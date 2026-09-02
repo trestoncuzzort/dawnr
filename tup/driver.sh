@@ -63,6 +63,16 @@ tup_receipt_skip_tests() {
   echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"page\":\"$1\",\"tests_skipped\":true}" >> "$RECEIPTS"
   echo "    [tests skipped by policy: $1]"
 }
+# Prints the sha256 of $1, or fails: a hash `sha256sum` did not produce is not
+# a hash this script may print. Its diagnostic goes to stderr rather than into
+# the digest, and an empty result counts as a failure however it arose.
+tup_sha256() {
+  local out
+  out=$(sha256sum "$1" 2>&1) || { echo "$out" >&2; return 1; }
+  out=${out%% *}
+  [ -n "$out" ] || return 1
+  printf '%s' "$out"
+}
 export -f tup_tests_enabled tup_receipt_skip_tests
 export RECEIPTS
 
@@ -182,18 +192,37 @@ while read -r script <&3; do
   fi
 
   secs=$((SECONDS - t0))
-  lhash=$(sha256sum "$plog" | cut -d' ' -f1)
+  # A digest this script could not compute is not a digest the receipt may
+  # claim. `sha256sum X | cut -d' ' -f1` reports the status of `cut` — which is
+  # 0 whatever sha256sum did — so an unreadable log wrote "log_sha256":"" into
+  # the ledger while the page printed "ok in 0s" and the run exited 0; the
+  # tarball hash had its own `2>/dev/null` and went to null the same way. Every
+  # digest the receipt names is checked here, and a page whose own evidence
+  # cannot be hashed fails as loudly as a page that will not build.
+  if ! lhash=$(tup_sha256 "$plog"); then
+    echo "!!! $id: cannot sha256 the page log $plog (the page itself exited $rc)"
+    echo "    refusing: the receipt would name a digest it does not have."
+    exit 1
+  fi
   # A page name is not a body. An executable override replaces the book's text
   # entirely, and the old receipt recorded only the page — so the ledger could
   # not say whether the book built this system or we did, let alone from which
   # bytes. $src is whichever body actually ran; the tarball is its other input.
   # These keys are ADDED, never renamed: a reader of the old five still parses.
-  shash=$(sha256sum "$src" 2>/dev/null | cut -d' ' -f1)
+  if ! shash=$(tup_sha256 "$src"); then
+    echo "!!! $id: cannot sha256 the body that ran, $src (the page itself exited $rc)"
+    echo "    refusing: the receipt would name a digest it does not have."
+    exit 1
+  fi
   ov_json=null;  [ -n "$ov" ]  && ov_json="\"$ov\""
   tb_json=null
   if [ -n "$pkg" ]; then
-    thash=$(sha256sum "$tarball" 2>/dev/null | cut -d' ' -f1)
-    [ -n "$thash" ] && tb_json="\"$thash\""
+    if ! thash=$(tup_sha256 "$tarball"); then
+      echo "!!! $id: cannot sha256 the tarball $tarball (the page itself exited $rc)"
+      echo "    refusing: the receipt would name a digest it does not have."
+      exit 1
+    fi
+    tb_json="\"$thash\""
   fi
   echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"page\":\"$id\",\"package\":\"${pkg:-null}\",\"seconds\":$secs,\"exit\":$rc,\"log_sha256\":\"$lhash\",\"override\":$ov_json,\"script_sha256\":\"$shash\",\"tarball_sha256\":$tb_json}" >> "$RECEIPTS"
   if [ $rc -ne 0 ]; then
