@@ -55,8 +55,13 @@ preconditions, postconditions and lower it mechanically to established
 verifiers, whose kernels supply every verdict. t proves nothing itself and is
 trusted for nothing. That is the design, not a weakness.
 
-**Seven independent proof kernels agree on all eleven t tasks**: 77 of 77
-cells `verified / refuted`, zero flakes ([`t/AGREEMENT.md`](t/AGREEMENT.md)):
+**Seven independent proof kernels, and a verdict on either side has to be
+earned.** The kernels verify all eleven real programs. They refute the
+deliberately broken twins only on positive evidence, and under that rule 71
+of 77 twin cells refute while six honestly time out, so the suite exits 1
+([`t/AGREEMENT.md`](t/AGREEMENT.md)). That exit 1 is the finding, not a
+failure: the table stopped reading 77 of 77 the moment 77 of 77 stopped
+being true.
 
 | Kernel | Stack |
 |---|---|
@@ -70,13 +75,43 @@ cells `verified / refuted`, zero flakes ([`t/AGREEMENT.md`](t/AGREEMENT.md)):
 
 A task counts only on a **measured flip**: the real program verifies *and* a
 deliberately broken twin is refuted. A twin that still verifies means the
-specification is vacuous, and the task is refused. See [`t/`](t/) and
+specification is vacuous, and the task is refused.
+
+**The finding: REFUTED used to be minted from failure, and now it is minted
+from proof.** VERIFIED here always required positive evidence, obligations
+the kernel discharged, never a bare exit 0. REFUTED did not. Four adapters
+read "I could not prove it" as "I disproved it": Verus scored a failure on
+nonlinear arithmetic it disables by default, Lean and Rocq had marker lists
+counting "omega could not prove" and "Tactic failure" as disproof, and
+Frama-C returned a goal whose own status was `Timeout` and called it refuted.
+Ground-truth fuzzing measured 39 cells refuting a task that was true by
+construction. A REFUTED that is really "I could not prove it" is the exact
+category error the project forbids on the VERIFIED side, and wherever a twin
+rested on one the flip was never measured.
+
+The fix gives REFUTED one door per column: positive kernel evidence, and
+nothing else. That is a countermodel the kernel confirms by executing it, or
+a **refutation certificate**. The harness already computes a concrete witness
+input where the real program and its twin provably differ; the lowering now
+restates that witness as a ground theorem, that the spec fails at that exact
+input, and the twin is refuted only when the kernel accepts the proof. Two
+guardrails keep it honest: a file carrying the certificate can never mint
+VERIFIED, so planting one can only demote a verdict, and a certificate the
+kernel rejects mints UNPROVED, never REFUTED. The reusable lesson is small: to
+trust a "this is false", make the tool prove the falsity at a witness, do not
+infer it from a failure to prove truth. Verus, Lean and Rocq re-earned all
+eleven flips this way, SPARK recovered its nine lost flips, and the post-purge
+ground-truth sweep measures zero incompleteness-sold-as-refutation in the five
+purged columns and in F*. One door is left open and named rather than fixed:
+the Dafny adapter still reads kernel exit 4 as REFUTED, and the same sweep
+finds exactly one true task it mislabels; it is recorded as remaining scope in
+[`ROADMAP.md`](ROADMAP.md) 10.7. See [`t/`](t/) and
 [`t/AGREEMENT.md`](t/AGREEMENT.md) for the current cross-kernel table.
 
-**That table is also the least interesting thing here, and the project now
-says so in its own files.** Two campaigns were run against t's own
-instruments, and both found real defects the green table could not have
-shown:
+**That table is the least interesting thing here, and the project says so in
+its own files.** The defect above, and the ones below, were found by running
+three campaigns against t's own instruments, because seven kernels agreeing on
+a mistranslated or vacuous spec proves nothing:
 
 - **The adapter audit** told seven hostile agents to make a *false* theorem
   pass through each adapter. They found ~38 holes, each with a live probe:
@@ -131,12 +166,12 @@ a verified program on an unaccountable system is a proof about nothing in
 particular, and an accountable system running unverified software is just
 tidy.
 
-The research that produced this discipline is in the repository root an
+The research that produced this discipline lives in [`forge/`](forge/): an
 execution-verified DPO pipeline whose real finding was that roughly half of a
 measured benchmark gain came from the measuring instrument rather than the
 model. That work is **scaffolding, not law**: it taught the method, it is
-written up in [`docs/revision-2026-08-25/`](docs/revision-2026-08-25/), and the
-distro and the language are where the method goes next.
+written up in [`forge/docs/`](forge/docs/), and the distro and the language
+are where the method goes next.
 
 ---
 
@@ -171,29 +206,15 @@ distro and the language are where the method goes next.
   hole. The committed tasks guard their ranges; the same total-logic
   softness in `requires` and invariant positions is recorded future work,
   and SPEC.md now states normatively what an undefined `requires` means.
-- **REFUTED now has one door per column, and holding it open costs the
-  table.** Ground-truth fuzzing had found 39 cells refuting a task *true by
-  construction*: Verus on nonlinear arithmetic, Lean and Rocq via marker
-  lists that treat "omega could not prove" and "Tactic failure" as
-  disproof, Frama-C returning a goal whose own status is `Timeout`.
-  Incompleteness reported as refutation is a taxonomy violation this project
-  forbids, and it was purged on 2026-09-02: those signals now mint UNPROVED
-  or TIMEOUT, and every column mints REFUTED only on positive kernel
-  evidence. That evidence is either a countermodel the kernel itself
-  confirms by execution, or a refutation certificate: the lowering restates
-  the harness's measured witness as a ground theorem that the spec fails
-  there, and the twin cell is REFUTED only when the kernel accepts that
-  proof. One recorded exception is left: the dafny adapter still reads
-  kernel exit 4 as REFUTED, and the post-purge ground-truth sweep measures
-  exactly one true task (an existential the solver will not instantiate
-  unprompted) where that door sells incompleteness as refutation; it is
-  named remaining scope in ROADMAP.md 10.7, not hidden. After the purge the table reads: 11 of 11 real programs verified in
-  all 7 columns, 71 of 77 twins refuted on that evidence (SPARK's nine lost
-  flips re-earned, so its column flips 11 of 11 again), and Frama-C's six
-  invariant-drop twins read `verified / timeout`, because their witnesses
-  are loop-exit states rather than program inputs and WP's step budget fires
-  first. **The suite still exits 1, now for exactly those six cells**: an
-  honest incompleteness on the record, not a mislabelled verdict.
+- **REFUTED is earned now, with one door still ajar.** The purge described
+  under "the finding" above put every column's REFUTED behind positive
+  evidence. The honest cost is Frama-C's six invariant-drop twins, which read
+  `verified / timeout` because their witnesses are loop-exit states rather
+  than program inputs, so no ground certificate exists and WP's step budget
+  fires first; those six cells are why the suite exits 1. One adapter was left
+  unpurged and is named, not hidden: Dafny still reads kernel exit 4 as
+  REFUTED, and ground-truth fuzzing finds exactly one true task it mislabels,
+  recorded as remaining scope in [`ROADMAP.md`](ROADMAP.md) 10.7.
 - **The integer-boundary unsoundness is FIXED and independently
   re-checked.** A boundary campaign built 48 tasks false over the integers
   but true under a machine word, and no kernel verified any of them. The
@@ -239,8 +260,8 @@ distro and the language are where the method goes next.
 | [`t/`](t/) | the language, its lowerings, and its verifier adapters |
 | [`locallm/`](locallm/) | train a model from scratch on your own machine (MIT) |
 | [`ROADMAP.md`](ROADMAP.md) | what happens next, adversarially reviewed |
-| repository root | the research pipeline and its instruments |
-| [`docs/`](docs/) | manuscripts, review dossiers, port witnesses |
+| [`forge/`](forge/) | the research pipeline and its instruments |
+| [`forge/docs/`](forge/docs/) | manuscripts, review dossiers, port witnesses |
 
 ## License
 
