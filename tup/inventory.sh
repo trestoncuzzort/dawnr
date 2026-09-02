@@ -32,6 +32,17 @@
 # was NOT looked at.
 set -u
 ROOT="${1:-/mnt/lfs}"
+# A trailing slash used to disable every exclusion below and quietly change the
+# format. The prune patterns are built as "$ROOT/$d", so "/mnt/lfs/" gave
+# "/mnt/lfs//proc", which `find -path` never matches: /proc, /sys, /dev, /run,
+# /tmp, /sources and /tup-build all walked into the inventory while the header
+# still listed them as excluded. And "${f#$ROOT}" stripped one character too
+# many, so every recorded path lost its leading slash and no two inventories
+# taken with different spellings of the same root could be diffed. Normalize
+# once, here. BASE is what actually prefixes a child: for "/" that is the empty
+# string, since "//proc" is the very bug being fixed.
+while :; do case "$ROOT" in ?*/) ROOT="${ROOT%/}";; *) break;; esac; done
+case "$ROOT" in /) BASE="";; *) BASE="$ROOT";; esac
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="$HERE/receipts"; mkdir -p "$OUT"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -41,7 +52,7 @@ EXCLUDE=(proc sys dev run tmp sources tup-build)
 [ -d "$ROOT" ] || { echo "no root at $ROOT"; exit 1; }
 
 PRUNE=()
-for d in "${EXCLUDE[@]}"; do PRUNE+=(-path "$ROOT/$d" -prune -o); done
+for d in "${EXCLUDE[@]}"; do PRUNE+=(-path "$BASE/$d" -prune -o); done
 
 {
   echo "# tup inventory — $STAMP"
@@ -54,7 +65,7 @@ for d in "${EXCLUDE[@]}"; do PRUNE+=(-path "$ROOT/$d" -prune -o); done
 find "$ROOT" "${PRUNE[@]}" \( -type f -o -type l \) -print 2>/dev/null \
 | LC_ALL=C sort \
 | while read -r f; do
-    rel="${f#$ROOT}"
+    rel="${f#$BASE}"
     if [ -L "$f" ]; then
       printf -- "-> %-58s %s %8s %s\n" "$(readlink "$f")" "lnk" "-" "$rel"
     else
