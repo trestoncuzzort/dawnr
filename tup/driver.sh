@@ -105,33 +105,73 @@ while read -r script <&3; do
     if [ ! -s "$tarball" ]; then
       echo "!!! $id: tarball absent: $pkg" | tee -a "$plog"; exit 1
     fi
-    # The top-level dir comes from the tarball's own listing — filename
-    # surgery guesses wrong on tcl8.6.17-src and friends. But the listing is
-    # UNTRUSTED INPUT to an `rm -rf` two lines below, and it failed open twice:
+    # ISOLATED EXTRACTION, because the archive names the directory an `rm -rf`
+    # is about to be aimed at. Nothing is aimed at a name the archive chose:
+    # extract into a fresh directory of OUR naming, look at what actually came
+    # out, and move it into place only once it is one real directory whose name
+    # is not reserved. Trusting the tarball's own listing failed open three
+    # ways, each of them measured:
     #   * a truncated or non-tarball file lists nothing, $top came back empty,
     #     and $dir became "$LFS/sources/" — every tarball plus log/receipts.jsonl
     #   * a perfectly good archive made with `tar cf x ./dir` lists "./dir/",
     #     `cut -d/ -f1` gives ".", and $dir became "$LFS/sources/." — the same
     #     deletion, with the page then reporting "ok"
-    # The listing goes to a file rather than through `head`, because `head`
-    # closing the pipe kills tar with SIGPIPE and its real exit status is lost.
-    tlist="$LOG/$CH-$page.tar-listing"
-    if ! tar tf "$tarball" > "$tlist" 2>>"$plog"; then
-      rm -f "$tlist"
-      echo "!!! $id: tar tf $tarball failed — refusing to continue" | tee -a "$plog"; exit 1
+    #   * an archive whose first entry is `log/` gave $dir = "$LFS/sources/log",
+    #     so the build deleted driver.state and receipts.jsonl — its own ledger
+    #     — and then printed "ok in 0s" and "complete" (measured 2026-09-01)
+    # After this, the only paths rm -rf can ever see are the staging directory
+    # this script made and the package directory it checked.
+    stage=$(mktemp -d "$LFS/sources/.tup-extract-XXXXXX") || {
+      echo "!!! $id: cannot make an extraction directory under $LFS/sources" | tee -a "$plog"; exit 1; }
+    if ! tar xf "$tarball" -C "$stage" 2>>"$plog"; then
+      rm -rf "$stage"
+      echo "!!! $id: tar xf $tarball failed — refusing to continue" | tee -a "$plog"; exit 1
     fi
-    top=$(head -1 "$tlist" | cut -d/ -f1)
-    rm -f "$tlist"
+    top=""; n=0
+    for e in "$stage"/* "$stage"/.[!.]* "$stage"/..?*; do
+      { [ -e "$e" ] || [ -L "$e" ]; } || continue
+      n=$((n + 1)); top="${e##*/}"
+    done
+    # One top-level directory is the book's own per-package shape, and it is
+    # what makes the rm -rf below a bounded statement. Each refusal below says
+    # what is true where it fires, because that is all it knows.
+    if [ "$n" -ne 1 ]; then
+      echo "!!! $id: $tarball extracts to $n top-level entries, not one directory" | tee -a "$plog"
+      [ "$n" -gt 0 ] && echo "    (the last one seen is \"$top\")" | tee -a "$plog"
+      echo "    refusing: the page contract is to cd into the package tree," | tee -a "$plog"
+      echo "    and the next step after that is rm -rf on it." | tee -a "$plog"
+      rm -rf "$stage"; exit 1
+    fi
+    # A symlink is not a directory however -d answers it: cd through one would
+    # run the page somewhere else entirely, and the rm -rf afterwards would
+    # remove the link and leave the tree.
+    if [ ! -d "$stage/$top" ] || [ -L "$stage/$top" ]; then
+      echo "!!! $id: $tarball's one top-level entry \"$top\" is not a directory" | tee -a "$plog"
+      echo "    refusing: the page contract is to cd into the package tree," | tee -a "$plog"
+      echo "    and the next step after that is rm -rf on it." | tee -a "$plog"
+      rm -rf "$stage"; exit 1
+    fi
     case "$top" in
-      ""|.|..)
-        echo "!!! $id: $tarball has no usable top-level directory (first entry gives \"$top\")" | tee -a "$plog"
-        echo "    refusing: the extract directory would be \$LFS/sources itself," | tee -a "$plog"
-        echo "    and the next step is rm -rf on it." | tee -a "$plog"
-        exit 1;;
+      log|.|..|*/*|.tup-extract-*)
+        echo "!!! $id: $tarball extracts to \"$top\", a name reserved in \$LFS/sources" | tee -a "$plog"
+        echo "    (log/ is this build's ledger — driver.state and receipts.jsonl;" | tee -a "$plog"
+        echo "    .tup-extract-* is this script's own staging.) The next step" | tee -a "$plog"
+        echo "    after moving it into place is rm -rf, so: refused." | tee -a "$plog"
+        rm -rf "$stage"; exit 1;;
     esac
     dir="$LFS/sources/$top"
-    ( set -e; cd "$LFS/sources"
-      rm -rf "$dir"; tar xf "$tarball"; cd "$dir"
+    if { [ -e "$dir" ] || [ -L "$dir" ]; } && { [ ! -d "$dir" ] || [ -L "$dir" ]; }; then
+      echo "!!! $id: $dir already exists and is not a package directory" | tee -a "$plog"
+      echo "    refusing to rm -rf it." | tee -a "$plog"
+      rm -rf "$stage"; exit 1
+    fi
+    rm -rf "$dir"                 # a previous run's tree of that name, and only that
+    if ! mv "$stage/$top" "$dir" 2>>"$plog"; then
+      echo "!!! $id: cannot move the extracted tree to $dir" | tee -a "$plog"
+      rm -rf "$stage"; exit 1
+    fi
+    rmdir "$stage" 2>/dev/null
+    ( set -e; cd "$dir"
       bash -e "$src"
     ) > "$plog" 2>&1 < /dev/null
     rc=$?
