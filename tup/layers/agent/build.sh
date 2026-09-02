@@ -21,6 +21,10 @@
 set -u
 export LFS=${LFS:-/mnt/lfs}
 HERE="$(cd "$(dirname "$0")" && pwd)"
+# The layer names itself from where it lives. Spelled out per file, the diff
+# header said "agent" in all three, so LAYER-prove-*.txt and LAYER-train-*.txt
+# would each have opened with "# tup layer: agent — what it added".
+LAYER="$(basename "$HERE")"
 LOG=$LFS/sources/log
 RECEIPTS_DIR="$(cd "$HERE/../../receipts" 2>/dev/null && pwd || echo /tmp)"
 TUP_DIR="$(cd "$HERE/../.." 2>/dev/null && pwd || echo /tmp)"
@@ -109,9 +113,9 @@ AFTER=$(take_inventory /tmp/agent-after.txt) \
 [ -s "$AFTER" ] || fail "inventory AFTER the layer wrote nothing at $AFTER"
 [ "$AFTER" != "$BEFORE" ] \
   || fail "before and after name the SAME inventory — refusing to report an empty diff as a measurement"
-DIFF="$RECEIPTS_DIR/LAYER-agent-$(date -u +%Y%m%dT%H%M%SZ).txt"
+DIFF="$RECEIPTS_DIR/LAYER-$LAYER-$(date -u +%Y%m%dT%H%M%SZ).txt"
 {
-  echo "# tup layer: agent — what it added"
+  echo "# tup layer: $LAYER — what it added"
   echo "# before: $(basename "$BEFORE")"
   echo "# after : $(basename "$AFTER")"
   echo "#"
