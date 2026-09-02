@@ -111,8 +111,27 @@ else
 fi
 QPID=$!
 BOOTED=""
-for i in $(seq 1 60); do
-  grep -q "tup login:" "$LOG" 2>/dev/null && { BOOTED="$((i*5))s"; break; }
+# The ship gate mirrors boot_witness.sh's verdict semantics: a kernel panic
+# anywhere on the console outranks the prompt and refuses the release; the
+# prompt must BE a line (leading whitespace/ANSI allowed), not a sentence that
+# mentions one; and a sighted prompt opens a settle window so a panic seconds
+# later is still the news.
+ESC=$'\033'
+PROMPT_RE="^[[:space:]]*($ESC\[[0-9;?]*[A-Za-z][[:space:]]*)*tup login:"
+SETTLE=${TUP_SETTLE_SECS:-10}
+prompt_at=0; settle_left=0
+for i in $(seq 1 36); do
+  grep -qE "Kernel panic|Attempted to kill init|not syncing" "$LOG" 2>/dev/null \
+    && { echo "!!! kernel panic on the serial console — NOT shipping"
+         tail -5 "$LOG"; kill "$QPID" 2>/dev/null || true; exit 1; }
+  if [ "$prompt_at" -eq 0 ] && grep -qE "$PROMPT_RE" "$LOG" 2>/dev/null; then
+    prompt_at=$((i*5)); settle_left=$SETTLE
+    echo "    login prompt at ${prompt_at}s — watching ${SETTLE}s more before shipping"
+  fi
+  if [ "$prompt_at" -gt 0 ]; then
+    settle_left=$((settle_left - 5))
+    [ "$settle_left" -le 0 ] && { BOOTED="${prompt_at}s"; break; }
+  fi
   sleep 5
 done
 kill "$QPID" 2>/dev/null || true
