@@ -1,0 +1,13 @@
+01-introduction.sh
+02-changingowner.sh
+03-kernfs.sh
+04-chroot.sh
+05-creatingdirs.sh
+06-createfiles.sh
+07-gettext.sh
+08-bison.sh
+09-perl.sh
+10-Python.sh
+11-texinfo.sh
+12-util-linux.sh
+13-cleanup.sh

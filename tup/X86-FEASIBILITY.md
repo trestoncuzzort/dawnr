@@ -138,3 +138,44 @@ Needs an x86_64 variant or edit:
    (Provisioning the second virtio disk as `/mnt/lfs` and pointing
    `extract_book.py` at the 12.4 book follow; the BIOS/EFI ruling comes
    first.)
+
+## Rulings and what was built (2026-09-02)
+
+**BIOS, not EFI.** The x86 leg installs GRUB the way the x86 12.4 book does:
+`i386-pc` to the MBR of a DOS-labelled disk with one ext4 partition, root on
+`/dev/vda1`, no ESP, no swap. Reasons, in order: it is the book's own bytes
+(the EFI route needs a second GRUB build from BLFS, which is a deviation
+with no witness value); the boot witness keeps its shape (firmware plus the
+disk and nothing else; SeaBIOS is bundled in the QEMU build, so there is no
+firmware file to name); and the fstab and grub overrides shrink instead of
+growing. The cost is stated: the arm64 and x86_64 images differ in partition
+layout (`vda2` under an ESP versus `vda1` alone), and that difference is
+recorded in each arch's `overrides/<arch>/ch10/fstab.sh`.
+
+**KVM still denied.** `/dev/kvm` remains `root:kvm` with an ACL for `gdm`
+only; the account's groups are unchanged. The leg therefore ran under TCG,
+64 vcpus, 96 G, exactly as the "available today, slow" path above costed
+it. Wall-clock numbers are in `receipts/BUILD-*.md` for this leg and are
+the first end-to-end TCG measurement; the 14x-per-thread proxy above was a
+single compiler.
+
+**What changed in the tree to make one driver build two books:**
+
+- `extract_book.py --arch x86_64` writes `book-x86_64/` with a
+  `BOOK-SOURCE` marker; the arm64 default and `book/` are untouched.
+- Overrides are matched by page name within a chapter, never by number.
+  The x86 book's chapter 8 has 85 pages to the arm64 fork's 87, so every
+  numbered chapter-8 override would have unhooked silently. Shared overrides
+  moved to `overrides/chNN/<page>.sh`; the arch-bound three (kernel, grub,
+  fstab) live under `overrides/arm64/` and `overrides/x86_64/`; `usage`
+  (serial console name) and `theend` (release string) read `TUP_ARCH`.
+  The driver hands every override its page as `$TUP_PAGE`, so no override
+  carries a path with a number in it either.
+- `check_overrides.py` and `check_placeholders.py` resolve against every
+  extracted book; both pass on both (46/46 hooks, 12/12 placeholders).
+- `buildvm/` is the scaffold for a Linux host without Lima or sudo, and
+  `buildvm/prepare-host.sh` is the first time chapters 2 to 4 exist in the
+  repository as bytes rather than as something typed into a VM.
+- `boot_witness.sh` and `release.sh` take `TUP_ARCH`, pick the accelerator
+  the host can actually open, and (release) witness an overlay so the
+  shipped master is the bytes that were witnessed.

@@ -6,6 +6,13 @@
 # crossing — same env -i, same PATH, recorded here instead of typed.
 set -u
 export LFS=/mnt/lfs
+# The arch selects the arch-bound overrides (kernel, bootloader, fstab) and
+# the serial console; it crosses into the chroot with every other setting.
+case "${TUP_ARCH:-$(uname -m)}" in
+  aarch64|arm64) export TUP_ARCH=arm64 ;;
+  x86_64|amd64)  export TUP_ARCH=x86_64 ;;
+  *) echo "$0: unknown arch ${TUP_ARCH:-$(uname -m)}"; exit 1 ;;
+esac
 LOG=$LFS/sources/log
 echo "chain7: waiting for chapter 6"
 until grep -q "CHAIN56 COMPLETE" $LOG/chain56.console 2>/dev/null; do sleep 60; done
@@ -35,6 +42,6 @@ chroot "$LFS" /usr/bin/env -i \
   HOME=/root TERM="${TERM:-xterm}" \
   PATH=/usr/bin:/usr/sbin \
   MAKEFLAGS=-j$(nproc) \
-  LFS= TUP_OVERRIDES=/tup-build/overrides \
+  LFS= TUP_ARCH="$TUP_ARCH" TUP_OVERRIDES=/tup-build/overrides \
   /bin/bash /tup-build/driver.sh /tup-build/book/ch07-inner \
   && echo "CHAIN7 COMPLETE" || echo "CHAIN7 FAILED IN CHROOT"

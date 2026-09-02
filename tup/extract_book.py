@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
-"""extract_book.py — turn the LFS arm64 book into ordered, driver-runnable scripts.
+"""extract_book.py: turn an LFS book into ordered, driver-runnable scripts.
 
-    python3 tup/extract_book.py 5 6 7 8 9 10     # chapters to extract
+    python3 tup/extract_book.py 5 6 7 8 9 10                # arm64 book -> tup/book/
+    python3 tup/extract_book.py --arch x86_64 5 6 7 8 9 10  # x86 12.4 book -> tup/book-x86_64/
 
 For every page in each chapter (in TOC order) this writes
-tup/book/chNN/MM-<page>.sh containing that page's <pre class="userinput">
+<bookdir>/chNN/MM-<page>.sh containing that page's <pre class="userinput">
 blocks, verbatim and in order, with a header naming the page title and URL.
 The driver, not this file, decides execution context (lfs user / chroot).
+
+Two books, one extractor. The arm64 edition (xry111's r12.4 fork) and the
+official x86 12.4 book share TOC shape and page classes but NOT page
+numbering: x86 chapter 8 has 85 pages where arm64 has 87, so the same page
+name sits at a different MM- prefix in each. That is why overrides are
+matched by page NAME and chapter, never by number (see driver.sh). Each
+book directory carries a BOOK-SOURCE file naming the arch, the base URL and
+the fetch date, so a receipt can say which book's bytes were run.
 
 WHAT IS AND IS NOT AUTOMATED, stated plainly:
   - Command blocks are the book's own bytes. Nothing is paraphrased.
@@ -32,9 +41,15 @@ import sys
 import urllib.request
 from pathlib import Path
 
-BASE = "https://www.linuxfromscratch.org/~xry111/lfs/view/arm64/"
+BOOKS = {
+    "arm64": "https://www.linuxfromscratch.org/~xry111/lfs/view/arm64/",
+    "x86_64": "https://www.linuxfromscratch.org/lfs/view/12.4/",
+}
 HERE = Path(__file__).resolve().parent
-BOOK = HERE / "book"
+BOOKDIRS = {"arm64": HERE / "book", "x86_64": HERE / "book-x86_64"}
+# Set in main() from --arch; module-level so the helpers below stay simple.
+BASE = BOOKS["arm64"]
+BOOK = BOOKDIRS["arm64"]
 
 # Test invocations are not spelled one way. The book writes `make check`,
 # `make -k check`, `make -j1 test`, `make NON_ROOT_USERNAME=tester check-root`,
@@ -154,8 +169,22 @@ def guard_tests(block: str, pkg: str) -> str:
 
 
 def main() -> int:
-    chapters = [int(a) for a in sys.argv[1:]] or [5, 6, 7, 8, 9, 10]
+    global BASE, BOOK
+    import argparse
+    from datetime import datetime, timezone
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--arch", choices=sorted(BOOKS), default="arm64",
+                    help="which book to extract (default arm64)")
+    ap.add_argument("chapters", nargs="*", type=int)
+    args = ap.parse_args()
+    BASE, BOOK = BOOKS[args.arch], BOOKDIRS[args.arch]
+    chapters = args.chapters or [5, 6, 7, 8, 9, 10]
     tarballs = load_tarballs()
+    BOOK.mkdir(parents=True, exist_ok=True)
+    (BOOK / "BOOK-SOURCE").write_text(
+        f"arch={args.arch}\nbase={BASE}\n"
+        f"fetched={datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}\n",
+        encoding="utf-8")
     for ch in chapters:
         outdir = BOOK / f"ch{ch:02d}"
         outdir.mkdir(parents=True, exist_ok=True)

@@ -29,13 +29,15 @@ with its Python version; digests that differed by platform) are what make
 
 | Path | What it is |
 |---|---|
-| `extract_book.py` | Fetches the LFS arm64 book and writes one script per page, in TOC order, containing that page's `<pre class="userinput">` blocks verbatim. Package pages are resolved against the wget-list's actual filenames; an unresolved package page is a loud WARNING, never a silent skip. |
+| `extract_book.py` | Fetches an LFS book (`--arch arm64`, the default, or `--arch x86_64`) and writes one script per page, in TOC order, containing that page's `<pre class="userinput">` blocks verbatim. Package pages are resolved against the wget-list's actual filenames; an unresolved package page is a loud WARNING, never a silent skip. |
 | `driver.sh` | Runs a chapter: extract tarball, enter, execute the page, delete the tree, append a receipt. Resumes from `driver.state`, stops loudly on the first failure. Reads its ORDER list on fd 3 with pages' stdin on `/dev/null`, because a page that reads stdin would otherwise eat the build list. |
-| `overrides/` | The only sanctioned deviation mechanism. One file per page it replaces, each stating in its own header what it changes and why. |
+| `overrides/` | The only sanctioned deviation mechanism. One file per page it replaces, each stating in its own header what it changes and why. Keyed by page NAME within a chapter (`ch08/glibc.sh`), never by page number, because the two books number chapter 8 differently; arch-bound pages (kernel, bootloader, fstab) live under `overrides/arm64/` and `overrides/x86_64/`. `check_overrides.py` proves every override hooks a real page in every book it applies to. |
 | `chain7.sh`, `chain8.sh`, `chain-home.sh` | The chroot legs, each waiting on the previous chapter's completion marker. |
-| `boot_witness.sh` | Boots the finished disk under QEMU with **nothing but UEFI firmware and the raw disk** — no `-kernel`, no `-initrd`, no `-append` — and records the console transcript. A login prompt is the acceptance test. |
+| `boot_witness.sh` | Boots the finished disk under QEMU with **nothing but firmware and the disk** (EDK2 for arm64, SeaBIOS for x86_64; no `-kernel`, no `-initrd`, no `-append`) and records the console transcript. A login prompt is the acceptance test. |
 | `bundle_receipts.py` | Collects `receipts.jsonl`, the source manifest, and the test-policy record into one auditable file under `receipts/`. |
-| `book/` | Generated. Never hand-edited; regenerate with `extract_book.py`. |
+| `book/`, `book-x86_64/` | Generated, one per book (arm64 r12.4 fork; official x86 12.4). Never hand-edited; regenerate with `extract_book.py`. Each carries a `BOOK-SOURCE` naming the book and the fetch date. |
+| `buildvm/` | The x86_64 leg's scaffolding on a Linux host with no sudo and no Lima: `vm.sh` (a QEMU build VM from the Ubuntu cloud image, hashed), `prepare-host.sh` (the book's chapters 2 to 4, scripted, every deviation named), `chain56.sh`, `build-all.sh`, and `build-x86_64.sh`, which runs the leg end to end and is resumable. |
+| `X86-FEASIBILITY.md` | The x86_64 probe (2026-08-31), the BIOS-versus-EFI ruling, and what the leg measured. |
 
 ## The overrides, and why each exists
 
@@ -76,6 +78,14 @@ python3 tup/extract_book.py 5 6 7 8 9 10 11   # regenerate book/
 # driver.sh runs per chapter inside the VM; chain*.sh sequence the legs
 python3 tup/bundle_receipts.py                # collect the evidence
 bash tup/boot_witness.sh                      # boot it alone, record the verdict
+```
+
+The x86_64 leg runs on a Linux host from QEMU alone (no Lima, no sudo):
+
+```bash
+python3 tup/extract_book.py --arch x86_64 5 6 7 8 9 10 11   # regenerate book-x86_64/
+python3 tup/check_overrides.py && python3 tup/check_placeholders.py
+bash tup/buildvm/build-x86_64.sh              # VM, chapters 2-11, receipts, witness, release
 ```
 
 ## Known findings from building it

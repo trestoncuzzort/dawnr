@@ -25,26 +25,46 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-BOOK, OVERRIDES = HERE / "book", HERE / "overrides"
+OVERRIDES = HERE / "overrides"
+BOOKS = {"arm64": HERE / "book", "x86_64": HERE / "book-x86_64"}
+NUMBERED = re.compile(r"^\d\d-")
 PLACEHOLDER = re.compile(r"<[A-Za-z_][A-Za-z0-9_ .@-]*>")
 # lines where angle brackets are legitimate shell or markup, not placeholders
 IGNORE = re.compile(r"<<|EOF|https?://|</|<[0-9]|-> ")
 
 
+def covered_by(arch: str) -> set[str]:
+    """Page names (numbered and bare) an override exists for, in this arch's
+    build: shared overrides plus overrides/<arch>/. Another arch's directory
+    does not count, which is the point: an x86 page is not covered by an
+    arm64 override."""
+    names = set()
+    for p in OVERRIDES.rglob("*.sh"):
+        top = p.relative_to(OVERRIDES).parts[0]
+        if top in BOOKS and top != arch:
+            continue
+        names.add(p.name)
+        names.add(NUMBERED.sub("", p.name))
+    return names
+
+
 def main() -> int:
-    covered = {p.name for p in OVERRIDES.rglob("*.sh")}
     bad, seen = [], 0
-    for page in sorted(BOOK.glob("ch*/[0-9]*.sh")):
-        for i, line in enumerate(page.read_text(encoding="utf-8").splitlines(), 1):
-            if line.lstrip().startswith("#") or IGNORE.search(line):
-                continue
-            m = PLACEHOLDER.search(line)
-            if not m:
-                continue
-            seen += 1
-            if page.name not in covered:
-                bad.append((f"{page.parent.name}/{page.name}", i, line.strip()))
-            break
+    for arch, book in BOOKS.items():
+        if not book.is_dir():
+            continue
+        covered = covered_by(arch)
+        for page in sorted(book.glob("ch*/[0-9]*.sh")):
+            for i, line in enumerate(page.read_text(encoding="utf-8").splitlines(), 1):
+                if line.lstrip().startswith("#") or IGNORE.search(line):
+                    continue
+                m = PLACEHOLDER.search(line)
+                if not m:
+                    continue
+                seen += 1
+                if page.name not in covered and NUMBERED.sub("", page.name) not in covered:
+                    bad.append((f"{arch}:{page.parent.name}/{page.name}", i, line.strip()))
+                break
     for pg, i, line in bad:
         print(f"  FAIL {pg}:{i}  unhandled placeholder\n         {line}")
     print(f"\n{seen - len(bad)}/{seen} pages with placeholders have an override")

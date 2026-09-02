@@ -1,8 +1,10 @@
-# prove layer sources. Format: name sha256 url
+# prove layer sources. Format: name sha256 url [arch=<arch>]
+# (the x86_64 Lean hash was taken from the downloaded release asset on 2026-09-02)
 # Lean is a prebuilt official release binary — stated, like Node in the agent
 # layer: it is a thing this machine did not compile. Everything else below it
 # is BUILT FROM SOURCE inside tup: the distro compiles its own proof kernel.
-lean-4.33.1-linux_aarch64.tar.zst f7353a8b2a8741c84558523e450556f9a1c45e3cafcf54399ce68c6a24c55f07 https://github.com/leanprover/lean4/releases/download/v4.33.1/lean-4.33.1-linux_aarch64.tar.zst
+lean-4.33.1-linux_aarch64.tar.zst f7353a8b2a8741c84558523e450556f9a1c45e3cafcf54399ce68c6a24c55f07 https://github.com/leanprover/lean4/releases/download/v4.33.1/lean-4.33.1-linux_aarch64.tar.zst arch=arm64
+lean-4.33.1-linux.tar.zst 890afd185370f85666025b883914ab4f4b339136f8c96167b69cfb62aecaf235 https://github.com/leanprover/lean4/releases/download/v4.33.1/lean-4.33.1-linux.tar.zst arch=x86_64
 ocaml-4.14.2.tar.gz c2d706432f93ba85bd3383fa451d74543c32a4e84a1afaf3e8ace18f7f097b43 https://github.com/ocaml/ocaml/archive/refs/tags/4.14.2.tar.gz
 findlib-1.9.6.tar.gz 2df996279ae16b606db5ff5879f93dbfade0898db9f1a3e82f7f845faa2930a2 http://download.camlcity.org/download/findlib-1.9.6.tar.gz
 dune-3.21.0.tar.gz 07c7dbd778579e35f365320b559d6f781cd755c6485b164b802f109fe21ead68 https://github.com/ocaml/dune/archive/refs/tags/3.21.0.tar.gz

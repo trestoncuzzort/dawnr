@@ -32,8 +32,12 @@ grep -q "^ch11" "$LOG/driver.state" 2>/dev/null \
 
 # --- 1. fetch and verify sources -----------------------------------------
 cd "$LFS/sources" || fail "no sources dir"
-while read -r name want url; do
+case "$(uname -m)" in aarch64) export TUP_ARCH=arm64 ;; x86_64) export TUP_ARCH=x86_64 ;; esac
+# A MANIFEST row may end in arch=<arch>; rows for another arch are not
+# fetched (the prebuilt binaries differ per arch, the sources do not).
+while read -r name want url arch; do
   case "$name" in ''|'#'*) continue;; esac
+  case "$arch" in arch=*) [ "${arch#arch=}" = "$TUP_ARCH" ] || continue ;; esac
   [ -s "$name" ] || { echo "fetching $name"; curl -fSL --retry 3 -o "$name" "$url" \
       || fail "cannot fetch $name"; }
   got=$(sha256sum "$name" | cut -d' ' -f1)
@@ -64,7 +68,7 @@ mountpoint -q "$LFS/proc" || bash -e /home/lfs/book/ch07/03-kernfs.sh >/dev/null
 # that cannot reach the network cannot be tempted by it.
 cleanup_resolv() { :; }
 
-chroot "$LFS" /usr/bin/env -i HOME=/root TERM=xterm \
+chroot "$LFS" /usr/bin/env -i HOME=/root TERM=xterm TUP_ARCH="$TUP_ARCH" \
   PATH=/usr/bin:/usr/sbin:/opt/node-v24.20.0/bin MAKEFLAGS=-j"$(nproc)" LFS=/ \
   TUP_OVERRIDES=/tup-build/overrides \
   /bin/bash /tup-build/driver.sh /tup-build/layers/prove \

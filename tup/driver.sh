@@ -11,11 +11,26 @@
 # not this script's stdout, is the record.
 #
 # Page contract (written by extract_book.py):
-#   # TUP_PACKAGE=name-version -> tarball extracted fresh, cwd inside it,
-#                                 tree deleted afterward (the book's standing
-#                                 per-package instruction).
+#   # TUP_TARBALL=name-version.tar.xz -> tarball extracted fresh, cwd inside
+#                                 it, tree deleted afterward (the book's
+#                                 standing per-package instruction).
+#   # TUP_TARBALL_<arch>=...    -> the same, chosen by $TUP_ARCH (layers with
+#                                 prebuilt per-arch binaries).
 #   # TUP_ACTION_PAGE          -> run with cwd $LFS/sources, no wrapping.
-# An executable $TUP_OVERRIDES/<page>.sh replaces the page body entirely.
+#
+# Overrides replace a page body entirely and are matched BY PAGE NAME, never
+# by page number. The x86 12.4 book and the arm64 book number chapter 8
+# differently (85 pages against 87), so `29-shadow.sh` names one build on
+# arm64 and a different one on x86; an override keyed to that number would
+# unhook silently on the other book. Lookup order, first executable wins:
+#   $TUP_OVERRIDES/$TUP_ARCH/<ch>/<page>.sh    arch-bound and chapter-scoped
+#   $TUP_OVERRIDES/$TUP_ARCH/<page>.sh
+#   $TUP_OVERRIDES/<ch>/<page>.sh              shared, chapter-scoped
+#   $TUP_OVERRIDES/<page>.sh
+# where <page> is tried as written (NN-name) and then with the number
+# stripped (name). The page an override replaces is handed to it as
+# $TUP_PAGE (its path) and $TUP_PAGE_ID (ch/NN-name), so no override needs
+# to know a page number either.
 #
 # Test policy (ruling 2026-08-31, "mathematically useful, zero bullshit"):
 # TUP_TESTS names the packages whose suites run; every other suite hit is
@@ -27,6 +42,12 @@ STATE=$LOG/driver.state
 RECEIPTS=$LOG/receipts.jsonl
 TUP_TESTS=${TUP_TESTS:-"glibc gcc binutils"}
 TUP_OVERRIDES=${TUP_OVERRIDES:-/home/lfs/overrides}
+case "${TUP_ARCH:-$(uname -m)}" in
+  aarch64|arm64) TUP_ARCH=arm64 ;;
+  x86_64|amd64)  TUP_ARCH=x86_64 ;;
+  *)             TUP_ARCH=${TUP_ARCH:-$(uname -m)} ;;
+esac
+export TUP_ARCH
 CHDIR=$1
 CH=$(basename "$CHDIR")
 mkdir -p "$LOG"
@@ -54,16 +75,26 @@ while read -r script <&3; do
   grep -qxF "$id" "$STATE" && continue
   page="${script%.sh}"
   src="$CHDIR/$script"
-  # Chapter-qualified first: 05-glibc.sh names a page in BOTH chapter 5 and
+  # Chapter-qualified first: glibc names a page in BOTH chapter 5 and
   # chapter 8, and they are different builds. A flat name would fire the
-  # wrong override on the wrong page, silently.
+  # wrong override on the wrong page, silently. Arch-bound first: the kernel
+  # and bootloader pages differ per book.
+  stem="${page#[0-9][0-9]-}"
   ov=""
-  for cand in "$TUP_OVERRIDES/${CH%%-*}/$page.sh" "$TUP_OVERRIDES/$page.sh"; do
+  for cand in "$TUP_OVERRIDES/$TUP_ARCH/${CH%%-*}/$page.sh" "$TUP_OVERRIDES/$TUP_ARCH/${CH%%-*}/$stem.sh" \
+              "$TUP_OVERRIDES/$TUP_ARCH/$page.sh"           "$TUP_OVERRIDES/$TUP_ARCH/$stem.sh" \
+              "$TUP_OVERRIDES/${CH%%-*}/$page.sh"           "$TUP_OVERRIDES/${CH%%-*}/$stem.sh" \
+              "$TUP_OVERRIDES/$page.sh"                     "$TUP_OVERRIDES/$stem.sh"; do
     [ -x "$cand" ] && { ov="$cand"; break; }
   done
+  export TUP_PAGE="$CHDIR/$script" TUP_PAGE_ID="$CH/$page"
   if [ -n "$ov" ]; then src="$ov"; echo ">>> $id (OVERRIDE ${ov##*/overrides/})"
   else echo ">>> $id"; fi
-  pkg=$(sed -n 's/^# TUP_TARBALL=//p' "$CHDIR/$script" | head -1)
+  # A page may name one tarball per arch (# TUP_TARBALL_x86_64=..., the
+  # prebuilt Node and Lean in the layers do); the arch-specific line wins,
+  # the plain one is the fallback.
+  pkg=$(sed -n "s/^# TUP_TARBALL_$TUP_ARCH=//p" "$CHDIR/$script" | head -1)
+  [ -n "$pkg" ] || pkg=$(sed -n 's/^# TUP_TARBALL=//p' "$CHDIR/$script" | head -1)
   plog="$LOG/$CH-$page.log"
   t0=$SECONDS
 

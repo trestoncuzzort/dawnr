@@ -4,6 +4,8 @@
 # before it is used. Same rule as the base system: nothing is built from bytes
 # that were not checked first.
 #
-# name                        sha256                                                            url
-node-v24.20.0-linux-arm64.tar.xz  5f4ddab610c1ab2016b3c227cebdbf6d9495161487e4739c7b90090595f465f7  https://nodejs.org/dist/v24.20.0/node-v24.20.0-linux-arm64.tar.xz
+# name                        sha256                                                            url  [arch=<arch>]
+# (x64 sha256 from nodejs.org SHASUMS256.txt, fetched 2026-09-02)
+node-v24.20.0-linux-arm64.tar.xz  5f4ddab610c1ab2016b3c227cebdbf6d9495161487e4739c7b90090595f465f7  https://nodejs.org/dist/v24.20.0/node-v24.20.0-linux-arm64.tar.xz  arch=arm64
+node-v24.20.0-linux-x64.tar.xz    2f2c0da162318f0de47665410c7c8c2ed3d36c8f3105de4bbc61176c70a7cbf2  https://nodejs.org/dist/v24.20.0/node-v24.20.0-linux-x64.tar.xz  arch=x86_64
 cacert.pem                        SHA256-RECORDED-AT-FETCH                                          https://curl.se/ca/cacert.pem

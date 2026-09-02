@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """bundle_receipts.py — turn the build's scattered evidence into one record.
 
-    python3 tup/bundle_receipts.py            # pull from the build VM
-    python3 tup/bundle_receipts.py --local /path/to/log
+    python3 tup/bundle_receipts.py            # pull from the Lima build VM (arm64 leg)
+    python3 tup/bundle_receipts.py --local /path/to/log   # from a copied log dir
+                                              # (the x86_64 leg: buildvm/build-x86_64.sh
+                                              #  copies /mnt/lfs/sources/log plus the
+                                              #  SHA256-MANIFEST-*.txt beside it)
 
 Collects, from the machine that did the work:
   * receipts.jsonl   — one line per page: package, seconds, exit, log sha256
@@ -75,6 +78,14 @@ def main() -> int:
                              f"cat {REMOTE_SRC}/SHA256-MANIFEST-*.txt"],
                             capture_output=True, text=True)
         manifest_raw = ls.stdout
+    else:
+        # the manifest lives beside the log dir on the build disk; the x86_64
+        # orchestrator copies it into the log dir it hands over
+        for d in (Path(args.local), Path(args.local).parent):
+            found = sorted(d.glob("SHA256-MANIFEST-*.txt"))
+            if found:
+                manifest_raw = "".join(f.read_text(encoding="utf-8") for f in found)
+                break
     prov_note = read("PROVENANCE-NOTE-bootscripts.txt")
 
     if not receipts_raw.strip():
