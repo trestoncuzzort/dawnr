@@ -10,7 +10,9 @@
 # package, seconds, exit status, the sha256 of its own log, and — because an
 # override REPLACES the page body — which body actually ran (`override`), the
 # sha256 of that body (`script_sha256`) and of the tarball it was handed
-# (`tarball_sha256`). That ledger, not this script's stdout, is the record.
+# (`tarball_sha256`) — both measured BEFORE the page runs, so they name the
+# inputs and not whatever the page left in their place. That ledger, not this
+# script's stdout, is the record.
 #
 # Page contract (written by extract_book.py):
 #   # TUP_TARBALL=name-version.tar.xz -> tarball extracted fresh, cwd inside
@@ -135,6 +137,23 @@ while read -r script <&3; do
   pkg=$(sed -n "s/^# TUP_TARBALL_$TUP_ARCH=//p" "$CHDIR/$script" | head -1)
   [ -n "$pkg" ] || pkg=$(sed -n 's/^# TUP_TARBALL=//p' "$CHDIR/$script" | head -1)
   plog="$LOG/$CH-$page.log"
+  # THE INPUT DIGESTS ARE TAKEN HERE, BEFORE ANYTHING RUNS, AND HELD. They used
+  # to be taken beside the log hash, after the page had returned — so a page
+  # that modified its own inputs while it built had the receipt record the bytes
+  # it LEFT BEHIND under the name of the bytes that RAN. Neither input is out of
+  # the page's reach: the build directory's parent is $LFS/sources, so the
+  # tarball is ../$pkg from the page's own cwd, and a page can rewrite its own
+  # file. Measured 2026-09-02: a page appending one byte to its archive and one
+  # line to its body produced a receipt naming both POST-run digests, "ok in
+  # 0s", exit 0 — the ledger absorbed the change instead of showing it. Held
+  # here and written unchanged below, the receipt states what went IN, and a
+  # mismatch against what is on disk afterwards is exactly what it now exposes.
+  if ! shash=$(tup_sha256 "$src"); then
+    echo "!!! $id: cannot sha256 the body about to run, $src"
+    echo "    refusing: the receipt would name a digest it does not have."
+    exit 1
+  fi
+  tb_json=null
   t0=$SECONDS
 
   if [ -n "$pkg" ]; then
@@ -142,6 +161,15 @@ while read -r script <&3; do
     if [ ! -s "$tarball" ]; then
       echo "!!! $id: tarball absent: $pkg" | tee -a "$plog"; exit 1
     fi
+    # Before extraction, for the reason given above: this is the archive that is
+    # about to be unpacked and handed to the page, not whatever stands at that
+    # path once the page has had its turn with it.
+    if ! thash=$(tup_sha256 "$tarball"); then
+      echo "!!! $id: cannot sha256 the tarball about to be extracted, $tarball"
+      echo "    refusing: the receipt would name a digest it does not have."
+      exit 1
+    fi
+    tb_json=$(tup_json_str "$thash")
     # ISOLATED EXTRACTION, because the archive names the directory an `rm -rf`
     # is about to be aimed at. Nothing is aimed at a name the archive chose:
     # extract into a fresh directory of OUR naming, look at what actually came
@@ -235,22 +263,9 @@ while read -r script <&3; do
   # entirely, and the old receipt recorded only the page — so the ledger could
   # not say whether the book built this system or we did, let alone from which
   # bytes. $src is whichever body actually ran; the tarball is its other input.
-  # These keys are ADDED, never renamed: a reader of the old five still parses.
-  if ! shash=$(tup_sha256 "$src"); then
-    echo "!!! $id: cannot sha256 the body that ran, $src (the page itself exited $rc)"
-    echo "    refusing: the receipt would name a digest it does not have."
-    exit 1
-  fi
+  # Both were hashed above, before the page could touch either. These keys are
+  # ADDED, never renamed: a reader of the old five still parses.
   ov_json=null;  [ -n "$ov" ]  && ov_json=$(tup_json_str "$ov")
-  tb_json=null
-  if [ -n "$pkg" ]; then
-    if ! thash=$(tup_sha256 "$tarball"); then
-      echo "!!! $id: cannot sha256 the tarball $tarball (the page itself exited $rc)"
-      echo "    refusing: the receipt would name a digest it does not have."
-      exit 1
-    fi
-    tb_json=$(tup_json_str "$thash")
-  fi
   echo "{\"ts\":$(tup_json_str "$(date -u +%FT%TZ)"),\"page\":$(tup_json_str "$id"),\"package\":$(tup_json_str "${pkg:-null}"),\"seconds\":$secs,\"exit\":$rc,\"log_sha256\":$(tup_json_str "$lhash"),\"override\":$ov_json,\"script_sha256\":$(tup_json_str "$shash"),\"tarball_sha256\":$tb_json}" >> "$RECEIPTS"
   if [ $rc -ne 0 ]; then
     echo "!!! $id FAILED (exit $rc, ${secs}s) — last lines of $plog:"
