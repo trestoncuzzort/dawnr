@@ -21,9 +21,12 @@
 #          firmware file at all, only the disk. kvm when /dev/kvm is
 #          openable, else tcg.
 #
-# Success is a LOGIN PROMPT on the serial console. Recorded to
-# tup/receipts/boot-witness-<date>.txt with the disk hash, the firmware
-# identity, the QEMU version, and the console transcript.
+# Success is the LITERAL `tup login:` prompt on the serial console, and a
+# kernel panic anywhere in the transcript outranks it. Recorded to
+# tup/receipts/boot-witness-<date>.txt with the disk's PRE-BOOT sha256 (or, for
+# a disk too large to hash in reasonable time, an explicit line saying so — the
+# receipt never just omits it), the firmware identity, the QEMU version, and
+# the console transcript.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ARCH="${TUP_ARCH:-arm64}"
@@ -117,12 +120,25 @@ else
 fi
 INVOCATION="${FWARGS[*]:0:6}, disk + firmware only; no -kernel, no -initrd, no -append"
 
-# Hash the disk BEFORE booting it: a boot remounts rw and changes the file,
-# so the witness names the bytes that were handed to the firmware.
-if command -v sha256sum >/dev/null; then
-    DISK_SHA=$(sha256sum "$DISK" | cut -d' ' -f1)
+# The receipt claims a disk hash, so take one BEFORE the boot: QEMU is handed
+# this file read-write, and every byte it changes afterwards is a byte the hash
+# no longer describes. The build disk measured 128849018880 bytes, which is
+# tens of minutes of I/O, so a ceiling decides — and when the ceiling refuses,
+# the receipt SAYS SO. An omitted line reads as "no hash was needed"; a stated
+# refusal reads as what it is. (stat -c first: GNU stat accepts `-f %z` as a
+# FILESYSTEM query and prints a block of filesystem statistics with exit 0, so
+# the BSD form must be the fallback, never the probe.)
+DISK_BYTES=$(stat -c %s "$DISK" 2>/dev/null || stat -f %z "$DISK" 2>/dev/null || echo 0)
+case "$DISK_BYTES" in ''|*[!0-9]*) DISK_BYTES=0;; esac
+HASH_MAX=${TUP_HASH_MAX_BYTES:-8589934592}       # 8 GiB; raise it to force one
+if [ "$DISK_BYTES" -eq 0 ]; then
+  DISK_SHA="not computed (size unknown — stat could not read $DISK)"
+elif [ "$DISK_BYTES" -gt "$HASH_MAX" ]; then
+  DISK_SHA="not computed (size $DISK_BYTES bytes, over the $HASH_MAX-byte ceiling; set TUP_HASH_MAX_BYTES to force it)"
 else
-    DISK_SHA=$(shasum -a 256 "$DISK" | cut -d' ' -f1)
+  echo "  hashing the disk before boot ($DISK_BYTES bytes)..."
+  DISK_SHA=$( { sha256sum "$DISK" 2>/dev/null || shasum -a 256 "$DISK" 2>/dev/null; } | cut -d' ' -f1 )
+  [ -n "$DISK_SHA" ] || DISK_SHA="not computed (no sha256sum or shasum on PATH)"
 fi
 echo "booting tup ($ARCH) from $DISK (nothing else attached), accel $ACCEL"
 echo "  disk sha256 $DISK_SHA (before this boot)"
@@ -139,34 +155,48 @@ fi
     -netdev user,id=n0 -device virtio-net-pci,netdev=n0 \
     > "$LOG" 2>&1 < /dev/null ) &
 QPID=$!
-# Wait for a login prompt, a kernel panic, or the timeout, whichever first.
+# Wait for a kernel panic, a login prompt, or the timeout — whichever first,
+# and the ORDER IS THE POINT. One polling window can hold both a prompt and the
+# panic that followed it; the panic is the news. Checking the prompt first, as
+# this loop used to, broke out of the loop and filed a dead system as BOOTED.
+#
+# And the prompt is the LITERAL `tup login:`. A bare "login:" appears in a
+# foreign banner ("ubuntu login:"), in the complaint of a userspace that never
+# reached a prompt ("login: no shell: /bin/sh: not found"), and inside ordinary
+# words ("setup login:") — which is what the leading boundary refuses.
 T0=$SECONDS
 for i in $(seq 1 120); do
   sleep 2
-  grep -qE "tup login:|login:" "$LOG" 2>/dev/null && { VERDICT="BOOTED"; break; }
   grep -qE "Kernel panic|Attempted to kill init|not syncing" "$LOG" 2>/dev/null && { VERDICT="PANIC"; break; }
+  grep -qE "(^|[^[:alnum:]_-])tup login:" "$LOG" 2>/dev/null && { VERDICT="BOOTED"; break; }
   kill -0 $QPID 2>/dev/null || { VERDICT="QEMU EXITED"; break; }
 done
 ELAPSED=$((SECONDS - T0))
 VERDICT="${VERDICT:-TIMEOUT (240s, no login prompt)}"
 kill $QPID 2>/dev/null; wait $QPID 2>/dev/null
-set -e
 
+# NO `set -e` here, deliberately. The receipt is this run's only durable
+# output, and `set -e` used to be switched on immediately before writing it: a
+# single non-zero step inside the block — a `tail` on a console log QEMU never
+# managed to create — aborted the script mid-write. The transcript was lost,
+# the VERDICT never reached stdout, and the caller got exit 1, which is
+# indistinguishable from "it did not boot". Every line below carries its own
+# fallback instead, and the exit status is the verdict's, on the last line.
 OUT="$RECEIPTS/boot-witness-$ARCH-$STAMP.txt"
 {
   echo "tup boot witness ($ARCH), $STAMP"
   echo "VERDICT: $VERDICT (after ${ELAPSED}s)"
   echo
   echo "disk      : $DISK"
-  echo "disk bytes: $(stat -f %z "$DISK" 2>/dev/null || stat -c %s "$DISK")"
-  echo "disk sha256: $DISK_SHA (before this boot; a boot mutates the disk)"
+  echo "disk bytes: $DISK_BYTES"
+  echo "disk sha256: ${DISK_SHA:-not computed (the hash step did not run)} (before this boot; a boot mutates the disk)"
   echo "firmware  : $FW_CODE"
   echo "qemu      : $("$QEMU" --version | head -1)"
   echo "host      : $(uname -sm), accel $ACCEL"
   echo "invocation: $INVOCATION; tup booted itself."
   echo
   echo "--- console transcript (last 60 lines) ---"
-  tail -60 "$LOG"
+  tail -60 "$LOG" 2>/dev/null || echo "(no console log at $LOG — QEMU wrote none)"
 } > "$OUT"
 echo
 echo "VERDICT: $VERDICT"
