@@ -99,7 +99,7 @@ def main() -> int:
                 continue
             try:
                 real_src = lower(task, task["body"])
-                twin_src = lower(task, twin_body)
+                twin_src = lower(task, twin_body, witness=w)
             except NotImplementedError as e:
                 rows[name][bname] = ("abstain", "abstain", True)
                 all_ok = False

@@ -515,7 +515,7 @@ bodies are axiomatized as total logic functions, so an `at` inside a
 spec_fun applied outside its guarded range keeps the reflexivity hole;
 the committed tasks guard their ranges.
 
-### 10.7 Purge incompleteness-sold-as-refutation, everywhere
+### 10.7 Purge incompleteness-sold-as-refutation: the 39 purged 2026-09-02; one dafny door remains
 
 The SPARK fix was the first instance found, not the only one. Ground-truth
 fuzzing measured 39 cells refuting a task true by construction: Verus on
@@ -525,23 +525,96 @@ failure" as disproof, Frama-C returning a goal whose own status is
 `Timeout`. Every one violates the rule `verifiers/__init__.py` already
 states. Two consequences: a kernel's REFUTED cannot be used as evidence
 against the oracle, and any twin flip resting on such a verdict was never
-measured. Fixing this will cost more flips, as SPARK's did. That is the
-price of the number meaning something.
+measured.
 
-### 10.8 Restore SPARK's flip, honestly
+**Purged.** Every give-up signal the four columns had been selling as
+REFUTED now mints UNPROVED (stopped without countermodel, without budget
+exhaustion) or TIMEOUT (budget fired): Lean and Rocq renamed their
+`REFUTED_MARKS` to `UNPROVED_MARKS` and demoted them, Verus demoted bare
+`errors > 0`, Frama-C partitions unproved goals by the goal's own status.
+REFUTED has exactly one door per column: positive kernel evidence, either a
+countermodel the kernel confirms by execution or a kernel-accepted
+refutation certificate (10.8's mechanism, adopted by verus, framac, lean
+and rocq as well as spark). Full matrix re-run 2026-09-02: exit 1, 194 s
+parallel, all 77 real cells still verified, 71 of 77 twins refuted on the
+new evidence. The purge cost six flips: framac's invariant-drop twins
+(all_nonneg, contains, count_matches, linear_search, seq_max, sum_upto)
+degrade to `verified / timeout`, correctly twice over, because their
+witnesses are loop-exit states rather than program inputs and WP's step
+budget fires before any countermodel. A ground-truth re-sweep with
+`truth_fuzz.py` (2026-09-02, `--mirror 16`, 194 tasks, 1357 cells, flake
+n=3, 213 s) measures ZERO REFUTES-TRUE cells in the five purged columns
+and in fstar. Exactly one remains machine-wide, and it is the one door
+this wave did not touch: `verifiers/dafny.py` mints REFUTED on kernel
+exit 4, which is could-not-prove, not a countermodel, and on
+`gt_q_ex_lit` (true by construction; an existential the solver will not
+instantiate unprompted) that door sells incompleteness as refutation.
+Lean and rocq now honestly read unproved on the same task; spark, framac
+and fstar verify it. Bringing the dafny door inside the law, with the
+certificate protocol or with dafny's own countermodel reporting, is the
+remaining scope of this item.
+
+Residuals, on the record: (1) `truth_fuzz.py` and `fuzz_lower.py` call
+`lower(task, body)` without the witnesses they hold for FALSE rows, so the
+purged columns can no longer mint REFUTED on FALSE fuzz rows and those
+cells grade as incompleteness; if FALSE rows should grade `pass` again,
+the certificate protocol has to be threaded through the fuzz instruments
+the way `harness.py` threads it through the suite. (2) The verus adapter
+cannot check that the certificate's asserted formula IS the negated spec at
+the measured witness; that binding lives in the trusted lowering, so a
+hand-planted certificate in a passing real program mints REFUTED per the
+protocol (declaring the name can never mint VERIFIED, so planting it only
+demotes). (3) The certificate names are protocol constants
+(`t_refutation_certificate`, SPARK's `T_Refutation_Certificate`,
+framac's `t_certificate`); the lowerings emit them only on twin calls,
+where `harness.py` passes the measured witness.
+
+### 10.8 Restore SPARK's flip, honestly: DONE 2026-09-02, all 11 recovered
 
 Nine of eleven SPARK twins read `verified / timeout`: gnatprove verifies
 the real program but cannot produce a countermodel for the twin under the
 unbounded model. `abs` and `max` were recovered with a confirmed
-countermodel (its small-step RAC actually executing it). If the remaining
-nine cannot be recovered under a sound model, the honest outcome is to
-record SPARK as verify-only rather than manufacture a flip.
+countermodel (its small-step RAC actually executing it).
 
-### 10.9 Pin the loop frame rule in SPEC.md
+**Recovered, not verify-only.** All 11 twins now flip. `abs` and `max`
+keep their RAC-confirmed countermodels (classification hoists that channel
+above the certificate, so their evidence signature is unchanged); the other
+nine are refuted through the witness certificate: `lower_spark.py`
+restates the harness's measured witness as one extra expression function,
+`T_Refutation_Certificate` with `Post => 'Result`, whose body is the
+negated spec at the witness ground over the file's own twin, and gnatprove
+discharges every check of it (severity info, VC_POSTCONDITION among them).
+Emitted only on twin calls; the adapter mints REFUTED only when the kernel
+discharges the certificate in full. No cell degraded: the nine went
+TIMEOUT to REFUTED and all 11 reals still verify. The same protocol is what
+10.7's purge handed to verus, framac, lean and rocq.
 
-Gate 2 says only "the standard partial-correctness-plus-termination
-package" and never states which variables a loop havocs. A lowering that
+### 10.9 Pin the loop frame rule in SPEC.md: DONE 2026-09-02
+
+Gate 2 said only "the standard partial-correctness-plus-termination
+package" and never stated which variables a loop havocs. A lowering that
 havocs everything and one that havocs only the assigned set prove different
 theorems, which is exactly how two lowerings drift apart without either
-looking wrong. The behaviour of an undefined `requires` is likewise
+looking wrong. The behaviour of an undefined `requires` was likewise
 unspecified. Both were found by the oracle-validation pass.
+
+**Pinned, both.** SPEC.md Gate 2 now states the frame rule normatively: a
+while loop havocs exactly the syntactic assigned set of its body
+(AST-computed, if- and nested-while targets count, body-declared locals
+scoped out, intersected with the names in scope), every other variable is
+preserved with no invariant owed, and an empty-havoc loop is a refusable
+shape. The two-probe audit (2026-09-02, a return assigned before the loop
+and never inside it; a prefix local never assigned in the loop and read
+after it) measured dafny, verus and framac already implementing the rule
+and verifying both probes, while fstar, lean, rocq and spark threaded every
+in-scope mutable through their loop encodings, the havoc-everything
+theorem: lean and rocq scored both probes UNPROVED, spark TIMEOUT, fstar
+REFUTED. All four were fixed the same day; with the fixes all seven kernels
+verify both probes, flake-checked, and the emitted artifacts for every
+committed task are byte-identical to before, because every committed loop
+assigns every variable in scope. Undefined `requires` is likewise now
+normative in the Definedness section: the clauses owe definedness
+unconditionally, a task whose requires is undefined at an admissible
+input is DEFECTIVE, and the
+measured probe shows six of seven lowerings surface it; framac is the
+recorded gap, per its docstring.

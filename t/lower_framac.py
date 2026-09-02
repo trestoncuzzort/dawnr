@@ -579,9 +579,221 @@ def spec_fun_acsl(f: dict, funs: dict) -> list:
     return lines
 
 
+# ------------------------------------------------ refutation certificate ----
+#
+# THE CERTIFICATE (shared protocol, ROADMAP 10.7): WP with alt-ergo never
+# distinguishes a false goal from a hard one (verifiers/framac.py records the
+# side-by-side measurement), so the adapter no longer mints REFUTED from an
+# unproved goal. To EARN a twin refutation, the twin file carries a second
+# function that replays the twin computation at the measured witness input as
+# straight-line ground code, ending in one ACSL assert named exactly
+# t_refutation_certificate: the negation of the instantiated ensures
+# (definedness guards included, since t counts an undefined ensures as
+# unsatisfied). The adapter mints REFUTED only when the kernel accepts that
+# assert AND every other goal of the certificate function; a rejected
+# certificate is UNPROVED, never REFUTED.
+#
+# Branch discipline, measured 2026-09-02: a ground-decided `if` in the
+# certificate makes its untaken arm dead code, and -wp-smoke-tests fails the
+# dead-code smoke goal (`Failed smoke-test` on cert_deadif.c), which scores
+# the whole file VACUOUS. So the certificate contains NO branches at all:
+# every `if` is resolved to the taken arm behind an emitted
+# `/*@ assert cond; */` (or its negation), and every `while` is unrolled to
+# its measured trace, one `assert cond;` per iteration plus a final
+# `assert !cond;`. Each branch decision is therefore a kernel-checked goal:
+# if the lowering's replay disagrees with the program, some assert fails,
+# the certificate is rejected, and the file honestly reads UNPROVED. A
+# mis-replay can never mint, only fail.
+#
+# Scope, stated rather than stretched: only a whole-program `value` witness
+# whose twin value falsifies `ensures` (_ens is True) is certificatable.
+# An `exit`/`preservation` witness names a loop state, not an input, and its
+# twin computes the right value on every input, so no ground refutation of
+# the program exists and none is forced. An `undefined`/no-value witness and
+# a twin body carrying a task self-call (recursion has no bounded ground
+# unrolling here) are likewise skipped. Skipping means the twin cell reads
+# timeout/unproved and the flip is honestly lost.
+
+CERT_FN = "t_certificate"
+CERT_GOAL = "t_refutation_certificate"
+MAX_CERT_STMTS = 256
+
+
+class _CertSkip(Exception):
+    """This witness cannot be expressed as a ground certificate; the twin
+    file is emitted without one (never a hard failure)."""
+
+
+def _cev(e: dict, st: dict):
+    """Ground evaluation of an EXECUTABLE t expression at concrete state,
+    used only to pick branches and count loop iterations. Every decision it
+    makes is re-emitted as a kernel goal, so a slip here rejects the
+    certificate rather than corrupting it."""
+    if "int" in e:
+        return e["int"]
+    if "bool" in e:
+        return e["bool"]
+    if "var" in e:
+        if e["var"] not in st:
+            raise _CertSkip(f"unassigned variable {e['var']} read")
+        return st[e["var"]]
+    if "ite" in e:
+        i = e["ite"]
+        return _cev(i["then"] if _cev(i["cond"], st) else i["else"], st)
+    if "call" in e:
+        raise _CertSkip("call in executable position")
+    if "forall" in e or "exists" in e:
+        raise _CertSkip("quantifier in executable position")
+    op, args = e["op"], e.get("args", [])
+    if op == "len":
+        return len(_cev(args[0], st))
+    if op == "at":
+        s, i = _cev(args[0], st), _cev(args[1], st)
+        if not 0 <= i < len(s):
+            raise _CertSkip("undefined at in replay")
+        return s[i]
+    if op == "neg":
+        return -_cev(args[0], st)
+    if op == "not":
+        return not _cev(args[0], st)
+    if op == "and":
+        return all(_cev(a, st) for a in args)
+    if op == "or":
+        return any(_cev(a, st) for a in args)
+    if op == "implies":
+        return (not _cev(args[0], st)) or _cev(args[1], st)
+    if op in ARITH:
+        a, b = _cev(args[0], st), _cev(args[1], st)
+        return {"+": a + b, "-": a - b, "*": a * b}[op]
+    if op in CMP:
+        a, b = _cev(args[0], st), _cev(args[1], st)
+        return {"==": a == b, "!=": a != b, "<": a < b, "<=": a <= b,
+                ">": a > b, ">=": a >= b}[op]
+    raise _CertSkip(f"no ground evaluation for operator {op!r}")
+
+
+def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
+                out: list, count: list) -> Ctx:
+    """Branch-free replay of `body` at state `st`: straight-line C plus one
+    assert per branch decision. Locals are predeclared by the caller, so a
+    `var` statement lands as a plain assignment (an unrolled loop iteration
+    would otherwise redeclare it)."""
+    ind = "  "
+    for s in body:
+        count[0] += 1
+        if count[0] > MAX_CERT_STMTS:
+            raise _CertSkip("replay exceeds the statement cap")
+        if "assign" in s:
+            n, e = s["assign"]
+            out += at_asserts(e, ctx, ind)
+            out.append(f"{ind}{n} = {cexpr(e, ctx.env, ctx.funs, name)};")
+            st[n] = _cev(e, st)
+        elif "var" in s:
+            v = s["var"]
+            out += at_asserts(v["init"], ctx, ind)
+            ctx = ctx.bind(v["name"], v["type"])
+            out.append(f"{ind}{v['name']} = "
+                       f"{cexpr(v['init'], ctx.env, ctx.funs, name)};")
+            st[v["name"]] = _cev(v["init"], st)
+        elif "if" in s:
+            c = s["if"]
+            out += at_asserts(c["cond"], ctx, ind)
+            g = pred(c["cond"], ctx)
+            taken = _cev(c["cond"], st)
+            out.append(f"{ind}/*@ assert {g if taken else f'(!{g})'}; */")
+            ctx = _cert_stmts(c["then"] if taken else c["else"],
+                              ctx, st, name, out, count)
+        elif "while" in s:
+            w = s["while"]
+            if code_ats(w["cond"], ctx.env):
+                raise _CertSkip("`at` in a while condition")
+            g = pred(w["cond"], ctx)
+            while _cev(w["cond"], st):
+                count[0] += 1
+                if count[0] > MAX_CERT_STMTS:
+                    raise _CertSkip("replay exceeds the statement cap")
+                out.append(f"{ind}/*@ assert {g}; */")
+                ctx = _cert_stmts(w["body"], ctx, st, name, out, count)
+            out.append(f"{ind}/*@ assert (!{g}); */")
+        else:
+            raise _CertSkip(f"no replay for statement {s!r}")
+    return ctx
+
+
+def _tty(v):
+    """Value tagged with its t type (bool is not int; interp._tv precedent,
+    restated locally so this file keeps importing nothing of interp's)."""
+    return ("bool", v) if isinstance(v, bool) else ("int", v)
+
+
+def certificate(task: dict, twin_body: list, w: dict,
+                env: dict, funs: dict, used: set) -> str | None:
+    """The certificate function's source text, or None with the reason left
+    to the caller's honesty: only a certifiable witness earns one."""
+    if w.get("_kind") != "value" or w.get("_ens") is not True:
+        return None                    # loop-state or non-falsifying witness
+    if not isinstance(w.get("_twin"), (bool, int)):
+        return None                    # no-value twins have no ground replay
+    if CERT_FN in used or CERT_GOAL in used:
+        return None                    # a task name would collide or forge
+    ret, rett = task["returns"][0]["name"], task["returns"][0]["type"]
+    st, decls = {}, []
+    try:
+        for p in task["params"]:
+            if p["name"] not in w:
+                return None
+            v = w[p["name"]]
+            if p["type"] == "seq":
+                # ACSL has no implicit array-to-pointer conversion
+                # (measured: a logic call over a local array is refused as
+                # annot-error), so the array gets a fresh backing name and
+                # the seq name is bound as the pointer, exactly the shape
+                # the twin function's own parameter has.
+                arr = f"t_cert_{p['name']}"
+                if arr in used:
+                    return None
+                vals = [int(x) for x in v]
+                init = ", ".join(str(x) for x in vals) or "0"
+                decls.append(f"  int {arr}[{max(len(vals), 1)}] = "
+                             f"{{{init}}};")
+                decls.append(f"  int *{p['name']} = {arr};")
+                decls.append(f"  int {p['name']}_n = {len(vals)};")
+                st[p["name"]] = vals
+            else:
+                decls.append(f"  int {p['name']} = "
+                             f"{int(v) if isinstance(v, bool) else v};")
+                st[p["name"]] = v
+        _, dec = assigned_names(twin_body)
+        names = [ret] + [d for d in dec if d != ret]
+        if len(set(dec)) != len(dec) or set(dec) & set(st):
+            return None                # flattening scopes would collide
+        decls += [f"  int {n};" for n in names]
+        body_out: list = []
+        _cert_stmts(twin_body, Ctx(env, funs, ret=None, label="Here"),
+                    st, task["name"], body_out, [0])
+        if _tty(st.get(ret)) != _tty(w["_twin"]):
+            return None                # replay disagrees with the witness
+    except (_CertSkip, NotImplementedError, ValueError, KeyError,
+            TypeError, RecursionError):
+        return None
+    ctx = Ctx(env, funs, ret=None, label="Here")
+    pieces = []
+    for e in task["ensures"]:
+        d, p = defs(e, ctx), pred(e, ctx)
+        pieces.append(f"({p})" if d is None else f"((({d}) && ({p})))")
+    lines = ["", "/*@ assigns \\nothing; */",
+             f"void {CERT_FN}(void) {{", *decls, *body_out,
+             f"  /*@ assert {CERT_GOAL}: !({' && '.join(pieces)}); */",
+             "  return;", "}", ""]
+    return "\n".join(lines)
+
+
 # -------------------------------------------------------------- lowering ----
 
-def lower(task: dict, body: list) -> str:
+# `witness` is the twin's measured witness (harness.twin_cached). Twin call
+# sites pass it; when it is certifiable, the emitted file carries the
+# refutation certificate (see the section above).
+def lower(task: dict, body: list, witness: dict | None = None) -> str:
     name, ret = task["name"], task["returns"][0]["name"]
     rett = task["returns"][0]["type"]
     env = {p["name"]: p["type"] for p in task["params"]}
@@ -646,12 +858,15 @@ def lower(task: dict, body: list) -> str:
 
     body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here"),
                        name, "  ")
+    cert = (certificate(task, body, witness, env, funs, used)
+            if witness is not None else None)
     return ("\n".join(header) + ("\n" if header else "")
             + "/*@\n" + "\n".join(clauses) + "\n*/\n"
             + f"int {name}_t({', '.join(cparams)}) {{\n"
             + f"  int {ret};\n"
             + "\n".join(body_lines) + "\n"
-            + f"  return {ret};\n}}\n")
+            + f"  return {ret};\n}}\n"
+            + (cert or ""))
 
 
 if __name__ == "__main__":

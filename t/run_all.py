@@ -74,7 +74,7 @@ def main() -> int:
                 continue
             try:
                 real_src = lower(task, task["body"])
-                twin_src = lower(task, twin_body)
+                twin_src = lower(task, twin_body, witness=w)
             except NotImplementedError as e:
                 # An explicit ABSTAIN from the lowering: a recorded absence.
                 cell = ("abstain", "abstain", True)

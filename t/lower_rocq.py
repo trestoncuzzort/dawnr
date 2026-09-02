@@ -45,7 +45,10 @@ v1 (`"t": 1`) opens the three gates for this backend:
   f_equal, backward chaining). Every discharge ends in the kernel: lia,
   assumption, congruence. A goal the engine cannot close fails with
   "Tactic failure: unsolved t verification condition", which the adapter
-  classifies REFUTED — the honest can't-prove, never a shape error.
+  classifies UNPROVED: the honest can't-prove, never a shape error and
+  never a refutation. REFUTED has exactly one door, the
+  witness-grounded t_refutation_certificate this file emits when the
+  harness hands a measured twin witness it can ground.
 
 Every file ends with `Print Assumptions`, so the axiom audit ships inside the
 artifact. No Admitted, no Axiom — the adapter bans the tokens outright.
@@ -60,6 +63,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                 # noqa: E402
+import interp                                  # noqa: E402
 from verifiers import rocq as rocq_backend     # noqa: E402
 
 # --------------------------------------------------------------------------
@@ -155,7 +159,11 @@ def body_expr0(body: list, ret: str) -> str:
     raise ValueError("t v0 -> rocq: body not expressible as one expression")
 
 
-def lower_v0(task: dict, body: list) -> str:
+def lower_v0(task: dict, body: list, witness: dict | None = None) -> str:
+    if witness is not None:
+        cert = _v0_cert(task, body, witness)
+        if cert is not None:
+            return cert
     name, ret = task["name"], task["returns"][0]["name"]
     params = " ".join(p["name"] for p in task["params"])
     binder = " ".join(f"({p['name']} : Z)" for p in task["params"])
@@ -456,7 +464,9 @@ RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
 
 
 def _ck(name: str) -> str:
-    if name in RESERVED or name.endswith("_len") or name.startswith("sf_"):
+    if (name in RESERVED or name.endswith("_len") or name.startswith("sf_")
+            or name.startswith("t_")):
+        # t_ is the certificate/tactic namespace (t_w_*, t_H, t_dis, ...)
         raise NotImplementedError(
             f"rocq lowering: identifier {name!r} collides with the lowering's "
             f"namespace")
@@ -508,7 +518,9 @@ class Ctx:
         assert "var" in e, "t v1: seq values are parameters, not expressions"
         v = e["var"]
         assert (self.tys.get(v) == "seq"), f"{v} is not a seq"
-        return v, f"{v}_len"
+        # env may carry a concrete instantiation (certificates substitute
+        # t_w_<v> and a literal length); absent that, the plain names.
+        return env.get(v, v), env.get(v + "_len", f"{v}_len")
 
     def call(self, e: dict, env: dict, local: dict) -> str:
         c = e["call"]
@@ -716,6 +728,21 @@ def has_self_call(node, name: str) -> bool:
     if isinstance(node, list):
         return any(has_self_call(v, name) for v in node)
     return False
+
+
+def loop_assigned(body: list) -> set:
+    """Syntactic assigned set of a loop body, SPEC.md's frame rule: a while
+    loop havocs exactly the variables assigned in its body."""
+    out: set = set()
+    for s in body:
+        if "assign" in s:
+            out.add(s["assign"][0])
+        elif "if" in s:
+            out |= loop_assigned(s["if"]["then"])
+            out |= loop_assigned(s["if"]["else"])
+        elif "while" in s:
+            out |= loop_assigned(s["while"]["body"])
+    return out
 
 
 def find_while(body: list):
@@ -1000,7 +1027,11 @@ def header() -> str:
             "Open Scope Z_scope.\n\n" + PRELUDE + "\n")
 
 
-def lower_v1(task: dict, body: list) -> str:
+def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
+    if witness is not None:
+        cert = _try_cert_v1(task, body, witness)
+        if cert is not None:
+            return cert
     cx = Ctx(task)
     name = task["name"]
     ret = task["returns"][0]["name"]
@@ -1149,7 +1180,17 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
                  + ["Hfuel"] + [f"Hinv{k+1}" for k in range(n_invs)])
     lemma_hyps = "".join(f"  {h} ->\n" for h in lens + reqs)
     inv_hyps = "".join(f"  {p} ->\n" for p in invs)
-    concl = " /\\ ".join(invs_p + [f"(~ {guard_pp})"])
+    # SPEC.md frame rule: the loop havocs exactly the syntactic assigned set
+    # of its body, so the loop lemma's conclusion also carries one frame
+    # equality per state var the body never assigns (its output component
+    # equals its input; the Fixpoint threads it through unchanged, so the
+    # same fuel induction proves it). Without these the final theorem knew
+    # only invariants + negated guard about the tuple, the havoc-everything
+    # reading: fr_probe_ret / fr_probe_local were unprovable here while
+    # Dafny, Verus and Frama-C proved them (measured 2026-09-02).
+    frame = [v for v in svars if v not in loop_assigned(w["body"])]
+    concl = " /\\ ".join(invs_p + [f"(~ {guard_pp})"]
+                         + [f"{v}' = {v}" for v in frame])
 
     ens = ensures_text(cx, f"({name}_t {pargs})")
     state_names = " ".join(svars)
@@ -1290,10 +1331,492 @@ Qed.
 """
 
 
-def lower(task: dict, body: list) -> str:
+# --------------------------------------------------------------------------
+# Refutation certificates (ROADMAP 10.7: the ONE door to REFUTED).
+#
+# When the harness hands a measured twin witness, the twin file is lowered
+# as the twin PROGRAM (its definitions, unchanged) plus a single goal named
+# t_refutation_certificate: the spec instantiated at the concrete witness,
+# negated, proved by ground evaluation inside the kernel (cbv/reflexivity
+# equations plus the file's own engine; no vm_compute, no native_compute,
+# so the trust story is exactly the adapter's kernel-plus-coqchk one). The
+# adapter mints REFUTED if and only if that goal is declared and the kernel
+# accepted the file under the full audit discipline. A certificate the
+# kernel rejects fails the file and mints UNPROVED, never REFUTED; a
+# witness kind this lowering cannot ground (an "undefined" twin, or a
+# value twin whose ensures still holds under the totalized seq model)
+# yields no certificate and the cell honestly reads verified/unproved.
+#
+# Witness kinds and their certificate statements:
+#   value        ~ (ensures at the concrete input, r := name_t <input>)
+#   exit         ~ (forall params state, lens -> requires -> surviving
+#                   invariants -> ~guard -> ensures[r := result]),
+#                a kernel-checked countermodel to the exit entailment the
+#                dropped invariant was carrying
+#   preservation the same with the guard positive and the stepped
+#                invariants as the conclusion
+# --------------------------------------------------------------------------
+
+CERT_NAME = "t_refutation_certificate"
+
+T_FEED = r"""Ltac t_feed H :=
+  repeat lazymatch type of H with
+  | ?A -> ?B =>
+      let D := fresh "t_D" in
+      assert (D : A) by t_dis; specialize (H D); clear D
+  end.
+"""
+
+
+def _zlit(v) -> str:
+    n = int(v)
+    return f"({n})" if n < 0 else str(n)
+
+
+def _glit(v, ty: str) -> str:
+    if ty == "bool":
+        return "true" if v else "false"
+    return _zlit(v)
+
+
+def _seq_lambda(vals: list) -> str:
+    if not vals:
+        return "fun _ : Z => 0"
+    expr = "0"
+    for k in range(len(vals) - 1, -1, -1):
+        expr = f"if t_k =? {k} then {_zlit(vals[k])} else ({expr})"
+    return f"fun t_k : Z => {expr}"
+
+
+def _fv(e, bound: set) -> set:
+    """Free variables of a t expression."""
+    if not isinstance(e, dict):
+        return set()
+    if "int" in e or "bool" in e:
+        return set()
+    if "var" in e:
+        return set() if e["var"] in bound else {e["var"]}
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        return (_fv(q["lo"], bound) | _fv(q["hi"], bound)
+                | _fv(q["body"], bound | {q["var"]}))
+    if "ite" in e:
+        c = e["ite"]
+        return (_fv(c["cond"], bound) | _fv(c["then"], bound)
+                | _fv(c["else"], bound))
+    if "call" in e:
+        out = set()
+        for a in e["call"]["args"]:
+            out |= _fv(a, bound)
+        return out
+    out = set()
+    for a in e.get("args", []):
+        out |= _fv(a, bound)
+    return out
+
+
+def _max_calls(e, known: set, out: list) -> list:
+    """Maximal call nodes with every free var in `known`, skipping anything
+    under a quantifier (rewrite cannot cross a binder; the engine handles
+    those through t_eqs and seeded instantiation instead)."""
+    if not isinstance(e, dict):
+        return out
+    if "call" in e and _fv(e, set()) <= known:
+        out.append(e)
+        return out
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        _max_calls(q["lo"], known, out)
+        _max_calls(q["hi"], known, out)
+        return out
+    if "ite" in e:
+        c = e["ite"]
+        for x in (c["cond"], c["then"], c["else"]):
+            _max_calls(x, known, out)
+        return out
+    if "call" in e:
+        for a in e["call"]["args"]:
+            _max_calls(a, known, out)
+        return out
+    for a in e.get("args", []):
+        _max_calls(a, known, out)
+    return out
+
+
+def _falsified_conjunct(task: dict, body: list, env_py: dict) -> bool:
+    """True iff some ensures conjunct evaluates cleanly False at env_py.
+    Only then is the certificate's negation TRUE and provable; an Undef
+    conjunct proves nothing, because the lowered (totalized-seq) model may
+    satisfy it."""
+    funs = interp.funs_of(task, body)
+    for e in task["ensures"]:
+        try:
+            if not interp.ev(e, dict(env_py), funs, interp.St()):
+                return True
+        except Exception:                                   # noqa: BLE001
+            continue
+    return False
+
+
+def _witness_env(task: dict, witness: dict):
+    """(env_py, env_txt, seq_defs, ptw, spec_args) for the params. env_txt
+    maps each param (and <seq>_len) to its concrete Coq term; ptw is the
+    pointwise-fact asserts that seed the engine's instantiation arms."""
+    env_py, env_txt, seq_defs, ptw, sets, spec_args = {}, {}, [], [], [], []
+    for p in task["params"]:
+        v = p["name"]
+        if v not in witness:
+            return None
+        wv = witness[v]
+        if p["type"] == "seq":
+            vals = list(wv)
+            env_py[v] = vals
+            env_txt[v] = f"t_w_{v}"
+            env_txt[v + "_len"] = _zlit(len(vals))
+            seq_defs.append(
+                f"Definition t_w_{v} : Z -> Z := {_seq_lambda(vals)}.\n")
+            for k, x in enumerate(vals):
+                ptw.append(f"  assert (t_p_{v}_{k} : t_w_{v} {k} = "
+                           f"{_zlit(x)}) by reflexivity.\n")
+            # the engine's saturation arms guard on is_var, and a global
+            # constant is not one: give the seq back its name as a local
+            sets.append(f"  set ({v} := t_w_{v}) in *.\n")
+            spec_args += [f"t_w_{v}", env_txt[v + "_len"]]
+        else:
+            env_py[v] = wv
+            env_txt[v] = _glit(wv, p["type"])
+            spec_args.append(env_txt[v])
+    return env_py, env_txt, seq_defs, ptw, sets, spec_args
+
+
+def _call_asserts(cx, task, body, asts, env_py, env_render, in_hyp=None):
+    """assert/rewrite lines computing every ground spec_fun application to
+    its kernel-checked literal (cbv; reflexivity), so the closing engine
+    never needs deep fuel unfolding."""
+    funs = interp.funs_of(task, body)
+    known = set(env_render)
+    calls: list = []
+    for e in asts:
+        _max_calls(e, known, calls)
+    lines, seen, k = [], set(), 0
+    where = f" in {in_hyp}" if in_hyp else ""
+    for cnode in calls:
+        term = cx.call(cnode, env_render, {})
+        if term in seen:
+            continue
+        seen.add(term)
+        try:
+            val = interp.ev(cnode, dict(env_py), funs, interp.St())
+        except Exception:                                   # noqa: BLE001
+            continue
+        k += 1
+        rt = cx.sfres[cnode["call"]["fun"]]
+        lines.append(f"  assert (t_c{k} : {term} = {_glit(val, rt)}) "
+                     f"by (cbv; reflexivity).\n")
+        lines.append(f"  try rewrite t_c{k}{where}.\n")
+    return lines
+
+
+def _plain_def(cx, task, body):
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    pb, _ = param_binders(cx)
+    local: dict = {}
+    env0 = {ret: "false" if ret_t == "bool" else "0"}
+    env = exec_straight(cx, body, env0, local, None, [], [])
+    return (f"Definition {task['name']}_t {pb} : {rty(ret_t)} := "
+            f"{env[ret]}.\n")
+
+
+def _rec_def(cx, task, body):
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    pb, pargs = param_binders(cx)
+    default = "false" if ret_t == "bool" else "0"
+    if "decreases" not in task:
+        return None
+    measure = cx.zx(task["decreases"], {}, {})
+    cx.callpre[name] = f"{name}_fuel fu"
+    local: dict = {}
+    env = exec_straight(cx, body, {ret: default}, local, None, [], [])
+    body_fuel = env[ret]
+    del cx.callpre[name]
+    return (f"Fixpoint {name}_fuel (fuel : nat) {pb} : {rty(ret_t)} :=\n"
+            f"  match fuel with\n"
+            f"  | O => {default}\n"
+            f"  | S fu => {body_fuel}\n"
+            f"  end.\n\n"
+            f"Definition {name}_t {pb} : {rty(ret_t)} :=\n"
+            f"  {name}_fuel (S (Z.to_nat {measure})) {pargs}.\n")
+
+
+def _loop_def(cx, task, prefix, w, suffix):
+    """The twin loop's Fixpoint + Definition (no lemmas), plus the pieces a
+    loop certificate needs. Mirrors gen_loop's construction with the
+    definedness collection off."""
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    pb, pargs = param_binders(cx)
+    local: dict = {}
+    env0 = {ret: "false" if ret_t == "bool" else "0"}
+    env_pre = exec_straight(cx, prefix, env0, local, None, [], [])
+    svars = [ret] + [s["var"]["name"] for s in prefix if "var" in s]
+    stys = {v: (local.get(v) or cx.tys[v]) for v in svars}
+    id_env = {v: v for v in svars}
+    guard_b = cx.bx(w["cond"], id_env, local)
+    step_env = exec_straight(cx, w["body"], id_env, dict(local), None, [], [])
+    env_post = exec_straight(cx, suffix, id_env, dict(local), None, [], [])
+    dec0 = cx.zx(w["decreases"], {v: env_pre[v] for v in svars}, local)
+    init_terms = " ".join(env_pre[v] for v in svars)
+    step_terms = " ".join(step_env[v] for v in svars)
+    tup_ty = "(" + " * ".join(rty(stys[v]) for v in svars) + ")%type"
+    tup = "(" + ", ".join(svars) + ")"
+    sb = " ".join(f"({v} : {rty(stys[v])})" for v in svars)
+    text = f"""Fixpoint {name}_loop (fuel : nat) {pb} {sb} : {tup_ty} :=
+  match fuel with
+  | O => {tup}
+  | S fu =>
+      if {guard_b}
+      then {name}_loop fu {pargs} {step_terms}
+      else {tup}
+  end.
+
+Definition {name}_t {pb} : {rty(ret_t)} :=
+  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms}
+  in {env_post[ret]}.
+"""
+    return text, dict(svars=svars, stys=stys, id_env=id_env, local=local,
+                      step_env=step_env, env_post=env_post, sb=sb)
+
+
+def _value_cert(cx, task, body, witness, def_text):
+    """Certificate chunk for a whole-program value witness, or None."""
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    if not task["params"]:
+        return None
+    got = _witness_env(task, witness)
+    if got is None:
+        return None
+    env_py, env_txt, seq_defs, ptw, sets, _ = got
+    tv = witness.get("_twin")
+    if tv == "no value":
+        # the lowered twin returns the type's default on that path
+        tv = False if ret_t == "bool" else 0
+    if not isinstance(tv, (int, bool)):
+        return None
+    env_py[ret] = tv
+    if not _falsified_conjunct(task, body, env_py):
+        return None
+    gargs = []
+    for p in task["params"]:
+        if p["type"] == "seq":
+            gargs += [env_txt[p["name"]], env_txt[p["name"] + "_len"]]
+        else:
+            gargs.append(env_txt[p["name"]])
+    applied = f"({name}_t {' '.join(gargs)})"
+    env_stmt = dict(env_txt)
+    env_stmt[ret] = applied
+    stmt = " /\\ ".join(cx.prop(e, env_stmt) for e in task["ensures"])
+    retlit = _glit(tv, ret_t)
+    env_lit = dict(env_txt)
+    env_lit[ret] = retlit
+    lines = []
+    if any(ret in _fv(e, set()) for e in task["ensures"]):
+        lines.append(f"  assert (t_out : {applied} = {retlit}) "
+                     f"by (cbv; reflexivity).\n")
+        lines.append("  rewrite t_out.\n")
+    lines += _call_asserts(cx, task, body, task["ensures"], env_py, env_lit)
+    lines += sets
+    return ("".join(seq_defs) + "\n" + def_text + "\n"
+            f"(* The spec fails at the measured witness, "
+            f"{harness.witness(witness)}: the kernel evaluates the twin "
+            f"there and accepts the negation. *)\n"
+            f"Theorem {CERT_NAME} :\n"
+            f"  ~ ({stmt}).\n"
+            "Proof.\n"
+            + "".join(ptw) + "".join(lines) +
+            "  t_dis.\n"
+            "Qed.\n")
+
+
+def _loop_cert(cx, task, prefix, w, suffix, witness):
+    """Certificate chunk for an invariant-drop loop-state witness, or
+    None."""
+    kind = witness.get("_kind")
+    ret = task["returns"][0]["name"]
+    def_text, L = _loop_def(cx, task, prefix, w, suffix)
+    svars, stys = L["svars"], L["stys"]
+    id_env, local = L["id_env"], L["local"]
+    for v in svars:
+        if v not in witness:
+            return None
+    pb, _ = param_binders(cx)
+    invs = [cx.prop(e, id_env, local) for e in w.get("invariants", [])]
+    guard_p = cx.prop(w["cond"], id_env, local)
+    inv_arrows = "".join(f"  {p} ->\n" for p in invs)
+    if kind == "exit":
+        guard_arrow = f"  (~ {guard_p}) ->\n"
+        concl = ensures_text(cx, L["env_post"][ret])
+        concl_asts = task["ensures"]
+    elif kind == "preservation":
+        if not w.get("invariants"):
+            return None
+        guard_arrow = f"  {guard_p} ->\n"
+        concl = " /\\ ".join(cx.prop(e, L["step_env"], local)
+                             for e in w.get("invariants", []))
+        concl_asts = []
+    else:
+        return None
+    got = _witness_env(task, witness)
+    if got is None:
+        return None
+    env_py, env_g, seq_defs, ptw, sets, spec_args = got
+    for v in svars:
+        if v in env_py:
+            return None            # a state var shadowing a param
+        env_py[v] = witness[v]
+        env_g[v] = _glit(witness[v], stys[v])
+        spec_args.append(env_g[v])
+    lines = []
+    if kind == "exit" and not suffix:
+        # ground the spec_fun applications of the instantiated conclusion
+        lines = _call_asserts(cx, task, task["body"], concl_asts,
+                              env_py, dict(env_g), in_hyp="t_H")
+    return ("".join(seq_defs) + "\n" + def_text + "\n"
+            f"(* The surviving loop annotations do not carry the spec: a "
+            f"kernel-checked countermodel at the measured state, "
+            f"{harness.witness(witness)}. *)\n"
+            f"Theorem {CERT_NAME} :\n"
+            f"  ~ (forall {pb} {L['sb']},\n"
+            f"{lens_arrows(cx)}{requires_arrows(cx)}{inv_arrows}"
+            f"{guard_arrow}"
+            f"  {concl}).\n"
+            "Proof.\n"
+            + "".join(ptw) +
+            "  intro t_H.\n"
+            f"  specialize (t_H {' '.join(spec_args)}).\n"
+            + "".join(lines) + "".join(sets) +
+            "  t_feed t_H.\n"
+            "  t_dis.\n"
+            "Qed.\n")
+
+
+def _try_cert_v1(task: dict, body: list, witness: dict):
+    """Full certificate FILE for a v1 twin, or None. Opportunistic: any
+    reason it cannot be built (an unsupported witness kind, an ensures the
+    totalized model satisfies, an internal error) falls back to the normal
+    lowering, whose failing proof reads UNPROVED. Losing a flip to honesty
+    is the intended price; only a faked one is a failure."""
+    try:
+        wk = witness.get("_kind")
+        if wk not in ("value", "exit", "preservation"):
+            return None
+        cx = Ctx(task)
+        prefix, w, suffix = find_while(body)
+        selfrec = has_self_call(body, task["name"])
+        if w is not None and selfrec:
+            return None
+        chunk = None
+        if wk in ("exit", "preservation"):
+            if w is None:
+                return None
+            chunk = _loop_cert(cx, task, prefix, w, suffix, witness)
+        else:
+            if w is not None:
+                def_text, _ = _loop_def(cx, task, prefix, w, suffix)
+            elif selfrec:
+                def_text = _rec_def(cx, task, body)
+            else:
+                def_text = _plain_def(cx, task, body)
+            if def_text is not None:
+                chunk = _value_cert(cx, task, body, witness, def_text)
+        if chunk is None:
+            return None
+        parts = [header(), emit_spec_funs(cx), POST_SF + "\n", T_FEED, chunk,
+                 f"\nPrint Assumptions {CERT_NAME}.\n"]
+        return "\n".join(p for p in parts if p)
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _subst_ints(e, sub: dict):
+    if not isinstance(e, dict):
+        return e
+    if "var" in e:
+        v = e["var"]
+        return {"int": sub[v]} if v in sub else e
+    out = {}
+    for k, val in e.items():
+        if isinstance(val, dict):
+            out[k] = _subst_ints(val, sub)
+        elif isinstance(val, list):
+            out[k] = [_subst_ints(x, sub) for x in val]
+        else:
+            out[k] = val
+    return out
+
+
+def _v0_cert(task: dict, body: list, witness: dict):
+    """Full certificate FILE for a v0 twin, or None (same contract as
+    _try_cert_v1; v0 is all-Z, so the closer is plain lia on literals)."""
+    try:
+        if witness.get("_kind") != "value" or not task["params"]:
+            return None
+        if any(p["type"] != "int" for p in task["params"]):
+            return None
+        if task["returns"][0]["type"] != "int":
+            return None
+        name = task["name"]
+        ret = task["returns"][0]["name"]
+        tv = witness.get("_twin")
+        if tv == "no value":
+            tv = 0
+        if not isinstance(tv, int) or isinstance(tv, bool):
+            return None
+        env_py = {p["name"]: witness[p["name"]] for p in task["params"]}
+        env_py[ret] = tv
+        if not _falsified_conjunct(task, body, env_py):
+            return None
+        expr = body_expr0(body, ret)
+        lits = " ".join(_zlit(witness[p["name"]]) for p in task["params"])
+        applied = f"({name}_t {lits})"
+        sub = {p["name"]: witness[p["name"]] for p in task["params"]}
+        post = " /\\ ".join(prop0(_subst_ints(e, sub), applied, ret)
+                            for e in task["ensures"])
+        binder = " ".join(f"({p['name']} : Z)" for p in task["params"])
+        rew = ""
+        if any(ret in _fv(e, set()) for e in task["ensures"]):
+            rew = (f"  assert (t_out : {applied} = {_zlit(tv)}) "
+                   f"by (cbv; reflexivity).\n"
+                   f"  rewrite t_out.\n")
+        return (
+            "From Stdlib Require Import ZArith Lia.\n"
+            "Open Scope Z_scope.\n\n"
+            f"Definition {name}_t {binder} : Z := {expr}.\n\n"
+            f"(* The spec fails at the measured witness, "
+            f"{harness.witness(witness)}: the kernel evaluates the twin "
+            f"there and accepts the negation. *)\n"
+            f"Theorem {CERT_NAME} :\n"
+            f"  ~ ({post}).\n"
+            "Proof.\n" + rew +
+            "  lia.\n"
+            "Qed.\n\n"
+            f"Print Assumptions {CERT_NAME}.\n")
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+# `witness` is the twin's measured witness (harness.twin_cached). Twin call
+# sites pass it; when a certificate can ground it, the twin file carries
+# t_refutation_certificate instead of an unprovable spec theorem.
+def lower(task: dict, body: list, witness: dict | None = None) -> str:
     if task.get("t") == 0:
-        return lower_v0(task, body)
-    return lower_v1(task, body)
+        return lower_v0(task, body, witness=witness)
+    return lower_v1(task, body, witness=witness)
 
 
 if __name__ == "__main__":

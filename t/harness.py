@@ -432,7 +432,9 @@ def witness(w: dict | None) -> str:
 
 
 def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
-    """lower(task, body) -> source text; backend is a t.verifiers module."""
+    """lower(task, body, witness=None) -> source text; backend is a
+    t.verifiers module. The twin call passes the measured witness so
+    a lowering may use it; the real call never does."""
     task = load(task_path)
     name = task["name"]
     OUT.mkdir(exist_ok=True)
@@ -445,7 +447,7 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
     real = OUT / f"{name}.{suffix}"
     real.write_text(lower(task, task["body"]), encoding="utf-8")
     twin = OUT / f"{name}_twin.{suffix}"
-    twin.write_text(lower(task, twin_body), encoding="utf-8")
+    twin.write_text(lower(task, twin_body, witness=w), encoding="utf-8")
 
     r_real, agree_r = flake_check(backend.verify, real)
     r_twin, agree_t = flake_check(backend.verify, twin)

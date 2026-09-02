@@ -61,6 +61,33 @@ ABSTAIN policy: shapes this lowering cannot express honestly raise
 NotImplementedError with the reason (multiple/nested loops, a loop plus
 self-recursion, quantifiers in computational position). A recorded absence,
 never a faked proof.
+
+THE REFUTATION CERTIFICATE (2026-09-02, certificate protocol shared by all
+columns): when lowering a TWIN with a measured witness, one extra theorem
+named exactly t_refutation_certificate is emitted; verifiers/lean.py mints
+REFUTED only when the kernel accepts it. The theorem states, at the
+concrete witness, ground facts the kernel re-evaluates itself:
+  value witness         requires holds at the input, and the ensures fails
+                        at the twin function applied to that input;
+  exit witness          requires, the surviving invariants, and the negated
+                        guard hold at the loop state, and the ensures fails
+                        at the loop function applied to that state, which
+                        refutes the instance of {name}_t_loop_spec that the
+                        surviving invariants were supposed to carry;
+  preservation witness  requires, the surviving invariants and the guard
+                        hold at the loop state, and one loop step (the
+                        symbolic update expressions instantiated at the
+                        state, re-evaluated by the kernel) breaks them.
+Proofs are ground and kernel-checked: decide, omega, simp with explicit
+names, grind with explicit names, plus enumeration of ground-bounded
+quantifiers (native_decide stays banned). t/interp.py evaluation only
+CHOOSES the proof path (which conjunct fails, which index witnesses); every
+choice is then re-proved by the kernel, so a wrong choice can only cost the
+certificate, never mint one. An undefined-kind witness is not certificated:
+this lowering computes with the total s[i.toNat]!, so t's undefinedness has
+no ground negation here and the twin cell honestly reads unproved. A
+certificate the kernel rejects also reads unproved; only kernel acceptance
+mints REFUTED, and a file carrying the certificate name can never verify.
 """
 from __future__ import annotations
 
@@ -72,10 +99,15 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                 # noqa: E402
+import interp                                  # noqa: E402
 from verifiers import lean as lean_backend     # noqa: E402
 
 CMP_OPS = {"<": "<", "<=": "≤", ">": ">", ">=": "≥"}
 ARITH_OPS = {"+", "-", "*"}
+CERT_NAME = "t_refutation_certificate"         # the contract with the adapter
+MAX_ENUM = 16     # ground quantifier enumeration cap; witness domains are
+                  # small (interp ladders), so past this the generic closers
+                  # get their chance and a miss honestly reads unproved
 
 
 def _collect_names(x, out: set) -> None:
@@ -91,6 +123,21 @@ def _collect_names(x, out: set) -> None:
     elif isinstance(x, list):
         for v in x:
             _collect_names(v, out)
+
+
+def loop_assigned(body: list) -> set:
+    """Syntactic assigned set of a loop body, SPEC.md's frame rule: a while
+    loop havocs exactly the variables assigned in its body."""
+    out: set = set()
+    for s in body:
+        if "assign" in s:
+            out.add(s["assign"][0])
+        elif "if" in s:
+            out |= loop_assigned(s["if"]["then"])
+            out |= loop_assigned(s["if"]["else"])
+        elif "while" in s:
+            out |= loop_assigned(s["while"]["body"])
+    return out
 
 
 class Lower:
@@ -741,14 +788,25 @@ class Lower:
                        f"    {chain}{obg} := by\n  grind{self.ga}\n")
             thms.append((f"{self.name}_t_wf{wf_k}", why))
 
-        # the helper lemma: invariants in, ensures-of-loop-value out
+        # the helper lemma: invariants in, ensures-of-loop-value out.
+        # SPEC.md frame rule: the loop havocs exactly the syntactic assigned
+        # set of its body, so every other state var carries a frame
+        # hypothesis pinning it to its entry value. The recursive call
+        # passes an unassigned var through unchanged, so the hypothesis is
+        # self-maintaining; without it the lemma quantified over havocked
+        # values, and fr_probe_ret / fr_probe_local were unprovable here
+        # while Dafny, Verus and Frama-C proved them (measured 2026-09-02).
+        frame = [v for v in state if v not in loop_assigned(w["body"])]
         has_pre = bool(pre_hyps)
         hpre = f"\n    (hpre : {self.pre_conj()})" if has_pre else ""
         hinvs = "".join(f"\n    (hinv{i + 1} : {p})"
                         for i, p in enumerate(inv_props))
+        hfrs = "".join(f"\n    (hfr{k + 1} : {v} = {env0[v]})"
+                       for k, v in enumerate(frame))
         applied_loop = f"({self.name}_t_loop {pnames} {snames})"
         out.append(
-            f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs} :\n"
+            f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs}"
+            f"{hfrs} :\n"
             f"    {self.post_conj(applied_loop)} := by\n"
             f"  rw [{self.name}_t_loop.eq_def]\n"
             f"  split\n"
@@ -772,6 +830,8 @@ class Lower:
                                 f"exact ⟨{lo0}, by grind{self.ga}⟩)")
             else:
                 init_pfs.append(f"(by grind{self.ga})")
+        for _v in frame:
+            init_pfs.append("rfl")   # hfr at the entry state: v0 = v0
         hpre_thm = f" (hpre : {self.pre_conj()})" if has_pre else ""
         applied = f"({self.name}_t {pnames})"
         out.append(
@@ -787,9 +847,405 @@ class Lower:
         thms.append((f"{self.name}_t_spec", "the contract"))
         return "\n".join(out), thms
 
+    # ---------- the refutation certificate (twin lowering only) ----------
+    # Ground proof generation: _prove(e) returns a one-line tactic proving
+    # prop(e) at the witness, _refute(e) one proving its negation. Interp
+    # evaluation picks the branch (which disjunct is true, which conjunct
+    # fails, which index breaks a forall); the kernel then re-proves the
+    # pick, so evaluation can lose a certificate but never fake one. Any
+    # shape neither handles falls to _closer(), a cascade of kernel-checked
+    # ground tactics; if that also misses, the kernel rejects the file and
+    # the adapter mints UNPROVED, the honest price.
 
-def lower(task: dict, body: list) -> str:
-    return Lower(task, body).lower()
+    def _closer(self) -> str:
+        fl = self.cert_fns
+        return (f"(first | decide | omega | simp [{fl}] | "
+                f"(simp [{fl}]; omega) | grind [{fl}])")
+
+    def _cev(self, e: dict, venv: dict):
+        """Ground-evaluate a spec expression at the witness; None when the
+        interpreter cannot decide it (the closers then get their chance)."""
+        try:
+            return interp.ev(e, venv, self.cert_funs, interp.St())
+        except (interp.Undef, interp.Budget, RecursionError):
+            return None
+
+    def _bounds_close(self, h1: str, h2: str) -> str:
+        """Close a goal from quantifier-range hypotheses: omega for literal
+        bounds; a simp pass first when a bound is a List.length cast; simp
+        alone when simp already closes the goal from a False hypothesis."""
+        return (f"first | omega | (simp at {h1} {h2}; omega) | "
+                f"(simp at {h1} {h2})")
+
+    def _enum(self, b: str, lo: int, hi: int, h1: str, h2: str,
+              alts: list[str]) -> str:
+        """Case-split an Int bound over the ground range [lo, hi) and close
+        every branch: each alternative is tried on each branch, and a wrong
+        pairing fails harmlessly inside `first`."""
+        hv = self.fresh_hyp()
+        disj = " ∨ ".join(f"{b} = ({k} : Int)" for k in range(lo, hi))
+        pats = " | ".join([hv] * (hi - lo))
+        uniq = list(dict.fromkeys(alts))
+        return (f"have {hv} : {disj} := by {self._bounds_close(h1, h2)}; "
+                f"rcases {hv} with {pats} <;> subst {hv} <;> "
+                "first | " + " | ".join(uniq))
+
+    def _prove(self, e: dict, tenv: dict, venv: dict, types: dict) -> str:
+        g = self._closer()
+        if "forall" in e:
+            q = e["forall"]
+            lo, hi = self._cev(q["lo"], venv), self._cev(q["hi"], venv)
+            if lo is None or hi is None or hi - lo > MAX_ENUM:
+                return g
+            b = self.fresh(q["var"])
+            h1, h2 = self.fresh_hyp(), self.fresh_hyp()
+            if hi <= lo:
+                return (f"(intro {b} {h1} {h2}; "
+                        f"{self._bounds_close(h1, h2)})")
+            alts = []
+            for k in range(lo, hi):
+                t2 = {**tenv, q["var"]: self._gterm(k, "int")}
+                v2 = {**venv, q["var"]: k}
+                alts.append(self._prove(q["body"], t2, v2,
+                                        {**types, q["var"]: "int"}))
+            return (f"(intro {b} {h1} {h2}; "
+                    + self._enum(b, lo, hi, h1, h2, alts) + ")")
+        if "exists" in e:
+            q = e["exists"]
+            lo, hi = self._cev(q["lo"], venv), self._cev(q["hi"], venv)
+            if lo is None or hi is None:
+                return g
+            for k in range(lo, hi):
+                v2 = {**venv, q["var"]: k}
+                if self._cev(q["body"], v2) is True:
+                    t2 = {**tenv, q["var"]: self._gterm(k, "int")}
+                    pb = self._prove(q["body"], t2, v2,
+                                     {**types, q["var"]: "int"})
+                    return (f"(exact ⟨({k} : Int), (by {g}), (by {g}), "
+                            f"(by {pb})⟩)")
+            return g
+        if "ite" in e:
+            c = e["ite"]
+            vc = self._cev(c["cond"], venv)
+            h = self.fresh_hyp()
+            if vc is True:
+                pt = self._prove(c["then"], tenv, venv, types)
+                pc = self._prove(c["cond"], tenv, venv, types)
+                return (f"(exact ⟨fun _ => (by {pt}), "
+                        f"fun {h} => absurd (by {pc}) {h}⟩)")
+            if vc is False:
+                rc = self._refute(c["cond"], tenv, venv, types)
+                pf = self._prove(c["else"], tenv, venv, types)
+                return (f"(exact ⟨fun {h} => absurd {h} (by {rc}), "
+                        f"fun _ => (by {pf})⟩)")
+            return g
+        op = e.get("op")
+        if op == "and":
+            parts = [self._prove(a, tenv, venv, types) for a in e["args"]]
+            return ("(exact ⟨" + ", ".join(f"(by {p})" for p in parts)
+                    + "⟩)")
+        if op == "or":
+            args = e["args"]
+            for i, a in enumerate(args):
+                if self._cev(a, venv) is True:
+                    term = f"(by {self._prove(a, tenv, venv, types)})"
+                    if i < len(args) - 1:
+                        term = f"(Or.inl {term})"
+                    for _ in range(i):
+                        term = f"(Or.inr {term})"
+                    return f"(exact {term})"
+            return g
+        if op == "implies":
+            aa, bb = e["args"]
+            h = self.fresh_hyp()
+            if self._cev(aa, venv) is False:
+                ra = self._refute(aa, tenv, venv, types)
+                return f"(intro {h}; exact absurd {h} (by {ra}))"
+            if self._cev(bb, venv) is True:
+                return (f"(intro {h}; "
+                        f"{self._prove(bb, tenv, venv, types)})")
+            return g
+        if op == "not":
+            return self._refute(e["args"][0], tenv, venv, types)
+        if op == "==" and self.sort(e["args"][0], types) == "bool":
+            a, b = e["args"]
+            va, vb = self._cev(a, venv), self._cev(b, venv)
+            h = self.fresh_hyp()
+            if va is True and vb is True:
+                pa = self._prove(a, tenv, venv, types)
+                pb = self._prove(b, tenv, venv, types)
+                return (f"(exact ⟨fun _ => (by {pb}), "
+                        f"fun _ => (by {pa})⟩)")
+            if va is False and vb is False:
+                ra = self._refute(a, tenv, venv, types)
+                rb = self._refute(b, tenv, venv, types)
+                return (f"(exact ⟨fun {h} => absurd {h} (by {ra}), "
+                        f"fun {h} => absurd {h} (by {rb})⟩)")
+            return g
+        if op == "!=" and self.sort(e["args"][0], types) == "bool":
+            iff = {"op": "==", "args": e["args"]}
+            return self._refute(iff, tenv, venv, types)
+        return g
+
+    def _refute(self, e: dict, tenv: dict, venv: dict, types: dict) -> str:
+        g = self._closer()
+        if "forall" in e:
+            q = e["forall"]
+            lo, hi = self._cev(q["lo"], venv), self._cev(q["hi"], venv)
+            if lo is None or hi is None:
+                return g
+            for k in range(lo, hi):
+                v2 = {**venv, q["var"]: k}
+                if self._cev(q["body"], v2) is False:
+                    t2 = {**tenv, q["var"]: self._gterm(k, "int")}
+                    rb = self._refute(q["body"], t2, v2,
+                                      {**types, q["var"]: "int"})
+                    h = self.fresh_hyp()
+                    return (f"(intro {h}; exact absurd ({h} ({k} : Int) "
+                            f"(by {g}) (by {g})) (by {rb}))")
+            return g
+        if "exists" in e:
+            q = e["exists"]
+            lo, hi = self._cev(q["lo"], venv), self._cev(q["hi"], venv)
+            if lo is None or hi is None:
+                return g
+            b = self.fresh(q["var"])
+            h = self.fresh_hyp()
+            h1, h2, h3 = (self.fresh_hyp(), self.fresh_hyp(),
+                          self.fresh_hyp())
+            intro = (f"intro {h}; obtain ⟨{b}, {h1}, {h2}, {h3}⟩ := {h}; ")
+            if hi <= lo:
+                return f"({intro}{self._bounds_close(h1, h2)})"
+            if hi - lo > MAX_ENUM:
+                return g
+            alts = []
+            for k in range(lo, hi):
+                v2 = {**venv, q["var"]: k}
+                if self._cev(q["body"], v2) is not False:
+                    return g
+                t2 = {**tenv, q["var"]: self._gterm(k, "int")}
+                rb = self._refute(q["body"], t2, v2,
+                                  {**types, q["var"]: "int"})
+                alts.append(f"(exact absurd {h3} (by {rb}))")
+            return f"({intro}" + self._enum(b, lo, hi, h1, h2, alts) + ")"
+        if "ite" in e:
+            c = e["ite"]
+            vc = self._cev(c["cond"], venv)
+            h = self.fresh_hyp()
+            if vc is True:
+                pc = self._prove(c["cond"], tenv, venv, types)
+                rt = self._refute(c["then"], tenv, venv, types)
+                return (f"(intro {h}; exact absurd ({h}.1 (by {pc})) "
+                        f"(by {rt}))")
+            if vc is False:
+                rc = self._refute(c["cond"], tenv, venv, types)
+                rf = self._refute(c["else"], tenv, venv, types)
+                return (f"(intro {h}; exact absurd ({h}.2 (by {rc})) "
+                        f"(by {rf}))")
+            return g
+        op = e.get("op")
+        if op == "and":
+            args = e["args"]
+            h = self.fresh_hyp()
+            for j, a in enumerate(args):
+                if self._cev(a, venv) is False:
+                    proj = ".2" * j + (".1" if j < len(args) - 1 else "")
+                    r = self._refute(a, tenv, venv, types)
+                    return (f"(intro {h}; exact absurd {h}{proj} "
+                            f"(by {r}))")
+            return g
+        if op == "or":
+            args = e["args"]
+            h = self.fresh_hyp()
+            alts = []
+            for a in args:
+                if self._cev(a, venv) is not False:
+                    return g
+                alts.append(f"(exact absurd {h} (by "
+                            + self._refute(a, tenv, venv, types) + "))")
+            pats = " | ".join([h] * len(args))
+            uniq = list(dict.fromkeys(alts))
+            return (f"(intro {h}; rcases {h} with {pats} <;> "
+                    "first | " + " | ".join(uniq) + ")")
+        if op == "implies":
+            aa, bb = e["args"]
+            if self._cev(aa, venv) is True \
+                    and self._cev(bb, venv) is False:
+                pa = self._prove(aa, tenv, venv, types)
+                rb = self._refute(bb, tenv, venv, types)
+                h = self.fresh_hyp()
+                return (f"(intro {h}; exact absurd ({h} (by {pa})) "
+                        f"(by {rb}))")
+            return g
+        if op == "not":
+            h = self.fresh_hyp()
+            pa = self._prove(e["args"][0], tenv, venv, types)
+            return f"(intro {h}; exact {h} (by {pa}))"
+        if op == "==" and self.sort(e["args"][0], types) == "bool":
+            a, b = e["args"]
+            va, vb = self._cev(a, venv), self._cev(b, venv)
+            h = self.fresh_hyp()
+            if va is True and vb is False:
+                pa = self._prove(a, tenv, venv, types)
+                rb = self._refute(b, tenv, venv, types)
+                return (f"(intro {h}; exact absurd ({h}.mp (by {pa})) "
+                        f"(by {rb}))")
+            if va is False and vb is True:
+                pb = self._prove(b, tenv, venv, types)
+                ra = self._refute(a, tenv, venv, types)
+                return (f"(intro {h}; exact absurd ({h}.mpr (by {pb})) "
+                        f"(by {ra}))")
+            return g
+        if op == "!=" and self.sort(e["args"][0], types) == "bool":
+            h = self.fresh_hyp()
+            iff = {"op": "==", "args": e["args"]}
+            pi = self._prove(iff, tenv, venv, types)
+            return f"(intro {h}; exact {h} (by {pi}))"
+        return g
+
+    def _gterm(self, v, ty: str) -> str:
+        if ty == "bool":
+            return "true" if v else "false"
+        if ty == "seq":
+            return "([" + ", ".join(str(int(x)) for x in v) + "] : List Int)"
+        n = int(v)
+        return f"({n} : Int)" if n >= 0 else f"(({n}) : Int)"
+
+    def _ens_conj(self) -> dict:
+        ens = self.task["ensures"]
+        return ens[0] if len(ens) == 1 else {"op": "and", "args": ens}
+
+    def certificate(self, w: dict) -> str | None:
+        """The t_refutation_certificate block for a twin with witness `w`,
+        or None when the witness kind has no ground negation here (then the
+        twin cell honestly reads unproved, never refuted)."""
+        kind = w.get("_kind")
+        if kind == "value":
+            build = self._cert_value
+        elif kind in ("exit", "preservation"):
+            build = self._cert_loop
+        else:
+            return None      # undefined-kind: `at` is total in this lowering
+        try:
+            parts = build(w, kind)
+        except (NotImplementedError, KeyError, StopIteration,
+                interp.Undef, interp.Budget, RecursionError):
+            return None
+        if parts is None:
+            return None
+        lines = ["-- refutation certificate: the spec instantiated at the",
+                 "-- measured witness; REFUTED is minted only if the kernel",
+                 "-- accepts this proof (verifiers/lean.py).",
+                 f"theorem {CERT_NAME} :",
+                 "    " + "\n    ∧ ".join(s for s, _ in parts) + " := by"]
+        if len(parts) == 1:
+            lines.append(f"  {parts[0][1]}")
+        else:
+            lines.append("  refine ⟨" + ", ".join(["?_"] * len(parts))
+                         + "⟩")
+            lines += [f"  · {tac}" for _, tac in parts]
+        lines.append(f"\n#print axioms {CERT_NAME}")
+        return "\n".join(lines) + "\n"
+
+    def _cert_value(self, w: dict, _kind: str) -> list | None:
+        if isinstance(w.get("_twin"), str):
+            return None      # "no value": nothing ground to instantiate
+        self.cert_funs = interp.funs_of(self.task, self.body)
+        fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
+        if any("while" in s for s in self.body):
+            fns.append(f"{self.name}_t_loop")
+        self.cert_fns = ", ".join(fns)
+        params = self.task["params"]
+        types = dict(self.types)
+        tenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
+                for p in params}
+        venv = {p["name"]: w[p["name"]] for p in params}
+        args = " ".join(tenv[p["name"]] for p in params)
+        if self._self_calls(self.body) and self.task.get("requires"):
+            applied = f"({self.name}_t {args} (by {self._closer()}))"
+        else:
+            applied = f"({self.name}_t {args})"
+        parts = [(self.prop(r, tenv, types),
+                  self._prove(r, tenv, venv, types))
+                 for r in self.task.get("requires", [])]
+        post = self._ens_conj()
+        tv = w["_twin"]
+        tenv_post = {**tenv, self.ret: applied}
+        venv_post = {**venv, self.ret: tv}
+        parts.append((f"(¬{self.prop(post, tenv_post, types)})",
+                      self._refute(post, tenv_post, venv_post, types)))
+        return parts
+
+    def _cert_loop(self, w: dict, kind: str) -> list | None:
+        body = self.body
+        idx = next(i for i, s in enumerate(body) if "while" in s)
+        prefix, wh, suffix = body[:idx], body[idx]["while"], body[idx + 1:]
+        types = dict(self.types)
+        for s in prefix:
+            if "var" in s:
+                types[s["var"]["name"]] = s["var"]["type"]
+        state = [self.ret] + [s["var"]["name"] for s in prefix
+                              if "var" in s]
+        self.cert_funs = interp.funs_of(self.task, body)
+        fns = [f"{self.name}_t", f"{self.name}_t_loop"] \
+            + [f"{f}_s" for f in self.sfuns]
+        self.cert_fns = ", ".join(fns)
+        params = [p["name"] for p in self.task["params"]]
+        names = params + state
+        if any(n not in w for n in names):
+            return None
+        tenv = {n: self._gterm(w[n], types[n]) for n in names}
+        venv = {n: w[n] for n in names}
+        parts = [(self.prop(r, tenv, types),
+                  self._prove(r, tenv, venv, types))
+                 for r in self.task.get("requires", [])]
+        for iv in wh.get("invariants", []):
+            parts.append((self.prop(iv, tenv, types),
+                          self._prove(iv, tenv, venv, types)))
+        guard = wh["cond"]
+        if kind == "exit":
+            parts.append((f"(¬{self.prop(guard, tenv, types)})",
+                          self._refute(guard, tenv, venv, types)))
+            applied = (f"({self.name}_t_loop "
+                       + " ".join(tenv[n] for n in params + state) + ")")
+            venv_post = dict(venv)
+            if suffix:
+                interp.exec_body(suffix, venv_post, self.cert_funs,
+                                 interp.St())
+            post = self._ens_conj()
+            tenv_post = {**tenv, self.ret: applied}
+            parts.append((f"(¬{self.prop(post, tenv_post, types)})",
+                          self._refute(post, tenv_post, venv_post,
+                                       types)))
+        else:                                    # preservation
+            parts.append((self.prop(guard, tenv, types),
+                          self._prove(guard, tenv, venv, types)))
+            types2 = dict(types)
+            env_b, _ = self.sym(wh["body"], tenv, types2, state)
+            step_tenv = {**tenv, **env_b}
+            venv_step = dict(venv)
+            interp.exec_body(wh["body"], venv_step, self.cert_funs,
+                             interp.St())
+            kept = wh.get("invariants", [])
+            kinv = (kept[0] if len(kept) == 1
+                    else {"op": "and", "args": kept})
+            parts.append((f"(¬{self.prop(kinv, step_tenv, types2)})",
+                          self._refute(kinv, step_tenv, venv_step,
+                                       types2)))
+        return parts
+
+
+# `witness` is the twin's measured witness (harness.twin_cached); the real
+# lowering never receives one. When present and certificatable it adds the
+# t_refutation_certificate theorem, the only door to a lean REFUTED.
+def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    lw = Lower(task, body)
+    src = lw.lower()
+    if witness is not None:
+        cert = lw.certificate(witness)
+        if cert is not None:
+            src += "\n" + cert
+    return src
 
 
 if __name__ == "__main__":

@@ -3,15 +3,39 @@
 Pins: Frama-C 33.0 (Arsenic) + alt-ergo 2.4.3-free (NEVER opam's alt-ergo
 2.6.x, which is non-commercial — the WS-7 licensing catch), via opam.
 
-THE REFUTED DOCTRINE, decided after measurement: a false postcondition here
-surfaces as Stepout/Timeout on the goal — the quantified VC yields no
-countermodel from alt-ergo or plain Z3 (both measured 2026-08-31). That is
-the same epistemic position as Dafny's rlimit and gnatprove's `medium`: the
-deterministic budget IS the bar, and "unproved at the pinned budget" is what
-REFUTED means operationally. The per-goal status lines ship in extras so the
-countermodel refinement (why3's `counterexamples` prover configs exist; WP's
-naming for them is the parked follow-up) can sharpen this later without
-rewriting history. Outcome.TIMEOUT here means the WALL backstop only.
+THE REFUTED DOCTRINE, remeasured 2026-09-02, because the old one violated
+the law verifiers/__init__.py states (ROADMAP 10.7: a goal whose own status
+was Timeout scored REFUTED). The load-bearing measurement, side by side at
+the pinned budget: a trivially false ground postcondition (ensures \\result
+== 1 on a function returning 0) and a true but unprovable lemma (Lagrange
+four squares) BOTH come back [Stepout]; -wp-counter-examples changes
+neither, because alt-ergo 2.4.3 has no counterexample driver under WP, so
+WP's Invalid status is unreachable on this toolchain and no run here has
+ever produced it. Falsity and hardness are indistinguishable by prover
+status, so NO prover status mints REFUTED. The partition of an unproved
+file is per goal, from the kernel's own report: any unproved goal whose
+status is Timeout or Stepout (a pinned budget fired, wall or steps) makes
+the file TIMEOUT; anything else unproved makes it UNPROVED. Outcome.TIMEOUT
+therefore covers both the WALL backstop and a budget-ended goal.
+
+REFUTED is minted by exactly one thing, the REFUTATION CERTIFICATE
+(shared protocol across all seven columns): lower_framac.py may append to a
+twin file one function, t_certificate, replaying the twin computation at the
+measured witness input as branch-free ground code whose branch decisions
+are themselves emitted goals, ending in one assert named
+t_refutation_certificate that negates the instantiated ensures. This
+adapter mints REFUTED if and only if that goal is declared in the kernel's
+per-goal report AND the kernel accepted it AND every other goal in the
+certificate's audit set (the certificate function's goals, smoke included,
+plus every function-less global goal such as the termination lemmas) is
+accepted, under the full existing audit discipline. Two hard rules, both
+enforced below: a file carrying the certificate name can NEVER mint
+VERIFIED, so planting the name in a real program only demotes it; and a
+certificate the kernel rejects mints UNPROVED, never REFUTED. Measured
+2026-09-02: all five value-witness twins (abs, factorial, fib, gcd, max)
+carry a certificate discharged by Qed or alt-ergo in milliseconds,
+recursive logic functions unfolding at ground arguments included
+(fact(2) in 6ms), while each twin's own ensures goal stays Stepout.
 
 THE SEMANTIC DECISION, half of which was wrong until 2026-09-01: without
 -wp-rte, WP reasons about C integer ARITHMETIC mathematically, so -wp-rte
@@ -47,9 +71,10 @@ THE AUDIT ARCHITECTURE (Wave-2/3, all points measured 2026-08-31):
   honest tasks stay N / N and all 11 twins stay N < M with the full set on
   (measured across out/*.c). See the constants for the sizing measurement,
   including the correction it forced: on the twins the failing goal ends
-  `[Timeout]`, not `[Stepout]`, so the WALL and not -wp-steps is what makes
-  those REFUTED — which is why the wall is pinned small and stated rather
-  than raised until steps bind, a point 30s of budget failed to reach.
+  with a budget status (`[Timeout]` at the 2s sizing walls, `[Stepout]` at
+  the current 10s/20000 pins), so those cells read TIMEOUT, and the wall is
+  pinned small and stated rather than raised until steps bind, a point 30s
+  of budget failed to reach.
 * TOOL_ERROR is live: absent/dead kernel binary, empty kernel output,
   `[wp] User Error` / `Plug-in wp aborted` (measured with an unknown prover:
   exit 0, no Proved line — exit codes alone cannot be trusted), and a
@@ -109,6 +134,7 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
 """
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import tempfile
@@ -139,7 +165,7 @@ PROBE_WALL_S = 120
 # above: for the twins -wp-steps is NOT what ends the failing goal — every
 # twin in out/*.c fails `[Timeout]`, never `[Stepout]`, at 2s and at 30s
 # alike, so alt-ergo never reaches 20 000 steps on those VCs and the wall is
-# the operative refutation bound there. Raising it buys no verdict, only
+# the operative budget bound there. Raising it buys no verdict, only
 # ~13s of suite time per extra second, so it stays small and stated.
 GOAL_TIMEOUT_S = 10
 SMOKE_TIMEOUT_S = 5
@@ -207,6 +233,82 @@ _SMOKE = re.compile(r"^\s+Smoke Tests:\s+(\d+)\s*/\s*(\d+)", re.M)
 _FAILED = re.compile(r"^\s+Failed:\s+\d+", re.M)
 _TOOLFAIL = re.compile(r"Plug-in wp aborted|\[wp\] User Error")
 _PRINT_MARK = "/* Generated by Frama-C */"
+
+# --- refutation-certificate machinery (see the doctrine, module docstring) --
+CERT_NAME = "t_refutation_certificate"
+# WP names a named assert's goal <model>_<fn>_assert_<name> (measured:
+# typed_nat_t_certificate_assert_t_refutation_certificate). Suffix-anchored
+# so an identifier merely CONTAINING the name (a task called
+# refutation_certificate lowers to refutation_certificate_t, whose unnamed
+# assert goal ends _t_assert) can demote a file but never forge acceptance.
+_CERT_GOAL = re.compile("_assert_" + CERT_NAME + "$")
+# The kernel's verdict vocabulary (frama-c-wp 33.0 report code): none,
+# computing, valid, invalid, unknown, timeout, stepout, failed. Budget
+# statuses make the file TIMEOUT; everything else unproved is UNPROVED,
+# "invalid" included, because that status was unreachable under the pinned
+# alt-ergo in every measurement (even ensures \result == 1 over return 0
+# comes back stepout) and an unmeasured pathway must not mint.
+_BUDGET_VERDICTS = {"timeout", "stepout"}
+# Text fallback when the kernel wrote no JSON report: WP prints one line per
+# unproved goal, e.g. "[wp] [Stepout] typed_nat_abs_t_ensures (Alt-Ergo)".
+_GOAL_LINE = re.compile(r"^\[wp\] \[(Timeout|Stepout|Unknown|Failed)\]"
+                        r"\s+(\S+)", re.M)
+
+
+def _load_report(p: Path):
+    """The kernel's per-goal JSON report (-wp-report-json), or None. None
+    never mints anything: no report, no certificate, and the unproved
+    partition falls back to the per-goal text lines."""
+    try:
+        entries = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if isinstance(entries, list) and all(isinstance(e, dict)
+                                         for e in entries):
+        return entries
+    return None
+
+
+def _unproved_goals(report, out: str) -> list:
+    """(goal, status) for every unproved non-smoke goal, from the JSON
+    report when present, else from the per-goal text lines."""
+    if report is not None:
+        return [(e.get("goal", "?"), str(e.get("verdict", "?")).lower())
+                for e in report if not e.get("smoke") and not e.get("passed")]
+    return [(g, s.lower()) for s, g in _GOAL_LINE.findall(out)]
+
+
+def _cert_status(report) -> tuple[bool, bool, str]:
+    """(declared, accepted, note) for the refutation certificate, judged on
+    the kernel's own per-goal report and nothing else. Accepted requires:
+    exactly one certificate-named assert goal, proved; and every goal in the
+    certificate's audit set proved, that set being every goal of the
+    certificate's enclosing function (its branch-decision asserts, its
+    assigns, its smoke tests) plus every function-less global goal (the
+    termination lemmas the logic definitions stand on)."""
+    if report is None:
+        return False, False, "kernel wrote no per-goal report"
+    certs = [e for e in report
+             if not e.get("smoke") and _CERT_GOAL.search(e.get("goal", ""))]
+    if not certs:
+        return False, False, "no certificate goal declared"
+    if len(certs) != 1:
+        return True, False, f"{len(certs)} certificate goals declared"
+    fn = certs[0].get("function")
+    if not fn:
+        return True, False, "certificate goal outside any function"
+
+    def ok(e):
+        return bool(e.get("passed")) and (
+            e.get("smoke") or str(e.get("verdict", "")).lower() == "valid")
+
+    audit = [e for e in report
+             if e.get("function") == fn or not e.get("function")]
+    bad = [e.get("goal", "?") for e in audit if not ok(e)]
+    if bad:
+        return True, False, ("unproved in the certificate audit set: "
+                             + ", ".join(bad[:4]))
+    return True, True, fn
 
 # --- consistency-probe machinery (see docstring section 2) -----------------
 _PROBE_TAG = "t_vacuity_probe"
@@ -438,14 +540,22 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
                                   "banned_tokens": [], "ban_audit": ban_audit})
 
     try:
-        rc, out = _run(
-            [FRAMAC, "-wp", "-wp-model", MODEL, "-wp-prover", "alt-ergo",
-             "-wp-steps",
-             str(budget), "-wp-cache", "none", "-wp-par", str(PAR),
-             "-wp-timeout", str(GOAL_TIMEOUT_S), "-wp-smoke-tests",
-             "-wp-smoke-dead-local-init", "-wp-smoke-timeout",
-             str(SMOKE_TIMEOUT_S), str(path)],
-            WALL_S)
+        # -wp-report-json is the audit channel, not a budget knob: it makes
+        # the kernel write its OWN per-goal verdicts, which is what the
+        # unproved partition and the certificate acceptance are judged on
+        # (a summary line cannot say WHICH goal timed out, and a proved
+        # certificate goal is invisible in the default text output).
+        with tempfile.TemporaryDirectory(prefix="t-framac-report-") as td:
+            rj = Path(td) / "report.json"
+            rc, out = _run(
+                [FRAMAC, "-wp", "-wp-model", MODEL, "-wp-prover", "alt-ergo",
+                 "-wp-steps",
+                 str(budget), "-wp-cache", "none", "-wp-par", str(PAR),
+                 "-wp-timeout", str(GOAL_TIMEOUT_S), "-wp-smoke-tests",
+                 "-wp-smoke-dead-local-init", "-wp-smoke-timeout",
+                 str(SMOKE_TIMEOUT_S), "-wp-report-json", str(rj), str(path)],
+                WALL_S)
+            report = _load_report(rj)
     except subprocess.TimeoutExpired:
         return Result("framac", _ver(), src_hash, Outcome.TIMEOUT,
                       wall_ms=int((time.monotonic() - t0) * 1000),
@@ -460,6 +570,13 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
     m = proved[-1] if proved else None
     statuses = _STATUS.findall(out)
     smoke = _SMOKE.search(out)
+    unproved = _unproved_goals(report, out)
+    declared, accepted, cert_note = _cert_status(report)
+    # The demotion gate: a file carrying the certificate name anywhere in
+    # the kernel's normalized view (raw fallback if unparseable) can never
+    # mint VERIFIED, whether or not a certificate goal was declared.
+    scan = norm.split(_PRINT_MARK, 1)[1] if print_ok else safe_text(path)
+    cert_marked = CERT_NAME in scan or declared
     err = ""
 
     if not out.strip():
@@ -478,19 +595,53 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
         outcome = Outcome.TOOL_ERROR    # prover failure outside a smoke test
         err = out[-400:]
     elif int(m.group(1)) == int(m.group(2)):
-        if rc == 0 and print_ok:
-            outcome = Outcome.VERIFIED
-        else:
+        if not (rc == 0 and print_ok):
             outcome = Outcome.TOOL_ERROR  # all-proved without a clean exit
             err = out[-400:]              # or without the controlled ban audit
+        elif cert_marked:
+            # Certificate file, everything proved: the kernel accepted the
+            # ground proof that ensures fails at the witness. A file that
+            # merely CARRIES the name without an accepted certificate goal
+            # is only demoted: never VERIFIED, and never REFUTED either.
+            if accepted:
+                outcome = Outcome.REFUTED
+                err = "kernel-accepted refutation certificate in " + cert_note
+            else:
+                outcome = Outcome.UNPROVED
+                err = ("carries the certificate name without an accepted "
+                       "certificate: " + cert_note)
+        else:
+            outcome = Outcome.VERIFIED
+    elif accepted and rc == 0 and print_ok:
+        # Unproved goals remain (the twin's own contract, typically ended by
+        # a budget), but the certificate's audit set is fully accepted: the
+        # kernel proved that ensures fails at the measured witness input,
+        # which is the positive evidence REFUTED requires.
+        outcome = Outcome.REFUTED
+        err = "kernel-accepted refutation certificate in " + cert_note
+    elif cert_marked:
+        outcome = Outcome.UNPROVED      # a rejected certificate never mints
+        err = "certificate not accepted: " + cert_note
+    elif any(s in _BUDGET_VERDICTS for _, s in unproved):
+        outcome = Outcome.TIMEOUT       # a pinned budget fired: wall or steps
+        err = ("budget exhausted on "
+               + ", ".join(g for g, s in unproved[:4]
+                           if s in _BUDGET_VERDICTS))
     else:
-        outcome = Outcome.REFUTED       # unproved at the pinned budget
+        outcome = Outcome.UNPROVED      # stopped without budget exhaustion
+        err = ("unproved without budget exhaustion: "
+               + ", ".join(f"{g} ({s})" for g, s in unproved[:4]))
     return Result("framac", _ver(), src_hash, outcome,
                   ok=outcome == Outcome.VERIFIED, exit_code=rc,
                   wall_ms=wall, budget=_budget(budget), error=err,
                   extras={"proved": m.group(0).replace("[wp] ", "").strip()
                           if m else None,
                           "goal_statuses": statuses[:8],
+                          "unproved_goals": unproved[:8],
+                          "certificate": {"declared": declared,
+                                          "accepted": accepted,
+                                          "note": cert_note}
+                          if cert_marked else None,
                           "smoke": smoke.group(0).strip() if smoke else None,
                           "recursive_defs": [d["name"] for d in rec],
                           "probe_note": probe_note,

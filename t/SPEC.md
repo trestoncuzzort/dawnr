@@ -77,6 +77,34 @@ either discharge these definedness obligations in its kernel (Dafny-style
 well-formedness) or abstain; a lowering that silently totalizes `at` is
 wrong.
 
+**Undefined `requires` (normative).** The `requires` clauses themselves
+owe definedness, and they owe it unconditionally: clause k must be defined
+at every type-correct input at which clauses 1 through k-1 are defined and
+true, because nothing else is in scope to guard it. A task whose
+`requires` is undefined at such an input (`requires at(s, 0) == 0` with
+nothing establishing `len(s) > 0`, undefined at the type-correct input
+`s = []`) is DEFECTIVE, the task author's error. It does not mean "inputs
+where the requires is undefined are excluded"; a lowering that can detect
+the defect must surface it, so that the real lowering fails and the task
+cannot count, rather than quietly narrowing the domain to wherever the
+clause happens to evaluate. What is, measured 2026-09-02 on exactly that
+probe: six of the seven lowerings surface it and none of the six verifies
+the probe. dafny (native well-formedness checking of contracts), verus
+(one wf lemma per requires clause, each assuming the earlier clauses),
+lean (one wf theorem per clause), rocq (one definedness lemma per clause),
+spark (the `at` wrapper's own precondition, checked by the kernel inside
+the contract) and fstar (the index refinement on `Seq.index`) all reject
+the real lowering: dafny and fstar score the probe REFUTED through their
+well-formedness and typing channels, verus, spark, lean and rocq score it
+UNPROVED. framac is the known gap and verified the probe: WP's
+logic is total, an out-of-range `s[i]` denotes an unconstrained value, and
+an undefined requires quietly becomes a constraint on that value.
+lower_framac.py discharges definedness for executable positions and for
+`ensures` clauses (the ensures side landed 2026-09-02); its `requires`
+side, and the same total-logic softness in invariant and spec_fun-body
+positions, is recorded future work in that file's own docstring, not
+silently claimed here.
+
 ### Gate 1 — quantifiers + sequences
 
 Semantics: a `seq` value s has a length `len(s) >= 0` and elements
@@ -129,6 +157,40 @@ int-valued expression that is `>= 0` whenever the guard holds and strictly
 decreases across every iteration; it is required, not optional — a t task
 never states a loop it cannot bound. The kernel discharges all of it; t
 checks nothing itself.
+
+**The frame rule (normative).** A `while` loop havocs exactly the
+variables assigned in its body: the syntactic assigned set, computed from
+the body AST (an `assign` target anywhere in the body counts, including
+under an `if` or inside a nested `while`), intersected with the names in
+scope at the loop (a local declared inside the body does not outlive the
+body and is excluded). Every other variable in scope is preserved across
+the loop, and no invariant is needed to say so; invariants carry
+information only about the havocked variables and the values readable from
+them. This sentence exists because "the standard package" underdetermines
+it: a lowering that havocs every mutable name and one that havocs only the
+assigned set prove DIFFERENT theorems, and a task whose `ensures` depends
+on a variable the loop never assigns is provable under one and not the
+other with neither lowering looking wrong. Measured 2026-09-02 with two
+probes on the training box (a return assigned before the loop and never
+inside it; a prefix local never assigned in the loop and read after it):
+dafny, verus and framac already implemented this rule (native loop
+targets, read-only helper parameters, and `loop assigns` from the assigned
+set, respectively) and verified both probes, while the fstar, lean, rocq
+and spark lowerings threaded every in-scope mutable name through their
+loop encodings under a contract stating only invariants plus the negated
+guard, which is the havoc-everything theorem: lean and rocq scored both
+probes UNPROVED, spark scored both TIMEOUT, and fstar scored both REFUTED,
+its solver rejecting the havoc-everything obligation the old lowering had
+emitted in place of the task's theorem. All four were fixed the same day
+(each loop helper now threads exactly the assigned set, or carries one
+frame equality per preserved variable); with the fixes all seven kernels
+verify both probes, flake-checked, and the artifacts emitted
+for every committed task are byte-identical to before the fix, because
+every committed loop assigns every variable in scope. A loop whose body
+assigns nothing in scope havocs nothing; such a loop cannot satisfy its
+own `decreases` obligation whenever the guard can hold, so no provable t
+task contains one, and a lowering may refuse the shape outright (an
+ABSTAIN, never a verdict).
 
 ### Gate 3 — recursion + termination
 

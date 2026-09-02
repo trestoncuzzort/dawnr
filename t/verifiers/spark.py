@@ -135,6 +135,19 @@ SEMANTIC VACUITY — two kernel-native instruments, neither of them lexical.
     VC_POSTCONDITION for F is TOOL_ERROR, never VERIFIED — the adapter may
     not certify what its own instrument could not examine.
 
+THE CERTIFICATE CHANNEL (10.8, 2026-09-02): the flips the honest rule gave
+up are bought back from the lowering, exactly as the paragraph above
+demanded. lower_spark.py restates the harness's measured witness as one
+ground goal named t_refutation_certificate in the twin file; the audit rule
+at CERT_ENTITY below mints REFUTED only when the kernel discharges every
+check of that goal, a rejected certificate is UNPROVED (never REFUTED), and
+a file whose active code carries the name can never mint VERIFIED. MEASURED
+2026-09-02: the nine verified/timeout twins all read verified/refuted under
+the unchanged 20000-step budget, every real cell stays VERIFIED, and the
+soundness probes (planted name without goals, false certificate, accepted
+certificate planted in a real program, name in a comment) land UNPROVED,
+UNPROVED, REFUTED-the-demotion, and inert respectively.
+
 Budget: --steps, gnatprove's explicitly machine-independent deterministic
 bound; the havoc run reuses it, so "provable against an arbitrary result" is
 judged at exactly the standard the real run was judged at. The havoc run's
@@ -290,6 +303,34 @@ UNREACHABLE = frozenset(("VC_UNREACHABLE_BRANCH", "VC_DEAD_CODE"))
 # containing its own hash, so squatting it is not an available move.
 HAVOC_FN = "T_Vacuity_Havoc"
 
+# THE REFUTATION CERTIFICATE (10.8). lower_spark.py may put ONE extra goal in
+# a twin file, a function named exactly this, whose body is the harness
+# witness instantiated as a ground formula (the negated ensures at the
+# measured input, or the negated exit-entailment at the measured loop state).
+# The audit routes its checks separately from everything else's, and the
+# classification is:
+#   * every certificate check discharged (severity "info"), its
+#     VC_POSTCONDITION included  -> REFUTED: the kernel itself accepted a
+#     proof that the spec fails at the witness. Positive evidence, exactly
+#     like a confirmed countermodel, and MEASURED (2026-09-02, all nine
+#     certificate twins) to discharge in 2-8s at the standard 20000 steps
+#     where countermodel SEARCH exhausts the budget: the certificate hands
+#     the prover the witness instead of asking it to find one.
+#   * any certificate check unproved -> never REFUTED from the certificate,
+#     and never VERIFIED for the whole file: "limit" on the certificate is
+#     TIMEOUT, anything else is UNPROVED. A certificate-entity check with
+#     severity "high" is deliberately NOT the countermodel channel: a
+#     failing certificate is a wrong accusation, not a wrong program.
+#   * a file whose ACTIVE CODE names t_refutation_certificate can never
+#     mint VERIFIED, goals or no goals: the name is reserved for refutation
+#     evidence, so planting it in a real program only demotes that program
+#     (to UNPROVED), never promotes anything.
+# Everything else is unchanged: bans, contradictory-hypothesis warnings and
+# justified/skip/assume checks still outrank the certificate (VACUOUS), and
+# the confirmed-countermodel channel (severity "high" plus cntexmp, RAC
+# executed) still refutes independently of any certificate.
+CERT_ENTITY = "t_refutation_certificate"
+
 # lower_spark.py emits F's completion as one signature line ending in `is`
 # followed by a parenthesised expression; the W_k helpers put `is` on the
 # next line, so both placements are accepted. The declaration is never
@@ -403,7 +444,8 @@ def _read_audit(work: Path) -> tuple[dict | None, str]:
         return None, "gnatprove wrote no .spark audit"
     a = {"proved": 0, "post_proved": 0, "justified": 0, "unproved": [],
          "skips": 0, "assumes": 0, "entities": {},
-         "contradictory": [], "unreachable": [], "f_post": []}
+         "contradictory": [], "unreachable": [], "f_post": [],
+         "cert": {"proved": 0, "post_proved": 0, "unproved": []}}
     for f in files:
         try:
             d = json.loads(f.read_bytes().decode("utf-8", errors="replace"))
@@ -443,8 +485,21 @@ def _read_audit(work: Path) -> tuple[dict | None, str]:
             # and were merged into one "flagged" counter before Wave-4: the
             # merge is what let an unproved obligation reach the VACUOUS
             # branch, and what left the REFUTED decision to a stdout regex.
+            # Certificate-entity checks are routed to their own bucket: they
+            # must never count toward the file's proofs (a certificate file
+            # never mints VERIFIED) and never reach _classify_unproved (a
+            # failing certificate must not borrow the countermodel channel).
+            # A justified certificate check still counts as justified, which
+            # is VACUOUS: excusing the certificate is still excusing a check.
             if "annot_kind" in entry:
                 a["justified"] += 1
+            elif owner.rsplit(".", 1)[-1].lower() == CERT_ENTITY:
+                if entry.get("severity") != "info":
+                    a["cert"]["unproved"].append(_unproved(entry, "prover"))
+                else:
+                    a["cert"]["proved"] += 1
+                    if rule == "VC_POSTCONDITION":
+                        a["cert"]["post_proved"] += 1
             elif entry.get("severity") != "info":
                 a["unproved"].append(_unproved(entry, "prover"))
             else:
@@ -454,11 +509,17 @@ def _read_audit(work: Path) -> tuple[dict | None, str]:
         for entry in d.get("flow", []):
             # honest flow entries are "info" (plus library "warning"s in
             # warn_error, not here); a justified flow check carries
-            # annot_kind exactly like a justified proof check.
+            # annot_kind exactly like a justified proof check. A failing
+            # flow check on the certificate entity kills the certificate,
+            # never the program: same routing as the proof entries.
             if "annot_kind" in entry:
                 a["justified"] += 1
             elif entry.get("severity") not in ("info", "warning"):
-                a["unproved"].append(_unproved(entry, "flow"))
+                fowner = names.get(str(entry.get("entity")).strip(), "")
+                if fowner.rsplit(".", 1)[-1].lower() == CERT_ENTITY:
+                    a["cert"]["unproved"].append(_unproved(entry, "flow"))
+                else:
+                    a["unproved"].append(_unproved(entry, "flow"))
         # "Declared here" is the entity's PRIMARY sloc (a generic member
         # carries the library's location first and the instantiation's
         # second). An entity of ours at "spec" is a body outside the
@@ -498,6 +559,37 @@ def _classify_audit(a: dict) -> tuple[str, str]:
             f"accepted without discharging: {a['assumes']} pragma_assume, "
             f"{a['skips']} skipped, {a['justified']} justified "
             f"check(s) in the .spark audit")
+    # The confirmed-countermodel channel outranks the certificate: severity
+    # "high" is the kernel's own executed evidence about the program's very
+    # obligation, so a cell that has it (abs, max) keeps the evidence
+    # signature it had before the certificate channel existed (10.8).
+    ce = [u for u in a["unproved"] if u["severity"] == "high"
+          and (u["cntexmp"] or u["how"] == "flow")]
+    if ce:
+        return _classify_unproved(a["unproved"])
+    cert = a["cert"]
+    if cert["proved"] or cert["unproved"]:
+        if not cert["unproved"] and cert["post_proved"]:
+            return Outcome.REFUTED, (
+                "kernel accepted the t_refutation_certificate goal: the "
+                "measured witness instantiation of the spec is proved to "
+                f"fail ({cert['proved']} certificate check(s) discharged, "
+                f"{cert['post_proved']} of them its postcondition)")
+        # A rejected certificate never refutes and the file never verifies.
+        # The program's own checks still classify normally below, so a
+        # confirmed countermodel on F stays REFUTED and a starved F stays
+        # TIMEOUT; only a file whose every non-certificate check proved
+        # falls through to the certificate's own failure.
+        detail = "; ".join(
+            f"{u['rule']} at {u['at']} severity {u['severity']}"
+            f"/{u['status'] or 'no-status'}" for u in cert["unproved"][:4])
+        if a["unproved"]:
+            return _classify_unproved(a["unproved"])
+        if any(u["status"] == "limit" for u in cert["unproved"]):
+            return Outcome.TIMEOUT, (
+                "certificate not judged within budget: " + detail)
+        return Outcome.UNPROVED, (
+            "kernel did not accept t_refutation_certificate: " + detail)
     if a["unproved"]:
         return _classify_unproved(a["unproved"])
     if a["proved"] == 0:
@@ -603,7 +695,9 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
         raise SystemExit(_GNATPROVE_WHY)
     src_hash = sha256_file(path)
     src_text = safe_text(path)
-    banned = [m.group(0) for m in BANNED.finditer(_active_code(src_text))]
+    active = _active_code(src_text)
+    banned = [m.group(0) for m in BANNED.finditer(active)]
+    cert_named = CERT_ENTITY in active.lower()
     t0 = time.monotonic()
     m = re.search(r"package\s+(\w+)", src_text)
     unit = (m.group(1).lower() if m else "t_unit") + ".ads"
@@ -634,6 +728,16 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
             outcome, why = Outcome.TOOL_ERROR, (
                 f"audit shows every check discharged but gnatprove exited "
                 f"{p.returncode}: " + out[-300:])
+    if outcome == Outcome.VERIFIED and cert_named:
+        # The name is reserved for refutation evidence (header): a file that
+        # carries it in active code never mints VERIFIED, goals or no goals,
+        # so planting it in a real program only costs that program its pass.
+        # Checked before the havoc oracle: a file that cannot verify does
+        # not pay for the second kernel run.
+        outcome, why = Outcome.UNPROVED, (
+            "active code names t_refutation_certificate but no accepted "
+            "certificate goal decides the file: a certificate-carrying "
+            "file never mints VERIFIED")
     havoc_wall = 0
     if outcome == Outcome.VERIFIED:
         # Only a would-be pass pays for the second kernel run: a refuted twin
@@ -651,6 +755,10 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
         extras["proof_warnings"] = (audit["contradictory"]
                                     + audit["unreachable"])[:5]
         extras["f_post"] = audit["f_post"]
+        if audit["cert"]["proved"] or audit["cert"]["unproved"]:
+            extras["cert"] = {"proved": audit["cert"]["proved"],
+                              "post_proved": audit["cert"]["post_proved"],
+                              "unproved": audit["cert"]["unproved"][:5]}
         # The verdict's whole basis when the outcome is not VERIFIED: which
         # check, what severity, whether a countermodel backed it.
         extras["unproved"] = audit["unproved"][:5]

@@ -156,25 +156,44 @@ distro and the language are where the method goes next.
   fallback and a rootless chroot measured impossible on this kernel.
 - **tup 0.1 is witnessed, not verified.** Nothing here proves the kernel or
   libc correct. It records what was built, from which bytes, in what order.
-- **Frama-C proves statements about UNDEFINED expressions** (measured
-  2026-09-01, the most serious open defect). `ensures at(s,-1) == at(s,-1)`
-  VERIFIES; so does reading one past the end, and a `forall` whose range
-  includes `len(s)`. SPEC.md says `at(s,i)` is defined iff `0 <= i <
-  len(s)`, so a postcondition naming an out-of-range element must not verify
-  at all. ACSL's logic is **total**: an out-of-range read denotes an
-  unconstrained value, so `e == e` closes by reflexivity and the definedness
-  obligation t requires is never emitted. A lowering defect, not a kernel
-  defect.
-- **Some REFUTED verdicts are unearned.** Ground-truth fuzzing found 39
-  cells refuting a task *true by construction*: Verus on nonlinear
-  arithmetic, Lean and Rocq via marker lists that treat "omega could not
-  prove" and "Tactic failure" as disproof, Frama-C returning a goal whose
-  own status is `Timeout`. Incompleteness reported as refutation is a
-  taxonomy violation this project forbids, and it is not yet purged. SPARK's
-  instance was fixed first and cost that column its flip: nine of its eleven
-  twins now honestly read `verified / timeout`, so **the suite exits 1 and
-  the table is no longer 77/77**. The earlier number rested, in one column,
-  on a mislabelled verdict.
+- **Frama-C proved statements about UNDEFINED expressions; FIXED as of
+  cb70ac4.** Measured 2026-09-01: `ensures at(s,-1) == at(s,-1)` verified,
+  as did reading one past the end and a `forall` whose range includes
+  `len(s)`. SPEC.md says `at(s,i)` is defined iff `0 <= i < len(s)`, and
+  ACSL's logic is **total**: an out-of-range read denotes an unconstrained
+  value, so `e == e` closed by reflexivity and the definedness obligation t
+  requires was never emitted. A lowering defect, not a kernel defect, and
+  fixed in the lowering: `lower_framac.py` now emits the obligation itself,
+  following SPEC.md's own evaluation order, and all four measured witnesses
+  stopped verifying. Residual, stated in that file's docstring: spec_fun
+  bodies are axiomatized as total logic functions, so an `at` applied
+  outside its guarded range inside a spec_fun body keeps the reflexivity
+  hole. The committed tasks guard their ranges; the same total-logic
+  softness in `requires` and invariant positions is recorded future work,
+  and SPEC.md now states normatively what an undefined `requires` means.
+- **REFUTED now has one door per column, and holding it open costs the
+  table.** Ground-truth fuzzing had found 39 cells refuting a task *true by
+  construction*: Verus on nonlinear arithmetic, Lean and Rocq via marker
+  lists that treat "omega could not prove" and "Tactic failure" as
+  disproof, Frama-C returning a goal whose own status is `Timeout`.
+  Incompleteness reported as refutation is a taxonomy violation this project
+  forbids, and it was purged on 2026-09-02: those signals now mint UNPROVED
+  or TIMEOUT, and every column mints REFUTED only on positive kernel
+  evidence. That evidence is either a countermodel the kernel itself
+  confirms by execution, or a refutation certificate: the lowering restates
+  the harness's measured witness as a ground theorem that the spec fails
+  there, and the twin cell is REFUTED only when the kernel accepts that
+  proof. One recorded exception is left: the dafny adapter still reads
+  kernel exit 4 as REFUTED, and the post-purge ground-truth sweep measures
+  exactly one true task (an existential the solver will not instantiate
+  unprompted) where that door sells incompleteness as refutation; it is
+  named remaining scope in ROADMAP.md 10.7, not hidden. After the purge the table reads: 11 of 11 real programs verified in
+  all 7 columns, 71 of 77 twins refuted on that evidence (SPARK's nine lost
+  flips re-earned, so its column flips 11 of 11 again), and Frama-C's six
+  invariant-drop twins read `verified / timeout`, because their witnesses
+  are loop-exit states rather than program inputs and WP's step budget fires
+  first. **The suite still exits 1, now for exactly those six cells**: an
+  honest incompleteness on the record, not a mislabelled verdict.
 - **The integer-boundary unsoundness is FIXED and independently
   re-checked.** A boundary campaign built 48 tasks false over the integers
   but true under a machine word, and no kernel verified any of them. The
