@@ -690,3 +690,111 @@ unconditionally, a task whose requires is undefined at an admissible
 input is DEFECTIVE, and the
 measured probe shows six of seven lowerings surface it; framac is the
 recorded gap, per its docstring.
+
+## WS-11: PROPOSED — the package-manager question, measured (opened 2026-09-02)
+
+0.1 ships no package manager by design, and `tup/overrides/ch08/pkgmgt.sh`
+records the decision rather than leaving it to be inferred. The audit in #17
+prices that decision honestly: nothing maps a file to the package that
+installed it, so no single package can be updated, removed, or CVE-patched
+except by rebuilding. `receipts.jsonl` records what was *built*, not what
+*landed where*.
+
+This section is direction, not tasks. Nothing in it has been built or
+measured; every candidate below is UNMEASURED and labeled so. What it
+proposes is a way to answer the question with numbers instead of taste.
+
+### 11.1 Ship pairs, not a menu
+
+The tempting version — one image per package manager, let people pick — is
+refused here in advance. N images means N builds, N receipt sets, and N
+witness burdens, in a project whose README already enumerates what is
+unwitnessed; multiplying the surface would grow that list, not shrink it.
+Nobody chooses a distribution from a package-manager menu anyway.
+
+The useful version is the same move `t` already makes. Every variant is built
+**twice**: once **raw**, with no package manager, and once **managed**. The
+raw build is the control, the managed build is the treatment, `inventory.sh`
+diffs the two, and **the diff is the receipt**. This is the twin discipline
+applied to the distro half — the real artifact beside a deliberately altered
+one, where the measured difference is the finding. A package manager whose
+cost cannot be shown as a file-level diff does not ship.
+
+The deliverable is a table, not extra images:
+
+    receipts/PKGMGR-COST.md
+      manager   files added   bytes   new binaries   deps pulled in
+
+Nobody publishes that number. tup is unusually well placed to: it has
+`inventory.sh`, a known-complete 70,146-file baseline, and a layer mechanism
+whose entire purpose is inventory-before → install → inventory-after.
+
+### 11.2 The raw image is the reference, per variant
+
+**Every variant keeps a no-package-manager build, permanently** — not as a
+transitional state before a "real" one arrives. Raw is the reference build:
+it is what the completeness claim is about, it is what a managed build is
+diffed against, and it is the only configuration where "the filesystem is
+the manifest" is true without qualification. If a variant has no raw twin,
+its managed twin has nothing to be measured against and the number is gone.
+
+### 11.3 Candidates per variant — all UNMEASURED
+
+| Variant | Raw (reference) | Candidate manager | Why |
+|---|---|---|---|
+| **base** | ships raw, always | *none* | The control. Adding one here is what 0.1 already refused, and the refusal is the point. |
+| **agent** | raw twin | `xbps` or `apk` | The layer needs the small userland an agent actually reaches for (git, curl, ripgrep, jq) and needs it to keep moving. Both are small, daemonless, single-binary, and FHS-shaped. |
+| **train** | raw twin | `micromamba` / `uv`, **user-level** | Nobody compiles PyTorch or a CUDA stack. This is already the house practice — WS-7's install rules and the `qemubuild` micromamba env both work this way. A *system* package manager is the wrong instrument here. |
+| **prove** | raw twin | toolchain-native (`opam`, `elan`, `rustup`) | Every kernel ships its own installer, and WS-10.5 already assumes them. A system manager would be a second, worse copy of seven working ones. |
+| **infer** | raw twin | *none* | llama.cpp / vLLM are a static binary plus weights. Ship as a layer; a package manager buys nothing. |
+
+Two constraints that bound the whole table:
+
+- **Nix and Guix are not variants of this.** They replace the filesystem
+  architecture (`/gnu/store`, `/nix/store`, no conventional `/usr/lib`), so
+  they cannot appear as peers of `xbps` in a swap-one-component matrix.
+  Their place is already recorded under "The far field" — closure hashes as
+  the receipt discipline machine-enforced, Guix's full-source bootstrap as
+  the serious answer to trusting-trust — and that entry stays where it is,
+  slotted behind WS-4, with the receipts learning to record a closure hash.
+  A Guix-based tup is a different operating system, and should be costed as
+  one if it is ever wanted.
+
+- **No foreign binary repository, for any candidate.** Every manager above is
+  proposed as a *local package format and install tracker*, never pointed at
+  an upstream repo. Foreign binaries are built against a different glibc, and
+  the manager's database starts empty — it believes it owns nothing and knows
+  nothing about the 70,146 files already on disk, so the first dependency
+  chain overwrites base-system files with no record. That is precisely the
+  unaccountable pile the README opens by refusing, and it would be reached in
+  one command.
+
+### 11.4 What is already measured, and what a first pass costs
+
+Measured today, and the reason `pacman` is a poor first candidate despite
+being the obvious one: of its build dependencies, `meson`, `ninja`, `gcc`,
+`make`, `pkg-config`, `python3` and `openssl` are all present in the 0.1
+image, but **`libarchive`, `curl`, `gpgme`, `libassuan` and `libgpg-error`
+are all absent** (checked against `INVENTORY-RELEASE-0.1.txt`). So pacman's
+row in the table would include an entire BLFS dependency chain — including
+`curl`, which tup deliberately does not ship. That chain is arguably the most
+interesting number in the table, and it is a reason to measure pacman, not a
+reason to adopt it.
+
+Also measured and relevant: `/usr/lib/locale/locale-archive` is 226 MiB and
+kernel modules are 312 MB, against a 2.3 GB image — so "what does a component
+cost" is already a question with large answers on this disk, and the
+instrument to answer it exists.
+
+UNMEASURED, and the honest first task: build one `tup/layers/pkg-<name>/`
+following the `agent`-layer contract (MANIFEST with pinned sources and
+sha256, `build.sh` with the inventory diff), for a single manager, and see
+whether the diff is legible. One row of the table is worth more than the
+whole design argument above. Needs an arm64 or x86_64 Linux build host;
+X86-FEASIBILITY's GO verdict applies unchanged, since package management is
+architecture-independent.
+
+Cheapest thing on this page, and independent of every choice above: **the
+`DESTDIR` install logs from #17.** They give the file-to-package map that the
+missing manager would have provided, without writing or adopting one, and
+they would make every row of the table above easier to produce.
