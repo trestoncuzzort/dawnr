@@ -16,20 +16,33 @@ Three layers, each with a reason:
      margin it DECLARES equivalence (p = .034) where the correct test does not
      (p = .295). A test both versions pass is not testing anything; this pair
      cannot both pass.
+  4. DEGENERATE INPUTS, with the broken twins kept beside them for the same
+     reason. Each twin is the code that used to ship, verbatim, and each one
+     returns something a caller would print: t = 0 and p = 1 for a paired
+     difference that is a constant 1.0, and a bare ZeroDivisionError from
+     inside a df expression for two constant Welch arms. A test the old code
+     also passes proves nothing, so the twins are asserted to still misbehave.
 
-Run: pytest tests/test_stats_core.py
+Run: python tests/test_stats_core.py   (self-executing; there is no pytest on
+the machines this runs on — the runner at the bottom is the same one every
+other file in tests/ carries)
 """
 from __future__ import annotations
 
+import json
+import math
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
+import analyze_run1                                               # noqa: E402
 from analyze_run1 import BASE, NULL, TRAINED, load, rate          # noqa: E402
-from stats_core import certify, t_crit, t_sf, tost, welch          # noqa: E402
+from stats_core import (DegenerateInput, certify, mean, paired,   # noqa: E402
+                        sd, t_crit, t_sf, tost, welch)
 
 
 def _arms():
@@ -105,3 +118,126 @@ def test_certificate_holds_alpha():
     assert 0.03 < c["welch_fpr_equal_var"] < 0.07
     assert 0.03 < c["welch_fpr_unequal_var"] < 0.07
     assert c["tost_fpr_at_margin"] < 0.07
+
+
+# --- 4. degenerate inputs, and the twins that used to answer them ---------
+def _raises(fn, *a, **k):
+    """Returns the exception a call raised, or None. Deliberately catches
+    everything: the point of these tests is WHICH exception comes out."""
+    try:
+        fn(*a, **k)
+    except BaseException as e:                                    # noqa: BLE001
+        return e
+    return None
+
+
+def _paired_silent_zero(a, b):
+    """The bug, verbatim: `t = mean(d)/se if se else 0.0`. A zero standard
+    error becomes a t of 0 and a p of 1 -- 'no evidence of a difference' --
+    even when every single pair differs by the same non-zero amount."""
+    d = [x - y for x, y in zip(a, b)]
+    n = len(d)
+    se = sd(d) / math.sqrt(n)
+    t = mean(d) / se if se else 0.0
+    return {"diff": mean(d), "se": se, "df": n - 1, "t": t,
+            "p": 2.0 * t_sf(abs(t), n - 1)}
+
+
+def _welch_unguarded_df(a, b):
+    """The bug, verbatim: the Welch-Satterthwaite df with nothing in front of
+    it. Two constant arms make it 0/0 and it dies inside the expression."""
+    na, nb = len(a), len(b)
+    va, vb = sd(a) ** 2, sd(b) ** 2
+    return (va / na + vb / nb) ** 2 / (
+        (va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1))
+
+
+def test_paired_refuses_a_constant_non_zero_difference():
+    e = _raises(paired, [1.0, 1.0], [0.0, 0.0])
+    assert isinstance(e, DegenerateInput), f"paired() answered instead: {e!r}"
+    assert "unbounded" in str(e), str(e)
+    # The twin must still produce the misleading answer, or this test is dead.
+    twin = _paired_silent_zero([1.0, 1.0], [0.0, 0.0])
+    assert twin["diff"] == 1.0 and twin["t"] == 0.0 and twin["p"] == 1.0, twin
+
+
+def test_paired_refuses_identical_samples():
+    e = _raises(paired, [1.0, 1.0, 1.0], [1.0, 1.0, 1.0])
+    assert isinstance(e, DegenerateInput), f"paired() answered instead: {e!r}"
+    assert "identical" in str(e), str(e)
+
+
+def test_paired_refuses_mismatched_lengths():
+    """zip() truncates in silence, so the old code compared the first n pairs
+    of a mismatched call and reported an n the caller never asked for."""
+    e = _raises(paired, [1.0, 2.0, 3.0], [1.0, 2.0])
+    assert isinstance(e, DegenerateInput), f"paired() answered instead: {e!r}"
+
+
+def test_welch_refuses_two_constant_arms_by_name():
+    e = _raises(welch, [1.0, 1.0], [0.0, 0.0])
+    assert isinstance(e, DegenerateInput), f"welch() raised {e!r}"
+    assert not isinstance(e, ZeroDivisionError)
+    # The twin still dies the old way, from inside the arithmetic.
+    twin = _raises(_welch_unguarded_df, [1.0, 1.0], [0.0, 0.0])
+    assert isinstance(twin, ZeroDivisionError), f"twin lost its bug: {twin!r}"
+
+
+def test_welch_still_answers_when_only_one_arm_is_constant():
+    """ONE constant arm is not degenerate: the df collapses to the other arm's
+    n-1, which is the right answer. The guard must not swallow this case."""
+    w = welch([1.0, 1.0, 1.0], [0.0, 1.0, 2.0])
+    assert math.isfinite(w["t"]) and math.isfinite(w["p"])
+    assert abs(w["df"] - 2.0) < 1e-9, w["df"]
+
+
+def test_non_finite_observations_are_refused_everywhere():
+    nan, inf = float("nan"), float("inf")
+    for fn, args in ((welch, ([0.1, 0.2, nan], [0.1, 0.2, 0.3])),
+                     (welch, ([0.1, 0.2, 0.3], [0.1, 0.2, inf])),
+                     (paired, ([0.1, 0.2, nan], [0.1, 0.2, 0.3])),
+                     (tost, ([0.1, 0.2, nan], [0.1, 0.2, 0.3], 0.02))):
+        e = _raises(fn, *args)
+        assert isinstance(e, DegenerateInput), f"{fn.__name__} returned {e!r}"
+
+
+def test_a_nan_p_value_would_read_as_not_significant():
+    """WHY the check above matters, asserted rather than described: NaN fails
+    both halves of the significance question, so a caller that asks only one
+    of them gets a definite-looking answer from a run that has no result."""
+    nan = float("nan")
+    assert not (nan < 0.05)
+    assert not (nan >= 0.05)
+
+
+def test_the_loader_refuses_a_nan_rate():
+    """json.loads accepts the bare token NaN. The banked file must not, and
+    the refusal has to happen at the loader -- after that the value is a float
+    like any other."""
+    row = {"model": TRAINED, "replicate": 1, "n_tasks": 1, "n_samples": 5,
+           "aggregate": {"pass@1": float("nan")},
+           "per_task": [{"tid": "A", "greedy": None, "sampled": [1, 0, 1]}]}
+    tmp = Path(tempfile.mkdtemp(prefix="test_stats_core_")) / "noise.jsonl"
+    tmp.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    assert "NaN" in tmp.read_text(encoding="utf-8"), "fixture lost its NaN"
+    saved = analyze_run1.NOISE
+    try:
+        analyze_run1.NOISE = tmp
+        e = _raises(load)
+        assert isinstance(e, DegenerateInput), f"the loader accepted it: {e!r}"
+    finally:
+        analyze_run1.NOISE = saved
+    # and the real file still loads, so the guard did not close the door.
+    assert len(load()[BASE]) == 50
+
+
+if __name__ == "__main__":
+    fails = []
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_"):
+            try:
+                fn(); print(f"PASS {name}")
+            except AssertionError as e:
+                fails.append(name); print(f"FAIL {name}: {e}")
+    print(f"\n{len(fails)} failed")
+    raise SystemExit(1 if fails else 0)

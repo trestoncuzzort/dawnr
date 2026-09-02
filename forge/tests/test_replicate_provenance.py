@@ -15,7 +15,10 @@ weaker claim"); the replicate bank had no equivalent.
 
 dataset_gate.verifier_fingerprint() ALREADY computes exactly the right thing --
 sha256 of forge.py, of screen_tasks.py, of data/screen_results.jsonl, plus the
-interpreter. The defect was that nothing put it on the row. So this file asserts
+interpreter (and, since the receipt was bound to the gate version and the frozen
+split, of verify_dataset.py and data/ruler_frozen.json too; this file reads the
+set from the gate rather than re-listing it, so that widening arrived here for
+free). The defect was that nothing put it on the row. So this file asserts
 the row carries it, not that a new hashing scheme is correct.
 
 RED WITNESS (pre-fix bytes, ruler_noise.replicate_row extracted but not yet
@@ -43,9 +46,9 @@ aborts the run instead of mislabelling rows.
 
 WHAT THIS DOES NOT ASSERT. It does not claim the fingerprint is complete as a
 description of "what verified means" -- that scope decision lives in
-dataset_gate's VERIFIER_FILES / TASK_SOURCE_FILES and this file deliberately
-reads it from there rather than re-listing it, so widening the fingerprint
-widens the test for free. It does not check that anything READS the new fields
+dataset_gate's VERIFIER_FILES / TASK_SOURCE_FILES / SPLIT_FILES and this file
+deliberately reads it from there rather than re-listing it, so widening the
+fingerprint widens the test for free. It does not check that anything READS the new fields
 to refuse pooling; recording is a precondition for that, not a substitute. And
 it says nothing about rows already banked: those stay unfingerprinted, and are
 evidence of that fact rather than something this fix can retroactively repair.

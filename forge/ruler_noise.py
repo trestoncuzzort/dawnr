@@ -63,6 +63,12 @@ import dataset_gate
 import eval as ev
 import forge
 import screen_tasks
+# verifier_key lived here until analyze_run1.py needed the same pooling key.
+# Importing this module to get it is not available to a CPU-only re-scoring
+# script (dataset_gate SystemExits at import without a pinned verifier), and a
+# second copy of a pooling rule is the failure that rule exists to prevent, so
+# it moved to provenance.py -- stdlib only -- and is re-exported here.
+from provenance import verifier_key  # noqa: F401
 
 HERE = Path(__file__).resolve().parent
 RULER = HERE / "data" / "ruler_confirmed.json"
@@ -211,8 +217,8 @@ def replicate_row(res: dict, replicate: int, verifier: dict) -> dict:
     indistinguishable in the file, silently pooled into one sd.
 
     dataset_gate already owns that scope decision for the dataset receipt
-    (VERIFIER_FILES + TASK_SOURCE_FILES, whole files on purpose) and already
-    computes it. It is IMPORTED here rather than re-derived, for the reason
+    (VERIFIER_FILES + TASK_SOURCE_FILES + SPLIT_FILES, whole files on purpose)
+    and already computes it. It is IMPORTED here rather than re-derived, for the reason
     venv_guard.py exists: a second definition of "what the verifier is" would be
     free to drift from the first, which is the failure this row is meant to make
     visible.
@@ -594,27 +600,6 @@ def cmd_selftest(args: argparse.Namespace) -> None:
 
     print(f"\n{'ALL PASS' if not fails else f'{fails} FAILURE(S)'}")
     sys.exit(1 if fails else 0)
-
-
-def verifier_key(rec: dict) -> tuple:
-    """The identity two replicates must share before they may be pooled.
-
-    Section 71 pooled on the interpreter VERSION alone. That is not sufficient:
-    two hosts running the same CPython under different operating systems record
-    the same string and were silently poolable -- see
-    docs/port-2026-08-24/RED-WITNESS-D-POOLING-KEY.txt, where 18 banked rows read
-    3.12.10 from a Windows host and a Linux host would have matched them.
-
-    Rows banked before this change carry no `platform`, so it is backfilled from
-    the recorded executable path: a drive letter or a backslash is unambiguous.
-    """
-    v = rec.get("verifier") or {}
-    ver = v.get("version", "pre-pin/unrecorded")
-    plat = v.get("platform")
-    if plat is None:
-        exe = v.get("executable", "") or ""
-        plat = "win32" if ("\\" in exe or exe[1:3] == ":\\") else "unknown"
-    return (ver, plat)
 
 
 def main() -> None:

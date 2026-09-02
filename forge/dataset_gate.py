@@ -19,10 +19,16 @@ rather than left implicit, because a guard that overstates its reach is worse
 than no guard:
 
   - A receipt is NOT proof of success by its existence. verify_dataset.py writes
-    one on every run, recording the violation count truthfully including when it
-    fails. `require_verified` is the only thing that grants permission, and it
-    demands violations == 0 AND a matching hash. A failed run therefore replaces
-    a passing receipt with a failing one, which is the intended behaviour.
+    one at the end of every run it COMPLETES, recording the violation count
+    truthfully including when it fails. It writes nothing in exactly one case:
+    an input it was verifying changed while it ran, so a receipt would name
+    bytes that did not produce the verdict. That leaves whatever receipt was
+    there before in place, unchanged and unendorsed -- and each file that moved
+    is one require_verified() compares, so aborting cannot make a stale receipt
+    acceptable. `require_verified` is the only thing that grants permission, and
+    it demands violations == 0 AND a matching hash. A failed run therefore
+    replaces a passing receipt with a failing one, which is the intended
+    behaviour.
   - This is unsigned plain JSON. It defends against DRIFT and ACCIDENT — a
     regenerated dataset, a stale receipt, hand-edited rows, a file swapped after
     verification. It does NOT defend against someone who edits the receipt
@@ -31,6 +37,14 @@ than no guard:
   - It certifies bytes, not judgement. "Verified" here means exactly: every pair
     in this file was executed and `chosen` passed while `rejected` failed. It
     says nothing about whether the pairs are good training signal.
+  - A receipt speaks only for the GATE VERSION and the SPLIT it was issued
+    under. "0 violations" is the answer verify_dataset.py gave to the questions
+    IT asked, checked against the frozen split it read at the time. Change
+    either and the answer can differ on the same bytes, so both are in the
+    fingerprint below and an outstanding receipt stops applying. That
+    invalidation regenerates nothing: what it buys is that the staleness is
+    LOUD instead of silent. Re-verifying is the maintainer's explicit decision
+    (docs/UBUNTU-BOOTSTRAP.md, step 6).
 
 Stdlib only, on purpose: this is imported both by the system Python (verify side)
 and by .venv-train's Python 3.11 (training side).
@@ -50,6 +64,16 @@ SCHEMA = 5          # bump when the `files` or `verifier` entry shape changes
                     # 3 -> 4: `verifier` gained the INTERPRETER, not just the
                     # file hashes (section 71).
                     # 4 -> 5: `verifier` gained the TASK SOURCE (section 91).
+                    # STILL 5 when the gate's own file and the frozen split
+                    # joined the fingerprint: an entry is a name -> sha256
+                    # either way, so nothing that READS a receipt has to read
+                    # it differently, and require_verified() catches the new
+                    # entries itself with a message naming which one moved. A
+                    # bump would refuse the same receipts one check earlier and
+                    # say only "wrong schema". Precedent at this same number:
+                    # task_bank.py joined the fingerprint inside schema 5 --
+                    # data/prereg_track_a_run1.json records the 3-file set and
+                    # the committed schema-5 receipt records 4.
 
 # THE RECEIPT MUST PIN THE VERIFIER, NOT ONLY THE DATA.
 # "0 violations" is a statement about forge.verify() run against forge.SEED_TASKS.
@@ -65,7 +89,30 @@ SCHEMA = 5          # bump when the `files` or `verifier` entry shape changes
 # the thing it guards has moved. A whole-file hash has no scope to get wrong.
 # The price is real and accepted: editing a comment in forge.py invalidates the
 # receipt and forces a re-verify. That is the correct direction to be wrong in.
-VERIFIER_FILES = ("forge.py",)
+#
+# ...AND THE VERIFIER INCLUDES THE GATE THAT ISSUES THE RECEIPT. forge.py decides
+# whether a candidate passes. verify_dataset.py decides what a VIOLATION IS:
+# which lines count as rows, whether a line it cannot parse is skipped or
+# counted, whether a file with nothing in it certifies anything, whether a pair's
+# task is even allowed on the training side. Those four questions were added to
+# it (see its docstring); before them a receipt said "0 violations" without any
+# of them having been asked -- and the fingerprint did not move when they
+# arrived, because forge.py, the task source and the interpreter were all
+# untouched. So the old receipt stayed matching, require_verified() went on
+# granting permission, and every one of the four new checks was invisible at the
+# moment it mattered. That is the same silent-weakening this block exists to
+# stop, one file over, in the file we actually keep changing.
+#
+# SELF-REFERENTIAL ON PURPOSE, and there is no fixed point to chase:
+# verify_dataset.py asks this module for the fingerprint, so the receipt it
+# writes records its own bytes. The hash lands in the receipt, never in the file
+# being hashed.
+#
+# WHAT THIS DOES NOT COVER: dataset_gate.py itself. It is the code doing the
+# comparing, so whatever bytes are running are the ones deciding and a receipt
+# cannot attest to them. A real limit of the mechanism, stated rather than
+# papered over.
+VERIFIER_FILES = ("forge.py", "verify_dataset.py")
 
 # ...AND THE VERIFIER IS NOT ONLY forge.py EITHER. "0 violations" is a statement
 # about verify() run against A SET OF TASKS, so whatever supplies those tasks is
@@ -94,6 +141,27 @@ VERIFIER_FILES = ("forge.py",)
 # it out would be exactly the silent-weakening this whole block exists to
 # stop, just relocated one file over.
 TASK_SOURCE_FILES = ("screen_tasks.py", "task_bank.py", "data/screen_results.jsonl")
+
+# ...AND "VERIFIED" INCLUDES WHICH SPLIT IT WAS CHECKED AGAINST.
+# verify_dataset.partition_violations() reads data/ruler_frozen.json at
+# verification time and refuses any pair whose task is a frozen RULER task or
+# sits outside the training pool. The verdict therefore depends on that file's
+# bytes exactly as it depends on forge.py's -- and the receipt recorded no trace
+# of it. Re-freeze the ruler so a training-pool task becomes an eval task and the
+# old receipt still matched, still said 0 violations, and still granted
+# permission to train on a pair drawn from the eval set. The pairs had not
+# changed and neither had the verifier; the ANSWER had, and the receipt could not
+# say which question it had answered.
+#
+# IN THE SAME `verifier` MAP rather than a new receipt field, because
+# require_verified() already compares that map whole and already names the
+# entries that moved: one comparison, one refusal, one place for a maintainer to
+# look. A separate field would need its own compare and its own message to say
+# the same thing, and two mechanisms for "what did this receipt mean" is exactly
+# the drift this module exists to prevent. Precedent for a DATA file in the map:
+# data/screen_results.jsonl is already there, for the same reason -- it decides
+# what a verdict means.
+SPLIT_FILES = ("data/ruler_frozen.json",)
 
 # ---------------------------------------------------------------------------
 # ...AND THE VERIFIER IS NOT ONLY ITS SOURCE. It is source PLUS the interpreter
@@ -182,8 +250,10 @@ def receipt_path(data_dir: str | Path) -> Path:
 
 def verifier_fingerprint() -> dict[str, str]:
     """Everything that defines what 'verified' means: the sha256 of every
-    verifier file, PLUS the task source those tasks are built from, PLUS the
-    interpreter that executes candidates."""
+    verifier file -- the executor AND the gate that decides what a violation is
+    -- PLUS the task source those tasks are built from, PLUS the frozen split
+    the partition check is run against, PLUS the interpreter that executes
+    candidates."""
     # REFUSE AND SAY WHY, rather than dying inside a hashing helper. These files
     # are part of what "verified" means, so a missing one is not recoverable --
     # but a bare FileNotFoundError raised from sha256_file names a path with no
@@ -192,7 +262,7 @@ def verifier_fingerprint() -> dict[str, str]:
     # source is deliberately withheld from the product whitelist, so the gate
     # crashed at import-time for anyone who cloned it, looking like broken code
     # when it was a boundary artifact.
-    missing = [n for n in VERIFIER_FILES + TASK_SOURCE_FILES
+    missing = [n for n in VERIFIER_FILES + TASK_SOURCE_FILES + SPLIT_FILES
                if not (HERE / n).exists()]
     if missing:
         raise SystemExit(
@@ -202,7 +272,7 @@ def verifier_fingerprint() -> dict[str, str]:
             "  written or checked without them. If this is a partial copy of\n"
             "  the repository, the pipeline cannot run here; use the full one.")
     fp = {name: sha256_file(HERE / name)
-          for name in VERIFIER_FILES + TASK_SOURCE_FILES}
+          for name in VERIFIER_FILES + TASK_SOURCE_FILES + SPLIT_FILES}
     fp.update(interpreter_fingerprint())
     return fp
 
@@ -276,8 +346,11 @@ def require_verified(paths: list[str | Path], data_dir: str | Path) -> dict:
         raise SystemExit(
             "GATE: the VERIFIER changed since this data was verified.\n"
             + detail +
-            "  '0 violations' was a statement about the old verifier. It says\n"
-            "  nothing about the current one, so the receipt no longer applies.\n"
+            "  '0 violations' was a statement about the OLD verifier -- its\n"
+            "  files, the gate that judged them, the tasks they were run\n"
+            "  against, the interpreter, and the frozen split the pairs were\n"
+            "  checked against. It says nothing about the current one, so the\n"
+            "  receipt no longer applies.\n"
             "  Re-run:  python verify_dataset.py")
 
     entries = receipt.get("files") or {}
