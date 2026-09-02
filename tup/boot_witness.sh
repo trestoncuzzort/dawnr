@@ -160,19 +160,51 @@ QPID=$!
 # panic that followed it; the panic is the news. Checking the prompt first, as
 # this loop used to, broke out of the loop and filed a dead system as BOOTED.
 #
-# And the prompt is the LITERAL `tup login:`. A bare "login:" appears in a
-# foreign banner ("ubuntu login:"), in the complaint of a userspace that never
-# reached a prompt ("login: no shell: /bin/sh: not found"), and inside ordinary
-# words ("setup login:") — which is what the leading boundary refuses.
+# A PROMPT IS NOT THE END OF THE BOOT. The loop used to break on the first
+# sighting and kill QEMU immediately, so a panic four seconds later never
+# happened as far as this receipt was concerned: a transcript reading
+# `tup login:` and then "Kernel panic - not syncing: Attempted to kill init!"
+# was filed BOOTED, exit 0, in three seconds. The prompt opens a settle window
+# now — the console keeps being read for TUP_SETTLE_SECS more, the panic test
+# still runs first inside it — and BOOTED is banked only if that window closes
+# quietly. The window is spent out of the same 240s budget, so the timeout
+# below still means what it says.
+#
+# And the prompt must BE the line, not appear in it. The boundary this used to
+# anchor on — (^|[^[:alnum:]_-]) — accepts a space, so
+#     ERROR: never reached tup login: because getty failed
+# scored BOOTED: the one sentence in a transcript that says it did not. The
+# match has to start the line now, and the only things allowed in front of it
+# are whitespace and the ANSI escape sequences a serial console really does
+# emit (which the old boundary rejected outright, since \033[0m ends in an
+# alphanumeric: a genuinely booted system could be filed QEMU EXITED for it).
+ESC=$'\033'
+PROMPT_RE="^[[:space:]]*($ESC\[[0-9;?]*[A-Za-z][[:space:]]*)*tup login:"
+SETTLE=${TUP_SETTLE_SECS:-12}
+prompt_seen=0; settle_left=0
 T0=$SECONDS
 for i in $(seq 1 120); do
   sleep 2
   grep -qE "Kernel panic|Attempted to kill init|not syncing" "$LOG" 2>/dev/null && { VERDICT="PANIC"; break; }
-  grep -qE "(^|[^[:alnum:]_-])tup login:" "$LOG" 2>/dev/null && { VERDICT="BOOTED"; break; }
-  kill -0 $QPID 2>/dev/null || { VERDICT="QEMU EXITED"; break; }
+  if [ "$prompt_seen" -eq 0 ]; then
+    if grep -qE "$PROMPT_RE" "$LOG" 2>/dev/null; then
+      prompt_seen=1; settle_left=$SETTLE
+      echo "  login prompt seen — watching ${SETTLE}s more before calling it booted"
+      continue
+    fi
+    kill -0 $QPID 2>/dev/null || { VERDICT="QEMU EXITED"; break; }
+  else
+    settle_left=$((settle_left - 2))
+    [ "$settle_left" -le 0 ] && { VERDICT="BOOTED"; break; }
+  fi
 done
 ELAPSED=$((SECONDS - T0))
-VERDICT="${VERDICT:-TIMEOUT (240s, no login prompt)}"
+if [ -z "${VERDICT:-}" ]; then
+  if [ "$prompt_seen" -eq 1 ]
+    then VERDICT="TIMEOUT (240s, prompt seen but its settle window never closed)"
+    else VERDICT="TIMEOUT (240s, no login prompt)"
+  fi
+fi
 kill $QPID 2>/dev/null; wait $QPID 2>/dev/null
 
 # NO `set -e` here, deliberately. The receipt is this run's only durable
