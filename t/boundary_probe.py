@@ -119,7 +119,6 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
-import multiprocessing
 import os
 import sys
 import time
@@ -132,7 +131,7 @@ if str(HERE) not in sys.path:
 
 import interp                                          # noqa: E402
 from fuzz_lower import check_wf                        # noqa: E402
-from verifiers import Outcome, flake_check             # noqa: E402
+from verifiers import Outcome, flake_check, mp_context             # noqa: E402
 
 BACKENDS = [
     ("dafny", "lower_dafny", "dfy"),
@@ -822,7 +821,7 @@ def run(tasks, outdir: Path, jobs: int, flake: int, only=None):
             p.write_text(src, encoding="utf-8")
             pending.append((bname, str(p)))
     t0 = time.time()
-    ctx = multiprocessing.get_context("fork")
+    ctx = mp_context()
     done = 0
     with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx) as ex:
         futs = [ex.submit(_cell, b, s, flake) for b, s in pending]

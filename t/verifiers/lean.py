@@ -37,16 +37,37 @@ FAILS this check rather than passing it). VERIFIED requires ALL of:
   - every extracted theorem has a post-sentinel audit line, and every audit
     line anywhere lists only {propext, Classical.choice, Quot.sound}.
 
-Verdict classification (lean 4.33.1, measured on this machine 2026-08-31):
+REFUTED HAS EXACTLY ONE DOOR: the refutation certificate. Lean is a proof
+assistant; a tactic that gives up ("omega could not prove", "unsolved
+goals", "`grind` failed") reports its own incompleteness, never falsity.
+The pre-2026-09-02 adapter minted REFUTED from those marks, and ground
+truth fuzzing (ROADMAP 10.7) measured it refuting goals true by
+construction; those marks now mint UNPROVED (stopped without countermodel,
+without budget exhaustion). Positive evidence of falsity is a theorem
+named exactly t_refutation_certificate: lower_lean.py emits it only when
+lowering a twin with a measured witness, stating the spec instantiated at
+that concrete witness, negated, and proved by kernel-checked ground
+evaluation. REFUTED is minted if and only if that name is declared in the
+source AND its post-sentinel audit line is present with only allowlisted
+axioms (a failed proof is recorded via sorryAx and fails that test). A
+certificate the kernel rejects mints UNPROVED, never REFUTED, and a file
+declaring the certificate name can NEVER mint VERIFIED, so planting the
+name in a real program only demotes it. Bans, sentinel and axiom audit
+apply to certificate files unchanged.
+
+Verdict classification (lean 4.33.1, measured on this machine 2026-08-31,
+certificate rows and UNPROVED 2026-09-02):
   banned token in stripped source                            -> VACUOUS
   zero theorem declarations (empty/comments-only/junk)       -> MALFORMED
   "maxHeartbeats" / "deterministic timeout" in output        -> TIMEOUT
+  t_refutation_certificate declared, audit clean             -> REFUTED
+  t_refutation_certificate declared, rejected or unaudited   -> UNPROVED
   exit 0, sentinel + all audits present, allowlisted         -> VERIFIED
   exit 0, any audit lists a non-allowlisted axiom            -> VACUOUS
   exit 0, sentinel or a theorem's audit missing              -> TOOL_ERROR
-  "omega could not prove" / "unsolved goals" / tactic-failed -> REFUTED
+  "omega could not prove" / "unsolved goals" / tactic-failed -> UNPROVED
   any other nonzero (parse/elaboration errors)               -> MALFORMED
-REFUTED is tested before MALFORMED because proof failures also exit 1.
+UNPROVED is tested before MALFORMED because proof failures also exit 1.
 
 Ban list (second line of defense; the positive audit above is what makes a
 missed token unable to yield a false VERIFIED): sorry/sorryAx/admit,
@@ -91,7 +112,14 @@ BANNED = re.compile(
     r"builtin_initialize|import|variable|implemented_by|extern)\b"
     r"|#eval\b|#exit\b")
 AXIOM_ALLOW = {"propext", "Classical.choice", "Quot.sound"}
-REFUTED_MARKS = ("omega could not prove", "unsolved goals", "failed")
+# Incompleteness marks: a tactic that stopped, said nothing false. These
+# minted REFUTED until 2026-09-02; "failed" matches nearly any error text,
+# so the old name REFUTED_MARKS was the bug (ROADMAP 10.7), not just a
+# misnomer. They mint UNPROVED now; REFUTED needs the certificate below.
+UNPROVED_MARKS = ("omega could not prove", "unsolved goals", "failed")
+# The single door to REFUTED: kernel-accepted proof that the spec fails at
+# the measured witness. The name is the contract with lower_lean.py.
+CERT_NAME = "t_refutation_certificate"
 
 THEOREM_RE = re.compile(r"\btheorem\s+([A-Za-z_][A-Za-z0-9_']*)")
 # '<name>' depends on axioms: [a, b] | '<name>' does not depend on any axioms
@@ -233,6 +261,31 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
     error = ""
     if "maxHeartbeats" in out or "deterministic timeout" in out:
         outcome = Outcome.TIMEOUT
+    elif CERT_NAME in theorems:
+        # The only door to REFUTED. A file declaring the certificate name
+        # can never mint VERIFIED, so this branch precedes the exit-0 path
+        # on purpose: planting the name in a real program only demotes it.
+        if idx < 0:
+            outcome = Outcome.TOOL_ERROR
+            error = ("adapter audit sentinel missing from tool output "
+                     "(empty or suppressed); kernel evidence absent; "
+                     f"output tail: {out[-200:]!r}")
+        else:
+            cert_lines = [
+                axs for nm, axs in AUDIT_LINE.findall(out[idx:])
+                if nm == CERT_NAME or nm.endswith("." + CERT_NAME)]
+            cert_ok = bool(cert_lines) and all(
+                {a.strip() for a in (axs or "").split(",")
+                 if a.strip()} <= AXIOM_ALLOW
+                for axs in cert_lines)
+            if cert_ok:
+                outcome = Outcome.REFUTED
+            else:
+                outcome = Outcome.UNPROVED
+                error = ("refutation certificate declared but not "
+                         "kernel-accepted (rejected proof, missing audit "
+                         "line, or a non-allowlisted axiom); a rejected "
+                         "certificate is never REFUTED")
     elif p.returncode == 0:
         if idx < 0:
             outcome = Outcome.TOOL_ERROR
@@ -247,8 +300,10 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
                      + ", ".join(unaudited[:5]))
         else:
             outcome = Outcome.VERIFIED
-    elif any(m in out for m in REFUTED_MARKS):
-        outcome = Outcome.REFUTED
+    elif any(m in out for m in UNPROVED_MARKS):
+        outcome = Outcome.UNPROVED
+        error = ("proof search stopped without a countermodel and without "
+                 "budget exhaustion; incompleteness, not falsity")
     else:
         outcome = Outcome.MALFORMED
     return Result("lean", version(), src_hash, outcome,

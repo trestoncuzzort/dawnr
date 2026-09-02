@@ -17,7 +17,10 @@ project). So EVERYTHING is a package spec of expression functions:
                       to expressions: assignments become substitution, `if`
                       becomes an if-expression merge of the branch outcomes);
   * while loops    -> one recursive helper function per loop, W_k over a
-                      record of the in-scope mutable state; loop invariants
+                      record of exactly the loop body's syntactic assigned
+                      set (SPEC.md frame rule); in-scope names the body
+                      never assigns stay plain parameters the caller keeps
+                      its own values for. Loop invariants
                       become W_k's Pre AND Post (plus `not cond` in Post),
                       the loop's decreases becomes W_k's Subprogram_Variant.
                       That is the standard Hoare package, stated to the
@@ -188,7 +191,58 @@ the twin operators never touch `ensures` (harness.py) and the real proves it.
 
 Ce_Num / Ce_Int / F_Ce cannot collide with a t identifier: cap() lowercases
 everything after the first character, so no t name can reach a name with an
-interior capital.
+interior capital. (RESERVED clashes are checked case-insensitively since
+10.8, because Ada resolves names case-insensitively: a t param named
+r_first would capitalize to R_first and silently capture R_First.)
+
+THE REFUTATION CERTIFICATE (10.8, 2026-09-02). The instance above recovered
+abs and max; the other nine committed twins stayed verified/timeout, and
+the cause was REPRODUCED before this section was written: every one is a
+VC_POSTCONDITION at severity medium, unproved_status "limit", at --steps
+20000 under the full counterexample flags, and the bundled portfolio
+(--prover=cvc5, altergo, z3,cvc5,altergo) and a tenfold budget (--steps
+200000) were measured to change nothing on sum_upto and factorial: no
+countermodel is ever BUILT over the private Big_Integer model, whatever the
+budget. What the kernel cannot FIND it can still CHECK. The harness already
+measured a violating witness (harness.twin_for), and run_task hands it to
+this lowering at every twin call; certificate() restates that witness as
+one ground goal named T_Refutation_Certificate, and verifiers/spark.py
+mints REFUTED exactly when gnatprove discharges every check of that
+function (see CERT_ENTITY there for the audit rule and its fail-closed
+sides: a rejected certificate is UNPROVED, never REFUTED, and a file
+carrying the name can never mint VERIFIED).
+
+Two witness kinds are certificatable here, and the goal is in both cases
+the negation of the obligation the witness was measured against:
+
+  * "value": requires at the input, and then not (ensures at F(input)).
+    F is the file's own twin F, an expression function, so its defining
+    axiom pins F(input) to the twin's computed value and the goal holds
+    exactly when that value falsifies the ensures. Emitted only when the
+    witness records _ens true: a twin value that merely differs can still
+    satisfy a loose ensures, and a goal known false is not an instrument.
+  * "exit": requires, and then the surviving invariants at the state, and
+    then not cond, and then not ensures, every variable a literal. This is
+    the exit-entailment instance interp.invariant_witness measured
+    (admissibility included): a state the survivors admit, at the loop's
+    exit, where the theorem fails. The survivors come from the twin body's
+    own loop, so the certificate weakens nothing itself; it is emitted
+    only when the twin body has exactly one loop.
+
+"undefined" and "preservation" witnesses are not certificated (fail
+closed; certificate() says why), and neither is any witness the lowering
+cannot express: those cells honestly keep the kernel's own verdict.
+
+MEASURED (2026-09-02, gnatprove FSF 16.1.0, --steps 20000, --prover=z3):
+all nine certificates discharge in seconds at the standard budget, seq
+literals, ground quantifier instances and empty-range cases included, and
+the committed column went 2/11 -> 11/11 flips with every real lowering
+still VERIFIED, stable over 3 repeats (verifiers.flake_check). Soundness
+probes, same day: the certificate name planted in a real program without
+goals demotes it to UNPROVED; a false certificate is rejected (UNPROVED,
+never REFUTED); a kernel-accepted certificate planted in a real program
+demotes it to REFUTED (a demotion is the intended worst case, never a
+pass); the name in a comment is inert, exactly like the ban scan.
 """
 from __future__ import annotations
 
@@ -212,7 +266,7 @@ NARY = {"and": "and then", "or": "or else"}
 # instead (the W_k helpers are checked separately, by count).
 RESERVED = frozenset((
     "F", "Seq", "Seqs", "Len", "Elem", "T_Range", "R_First", "R_Has",
-    "R_Next", "Big_Integer", "Boolean"))
+    "R_Next", "Big_Integer", "Boolean", "T_Refutation_Certificate"))
 
 # The counterexample instance (header). The window is above 2^31 so that a
 # lowering which had silently kept a 32-bit model would be caught by the
@@ -400,6 +454,21 @@ def bound_names(task: dict, body: list) -> set:
     return {n for n in out if isinstance(n, str)}
 
 
+def loop_assigned(body: list) -> set:
+    """Syntactic assigned set of a loop body, SPEC.md's frame rule: a while
+    loop havocs exactly the variables assigned in its body."""
+    out: set = set()
+    for s in body:
+        if "assign" in s:
+            out.add(s["assign"][0])
+        elif "if" in s:
+            out |= loop_assigned(s["if"]["then"])
+            out |= loop_assigned(s["if"]["else"])
+        elif "while" in s:
+            out |= loop_assigned(s["while"]["body"])
+    return out
+
+
 class Lower:
     def __init__(self, task: dict, ce: bool = False):
         self.task = task
@@ -528,12 +597,27 @@ class Lower:
                 raise NotImplementedError(
                     f"spark: loop reached with {v!r} unassigned; the state "
                     f"record has no value for it")
+        # SPEC.md frame rule: the loop havocs exactly the syntactic assigned
+        # set of its body. Only those variables become record fields of the
+        # helper's result; every other in-scope name stays a plain parameter
+        # the helper passes through unchanged, and the caller keeps its own
+        # value for it. (Before 2026-09-02 the record held ALL of env, and
+        # the Post said only invariants + not guard about it, the
+        # havoc-everything theorem: fr_probe_ret / fr_probe_local went
+        # TIMEOUT here while Dafny, Verus and Frama-C proved them.)
+        hav = loop_assigned(w["body"])
+        mut = [v for v in state if v in hav]
+        if not mut:
+            raise NotImplementedError(
+                "spark: loop body assigns nothing in scope; an empty state "
+                "record is not lowerable")
         tparams = self.task["params"]
         plist = [f"{cap(p['name'])} : {TYPE[p['type']]}" for p in tparams] \
             + [f"{cap(v)} : {TYPE[types[v]]}" for v in state]
         entry = {**psub, **{v: cap(v) for v in state}}
         result = {**psub,
-                  **{v: f"{name}'Result.{cap(v)}" for v in state}}
+                  **{v: (f"{name}'Result.{cap(v)}" if v in mut else cap(v))
+                     for v in state}}
         invs = w.get("invariants", [])
         pre = "\n       and then ".join(self.expr(i, entry) for i in invs)
         post_parts = [self.expr(i, result) for i in invs]
@@ -546,7 +630,7 @@ class Lower:
         cond = self.expr(w["cond"], {**psub, **inner})
         rec_args = [cap(p["name"]) for p in tparams] \
             + [benv[v] for v in state]
-        agg = ", ".join(f"{cap(v)} => {cap(v)}" for v in state)
+        agg = ", ".join(f"{cap(v)} => {cap(v)}" for v in mut)
         sig = f"function {name} ({'; '.join(plist)}) return {tname}"
         aspects = []
         if pre:
@@ -554,7 +638,7 @@ class Lower:
         aspects.append(f"Post => {post}")
         aspects.append(f"Subprogram_Variant => (Decreases => {variant})")
         fields = "\n".join(f"      {cap(v)} : {TYPE[types[v]]};"
-                           for v in state)
+                           for v in mut)
         self.helpers.append(
             f"   type {tname} is record\n{fields}\n   end record;\n"
             f"\n"
@@ -568,7 +652,8 @@ class Lower:
         out_args = [cap(p["name"]) for p in tparams] \
             + [env[v] for v in state]
         call = f"{name} ({', '.join(out_args)})"
-        return {v: f"{call}.{cap(v)}" for v in state}
+        return {v: (f"{call}.{cap(v)}" if v in mut else env[v])
+                for v in state}
 
     # --- spec_funs ---------------------------------------------------------
 
@@ -587,7 +672,121 @@ class Lower:
                 f"     ({self.expr(sf['body'], sub)});\n")
 
 
-def lower(task: dict, body: list) -> str:
+CERT_NAME = "T_Refutation_Certificate"
+
+
+def _cert_lit(v) -> str:
+    """One witness value as ground Ada text. Types are read off the JSON
+    value itself (bool before int: a Python bool is an int), so the literal
+    cannot disagree with what interp.py measured."""
+    if isinstance(v, bool):
+        return "True" if v else "False"
+    if isinstance(v, list):
+        out = "Seqs.Empty_Sequence"
+        for x in v:
+            out = f"Seqs.Add ({out}, Big_Integer'({x}))"
+        return out
+    return f"Big_Integer'({v})"
+
+
+def _cert_loops(body: list) -> list:
+    """Every while loop in the twin body, pre-order."""
+    out = []
+    for s in body:
+        if "while" in s:
+            out.append(s["while"])
+            out += _cert_loops(s["while"]["body"])
+        elif "if" in s:
+            out += _cert_loops(s["if"]["then"]) + _cert_loops(s["if"]["else"])
+    return out
+
+
+def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
+    """THE REFUTATION CERTIFICATE (10.8). One additional ground goal, named
+    exactly T_Refutation_Certificate, that instantiates the harness witness
+    so the kernel itself can judge it: verifiers/spark.py mints REFUTED only
+    when gnatprove DISCHARGES every check of this function, and a file that
+    so much as names it can never mint VERIFIED there.
+
+    Two witness kinds are certificatable in this kernel:
+
+      * "value" (a whole-program input): the goal is requires at the input,
+        and then not (ensures at ret := F(input)). F is the file's own twin
+        F, so the kernel evaluates the twin body it was handed, not a
+        transcription: F's defining axiom (it is an expression function)
+        forces F(input) to the twin's computed value, and the goal is
+        provable exactly when that value falsifies the ensures. Emitted only
+        when the witness records _ens true, because a twin value that merely
+        DIFFERS may still satisfy a loose ensures, and a goal known to be
+        false is not an instrument.
+
+      * "exit" (a loop state, from INVARIANT-DROP): the goal is the negated
+        exit-entailment VC at the state, requires and then the surviving
+        invariants and then not cond and then not ensures, every variable a
+        literal. That is byte-for-byte the statement interp.invariant_witness
+        measured (admissibility included), restated to the kernel: a state
+        the survivors admit, at the loop's exit, where the theorem fails.
+        The twin body's own loop supplies the survivors, so the certificate
+        weakens nothing itself. Emitted only when the twin body has exactly
+        one loop, the one the witness's state ranges over.
+
+    "undefined" and "preservation" witnesses are NOT certificated: the first
+    has no value for the ensures to be evaluated at (the twin's definedness
+    failure is its own evidence, but not ground evidence this goal can
+    carry), and the second needs one symbolic body step from the state,
+    which this file does not yet trust itself to instantiate. Fail closed:
+    no certificate, and the cell honestly reads what the kernel could judge.
+
+    Any lowering failure (a name the witness does not value, an operator
+    outside t) emits no certificate rather than a wrong one.
+    """
+    if not w:
+        return ""
+    kind = w.get("_kind")
+    vals = {k: v for k, v in w.items() if not k.startswith("_")}
+    sub = {k: _cert_lit(v) for k, v in vals.items()}
+    ret = task["returns"][0]["name"]
+    try:
+        if kind == "value":
+            if w.get("_ens") is not True:
+                return ""
+            if set(vals) != {p["name"] for p in task["params"]}:
+                return ""
+            args = ", ".join(sub[p["name"]] for p in task["params"])
+            call = f"F ({args})" if args else "F"
+            parts = [L.expr(e, sub) for e in task.get("requires", [])]
+            ens = [L.expr(e, {**sub, ret: call}) for e in task["ensures"]]
+        elif kind == "exit":
+            loops = _cert_loops(body)
+            if len(loops) != 1:
+                return ""
+            loop = loops[0]
+            parts = [L.expr(e, sub) for e in task.get("requires", [])]
+            parts += [L.expr(i, sub) for i in loop.get("invariants", [])]
+            parts.append(f"(not {L.expr(loop['cond'], sub)})")
+            ens = [L.expr(e, sub) for e in task["ensures"]]
+        else:
+            return ""
+    except (ValueError, KeyError, NotImplementedError):
+        return ""
+    neg = f"(not {ens[0]})" if len(ens) == 1 \
+        else "(not (" + " and then ".join(ens) + "))"
+    parts.append(neg)
+    conj = "\n      and then ".join(parts)
+    sig = f"function {CERT_NAME} return Boolean"
+    return (f"   --  Refutation certificate: the measured witness, restated\n"
+            f"   --  as one ground goal for the kernel to judge (see the\n"
+            f"   --  header). This file can never claim VERIFIED.\n"
+            f"   {sig}\n"
+            f"   with Post => {CERT_NAME}'Result;\n"
+            f"\n"
+            f"   {sig} is\n"
+            f"     ({conj});\n")
+
+
+# `witness` is the twin's measured witness (harness.twin_cached). Twin call
+# sites pass it; a certificatable witness becomes the certificate goal above.
+def lower(task: dict, body: list, witness: dict | None = None) -> str:
     L = Lower(task)
     ret = task["returns"][0]
     psub = {p["name"]: cap(p["name"]) for p in task["params"]}
@@ -598,7 +797,9 @@ def lower(task: dict, body: list) -> str:
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,
     # which is a wrong answer rather than a missing one.
-    clash = sorted(n for n in bound_names(task, body) if cap(n) in RESERVED)
+    reserved_lc = {r.lower() for r in RESERVED}
+    clash = sorted(n for n in bound_names(task, body)
+                   if n.lower() in reserved_lc)
     if clash:
         raise NotImplementedError(
             f"spark: t name(s) {clash} collide with the emitted package's own "
@@ -623,6 +824,8 @@ def lower(task: dict, body: list) -> str:
         d = L.expr(task["decreases"], psub)
         aspects.append(f"Subprogram_Variant => "
                        f"(Decreases => (if {d} >= 0 then {d} else 0))")
+
+    cert = certificate(task, body, witness, L)
 
     plist = "; ".join(f"{cap(p['name'])} : {TYPE[p['type']]}"
                       for p in task["params"])
@@ -656,6 +859,8 @@ def lower(task: dict, body: list) -> str:
     inst = ce_instance(task, body)
     if inst:
         parts += [inst]
+    if cert:
+        parts += [cert]
     parts += [f"end {pkg};"]
     return "\n".join(parts) + "\n"
 

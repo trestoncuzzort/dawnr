@@ -27,7 +27,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import multiprocessing as mp
+import re
 import sys
 import time
 from pathlib import Path
@@ -52,6 +54,113 @@ EVAL_BATCHES = 40
 # which is the shipped default, bf16 wins by a wide margin end to end (163s vs
 # 215s). Benchmark the configuration you actually run.
 USE_AMP = True
+
+
+# THE BAR IS A COMPLETE NUMERIC TOKEN, and the pattern says so at both ends.
+# The previous one, r">=\s*([0-9]*\.?[0-9]+)", was a PREFIX match: it read the
+# longest plain decimal it could and ignored whatever followed, so it could not
+# tell 0.020 from 0.020junk and read the exponent of 5e-1 as if it were not
+# there. Measured, before: "gap >= 5e-1" -> 5.0 (a bar 10x too high),
+# "gap >= 2E2" -> 2.0, "gap >= 0.020junk" -> 0.020, "gap >= -0.020" -> refused
+# outright, "gap >= 0x10" -> 0.0, "gap >= 1_000" -> 1.0, "gap >= 0.02e" ->
+# 0.020, "gap >= 2e400" -> 2.0.
+#
+#   [+-]?                     an explicit sign, PARSED rather than dropped
+#   digits with an optional fraction, or a leading-dot fraction
+#   an optional exponent, WITH its digits
+#   (?![0-9A-Za-z_]|\.[0-9])  and nothing may follow that could have belonged
+#                             to the number. A sentence-ending "." is fine: a
+#                             period not followed by a digit is punctuation.
+_BAR = re.compile(
+    r">=\s*([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)"
+    r"(?![0-9A-Za-z_]|\.[0-9])")
+
+# EVERY ">=" IN THE SENTENCE IS A COMPARISON THIS HAS TO ACCOUNT FOR. The bar
+# above is a good pattern applied with findall, which reports the comparisons it
+# COULD read and says nothing about the ones it could not, so a sentence
+# carrying one readable comparison and one malformed one came back with a
+# number. Measured, three of three sentences tried in this shape:
+#
+#     "n >= 5 seeds and gap >= 0.020junk"   -> 5.0
+#     "gap >= 0.020 and gap >= 5e-1x"       -> 0.02
+#     "gap >= 0x10 and gap >= 0.020"        -> 0.02
+#
+# Each is a bar the preregistration never set, printed as if it had.
+#
+# A parser that validates only its own matches cannot refuse anything it failed
+# to match, which is the whole failure class. So the occurrences are enumerated
+# FIRST and each one is then required to parse, rather than the parse being
+# allowed to define the occurrences.
+_GE = re.compile(r">=")
+
+
+def success_bar(prereg: dict) -> float:
+    """The numeric bar, READ FROM THE PREREGISTRATION that declared it.
+
+    This file printed prereg['success_bar']['primary'] and then decided against
+    a literal 0.020 in three places. Change the preregistration and the
+    experiment goes on answering the old question while printing the new one:
+    measured with the bar raised to 0.500 and a stubbed gap of 0.0500, it
+    printed "gap >= ... >= 0.500" and then "bar = 0.020" and PASS.
+
+    The bar lives in prose because the prose is what a reader checks the run
+    against, so it is parsed out rather than duplicated into a numeric field --
+    a second field would be a second place for the two to disagree. If it
+    cannot be read, the experiment stops: a confirmatory run that does not know
+    its own bar has nothing to confirm.
+
+    PARSING PROSE MEANS REFUSING PROSE IT CANNOT READ. The failure this guards
+    is not an exception, it is a WRONG NUMBER THAT RUNS: the previous pattern
+    read "gap >= 5e-1" as 5.0 and "gap >= 0.020junk" as 0.020, and either would
+    have printed "bar = ..." and a PASS/FAIL verdict against a bar the
+    preregistration never set. So the token must be a complete numeric literal
+    with nothing of the number left over, and anything else raises.
+
+    ONE bar, too. If the prose carries two different ">= <number>" tokens --
+    "n >= 5 seeds and gap >= 0.020" -- the old pattern took the first and read
+    the bar as 5.0. There is no rule that makes one of them the right one, so
+    this refuses and says which two it found. Repeats of the SAME number are
+    fine: they cannot be ambiguous.
+
+    AND EVERY COMPARISON COUNTS, not only the ones that parsed. The refusal
+    above was implemented with findall, which returns successes: it could refuse
+    "gap >= 0.020junk" alone, because then there was nothing to return, but
+    "n >= 5 seeds and gap >= 0.020junk" returned 5.0 -- the bar of the readable
+    half, silently standing in for a sentence half of which is unreadable. So
+    the ">=" occurrences are enumerated first and each is required to parse as a
+    complete comparison; one that does not is named and raises. See _GE.
+    """
+    primary = prereg["success_bar"]["primary"]
+    found = []
+    for m in _GE.finditer(primary):
+        bar_at = _BAR.match(primary, m.start())
+        if bar_at is None:
+            raise ValueError(
+                f"this preregistration's success_bar.primary contains a "
+                f"comparison whose bar is not a number this can read: "
+                f"{primary[m.start():m.start() + 20]!r} at character "
+                f"{m.start()} of {primary!r}. Every '>=' in the sentence must "
+                f"be followed by a complete decimal literal (5, 0.020, .5, "
+                f"-0.02, 5e-1) with nothing attached to it.")
+        found.append(bar_at.group(1))
+    if not found:
+        raise ValueError(
+            f"cannot read a numeric bar out of this preregistration's "
+            f"success_bar.primary: {primary!r}. It must contain '>= <number>' "
+            f"where <number> is a complete decimal literal (5, 0.020, .5, "
+            f"-0.02, 5e-1) with nothing attached to it.")
+    values = sorted({float(f) for f in found})
+    if len(values) > 1:
+        raise ValueError(
+            f"this preregistration's success_bar.primary names more than one "
+            f"bar ({', '.join(repr(v) for v in values)}): {primary!r}. Nothing "
+            f"here decides which is THE bar, so it must say one.")
+    bar = values[0]
+    if not math.isfinite(bar):
+        raise ValueError(
+            f"this preregistration's success_bar.primary reads as {bar}, which "
+            f"is not a number an experiment can be judged against: {primary!r}")
+    return bar
 
 
 def fixed_eval_batches(corpus: Corpus, batch_size: int, block_size: int, n: int):
@@ -90,16 +199,110 @@ def _init_worker(cfg_d, device, corpus_path):
     text = Path(corpus_path).read_text(encoding="utf-8", errors="ignore")
     tok = CharTokenizer.from_text(text)
     corpus = Corpus(text, tok, device)
+    # The fingerprint of the file THIS worker read, kept rather than the text:
+    # it is the fallback identity for a split that has no train TEXT to hash,
+    # and holding another copy of a 20MB corpus per worker to get it would be
+    # paying in memory for twelve characters.
     _W.update(tok=tok, corpus=corpus, device=device, cfg=cfg_d,
+              corpus_fp=runlog.corpus_fingerprint(text),
               batches=fixed_eval_batches(corpus, cfg_d["batch_size"],
                                          cfg_d["block_size"], EVAL_BATCHES))
+
+
+def _provenance() -> dict:
+    """What this arm actually trained on, read off the Corpus in this worker.
+
+    Every arm runs in a separate process and builds its own Corpus, so there is
+    no single object in the parent to ask. Re-deriving it in main() by calling
+    group_split() again would agree only for as long as every caller happens to
+    pass the same val_frac and seed, which is the trap data.Corpus keeps
+    train_text/val_text to close. So the arm reports what it used and main()
+    reconciles the reports.
+
+    THE ENDPOINT HERE IS TRAIN LOSS, SO THE TRAINING TEXT IS THE FINGERPRINT
+    THAT HAS TO BE RECONCILED. This reported the VALIDATION fingerprint alone,
+    which is the half of the split the endpoint never touches. Measured on a
+    24-document corpus with one TRAINING document rewritten to the same length
+    (4 characters changed): train text different, val text byte-identical, both
+    arms reporting val_sha1 16aba70b30cb, and provenance_of joining them into
+    one split_fingerprint with no warning -- provenance reporting agreement
+    between two arms that trained on different text. Any same-length edit does
+    it, because group_split assigns by position in a seed-shuffled list and the
+    document LENGTHS decide what fits.
+
+    A LIMIT THIS DOES NOT FIX: main() records corpus_fingerprint(text) from its
+    OWN read of the file and nothing compares that with what the workers read.
+    If the file changes between the parent's read and a worker's, the arms can
+    agree with each other and all disagree with the corpus named on the row.
+    The train fingerprint makes that visible to a reader who compares two runs
+    of the "same" corpus; nothing here raises it.
+    """
+    c = _W["corpus"]
+    # The text this arm's optimiser actually saw. On the positional path there
+    # is no train TEXT to hash -- data.Corpus splits tokens there and keeps
+    # None -- so the fallback is the corpus this worker read, labelled as such:
+    # "the whole corpus" and "the training half of it" are different facts, and
+    # a reconciliation that could not tell them apart would be the val-only
+    # mistake again in another costume.
+    trained_on = (runlog.corpus_fingerprint(c.train_text)
+                  if c.train_text is not None
+                  else dict(_W["corpus_fp"], whole_corpus=True))
+    return {"data_device": c.data_device,
+            "train_fingerprint": trained_on,
+            "split_fingerprint": runlog.split_fingerprint(
+                c.val_frac, c.seed, c.val_text)}
 
 
 def _run_arm(job):
     label, lr, seed = job
     loss, secs, _ = run_one(_W["corpus"], _W["tok"], lr, seed, _W["cfg"],
                             _W["device"], _W["batches"])
-    return label, lr, seed, loss, secs
+    return label, lr, seed, loss, secs, _provenance()
+
+
+def provenance_of(results: list) -> dict:
+    """One provenance for the whole run, or the disagreement left visible.
+
+    Arms build their corpus independently from the same file with the same
+    defaults, so they normally agree exactly and this returns their one answer.
+    They can disagree for a real reason -- one worker's corpus fell back to
+    host memory while another's fitted, or the corpus file changed between the
+    two stages -- and that is a fact about the run, not a detail to average
+    away. So the distinct values are joined rather than reduced to the first
+    one seen, and a run whose arms did not agree on the training text or on the
+    holdout does not get to name one.
+    """
+    devices = sorted({r[5]["data_device"] for r in results})
+    out = {"data_device": devices[0] if len(devices) == 1 else "+".join(devices)}
+
+    # BOTH HALVES OF THE SPLIT, reconciled the same way. The train fingerprint
+    # is the one this experiment's endpoint is measured on; the split
+    # fingerprint identifies the holdout the prereg says every arm shares.
+    # Reporting only the second was reporting agreement about the text nobody
+    # scored: see _provenance.
+    for field, warning in (
+            ("train_fingerprint",
+             "\nWARNING: the arms did not train on the same TEXT, so the gap "
+             "printed above is between arms trained on different corpora and "
+             "cannot be attributed to the learning rate. Recorded as a "
+             "disagreement rather than as one training set."),
+            ("split_fingerprint",
+             "\nWARNING: the arms did not train on the same holdout, so the "
+             "comparison printed above is between arms scored on different "
+             "validation text and the prereg assumes they are identical. "
+             "Recorded as a disagreement rather than as one split.")):
+        seen = {json.dumps(r[5][field], sort_keys=True) for r in results}
+        if len(seen) == 1:
+            out[field] = json.loads(seen.pop())
+        else:
+            out[field] = {"arms_disagreed":
+                          [json.loads(s) for s in sorted(seen)]}
+            print(warning)
+    if len(devices) > 1:
+        print(f"\nWARNING: arms kept the corpus on different devices "
+              f"({', '.join(devices)}); their ms/step are not comparable with "
+              f"each other.")
+    return out
 
 
 def _run_jobs(jobs, cfg_d, device, workers, corpus_path):
@@ -178,7 +381,9 @@ def main():
     text = corpus_path.read_text(encoding="utf-8", errors="ignore")
     print(f"device {device} | corpus {len(text):,} chars | workers {args.workers} "
           f"| config {C}")
-    print(f"prereg bar: gap >= {prereg['success_bar']['primary']}\n")
+    bar = success_bar(prereg)
+    print(f"prereg bar: {prereg['success_bar']['primary']}")
+    print(f"            read as: gap >= {bar}\n")
 
     t_all = time.time()
 
@@ -189,8 +394,9 @@ def main():
     t_stage = time.time()
     res = _run_jobs([("sweep", lr, sweep_seed) for lr in sweep_lrs],
                     C, device, args.workers, str(corpus_path))
-    sweep = {lr: loss for _, lr, _, loss, _ in res}
-    for _, lr, _, loss, secs in sorted(res, key=lambda r: r[1]):
+    sweep_res = res
+    sweep = {lr: loss for _, lr, _, loss, _, _ in res}
+    for _, lr, _, loss, secs, _p in sorted(res, key=lambda r: r[1]):
         print(f"  lr {lr:<8.1e}  train loss {loss:.4f}   ({secs:.0f}s)")
     print(f"  stage 1 wall clock: {time.time() - t_stage:.0f}s")
     finite = {k: v for k, v in sweep.items() if v == v}
@@ -212,7 +418,7 @@ def main():
             + [("treatment", treatment_lr, sd) for sd in seeds])
     res = _run_jobs(jobs, C, device, args.workers, str(corpus_path))
     arms = {"control": [], "treatment": []}
-    for label, lr, sd, loss, secs in sorted(res, key=lambda r: (r[0], r[2])):
+    for label, lr, sd, loss, secs, _p in sorted(res, key=lambda r: (r[0], r[2])):
         arms[label].append(loss)
         print(f"  {label:<10} seed {sd}  train loss {loss:.4f}   ({secs:.0f}s)")
     print(f"  stage 2 wall clock: {time.time() - t_stage:.0f}s")
@@ -225,9 +431,9 @@ def main():
     print("\n" + "=" * 62)
     print(f"control   lr {control_lr:.1e}  mean {mc:.4f}  range [{min(c):.4f}, {max(c):.4f}]")
     print(f"treatment lr {treatment_lr:.1e}  mean {mt:.4f}  range [{min(t):.4f}, {max(t):.4f}]")
-    print(f"gap (control - treatment) = {gap:+.4f}   bar = 0.020")
+    print(f"gap (control - treatment) = {gap:+.4f}   bar = {bar}")
     print(f"ranges overlap = {overlap}   (bar requires NO overlap)")
-    passed = (gap >= 0.020) and (not overlap)
+    passed = (gap >= bar) and (not overlap)
     # The verdict carries its own provenance. A label kept only in a filename or
     # a person's memory gets conflated with the canonical result eventually; one
     # written into the string itself travels with the number wherever it is
@@ -240,7 +446,7 @@ def main():
         verdict += (" - claim: reaches lower train loss FASTER; "
                     "NOT the canonical effect size")
     print(f"\nPREREGISTERED VERDICT: {verdict}")
-    if gap < 0 and abs(gap) >= 0.020:
+    if gap < 0 and abs(gap) >= bar:
         print("NOTE: control WON — the hypothesis is falsified on this rig.")
     print("=" * 62)
 
@@ -252,7 +458,8 @@ def main():
     else:
         out = HERE / "exp_lr_width_result.json"
     out.write_text(json.dumps({
-        "profile": args.profile, "prereg_file": pf, "verdict_string": verdict,
+        "profile": args.profile, "prereg_file": pf, "success_bar": bar,
+        "verdict_string": verdict,
         "claim": prereg.get("claim_this_licenses", ""),
         "config": C, "device": device, "quick": args.quick,
         "sweep": {str(k): v for k, v in sweep.items()},
@@ -261,8 +468,17 @@ def main():
         "mean_control": mc, "mean_treatment": mt, "gap": gap,
         "ranges_overlap": overlap, "passed": passed,
     }, indent=2), encoding="utf-8")
+    # The endpoint here is TRAIN loss, so the training text is on the row: a
+    # gap between two arms means nothing if they were not reading the same
+    # documents. The split is on it too -- every arm still trains on the train
+    # side of one -- and the timings are device numbers. All three are reported
+    # by the arms themselves, because the corpus is built inside the workers.
+    prov = provenance_of(sweep_res + res)
     runlog.record("experiment", name=f"lr_vs_width[{args.profile}]",
-                  device=device, corpus=runlog.corpus_fingerprint(text),
+                  device=device, data_device=prov["data_device"],
+                  corpus=runlog.corpus_fingerprint(text),
+                  train_fingerprint=prov["train_fingerprint"],
+                  split_fingerprint=prov["split_fingerprint"],
                   config=C,
                   metrics={"verdict": verdict, "gap": gap,
                            "mean_control": mc, "mean_treatment": mt,

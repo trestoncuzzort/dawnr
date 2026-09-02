@@ -12,7 +12,10 @@ what is delegated to the kernel and what is refused:
   totalized: an unguarded `at` fails the file with number 19, never passes.
 
   LOOPS. F*'s pure fragment has no while statement, so a while loop lowers
-  to a top-level `let rec <name>_loop` over (params + mutable state):
+  to a top-level `let rec <name>_loop` over params, the frame (mutable
+  names the loop body never assigns, passed back unchanged so the caller
+  keeps its own bindings, per SPEC.md's frame rule) and the threaded state
+  (exactly the loop body's syntactic assigned set):
   requires = task requires + invariants in stated order (the twin operator
   depends on that order), ensures = invariants + negated guard over the
   returned state, decreases = the loop's required decreases clause.
@@ -347,6 +350,21 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict) -> dict:
     return env
 
 
+def loop_assigned(body: list) -> set:
+    """Syntactic assigned set of a loop body, SPEC.md's frame rule: a while
+    loop havocs exactly the variables assigned in its body."""
+    out: set = set()
+    for s in body:
+        if "assign" in s:
+            out.add(s["assign"][0])
+        elif "if" in s:
+            out |= loop_assigned(s["if"]["then"])
+            out |= loop_assigned(s["if"]["else"])
+        elif "while" in s:
+            out |= loop_assigned(s["while"]["body"])
+    return out
+
+
 def find_while(body: list):
     """(prefix, while, suffix) for exactly one top-level while and none
     nested; (body, None, []) when no while at all. Same refusals as the
@@ -451,8 +469,25 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     local: dict[str, str] = {}
     env_pre = exec_straight(
         cx, prefix, {ret: "false" if ret_t == "bool" else "0"}, local)
-    svars = [ret] + [s["var"]["name"] for s in prefix if "var" in s]
-    stys = {v: (local.get(v) or cx.tys[v]) for v in svars}
+    # SPEC.md frame rule: the loop havocs exactly the syntactic assigned set
+    # of its body. Only those variables are threaded through the recursion;
+    # every other mutable name is a plain binder of the helper, passed back
+    # unchanged at the recursive call, so the caller keeps its own binding
+    # and no invariant is needed to preserve it. (Before 2026-09-02 every
+    # mutable name was threaded and returned under an ensures that said only
+    # invariants + not-guard, which proved the havoc-everything theorem:
+    # fr_probe_ret / fr_probe_local failed here while Dafny, Verus and
+    # Frama-C proved them.)
+    mvars = [ret] + [s["var"]["name"] for s in prefix if "var" in s]
+    hav = loop_assigned(w["body"])
+    svars = [v for v in mvars if v in hav]
+    fvars = [v for v in mvars if v not in hav]
+    if not svars:
+        raise NotImplementedError(
+            "fstar lowering: loop body assigns nothing in scope")
+    stys = {v: (local.get(v) or cx.tys[v]) for v in mvars}
+    fb = "".join(f" ({v}:{TY[stys[v]]})" for v in fvars)
+    fargs = "".join(f" {v}" for v in fvars)
     sb = " ".join(f"({v}:{TY[stys[v]]})" for v in svars)
 
     guard_b = cx.bx(w["cond"], {}, local)
@@ -481,24 +516,27 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
         bind = f"let ({', '.join(svars)})"
 
     init = " ".join(env_pre.get(v, v) for v in svars)
-    return (f"let rec {lname} {pb} {sb}\n"
+    fbind = "".join(f"let {v} = {env_pre.get(v, v)} in\n  " for v in fvars)
+    return (f"let rec {lname} {pb}{fb} {sb}\n"
             f"  : Pure {loop_ty}\n"
             f"    (requires {_conj(reqs + invs)})\n"
             f"    (ensures {loop_ens})\n"
             f"    (decreases {dec})\n"
             f"= if {guard_b}\n"
-            f"  then {lname} {pargs} {step}\n"
+            f"  then {lname} {pargs}{fargs} {step}\n"
             f"  else {state_out}\n"
             f"\n"
             f"let {name} {pb}\n"
             f"  : Pure {TY[ret_t]}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens})\n"
-            f"= {bind} = {lname} {pargs} {init} in\n"
+            f"= {fbind}{bind} = {lname} {pargs}{fargs} {init} in\n"
             f"  {result}\n")
 
 
-def lower(task: dict, body: list) -> str:
+# `witness` is the twin's measured witness (harness.twin_cached). Twin call
+# sites pass it; this lowering does not use it yet.
+def lower(task: dict, body: list, witness: dict | None = None) -> str:
     cx = Ctx(task)
     name = task["name"]
     mod = name[0].upper() + name[1:]

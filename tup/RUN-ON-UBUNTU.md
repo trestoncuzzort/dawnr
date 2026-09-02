@@ -57,8 +57,12 @@ On an arm64 host with KVM, add `-accel kvm` and change `-cpu cortex-a72` to
 `-cpu host`. On x86_64 (the lab Dell) leave the command exactly as written —
 it emulates, and tup's boot is small enough that this is fine.
 
-Log in as `root` (no password on the witness image; set one). To exit QEMU
-from `-nographic`: `Ctrl-a x`.
+Log in as `root`, password **`tup`** — the build sets it
+(`overrides/29-shadow.sh`), the README says so, and this file used to say
+"no password", which cost a reader three `Login incorrect`s on 2026-09-02.
+Change it at first boot. `login` gives up after 60 s at the prompt and
+returns to `tup login:`; a scripted console has to answer within that. To
+exit QEMU from `-nographic`: `Ctrl-a x`.
 
 **The command above writes to the qcow2** — the guest remounts rw and touches
 the filesystem on every boot, so your image immediately stops matching
@@ -84,7 +88,22 @@ and `receipts/boot-witness-*.txt` records it being met.
   it is `receipts/LAYER-agent-FULL.md` (4,844 files added, 1 modified, and the
   one modification is listed)
 - `receipts/` in the repo — a receipt for every one of the 105 book pages the
-  system was built from, plus the inventory of every file on the disk
+  system was built from, plus the inventories. There are thirteen
+  `INVENTORY-*.txt` files and only one describes this image; which one, and
+  what the other twelve are, is in `receipts/INVENTORIES.md`. Seven of them
+  list Lean under `/opt`, and this image has no Lean: those are the prove and
+  train layers being built *after* the release was cut, not this disk.
+
+## What is not in the image
+
+No `curl`, `wget`, `git`, `unzip`, or `which` (measured against the
+inventory and inside a booted guest, 2026-09-02). `command -v` does what
+`which` did. The image has `python3` (3.14, not the 3.12 the `t` docs
+assume) with `ssl`, plus `tar` and `zstd`, and QEMU's user-mode network puts
+the host at `10.0.2.2`; so the witnessed way to move a file in is an HTTP
+server on the host and `python3 -c 'import urllib.request ...'` in the guest.
+Fetching tools belong in a layer with a receipt, not in a base that is
+supposed to be able to say what it contains.
 
 ## What this is not, yet
 

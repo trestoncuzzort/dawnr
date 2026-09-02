@@ -38,6 +38,13 @@ not CLEAN — then the comparison is as meaningless as the model's own val loss,
 and callers must not present it as evidence. compare() therefore takes the
 already-split text rather than re-splitting, so it cannot silently score a
 different split than the one that trained (the F-02 trap, in miniature).
+
+AND IT IS ENFORCED OVER A WHOLE PAYLOAD, not over one field. holdout_eligibility
+answers whether a holdout can carry a claim; withhold_claims takes an
+experiment's result payload and nulls every claim in it when the answer is no,
+deriving the set of claims by walking the payload rather than from a list
+someone maintains by hand beside it. See its docstring for what was published
+the two times only one field was nulled.
 """
 from __future__ import annotations
 
@@ -91,6 +98,17 @@ def ngram_nats(train: str, val: str, vocab_size: int,
     one pass, and on the 20MB corpus it builds in 1.8s into ~11k cells. That cost
     is why this can run on every claim-bearing run instead of being opt-in.
 
+    The context table is FOLDED OUT OF the n-gram table rather than counted from
+    the string a second time, and that is a correctness point before it is a
+    speed one. Counting (k-1)-grams over the string walks one position further
+    than counting k-grams does, so the FINAL (k-1)-gram gets counted as a
+    context that never had a following character. Any context equal to that one
+    then divides by a denominator one too large and its conditional
+    distribution sums to less than 1: measured on an 8,708-character corpus,
+    0.99953 at order 2, 0.99762 at order 3 and 0.99160 at order 4. Summing the
+    k-gram counts instead makes sum_c (n + 1) / (d + V) equal (d + V) / (d + V)
+    by construction, at every order, for every context.
+
     An unseen context falls back to add-1 over the whole alphabet, which is the
     same floor `uniform_nats` reports — a context the model has never seen is a
     context this baseline cannot help with, and pretending otherwise would
@@ -101,8 +119,16 @@ def ngram_nats(train: str, val: str, vocab_size: int,
         return uniform_nats(vocab_size)
 
     # counts[ctx][nxt] via two flat Counters: the full n-gram, and its context.
+    # The context table is the n-gram table with the last character dropped, so
+    # the two can never disagree about how many positions were counted. See the
+    # docstring: counting it from the string instead walked one position further
+    # and left the last context with a successor it never had.
     full = Counter(zip(*(train[i:] for i in range(k))))
-    ctx = Counter(zip(*(train[i:] for i in range(k - 1)))) if k > 1 else None
+    ctx = None
+    if k > 1:
+        ctx = Counter()
+        for gram, n in full.items():
+            ctx[gram[:-1]] += n
 
     hist = tuple(train[-(k - 1):]) if k > 1 else ()
     s = 0.0
@@ -116,6 +142,220 @@ def ngram_nats(train: str, val: str, vocab_size: int,
         if k > 1:
             hist = (hist + (c,))[-(k - 1):]
     return _mean_nats(s, len(val))
+
+
+def holdout_eligibility(text: str, train_text: str | None, val_text: str | None,
+                        val_frac: float = 0.1, seed: int = 1337, *,
+                        doc_aligned: bool) -> str | None:
+    """Why this holdout cannot carry a baseline comparison, or None if it can.
+
+    THE RULE IN THIS MODULE'S DOCSTRING, MADE CALLABLE. It was prose here and
+    an inline check in studio.py, and the two experiments had neither: they
+    published closed_fraction on any corpus at all. Measured, before this
+    existed, with training stubbed so only the analysis ran:
+
+      one document holding 99% of the corpus   split_verdict "corpus",
+                                               closed_fraction 0.0221 published
+      near-duplicate documents on both sides   leakage CONTAMINATED,
+                                               closed_fraction -0.3258 published
+      one character, no holdout at all         ZeroDivisionError
+
+    Every one of those numbers is the model and the baseline being wrong in the
+    same direction on the same unusable holdout, printed as a percentage with a
+    "vs table" column heading over it.
+
+    The split arm and the leakage arm are both required, and they catch
+    different things: a corpus can split perfectly and still have the same
+    passages on both sides, and a corpus with no overlap at all can still fail
+    to yield a holdout worth the name.
+
+    doc_aligned IS KEYWORD-ONLY AND HAS NO DEFAULT, deliberately. It is passed
+    straight to leakage.scan, whose document arm counts byte-identical
+    documents against a tight 0.10 bar and is meaningful only on a split that
+    cut between documents; on a positional cut those "documents" are fragments.
+    This function used to call scan() with no flag at all and inherit its
+    default of True, which reads fragment counts against the document bar.
+    Measured on a 18,249-character corpus of 100 blocks, every fifth one an
+    identical separator, cut positionally at 90%: documents 2/10 = 20.0%,
+    lines 5.9%, content 0.0%, and the eligibility answer came back "the leakage
+    scan reads CONTAMINATED: 20.0% of validation documents are byte-identical
+    to a training one" -- while the same report prints "documents n/a, the
+    split cut through a document, so document counts are not meaningful". With
+    doc_aligned=False the same holdout reads CLEAN. A default would let the
+    next caller inherit the same wrong answer silently; a required keyword
+    makes it state what it split, and a caller that does not know gets a
+    TypeError rather than a verdict.
+
+    A LIMIT THIS DOES NOT FIX, named rather than left for the next reader to
+    find: the split arm below asks group_split's question. split_health()
+    re-splits `text` by document whatever the caller's split was, so on a
+    positional caller it reports on a holdout that caller is not using, and the
+    "splitter" remedy it can return ("another seed probably would") is
+    grouped-only advice -- a positional cut does not have a seed. The leakage
+    arm is now honest about the split it was handed; the split arm is not yet.
+
+    Imports are local so that importing baselines stays free for callers that
+    only want the arithmetic, and so this module never has to be ordered
+    against leakage.py at import time.
+    """
+    from data import split_health, split_verdict
+    from leakage import scan
+
+    if train_text is None or not val_text:
+        return ("no held-out text was produced, so there is nothing to score a "
+                "baseline on")
+    v = split_verdict(split_health(text, val_frac, seed))
+    if v is not None:
+        return {
+            "empty": "nothing was held back at all, so there is no holdout",
+            "corpus": ("this corpus cannot support the requested split: no "
+                       "whole-document split of it gets near the request"),
+            "splitter": ("this split fell short of the requested holdout, "
+                         "though the corpus could support it -- another seed "
+                         "probably would"),
+        }[v]
+    rep = scan(train_text, val_text, doc_aligned=doc_aligned)
+    if not rep.trustworthy:
+        return f"the leakage scan reads {rep.verdict}: {rep.reason}"
+    return None
+
+
+def closed_fraction(ngram_choices: float, model_choices: float,
+                    ineligible: str | None = None) -> tuple[float | None, str | None]:
+    """Of the distance the lookup table left on the table, how much the model
+    closed -- or None, and the sentence that says why there is no number.
+
+    Two ways there is no number. The holdout may be ineligible, in which case
+    the caller already knows why and passes it through. Or the lookup table may
+    already be at 1.0 choices, which leaves the fraction without a denominator:
+    both experiments divided by (ngram_choices - 1.0) unguarded and died with
+    ZeroDivisionError on a single-character corpus, where the n-gram falls back
+    to uniform_nats(1) == 0 and exp(0) is exactly 1.0.
+
+    NOT USED BY compare() BELOW, deliberately and not happily: compare()
+    answers the same question with 0.0 in the no-denominator case, which reads
+    as "the model closed none of the distance" when the truth is "there was no
+    distance". Changing it moves what train.py and studio.py print, so it wants
+    its own change and its own witness rather than a ride on this one.
+    """
+    if ineligible:
+        return None, ineligible
+    if ngram_choices <= 1.0:
+        return None, (f"the lookup table already scores {ngram_choices:.4f} "
+                      f"choices, so there is no distance left to close and the "
+                      f"fraction has no denominator")
+    return (ngram_choices - model_choices) / (ngram_choices - 1.0), None
+
+
+# The three fields the gate below writes for itself. They are the ANSWER to the
+# eligibility question rather than a reading of the run, so no caller declares
+# them and no caller sets them: a payload that wrote its own holdout_eligible
+# could disagree with the gate that suppressed it.
+GATE_FIELDS = ("holdout_eligible", "ineligible_reason", "claims_withheld")
+
+
+def _leaf_paths(node, prefix: tuple = ()):
+    """Every leaf path of a payload, as tuples of key names.
+
+    A LIST IS A LEAF. A list of comparisons is one claim the run makes, not one
+    claim per element, and nothing here needs to null the third element of a
+    list while keeping the second.
+    """
+    if isinstance(node, dict) and node:
+        for k, v in node.items():
+            yield from _leaf_paths(v, prefix + (str(k),))
+    else:
+        yield prefix
+
+
+def _declared(path: tuple, data) -> bool:
+    """Whether one leaf path is declared a measurement.
+
+    `*` matches exactly ONE segment, so "arms.*.mean" covers every arm without
+    naming them. A pattern never matches a PREFIX of a path: declaring
+    "baseline" would not silently adopt whatever a later change adds inside it,
+    and that is the direction this has to fail in.
+    """
+    for pattern in data:
+        segs = pattern.split(".")
+        if len(segs) == len(path) and all(s in ("*", p)
+                                          for s, p in zip(segs, path)):
+            return True
+    return False
+
+
+def _null_claims(node, data, prefix: tuple = ()):
+    """`node` with every undeclared leaf replaced by None. Builds a new object;
+    the caller's payload is not modified."""
+    if isinstance(node, dict) and node:
+        return {k: _null_claims(v, data, prefix + (str(k),))
+                for k, v in node.items()}
+    return node if _declared(prefix, data) else None
+
+
+def claims_in(payload: dict, data) -> list[str]:
+    """The claim-bearing paths of `payload`, DERIVED by walking `payload`.
+
+    The set is computed from the object that is about to be published, not
+    typed out beside it. A caller declares what it MEASURED; everything else in
+    the structure is an assertion built on the holdout, including a field added
+    to the payload next year by someone who never read this module. A list of
+    fields to null would have to be edited in step with the payload and would
+    fail open when it was not; this fails closed, and the cost is that a new
+    measurement has to be declared before it survives.
+    """
+    return sorted(".".join(p) for p in _leaf_paths(payload)
+                  if p and p[0] not in GATE_FIELDS and not _declared(p, data))
+
+
+def withhold_claims(payload: dict, ineligible: str | None, data) -> dict:
+    """Null every claim in `payload` when the holdout cannot carry one.
+
+    ELIGIBILITY GATES THE WHOLE VERDICT SURFACE, NOT ONE FIELD. This is the
+    third time the same failure has been found: a run that has already printed
+    why it cannot be trusted goes on to publish the ordinary affirmative
+    result. First closed_fraction was published on an ineligible corpus; then
+    closed_fraction alone was nulled and everything beside it survived.
+    Measured on the bytes before this function existed, with training stubbed
+    so only the analysis ran and a corpus one document of which holds 99% of
+    it, exp_steps_vs_quality printed
+
+        NOT ELIGIBLE for a baseline comparison: this corpus cannot support the
+        requested split: no whole-document split of it gets near the request
+
+    and, at the end of the same run,
+
+        VERDICT: longer training measurably helps
+
+    while the result file carried that verdict plus two comparisons marked
+    beats_noise true, and runs.jsonl recorded
+    {"verdict": "longer training measurably helps", ...} with no eligibility
+    field anywhere on the row. Every one of those is an affirmative claim about
+    unseen text, made about a holdout the same run had just called unusable.
+
+    WHAT SURVIVES, AND WHY IT IS NOT A LOOPHOLE. The measurements do. A per-seed
+    validation loss is the number the model scored on the text that was actually
+    held back; it is what happened, and recording it is how a later reader can
+    re-derive anything if the split is ever shown to be sound after all. What
+    ineligibility destroys is the INTERPRETATION -- that those numbers say
+    anything about text the model has not seen -- so every difference between
+    arms, every comparison against noise and every verdict string goes, and the
+    readings stay beside the sentence that says why they cannot be read. A
+    caller that declares a comparison as a measurement is lying to this
+    function; nothing here can stop it, and the declaration is in its file
+    where a reader can check it.
+
+    Returns a new payload. The original is not modified.
+    """
+    withheld = claims_in(payload, data)
+    if ineligible:
+        out = _null_claims(payload, data)
+    else:
+        out = dict(payload)
+    out["holdout_eligible"] = ineligible is None
+    out["ineligible_reason"] = ineligible
+    out["claims_withheld"] = [] if ineligible is None else withheld
+    return out
 
 
 def compare(train: str, val: str, vocab_size: int,

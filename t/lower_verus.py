@@ -71,6 +71,12 @@ _SUFFIX_INT = False   # v1 only: literals as `(7int)` so ite branches infer
 
 
 def expr(e: dict) -> str:
+    if "_seq" in e:
+        # Private ground node, emitted only by the refutation certificate
+        # builder below: a concrete Seq<int> literal from a measured witness.
+        if not e["_seq"]:
+            return "Seq::<int>::empty()"
+        return "seq![" + ", ".join(f"({v}int)" for v in e["_seq"]) + "]"
     if "int" in e:
         return f"({e['int']}int)" if _SUFFIX_INT else str(e["int"])
     if "var" in e:
@@ -124,7 +130,7 @@ def body_expr(body: list, ret: str) -> str:
     raise ValueError("t v0 -> verus: body not expressible as one expression")
 
 
-def lower_v0(task: dict, body: list) -> str:
+def lower_v0(task: dict, body: list, witness: dict | None = None) -> str:
     ps = ", ".join(f"{p['name']}: int" for p in task["params"])
     r = task["returns"][0]["name"]
     ensures = ",\n        ".join(expr(e) for e in task["ensures"])
@@ -212,7 +218,7 @@ def subst(e: dict, m: dict) -> dict:
         if v is None:
             return e
         return {"var": v} if isinstance(v, str) else v
-    if "int" in e or "bool" in e:
+    if "int" in e or "bool" in e or "_seq" in e:
         return e
     if "ite" in e:
         c = e["ite"]
@@ -614,16 +620,212 @@ class _V1:
                 + "\n} // verus!\n\nfn main() {}\n")
 
 
-def lower(task: dict, body: list) -> str:
+
+
+# ------------------------------------------------ the refutation certificate
+# Shared certificate protocol (2026-09-02, all columns). Verus surfaces NO
+# signal separating a countermodel from incompleteness: Z3 runs with
+# smt.mbqi false, so the check-sat for a genuinely false postcondition and
+# for true nonlinear distributivity both come back "unknown" (measured, see
+# verifiers/verus.py), and no flag prints a model. The adapter therefore
+# never mints REFUTED from a bare verification failure. What it can trust
+# is a proof it checked itself: when lowering a TWIN whose measured witness
+# is expressible as a GROUND formula, this lowering appends one extra goal,
+# named exactly t_refutation_certificate, that instantiates the spec at the
+# concrete witness and asserts via assert(..) by (compute_only), ground
+# kernel evaluation with no SMT fallback, that the obligation fails there.
+# verifiers/verus.py mints REFUTED only when the kernel accepts that goal,
+# and a file carrying the goal's name can never mint VERIFIED.
+#
+# What each witness kind certifies:
+#   value (_ens True only): requires holds at the witness input and the
+#     ensures conjunction is false at (input, r := the twin's measured
+#     result). Recursive spec fns evaluate under compute_only with no
+#     reveal_with_fuel (measured: fact(2), count over seq literals).
+#   exit: the loop rule's post-loop obligation is false at the witness
+#     state: requires and the twin's SURVIVING invariants hold, the guard
+#     is false, and the ensures conjunction is false. The kept invariants
+#     and guard are read off the twin body's own loop, found by diffing the
+#     real body against the twin body, so the certificate always speaks
+#     about the file it travels in. This is the negation of exactly the
+#     obligation the lowered twin asks the kernel to prove: the loop helper
+#     ensures only invariants plus the negated guard, and the witness state
+#     is one interp._Admissible already screened as unrefusable.
+#   preservation: would need one loop iteration replayed inside the
+#     certificate; not emitted (no current twin produces this kind), so
+#     such a cell honestly reads unproved.
+#   undefined: the twin has no value at the witness, so there is no ground
+#     ensures instance to evaluate; not emitted.
+# Bounded quantifiers whose bounds are ground after witness substitution
+# are unrolled here (finite conjunction/disjunction over the concrete
+# range, capped) because compute_only cannot evaluate int quantifiers; the
+# formula the kernel checks is fully ground. Anything outside these rules
+# returns None and no certificate is emitted: a missing or rejected
+# certificate can only cost a flip (UNPROVED), never fake one.
+
+CERT_NAME = "t_refutation_certificate"
+_UNROLL_CAP = 64
+
+
+def _tlit(v):
+    """A measured witness value as a t literal expression."""
+    if isinstance(v, bool):
+        return {"bool": v}
+    if isinstance(v, int):
+        return {"int": v}
+    if isinstance(v, list) and all(
+            isinstance(x, int) and not isinstance(x, bool) for x in v):
+        return {"_seq": list(v)}
+    raise ValueError(f"witness value {v!r} has no t literal")
+
+
+def _gint(e) -> int:
+    """Ground int value of a quantifier bound after witness substitution.
+    Deliberately strict: anything unexpected raises, which refuses the
+    certificate rather than emitting a wrong one."""
+    if isinstance(e, dict) and "int" in e:
+        return e["int"]
+    op = e.get("op") if isinstance(e, dict) else None
+    args = e.get("args", []) if isinstance(e, dict) else []
+    if op == "len" and len(args) == 1 and "_seq" in args[0]:
+        return len(args[0]["_seq"])
+    if op == "neg" and len(args) == 1:
+        return -_gint(args[0])
+    if op in ("+", "-", "*") and len(args) == 2:
+        a, b = _gint(args[0]), _gint(args[1])
+        return a + b if op == "+" else (a - b if op == "-" else a * b)
+    raise ValueError(f"quantifier bound not ground: {e!r}")
+
+
+def _unroll(e: dict, budget: list) -> dict:
+    """Replace bounded quantifiers (ground bounds) with finite conjunctions
+    or disjunctions so compute_only can evaluate the result. budget is a
+    one-element countdown over emitted instances; exhausting it raises and
+    the certificate is refused."""
+    if "forall" in e or "exists" in e:
+        kind = "forall" if "forall" in e else "exists"
+        q = e[kind]
+        lo, hi = _gint(q["lo"]), _gint(q["hi"])
+        insts = []
+        for k in range(lo, hi):
+            budget[0] -= 1
+            if budget[0] < 0:
+                raise ValueError("quantifier unroll budget exhausted")
+            insts.append(_unroll(subst(q["body"], {q["var"]: {"int": k}}),
+                                 budget))
+        if not insts:
+            return {"bool": kind == "forall"}
+        if len(insts) == 1:
+            return insts[0]
+        return {"op": "and" if kind == "forall" else "or", "args": insts}
+    if "ite" in e:
+        c = e["ite"]
+        return {"ite": {"cond": _unroll(c["cond"], budget),
+                        "then": _unroll(c["then"], budget),
+                        "else": _unroll(c["else"], budget)}}
+    if "call" in e:
+        c = e["call"]
+        return {"call": {"fun": c["fun"],
+                         "args": [_unroll(a, budget) for a in c["args"]]}}
+    if "op" in e:
+        return {"op": e["op"],
+                "args": [_unroll(a, budget) for a in e.get("args", [])]}
+    return e
+
+
+def _twin_loop(real_body: list, twin_body: list) -> dict | None:
+    """The single while whose invariant list the twin changed, or None."""
+    diffs: list[dict] = []
+
+    def walk(a: list, b: list) -> None:
+        if len(a) != len(b):
+            return
+        for sa, sb in zip(a, b):
+            if "while" in sa and "while" in sb:
+                wa, wb = sa["while"], sb["while"]
+                if wa.get("invariants", []) != wb.get("invariants", []):
+                    diffs.append(wb)
+                walk(wa["body"], wb["body"])
+            elif "if" in sa and "if" in sb:
+                walk(sa["if"]["then"], sb["if"]["then"])
+                walk(sa["if"].get("else") or [], sb["if"].get("else") or [])
+
+    walk(real_body, twin_body)
+    return diffs[0] if len(diffs) == 1 else None
+
+
+def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
+    """The appended t_refutation_certificate block for a measured twin
+    witness, or None when the witness is not expressible as a ground
+    certificate under the rules in the section comment above."""
+    kind = w.get("_kind")
+    names = {k: v for k, v in w.items() if not k.startswith("_")}
+    try:
+        m = {n: _tlit(v) for n, v in names.items()}
+        parts = [subst(rq, m) for rq in task.get("requires", [])]
+        if kind == "value":
+            if w.get("_ens") is not True:
+                return None      # a drift a sound kernel may still accept
+            tw = w.get("_twin")
+            if not isinstance(tw, (bool, int, list)):
+                return None
+            m2 = dict(m)
+            m2[task["returns"][0]["name"]] = _tlit(tw)
+            parts = [subst(rq, m2) for rq in task.get("requires", [])]
+            parts.append({"op": "not", "args": [
+                _conj([subst(en, m2) for en in task["ensures"]])]})
+        elif kind == "exit":
+            loop = _twin_loop(task["body"], twin_body)
+            if loop is None:
+                return None
+            parts += [subst(iv, m) for iv in loop.get("invariants", [])]
+            parts.append({"op": "not", "args": [subst(loop["cond"], m)]})
+            parts.append({"op": "not", "args": [
+                _conj([subst(en, m) for en in task["ensures"]])]})
+        else:
+            return None          # preservation / undefined: see above
+        formula = _unroll(_conj(parts), [_UNROLL_CAP])
+    except (ValueError, KeyError, TypeError, IndexError):
+        return None
+    global _SUFFIX_INT
+    saved = _SUFFIX_INT
+    _SUFFIX_INT = True
+    try:
+        body = expr(formula)
+    finally:
+        _SUFFIX_INT = saved
+    return (
+        "\nverus!{\n\n"
+        "// Ground refutation certificate for the measured twin witness.\n"
+        "// The kernel evaluates it with no SMT fallback; verifiers/verus.py\n"
+        "// mints REFUTED only if this one goal is accepted, and a file\n"
+        "// carrying this name can never mint VERIFIED.\n"
+        f"proof fn {CERT_NAME}()\n"
+        "{\n"
+        f"    assert({body}) by (compute_only);\n"
+        "}\n\n"
+        "} // verus!\n")
+
+
+# `witness` is the twin's measured witness (harness.twin_cached). Twin call
+# sites pass it; when it is present and ground-certificatable, the lowering
+# appends the refutation certificate block (see the section above).
+def lower(task: dict, body: list, witness: dict | None = None) -> str:
     global _SUFFIX_INT
     if task.get("t", 0) == 0:
         _SUFFIX_INT = False
-        return lower_v0(task, body)
-    _SUFFIX_INT = True
-    try:
-        return _V1(task).emit(body)
-    finally:
-        _SUFFIX_INT = False
+        src = lower_v0(task, body, witness=witness)
+    else:
+        _SUFFIX_INT = True
+        try:
+            src = _V1(task).emit(body)
+        finally:
+            _SUFFIX_INT = False
+    if witness is not None:
+        cert = _certificate(task, body, witness)
+        if cert:
+            src += cert
+    return src
 
 
 if __name__ == "__main__":

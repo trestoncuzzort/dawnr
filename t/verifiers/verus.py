@@ -96,6 +96,45 @@ errors == 0 and stays MALFORMED).
 Budget: --rlimit (solver resource multiplier), deterministic where
 wall-clock is not — same doctrine as Dafny's. The bundled Z3 is used as
 shipped; the release bundle pins it, and version() records the identity.
+
+REFUTED (ROADMAP 10.7, measured 2026-09-02 on 0.2026.08.30.b432e82): Verus
+surfaces NO signal that separates a countermodel from incompleteness, so a
+bare verification failure NEVER mints REFUTED here. The measurement, in
+order of depth: (1) --output-json for a genuinely false postcondition
+(ensures r >= 0, body x) and for TRUE nonlinear distributivity
+(ensures r == x*y + x*z, body x*(y+z)) is field-for-field identical:
+errors=1, success=false, no other field moves. (2) The message stream is
+identical: "postcondition not satisfied", same shape, no model. (3) The
+SMT transcript (--log smt-transcript) shows why nothing better is
+possible: Verus sets smt.mbqi false and auto_config false, so Z3 answers
+"unknown" for BOTH queries, never "sat", and never builds a model; the
+later "unsat" answers are the --multiple-errors localization re-queries.
+(4) --expand-errors marks track conjunction structure, not falsity: the
+single-clause false goal gets no mark while the true nonlinear conjunct
+gets ✘ (both measured). (5) No flag mentions counterexamples or models
+(--help, full scan). Errors > 0 without an rlimit header is therefore
+Outcome.UNPROVED: the solver stopped, no budget exhaustion, no
+countermodel, not knowledge either way.
+
+THE REFUTATION CERTIFICATE is how a twin cell earns REFUTED back, per the
+shared protocol: lower_verus.py, when handed a measured witness, appends
+one proof fn named exactly t_refutation_certificate holding a single
+assert(..) by (compute_only) that instantiates the spec at the concrete
+witness and evaluates the negated obligation ground (see the section
+comment there for what each witness kind certifies). This adapter mints
+REFUTED if and only if the kernel both DECLARED that goal (its own
+func-details listing from the first run, never a regex alone) and
+ACCEPTED it in a second, targeted run (--verify-root --verify-function,
+errors == 0 and verified >= 1; measured: the targeted run carries no
+"success" field). Two closures make the name safe: a file carrying the
+certificate name can NEVER mint VERIFIED, so planting it in a real
+program only demotes that program; and a certificate the kernel rejects
+or cannot read mints UNPROVED, never REFUTED. All demotion gates
+(--no-cheating refusal, ban scan, requires-false) run BEFORE the
+certificate is consulted, so the audit discipline is unchanged. What the
+adapter cannot check is that the asserted formula IS the negated spec at
+the witness: that binding lives in the lowering, which is the same trust
+already extended to every lowered obligation.
 """
 from __future__ import annotations
 
@@ -143,6 +182,13 @@ _RLIMIT_DIAG = re.compile(
 # Verus's own refusal of the cheating constructs, emitted at column 0 with
 # encountered-vir-error and no verified/errors tally at all.
 _NOCHEAT_DIAG = re.compile(r"^error: .*not allowed with --no-cheating", re.M)
+
+# The one goal name that can mint REFUTED (module docstring, certificate
+# section). The raw-text scan only ever DEMOTES: it bars VERIFIED for any
+# file carrying the name, comments and strings included, fail-closed.
+# Minting additionally requires the kernel's own func-details declaration.
+CERT_NAME = "t_refutation_certificate"
+_CERT = re.compile(r"\bt_refutation_certificate\b")
 
 # Cyrillic/Greek/Armenian codepoints that render as a-z (the confusables
 # actually seen evading keyword scans; NFKC does not fold these).
@@ -478,6 +524,72 @@ def _probe_vacuity(text: str, budget: int) -> tuple[str, dict]:
     return "clean", detail
 
 
+def _cert_error_lines(text: str, err: str) -> bool:
+    """True when some error diagnostic's span falls inside the
+    t_refutation_certificate fn, so the kernel's refusal is a refusal OF
+    the certificate. Needed because a compute_only rejection aborts the
+    whole run with encountered-vir-error and NO verified/errors counts
+    (measured 2026-09-02: "expression simplifies to ... false"), which
+    would otherwise be indistinguishable from a front-end failure."""
+    fns = _fns(text)
+    idx = [i for i, f in enumerate(fns) if f["name"] == CERT_NAME]
+    if not idx:
+        return False
+    lo = fns[idx[0]]["line"]
+    hi = (fns[idx[0] + 1]["line"] if idx[0] + 1 < len(fns)
+          else 10 ** 9)
+    return any(sev == "error" and lo <= ln < hi
+               for ln, sev, _m in _diags(err))
+
+
+def _check_certificate(path: Path, budget: int) -> tuple[bool, dict]:
+    """One targeted kernel run of the certificate goal alone
+    (--verify-root --verify-function). Accepted means the kernel
+    discharged it: errors == 0 and verified >= 1 in the filtered
+    verification-results (measured on 0.2026.08.30: the targeted run
+    carries no "success" field, only the counts and the two encountered
+    flags). Anything else, a wall timeout and an unparseable stream
+    included, is not-accepted, which the caller maps to UNPROVED and
+    never to REFUTED."""
+    t0 = time.monotonic()
+    try:
+        p = subprocess.run(
+            [str(VERUS), "--output-json", "--no-cheating",
+             "--rlimit", str(budget), "--verify-root",
+             "--verify-function", CERT_NAME, str(path)],
+            capture_output=True, text=True, timeout=WALL_S)
+    except subprocess.TimeoutExpired:
+        return False, {"cert_ms": int((time.monotonic() - t0) * 1000),
+                       "why": "certificate run hit the wall backstop"}
+    ms = int((time.monotonic() - t0) * 1000)
+    vr, fd = None, {}
+    try:
+        doc = json.loads(p.stdout)
+        vr = doc.get("verification-results")
+        fd = doc.get("func-details")
+        if not isinstance(fd, dict):
+            fd = {}
+    except (json.JSONDecodeError, AttributeError):
+        pass
+    if not isinstance(vr, dict):
+        return False, {"cert_ms": ms,
+                       "why": "certificate run produced no "
+                              "verification-results"}
+    verified = vr.get("verified", 0)
+    if not isinstance(verified, int) or isinstance(verified, bool):
+        verified = 0
+    declared = any(k == CERT_NAME or k.endswith("::" + CERT_NAME)
+                   for k in fd)
+    accepted = (declared and vr.get("errors", 1) == 0 and verified >= 1
+                and vr.get("encountered-error") is False
+                and vr.get("encountered-vir-error") is False)
+    detail = {"cert_ms": ms, "cert_results": vr,
+              "declared_in_cert_run": declared}
+    if not accepted:
+        detail["why"] = "the kernel did not accept the certificate goal"
+    return accepted, detail
+
+
 def version() -> str:
     if not VERUS:
         raise SystemExit(_VERUS_WHY)
@@ -512,19 +624,30 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
                       wall_ms=int((time.monotonic() - t0) * 1000),
                       budget=f"rlimit={budget}", error="wall backstop fired")
     wall = int((time.monotonic() - t0) * 1000)
-    vr = None
+    vr, fd = None, {}
     try:
         doc = json.loads(p.stdout)
         vr = doc.get("verification-results")
+        fd = doc.get("func-details")
+        if not isinstance(fd, dict):
+            fd = {}
     except (json.JSONDecodeError, AttributeError):
         pass
+    # Certificate presence, two readings that only ever demote: the
+    # kernel's own goal listing (this is the one that can help mint
+    # REFUTED) and the raw/folded text scan (bars VERIFIED even from a
+    # comment, fail-closed).
+    cert_declared = any(k == CERT_NAME or k.endswith("::" + CERT_NAME)
+                        for k in fd)
+    cert_present = bool(cert_declared or _CERT.search(text)
+                        or _CERT.search(_fold(text)))
 
     errors = vr.get("errors", 0) if isinstance(vr, dict) else 0
     verified = vr.get("verified", 0) if isinstance(vr, dict) else 0
     if not isinstance(verified, int) or isinstance(verified, bool):
         verified = 0
 
-    err, probe = "", {}
+    err, probe, cert = "", {}, {}
     if _NOCHEAT_DIAG.search(p.stderr):
         # The kernel itself refused an assume/admit/external_body/
         # assume_specification, by construct rather than by spelling.
@@ -537,7 +660,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     elif vr is None:
         outcome = Outcome.MALFORMED
     elif (vr.get("errors", 1) == 0 and vr.get("success")
-          and verified >= 1 and has_theorem):
+          and verified >= 1 and has_theorem and not cert_present):
         # Everything the solver counts says "proved". The remaining question
         # is whether it proved anything: ask the kernel (module docstring,
         # instrument 2).
@@ -549,20 +672,46 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
             err = "vacuity probe gave no reading: " + probe.get("why", "?")
         else:
             outcome = Outcome.VERIFIED
+    elif cert_present:
+        # Certificate discipline (module docstring): never VERIFIED; the
+        # kernel's acceptance of the one declared goal is the only thing
+        # that mints REFUTED, checked in its own targeted run so the main
+        # goals' failures cannot mask it and vice versa. The targeted run
+        # is its own declaration record too: a name that exists only in a
+        # comment makes the run abort with "could not find function"
+        # (measured), so it can never be accepted.
+        accepted, cert = _check_certificate(path, budget)
+        cert["declared_to_kernel"] = cert_declared
+        if accepted:
+            outcome = Outcome.REFUTED
+        elif _RLIMIT_DIAG.search(p.stderr) and errors > 0:
+            outcome = Outcome.TIMEOUT
+        elif errors > 0 or _cert_error_lines(text, p.stderr):
+            # The solver rejected goals without exhausting the budget, or
+            # the kernel's abort points into the certificate fn itself: a
+            # rejected certificate mints UNPROVED, never REFUTED.
+            outcome = Outcome.UNPROVED
+        else:
+            # The front end rejected the file before any goal was seen
+            # (rustc error, empty run): same reading as the tail below.
+            outcome = Outcome.MALFORMED
     elif _RLIMIT_DIAG.search(p.stderr) and errors > 0:
         outcome = Outcome.TIMEOUT
     elif errors > 0:
-        # REFUTED requires the solver itself to have rejected a proof: the
-        # verification-results errors count is the only evidence accepted.
-        outcome = Outcome.REFUTED
+        # No countermodel exists behind this signal (ROADMAP 10.7, module
+        # docstring): with smt.mbqi off the solver answers "unknown" for a
+        # false goal and for a true-but-nonlinear one alike, so errors > 0
+        # is the solver stopping, not the solver refuting. UNPROVED, and a
+        # twin earns REFUTED back only through the certificate above.
+        outcome = Outcome.UNPROVED
     else:
         # vr exists but nothing was refuted and the positive-evidence gate
         # did not open: rustc rejected the file before verification, OR the
         # run discharged zero obligations (verified == 0: empty verus block,
         # spec-only file, external-annotated theorem — all measured
         # success=true in Wave-1), OR no ensures survives outside
-        # comments/strings (zero stated theorems). MALFORMED, never REFUTED
-        # and never VERIFIED. The first repair here matched "error[" in
+        # comments/strings (zero stated theorems). MALFORMED, never
+        # UNPROVED and never VERIFIED. The first repair here matched "error[" in
         # stderr, and the 2026-08-31 Dell install audit measured it vacuous:
         # the dotted-name diagnostic is a bare "error: invalid character '.'
         # in crate name" with no [E####] bracket, so <name>.twin.rs still
@@ -580,4 +729,5 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
                           "requires_false": req_false,
                           "has_ensures": has_theorem,
                           "verified_count": verified,
-                          "vacuity_probe": probe})
+                          "vacuity_probe": probe,
+                          "certificate": cert})

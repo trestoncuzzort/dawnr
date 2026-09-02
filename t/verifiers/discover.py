@@ -37,9 +37,14 @@ def find(env_var: str, names: list[str], globs: list[str] | None = None) -> str 
         if found:
             return found
     for pattern in globs or []:
-        for hit in sorted(Path.home().glob(pattern)):
-            if hit.is_file() and os.access(hit, os.X_OK):
-                return str(hit)
+        # Windows binaries carry .exe, so a glob written for the POSIX name
+        # ("dafny") would never match there; trying pattern + ".exe" costs
+        # nothing on Linux, where no such file exists.
+        variants = [pattern] if pattern.endswith(".exe") else [pattern, pattern + ".exe"]
+        for pat in variants:
+            for hit in sorted(Path.home().glob(pat)):
+                if hit.is_file() and os.access(hit, os.X_OK):
+                    return str(hit)
     return None
 
 

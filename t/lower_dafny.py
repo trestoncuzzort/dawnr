@@ -249,7 +249,9 @@ def stmts(body: list, indent: str, ctx: _Ctx) -> str:
     return "\n".join(out)
 
 
-def lower(task: dict, body: list) -> str:
+# `witness` is the twin's measured witness (harness.twin_cached). Twin call
+# sites pass it; this lowering does not use it yet.
+def lower(task: dict, body: list, witness: dict | None = None) -> str:
     self_name = task["name"]
     method = self_name.capitalize()
     ctx = _Ctx(task, method)

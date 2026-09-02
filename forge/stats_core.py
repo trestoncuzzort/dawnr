@@ -28,6 +28,29 @@ HONEST LIMITS, stated first:
     equivalence from one side only — and the test suite keeps that broken variant
     to prove the tests can tell them apart.
 
+DEGENERATE INPUTS ARE REFUSED BY NAME, NOT ANSWERED
+---------------------------------------------------
+Three inputs used to leave this module with a number that was worse than no
+number, and all three now raise DegenerateInput:
+
+  - paired([1,1], [0,0]). Every pair differs by exactly 1.0, so the t statistic
+    is 1.0/0 — unbounded, not zero. The old `t = mean(d)/se if se else 0.0`
+    returned t = 0, p = 1: "no evidence of any difference", from data whose
+    every observation differs. A silent sentinel dressed as a result.
+  - welch() on two constant arrays. Both variances are zero, so the
+    Welch–Satterthwaite df is 0/0 and the module raised ZeroDivisionError from
+    the middle of an arithmetic expression, which tells a caller nothing about
+    which input was bad. One constant arm is NOT degenerate and still answers.
+  - a non-finite observation. Python's json admits NaN, so a NaN rate loads
+    without complaint, and every comparison against the resulting p-value is
+    False — `p < 0.05` and `p >= 0.05` are both False, so a caller that tests
+    significance silently reports "not significant". analyze_run1.py refuses
+    NaN at the loader as well; this is the second fence, for every other caller.
+
+Refusing is deliberate. Any p this module returns gets printed, and a printed
+p-value is a claim about evidence. Where the t framework defines none, the
+honest output is a named error the caller can report, not a plausible float.
+
 No scipy on the machines this runs on, so the t distribution is implemented here:
 regularised incomplete beta by continued fraction (Lentz), critical values by
 bisection. Self-checked against known values in certify() and the test suite.
@@ -37,7 +60,17 @@ from __future__ import annotations
 import math
 import random
 
-__all__ = ["mean", "sd", "t_sf", "t_crit", "welch", "paired", "tost", "certify"]
+__all__ = ["DegenerateInput", "mean", "sd", "t_sf", "t_crit", "welch", "paired",
+           "tost", "certify"]
+
+
+class DegenerateInput(ValueError):
+    """A sample on which the requested statistic is not defined.
+
+    Raised instead of returning a sentinel, and instead of letting a bare
+    ZeroDivisionError escape from inside an expression. The message names the
+    offending sample and the reason, so a caller can print the truth.
+    """
 
 
 # --- t distribution -------------------------------------------------------
@@ -110,24 +143,59 @@ def t_crit(df: float, alpha: float = 0.05) -> float:
 
 
 # --- statistics -----------------------------------------------------------
+def _sample(v: list[float], label: str, minimum: int = 2) -> list[float]:
+    """Every entry point's front door: the sample is big enough and finite.
+
+    A non-finite observation is checked HERE rather than at each formula,
+    because NaN propagates to the p-value and then stops being detectable —
+    both `p < alpha` and `p >= alpha` are False against a NaN, so it reads as
+    "not significant" to any caller that only asks one of the two questions.
+    """
+    if len(v) < minimum:
+        raise DegenerateInput(
+            f"{label} needs at least {minimum} observations; got {len(v)}")
+    bad = [i for i, x in enumerate(v) if not math.isfinite(x)]
+    if bad:
+        raise DegenerateInput(
+            f"{label} carries {len(bad)} non-finite observation(s) at index "
+            f"{bad[:5]}{'...' if len(bad) > 5 else ''}: "
+            f"{[v[i] for i in bad[:5]]}")
+    return v
+
+
 def mean(v: list[float]) -> float:
-    return sum(v) / len(v)
+    return sum(_sample(v, "mean sample", minimum=1)) / len(v)
 
 
 def sd(v: list[float]) -> float:
+    _sample(v, "sd sample")
     m = mean(v)
     return math.sqrt(sum((x - m) ** 2 for x in v) / (len(v) - 1))
 
 
 def welch(a: list[float], b: list[float]) -> dict:
-    """Welch's t-test. Each arm keeps its own variance; nothing is pooled."""
+    """Welch's t-test. Each arm keeps its own variance; nothing is pooled.
+
+    Raises DegenerateInput when BOTH arms are constant: the standard error and
+    the Welch-Satterthwaite df are then each 0/0. One constant arm is fine --
+    the df collapses to the other arm's n-1, which is the correct answer, not a
+    degenerate one.
+    """
+    _sample(a, "welch arm a")
+    _sample(b, "welch arm b")
     na, nb = len(a), len(b)
     va, vb = sd(a) ** 2, sd(b) ** 2
+    if va == 0.0 and vb == 0.0:
+        raise DegenerateInput(
+            f"both welch arms are constant (a == {a[0]!r}, b == {b[0]!r}): the "
+            f"standard error is 0 and the Welch-Satterthwaite df is 0/0, so "
+            f"neither t nor a p-value is defined. Observed difference "
+            f"{mean(a) - mean(b)!r}.")
     se = math.sqrt(va / na + vb / nb)
     diff = mean(a) - mean(b)
     df = (va / na + vb / nb) ** 2 / (
         (va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1))
-    t = diff / se if se else 0.0
+    t = diff / se
     tc = t_crit(df)
     return {"diff": diff, "se": se, "df": df, "t": t,
             "p": 2.0 * t_sf(abs(t), df),
@@ -135,10 +203,30 @@ def welch(a: list[float], b: list[float]) -> dict:
 
 
 def paired(a: list[float], b: list[float]) -> dict:
+    """Paired t-test on a - b.
+
+    Raises DegenerateInput when the differences have zero spread. That covers
+    both the identical case (every difference 0, t = 0/0) and the constant
+    non-zero case (every difference the same value d != 0, t = d/0, unbounded).
+    The old code answered t = 0, p = 1 for both, which for the second one is
+    the exact opposite of what the sample shows.
+    """
+    if len(a) != len(b):
+        raise DegenerateInput(
+            f"paired samples must be the same length; got {len(a)} and {len(b)}")
+    _sample(a, "paired arm a")
+    _sample(b, "paired arm b")
     d = [x - y for x, y in zip(a, b)]
     n = len(d)
-    se = sd(d) / math.sqrt(n)
-    t = mean(d) / se if se else 0.0
+    spread = sd(d)
+    if spread == 0.0:
+        raise DegenerateInput(
+            f"every paired difference is exactly {d[0]!r} over n={n}, so the "
+            f"sample spread is 0 and t = {mean(d)!r}/0 is undefined"
+            + (" (the two samples are identical)" if d[0] == 0 else
+               " -- unbounded, NOT zero") + ". No p-value is returned.")
+    se = spread / math.sqrt(n)
+    t = mean(d) / se
     tc = t_crit(n - 1)
     return {"diff": mean(d), "se": se, "df": n - 1, "t": t,
             "p": 2.0 * t_sf(abs(t), n - 1),

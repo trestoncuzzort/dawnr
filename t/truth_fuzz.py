@@ -65,7 +65,6 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
-import multiprocessing
 import os
 import random
 import sys
@@ -79,7 +78,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import interp                                            # noqa: E402
-from verifiers import Outcome, flake_check, sha256_file  # noqa: E402
+from verifiers import Outcome, flake_check, sha256_file, mp_context  # noqa: E402
 
 BACKENDS = [
     ("dafny", "lower_dafny", "dfy"),
@@ -1692,7 +1691,7 @@ def main() -> int:
 
     print(f"{len(present)} kernels x {len(recs)} tasks -> {len(cells)} cells "
           f"(flake n=3)")
-    ctx = multiprocessing.get_context("fork")
+    ctx = mp_context()
     done = 0
     with ProcessPoolExecutor(max_workers=a.jobs, mp_context=ctx) as ex:
         futs = [ex.submit(_cell, b, n, p) for b, n, p in cells]

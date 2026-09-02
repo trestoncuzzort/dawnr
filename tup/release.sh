@@ -69,6 +69,12 @@ qemu-img convert -O vdi  "$OUT/$NAME.qcow2" "$OUT/$NAME.vdi"
 echo "=== 5. hashes and the release note"
 ( cd "$OUT" && shasum -a 256 "$NAME.qcow2" "$NAME.vmdk" "$NAME.vdi" > SHA256SUMS )
 KERNEL=$(limactl shell lfs-host -- ls /mnt/lfs/boot 2>/dev/null | grep ^vmlinuz | head -1 || echo unknown)
+# Name the inventory. Thirteen INVENTORY files with nothing saying which one
+# was the release cost an outside reader a wrong conclusion (2026-09-02); the
+# release note now names its inventory by file and hash, and INVENTORIES.md
+# is where a human corrects it if the newest one is not the shipped disk.
+INV=$(ls -t "$(dirname "$0")/receipts"/INVENTORY-*.txt 2>/dev/null | head -1 || true)
+INV_SHA=$([ -n "$INV" ] && shasum -a 256 "$INV" | cut -d' ' -f1 || echo none)
 LAYERS=$(ls "$(dirname "$0")/receipts"/LAYER-*.txt "$(dirname "$0")/receipts"/LAYER-*.md 2>/dev/null \
          | xargs -n1 basename 2>/dev/null | tr '\n' ' ' || true)
 cat > "$OUT/RELEASE.md" <<EOF
@@ -81,6 +87,10 @@ cat > "$OUT/RELEASE.md" <<EOF
 - layer diffs shipped in the repo: $LAYERS
 - how to boot: tup/RUN-ON-UBUNTU.md (one apt-get, one qemu command)
 - verify: \`shasum -a 256 -c SHA256SUMS\`
+- inventory of this disk: \`$(basename "$INV")\` sha256 $INV_SHA (the newest
+  INVENTORY in receipts/ when this ran; if a layer was built between that
+  inventory and this cut, re-inventory the image itself and say so in
+  receipts/INVENTORIES.md)
 
 Provenance, not verification: the receipts record what was built, from which
 bytes, in what order. Training on the Dell stays on the host OS where CUDA

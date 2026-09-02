@@ -88,3 +88,96 @@ def flake_check(verify_fn, path: Path, n: int = 3):
     results = [verify_fn(path) for _ in range(n)]
     outcomes = {r.outcome for r in results}
     return results[-1], len(outcomes) == 1
+
+
+def mp_context():
+    """Process-pool context for the parallel drivers, on every platform.
+
+    fork where the platform offers it (every measured run on the training
+    box used fork); spawn otherwise, because Windows has no fork. Spawn
+    re-imports modules in each child instead of inheriting memory, which
+    imposes a contract on every caller, audited 2026-09-02 across all five
+    drivers: the worker handed to the pool is a module-level function, its
+    arguments pickle (strings, ints and small tuples throughout), and each
+    entry point sits behind an `if __name__ == "__main__"` guard, without
+    which spawn re-executes the driver inside every child. T_MP_START
+    forces a method so the other platform's path can be exercised where it
+    does not naturally run; the full matrix under T_MP_START=spawn on
+    Linux is the witness that the spawn branch works on a real workload.
+    """
+    import multiprocessing
+    import os
+    method = os.environ.get("T_MP_START") or (
+        "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn")
+    return multiprocessing.get_context(method)
+
+
+def acquire_run_lock(out_dir):
+    """One writer for out/ at a time, on every platform.
+
+    Two live suite runs write the same out/ filenames, so the second must
+    refuse. run_par.py's /proc scan enforces that on Linux but /proc does
+    not exist on Windows, so the portable mechanism is a lock file taken
+    with O_EXCL. Returns a zero-argument release callable on success, or a
+    refusal string naming the holder on conflict.
+
+    Staleness: the file records the holder's pid. On POSIX a dead pid is
+    detected with os.kill(pid, 0) and the lock is taken over. On Windows
+    os.kill(pid, 0) TERMINATES the process (TerminateProcess semantics per
+    the os.kill docs), so it is never used there; OpenProcess with
+    query-limited rights answers liveness instead. That branch is
+    UNVERIFIED on a real Windows box and therefore fails CLOSED: any error
+    treats the holder as alive and the refusal message names the lock file
+    so a human can delete a stale one by hand.
+    """
+    import os
+    import sys
+    lock = Path(out_dir) / ".run.lock"
+    lock.parent.mkdir(exist_ok=True)
+
+    def alive(pid):
+        if sys.platform != "win32":
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return False
+            except PermissionError:
+                return True
+            return True
+        try:
+            import ctypes
+            h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+            if h:
+                ctypes.windll.kernel32.CloseHandle(h)
+                return True
+            return ctypes.windll.kernel32.GetLastError() == 5
+        except Exception:
+            return True
+
+    for _ in range(2):
+        try:
+            fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, ("%d\n" % os.getpid()).encode())
+            os.close(fd)
+            def release():
+                try:
+                    os.unlink(str(lock))
+                except OSError:
+                    pass
+            return release
+        except FileExistsError:
+            try:
+                head = lock.read_text().split()
+            except OSError:
+                head = []
+            pid = int(head[0]) if head and head[0].isdigit() else None
+            if pid is not None and not alive(pid):
+                try:
+                    os.unlink(str(lock))
+                except OSError:
+                    pass
+                continue
+            return ("another t run holds %s (pid %s). Two concurrent runs "
+                    "write the same out/ filenames; let it finish, or delete "
+                    "the lock file if that run is dead." % (lock, pid))
+    return "could not acquire %s after clearing a stale holder" % lock

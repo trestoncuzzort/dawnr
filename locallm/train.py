@@ -87,15 +87,33 @@ def make_optimizer(model, lr: float):
 
 def _leak_of(text: str) -> dict:
     """Leakage verdict for the split this run actually trained on, so a val loss
-    is never recorded without the context that says whether it means anything."""
+    is never recorded without the context that says whether it means anything.
+
+    A CRASH IS A VERDICT, and it is not a good one. This used to return {} on
+    any exception, which wrote a row with no verdict in it at all; runlog's
+    digest then read the missing verdict as "nothing to report" and filed the
+    run beside the ones that were actually scanned and found clean. A scan that
+    died tells you nothing about the split, so it must say exactly that and be
+    counted with the runs whose val loss cannot be defended.
+
+    AND THE ROW IS THE SCAN'S OWN. This built {"verdict", "content_frac"} by
+    hand, which was the whole row while content overlap WAS the verdict. It is
+    now the worst of three signals, and a hand-built row went on recording the
+    one arm that structurally cannot see a short copied document: measured on
+    test_detectors.short_document_fixture, verdict CONTAMINATED beside
+    content_frac 0.0, with the two arms that decided it recorded nowhere. See
+    leakage.Report.record.
+    """
     try:
         from leakage import scan
         from data import group_split
         tr, va = group_split(text)
-        rep = scan(tr, va)
-        return {"verdict": rep.verdict, "content_frac": rep.shingle_frac}
-    except Exception:                            # noqa: BLE001
-        return {}
+        rep = scan(tr, va, doc_aligned=True)      # group_split: it is
+        return rep.record()
+    except Exception as e:                       # noqa: BLE001
+        print(f"[leakage] the scan failed ({type(e).__name__}: {e}), so this "
+              f"run's val loss is UNVERIFIED. Judge it on train loss.")
+        return {"verdict": "SCAN_FAILED", "error": f"{type(e).__name__}: {e}"}
 
 
 def auto_lr(n_embd: int) -> float:
@@ -104,7 +122,13 @@ def auto_lr(n_embd: int) -> float:
     The old hardcoded 3e-4 is a GPT-2-scale constant (width 768-1600) and is far
     too low for the widths this rig runs. Measured on this box (exp_lr_width.py,
     prereg_lr_width.json): at width 256 / 4 layers on corpus.txt, lr=3e-3 beats
-    3e-4 by 0.1056 train loss, 5 seeds/arm, zero range overlap.
+    3e-4 by 0.0439 train loss, 5 seeds/arm, zero range overlap.
+
+    0.0439 is the GAP -- mean(control) 0.1495 minus mean(treatment) 0.1056 --
+    which is what the experiment's success bar is written against and what its
+    not_claimed section quotes. This line used to say 0.1056, the treatment
+    arm's own mean, which is where the treatment ENDED and not what the change
+    was worth. It overstated the effect by 2.4x.
 
     The 1/width scaling is muP's (Yang et al. 2022, arXiv:2203.03466). ANCHORED AT
     ONE MEASURED POINT ONLY (width 256). Other widths are extrapolation, not
@@ -240,8 +264,19 @@ def main():
         for line in baselines.summary_lines(base):
             print(line)
 
-    runlog.record("train", device=device, out=args.out, source="cli",
+    # corpus AND split. The corpus fingerprint says which text; the split
+    # fingerprint says which tenth of it was held back, which is the part every
+    # prereg here assumes is identical across runs and which nothing recorded.
+    # A new key beside the old one, never a change to one: rows already written
+    # must keep parsing, and they do.
+    # data_device, not just device: if the corpus did not fit and fell back to
+    # host memory, this run's ms/step and its batch sequence are both different
+    # from an otherwise identical run that fitted. See Corpus._place.
+    runlog.record("train", device=device, data_device=corpus.data_device,
+                  out=args.out, source="cli",
                   corpus=runlog.corpus_fingerprint(text),
+                  split_fingerprint=runlog.split_fingerprint(
+                      corpus.val_frac, corpus.seed, corpus.val_text),
                   config={"n_layer": args.n_layer, "n_head": args.n_head,
                           "n_embd": args.n_embd, "block_size": args.block_size,
                           "batch_size": args.batch_size, "steps": args.steps,

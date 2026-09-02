@@ -56,7 +56,6 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
-import multiprocessing
 import os
 import random
 import re
@@ -70,7 +69,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                        # noqa: E402
-from verifiers import Outcome, flake_check            # noqa: E402
+from verifiers import Outcome, flake_check, mp_context            # noqa: E402
 
 BACKENDS = [
     ("dafny", "lower_dafny", "dfy"),
@@ -1634,7 +1633,7 @@ def run(corpus, outdir: Path, jobs: int, n_flake: int, only=None):
             tp.write_text(ts, encoding="utf-8")
             pending.append((bname, str(rp), str(tp)))
     t0 = time.time()
-    ctx = multiprocessing.get_context("fork")
+    ctx = mp_context()
     done = 0
     with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx) as ex:
         futs = [ex.submit(_cell, b, r, t, n_flake) for b, r, t in pending]

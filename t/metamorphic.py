@@ -120,7 +120,6 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
-import multiprocessing
 import os
 import random
 import sys
@@ -134,7 +133,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import fuzz_lower as fz                               # noqa: E402
-from verifiers import Outcome, flake_check            # noqa: E402
+from verifiers import Outcome, flake_check, mp_context            # noqa: E402
 
 BACKENDS = [
     ("dafny", "lower_dafny", "dfy"),
@@ -1125,7 +1124,7 @@ def run_cells(pending, jobs, n_flake, label="", checkpoint: Path | None = None):
     res = {}
     t0 = time.time()
     fh = open(checkpoint, "a", encoding="utf-8") if checkpoint else None
-    ctx = multiprocessing.get_context("fork")
+    ctx = mp_context()
     try:
         with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx) as ex:
             futs = {ex.submit(_cell, b, p, n_flake): (b, p, cid)

@@ -33,7 +33,17 @@ HONEST LIMITS, stated first:
     not transfer to other systems — that non-transfer is exactly why the
     locallm-surrogate proposal was killed (ROADMAP.md, graveyard).
 
-Output is printed and banked to council/seed_variance_decomposition.txt.
+Output is printed and banked to council/seed_variance_decomposition.txt. The
+directory is CREATED here rather than assumed: council/ is gitignored, so on a
+fresh clone it does not exist, and the script used to print the entire report
+and then die on write() with a FileNotFoundError and exit 1. Everything looked
+right on screen and nothing was banked, which is the worst of the two failures
+it could have had.
+
+The three divisions below are guarded for the same reason. Each one is a ratio
+whose denominator is a measured variance or a count of pairs, and each becomes
+0/0 on inputs this script can actually be handed: one full arm (no
+between-seed term exists), or arms with no replicate variance at all.
 """
 from __future__ import annotations
 
@@ -41,7 +51,7 @@ import json
 from pathlib import Path
 
 from analyze_run1 import load, rate
-from stats_core import mean, sd, welch
+from stats_core import DegenerateInput, mean, sd, welch
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "council" / "seed_variance_decomposition.txt"
@@ -68,37 +78,65 @@ def main() -> int:
     for m, v in full.items():
         say(f"{m:12} {mean(v):8.4f} {sd(v):8.4f}")
 
-    means = [mean(v) for v in full.values()]
-    within_var = mean([sd(v) ** 2 for v in full.values()])
-    between_var = sd(means) ** 2
-    expected_under_null = within_var / FULL_N
-    seed_var = max(0.0, between_var - expected_under_null)
     say("")
-    say("decomposition (method of moments):")
-    say(f"  within-seed sd (replicate noise, one checkpoint)   {within_var ** 0.5:.4f}")
-    say(f"  observed sd of the {len(full)} seed means           "
-        f"        {between_var ** 0.5:.4f}")
-    say(f"  expected sd of means if seeds did not matter        "
-        f"       {expected_under_null ** 0.5:.4f}   (within/sqrt({FULL_N}))")
-    say(f"  seed component  sigma_seed                          "
-        f"       {seed_var ** 0.5:.4f}")
-    say(f"  variance share  sigma^2_seed / (sigma^2_seed + within/{FULL_N})"
-        f"   {seed_var / (seed_var + expected_under_null):.3f}")
+    if len(full) < 2:
+        say("decomposition: NOT COMPUTED. A between-seed term needs at least "
+            "two full")
+        say(f"arms and {len(full)} was found. There is no variance of seed "
+            f"means over one")
+        say("seed, and a decomposition reported from one arm would be a "
+            "number with no")
+        say("second observation behind it.")
+    else:
+        means = [mean(v) for v in full.values()]
+        within_var = mean([sd(v) ** 2 for v in full.values()])
+        between_var = sd(means) ** 2
+        expected_under_null = within_var / FULL_N
+        seed_var = max(0.0, between_var - expected_under_null)
+        say("decomposition (method of moments):")
+        say(f"  within-seed sd (replicate noise, one checkpoint)   {within_var ** 0.5:.4f}")
+        say(f"  observed sd of the {len(full)} seed means           "
+            f"        {between_var ** 0.5:.4f}")
+        say(f"  expected sd of means if seeds did not matter        "
+            f"       {expected_under_null ** 0.5:.4f}   (within/sqrt({FULL_N}))")
+        say(f"  seed component  sigma_seed                          "
+            f"       {seed_var ** 0.5:.4f}")
+        # 0/0 when the arms have no replicate variance AND no spread between
+        # them: the share of a total variance of zero is not 0, it is undefined.
+        share_den = seed_var + expected_under_null
+        say(f"  variance share  sigma^2_seed / (sigma^2_seed + within/{FULL_N})"
+            + (f"   {seed_var / share_den:.3f}" if share_den else
+               "   undefined (total variance is exactly 0)"))
 
     names = list(full)
-    rejections, ps = 0, []
+    rejections, ps, undefined = 0, [], []
     for i in range(len(names)):
         for j in range(i + 1, len(names)):
-            w = welch(full[names[i]], full[names[j]])
+            try:
+                w = welch(full[names[i]], full[names[j]])
+            except DegenerateInput as e:
+                # Two arms with no replicate variance have no Welch t. Counting
+                # such a pair as "not rejected" would push the empirical rate
+                # down with a test that was never run.
+                undefined.append((names[i], names[j], str(e)))
+                continue
             ps.append((w["p"], names[i], names[j], w["diff"]))
             rejections += w["p"] < 0.05
     ps.sort()
     say("")
-    say(f"pairwise Welch between full arms: {len(ps)} pairs, alpha .05")
-    say(f"  rejections: {rejections}/{len(ps)}  "
-        f"(empirical rate {rejections / len(ps):.3f}; nominal .05 if seeds do not matter)")
-    say(f"  smallest p: " + ", ".join(
-        f"{a} vs {b} p={p:.4f} ({d * 100:+.2f} pp)" for p, a, b, d in ps[:3]))
+    say(f"pairwise Welch between full arms: {len(ps) + len(undefined)} pairs, "
+        f"alpha .05")
+    if ps:
+        say(f"  rejections: {rejections}/{len(ps)}  "
+            f"(empirical rate {rejections / len(ps):.3f}; nominal .05 if seeds do not matter)")
+        say(f"  smallest p: " + ", ".join(
+            f"{a} vs {b} p={p:.4f} ({d * 100:+.2f} pp)" for p, a, b, d in ps[:3]))
+    else:
+        say("  no pair yielded a defined test, so there is no rejection rate.")
+    if undefined:
+        say(f"  {len(undefined)} pair(s) UNDEFINED and excluded from the rate: "
+            + ", ".join(f"{a} vs {b}" for a, b, _ in undefined[:3])
+            + (" ..." if len(undefined) > 3 else ""))
     say("")
     say("WHAT THIS CANNOT SHOW: the campaign was unpreregistered exploration, the")
     say("55 pairs share 11 arms, and sigma_seed does not transfer off this system.")
@@ -106,8 +144,13 @@ def main() -> int:
 
     text = "\n".join(lines) + "\n"
     print(text, end="")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(text, encoding="utf-8")
-    print(f"[banked to {OUT.relative_to(HERE)}]")
+    try:
+        shown = OUT.relative_to(HERE)
+    except ValueError:      # OUT pointed outside the tree; show it in full
+        shown = OUT
+    print(f"[banked to {shown}]")
     return 0
 
 

@@ -74,7 +74,7 @@ def main() -> int:
                 continue
             try:
                 real_src = lower(task, task["body"])
-                twin_src = lower(task, twin_body)
+                twin_src = lower(task, twin_body, witness=w)
             except NotImplementedError as e:
                 # An explicit ABSTAIN from the lowering: a recorded absence.
                 cell = ("abstain", "abstain", True)
@@ -93,9 +93,9 @@ def main() -> int:
                       f"{type(e).__name__}: {e}")
                 continue
             real = harness.OUT / f"{task['name']}.{suffix}"
-            real.write_text(real_src, encoding="utf-8")
-            twin = harness.OUT / f"{task["name"]}_twin.{suffix}"
-            twin.write_text(twin_src, encoding="utf-8")
+            real.write_text(real_src, encoding="utf-8", newline="\n")
+            twin = harness.OUT / f"{task['name']}_twin.{suffix}"
+            twin.write_text(twin_src, encoding="utf-8", newline="\n")
             r_real, a1 = flake_check(backend.verify, real)
             r_twin, a2 = flake_check(backend.verify, twin)
             cell = (r_real.outcome, r_twin.outcome, a1 and a2)
@@ -115,6 +115,24 @@ def main() -> int:
     # explicit refusal rather than a pass.
     present = [b for b, v in cols if not v.startswith("ABSENT")]
     MIN_KERNELS = int(os.environ.get("T_MIN_KERNELS", "2"))
+    # REFUSE BEFORE WRITING. The table write used to come first, so a
+    # refused run (zero kernels on a fresh clone) replaced the committed
+    # 77-cell AGREEMENT.md with an empty one — measured 2026-09-02 on a
+    # Windows box, 21 lines changed, restored by git checkout. A refusal
+    # must leave the committed evidence untouched; the witness for this is
+    # a zero-kernel run after which the file's sha256 is unchanged.
+    if len(present) < MIN_KERNELS:
+        print(f"\nREFUSED: {len(present)} kernel(s) available, {MIN_KERNELS} "
+              f"required. Agreement across fewer than two kernels is not "
+              f"agreement — it is one opinion, or none. AGREEMENT.md not written.")
+        for b, v in cols:
+            if v.startswith("ABSENT"):
+                print(f"  {b}: {v}")
+        return 2
+    if not tasks:
+        print("\nREFUSED: no tasks in t/tasks/ — nothing was verified. "
+              "AGREEMENT.md not written.")
+        return 2
 
     lines = [f"# t cross-kernel agreement — "
              f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",
@@ -137,22 +155,24 @@ def main() -> int:
     lines += ["", f"Verdict basis: every source file hashed; e.g. "
               f"`abs.dfy` {sha256_file(harness.OUT / 'abs.dfy')[:16]}…, "
               f"`abs.rs` {sha256_file(harness.OUT / 'abs.rs')[:16]}…"]
-    (HERE / "AGREEMENT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    if len(present) < MIN_KERNELS:
-        print(f"\nREFUSED: {len(present)} kernel(s) available, {MIN_KERNELS} "
-              f"required. Agreement across fewer than two kernels is not "
-              f"agreement — it is one opinion, or none.")
-        for b, v in cols:
-            if v.startswith("ABSENT"):
-                print(f"  {b}: {v}")
-        return 2
-    if not tasks:
-        print("\nREFUSED: no tasks in t/tasks/ — nothing was verified.")
-        return 2
+    # LF regardless of host: the table is committed, and a Windows writer
+    # defaulting to os.linesep would make the committed file differ by
+    # platform for no reason the verdicts know about.
+    (HERE / "AGREEMENT.md").write_text("\n".join(lines) + "\n",
+                                       encoding="utf-8", newline="\n")
     print(f"\n{len(present)} kernels, {len(tasks)} tasks: "
           f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT — a finding, see t/AGREEMENT.md'}")
     return 0 if all_ok else 1
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from verifiers import acquire_run_lock
+    _lock = acquire_run_lock(HERE / "out")
+    if not callable(_lock):
+        print(f"REFUSED: {_lock}")
+        raise SystemExit(2)
+    try:
+        _code = main()
+    finally:
+        _lock()
+    raise SystemExit(_code)

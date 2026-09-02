@@ -38,8 +38,13 @@ Verdict classification (coqc/coqchk 9.2.0, re-measured on this machine
   audit run finds open assumptions or unsafe-flag reliance,
       or coqchk refuses / lists a t_unit.* assumption          -> VACUOUS
   "Tactic failure" / "Cannot find witness" / "Unable to
-      unify" / "unsolved"                                      -> REFUTED
-      (lia's honest can't-prove is "Cannot find witness")
+      unify" / "unsolved"                                      -> UNPROVED
+      (the engine or a decision tactic stopped without a
+      countermodel; lia's honest can't-prove is "Cannot find
+      witness". Rocq is a proof assistant: an unclosed goal is
+      not a disproof, so these never mint REFUTED. ROADMAP 10.7,
+      fixed 2026-09-02; a rejected refutation certificate lands
+      here too)
   "Syntax error" / "was not found" / "Illegal"                 -> MALFORMED
   source not valid UTF-8 (coqc 9.2 tolerates stray bytes in
       comments — junk_nonutf8.v measured — but this adapter's
@@ -47,8 +52,14 @@ Verdict classification (coqc/coqchk 9.2.0, re-measured on this machine
   zero declared theorems / audit cannot resolve a declared
       obligation name                                          -> MALFORMED
   wall backstop (whole pipeline shares one deadline)           -> TIMEOUT
+  all four positive checks pass, and the declared goals
+      include t_refutation_certificate (the lowering's
+      kernel-checked proof that the spec fails at the measured
+      twin witness; the ONLY door to REFUTED)                  -> REFUTED
+  all four positive checks pass, certificate name present
+      but not a declared goal (planting the name only demotes) -> VACUOUS
   all four positive checks above pass                          -> VERIFIED
-REFUTED markers are tested before MALFORMED; both exit nonzero.
+UNPROVED markers are tested before MALFORMED; both exit nonzero.
 
 The ban regex is the SECOND line of defense: it scans the source with
 comments and string literals stripped (each replaced by one space, so a
@@ -110,8 +121,24 @@ THM = re.compile(
     r"\b(?:Theorem|Lemma|Corollary|Fact|Remark|Proposition|Property)"
     r"\s+([A-Za-z_][A-Za-z0-9_']*)")
 
-REFUTED_MARKS = ("Tactic failure", "Cannot find witness", "Unable to unify",
-                 "unsolved")
+# The ONE door to REFUTED: a goal with exactly this name, accepted by the
+# kernel under the full audit discipline (bans, per-theorem closedness
+# audit, coqchk re-check). The lowering emits it only for a measured twin
+# witness; it states the negation of the spec instantiated at that witness
+# and is proved by ground evaluation, so its acceptance is positive
+# kernel evidence of falsity. A file that even MENTIONS the name outside
+# a declared goal can never mint VERIFIED (planting it only demotes).
+CERT_NAME = "t_refutation_certificate"
+CERT_RE = re.compile(r"\bt_refutation_certificate\b")
+
+# Incompleteness marks: the engine or a decision tactic STOPPED without a
+# countermodel (Rocq is a proof assistant; an unclosed goal is not a
+# disproof, and lia's honest can't-prove is "Cannot find witness").
+# These mint UNPROVED, never REFUTED (ROADMAP 10.7, fixed 2026-09-02;
+# the old REFUTED_MARKS minted REFUTED from exactly these strings).
+UNPROVED_MARKS = ("Tactic failure", "Cannot find witness", "Unable to unify",
+                  "unsolved")
+
 MALFORMED_MARKS = ("Syntax error", "was not found", "Illegal", "Unknown")
 
 _SPECIAL = re.compile(r'\(\*|\*\)|"')
@@ -195,6 +222,10 @@ def verify(path: Path, budget: int = 0) -> Result:
     banned = sorted(set(BANNED.findall(code))
                     | set(BANNED.findall(unicodedata.normalize("NFKC", code))))
     thms = list(dict.fromkeys(THM.findall(code)))
+    cert_declared = CERT_NAME in thms
+    cert_carried = bool(
+        CERT_RE.search(code)
+        or CERT_RE.search(unicodedata.normalize("NFKC", code)))
     t0 = time.monotonic()
     deadline = t0 + WALL_S
 
@@ -236,8 +267,12 @@ def verify(path: Path, budget: int = 0) -> Result:
             return done(Outcome.TIMEOUT, error="backstop fired")
         out = p.stdout + p.stderr
         if p.returncode != 0:
-            if any(m in out for m in REFUTED_MARKS):
-                return done(Outcome.REFUTED, exit_code=p.returncode)
+            if any(m in out for m in UNPROVED_MARKS):
+                # stopped without a countermodel, without budget exhaustion:
+                # not knowledge, and in particular not falsity. A rejected
+                # t_refutation_certificate lands here too: UNPROVED.
+                return done(Outcome.UNPROVED, exit_code=p.returncode,
+                            error="proof search gave up: " + out[-200:])
             if any(m in out for m in MALFORMED_MARKS):
                 return done(Outcome.MALFORMED, exit_code=p.returncode)
             return done(Outcome.MALFORMED, exit_code=p.returncode)
@@ -297,5 +332,23 @@ def verify(path: Path, budget: int = 0) -> Result:
                                  or c_out[-300:]),
                         extras={"audit_closed": closed_n,
                                 "coqchk_assumed": local_assumed[:5]})
+        if cert_declared:
+            # All four positive checks passed and the declared goals include
+            # the refutation certificate: the kernel accepted a proof that
+            # the spec fails at the measured witness, audited exactly like
+            # any proof (closedness per theorem, coqchk re-check). This is
+            # the one door to REFUTED: positive evidence of falsity.
+            return done(Outcome.REFUTED, exit_code=0,
+                        extras={"audit_closed": closed_n, "coqchk": "clean",
+                                "certificate": "kernel-accepted"})
+        if cert_carried:
+            # The certificate name appears outside a declared goal. Such a
+            # file may never mint VERIFIED: carrying the refutation name is
+            # a claim of falsity machinery, and exit 0 without the declared,
+            # audited goal is acceptance for the wrong reason.
+            return done(Outcome.VACUOUS, exit_code=0,
+                        error="carries t_refutation_certificate without "
+                              "declaring it as a goal",
+                        extras={"audit_closed": closed_n, "coqchk": "clean"})
         return done(Outcome.VERIFIED, exit_code=0,
                     extras={"audit_closed": closed_n, "coqchk": "clean"})
