@@ -12,8 +12,9 @@ layer says exactly what it added.
 **Status: tup 0.1 boots.** From its own disk, under nothing but UEFI firmware
 with no `-kernel`, no `-initrd`, no host help, to a `tup login:` prompt in 20
 seconds, with Claude Code preinstalled and the exact file-level cost of
-installing it recorded. Witnessed on macOS/QEMU, and on Ubuntu under pure TCG
-emulation with no KVM at all. What exists, what does not, and what is merely
+installing it recorded. Witnessed on macOS/QEMU, on Ubuntu under pure TCG
+emulation with no KVM at all, and on Windows 11 both natively (QEMU 11.1,
+21 s) and under WSL2 (27 s), by someone who was not the author. What exists, what does not, and what is merely
 intended are marked as such throughout; that is the habit the whole project is
 built on.
 
@@ -147,8 +148,8 @@ distro and the language are where the method goes next.
   SATA/e1000 fallbacks, so VMware and VirtualBox should boot it, but nobody has
   witnessed that yet, so it is not claimed.
 - **tup is arm64 today.** On an x86_64 host it boots under emulation
-  (measured: 45 s to login on the training box, from the released split
-  image, under pure TCG with no KVM). A native x86_64 build through the same
+  (measured: 45 s to login on the training box, 21 s on an i9-14900K under
+  Windows, both from the released split image under pure TCG with no KVM). A native x86_64 build through the same
   driver and receipts has not been run; the feasibility probe is
   [`tup/X86-FEASIBILITY.md`](tup/X86-FEASIBILITY.md): GO via a KVM guest,
   currently gated on a group membership, with TCG measured at ~14x as the

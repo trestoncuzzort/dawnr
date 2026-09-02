@@ -11,9 +11,12 @@ What does work is **QEMU**, which emulates the CPU. tup's boot is small
 enough that emulation is fine: 40 seconds to a login prompt on an Ubuntu
 host with no acceleration at all, and 45 seconds on a second Ubuntu
 machine booting the released split image reassembled from its parts
-(witnessed 2026-08-31). A Windows boot under the same TCG emulation has
-not been witnessed yet; you would be the first, and the witness is worth
-recording (see the end).
+(witnessed 2026-08-31). **On Windows it has now been witnessed both ways**,
+2026-09-02, Windows 11 Pro on an i9-14900K, same image `5bb06ce1…`, pure
+TCG: **21.1 s** to `tup login:` under native QEMU 11.1.0 (Path A) and
+**26.9 s** under WSL2's QEMU 8.2.2 (Path B). Both timings include GRUB's 5 s
+countdown. The receipts for those two boots are held by the person who ran
+them and are not in this repository; what is here is the report of them.
 
 ## What to bring
 
@@ -51,7 +54,14 @@ text mode silently corrupts a binary file.
 ```
 
 The console runs in that terminal. `tup login:` is the finish line; log in
-as `root`. To quit QEMU: `Ctrl-a` then `x`.
+as `root` with password **`tup`** and change it. `login` times out after
+60 s at the prompt. To quit QEMU: `Ctrl-a` then `x`.
+
+If you script the launch instead of typing it: PowerShell's
+`Start-Process -ArgumentList @(...)` does not re-quote the space in
+`Program Files`, and QEMU dies within a second with no output (measured
+2026-09-02). The direct `& "..."` call above is fine; only a launcher that
+rebuilds the argument list hits it.
 
 One caution, measured on Ubuntu 2026-08-31: this command attaches the disk
 read-write and the guest touches the filesystem on every boot, so after
@@ -69,19 +79,24 @@ leave the reassembled master untouched:
 
 Inside a WSL2 Ubuntu, the machine *is* an Ubuntu host, so follow
 [`RUN-ON-UBUNTU.md`](RUN-ON-UBUNTU.md) verbatim (`sudo apt-get install
-qemu-system-arm qemu-efi-aarch64`, one command, done). Same measured 40 s
-class of boot.
+qemu-system-arm qemu-efi-aarch64`, one command, done). Measured 26.9 s on
+2026-09-02 (QEMU 8.2.2 from apt, pure TCG, `-accel help` lists tcg only).
 
 ## What you are looking at, once it boots
 
 Same checks as everywhere: `cat /etc/os-release` says `NAME="tup"`;
-`claude --version` answers from the agent layer; every file on the disk is
-accounted for in the repo's `receipts/`.
+`claude --version` answers from the agent layer (2.1.251 as shipped); every
+file on the disk is accounted for in the repo's `receipts/` — the one
+inventory that describes this image is named in `receipts/INVENTORIES.md`.
+What is *not* in the image (no `curl`, `wget`, `git`, `unzip`, `which`) and
+how to get a file in anyway is in `RUN-ON-UBUNTU.md`.
 
 ## Record the witness
 
-Nobody has booted tup on Windows yet. If you do, that is a fact worth
-keeping: note the Windows version, QEMU version, and time-to-login, and
-drop it in `receipts/` as `boot-witness-windows-<date>.txt` (a photo of the
-login prompt is a fine start). The house rule is that claims are measured:
-"boots on Windows" becomes true the moment someone writes down that it did.
+tup has booted on one Windows machine (above). A second one is still
+worth keeping: note the Windows version, QEMU version, path A or B, and
+time-to-login, and drop it in `receipts/` as
+`boot-witness-windows-<date>.txt` (a photo of the login prompt is a fine
+start). The house rule is that claims are measured: "boots on Windows"
+became true the moment someone wrote down that it did, and stays exactly as
+true as the receipts that exist.
