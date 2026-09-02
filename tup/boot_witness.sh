@@ -119,7 +119,11 @@ INVOCATION="${FWARGS[*]:0:6}, disk + firmware only; no -kernel, no -initrd, no -
 
 # Hash the disk BEFORE booting it: a boot remounts rw and changes the file,
 # so the witness names the bytes that were handed to the firmware.
-DISK_SHA=$(sha256sum "$DISK" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$DISK" | cut -d' ' -f1)
+if command -v sha256sum >/dev/null; then
+    DISK_SHA=$(sha256sum "$DISK" | cut -d' ' -f1)
+else
+    DISK_SHA=$(shasum -a 256 "$DISK" | cut -d' ' -f1)
+fi
 echo "booting tup ($ARCH) from $DISK (nothing else attached), accel $ACCEL"
 echo "  disk sha256 $DISK_SHA (before this boot)"
 echo "  console -> $LOG"
