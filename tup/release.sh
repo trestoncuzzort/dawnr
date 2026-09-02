@@ -141,7 +141,7 @@ for i in $(seq 1 36); do
   if [ "$prompt_at" -eq 0 ]; then
     if grep -qE "$PROMPT_RE" "$LOG" 2>/dev/null; then
       prompt_at=$((i*5)); settle_left=$SETTLE
-      echo "    login prompt at ${prompt_at}s — watching ${SETTLE}s more before shipping"
+      echo "    login prompt within ${prompt_at}s — watching ${SETTLE}s more before shipping"
     fi
   else
     # The countdown belongs to the passes AFTER the sighting, never to the pass
@@ -163,7 +163,7 @@ done
 kill "$QPID" 2>/dev/null || true
 [ -n "$BOOTED" ] || { echo "!!! qcow2 did not reach tup login: in 300s; NOT shipping"
                       tail -5 "$LOG"; exit 1; }
-echo "    tup login: after $BOOTED, booted from a disposable overlay"
+echo "    tup login: within $BOOTED, booted from a disposable overlay"
 
 echo "=== 4. derived formats (from the witnessed master)"
 "$QIMG" convert -O vmdk "$OUT/$NAME.qcow2" "$OUT/$NAME.vmdk"
@@ -202,7 +202,7 @@ cat > "$OUT/RELEASE.md" <<EOF
 # tup 0.1 $ARCH ($VER)
 
 - kernel: $KERNEL
-- boot witness (this exact qcow2, sha256 $MASTER_SHA): \`tup login:\` after
+- boot witness (this exact qcow2, sha256 $MASTER_SHA): \`tup login:\` within
   $BOOTED under QEMU/$ACCEL on $(uname -sm), booted through a disposable
   overlay so the witness could not alter the bytes below
 - qcow2: **witnessed**; vmdk/vdi: **UNVERIFIED**, converted from the
