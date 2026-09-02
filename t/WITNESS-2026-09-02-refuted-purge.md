@@ -105,6 +105,13 @@ On the 11 committed twins the door is safe in practice, every twin failure
 being a ground postcondition dafny decides, but the honest generalization
 lives in ROADMAP.md 10.7 as remaining scope.
 
+Note, added later on 2026-09-02: the dafny door was closed that afternoon.
+Exit 4 now reads UNPROVED, the dafny column refutes only through the same
+certificate protocol, and the re-run matrix and re-sweep (REFUTES-TRUE 0
+machine-wide) are recorded in WITNESS-2026-09-02-dafny-door.md. The
+measurements in this file, including the REFUTES-TRUE 1 line and the
+Reproduce expectation below, stand as measured at the time of this run.
+
 ## What exit 1 means now
 
 The suite exits 1 for exactly the six framac invariant-drop twin timeouts:
@@ -130,8 +137,10 @@ UNSOUNDNESS is 10.6's stated residual (a spec_fun body is axiomatized
 total, byte-identical emission before and after this work), and the
 REFUTES-TRUE is the dafny adapter's exit-4 door, could-not-prove read as
 refutation, on a true task whose existential the solver will not
-instantiate unprompted. The dafny door is now named remaining scope in
-ROADMAP.md 10.7. Neither is a regression: both doors predate this wave,
+instantiate unprompted. The dafny door was named remaining scope in
+ROADMAP.md 10.7 and closed later that day (note above;
+WITNESS-2026-09-02-dafny-door.md). Neither is a regression: both doors
+predate this wave,
 and the sweep exits 1 for the unsoundness exactly as the pre-wave
 instrument did.
 
@@ -159,7 +168,7 @@ instrument did.
     cd t
     python3 run_par.py            # full matrix; expect exit 1, the six
                                   # framac twin timeouts, 77/77 reals
-    python3 truth_fuzz.py --mirror 16 --jobs 48 --out ~/t-truth-fuzz
+    python3 truth_fuzz.py --mirror 16 --jobs 48 --out <a directory outside the repo>
                                   # expect UNSOUNDNESS 1 (framac 10.6
                                   # residual), REFUTES-TRUE 1 (the dafny
                                   # exit-4 door), ALL-KERNEL 0

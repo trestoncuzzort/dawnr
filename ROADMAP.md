@@ -515,7 +515,7 @@ bodies are axiomatized as total logic functions, so an `at` inside a
 spec_fun applied outside its guarded range keeps the reflexivity hole;
 the committed tasks guard their ranges.
 
-### 10.7 Purge incompleteness-sold-as-refutation: the 39 purged 2026-09-02; one dafny door remains
+### 10.7 Purge incompleteness-sold-as-refutation: the 39 purged 2026-09-02; the dafny door closed the same day
 
 The SPARK fix was the first instance found, not the only one. Ground-truth
 fuzzing measured 39 cells refuting a task true by construction: Verus on
@@ -551,21 +551,92 @@ exit 4, which is could-not-prove, not a countermodel, and on
 instantiate unprompted) that door sells incompleteness as refutation.
 Lean and rocq now honestly read unproved on the same task; spark, framac
 and fstar verify it. Bringing the dafny door inside the law, with the
-certificate protocol or with dafny's own countermodel reporting, is the
-remaining scope of this item.
+certificate protocol or with dafny's own countermodel reporting, was the
+remaining scope of this item when the paragraph above was written.
+
+**Dafny door closed, later the same day (2026-09-02).**
+`verifiers/dafny.py` no longer maps kernel exit 4 to REFUTED: exit 4 reads
+TIMEOUT on "out of resource" and UNPROVED otherwise, and `gt_q_ex_lit`,
+lowered from the same instrument, now reads UNPROVED at exit 4 (ok=False,
+0 verified, 1 error, no certificate present). REFUTED comes through the
+certificate protocol only. On a twin call `lower_dafny.py` appends one
+parameterless `lemma t_refutation_certificate()` whose single `ensures`
+restates the measured witness as a ground theorem: for a value witness,
+the ensures fails at the twin's result on that input; for an exit witness,
+the twin's surviving invariants and the negated guard hold at the measured
+loop-exit state and the ensures conjunction fails there (preservation and
+undefined witnesses are not certificated, as in the other columns).
+Bounded quantifiers are unrolled (cap 64) with the bound values restated as
+conjuncts the kernel checks; seq witnesses are let-bound inside the
+ensures, because an inline `[]` is a type error on 4.11.0; recursive
+spec_funs get an interpreter-chosen `assert f(args) == v;` ladder in the
+lemma body, which can only lose a certificate, never fake one. One step is
+specific to this column and was forced by measurement: dafny proves the
+index-in-range obligation of `s[(-1)]` under the false guard `(-1) >= 0`
+from the contradiction, and `--warn-contradictory-assumptions` then ends
+the whole file at exit 2, so the lowering prunes every operand t's
+short-circuit semantics never evaluated and hoists each deciding operand as
+a top-level conjunct; under the hoisted facts every rewritten node is
+logically equal to the original, so the emitted formula entails the
+verus-shaped one by propositional logic, not by the interpreter's word.
+The adapter mints REFUTED if and only if an isolated
+`dafny verify --filter-symbol=t_refutation_certificate.` run (the trailing
+dot anchors the end of the name; a bare filter also matched a decoy
+`t_refutation_certificate_extra`) exits 0 with every "Results for" block
+of its text log naming exactly that lemma at outcome Correct and no
+warning printed, while the kernel's own `--rprint` of the main run shows
+exactly one unmodified `lemma t_refutation_certificate()` carrying exactly
+one ensures clause and no requires, and every failing block of the main
+run's text log is a plain `method`: the filtered run assumes callee
+contracts without re-verifying them, so a failing helper lemma or a
+non-terminating function used by the certificate is refused by that
+attribution. A file naming the certificate can never mint VERIFIED.
+Measured 2026-09-02 on dafny 4.11.0: all 11 twins refute through the lemma
+(isolated run 1 verified, 0 errors; 2 verified where dafny splits a
+well-formedness task off, on seq_max and linear_search), all 11 reals
+verify, flake n=3 agreed on every cell; the honest abs certificate planted
+in the verified abs real demotes it to REFUTED; the name in a comment, a
+false certificate, `requires false`, a satisfiable requires, a second
+ensures, a decreases clause, a method-, twostate- or least-typed
+certificate, a parameterised one, a module wrapper and a
+`lemma xt_refutation_certificate` decoy all read UNPROVED. Full matrix
+re-run (`run_par.py`, 190 s parallel): every one of the 77 cells identical
+to the pre-change table, the 11 dafny REFUTED cells now carried by the
+certificate, exit 1 still for the six framac timeouts only. Ground-truth
+re-sweep (`truth_fuzz.py --mirror 16`, same seed and corpus, 194 tasks,
+1357 cells, flake n=3 with zero disagreements, 211 s): REFUTES-TRUE 0
+machine-wide, UNSOUNDNESS still exactly 10.6's residual
+(gt_def_specfun_bad, framac), and ALL-KERNEL rose from 0 to 1 on
+`gt_width_loop`, a FALSE task every column now reads non-pass, because the
+dafny exit-4 door had been the one column passing it. The dafny FALSE-row
+cost is the same one the five purged columns already paid under residual
+(1): 76 FALSE rows and 11 ill-defined rows moved from pass to incomplete
+(unproved, exit 4), since the sweep lowers without a witness. The cost per
+twin verify call is one extra kernel run, about the cost of the main run
+(remeasured 2026-09-02 on the shipped adapter: isolated run mean 1056 ms
+against 1113 ms for the main run with its rprint and text log, sequential
+on an idle box, four twins x3). Witness: t/WITNESS-2026-09-02-dafny-door.md.
 
 Residuals, on the record: (1) `truth_fuzz.py` and `fuzz_lower.py` call
 `lower(task, body)` without the witnesses they hold for FALSE rows, so the
-purged columns can no longer mint REFUTED on FALSE fuzz rows and those
-cells grade as incompleteness; if FALSE rows should grade `pass` again,
-the certificate protocol has to be threaded through the fuzz instruments
-the way `harness.py` threads it through the suite. (2) The verus adapter
+purged columns, dafny among them since the same day, can no longer mint
+REFUTED on FALSE fuzz rows and those cells grade as incompleteness; if
+FALSE rows should grade `pass` again, the certificate protocol has to be
+threaded through the fuzz instruments the way `harness.py` threads it
+through the suite. (2) The verus adapter, and the dafny adapter with it,
 cannot check that the certificate's asserted formula IS the negated spec at
 the measured witness; that binding lives in the trusted lowering, so a
 hand-planted certificate in a passing real program mints REFUTED per the
 protocol (declaring the name can never mint VERIFIED, so planting it only
-demotes). (3) The certificate names are protocol constants
-(`t_refutation_certificate`, SPARK's `T_Refutation_Certificate`,
+demotes), and on dafny a content-free `ensures true` certificate is
+kernel-accepted and reads REFUTED for the same reason (measured on the abs
+twin). Dafny adds one binding of its own: a value-kind certificate states
+the negated ensures at r := the interpreter's twin result, because a
+method is not callable from a lemma, so unlike SPARK's `F(input)` and
+Lean's applied function that result is trusted, not kernel-evaluated.
+(3) The certificate names are protocol constants
+(`t_refutation_certificate`, emitted by the verus, lean, rocq and, since
+the same day, dafny lowerings; SPARK's `T_Refutation_Certificate`;
 framac's `t_certificate`); the lowerings emit them only on twin calls,
 where `harness.py` passes the measured witness.
 
@@ -587,7 +658,8 @@ discharges every check of it (severity info, VC_POSTCONDITION among them).
 Emitted only on twin calls; the adapter mints REFUTED only when the kernel
 discharges the certificate in full. No cell degraded: the nine went
 TIMEOUT to REFUTED and all 11 reals still verify. The same protocol is what
-10.7's purge handed to verus, framac, lean and rocq.
+10.7's purge handed to verus, framac, lean and rocq, and, later the same
+day, to dafny.
 
 ### 10.9 Pin the loop frame rule in SPEC.md: DONE 2026-09-02
 

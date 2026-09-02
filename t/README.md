@@ -20,12 +20,17 @@ it is refused here in advance (ROADMAP.md, "The far field").
 - Types: `int`. No arrays, no quantifiers, no heap, no loops. v0 exists to prove
   the pipeline — task → lowering → kernel verdict → witness — not expressiveness.
 - A task is JSON (`tasks/*.json`): no parser to write means no parser to trust.
-- `lower_dafny.py` emits Dafny; `dafny verify` decides. Exit codes are the ones
-  dafny_verify.py measured on 4.11.0: 0 verified, 2 malformed, 4 refuted.
+- `lower_dafny.py` emits Dafny; `dafny verify` decides. Exit codes as measured
+  on 4.11.0: 0 verified, 2 malformed, 4 could-not-prove, which reads UNPROVED
+  (TIMEOUT on "out of resource"). Until 2026-09-02 exit 4 was read as refuted;
+  it is not a countermodel and is no longer read as one
+  (WITNESS-2026-09-02-dafny-door.md).
 - Every lowering also emits a BROKEN TWIN (the body's first `if` collapsed to
   its then-branch). A task only counts when the real lowering VERIFIES **and**
-  the twin is REFUTED — one witness for "the spec is provable," one for "the
-  spec has teeth." A twin that still verifies is a vacuous spec and the task is
+  the twin is REFUTED: one witness for "the spec is provable," one for "the
+  spec has teeth." Since 2026-09-02 the twin's REFUTED means the kernel accepted
+  a certificate lemma restating the measured witness, not a bare failing exit.
+  A twin that still verifies is a vacuous spec and the task is
   refused. This is dafny_pairs.py's measured-flip rule, applied to t from birth.
 
 ## Files

@@ -445,9 +445,11 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
         return False
 
     real = OUT / f"{name}.{suffix}"
-    real.write_text(lower(task, task["body"]), encoding="utf-8")
+    real.write_text(lower(task, task["body"]), encoding="utf-8",
+                    newline="\n")
     twin = OUT / f"{name}_twin.{suffix}"
-    twin.write_text(lower(task, twin_body, witness=w), encoding="utf-8")
+    twin.write_text(lower(task, twin_body, witness=w), encoding="utf-8",
+                    newline="\n")
 
     r_real, agree_r = flake_check(backend.verify, real)
     r_twin, agree_t = flake_check(backend.verify, twin)

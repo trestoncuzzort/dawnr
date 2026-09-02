@@ -102,11 +102,15 @@ trust a "this is false", make the tool prove the falsity at a witness, do not
 infer it from a failure to prove truth. Verus, Lean and Rocq re-earned all
 eleven flips this way, SPARK recovered its nine lost flips, and the post-purge
 ground-truth sweep measures zero incompleteness-sold-as-refutation in the five
-purged columns and in F*. One door is left open and named rather than fixed:
-the Dafny adapter still reads kernel exit 4 as REFUTED, and the same sweep
-finds exactly one true task it mislabels; it is recorded as remaining scope in
-[`ROADMAP.md`](ROADMAP.md) 10.7. See [`t/`](t/) and
-[`t/AGREEMENT.md`](t/AGREEMENT.md) for the current cross-kernel table.
+purged columns and in F*. The last door, the Dafny adapter reading kernel
+exit 4 as REFUTED, was closed later the same day: exit 4 now reads UNPROVED,
+Dafny refutes only through the same certificate lemma, checked by the kernel
+in an isolated run, and the re-sweep measures zero
+incompleteness-sold-as-refutation machine-wide, with every one of the 77
+matrix cells unchanged
+([`ROADMAP.md`](ROADMAP.md) 10.7, [`t/WITNESS-2026-09-02-dafny-door.md`](t/WITNESS-2026-09-02-dafny-door.md)).
+See [`t/`](t/) and [`t/AGREEMENT.md`](t/AGREEMENT.md) for the current
+cross-kernel table.
 
 **That table is the least interesting thing here, and the project says so in
 its own files.** The defect above, and the ones below, were found by running
@@ -206,15 +210,18 @@ are where the method goes next.
   hole. The committed tasks guard their ranges; the same total-logic
   softness in `requires` and invariant positions is recorded future work,
   and SPEC.md now states normatively what an undefined `requires` means.
-- **REFUTED is earned now, with one door still ajar.** The purge described
+- **REFUTED is earned now, in every column.** The purge described
   under "the finding" above put every column's REFUTED behind positive
   evidence. The honest cost is Frama-C's six invariant-drop twins, which read
   `verified / timeout` because their witnesses are loop-exit states rather
   than program inputs, so no ground certificate exists and WP's step budget
-  fires first; those six cells are why the suite exits 1. One adapter was left
-  unpurged and is named, not hidden: Dafny still reads kernel exit 4 as
-  REFUTED, and ground-truth fuzzing finds exactly one true task it mislabels,
-  recorded as remaining scope in [`ROADMAP.md`](ROADMAP.md) 10.7.
+  fires first; those six cells are why the suite exits 1. The one adapter
+  the purge had left alone, Dafny, which read kernel exit 4 as REFUTED and
+  mislabelled exactly one true task in ground-truth fuzzing, was brought
+  inside the rule later the same day: exit 4 reads UNPROVED, the twin is
+  refuted only through a certificate lemma the kernel accepts, and the
+  re-sweep measures zero incompleteness-sold-as-refutation machine-wide
+  ([`ROADMAP.md`](ROADMAP.md) 10.7).
 - **The integer-boundary unsoundness is FIXED and independently
   re-checked.** A boundary campaign built 48 tasks false over the integers
   but true under a machine word, and no kernel verified any of them. The
