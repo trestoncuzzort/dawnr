@@ -17,12 +17,25 @@
 #      script refuses a disk any process still holds open.
 #   2. fstrim first: the disk carries every deleted build artifact as
 #      allocated blocks (53 GB where 5.5 GB is real) until the guest trims.
-#   3. No image ships unwitnessed: the qcow2 must reach `tup login:` on a
-#      serial console before SHA256SUMS is written — and it is witnessed
+#   3. No image ships unwitnessed: the qcow2 must satisfy every clause of the
+#      boot verdict in tup/boot_verdict.sh — a `tup login:` line, no panic
+#      anywhere on the console, a guest still alive when the verdict is taken,
+#      and a settle window that really elapsed — before SHA256SUMS is written,
+#      and it is witnessed
 #      THROUGH A THROWAWAY OVERLAY, because a witness that writes into the
 #      file it is witnessing has changed the evidence. The others are
 #      converted FROM the witnessed master, and say so.
 set -eu
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# The ship gate carries no idea of its own about what "booted" means. It loads
+# the rules boot_witness.sh uses, from boot_verdict.sh, because a second copy of
+# those rules is how three separate "banked BOOTED, did not boot" defects got
+# in — that file's opening note has the account.
+. "$HERE/boot_verdict.sh" 2>/dev/null || true
+command -v tup_boot_verdict >/dev/null || {
+  echo "cannot load $HERE/boot_verdict.sh — the rules that decide BOOTED live there" >&2
+  echo "  refusing to ship an image on a verdict this script made up" >&2
+  exit 1; }
 OUT=${1:-"$HOME/tup-release"}
 ARCH="${TUP_ARCH:-arm64}"
 SCRATCH="${TMPDIR:-/tmp}/tup-release-$$"
@@ -124,45 +137,57 @@ else
     -display none -serial "file:$LOG" &
 fi
 QPID=$!
-BOOTED=""
-# The ship gate mirrors boot_witness.sh's verdict semantics: a kernel panic
-# anywhere on the console outranks the prompt and refuses the release; the
-# prompt must BE a line (leading whitespace/ANSI allowed), not a sentence that
-# mentions one; and a sighted prompt opens a settle window so a panic seconds
-# later is still the news.
-ESC=$'\033'
-PROMPT_RE="^[[:space:]]*($ESC\[[0-9;?]*[A-Za-z][[:space:]]*)*tup login:"
+# The ship gate does not MIRROR boot_witness.sh's verdict semantics any more —
+# it uses them. Both call tup_boot_verdict, so "what counts as booted" cannot
+# mean one thing to the witness and another to the gate, which is how the settle
+# window came to be right in one file and wrong in the other. This loop only
+# watches and counts; the verdict is taken once, after it, while the guest is
+# still running.
+#
+# The countdown belongs to the passes AFTER the sighting, never to the pass that
+# made it. It used to run in the same iteration that opened the window: a 10s
+# window was down to 5 before the first sleep, so exactly ONE further read of
+# the console happened — at +5s — and the gate shipped. A panic reaching the
+# console between +5s and +10s, inside the window this script says it is
+# watching, was read by nobody and the image went out. The window costs what it
+# claims: SETTLE/5 further reads, the last of them SETTLE seconds after the
+# prompt, each running the panic test first — and the seconds actually watched
+# are handed to the verdict rather than assumed by it.
 SETTLE=${TUP_SETTLE_SECS:-10}
-prompt_at=0; settle_left=0
+POLL=5
+BUDGET=$((36 * POLL))
+prompt_seen=0; prompt_at=0; settle_watched=0
 for i in $(seq 1 36); do
-  grep -qE "Kernel panic|Attempted to kill init|not syncing" "$LOG" 2>/dev/null \
-    && { echo "!!! kernel panic on the serial console — NOT shipping"
-         tail -5 "$LOG"; kill "$QPID" 2>/dev/null || true; exit 1; }
-  if [ "$prompt_at" -eq 0 ]; then
-    if grep -qE "$PROMPT_RE" "$LOG" 2>/dev/null; then
-      prompt_at=$((i*5)); settle_left=$SETTLE
+  if tup_saw_panic "$LOG"; then break; fi
+  if [ "$prompt_seen" -eq 0 ]; then
+    if tup_saw_prompt "$LOG"; then
+      prompt_seen=1; prompt_at=$((i * POLL))
       echo "    login prompt within ${prompt_at}s — watching ${SETTLE}s more before shipping"
+    elif ! tup_guest_alive "$QPID"; then
+      break
     fi
   else
-    # The countdown belongs to the passes AFTER the sighting, never to the pass
-    # that made it. It used to run in the same iteration that opened the window:
-    # a 10s window was down to 5 before the first sleep, so exactly ONE further
-    # read of the console happened — at +5s — and the gate shipped. A panic
-    # reaching the console between +5s and +10s, inside the window this script
-    # says it is watching, was read by nobody and the image went out. The window
-    # now costs what it claims: SETTLE/5 further reads, the last of them SETTLE
-    # seconds after the prompt, each running the panic test above before it
-    # counts. (boot_witness.sh's loop was checked for the same fault and does
-    # not have it: its sighting branch ends in `continue`, so the decrement in
-    # the else arm cannot run on the iteration that opened the window.)
-    settle_left=$((settle_left - 5))
-    [ "$settle_left" -le 0 ] && { BOOTED="${prompt_at}s"; break; }
+    settle_watched=$((settle_watched + POLL))
+    if ! tup_guest_alive "$QPID"; then break; fi
+    if [ "$settle_watched" -ge "$SETTLE" ]; then break; fi
   fi
-  sleep 5
+  sleep "$POLL"
 done
+# Taken BEFORE the kill, for the same reason boot_witness.sh takes it before
+# its own: a liveness clause answered after this script has killed the guest is
+# not a measurement of anything.
+VERDICT_OK=0
+if VERDICT=$(tup_boot_verdict "$LOG" "$QPID" "$prompt_seen" "$settle_watched" "$SETTLE" "$BUDGET"); then
+  VERDICT_OK=1
+fi
 kill "$QPID" 2>/dev/null || true
-[ -n "$BOOTED" ] || { echo "!!! qcow2 did not reach tup login: in 300s; NOT shipping"
-                      tail -5 "$LOG"; exit 1; }
+if [ "$VERDICT_OK" -ne 1 ]; then
+  echo "!!! the qcow2 did not witness as booted — NOT shipping"
+  echo "    verdict: $VERDICT"
+  tail -5 "$LOG" || true
+  exit 1
+fi
+BOOTED="${prompt_at}s"
 echo "    tup login: within $BOOTED, booted from a disposable overlay"
 
 echo "=== 4. derived formats (from the witnessed master)"
@@ -203,8 +228,11 @@ cat > "$OUT/RELEASE.md" <<EOF
 
 - kernel: $KERNEL
 - boot witness (this exact qcow2, sha256 $MASTER_SHA): \`tup login:\` within
-  $BOOTED under QEMU/$ACCEL on $(uname -sm), booted through a disposable
-  overlay so the witness could not alter the bytes below
+  $BOOTED under QEMU/$ACCEL on $(uname -sm), then ${SETTLE}s of settle in
+  which no panic reached the console and the guest was still running when
+  the verdict was taken; the clauses, and what they do not cover, are in
+  tup/boot_verdict.sh. Booted through a disposable overlay so the witness
+  could not alter the bytes below
 - qcow2: **witnessed**; vmdk/vdi: **UNVERIFIED**, converted from the
   witnessed master; boot one and say so before relying on it
 - layer diffs shipped in the repo: ${LAYERS:-none yet for this arch}
