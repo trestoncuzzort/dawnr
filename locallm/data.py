@@ -215,6 +215,30 @@ def split_verdict(h: dict) -> str | None:
     return "splitter"
 
 
+# WHAT A CAPACITY FAILURE SAYS, lowercased, from the backends this runs on.
+# torch.cuda.OutOfMemoryError is matched by TYPE, which is the honest primary;
+# these three substrings are for the backends that raise a plain RuntimeError:
+#
+#   "CUDA out of memory. Tried to allocate 2.00 GiB (GPU 0; ...)"  out of memory
+#   "MPS backend out of memory (MPS allocated: 9.06 GB, ...)"      out of memory
+#   "[enforce fail at alloc_cpu.cpp:75] . DefaultCPUAllocator:
+#    not enough memory: you tried to allocate 4294967296 bytes"    not enough memory
+#   "cudaErrorMemoryAllocation"                                    alloc
+#
+# The list is deliberately short and deliberately about MEMORY. It is a
+# whitelist, not a blacklist: anything it does not recognise is not called a
+# capacity problem, which is the direction that cannot invent a cause.
+_CAPACITY_TELLS = ("out of memory", "not enough memory", "alloc")
+
+
+def _is_capacity_error(e: BaseException) -> bool:
+    """Is this the corpus not fitting, or is it something else entirely?"""
+    if isinstance(e, torch.cuda.OutOfMemoryError):
+        return True
+    msg = str(e).lower()
+    return any(tell in msg for tell in _CAPACITY_TELLS)
+
+
 class CharTokenizer:
     def __init__(self, chars):
         self.chars = list(chars)
@@ -278,7 +302,23 @@ class Corpus:
         self.train_text = train_text
         self.val_text = val_text
 
+        # THE REQUEST THAT PRODUCED THE SPLIT, kept for the same reason the
+        # split itself is. A run record that names the corpus but not the
+        # holdout cannot tell two runs on different validation sets apart, and
+        # every prereg in this folder asserts an identical holdout across arms.
+        # runlog.split_fingerprint turns these three into that record.
+        self.val_frac = val_frac
+        self.seed = seed
+        self.grouped = grouped
+
+        # TWO DEVICES, BECAUSE THERE REALLY ARE TWO. `device` is where batches
+        # are DELIVERED, which is where the model lives and never changes.
+        # `data_device` is where the corpus tensors actually ended up, which is
+        # the same thing right up until the corpus does not fit and _place falls
+        # back to host memory. Collapsing them into one attribute is what made
+        # that fallback silent.
         self.device = device
+        self.data_device = device
         # Keep the corpus resident on the training device. Batches are then cut
         # on-device with one vectorised gather instead of a Python loop plus a
         # host-to-device copy per step, which is the dominant cost at these
@@ -287,16 +327,72 @@ class Corpus:
         # costs one cheap cast per batch (nn.Embedding needs int64 indices).
         self.train = self._place(train_ids)
         self.val = self._place(val_ids)
+        if self.train.device.type != self.data_device:
+            # The val half fell back after the train half was already placed.
+            # Keep the whole corpus on one device, so data_device describes all
+            # of it rather than most of it.
+            self.train = self.train.to(self.data_device)
 
     def _place(self, t: torch.Tensor) -> torch.Tensor:
         """Move the corpus to the device, falling back to host memory if it
         does not fit. A corpus large enough to fill VRAM should not cost you
-        the ability to train on it."""
-        if self.device == "cpu":
+        the ability to train on it.
+
+        THE FALLBACK IS NOT FREE AND IT USED TO BE SILENT. It caught the
+        exception, returned the CPU tensor, and left self.device saying "cuda",
+        so every consumer -- the run log included -- recorded a GPU run that was
+        keeping its corpus in host memory. Two things change under it and
+        neither is cosmetic:
+
+          speed        every batch is now cut on the CPU and copied across, so a
+                       ms/step recorded from this run is not comparable with one
+                       recorded from a run that fitted.
+          the RNG      get_batch draws its index with device=d.device. On the
+                       fallback that is the CPU generator, not the CUDA one, so
+                       the same --seed produces a DIFFERENT training batch
+                       sequence. A run that silently changes what it trains on
+                       is the one thing this folder exists to make VISIBLE: a
+                       recorded fingerprint detects a wrong comparison, it
+                       cannot prevent one.
+
+        self.device is deliberately NOT changed to "cpu". The model is still on
+        the graphics card, and get_batch's last two lines move each batch to
+        self.device precisely because the corpus may not be there; setting it to
+        "cpu" would skip that move and hand CPU batches to a CUDA model. The
+        object stops lying by gaining a second, accurate attribute, not by
+        replacing a true one with a false one.
+
+        ONLY A CAPACITY FAILURE TAKES THIS PATH. The except clause caught every
+        RuntimeError and printed one invented cause over all of them: measured,
+        RuntimeError("CUDA driver initialization failed, you might not have a
+        CUDA gpu") printed "the corpus does not fit on the cuda" and returned a
+        CPU tensor, and so did "Torch not compiled with CUDA enabled" and "CUDA
+        error: device-side assert triggered". None of those is about size.
+
+        Anything else RE-RAISES rather than falling back with the real message,
+        and that is the choice on purpose. The fallback is only a remedy for
+        one problem. The MODEL is on that device too: if the device is not
+        usable, keeping the corpus in host memory buys nothing and the run dies
+        at the first forward pass instead, several screens later, with the
+        original cause already scrolled away and a WARNING on the record
+        claiming a corpus size problem that never existed. Re-raising loses
+        nothing -- the exception is the device's own, with its own message.
+        """
+        if self.data_device == "cpu":
             return t
         try:
-            return t.to(self.device)
-        except (torch.cuda.OutOfMemoryError, RuntimeError):
+            return t.to(self.data_device)
+        except (torch.cuda.OutOfMemoryError, RuntimeError) as e:
+            if not _is_capacity_error(e):
+                raise
+            print(f"WARNING: the corpus does not fit on the {self.device} "
+                  f"({type(e).__name__}: {str(e).splitlines()[0][:120]}), so it "
+                  f"stays in host memory. Training still runs on the "
+                  f"{self.device}, but batches are cut on the CPU and copied "
+                  f"across: slower, and drawn from the CPU random stream, so "
+                  f"this run is not step-for-step comparable with one whose "
+                  f"corpus fitted.")
+            self.data_device = "cpu"
             return t
 
     def get_batch(self, split: str, batch_size: int, block_size: int,

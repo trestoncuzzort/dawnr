@@ -386,7 +386,7 @@ class TrainWorker(threading.Thread):
         # anything. Validation text that also appears in training measures
         # memorisation, not generalisation.
         tr_txt, va_txt = group_split(text)
-        rep = leakage_scan(tr_txt, va_txt)
+        rep = leakage_scan(tr_txt, va_txt, doc_aligned=True)   # group_split: it is
         health = split_health(text)
         # data.split_verdict, not a local comparison: this used to test only
         # "did the splitter fall short", which is silent on the one corpus shape
@@ -501,8 +501,16 @@ class TrainWorker(threading.Thread):
             for line in baselines.summary_lines(base):
                 self.log(line)
 
-        runlog.record("train", device=device, out=str(out), source="studio",
+        # corpus AND split AND data device, the same three the CLI trainer
+        # records. A GUI run lands in the same log and is read beside those
+        # rows: without the split fingerprint two runs on different holdouts
+        # are indistinguishable there, and without data_device a run whose
+        # corpus fell back to host memory looks like one that fitted.
+        runlog.record("train", device=device, data_device=corpus.data_device,
+                      out=str(out), source="studio",
                       corpus=runlog.corpus_fingerprint(text),
+                      split_fingerprint=runlog.split_fingerprint(
+                          corpus.val_frac, corpus.seed, corpus.val_text),
                       config={k: c[k] for k in ("n_layer", "n_head", "n_embd",
                                                 "block_size", "batch_size",
                                                 "steps", "lr", "dropout", "seed")},
@@ -511,8 +519,12 @@ class TrainWorker(threading.Thread):
                                "ms_per_step": wall / max(c["steps"], 1) * 1000,
                                "params": model.num_params()},
                       baselines=base,
-                      leakage={"verdict": rep.verdict,
-                               "content_frac": rep.shingle_frac})
+                      # The scan's own row, not a two-field copy of it: the
+                      # verdict is the worst of three signals and this used to
+                      # record the verdict beside the CONTENT fraction, which
+                      # is frequently not the arm that decided. See
+                      # leakage.Report.record.
+                      leakage=rep.record())
         self.q.put(("done", {"model": model, "tok": tok, "device": device,
                              "elapsed": time.time() - t0,
                              "train": final["train"], "vocab": tok.vocab_size}))
@@ -1028,7 +1040,7 @@ class Studio(ttk.Frame):
         sample = text[:SCAN_SAMPLE_BYTES] if sampled else text
         try:
             tr_txt, va_txt = group_split(sample)
-            rep = leakage_scan(tr_txt, va_txt)
+            rep = leakage_scan(tr_txt, va_txt, doc_aligned=True)  # group_split: it is
             health = split_health(sample)
             colour = {"CLEAN": self.C["ok"], "SUSPECT": self.C["warn"],
                       "CONTAMINATED": self.C["bad"]}[rep.verdict]
