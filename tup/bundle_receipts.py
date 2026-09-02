@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -50,6 +51,56 @@ def vm_read(path: str) -> str:
 
 def sha256_text(s: str) -> str:
     return hashlib.sha256(s.encode()).hexdigest()
+
+
+# Everything rendered below came out of the build's own files: a page name out
+# of ORDER, a package name out of a page's "# TUP_TARBALL=" line, glibc's
+# "unexpected" field out of test names scraped from check.out. None of it was
+# written to be Markdown, and Markdown reads some of it as structure. A GFM
+# table row is split on its pipes BEFORE anything inline is parsed -- so a pipe
+# in a value opens a new cell even inside a code span -- and a newline ends the
+# row, leaving what followed to be read as the document's own text. Measured: a
+# package name of "evil|cell\nnext" cut its row to two cells and left
+# "next | 13.3 min |" standing on its own; a test criterion holding
+# "| forged | criterion | row |" printed exactly that, as a table. So values
+# are escaped where they meet the Markdown.
+def md_cell(v) -> str:
+    """One table cell from an arbitrary value: pipes escaped, control
+    characters made visible instead of left to act."""
+    s = "" if v is None else str(v)
+    out = []
+    for ch in s:
+        if ch == "|":
+            out.append("\\|")
+        elif ch == "\n":
+            out.append("\\n")
+        elif ch == "\r":
+            out.append("\\r")
+        elif ch == "\t":
+            out.append("\\t")
+        elif ord(ch) < 0x20 or ord(ch) == 0x7F:
+            out.append(f"\\x{ord(ch):02x}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def md_code(v) -> str:
+    """The same value in a code span it cannot close. CommonMark ends a span at
+    the next run of exactly as many backticks as opened it, so open with one
+    more than the longest run inside, and pad if it starts or ends with one."""
+    s = md_cell(v)
+    n = max((len(m) for m in re.findall(r"`+", s)), default=0)
+    fence = "`" * (n + 1)
+    pad = " " if s.startswith("`") or s.endswith("`") else ""
+    return f"{fence}{pad}{s}{pad}{fence}"
+
+
+def md_fence(text: str) -> str:
+    """A fence for a block that the block's own text cannot close: three
+    backticks at least, and longer than any fence line inside it."""
+    n = max((len(m) for m in re.findall(r"^\s*(`{3,})", text, re.M)), default=0)
+    return "`" * max(3, n + 1)
 
 
 # The test receipts come in more than one shape, because the suites do: the
@@ -183,7 +234,7 @@ def main() -> int:
       + (f" (plus {len(failed)} failed page(s), listed below)" if failed else ""))
     w(f"- machine time in builds: **{human(total)}**")
     w(f"- source tarballs hashed: **{len(tarballs)}**")
-    w(f"- chapters: " + ", ".join(f"{c} ({n})" for c, n in sorted(by_ch.items())))
+    w(f"- chapters: " + ", ".join(f"{md_cell(c)} ({n})" for c, n in sorted(by_ch.items())))
     w("")
     w("## Test policy, as executed")
     w("")
@@ -204,16 +255,18 @@ def main() -> int:
         w("| page | what the run reported | exit |")
         w("|---|---|---|")
         for r in tests_run:
-            w(f"| `{r.get('page','?')}` | {test_result(r)} | {test_exit(r)} |")
+            w(f"| {md_code(r.get('page','?'))} | {md_cell(test_result(r))}"
+              f" | {md_cell(test_exit(r))} |")
         w("")
         seen = set()
         for r in tests_run:
             pg = r.get("page", "?")
             if r.get("criterion") and (pg, r["criterion"]) not in seen:
                 seen.add((pg, r["criterion"]))
-                w(f"- `{pg}` pass criterion: {r['criterion']}")
+                w(f"- {md_code(pg)} pass criterion: {md_cell(r['criterion'])}")
             if r.get("fail_list"):
-                w(f"- `{pg}` named failures are listed in `{r['fail_list']}`")
+                w(f"- {md_code(pg)} named failures are listed in"
+                  f" {md_code(r['fail_list'])}")
         w("")
     else:
         w("No test-result records present in this run's receipts.")
@@ -222,7 +275,7 @@ def main() -> int:
         w(f"Suites skipped by policy ({len(skipped_tests)}):")
         w("")
         for p in skipped_tests:
-            w(f"- `{p}`")
+            w(f"- {md_code(p)}")
     else:
         w("No skip records present in this run's receipts.")
     w("")
@@ -230,22 +283,25 @@ def main() -> int:
         w("## Failed pages")
         w("")
         for r in failed:
-            w(f"- `{r['page']}` exit {r['exit']} after {human(r.get('seconds',0))}"
-              f" — log sha256 `{r.get('log_sha256','?')[:16]}…`")
+            w(f"- {md_code(r['page'])} exit {md_cell(r['exit'])}"
+              f" after {human(r.get('seconds',0))}"
+              f" — log sha256 {md_code(str(r.get('log_sha256','?'))[:16] + '…')}")
         w("")
     w("## Ten slowest pages")
     w("")
     w("| page | package | time |")
     w("|---|---|---|")
     for r in slowest:
-        w(f"| `{r['page']}` | {r.get('package') or '—'} | {human(r.get('seconds',0))} |")
+        w(f"| {md_code(r['page'])} | {md_cell(r.get('package') or '—')}"
+          f" | {human(r.get('seconds',0))} |")
     w("")
     if prov_note.strip():
         w("## Provenance exceptions")
         w("")
-        w("```")
+        fence = md_fence(prov_note)
+        w(fence)
         w(prov_note.strip())
-        w("```")
+        w(fence)
         w("")
     w("## Evidence hashes")
     w("")
@@ -261,12 +317,13 @@ def main() -> int:
     w("")
     w("## Source manifest (first 20 of the tarballs this system was built from)")
     w("")
-    w("```")
+    fence = md_fence("\n".join(tarballs[:20]))
+    w(fence)
     for line in tarballs[:20]:
         w(line)
     if len(tarballs) > 20:
         w(f"... {len(tarballs)-20} more")
-    w("```")
+    w(fence)
 
     dest.write_text("\n".join(L) + "\n", encoding="utf-8")
     (OUT / f"receipts-{stamp}.jsonl").write_text(receipts_raw, encoding="utf-8")
