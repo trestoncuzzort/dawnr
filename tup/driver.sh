@@ -137,6 +137,21 @@ while read -r script <&3; do
   pkg=$(sed -n "s/^# TUP_TARBALL_$TUP_ARCH=//p" "$CHDIR/$script" | head -1)
   [ -n "$pkg" ] || pkg=$(sed -n 's/^# TUP_TARBALL=//p' "$CHDIR/$script" | head -1)
   plog="$LOG/$CH-$page.log"
+  # THE PAGE LOG IS OPENED HERE, AND EVERY WRITER AFTER THIS ONE APPENDS. It
+  # used to be truncated by the redirect on the page's own subshell, a long way
+  # further down, and everything written to it before that point went with it.
+  # Extraction runs first and sends tar's stderr here (`2>>"$plog"`), so a
+  # tarball that WARNS and still exits 0 — an implausible timestamp, an unknown
+  # pax header — had its warnings appended and then wiped, and the log_sha256
+  # in the receipt described the page's own output alone. Measured 2026-09-02:
+  # `tar: pkg-1.0/configure: time stamp ... is 357619170 s in the future`, one
+  # line, gone from the record, on the one path where nothing failed loudly and
+  # a reader would therefore never go looking. Truncated once per attempt, so a
+  # retry still starts clean and the digest still covers exactly one attempt.
+  : > "$plog" || {
+    echo "!!! $id: cannot open the page log $plog for writing"
+    echo "    refusing: the receipt names that log's digest."
+    exit 1; }
   # THE INPUT DIGESTS ARE TAKEN HERE, BEFORE ANYTHING RUNS, AND HELD. They used
   # to be taken beside the log hash, after the page had returned — so a page
   # that modified its own inputs while it built had the receipt record the bytes
@@ -238,11 +253,11 @@ while read -r script <&3; do
     rmdir "$stage" 2>/dev/null
     ( set -e; cd "$dir"
       bash -e "$src"
-    ) > "$plog" 2>&1 < /dev/null
+    ) >> "$plog" 2>&1 < /dev/null
     rc=$?
     [ $rc -eq 0 ] && rm -rf "$dir"
   else
-    ( set -e; cd "$LFS/sources"; bash -e "$src" ) > "$plog" 2>&1 < /dev/null
+    ( set -e; cd "$LFS/sources"; bash -e "$src" ) >> "$plog" 2>&1 < /dev/null
     rc=$?
   fi
 
