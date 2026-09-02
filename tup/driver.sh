@@ -59,8 +59,35 @@ tup_tests_enabled() {
   for t in $TUP_TESTS; do case "$1" in *"$t"*) return 0;; esac; done
   return 1
 }
+# Every string this script puts in the ledger is a filename or a path, and a
+# filename may hold a double quote, a backslash or a control character. Pasting
+# one between \" and \" by hand does not produce JSON: a single override path
+# with a quote in it made json.loads refuse the WHOLE line, so a reader lost
+# that page's digests, seconds and exit status too, not just the field it could
+# not read. These are RFC 8259's escapes -- backslash and quote first, then the
+# C0 range, which has no literal form in a JSON string at all.
+tup_json_str() {
+  local s=$1 out='"' i ch code
+  for ((i = 0; i < ${#s}; i++)); do
+    ch=${s:i:1}
+    case "$ch" in
+      '"')   out=$out'\"' ;;
+      '\')   out=$out'\\' ;;
+      $'\n') out=$out'\n' ;;
+      $'\r') out=$out'\r' ;;
+      $'\t') out=$out'\t' ;;
+      $'\b') out=$out'\b' ;;
+      $'\f') out=$out'\f' ;;
+      *)
+        printf -v code '%d' "'$ch"
+        if [ "$code" -lt 32 ]; then out=$out$(printf '\\u%04x' "$code")
+        else out=$out$ch; fi ;;
+    esac
+  done
+  printf '%s"' "$out"
+}
 tup_receipt_skip_tests() {
-  echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"page\":\"$1\",\"tests_skipped\":true}" >> "$RECEIPTS"
+  echo "{\"ts\":$(tup_json_str "$(date -u +%FT%TZ)"),\"page\":$(tup_json_str "$1"),\"tests_skipped\":true}" >> "$RECEIPTS"
   echo "    [tests skipped by policy: $1]"
 }
 # Prints the sha256 of $1, or fails: a hash `sha256sum` did not produce is not
@@ -73,7 +100,7 @@ tup_sha256() {
   [ -n "$out" ] || return 1
   printf '%s' "$out"
 }
-export -f tup_tests_enabled tup_receipt_skip_tests
+export -f tup_tests_enabled tup_receipt_skip_tests tup_json_str
 export RECEIPTS
 
 # ORDER is read on fd 3, and every page runs with stdin from /dev/null. A book
@@ -214,7 +241,7 @@ while read -r script <&3; do
     echo "    refusing: the receipt would name a digest it does not have."
     exit 1
   fi
-  ov_json=null;  [ -n "$ov" ]  && ov_json="\"$ov\""
+  ov_json=null;  [ -n "$ov" ]  && ov_json=$(tup_json_str "$ov")
   tb_json=null
   if [ -n "$pkg" ]; then
     if ! thash=$(tup_sha256 "$tarball"); then
@@ -222,9 +249,9 @@ while read -r script <&3; do
       echo "    refusing: the receipt would name a digest it does not have."
       exit 1
     fi
-    tb_json="\"$thash\""
+    tb_json=$(tup_json_str "$thash")
   fi
-  echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"page\":\"$id\",\"package\":\"${pkg:-null}\",\"seconds\":$secs,\"exit\":$rc,\"log_sha256\":\"$lhash\",\"override\":$ov_json,\"script_sha256\":\"$shash\",\"tarball_sha256\":$tb_json}" >> "$RECEIPTS"
+  echo "{\"ts\":$(tup_json_str "$(date -u +%FT%TZ)"),\"page\":$(tup_json_str "$id"),\"package\":$(tup_json_str "${pkg:-null}"),\"seconds\":$secs,\"exit\":$rc,\"log_sha256\":$(tup_json_str "$lhash"),\"override\":$ov_json,\"script_sha256\":$(tup_json_str "$shash"),\"tarball_sha256\":$tb_json}" >> "$RECEIPTS"
   if [ $rc -ne 0 ]; then
     echo "!!! $id FAILED (exit $rc, ${secs}s) — last lines of $plog:"
     tail -15 "$plog"
