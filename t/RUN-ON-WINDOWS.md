@@ -3,9 +3,13 @@
 t itself is plain Python 3.12 with no dependencies; the kernels do the
 proving. Five of the seven have real Windows builds, verified against their
 release listings on 2026-09-02 (the asset names below are copied from those
-listings, not guessed). Nobody here has run t on an actual Windows machine
-yet, so every behavioural claim on this page is UNVERIFIED until someone
-does, and the last section says what to record when you do.
+listings, not guessed). t has now run on a real Windows machine: 2026-09-02,
+Windows 11 Pro, Python 3.12.10, Dafny 4.11.0 + Lean 4.33.1 + F* 2026.08.30
+installed user-local with no PATH edits and no `T_*` variables, found by the
+home-directory glob; `run_all.py` 3 kernels x 11 tasks FULL AGREEMENT in
+99 s, `run_par.py` the same in 10 s under the spawn start method, 33/33
+cells `verified / refuted`. The witness file is held by the person who ran
+it; this page records what it established and what it broke (below).
 
 The honest summary first: **WSL2 gives you all seven kernels** by following
 the Ubuntu instructions verbatim inside an Ubuntu WSL2 distribution.
@@ -44,10 +48,14 @@ PowerShell example:
 $env:T_DAFNY   = "C:\tools\dafny\dafny.exe"
 $env:T_FSTAR   = "C:\tools\fstar\bin\fstar.exe"
 cd path\to\tup\t
-python run_all.py        # or: py -3 run_all.py
+py -3.12 run_all.py      # not `python`: a stock box resolves that to 3.11
 ```
 
-`run_all.py` prints one line per absent kernel saying exactly where it
+`py -3.12`, not `python` or `py -3`: on a box with more than one Python the
+bare names picked 3.11 (measured), and the drivers are 3.12 code. (The one
+syntax that actually failed on 3.11, an f-string with a nested `"` , is gone
+since 2026-09-02, but nothing else on 3.11 is tested and the receipt says
+3.12.) `run_all.py` prints one line per absent kernel saying exactly where it
 looked. Two or more present kernels and the suite runs; fewer and it
 refuses, by design, because agreement measured on nothing is one opinion,
 or none.
@@ -57,17 +65,33 @@ or none.
 The parallel drivers used to hard-select the `fork` start method, which
 does not exist on Windows; they now select fork where it exists and spawn
 elsewhere (`verifiers.mp_context`). The live-run guard used to scan
-`/proc`, which also does not exist on Windows; a lock file in `out/` now
-provides mutual exclusion on every platform, with the Linux `/proc` scan
-kept as an extra check where it works. The spawn branch was exercised on
-Linux by forcing it (`T_MP_START=spawn`) through the full 77-cell matrix.
-The Windows-specific liveness check inside the lock is UNVERIFIED and
-fails closed: a stale lock refuses with the file's path so you can delete
-it by hand.
+`/proc`, which also does not exist on Windows; a lock file in `out/`
+provides mutual exclusion on every platform. The `/proc` scan was kept as
+an extra Linux check until 2026-09-02, when it refused against its own
+launcher (`timeout 600 python3 run_par.py` carries the script name in the
+wrapper's argv) inside a tup guest; the lock already answered the question,
+so the scan is gone. The spawn branch was exercised on Linux by forcing it
+(`T_MP_START=spawn`) and then for real on Windows (10 s, full agreement).
+The Windows-specific liveness check inside the lock was measured on that
+box the same day: a second live process refuses naming the holder's pid, a
+dead holder (pid 4000000) is taken over, an unparseable holder refuses
+(fails closed), release removes the file, and `os.kill` is never reached.
+
+Two more things that Windows run found, both fixed the same day. A run
+with too few kernels used to write the (empty) table *before* refusing, so
+a fresh clone's first `run_all.py` replaced the committed `AGREEMENT.md`
+with an empty one; the refusal now comes first and the witness is a
+zero-kernel run after which the file's sha256 is unchanged. And
+`Path.write_text` defaulted to `os.linesep`, so the lowered sources were
+CRLF on Windows and their hashes, the verdict basis, differed from every
+other platform's for the same text (`abs.dfy` `9147e4af…` vs `9fe1e7e8…`,
+equal after CRLF->LF); every write site now passes `newline="\n"`, and
+`.gitattributes` pins `t/` to LF on checkout so `autocrlf=true` cannot
+re-introduce it through the committed fixtures.
 
 ## Record the witness
 
-Nobody has run t on Windows yet. If you do, that fact is worth keeping:
+t has run on one Windows machine. A second is still worth keeping:
 note the Windows version, which kernels you installed and from which
 assets, what `run_all.py` printed for present and absent kernels, and the
 final agreement line. Drop it in `t/` as

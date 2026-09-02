@@ -43,30 +43,6 @@ BACKENDS = [
 ]
 
 
-def _live_conflict() -> str | None:
-    # /proc scan, not pgrep: no external-binary dependency. Two live
-    # run_all.py/run_par.py both write the same out/*.{suffix} names.
-    me = os.getpid()
-    for entry in Path("/proc").iterdir():
-        if not entry.name.isdigit() or int(entry.name) == me:
-            continue
-        try:
-            raw = entry.joinpath("cmdline").read_bytes()
-        except OSError:
-            continue
-        argv = [a for a in raw.decode(errors="replace").split("\0") if a]
-        # Basename equality, not substring: the first Dell run refused
-        # against its own launching shell, whose single -c argument merely
-        # CONTAINED "run_par.py" inside a longer command string (measured
-        # 2026-08-31, exit 2, zero cells run). boot_witness.sh paid for the
-        # same self-match lesson with pgrep; a real invocation has the
-        # script as its own argv element, and that is what this matches.
-        if any(os.path.basename(a) in ("run_all.py", "run_par.py")
-               for a in argv):
-            return f"pid {entry.name}: {' '.join(argv)}"
-    return None
-
-
 def _run_cell(bname: str, task_name: str, suffix: str, op: str):
     # Re-imported per call: correct under spawn (fresh interpreter, no
     # inherited module object); a sys.modules hit under fork, used below.
@@ -79,13 +55,14 @@ def _run_cell(bname: str, task_name: str, suffix: str, op: str):
 
 
 def main() -> int:
-    # /proc is Linux furniture; elsewhere the lock in __main__ is the
-    # only guard, and iterating a missing /proc would crash before it.
-    conflict = _live_conflict() if Path("/proc").is_dir() else None
-    if conflict:
-        print(f"REFUSED: another t run is live ({conflict}). Two concurrent "
-              f"runs write the same out/ filenames; let it finish first.")
-        return 2
+    # Mutual exclusion is the lock file taken in __main__ (verifiers.
+    # acquire_run_lock), on every platform. A /proc scan used to sit here
+    # as an extra Linux-only check, matching any process whose argv held
+    # "run_par.py"; it refused against its own launcher — `timeout 600
+    # python3 run_par.py`, nohup, sh -c — because the wrapper's argv
+    # carries the script name too (measured 2026-09-02 inside a tup guest,
+    # exit 2, zero cells run). The lock already answers the question the
+    # scan was asking, so the scan is gone.
     ap = argparse.ArgumentParser()
     ap.add_argument("--jobs", type=int, default=None)
     jobs_arg = ap.parse_args().jobs
@@ -133,8 +110,14 @@ def main() -> int:
                 all_ok = False
                 print(f"  {name} x {bname}: LOWER-ERROR — {type(e).__name__}: {e}")
                 continue
-            (harness.OUT / f"{name}.{suffix}").write_text(real_src, encoding="utf-8")
-            (harness.OUT / f"{name}_twin.{suffix}").write_text(twin_src, encoding="utf-8")
+            # newline="\n": the lowering's bytes are the verdict basis, hashed
+            # into AGREEMENT.md. Path.write_text defaults to os.linesep, so a
+            # Windows host produced CRLF sources whose hashes differed from
+            # every other platform's for the same text (measured 2026-09-02:
+            # abs.dfy 9147e4af… on Windows vs 9fe1e7e8… everywhere else,
+            # equal after CRLF->LF). One newline choice, every host.
+            (harness.OUT / f"{name}.{suffix}").write_text(real_src, encoding="utf-8", newline="\n")
+            (harness.OUT / f"{name}_twin.{suffix}").write_text(twin_src, encoding="utf-8", newline="\n")
             pending.append((bname, name, suffix, op))
             wits[name] = w
     n_cells = len(tasks) * len(BACKENDS)          # matrix size, independent of what lowered
@@ -156,6 +139,20 @@ def main() -> int:
                   + f"   (twin witness: {harness.witness(wits.get(name))})")
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
     MIN_KERNELS = int(os.environ.get("T_MIN_KERNELS", "2"))
+    # Refuse BEFORE writing; see run_all.py for the measurement behind it.
+    if len(present_names) < MIN_KERNELS:
+        print(f"\nREFUSED: {len(present_names)} kernel(s) available, "
+              f"{MIN_KERNELS} required. Agreement across fewer than two "
+              f"kernels is not agreement — it is one opinion, or none. "
+              f"AGREEMENT.md not written.")
+        for b, v in cols:
+            if v.startswith("ABSENT"):
+                print(f"  {b}: {v}")
+        return 2
+    if not tasks:
+        print("\nREFUSED: no tasks in t/tasks/ — nothing was verified. "
+              "AGREEMENT.md not written.")
+        return 2
 
     lines = [f"# t cross-kernel agreement — "
              f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",
@@ -178,19 +175,8 @@ def main() -> int:
     lines += ["", f"Verdict basis: every source file hashed; e.g. "
               f"`abs.dfy` {sha256_file(harness.OUT / 'abs.dfy')[:16]}…, "
               f"`abs.rs` {sha256_file(harness.OUT / 'abs.rs')[:16]}…"]
-    (HERE / "AGREEMENT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    if len(present_names) < MIN_KERNELS:
-        print(f"\nREFUSED: {len(present_names)} kernel(s) available, "
-              f"{MIN_KERNELS} required. Agreement across fewer than two "
-              f"kernels is not agreement — it is one opinion, or none.")
-        for b, v in cols:
-            if v.startswith("ABSENT"):
-                print(f"  {b}: {v}")
-        return 2
-    if not tasks:
-        print("\nREFUSED: no tasks in t/tasks/ — nothing was verified.")
-        return 2
+    (HERE / "AGREEMENT.md").write_text("\n".join(lines) + "\n",
+                                       encoding="utf-8", newline="\n")
     print(f"\n{len(present_names)} kernels, {len(tasks)} tasks: "
           f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT — a finding, see t/AGREEMENT.md'}")
     return 0 if all_ok else 1
