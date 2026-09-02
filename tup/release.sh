@@ -97,16 +97,30 @@ echo "=== 3. witness the qcow2 before anything else happens (accel $ACCEL)"
 # changes the file (measured 2026-08-31; it is why RUN-ON-UBUNTU.md prescribes
 # an overlay). What ships is the exact bytes the overlay was backed by.
 LOG="$SCRATCH/witness.log"
-"$QIMG" create -q -f qcow2 -b "$OUT/$NAME.qcow2" -F qcow2 "$SCRATCH/witness.qcow2" \
+# The backing name is stored IN the overlay's header, and qemu resolves a
+# relative one against the OVERLAY's own directory, $SCRATCH under $TMPDIR,
+# not against this script's cwd. Invoked the way the usage line above invites,
+# `bash tup/release.sh ./dist`, -b was handed "./dist/tup-0.1-arm64.qcow2" and
+# qemu went looking for $SCRATCH/./dist/tup-0.1-arm64.qcow2, which is nowhere:
+# the overlay could not be created, so nothing could be witnessed and no
+# release could be cut, for a reason the message did not name. The master is
+# made absolute first, and an output directory that will not resolve says so.
+MASTER_DIR=$(cd "$OUT" 2>/dev/null && pwd -P) \
+  || { echo "cannot resolve the output directory $OUT to an absolute path" >&2
+       echo "    refusing to hand qemu a backing name it resolves somewhere else" >&2
+       exit 1; }
+MASTER_ABS="$MASTER_DIR/$NAME.qcow2"
+OVERLAY="$SCRATCH/witness.qcow2"
+"$QIMG" create -q -f qcow2 -b "$MASTER_ABS" -F qcow2 "$OVERLAY" \
   || { echo "cannot create the witness overlay; refusing to boot the master" >&2; exit 1; }
 if [ "$ARCH" = arm64 ]; then
   "$QEMU" -machine virt -accel "$ACCEL" -cpu "$CPU" -m 2048 -smp 2 \
     -drive if=pflash,format=raw,readonly=on,file="$FW" \
-    -drive file="$SCRATCH/witness.qcow2",format=qcow2,if=virtio \
+    -drive file="$OVERLAY",format=qcow2,if=virtio \
     -display none -serial "file:$LOG" &
 else
   "$QEMU" -M q35 -accel "$ACCEL" -cpu "$CPU" -m 2048 -smp 2 \
-    -drive file="$SCRATCH/witness.qcow2",format=qcow2,if=virtio \
+    -drive file="$OVERLAY",format=qcow2,if=virtio \
     -display none -serial "file:$LOG" &
 fi
 QPID=$!
@@ -124,11 +138,23 @@ for i in $(seq 1 36); do
   grep -qE "Kernel panic|Attempted to kill init|not syncing" "$LOG" 2>/dev/null \
     && { echo "!!! kernel panic on the serial console — NOT shipping"
          tail -5 "$LOG"; kill "$QPID" 2>/dev/null || true; exit 1; }
-  if [ "$prompt_at" -eq 0 ] && grep -qE "$PROMPT_RE" "$LOG" 2>/dev/null; then
-    prompt_at=$((i*5)); settle_left=$SETTLE
-    echo "    login prompt at ${prompt_at}s — watching ${SETTLE}s more before shipping"
-  fi
-  if [ "$prompt_at" -gt 0 ]; then
+  if [ "$prompt_at" -eq 0 ]; then
+    if grep -qE "$PROMPT_RE" "$LOG" 2>/dev/null; then
+      prompt_at=$((i*5)); settle_left=$SETTLE
+      echo "    login prompt at ${prompt_at}s — watching ${SETTLE}s more before shipping"
+    fi
+  else
+    # The countdown belongs to the passes AFTER the sighting, never to the pass
+    # that made it. It used to run in the same iteration that opened the window:
+    # a 10s window was down to 5 before the first sleep, so exactly ONE further
+    # read of the console happened — at +5s — and the gate shipped. A panic
+    # reaching the console between +5s and +10s, inside the window this script
+    # says it is watching, was read by nobody and the image went out. The window
+    # now costs what it claims: SETTLE/5 further reads, the last of them SETTLE
+    # seconds after the prompt, each running the panic test above before it
+    # counts. (boot_witness.sh's loop was checked for the same fault and does
+    # not have it: its sighting branch ends in `continue`, so the decrement in
+    # the else arm cannot run on the iteration that opened the window.)
     settle_left=$((settle_left - 5))
     [ "$settle_left" -le 0 ] && { BOOTED="${prompt_at}s"; break; }
   fi
