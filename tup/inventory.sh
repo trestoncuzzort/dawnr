@@ -30,6 +30,11 @@
 # the build scaffolding (/sources /tup-build), which is not part of tup; and
 # /tmp. Every exclusion is printed in the header, so the reader knows what
 # was NOT looked at.
+#
+# And when the scan itself does not finish, the file says so in its header and
+# in its totals, and this script exits nonzero. The whole use of an inventory
+# is to be diffed against another one as if both were complete; a short
+# listing that reads like a complete one is worse than no listing at all.
 set -u
 ROOT="${1:-/mnt/lfs}"
 # A trailing slash used to disable every exclusion below and quietly change the
@@ -54,16 +59,47 @@ EXCLUDE=(proc sys dev run tmp sources tup-build)
 PRUNE=()
 for d in "${EXCLUDE[@]}"; do PRUNE+=(-path "$BASE/$d" -prune -o); done
 
+# find's verdict used to be discarded twice over: `2>/dev/null` threw away what
+# it said, and the pipe into `sort` threw away that it had said anything at all,
+# since the status of a pipeline is the status of its LAST command. A scan that
+# died one file in -- an unreadable directory, a mount that went away -- still
+# produced a file headed "tup inventory" with a totals line under it, and this
+# script still exited 0. Measured: a root holding four files, a find that
+# stopped after one, and a receipt reading "totals: 1 files ... 20 bytes hashed"
+# with the reader invited at the end to diff it against another build.
+#
+# So the scan happens first, into a file, with its status and its complaints
+# kept; the header is written afterwards and can therefore say which kind of
+# scan this was. GNU find exits nonzero if ANY path could not be read, which is
+# exactly the condition that makes the completeness claim false.
+SCAN=$(mktemp "${TMPDIR:-/tmp}/tup-inventory-scan-XXXXXX")
+ERRS=$(mktemp "${TMPDIR:-/tmp}/tup-inventory-errs-XXXXXX")
+trap 'rm -f "$SCAN" "$ERRS"' EXIT
+find "$ROOT" "${PRUNE[@]}" \( -type f -o -type l \) -print > "$SCAN" 2> "$ERRS"
+FIND_RC=$?
+
 {
   echo "# tup inventory — $STAMP"
   echo "# root: $ROOT"
   echo "# excluded (not examined): ${EXCLUDE[*]}"
   echo "# format: <sha256 | symlink target>  <mode> <size> <path relative to root>"
+  if [ "$FIND_RC" -ne 0 ]; then
+    echo "#"
+    echo "# !!! PARTIAL: THE SCAN FAILED. find exited $FIND_RC, so what follows is"
+    echo "# !!! whatever it listed before it stopped. This is NOT an inventory of"
+    echo "# !!! this system and it must not be diffed against one as though it"
+    echo "# !!! were. find said:"
+    sed 's/^/# !!!   /' "$ERRS"
+  fi
   echo "#"
 } > "$DEST"
 
-find "$ROOT" "${PRUNE[@]}" \( -type f -o -type l \) -print 2>/dev/null \
-| LC_ALL=C sort \
+if [ "$FIND_RC" -ne 0 ]; then
+  echo "!!! the filesystem scan FAILED: find exited $FIND_RC" >&2
+  sed 's/^/    /' "$ERRS" >&2
+fi
+
+LC_ALL=C sort "$SCAN" \
 | while read -r f; do
     rel="${f#$BASE}"
     if [ -L "$f" ]; then
@@ -81,10 +117,20 @@ LINKS=$(grep -c "^-> " "$DEST" || true)
 BYTES=$(awk '!/^#/ && !/^-> / {s+=$3} END {print s+0}' "$DEST")
 {
   echo "#"
-  echo "# totals: $((FILES - LINKS)) files, $LINKS symlinks, $BYTES bytes hashed"
+  if [ "$FIND_RC" -ne 0 ]; then
+    echo "# totals of a PARTIAL scan (find exited $FIND_RC): $((FILES - LINKS)) files,"
+    echo "# $LINKS symlinks, $BYTES bytes hashed. This is not the size of the system."
+  else
+    echo "# totals: $((FILES - LINKS)) files, $LINKS symlinks, $BYTES bytes hashed"
+  fi
 } >> "$DEST"
 
 echo "wrote ${DEST#$HERE/}"
+if [ "$FIND_RC" -ne 0 ]; then
+  echo "  PARTIAL: $((FILES - LINKS)) files, $LINKS symlinks, $BYTES bytes — the scan"
+  echo "  did not finish, so this file is not an inventory of the system."
+  exit 1
+fi
 echo "  $((FILES - LINKS)) files, $LINKS symlinks, $BYTES bytes"
 echo
 echo "to compare two builds:  diff INVENTORY-A.txt INVENTORY-B.txt | grep '^[<>]' | wc -l"
