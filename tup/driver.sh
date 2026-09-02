@@ -7,8 +7,10 @@
 # lives in $LFS/sources/log/driver.state (one line per completed script), so
 # a rerun resumes after the last success — a failed page is retried, never
 # skipped. Every page appends one JSON line to log/receipts.jsonl: page,
-# package, seconds, exit status, and the sha256 of its own log. That ledger,
-# not this script's stdout, is the record.
+# package, seconds, exit status, the sha256 of its own log, and — because an
+# override REPLACES the page body — which body actually ran (`override`), the
+# sha256 of that body (`script_sha256`) and of the tarball it was handed
+# (`tarball_sha256`). That ledger, not this script's stdout, is the record.
 #
 # Page contract (written by extract_book.py):
 #   # TUP_TARBALL=name-version.tar.xz -> tarball extracted fresh, cwd inside
@@ -103,9 +105,30 @@ while read -r script <&3; do
     if [ ! -s "$tarball" ]; then
       echo "!!! $id: tarball absent: $pkg" | tee -a "$plog"; exit 1
     fi
-    # the top-level dir comes from the tarball's own listing — filename
-    # surgery guesses wrong on tcl8.6.17-src and friends
-    top=$(tar tf "$tarball" 2>/dev/null | head -1 | cut -d/ -f1)
+    # The top-level dir comes from the tarball's own listing — filename
+    # surgery guesses wrong on tcl8.6.17-src and friends. But the listing is
+    # UNTRUSTED INPUT to an `rm -rf` two lines below, and it failed open twice:
+    #   * a truncated or non-tarball file lists nothing, $top came back empty,
+    #     and $dir became "$LFS/sources/" — every tarball plus log/receipts.jsonl
+    #   * a perfectly good archive made with `tar cf x ./dir` lists "./dir/",
+    #     `cut -d/ -f1` gives ".", and $dir became "$LFS/sources/." — the same
+    #     deletion, with the page then reporting "ok"
+    # The listing goes to a file rather than through `head`, because `head`
+    # closing the pipe kills tar with SIGPIPE and its real exit status is lost.
+    tlist="$LOG/$CH-$page.tar-listing"
+    if ! tar tf "$tarball" > "$tlist" 2>>"$plog"; then
+      rm -f "$tlist"
+      echo "!!! $id: tar tf $tarball failed — refusing to continue" | tee -a "$plog"; exit 1
+    fi
+    top=$(head -1 "$tlist" | cut -d/ -f1)
+    rm -f "$tlist"
+    case "$top" in
+      ""|.|..)
+        echo "!!! $id: $tarball has no usable top-level directory (first entry gives \"$top\")" | tee -a "$plog"
+        echo "    refusing: the extract directory would be \$LFS/sources itself," | tee -a "$plog"
+        echo "    and the next step is rm -rf on it." | tee -a "$plog"
+        exit 1;;
+    esac
     dir="$LFS/sources/$top"
     ( set -e; cd "$LFS/sources"
       rm -rf "$dir"; tar xf "$tarball"; cd "$dir"
@@ -120,7 +143,19 @@ while read -r script <&3; do
 
   secs=$((SECONDS - t0))
   lhash=$(sha256sum "$plog" | cut -d' ' -f1)
-  echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"page\":\"$id\",\"package\":\"${pkg:-null}\",\"seconds\":$secs,\"exit\":$rc,\"log_sha256\":\"$lhash\"}" >> "$RECEIPTS"
+  # A page name is not a body. An executable override replaces the book's text
+  # entirely, and the old receipt recorded only the page — so the ledger could
+  # not say whether the book built this system or we did, let alone from which
+  # bytes. $src is whichever body actually ran; the tarball is its other input.
+  # These keys are ADDED, never renamed: a reader of the old five still parses.
+  shash=$(sha256sum "$src" 2>/dev/null | cut -d' ' -f1)
+  ov_json=null;  [ -n "$ov" ]  && ov_json="\"$ov\""
+  tb_json=null
+  if [ -n "$pkg" ]; then
+    thash=$(sha256sum "$tarball" 2>/dev/null | cut -d' ' -f1)
+    [ -n "$thash" ] && tb_json="\"$thash\""
+  fi
+  echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"page\":\"$id\",\"package\":\"${pkg:-null}\",\"seconds\":$secs,\"exit\":$rc,\"log_sha256\":\"$lhash\",\"override\":$ov_json,\"script_sha256\":\"$shash\",\"tarball_sha256\":$tb_json}" >> "$RECEIPTS"
   if [ $rc -ne 0 ]; then
     echo "!!! $id FAILED (exit $rc, ${secs}s) — last lines of $plog:"
     tail -15 "$plog"
