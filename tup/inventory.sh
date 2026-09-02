@@ -56,8 +56,36 @@ EXCLUDE=(proc sys dev run tmp sources tup-build)
 
 [ -d "$ROOT" ] || { echo "no root at $ROOT"; exit 1; }
 
+# The two scratch files this script needs are ordinary files somewhere on this
+# machine, and "somewhere" can be INSIDE the tree being inventoried: $TMPDIR
+# under $ROOT, or $ROOT itself /tmp, or $ROOT = /. The scan then finds them —
+# the listing is created by the redirect before find starts walking — hashes
+# them, and counts their bytes in the totals. They are unique per run and the
+# scan file holds the root's own path, so two inventories of one unchanged
+# system differ, and the difference reads as non-determinism in tup, which is
+# the exact question this file exists to answer. Measured 2026-09-02: a root
+# holding three files and seventeen bytes filed "5 files, 0 symlinks, 774 bytes
+# hashed", two of them its own.
+#
+# So they are named to find as paths not to walk into, in BOTH spellings, since
+# find prints the path it walked and that need not be the path mktemp handed
+# back: on macOS $TMPDIR sits under /var, which is a symlink to /private/var, so
+# an inventory of / reaches the same file as /private/var/... while $SCAN still
+# says /var/.... Leaving them out is an exclusion like any other, so it is
+# printed in the header rather than done quietly.
+SCAN=$(mktemp "${TMPDIR:-/tmp}/tup-inventory-scan-XXXXXX")
+ERRS=$(mktemp "${TMPDIR:-/tmp}/tup-inventory-errs-XXXXXX")
+trap 'rm -f "$SCAN" "$ERRS"' EXIT
+SCRATCH=("$SCAN" "$ERRS")
+SCRATCH_DIR=$(dirname "$SCAN")
+SCRATCH_PHYS=$(cd "$SCRATCH_DIR" 2>/dev/null && pwd -P) || SCRATCH_PHYS="$SCRATCH_DIR"
+if [ "$SCRATCH_PHYS" != "$SCRATCH_DIR" ]; then
+  SCRATCH+=("$SCRATCH_PHYS/$(basename "$SCAN")" "$SCRATCH_PHYS/$(basename "$ERRS")")
+fi
+
 PRUNE=()
 for d in "${EXCLUDE[@]}"; do PRUNE+=(-path "$BASE/$d" -prune -o); done
+for s in "${SCRATCH[@]}"; do PRUNE+=(-path "$s" -prune -o); done
 
 # find's verdict used to be discarded twice over: `2>/dev/null` threw away what
 # it said, and the pipe into `sort` threw away that it had said anything at all,
@@ -71,10 +99,8 @@ for d in "${EXCLUDE[@]}"; do PRUNE+=(-path "$BASE/$d" -prune -o); done
 # So the scan happens first, into a file, with its status and its complaints
 # kept; the header is written afterwards and can therefore say which kind of
 # scan this was. GNU find exits nonzero if ANY path could not be read, which is
-# exactly the condition that makes the completeness claim false.
-SCAN=$(mktemp "${TMPDIR:-/tmp}/tup-inventory-scan-XXXXXX")
-ERRS=$(mktemp "${TMPDIR:-/tmp}/tup-inventory-errs-XXXXXX")
-trap 'rm -f "$SCAN" "$ERRS"' EXIT
+# exactly the condition that makes the completeness claim false. (The scratch
+# files it writes into were made, and excluded from the walk, above.)
 find "$ROOT" "${PRUNE[@]}" \( -type f -o -type l \) -print > "$SCAN" 2> "$ERRS"
 FIND_RC=$?
 
@@ -82,6 +108,12 @@ FIND_RC=$?
   echo "# tup inventory — $STAMP"
   echo "# root: $ROOT"
   echo "# excluded (not examined): ${EXCLUDE[*]}"
+  echo "# also excluded: this script's own two scratch files, mktemp'd as"
+  echo "#   tup-inventory-scan-XXXXXX and tup-inventory-errs-XXXXXX under \$TMPDIR,"
+  echo "#   which is a directory that can fall inside the tree being scanned."
+  echo "#   They are deleted when this script exits. Named by pattern and not by"
+  echo "#   path on purpose: the path is unique per run, and a header line that"
+  echo "#   changes every run is a line every diff of two inventories reports."
   echo "# format: <sha256 | symlink target>  <mode> <size> <path relative to root>"
   if [ "$FIND_RC" -ne 0 ]; then
     echo "#"
