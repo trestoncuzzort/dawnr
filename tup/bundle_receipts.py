@@ -11,7 +11,8 @@ Collects, from the machine that did the work:
   * receipts.jsonl   — one line per page: package, seconds, exit, log sha256
   * SHA256-MANIFEST  — every source tarball as downloaded
   * driver.state     — the pages that actually completed
-  * the test-policy record — which suites ran and which were skipped, BY NAME
+  * the test-policy record — which suites ran, WITH THEIR RESULTS, and which
+    were skipped, BY NAME
 
 and writes tup/receipts/BUILD-<date>.md: a single file a reader can check the
 build against without trusting this script. Every number here is derived from
@@ -49,6 +50,43 @@ def vm_read(path: str) -> str:
 
 def sha256_text(s: str) -> str:
     return hashlib.sha256(s.encode()).hexdigest()
+
+
+# The test receipts come in more than one shape, because the suites do: the
+# glibc page records pass/fail/check_exit, binutils records expected_passes,
+# fail_lines and unresolved, gcc records unexpected_failures and the name of a
+# file listing them. Render whichever keys a record carries instead of assuming
+# one schema — and print unknown keys too, because a suite result nobody prints
+# is a suite result nobody reads.
+TEST_FIELDS = (
+    ("pass", "pass"),
+    ("fail", "fail"),
+    ("expected_passes", "expected passes"),
+    ("fail_lines", "FAIL: lines"),
+    ("unexpected_failures", "unexpected failures"),
+    ("unresolved", "unresolved"),
+    ("unexpected", "unexpected"),
+)
+EXIT_FIELDS = ("check_exit", "make_exit")
+TEST_KNOWN = ({"page", "ts", "tests_run", "criterion", "fail_list"}
+              | {k for k, _ in TEST_FIELDS} | set(EXIT_FIELDS))
+
+
+def test_result(r: dict) -> str:
+    bits = []
+    for k, label in TEST_FIELDS:
+        if k in r:
+            v = r[k]
+            if isinstance(v, str):
+                v = v.strip() or "none named"
+            bits.append(f"{label} {v}")
+    bits += [f"{k} {r[k]}" for k in r if k not in TEST_KNOWN]
+    return ", ".join(bits) if bits else "no counts recorded"
+
+
+def test_exit(r: dict) -> str:
+    bits = [f"{k.split('_')[0]} exit {r[k]}" for k in EXIT_FIELDS if k in r]
+    return ", ".join(bits) if bits else "—"
 
 
 def human(sec: float) -> str:
@@ -93,18 +131,25 @@ def main() -> int:
         return 1
 
     rows = [json.loads(l) for l in receipts_raw.splitlines() if l.strip()]
+    # THREE different kinds of line carry a "page" key, and they name different
+    # things: a build receipt names "ch08/05-glibc.sh", a test result names
+    # "ch08/05-glibc", a skip record names the bare suite "zlib". Only the
+    # first is a page of the build. Counting all three as pages inflated the
+    # retry figure from 39 to 43 on the 2026-08-31 ledger — four "retries" that
+    # were a test result and three skip records wearing a build page's name.
+    build_rows = [r for r in rows if "page" in r and "exit" in r]
+    tests_run = [r for r in rows if r.get("tests_run")]
     # A page that failed and was retried leaves MULTIPLE receipts, and counting
     # them all reported "158 pages" where the state file held fewer. The last
     # receipt per page is the page's outcome; earlier ones are its history.
     # Both are reported, separately, and the count is reconciled against
     # driver.state so the two sources of truth cannot drift silently.
     last_by_page: dict = {}
-    for r in rows:
-        if "page" in r:
-            last_by_page[r["page"]] = r
+    for r in build_rows:
+        last_by_page[r["page"]] = r
     built = [r for r in last_by_page.values() if r.get("exit") == 0]
     failed = [r for r in last_by_page.values() if r.get("exit") not in (0, None)]
-    retries = len([r for r in rows if "page" in r]) - len(last_by_page)
+    retries = len(build_rows) - len(last_by_page)
     skipped_tests = sorted({r["page"] for r in rows if r.get("tests_skipped")})
     total = sum(r.get("seconds", 0) for r in rows)   # history: every attempt costs time
     by_ch = Counter(r["page"].split("/")[0] for r in built)
@@ -146,6 +191,33 @@ def main() -> int:
     w("(glibc — the book calls it essential — plus GCC and binutils); record")
     w("every other suite as skipped BY NAME rather than dropping it silently.")
     w("")
+    # The section is titled "as executed" and used to print only the suites
+    # that did NOT execute. The three the ruling names as load-bearing ran,
+    # and their results — glibc's one failure, binutils' one unresolved test,
+    # gcc's 51 unexpected failures — appeared nowhere in the receipt.
+    if tests_run:
+        pages = {r.get("page") for r in tests_run}
+        w(f"Suites that RAN ({len(tests_run)} records across {len(pages)} pages).")
+        w("These are the suites' own numbers, recorded as the build saw them;")
+        w("this script judges none of them.")
+        w("")
+        w("| page | what the run reported | exit |")
+        w("|---|---|---|")
+        for r in tests_run:
+            w(f"| `{r.get('page','?')}` | {test_result(r)} | {test_exit(r)} |")
+        w("")
+        seen = set()
+        for r in tests_run:
+            pg = r.get("page", "?")
+            if r.get("criterion") and (pg, r["criterion"]) not in seen:
+                seen.add((pg, r["criterion"]))
+                w(f"- `{pg}` pass criterion: {r['criterion']}")
+            if r.get("fail_list"):
+                w(f"- `{pg}` named failures are listed in `{r['fail_list']}`")
+        w("")
+    else:
+        w("No test-result records present in this run's receipts.")
+        w("")
     if skipped_tests:
         w(f"Suites skipped by policy ({len(skipped_tests)}):")
         w("")
