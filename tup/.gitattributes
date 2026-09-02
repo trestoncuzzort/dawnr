@@ -1,0 +1,12 @@
+# Receipts are evidence, not source.
+#
+# Every file under receipts/ was written on the build machine, in LF, and the
+# reports print sha256 sums OF THOSE BYTES: BUILD-20260831T123738Z.md tells a
+# reader that receipts.jsonl hashes to 9d30878d…, and invites them to check.
+# With git's usual text handling a Windows checkout hands that reader a CRLF
+# copy hashing to f9ad7062…, and the receipt's own instruction fails in their
+# hands — for a reason that has nothing to do with the build.
+#
+# -text: no conversion in either direction. What was committed is what lands
+# on disk, on every platform, so a printed hash is checkable where it is read.
+receipts/** -text
