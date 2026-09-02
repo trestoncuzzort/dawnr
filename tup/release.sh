@@ -18,8 +18,10 @@
 #   2. fstrim first: the disk carries every deleted build artifact as
 #      allocated blocks (53 GB where 5.5 GB is real) until the guest trims.
 #   3. No image ships unwitnessed: the qcow2 must reach `tup login:` on a
-#      serial console before SHA256SUMS is written. The others are converted
-#      FROM the witnessed qcow2, and say so.
+#      serial console before SHA256SUMS is written — and it is witnessed
+#      THROUGH A THROWAWAY OVERLAY, because a witness that writes into the
+#      file it is witnessing has changed the evidence. The others are
+#      converted FROM the witnessed master, and say so.
 set -eu
 OUT=${1:-"$HOME/tup-release"}
 ARCH="${TUP_ARCH:-arm64}"
@@ -61,7 +63,12 @@ if [ "$ARCH" = arm64 ] && command -v limactl >/dev/null; then
   limactl shell lfs-host -- sudo bash -c '
     fstrim /mnt/lfs >/dev/null 2>&1 || true
     umount -R /mnt/lfs 2>/dev/null || true
-    mountpoint -q /mnt/lfs && { echo "cannot quiesce /mnt/lfs" >&2; exit 1; }' \
+    if mountpoint -q /mnt/lfs; then
+      echo "cannot quiesce /mnt/lfs, something still holds it" >&2
+      exit 1
+    else
+      exit 0
+    fi' \
     || { echo "quiesce failed" >&2; exit 1; }
   cp -c "$DISK" "$SRC"          # APFS clone: instant, no lock
   limactl shell lfs-host -- sudo bash -c \
@@ -82,13 +89,16 @@ fi
 echo "=== 2. convert (compressed qcow2 is the master)"
 "$QIMG" convert -f "$SRCFMT" -O qcow2 -c "$SRC" "$OUT/$NAME.qcow2"
 ls -lh "$OUT/$NAME.qcow2" | awk '{print "    qcow2:", $5}'
+MASTER_SHA=$($SHA "$OUT/$NAME.qcow2" | cut -d' ' -f1)
+echo "    sha256: $MASTER_SHA  (this is the number step 5 must still find)"
 
 echo "=== 3. witness the qcow2 before anything else happens (accel $ACCEL)"
 # Boot an OVERLAY of the master, never the master: a boot remounts rw and
 # changes the file (measured 2026-08-31; it is why RUN-ON-UBUNTU.md prescribes
 # an overlay). What ships is the exact bytes the overlay was backed by.
 LOG="$SCRATCH/witness.log"
-"$QIMG" create -q -f qcow2 -b "$OUT/$NAME.qcow2" -F qcow2 "$SCRATCH/witness.qcow2"
+"$QIMG" create -q -f qcow2 -b "$OUT/$NAME.qcow2" -F qcow2 "$SCRATCH/witness.qcow2" \
+  || { echo "cannot create the witness overlay; refusing to boot the master" >&2; exit 1; }
 if [ "$ARCH" = arm64 ]; then
   "$QEMU" -machine virt -accel "$ACCEL" -cpu "$CPU" -m 2048 -smp 2 \
     -drive if=pflash,format=raw,readonly=on,file="$FW" \
@@ -108,13 +118,21 @@ done
 kill "$QPID" 2>/dev/null || true
 [ -n "$BOOTED" ] || { echo "!!! qcow2 did not reach tup login: in 300s; NOT shipping"
                       tail -5 "$LOG"; exit 1; }
-echo "    tup login: after $BOOTED"
+echo "    tup login: after $BOOTED, booted from a disposable overlay"
 
 echo "=== 4. derived formats (from the witnessed master)"
 "$QIMG" convert -O vmdk "$OUT/$NAME.qcow2" "$OUT/$NAME.vmdk"
 "$QIMG" convert -O vdi  "$OUT/$NAME.qcow2" "$OUT/$NAME.vdi"
 
 echo "=== 5. hashes and the release note"
+# The master must still be the file step 2 built. If anything wrote to it
+# between then and now — an overlay that did not isolate, a stray qemu — the
+# release is not the thing that was witnessed, and it does not go out.
+NOW_SHA=$($SHA "$OUT/$NAME.qcow2" | cut -d' ' -f1)
+[ "$NOW_SHA" = "$MASTER_SHA" ] || {
+  echo "!!! the master changed after conversion: $MASTER_SHA -> $NOW_SHA" >&2
+  echo "    something wrote to the image that was witnessed; NOT shipping" >&2
+  exit 1; }
 ( cd "$OUT" && $SHA "$NAME.qcow2" "$NAME.vmdk" "$NAME.vdi" > SHA256SUMS )
 # Name the inventory. Thirteen INVENTORY files with nothing saying which one
 # was the release cost an outside reader a wrong conclusion (2026-09-02); the
@@ -139,7 +157,9 @@ cat > "$OUT/RELEASE.md" <<EOF
 # tup 0.1 $ARCH ($VER)
 
 - kernel: $KERNEL
-- boot witness (this exact qcow2): \`tup login:\` after $BOOTED under QEMU/$ACCEL on $(uname -sm)
+- boot witness (this exact qcow2, sha256 $MASTER_SHA): \`tup login:\` after
+  $BOOTED under QEMU/$ACCEL on $(uname -sm), booted through a disposable
+  overlay so the witness could not alter the bytes below
 - qcow2: **witnessed**; vmdk/vdi: **UNVERIFIED**, converted from the
   witnessed master; boot one and say so before relying on it
 - layer diffs shipped in the repo: ${LAYERS:-none yet for this arch}
