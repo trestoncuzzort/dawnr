@@ -170,12 +170,12 @@ a verified program on an unaccountable system is a proof about nothing in
 particular, and an accountable system running unverified software is just
 tidy.
 
-The research that produced this discipline lives in [`forge/`](forge/): an
+The research that came first is in the repository root — an
 execution-verified DPO pipeline whose real finding was that roughly half of a
 measured benchmark gain came from the measuring instrument rather than the
-model. That work is **scaffolding, not law**: it taught the method, it is
-written up in [`forge/docs/`](forge/docs/), and the distro and the language
-are where the method goes next.
+model. That work is **scaffolding, not law**: it is
+written up in [`docs/revision-2026-08-25/`](docs/revision-2026-08-25/), and the
+distro and the language are where the work goes next.
 
 ---
 

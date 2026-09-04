@@ -39,7 +39,7 @@ the tasks sitting at 0.00 on exact match:
 So the scalar rescues one task reliably and one intermittently, out of three that
 the boolean writes off entirely. That is a real gain and a much smaller one than
 "natural partial credit" implies. The stronger claim has been deleted rather than
-reworded, per the operating protocol.
+reworded, per this repo's working rules.
 
 EXACTNESS IS PRESERVED. score == 1.0 if and only if the result matches exactly
 (as a multiset when order does not count, as a sequence when it does). The

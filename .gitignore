@@ -68,14 +68,11 @@ t/out/
 # tup/book/ stays TRACKED: it is generated, but it is the exact bytes that
 # executed, which is evidence a receipt can point at.
 
-# --- working record and agent tooling: private, not product ---------------
-# These are the project CHANNEL and the notes agents wrote to each other —
-# reports, transcripts, operating protocol, handoffs, method-kit pointers.
-# They earned the discipline in t/ and tup/ but they are not the project, and
+# --- working record: private, not product ---------------------------------
+# Local working notes and logs. They are not the project, and
 # sync_public.py already refuses to publish anything that mentions them.
-# NOTE: ignoring stops future commits; these remain in history. That is fine
-# while this repository is PRIVATE (verified 2026-08-31). Making it public
-# would need the history scrubbed, not just these lines.
+# NOTE: ignoring stops future commits. The history behind these paths was
+# scrubbed by the 2026-09-01 rewrite; clones from before it must be re-cloned.
 forge/council/
 forge/instructions.txt
 forge/the instructions.txt
