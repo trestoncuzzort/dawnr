@@ -21,12 +21,28 @@
 #          firmware file at all, only the disk. kvm when /dev/kvm is
 #          openable, else tcg.
 #
-# Success is a LOGIN PROMPT on the serial console. Recorded to
-# tup/receipts/boot-witness-<date>.txt with the disk hash, the firmware
-# identity, the QEMU version, and the console transcript.
+# Success is a conjunction, not a sighting: the LITERAL `tup login:` prompt as
+# a line on the serial console, no kernel panic anywhere in the transcript, the
+# guest still alive at the moment the verdict is taken, and a settle window that
+# really elapsed. tup/boot_verdict.sh holds that rule, for this script and for
+# release.sh's ship gate alike, and says how the set of clauses was derived.
+# Recorded to
+# tup/receipts/boot-witness-<date>.txt with the disk's PRE-BOOT sha256 (or, for
+# a disk too large to hash in reasonable time, an explicit line saying so — the
+# receipt never just omits it), the firmware identity, the QEMU version, and
+# the console transcript.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ARCH="${TUP_ARCH:-arm64}"
+# What counts as BOOTED is written down once, in boot_verdict.sh, and release.sh
+# ships on the same file — the note at the top of it has the account of why
+# there is only one copy. A witness that cannot load those rules does not get to
+# improvise a verdict of its own.
+. "$HERE/boot_verdict.sh" 2>/dev/null || true
+command -v tup_boot_verdict >/dev/null || {
+  echo "cannot load $HERE/boot_verdict.sh — the rules that decide BOOTED live there" >&2
+  echo "  refusing to judge a boot without them" >&2
+  exit 1; }
 RECEIPTS="$HERE/receipts"; mkdir -p "$RECEIPTS"
 WORK="${TMPDIR:-/tmp}/tup-boot"; mkdir -p "$WORK"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -117,12 +133,25 @@ else
 fi
 INVOCATION="${FWARGS[*]:0:6}, disk + firmware only; no -kernel, no -initrd, no -append"
 
-# Hash the disk BEFORE booting it: a boot remounts rw and changes the file,
-# so the witness names the bytes that were handed to the firmware.
-if command -v sha256sum >/dev/null; then
-    DISK_SHA=$(sha256sum "$DISK" | cut -d' ' -f1)
+# The receipt claims a disk hash, so take one BEFORE the boot: QEMU is handed
+# this file read-write, and every byte it changes afterwards is a byte the hash
+# no longer describes. The build disk measured 128849018880 bytes, which is
+# tens of minutes of I/O, so a ceiling decides — and when the ceiling refuses,
+# the receipt SAYS SO. An omitted line reads as "no hash was needed"; a stated
+# refusal reads as what it is. (stat -c first: GNU stat accepts `-f %z` as a
+# FILESYSTEM query and prints a block of filesystem statistics with exit 0, so
+# the BSD form must be the fallback, never the probe.)
+DISK_BYTES=$(stat -c %s "$DISK" 2>/dev/null || stat -f %z "$DISK" 2>/dev/null || echo 0)
+case "$DISK_BYTES" in ''|*[!0-9]*) DISK_BYTES=0;; esac
+HASH_MAX=${TUP_HASH_MAX_BYTES:-8589934592}       # 8 GiB; raise it to force one
+if [ "$DISK_BYTES" -eq 0 ]; then
+  DISK_SHA="not computed (size unknown — stat could not read $DISK)"
+elif [ "$DISK_BYTES" -gt "$HASH_MAX" ]; then
+  DISK_SHA="not computed (size $DISK_BYTES bytes, over the $HASH_MAX-byte ceiling; set TUP_HASH_MAX_BYTES to force it)"
 else
-    DISK_SHA=$(shasum -a 256 "$DISK" | cut -d' ' -f1)
+  echo "  hashing the disk before boot ($DISK_BYTES bytes)..."
+  DISK_SHA=$( { sha256sum "$DISK" 2>/dev/null || shasum -a 256 "$DISK" 2>/dev/null; } | cut -d' ' -f1 )
+  [ -n "$DISK_SHA" ] || DISK_SHA="not computed (no sha256sum or shasum on PATH)"
 fi
 echo "booting tup ($ARCH) from $DISK (nothing else attached), accel $ACCEL"
 echo "  disk sha256 $DISK_SHA (before this boot)"
@@ -139,36 +168,89 @@ fi
     -netdev user,id=n0 -device virtio-net-pci,netdev=n0 \
     > "$LOG" 2>&1 < /dev/null ) &
 QPID=$!
-# Wait for a login prompt, a kernel panic, or the timeout, whichever first.
+# THIS LOOP DOES NOT DECIDE ANYTHING. It watches, and it gathers two facts —
+# whether a login prompt was seen, and how many seconds of the settle window
+# were really spent watching after it — and boot_verdict.sh decides, once,
+# below. That split is the point. The three times this witness filed a dead
+# machine as BOOTED, the verdict was a side effect of HOW the loop happened to
+# exit, so every new way of leaving the loop was a new way of banking a boot
+# that never happened; the newest was QEMU exiting inside the settle window,
+# where nothing asked after the guest at all. A `break` here is now only an
+# admission that there is nothing further to learn by waiting.
+#
+# The ORDER of the tests is still the point. One polling window can hold both a
+# prompt and the panic that followed it; the panic is the news, so the panic
+# test runs first on every pass — and because the verdict re-reads the whole
+# transcript at banking time, a panic landing on the last pass is caught even
+# though this loop never looks again.
+#
+# A PROMPT IS NOT THE END OF THE BOOT. The loop used to break on the first
+# sighting and kill QEMU immediately, so a panic four seconds later never
+# happened as far as this receipt was concerned: a transcript reading
+# `tup login:` and then "Kernel panic - not syncing: Attempted to kill init!"
+# was filed BOOTED, exit 0, in three seconds. The prompt opens a settle window
+# — the console keeps being read for TUP_SETTLE_SECS more — and the seconds
+# actually watched are counted here and checked there. The window is spent out
+# of the same 240s budget, so the timeout still means what it says.
+SETTLE=${TUP_SETTLE_SECS:-12}
+POLL=2
+BUDGET=$((120 * POLL))
+prompt_seen=0; settle_watched=0
 T0=$SECONDS
 for i in $(seq 1 120); do
-  sleep 2
-  grep -qE "tup login:|login:" "$LOG" 2>/dev/null && { VERDICT="BOOTED"; break; }
-  grep -qE "Kernel panic|Attempted to kill init|not syncing" "$LOG" 2>/dev/null && { VERDICT="PANIC"; break; }
-  kill -0 $QPID 2>/dev/null || { VERDICT="QEMU EXITED"; break; }
+  sleep "$POLL"
+  if tup_saw_panic "$LOG"; then break; fi
+  if [ "$prompt_seen" -eq 0 ]; then
+    if tup_saw_prompt "$LOG"; then
+      prompt_seen=1
+      echo "  login prompt seen — watching ${SETTLE}s more before calling it booted"
+      continue
+    fi
+    if ! tup_guest_alive "$QPID"; then break; fi
+  else
+    settle_watched=$((settle_watched + POLL))
+    if ! tup_guest_alive "$QPID"; then break; fi
+    if [ "$settle_watched" -ge "$SETTLE" ]; then break; fi
+  fi
 done
 ELAPSED=$((SECONDS - T0))
-VERDICT="${VERDICT:-TIMEOUT (240s, no login prompt)}"
+# THE VERDICT IS TAKEN HERE, WHILE THE GUEST IS STILL RUNNING. The liveness
+# clause is worth nothing if this script has already killed the process it is
+# asking about, so the kill waits until after. Every clause is read from the
+# transcript and the process at this instant; nothing is inherited from the way
+# the loop ended.
+VERDICT_OK=0
+if VERDICT=$(tup_boot_verdict "$LOG" "$QPID" "$prompt_seen" "$settle_watched" "$SETTLE" "$BUDGET"); then
+  VERDICT_OK=1
+fi
 kill $QPID 2>/dev/null; wait $QPID 2>/dev/null
-set -e
 
+# NO `set -e` here, deliberately. The receipt is this run's only durable
+# output, and `set -e` used to be switched on immediately before writing it: a
+# single non-zero step inside the block — a `tail` on a console log QEMU never
+# managed to create — aborted the script mid-write. The transcript was lost,
+# the VERDICT never reached stdout, and the caller got exit 1, which is
+# indistinguishable from "it did not boot". Every line below carries its own
+# fallback instead, and the exit status is the verdict's, on the last line.
 OUT="$RECEIPTS/boot-witness-$ARCH-$STAMP.txt"
 {
   echo "tup boot witness ($ARCH), $STAMP"
   echo "VERDICT: $VERDICT (after ${ELAPSED}s)"
   echo
   echo "disk      : $DISK"
-  echo "disk bytes: $(stat -f %z "$DISK" 2>/dev/null || stat -c %s "$DISK")"
-  echo "disk sha256: $DISK_SHA (before this boot; a boot mutates the disk)"
+  echo "disk bytes: $DISK_BYTES"
+  echo "disk sha256: ${DISK_SHA:-not computed (the hash step did not run)} (before this boot; a boot mutates the disk)"
   echo "firmware  : $FW_CODE"
   echo "qemu      : $("$QEMU" --version | head -1)"
   echo "host      : $(uname -sm), accel $ACCEL"
   echo "invocation: $INVOCATION; tup booted itself."
   echo
   echo "--- console transcript (last 60 lines) ---"
-  tail -60 "$LOG"
+  tail -60 "$LOG" 2>/dev/null || echo "(no console log at $LOG — QEMU wrote none)"
 } > "$OUT"
 echo
 echo "VERDICT: $VERDICT"
 echo "witness: ${OUT#$HERE/}"
-[ "$VERDICT" = "BOOTED" ]
+# The status is the verdict function's own, not a second reading of its string:
+# a caller that re-derives BOOTED from the text is one more copy of the rule.
+[ "$VERDICT_OK" -eq 1 ]

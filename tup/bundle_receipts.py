@@ -11,7 +11,8 @@ Collects, from the machine that did the work:
   * receipts.jsonl   — one line per page: package, seconds, exit, log sha256
   * SHA256-MANIFEST  — every source tarball as downloaded
   * driver.state     — the pages that actually completed
-  * the test-policy record — which suites ran and which were skipped, BY NAME
+  * the test-policy record — which suites ran, WITH THEIR RESULTS, and which
+    were skipped, BY NAME
 
 and writes tup/receipts/BUILD-<date>.md: a single file a reader can check the
 build against without trusting this script. Every number here is derived from
@@ -28,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -49,6 +51,93 @@ def vm_read(path: str) -> str:
 
 def sha256_text(s: str) -> str:
     return hashlib.sha256(s.encode()).hexdigest()
+
+
+# Everything rendered below came out of the build's own files: a page name out
+# of ORDER, a package name out of a page's "# TUP_TARBALL=" line, glibc's
+# "unexpected" field out of test names scraped from check.out. None of it was
+# written to be Markdown, and Markdown reads some of it as structure. A GFM
+# table row is split on its pipes BEFORE anything inline is parsed -- so a pipe
+# in a value opens a new cell even inside a code span -- and a newline ends the
+# row, leaving what followed to be read as the document's own text. Measured: a
+# package name of "evil|cell\nnext" cut its row to two cells and left
+# "next | 13.3 min |" standing on its own; a test criterion holding
+# "| forged | criterion | row |" printed exactly that, as a table. So values
+# are escaped where they meet the Markdown.
+def md_cell(v) -> str:
+    """One table cell from an arbitrary value: pipes escaped, control
+    characters made visible instead of left to act."""
+    s = "" if v is None else str(v)
+    out = []
+    for ch in s:
+        if ch == "|":
+            out.append("\\|")
+        elif ch == "\n":
+            out.append("\\n")
+        elif ch == "\r":
+            out.append("\\r")
+        elif ch == "\t":
+            out.append("\\t")
+        elif ord(ch) < 0x20 or ord(ch) == 0x7F:
+            out.append(f"\\x{ord(ch):02x}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def md_code(v) -> str:
+    """The same value in a code span it cannot close. CommonMark ends a span at
+    the next run of exactly as many backticks as opened it, so open with one
+    more than the longest run inside, and pad if it starts or ends with one."""
+    s = md_cell(v)
+    n = max((len(m) for m in re.findall(r"`+", s)), default=0)
+    fence = "`" * (n + 1)
+    pad = " " if s.startswith("`") or s.endswith("`") else ""
+    return f"{fence}{pad}{s}{pad}{fence}"
+
+
+def md_fence(text: str) -> str:
+    """A fence for a block that the block's own text cannot close: three
+    backticks at least, and longer than any fence line inside it."""
+    n = max((len(m) for m in re.findall(r"^\s*(`{3,})", text, re.M)), default=0)
+    return "`" * max(3, n + 1)
+
+
+# The test receipts come in more than one shape, because the suites do: the
+# glibc page records pass/fail/check_exit, binutils records expected_passes,
+# fail_lines and unresolved, gcc records unexpected_failures and the name of a
+# file listing them. Render whichever keys a record carries instead of assuming
+# one schema — and print unknown keys too, because a suite result nobody prints
+# is a suite result nobody reads.
+TEST_FIELDS = (
+    ("pass", "pass"),
+    ("fail", "fail"),
+    ("expected_passes", "expected passes"),
+    ("fail_lines", "FAIL: lines"),
+    ("unexpected_failures", "unexpected failures"),
+    ("unresolved", "unresolved"),
+    ("unexpected", "unexpected"),
+)
+EXIT_FIELDS = ("check_exit", "make_exit")
+TEST_KNOWN = ({"page", "ts", "tests_run", "criterion", "fail_list"}
+              | {k for k, _ in TEST_FIELDS} | set(EXIT_FIELDS))
+
+
+def test_result(r: dict) -> str:
+    bits = []
+    for k, label in TEST_FIELDS:
+        if k in r:
+            v = r[k]
+            if isinstance(v, str):
+                v = v.strip() or "none named"
+            bits.append(f"{label} {v}")
+    bits += [f"{k} {r[k]}" for k in r if k not in TEST_KNOWN]
+    return ", ".join(bits) if bits else "no counts recorded"
+
+
+def test_exit(r: dict) -> str:
+    bits = [f"{k.split('_')[0]} exit {r[k]}" for k in EXIT_FIELDS if k in r]
+    return ", ".join(bits) if bits else "—"
 
 
 def human(sec: float) -> str:
@@ -93,18 +182,25 @@ def main() -> int:
         return 1
 
     rows = [json.loads(l) for l in receipts_raw.splitlines() if l.strip()]
+    # THREE different kinds of line carry a "page" key, and they name different
+    # things: a build receipt names "ch08/05-glibc.sh", a test result names
+    # "ch08/05-glibc", a skip record names the bare suite "zlib". Only the
+    # first is a page of the build. Counting all three as pages inflated the
+    # retry figure from 39 to 43 on the 2026-08-31 ledger — four "retries" that
+    # were a test result and three skip records wearing a build page's name.
+    build_rows = [r for r in rows if "page" in r and "exit" in r]
+    tests_run = [r for r in rows if r.get("tests_run")]
     # A page that failed and was retried leaves MULTIPLE receipts, and counting
     # them all reported "158 pages" where the state file held fewer. The last
     # receipt per page is the page's outcome; earlier ones are its history.
     # Both are reported, separately, and the count is reconciled against
     # driver.state so the two sources of truth cannot drift silently.
     last_by_page: dict = {}
-    for r in rows:
-        if "page" in r:
-            last_by_page[r["page"]] = r
+    for r in build_rows:
+        last_by_page[r["page"]] = r
     built = [r for r in last_by_page.values() if r.get("exit") == 0]
     failed = [r for r in last_by_page.values() if r.get("exit") not in (0, None)]
-    retries = len([r for r in rows if "page" in r]) - len(last_by_page)
+    retries = len(build_rows) - len(last_by_page)
     skipped_tests = sorted({r["page"] for r in rows if r.get("tests_skipped")})
     total = sum(r.get("seconds", 0) for r in rows)   # history: every attempt costs time
     by_ch = Counter(r["page"].split("/")[0] for r in built)
@@ -138,7 +234,7 @@ def main() -> int:
       + (f" (plus {len(failed)} failed page(s), listed below)" if failed else ""))
     w(f"- machine time in builds: **{human(total)}**")
     w(f"- source tarballs hashed: **{len(tarballs)}**")
-    w(f"- chapters: " + ", ".join(f"{c} ({n})" for c, n in sorted(by_ch.items())))
+    w(f"- chapters: " + ", ".join(f"{md_cell(c)} ({n})" for c, n in sorted(by_ch.items())))
     w("")
     w("## Test policy, as executed")
     w("")
@@ -146,11 +242,40 @@ def main() -> int:
     w("(glibc — the book calls it essential — plus GCC and binutils); record")
     w("every other suite as skipped BY NAME rather than dropping it silently.")
     w("")
+    # The section is titled "as executed" and used to print only the suites
+    # that did NOT execute. The three the ruling names as load-bearing ran,
+    # and their results — glibc's one failure, binutils' one unresolved test,
+    # gcc's 51 unexpected failures — appeared nowhere in the receipt.
+    if tests_run:
+        pages = {r.get("page") for r in tests_run}
+        w(f"Suites that RAN ({len(tests_run)} records across {len(pages)} pages).")
+        w("These are the suites' own numbers, recorded as the build saw them;")
+        w("this script judges none of them.")
+        w("")
+        w("| page | what the run reported | exit |")
+        w("|---|---|---|")
+        for r in tests_run:
+            w(f"| {md_code(r.get('page','?'))} | {md_cell(test_result(r))}"
+              f" | {md_cell(test_exit(r))} |")
+        w("")
+        seen = set()
+        for r in tests_run:
+            pg = r.get("page", "?")
+            if r.get("criterion") and (pg, r["criterion"]) not in seen:
+                seen.add((pg, r["criterion"]))
+                w(f"- {md_code(pg)} pass criterion: {md_cell(r['criterion'])}")
+            if r.get("fail_list"):
+                w(f"- {md_code(pg)} named failures are listed in"
+                  f" {md_code(r['fail_list'])}")
+        w("")
+    else:
+        w("No test-result records present in this run's receipts.")
+        w("")
     if skipped_tests:
         w(f"Suites skipped by policy ({len(skipped_tests)}):")
         w("")
         for p in skipped_tests:
-            w(f"- `{p}`")
+            w(f"- {md_code(p)}")
     else:
         w("No skip records present in this run's receipts.")
     w("")
@@ -158,22 +283,25 @@ def main() -> int:
         w("## Failed pages")
         w("")
         for r in failed:
-            w(f"- `{r['page']}` exit {r['exit']} after {human(r.get('seconds',0))}"
-              f" — log sha256 `{r.get('log_sha256','?')[:16]}…`")
+            w(f"- {md_code(r['page'])} exit {md_cell(r['exit'])}"
+              f" after {human(r.get('seconds',0))}"
+              f" — log sha256 {md_code(str(r.get('log_sha256','?'))[:16] + '…')}")
         w("")
     w("## Ten slowest pages")
     w("")
     w("| page | package | time |")
     w("|---|---|---|")
     for r in slowest:
-        w(f"| `{r['page']}` | {r.get('package') or '—'} | {human(r.get('seconds',0))} |")
+        w(f"| {md_code(r['page'])} | {md_cell(r.get('package') or '—')}"
+          f" | {human(r.get('seconds',0))} |")
     w("")
     if prov_note.strip():
         w("## Provenance exceptions")
         w("")
-        w("```")
+        fence = md_fence(prov_note)
+        w(fence)
         w(prov_note.strip())
-        w("```")
+        w(fence)
         w("")
     w("## Evidence hashes")
     w("")
@@ -189,12 +317,13 @@ def main() -> int:
     w("")
     w("## Source manifest (first 20 of the tarballs this system was built from)")
     w("")
-    w("```")
+    fence = md_fence("\n".join(tarballs[:20]))
+    w(fence)
     for line in tarballs[:20]:
         w(line)
     if len(tarballs) > 20:
         w(f"... {len(tarballs)-20} more")
-    w("```")
+    w(fence)
 
     dest.write_text("\n".join(L) + "\n", encoding="utf-8")
     (OUT / f"receipts-{stamp}.jsonl").write_text(receipts_raw, encoding="utf-8")

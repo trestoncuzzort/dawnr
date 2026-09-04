@@ -40,7 +40,7 @@ judge_glibc_check() {
   npass=$(awk '/^[[:space:]]+[0-9]+ PASS$/{print $1; exit}' check.out)
   npass=${npass:-0}
   unexpected=$(grep -E "^FAIL: " check.out | sed 's/^FAIL: //' | grep -Ev "$ALLOWED" || true)
-  echo "{\"page\":\"$TUP_PAGE_ID\",\"tests_run\":true,\"pass\":$npass,\"fail\":$nfail,\"check_exit\":$rc,\"unexpected\":\"$(echo $unexpected | tr '\n' ' ')\"}" \
+  echo "{\"page\":\"$TUP_PAGE_ID\",\"tests_run\":true,\"pass\":$npass,\"fail\":$nfail,\"check_exit\":$rc,\"unexpected\":$(tup_json_str "$(echo $unexpected | tr '\n' ' ')")}" \
     >> "${RECEIPTS:-/sources/log/receipts.jsonl}"
   if [ -n "$unexpected" ]; then
     echo "!!! glibc: FAILURES OUTSIDE THE BOOK'S ALLOWLIST:"

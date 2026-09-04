@@ -21,7 +21,7 @@ judge_zero_fail() {
                        | grep -oE "[0-9]+$" | awk '{s+=$1} END{print s+0}')
   local pass;  pass=$(grep -hoE "# of expected passes[[:space:]]+[0-9]+" check.out \
                        | grep -oE "[0-9]+$" | awk '{s+=$1} END{print s+0}')
-  echo "{\"page\":\"$name\",\"tests_run\":true,\"criterion\":\"zero FAIL: lines (the book's own recipe)\",\"expected_passes\":$pass,\"fail_lines\":$nfail,\"unresolved\":$unres,\"make_exit\":$rc}" \
+  echo "{\"page\":$(tup_json_str "$name"),\"tests_run\":true,\"criterion\":\"zero FAIL: lines (the book's own recipe)\",\"expected_passes\":$pass,\"fail_lines\":$nfail,\"unresolved\":$unres,\"make_exit\":$rc}" \
     >> "${RECEIPTS:-/sources/log/receipts.jsonl}"
   echo "=== $name: $pass expected passes, $nfail FAIL lines, $unres unresolved (make exit $rc)"
   if [ "$nfail" -gt 0 ]; then
@@ -49,7 +49,7 @@ judge_record_only() {
   unexp=$(grep -hoE "# of unexpected failures[[:space:]]+[0-9]+" check.out \
           | grep -oE "[0-9]+$" | awk '{s+=$1} END{print s+0}')
   printf '%s\n' "$fails" > "${LOGDIR:-/sources/log}/$name-FAIL-list.txt"
-  echo "{\"page\":\"$name\",\"tests_run\":true,\"criterion\":\"RECORDED, NOT JUDGED — the book states no mechanical pass criterion\",\"expected_passes\":$pass,\"unexpected_failures\":$unexp,\"fail_lines\":$nfail,\"make_exit\":$rc,\"fail_list\":\"$name-FAIL-list.txt\"}" \
+  echo "{\"page\":$(tup_json_str "$name"),\"tests_run\":true,\"criterion\":\"RECORDED, NOT JUDGED — the book states no mechanical pass criterion\",\"expected_passes\":$pass,\"unexpected_failures\":$unexp,\"fail_lines\":$nfail,\"make_exit\":$rc,\"fail_list\":$(tup_json_str "$name-FAIL-list.txt")}" \
     >> "${RECEIPTS:-/sources/log/receipts.jsonl}"
   echo "=== $name: $pass expected passes, $unexp unexpected failures, $nfail FAIL lines"
   echo "=== $name: RECORDED, NOT JUDGED — the book gives no pass criterion here;"
