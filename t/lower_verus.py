@@ -138,7 +138,7 @@ def lower_v0(task: dict, body: list, witness: dict | None = None) -> str:
     req = f"    requires\n        {requires}\n" if requires else ""
     return (
         "use vstd::prelude::*;\n\nverus! {\n\n"
-        f"proof fn {task['name']}({ps}) -> (r: int)\n"
+        f"proof fn {task['name']}({ps}) -> ({r}: int)\n"
         f"{req}    ensures\n        {ensures},\n"
         "{\n"
         f"    {body_expr(body, r)}\n"
