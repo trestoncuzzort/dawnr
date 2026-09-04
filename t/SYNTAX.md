@@ -4,11 +4,41 @@ Everything a t task can say, in one place. [`SPEC.md`](SPEC.md) is normative:
 it carries the semantics, the definedness rules, and the twin selection. This
 page is the grammar with examples, for writing a task by hand.
 
-A t program **is** its JSON abstract syntax tree. There is no parser and no
-concrete surface syntax yet. That is a deliberate absence, not an oversight:
-a surface syntax would need its own verified parse-print round-trip before its
-proofs meant anything. The `written:` lines below are **documentation
-notation only**; nothing parses them.
+A t program **is** its JSON abstract syntax tree, and since 2026-09-04 that
+tree also has a surface syntax: [`surface.py`](surface.py) parses the
+`written:` notation below into the AST and prints the AST back out. The
+absence was deliberate while it lasted, and it ended on the terms it was
+stated on. A surface syntax needs a verified parse-print round trip before
+its proofs mean anything, because a parser and a printer that disagree prove
+things about a program nobody wrote. Measured by `python3 t/surface.py
+--check`:
+
+- `parse(print(t)) == t` on **1528 of 1528** tasks, compared as canonical
+  JSON. The corpus is the 11 committed tasks in `tasks/` plus
+  `fuzz_lower.build_corpus` over seeds 1 through 7, which is 1400 generated
+  tasks plus the 19 hand-built probes per seed, 1544 in all, less the 16 that
+  `check_wf` rejects for carrying constructs t does not have. 1406 of the
+  1528 are distinct; the repeats are the probes, which recur once per seed.
+- `print(parse(text)) == text` on all 1528, so every task has exactly one
+  normal form in the notation.
+- The **7 `written:` lines on this page parse, unedited**, to the JSON they
+  sit beside. That is what makes this grammar the documented notation rather
+  than a new one that resembles it.
+- **100000 of 100000** random ASTs drawn from the grammar itself round trip
+  (`--fuzz 20000`, seeds 1 through 5). That instrument samples the grammar
+  instead of t's semantics, so it reaches shapes no corpus generator emits,
+  and it is what found the only real defect this syntax had: `neg` of an `at`
+  whose base is a literal printed as `-18[false]`, which reparses as `at` of
+  the literal `-18`. A corpus cannot contain what its generators cannot
+  build, so that instrument stays.
+
+The notation is sugar and nothing more. It adds, removes and reinterprets no
+construct; there is nothing it can say that the JSON cannot already say, and
+nothing the JSON says that it drops. The full surface grammar is in
+`surface.py`'s module docstring, beside the two places where the obvious
+notation would have lost information: a negative literal `-5` against `neg`
+of a literal `-(5)`, and the n-ary arity of `and`/`or`, where `a and b and c`
+is the 3-ary node and `(a and b) and c` is not.
 
 ## The whole grammar
 
@@ -193,9 +223,24 @@ re-derives. The twin never touches `requires`, `ensures`, `spec_funs`, or the
 `decreases` clauses that survive in the mutated body. The spec is the fixed
 instrument; the body is what gets broken.
 
+## What the notation refuses
+
+The surface syntax is allowed to say exactly what the AST says, so these are
+rejected rather than given a meaning. Each is a case where accepting would
+have made the notation a second, undocumented language; `surface.py --check`
+exercises all six.
+
+| refused | why |
+|---|---|
+| `div`, `mod` | they do not exist in t, so they have no notation |
+| a chained comparison, `a == b == c` | there is no AST node for it, and reading it as a conjunction would invent one |
+| `and`/`or` at arity 1 | the AST admits it and `a and` is not a sentence; it occurs 0 times in the 1528 tasks, and `print` raises rather than emit text that reads as a different tree |
+| a keyword as a name | `len` cannot be both an operator and a spec_fun |
+| **comments** | a comment has no AST node, so it cannot survive `print(parse(text)) == text`; admitting one would make the round trip conditional, and the round trip is the only reason the syntax exists |
+
 ## What does not exist (on purpose)
 
-No surface syntax, no parser. No div/mod. No unbounded quantifiers. No
+No div/mod. No unbounded quantifiers. No
 mutation of sequences, no arrays, no heap, no aliasing. No mutual recursion,
 no higher-order functions, no seq returns, no seq literals. One return value.
 Gates open with measurements, not intentions; see `AGREEMENT.md` for what
