@@ -574,7 +574,26 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         # dafny says about this file is evidence, whatever the exit code.
         outcome = Outcome.VACUOUS
     elif p.returncode == 2:
-        outcome = Outcome.MALFORMED
+        # Exit 2 is parse/resolution failure AND any warning, because this
+        # adapter deliberately runs without --allow-warnings so that the
+        # contradictory-assumptions warning can carry the vacuity signal.
+        # Those are not the same event. When the run still printed its own
+        # tally with an obligation discharged and no error, dafny COMPILED
+        # AND VERIFIED the file and then failed it for a warning, so calling
+        # it MALFORMED reports a prover's caution as a broken lowering, the
+        # same class of misreport as selling incompleteness as refutation.
+        # Measured 2026-09-04: the metamorphic sweep rewrote s[j] to
+        # s[(j + 0)] in an invariant, dafny lost the quantifier trigger it
+        # had been inferring, warned, and exited 2 on "2 verified, 0 errors".
+        # Vacuity still wins when it fires; otherwise this is UNPROVED, not
+        # VERIFIED, because a proof the prover calls brittle is not one this
+        # project counts.
+        if fin is not None and n_verified >= 1 and n_errors == 0:
+            outcome = Outcome.VACUOUS if vac else Outcome.UNPROVED
+            if not vac:
+                err = "verified but warned, not counted: " + diag[-200:]
+        else:
+            outcome = Outcome.MALFORMED
     elif cert_present:
         # Certificate discipline (module docstring): never VERIFIED; the
         # kernel's acceptance of the one declared lemma, in its own isolated
