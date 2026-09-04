@@ -71,6 +71,14 @@ smoke probe catch a superset, including the cases the regexes provably miss:
 `requires 1 == 0` and `requires x < x` carry no `false` token at all, and
 `requires ({ let b = false; b })` hides the token behind a `{` the
 tempered-dot stops at (measured VERIFIED, all three, before the probe).
+The requires-false scan was NARROWED on 2026-09-04 to a clause that IS the
+constant false, per-clause and paren-stripped, because asking whether the
+token appears anywhere in the block is a strictly larger question than the
+one it can answer: the metamorphic sweep rewrote a precondition P to the
+equivalent `P || false` and this adapter called 79 files vacuous that were
+satisfiable exactly when P was. Everything subtler than a literal clause is
+_probe_vacuity's job, which asks the solver for a model instead of guessing
+from spelling.
 The scans are deliberately asymmetric about inert text:
   - ban + requires-false run on the RAW decoded source (a hit in a comment
     or string over-flags to VACUOUS — fails closed; stripping first would
@@ -167,9 +175,46 @@ BANNED = re.compile(r"\b(?:assume|admit|external)\w*")
 # as does `requires 0 == 1`, and no regex decides satisfiability. Both are
 # measured evasions (n_reqfalse_brace, n_reqvac); _probe_vacuity is what
 # actually closes them.
-_REQ_FALSE = re.compile(
-    r"\brequires\b(?:(?!\bensures\b|\bdecreases\b|\brecommends\b|[{;])[\s\S])*?"
-    r"\bfalse\b")
+_REQ_BLOCK = re.compile(
+    r"\brequires\b((?:(?!\bensures\b|\bdecreases\b|\brecommends\b|[{;])[\s\S])*)")
+
+
+def _req_false_clause(text: str) -> bool:
+    """True when some requires CLAUSE is literally the constant false.
+
+    The older rule asked whether the token `false` appeared anywhere between
+    `requires` and the next clause keyword, which is a different question and
+    a strictly larger one. Measured 2026-09-04: the metamorphic sweep rewrote
+    a precondition P to the equivalent `P || false` and this adapter called 79
+    files vacuous that were not, every one of them verus. That is the failure
+    ROADMAP 10.2 names, an adapter re-parsing a rich language with a regex,
+    and it joins the char literal, the raw identifier `r#try` and the
+    parameter named `recommends` in that list.
+
+    So the token scan is narrowed to what it can actually decide, a clause
+    that IS false, and everything else is left to _probe_vacuity, which asks
+    the solver whether a precondition has a model. A genuine `requires false`
+    is caught here AND there; `P || false` is caught by neither, correctly,
+    because it is satisfiable exactly when P is.
+    """
+    for m in _REQ_BLOCK.finditer(text):
+        depth = 0
+        clause: list[str] = []
+        for ch in m.group(1) + ",":
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth -= 1
+            if ch == "," and depth <= 0:
+                c = "".join(clause).strip()
+                while c.startswith("(") and c.endswith(")"):
+                    c = c[1:-1].strip()
+                if c == "false":
+                    return True
+                clause = []
+            else:
+                clause.append(ch)
+    return False
 
 _ENSURES = re.compile(r"\bensures\b")
 
@@ -604,7 +649,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     # unhandled UnicodeDecodeError in Wave-1 (j_nonutf8, j_random).
     text = safe_text(path)
     banned = _ban_hits(text)
-    req_false = _REQ_FALSE.search(text) is not None
+    req_false = _req_false_clause(text)
     masked = _mask_inert(text)
     # Theorem evidence, per function rather than per file: some non-spec fn
     # must carry a real `ensures` CLAUSE, not merely the word somewhere in
