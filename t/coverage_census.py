@@ -32,6 +32,14 @@ token means: an element assignment is a statement and not the `:=` inside
 a return is early only when it is not in tail position of a method body, and
 a brace holding one identifier is a set display only in expression position.
 
+Proof scaffolding is blanked before any gap or burden is read: whole lemma
+declarations, and `assert`, `assume` and `calc` statements. SYNTAX.md is
+explicit that these are hints which never put a program outside the fragment,
+and t has no lemmas at all, so a set, a quantifier or a nondeterministic
+choice that appears ONLY inside one is not a construct the program needs. The
+hint detectors themselves read the unblanked text, since a lemma has to be
+visible to be counted as one.
+
 Stdlib only, like every instrument in t/.
 """
 from __future__ import annotations
@@ -328,18 +336,39 @@ def _binders(decl: str) -> list[tuple[str, str]]:
     return out
 
 
-_INT_SHAPED = re.compile(r"^[\s(]*[-+]?(?:\d+|" + IDENT + r")"
-                         r"(?:\s*[-+*]\s*[-+]?(?:\d+|" + IDENT + r"))*[\s)]*$")
+_INT_ATOM = r"(?:\|[^|]*\||\d+|" + IDENT + r"(?:\s*[\[(][^\[\]()]*[\])])?)"
+_INT_SHAPED = re.compile(r"^[\s(]*[-+]?" + _INT_ATOM +
+                         r"(?:\s*[-+*]\s*[-+]?" + _INT_ATOM + r")*[\s)]*$")
+_INT_RESULT = re.compile(r"\b(?:function|predicate)\s+(?:method\s+)?(" + IDENT +
+                         r")\s*(?:<[^>]*>)?\s*\([^)]*\)\s*:\s*(?:int|nat)\b")
+_INT_COLL = re.compile(r"\b(" + IDENT + r")\s*:\s*(?:array\d*|seq)<\s*(?:int|nat)\s*>")
 
 
-def _int_shaped(e: str) -> bool:
-    """True when `e` could denote an integer position: a literal, a name, or
-    arithmetic over them. An index, a field access or a call is not, so
-    `tx == txQueues[pid][state.currentTx]` does not pin tx to a range."""
-    return _INT_SHAPED.match(e.strip()) is not None
+def _int_names(s: str) -> set:
+    """Names the file itself declares to denote an integer: functions and
+    predicates whose result type is int or nat, and arrays and sequences of
+    them. Read off the source rather than assumed, so a call or an index is
+    only integer shaped when this file says it is."""
+    return {m.group(1) for m in _INT_RESULT.finditer(s)} | \
+           {m.group(1) for m in _INT_COLL.finditer(s)}
 
 
-def _range_bounds(n: str, head: str) -> tuple[bool, bool]:
+def _int_shaped(e: str, names: set = frozenset()) -> bool:
+    """True when `e` could denote an integer position: a literal, a name, a
+    cardinality, a call or an index the file types as int, or arithmetic over
+    those. A field access, or a call this file does not type, is not, so
+    `tx == txQueues[pid][state.currentTx]` does not pin tx to a range while
+    `p == Count(b.Length, a[..])` does when Count is declared to return int."""
+    e = e.strip()
+    if "." in re.sub(r"\.\.", "", e):
+        return False
+    head = re.match(r"^[\s(]*[-+]?\s*(" + IDENT + r")\s*[\[(]", e)
+    if head and head.group(1) not in names:
+        return False
+    return _INT_SHAPED.match(e) is not None
+
+
+def _range_bounds(n: str, head: str, names: set = frozenset()) -> tuple[bool, bool]:
     """(lower, upper) for `n` in a quantifier head. The operand has to be a
     BARE `n` (or `n + k`): in `0 < a*a < n` the comparisons bound the
     product, not `a`, and t's forall wants `lo <= a < hi` on `a` itself.
@@ -357,7 +386,7 @@ def _range_bounds(n: str, head: str) -> tuple[bool, bool]:
             other = toks[k + 1] if left else toks[k - 1]
             if ((left and not re.search(_word(n), toks[k + 1])) or
                     (right and not re.search(_word(n), toks[k - 1]))) \
-                    and _int_shaped(other):
+                    and _int_shaped(other, names):
                 lo = hi = True
         elif op in ("<", "<="):
             lo, hi = lo or right, hi or left
@@ -366,14 +395,89 @@ def _range_bounds(n: str, head: str) -> tuple[bool, bool]:
     return lo, hi
 
 
-_ASSERT_KW = re.compile(r"\b(?:assert|assume)\b")
+_HINT_KW = re.compile(r"\b(?:assert|assume|calc)\b")
+_LEMMA_KW = re.compile(r"\b(?:(?:least|greatest|twostate|inductive)\s+)*lemma\b")
+_DECL_KW = re.compile(r"\b(?:method|function|predicate|lemma|class|trait|datatype|"
+                      r"codatatype|module|import|include|iterator|newtype|type|const|"
+                      r"least|greatest|twostate|inductive|ghost|static|abstract)\b")
+
+
+def _hint_end(s: str, start: int) -> int:
+    """End of the assert, assume or calc statement beginning at `start`. A
+    plain `assert P;` ends at its semicolon; `assert P by { .. }` and
+    `calc { .. }` end when their block closes, and neither carries a
+    semicolon, so a scanner that only looks for one eats the rest of the
+    enclosing body."""
+    depth, j = 0, start
+    while j < len(s):
+        c = s[j]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if depth == 0:
+                return j
+            depth -= 1
+            if depth == 0 and c == "}":
+                return j + 1
+        elif c == ";" and depth == 0:
+            return j + 1
+        j += 1
+    return len(s)
+
+
+def _lemma_end(s: str, start: int) -> int:
+    """End of the lemma declaration beginning at `start`: its signature, its
+    spec clauses and its body if it has one. A bodyless lemma ends where the
+    next declaration begins."""
+    depth, j = 0, start
+    while j < len(s):
+        c = s[j]
+        if c in "([":
+            depth += 1
+        elif c in ")]":
+            depth = max(0, depth - 1)
+        elif c == "{" and depth == 0:
+            k, d = j, 0
+            while k < len(s):
+                if s[k] == "{":
+                    d += 1
+                elif s[k] == "}":
+                    d -= 1
+                    if d == 0:
+                        return k + 1
+                k += 1
+            return len(s)
+        elif c == "}" and depth == 0:
+            return j
+        elif depth == 0:
+            m = _DECL_KW.match(s, j)
+            if m and j > start:
+                return j
+        j += 1
+    return len(s)
+
+
+def _mask_hints(s: str) -> str:
+    """Blank the proof scaffolding, newlines kept: assert, assume and calc
+    statements, and whole lemma declarations. SYNTAX.md is explicit that these
+    are hints and never put a program outside t's fragment, so a set literal,
+    a quantifier or a nondeterministic choice that appears ONLY inside one is
+    not a construct the program needs. t has no lemmas at all: a lowering
+    drops them."""
+    out = list(s)
+    spans = [(m.start(), _lemma_end(s, m.end())) for m in _LEMMA_KW.finditer(s)]
+    spans += [(m.start(), _hint_end(s, m.end())) for m in _HINT_KW.finditer(s)]
+    for i, j in spans:
+        for k in range(i, min(j, len(s))):
+            if out[k] != "\n":
+                out[k] = " "
+    return "".join(out)
 
 
 def _mask_assertions(s: str) -> str:
-    """Blank assert and assume statements, newlines kept. A quantifier that
-    appears only in a hint is not a construct the program needs."""
+    """Kept as the quantifier scan's own entry point; see _mask_hints."""
     out = list(s)
-    for m in _ASSERT_KW.finditer(s):
+    for m in _HINT_KW.finditer(s):
         depth, j = 0, m.end()
         while j < len(s):
             c = s[j]
@@ -400,7 +504,8 @@ def _unbounded_quantifier(s: str) -> bool:
     # the `==>` that starts it). Membership `v in e` still counts as a
     # range (a bounded exists over a seq, a burden); `v !in e` does not,
     # since it names everything the collection leaves out.
-    s = _mask_assertions(_ATTRIBUTE.sub(" ", s))
+    names = _int_names(s)
+    s = _mask_hints(_ATTRIBUTE.sub(" ", s))
     for m in _QUANT_HEAD.finditer(s):
         pipe = m.group(2).split("|", 1)
         body = s[m.end():m.end() + 200]
@@ -413,7 +518,7 @@ def _unbounded_quantifier(s: str) -> bool:
                 continue
             if typ and not re.match(r"(?:int|nat)\s*$", typ):
                 return True
-            lo, hi = _range_bounds(n, head)
+            lo, hi = _range_bounds(n, head, names)
             if typ == "nat":
                 lo = True
             if not (lo and hi):
@@ -1065,10 +1170,10 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "heap": ("gap", _has(r"\bclass\b|\btrait\b|\bfresh\b|\bthis\b|\bnew\s+" + IDENT + r"\s*[(;]"), "classes, object allocation, this"),
     "datatype": ("gap", _has(r"\b(?:co)?datatype\b|\bmatch\b"), "algebraic datatypes and match"),
     "nondet": ("gap", lambda s: _NONDET.search(s) is not None, "nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case }"),
-    "multi-method": ("gap", lambda s: _method_count(s) > 1, "more than one method (Main excluded)"),
+    "multi-method": ("gap", lambda s: _method_count(s) > 1, "more than one method (Main, and the method of function method, excluded)"),
     "multi-return": ("gap", _multi_return, "several return values"),
     "zero-returns": ("gap", _zero_returns, "a method with no return value (t returns exactly one)"),
-    "early-exit": ("gap", lambda s: _returns(s)[0], "return inside a block, break, continue"),
+    "early-exit": ("gap", lambda s: _returns(s)[0], "a return that is not in tail position of a method body, or a break or continue"),
     "seq-return": ("gap", _seq_return, "sequence-valued return of a method or a function"),
     "seq-literal": ("gap", _seq_literal, "sequence literal [..] in an expression"),
     "seq-slice": ("gap", _has(r"\[[^\]]*\.\.[^\]]*\]"), "slicing s[a..b]"),
@@ -1146,7 +1251,14 @@ def tag(src: str) -> dict:
             i, j = span
             _, seen = mask(src[:i] + blank(src[i:j]) + src[j:])
         masked = strip_main(masked)
-    tags = {k: bool(fn(masked)) for k, (_, fn, _) in DETECTORS.items()}
+    # SYNTAX.md: lemmas, assert, assume and calc are hints and never put a
+    # program outside the fragment, so gaps and burdens are read from source
+    # with the scaffolding blanked. The hint detectors themselves, and the
+    # shape detectors, still read the whole text: a lemma has to be visible
+    # to be counted as one.
+    hintless = _mask_hints(masked)
+    tags = {k: bool(fn(hintless if kind in ("gap", "burden") else masked))
+            for k, (kind, fn, _) in DETECTORS.items()}
     tags["main-harness"] = has_main
     if seen["string_lit"] or seen["char_lit"]:
         tags["string-char"] = True
@@ -1320,10 +1432,17 @@ def main() -> int:
     w("so seq needs are under-counted) and `nat` is a burden not a gap. Where")
     w("one token means two things, the detector reads its context:")
     w("")
+    w("- proof scaffolding is blanked before any gap or burden is read: whole")
+    w("  lemma declarations, and `assert`, `assume` and `calc` statements.")
+    w("  SYNTAX.md makes these hints, which never put a program outside the")
+    w("  fragment, so a construct appearing only inside one is not counted;")
+    w("  the hint rows below are counted on the unblanked text;")
     w("- a quantifier is unbounded when a bound variable carries a non-int")
     w("  declared type, or carries no int range on the variable itself (a bare")
-    w("  `v`, not `v*v` or `f(v)`) in the guard; membership `v in e` counts as")
-    w("  a range, `v !in e` does not;")
+    w("  `v`, not `v*v`) in the guard; membership `v in e` counts as a range,")
+    w("  `v !in e` does not, and an equality `v == e` counts only when this")
+    w("  file types `e` as an integer, by declaring the function it calls or")
+    w("  the collection it indexes to return int or nat;")
     w("- `a[i] := e` is an element assignment only when the left-hand side")
     w("  starts a statement, so the `:=` inside a functional update")
     w("  `m[k := v]` is not one, and the index is bracket-balanced;")

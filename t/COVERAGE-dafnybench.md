@@ -15,35 +15,35 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | gap | programs | sole blocker for (gradable) | meaning |
 |---|---|---|---|
-| array | 309 | 36 | array type or allocation |
+| array | 308 | 36 | array type or allocation |
 | zero-returns | 215 | 0 | a method with no return value (t returns exactly one) |
-| multi-method | 212 | 5 | more than one method (Main excluded) |
-| div-mod | 173 | 25 | integer division or modulo |
-| seq-slice | 169 | 0 | slicing s[a..b] |
+| multi-method | 212 | 5 | more than one method (Main, and the method of function method, excluded) |
+| seq-slice | 164 | 0 | slicing s[a..b] |
+| div-mod | 163 | 25 | integer division or modulo |
 | array-mutation | 152 | 0 | element assignment a[i] := e |
-| set | 142 | 2 | set, iset, multiset, set comprehension or set literal |
-| early-exit | 138 | 4 | return inside a block, break, continue |
-| seq-literal | 137 | 1 | sequence literal [..] in an expression |
-| generics | 96 | 1 | type parameters |
+| early-exit | 138 | 4 | a return that is not in tail position of a method body, or a break or continue |
+| set | 130 | 2 | set, iset, multiset, set comprehension or set literal |
+| seq-literal | 113 | 1 | sequence literal [..] in an expression |
 | string-char | 94 | 3 | string or char type |
-| seq-return | 81 | 0 | sequence-valued return of a method or a function |
-| nested-seq | 78 | 2 | a nested seq or array, or a seq of non-int elements |
+| generics | 80 | 1 | type parameters |
+| seq-return | 78 | 0 | sequence-valued return of a method or a function |
 | heap | 78 | 0 | classes, object allocation, this |
-| multi-return | 77 | 14 | several return values |
+| multi-return | 74 | 14 | several return values |
+| nested-seq | 74 | 2 | a nested seq or array, or a seq of non-int elements |
 | datatype | 69 | 0 | algebraic datatypes and match |
-| unbounded-quantifier | 68 | 1 | quantifier without an int range |
+| unbounded-quantifier | 49 | 1 | quantifier without an int range |
 | module | 43 | 1 | modules and imports |
-| higher-order | 42 | 0 | lambdas or function types |
+| higher-order | 40 | 0 | lambdas or function types |
 | bodyless-function | 40 | 0 | an uninterpreted function or predicate: a declaration with no body, constrained only by axioms |
-| map | 34 | 0 | map, imap, map comprehension or map literal |
-| real | 33 | 5 | real numbers |
 | type-decl | 33 | 0 | newtype, type synonyms, subset types |
-| nondet | 25 | 1 | nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case } |
+| real | 32 | 5 | real numbers |
+| map | 31 | 0 | map, imap, map comprehension or map literal |
 | io | 24 | 0 | print or expect |
 | bodyless-method | 24 | 0 | a method declared without a body |
-| tuple | 21 | 0 | tuples |
-| such-that-exec | 18 | 0 | assign-such-that :| in executable code (nondeterministic choice) |
-| seq-update | 16 | 0 | functional update s[i := v] |
+| nondet | 22 | 1 | nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case } |
+| such-that-exec | 21 | 0 | assign-such-that :| in executable code (nondeterministic choice) |
+| tuple | 19 | 0 | tuples |
+| seq-update | 15 | 0 | functional update s[i := v] |
 | bitvector | 6 | 1 | bit vectors or bitwise operators |
 | decreases-star | 6 | 0 | decreases * (a loop or call allowed not to terminate) |
 | extreme-predicate | 5 | 0 | least / greatest predicate: an inductive or coinductive definition, not a well-founded recursion (least and greatest LEMMAS stay hints) |
@@ -63,26 +63,26 @@ seven kernels verify its t rendering. Method and detectors at the end.
 | 4 | multi-return | 25 | 201 | 31.3% |
 | 5 | array-mutation | 21 | 222 | 34.5% |
 | 6 | zero-returns | 26 | 248 | 38.6% |
-| 7 | multi-method | 41 | 289 | 44.9% |
-| 8 | seq-slice | 29 | 318 | 49.5% |
-| 9 | string-char | 30 | 348 | 54.1% |
-| 10 | set | 28 | 376 | 58.5% |
-| 11 | real | 17 | 393 | 61.1% |
-| 12 | seq-literal | 17 | 410 | 63.8% |
-| 13 | seq-return | 35 | 445 | 69.2% |
-| 14 | nested-seq | 21 | 466 | 72.5% |
-| 15 | heap | 15 | 481 | 74.8% |
-| 16 | generics | 13 | 494 | 76.8% |
-| 17 | nondet | 12 | 506 | 78.7% |
-| 18 | higher-order | 11 | 517 | 80.4% |
-| 19 | unbounded-quantifier | 14 | 531 | 82.6% |
-| 20 | datatype | 12 | 543 | 84.4% |
-| 21 | bodyless-method | 12 | 555 | 86.3% |
-| 22 | seq-update | 10 | 565 | 87.9% |
-| 23 | io | 10 | 575 | 89.4% |
+| 7 | multi-method | 42 | 290 | 45.1% |
+| 8 | seq-slice | 31 | 321 | 49.9% |
+| 9 | string-char | 30 | 351 | 54.6% |
+| 10 | set | 32 | 383 | 59.6% |
+| 11 | real | 18 | 401 | 62.4% |
+| 12 | seq-literal | 13 | 414 | 64.4% |
+| 13 | seq-return | 35 | 449 | 69.8% |
+| 14 | nested-seq | 24 | 473 | 73.6% |
+| 15 | heap | 15 | 488 | 75.9% |
+| 16 | generics | 13 | 501 | 77.9% |
+| 17 | higher-order | 12 | 513 | 79.8% |
+| 18 | nondet | 11 | 524 | 81.5% |
+| 19 | bodyless-method | 11 | 535 | 83.2% |
+| 20 | unbounded-quantifier | 10 | 545 | 84.8% |
+| 21 | datatype | 12 | 557 | 86.6% |
+| 22 | io | 10 | 567 | 88.2% |
+| 23 | seq-update | 8 | 575 | 89.4% |
 | 24 | bodyless-function | 8 | 583 | 90.7% |
-| 25 | module | 8 | 591 | 91.9% |
-| 26 | such-that-exec | 9 | 600 | 93.3% |
+| 25 | such-that-exec | 8 | 591 | 91.9% |
+| 26 | module | 9 | 600 | 93.3% |
 | 27 | map | 7 | 607 | 94.4% |
 | 28 | tuple | 10 | 617 | 96.0% |
 | 29 | type-decl | 12 | 629 | 97.8% |
@@ -252,20 +252,20 @@ more than one gate.
 
 | burden | programs | meaning |
 |---|---|---|
-| spec-only-quantifier | 467 | quantifiers (bounded ones are in t) |
-| untyped-var | 437 | var without a type (t declares every type) |
+| spec-only-quantifier | 432 | quantifiers (bounded ones are in t) |
+| untyped-var | 412 | var without a type (t declares every type) |
 | function-or-predicate | 379 | pure functions, as spec_funs when first-order over int and seq |
-| while-no-decreases | 275 | a loop without its decreases (t requires one) |
-| nat | 220 | nat, as int with a >= 0 clause |
+| while-no-decreases | 274 | a loop without its decreases (t requires one) |
+| nat | 209 | nat, as int with a >= 0 clause |
 | frame-clause | 192 | modifies / reads (array frames when no class is present) |
-| no-if-no-loop | 173 | straight-line body: the twin ladder has only its extensional operators to try |
-| if-no-else | 171 | if without else |
-| seq-membership | 148 | in / !in (a bounded exists over a seq; set and map membership are their own gaps) |
-| trailing-return | 127 | a return as the last statement (assign the result instead) |
+| no-if-no-loop | 192 | straight-line body: the twin ladder has only its extensional operators to try |
+| if-no-else | 167 | if without else |
+| seq-membership | 133 | in / !in (a bounded exists over a seq; set and map membership are their own gaps) |
+| trailing-return | 125 | a return as the last statement (assign the result instead) |
 | main-harness | 105 | a Main test harness (stripped before tagging) |
 | for-loop | 100 | for loop (a while with a bound) |
-| parallel-assign | 95 | x, y := a, b (sequenced through a temporary) |
-| iff | 91 | <==> (== on bools) |
+| parallel-assign | 88 | x, y := a, b (sequenced through a temporary) |
+| iff | 77 | <==> (== on bools) |
 | as-cast | 15 | as int / as nat casts |
 
 ## Hints (proof scaffolding a kernel may need; t has none)
@@ -379,10 +379,17 @@ is not distinguished from `+` on integers (concatenation is not tagged,
 so seq needs are under-counted) and `nat` is a burden not a gap. Where
 one token means two things, the detector reads its context:
 
+- proof scaffolding is blanked before any gap or burden is read: whole
+  lemma declarations, and `assert`, `assume` and `calc` statements.
+  SYNTAX.md makes these hints, which never put a program outside the
+  fragment, so a construct appearing only inside one is not counted;
+  the hint rows below are counted on the unblanked text;
 - a quantifier is unbounded when a bound variable carries a non-int
   declared type, or carries no int range on the variable itself (a bare
-  `v`, not `v*v` or `f(v)`) in the guard; membership `v in e` counts as
-  a range, `v !in e` does not;
+  `v`, not `v*v`) in the guard; membership `v in e` counts as a range,
+  `v !in e` does not, and an equality `v == e` counts only when this
+  file types `e` as an integer, by declaring the function it calls or
+  the collection it indexes to return int or nat;
 - `a[i] := e` is an element assignment only when the left-hand side
   starts a statement, so the `:=` inside a functional update
   `m[k := v]` is not one, and the index is bracket-balanced;
