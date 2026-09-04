@@ -7,103 +7,116 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 ## Headline
 
-- programs: 785; with a method and an ensures (gradable): 661
-- in t's fragment today: **77** of 661 gradable (11.6%)
-- programs blocked by exactly one gap: 140
+- programs: 785; with a method carrying its own ensures (gradable): 643
+- in t's fragment today: **77** of 643 gradable (12.0%)
+- gradable programs blocked by exactly one gap: 102
 
 ## Gaps, by programs that need them
 
-| gap | programs | sole blocker for | meaning |
+| gap | programs | sole blocker for (gradable) | meaning |
 |---|---|---|---|
-| array | 309 | 39 | array type or allocation |
-| multi-method | 212 | 12 | more than one method (Main excluded) |
-| div-mod | 173 | 32 | integer division or modulo |
-| early-exit | 172 | 8 | return inside a block, break, continue |
+| array | 309 | 36 | array type or allocation |
+| zero-returns | 215 | 0 | a method with no return value (t returns exactly one) |
+| multi-method | 212 | 5 | more than one method (Main excluded) |
+| div-mod | 173 | 25 | integer division or modulo |
 | seq-slice | 169 | 0 | slicing s[a..b] |
-| array-mutation | 150 | 0 | element assignment a[i] := e |
-| set | 150 | 5 | set, iset, multiset, set comprehension or set literal |
-| seq-literal | 136 | 1 | sequence literal [..] in an expression |
-| generics | 90 | 1 | type parameters |
-| multi-return | 84 | 18 | several return values |
-| string-char | 81 | 3 | string or char type |
-| datatype | 78 | 2 | algebraic datatypes and match |
-| heap | 78 | 1 | classes, object allocation, this |
-| nested-seq | 76 | 2 | seq of non-int elements |
-| seq-return | 60 | 0 | sequence-valued return |
-| module | 43 | 2 | modules and imports |
-| unbounded-quantifier | 42 | 3 | quantifier without an int range |
-| higher-order | 40 | 0 | lambdas or function types |
-| real | 35 | 6 | real numbers |
-| seq-update | 35 | 0 | functional update s[i := v] |
-| map | 34 | 2 | map, imap, map comprehension or map literal |
+| array-mutation | 152 | 0 | element assignment a[i] := e |
+| set | 142 | 2 | set, iset, multiset, set comprehension or set literal |
+| early-exit | 138 | 4 | return inside a block, break, continue |
+| seq-literal | 137 | 1 | sequence literal [..] in an expression |
+| generics | 96 | 1 | type parameters |
+| string-char | 94 | 3 | string or char type |
+| seq-return | 81 | 0 | sequence-valued return of a method or a function |
+| nested-seq | 78 | 2 | a nested seq or array, or a seq of non-int elements |
+| heap | 78 | 0 | classes, object allocation, this |
+| multi-return | 77 | 14 | several return values |
+| datatype | 69 | 0 | algebraic datatypes and match |
+| unbounded-quantifier | 68 | 1 | quantifier without an int range |
+| module | 43 | 1 | modules and imports |
+| higher-order | 42 | 0 | lambdas or function types |
+| bodyless-function | 40 | 0 | an uninterpreted function or predicate: a declaration with no body, constrained only by axioms |
+| map | 34 | 0 | map, imap, map comprehension or map literal |
+| real | 33 | 5 | real numbers |
 | type-decl | 33 | 0 | newtype, type synonyms, subset types |
-| io | 24 | 1 | print or expect |
-| tuple | 24 | 0 | tuples |
+| nondet | 25 | 1 | nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case } |
+| io | 24 | 0 | print or expect |
+| bodyless-method | 24 | 0 | a method declared without a body |
+| tuple | 21 | 0 | tuples |
+| such-that-exec | 18 | 0 | assign-such-that :| in executable code (nondeterministic choice) |
+| seq-update | 16 | 0 | functional update s[i := v] |
 | bitvector | 6 | 1 | bit vectors or bitwise operators |
 | decreases-star | 6 | 0 | decreases * (a loop or call allowed not to terminate) |
+| extreme-predicate | 5 | 0 | least / greatest predicate: an inductive or coinductive definition, not a well-founded recursion (least and greatest LEMMAS stay hints) |
+| mutual-recursion | 4 | 0 | spec functions that call each other (t allows self-calls and calls to earlier functions) |
 | seq-comprehension | 3 | 0 | seq(n, i => e) |
 | char-arith | 3 | 0 | char arithmetic |
-| iterator | 2 | 1 | iterators |
+| iterator | 2 | 0 | iterators |
 | function-method | 1 | 0 | compiled functions |
 
 ## Greedy gate order (open the gate that unlocks the most programs)
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | array | 38 | 115 | 17.4% |
-| 2 | array-mutation | 33 | 148 | 22.4% |
-| 3 | div-mod | 38 | 186 | 28.1% |
-| 4 | early-exit | 40 | 226 | 34.2% |
-| 5 | multi-method | 41 | 267 | 40.4% |
-| 6 | multi-return | 40 | 307 | 46.4% |
-| 7 | seq-slice | 28 | 335 | 50.7% |
-| 8 | string-char | 30 | 365 | 55.2% |
-| 9 | set | 34 | 399 | 60.4% |
-| 10 | real | 19 | 418 | 63.2% |
-| 11 | seq-literal | 17 | 435 | 65.8% |
-| 12 | seq-return | 38 | 473 | 71.6% |
-| 13 | nested-seq | 22 | 495 | 74.9% |
-| 14 | heap | 19 | 514 | 77.8% |
-| 15 | generics | 18 | 532 | 80.5% |
-| 16 | datatype | 18 | 550 | 83.2% |
-| 17 | seq-update | 13 | 563 | 85.2% |
-| 18 | higher-order | 13 | 576 | 87.1% |
-| 19 | unbounded-quantifier | 9 | 585 | 88.5% |
-| 20 | io | 10 | 595 | 90.0% |
-| 21 | module | 12 | 607 | 91.8% |
-| 22 | map | 12 | 619 | 93.6% |
-| 23 | tuple | 14 | 633 | 95.8% |
-| 24 | type-decl | 13 | 646 | 97.7% |
-| 25 | decreases-star | 5 | 651 | 98.5% |
-| 26 | bitvector | 4 | 655 | 99.1% |
-| 27 | char-arith | 3 | 658 | 99.5% |
-| 28 | seq-comprehension | 1 | 659 | 99.7% |
-| 29 | iterator | 1 | 660 | 99.8% |
-| 30 | function-method | 1 | 661 | 100.0% |
+| 1 | array | 36 | 113 | 17.6% |
+| 2 | div-mod | 28 | 141 | 21.9% |
+| 3 | early-exit | 35 | 176 | 27.4% |
+| 4 | multi-return | 25 | 201 | 31.3% |
+| 5 | array-mutation | 21 | 222 | 34.5% |
+| 6 | zero-returns | 26 | 248 | 38.6% |
+| 7 | multi-method | 41 | 289 | 44.9% |
+| 8 | seq-slice | 29 | 318 | 49.5% |
+| 9 | string-char | 30 | 348 | 54.1% |
+| 10 | set | 28 | 376 | 58.5% |
+| 11 | real | 17 | 393 | 61.1% |
+| 12 | seq-literal | 17 | 410 | 63.8% |
+| 13 | seq-return | 35 | 445 | 69.2% |
+| 14 | nested-seq | 21 | 466 | 72.5% |
+| 15 | heap | 15 | 481 | 74.8% |
+| 16 | generics | 13 | 494 | 76.8% |
+| 17 | nondet | 12 | 506 | 78.7% |
+| 18 | higher-order | 11 | 517 | 80.4% |
+| 19 | unbounded-quantifier | 14 | 531 | 82.6% |
+| 20 | datatype | 12 | 543 | 84.4% |
+| 21 | bodyless-method | 12 | 555 | 86.3% |
+| 22 | seq-update | 10 | 565 | 87.9% |
+| 23 | io | 10 | 575 | 89.4% |
+| 24 | bodyless-function | 8 | 583 | 90.7% |
+| 25 | module | 8 | 591 | 91.9% |
+| 26 | such-that-exec | 9 | 600 | 93.3% |
+| 27 | map | 7 | 607 | 94.4% |
+| 28 | tuple | 10 | 617 | 96.0% |
+| 29 | type-decl | 12 | 629 | 97.8% |
+| 30 | decreases-star | 5 | 634 | 98.6% |
+| 31 | bitvector | 4 | 638 | 99.2% |
+| 32 | char-arith | 3 | 641 | 99.7% |
+| 33 | seq-comprehension | 1 | 642 | 99.8% |
+| 34 | iterator | 1 | 643 | 100.0% |
 
 
 ### The same order on the MBPP-DFY family alone (164 gradable, the LLM-shaped subset)
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | div-mod | 16 | 42 | 25.6% |
-| 2 | array | 10 | 52 | 31.7% |
-| 3 | early-exit | 17 | 69 | 42.1% |
-| 4 | string-char | 10 | 79 | 48.2% |
-| 5 | array-mutation | 9 | 88 | 53.7% |
-| 6 | real | 9 | 97 | 59.1% |
-| 7 | set | 6 | 103 | 62.8% |
-| 8 | nested-seq | 5 | 108 | 65.9% |
-| 9 | seq-literal | 4 | 112 | 68.3% |
-| 10 | seq-return | 23 | 135 | 82.3% |
-| 11 | seq-slice | 15 | 150 | 91.5% |
-| 12 | multi-return | 4 | 154 | 93.9% |
-| 13 | multi-method | 3 | 157 | 95.7% |
-| 14 | char-arith | 3 | 160 | 97.6% |
-| 15 | bitvector | 2 | 162 | 98.8% |
-| 16 | tuple | 1 | 163 | 99.4% |
-| 17 | higher-order | 0 | 163 | 99.4% |
-| 18 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | div-mod | 16 | 41 | 25.0% |
+| 2 | array | 9 | 50 | 30.5% |
+| 3 | early-exit | 17 | 67 | 40.9% |
+| 4 | string-char | 10 | 77 | 47.0% |
+| 5 | real | 9 | 86 | 52.4% |
+| 6 | array-mutation | 7 | 93 | 56.7% |
+| 7 | set | 6 | 99 | 60.4% |
+| 8 | nested-seq | 6 | 105 | 64.0% |
+| 9 | seq-literal | 4 | 109 | 66.5% |
+| 10 | seq-return | 23 | 132 | 80.5% |
+| 11 | seq-slice | 15 | 147 | 89.6% |
+| 12 | multi-return | 4 | 151 | 92.1% |
+| 13 | char-arith | 3 | 154 | 93.9% |
+| 14 | zero-returns | 2 | 156 | 95.1% |
+| 15 | multi-method | 3 | 159 | 97.0% |
+| 16 | bitvector | 2 | 161 | 98.2% |
+| 17 | unbounded-quantifier | 1 | 162 | 98.8% |
+| 18 | tuple | 1 | 163 | 99.4% |
+| 19 | higher-order | 0 | 163 | 99.4% |
+| 20 | seq-comprehension | 1 | 164 | 100.0% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
@@ -113,33 +126,33 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 26 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 25 |
 | GitHub (Dafny) | 76 | 72 | 9 |
-| GitHub (Program-Verification-Dataset) | 65 | 52 | 1 |
-| Clover | 62 | 62 | 5 |
-| GitHub (dafny-language-server) | 43 | 21 | 1 |
+| GitHub (Program-Verification-Dataset) | 65 | 48 | 0 |
+| Clover | 62 | 62 | 7 |
+| GitHub (dafny-language-server) | 43 | 17 | 1 |
 | GitHub (Dafny-Exercises) | 21 | 20 | 0 |
 | GitHub (dafny) | 18 | 14 | 2 |
-| GitHub (SENG) | 14 | 12 | 0 |
+| GitHub (SENG) | 14 | 11 | 0 |
 | GitHub (dafny-exercise) | 12 | 11 | 0 |
-| GitHub (ironsync-osdi) | 12 | 4 | 0 |
-| GitHub (dafl) | 11 | 7 | 1 |
+| GitHub (ironsync-osdi) | 12 | 3 | 0 |
+| GitHub (dafl) | 11 | 5 | 1 |
 | GitHub (protocol-verification-fa) | 11 | 1 | 0 |
 | GitHub (Metodos) | 10 | 9 | 6 |
 | GitHub (Final-Project-Dafny) | 9 | 8 | 0 |
 | GitHub (Software-Verification) | 9 | 9 | 0 |
-| GitHub (DafnyProjects) | 8 | 8 | 0 |
+| GitHub (DafnyProjects) | 8 | 7 | 0 |
 | GitHub (Prog-Fun-Solutions) | 8 | 8 | 5 |
 | GitHub (Programmverifikation-und-synthese) | 7 | 7 | 2 |
 | GitHub (cs245-verification) | 7 | 6 | 4 |
 | GitHub (dafny-duck) | 7 | 6 | 0 |
-| GitHub (Software-building-and-verification-Projects) | 6 | 6 | 1 |
+| GitHub (Software-building-and-verification-Projects) | 6 | 5 | 0 |
 | GitHub (Workshop) | 6 | 6 | 0 |
 | GitHub (llm-verified-eval) | 6 | 5 | 0 |
 | GitHub (t) | 6 | 5 | 1 |
 | GitHub (MFES) | 5 | 5 | 0 |
 | GitHub (MIEIC) | 5 | 5 | 2 |
-| GitHub (dafny-workout) | 5 | 5 | 1 |
+| GitHub (dafny-workout) | 5 | 5 | 2 |
 | GitHub (summer-school-) | 5 | 2 | 0 |
 | GitHub (CVS-Projto) | 4 | 2 | 0 |
 | GitHub (DafnyPrograms) | 4 | 4 | 0 |
@@ -149,7 +162,7 @@ more than one gate.
 | GitHub (dafny-programs) | 4 | 4 | 2 |
 | GitHub (formal) | 4 | 4 | 0 |
 | GitHub (specTesting) | 4 | 1 | 0 |
-| GitHub (stunning-palm-tree) | 4 | 3 | 0 |
+| GitHub (stunning-palm-tree) | 4 | 1 | 0 |
 | GitHub (test-generation-examples) | 4 | 3 | 0 |
 | GitHub (AssertivePrograming) | 3 | 3 | 0 |
 | GitHub (Correctness) | 3 | 3 | 0 |
@@ -159,7 +172,7 @@ more than one gate.
 | GitHub (cs) | 3 | 3 | 1 |
 | GitHub (dafleet) | 3 | 3 | 0 |
 | GitHub (formal-methods-in-software-engineering) | 3 | 1 | 0 |
-| GitHub (groupTheory) | 3 | 1 | 0 |
+| GitHub (groupTheory) | 3 | 0 | 0 |
 | GitHub (iron-sync) | 3 | 1 | 0 |
 | GitHub (se) | 3 | 2 | 1 |
 | GitHub (veri-sparse) | 3 | 3 | 0 |
@@ -225,7 +238,7 @@ more than one gate.
 | GitHub (pucrs-metodos-formais-t) | 1 | 1 | 0 |
 | GitHub (repo-8967-Ironclad) | 1 | 0 | 0 |
 | GitHub (sat) | 1 | 0 | 0 |
-| GitHub (software-specification-p) | 1 | 1 | 0 |
+| GitHub (software-specification-p) | 1 | 0 | 0 |
 | GitHub (software) | 1 | 1 | 0 |
 | GitHub (tangent-finder) | 1 | 1 | 0 |
 | GitHub (type-definition) | 1 | 0 | 0 |
@@ -248,7 +261,7 @@ more than one gate.
 | no-if-no-loop | 173 | straight-line body: the twin ladder has only its extensional operators to try |
 | if-no-else | 171 | if without else |
 | seq-membership | 148 | in / !in (a bounded exists over a seq; set and map membership are their own gaps) |
-| trailing-return | 108 | a return as the last statement (assign the result instead) |
+| trailing-return | 127 | a return as the last statement (assign the result instead) |
 | main-harness | 105 | a Main test harness (stripped before tagging) |
 | for-loop | 100 | for loop (a while with a bound) |
 | parallel-assign | 95 | x, y := a, b (sequenced through a temporary) |
@@ -262,11 +275,11 @@ more than one gate.
 | assert | 315 | assert statements |
 | lemma | 151 | lemmas |
 | ghost | 116 | ghost code |
-| old | 110 | old() (two-state; heap or array frames) |
+| old | 110 | old() / old@L() (two-state; heap or array frames) |
 | attribute | 73 | attributes |
 | ghost-var | 62 | ghost variables |
-| assign-such-that | 53 | assign-such-that |
 | calc | 44 | calc proofs |
+| assign-such-that | 34 | assign-such-that in a lemma, a function or on a ghost variable (the executable one is the such-that-exec gap) |
 | forall-statement | 32 | forall statements |
 | assume | 28 | assume (unsound as a hint; refused by every t adapter) |
 | assert-by | 22 | assert ... by { } |
@@ -274,12 +287,13 @@ more than one gate.
 
 ## In fragment today
 
+- Clover_abs.dfy
 - Clover_integer_square_root.dfy
+- Clover_min_of_two.dfy
 - Clover_return_seven.dfy
 - Clover_triple.dfy
 - Clover_triple3.dfy
 - Clover_triple4.dfy
-- Dafny_Programs_tmp_tmp99966ew4_trig.dfy
 - Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_ComputePower.dfy
 - Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_Cube.dfy
 - Dafny_Verify_tmp_tmphq7j0row_Generated_Code_15.dfy
@@ -288,6 +302,7 @@ more than one gate.
 - Dafny_Verify_tmp_tmphq7j0row_dataset_C_convert_examples_15.dfy
 - Dafny_Verify_tmp_tmphq7j0row_dataset_bql_exampls_Square.dfy
 - Dafny_Verify_tmp_tmphq7j0row_dataset_error_data_real_error_IsEven_success_1.dfy
+- Dafny_tmp_tmpmvs2dmry_SlowMax.dfy
 - FormalMethods_tmp_tmpvda2r3_o_dafny_Invariants_ex1.dfy
 - FormalMethods_tmp_tmpvda2r3_o_dafny_Invariants_ex2.dfy
 - M2_tmp_tmp2laaavvl_Software Verification_Exercices_Exo4-CountAndReturn.dfy
@@ -306,10 +321,8 @@ more than one gate.
 - Prog-Fun-Solutions_tmp_tmp7_gmnz5f_mockExam2_p3.dfy
 - Prog-Fun-Solutions_tmp_tmp7_gmnz5f_mockExam2_p5.dfy
 - Prog-Fun-Solutions_tmp_tmp7_gmnz5f_mockExam2_p6.dfy
-- Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_basic examples_product_details.dfy
 - Programmverifikation-und-synthese_tmp_tmppurk6ime_PVS_Assignment_ex_06_Hoangkim_ex06-solution.dfy
 - Programmverifikation-und-synthese_tmp_tmppurk6ime_PVS_Assignment_ex_06_Hoangkim_ex_06_hoangkim.dfy
-- Software-building-and-verification-Projects_tmp_tmp5tm1srrn_CVS-projeto_aula1.dfy
 - cs245-verification_tmp_tmp0h_nxhqp_A8_Q1.dfy
 - cs245-verification_tmp_tmp0h_nxhqp_A8_Q2.dfy
 - cs245-verification_tmp_tmp0h_nxhqp_Assignments_simple.dfy
@@ -342,9 +355,9 @@ more than one gate.
 - dafny-synthesis_task_id_637.dfy
 - dafny-synthesis_task_id_762.dfy
 - dafny-synthesis_task_id_801.dfy
-- dafny-synthesis_task_id_803.dfy
 - dafny-synthesis_task_id_86.dfy
 - dafny-synthesis_task_id_89.dfy
+- dafny-workout_tmp_tmp0abkw6f8_starter_ex01.dfy
 - dafny-workout_tmp_tmp0abkw6f8_starter_ex02.dfy
 - dafny_examples_tmp_tmp8qotd4ez_leetcode_0070-climbing-stairs.dfy
 - dafny_misc_tmp_tmpg4vzlnm1_rosetta_code_factorial.dfy
@@ -355,12 +368,54 @@ more than one gate.
 ## Method
 
 Source is masked (comments, string and char literals blanked, their
-presence recorded) and each detector is a regular expression or a small
-scanner over the masked text; `coverage_census.py` lists every one.
+presence recorded outside `{:attribute}` arguments and outside the
+`method Main` harness, which is blanked in the ORIGINAL source so that
+a literal elsewhere in the file is still recorded) and each detector is
+a regular expression or a small scanner over the masked text;
+`coverage_census.py` lists every one.
+
 Lexical detection is approximate in both directions: `+` on sequences
 is not distinguished from `+` on integers (concatenation is not tagged,
-so seq needs are under-counted), `nat` is a burden not a gap, and a
-quantifier is read as unbounded when its variables carry a non-int type
-or no comparison bounds them before the body. Every file's tag set is
-in the JSON beside this report when `--json` is given, so any row can
-be checked against its source.
+so seq needs are under-counted) and `nat` is a burden not a gap. Where
+one token means two things, the detector reads its context:
+
+- a quantifier is unbounded when a bound variable carries a non-int
+  declared type, or carries no int range on the variable itself (a bare
+  `v`, not `v*v` or `f(v)`) in the guard; membership `v in e` counts as
+  a range, `v !in e` does not;
+- `a[i] := e` is an element assignment only when the left-hand side
+  starts a statement, so the `:=` inside a functional update
+  `m[k := v]` is not one, and the index is bracket-balanced;
+- `s[i := v]` is a sequence update only when its receiver is a slice,
+  or is not named as a map, imap or multiset in a file that holds a
+  sequence somewhere;
+- a `[` opens a sequence display only when what precedes it is not an
+  identifier, `]` or `)`, or is one of a fixed list of keywords
+  (`then [0]`, `else []`, `return [];`);
+- a brace group holding only identifiers or integers is a set display
+  only in expression position: `predicate P() { false }` is a body;
+- `case` alone does not prove a datatype, since a match always carries
+  its `match` keyword; `if { case .. }` is the guarded-alternative
+  statement and is tagged as nondeterminism instead;
+- a return is early only when it is not in tail position of a `method`
+  body; a return in a lemma, a function or a predicate is not an exit;
+- `:|` is nondeterministic choice (a gap) in a non-ghost method or
+  constructor and proof scaffolding (a hint) in a lemma, a function, a
+  ghost declaration or the ghost-only `:| assume P` form;
+- a program is gradable when a METHOD carries an ensures of its own:
+  an ensures on a function, a lemma, a constructor or an iterator
+  states nothing a kernel would grade about the method;
+- a comma inside `(int, int)` or `map<K, V>` is part of one type, not a
+  second return value, and such a group is a tuple only when no call,
+  index, arrow type, datatype update or binder head claims it first;
+- a real literal is a digit run, a dot and a digit run, never glued to
+  an identifier or another dot, so `x.1.1` is a tuple projection;
+- an arrow type is `->`, `-->` or `~>` with or without spaces, and a
+  declaration is generic even when an attribute stands between the
+  keyword and the name.
+
+A declaration with no body (an uninterpreted function, a method
+signature), a method with no return value, a least or greatest
+predicate, and spec functions in a call cycle are gaps of their own.
+Every file's tag set is in the JSON beside this report when `--json` is
+given, so any row can be checked against its source.
