@@ -356,14 +356,38 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
         # UNMEASURABLE, which is a different refusal from "the twin computes
         # the same thing" — and the two causes are worth telling apart.
         return None, ("no-input" if not ref.n_req else "real-undefined"), None
+    # A witness that merely shows real and twin compute DIFFERENT values is
+    # not grounds for expecting a refutation: a loose `ensures` can be
+    # satisfied by both. Only a witness that FALSIFIES ensures entails that a
+    # sound kernel must refute, which is what interp records in `_ens` and
+    # what SPEC.md means by "the twin is REFUTED by the actual kernel".
+    # Measured 2026-09-04: accepting on difference alone produced 88 cells
+    # across all seven kernels whose twin came back VERIFIED, every one a
+    # collapse-if, clustered by TASK rather than by kernel, which is the
+    # signature of the twin being unrefutable rather than of seven adapters
+    # being wrong. The ladder therefore prefers a refuting candidate and
+    # falls back to a merely-differing one only when the whole ladder has
+    # none, so the weakness is recorded in the tag instead of being silently
+    # counted as a flip that failed.
+    fallback = None
     for op, gen in EXTENSIONAL:
         for k, twin in enumerate(gen(task["body"], _scope(task))):
             n += 1
             if n > MAX_CANDIDATES:
-                return None, "candidate-budget", None
+                break
             w = ref.witness(twin)
-            if w is not None:
+            if w is None:
+                continue
+            if w.get("_ens") is True:
                 return twin, _tag(op, k), w
+            if fallback is None:
+                fallback = (twin, _tag(op, k) + "+nonrefuting", w)
+        if n > MAX_CANDIDATES:
+            break
+    if n > MAX_CANDIDATES and fallback is None:
+        return None, "candidate-budget", None
+    if fallback is not None:
+        return fallback
     return None, ("no-witness" if n else "no-operator"), None
 
 
