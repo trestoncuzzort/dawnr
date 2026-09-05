@@ -900,6 +900,38 @@ AGREEMENT.md.
 DONE WHEN: every verified twin is explained, and the witness or vacuity
 defect behind it is fixed or recorded as a measured limit.
 
+**PARTIAL 2026-09-05. One defect fixed, and the count did NOT fall, which is
+the finding.** The ladder accepted a twin on a witness showing only that the
+real body and the twin compute different VALUES. That does not entail a
+refutation: a loose `ensures` is satisfied by both, and every kernel then
+verifies the twin correctly. interp already computed the stronger fact and
+recorded it as `_ens`, and `refuting_witness` existed for exactly this
+question; the acceptance path used neither. It now prefers a candidate whose
+witness falsifies `ensures` and tags a merely-differing fallback
+`+nonrefuting`.
+
+Re-measured after the fix: 97 verified-twin cells over 17 tasks, against 88
+over an earlier corpus. It did not drop because the fix makes the weakness
+VISIBLE rather than removing it, and because of what those 17 tasks are:
+
+- 3 tasks, 10 cells, are `fz_p_vac_*`, deliberate vacuity probes whose twins
+  are supposed to verify. Not a defect, and they should be excluded from this
+  statistic rather than counted in it.
+- 14 tasks, 87 cells, are generated, and the family names say the rest:
+  `v0loose` by construction carries a loose spec, and `v0if` and `v1bool`
+  dominate the remainder. Verified against the harness directly, these carry
+  `_ens=False`: the interpreter agrees the twin differs and agrees it does
+  NOT falsify the postcondition. Seven kernels verifying it is the correct
+  answer.
+
+So the honest reading is that this statistic has been measuring the fuzzer's
+spec strength, not the kernels' twin discipline. THE OPEN DECISION, which is
+a semantics call and not a repair: SPEC.md says a twin that verifies means
+the spec is decorative and the task is REFUSED. If the harness refused every
+task with no refuting twin, these would leave the corpus entirely and
+`no_flip` would mean only what it claims to mean. That shrinks the generated
+corpus and changes what counts, so it wants a decision rather than a commit.
+
 ### 12.4 The Dafny-to-t lifter
 
 `coverage_census.py` decides fragment membership with regular expressions
