@@ -4,10 +4,10 @@ verus! {
 
 proof fn abs(x: int) -> (r: int)
     ensures
-        (r >= 0),
+        (r >= (0int)),
         ((r == x) || (r == (-x))),
 {
-    if (x < 0) { (-x) } else { x }
+    if (x < (0int)) { (-x) } else { x }
 }
 
 } // verus!

@@ -838,6 +838,43 @@ DONE WHEN: a metamorphic sweep reports 0 confirmed variances, or every
 survivor is named in this file with the reason it is a property of the prover
 rather than of a lowering.
 
+**CLOSED 2026-09-04 under the second clause.** Variance went 145, then 39,
+then 7, and all seven survivors are named below. Six defects were fixed, each
+found by a rewrite that cannot change meaning and none of them findable by
+comparing kernels against each other:
+
+- verus bound the letter `r` in a v0 signature instead of the task's declared
+  return name, so any task returning something else referenced an identifier
+  the signature never declared (40 cells, rustc E0425)
+- verus read `P || false` in a requires as vacuity, because the scan asked
+  whether the token appeared rather than whether the precondition was
+  satisfiable (60 cells)
+- framac read unreachable code as a dead contract, because WP's smoke classes
+  were collapsed into one verdict (19 cells), which also forced two tallies
+  that double-count smoke goals to be corrected
+- lower_framac emitted unary minus on a negative as `--2`, which C parses as
+  the decrement operator (10 cells, frama-c User Error)
+- dafny called a file MALFORMED that it had itself verified, because exit 2
+  is both a parse failure and any warning (6 cells)
+- v0 verus literals carried no type, so an expression of non-negative
+  literals inferred `nat` against an `int` return; this is the one that
+  turned MALFORMED into VERIFIED under a rewrite, the direction that should
+  never happen
+
+The larger movement was not in the variance count at all. Bases true by
+construction that no kernel verified went 174, then 154, then **0**, and
+incompleteness went 152 to 90. Those cells were never variances, so they sat
+outside the headline while being the bigger number.
+
+**The seven survivors, all verus, all `verified -> malformed`:** b053
+mul-one, b072 b083 b115 spec-add-zero, b093 b135 add-zero, b147 sub-zero.
+Every one rewrites a sequence index from `s[j]` to `s[j * 1]` or `s[j + 0]`,
+which is no longer a trigger candidate, and verus refuses to infer a trigger
+for the enclosing quantifier. Dafny loses the same trigger on the same shape
+and warns instead of erroring. This is a property of SMT quantifier
+instantiation, which is syntactic, and no lowering or adapter change removes
+it. Recorded, not repaired.
+
 ### 12.2 The F* naming defect
 
 F* abstained on `gt_width_loop` because the task's own name collides with an
