@@ -806,11 +806,24 @@ answers the question the project exists to answer. Each session below is a
 HURDLE with a stated done-condition, not a schedule: the order is what
 unblocks what, and nothing here predicts a date.
 
-**The 1.0 bar, so "done" has a number.** t reaches 1.0 when at least half of
-the MBPP-DFY subset of DafnyBench, 82 of its 164 programs, lowers into t and
-is VERIFIED by all seven kernels with its twin REFUTED, published beside
-AGREEMENT.md. Deliberately the measured coverage, not the lexical one, which
-is why 12.1 comes before everything else.
+**The 1.0 bar, so "done" has a number and a walk-through.** Two halves, and
+a third person can check both. COVERAGE: at least half of the MBPP-DFY
+subset of DafnyBench, 82 of its 164 programs, lifts into t and is VERIFIED
+by all seven kernels with its twin REFUTED, published beside AGREEMENT.md
+and reproduced from clean scratch by an adversarial reader per 10.4.
+Deliberately the measured coverage, not the lexical one, which is why 12.1
+came before everything else; the lexical count for that subset today is 25
+of 164 (COVERAGE-dafnybench.md, family table). USABILITY, added 2026-09-05
+when Treston set the bar at "fully usable in an IDE", with people coding in
+Visual Studio and in VS Code: a person with a fresh checkout opens a `.t`
+file in VS Code on Linux and on Windows, and in Visual Studio on Windows,
+and gets highlighting, parse and well-formedness errors at the offending
+token, hover with types and declarations, go to definition for a spec_fun,
+formatting, and the seven kernel verdicts for the real task and its twin
+with the witness shown, produced by the same harness that makes the tables.
+The steps are committed as a walk-through and a second person has repeated
+them. The road to both halves is "The road to 1.0" below; the tag is cut
+when both hold.
 
 **Where the numbers stand, 2026-09-04.** Lexical census: 77 of 643 gradable
 DafnyBench programs in fragment, gate order array, div-mod, early-exit,
@@ -1018,3 +1031,287 @@ root, 934 across 79 files. Repair the sentences the dashes were carrying
 rather than deleting the character, which is what leaves run-ons behind.
 
 `forge/` and `locallm/` remain out of scope.
+
+## The road to 1.0 (opened 2026-09-05)
+
+WS-12 is the next six sessions. This is everything after them, to the two
+halves of the bar above. Hurdles, not dates: each carries a DONE WHEN a
+third person can check and says what it unblocks, and the order is what
+unblocks what. First cut, written 2026-09-05 from the repository as it
+stands; a mapping pass over the repo refines it in a later commit, and any
+number below that is not yet measured says so.
+
+**Where the tool stands.** The notation exists: `t/surface.py` parses the
+written form to the JSON AST and prints it back, round trip verified on 1528
+tasks both directions and 100000 random ASTs. It is wired into nothing:
+`run_all.py` and `run_par.py` read only `t/tasks/*.json`, a parse error
+carries no line or column (the tokens do, the error does not), the
+well-formedness checker `check_wf` lives inside `fuzz_lower.py`, and there is
+no command, no language server, no editor extension and no formatter
+command. `TUTORIAL.md` lesson 0 still says nothing parses the pretty form,
+which has been false since 2026-09-04. Kernels: seven on Linux, installed on
+the Dell without root; five native on Windows and all seven under WSL2
+(RUN-ON-WINDOWS.md); macOS unmeasured.
+
+### WS-13: the language
+
+#### 13.1 Constructs to the coverage bar
+
+12.7 opens div-mod and early-exit first, then arrays with mutation, in the
+census order. The coverage half needs whatever the 164 MBPP-DFY programs
+need, and that profile is UNMEASURED as a subset: the census ranks gates over
+all 643 gradable programs, and 25 of the 164 are in fragment today. Measure
+the gate order over the 164 alone before opening a gate for them. Every gate
+follows 10.4: taxonomy measured, lowering landed in all seven, flip table
+reproduced from clean scratch by a skeptic, then the column is claimed. The
+hazards named in 12.7 stand.
+
+DONE WHEN: the census over the 164 shows at least 82 lexically in fragment
+AND the lifter (12.4) lifts them, each opened construct having passed 10.4.
+UNBLOCKS: 16.2.
+
+#### 13.2 Names in all seven columns
+
+12.2's real done-condition. fstar no longer refuses a name ending in `_loop`
+(69bfbe9), but only fstar, rocq and spark carry a RESERVED set, fstar
+refuses an uppercase initial, and the lifter's corpus inventory (2026-09-05)
+found that 68 of the 77 in-fragment DafnyBench programs would hit that
+refusal. A lowering may refuse what it cannot express; it may not refuse a
+name it can rename. One sanitising pass, shared by every lowering, recording
+the rename so a table can still be read against the source.
+
+DONE WHEN: a probe task named for each kernel's reserved words, and one with
+an uppercase initial, lowers and runs in all seven columns.
+UNBLOCKS: 12.4, 15.1.
+
+#### 13.3 What a verified twin means
+
+12.3's open decision, Treston's to make: SPEC.md says a task whose twin
+verifies has a decorative spec and is REFUSED, and the harness does not yet
+refuse it, so `no_flip` measures the fuzzer's spec strength rather than the
+kernels' twin discipline.
+
+DONE WHEN: SPEC.md states the rule taken, the harness enforces it, and the
+fuzz_lower statistic means only what it says.
+UNBLOCKS: 13.4, 16.1.
+
+#### 13.4 The spec freeze and the conformance probes
+
+`"t": 0` is frozen and `"t": 1` is a superset. 1.0 freezes the version the
+tag ships, states every semantic decision taken since (definedness, the
+frame rule, the twin rule, div-mod rounding, early exit, arrays) in SPEC.md,
+and turns the hand-built probes of `fuzz_lower.py` plus the named metamorphic
+survivors into a conformance suite every lowering must pass. The far field's
+rule is unchanged: t ships a well-formedness checker, not a proof checker,
+so nothing here needs mechanizing before 1.0; the day t grows a proof
+checker, that checker is verified in Rocq or Lean first.
+
+DONE WHEN: a versioned SPEC.md, a probe suite that runs in one command, and
+all seven lowerings passing it in AGREEMENT.md.
+UNBLOCKS: 17.2.
+
+### WS-14: from a JSON tree to a language you type
+
+#### 14.1 `.t` becomes the input
+
+12.8 called this a decision, not a tidy-up. The decision this roadmap
+assumes: `t/tasks/` holds `.t` files, the JSON is derived and never edited,
+and the harness reads the notation. The round trip is what makes this safe:
+`parse(print(t)) == t` on every committed and generated task.
+
+DONE WHEN: every task in `t/tasks/` is a `.t` file, `run_all.py` and
+`run_par.py` read them, and AGREEMENT.md regenerated through the notation is
+identical row for row to the JSON run.
+UNBLOCKS: 14.2, 14.4, 15.2.
+
+#### 14.2 Errors with a position
+
+`SurfaceError` names what went wrong and not where. Every parse and every
+well-formedness error carries file, line and column of the offending token,
+and names the SYNTAX.md production or the SPEC.md rule.
+
+DONE WHEN: a committed corpus of malformed `.t` files, one per production and
+one per check_wf rule, each yields its expected line, column and rule in a
+test.
+UNBLOCKS: 14.4, 15.2.
+
+#### 14.3 The checker as a module
+
+`check_wf` moves out of the fuzzer into a module of its own, imported by the
+fuzzer, the surface parser and the command, with each error naming the
+SPEC.md rule it enforces.
+
+DONE WHEN: the module exists, `fuzz_lower.py` imports it, and the metamorphic,
+truth_fuzz and fuzz_lower sweeps report the same numbers as before the move.
+UNBLOCKS: 14.4, 15.2.
+
+#### 14.4 One command
+
+A single entry point with subcommands: parse, check, format, lower (one
+kernel or all), verify (a chosen kernel set, flake-checked), twin (the
+operator chosen and its witness), explain (what a verdict means, per
+kernel). Output has two forms: text for a person and JSON lines for an
+editor, one record per diagnostic with file, line, column, rule, severity
+and kernel. Runs on Windows with `--flag=value` forms per RUN-ON-WINDOWS.md.
+
+DONE WHEN: every subcommand has a test, and AGREEMENT.md produced through the
+command is byte-identical to `run_par.py`'s modulo the timestamp.
+UNBLOCKS: 15.1, 15.2, 17.1.
+
+#### 14.5 Docs that are true
+
+TUTORIAL.md, README.md, SYNTAX.md and SPEC.md agree with the tool and with
+each other; every example in them is executed.
+
+DONE WHEN: a doc test parses and checks every `.t` example in the four files
+and fails on a stale sentence about the notation.
+UNBLOCKS: 17.2.
+
+### WS-15: the editors, Visual Studio and VS Code
+
+#### 15.1 The harness as a library, with a cache
+
+An editor cannot shell out to `run_par.py`: it needs verify(task, kernels)
+callable in-process, verdicts cached by source sha256, kernel version and
+budget so an unchanged task costs no kernel run, and the run lock relaxed
+so an editor session and a table run can coexist without corrupting `out/`.
+The flake discipline is not relaxed: the editor shows a verdict as
+provisional until n=3 agree, and nothing provisional is ever written to a
+table. Interactive budgets per kernel are UNMEASURED; AGREEMENT.md records
+verdicts, not wall times.
+
+DONE WHEN: cached re-verification of an unchanged task runs no kernel; an
+editor session and `run_par.py` run at once and AGREEMENT.md is unchanged.
+UNBLOCKS: 15.2, 15.5.
+
+#### 15.2 The language server
+
+One server, spoken to over stdio in the Language Server Protocol (JSON-RPC
+with Content-Length framing), in Python 3.12 with the standard library only:
+open, change and save notifications, publishDiagnostics from 14.2 and 14.3,
+hover with the type and declaration of a name, definition for a spec_fun,
+document formatting through the printer, and a custom notification carrying
+kernel verdicts from 15.1 as they arrive. One server serves both editors.
+
+DONE WHEN: a committed transcript of request and response pairs replays as a
+test, and every diagnostic lands on the token 14.2 names.
+UNBLOCKS: 15.3, 15.4.
+
+#### 15.3 VS Code
+
+An extension: a TextMate grammar for the notation, a client for 15.2,
+settings for kernel paths and the kernel set, packaged as a `.vsix` with the
+user-local Node 22 already on the box.
+
+DONE WHEN: from a fresh checkout on Linux and on Windows the committed
+walk-through yields every behaviour in the usability half of the bar.
+UNBLOCKS: 15.5, 17.2.
+
+#### 15.4 Visual Studio
+
+Visual Studio 2022 hosts language servers through its own client
+extensibility, so 15.2's server is reused; the extension is a VSIX carrying
+the grammar and a language client, and it can only be built and tested on
+Windows with the Visual Studio SDK. This box is Linux; the build runs on
+Treston's Windows machine or a Windows CI runner. Five kernels run natively
+there and WSL2 gives all seven (RUN-ON-WINDOWS.md).
+
+DONE WHEN: the same walk-through, in Visual Studio 2022 on Windows, with the
+five native kernels, repeated by a second person.
+UNBLOCKS: 17.2.
+
+#### 15.5 Verdicts in the editor
+
+Per kernel, real and twin, the witness rendered as the input or loop state
+it is; an absent kernel shown as absent and never as a verdict; a
+provisional verdict marked provisional.
+
+DONE WHEN: the walk-through shows a task VERIFIED with its twin REFUTED, a
+real task REFUTED with the kernel's message, and an absent kernel, and the
+same task shows the same verdicts in AGREEMENT.md.
+UNBLOCKS: 17.2.
+
+### WS-16: the claims
+
+#### 16.1 The lifter, the sweep, the spec experiment
+
+12.4, 12.5 and 12.6 as written; the lifter is in design today.
+
+DONE WHEN: as stated there.
+UNBLOCKS: 16.2, 16.3.
+
+#### 16.2 MBPP-DFY to half
+
+The coverage half of the bar: 82 of 164 lifted and VERIFIED by all seven
+kernels with twins REFUTED. 25 of 164 are lexically in fragment today; the
+measured number after 12.5 is unknown and expected lower.
+
+DONE WHEN: the coverage table beside AGREEMENT.md shows at least 82,
+reproduced from clean scratch by an adversarial reader.
+UNBLOCKS: 17.2.
+
+#### 16.3 The next corpora
+
+HumanEval and MBPP bodies from the nl-problems corpus named in 12.6, run
+through the same pipeline, so the coverage claim is not a claim about one
+benchmark.
+
+DONE WHEN: a second coverage table, same format, over a second corpus.
+UNBLOCKS: nothing on the 1.0 path; it is what 1.0 is measured against next.
+
+### WS-17: the release
+
+#### 17.1 Install stories per OS
+
+RUN-ON-WINDOWS.md exists and was confirmed on a real Windows machine. Linux
+has the Dell's no-root install recorded outside the repo; macOS is
+unmeasured.
+
+DONE WHEN: a committed install page per OS, followed from a fresh machine by
+a second person, ending in the walk-through.
+UNBLOCKS: 17.2.
+
+#### 17.2 The tag
+
+A 1.0 tag contains: SPEC.md at its frozen version with the conformance
+probes (13.4), AGREEMENT.md and the coverage table regenerated from clean
+scratch by an adversarial reader (10.4), the install pages (17.1), the
+walk-through (15.3, 15.4), the licensing appendix (WS-7.5), the two
+extensions from a release page, and docs that pass 14.5. Plain checkout,
+standard library only; no package manager. Whether the seven kernels can run
+in CI is UNMEASURED; until measured, the tables are hand-witnessed and say
+so.
+
+DONE WHEN: both halves of the bar hold and the tag is cut.
+UNBLOCKS: 17.3.
+
+#### 17.3 Going public
+
+The repository is private today (verified 2026-09-04) and its claims move
+while it is. The em-dash debt in 12.8 is paid before the tag, sentence by
+sentence, not by deleting the character.
+
+DONE WHEN: Treston's call; the roadmap assumes the 1.0 tag is the moment.
+
+### Decisions for Treston
+
+Each is assumed as stated until answered; answering otherwise changes what
+is written above.
+
+- 13.3: refuse a task whose twin verifies (assumed yes).
+- 14.1: `.t` files become the input and the JSON is derived (assumed yes).
+- Lifter semantics, from 12.4's design: nat lifted as int plus a
+  non-negativity requires and ensures (assumed yes); a read-only array
+  lifted as a seq (assumed yes, recorded as a rewrite); `x in s` desugared
+  to a bounded exists (assumed yes); an assume in executable code refused
+  (assumed yes).
+- 15.4: which Visual Studio version (assumed 2022) and where the VSIX is
+  built (assumed your Windows machine until a CI runner exists).
+- Editors beyond the two (assumed none for 1.0).
+- 17.3: when t goes public (assumed at the tag).
+
+### Far field, unchanged
+
+Mechanizing the normative core in Rocq or Lean, tup's prove layer with the
+kernels inside the receipted distro (10.5), floats, an OS in t. Considered
+for this road and left where they were.
