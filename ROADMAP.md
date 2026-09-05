@@ -798,3 +798,154 @@ Cheapest thing on this page, and independent of every choice above: **the
 `DESTDIR` install logs from #17.** They give the file-to-package map that the
 missing manager would have provided, without writing or adopting one, and
 they would make every row of the table above easier to produce.
+
+## WS-12: the next six sessions (opened 2026-09-04)
+
+WS-10 was the audit's bill. This is the queue that pays it down and then
+answers the question the project exists to answer. Each session below is a
+HURDLE with a stated done-condition, not a schedule: the order is what
+unblocks what, and nothing here predicts a date.
+
+**The 1.0 bar, so "done" has a number.** t reaches 1.0 when at least half of
+the MBPP-DFY subset of DafnyBench, 82 of its 164 programs, lowers into t and
+is VERIFIED by all seven kernels with its twin REFUTED, published beside
+AGREEMENT.md. Deliberately the measured coverage, not the lexical one, which
+is why 12.1 comes before everything else.
+
+**Where the numbers stand, 2026-09-04.** Lexical census: 77 of 643 gradable
+DafnyBench programs in fragment, gate order array, div-mod, early-exit,
+multi-return, array-mutation, zero-returns. MBPP measured separately over its
+Python reference solutions: 62 of 974, gate order early-exit, div-mod,
+string-char. Both corpora independently rank div-mod and early-exit at the
+top, which is what makes those two the safe first constructs. Metamorphic
+variance went 145 to 39 to a remainder of 10 as the adapter defects below
+were closed.
+
+### 12.1 Finish the metamorphic remainder
+
+Rewrites that cannot change meaning must not change a verdict. 135 of the
+original 145 are closed: a verus signature that bound the letter r instead of
+the task's return name (40), a verus requires-scan that read `P || false` as
+vacuity (60), a dafny adapter that called a file it had itself verified
+malformed (6), a framac adapter that read unreachable code as a dead contract
+(19), and a C emitter that rendered unary minus on a negative as the
+decrement operator (10). What remains: 8 verus arithmetic rewrites in the
+trigger-inference family, and one cell where a rewrite turns malformed into
+verified, which is the direction that should never happen and is therefore
+the one to read first.
+
+DONE WHEN: a metamorphic sweep reports 0 confirmed variances, or every
+survivor is named in this file with the reason it is a property of the prover
+rather than of a lowering.
+
+### 12.2 The F* naming defect
+
+F* abstained on `gt_width_loop` because the task's own name collides with an
+F* keyword, so one of seven columns declined to run for a spelling reason.
+Any claim resting on that column is quietly weaker than it reads. Every
+lowering owes an identifier-sanitising pass against its target's reserved
+words; this is the same class as 12.1 and cheap.
+
+DONE WHEN: a task named for each kernel's reserved words lowers and runs in
+all seven columns.
+
+### 12.3 The twins that verified
+
+`fuzz_lower` reports, per kernel, real-VERIFIED cells whose twin was not
+REFUTED. Most are incompleteness, which is honest. The ones that are not:
+twins that came back VERIFIED, 16 lean, 16 rocq, 14 dafny, 14 spark, 13
+verus, 9 fstar, 6 framac. A verified twin means the spec is vacuous or the
+mutation was inert, and the witness rule exists to make both impossible, so
+each is either a witness that does not witness or a vacuity probe that
+missed. This is the only open item that touches a claim already published in
+AGREEMENT.md.
+
+DONE WHEN: every verified twin is explained, and the witness or vacuity
+defect behind it is fixed or recorded as a measured limit.
+
+### 12.4 The Dafny-to-t lifter
+
+`coverage_census.py` decides fragment membership with regular expressions
+over Dafny source. It needed three repair rounds and 185 confirmed detector
+faults to become trustworthy, and it still answers a proxy question. The
+lifter replaces it: a program is in the fragment when it LIFTS into a t task
+and seven kernels verify it with the twin refuted. It also produces the task
+corpus 12.5 and 12.6 both need, so it is the long pole.
+
+Meaning preservation beats coverage. A program the lifter refuses with a
+named reason costs one row in a table; a program it lifts wrongly corrupts
+every number downstream. Parse, do not pattern-match: the census is the
+standing evidence for what regexes do to this problem.
+
+DONE WHEN: the lifter runs over all 785 programs, every emitted task
+validates against SPEC.md and executes under interp.py, and the disagreements
+with the lexical census are enumerated with a verdict on which instrument is
+right in each case.
+
+### 12.5 The ground-truth sweep
+
+Run the lifted corpus through the full pipeline, seven kernels, real and
+twin, flake-checked. This is the first coverage number that means what the
+1.0 bar says, and the first honest answer to how far t actually reaches.
+Expect it to be lower than the lexical 77: lifting can fail where a regex saw
+nothing to object to.
+
+DONE WHEN: a coverage table sits beside AGREEMENT.md giving verified-with-
+twin-refuted counts per kernel over the lifted corpus, with the refusals
+taxonomised into lifter gaps and language gaps.
+
+### 12.6 The spec experiment
+
+The whole training thesis is that a model can write a t task, specification
+included, from a natural-language problem, and that seven kernels grading it
+give a signal worth training on. That has never been measured once, which
+makes it the highest-risk unknown in the project and the one furthest from
+the critical path. It should move up.
+
+The corpus exists: github.com/jonhhjackson-a11y/nl-problems, 24,748 problems
+with 23,319 reference solutions, of which MBPP and HumanEval are already in
+reach. The reward is not "did it verify": a vacuous specification verifies
+trivially. The reward is the twin discipline, real VERIFIED and twin REFUTED
+at a witness, which is the defense most verifiable-reward setups lack. The
+test cases give a second, independent check that the specification is the one
+the problem asked for.
+
+Run generation on local models on the GPUs, which are idle for this project
+and cost no API budget.
+
+DONE WHEN: a measured table of how many model-written t tasks verify with a
+refuted twin, and how many of those also pass the problem's own test cases,
+because those two failures are different and both matter.
+
+### 12.7 Constructs, in the measured order
+
+div-mod and early-exit first, since both censuses rank them top
+independently. They are largely disjoint in the lowerings, so they can run in
+parallel worktrees rather than in sequence. Then arrays with mutation, which
+is the expensive one: element-level framing has to replace name-level framing
+in six of the seven loop encodings, and that is the exact class of bug the
+2026-09-02 frame-rule fix caught one level up.
+
+The known cross-kernel hazards, from the lowering survey: div-mod rounding is
+a three-way split, Euclidean against truncating against floor, and division
+by zero repeats the definedness story that framac's total logic already lost
+once. Early exit splits the seven into three with a statement return and four
+with none, so an outcome-flag encoding changes the invariant shape every
+kernel proves.
+
+DONE WHEN: each construct is in SPEC.md with a semantics stated for every
+column, lowered in all seven, and an adversarial reader has reproduced its
+flip table from clean scratch. Per ROADMAP 10.4, not before.
+
+### 12.8 Standing items
+
+Surface syntax landed 2026-09-04 (`t/surface.py`, round trip verified on 1528
+tasks both directions plus 100,000 random ASTs). It is wired into nothing on
+purpose: whether a `.t` file becomes an input to the harness is a decision,
+not a tidy-up.
+
+Em-dash debt in the parts under focus: 525 in `t/`, 260 in `tup/`, 149 at the
+root, 934 across 79 files. Repair the sentences the dashes were carrying
+rather than deleting the character, which is what leaves run-ons behind.
+
+`forge/` and `locallm/` remain out of scope.
