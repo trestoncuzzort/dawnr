@@ -40,8 +40,9 @@ body, and a value computed under a branch stays under that branch's guard.
 ABSTAINS (NotImplementedError — recorded, never faked): a quantifier in
 computational position; more than one loop, nested loops, a loop under a
 conditional, or a loop plus self-recursion in one body; identifiers that
-collide with F* keywords, an uppercase initial (F* term names are
-lowercase), or this lowering's `_loop` namespace.
+collide with F* keywords, or carry an uppercase initial (F* term names are
+lowercase). Generated helper names are made fresh against the task's own
+strings, so a task name is never refused for its spelling.
 
 Stdlib only, same reason as dataset_gate.py.
 """
@@ -74,11 +75,20 @@ RESERVED = {
 
 
 def _ck(name: str) -> str:
-    if name in RESERVED or not name[0].islower() or name.endswith("_loop"):
+    # The `_loop` suffix used to be refused here as well, to keep this
+    # lowering's generated helper names clear of the task's own. That was
+    # unnecessary and it cost a column: Ctx.fresh_named already guarantees
+    # freshness by checking every string in the task and appending a counter,
+    # so a task named `gt_width_loop` simply yields the helper
+    # `gt_width_loop_loop`. Measured 2026-09-04: truth_fuzz's gt_width_loop
+    # made fstar ABSTAIN, so one of seven columns declined to run for a
+    # spelling reason and every claim resting on that row was quietly weaker
+    # than it read. A lowering may refuse what it cannot express; it may not
+    # refuse a name it can rename.
+    if name in RESERVED or not name[0].islower():
         raise NotImplementedError(
-            f"fstar lowering: identifier {name!r} collides with an F* "
-            f"keyword, needs an uppercase initial F* refuses for terms, or "
-            f"sits in this lowering's _loop namespace")
+            f"fstar lowering: identifier {name!r} is an F* keyword or lacks "
+            f"the lowercase initial F* requires for term names")
     return name
 
 
