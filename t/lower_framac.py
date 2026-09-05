@@ -148,6 +148,19 @@ def acsl_call(c: dict, ctx: Ctx) -> str:
     return f"{fun}{lab}({', '.join(parts)})"
 
 
+def _gap(rendered: str) -> str:
+    """A space when the operand already starts with a minus, so unary minus
+    on a negative renders as `- -2` and not `--2`.
+
+    C reads `--` as the decrement operator, so `-(--2)` is not double
+    negation, it is a predecrement of a literal and frama-c rejects the file
+    with a User Error. Measured 2026-09-04: the metamorphic double-negation
+    rewrite produced exactly that on 10 cells, every one framac, every one
+    scored malformed. The same hazard exists for `+ +` and it is spelled the
+    same way here."""
+    return " " + rendered if rendered[:1] in "-+" else rendered
+
+
 def term(e: dict, ctx: Ctx) -> str:
     """ACSL term. int-typed terms are `integer`-valued; bool-typed terms are
     ACSL boolean terms (comparisons / && / || / ! coerce in term position —
@@ -174,7 +187,7 @@ def term(e: dict, ctx: Ctx) -> str:
     if op == "at":
         return f"{seq_var(args[0], ctx.env)}[{term(args[1], ctx)}]"
     if op == "neg":
-        return f"(-{term(args[0], ctx)})"
+        return f"(-{_gap(term(args[0], ctx))})"
     if op == "not":
         return f"(!{term(args[0], ctx)})"
     if op == "implies":
@@ -343,7 +356,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str) -> str:
         return (f"{seq_var(args[0], env)}"
                 f"[{cexpr(args[1], env, funs, task_name)}]")
     if op == "neg":
-        return f"(-{cexpr(args[0], env, funs, task_name)})"
+        return f"(-{_gap(cexpr(args[0], env, funs, task_name))})"
     if op == "not":
         return f"(!{cexpr(args[0], env, funs, task_name)})"
     if op == "implies":
