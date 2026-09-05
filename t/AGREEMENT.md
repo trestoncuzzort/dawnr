@@ -1,4 +1,4 @@
-# t cross-kernel agreement — 2026-09-02 13:01Z
+# t cross-kernel agreement — 2026-09-05 00:53Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column.
 
@@ -27,4 +27,4 @@ Backends:
 - rocq: The Rocq Prover, version 9.2
 - fstar: F* 2026.08.30 / platform=Linux_x86_64 / system=Unix / compiler=OCaml 5.3.0 / date=2026-08-30 16:26:18 +0000 / commit=2b82aefeff37f78509c876844954b07fcb8813ff
 
-Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `abs.rs` 4411ed95f8c487e8…
+Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `abs.rs` 750a8322fb7abf25…

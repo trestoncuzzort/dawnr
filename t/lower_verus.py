@@ -813,8 +813,22 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     global _SUFFIX_INT
     if task.get("t", 0) == 0:
-        _SUFFIX_INT = False
-        src = lower_v0(task, body, witness=witness)
+        # v0 used to emit bare literals to keep its output byte-identical to
+        # an earlier baseline. That is unsound as an emission rule: Verus
+        # types a literal expression by inference, and an expression built
+        # only from non-negative literals infers `nat`, which does not match
+        # the `int` return. Measured 2026-09-04 on fz_v0if_141, where the
+        # branch value `(3 * 1)` is rejected with E0308 expected int found
+        # nat, while the metamorphic rewrite of the same value to
+        # `((3 - 0) * 1)` introduces a subtraction, infers int, and verifies.
+        # A lowering whose well-formedness depends on whether a constant
+        # folds to something non-negative is not a lowering. v0 now suffixes
+        # exactly as v1 does.
+        _SUFFIX_INT = True
+        try:
+            src = lower_v0(task, body, witness=witness)
+        finally:
+            _SUFFIX_INT = False
     else:
         _SUFFIX_INT = True
         try:
