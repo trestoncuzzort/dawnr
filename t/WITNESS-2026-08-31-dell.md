@@ -1,8 +1,8 @@
-# t — Dell witness, 2026-08-31 (ubuntu-box, Ubuntu 24.04, x86_64)
+# t: Dell witness, 2026-08-31 (ubuntu-box, Ubuntu 24.04, x86_64)
 
 WS-7's step zero, run after the machine wipe: every kernel reinstalled
 no-sudo from pinned, hashed artifacts, then the full 11-task suite through
-`run_all.py`. Result: **65 of 66 cells `verified / refuted`** — the measured
+`run_all.py`. Result: **65 of 66 cells `verified / refuted`**, the measured
 flip on every task for dafny, verus, spark, framac, lean, and 10 of 11 for
 rocq. The one non-flip is a recorded finding, not noise:
 
@@ -12,7 +12,7 @@ rocq. The one non-flip is a recorded finding, not noise:
 
 This run is also two discharges the v1 commit left pending:
 
-- **The Verus remeasure.** All 11 Verus cells flip — the first honest
+- **The Verus remeasure.** All 11 Verus cells flip, the first honest
   measurement since the filename-artifact audit. And the audit's repair
   itself needed repairing: the "error[" stderr match missed rustc's bare
   `error: invalid character '.' in crate name` diagnostic, so a dotted-name
@@ -30,7 +30,7 @@ parked finisher's remaining scope is one cell: the count_matches timeout.
 
 The suite was then re-run through `run_par.py` (cell-parallel, built and
 adversarially reviewed today): its AGREEMENT.md is byte-identical to the
-serial table modulo timestamp — serial 27 min, parallel 9 min. Its live-run
+serial table modulo timestamp: serial 27 min, parallel 9 min. Its live-run
 guard also paid the house's pgrep-self-match lesson once more before being
 fixed to basename-equality matching (first launch refused against its own
 launcher shell; measured, recorded in the code comment).
@@ -59,9 +59,9 @@ launcher shell; measured, recorded in the code comment).
     f2ee1cb0b9af3e7b…  stdlib-9.2.0.tar.gz
 
 Two install findings, banked for the record: `rocq-stdlib` 9.2.0 is not
-published on opam (tops out 9.1.0) — pinned here from the upstream
+published on opam (tops out 9.1.0), so it is pinned here from the upstream
 rocq-prover/stdlib V9.2.0 release tarball; and Rocq 9.2's `rocq-core` ships
-no `coqc` at all — the binary the adapter invokes comes from the first-party
+no `coqc` at all: the binary the adapter invokes comes from the first-party
 `coq-core.9.2.0` compatibility package. Build-time system deps (gmp headers,
 autoconf, graphviz) came from a disposable conda env with zero runtime
 linkage (verified via readelf: no RPATH into the env; deletable).
@@ -72,20 +72,20 @@ backend identities as listed there. Verus requires `~/.cargo/bin` on PATH
 
 ---
 
-# Evening addendum — the matrix goes to 7 kernels, 77/77
+# Evening addendum: the matrix goes to 7 kernels, 77/77
 
 Same box, same day. Three fronts closed by a Fable agent fan-out, every
 claim re-measured in the main session before landing:
 
-**count_matches x rocq FIXED — root cause, not workaround.** The generated
+**count_matches x rocq FIXED, root cause and not workaround.** The generated
 prelude's `t_merge` saturation step lacked an occurs check: when one merge
 term syntactically contained the other, Ltac could orient the rewrite so
 each `replace` re-created its own trigger (`-1+1` chains growing without
 bound; probed to 30 saturation steps, still growing). Only count_matches
-exposed it — its spec_fun unfolding plus a `subst` on the loop guard puts
+exposed it: its spec_fun unfolding plus a `subst` on the loop guard puts
 two same-function applications at lia-equal, syntactically distinct indices
 into one goal. One shared structural edit (two occurs-check arms ahead of
-the numeral guards, the containing term always the one replaced — strictly
+the numeral guards, the containing term always the one replaced, strictly
 shrinking, cannot re-fire). No task is name-keyed; the spec is untouched.
 Real now verifies in ~0.62 s (was 3 x 180 s TIMEOUT); all 11 rocq rows
 re-measured, no regressions (seq_max ~55 s and linear_search twin ~151 s
@@ -110,13 +110,13 @@ adapter, after the fix.
 
 **The matrix: FULL AGREEMENT, 77/77 cells (11 tasks x 7 kernels), zero
 flakes, exit 0, ~8 min wall via run_par.py.** Seven independent proof
-kernels — two SMT-via-Boogie-style (dafny, verus), two SMT-via-Why3/WP
+kernels, two SMT-via-Boogie-style (dafny, verus), two SMT-via-Why3/WP
 (spark, framac), one SMT-native (fstar), two kernel-checked proof-term
-(lean, rocq) — agree on every task and refute every twin.
+(lean, rocq), agree on every task and refute every twin.
 
 **x86_64 tup: GO, gated on one admin line.** Probe report at
 `tup/X86-FEASIBILITY.md`: /dev/kvm is root:kvm + gdm ACL and this user is
-not in `kvm` (fix: `sudo gpasswd -a user kvm` — Ryan/Dr. Rahman);
+not in `kvm` (fix: `sudo gpasswd -a user kvm`, Ryan/Dr. Rahman);
 KVM guest is the recommended path. TCG works today at a measured ~14x per
 thread (honest proxy benchmark, method recorded); rootless chroot is
 measured dead (apparmor_restrict_unprivileged_userns=1, uid_map EPERM).

@@ -1,7 +1,7 @@
-# X86-FEASIBILITY — the x86_64 build on ubuntu-box
+# X86-FEASIBILITY: the x86_64 build on ubuntu-box
 
 Probe run 2026-08-31 on ubuntu-box (Ubuntu 24.04, x86_64, 120 threads,
-502 G RAM, no sudo). Scope: WS-8's one remaining real item — "same driver,
+502 G RAM, no sudo). Scope: WS-8's one remaining real item, "same driver,
 x86 book". This is a feasibility report, not a build; everything below is
 either a measurement made today or is labeled UNMEASURED.
 
@@ -14,7 +14,7 @@ is the recommended path; rootless chroot is measured dead on this box.
    aarch64-softmmu only (confirmed: `bin/` contained `qemu-system-aarch64`
    and no x86 binary). Rebuilt today from `qemu-10.1.3.tar.xz`, sha256
    `fbaa7a0d7a9a1deb5695b125916746ec28fe0de6275d4454f3e3bbaf8b339b53`
-   (matches the pin), using the exact RUN-ON-UBUNTU.md no-sudo recipe — the
+   (matches the pin), using the exact RUN-ON-UBUNTU.md no-sudo recipe. The
    micromamba `qemubuild` env survived the Aug 31 wipe. Target list:
    `aarch64-softmmu,x86_64-softmmu,x86_64-linux-user`. The third target is a
    deviation from the requested pair, added solely to produce `qemu-x86_64`
@@ -28,7 +28,7 @@ is the recommended path; rootless chroot is measured dead on this box.
    `user users`. `open(O_RDWR)` → EACCES;
    `qemu-system-x86_64 -accel kvm` → "Could not access KVM kernel module:
    Permission denied". KVM support is compiled in (`-accel help` lists kvm
-   and tcg). ROADMAP WS-8 says tup "runs as a KVM guest on the Dell" — as of
+   and tcg). ROADMAP WS-8 says tup "runs as a KVM guest on the Dell", and as of
    today that is aspiration, not fact, until an admin grants the kvm group.
 
 3. **TCG overhead ≈ 14x per thread** (crude proxy, labeled as such):
@@ -45,7 +45,7 @@ is the recommended path; rootless chroot is measured dead on this box.
    `kernel.apparmor_restrict_unprivileged_userns = 1` (Ubuntu 24.04
    default). Measured, not assumed: `unshare -r` fails writing uid_map
    (EPERM); a raw `unshare(CLONE_NEWUSER)` from python succeeds but the
-   process comes out capability-stripped — setgroups EACCES, uid_map EPERM,
+   process comes out capability-stripped: setgroups EACCES, uid_map EPERM,
    gid_map EPERM, `chroot()` EPERM, `unshare(CLONE_NEWNS)` EPERM. The
    setuid helpers `/usr/bin/newuidmap`/`newgidmap` are not installed even
    though `/etc/subuid` carries `user:362144:65536`. Probe caveat: a
@@ -87,19 +87,19 @@ Needs an x86_64 variant or edit:
 
 ## The three paths, honestly costed
 
-- **KVM guest — recommended.** Blocked today only by /dev/kvm permissions;
+- **KVM guest, recommended.** Blocked today only by /dev/kvm permissions;
   everything else is in place (emulator, firmware, driver, chain scripts).
   Near-native CPU. Anchored to the 2.40 h arm64 receipt and 120 host
   threads: **~2–4 h wall** for the build legs, plus VM provisioning.
   UNMEASURED: no x86_64 guest has actually booted here, KVM speed itself
   unmeasurable until access is granted.
-- **TCG guest — available today, slow.** The 40 s boot-to-login of the
+- **TCG guest, available today and slow.** The 40 s boot-to-login of the
   arm64 image under pure TCG on this box is already witnessed
   (RUN-ON-UBUNTU.md), so the path is real. At ~14x per thread on compile
   work, partially recovered by MTTCG across many vcpus and lost again in
   serial configure phases: **~1–2 days wall, wide error bars.** UNMEASURED
   end to end; the 14x is a single-process compiler proxy, not a build.
-- **Rootless chroot — NO-GO as this box is configured.** Would be native
+- **Rootless chroot, NO-GO as this box is configured.** Would be native
   speed and VM-free, but the apparmor userns restriction strips every
   capability the LFS chroot legs need (chroot, mount, chown-to-many-uids).
   Unblocking needs an admin: `apparmor_restrict_unprivileged_userns=0` (or
@@ -112,9 +112,9 @@ Needs an x86_64 variant or edit:
   probe scope excluded multi-hour work).
 - KVM acceleration (permission-blocked).
 - Full x86_64 build wall time under either accelerator.
-- The BIOS-vs-EFI decision for the x86 leg — a ruling to record, not a
+- The BIOS-vs-EFI decision for the x86 leg, a ruling to record and not a
   measurement to take.
-- The regenerated x86 `book/` page set — the extractor's own count-vs-index
+- The regenerated x86 `book/` page set, where the extractor's own count-vs-index
   gate is the witness for that, at extraction time.
 
 ## Exact next commands
@@ -123,12 +123,12 @@ Needs an x86_64 variant or edit:
 
        sudo gpasswd -a user kvm
 
-2. After next login, verify — this line's output is the witness:
+2. After next login, verify. This line's output is the witness:
 
        bash -lc 'python3 -c "import os,fcntl;fd=os.open(\"/dev/kvm\",os.O_RDWR);print(\"KVM API\",fcntl.ioctl(fd,0xAE00))"'
 
 3. First build-path step (runs today under TCG; add `-accel kvm` once step
-   2 passes) — fetch scaffolding, hash before use, boot it:
+   2 passes): fetch scaffolding, hash before use, boot it:
 
        cd ~/tup && curl -LO https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img \
          && sha256sum noble-server-cloudimg-amd64.img   # record the hash in the receipt before first use

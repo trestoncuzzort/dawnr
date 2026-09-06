@@ -86,7 +86,7 @@ qemu-system-arm qemu-efi-aarch64`, one command, done). Measured 26.9 s on
 
 Same checks as everywhere: `cat /etc/os-release` says `NAME="tup"`;
 `claude --version` answers from the agent layer (2.1.251 as shipped); every
-file on the disk is accounted for in the repo's `receipts/` — the one
+file on the disk is accounted for in the repo's `receipts/`, the one
 inventory that describes this image is named in `receipts/INVENTORIES.md`.
 What is *not* in the image (no `curl`, `wget`, `git`, `unzip`, `which`) and
 how to get a file in anyway is in `RUN-ON-UBUNTU.md`.

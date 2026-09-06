@@ -19,7 +19,7 @@ in [`../t/`](../t/); provenance lives here.
 
 The repository root asks how much of a measured result is real. Its answer
 depends on a verifier, which depends on an interpreter, which depends on a
-libc, which depends on a compiler — and the receipts stop at the interpreter.
+libc, which depends on a compiler, and the receipts stop at the interpreter.
 tup is that descent continued: the same discipline applied to the ground the
 verdicts stand on. The paper's own findings (a verifier whose answer changed
 with its Python version; digests that differed by platform) are what make
@@ -45,33 +45,33 @@ with its Python version; digests that differed by platform) are what make
 The book assumes a human at a terminal. Every place it does, tup has a file
 saying so:
 
-- **`exec /usr/bin/bash --login`** (createfiles, bash) — a human re-enters the
+- **`exec /usr/bin/bash --login`** (createfiles, bash): a human re-enters the
   shell; under the driver it would silently discard the rest of the page.
-- **`passwd root`** — prompts. tup sets an initial password of `tup`; **change
+- **`passwd root`**: prompts. tup sets an initial password of `tup`; **change
   it at first boot.** The override exists so nobody can pretend the password
   was chosen well.
-- **`make menuconfig`** — a curses UI. Replaced by `defconfig` plus the
+- **`make menuconfig`**: a curses UI. Replaced by `defconfig` plus the
   virtio/ext4/vfat options a QEMU guest boots from, forced in so no initramfs
   is needed.
-- **Prose pages with code in them** — 8.2 Package Management is an advisory
+- **Prose pages with code in them**: 8.2 Package Management is an advisory
   essay whose bare `./configure` fails instantly; 9.4 is device-naming
   diagnostics; 9.5 and 9.7 are placeholder examples (`<Your Domain Name>`).
   Each is replaced by either a no-op with a reason, or tup's real config.
-- **8.86 Stripping** — optional and soname-fragile. Skipped by policy; tup
+- **8.86 Stripping**: optional and soname-fragile. Skipped by policy; tup
   keeps its debug symbols, because a system that can be debugged is worth more
   here than a smaller one.
 
 ## Test policy
 
-Ruling, 2026-08-31: run the suites that are load-bearing — **glibc** (the book
-calls it essential), **GCC**, **binutils** — and record every other suite as
+Ruling, 2026-08-31: run the suites that are load-bearing, **glibc** (the book
+calls it essential), **GCC** and **binutils**, and record every other suite as
 skipped *by name* in the receipt. A skipped suite that nobody can enumerate is
 indistinguishable from a suite that passed, which is the failure mode this
 whole repository is about.
 
 ## Running it
 
-The build happens inside a Lima VM (Ubuntu as disposable scaffolding — the LFS
+The build happens inside a Lima VM (Ubuntu as disposable scaffolding; the LFS
 two-pass toolchain exists precisely to sever the result from its host):
 
 ```bash

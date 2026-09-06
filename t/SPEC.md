@@ -1,9 +1,9 @@
-# t — task format
+# t: task format
 
 A task is one JSON object. Every field is required unless marked optional.
 Two format versions exist. `"t": 0` is frozen: everything in the v0 section
 is unchanged and every v0 task remains valid byte-for-byte. `"t": 1` is a
-strict superset that opens three expressiveness gates — quantifiers over
+strict superset that opens three expressiveness gates: quantifiers over
 sequences, loops with invariants, recursion with termination measures. A v1
 task may use any v0 construct; a v0 task may use nothing from v1.
 
@@ -37,7 +37,7 @@ syntax.
 `OP` ∈ arithmetic `+ - * neg` (neg is unary), comparison `== != < <= > >=`,
 logic `and or not implies`. `and`/`or` are n-ary; `not`/`neg` unary; the rest
 binary. Division and modulo are deliberately absent from v0 AND v1 (their
-semantics differ across the WS-7 backends — Euclidean vs truncating — and t
+semantics differ across the WS-7 backends, Euclidean against truncating, and t
 refuses to paper over a semantic difference with a syntax).
 
 ### Stmt (v0)
@@ -47,7 +47,7 @@ refuses to paper over a semantic difference with a syntax).
 {"if": {"cond": Expr, "then": [Stmt, ...], "else": [Stmt, ...]}}
 ```
 
-## v1 (`"t": 1`) — the three gates
+## v1 (`"t": 1`): the three gates
 
 New top-level fields, all optional unless a gate below requires them:
 
@@ -57,9 +57,9 @@ New top-level fields, all optional unless a gate below requires them:
 "decreases": Expr                               // termination measure for a self-recursive body
 ```
 
-New type: `"seq"` — a finite immutable sequence of mathematical integers.
+New type: `"seq"`, a finite immutable sequence of mathematical integers.
 Usable as a parameter type only (not a return type in v1). New type:
-`"bool"` — usable as a return or local type.
+`"bool"`, usable as a return or local type.
 
 ### Definedness
 
@@ -105,10 +105,10 @@ side, and the same total-logic softness in invariant and spec_fun-body
 positions, is recorded future work in that file's own docstring, not
 silently claimed here.
 
-### Gate 1 — quantifiers + sequences
+### Gate 1: quantifiers + sequences
 
 Semantics: a `seq` value s has a length `len(s) >= 0` and elements
-`s[0] … s[len(s)-1]`, each a mathematical integer. Sequences are values —
+`s[0] … s[len(s)-1]`, each a mathematical integer. Sequences are values:
 no aliasing, no mutation, no heap.
 
 New Expr forms:
@@ -125,7 +125,7 @@ New Expr forms:
 `forall` means: for every integer i with `lo <= i < hi`, body holds. `exists`
 means: for some such i. The range is half-open `[lo, hi)`; `hi <= lo` gives
 the empty range (forall = true, exists = false). Quantification is bounded by
-design — every kernel on the WS-7 list can express a bounded integer
+design, because every kernel on the WS-7 list can express a bounded integer
 quantifier; unbounded quantification is a later gate, not a notational
 convenience to smuggle in. The bound variable is a fresh name scoped to
 `body` and must not collide with any name already in scope at that point
@@ -137,7 +137,7 @@ Scope rule (v0 had it implicitly): `requires` sees params; `ensures` sees
 params and returns; body expressions see params, returns, and locals declared
 above them; invariants see all of those.
 
-### Gate 2 — loops + invariants
+### Gate 2: loops + invariants
 
 New Stmt forms:
 
@@ -154,7 +154,7 @@ the standard partial-correctness-plus-termination package: every invariant
 must hold on entry and be preserved by one iteration (assuming the guard);
 after the loop, invariants hold and the guard is false. `decreases` is an
 int-valued expression that is `>= 0` whenever the guard holds and strictly
-decreases across every iteration; it is required, not optional — a t task
+decreases across every iteration; it is required, not optional: a t task
 never states a loop it cannot bound. The kernel discharges all of it; t
 checks nothing itself.
 
@@ -192,7 +192,7 @@ own `decreases` obligation whenever the guard can hold, so no provable t
 task contains one, and a lowering may refuse the shape outright (an
 ABSTAIN, never a verdict).
 
-### Gate 3 — recursion + termination
+### Gate 3: recursion + termination
 
 A SpecFun is a pure total function defined by well-founded recursion,
 usable in `requires`, `ensures`, `invariants`, and bodies:
@@ -211,7 +211,7 @@ New Expr form:
 {"call": {"fun": ID, "args": [Expr, ...]}}
 ```
 
-`fun` is a spec_fun name, or — inside the task's own body only — the task's
+`fun` is a spec_fun name, or, inside the task's own body only, the task's
 own name (direct self-recursion; no mutual recursion in v1). Semantics:
 
 - A spec_fun call denotes the unique function satisfying its defining
@@ -227,7 +227,7 @@ own name (direct self-recursion; no mutual recursion in v1). Semantics:
   obligation as above. Lowerings may hoist expression-position self-calls
   into call statements; the meaning is call-by-value, evaluated left to
   right, and (in v1) self-calls appear only in contexts where evaluation
-  order is unobservable — specs and assignments.
+  order is unobservable: specs and assignments.
 
 The spec side of a recursive task is anchored by a spec_fun (`ensures r ==
 fact(n)`), never by the task's own name: an `ensures` that referenced the
@@ -240,23 +240,23 @@ A ladder of mutation operators. None is optional or configurable; the choice
 is derived from the body by one deterministic rule, applied identically to
 every task, so "the twin failed" always means the same thing. The twin never
 touches `requires`, `ensures`, `spec_funs`, or the task/loop `decreases`
-clauses that survive in the mutated body — the spec is the fixed instrument;
+clauses that survive in the mutated body. The spec is the fixed instrument;
 the body and its annotations are what gets broken.
 
 **Every twin must carry a witness.** This is the whole point and it is a
 measurement, not an assumption. Measured over the 1395 generated tasks (7 seeds x
 200 from `fuzz_lower.py`, less the 5 its own well-formedness check rejects)
-that the fuzzer measures, 129 of them — 9.2%, and 13 to 22 per seed — had a
+that the fuzzer measures, 129 of them, 9.2%, and 13 to 22 per seed, had a
 twin that computes an IDENTICAL value to the real program on every input
 tested. On those tasks the "measured flip" measures nothing: there is no
 behavioural difference for a kernel to detect, so a REFUTED verdict is luck
 and a VERIFIED twin cannot be told apart from a vacuous spec. So a mutation is
 accepted only when `t/interp.py` produces one of:
 
-- a value witness — an input satisfying `requires` on which the real body and
+- a value witness, an input satisfying `requires` on which the real body and
   the twin return different values, or on which the twin is undefined where
   the real body has a value (the value-changing operators); or
-- a proof witness — a loop state satisfying `requires` and the SURVIVING
+- a proof witness, a loop state satisfying `requires` and the SURVIVING
   invariants that either falsifies `ensures` with the guard false (exit
   entailment) or breaks a surviving invariant in one iteration (preservation).
   INVARIANT-DROP's twin computes the same value by construction, so this is
@@ -266,41 +266,41 @@ The operators, tried in this fixed order, with sites inside an operator
 enumerated in pre-order (statement, then into `if` branches and `while`
 bodies), first candidate with a witness winning:
 
-1. **INVARIANT-DROP** (v1) — one invariant of one loop is deleted. An
+1. **INVARIANT-DROP** (v1): one invariant of one loop is deleted. An
    annotation mutation. Twin REFUTED means that invariant is load-bearing:
    the kernel cannot re-derive it, so the stated proof outline is real work.
-2. **COLLAPSE-IF** (v0) — one `if` is replaced by its then-branch.
-3. **NEGATE-COND** — one `if`'s branches are swapped, which is `not cond`
+2. **COLLAPSE-IF** (v0): one `if` is replaced by its then-branch.
+3. **NEGATE-COND**: one `if`'s branches are swapped, which is `not cond`
    with no new syntax for a lowering to reject.
-4. **COMPARE-FLIP** — `<` <-> `<=`, `>` <-> `>=` at one comparison.
-5. **BOUNDARY-SWAP** — the operands of one order comparison are exchanged.
-6. **OFF-BY-ONE** — +/-1 on one integer literal, `at` index, or loop bound.
-7. **WRONG-VAR** — one variable occurrence is replaced by another of the same
+4. **COMPARE-FLIP**: `<` <-> `<=`, `>` <-> `>=` at one comparison.
+5. **BOUNDARY-SWAP**: the operands of one order comparison are exchanged.
+6. **OFF-BY-ONE**: +/-1 on one integer literal, `at` index, or loop bound.
+7. **WRONG-VAR**: one variable occurrence is replaced by another of the same
    type in scope (never the return: reading it before its first assignment is
    ill-formed rather than wrong, and a lowering rejects it instead of
    refuting it).
-8. **DROP-GUARD** — one conjunct of an `if`/`while` condition is dropped.
+8. **DROP-GUARD**: one conjunct of an `if`/`while` condition is dropped.
 
 Rungs 1 and 2 at site 0 are exactly the v1 rule, so a task whose v1 twin was
 already load-bearing keeps that twin unchanged; measured over the same 1395
 tasks, 96 twins changed and every one of them was a twin the interpreter
-shows was vacuous — no twin that was already distinct moved.
+shows was vacuous: no twin that was already distinct moved.
 
 No witness on any rung and the task is REFUSED, with the reason named:
 `no-witness` (every mutation computes what the real body computes),
-`no-input` (nothing in the bounded domain satisfies `requires` — a vacuous
+`no-input` (nothing in the bounded domain satisfies `requires`, a vacuous
 precondition), `real-undefined` (the real body returns no value), or
 `no-operator` (nothing to mutate). An unmeasurable twin is reported as such,
 never passed off as a flip.
 
 A task counts ONLY when the real lowering is VERIFIED and the twin is REFUTED
-by the actual kernel — both measured, never predicted. Twin VERIFIED now says
+by the actual kernel, both measured and never predicted. Twin VERIFIED now says
 one specific thing, because the twin is known to be broken: the spec is
 vacuous, or the dropped invariant's obligation is one the kernel re-derives.
 
 ## What v1 does not claim
 
-No unbounded quantifiers. No arrays-with-mutation, no heap, no aliasing —
+No unbounded quantifiers. No arrays-with-mutation, no heap, no aliasing:
 `seq` is a value. No division or modulo. No overflow semantics (mathematical
 integers; bounded backends owe explicit range obligations). One return
 value. No mutual recursion, no higher-order functions, no seq-valued
