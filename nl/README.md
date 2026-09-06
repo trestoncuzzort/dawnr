@@ -90,6 +90,18 @@ strings here, not the raw ClassLabel integers.
 problems whose correct answers sit in the same record. That is a ready-made preference
 signal chosen/rejected pairs grounded in a real judge rather than in a model's opinion.
 
+`scripts/preference_pairs.py` builds them, and the yield is measured rather than hoped for:
+of 13,610 CodeContests problems, **11,000 (80.8%) carry both an accepted and a rejected
+submission in the same language**, giving **40,202 pairs** at four per problem (PYTHON3
+27,673, CPP 11,774, PYTHON 755; CODEFORCES 28,837, AIZU 6,292, ATCODER 5,073). Pairing is
+within one language on purpose: a cross-language pair adds a second difference nobody
+asked for. Of the 2,610 problems that yield nothing, 2,266 simply have no rejected
+submission.
+
+Read the labels with the third Known Limitation below in mind. Nothing was executed, so
+"rejected" means the judge rejected it, and upstream does not distinguish a wrong answer
+from a timeout. A pair can therefore encode "slower" rather than "wrong".
+
 **APPS** (`apps_raw_*`) scraped with judge data.
 
 | field | type | notes |
