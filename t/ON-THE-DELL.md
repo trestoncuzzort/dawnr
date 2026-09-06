@@ -1,10 +1,18 @@
 # What still needs the Dell
 
-Written 2026-09-06 from the MacBook, with the Dell off the VPN. The list got
-much shorter that day, so read the second section before assuming something
-here is blocked.
+Instructions for the next time you sit at the Dell. Written 2026-09-06 from the
+MacBook while the Dell was off the VPN; the list got much shorter that day, so
+read "no longer a Dell item" at the bottom before assuming anything here is
+blocked.
 
-Each item says what it is, the command, and how you know it is done.
+Each item says what it is, the command to run, and how you know it is done.
+
+Note on what "off the VPN" meant: unreachable BY US, not offline. The Dell kept
+its own internet, its session finished the `lifter-785-review-fix` workflow, and
+it pushed three commits to main at 02:52 to 03:16 (`ff1c324`, `eace133`,
+`9ce8234`: the 785 run, WS-12.4 done, LIFTER-785.md's disagreement table). Two
+items that were on this list when it was written are therefore already closed,
+and are recorded below as closed rather than deleted.
 
 ## 1. The hand-lifted seed pairs. The only hard blocker.
 
@@ -25,29 +33,24 @@ skipping them. Then commit them. They are small, irreplaceable, and being
 outside the repo is what makes them a single point of failure; the argument
 that t-corpora is a data checkout does not apply to a fixture a person wrote.
 
-## 2. The uncommitted lifter WIP. Do not apply the patch.
+## 2. CLOSED. The lifter WIP patch is superseded; delete it.
 
-Pulled off the Dell before the VPN dropped, saved at
-`scratchpad/csdell/lifter-wip.patch`: 458 insertions across `lift_census.py`,
-`lift_check.py`, `lift_classify.py`, `lift_rewrite.py` and
-`test_lift_report.py`, based on `f2cd948`.
+`scratchpad/csdell/lifter-wip.patch` (458 insertions, based on `f2cd948`) was
+pulled off the Dell mid-write. The workflow then finished and pushed, and what
+landed is a strict superset: `lift_census.py` 215 lines and
+`test_lift_report.py` 112 match the patch exactly, while `lift_check.py` (286
+vs 83), `lift_classify.py` (83 vs 66) and `lift_rewrite.py` (49 vs 19) are
+larger. Nothing in the patch is missing from main. Do not apply it; delete it.
 
-It is a snapshot of files the `lifter-785-review-fix` workflow was writing at
-the time, not a finished change. Its final state supersedes the patch, so take
-the workflow's result and use the patch only to see what was in flight.
+## 3. CLOSED. The `lifter-785-review-fix` workflow finished.
 
-DONE WHEN: the workflow's output is on main and the patch is deleted.
+Run `wf_39c9d22b-012`, session `40721cbd-6036-407e-8e9e-35b3828f9593`. Its
+output is `ff1c324`, `eace133` and `9ce8234` on main: the 785 run with crashes
+to zero, the review's two wrong lifts closed, WS-12.4 marked done, and
+`t/LIFTER-785.md` (1,386 lines) carrying the disagreement table.
 
-## 3. The `lifter-785-review-fix` workflow's results.
-
-Run `wf_39c9d22b-012`, session `40721cbd-6036-407e-8e9e-35b3828f9593`. Four
-Sonnet fixers (classify crashes and misses, `L_req` on array-as-seq,
-parse-failure naming, census join tables) plus a reviewer, then one fixer for
-the reviewer's findings. A workflow-nanny was watching it. It runs locally on
-the Dell and did not need the VPN, so it should have finished.
-
-DONE WHEN: its findings are read, the real fixes are on main, and the residuals
-it names are recorded rather than lost.
+STILL WORTH DOING: read `t/LIFTER-785.md`'s residuals. A workflow that closes
+its own findings is not the same as a person having read what it left open.
 
 ## 4. GPU work: WS-12.6, the spec experiment.
 
