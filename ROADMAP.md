@@ -662,15 +662,27 @@ nothing until fstar's door is fixed.** `t/COVERAGE-lifted-785.md`
 minutes, 0 flaked cells; the taxonomy is its closing section). Counts per
 column: dafny 132, spark 100, fstar 100, verus 92, lean 80, rocq 77,
 framac 62; 30 of 159 count in all seven, and 5 of the 26 lifted MBPP-DFY
-tasks, against a bar of 82 of 164. The hurdle the run found: fstar reads
-23 real programs REFUTED that dafny verifies, all nat-typed loops, because
-`verifiers/fstar.py` still maps F* error 19 (the prover gave up) to
-REFUTED, the door the 2026-09-02 purge closed in every other column and
-left open here because the fuzz corpus never failed an F* proof. Its 100
-twin refutations rest on the same door. Next: fstar adopts the
-certificate protocol (10.7's mechanism, a lemma restating the measured
-witness), the column is re-run, and only then is the seven-column count a
-number. Also named: 19 fstar malformed reals and 8 abstentions (13.2), 58
+tasks, against a bar of 82 of 164.
+
+**The hurdle the run found is FIXED, 2026-09-06, and the sweep must be
+re-run before its fstar column is read.** `verifiers/fstar.py` mapped F*
+Error 19 (the prover gave up) to REFUTED, the door the 2026-09-02 purge
+closed everywhere else and left open here because the fuzz corpus never
+failed an F* proof; the sweep measured 23 real programs REFUTED that dafny
+verifies, all nat-typed loops, with the column's 100 twin refutations on
+the same door. Error 19 now mints UNPROVED and fstar is the seventh column
+on 10.7's certificate protocol: `lower_fstar.py` appends a
+`t_refutation_certificate` on twin calls, stating the witness instance
+built by `lower_verus.certificate_formula` (one formula, seven columns,
+factored out for this) and discharged by `assert_norm`, and the adapter
+mints REFUTED only when a targeted `--admit_except` run accepts that one
+lemma. Measured: all 11 committed twins refute through it, the 77-cell
+matrix is IDENTICAL to the committed one (zero cells changed, so the door
+closed at no cost in flips), and all four decoys behave (a real carrying a
+true certificate reads MALFORMED, a twin carrying a false one reads
+UNPROVED). Next: re-run the 159-task sweep, which is now a mechanical
+re-measurement rather than a design question, and only then is the
+seven-column count a number. Also named: 19 fstar malformed reals and 8 abstentions (13.2), 58
 framac exit-witness timeouts (10.7's residual), 17 dafny preservation
 twins without certificates, 5 dafny verified twins for 12.3, 26 lean and
 16 spark abstentions.
