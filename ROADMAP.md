@@ -650,13 +650,30 @@ lifted row says "agrees on N of M points" and never claims body identity;
 
 Run the lifted corpus through the full pipeline, seven kernels, real and
 twin, flake-checked. This is the first coverage number that means what the
-1.0 bar says, and the first honest answer to how far t actually reaches.
-Expect it to be lower than the lexical 77: lifting can fail where a regex saw
-nothing to object to.
+1.0 bar says.
 
 DONE WHEN: a coverage table sits beside AGREEMENT.md giving verified-with-
 twin-refuted counts per kernel over the lifted corpus, with the refusals
 taxonomised into lifter gaps and language gaps.
+
+**PARTIAL 2026-09-06: the table exists, the count is an upper bound on
+nothing until fstar's door is fixed.** `t/COVERAGE-lifted-785.md`
+(`run_par.py --tasks --out --table`, 159 lifted tasks, 48 jobs, 10
+minutes, 0 flaked cells; the taxonomy is its closing section). Counts per
+column: dafny 132, spark 100, fstar 100, verus 92, lean 80, rocq 77,
+framac 62; 30 of 159 count in all seven, and 5 of the 26 lifted MBPP-DFY
+tasks, against a bar of 82 of 164. The hurdle the run found: fstar reads
+23 real programs REFUTED that dafny verifies, all nat-typed loops, because
+`verifiers/fstar.py` still maps F* error 19 (the prover gave up) to
+REFUTED, the door the 2026-09-02 purge closed in every other column and
+left open here because the fuzz corpus never failed an F* proof. Its 100
+twin refutations rest on the same door. Next: fstar adopts the
+certificate protocol (10.7's mechanism, a lemma restating the measured
+witness), the column is re-run, and only then is the seven-column count a
+number. Also named: 19 fstar malformed reals and 8 abstentions (13.2), 58
+framac exit-witness timeouts (10.7's residual), 17 dafny preservation
+twins without certificates, 5 dafny verified twins for 12.3, 26 lean and
+16 spark abstentions.
 
 ### 12.6 The spec experiment
 
@@ -930,8 +947,8 @@ UNBLOCKS: 16.2, 16.3.
 #### 16.2 MBPP-DFY to half
 
 The coverage half of the bar: 82 of 164 lifted and VERIFIED by all seven
-kernels with twins REFUTED. 25 of 164 are lexically in fragment today; the
-measured number after 12.5 is unknown and expected lower.
+kernels with twins REFUTED. Measured 2026-09-06 (12.5): 26 of the 164
+lift, 5 count in all seven columns, with fstar's column not yet evidence.
 
 DONE WHEN: the coverage table beside AGREEMENT.md shows at least 82,
 reproduced from clean scratch by an adversarial reader.
