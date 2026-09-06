@@ -103,9 +103,14 @@ class CensusRow:
     `file` and `method` identify the row (`method` is `None` for a
     file-level `Refusal` that never reached method classification, e.g.
     `resolve-failure`, `no-method`). `in_fragment` and `gaps` are copied
-    from the matching `census.json` record (`gaps` a dict of every gap-name
-    boolean on that record, not just the ones relevant to this row).
-    `lifter_verdict` is `"lifted"` or `"refused:<reason>"`; `refusal` holds
+    from the matching `census.json` record (`gaps` the list of census gap
+    NAMES that fired on that record -- `census.json`'s own `"gaps"` field,
+    already a list of names, not the full boolean map of every detector;
+    empty when `in_fragment` is true). Keeping `gaps` as names rather than
+    booleans is what makes the pair tally (`gap_pair_tally`, section 8/
+    18.2) readable: a bare `True`/`False` map cannot be joined against a
+    lifter refusal reason by name. `lifter_verdict` is `"lifted"` or
+    `"refused:<reason>"`; `refusal` holds
     the full `Refusal` (reason, token, line, stage) when refused, `None`
     when lifted. `rewrites` and `renames` mirror the method's `LiftRecord`
     (empty when refused before rewrite). `check_wf`, `interp_points`,
@@ -120,7 +125,7 @@ class CensusRow:
     file: str
     method: Optional[str]
     in_fragment: bool
-    gaps: dict[str, bool]
+    gaps: list[str]
     lifter_verdict: str
     refusal: Optional[Refusal] = None
     rewrites: list[str] = field(default_factory=list)
@@ -258,9 +263,18 @@ def _record_check_wf(refusal: Optional[Refusal]) -> list[str]:
     return []
 
 
-def _census_gaps_dict(census_record: dict) -> dict[str, bool]:
+def _census_gaps_dict(census_record: dict) -> list[str]:
+    """The census gap NAMES that fired on this record: `census.json`'s own
+    `"gaps"` list (a curated subset of the boolean detector fields -- e.g.
+    `has-method`/`method-with-ensures` are true on most records but never
+    appear in `"gaps"`, since they are not fragment-blocking gaps), copied
+    as-is. Falls back to deriving the list from the boolean fields only
+    when a record has no `"gaps"` key at all (defensive: every record in
+    the shipped `census.json` has one)."""
+    if "gaps" in census_record:
+        return list(census_record["gaps"])
     skip = {"file", "family", "gaps", "in_fragment"}
-    return {k: bool(v) for k, v in census_record.items() if k not in skip}
+    return sorted(k for k, v in census_record.items() if k not in skip and v)
 
 
 def _row_from_method_outcome(census_record: dict, method_outcome) -> "CensusRow":
@@ -479,6 +493,111 @@ def summarize(rows: list["CensusRow"]) -> ReportSummary:
     return s
 
 
+def gap_pair_tally(rows: list["CensusRow"]) -> dict[tuple[str, str], int]:
+    """Section 8/18.2's readability gap: the existing report has the
+    disagreement-class COUNTS (`gap-name`: 421, `lifter`: 52) but not
+    which census detector disagrees with which lifter reason. This tallies
+    the pair `(lifter_side, gap_name)` over every row whose disagreement
+    verdict is `"gap-name"` or `"lifter"` -- the two classes section 8
+    defines as a real disagreement between the two graders (`"agree"`,
+    `"undecided"` and the unreachable `"census"` are not pairs of
+    disagreeing reasons and are excluded).
+
+    `lifter_side` is `"lifted"` when the row lifted (the `"lifter"` class
+    where the census flagged a gap but the row lifted and checked clean
+    anyway) or the refusal's `reason` otherwise. `gap_name` ranges over
+    every name in `row.gaps` (the census's own fired-gap list, decision-9/
+    18.2 per-row); a row with no fired gaps (the `"lifter"` class's other
+    shape: census says `in_fragment=True`, the lifter refused naming a
+    real construct, so `row.gaps` is empty by construction) is tallied
+    once under the sentinel gap name `"(in-fragment)"` rather than
+    silently dropped, so the pair count total still equals the number of
+    qualifying rows when every row has 0 or 1 fired gaps, and is >= that
+    count when a row has more than one.
+
+    A row with 2+ fired gaps contributes one pair per gap, not one pair
+    for the row as a whole: section 8 draws no rule for picking a single
+    "the" gap that caused a multi-gap disagreement, so this tallies "the
+    lifter reason co-occurred with gap G" for every G the census actually
+    flagged, which is the only reading that does not silently discard
+    data the census recorded."""
+    tally: dict[tuple[str, str], int] = {}
+    for row in rows:
+        if row.disagreement not in ("gap-name", "lifter"):
+            continue
+        lifter_side = "lifted" if row.refusal is None else row.refusal.reason
+        gaps = list(row.gaps) if row.gaps else ["(in-fragment)"]
+        for gap in gaps:
+            key = (lifter_side, gap)
+            tally[key] = tally.get(key, 0) + 1
+    return tally
+
+
+def gap_pair_tally_lines(tally: dict[tuple[str, str], int], limit: Optional[int] = None) -> list[str]:
+    """`gap_pair_tally`'s output rendered as sorted `"reason x gap: N"`
+    lines, most frequent first, ties broken by (reason, gap) for
+    determinism. `limit` truncates to the top N lines (the measured
+    acceptance asks for "the pair tally's top 15 lines")."""
+    ordered = sorted(tally.items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1]))
+    if limit is not None:
+        ordered = ordered[:limit]
+    return [f"{reason} x {gap}: {count}" for (reason, gap), count in ordered]
+
+
+def lifter_disagreement_rows(rows: list["CensusRow"]) -> list["CensusRow"]:
+    """The `"lifter"`-verdict rows (section 8: the census is wrong, either
+    a detector fault on an absent construct or one of the verified
+    rewrites), in input order."""
+    return [r for r in rows if r.disagreement == "lifter"]
+
+
+def undecided_rows(rows: list["CensusRow"]) -> list["CensusRow"]:
+    """The `"undecided"`-verdict rows (a policy reason/gap, `lift-check-
+    failed`, an incomplete-pipeline reason, or an unchecked lift), in
+    input order."""
+    return [r for r in rows if r.disagreement == "undecided"]
+
+
+def undecided_reason(row: "CensusRow") -> str:
+    """Why one `"undecided"` row was left undecided, for the report's
+    undecided-rows list. Re-derives the branch of `disagreement_verdict`
+    that produced `"undecided"` for this row (that function itself
+    returns only the verdict, not which branch fired) from the same
+    inputs: a refusal's own `reason` when the row refused (covers the
+    policy-reason, `lift-check-failed`, and incomplete-pipeline branches
+    all at once, since each is literally that reason); a fired policy gap
+    named when the row lifted anyway (the out-of-fragment policy-gap
+    branch); `"unchecked-lift"` otherwise (lifted, but `lifted_and_checked`
+    was false -- e.g. `--skip-check`)."""
+    if row.refusal is not None:
+        return row.refusal.reason
+    policy_gaps = sorted(g for g in row.gaps if g in POLICY_GAP_NAMES)
+    if policy_gaps:
+        return "policy-gap:" + ",".join(policy_gaps)
+    return "unchecked-lift"
+
+
+def refusal_reason_by_infragment(rows: list["CensusRow"]) -> dict[str, dict[str, int]]:
+    """Third table the acceptance asks for: the refusal-reason tally
+    (already in `ReportSummary.refusal_reason_counts`) split by whether
+    the census called the file/row in fragment, so a reader can see, for
+    each reason, how many of its refusals the census also considered
+    in-fragment (a `"lifter"`-class signal per section 8: the census
+    cannot be right that an in-fragment program's lifter refusal names a
+    real construct) versus out of fragment."""
+    tally: dict[str, dict[str, int]] = {}
+    for row in rows:
+        reason = _refusal_reason(row)
+        if reason is None:
+            continue
+        bucket = tally.setdefault(reason, {"in_fragment": 0, "out_of_fragment": 0})
+        if row.in_fragment:
+            bucket["in_fragment"] += 1
+        else:
+            bucket["out_of_fragment"] += 1
+    return tally
+
+
 def _row_to_jsonable(row: "CensusRow") -> dict:
     d = asdict(row)
     # asdict() already turns the nested Refusal dataclass into a plain
@@ -512,6 +631,70 @@ def build_report(rows: list["CensusRow"]) -> tuple[str, dict]:
     lines.append("Refusal reason counts:")
     for reason, count in sorted(summary.refusal_reason_counts.items()):
         lines.append(f"- {reason}: {count}")
+
+    # Table 1 (section 8/18.2): the disagreement pair tally -- for every
+    # "gap-name" and "lifter" row, which lifter reason (or "lifted")
+    # paired with which fired census gap name, and how often.
+    tally = gap_pair_tally(rows)
+    lines.append("")
+    lines.append("## Disagreement pair tally (gap-name and lifter rows)")
+    lines.append("")
+    lines.append("Lifter side (refusal reason, or `lifted`) paired with each census gap "
+                 "name that fired, tallied over every row whose disagreement verdict is "
+                 "`gap-name` or `lifter`; a row with no fired gap (an in-fragment `lifter` "
+                 "row) is tallied under `(in-fragment)`.")
+    lines.append("")
+    lines.append("| lifter side | census gap | count |")
+    lines.append("|---|---|---|")
+    for (reason, gap), count in sorted(tally.items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1])):
+        lines.append(f"| {reason} | {gap} | {count} |")
+
+    # Table 2 (section 8): the "lifter"-verdict rows, one per row, with
+    # the census gaps and the lifter's own verdict.
+    lifter_rows = lifter_disagreement_rows(rows)
+    lines.append("")
+    lines.append(f"## Lifter-verdict rows ({len(lifter_rows)})")
+    lines.append("")
+    lines.append("Rows where the section-8 rule says the census is wrong (a detector "
+                 "fault, a verified rewrite, or an in-fragment refusal naming a real "
+                 "construct).")
+    lines.append("")
+    lines.append("| file | method | census gaps | lifter verdict |")
+    lines.append("|---|---|---|---|")
+    for row in lifter_rows:
+        method_cell = row.method if row.method is not None else "(file)"
+        gaps_cell = ", ".join(row.gaps) if row.gaps else "(none)"
+        lines.append(f"| {row.file} | {method_cell} | {gaps_cell} | {row.lifter_verdict} |")
+
+    # Table 3 (section 8): the "undecided" rows, one per row, with the
+    # reason (policy call, lift-check-failed, incomplete pipeline, or
+    # unchecked lift).
+    undec_rows = undecided_rows(rows)
+    lines.append("")
+    lines.append(f"## Undecided rows ({len(undec_rows)})")
+    lines.append("")
+    lines.append("Rows section 8 leaves for a human: a policy reason or gap, a "
+                 "lift-check failure (a bug report against the lifter), an incomplete "
+                 "pipeline stage, or an unchecked lift.")
+    lines.append("")
+    lines.append("| file | method | reason |")
+    lines.append("|---|---|---|")
+    for row in undec_rows:
+        method_cell = row.method if row.method is not None else "(file)"
+        lines.append(f"| {row.file} | {method_cell} | {undecided_reason(row)} |")
+
+    # Table 4: refusal-reason tally split by whether the census called
+    # the row in fragment.
+    by_infrag = refusal_reason_by_infragment(rows)
+    lines.append("")
+    lines.append("## Refusal reason tally by census in_fragment")
+    lines.append("")
+    lines.append("| reason | in_fragment | out_of_fragment |")
+    lines.append("|---|---|---|")
+    for reason in sorted(by_infrag):
+        counts = by_infrag[reason]
+        lines.append(f"| {reason} | {counts['in_fragment']} | {counts['out_of_fragment']} |")
+
     lines.append("")
     lines.append("| file | method | in_fragment | verdict | disagreement |")
     lines.append("|---|---|---|---|---|")
@@ -522,6 +705,21 @@ def build_report(rows: list["CensusRow"]) -> tuple[str, dict]:
 
     report_json = {
         "summary": asdict(summary),
+        "gap_pair_tally": [
+            {"lifter_side": reason, "gap": gap, "count": count}
+            for (reason, gap), count in sorted(
+                tally.items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1]))
+        ],
+        "lifter_rows": [
+            {"file": r.file, "method": r.method, "gaps": list(r.gaps),
+             "lifter_verdict": r.lifter_verdict}
+            for r in lifter_rows
+        ],
+        "undecided_rows": [
+            {"file": r.file, "method": r.method, "reason": undecided_reason(r)}
+            for r in undec_rows
+        ],
+        "refusal_reason_by_infragment": by_infrag,
         "rows": [_row_to_jsonable(r) for r in rows],
     }
     return "\n".join(lines) + "\n", report_json
@@ -601,6 +799,11 @@ def main(argv: Optional[list[str]] = None) -> int:
           f"{summary.census_in_program_rows} program rows")
     for verdict in ("agree", "lifter", "census", "undecided", "gap-name"):
         print(f"  {verdict}: {summary.disagreement_counts.get(verdict, 0)}")
+    print("pair tally (top 15):")
+    for line in gap_pair_tally_lines(gap_pair_tally(rows), limit=15):
+        print(f"  {line}")
+    print(f"lifter rows: {len(lifter_disagreement_rows(rows))}")
+    print(f"undecided rows: {len(undecided_rows(rows))}")
     print(f"wrote {md_path}")
     print(f"wrote {json_path}")
     return 0

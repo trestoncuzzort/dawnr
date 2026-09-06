@@ -343,8 +343,81 @@ def test_inverse_committed_and_corpus(slow: bool) -> None:
     assert not mismatches, f"{len(mismatches)} inverse-test mismatch(es), see above"
 
 
+def test_array_program_end_to_end(slow: bool) -> None:
+    """Read-only `array<int>` parameter (decision 1, `array-readonly-as-
+    seq`) end to end on a real corpus file: `Clover_max_array.dfy`'s
+    `maxArray` lifts `a: array<int>` to a task `seq<int>` of the same
+    name, so the checker lemmas keep ONE lemma parameter per argument,
+    typed to the SOURCE's `array<int>`, and every lifted-side reference to
+    it must print as its sequence view `a[..]` rather than bare `a` (an
+    `array<int>` has no `|.|`/seq-index operator) -- the bug this item
+    fixed, measured directly against dafny before the fix ("size operator
+    expects a collection argument (instead got array<int>)" on L_req,
+    L_ens, L_inv_0 and L_dec_0, all four `tool_error`). Asserts every
+    lemma verdict is `verified`, not merely that `check` ran."""
+    if not slow:
+        print("test_array_program_end_to_end: skipped (pass --slow)")
+        return
+    dfy_path = test_lifter.CORPUS_DIR / "Clover_max_array.dfy"
+    t0 = time.monotonic()
+    fx = _lift_source(dfy_path, "maxArray", timeout_s=90.0)
+    assert fx["status"] == "ok", f"maxArray lift refused upstream: {fx}"
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out = lift_check.check(fx["task"], fx["source"], fx["closure"], fx["record"],
+                          OUT_DIR / "Clover_max_array", timeout_s=90.0)
+    wall = round(time.monotonic() - t0, 2)
+    verdicts = dict(fx["record"].checker_verdicts)
+    print(f"test_array_program_end_to_end: maxArray verdicts={json.dumps(verdicts)} "
+         f"check_wf={out.refusal is None or out.refusal.reason != 'check-wf-failed'} "
+         f"wall_s={wall}")
+    assert verdicts, "no lemma verdicts recorded at all"
+    non_verified = {k: v for k, v in verdicts.items() if v != "verified"}
+    assert not non_verified, f"non-verified lemma verdict(s) on maxArray: {non_verified}"
+    for expected in ("L_req", "L_ens", "L_inv_0", "L_dec_0"):
+        assert expected in verdicts, f"expected lemma {expected!r} missing: {verdicts}"
+
+
+def test_kernel_unproved_not_folded_into_lift_check_failed(slow: bool) -> None:
+    """Section 9 item 7 / decision 17: the checker file's lowered
+    `<Method>` (item 2) is a SEPARATE column from the L_* lemma verdicts,
+    because decision 8 drops hints (asserts, lemma calls, function
+    ensures, nat-result facts) the kernel's own proof may need -- its
+    body reading UNPROVED is then an expected consequence of that
+    decision, not a wrong lift. Before this fix, `_verify_checker` folded
+    ANY error attributable to the finish line's error count into
+    `first_bad`/`lift-check-failed` when no lemma scan caught it,
+    including the lowered method's own symbol (measured: a probe lifting
+    `SumSeq(s: seq<nat>) ...` reported `lift-check-failed:
+    Probe_seqnat__sumseq` -- the LOWERED METHOD's name, not a lemma --
+    while every `L_*` verdict was `verified`). This constructs the same
+    shape directly (a trivially-true lemma plus a kernel method whose own
+    `ensures` is unprovable as written) and asserts the lemma verifies,
+    `all_ok` stays true (no `lift-check-failed`), and the kernel's own
+    verdict surfaces via `lowered_verdict`/`record.lowered_task_verdict`,
+    never via `first_bad`."""
+    if not slow:
+        print("test_kernel_unproved_not_folded_into_lift_check_failed: skipped (pass --slow)")
+        return
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    dfy = OUT_DIR / "unit_kernel_unproved.dfy"
+    dfy.write_text(
+        "lemma L_req(x: int)\n  ensures true\n{ }\n\n"
+        "method Kernel(x: int) returns (r: int)\n  ensures r > x\n{\n  r := x;\n}\n",
+        encoding="utf-8")
+    verdicts, exit_code, all_ok, first_bad, warnings, lowered_verdict = (
+        lift_check._verify_checker(dfy, ["L_req"], 60.0, "Kernel"))
+    print(f"test_kernel_unproved_not_folded_into_lift_check_failed: "
+         f"verdicts={verdicts} all_ok={all_ok} first_bad={first_bad!r} "
+         f"lowered_verdict={lowered_verdict!r}")
+    assert verdicts.get("L_req") == "verified", verdicts
+    assert all_ok, f"a dropped-hint kernel failure must not fail the lift, got all_ok={all_ok}"
+    assert first_bad is None, f"the kernel's own failure must not be named as first_bad, got {first_bad!r}"
+    assert lowered_verdict == "unproved", f"expected the kernel verdict recorded separately, got {lowered_verdict!r}"
+
+
 SLOW_TESTS = [test_seeds_check_end_to_end, test_t7_two_seed_pairs,
-             test_inverse_committed_and_corpus]
+             test_inverse_committed_and_corpus, test_array_program_end_to_end,
+             test_kernel_unproved_not_folded_into_lift_check_failed]
 
 
 def run(slow: bool = False) -> None:

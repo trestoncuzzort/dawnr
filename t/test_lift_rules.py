@@ -1545,6 +1545,151 @@ method UseSumDec(x: int, y: int) returns (r: int)
           "neither-unchanged -> guess:sum(x,y)")
 
 
+def test_set_refused_before_rewrite() -> None:
+    """The 785 run found `SetDisplay` and a set `Comprehension` reaching
+    lift_rewrite uncaught (dafny-synthesis task_id_455 / task_id_142);
+    classify must refuse `set` for both, and for a set-typed local, before
+    a rewrite is ever attempted."""
+    display_src = """
+method UseDisplay(x: int) returns (r: bool)
+  ensures r == true
+{
+  var s := {1, 2, 3};
+  r := x in s;
+}
+"""
+    v = _classify_one(display_src, "UseDisplay")
+    assert isinstance(v, C.Refusal) and v.reason == "set", f"expected set refusal, got {v}"
+
+    compr_src = """
+method UseCompr(n: int) returns (r: bool)
+  ensures r == true
+{
+  var s := set x: int | 0 <= x < n :: x;
+  r := true;
+}
+"""
+    v2 = _classify_one(compr_src, "UseCompr")
+    assert isinstance(v2, C.Refusal) and v2.reason == "set", f"expected set refusal, got {v2}"
+    print("test_set_refused_before_rewrite: a set display and a set comprehension both "
+          "refuse `set` at classify, never reaching rewrite")
+
+
+def test_calls_other_method_in_assignment() -> None:
+    """Section 4.5's `x := M(args);` row: a call of a DIFFERENT method,
+    as a plain assignment's or a var-init's right-hand side, must refuse
+    `calls-other-method` -- previously only a bare `M(args);` call
+    STATEMENT was caught, so this shape (nitwit's `nit_flip` calling the
+    method `max_nit`, VSI-Benchmarks' `Mul` calling `Add`) reached
+    lift_rewrite and either crashed or emitted an unknown-fun call."""
+    src = """
+method Helper(x: int) returns (h: int)
+  ensures h == x
+{
+  h := x;
+}
+
+method Caller(x: int) returns (r: int)
+  ensures r == x
+{
+  var t := Helper(x);
+  r := t;
+}
+"""
+    v = _classify_one(src, "Caller")
+    assert isinstance(v, C.Refusal) and v.reason == "calls-other-method", f"expected calls-other-method, got {v}"
+    print("test_calls_other_method_in_assignment: `var t := Helper(x);` refuses "
+          "calls-other-method (not just a bare call statement)")
+
+
+def test_null_refuses_heap() -> None:
+    """A bare `null` literal (the shim, like lift_parse.py, has no
+    dedicated NullLit node -- it is a plain Ident named "null") is a heap
+    fact t has no word for: an array param compared to null (minArray,
+    FindMax) must refuse `heap`, not reach rewrite as an ordinary
+    identifier."""
+    src = """
+method UsesNull(a: array<int>) returns (r: int)
+  requires a != null && a.Length > 0
+  ensures r == 0
+{
+  r := 0;
+}
+"""
+    v = _classify_one(src, "UsesNull")
+    assert isinstance(v, C.Refusal) and v.reason == "heap", f"expected heap refusal, got {v}"
+    print("test_null_refuses_heap: `a != null` refuses heap")
+
+
+def test_bodyless_method_refused() -> None:
+    """A method with no body (`method q(...) returns (...) requires ..
+    ensures ..` and no `{ }`, ex10_hoangkim's `q`) must refuse
+    `bodyless-method` instead of reaching lift_rewrite's
+    `_desugar_returns(None, ...)` and crashing with a TypeError."""
+    src = """
+method NoBody(x: nat) returns (z: nat)
+  requires x > 2
+  ensures z > x
+"""
+    v = _classify_one(src, "NoBody")
+    assert isinstance(v, C.Refusal) and v.reason == "bodyless-method", f"expected bodyless-method, got {v}"
+    print("test_bodyless_method_refused: a method with no body refuses bodyless-method")
+
+
+def test_method_level_decreases_neither_projects_nor_sums() -> None:
+    """Decision 11's tuple-decreases test, done at the method-level self-
+    call site (`mystery1`/`mystery2`-shaped): when NEITHER stated
+    component ever changes across every self-call (both params passed
+    straight through unchanged, so `unchanged_at_every_call` drops both),
+    the tuple neither projects nor sums and classify must refuse
+    `lexicographic-decreases` -- previously this reached
+    lift_rewrite._method_level_decreases and crashed with an IndexError
+    on an empty `lifted` list (both Software-building-and-verification
+    -Projects `mystery1` and `mystery2`)."""
+    src = """
+method Loopy(n: nat, m: nat) returns (res: nat)
+  decreases n, m
+  ensures n + m == res
+{
+  if n == 0 {
+    res := m;
+  } else {
+    var aux := Loopy(n, m);
+    res := 1 + aux;
+  }
+}
+"""
+    v = _classify_one(src, "Loopy")
+    assert isinstance(v, C.Refusal) and v.reason == "lexicographic-decreases", (
+        f"expected lexicographic-decreases, got {v}")
+    print("test_method_level_decreases_neither_projects_nor_sums: neither param ever "
+          "changes at the self-call -> lexicographic-decreases (not a rewrite crash)")
+
+
+def test_predicate_result_is_bool() -> None:
+    """`predicate` declares no `: T` at all (implicit `: bool`); a spec_fun
+    built from one must get a `bool` result and a `False` totalisation
+    default, not fall through to `int`/`0` for lack of an explicit
+    ret_type -- the bug behind nitwit's max_nit/nit_flip check_wf failure
+    ("ite branches differ: bool vs int; spec_fun ... body type != result")."""
+    src = """
+predicate IsBig(b: nat) {
+  b >= 2
+}
+
+method UsesPred(b: nat) returns (r: bool)
+  ensures r == IsBig(b)
+{
+  r := IsBig(b);
+}
+"""
+    task, rec = _lift_one(src, "UsesPred")
+    spec_fun = task["spec_funs"][0]
+    assert spec_fun["result"] == "bool", f"expected bool result, got {spec_fun}"
+    print("test_predicate_result_is_bool: a `predicate`'s spec_fun gets result \"bool\" "
+          "(and check_wf, run via _lift_one, passes)")
+
+
 def test_multi_method_one_task_each() -> None:
     src = """
 method First(x: int) returns (r: int)
@@ -1574,6 +1719,67 @@ method Second(x: int) returns (r: int)
     print(f"test_multi_method_one_task_each: 2 gradable methods -> 2 tasks, names={sorted(names)}")
 
 
+def test_seq_nat_param_refused() -> None:
+    """Decision 14: `seq<nat>`'s element bound is part of the source's
+    precondition exactly as a `nat` parameter's is (section 7); the
+    lifter carries no per-element guard for a bare `seq`, so a `seq<nat>`
+    parameter must refuse `nat-seq-elements` rather than lift to an
+    unconstrained `seq` (probe_seqnat.dfy: `SumSeq(s: seq<nat>) returns
+    (r: int) ensures r >= 0` was lifting to a task whose domain admits
+    `s = [-1]`, a wider domain than the source verified over)."""
+    src = """
+method SumSeq(s: seq<nat>) returns (r: int)
+  ensures r >= 0
+{
+  r := 0;
+}
+"""
+    v = _classify_one(src, "SumSeq")
+    assert isinstance(v, C.Refusal) and v.reason == "nat-seq-elements", (
+        f"expected nat-seq-elements refusal, got {v}")
+    # A plain seq<int> param must still lift (only the nat-elements case
+    # is refused; seq<int> has no such bound to lose).
+    src_int = src.replace("seq<nat>", "seq<int>")
+    task, _rec = _lift_one(src_int, "SumSeq")
+    assert task["params"][0]["type"] == "seq"
+    print("test_seq_nat_param_refused: seq<nat> param refuses nat-seq-elements; "
+         "seq<int> still lifts")
+
+
+def test_quantifier_membership_binder_substitution() -> None:
+    """Section 4.4's `forall k | k in s :: P` row must substitute `at(s,
+    j)` for the bound element `k`, not the bare sequence `s` itself (the
+    finding: `_lift_quantifier`'s `_AtHole` returned the seq expression
+    directly, so every occurrence of `k` in the body became `s`, turning
+    `k > 0` into the ill-typed `s > 0`). `_lift_one` already asserts
+    `check_wf(rr.task) == []`, which the old bug failed (`> is int-only`);
+    this also checks the printed body actually indexes `s` by the fresh
+    binder."""
+    src = """
+method AllPos(s: seq<int>) returns (r: int)
+  requires forall k | k in s :: k > 0
+  ensures r >= 0
+{
+  r := 0;
+}
+"""
+    task, rec = _lift_one(src, "AllPos")
+    req = task["requires"][0]
+    assert "forall" in req, f"expected a forall in requires, got {req}"
+    body = req["forall"]["body"]
+    # body is `at(s, j) > 0`, never the bare seq `s > 0`.
+    assert body["op"] == ">", body
+    lhs = body["args"][0]
+    assert lhs.get("op") == "at", f"expected the binder indexed into s (`at`), got {lhs}"
+    at_args = lhs["args"]
+    assert at_args[0] == {"var": "s"}, at_args
+    assert at_args[1] == {"var": req["forall"]["var"]}, (
+        f"the `at` index must be the quantifier's own (fresh) binder, got {at_args[1]!r} "
+        f"vs binder {req['forall']['var']!r}")
+    print(f"test_quantifier_membership_binder_substitution: "
+         f"'k | k in s :: k > 0' -> at(s, {req['forall']['var']}) > 0")
+
+
 UNIT_TESTS = [
     test_chain_desugared, test_iff_to_eq, test_nat_return_ensures,
     test_nat_invariant_added_and_dedup, test_spec_fun_totalised,
@@ -1581,6 +1787,11 @@ UNIT_TESTS = [
     test_split_conjuncts_ensures_not_invariants, test_in_desugared_fresh_binder,
     test_array_readonly_as_seq_and_mutation_refusal,
     test_decreases_tuple_projection_and_guess_sum, test_multi_method_one_task_each,
+    test_set_refused_before_rewrite, test_calls_other_method_in_assignment,
+    test_null_refuses_heap, test_bodyless_method_refused,
+    test_method_level_decreases_neither_projects_nor_sums,
+    test_predicate_result_is_bool,
+    test_seq_nat_param_refused, test_quantifier_membership_binder_substitution,
 ]
 
 

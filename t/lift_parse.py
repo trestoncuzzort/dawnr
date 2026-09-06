@@ -74,17 +74,26 @@ class LiftParseError(Exception):
     """Raised by `parse` on a token outside section 3's grammar entirely.
 
     `token` is the offending token's source text; `line` is its 1-based
-    line in the rprint text that was passed to `parse`. Every catcher of
-    this exception (`lifter.py`, `lift_census.py`) turns it into a
-    `lift_ast.Refusal(reason="parse-failure", token=token, line=line,
-    stage="parse")` -- this module raises the exception rather than
-    building the `Refusal` itself so it has no dependency on how a caller
-    chooses to report a file-level vs. method-level parse failure."""
+    line in the rprint text that was passed to `parse`. `reason` names the
+    census-vocabulary construct the parser recognised at that point when
+    it could (section 5, section 18.2): a shape the grammar does not admit
+    into the AST but that the parser can still name precisely (a `match`
+    statement, a lambda literal, a datatype update, an object method call,
+    ...), so the refusal is never just a bare confusing token. It defaults
+    to `"parse-failure"` for a token the parser genuinely cannot place at
+    all. Every catcher of this exception (`lifter.py`, `lift_census.py`)
+    turns it into a `lift_ast.Refusal(reason=e.reason, token=token,
+    line=line, stage="parse")` -- this module raises the exception rather
+    than building the `Refusal` itself so it has no dependency on how a
+    caller chooses to report a file-level vs. method-level parse
+    failure."""
 
-    def __init__(self, token: str, line: int, message: str = ""):
+    def __init__(self, token: str, line: int, message: str = "",
+                 reason: str = "parse-failure"):
         super().__init__(message or f"unexpected token {token!r} at line {line}")
         self.token = token
         self.line = line
+        self.reason = reason
 
 
 # ===========================================================================
@@ -107,8 +116,17 @@ class Token(NamedTuple):
 _MULTI_OPS = [
     "<==>", "==>", "<==", "-->", "::", ":=", ":|", "..", "<=", ">=",
     "==", "!=", "&&", "||", "~>", "->", "=>",
+    # Bitvector-only shift operators (section 18.2's grammar extensions):
+    # not round-tripped into t (bitvector is always a refusal), lexed and
+    # parsed as ordinary Binary nodes purely so the method around them
+    # still parses and the `bv` type is what the classifier names.
+    # Deliberately NOT "!!" here: lexing it as one token would also
+    # swallow a legitimate double negation ("!!p", two unary "!"), so
+    # set/multiset disjointness is recognised as two adjacent "!" tokens
+    # at the relational-operator level instead (`_parse_rel`).
+    "<<", ">>",
 ]
-_SINGLE_OPS = set("()[]{},.:;|!+-*/%<>=?@#")
+_SINGLE_OPS = set("()[]{},.:;|!+-*/%<>=?@#&^")
 
 
 def _compute_line_starts(text: str) -> list[int]:
@@ -225,7 +243,17 @@ def _lex(text: str, start: int, line_starts: list[int]) -> list[Token]:
         start_i = i
         if c.isalpha() or c == "_":
             j = i + 1
-            while j < n and (text[j].isalnum() or text[j] in "_'"):
+            # "#" is not part of any identifier a Dafny author can write,
+            # but rprint synthesises names like "_t#0" (a chained
+            # quantifier's compiler-introduced bound variable) and
+            # "i#inv" (a forall-statement's own bound variable printed
+            # back out); accepting "#<alnum>" as an identifier tail is a
+            # lexer-level grammar extension (section 18.2's "a shape the
+            # printer emits that the grammar did not anticipate"), not a
+            # refusal -- the classifier treats these Ids like any other.
+            while j < n and (text[j].isalnum() or text[j] in "_'"
+                              or (text[j] == "#" and j + 1 < n
+                                  and text[j + 1].isalnum())):
                 j += 1
             if j < n and text[j] == "?":
                 j += 1
@@ -270,6 +298,16 @@ def _lex(text: str, start: int, line_starts: list[int]) -> list[Token]:
         ):
             kind, tok_text = "op", "!in"
             i += 3
+        elif c == "`":
+            # A frame-field designator (`modifies this`value`, `reads
+            # this`elements`, or bare `` `field` ``): section 3's grammar
+            # has no such node (ReadsClause/ModifiesClause hold Exprs, and
+            # a field name alone by itself is not one), and it only ever
+            # names a class field on the heap, so it is named `heap`
+            # right here rather than falling through to a bare-backtick
+            # parse-failure.
+            raise LiftParseError("`", _line_of(line_starts, start_i),
+                                  "frame field designator", reason="heap")
         else:
             matched = next((op for op in _MULTI_OPS if text.startswith(op, i)), None)
             if matched:
@@ -371,6 +409,19 @@ class _Parser:
                                   f"expected {text!r}, found {self.cur.text!r}")
         return self.advance()
 
+    def _expect_gt(self) -> None:
+        """Close one level of `"<" Type ("," Type)* ">"` nesting. A
+        nested generic ("seq<Code<V>>") has its two closing angle
+        brackets lexed as one ">>" token (added for the bitvector shift
+        operator, section 18.2) -- this splits it back into the ">" that
+        closes the inner level and a one-character ">" left in the token
+        stream for whatever closes the outer level next, instead of
+        consuming a shift operator's worth of closing punctuation."""
+        if self.at(">>"):
+            self.tokens[self.pos] = self.cur._replace(text=">", start=self.cur.start + 1)
+            return
+        self.expect(">")
+
     def expect_ident(self) -> str:
         if self.cur.kind != "id":
             raise LiftParseError(self.cur.text or "<eof>", self.cur.line,
@@ -448,7 +499,7 @@ class _Parser:
                 self.advance()
             else:
                 break
-        self.expect(">")
+        self._expect_gt()
         return tuple(names)
 
     def _parse_params(self) -> list[Param]:
@@ -500,13 +551,45 @@ class _Parser:
         ret_type = None
         if self.at(":"):
             self.advance()
-            ret_type = self.parse_type()
+            # A named result ("function abs(x: int32): (r: int32)"): the
+            # author's name for the return value, used only inside this
+            # function's own `ensures` clauses. Section 3's Type
+            # production has no room for the "Id ':'" prefix (a genuine
+            # Type can never start that way, so the two forms never
+            # collide); lift_ast.FunctionDecl has no field to hold the
+            # name, so it is parsed and dropped -- an `ensures` clause
+            # that names it is left referring to a plain, unbound `Ident`,
+            # which is exactly as far as this module (parse only) is
+            # responsible for going.
+            if (self.at("(") and self.tokens[self.pos + 1].kind == "id"
+                    and self.tokens[self.pos + 2].text == ":"):
+                self.advance()  # "("
+                self.expect_ident()  # result name, discarded
+                self.expect(":")
+                ret_type = self.parse_type()
+                self.expect(")")
+            else:
+                ret_type = self.parse_type()
         specs = self._parse_fspec_list()
         body = None
         if self.at("{"):
             self.advance()
             body = self.parse_expr()
+            self._check_hint_chain_semicolon()
             self.expect("}")
+        if self.at("by"):
+            # `function ... { Expr } by method { Stmt* }`: an alternative
+            # imperative implementation of the same function, checked
+            # against the `ensures` above by dafny itself. Decision 14
+            # names this `function-method`; brace-matched and dropped the
+            # same way a lemma body is (section 3's own Skipped/Lemma
+            # convention), since section 3's FunctionDecl has no field to
+            # hold a second body.
+            self.advance()
+            self.expect("method")
+            self._skip_brace_matched_block()
+            raise LiftParseError("by", line, "function ... by method",
+                                  reason="function-method")
         return FunctionDecl(line, name=name, ghost="ghost" in modifiers,
                              is_predicate=is_predicate, type_params=type_params,
                              params=tuple(params), ret_type=ret_type,
@@ -533,6 +616,37 @@ class _Parser:
         return MethodDecl(line, name=name, type_params=type_params,
                            params=tuple(params), returns=tuple(returns),
                            specs=tuple(specs), body=body, attrs=attrs)
+
+    def _check_hint_chain_semicolon(self) -> None:
+        """A fully-parsed Expr followed immediately by ";" (measured in a
+        function body's "then"/"else" arm: "IntLemma(x); 3") is Dafny's
+        `StmtInExpr` form -- a hint statement (a lemma call, an `assert
+        ... by`, a `var` binding already caught at atom-start) sequenced
+        before the real result. No Expr production in section 3 is ever
+        legitimately followed by a bare ";" (a statement's own trailing
+        ";" is always consumed by the statement, never left for the Expr
+        that happens to be its last sub-part), so seeing one here is
+        unambiguous. Same family, same reason as the "var"-led let
+        expression; `lift_ast` has no node for either."""
+        if self.at(";"):
+            raise LiftParseError(";", self.cur.line, "hint-chain expression",
+                                  reason="let-expression")
+
+    def _skip_brace_matched_block(self) -> None:
+        """Consume a `"{" ... "}"` block whose interior this module has
+        no reason to parse (a lemma body, a `function ... by method`
+        body), tracking nested braces so a `{` inside the block does not
+        end the scan early."""
+        self.expect("{")
+        depth = 1
+        while depth > 0:
+            if self.at("{"):
+                depth += 1
+            elif self.at("}"):
+                depth -= 1
+            elif self.at_eof():
+                raise LiftParseError("<eof>", self.cur.line, "unterminated block")
+            self.advance()
 
     def _parse_lemma(self, modifiers: list[str], line: int) -> LemmaDecl:
         start = self.cur.start if not modifiers else self.tokens[self.pos - len(modifiers)].start
@@ -566,15 +680,32 @@ class _Parser:
         text = self._source[start:end]
         return LemmaDecl(line, keyword=keyword, text=text)
 
+    def _skip_clause_label(self) -> None:
+        """A `requires`/`ensures`/`invariant`/`assert` clause may open
+        with an author-chosen label ("requires A: c <= x", "requires inv:
+        0 <= i <= |q| && ...", "assert 0: f(a, f(b, c)) == ... by {...}"):
+        section 3's FSpec/MSpec/LoopSpec/AssertStmt have no room for it,
+        and no `Spec`/`Stmt` node has a field to keep it in, so it is
+        recognised and dropped here. Unambiguous: no Expr production ever
+        starts with a bare `Id` or `Int` immediately followed by a
+        literal `":"` (the quantifier/comprehension separator is the
+        two-character `"::"`, a different token)."""
+        if (self.cur.kind in ("id", "int")
+                and self.tokens[self.pos + 1].text == ":"):
+            self.advance()
+            self.advance()
+
     def _parse_fspec_list(self) -> list:
         specs = []
         while True:
             line = self.cur.line
             if self.at("requires"):
                 self.advance()
+                self._skip_clause_label()
                 specs.append(RequiresClause(line, self.parse_expr()))
             elif self.at("ensures"):
                 self.advance()
+                self._skip_clause_label()
                 specs.append(EnsuresClause(line, self.parse_expr()))
             elif self.at("reads"):
                 self.advance()
@@ -592,9 +723,11 @@ class _Parser:
             line = self.cur.line
             if self.at("requires"):
                 self.advance()
+                self._skip_clause_label()
                 specs.append(RequiresClause(line, self.parse_expr()))
             elif self.at("ensures"):
                 self.advance()
+                self._skip_clause_label()
                 specs.append(EnsuresClause(line, self.parse_expr()))
             elif self.at("modifies"):
                 self.advance()
@@ -612,6 +745,7 @@ class _Parser:
             line = self.cur.line
             if self.at("invariant"):
                 self.advance()
+                self._skip_clause_label()
                 specs.append(InvariantClause(line, self.parse_expr()))
             elif self.at("decreases"):
                 self.advance()
@@ -663,18 +797,26 @@ class _Parser:
             return Type(line, kind=tok.text)
         if tok.text in ("seq", "set", "iset", "multiset"):
             self.advance()
-            self.expect("<")
-            inner = self.parse_type()
-            self.expect(">")
-            return Type(line, kind=tok.text, args=(inner,))
+            args = ()
+            # The element type is optional (bare "set", "seq"): Dafny
+            # infers it. Measured (section 18.2): "predicate
+            # IsSubset(A: set, B: set)", "lemma Lemma_1(Seq_1: seq, ...)".
+            if self.at("<"):
+                self.advance()
+                args = (self.parse_type(),)
+                self._expect_gt()
+            return Type(line, kind=tok.text, args=args)
         if tok.text in ("map", "imap"):
             self.advance()
-            self.expect("<")
-            k = self.parse_type()
-            self.expect(",")
-            v = self.parse_type()
-            self.expect(">")
-            return Type(line, kind=tok.text, args=(k, v))
+            args = ()
+            if self.at("<"):
+                self.advance()
+                k = self.parse_type()
+                self.expect(",")
+                v = self.parse_type()
+                self._expect_gt()
+                args = (k, v)
+            return Type(line, kind=tok.text, args=args)
         if tok.text in ("array", "array?"):
             nullable = tok.text.endswith("?")
             self.advance()
@@ -682,7 +824,7 @@ class _Parser:
             if self.at("<"):
                 self.advance()
                 args = (self.parse_type(),)
-                self.expect(">")
+                self._expect_gt()
             return Type(line, kind="array", args=args, nullable=nullable)
         if self.at("("):
             self.advance()
@@ -699,6 +841,14 @@ class _Parser:
         if tok.kind == "id":
             self.advance()
             name = tok.text
+            # A module-qualified type name ("Code.Variables", "T.C"):
+            # section 3's Type production has no "." form, but rprint
+            # always fully qualifies a type from another module. Folded
+            # into one dotted name string; `lift_classify.py` sees the
+            # same "T.C" it would see unqualified.
+            while self.at(".") and self.tokens[self.pos + 1].kind == "id":
+                self.advance()
+                name = f"{name}.{self.expect_ident()}"
             args = ()
             if self.at("<"):
                 self.advance()
@@ -706,7 +856,7 @@ class _Parser:
                 while self.at(","):
                     self.advance()
                     items.append(self.parse_type())
-                self.expect(">")
+                self._expect_gt()
                 args = tuple(items)
             return Type(line, kind="id", name=name, args=args)
         raise LiftParseError(tok.text or "<eof>", tok.line, "expected a type")
@@ -725,6 +875,16 @@ class _Parser:
         tok = self.cur
         line = tok.line
 
+        if self.at("match"):
+            # `match Expr (Case)+` or `match Expr { (Case)* }`: section 3
+            # has no Match node at all (`lift_ast.py` carries none), so
+            # this always names the census's own `datatype` gap rather
+            # than falling through and reporting some confusing token
+            # deep inside the match subject or its first case pattern
+            # (measured: the subject's own first token -- "l", "xs", "t",
+            # "n", a case-value identifier -- was the token every one of
+            # the 154 parse-refusal "match" files reported before this).
+            raise LiftParseError("match", line, "match statement", reason="datatype")
         if self.at("var"):
             return self._parse_var_stmt(line)
         if self.at("ghost") and self.tokens[self.pos + 1].text == "var":
@@ -771,6 +931,7 @@ class _Parser:
         if self.at("assert"):
             self.advance()
             attrs = self._parse_attrs()
+            self._skip_clause_label()
             cond = self.parse_expr()
             if self.at("by"):
                 self.advance()
@@ -852,10 +1013,66 @@ class _Parser:
             self.expect(";")
             return CallStmt(line, name, tuple(args))
 
+        if tok.kind == "id" and self.tokens[self.pos + 1].text == "<":
+            # A call with explicit type arguments as its own statement
+            # ("PrintArray<int>(null);"): CallStmt has only a bare `Id
+            # "(" ... ")"` shape (no field for type arguments), so on
+            # confirming this really is one (a Dafny statement can never
+            # otherwise open "Id <"), the type arguments are parsed and
+            # dropped rather than kept. Backtracks to the ordinary lhs
+            # path below on anything that is not this exact shape (a
+            # relational "a < b" used as, e.g., an argument is never a
+            # full statement by itself, so no real statement is lost).
+            save = self.pos
+            name = self.advance().text
+            self.advance()  # "<"
+            ok = True
+            try:
+                self.parse_type()
+                while self.at(","):
+                    self.advance()
+                    self.parse_type()
+                ok = self.at(">")
+            except LiftParseError:
+                ok = False
+            if ok:
+                self.advance()  # ">"
+                ok = self.at("(")
+            if ok:
+                self.advance()  # "("
+                args = self._parse_expr_list_until(")")
+                self.expect(")")
+                self.expect(";")
+                return CallStmt(line, name, tuple(args))
+            self.pos = save
+
         lhss = [self._parse_lhs()]
         while self.at(","):
             self.advance()
             lhss.append(self._parse_lhs())
+        if self.at(":|") and all(l.kind == "name" for l in lhss):
+            # `Lhs (","Lhs)* ":|" Expr ";"` -- the such-that form without
+            # a leading "var" (re-binding an already-declared local:
+            # "p :| p in m;"). Section 3's grammar only has the "var"
+            # form; `lift_ast.AssignSuchThat` needs only names, which a
+            # bare re-assignment already has, so no AST change is needed.
+            # Always `such-that-exec` downstream regardless of this
+            # spelling.
+            self.advance()
+            cond = self.parse_expr()
+            self.expect(";")
+            names = tuple(Param(l.line, l.name, None, False) for l in lhss)
+            return AssignSuchThat(line, names, cond)
+        if self.at("("):
+            # A call statement on a dotted or indexed receiver
+            # ("cm.Restock();", "carPark.closeCarPark();", "aa[j,
+            # k].Foo();"): section 3's CallStmt is only `Id "(" ... ")"
+            # ";"`, and lift_ast.CallStmt keeps no receiver, so this is
+            # always a heap-object method call the AST cannot represent
+            # rather than a bare-token parse-failure.
+            raise LiftParseError("(", self.cur.line,
+                                  "call on a dotted or indexed receiver",
+                                  reason="heap")
         self.expect(":=")
         values = [self._parse_rhs()]
         while self.at(","):
@@ -870,6 +1087,15 @@ class _Parser:
         if self.at("ghost"):
             self.advance()
             ghost = True
+        if self.at("("):
+            # A tuple-destructuring declaration ("var (c: int, r: int) :=
+            # argmax(radii, 0);"): `VarDeclStmt.names` is a flat `Param`
+            # tuple with no way to say "these came from one destructured
+            # value", so this is named `tuple` (the construct actually
+            # in play) instead of failing later on the first ":" inside
+            # the parens.
+            raise LiftParseError("(", line, "tuple-destructuring var",
+                                  reason="tuple")
         names = [self._parse_vardecl_name()]
         while self.at(","):
             self.advance()
@@ -913,11 +1139,37 @@ class _Parser:
 
     def _parse_if_stmt(self, line: int) -> Stmt:
         self.advance()  # if
-        if self.at("{"):
-            self.advance()
+        if self.at("{") or self.at("case"):
+            # rprint sometimes omits the wrapping "{" "}" around an
+            # if-case block entirely (measured, Clover_canyon_search.dfy:
+            # "if\ncase a[m] <= b[n] =>\n  m := m + 1;\ncase ... =>\n  n
+            # := n + 1;" with no braces at all, the case list simply
+            # ending where the enclosing block's own "}" does).
+            # `_parse_case_block` already stops on either "case" running
+            # out or a "}", so the same call serves both spellings.
+            braced = self.at("{")
+            if braced:
+                self.advance()
             cases = self._parse_case_block()
-            self.expect("}")
+            if braced:
+                self.expect("}")
             return IfCaseStmt(line, tuple(cases))
+        if self.cur.kind == "id" and self.tokens[self.pos + 1].text == ":":
+            # A binding-guard if ("if i: int, j: int {:trigger ...} :| 0
+            # <= i < j < a.Length && a[i] > a[j] { ... }"): the guard is
+            # an existential witness binding, not a boolean Expr at all
+            # (no Expr production starts "Id ':'", same non-ambiguity as
+            # a clause label). No AST node models a binding guard, so
+            # this is named `such-that-exec` directly; the block after
+            # ":|" is still walked (never left unconsumed) even though
+            # its statements are discarded with the refusal.
+            self._parse_binders()
+            self._parse_attrs()
+            self.expect(":|")
+            self.parse_expr()
+            self.parse_block()
+            raise LiftParseError(":|", line, "if binding guard",
+                                  reason="such-that-exec")
         cond: Union[Expr, Star]
         if self.at("*"):
             cond = Star(self.cur.line)
@@ -936,10 +1188,13 @@ class _Parser:
 
     def _parse_while_stmt(self, line: int) -> Stmt:
         self.advance()  # while
-        if self.at("{"):
-            self.advance()
+        if self.at("{") or self.at("case"):
+            braced = self.at("{")
+            if braced:
+                self.advance()
             cases = self._parse_case_block()
-            self.expect("}")
+            if braced:
+                self.expect("}")
             return WhileCaseStmt(line, (), tuple(cases))
         cond: Union[Expr, Star]
         if self.at("*"):
@@ -948,7 +1203,17 @@ class _Parser:
         else:
             cond = self.parse_expr()
         specs = self._parse_loopspec_list()
-        body = self.parse_block()
+        if self.at("{"):
+            body = self.parse_block()
+        else:
+            # A non-block single-statement body ("while r >= d invariant
+            # ... decreases r - d\n  r := r - 1;" -- measured,
+            # Programmverifikation-...-Hoangkim.dfy: the source itself
+            # never opens a "{" for this loop at all, so dafny's own
+            # grammar accepts a bare Stmt here same as an "if"/"for"
+            # guard would; wrapped as the one-element block
+            # `lift_ast.WhileStmt.body` already expects).
+            body = (self.parse_stmt(),)
         return WhileStmt(line, cond, tuple(specs), body)
 
     def _parse_for_stmt(self, line: int) -> Stmt:
@@ -999,6 +1264,22 @@ class _Parser:
             if self.at("["):
                 self.advance()
                 idx = self.parse_expr()
+                if self.at(","):
+                    # array2/array3 assignment ("m3[i, j] := 0;"): same
+                    # multi-index fold into one TupleExpr as the
+                    # expression-position Index above, for the same
+                    # reason (always refused `array` once the base's
+                    # `array<T>` type is seen, however it was indexed).
+                    idxs = [idx]
+                    while self.at(","):
+                        self.advance()
+                        idxs.append(self.parse_expr())
+                    self.expect("]")
+                    idx = TupleExpr(line, tuple(idxs))
+                    if self.at("[") or self.at("."):
+                        base = Index(line, base, idx)
+                        continue
+                    return Lhs(line, kind="index", base=base, index=idx)
                 self.expect("]")
                 if self.at("[") or self.at("."):
                     base = Index(line, base, idx)
@@ -1101,13 +1382,29 @@ class _Parser:
             return Unary(line, "!", self._parse_not())
         return self._parse_rel()
 
+    def _at_disjoint_op(self) -> bool:
+        """Set/multiset disjointness ("A !! B") is two adjacent "!"
+        tokens in a binary-operator position. It is deliberately not
+        lexed as one "!!" token: that would also swallow a legitimate
+        double negation ("!!p", section 18.2), which only ever appears
+        at the START of a Unary, never here after a full Add-level
+        operand has already been parsed -- the two spellings never
+        collide because they are only ever checked in these two
+        different parser positions."""
+        return self.cur.text == "!" and self.tokens[self.pos + 1].text == "!"
+
     def _parse_rel(self) -> Expr:
         left = self._parse_add()
         ops = []
         operands = [left]
-        while self.cur.text in RELOPS:
+        while self.cur.text in RELOPS or self._at_disjoint_op():
             line = self.cur.line
-            ops.append(self.advance().text)
+            if self._at_disjoint_op():
+                self.advance()
+                self.advance()
+                ops.append("!!")
+            else:
+                ops.append(self.advance().text)
             operands.append(self._parse_add())
         if not ops:
             return left
@@ -1124,7 +1421,14 @@ class _Parser:
 
     def _parse_mul(self) -> Expr:
         left = self._parse_unary()
-        while self.cur.text in ("*", "/", "%"):
+        # "<<"/">>" (shift) and "&"/"^" (bitwise and/xor) are bitvector
+        # operators with no dedicated precedence tier in section 3's
+        # grammar; t has no bitvector, so exact precedence among them
+        # never affects a lift outcome (the method around them is always
+        # refused `bitvector` once its `bv` type is seen). Folded into
+        # this tier so the operators are at least tokenised into a
+        # well-formed AST instead of stalling the parse.
+        while self.cur.text in ("*", "/", "%", "<<", ">>", "&", "^"):
             line = self.cur.line
             op = self.advance().text
             right = self._parse_unary()
@@ -1166,12 +1470,45 @@ class _Parser:
                         value = self.parse_expr()
                         self.expect("]")
                         atom = SeqUpdate(line, atom, first, value)
+                    elif self.at(","):
+                        # array2/array3 indexing ("a[i, j]"): Index has
+                        # one `index` field, so the comma-separated
+                        # indices are folded into one TupleExpr the same
+                        # way a parenthesised tuple would be, purely so
+                        # this parses; downstream already refuses any
+                        # `array<T>`-typed value regardless of how it was
+                        # indexed (section 18.6: "array2 ... stay refused
+                        # `array`").
+                        idxs = [first]
+                        while self.at(","):
+                            self.advance()
+                            idxs.append(self.parse_expr())
+                        self.expect("]")
+                        atom = Index(line, atom, TupleExpr(line, tuple(idxs)))
                     else:
                         self.expect("]")
                         atom = Index(line, atom, first)
             elif self.at("."):
                 self.advance()
-                name = self.expect_ident()
+                if self.at("("):
+                    # A datatype update expression ("v.(f := e)",
+                    # "k.(0 := 100, c3 := 200)"): section 3's Primary
+                    # postfix set has no such form, and lift_ast has no
+                    # dedicated update node, so it is named `datatype`
+                    # right here instead of falling through to
+                    # `expect_ident` raising a bare-token failure on the
+                    # "(" itself.
+                    raise LiftParseError("(", self.cur.line,
+                                          "datatype update expression",
+                                          reason="datatype")
+                if self.cur.kind == "int":
+                    # Tuple field projection ("iv.0", "pair.1"): Primary's
+                    # "." postfix only names an Id (a field/destructor);
+                    # `Member.name` is already a bare string, so an
+                    # integer index reuses it unchanged.
+                    name = self.advance().text
+                else:
+                    name = self.expect_ident()
                 atom = Member(line, atom, name)
             elif self.at("as"):
                 self.advance()
@@ -1194,6 +1531,31 @@ class _Parser:
     def _parse_atom(self) -> Expr:
         tok = self.cur
         line = tok.line
+        if tok.text == "match":
+            # `match Expr { case ... }` used as an expression (a function
+            # or predicate body, or nested in one): same construct as the
+            # statement form, same reason.
+            raise LiftParseError("match", line, "match expression", reason="datatype")
+        if tok.text == "null":
+            # The heap null literal: section 3's Atom has no such literal
+            # (t has no heap, so no reference type ever needs one), and
+            # lift_ast has no NullLit node. Read as a plain Ident so a
+            # method that merely passes `null` to an already-refused
+            # heap-object call (its only measured use, section 18.2)
+            # still parses; nothing downstream binds an identifier named
+            # "null" to anything, so it can never be mistaken for a real
+            # local.
+            self.advance()
+            return Ident(line, "null")
+        if tok.text == "var" or (tok.text == "ghost"
+                                  and self.tokens[self.pos + 1].text == "var"):
+            # A let-expression ("var x := e; body", "ghost var t: T := e;
+            # if t == Nil then t else t.tail"): section 3's Expr has no
+            # let-binding production, and lift_ast has no Let node, so
+            # this is named directly rather than reporting whatever
+            # token the stray "body" expression happens to start with.
+            raise LiftParseError("var", line, "let expression",
+                                  reason="let-expression")
         if tok.kind == "int":
             self.advance()
             return IntLit(line, int(tok.text))
@@ -1214,10 +1576,29 @@ class _Parser:
             return BoolLit(line, False)
         if tok.text == "old":
             self.advance()
+            if self.at("@"):
+                # A labeled old ("old@L(a[..])"): section 3's Atom only
+                # has plain "old" "(" Expr ")", and `lift_ast.Old` has no
+                # field for the label, so silently dropping it would
+                # change WHICH program point the value comes from -- a
+                # real semantic difference, not a droppable hint. Named
+                # `old` (the construct's own census key) rather than
+                # risked as a silent misreading.
+                raise LiftParseError("@", self.cur.line, "labeled old",
+                                      reason="old")
             self.expect("(")
             e = self.parse_expr()
             self.expect(")")
             return Old(line, e)
+        if tok.text == "new":
+            # "new" as a plain expression ("return new A[rows, cols]
+            # ((x: nat, y: int) => ...);"): section 3 only allows "new"
+            # in Rhs position (an assignment/var-decl initialiser), not
+            # as a general Expr/Atom, and a fresh heap allocation is
+            # exactly the `heap` construct regardless of where it turns
+            # up.
+            raise LiftParseError("new", line, "new as an expression",
+                                  reason="heap")
         if tok.text == "fresh":
             self.advance()
             self.expect("(")
@@ -1229,8 +1610,10 @@ class _Parser:
             cond = self.parse_expr()
             self.expect("then")
             then_ = self.parse_expr()
+            self._check_hint_chain_semicolon()
             self.expect("else")
             else_ = self.parse_expr()
+            self._check_hint_chain_semicolon()
             return IfExpr(line, cond, then_, else_)
         if tok.text in ("forall", "exists"):
             self.advance()
@@ -1293,6 +1676,14 @@ class _Parser:
             self.expect("(")
             n_expr = self.parse_expr()
             self.expect(",")
+            if self.at("("):
+                # `seq(n, (i: int) requires 0 <= i <= n => body)`: the
+                # generator is a full lambda literal (typed parameter,
+                # optional "requires"), not the bare-Id shorthand below --
+                # the same `higher-order` construct as any other lambda.
+                raise LiftParseError("(", self.cur.line,
+                                      "seq generator lambda",
+                                      reason="higher-order")
             var_name = self.expect_ident()
             self.expect("=>")
             body = self.parse_expr()
@@ -1323,7 +1714,34 @@ class _Parser:
             self.expect("|")
             return Cardinality(line, inner)
         if tok.text == "(":
+            # A lambda literal ("(n: int, m: int) => n >= m", "(i: int)
+            # requires 0 <= i <= n => Power10(i)") looks exactly like a
+            # parenthesised expression or tuple display up to its closing
+            # ")" -- the two are told apart only by what follows. Section
+            # 3's Atom has no lambda production at all (lift_ast has no
+            # Lambda node), so on confirming the shape, this is named
+            # `higher-order` before the tuple-display path below ever
+            # tries to parse the parameter list as expressions and fails
+            # confusingly on the first ":".
+            save = self.pos
             self.advance()
+            ok = True
+            try:
+                if not self.at(")"):
+                    self._parse_params()
+                ok = self.at(")")
+            except LiftParseError:
+                ok = False
+            if ok:
+                self.advance()  # ")"
+                ok = self.at("=>") or self.at("requires")
+            if ok:
+                tail_tok, tail_line = self.cur.text, self.cur.line
+                self.pos = save
+                raise LiftParseError(tail_tok, tail_line, "lambda literal",
+                                      reason="higher-order")
+            self.pos = save
+            self.advance()  # "("
             if self.at(")"):
                 self.advance()
                 return TupleExpr(line, ())

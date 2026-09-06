@@ -173,7 +173,7 @@ class Scope:
 def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
                task_name: str, record: LiftRecord, renamer: "_Renamer") -> dict:
     if isinstance(e, _AtHole):
-        return e.seq_expr_json
+        return {"op": "at", "args": [e.seq_expr_json, {"var": e.binder}]}
     if isinstance(e, IntLit):
         return {"int": e.value}
     if isinstance(e, BoolLit):
@@ -269,7 +269,7 @@ def _lift_quantifier(q: Quantifier, scope: Scope, fn_names: dict, self_name: str
             lo_e = {"int": 0}
             hi_e = {"op": "len", "args": [s_e]}
             s2.renames[name] = fresh  # bound var itself unused directly; substitution below
-            body_sub = _subst(body_expr, name, _AtHole(s_e))
+            body_sub = _subst(body_expr, name, _AtHole(s_e, fresh))
         else:
             lo_e = _lift_expr(lo, inner_scope, fn_names, self_name, task_name, record, renamer)
             hi_e = _lift_expr(hi, inner_scope, fn_names, self_name, task_name, record, renamer)
@@ -287,15 +287,16 @@ def _lift_quantifier(q: Quantifier, scope: Scope, fn_names: dict, self_name: str
 
 class _AtHole:
     """Sentinel substituted for a `k in s` binder: `_subst` replaces every
-    `Ident(k)` in the body with `Index(s, <the fresh var>)` -- but since
-    the fresh var name is only known inside `build` (renamer.fresh runs
-    there), the substitution is finished in two steps: `_subst` swaps in
-    this placeholder wrapping the (already-lifted) seq expr, and the
-    caller's own lift of `Index` special-cases it back out with the
-    fresh binder attached at lift time. In practice: this class is
-    intercepted directly by `_lift_expr` before generic dispatch."""
-    def __init__(self, seq_expr_json: dict):
+    `Ident(k)` in the body with `at(s, j)` for the fresh loop binder `j`
+    that indexes `s` (section 4.4's `forall k | k in s :: P` row lifts to
+    `forall j in [0, len(s)) . P[k := s[j]]`). `_lift_expr` intercepts this
+    sentinel directly, before generic dispatch, and emits `{"op": "at",
+    "args": [seq_expr_json, {"var": binder}]}` -- never the bare seq
+    expression, which would substitute the whole sequence for the bound
+    element."""
+    def __init__(self, seq_expr_json: dict, binder: str):
         self.seq_expr_json = seq_expr_json
+        self.binder = binder
 
 
 def _subst(e: Expr, name: str, repl) -> Expr:
@@ -699,7 +700,14 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
             record.rewrites.append(Rewrite(rule="spec-fun-totalised", line=p.line))
 
     result_nat = d.ret_type is not None and d.ret_type.kind == "nat"
-    result = "bool" if (d.ret_type is not None and d.ret_type.kind == "bool") else "int"
+    # `predicate` declares no `: T` at all (implicit `: bool`, lift_ast.py's
+    # FunctionDecl docstring) -- `d.ret_type` is None for one, so testing
+    # only `ret_type.kind == "bool"` fell through to "int" and emitted a
+    # spec_fun whose declared result disagreed with its (bool) body,
+    # caught by fuzz_lower.check_wf as "body type != result" (nitwit's
+    # valid_base/nitness/is_max_nit, all predicates).
+    result = "bool" if (d.is_predicate
+                        or (d.ret_type is not None and d.ret_type.kind == "bool")) else "int"
     if result_nat:
         record.clauses_dropped.append(ClauseDropped(rule="nat-result-fact-dropped", count=1))
         record.rewrites.append(Rewrite(rule="nat-result-fact-dropped", line=d.line))
@@ -870,11 +878,26 @@ def _method_level_decreases(method: MethodDecl, scope: Scope, fn_names: dict,
     exprs = dc.exprs
     if len(exprs) == 1:
         return _lift_expr(exprs[0], scope, fn_names, method.name, task_name, record, renamer), "stated"
-    body_assigned = _assigned_dafny_names(method.body)
-    kept = [e for e in exprs if not (isinstance(e, Ident) and e.name not in body_assigned)]
+    # Mirror `_function_decreases`'s projection test (decision 11): a
+    # component is kept only when it CHANGES at every self-call (i.e. is
+    # not passed through unchanged), found by walking the method's own
+    # self-calls -- never by looking at which names the body assigns
+    # (params like mystery1/mystery2's `n`, `m` are never reassigned, so
+    # that test dropped every component and crashed on an empty `lifted`
+    # list; see LIFTER-DESIGN.md section 6 / decision 11).
+    calls = [c for c in walk(method.body) if isinstance(c, Call)
+             and isinstance(c.fn, Ident) and c.fn.name == method.name] if method.body is not None else []
+    param_names = [p.name for p in method.params]
+    dropped = unchanged_at_every_call(param_names, calls, len(exprs))
+    kept = [exprs[i] for i in range(len(exprs)) if i not in dropped]
     if len(kept) == 1:
         record.rewrites.append(Rewrite(rule="decreases-tuple-reduced", line=dc.line))
         return _lift_expr(kept[0], scope, fn_names, method.name, task_name, record, renamer), "projected"
+    if len(kept) == 0:
+        # classify's pre-check (section 5's `lexicographic-decreases`) is
+        # supposed to have refused this already; fall back to summing
+        # every stated component rather than crashing if it did not.
+        kept = list(exprs)
     record.rewrites.append(Rewrite(rule="guess:sum", line=dc.line))
     lifted = [_lift_expr(e, scope, fn_names, method.name, task_name, record, renamer) for e in kept]
     out = lifted[0]

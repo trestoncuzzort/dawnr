@@ -75,9 +75,9 @@ from lift_ast import (
     LabelStmt, LemmaDecl, Lhs, MapDisplay, Member, MethodDecl,
     ModifiesClause, Module, NaryBool, NewRhs, Node, Old, Param, PrintStmt,
     Quantifier, ReadsClause, Refusal, RequiresClause, RevealStmt,
-    ReturnStmt, Rewrite, SeqDisplay, SeqUpdate, SkippedDecl, Slice, Star,
-    Stmt, TupleExpr, Type, TypeTest, Unary, VarDeclStmt, WhileCaseStmt,
-    WhileStmt,
+    ReturnStmt, Rewrite, SeqDisplay, SeqUpdate, SetDisplay, SkippedDecl,
+    Slice, Star, Stmt, TupleExpr, Type, TypeTest, Unary, VarDeclStmt,
+    WhileCaseStmt, WhileStmt, Comprehension,
 )
 
 
@@ -147,6 +147,11 @@ def _is_seq_of_int(t: Optional[Type]) -> bool:
             and _is_int_like(t.args[0]))
 
 
+def _is_seq_of_nat(t: Optional[Type]) -> bool:
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and _is_nat(t.args[0]))
+
+
 def _is_array_of_int(t: Optional[Type]) -> bool:
     return (t is not None and t.kind == "array" and not t.nullable
             and len(t.args) == 1 and _is_int_like(t.args[0]))
@@ -162,6 +167,12 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     if t.kind in ("int", "nat", "bool"):
         return None
     if t.kind == "seq":
+        if _is_seq_of_nat(t):
+            # decision 14: `seq<nat>`'s element bound is part of the
+            # source's precondition exactly as a `nat` parameter's is
+            # (section 7); the lifter carries no per-element guard for a
+            # bare `seq`, so this is refused rather than silently widened.
+            return "nat-seq-elements"
         if len(t.args) == 1 and _is_int_like(t.args[0]):
             return None
         return "nested-seq"
@@ -525,6 +536,20 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     closure = _closure(module, method)
     scope_roots: list[Node] = [method] + list(closure)
 
+    # -- bodyless method/function (section 5): a `body is None` node is
+    # never guessed at by the classifier or rewriter (lift_ast.py's
+    # MethodDecl/FunctionDecl docstrings); left unchecked, this reaches
+    # lift_rewrite and crashes (`_desugar_returns(None, ...)`,
+    # `_lift_expr(None, ...)`) instead of refusing (ex10_hoangkim's
+    # bodyless `method q(x:nat, y:nat) returns (z:nat) requires .. ensures
+    # ..` with no `{ }`, unreachable from `strange` so never itself
+    # classified were it not also a gradable method in its own right). --
+    if method.body is None:
+        issues.append((method.line, "bodyless-method", method.name or "?"))
+    for d in closure:
+        if isinstance(d, FunctionDecl) and d.body is None:
+            issues.append((d.line, "bodyless-function", d.name or "?"))
+
     # -- returns: zero/multi first (section 5) --------------------------
     if len(method.returns) == 0:
         issues.append((method.line, "zero-returns", method.name or "?"))
@@ -568,9 +593,10 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
 
     # -- everything a single generic pass over every node can catch ------
     closure_names = {d.name for d in closure if d.name}
+    method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
     for root in scope_roots:
         for n in walk(root):
-            _scan_node_for_issues(n, issues, method.name, closure_names)
+            _scan_node_for_issues(n, issues, method.name, closure_names, method_names)
 
     # -- definite assignment of the return, every path (section 4.7) -----
     if ret_param is not None and method.body is not None:
@@ -629,7 +655,8 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
-                           closure_names: set[str]) -> None:
+                           closure_names: set[str],
+                           method_names: set[str] = frozenset()) -> None:
     """One generic pass catching every section-5 row that is a plain
     "does this construct appear anywhere" test. Rows needing context
     (self-recursion shape, tail returns, quantifier bounds, decreases,
@@ -644,6 +671,12 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         issues.append((n.line, "seq-update", ":="))
     elif isinstance(n, (Old, Fresh)):
         issues.append((n.line, "old", "old"))
+    elif isinstance(n, Ident) and n.name == "null":
+        # `a != null`, `a == null`: the parser has no dedicated NullLit
+        # node (section 3's shim keeps `null` a bare Ident), but it is a
+        # heap fact t has no word for -- an array param compared to null
+        # (minArray, FindMax) (LIFTER-DESIGN.md section 5's `heap` row).
+        issues.append((n.line, "heap", "null"))
     elif isinstance(n, AssumeStmt):
         issues.append((n.line, "assume", "assume"))
     elif isinstance(n, AssignSuchThat):
@@ -667,6 +700,14 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         issues.append((n.line, "array", "local array"))
     elif isinstance(n, MapDisplay):
         issues.append((n.line, "map", "{...}"))
+    elif isinstance(n, SetDisplay):
+        issues.append((n.line, "set", "{...}"))
+    elif isinstance(n, Comprehension) and n.kind == "set":
+        issues.append((n.line, "set", "set-comprehension"))
+    elif isinstance(n, Comprehension) and n.kind == "map":
+        issues.append((n.line, "map", "map-comprehension"))
+    elif isinstance(n, Comprehension) and n.kind == "seq":
+        issues.append((n.line, "seq-comprehension", "seq-comprehension"))
     elif isinstance(n, TupleExpr):
         issues.append((n.line, "tuple", "(...)"))
     elif isinstance(n, Cast):
@@ -684,6 +725,14 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
             issues.append((n.line, "calls-other-method", n.name))
         # else: a lemma call in the closure -- dropped, not refused
         # (decision 8; see _plan_rewrites' lemma-call-dropped entry).
+    elif (isinstance(n, Call) and isinstance(n.fn, Ident)
+          and n.fn.name != method_name and n.fn.name in method_names):
+        # `x := M(args)` / `var x := M(args)` / any other expression
+        # position naming a DIFFERENT method (section 4.5's row; a
+        # same-named self-call is section 4.5's own rewrite, handled by
+        # `_self_call_positions`, and a call of a closure function is an
+        # ordinary spec_fun application, not this row at all).
+        issues.append((n.line, "calls-other-method", n.fn.name))
 
 
 def _self_call_positions(method: MethodDecl) -> list[tuple[int, str, str]]:
@@ -794,6 +843,30 @@ def _decreases_issues(method: MethodDecl, closure: tuple[Decl, ...]
             # else: rprint always prints one; absence would be
             # uninferable-decreases, but for a spec_fun that never
             # self-calls no decreases is needed at all (no issue).
+
+    # -- method-level decreases (section 4.5's `r := M(args)` self-call
+    # row): a self-recursive method needs the same tuple-projection
+    # pre-check as a closure FunctionDecl gets above, done here rather
+    # than left to lift_rewrite so a tuple that neither projects nor
+    # sums is refused instead of crashing on an empty component list
+    # (mystery1/mystery2, decreases n, m with neither ever assigned). --
+    if method.body is not None:
+        self_calls = [c for c in walk(method.body) if isinstance(c, Call)
+                      and isinstance(c.fn, Ident) and c.fn.name == method.name]
+        if self_calls:
+            dcs = [s for s in method.specs if isinstance(s, DecreasesClause)]
+            if not dcs:
+                issues.append((method.line, "uninferable-decreases", method.name or "?"))
+            else:
+                dc = dcs[0]
+                if isinstance(dc.exprs, Star):
+                    issues.append((dc.line, "decreases-star", "*"))
+                elif len(dc.exprs) > 1:
+                    param_names = [p.name for p in method.params]
+                    dropped = unchanged_at_every_call(param_names, self_calls, len(dc.exprs))
+                    kept_idx = [i for i in range(len(dc.exprs)) if i not in dropped]
+                    if len(kept_idx) == 0:
+                        issues.append((dc.line, "lexicographic-decreases", method.name or "?"))
     return issues
 
 

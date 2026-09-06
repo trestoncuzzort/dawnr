@@ -206,6 +206,23 @@ def _print_param(p: Param) -> str:
     return f"{g}{p.name}: {_print_type(p.type)}"
 
 
+def _print_binder(p: Param, rename: dict) -> str:
+    """Like `_print_param`, but the bound name itself goes through
+    `rename` too. A quantifier's own binder is a declaration, not a
+    reference, so `_print_expr`'s plain `Ident` case never touches it --
+    but `rename` (built by `_clause_rename` for a whole clause, not
+    scoped per-quantifier) renames every occurrence of that name in the
+    body when it collides with a lifted-side name (e.g. `k` -> `k_v`,
+    recorded `collision` in the sidecar's rename_map). Printing the
+    binder unrenamed then leaves the body referring to an identifier
+    Dafny never bound (measured: Clover_max_array's L_ens, "unresolved
+    identifier: k_v" -- the source's `forall k :: ... m >= a[k]` had its
+    body's `k` renamed to `k_v` but its own `forall k` binder left as
+    `k`)."""
+    g = "ghost " if p.ghost else ""
+    return f"{g}{rename.get(p.name, p.name)}: {_print_type(p.type)}"
+
+
 # ===========================================================================
 # Expression printing. Every compound expression is fully parenthesised;
 # only atoms (literals, names, calls, indexing) are not. The output is
@@ -250,7 +267,7 @@ def _print_expr(e, rename: dict) -> str:
         return (f"(if {_print_expr(e.cond, rename)} then "
                 f"{_print_expr(e.then, rename)} else {_print_expr(e.else_, rename)})")
     if isinstance(e, Quantifier):
-        binders = ", ".join(_print_param(b) for b in e.binders)
+        binders = ", ".join(_print_binder(b, rename) for b in e.binders)
         rng = f" | {_print_expr(e.range, rename)}" if e.range is not None else ""
         return f"({e.kind} {binders}{rng} :: {_print_expr(e.body, rename)})"
     if isinstance(e, SetDisplay):
@@ -262,7 +279,7 @@ def _print_expr(e, rename: dict) -> str:
     if isinstance(e, SeqDisplay):
         return "[" + ", ".join(_print_expr(x, rename) for x in e.elems) + "]"
     if isinstance(e, Comprehension):
-        binders = ", ".join(_print_param(b) for b in e.binders)
+        binders = ", ".join(_print_binder(b, rename) for b in e.binders)
         rng = f" | {_print_expr(e.range, rename)}" if e.range is not None else ""
         if e.kind == "map" and e.value is not None:
             return f"map {binders}{rng} :: {_print_expr(e.body, rename)} := {_print_expr(e.value, rename)}"
@@ -509,51 +526,63 @@ def _closure_rename_map(source: MethodDecl, closure: tuple) -> dict:
 # clause, and its own `expr`/`stmts` helpers are private to that module.
 # ===========================================================================
 
-def _t_expr(e: dict) -> str:
+def _t_expr(e: dict, arr: frozenset = frozenset()) -> str:
+    """`arr` names the task's own params that a source `array<int>`
+    parameter was lifted to (decision 1, `array-readonly-as-seq`): the
+    checker lemma keeps ONE lemma parameter per such argument, typed
+    `array<int>` to match the source clause, so a bare task-side reference
+    to that name would be the array value itself, not a seq -- `|a|` on an
+    `array<int>` is a Dafny type error (measured: Clover_max_array's
+    L_req/L_ens/L_inv/L_dec, "size operator expects a collection argument
+    (instead got array<int>)"). Printing the task side's reference to that
+    name as `(a[..])` states it over the array's sequence view instead, so
+    both sides of the lemma talk about the same object per LIFTER-DESIGN.md
+    section 9 / the array-readonly-as-seq decision's rationale."""
     if "int" in e:
         return str(e["int"])
     if "bool" in e:
         return "true" if e["bool"] else "false"
     if "var" in e:
-        return e["var"]
+        name = e["var"]
+        return f"({name}[..])" if name in arr else name
     if "ite" in e:
         c = e["ite"]
-        return (f"(if {_t_expr(c['cond'])} then {_t_expr(c['then'])} "
-                f"else {_t_expr(c['else'])})")
+        return (f"(if {_t_expr(c['cond'], arr)} then {_t_expr(c['then'], arr)} "
+                f"else {_t_expr(c['else'], arr)})")
     if "forall" in e or "exists" in e:
         kw = "forall" if "forall" in e else "exists"
         q = e[kw]
         joiner = "==>" if kw == "forall" else "&&"
-        return (f"({kw} {q['var']}: int :: {_t_expr(q['lo'])} <= {q['var']} "
-                f"< {_t_expr(q['hi'])} {joiner} {_t_expr(q['body'])})")
+        return (f"({kw} {q['var']}: int :: {_t_expr(q['lo'], arr)} <= {q['var']} "
+                f"< {_t_expr(q['hi'], arr)} {joiner} {_t_expr(q['body'], arr)})")
     if "call" in e:
         c = e["call"]
-        args = ", ".join(_t_expr(a) for a in c["args"])
+        args = ", ".join(_t_expr(a, arr) for a in c["args"])
         return f"{c['fun']}({args})"
     op = e["op"]
     args = e.get("args", [])
     if op == "neg":
-        return f"(-{_t_expr(args[0])})"
+        return f"(-{_t_expr(args[0], arr)})"
     if op == "not":
-        return f"(!{_t_expr(args[0])})"
+        return f"(!{_t_expr(args[0], arr)})"
     if op == "len":
-        return f"|{_t_expr(args[0])}|"
+        return f"|{_t_expr(args[0], arr)}|"
     if op == "at":
-        return f"{_t_expr(args[0])}[{_t_expr(args[1])}]"
+        return f"{_t_expr(args[0], arr)}[{_t_expr(args[1], arr)}]"
     if op in ("and", "or"):
         joiner = " && " if op == "and" else " || "
-        return "(" + joiner.join(_t_expr(a) for a in args) + ")"
+        return "(" + joiner.join(_t_expr(a, arr) for a in args) + ")"
     if op == "implies":
-        return f"({_t_expr(args[0])} ==> {_t_expr(args[1])})"
+        return f"({_t_expr(args[0], arr)} ==> {_t_expr(args[1], arr)})"
     if op in ("+", "-", "*", "<", "<=", ">", ">=", "==", "!="):
-        return f"({_t_expr(args[0])} {op} {_t_expr(args[1])})"
+        return f"({_t_expr(args[0], arr)} {op} {_t_expr(args[1], arr)})"
     raise ValueError(f"lift_check._t_expr: unknown t operator {op!r}")
 
 
-def _t_conj(exprs: list) -> str:
+def _t_conj(exprs: list, arr: frozenset = frozenset()) -> str:
     if not exprs:
         return "true"
-    return " && ".join(f"({_t_expr(e)})" for e in exprs)
+    return " && ".join(f"({_t_expr(e, arr)})" for e in exprs)
 
 
 def _conj_text(exprs: list, rename: dict) -> str:
@@ -590,6 +619,45 @@ def _task_loops(body: list) -> list:
     return out
 
 
+def _task_loop_scopes(body: list) -> list:
+    """Pre-order list of the lifted task's own local-variable names in
+    scope at each `while`, index-for-index with `_walk_source_loops` (same
+    depth-first walk `_task_loops` uses). Needed because `crename` (a flat
+    name->name overlay built from `record.rename_map`, see `_clause_rename`)
+    cannot tell apart two source declarations that happen to share one
+    name in different scopes -- measured on Clover_min_array: the source's
+    two ensures-clause quantifier binders and its loop-local variable are
+    ALL named `i`, so the renamer's rename_map holds one bare entry `i`
+    (the first `i` it renamed, here a quantifier binder, -> `i_v`) and one
+    `i#local` entry for the second (the loop local, -> `i_v2`); `crename`'s
+    flat lookup always returns the bare entry, so `L_inv_0`'s signature
+    named the loop-scope local `i_v` while the lifted invariant text
+    (printed straight from the task JSON, which HAS the real lexical
+    scoping) says `i_v2` -- two unrelated identifiers, `L_inv_0` reads
+    "unresolved identifier: i_v2" and the whole checker file is tool_error.
+    This walk instead reads the task's own local names off its body in the
+    same declaration order the source's `VarDeclStmt`s are walked in, so
+    the lemma signature can name each loop-scope local by what the task
+    JSON already calls it -- no rename_map guess needed. Positional, like
+    `_task_loops`; a `for`-loop's desugared range locals (decision 15) have
+    no source-side declaration to align against and are not addressed
+    here."""
+    out = []
+
+    def walk(stmts, sc):
+        for s in stmts:
+            if "var" in s:
+                sc = sc + [s["var"]["name"]]
+            elif "while" in s:
+                out.append(list(sc))
+                walk(s["while"]["body"], sc)
+            elif "if" in s:
+                walk(s["if"]["then"], sc)
+                walk(s["if"].get("else", []), sc)
+    walk(body, [])
+    return out
+
+
 def _walk_source_loops(source: MethodDecl) -> list:
     """Pre-order `(loop, scope)` pairs from the source method's body: every
     `WhileStmt`/`ForStmt`, and the `Param` list in scope there (the
@@ -606,9 +674,22 @@ def _walk_source_loops(source: MethodDecl) -> list:
                 out.append((s, list(sc)))
                 walk(s.body, sc)
             elif isinstance(s, ForStmt):
-                out.append((s, list(sc)))
+                # The for-loop's OWN iteration variable is in scope for
+                # ITS OWN invariants (Dafny allows `for i := lo to hi
+                # invariant P(i)`), not only for a nested loop inside the
+                # body -- appending it only on the recursive `walk` call
+                # (as the code did before) left it out of `out`'s own
+                # recorded scope, so `locals_in_scope` in
+                # `_build_checker_parts` never carried it and the source
+                # invariant's own `i` had no lemma parameter to bind to
+                # (measured: dafny-synthesis_task_id_62's FindSmallest,
+                # "unresolved identifier: i_v" in L_inv_0 -- the for's `i`
+                # itself, crename-translated, never appeared in the
+                # signature).
                 vt = s.var_type or Type(line=s.line, kind="id", name="int")
-                walk(s.body, sc + [Param(line=s.line, name=s.var, type=vt)])
+                sc_here = sc + [Param(line=s.line, name=s.var, type=vt)]
+                out.append((s, list(sc_here)))
+                walk(s.body, sc_here)
             elif isinstance(s, IfStmt):
                 walk(s.then, sc)
                 if isinstance(s.else_, tuple):
@@ -795,7 +876,17 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
 
     lemma_names = []
     ret = task["returns"][0]
-    lifted_req = _t_conj(task.get("requires", []))
+    # Decision 1 (`array-readonly-as-seq`): a source `array<int>` param is
+    # lifted to a task `seq<int>` param of the SAME name. The checker
+    # lemmas (below) keep one parameter per argument, typed to the
+    # SOURCE's type so the source clause reads naturally (`a.Length`,
+    # `a[k]`); `array_view` names which task params that leaves typed
+    # `array<int>` in the lemma signature, so every LIFTED-side reference
+    # to one of them must print as its sequence view `a[..]`, not bare
+    # `a` -- `_t_expr`/`_t_conj` do that substitution when passed this set.
+    array_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
+                           if sp.type is not None and sp.type.kind == "array")
+    lifted_req = _t_conj(task.get("requires", []), array_view)
 
     # (3) L_fun_F per spec_fun whose closure function is found.
     for fd in fdecls:
@@ -854,7 +945,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     src_ens_conj = _conj_text(
         [sp.expr for sp in source.specs if isinstance(sp, EnsuresClause)], crename)
     ret_type_clause = (f"{ret['name']} >= 0" if _is_nat_type(ret_type_src) else "true")
-    lifted_ens = _t_conj(task.get("ensures", []))
+    lifted_ens = _t_conj(task.get("ensures", []), array_view)
     hint_lines = []
     for fd in fdecls:
         f = _match_spec_fun(fd, task.get("spec_funs", []), record)
@@ -881,6 +972,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # (6) L_inv_k / decreases-equality per loop, pre-order.
     src_loops = _walk_source_loops(source)
     task_loops = _task_loops(task["body"])
+    task_loop_scopes = _task_loop_scopes(task["body"])
     for k, (loop, scope) in enumerate(src_loops):
         lemma_names.append(f"L_inv_{k}")
         # `scope` (from `_walk_source_loops`) is seeded with `source.params`
@@ -897,19 +989,58 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # another -- an undefined identifier, which reads as `tool_error`
         # on every lemma in the file, not just this one. Integrator fix
         # 2026-09-05, found via 05_PVS_gcdI's real checker output.
+        #
+        # `crename`'s flat, whole-clause rename_map lookup is not enough
+        # for a LOOP LOCAL specifically: when a source name (e.g. `i`) is
+        # reused for both a quantifier binder elsewhere in the method AND
+        # this loop's own local variable, the renamer's rename_map holds
+        # one bare entry for whichever it renamed first and a `#`-suffixed
+        # entry for the second (LIFTER-DESIGN.md section 4.8), and
+        # `crename` always resolves to the bare one -- not necessarily
+        # this loop's local (measured: Clover_min_array's `i`, bare entry
+        # `i_v` is the ensures clauses' quantifier binder, `i#local` ->
+        # `i_v2` is the actual loop variable the lifted invariant text
+        # names; using the bare entry named the lemma parameter `i_v` while
+        # the printed lifted invariant said `i_v2`, an undefined
+        # identifier). `_task_loop_scopes` reads the task's own local names
+        # off its body in the same declaration order the source locals are
+        # walked in, so `loop_crename` overrides just THIS loop's locals
+        # with what the task JSON actually calls them, positionally --
+        # exact, not a name-collision guess.
         locals_in_scope = list(scope[len(src_params):])
+        true_local_names = task_loop_scopes[k] if k < len(task_loop_scopes) else []
+        # A desugared `for` (decision 15, `for-desugared`) PREPENDS a
+        # range-bound local (`h_t := <hi>`) that has no source-side
+        # declaration at all -- only the loop's own counter, appended
+        # last, corresponds to the source's own iteration variable. Align
+        # from the END so the source's real locals pair with their real
+        # task counterparts regardless of how many desugaring-only extras
+        # come first (measured: dafny-synthesis_task_id_62's FindSmallest,
+        # task scope `[h, i_v2]` against source scope `[i]` -- a left zip
+        # would wrongly pair `i` with `h`). Extras with no source
+        # counterpart are still real lemma parameters (the invariant text
+        # references them, e.g. `i_v2 <= h`): decision 15's desugaring
+        # always types them `int`.
+        extra = len(true_local_names) - len(locals_in_scope)
+        extra_names = true_local_names[:extra] if extra > 0 else []
+        aligned_names = true_local_names[extra:] if extra > 0 else true_local_names
+        loop_crename = dict(crename)
+        for p, true_name in zip(locals_in_scope, aligned_names):
+            loop_crename[p.name] = true_name
         full_names = ([tp["name"] for tp in task_params]
-                      + [crename.get(p.name, p.name) for p in locals_in_scope]
+                      + extra_names
+                      + [loop_crename.get(p.name, p.name) for p in locals_in_scope]
                       + [ret["name"]])
         full_types = ([sp.type for sp in src_params]
+                      + [Type(line=loop.line, kind="int", name=None) for _ in extra_names]
                       + [p.type for p in locals_in_scope] + [ret_type_src])
         ps_inv = ", ".join(f"{n}: {_lemma_param_type(t)}"
                            for n, t in zip(full_names, full_types))
         nat_clause = _and([f"{n} >= 0" for n, t in zip(full_names, full_types)
                           if _is_nat_type(t)])
         inv_exprs = [sp.expr for sp in loop.specs if isinstance(sp, InvariantClause)]
-        src_inv = _conj_text(inv_exprs, crename)
-        lifted_inv = (_t_conj(task_loops[k].get("invariants", []))
+        src_inv = _conj_text(inv_exprs, loop_crename)
+        lifted_inv = (_t_conj(task_loops[k].get("invariants", []), array_view)
                      if k < len(task_loops) else "true")
         # Same reason as L_ens's forall hint (section 9 item 5, measured):
         # Dafny will not apply a spec_fun's equivalence lemma unprompted.
@@ -945,7 +1076,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         call_guard_list = []
         for call in inv_calls:
             fd_match = next(fd for fd in fdecls if fd.name == call.fn.name)
-            g = _call_guard(fd_match, call, crename)
+            g = _call_guard(fd_match, call, loop_crename)
             if g not in call_guard_list:
                 call_guard_list.append(g)
         call_guards = _and(call_guard_list)
@@ -955,8 +1086,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             f = _match_spec_fun(fd_match, task.get("spec_funs", []), record)
             if f is None:
                 continue
-            args = ", ".join(_print_expr(a, crename) for a in call.args)
-            guard = _call_guard(fd_match, call, crename)
+            args = ", ".join(_print_expr(a, loop_crename) for a in call.args)
+            guard = _call_guard(fd_match, call, loop_crename)
             call_line = f"L_fun_{f['name']}({args});"
             if guard == "true":
                 inv_hints.append(f"  {call_line}")
@@ -999,8 +1130,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         if single_src_dec and single_lifted_dec:
             name = f"L_dec_{k}"
             lemma_names.append(name)
-            src_dec = _print_expr(dec_specs[0].exprs[0], crename)
-            lifted_dec = _t_expr(task_loops[k]["decreases"])
+            src_dec = _print_expr(dec_specs[0].exprs[0], loop_crename)
+            lifted_dec = _t_expr(task_loops[k]["decreases"], array_view)
             lines.append(f"lemma {name}({ps_inv})")
             lines.append(f"  ensures ({src_dec}) == ({lifted_dec})")
             lines.append("{ }")
@@ -1240,10 +1371,23 @@ def _extract_warnings(out: str) -> list:
     return [line.strip() for line in out.splitlines() if "Warning" in line]
 
 
-def _verify_checker(path: Path, lemma_names: list, timeout_s: float):
+def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
+                    lowered_name: Optional[str] = None):
     """Runs `dafny verify` on `path`; returns (verdicts: dict[name,str],
     exit_code, all_ok: bool, first_failing_token: str|None,
-    warnings: list[str])."""
+    warnings: list[str], lowered_verdict: str|None).
+
+    `lowered_name` is the symbol the checker file's lowered `<Method>`
+    (item 2 of the file, `lower_dafny.lower`) is printed under. Its own
+    Dafny verdict is returned separately as `lowered_verdict`, never
+    folded into `verdicts`/`all_ok`/`first_bad`: decision 8 drops hints
+    (asserts, lemma calls, function ensures, nat-result facts) the
+    lowered method's proof needs, so its own body reading UNPROVED is an
+    expected consequence of that decision, not evidence the LIFT is
+    wrong (decision 17's "two columns" -- see LiftRecord.lowered_task_
+    verdict). Only when EVERY error in the finish line is attributable to
+    the lowered method's own body does this function still report
+    `all_ok=True`; a genuine lemma failure is unaffected."""
     exit_code, out = _run_dafny(
         ["verify", str(path), "--allow-warnings", "--log-format", "text"],
         timeout_s)
@@ -1252,7 +1396,8 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float):
     if exit_code == _TIMEOUT_SENTINEL:
         for name in lemma_names:
             verdicts[name] = Outcome.TIMEOUT
-        return verdicts, exit_code, False, "timeout", warnings
+        lowered_verdict = Outcome.TIMEOUT if lowered_name is not None else None
+        return verdicts, exit_code, False, "timeout", warnings, lowered_verdict
 
     blocks = _symbol_outcomes(out)
     by_name: dict = {}
@@ -1277,6 +1422,12 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float):
             if first_bad is None:
                 first_bad = name
 
+    lowered_verdict = None
+    if lowered_name is not None:
+        entries = by_name.get(lowered_name)
+        if entries:
+            lowered_verdict = _DAFNY_OUTCOME.get(entries[-1][1], Outcome.TOOL_ERROR)
+
     fin = _FINISH_RE.search(out)
     if fin is None:
         all_ok = False
@@ -1288,14 +1439,25 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float):
             # errors the per-lemma scan didn't attribute (e.g. a closure
             # declaration's own well-formedness failed, a printer bug --
             # section 9's "N verified, 0 errors" is checked whole-file).
+            # The lowered method's OWN symbol is excluded from this scan:
+            # its failure is the kernel's, not the lift's (see docstring).
+            culprit = None
             for sym, kind, outcome in blocks:
-                if outcome != "Correct":
-                    first_bad = sym
+                if outcome != "Correct" and sym != lowered_name:
+                    culprit = sym
                     break
-            if first_bad is None:
+            if culprit is not None:
+                first_bad = culprit
+                all_ok = False
+            elif not (lowered_name is not None and lowered_verdict is not None
+                     and lowered_verdict != Outcome.VERIFIED):
+                # no lemma is bad and the lowered method isn't the (sole)
+                # culprit either -- still an unattributed error.
                 first_bad = "unattributed-error"
-            all_ok = False
-    return verdicts, exit_code, all_ok, first_bad, warnings
+                all_ok = False
+            # else: every error in the file belongs to the lowered task's
+            # own kernel proof -- reported via `lowered_verdict`, not here.
+    return verdicts, exit_code, all_ok, first_bad, warnings, lowered_verdict
 
 
 _POINT_RE = re.compile(r"^(\d+) (\S+) (\S+)\s*$")
@@ -1410,10 +1572,12 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     checker_text, lemma_names = _build_checker_parts(task, source, closure, record)
     checker_path = dfy_path.with_name(dfy_path.stem + ".check.dfy")
     checker_path.write_text(checker_text, encoding="utf-8", newline="\n")
+    lowered_name = task["name"].capitalize()  # matches lower_dafny.lower's own naming
     t0 = time.monotonic()
-    verdicts, exit_code, all_ok, first_bad, warnings = _verify_checker(
-        checker_path, lemma_names, timeout_s)
+    verdicts, exit_code, all_ok, first_bad, warnings, lowered_verdict = _verify_checker(
+        checker_path, lemma_names, timeout_s, lowered_name)
     record.checker_verdicts.update(verdicts)
+    record.lowered_task_verdict = lowered_verdict
     record.dafny_exit_codes["verify-checker"] = exit_code
     record.warnings.extend(warnings)
 

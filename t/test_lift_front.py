@@ -167,14 +167,36 @@ FAST_TESTS = [
 # Slow tests (--slow only): full-785 and dafny-round-trip corpus checks.
 # ---------------------------------------------------------------------------
 
+
+# Acceptance (a): the 154 files the 785 run refused at parse time with a
+# bare `parse-failure` reason. Named tokens that survive as a genuine
+# residual (the parser recognises the shape but section 3's grammar has
+# no way to admit it AND no census-vocabulary name fits precisely enough
+# to assign one without guessing) are listed here with their one example
+# each, so a bare-token reason never appears silently.
+KNOWN_BARE_TOKEN_RESIDUALS = {
+    # `(n << d as bv6) | (n >> (32 - d) as bv6)`: a bare infix "|" is
+    # Dafny's bitvector bitwise-or, but "|" is also how every cardinality
+    # atom opens ("|s|") -- a naive recursive-descent parser cannot tell
+    # "close this cardinality" from "start a new infix operator" without
+    # unbounded lookahead, and mis-guessing would silently break every
+    # `|s|` use in the corpus. Left refused rather than risk that.
+    "|": "dafny-synthesis_task_id_799.dfy.rprint.dfy",
+}
+
+
 def test_785_parse_or_refuse() -> None:
-    """Acceptance (a): every one of the 785 banked rprints either parses
-    cleanly or raises `LiftParseError` naming a token and a line -- never
-    any other exception."""
+    """Acceptance (a) and (c): every one of the 785 banked rprints either
+    parses cleanly or raises `LiftParseError` naming a token, a line, and
+    a construct-named reason (section 5, section 18.2) -- never any other
+    exception, and never a bare `parse-failure` reason outside the named
+    residual list above."""
     files = sorted(RPRINT_DIR.glob("*.rprint.dfy"))
     assert len(files) == 785, len(files)
     parsed = refused = 0
     tokens: Counter = Counter()
+    reasons: Counter = Counter()
+    bare_failures: list[tuple[str, str, int]] = []
     for f in files:
         text = f.read_text(encoding="utf-8", errors="replace")
         try:
@@ -183,10 +205,19 @@ def test_785_parse_or_refuse() -> None:
         except lp.LiftParseError as e:
             refused += 1
             tokens[e.token] += 1
+            reasons[e.reason] += 1
+            if e.reason == "parse-failure":
+                bare_failures.append((f.name, e.token, e.line))
     assert parsed + refused == 785
+    unexpected = [(name, tok, line) for name, tok, line in bare_failures
+                  if tok not in KNOWN_BARE_TOKEN_RESIDUALS]
+    assert not unexpected, f"unnamed bare-token parse-failure(s): {unexpected}"
+    for name, tok, _line in bare_failures:
+        assert KNOWN_BARE_TOKEN_RESIDUALS[tok] == name, (name, tok)
     top = tokens.most_common(15)
     print(f"test_785_parse_or_refuse: {parsed} parsed, {refused} refused "
-          f"(0 crashes) / 785; top refusal tokens: {top}")
+          f"(0 crashes) / 785; refusal reasons: {reasons.most_common()}; "
+          f"top refusal tokens: {top}; bare-token residuals: {bare_failures}")
 
 
 def test_77_fixpoint() -> None:

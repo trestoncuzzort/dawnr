@@ -179,7 +179,7 @@ def test_verdict_unchecked_lift_is_undecided() -> None:
 def _row(file: str, method, refusal_reason: str | None, in_fragment: bool = True) -> lift_census.CensusRow:
     refusal = None if refusal_reason is None else Refusal(refusal_reason, "x", 1, "classify")
     row = lift_census.CensusRow(
-        file=file, method=method, in_fragment=in_fragment, gaps={},
+        file=file, method=method, in_fragment=in_fragment, gaps=[],
         lifter_verdict=("lifted" if refusal is None else f"refused:{refusal_reason}"),
         refusal=refusal,
     )
@@ -221,12 +221,117 @@ def test_counting_units_program_vs_method() -> None:
           f"method_lifted={summary.method_lifted} program_lifted={summary.program_lifted}")
 
 
+def _gap_row(file: str, method, in_fragment: bool, gaps: list[str],
+             refusal_reason: str | None) -> lift_census.CensusRow:
+    """Build one synthetic `CensusRow` with a real `disagreement`
+    verdict (computed the same way `_row_from_method_outcome` does),
+    for `gap_pair_tally`/`lifter_disagreement_rows`/`undecided_rows`
+    tests below."""
+    refusal = None if refusal_reason is None else Refusal(refusal_reason, "x", 1, "classify")
+    lifted_and_checked = refusal is None
+    row = lift_census.CensusRow(
+        file=file, method=method, in_fragment=in_fragment, gaps=list(gaps),
+        lifter_verdict=("lifted" if refusal is None else f"refused:{refusal_reason}"),
+        refusal=refusal,
+    )
+    census_record = {"in_fragment": in_fragment, "gaps": list(gaps)}
+    for g in gaps:
+        census_record[g] = True
+    row.disagreement = lift_census.disagreement_verdict(census_record, refusal, lifted_and_checked)
+    return row
+
+
+def test_gap_pair_tally_counts_and_multi_gap_rows() -> None:
+    """Synthetic rows covering: a plain gap-name disagreement (one pair),
+    a lifter row with two fired census gaps (two pairs, one row), an
+    in-fragment lifter row with no fired gap (tallied under the
+    `"(in-fragment)"` sentinel, not dropped), and an "agree" row that
+    must be excluded entirely from the tally."""
+    rows = [
+        # gap-name: census says div-mod, lifter refused array (different
+        # reason) -> disagreement "gap-name", pair (array, div-mod).
+        _gap_row("a.dfy", "A", in_fragment=False, gaps=["div-mod"], refusal_reason="array"),
+        # lifter, detector fault, two fired gaps that are both absent
+        # constructs by this lift's own evidence -> disagreement "lifter",
+        # contributes ONE pair per gap: (lifted, if-no-else), (lifted, real).
+        _gap_row("b.dfy", "B", in_fragment=False, gaps=["if-no-else", "real"], refusal_reason=None),
+        # lifter, in-fragment refusal naming a real construct, no fired
+        # gap -> disagreement "lifter", pair (div-mod, (in-fragment)).
+        _gap_row("c.dfy", "C", in_fragment=True, gaps=[], refusal_reason="div-mod"),
+        # agree: must not appear in the tally at all.
+        _gap_row("d.dfy", "D", in_fragment=True, gaps=[], refusal_reason=None),
+    ]
+    assert [r.disagreement for r in rows] == ["gap-name", "lifter", "lifter", "agree"], \
+        [r.disagreement for r in rows]
+
+    tally = lift_census.gap_pair_tally(rows)
+    assert tally == {
+        ("array", "div-mod"): 1,
+        ("lifted", "if-no-else"): 1,
+        ("lifted", "real"): 1,
+        ("div-mod", "(in-fragment)"): 1,
+    }, tally
+    # Total pair count over a 3-qualifying-row, 4-fired-gap input is 4
+    # (row b contributes 2, rows a and c contribute 1 each) -- never 3.
+    assert sum(tally.values()) == 4, tally
+
+    lines = lift_census.gap_pair_tally_lines(tally, limit=2)
+    assert len(lines) == 2, lines
+    # Tie-broken alphabetically by (reason, gap) among the three 1-count
+    # pairs; "array x div-mod" sorts first.
+    assert lines[0] == "array x div-mod: 1", lines
+
+    lifter_rows = lift_census.lifter_disagreement_rows(rows)
+    assert [r.file for r in lifter_rows] == ["b.dfy", "c.dfy"], [r.file for r in lifter_rows]
+
+    undec = lift_census.undecided_rows(rows)
+    assert undec == [], undec
+    print("test_gap_pair_tally_counts_and_multi_gap_rows: "
+          f"{sum(tally.values())} pairs over {len(lifter_rows)} lifter rows")
+
+
+def test_undecided_reason_branches() -> None:
+    """`undecided_reason` on one row of each producible "undecided"
+    branch: a refusal reason (policy/lift-check-failed/incomplete-
+    pipeline all read the same way, straight from `Refusal.reason`), a
+    fired policy gap on a row that lifted anyway, and an unchecked lift
+    with no refusal and no policy gap."""
+    policy_refusal = _gap_row("e.dfy", "E", in_fragment=True, gaps=[], refusal_reason="array")
+    assert policy_refusal.disagreement == "undecided", policy_refusal.disagreement
+    assert lift_census.undecided_reason(policy_refusal) == "array"
+
+    policy_gap_lifted = _gap_row("f.dfy", "F", in_fragment=False, gaps=["array"], refusal_reason=None)
+    assert policy_gap_lifted.disagreement == "undecided", policy_gap_lifted.disagreement
+    assert lift_census.undecided_reason(policy_gap_lifted) == "policy-gap:array"
+
+    unchecked = lift_census.CensusRow(
+        file="g.dfy", method="G", in_fragment=True, gaps=[],
+        lifter_verdict="lifted", refusal=None)
+    unchecked.disagreement = lift_census.disagreement_verdict(
+        {"in_fragment": True, "gaps": []}, None, False)
+    assert unchecked.disagreement == "undecided", unchecked.disagreement
+    assert lift_census.undecided_reason(unchecked) == "unchecked-lift"
+    print("test_undecided_reason_branches: policy-refusal, policy-gap, "
+          "unchecked-lift all resolve to distinct reasons")
+
+
+def test_refusal_reason_by_infragment_split() -> None:
+    rows = [
+        _gap_row("a.dfy", "A", in_fragment=True, gaps=[], refusal_reason="div-mod"),
+        _gap_row("b.dfy", "B", in_fragment=False, gaps=["div-mod"], refusal_reason="div-mod"),
+        _gap_row("c.dfy", "C", in_fragment=False, gaps=[], refusal_reason="div-mod"),
+    ]
+    by_infrag = lift_census.refusal_reason_by_infragment(rows)
+    assert by_infrag["div-mod"] == {"in_fragment": 1, "out_of_fragment": 2}, by_infrag
+    print("test_refusal_reason_by_infragment_split: div-mod split 1 in / 2 out")
+
+
 def test_decision17_lifted_vs_counted() -> None:
     """Decision 17: a lifted row whose twin instrument refused is still
     `_is_lifted` but not `_is_counted` -- two different numbers."""
     lifted_clean = _row("e.dfy", "E", None)
     lifted_twin_refused = lift_census.CensusRow(
-        file="f.dfy", method="F", in_fragment=True, gaps={},
+        file="f.dfy", method="F", in_fragment=True, gaps=[],
         lifter_verdict="lifted", refusal=None, twin_refusal="no-operator")
     rows = [lifted_clean, lifted_twin_refused]
     summary = lift_census.summarize(rows)
@@ -460,6 +565,9 @@ OWN_TESTS = [
     test_verdict_incomplete_pipeline_undecided,
     test_verdict_unchecked_lift_is_undecided,
     test_counting_units_program_vs_method,
+    test_gap_pair_tally_counts_and_multi_gap_rows,
+    test_undecided_reason_branches,
+    test_refusal_reason_by_infragment_split,
     test_decision17_lifted_vs_counted,
     test_lift_file_stub_no_crash,
     test_resumability_no_recompute,

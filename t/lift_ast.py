@@ -806,7 +806,10 @@ class LiftRecord:
     three-invocation discipline plus the checker/differential runs of
     sections 9-10). `warnings` collects every warning line dafny printed
     on any of those invocations, verbatim; section 18.1 says they are
-    recorded and ignored, never promoted to a refusal."""
+    recorded and ignored, never promoted to a refusal. `lowered_task_verdict`
+    is the checker file's own lowered-`<Method>` verdict (decision 8's
+    dropped hints show up here as UNPROVED, decision 17's own column: never
+    folded into `checker_verdicts` or a `lift-check-failed` refusal)."""
     source_path: str
     method: str
     rprint_sha256: str
@@ -821,3 +824,4 @@ class LiftRecord:
     differential_verdict: Optional[str] = None
     dafny_exit_codes: dict[str, int] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    lowered_task_verdict: Optional[str] = None
