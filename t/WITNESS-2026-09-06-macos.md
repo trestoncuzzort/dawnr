@@ -95,6 +95,52 @@ in fragment**, the documented figure, and **25 of the 164 MBPP-DFY**, which is
 what ROADMAP WS-13.1 claims. 785 rprints regenerated, 783 clean plus the two
 known exit-2 resolve failures.
 
+## The 12.5 sweep, reproduced on a second platform
+
+The Dell ran WS-12.5 the same day (`f2f0808`): the 159 lifted DafnyBench tasks
+through seven kernels, real and twin, flake n=3. This machine ran the same
+sweep independently, from a corpus it had re-lifted itself rather than copied,
+at 18 jobs instead of 48.
+
+**1,113 shared cells. Three differ. 99.73% identical.**
+
+| kernel | Dell (159 tasks) | MacBook (160) |
+|---|---:|---:|
+| dafny | 132 | 133 |
+| verus | 92 | 92 |
+| spark | 100 | 100 |
+| framac | 62 | 61 |
+| lean | 80 | 80 |
+| rocq | 77 | 78 |
+| fstar | 100 | 101 |
+| count in all seven | **30** | **30** |
+| flaked cells | 0 | 0 |
+
+The three differing cells, on the tasks both tables hold:
+
+```
+framac  dafny_verify_..._dataset_error_d   dell verified/timeout   mac tool_error/tool_error
+framac  nitwit_..._max_nit                 dell verified/refuted   mac tool_error/tool_error
+spark   dafny_verify_..._dataset_bql_exa   dell timeout/timeout    mac timeout/refuted
+```
+
+All three sit in Frama-C and SPARK, which are the two kernels already known to
+be the timing-sensitive ones: the 11-task table's six `verified / timeout`
+cells are all Frama-C, on both platforms. Nothing in dafny, verus, lean, rocq
+or fstar moved at all, and **30 of 159 counting in all seven reproduces
+exactly**.
+
+The extra task in the Mac column is
+`dafny_verify_..._ai_agent_validation_examples__max`, the same method that
+lift-checks clean here and refused on the Dell. It is the one row where the two
+machines disagree about the corpus itself, and
+`LIFTER-785-RESIDUALS.md` has the account.
+
+So the sweep's headline number is a property of the corpus and the kernels, not
+of one box. Its known hurdle, the fstar door that reads 23 reals REFUTED
+because F* error 19 maps to REFUTED, reproduces here too: fstar counts 100 on
+the Dell and 101 here, and both rest on that mapping.
+
 ## Reproducing this
 
 ```bash
