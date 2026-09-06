@@ -31,6 +31,11 @@ data/kodcode*
 data/acecode*
 data/imported_*
 localllm/out_gui/
+# Three l's above is a typo that has been there since the entry was
+# written, so the real locallm/out_gui/ was never ignored: 73 MB of
+# trained weights sat one `git add -A` away from the repo, against this
+# file's own rule that checkpoints are reproducible and do not belong here.
+locallm/out_gui/
 
 # The sponsor handoff package is his proprietary guidance. It lives here for
 # reading and never enters version control or any publish whitelist.
@@ -49,8 +54,9 @@ poscontrol/served/*.gguf
 dpo_adapter_poscontrol/*.safetensors
 dpo_adapter_poscontrol/export/*.gguf
 dpo_adapter_poscontrol/export/amplified/*.safetensors
-# Claude Code session tooling
+# Agent session tooling, none of it product
 .claude/
+.codex/
 # pytest's cache, created by running the suite. Not a result.
 .pytest_cache/
 
