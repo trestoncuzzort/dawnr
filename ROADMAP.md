@@ -745,14 +745,17 @@ number below that is not yet measured says so.
 **Where the tool stands.** The notation exists: `t/surface.py` parses the
 written form to the JSON AST and prints it back, round trip verified on 1528
 tasks both directions and 100000 random ASTs. It is wired into nothing:
-`run_all.py` and `run_par.py` read only `t/tasks/*.json`, a parse error
+`run_all.py` reads only `t/tasks/*.json` (`run_par.py` took
+`--tasks`, `--out` and `--table` on 2026-09-06 for 12.5), a parse error
 carries no line or column (the tokens do, the error does not), the
 well-formedness checker `check_wf` lives inside `fuzz_lower.py`, and there is
 no command, no language server, no editor extension and no formatter
 command. `TUTORIAL.md` lesson 0 still says nothing parses the pretty form,
 which has been false since 2026-09-04. Kernels: seven on Linux, installed on
 the Dell without root; five native on Windows and all seven under WSL2
-(RUN-ON-WINDOWS.md); macOS unmeasured.
+(RUN-ON-WINDOWS.md); and, measured 2026-09-06, all seven native on macOS
+arm64 (`RUN-ON-MACOS.md`, `WITNESS-2026-09-06-macos.md`), where the
+7 x 11 matrix reproduced the Dell's table cell for cell.
 
 ### WS-13: the language
 
@@ -760,9 +763,14 @@ the Dell without root; five native on Windows and all seven under WSL2
 
 12.7 opens div-mod and early-exit first, then arrays with mutation, in the
 census order. The coverage half needs whatever the 164 MBPP-DFY programs
-need, and that profile is UNMEASURED as a subset: the census ranks gates over
-all 643 gradable programs, and 25 of the 164 are in fragment today. Measure
-the gate order over the 164 alone before opening a gate for them. Every gate
+need. The CENSUS side of that profile is measured and always was:
+`coverage_census.py` runs its greedy curve on the MBPP-DFY family alone and
+`COVERAGE-dafnybench.md` carries the twenty steps, div-mod first, 25 of the
+164 in fragment today. What is unmeasured is the same question asked of the
+instrument that replaced the census: `LIFTER-785.md` carries no family
+breakdown, and `lift_census.py` drops the `family` field on the way in.
+Measure the gate order over the 164 on the LIFTER side before opening a gate
+for them, and say where it parts from the lexical one. Every gate
 follows 10.4: taxonomy measured, lowering landed in all seven, flip table
 reproduced from clean scratch by a skeptic, then the column is claimed. The
 hazards named in 12.7 stand.
@@ -967,9 +975,11 @@ UNBLOCKS: nothing on the 1.0 path; it is what 1.0 is measured against next.
 
 #### 17.1 Install stories per OS
 
-RUN-ON-WINDOWS.md exists and was confirmed on a real Windows machine. Linux
-has the Dell's no-root install recorded outside the repo; macOS is
-unmeasured.
+RUN-ON-WINDOWS.md exists and was confirmed on a real Windows machine.
+RUN-ON-MACOS.md exists and was measured on a real Mac 2026-09-06, seven
+kernels native on arm64, witness `WITNESS-2026-09-06-macos.md`. Linux still
+has only the Dell's no-root install recorded outside the repo, which is now
+the gap rather than macOS.
 
 DONE WHEN: a committed install page per OS, followed from a fresh machine by
 a second person, ending in the walk-through.
