@@ -63,33 +63,51 @@ the simplest functional tasks t has:
 ```
 MAX_POINTS cap: 2048
 
-task             params            full cross   visited  coverage
-------------------------------------------------------------------
-abs              int                       86        86    100.0%
-all_nonneg       seq                       82        82    100.0%
-contains         seq,int                7,052     2,048     29.0%
-count_matches    seq,int                7,052     2,048     29.0%
-factorial        int                       86        86    100.0%
-fib              int                       86        86    100.0%
-gcd              int,int                7,396     2,048     27.7%
-linear_search    seq,int                7,052     2,048     29.0%
-max              int,int                7,396     2,048     27.7%
-seq_max          seq                       82        82    100.0%
-sum_upto         int                       86        86    100.0%
-------------------------------------------------------------------
-5 of 11 tasks are truncated by the cap
-  lowest coverage: gcd at 27.7% (2,048 of 7,396 points)
+task             params         full cross   visited   checked  checked%
+--------------------------------------------------------------------------
+abs              int                    86        86        86    100.0%
+all_nonneg       seq                    82        82        82    100.0%
+contains         seq,int             7,052     2,048     2,048     29.0%
+count_matches    seq,int             7,052     2,048     2,048     29.0%
+factorial        int                    86        86        41     47.7%
+fib              int                    86        86        17     19.8%
+gcd              int,int             7,396     2,048       450      6.1%
+linear_search    seq,int             7,052     2,048     2,048     29.0%
+max              int,int             7,396     2,048     2,048     27.7%
+seq_max          seq                    82        82        81     98.8%
+sum_upto         int                    86        86        41     47.7%
+--------------------------------------------------------------------------
+5 of 11 tasks are truncated by the MAX_POINTS cap
+5 of 11 lose further points to their `requires`
+  least-checked task: gcd, 450 of 7,396 points (6.1% of its input space)
+  fewest points outright: fib at 17
   widest untried integer interval: (-2,147,483,649, -1,000,000), 2,146,483,649 wide
 ```
 
-Three facts follow, and each is a distinct weakness:
+VISITED and CHECKED are different numbers and only CHECKED matters.
+`build_differential` runs `interp.Reference(task).points`, which is the domain
+after the `requires` filter, so a task with a precondition is checked on fewer
+points than it visits.
 
-**The single-parameter tasks are exhaustive over a ladder of 86 values.** For `abs`,
-`factorial`, `fib` and `sum_upto` the check tries every point the ladder offers, so within
-the ladder there is nothing left to find. The ladder is
+**The first version of this file, committed earlier the same day, printed VISITED
+and called it coverage.** That was wrong in the flattering direction: it reported
+`fib` at 100% and `gcd` at 27.7%, when the harness actually runs 17 points for
+`fib` and 450 for `gcd`. The tool has been fixed to print both.
+
+Four facts follow, and each is a distinct weakness:
+
+**Only `abs` and `all_nonneg` are checked on their whole input space.** Their ladders are
+86 and 82 values and they have no precondition to shed, so within the ladder there is
+nothing left to find. The ladder is
 `0, 1, -1, 2, -2, 1000000, -1000000, 2147483648, -2147483649, 2147483647, 3..40` and their
 negations. It is a well-chosen ladder: it has zero, the small integers, and the int32
 boundaries. It is still 86 points.
+
+**A precondition can take most of them away.** `fib` and `sum_upto` and `factorial` all
+require a non-negative argument, so the negative half of the ladder is discarded before
+anything runs: `fib` is checked on **17 points**, `factorial` and `sum_upto` on 41. `gcd`
+requires both arguments positive and lands on 450 of its 7,396, **6.1%**. The narrowest
+body-fidelity evidence in the tier is seventeen integers.
 
 **The ladder is essentially task-independent.** `interp.ladders` builds it from
 `[0, 1, -1] + _around(literals) + INTS`, and for `factorial`, `abs` and `gcd` the literals
@@ -97,8 +115,8 @@ are all 0 and 1, which the fixed `INTS` tuple already contains. All three get th
 86-value ladder. The domain does not adapt to the program, so a program whose interesting
 behaviour lives at 97, or at 12345, is sampled nowhere near it.
 
-**The two-parameter tasks are truncated, not exhaustive.** `gcd` and `max` are checked on
-2,048 of 7,396 points, 27.7%. The three `seq,int` tasks are checked on 29.0%. The cap is
+**The two-parameter tasks are truncated, not exhaustive.** `max` is checked on
+2,048 of 7,396 points, 27.7%, and the three `seq,int` tasks on 29.0%. The cap is
 `MAX_POINTS = 2048` and the traversal is shell order, so what gets visited is a ball
 around low ladder indices; the far corner of the cross product is never reached. This is
 the weakness that grows: three parameters would be 86^3 = 636,056 points, of which 2,048
@@ -124,30 +142,41 @@ today print the same way.
 ## The gate
 
 Before any coverage number over `nl/`'s 24,748 problems is reported, these must hold, in
-this order. None of them is satisfied today.
+this order. Condition 0 is settled below and needs no further work; conditions 1 through 5
+are open, and none of them is satisfied today.
 
-1. **Every task in `t/tasks/` reports its domain coverage alongside its verdict.** A
-   sampled agreement is labelled as sampled, with the fraction. `t/fidelity_domain.py`
-   produces the fraction; nothing consumes it yet.
+0. **The tier is the 164 MBPP-DFY programs, not the eleven hand-written tasks.** This is
+   a correction to the first draft of this file. `lift_check.build_differential(task,
+   source, closure)` needs a real `MethodDecl` and call-graph closure, which only
+   `lift_resolve.resolve` on an actual `.dfy` file produces. The tasks in `t/tasks/` have
+   no Dafny source, and lowering a task to serve as its own `source` compares a thing to
+   itself. The eleven remain the right place to measure the DOMAIN, which is what
+   `fidelity_domain.py` does; they are not a place the differential arm can run.
 
-2. **The simplest tier is checked exhaustively, not to a cap.** For the eleven tasks the
-   full cross product is at most 7,396 points, which is affordable; the 2,048 cap buys
-   nothing here and costs 72.3% of `gcd`'s domain. The cap exists for witness search, where it
-   is load-bearing, so this needs a separate limit for the fidelity run rather than a
-   change to `MAX_POINTS`.
+1. **Every row reports CHECKED points, not visited ones, beside its verdict.** A sampled
+   agreement is labelled as sampled, with the count that actually ran.
+   `lift_check` already words it correctly ("agrees on N of M points"); what is missing is
+   that nothing refuses to print a coverage number when N is small.
 
-3. **The ladder is widened past its own literals for the fidelity run.** A domain derived
-   from the program's constants cannot find a divergence away from those constants. Random
-   sampling under a fixed seed, plus the existing boundaries, would cover the untried
-   intervals and stay reproducible.
+2. **The tier is checked on the human-written inputs as a second arm.** The 492 MBPP
+   assertions, parsed to concrete points, run through
+   `lift_check._build_differential_with_points`, which already accepts an explicit point
+   list. Not merged with the ladder arm: two arms, two numbers, reported separately,
+   because they answer different questions and only one of them is independent.
 
-4. **`bad=0` on every task in the tier, at that widened domain, with the count recorded.**
-   This is the condition the rule actually names. It is a measurement, so it can fail, and
-   if it fails the corpus run does not start.
+3. **Points outside t's `int`/`bool`/`seq<int>` types are refused with a named reason,**
+   the same discipline the lifter applies to constructs. An MBPP assertion over strings,
+   dicts or tuples is not silently dropped; it is counted and named, so the surviving
+   count is a measurement and not a filter nobody audited.
+
+4. **`bad=0` on both arms across the tier, with both counts recorded.** This is the
+   condition the rule actually names. It is a measurement, so it can fail, and if it fails
+   the corpus run does not start.
 
 5. **Only then, the corpus number, carrying the tier result with it.** The claim is
-   "N of 24,748, under a lifter measured faithful on the simplest tier at D points per
-   task", and it is never quoted without the second clause.
+   "N of 24,748, under a lifter measured faithful on the MBPP-DFY tier at L ladder points
+   and H human-written points per program", and it is never quoted without the second
+   clause.
 
 ## Where nl/ comes in
 
@@ -158,10 +187,30 @@ not looking at the lifter**: `test_list` for MBPP, a `check(candidate)` harness 
 HumanEval. Those inputs are independent of the program's literals by construction, which
 is exactly the property `interp.ladders` cannot have.
 
-They are Python, and the lifter reads Dafny, so this is not a drop-in domain today. It is
-the reason to keep the tier definition and the corpus in one repo: when a Python path
-exists, the fidelity domain for the simplest tier should come from those human-written
-tests rather than from a ladder the lifter generated for itself.
+They are Python and the lifter reads Dafny, but that gap is already bridged, and the bridge
+was found on 2026-09-06 rather than built. **DafnyBench's 785 ground-truth programs include
+164 named `dafny-synthesis_task_id_NNN.dfy`**: Dafny versions of MBPP problems, the same
+164 that ROADMAP WS-13.1 and WS-16.2 call "the MBPP-DFY programs". They join to `nl/`'s
+MBPP records by `task_id`, and the join was measured, not assumed:
+
+```
+MBPP-DFY Dafny programs in DafnyBench:            164
+matched to an MBPP record in nl/:                 164 (100.0%)
+human-written assert statements they carry:       492 (3.0 per program)
+```
+
+So for exactly the tier the rule is about, there is a Dafny source the lifter can read AND
+an independent set of inputs somebody wrote without reference to the lifter. MBPP task 605
+tests `prime_num(-1010)==False`; -1010 lies inside the untried interval between 40 and
+10^6, so that one human-written line already reaches where the ladder never looks.
+
+This also settles how to widen the domain, because two constraints rule out the obvious
+answer. `interp.py` states that "the domain is enumerated, never sampled" and treats the
+determinism as load-bearing for reproducible witness selection, so seeded random sampling
+is a departure, not a free upgrade. And `DIFF_MAX_POINTS = 512` exists because the Dafny
+differential run is superlinear: 512 points take 7.5 s, 2,048 take 87 s. More points is
+therefore the wrong lever. **492 human-chosen points is the right one:** deterministic,
+independent of the program's own literals, and nearly free against the Dafny budget.
 
 ## Re-running the numbers
 

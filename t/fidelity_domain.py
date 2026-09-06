@@ -16,6 +16,14 @@ between them. It also reports the ladder's reach: the widest gap between
 consecutive integer values, because a body that diverges from its source
 strictly inside that gap is invisible to every check the lifter runs.
 
+Two point counts, and the difference between them is the whole point. VISITED
+is what `interp.domain` yields. CHECKED is what survives `interp.Reference`'s
+`requires` filter, and it is the only one the differential harness ever runs:
+`build_differential` takes `interp.Reference(task).points`, not the raw domain.
+The first version of this tool reported VISITED alone, which flattered every
+task with a precondition: `fib` visits 86 points and checks 17. Report both or
+the number is not the number.
+
     python3 fidelity_domain.py                  # every task in tasks/
     python3 fidelity_domain.py tasks/gcd.json   # named tasks only
     python3 fidelity_domain.py --json           # machine-readable
@@ -64,6 +72,12 @@ def measure(path):
 
     visited = sum(1 for _ in interp.domain(task, names))
 
+    # What the differential harness actually runs. `build_differential` uses
+    # `interp.Reference(task).points`, which is the domain filtered to the
+    # points satisfying `requires`, so a task with a precondition is checked
+    # on fewer points than it visits and the gap is invisible in `visited`.
+    checked = len(interp.Reference(task).points)
+
     ints = ladders["int"]
     gap, lo, hi = widest_gap(ints)
 
@@ -73,7 +87,9 @@ def measure(path):
                    for n, t in names],
         "full_cross": full,
         "visited": visited,
+        "checked": checked,
         "coverage": (visited / full) if full else 1.0,
+        "checked_share": (checked / full) if full else 1.0,
         "capped": visited < full,
         "int_ladder": len(ints),
         "int_min": min(ints),
@@ -98,24 +114,32 @@ def main(argv):
 
     print("MAX_POINTS cap: %d" % interp.MAX_POINTS)
     print()
-    print("%-16s %-14s %13s %9s %9s"
-          % ("task", "params", "full cross", "visited", "coverage"))
-    print("-" * 66)
+    print("%-16s %-12s %12s %9s %9s %9s"
+          % ("task", "params", "full cross", "visited", "checked", "checked%"))
+    print("-" * 74)
     for r in rows:
         sig = ",".join(p["type"] for p in r["params"])
-        print("%-16s %-14s %13s %9s %8.1f%%"
+        print("%-16s %-12s %12s %9s %9s %8.1f%%"
               % (r["task"], sig, "{:,}".format(r["full_cross"]),
-                 "{:,}".format(r["visited"]), 100 * r["coverage"]))
+                 "{:,}".format(r["visited"]), "{:,}".format(r["checked"]),
+                 100 * r["checked_share"]))
 
     capped = [r for r in rows if r["capped"]]
-    print("-" * 66)
-    print("%d of %d tasks are truncated by the cap" % (len(capped), len(rows)))
-    if capped:
-        worst = min(capped, key=lambda r: r["coverage"])
-        print("  lowest coverage: %s at %.1f%% (%s of %s points)"
-              % (worst["task"], 100 * worst["coverage"],
-                 "{:,}".format(worst["visited"]),
-                 "{:,}".format(worst["full_cross"])))
+    print("-" * 74)
+    print("%d of %d tasks are truncated by the MAX_POINTS cap"
+          % (len(capped), len(rows)))
+
+    filtered = [r for r in rows if r["checked"] < r["visited"]]
+    print("%d of %d lose further points to their `requires`"
+          % (len(filtered), len(rows)))
+
+    worst = min(rows, key=lambda r: r["checked_share"])
+    print("  least-checked task: %s, %s of %s points (%.1f%% of its input space)"
+          % (worst["task"], "{:,}".format(worst["checked"]),
+             "{:,}".format(worst["full_cross"]), 100 * worst["checked_share"]))
+    fewest = min(rows, key=lambda r: r["checked"])
+    print("  fewest points outright: %s at %d"
+          % (fewest["task"], fewest["checked"]))
 
     gaps = {(r["widest_gap"], tuple(r["gap_between"])) for r in rows}
     for gap, (lo, hi) in sorted(gaps, reverse=True)[:1]:
