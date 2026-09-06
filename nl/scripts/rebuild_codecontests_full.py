@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Rebuild the FULL code_contests extraction (~20.9 GB of JSONL) from HuggingFace.
 
-The repo ships a capped variant — every problem and every test, but at most N
-solutions per problem — because the full solution set does not fit in GitHub LFS.
+The repo ships a capped variant, every problem and every test but at most N
+solutions per problem, because the full solution set does not fit in GitHub LFS.
 This script reproduces the uncapped original.
 
     pip install huggingface_hub pyarrow        # in a venv

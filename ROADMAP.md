@@ -724,12 +724,17 @@ Surface syntax landed 2026-09-04 (`t/surface.py`, round trip verified on
 1528 tasks both directions plus 100,000 random ASTs), wired into nothing
 on purpose; 14.1 is the decision.
 
-Em-dash debt in the parts under focus, measured 2026-09-05: 526 in `t/`,
-289 in `tup/`, 149 in the root markdown, 121 files, 72 of them
-in this file. Repair the sentences the dashes were carrying rather than
-deleting the character, which leaves run-ons behind; the closed items
-above were rewritten without them on 2026-09-05, the open ones still
-carry theirs.
+Em-dash debt: **PAID 2026-09-06**, 757 to 21 across `t/` and `tup/`, every
+sentence repaired rather than the character deleted. The 21 that remain are
+deliberate and of four kinds: table and receipt TITLES whose bytes land in a
+committed receipt (5); the EMPTY-CELL marker, a data glyph saying "no reading
+here" (5); `test_lift_report.py`'s own `assert "—" not in md_text` (1); and
+seven that sit inside heredocs writing `/etc/fstab`, `/etc/resolv.conf` and
+`grub.cfg` INTO the image, where editing prose would change every inventory
+hash and silently invalidate the boot witness. `tup/receipts/*.md` were left
+untouched for the same reason: a receipt is evidence, and .gitattributes says
+to hand it back exactly as committed. Reprinting any of these is a decision
+to take on purpose.
 
 `forge/` and `locallm/` remain out of scope.
 
