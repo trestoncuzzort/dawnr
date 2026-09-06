@@ -1,0 +1,47 @@
+# Lifter decisions
+
+The four designs in `t/lifter-design/` (DPN: dafny-print-normalised, RD:
+recursive-descent, TSG: two-stage-generic, VL: verified-lift) each end with an
+"open decisions" section. Read together they name the same questions, and
+each states what reversing its default costs. This file settles them so the
+implementers have one answer per question. Row 1 was decided by Treston on
+2026-09-05; the rest are the majority default across the four designs, with
+the ROADMAP.md "assumed" list (WS-16 notes) breaking ties, approved with the
+implementation plan on 2026-09-05. A row is reversed by editing this file and
+re-running the corpus; the sidecar records which rule fired, so every count
+can be re-derived under the other choice.
+
+Every rewrite is recorded in the task's `.lift.json` sidecar under the name in
+the "chosen" column, so the disagreement table can say which rule a row rests
+on.
+
+| # | Decision | DPN | RD | TSG | VL | Chosen default | Cost of reversing |
+|---|---|---|---|---|---|---|---|
+| 1 | Read-only `array<int>` parameter | refuse `array` | refuse `array` | lift to seq | refuse `array` | Lift to `seq`, `a.Length` as `len`, `a[i]` as `at`; condition: no `modifies`, no element assignment, no `new`, no call passing the array, anywhere in the method's closure; recorded `array-readonly-as-seq`. Treston, 2026-09-05; ROADMAP assumed the same. | Refuse `array`: the 36 sole-gap programs stay refused and the table loses its largest class of rows. |
+| 2 | `x in s`, `x !in s` on a `seq<int>` | desugar | desugar | desugar | desugar | Bounded `exists` over `[0, len(s))` with a fresh binder, `not` of it for `!in`; recorded `in-desugared`. The contract lemma verifies it per program. | Refuse `seq-membership`: 0 of the 77, 6 of the 49 samples; a lifter-introduced quantifier never reaches a kernel. |
+| 3 | `s != []`, `s == []` | refuse `seq-literal` | not raised | not raised | not raised | Refuse `seq-literal` in v1 (a display is a display). | Exact emptiness desugaring to `len(s) != 0`; maximum.dfy lifts. Revisit from the 785 table. |
+| 4 | nat return | add | add | add, first | add | Add `ensures r >= 0` as the first ensures clause; recorded `nat-return-ensures`. The source's typing is part of its theorem. | The kernels prove a weaker theorem than the source's on the 25 nat-returning methods of the 77, and a twin returning a negative can pass. |
+| 5 | nat local, or nat return assigned in a loop | append | append | append, dedup | add | Append `v >= 0` to every loop that assigns `v`, after the author's invariants, deduplicated; recorded `nat-invariant-added`. This is the per-assignment obligation Dafny proved, relocated to the loop head. | Omit: potencia-shaped loops fail in every kernel (exit `e <= 0` does not give `e == 0`). Refuse `nat-local` instead: 7 of the 77. Prepending instead of appending shifts the author's INVARIANT-DROP site indices. |
+| 6 | Function `requires`, and nat parameters (a nat parameter is a requires) | totalise | widen | totalise | totalise | Wrap the body in an `ite` on the source's domain guard with default 0 for int and false for bool; recorded `spec-fun-totalised`. Any constant agrees on the domain; the default is invisible where the source verified. | Refuse `function-requires`: 8 to 12 of the 77 (the designs count differently), every nat-domain recursive function among them. |
+| 7 | `assume` in a method body | not raised | refuse | refuse | not raised | Refuse `assume-in-body`. ROADMAP assumed the same. | Drop with provenance: the lifted theorem is stronger than the one the source proved. |
+| 8 | Hints and unreachable declarations: `assert`, `calc`, lemma calls, function `ensures`, unused functions and lemmas, `Main` | drop, count | drop, count | drop, record | drop, log | Drop, each counted in the sidecar: `assert-dropped` with count, `lemma-call-dropped`, `function-ensures-dropped`, `unused-function-dropped`, `main-dropped`. A kernel that needed the hint reads UNPROVED, attributed by the sidecar. | Refuse `assert-in-body`: 8 of the 77. Refuse `function-ensures`: 1 of the 77 (`fact` in dafny-programs factorial). |
+| 9 | Files with several gradable methods | one task per method | refuse when two carry an ensures | one task per method | one candidate per method | One task per gradable method (a `method` with at least one `ensures`, not `Main`); the table reports both the program count (in fragment iff every task lifts) and the method count, and every number says which unit it uses. | Refuse `multi-method` as the census does: 212 programs stay out on packaging alone. |
+| 10 | Top-level `&&` inside one clause | split all | never | split requires and ensures only | never | Split in `requires` and `ensures` (`split-conjuncts`; identical theorem, finer certificate conjuncts). Never split an `invariant`: the author's invariant list is the twin's exact instrument. | Meaning is unchanged either way. Splitting invariants changes the selected twin on 27 programs (VL) and gives INVARIANT-DROP more sites (DPN). |
+| 11 | Tuple `decreases` (stated, or inferred by rprint for `&&` guards and multi-parameter functions) | refuse unless a Dafny-checked candidate flag is on | sum of guarded parameters with a local check | candidate ladder with a Dafny probe | project, else `guess:sum` | Project to the one component that changes when the others are fixed (`decreases-tuple-reduced`); else the sum of components, recorded `guess:sum`. No Dafny probe in v1: a wrong measure fails the real cell visibly and cannot corrupt a count. When no candidate exists (a loop with a `\|\|`, `!b` or bool guard and no stated measure; `decreases *`), refuse `uninferable-decreases`. | Refuse `lexicographic-decreases`: SlowMax and the two gcd programs are lost. |
+| 12 | Source that dafny 4.11.0 does not verify | not raised | carry the exit code | lift, tag | not raised | Lift, tag `source-unverified`, and carry the source's `dafny verify` exit code on every row. None of the 77 today. | Refuse: a Dafny-version artefact then counts as a refusal. |
+| 13 | Uninitialised local read before assignment | default-init | fold | not raised | 2 in the 77, folded | Default-init 0 for int and false for bool; recorded `default-init`. | Refuse `uninitialised-local`: 2 of the 77. |
+| 14 | `module` wrapper; `ghost var` local; `function ... by method`; `modifies a` with no write; `string` seen only through `\|s\|` and `seq<nat>` elements; top-level early `return` before a loop | refuse | refuse | unwrap; ordinary local; drop the method body; accept; refuse; not raised | not raised | Refuse, with the census name where one exists: `module`, `ghost-local`, `function-method`, `array-mutation` (the frame permits a write), `string-char`, `nat-seq-elements`, `early-exit`. Conservative for v1. | Each is an exact rewrite the inventory identified (TSG and DPN name the files). Revisit from the 785 table. |
+| 15 | `for` loops | not raised | not raised | desugar | row in section 4 | Desugar per LIFTER-DESIGN.md section 4 with the implicit range invariant and the `hi - k` measure; recorded `for-desugared`. Zero of the 77; untested until the 785. | Refuse `for-loop`. |
+| 16 | `requires true`; the `"t"` version field | not raised | not raised | not raised | mirror; always 1 | Mirror the literal as `[{"bool": true}]`; emit `"t": 1` always. | Nothing measurable; v0-shaped tasks become byte-comparable to the committed ones. |
+| 17 | A task that lifts but t's own instruments refuse (`no-operator`, `interp-no-input`, a preservation-witness twin that dafny reads UNPROVED) | own column | separate rows | tag | distinct column | Two columns, lifted and counted. These are t verdicts on lifted tasks, not lift failures, and coverage of the fragment and coverage of the measurement are two numbers. | One column hides which instrument refused. |
+| 18 | Retry a `lift-check-failed` row with mechanical hints (`{:induction}`, calling every generated lemma) | not raised | not raised | not raised | never | Never. The checker never argues for the lifter; the row stays refused. | A proof the lifter wrote about itself. |
+| 19 | The differential run's input domain | interp's | interp's | interp's, both arms | interp's | `interp.domain` of the lifted task, so the twin, the fidelity check and the body oracle share one domain. | A larger sampled domain costs about 0.1 ms per point after the compile and finds only what interp's misses. |
+
+Excluded on purpose: the ROADMAP 12.3 question, whether a task with no
+refuting twin is refused, stays open and is not the lifter's to settle. The
+lifter emits the task and records the twin refusal; the count treats it under
+whatever 12.3 decides.
+
+Where a design's default was reversed by this file, the design text still
+argues the other way: VL section 15 items 1 and 5 (arrays, clause splitting)
+and DPN section 15 items 1 and 9 are the places to read the losing argument.
