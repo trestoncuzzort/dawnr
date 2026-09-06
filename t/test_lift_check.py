@@ -345,8 +345,8 @@ def test_inverse_committed_and_corpus(slow: bool) -> None:
 
 def test_array_program_end_to_end(slow: bool) -> None:
     """Read-only `array<int>` parameter (decision 1, `array-readonly-as-
-    seq`) end to end on a real corpus file: `Clover_max_array.dfy`'s
-    `maxArray` lifts `a: array<int>` to a task `seq<int>` of the same
+    seq`) end to end on a real corpus file: `Clover_min_array.dfy`'s
+    `minArray` lifts `a: array<int>` to a task `seq<int>` of the same
     name, so the checker lemmas keep ONE lemma parameter per argument,
     typed to the SOURCE's `array<int>`, and every lifted-side reference to
     it must print as its sequence view `a[..]` rather than bare `a` (an
@@ -358,21 +358,30 @@ def test_array_program_end_to_end(slow: bool) -> None:
     if not slow:
         print("test_array_program_end_to_end: skipped (pass --slow)")
         return
-    dfy_path = test_lifter.CORPUS_DIR / "Clover_max_array.dfy"
+    # Clover_MIN_array, not max. The max file does not parse: it carries a
+    # hint-chain expression (a lemma call sequenced before the real result
+    # inside a function arm), so the whole FILE refuses `let-expression`
+    # before any method is reached. That is not a Mac artifact, it is what
+    # this repository's own corpus report says: LIFTER-785.md row
+    # "Clover_max_array.dfy | (file) | refused:let-expression". So the test
+    # asserted a lift its own evidence rules out, and being --slow-gated it
+    # had not been run. The min file is the same shape and the same decision
+    # 1 rewrite, and it lifts with all four lemmas verified.
+    dfy_path = test_lifter.CORPUS_DIR / "Clover_min_array.dfy"
     t0 = time.monotonic()
-    fx = _lift_source(dfy_path, "maxArray", timeout_s=90.0)
-    assert fx["status"] == "ok", f"maxArray lift refused upstream: {fx}"
+    fx = _lift_source(dfy_path, "minArray", timeout_s=90.0)
+    assert fx["status"] == "ok", f"minArray lift refused upstream: {fx}"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out = lift_check.check(fx["task"], fx["source"], fx["closure"], fx["record"],
-                          OUT_DIR / "Clover_max_array", timeout_s=90.0)
+                          OUT_DIR / "Clover_min_array", timeout_s=90.0)
     wall = round(time.monotonic() - t0, 2)
     verdicts = dict(fx["record"].checker_verdicts)
-    print(f"test_array_program_end_to_end: maxArray verdicts={json.dumps(verdicts)} "
+    print(f"test_array_program_end_to_end: minArray verdicts={json.dumps(verdicts)} "
          f"check_wf={out.refusal is None or out.refusal.reason != 'check-wf-failed'} "
          f"wall_s={wall}")
     assert verdicts, "no lemma verdicts recorded at all"
     non_verified = {k: v for k, v in verdicts.items() if v != "verified"}
-    assert not non_verified, f"non-verified lemma verdict(s) on maxArray: {non_verified}"
+    assert not non_verified, f"non-verified lemma verdict(s) on minArray: {non_verified}"
     for expected in ("L_req", "L_ens", "L_inv_0", "L_dec_0"):
         assert expected in verdicts, f"expected lemma {expected!r} missing: {verdicts}"
 

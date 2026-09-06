@@ -56,6 +56,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                   # noqa: E402
+import lower_verus                               # noqa: E402
 from verifiers import fstar as fstar_backend     # noqa: E402
 
 TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int"}
@@ -179,6 +180,14 @@ class Ctx:
         seq-typed variable."""
         if "var" in e and (local.get(e["var"]) or self.tys.get(e["var"])) == "seq":
             return e["var"]
+        if "_seq" in e:
+            # A GROUND seq value, which only the refutation certificate below
+            # produces: the witness substitutes a concrete sequence into a
+            # seq-typed parameter. Nothing else in the lowering may reach
+            # here, and the certificate is the one place a seq position is
+            # not a variable.
+            items = "; ".join(str(int(v)) for v in e["_seq"])
+            return f"(Seq.createL #int [{items}])"
         raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
     def call(self, e: dict, env: dict, local: dict) -> str:
@@ -546,6 +555,72 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
 
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
 # sites pass it; this lowering does not use it yet.
+# ------------------------------------------------ refutation certificate ----
+# The shared certificate protocol (ROADMAP 10.7), adopted here 2026-09-06.
+# Until then verifiers/fstar.py minted REFUTED from F* Error 19 alone, and
+# Error 19 is "the SMT solver could not prove the query", which is a give-up
+# signal and not a countermodel. 12.5's sweep measured the cost: 23 real
+# programs read REFUTED that dafny verifies, every one a nat-typed loop. The
+# door the 2026-09-02 purge closed in the other six columns was still open
+# here because the fuzz corpus never failed an F* proof.
+#
+# So Error 19 now mints UNPROVED, and a twin earns REFUTED back the way every
+# other column does: when the measured witness is expressible as a GROUND
+# formula, this lowering appends one lemma named exactly
+# t_refutation_certificate stating it, and verifiers/fstar.py mints REFUTED
+# only when a targeted kernel run discharges that one lemma. A file carrying
+# the name can never mint VERIFIED.
+#
+# The formula is not rebuilt here. It is `lower_verus`'s, imported, so the
+# seven columns certify one formula and not seven readings of it: requires at
+# the witness, and the ensures conjunction false at (input, r := the twin's
+# measured result) for a value witness; for an exit witness the surviving
+# invariants and the negated guard and the negated ensures at the measured
+# loop-exit state. Preservation and undefined witnesses are not certificated
+# and honestly read unproved.
+#
+# F*'s ground evaluator is `assert_norm`, the analogue of verus's
+# compute_only: it normalises the proposition with no SMT fallback. Measured
+# 2026-09-06 on F* 2026.08.30, Darwin arm64:
+#   * a true ground certificate verifies, "All verification conditions
+#     discharged successfully", exit 0;
+#   * a FALSE one (the ensures stated false where it actually holds) is
+#     rejected Error 19, "Failed to prove: Prims.l_False";
+#   * on the real abs twin, whose own proof fails Error 19, the targeted run
+#     `--admit_except '<Module>.t_refutation_certificate'` verifies the
+#     certificate alone.
+# So the certificate discriminates in both directions, which a give-up signal
+# never did.
+
+CERT_NAME = "t_refutation_certificate"
+
+
+def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
+    """The appended t_refutation_certificate lemma for a measured twin
+    witness, or None when the witness is not ground-certificatable.
+
+    Returning None costs a flip (the cell reads unproved). It can never fake
+    one, which is the only direction that matters here."""
+    try:
+        formula = lower_verus.certificate_formula(task, twin_body, w)
+    except Exception:
+        return None
+    if formula is None:
+        return None
+    try:
+        body = cx.prop(formula, {}, {})
+    except (KeyError, TypeError, ValueError, NotImplementedError):
+        return None
+    return (
+        "\n// Ground refutation certificate for the measured twin witness." \
+        + "\n// assert_norm evaluates it with no SMT fallback; \n"
+        + "// verifiers/fstar.py mints REFUTED only if a targeted run\n"
+        + "// discharges this one lemma, and a file carrying this name\n"
+        + "// can never mint VERIFIED." + "\n"
+        + f"let {CERT_NAME} () : Lemma ({body})\n"
+        + f"= assert_norm ({body})\n")
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     cx = Ctx(task)
     name = task["name"]
@@ -563,6 +638,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts.append(gen_loop(cx, task, prefix, w, suffix))
     else:
         parts.append(gen_fun(cx, task, body))
+    # Twin call sites pass the measured witness; real ones pass None, so a
+    # real program never carries the name and can never be demoted by it.
+    if witness is not None:
+        cert = _certificate(cx, task, body, witness)
+        if cert is not None:
+            parts.append(cert)
     return "\n".join(parts)
 
 

@@ -14,13 +14,40 @@ re-measured 2026-08-31 in the Wave-1 hole-closing pass):
       discharged obligations is not a proof)
   Error number 19, solver reason canceled/
       resource-limits on any attempt line        -> TIMEOUT  (rlimit verdict)
-  Error number 19 otherwise                      -> REFUTED
+  Error number 19 otherwise                      -> UNPROVED (a give-up
+      signal, not a countermodel; see THE CERTIFICATE below)
+  a discharged t_refutation_certificate          -> REFUTED  (the only door)
+  a t_refutation_certificate on a file that
+      otherwise verifies                         -> MALFORMED
   Error number 168 (syntax) / 72 (resolution)    -> MALFORMED
   Error number 129 (missing input file)          -> TOOL_ERROR
   any other Error number                         -> MALFORMED (the typechecker
       rejected the shape before/around proof; never a refutation)
   nonzero exit with no parseable Error JSON      -> TOOL_ERROR
   wall backstop                                  -> TIMEOUT
+
+THE CERTIFICATE is how a twin earns REFUTED back, adopted here 2026-09-06,
+the last column to take ROADMAP 10.7's protocol. Until then Error 19 minted
+REFUTED on its own, and 19 is "the SMT solver could not prove the query": F*
+prints it whether the goal is false or merely hard, so incompleteness was
+being sold as refutation. 12.5's sweep measured the cost at 23 real programs
+REFUTED that dafny verifies, every one a nat-typed loop, and the column's 100
+twin refutations rested on the same door. The reason it survived the
+2026-09-02 purge is that the fuzz corpus never failed an F* proof.
+
+Now `lower_fstar.py` appends, on TWIN calls only and only when the measured
+witness is ground, one lemma named exactly t_refutation_certificate whose
+statement is the witness instance built by `lower_verus.certificate_formula`,
+the same formula every other column certifies, discharged by `assert_norm`
+(ground normalisation, no SMT fallback). This adapter mints REFUTED only when
+a targeted `--admit_except '<Module>.t_refutation_certificate'` run discharges
+that one lemma, and a file declaring the name can never mint VERIFIED.
+
+Measured 2026-09-06 on F* 2026.08.30, Darwin arm64: all 11 committed twins
+refute through the certificate, and every decoy behaves: a real with no
+certificate VERIFIES, a real carrying a true certificate reads MALFORMED, the
+name in a comment changes nothing, and a twin carrying a FALSE certificate
+reads UNPROVED rather than REFUTED.
 
 Exit codes are 0/1 only (measured: every failure class exits 1), so
 classification comes from the NDJSON diagnostics `--message_format json`
@@ -189,6 +216,15 @@ _QUERY = re.compile(r"\bQuery-stats\b")
 # after Z3 answers; line-anchored because an F* identifier, the only source
 # text measured to reach the log, cannot contain a newline.
 _SOLVER_UNSAT = re.compile(r"^; STATUS: unsat[ \t]*$", re.MULTILINE)
+# The one lemma name that can mint REFUTED, and the only door to it
+# (ROADMAP 10.7's certificate protocol, adopted here 2026-09-06). Until then
+# Error 19 alone minted REFUTED, and 19 is "the SMT solver could not prove the
+# query", a give-up signal. 12.5 measured the cost: 23 reals REFUTED that
+# dafny verifies. A file carrying this name can never mint VERIFIED.
+CERT_NAME = "t_refutation_certificate"
+_CERT_DECL = re.compile(r"^\s*let\s+t_refutation_certificate\s*\(\)\s*:\s*Lemma\b",
+                        re.M)
+
 TACTIC_ADMIT_NUM = 296     # "Tactics admitted goal.", measured on tadmit
 # Under --query_stats every error-19 msg carries per-attempt reason lines
 # ("unknown because canceled (rlimit=1; ...)" at rlimit exhaustion,
@@ -216,6 +252,46 @@ def version() -> str:
         raise SystemExit(_FSTAR_WHY)
     p = subprocess.run([FSTAR, "--version"], capture_output=True, text=True)
     return " / ".join(l.strip() for l in p.stdout.strip().splitlines())
+
+
+def _check_certificate(fname: str, cwd: str, module: str,
+                       budget: int) -> tuple[bool, str]:
+    """One targeted kernel run of the certificate lemma alone.
+
+    `--admit_except '<Module>.t_refutation_certificate'` admits every other
+    query in the file, so the kernel's verdict is a verdict ON the
+    certificate and a twin whose own proof fails (which is the whole point of
+    a twin) cannot drag it down. Measured 2026-09-06 on F* 2026.08.30: a true
+    ground certificate discharges, a false one is rejected Error 19 "Failed
+    to prove: Prims.l_False", and on the real abs twin, whose own proof fails
+    19, the targeted run discharges the certificate alone.
+
+    Returns (accepted, why). Anything short of a clean discharge is False, so
+    a rejected or unrunnable certificate costs a flip and never fakes one."""
+    try:
+        p = subprocess.run(
+            # NOT --report_assumes error here: F* makes any use of
+            # --admit_except itself an assume (Error 335, "Every use of this
+            # option triggers an error: admit_except"), so the two flags
+            # cannot both be on. Dropping it is safe because the MAIN run
+            # already screened this exact file: a banned token or a 335 or a
+            # 296 mints VACUOUS before the gate below is ever reached, so a
+            # file that gets here carries no admit, no assume and no
+            # tactic-admitted goal.
+            [FSTAR, "--message_format", "json",
+             "--z3version", Z3_VERSION, "--z3seed", str(Z3_SEED),
+             "--z3rlimit", str(budget),
+             "--warn_error", f"@{TACTIC_ADMIT_NUM}",
+             "--admit_except", f"{module}.{CERT_NAME}", fname],
+            capture_output=True, text=True, timeout=WALL_S, cwd=cwd)
+    except subprocess.TimeoutExpired:
+        return False, "certificate run hit the wall backstop"
+    out = p.stdout + p.stderr
+    if p.returncode != 0:
+        return False, "the kernel did not accept the certificate lemma"
+    if "All verification conditions discharged successfully" not in out:
+        return False, "certificate run printed no discharge line"
+    return True, ""
 
 
 def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
@@ -253,6 +329,14 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         # the log after the module, so glob rather than trust the name.
         logs = sorted(Path(td).glob("queries-*.smt2"))
         discharged = sum(len(_SOLVER_UNSAT.findall(safe_text(f))) for f in logs)
+        # The certificate's targeted run has to happen while the scratch
+        # directory still exists, so it runs here and the gate below reads
+        # the answer. Only when the file actually declares the lemma, so a
+        # file without one costs no second kernel run.
+        _cert_result = ((False, "no certificate")
+                        if not _CERT_DECL.search(src_text)
+                        else _check_certificate(fname, td,
+                                                fname[:-len(".fst")], budget))
     wall = int((time.monotonic() - t0) * 1000)
 
     errs: list[tuple[int, str]] = []
@@ -296,7 +380,14 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         # a run the budget muddied is never counted as a refutation
         outcome = Outcome.TIMEOUT
     elif 19 in nums:
-        outcome = Outcome.REFUTED
+        # THE DOOR, closed 2026-09-06 (ROADMAP 10.7's protocol). Error 19 is
+        # "the SMT solver could not prove the query": a give-up signal, not a
+        # countermodel, and F* prints the same 19 whether the goal is false
+        # or merely hard. Minting REFUTED from it sold incompleteness as
+        # refutation, which 12.5 measured at 23 reals REFUTED that dafny
+        # verifies, every one a nat-typed loop. It now mints UNPROVED, and
+        # REFUTED is earned below through the certificate alone.
+        outcome = Outcome.UNPROVED
     elif nums & {168, 72}:
         outcome = Outcome.MALFORMED
     elif 129 in nums:
@@ -305,6 +396,24 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         outcome = Outcome.MALFORMED
     else:
         outcome = Outcome.TOOL_ERROR
+    # The certificate gate (ROADMAP 10.7). Two directions, both one-way:
+    # a file carrying the name can never mint VERIFIED, and a twin earns
+    # REFUTED only when a targeted run discharges that one lemma.
+    cert_detail = {}
+    if _CERT_DECL.search(src_text):
+        if outcome == Outcome.VERIFIED:
+            # a certificate is a claim that the file's own theorem is FALSE
+            # at the witness; a file that also verifies is incoherent.
+            outcome = Outcome.MALFORMED
+            cert_detail = {"certificate": "present on a file that verified"}
+        elif outcome in (Outcome.UNPROVED, Outcome.TIMEOUT):
+            accepted, why = _cert_result
+            if accepted:
+                outcome = Outcome.REFUTED
+                cert_detail = {"certificate": "accepted"}
+            else:
+                cert_detail = {"certificate": "rejected: " + why}
+
     return Result("fstar", version(), src_hash, outcome,
                   ok=outcome == Outcome.VERIFIED, exit_code=p.returncode,
                   wall_ms=wall, budget=bud,
@@ -317,4 +426,5 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
                           "query_logs": len(logs),
                           # forgeable; kept so a forgery is legible in the
                           # witness as stdout_query_rows > solver_unsat
-                          "stdout_query_rows": queries})
+                          "stdout_query_rows": queries,
+                          **cert_detail})

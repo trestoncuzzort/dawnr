@@ -754,10 +754,20 @@ def _twin_loop(real_body: list, twin_body: list) -> dict | None:
     return diffs[0] if len(diffs) == 1 else None
 
 
-def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
-    """The appended t_refutation_certificate block for a measured twin
-    witness, or None when the witness is not expressible as a ground
-    certificate under the rules in the section comment above."""
+def certificate_formula(task: dict, twin_body: list, w: dict) -> dict | None:
+    """The certificate's FORMULA as a t expression, or None when the witness
+    is not ground-certificatable under the rules in the section above.
+
+    Factored out of `_certificate` 2026-09-06 so another column can certify
+    the SAME formula rather than a second reading of it: lower_fstar.py
+    imports this and renders it in F* syntax. Every rule in the section
+    comment above therefore has one implementation, and a change to what a
+    certificate MEANS lands in one place while each column keeps only its own
+    syntax and its own ground-evaluation tactic."""
+    return _cert_formula(task, twin_body, w)
+
+
+def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
     kind = w.get("_kind")
     names = {k: v for k, v in w.items() if not k.startswith("_")}
     try:
@@ -784,8 +794,17 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
                 _conj([subst(en, m) for en in task["ensures"]])]})
         else:
             return None          # preservation / undefined: see above
-        formula = _unroll(_conj(parts), [_UNROLL_CAP])
+        return _unroll(_conj(parts), [_UNROLL_CAP])
     except (ValueError, KeyError, TypeError, IndexError):
+        return None
+
+
+def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
+    """The appended t_refutation_certificate block for a measured twin
+    witness, or None when the witness is not expressible as a ground
+    certificate under the rules in the section comment above."""
+    formula = _cert_formula(task, twin_body, w)
+    if formula is None:
         return None
     global _SUFFIX_INT
     saved = _SUFFIX_INT
