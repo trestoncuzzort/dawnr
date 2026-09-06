@@ -6,7 +6,7 @@
 # Python with --enable-optimizations, which is profile-guided optimization:
 # "the interpreter is built twice; tests performed on the first build are used
 # to improve the optimized final version." That first run is a PROFILING
-# WORKLOAD — its purpose is to exercise code paths so the compiler can measure
+# WORKLOAD: its purpose is to exercise code paths so the compiler can measure
 # which ones are hot. It is not a correctness gate, and CPython nevertheless
 # fails the whole build if any of it fails.
 #
@@ -15,12 +15,12 @@
 #         (test.test_generators.SignalAndYieldFromTest)
 #   AssertionError: 'FAILED' != 'PASSED'
 # A SIGNAL-DELIVERY test, failing inside a chroot with no controlling
-# terminal. That is the environment, not the interpreter — the same species as
+# terminal. That is the environment, not the interpreter, the same species as
 # glibc's io/tst-lchmod, which the book itself documents as a chroot failure.
 #
 # So PROFILE_TASK drops test_generators from the workload it profiles. The
 # interpreter is still built twice, still profile-guided, and still runs every
-# other test file. What is lost is optimization data from one generator test —
+# other test file. What is lost is optimization data from one generator test,
 # which is nothing anyone can measure.
 #
 # NOT DONE, deliberately: dropping --enable-optimizations entirely. That would

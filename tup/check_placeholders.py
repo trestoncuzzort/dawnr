@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""check_placeholders.py — no book placeholder may reach the build unhandled.
+"""check_placeholders.py: no book placeholder may reach the build unhandled.
 
     python3 tup/check_placeholders.py
 
 The LFS book addresses a human, so its pages contain literal instructions in
 angle brackets: <paper_size>, <xxx>, <Your Domain Name>, <locale name>,
-<your name here>. Under a driver these are not instructions, they are shell —
+<your name here>. Under a driver these are not instructions, they are shell,
 and `PAGE=<paper_size> ./configure` dies trying to read a file called
 paper_size, which is exactly how chapter 8 stopped at groff.
 

@@ -1,4 +1,4 @@
-# prove 1: Lean 4.33.1 — the official release binary, verbatim.
+# prove 1: Lean 4.33.1, the official release binary, verbatim.
 # The one prebuilt thing in this layer, and it says so: kernel-checked proof
 # terms are the point of Lean, and the binary's hash is pinned in MANIFEST.
 case "$(uname -m)" in

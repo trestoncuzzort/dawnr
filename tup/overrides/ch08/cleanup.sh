@@ -1,7 +1,7 @@
 #!/bin/bash
 # OVERRIDE ch08/cleanup: `rm -rf /tmp/{*,.*}` cannot succeed.
 #
-# The glob expands to include `.` and `..`, and rm REFUSES those and exits 1 —
+# The glob expands to include `.` and `..`, and rm REFUSES those and exits 1,
 # always, even when it removed everything else correctly. Under `set -e` the
 # final page of chapter 8 therefore fails on its own success, which is the
 # same shape as glibc's "no timeouts found" grep and binutils' zero-failure

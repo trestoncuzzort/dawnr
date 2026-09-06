@@ -1,5 +1,5 @@
 #!/bin/bash
-# chain8.sh — chapter 8 inside the chroot (runs as root outside, crosses in).
+# chain8.sh: chapter 8 inside the chroot (runs as root outside, crosses in).
 set -u
 export LFS=/mnt/lfs
 # The arch selects the arch-bound overrides (kernel, bootloader, fstab) and

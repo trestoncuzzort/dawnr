@@ -1,16 +1,16 @@
 #!/bin/bash
-# driver.sh — run one extracted chapter of the tup build, with receipts.
+# driver.sh: run one extracted chapter of the tup build, with receipts.
 #
 #   bash driver.sh <chapter-dir> [start-after]
 #
 # Reads <chapter-dir>/ORDER and executes each page script in order. State
 # lives in $LFS/sources/log/driver.state (one line per completed script), so
-# a rerun resumes after the last success — a failed page is retried, never
+# a rerun resumes after the last success; a failed page is retried, never
 # skipped. Every page appends one JSON line to log/receipts.jsonl: page,
-# package, seconds, exit status, the sha256 of its own log, and — because an
-# override REPLACES the page body — which body actually ran (`override`), the
+# package, seconds, exit status, the sha256 of its own log, and, because an
+# override REPLACES the page body, which body actually ran (`override`), the
 # sha256 of that body (`script_sha256`) and of the tarball it was handed
-# (`tarball_sha256`) — both measured BEFORE the page runs, so they name the
+# (`tarball_sha256`), both measured BEFORE the page runs, so they name the
 # inputs and not whatever the page left in their place. That ledger, not this
 # script's stdout, is the record.
 #
@@ -107,10 +107,10 @@ export RECEIPTS
 
 # ORDER is read on fd 3, and every page runs with stdin from /dev/null. A book
 # page that reads stdin (createfiles does) would otherwise consume the ORDER
-# list off fd 0 and then run the remaining filenames as commands — measured
+# list off fd 0 and then run the remaining filenames as commands, measured
 # 2026-08-31: chapter 7 failed with "07-gettext.sh: command not found" x6.
-[ -r "$CHDIR/ORDER" ] || { echo "!!! $CH: no ORDER file at $CHDIR/ORDER — refusing to call an empty run complete"; exit 1; }
-[ -s "$CHDIR/ORDER" ] || { echo "!!! $CH: ORDER is empty — refusing to call an empty run complete"; exit 1; }
+[ -r "$CHDIR/ORDER" ] || { echo "!!! $CH: no ORDER file at $CHDIR/ORDER, refusing to call an empty run complete"; exit 1; }
+[ -s "$CHDIR/ORDER" ] || { echo "!!! $CH: ORDER is empty, refusing to call an empty run complete"; exit 1; }
 while read -r script <&3; do
   id="$CH/$script"
   grep -qxF "$id" "$STATE" && continue
@@ -141,8 +141,8 @@ while read -r script <&3; do
   # used to be truncated by the redirect on the page's own subshell, a long way
   # further down, and everything written to it before that point went with it.
   # Extraction runs first and sends tar's stderr here (`2>>"$plog"`), so a
-  # tarball that WARNS and still exits 0 — an implausible timestamp, an unknown
-  # pax header — had its warnings appended and then wiped, and the log_sha256
+  # tarball that WARNS and still exits 0, an implausible timestamp or an unknown
+  # pax header, had its warnings appended and then wiped, and the log_sha256
   # in the receipt described the page's own output alone. Measured 2026-09-02:
   # `tar: pkg-1.0/configure: time stamp ... is 357619170 s in the future`, one
   # line, gone from the record, on the one path where nothing failed loudly and
@@ -153,14 +153,14 @@ while read -r script <&3; do
     echo "    refusing: the receipt names that log's digest."
     exit 1; }
   # THE INPUT DIGESTS ARE TAKEN HERE, BEFORE ANYTHING RUNS, AND HELD. They used
-  # to be taken beside the log hash, after the page had returned — so a page
+  # to be taken beside the log hash, after the page had returned, so a page
   # that modified its own inputs while it built had the receipt record the bytes
   # it LEFT BEHIND under the name of the bytes that RAN. Neither input is out of
   # the page's reach: the build directory's parent is $LFS/sources, so the
   # tarball is ../$pkg from the page's own cwd, and a page can rewrite its own
   # file. Measured 2026-09-02: a page appending one byte to its archive and one
   # line to its body produced a receipt naming both POST-run digests, "ok in
-  # 0s", exit 0 — the ledger absorbed the change instead of showing it. Held
+  # 0s", exit 0: the ledger absorbed the change instead of showing it. Held
   # here and written unchanged below, the receipt states what went IN, and a
   # mismatch against what is on disk afterwards is exactly what it now exposes.
   if ! shash=$(tup_sha256 "$src"); then
@@ -192,20 +192,20 @@ while read -r script <&3; do
     # is not reserved. Trusting the tarball's own listing failed open three
     # ways, each of them measured:
     #   * a truncated or non-tarball file lists nothing, $top came back empty,
-    #     and $dir became "$LFS/sources/" — every tarball plus log/receipts.jsonl
+    #     and $dir became "$LFS/sources/", every tarball plus log/receipts.jsonl
     #   * a perfectly good archive made with `tar cf x ./dir` lists "./dir/",
-    #     `cut -d/ -f1` gives ".", and $dir became "$LFS/sources/." — the same
+    #     `cut -d/ -f1` gives ".", and $dir became "$LFS/sources/.", the same
     #     deletion, with the page then reporting "ok"
     #   * an archive whose first entry is `log/` gave $dir = "$LFS/sources/log",
-    #     so the build deleted driver.state and receipts.jsonl — its own ledger
-    #     — and then printed "ok in 0s" and "complete" (measured 2026-09-01)
+    #     so the build deleted driver.state and receipts.jsonl, its own ledger,
+    #     and then printed "ok in 0s" and "complete" (measured 2026-09-01)
     # After this, the only paths rm -rf can ever see are the staging directory
     # this script made and the package directory it checked.
     stage=$(mktemp -d "$LFS/sources/.tup-extract-XXXXXX") || {
       echo "!!! $id: cannot make an extraction directory under $LFS/sources" | tee -a "$plog"; exit 1; }
     if ! tar xf "$tarball" -C "$stage" 2>>"$plog"; then
       rm -rf "$stage"
-      echo "!!! $id: tar xf $tarball failed — refusing to continue" | tee -a "$plog"; exit 1
+      echo "!!! $id: tar xf $tarball failed, refusing to continue" | tee -a "$plog"; exit 1
     fi
     top=""; n=0
     for e in "$stage"/* "$stage"/.[!.]* "$stage"/..?*; do
@@ -234,7 +234,7 @@ while read -r script <&3; do
     case "$top" in
       log|.|..|*/*|.tup-extract-*)
         echo "!!! $id: $tarball extracts to \"$top\", a name reserved in \$LFS/sources" | tee -a "$plog"
-        echo "    (log/ is this build's ledger — driver.state and receipts.jsonl;" | tee -a "$plog"
+        echo "    (log/ is this build's ledger: driver.state and receipts.jsonl;" | tee -a "$plog"
         echo "    .tup-extract-* is this script's own staging.) The next step" | tee -a "$plog"
         echo "    after moving it into place is rm -rf, so: refused." | tee -a "$plog"
         rm -rf "$stage"; exit 1;;
@@ -263,8 +263,8 @@ while read -r script <&3; do
 
   secs=$((SECONDS - t0))
   # A digest this script could not compute is not a digest the receipt may
-  # claim. `sha256sum X | cut -d' ' -f1` reports the status of `cut` — which is
-  # 0 whatever sha256sum did — so an unreadable log wrote "log_sha256":"" into
+  # claim. `sha256sum X | cut -d' ' -f1` reports the status of `cut`, which is
+  # 0 whatever sha256sum did, so an unreadable log wrote "log_sha256":"" into
   # the ledger while the page printed "ok in 0s" and the run exited 0; the
   # tarball hash had its own `2>/dev/null` and went to null the same way. Every
   # digest the receipt names is checked here, and a page whose own evidence
@@ -275,7 +275,7 @@ while read -r script <&3; do
     exit 1
   fi
   # A page name is not a body. An executable override replaces the book's text
-  # entirely, and the old receipt recorded only the page — so the ledger could
+  # entirely, and the old receipt recorded only the page, so the ledger could
   # not say whether the book built this system or we did, let alone from which
   # bytes. $src is whichever body actually ran; the tarball is its other input.
   # Both were hashed above, before the page could touch either. These keys are
@@ -283,7 +283,7 @@ while read -r script <&3; do
   ov_json=null;  [ -n "$ov" ]  && ov_json=$(tup_json_str "$ov")
   echo "{\"ts\":$(tup_json_str "$(date -u +%FT%TZ)"),\"page\":$(tup_json_str "$id"),\"package\":$(tup_json_str "${pkg:-null}"),\"seconds\":$secs,\"exit\":$rc,\"log_sha256\":$(tup_json_str "$lhash"),\"override\":$ov_json,\"script_sha256\":$(tup_json_str "$shash"),\"tarball_sha256\":$tb_json}" >> "$RECEIPTS"
   if [ $rc -ne 0 ]; then
-    echo "!!! $id FAILED (exit $rc, ${secs}s) — last lines of $plog:"
+    echo "!!! $id FAILED (exit $rc, ${secs}s), last lines of $plog:"
     tail -15 "$plog"
     exit 1
   fi

@@ -1,6 +1,6 @@
 #!/bin/bash
 # OVERRIDE arm64/ch10/kernel: `make menuconfig` is a human at a curses UI, so the
-# configuration is made here instead — explicitly, in a file, reviewable.
+# configuration is made here instead: explicitly, in a file, reviewable.
 #
 # THE OPTIONS ARE THE BOOK'S, NOT MINE. The page's *commands* say only
 # "make menuconfig"; the required configuration lives in the page's PROSE,
@@ -8,12 +8,12 @@
 # chapter10/kernel.html on 2026-08-31: 23 symbols, each with the state the
 # book shows ([*] enable, [ ] disable). An earlier version of this override
 # set ten options of my own choosing and would have failed at the copy step,
-# because EFI_ZBOOT — the option that MAKES arch/arm64/boot/vmlinuz.efi
-# exist — was not among them. Caught by reading the page instead of the
+# because EFI_ZBOOT, the option that MAKES arch/arm64/boot/vmlinuz.efi
+# exist, was not among them. Caught by reading the page instead of the
 # commands.
 #
 # tup adds four of its own on top, marked below: virtio, so the image boots
-# under QEMU. They are forced in (=y, not =m) so no initramfs is needed —
+# under QEMU. They are forced in (=y, not =m) so no initramfs is needed,
 # a deliberate simplification that WS-8 retires when tup targets real
 # hardware, where storage drivers must be modules and an initramfs must load
 # them.
@@ -47,7 +47,7 @@ done
 make olddefconfig
 
 # Refuse to build a kernel whose required options did not survive
-# olddefconfig — a silently dropped symbol here becomes an unbootable image
+# olddefconfig: a silently dropped symbol here becomes an unbootable image
 # two steps later, and this project does not do silently.
 missing=""
 for opt in EFI_ZBOOT DEVTMPFS_MOUNT VIRTIO_BLK EXT4_FS; do

@@ -1,7 +1,7 @@
 #!/bin/bash
 # OVERRIDE ch08/binutils: judge the suite by the book's own criterion.
 #
-# MEASURED 2026-08-31: every binutils summary reported expected passes only —
+# MEASURED 2026-08-31: every binutils summary reported expected passes only,
 # ZERO FAIL lines, which is exactly what the book's stated diagnostic
 # ("For a list of failed tests, run: grep '^FAIL:' $(find -name '*.log')")
 # checks for. `make -k check` still exited 2, because ONE gprofng testcase

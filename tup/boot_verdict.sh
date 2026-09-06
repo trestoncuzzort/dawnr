@@ -1,4 +1,4 @@
-# boot_verdict.sh — the one definition of "tup booted", shared by both witnesses.
+# boot_verdict.sh: the one definition of "tup booted", shared by both witnesses.
 #
 # SOURCED, never run: `. "$HERE/boot_verdict.sh"`. It sets two patterns and
 # defines four functions, and does nothing else.
@@ -8,13 +8,13 @@
 #
 #   1. A panic sat in the transcript and the prompt was tested first, so the
 #      loop broke on the prompt and the panic was never read (boot_witness.sh).
-#   2. The settle window under-ran by one poll — the countdown started on the
-#      pass that SAW the prompt — so a panic arriving inside the window the
+#   2. The settle window under-ran by one poll, the countdown starting on the
+#      pass that SAW the prompt, so a panic arriving inside the window the
 #      script said it was watching reached nobody (release.sh).
 #   3. QEMU exited during the settle window and both scripts still banked
 #      BOOTED, because the only liveness test lived in the branch that runs
 #      BEFORE the prompt is seen: once the prompt was seen, nothing ever asked
-#      again whether the guest was still there (both, measured 2026-09-02 —
+#      again whether the guest was still there (both, measured 2026-09-02,
 #      the guest exited six seconds in and release.sh wrote SHA256SUMS and a
 #      RELEASE.md saying "tup login: within 10s").
 #
@@ -27,7 +27,7 @@
 # instruction to a person; a sourced file is a fact about the program.
 #
 # WHAT THE VERDICT IS. Not "the loop broke, and where it broke names the
-# result" — that is what all three defects had in common: the verdict was a
+# result", which is what all three defects had in common: the verdict was a
 # side effect of control flow, so every new way of leaving the loop was a new
 # way of banking BOOTED. BOOTED is a POSITIVE CONJUNCTION now, computed once,
 # at the moment of banking, from state the loop only gathers. Every clause must
@@ -42,7 +42,7 @@
 #
 # There is no fourth channel: this witness never logs in, never reads guest
 # memory, never opens a QEMU monitor socket. Asking each channel both of its
-# questions — what it affirms, and what it denies — gives the whole set:
+# questions, what it affirms and what it denies, gives the whole set:
 #
 #   A. NO PANIC anywhere in the transcript, re-read at banking time. Not "no
 #      panic before the prompt", and not "no panic as of the last poll". A
@@ -67,7 +67,7 @@
 #     a kernel that stopped printing without panicking satisfies every clause.
 #     Telling an idle login prompt from a hung one means logging in, and this
 #     witness does not log in.
-#   * A failure that does not use the words in TUP_PANIC_RE — an Oops that
+#   * A failure that does not use the words in TUP_PANIC_RE, an Oops that
 #     never reaches "not syncing", a firmware-level reset, a silent hang, a
 #     guest that reboots and prints the same prompt again.
 #   * Anything after the settle window. The verdict is scoped to the prompt
@@ -87,7 +87,7 @@
 TUP_PANIC_RE='Kernel panic|Attempted to kill init|not syncing'
 
 # The prompt must BE the line, not appear in it. The boundary this used to
-# anchor on — (^|[^[:alnum:]_-]) — accepts a space, so
+# anchor on, (^|[^[:alnum:]_-]), accepts a space, so
 #     ERROR: never reached tup login: because getty failed
 # scored BOOTED: the one sentence in a transcript that says it did not. The
 # match starts the line, and the only things allowed in front of it are
@@ -105,7 +105,7 @@ tup_guest_alive() { kill -0 "$1" 2>/dev/null; }
 #                  <settle-seconds-watched> <settle-seconds-required> <budget>
 #
 # Prints the verdict on stdout, and returns 0 for BOOTED and nonzero for every
-# other one — so a caller may branch on the status or on the string, and the
+# other one, so a caller may branch on the status or on the string, and the
 # two cannot disagree about the same run.
 tup_boot_verdict() {
   # Arity first, before the parameters are read: under `set -u` a missing

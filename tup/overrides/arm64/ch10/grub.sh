@@ -1,6 +1,6 @@
 #!/bin/bash
 # OVERRIDE arm64/ch10/grub: the ESP is /dev/vdb1 DURING THE BUILD (the LFS disk
-# is the build VM's second disk) and /dev/vda1 at final boot — so the mount
+# is the build VM's second disk) and /dev/vda1 at final boot, so the mount
 # here names vdb1 while grub.cfg names vda2. --removable installs to the
 # EFI fallback path, so no NVRAM entry is needed anywhere.
 set -e

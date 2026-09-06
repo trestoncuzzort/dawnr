@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bundle_receipts.py — turn the build's scattered evidence into one record.
+"""bundle_receipts.py: turn the build's scattered evidence into one record.
 
     python3 tup/bundle_receipts.py            # pull from the Lima build VM (arm64 leg)
     python3 tup/bundle_receipts.py --local /path/to/log   # from a copied log dir
@@ -8,10 +8,10 @@
                                               #  SHA256-MANIFEST-*.txt beside it)
 
 Collects, from the machine that did the work:
-  * receipts.jsonl   — one line per page: package, seconds, exit, log sha256
-  * SHA256-MANIFEST  — every source tarball as downloaded
-  * driver.state     — the pages that actually completed
-  * the test-policy record — which suites ran, WITH THEIR RESULTS, and which
+  * receipts.jsonl   : one line per page: package, seconds, exit, log sha256
+  * SHA256-MANIFEST  : every source tarball as downloaded
+  * driver.state     : the pages that actually completed
+  * the test-policy record: which suites ran, WITH THEIR RESULTS, and which
     were skipped, BY NAME
 
 and writes tup/receipts/BUILD-<date>.md: a single file a reader can check the
@@ -20,7 +20,7 @@ those files, and the files' own hashes are printed so the derivation can be
 re-run.
 
 WHAT THIS IS NOT: a proof the system is correct. It is a record of what was
-built, from which bytes, in what order, with what outcome — provenance, not
+built, from which bytes, in what order and with what outcome: provenance, not
 verification. tup 0.1 is a WITNESSED system, not a verified one, and the
 distinction is the whole point of keeping it.
 """
@@ -107,7 +107,7 @@ def md_fence(text: str) -> str:
 # glibc page records pass/fail/check_exit, binutils records expected_passes,
 # fail_lines and unresolved, gcc records unexpected_failures and the name of a
 # file listing them. Render whichever keys a record carries instead of assuming
-# one schema — and print unknown keys too, because a suite result nobody prints
+# one schema, and print unknown keys too, because a suite result nobody prints
 # is a suite result nobody reads.
 TEST_FIELDS = (
     ("pass", "pass"),
@@ -178,7 +178,7 @@ def main() -> int:
     prov_note = read("PROVENANCE-NOTE-bootscripts.txt")
 
     if not receipts_raw.strip():
-        print("no receipts found — is the build VM running?")
+        print("no receipts found; is the build VM running?")
         return 1
 
     rows = [json.loads(l) for l in receipts_raw.splitlines() if l.strip()]
@@ -186,7 +186,7 @@ def main() -> int:
     # things: a build receipt names "ch08/05-glibc.sh", a test result names
     # "ch08/05-glibc", a skip record names the bare suite "zlib". Only the
     # first is a page of the build. Counting all three as pages inflated the
-    # retry figure from 39 to 43 on the 2026-08-31 ledger — four "retries" that
+    # retry figure from 39 to 43 on the 2026-08-31 ledger, four "retries" that
     # were a test result and three skip records wearing a build page's name.
     build_rows = [r for r in rows if "page" in r and "exit" in r]
     tests_run = [r for r in rows if r.get("tests_run")]
@@ -228,7 +228,7 @@ def main() -> int:
     w(f"- reconciliation vs driver.state: {len(state_pages)} state lines, "
       f"{len(receipt_pages)} receipted pages"
       + ("" if not only_state and not only_receipts else
-         f" — **MISMATCH**: only-in-state {only_state[:5]}, only-in-receipts {only_receipts[:5]}"))
+         f", **MISMATCH**: only-in-state {only_state[:5]}, only-in-receipts {only_receipts[:5]}"))
     w("")
     w(f"- pages completed: **{len(built)}**"
       + (f" (plus {len(failed)} failed page(s), listed below)" if failed else ""))
@@ -239,13 +239,13 @@ def main() -> int:
     w("## Test policy, as executed")
     w("")
     w("Ruling 2026-08-31: run the suites that are mathematically load-bearing")
-    w("(glibc — the book calls it essential — plus GCC and binutils); record")
+    w("(glibc, which the book calls essential, plus GCC and binutils); record")
     w("every other suite as skipped BY NAME rather than dropping it silently.")
     w("")
     # The section is titled "as executed" and used to print only the suites
     # that did NOT execute. The three the ruling names as load-bearing ran,
-    # and their results — glibc's one failure, binutils' one unresolved test,
-    # gcc's 51 unexpected failures — appeared nowhere in the receipt.
+    # and their results, glibc's one failure, binutils' one unresolved test
+    # and gcc's 51 unexpected failures, appeared nowhere in the receipt.
     if tests_run:
         pages = {r.get("page") for r in tests_run}
         w(f"Suites that RAN ({len(tests_run)} records across {len(pages)} pages).")
@@ -285,7 +285,7 @@ def main() -> int:
         for r in failed:
             w(f"- {md_code(r['page'])} exit {md_cell(r['exit'])}"
               f" after {human(r.get('seconds',0))}"
-              f" — log sha256 {md_code(str(r.get('log_sha256','?'))[:16] + '…')}")
+              f", log sha256 {md_code(str(r.get('log_sha256','?'))[:16] + '…')}")
         w("")
     w("## Ten slowest pages")
     w("")

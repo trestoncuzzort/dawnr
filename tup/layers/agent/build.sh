@@ -1,12 +1,12 @@
 #!/bin/bash
-# build.sh — install the agent layer into a built tup, with a measured diff.
+# build.sh: install the agent layer into a built tup, with a measured diff.
 #
 #   sudo bash tup/layers/agent/build.sh          # inside the build VM
 #
 # WHAT A LAYER IS, and why this is not just "some more packages": the base
 # system is built from source with a receipt per step, and its inventory is a
 # complete list of every file on the machine. A layer keeps that property by
-# construction — inventory BEFORE, install, inventory AFTER, and the diff IS
+# construction: inventory BEFORE, install, inventory AFTER, and the diff IS
 # the layer's contents. "Here is what installing an AI coding agent added to
 # my operating system, file by file" stops being a shrug and becomes a number.
 #
@@ -47,7 +47,7 @@ while read -r name want url arch; do
       || fail "cannot fetch $name"; }
   got=$(sha256sum "$name" | cut -d' ' -f1)
   if [ "$want" = "SHA256-RECORDED-AT-FETCH" ]; then
-    echo "  $name sha256 $got   (recorded, not pinned — upstream rotates this file)"
+    echo "  $name sha256 $got   (recorded, not pinned; upstream rotates this file)"
   elif [ "$got" != "$want" ]; then
     fail "$name hash mismatch: manifest $want, got $got"
   else
@@ -58,7 +58,7 @@ done < "$HERE/MANIFEST"
 # --- 2. inventory BEFORE --------------------------------------------------
 # inventory.sh PRINTS the path it wrote and RETURNS a status. Both used to be
 # discarded: the path was guessed with `ls -t` over the receipts directory, and
-# that guess succeeds precisely when the inventory FAILED — it hands back a
+# that guess succeeds precisely when the inventory FAILED: it hands back a
 # stale file from an earlier run. Measured on synthetic runs: a failing BEFORE
 # silently diffed the layer against a year-old inventory, and a failing AFTER
 # made both names resolve to the SAME file, so the layer diff came out empty
@@ -75,7 +75,7 @@ take_inventory() {                       # $1 = where to keep the transcript
 }
 echo "=== inventory before the layer"
 BEFORE=$(take_inventory /tmp/agent-before.txt) \
-  || fail "inventory BEFORE the layer failed — refusing to measure a layer against a guess"
+  || fail "inventory BEFORE the layer failed, refusing to measure a layer against a guess"
 [ -s "$BEFORE" ] || fail "inventory BEFORE the layer wrote nothing at $BEFORE"
 echo "  $BEFORE"
 
@@ -85,7 +85,7 @@ rm -rf "$LFS/tup-build/layers/agent"          # else the second run nests pages/
 cp -r "$HERE/pages" "$LFS/tup-build/layers/agent"
 mountpoint -q "$LFS/proc" || bash -e /home/lfs/book/ch07/03-kernfs.sh >/dev/null 2>&1
 
-# tup's own /etc/resolv.conf names 10.0.2.3 — QEMU's resolver, correct when tup
+# tup's own /etc/resolv.conf names 10.0.2.3, QEMU's resolver, correct when tup
 # BOOTS under QEMU and meaningless inside this build VM, where npm then fails
 # with EAI_AGAIN. Bind-mount the host's resolver for the chroot's duration and
 # unmount it after. Deliberately NOT a copy: copying would either overwrite
@@ -109,10 +109,10 @@ cleanup_resolv; RESOLV_BOUND=""
 # --- 4. inventory AFTER, and the diff that IS the layer -------------------
 echo "=== inventory after the layer"
 AFTER=$(take_inventory /tmp/agent-after.txt) \
-  || fail "inventory AFTER the layer failed — the layer is installed but unmeasured"
+  || fail "inventory AFTER the layer failed; the layer is installed but unmeasured"
 [ -s "$AFTER" ] || fail "inventory AFTER the layer wrote nothing at $AFTER"
 [ "$AFTER" != "$BEFORE" ] \
-  || fail "before and after name the SAME inventory — refusing to report an empty diff as a measurement"
+  || fail "before and after name the SAME inventory, refusing to report an empty diff as a measurement"
 DIFF="$RECEIPTS_DIR/LAYER-$LAYER-$(date -u +%Y%m%dT%H%M%SZ).txt"
 {
   echo "# tup layer: $LAYER — what it added"
@@ -121,11 +121,11 @@ DIFF="$RECEIPTS_DIR/LAYER-$LAYER-$(date -u +%Y%m%dT%H%M%SZ).txt"
   echo "#"
   # Key on hash+path, not path alone. Keying on the filename makes MODIFIED
   # files invisible, and this layer modifies /etc/profile (pages/01 appends the
-  # CA variables to it) — a diff that cannot see that is not a diff.
+  # CA variables to it), and a diff that cannot see that is not a diff.
   # A symlink's line is "-> <target> lnk - <path>", so $1 is the literal "->"
   # for every symlink on the system: the old key gave them all the same value,
   # and a link retargeted from /usr/bin/bash to /usr/bin/dash landed in no
-  # section at all — not added, not removed, not modified. A symlink's content
+  # section at all: not added, not removed, not modified. A symlink's content
   # IS its target, which is what it is keyed on now. The "->" prefix keeps a
   # symlink and a regular file at one path from ever comparing equal.
   key='NF { if ($1 == "->") {
@@ -152,8 +152,8 @@ DIFF="$RECEIPTS_DIR/LAYER-$LAYER-$(date -u +%Y%m%dT%H%M%SZ).txt"
   rm -f "$b" "$a"
 } > "$DIFF"
 echo
-# `grep -c '^/' "$DIFF"` counted every path line in the file — the added, the
-# removed and the modified alike — so a layer that added 1, removed 2 and
+# `grep -c '^/' "$DIFF"` counted every path line in the file, the added, the
+# removed and the modified alike, so a layer that added 1, removed 2 and
 # modified 1 announced "added 4 files". (And on a count of zero grep exits 1,
 # so the `|| echo 0` fired as well and printed the number twice.) The sections
 # were already counted while the diff was written; say all three.

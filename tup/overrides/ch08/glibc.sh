@@ -1,14 +1,14 @@
 #!/bin/bash
 # OVERRIDE ch08/glibc: run the critical test suite and JUDGE it, instead of
 # letting `make check`'s exit code decide. The page runs BYTE FOR BYTE except
-# that the single line `make check` becomes `judge_glibc_check` — everything
+# that the single line `make check` becomes `judge_glibc_check`; everything
 # after it (localedefs, timezone data, ld.so.conf) is the book's own.
 #
 # THE PROBLEM. The book calls this suite critical ("Do not skip it under any
 # circumstance") and in the same breath says "a few tests do not pass... the
 # failures listed below are usually safe to ignore." `make check` exits
 # nonzero on ANY failure, so the honest options are not {run, skip} but:
-#   (a) `make check || true` — swallows every failure forever, including real
+#   (a) `make check || true` swallows every failure forever, including real
 #       ones. The option that looks like it works and measures nothing.
 #   (b) enumerate the failures the book names; fail on anything else.
 # tup takes (b).
@@ -22,7 +22,7 @@
 # stdlib/tst-arc4random-thread (older host kernels).
 #
 # Measured on the first run: 6275 PASS, 1 FAIL (io/tst-lchmod), 473
-# UNSUPPORTED, 16 XFAIL, 2 XPASS — a clean pass by the book's own standard.
+# UNSUPPORTED, 16 XFAIL, 2 XPASS, a clean pass by the book's own standard.
 set -e
 
 ALLOWED='^(io/tst-lchmod|misc/tst-preadvwritev2|misc/tst-preadvwritev64v2|nss/tst-nss-files-hosts-multi|nptl/tst-thread-affinity.*|elf/tst-cpu-features-cpuinfo|stdlib/tst-arc4random-thread)$'
@@ -73,5 +73,5 @@ sed -e 's@^make check$@judge_glibc_check@' \
     -e 's@^ln -sfv /usr/share/zoneinfo/<xxx> /etc/localtime$@ln -sfv /usr/share/zoneinfo/UTC /etc/localtime@' \
     "$PAGE" > /tmp/glibc-judged.sh
 diff <(grep -c . "$PAGE") <(grep -c . /tmp/glibc-judged.sh) >/dev/null \
-  || { echo "override: substitution changed the line count — refusing"; exit 1; }
+  || { echo "override: substitution changed the line count, refusing"; exit 1; }
 . /tmp/glibc-judged.sh

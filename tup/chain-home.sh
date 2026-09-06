@@ -1,5 +1,5 @@
 #!/bin/bash
-# chain-home.sh — chapters 9, 10, 11 inside the chroot; the last leg.
+# chain-home.sh: chapters 9, 10, 11 inside the chroot; the last leg.
 set -u
 export LFS=/mnt/lfs
 # The arch selects the arch-bound overrides (kernel, bootloader, fstab) and
@@ -22,4 +22,4 @@ run_ch() {
     /bin/bash /tup-build/driver.sh "/tup-build/book/$1"
 }
 run_ch ch09 && run_ch ch10 && run_ch ch11 \
-  && echo "TUP BUILT — ready for the boot witness" || echo "CHAIN-HOME FAILED"
+  && echo "TUP BUILT, ready for the boot witness" || echo "CHAIN-HOME FAILED"

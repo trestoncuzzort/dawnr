@@ -1,4 +1,4 @@
-# train 3: the acceptance test that gives this layer its name — a model
+# train 3: the acceptance test that gives this layer its name: a model
 # TRAINS inside tup. Five steps, CPU, the repo's own Dafny corpus. Loss must
 # be finite and a checkpoint must exist, or the layer fails. A train layer
 # that cannot train is not a layer.

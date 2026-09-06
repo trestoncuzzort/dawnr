@@ -18,9 +18,9 @@
 #   2. fstrim first: the disk carries every deleted build artifact as
 #      allocated blocks (53 GB where 5.5 GB is real) until the guest trims.
 #   3. No image ships unwitnessed: the qcow2 must satisfy every clause of the
-#      boot verdict in tup/boot_verdict.sh — a `tup login:` line, no panic
+#      boot verdict in tup/boot_verdict.sh: a `tup login:` line, no panic
 #      anywhere on the console, a guest still alive when the verdict is taken,
-#      and a settle window that really elapsed — before SHA256SUMS is written,
+#      and a settle window that really elapsed, before SHA256SUMS is written,
 #      and it is witnessed
 #      THROUGH A THROWAWAY OVERLAY, because a witness that writes into the
 #      file it is witnessing has changed the evidence. The others are
@@ -30,10 +30,10 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # The ship gate carries no idea of its own about what "booted" means. It loads
 # the rules boot_witness.sh uses, from boot_verdict.sh, because a second copy of
 # those rules is how three separate "banked BOOTED, did not boot" defects got
-# in — that file's opening note has the account.
+# in; that file's opening note has the account.
 . "$HERE/boot_verdict.sh" 2>/dev/null || true
 command -v tup_boot_verdict >/dev/null || {
-  echo "cannot load $HERE/boot_verdict.sh — the rules that decide BOOTED live there" >&2
+  echo "cannot load $HERE/boot_verdict.sh; the rules that decide BOOTED live there" >&2
   echo "  refusing to ship an image on a verdict this script made up" >&2
   exit 1; }
 OUT=${1:-"$HOME/tup-release"}
@@ -137,7 +137,7 @@ else
     -display none -serial "file:$LOG" &
 fi
 QPID=$!
-# The ship gate does not MIRROR boot_witness.sh's verdict semantics any more —
+# The ship gate does not MIRROR boot_witness.sh's verdict semantics any more,
 # it uses them. Both call tup_boot_verdict, so "what counts as booted" cannot
 # mean one thing to the witness and another to the gate, which is how the settle
 # window came to be right in one file and wrong in the other. This loop only
@@ -147,11 +147,11 @@ QPID=$!
 # The countdown belongs to the passes AFTER the sighting, never to the pass that
 # made it. It used to run in the same iteration that opened the window: a 10s
 # window was down to 5 before the first sleep, so exactly ONE further read of
-# the console happened — at +5s — and the gate shipped. A panic reaching the
+# the console happened, at +5s, and the gate shipped. A panic reaching the
 # console between +5s and +10s, inside the window this script says it is
 # watching, was read by nobody and the image went out. The window costs what it
 # claims: SETTLE/5 further reads, the last of them SETTLE seconds after the
-# prompt, each running the panic test first — and the seconds actually watched
+# prompt, each running the panic test first, and the seconds actually watched
 # are handed to the verdict rather than assumed by it.
 SETTLE=${TUP_SETTLE_SECS:-10}
 POLL=5
@@ -162,7 +162,7 @@ for i in $(seq 1 36); do
   if [ "$prompt_seen" -eq 0 ]; then
     if tup_saw_prompt "$LOG"; then
       prompt_seen=1; prompt_at=$((i * POLL))
-      echo "    login prompt within ${prompt_at}s — watching ${SETTLE}s more before shipping"
+      echo "    login prompt within ${prompt_at}s, watching ${SETTLE}s more before shipping"
     elif ! tup_guest_alive "$QPID"; then
       break
     fi
@@ -182,7 +182,7 @@ if VERDICT=$(tup_boot_verdict "$LOG" "$QPID" "$prompt_seen" "$settle_watched" "$
 fi
 kill "$QPID" 2>/dev/null || true
 if [ "$VERDICT_OK" -ne 1 ]; then
-  echo "!!! the qcow2 did not witness as booted — NOT shipping"
+  echo "!!! the qcow2 did not witness as booted, NOT shipping"
   echo "    verdict: $VERDICT"
   tail -5 "$LOG" || true
   exit 1
@@ -196,7 +196,7 @@ echo "=== 4. derived formats (from the witnessed master)"
 
 echo "=== 5. hashes and the release note"
 # The master must still be the file step 2 built. If anything wrote to it
-# between then and now — an overlay that did not isolate, a stray qemu — the
+# between then and now, an overlay that did not isolate or a stray qemu, the
 # release is not the thing that was witnessed, and it does not go out.
 NOW_SHA=$($SHA "$OUT/$NAME.qcow2" | cut -d' ' -f1)
 [ "$NOW_SHA" = "$MASTER_SHA" ] || {

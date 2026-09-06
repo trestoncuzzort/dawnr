@@ -1,11 +1,11 @@
 #!/bin/bash
-# inventory.sh — hash every file tup contains, so two builds can be compared
+# inventory.sh: hash every file tup contains, so two builds can be compared
 # and so "we know exactly what is on this system" is a checkable claim.
 #
 #   bash tup/inventory.sh                 # run against the built $LFS tree
 #   bash tup/inventory.sh /path/to/root   # or any root
 #
-# Output: tup/receipts/INVENTORY-<date>.txt — one line per regular file,
+# Output: tup/receipts/INVENTORY-<date>.txt, one line per regular file,
 # `<sha256>  <mode> <size> <path>`, sorted by path, with symlinks recorded as
 # `-> target` (their content is the target, and a link that changes target is
 # a change worth seeing).
@@ -13,7 +13,7 @@
 # WHY THIS EXISTS, in two parts:
 #
 # 1. THE REPRODUCIBILITY EXPERIMENT. Build tup twice from the same manifest
-#    and diff two inventories. Files that differ are non-determinism —
+#    and diff two inventories. Files that differ are non-determinism,
 #    embedded timestamps, build paths, ordering, parallelism. That is a
 #    measurement with a yes/no answer and a countable result, and whatever
 #    differs is a finding rather than a nuisance. Expect differences: this is
@@ -22,7 +22,7 @@
 #
 # 2. THE COMPLETE INVENTORY. tup has no package manager, so the filesystem IS
 #    the manifest. A system whose every file is enumerated and hashed is the
-#    right subject for asking "is anything here that should not be" — which
+#    right subject for asking "is anything here that should not be", which
 #    is the security-smell question, asked of a system small enough to answer.
 #
 # Excluded (by directory, listed rather than silently dropped): the virtual
@@ -58,8 +58,8 @@ EXCLUDE=(proc sys dev run tmp sources tup-build)
 
 # The two scratch files this script needs are ordinary files somewhere on this
 # machine, and "somewhere" can be INSIDE the tree being inventoried: $TMPDIR
-# under $ROOT, or $ROOT itself /tmp, or $ROOT = /. The scan then finds them —
-# the listing is created by the redirect before find starts walking — hashes
+# under $ROOT, or $ROOT itself /tmp, or $ROOT = /. The scan then finds them,
+# the listing being created by the redirect before find starts walking, hashes
 # them, and counts their bytes in the totals. They are unique per run and the
 # scan file holds the root's own path, so two inventories of one unchanged
 # system differ, and the difference reads as non-determinism in tup, which is
@@ -159,7 +159,7 @@ BYTES=$(awk '!/^#/ && !/^-> / {s+=$3} END {print s+0}' "$DEST")
 
 echo "wrote ${DEST#$HERE/}"
 if [ "$FIND_RC" -ne 0 ]; then
-  echo "  PARTIAL: $((FILES - LINKS)) files, $LINKS symlinks, $BYTES bytes — the scan"
+  echo "  PARTIAL: $((FILES - LINKS)) files, $LINKS symlinks, $BYTES bytes; the scan"
   echo "  did not finish, so this file is not an inventory of the system."
   exit 1
 fi

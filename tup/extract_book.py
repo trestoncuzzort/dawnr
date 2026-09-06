@@ -29,7 +29,7 @@ WHAT IS AND IS NOT AUTOMATED, stated plainly:
     silently dropped.
   - A file in tup/overrides/<page>.sh REPLACES the extracted page entirely.
     That is the only sanctioned way to handle the book's interactive moments
-    (root passwd, make menuconfig, GRUB) — an override is a visible, diffable
+    (root passwd, make menuconfig, GRUB); an override is a visible, diffable
     decision; an inline edit to book/ would be a silent one. book/ is
     regenerated at will and never hand-edited.
 """
@@ -62,7 +62,7 @@ TEST_RE = re.compile(r"\bmake\b[^;&|]*?\b(check|test)\b")
 # The package is found ANYWHERE in the title ("Linux-6.17.3 API Headers",
 # "Libelf from Elfutils-0.193", "GCC-15.2.0 - Pass 2" are all real), names may
 # contain hyphens and colons, and the classification is settled by resolving
-# against the wget-list's ACTUAL filenames — an unresolved package page gets a
+# against the wget-list's ACTUAL filenames; an unresolved package page gets a
 # loud WARNING, never a silent demotion to action-page (the linux-headers
 # failure that taught this cost a chain restart).
 TITLE_PKG_RE = re.compile(r"([A-Za-z][A-Za-z0-9_+:.-]*?)-(\d[\w.-]*\w)")
@@ -96,17 +96,17 @@ def toc_pages(chapter: int) -> list[str]:
     """Page filenames for a chapter, in book order, from the master TOC."""
     idx = fetch(BASE + "index.html")
     # Case-SENSITIVE page names exist: the book ships chapter07/Python.html
-    # with a capital P, and a lowercase-only class silently dropped it — the
+    # with a capital P, and a lowercase-only class silently dropped it, so the
     # temporary Python never got built and glibc's configure failed three
     # chapters later with "critical programs are missing: python". Any class
     # that can silently drop a page is a defect; this one now also COUNTS.
     # `href=\s*"` and not `href="`: the book's HTML wraps lines between the
-    # attribute and its value —
+    # attribute and its value,
     #     <a href=
     #     "chapter09/bootscripts.html">
     # so a contiguous pattern silently dropped every page whose link happened
     # to wrap. That cost ch08/libpipeline (which broke man-db) and, far worse,
-    # ch09/bootscripts — the page that installs the init scripts. tup would
+    # ch09/bootscripts, the page that installs the init scripts. tup would
     # have built completely, booted, and had no init system.
     pat = re.compile(
         rf'href=\s*"(chapter{chapter:02d}/[A-Za-z0-9+.-]+\.html)"')
@@ -126,7 +126,7 @@ def extract(page_html: str) -> tuple[str, list[str]]:
     # `userinput` is not the only class the book uses for COMMANDS. ch09's
     # etcshells page is a single <pre class="root"> block, so extracting only
     # userinput produced a 140-byte page with no commands at all and /etc/shells
-    # would never have been written. `screen` is deliberately excluded — that
+    # would never have been written. `screen` is deliberately excluded; that
     # class is sample OUTPUT, and running it would be nonsense.
     blocks = [html.unescape(re.sub(r"<[^>]+>", "", b)).strip()
               for b in re.findall(r'<pre class="(?:userinput|root)">(.*?)</pre>',
@@ -134,11 +134,11 @@ def extract(page_html: str) -> tuple[str, list[str]]:
     return title, blocks
 
 
-# Book pages carry DIAGNOSTIC greps — "grep '^FAIL:' $(find -name '*.log')",
+# Book pages carry DIAGNOSTIC greps, "grep '^FAIL:' $(find -name '*.log')",
 # "grep 'Timed out' ...", the toolchain sanity greps in chapters 5 and 6.
 # They exist for a human to READ. grep exits 1 when it matches nothing, so
 # under `set -e` the good outcome (no failures, no timeouts) aborts the build
-# — measured three separate times tonight, on glibc, on binutils, and on the
+# Measured three separate times tonight, on glibc, on binutils, and on the
 # chapter-5 sanity checks. They are advisory output, not assertions, so the
 # driver prints them and does not gate on them. If a check should GATE, it
 # needs an explicit assertion; the book does not provide one, and neither

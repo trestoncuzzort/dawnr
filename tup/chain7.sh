@@ -1,9 +1,9 @@
 #!/bin/bash
-# chain7.sh — the chroot crossing (runs as root). Waits for chapter 6, does the
+# chain7.sh: the chroot crossing (runs as root). Waits for chapter 6, does the
 # book's root-side pages (ownership, kernel filesystems), then enters chroot
 # and hands pages 05-12 to the driver INSIDE the new root. The book's own
 # interactive `chroot` block (04-chroot.sh) is replaced by this scripted
-# crossing — same env -i, same PATH, recorded here instead of typed.
+# crossing: same env -i, same PATH, recorded here instead of typed.
 set -u
 export LFS=/mnt/lfs
 # The arch selects the arch-bound overrides (kernel, bootloader, fstab) and
@@ -34,7 +34,7 @@ cp /home/lfs/driver.sh $LFS/tup-build/
 cp $LFS/tup-build/book/ch07/0[5-9]-*.sh $LFS/tup-build/book/ch07/1[0-2]-*.sh $LFS/tup-build/book/ch07-inner/
 (cd $LFS/tup-build/book/ch07-inner && ls *.sh | sort > ORDER)
 # inside chroot LFS must be EMPTY AND USED: hard-set it in the staged driver
-# (${LFS:-...} would treat empty as unset — the colon form's trap).
+# (${LFS:-...} would treat empty as unset, the colon form's trap).
 sed -i 's|^LFS=.*|LFS=${LFS-/mnt/lfs}|' $LFS/tup-build/driver.sh
 
 echo "chain7: crossing into chroot"

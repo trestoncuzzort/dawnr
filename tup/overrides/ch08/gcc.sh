@@ -5,7 +5,7 @@
 # unexpected failures cannot always be avoided", "On ARM64, many tests in the
 # c-c++-common/hwasan directory are known to fail", "In some cases test
 # failures depend on the specific hardware of the system." It offers a
-# summary-extraction recipe and a comparison against published results — a
+# summary-extraction recipe and a comparison against published results, a
 # human judgment, not a threshold.
 #
 # tup will not fabricate one. The suite RUNS (it is the largest evidence this
@@ -13,7 +13,7 @@
 # and unexpected-failure counts go into the receipt, and the receipt says
 # "RECORDED, NOT JUDGED" in those words. Inventing a passing threshold the
 # book declines to give would be a number that looks like a verdict and is
-# not one — the exact thing this repository exists to refuse.
+# not one, the exact thing this repository exists to refuse.
 set -e
 . /tup-build/overrides/lib-judge.sh
 PAGE="$TUP_PAGE"

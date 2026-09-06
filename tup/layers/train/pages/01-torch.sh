@@ -1,4 +1,4 @@
-# train 1: PyTorch 2.13.0+cpu — the exact wheels hashed at fetch, offline.
+# train 1: PyTorch 2.13.0+cpu, the exact wheels hashed at fetch, offline.
 cd /sources/wheels
 sha256sum -c SHA256SUMS-at-fetch
 pip install --no-index --find-links=/sources/wheels torch==2.13.0+cpu

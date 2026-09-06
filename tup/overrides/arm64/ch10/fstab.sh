@@ -1,6 +1,6 @@
 #!/bin/bash
 # OVERRIDE arm64/ch10/fstab: the book's <xxx> placeholders, filled with tup's
-# FINAL-BOOT device names — standalone under QEMU the disk is vda (inside the
+# FINAL-BOOT device names: standalone under QEMU the disk is vda (inside the
 # build VM it is vdb; that name never belongs in this file). No swap.
 set -e
 cat > /etc/fstab << "FSTABEOF"
