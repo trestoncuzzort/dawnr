@@ -69,6 +69,15 @@ MAX_STEPS = 60_000
 MAX_LOOP = 2_000
 MAX_DEPTH = 40
 MAX_RANGE = 5_000
+MAX_BITS = 4096          # magnitude of any int an arithmetic op produces.
+                         # Measured 2026-09-06 on DafnyBench mockExam2_p6,
+                         # f(n) = n + f(n-1)*f(n-2): values grow doubly
+                         # exponentially, the step cap never fires, and one
+                         # multiplication on a far domain point ran for over
+                         # an hour. The largest value any of the 87
+                         # committed and lifted tasks computes is 621 bits,
+                         # and their Reference points are identical with
+                         # and without the cap (measured 2026-09-06).
 
 # Domain caps. Points are enumerated in shell order (below) so the small,
 # witness-dense corner of the product comes first and the cap trims the
@@ -90,6 +99,14 @@ class Undef(Exception):
 
 class Budget(Exception):
     """A cap above was hit; this input decides nothing."""
+
+
+def _bounded(v):
+    """The magnitude cap, applied to every arithmetic result: an int past
+    MAX_BITS decides nothing, like a step past MAX_STEPS."""
+    if type(v) is int and v.bit_length() > MAX_BITS:
+        raise Budget("magnitude cap")
+    return v
 
 
 class St:
@@ -206,11 +223,11 @@ def ev(e: dict, env: dict, funs: dict, st: St):
             raise Undef(f"at index {i} outside [0,{len(s)})")
         return s[i]
     if op == "+":
-        return a[0] + a[1]
+        return _bounded(a[0] + a[1])
     if op == "-":
-        return a[0] - a[1]
+        return _bounded(a[0] - a[1])
     if op == "*":
-        return a[0] * a[1]
+        return _bounded(a[0] * a[1])
     if op == "==":
         return a[0] == a[1]
     if op == "!=":
