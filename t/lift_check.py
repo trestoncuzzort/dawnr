@@ -102,6 +102,28 @@ from verifiers.dafny import DAFNY  # resolution only; never dafny.py's certifica
 DEFAULT_TIMEOUT_S = 120.0
 _TIMEOUT_SENTINEL = -9999
 
+# Section 10(a)'s point cap (integrator fix 2026-09-06). Measured on
+# dafny-synthesis_task_id_801 (CountEqualNumbers, 3 int params; interp's
+# own domain for this task is exactly 2048 points, one of the 11 tasks
+# whose full domain made `dafny run FILE --no-verify` time out): the OLD
+# one-statement-per-point Main did not finish inside a 180s wall timeout
+# at 2048 points (no `points=`/`bad=` line printed at all -- see
+# `_build_differential_with_points`'s own docstring for the data-not-
+# statements fix this constant sits alongside). Even with that fix,
+# `dafny run`'s cost is superlinear in point count on the SAME task, same
+# machine: 256 points 5.6s, 512 points 7.5s, 1024 points 26.2s, 2048
+# points 87.0s (all `/usr/bin/time` wall-clock, compile+run together).
+# 512 is the largest point count still comfortably inside a single-digit-
+# times-ten-second budget, leaving headroom in the 120-200s per-file
+# timeout for the checker's own dafny verify pass (section 9, ~1.1s
+# measured on small files, more on a many-lemma file) and for four
+# concurrent dafny processes contending on this shared box (house rule).
+# A task with fewer points than this is unaffected (`points[:N]` is a
+# no-op); the verdict names both M (the task's actual interp point count)
+# and N (how many were actually run) so a capped row is never misread as
+# a full-domain agreement.
+DIFF_MAX_POINTS = 512
+
 
 @dataclass
 class CheckOutput:
@@ -895,8 +917,40 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # parameters (not universally quantified), so a direct call
         # suffices in place of a forall.
         fd_names = {fd.name for fd in fdecls}
+        inv_calls = _find_fun_calls(inv_exprs, fd_names)
+        # Domain guards of every closure-function call embedded DIRECTLY in
+        # the source invariant text (as opposed to one only invoked, under
+        # its own guard, from a hint below): the source's own conjunction
+        # calls e.g. `Potencia(b, e)` or `power(x, y0 - y)` unconditionally,
+        # so Dafny requires that call's argument in the callee's domain --
+        # `b >= 0`, `y0 - y >= 0` -- for the ensures clause to be well
+        # -formed at all, for ANY (params, locals) satisfying just
+        # `requires`. This is not always a plain nat-typing fact (`y0`,
+        # `y` are bare `int` with a `requires y0 >= 0` in A8_Q1; nothing
+        # here is typed `nat`), so it cannot be read off `_is_nat_type`;
+        # it is exactly `_call_guard`'s computation, reused from the hint
+        # loop below. The source's own successful verification (decision
+        # 12) already proved this guard holds at every real loop head, so
+        # naming it here states a fact the source's typing/domain
+        # discipline established, per decision 4, not one this module
+        # invents. Integrator fix 2026-09-06: seven L_inv_0 failures (one
+        # of them the pre-existing `nat_clause`-only `b` case, still
+        # covered here since `_call_guard` includes each callee param's
+        # own nat-ness; six others -- A8_Q1, power, uiowa fibonacci,
+        # TuringFactorial, climbing-stairs, rosetta factorial -- have no
+        # nat-typed variable in play at all: "function precondition could
+        # not be proved" / "value does not satisfy the subset constraints
+        # of 'nat'" on the embedded call, confirmed from the dafny text
+        # log on each, fixed by this same one-line generalisation).
+        call_guard_list = []
+        for call in inv_calls:
+            fd_match = next(fd for fd in fdecls if fd.name == call.fn.name)
+            g = _call_guard(fd_match, call, crename)
+            if g not in call_guard_list:
+                call_guard_list.append(g)
+        call_guards = _and(call_guard_list)
         inv_hints = []
-        for call in _find_fun_calls(inv_exprs, fd_names):
+        for call in inv_calls:
             fd_match = next(fd for fd in fdecls if fd.name == call.fn.name)
             f = _match_spec_fun(fd_match, task.get("spec_funs", []), record)
             if f is None:
@@ -909,21 +963,26 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             else:
                 inv_hints.append(f"  if {guard} {{ {call_line} }}")
         lines.append(f"lemma L_inv_{k}({ps_inv})")
-        # `nat_clause` also belongs in `requires`, not only inside the
-        # ensures' left conjunct: a local that is nat-typed in the source
-        # but never reassigned inside THIS loop gets no `nat-invariant
-        # -added` clause on the lifted side (decision 5 only appends for
-        # an ASSIGNED nat local), so the lifted conjunction on its own
-        # says nothing about it -- leaving it a free, unconstrained int
-        # lemma parameter makes the <==> false for a witness where it is
-        # negative (measured: gcdI-adjacent 04_pot's own `b`, assigned
+        # `nat_clause`/`call_guards` also belong in `requires`, not only
+        # inside the ensures' left conjunct: a local that is nat-typed in
+        # the source but never reassigned inside THIS loop gets no
+        # `nat-invariant-added` clause on the lifted side (decision 5 only
+        # appends for an ASSIGNED nat local), so the lifted conjunction on
+        # its own says nothing about it -- leaving it a free, unconstrained
+        # int lemma parameter makes the <==> false for a witness where it
+        # is negative (measured: gcdI-adjacent 04_pot's own `b`, assigned
         # once before the loop from a nat param and never touched again,
         # produced a genuine, provably-false equivalence, not merely a
         # hard-to-automate one -- confirmed by patching just this line and
         # re-verifying: 11 verified, 0 errors, same file, same lemmas).
-        # Integrator fix 2026-09-05.
-        lines.append(f"  requires {_and([lifted_req, nat_clause])}")
-        lines.append(f"  ensures ({_and([nat_clause, src_inv])}) <==> ({lifted_inv})")
+        # Integrator fix 2026-09-05; generalised to `call_guards` 2026-09-06
+        # (see the comment above `call_guard_list`). Both are placed FIRST
+        # in the ensures' left conjunct, ahead of `src_inv`, so Dafny's
+        # left-to-right `&&` short-circuit (the same discipline L_req
+        # already relies on) establishes them before `src_inv`'s embedded
+        # calls are evaluated.
+        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards])}")
+        lines.append(f"  ensures ({_and([nat_clause, call_guards, src_inv])}) <==> ({lifted_inv})")
         if inv_hints:
             lines.append("{")
             lines.extend(inv_hints)
@@ -1031,6 +1090,22 @@ def build_differential(task: dict, source: MethodDecl, closure: tuple) -> str:
 
 def _build_differential_with_points(task: dict, source: MethodDecl,
                                     closure: tuple, points: list) -> str:
+    """Section 10(a), item (a)'s data-not-statements form (integrator fix
+    2026-09-06): the OLD Main emitted one `{ var srcv := ...; ...}` block
+    PER POINT, so N points meant N call statements for `dafny run` to
+    parse and compile; measured on dafny-synthesis_task_id_801
+    (CountEqualNumbers, 3 int params, interp's own domain is exactly 2048
+    points): `dafny run --no-verify` on the old form did not finish inside
+    a 180s wall timeout (no `points=`/`bad=` line printed at all). This
+    form instead emits the points as DATA -- a `seq` of tuples (one tuple
+    field per param; a bare `seq<T>` when there is exactly one param, no
+    tuple needed) -- walked by ONE `while` loop that makes the two calls
+    generically; `dafny run --no-verify` never proves anything about the
+    loop (verification is skipped), so no invariant or decreases is
+    needed for the loop to compile and run. Measured on the SAME task,
+    same 2048 points, same machine: 8.7s compile+run (see
+    DIFF_MAX_POINTS's own comment for the full before/after numbers this
+    justifies)."""
     rename = _closure_rename_map(source, closure)
     fdecls = [d for d in closure if isinstance(d, FunctionDecl)]
     mdecls = [d for d in closure if isinstance(d, MethodDecl)]
@@ -1052,23 +1127,50 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
     src_name = rename.get(source.name, source.name)
     lift_name = task["name"].capitalize()
     names_types = _param_names_types(task)
-    ret_ty = task["returns"][0]["type"]
+    n_params = len(names_types)
 
     lines.append("method Main() {")
-    lines.append("  var bad := 0;")
-    lines.append("  var points := 0;")
-    for i, (env0, _real) in enumerate(points):
-        args = ", ".join(_dafny_literal(env0[n], ty) for n, ty in names_types)
-        lines.append(f"  {{")
-        lines.append(f"    var srcv := {src_name}({args});")
-        lines.append(f"    var liftv := {lift_name}({args});")
-        lines.append(f"    points := points + 1;")
-        lines.append(f'    print {i}, " ", srcv, " ", liftv, "\\n";')
-        cmp_ne = "srcv != liftv" if ret_ty != "bool" else "srcv != liftv"
-        lines.append(f"    if {cmp_ne} {{")
-        lines.append(f"      bad := bad + 1;")
-        lines.append(f"    }}")
-        lines.append(f"  }}")
+    if n_params == 0:
+        # interp's domain for a 0-param method is degenerate (>= 1 trivial
+        # point, never large: LIFTER-DECISIONS.md row 19, interp's own
+        # domain), so the direct-call form costs nothing extra and needs
+        # no data/loop machinery to represent zero-length tuples.
+        lines.append("  var bad := 0;")
+        lines.append("  var points := 0;")
+        for i in range(len(points)):
+            lines.append("  {")
+            lines.append(f"    var srcv := {src_name}();")
+            lines.append(f"    var liftv := {lift_name}();")
+            lines.append("    points := points + 1;")
+            lines.append(f'    print {i}, " ", srcv, " ", liftv, "\\n";')
+            lines.append("    if srcv != liftv { bad := bad + 1; }")
+            lines.append("  }")
+    else:
+        if n_params == 1:
+            n0, ty0 = names_types[0]
+            pts_ty = lower_dafny.TYPES[ty0]
+            lit_list = [_dafny_literal(env0[n0], ty0) for env0, _real in points]
+            call_args = "pts[i]"
+        else:
+            field_tys = ", ".join(lower_dafny.TYPES[ty] for _n, ty in names_types)
+            pts_ty = f"({field_tys})"
+            lit_list = []
+            for env0, _real in points:
+                fields = ", ".join(_dafny_literal(env0[n], ty) for n, ty in names_types)
+                lit_list.append(f"({fields})")
+            call_args = ", ".join(f"pts[i].{j}" for j in range(n_params))
+        lines.append(f"  var pts: seq<{pts_ty}> := [{', '.join(lit_list)}];")
+        lines.append("  var bad := 0;")
+        lines.append("  var points := 0;")
+        lines.append("  var i := 0;")
+        lines.append("  while i < |pts| {")
+        lines.append(f"    var srcv := {src_name}({call_args});")
+        lines.append(f"    var liftv := {lift_name}({call_args});")
+        lines.append("    points := points + 1;")
+        lines.append('    print i, " ", srcv, " ", liftv, "\\n";')
+        lines.append("    if srcv != liftv { bad := bad + 1; }")
+        lines.append("    i := i + 1;")
+        lines.append("  }")
     lines.append('  print "points=", points, " bad=", bad, "\\n";')
     lines.append("}")
     lines.append("")
@@ -1322,8 +1424,15 @@ def check(task: dict, source: MethodDecl, closure: tuple,
                            refusal=refusal, interp_points=n_points,
                            interp_first_value=first_value)
 
-    # (5) differential run.
-    diff_text = _build_differential_with_points(task, source, closure, ref.points)
+    # (5) differential run. Section 10(a) is a BOUNDED test either way
+    # (agreement on N points is never a proof of identity, design's own
+    # words); DIFF_MAX_POINTS bounds it to a point count `dafny run`
+    # actually finishes in this project's timeouts (see that constant's
+    # comment for the measurement), taking the first N points in interp's
+    # own shell order -- the same order `interp.Reference` already
+    # produced them in, so this is a prefix, not a resample.
+    diff_points = ref.points[:DIFF_MAX_POINTS]
+    diff_text = _build_differential_with_points(task, source, closure, diff_points)
     diff_path = dfy_path.with_name(dfy_path.stem + ".diff.dfy")
     diff_path.write_text(diff_text, encoding="utf-8", newline="\n")
     d_exit, printed, points_n, bad_n, raw_out = _run_differential(diff_path, timeout_s)
@@ -1348,18 +1457,25 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     if bad_n > 0:
         first_bad_i = next((i for i in sorted(printed)
                             if printed[i][0] != printed[i][1]), None)
-        env0 = ref.points[first_bad_i][0] if first_bad_i is not None else {}
-        record.differential_verdict = f"bad={bad_n}"
+        env0 = diff_points[first_bad_i][0] if first_bad_i is not None else {}
+        record.differential_verdict = f"bad={bad_n} of {n_points} points"
         refusal = Refusal(reason="lift-diff-failed", token=repr(env0), line=0, stage="check")
         return CheckOutput(checker_dfy=checker_text, differential_dfy=diff_text,
                            record=record, refusal=refusal, interp_points=n_points,
                            interp_first_value=first_value)
 
-    record.differential_verdict = f"agrees on {points_n} points"
+    # Design section 10(a): "the report says 'agrees on N points'";
+    # LIFTER-DECISIONS.md's charge to this fix is "the row must say
+    # 'agrees on N points'" where N is a BOUNDED test -- M (`n_points`,
+    # the task's full interp point count) names what was bounded away so
+    # a capped row is never misread as full-domain agreement.
+    record.differential_verdict = f"agrees on {points_n} of {n_points} points"
 
-    # (6) interp third arm (18.5).
+    # (6) interp third arm (18.5), over the SAME capped points the
+    # differential run actually executed (`printed`'s indices are
+    # positions into `diff_points`, not into the uncapped `ref.points`).
     disagreement = None
-    for i, (env0, real) in enumerate(ref.points):
+    for i, (env0, real) in enumerate(diff_points):
         entry = printed.get(i)
         if entry is None:
             continue
@@ -1620,16 +1736,86 @@ def run_t7(task: dict, source: MethodDecl, closure: tuple, dfy_dir: Path,
 # guessing.
 # ===========================================================================
 
+def _fold_neg(e):
+    """Integrator fix 2026-09-06 (18.4's first documented asymmetry): a
+    negative literal round-trips as either `{"op":"neg","args":[{"int":
+    k}]}` or `{"int": -k}`, chosen by whichever side's printer/parser
+    last touched it (measured: 6 of 20 inverse-test mismatches over the
+    committed tasks plus `fuzz_lower.build_corpus(20, seed=20260905)`
+    were exactly this, e.g. `fz_wrong_002`'s
+    `.body[...].assign[1].args[0].args`, one side carrying `args` at all
+    and the other not). Folded to the literal form wherever it appears,
+    on both sides, before any inverse-test comparison, so this printer
+    choice is never mistaken for a lifter fault in either direction."""
+    if isinstance(e, dict):
+        if (e.get("op") == "neg" and isinstance(e.get("args"), list)
+                and len(e["args"]) == 1):
+            inner = e["args"][0]
+            if isinstance(inner, dict) and set(inner.keys()) == {"int"}:
+                return {"int": -inner["int"]}
+        return {k: _fold_neg(v) for k, v in e.items()}
+    if isinstance(e, list):
+        return [_fold_neg(v) for v in e]
+    return e
+
+
+def _has_neg_literal(e) -> bool:
+    """Whether `_fold_neg` would actually change `e` -- used only to
+    report, per task item 3, "which normalisation fired", never to gate
+    the comparison itself (folding always runs)."""
+    if isinstance(e, dict):
+        if (e.get("op") == "neg" and isinstance(e.get("args"), list)
+                and len(e["args"]) == 1):
+            inner = e["args"][0]
+            if isinstance(inner, dict) and set(inner.keys()) == {"int"}:
+                return True
+        return any(_has_neg_literal(v) for v in e.values())
+    if isinstance(e, list):
+        return any(_has_neg_literal(v) for v in e)
+    return False
+
+
+def _flatten_assoc(e, op: str) -> list:
+    """The leaf operands of a chain of nested (already `_canon_expr`-
+    canonicalised) `{"op": op, "args": [a, b]}` binary nodes, left to
+    right -- `op` is `"+"` or `"*"`, both associative AND commutative
+    over t's integer domain, so a DIFFERENT grouping of the same chain
+    (measured: `fuzz_lower.build_corpus(20, seed=20260905)`'s
+    `fz_wrong_002`/`fz_v0if_013`, `(-2) * (2 * 11)` round-tripping as
+    `((-2) * 2) * 11` -- Dafny's own grammar reprints and reparses `*` as
+    strictly left-associative, so any right-grouped chain a generator
+    built directly, never through dafny's own parser, cannot survive a
+    round trip unchanged) carries no more meaning than and/or's own
+    grouping does, which `_canon_expr` already discounts by sorting."""
+    if (isinstance(e, dict) and e.get("op") == op
+            and isinstance(e.get("args"), list) and len(e["args"]) == 2):
+        out = []
+        for a in e["args"]:
+            out.extend(_flatten_assoc(a, op))
+        return out
+    return [e]
+
+
 def _canon_expr(e):
     """Canonicalise a t expression for the inverse-test comparison:
     recursively sort the args of commutative `and`/`or` nodes, so the
     third documented asymmetry (nested binary and/or flattening to one
     n-ary node) cannot fail an otherwise-identical comparison over a
-    grouping/order difference alone."""
+    grouping/order difference alone; the same treatment for `+`/`*`
+    (never `-`: not associative or commutative), rebuilt as a canonical
+    left-nested binary chain since t's own grammar stores them strictly
+    binary (see `_flatten_assoc`)."""
     if isinstance(e, dict):
         out = {k: _canon_expr(v) for k, v in e.items()}
         if out.get("op") in ("and", "or") and isinstance(out.get("args"), list):
             out["args"] = sorted(out["args"], key=lambda x: repr(x))
+        elif (out.get("op") in ("+", "*")
+              and isinstance(out.get("args"), list) and len(out["args"]) == 2):
+            leaves = sorted(_flatten_assoc(out, out["op"]), key=lambda x: repr(x))
+            rebuilt = leaves[0]
+            for leaf in leaves[1:]:
+                rebuilt = {"op": out["op"], "args": [rebuilt, leaf]}
+            return rebuilt
         return out
     if isinstance(e, list):
         return [_canon_expr(v) for v in e]
@@ -1637,7 +1823,7 @@ def _canon_expr(e):
 
 
 def _canon_task(task: dict) -> dict:
-    t = _canon_expr(copy.deepcopy(task))
+    t = _canon_expr(_fold_neg(copy.deepcopy(task)))
     t.pop("name", None)  # asymmetry 1: capitalise/lowercase round trip
     # Decision 16: "the 't' version field ... always 1" -- a fresh lift
     # always emits t:1 regardless of what an older, differently-versioned
@@ -1652,6 +1838,190 @@ def _canon_task(task: dict) -> dict:
     for k in [k for k in t if k.startswith("_")]:
         t.pop(k, None)
     return t
+
+
+# ---------------------------------------------------------------------------
+# Alpha-equivalence (18.4's second documented asymmetry, integrator fix
+# 2026-09-06): the file-global renamer renames a LOCAL or a bound variable
+# whenever its bare name collides with some other name anywhere in the
+# whole rprint text, even across scopes that never interact -- measured:
+# 14 of 20 inverse-test mismatches were exactly this (`i`/`i_v`/`i_v2` on
+# a while-loop counter, `s`/`x` on a spec_fun's OWN params renamed to
+# `s_v`/`x_v` because the ENCLOSING method happens to have same-named
+# params in an entirely separate scope: `count_matches.json`). A plain
+# JSON `==` after `_canon_task` cannot see past this, so `_alpha_equal_
+# tasks` walks both (already `_canon_task`-normalised) trees in PARALLEL,
+# building a bijection as it goes: params, returns, a spec_fun's OWN
+# name, and the TYPE (never the name) of a spec_fun's OWN parameters at
+# each position must match exactly (task item 3's "params, returns,
+# spec_fun names and their parameter order must match exactly"); a
+# spec_fun's own parameter NAMES, and every local/bound-variable name
+# introduced by a `var` statement or a `forall`/`exists` binder, are
+# free to differ as long as the SAME correspondence holds at every use
+# (checked, never assumed: a name seen mapped one way and later required
+# to map another way is a real mismatch, not a renaming). Method params/
+# returns seed the bijection as the identity (they are never renamed);
+# each spec_fun gets its OWN bijection, seeded fresh from its own
+# params, so a name shared by coincidence between two scopes that never
+# interact (`count_matches.json`'s `s`) cannot force a spurious clash.
+# ---------------------------------------------------------------------------
+
+class _AlphaMismatch(Exception):
+    """Raised at the first point two (already `_canon_task`-normalised)
+    trees are NOT alpha-equivalent; `path` names where, `a`/`b` the two
+    values found there, for the caller to fold into its own diff report."""
+    def __init__(self, path, a=None, b=None):
+        super().__init__(path)
+        self.path = path
+        self.a = a
+        self.b = b
+
+
+def _alpha_expr(a, b, bindings: dict, rev: dict, path: str, renames: set) -> None:
+    if isinstance(a, dict) and isinstance(b, dict):
+        if set(a.keys()) != set(b.keys()):
+            raise _AlphaMismatch(path, a, b)
+        if "var" in a and isinstance(a["var"], str):
+            # A USE (a DECLARATION -- a `var` statement or a quantifier
+            # binder -- is handled by its own caller before recursing
+            # into the scope the declared name is visible in, so by the
+            # time an expression walk reaches a bare `{"var": x}` it is
+            # always a reference to an already-bound name).
+            na, nb = a["var"], b["var"]
+            if na not in bindings or bindings[na] != nb:
+                raise _AlphaMismatch(path, a, b)
+            if na != nb:
+                renames.add(f"{na}->{nb}")
+            return
+        if "forall" in a or "exists" in a:
+            kw = "forall" if "forall" in a else "exists"
+            qa, qb = a[kw], b[kw]
+            if set(qa.keys()) != set(qb.keys()):
+                raise _AlphaMismatch(path, a, b)
+            _alpha_expr(qa["lo"], qb["lo"], bindings, rev, f"{path}.{kw}.lo", renames)
+            _alpha_expr(qa["hi"], qb["hi"], bindings, rev, f"{path}.{kw}.hi", renames)
+            na, nb = qa["var"], qb["var"]
+            if nb in rev and rev[nb] != na:
+                raise _AlphaMismatch(f"{path}.{kw}.var", na, nb)
+            inner_b, inner_r = dict(bindings), dict(rev)
+            inner_b[na] = nb
+            inner_r[nb] = na
+            _alpha_expr(qa["body"], qb["body"], inner_b, inner_r,
+                       f"{path}.{kw}.body", renames)
+            if na != nb:
+                renames.add(f"{na}->{nb}")
+            return
+        for k in a:
+            _alpha_expr(a[k], b[k], bindings, rev, f"{path}.{k}", renames)
+        return
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            raise _AlphaMismatch(f"{path}[len]", len(a), len(b))
+        for i, (x, y) in enumerate(zip(a, b)):
+            _alpha_expr(x, y, bindings, rev, f"{path}[{i}]", renames)
+        return
+    if a != b:
+        raise _AlphaMismatch(path, a, b)
+
+
+def _alpha_stmts(a_list: list, b_list: list, bindings: dict, rev: dict,
+                 path: str, renames: set) -> None:
+    """`bindings`/`rev` are mutated in place as `var` statements are
+    walked, exactly matching Dafny's own scoping: a name declared here
+    stays visible to every later statement in THIS list, but an `if`'s
+    two branches and a `while`'s body each get their OWN copy (seeded
+    from the current bindings) so a branch-local declaration cannot leak
+    into its sibling or past the statement that opened the block."""
+    if len(a_list) != len(b_list):
+        raise _AlphaMismatch(f"{path}[len]", len(a_list), len(b_list))
+    for i, (sa, sb) in enumerate(zip(a_list, b_list)):
+        p = f"{path}[{i}]"
+        if set(sa.keys()) != set(sb.keys()):
+            raise _AlphaMismatch(p, sa, sb)
+        if "assign" in sa:
+            na, ea = sa["assign"]
+            nb, eb = sb["assign"]
+            if na not in bindings or bindings[na] != nb:
+                raise _AlphaMismatch(f"{p}.assign[0]", na, nb)
+            if na != nb:
+                renames.add(f"{na}->{nb}")
+            _alpha_expr(ea, eb, bindings, rev, f"{p}.assign[1]", renames)
+        elif "var" in sa:
+            da, db = sa["var"], sb["var"]
+            if da.get("type") != db.get("type"):
+                raise _AlphaMismatch(f"{p}.var.type", da, db)
+            _alpha_expr(da["init"], db["init"], bindings, rev, f"{p}.var.init", renames)
+            na, nb = da["name"], db["name"]
+            if nb in rev and rev[nb] != na:
+                raise _AlphaMismatch(f"{p}.var.name", na, nb)
+            bindings[na] = nb
+            rev[nb] = na
+            if na != nb:
+                renames.add(f"{na}->{nb}")
+        elif "if" in sa:
+            ca, cb = sa["if"], sb["if"]
+            _alpha_expr(ca["cond"], cb["cond"], bindings, rev, f"{p}.if.cond", renames)
+            _alpha_stmts(ca["then"], cb["then"], dict(bindings), dict(rev),
+                        f"{p}.if.then", renames)
+            _alpha_stmts(ca["else"], cb["else"], dict(bindings), dict(rev),
+                        f"{p}.if.else", renames)
+        elif "while" in sa:
+            wa, wb = sa["while"], sb["while"]
+            _alpha_expr(wa["cond"], wb["cond"], bindings, rev, f"{p}.while.cond", renames)
+            _alpha_expr(wa.get("invariants", []), wb.get("invariants", []),
+                       bindings, rev, f"{p}.while.invariants", renames)
+            _alpha_expr(wa["decreases"], wb["decreases"], bindings, rev,
+                       f"{p}.while.decreases", renames)
+            _alpha_stmts(wa["body"], wb["body"], dict(bindings), dict(rev),
+                        f"{p}.while.body", renames)
+        else:
+            raise _AlphaMismatch(p, sa, sb)
+
+
+def _alpha_equal_tasks(a: dict, b: dict) -> list:
+    """Returns the sorted list of `"expected->got"` local/bound-variable
+    renames actually used, or raises `_AlphaMismatch` at the first real
+    difference. `a`/`b` must already be `_canon_task`-normalised."""
+    renames: set = set()
+    if a.get("params", []) != b.get("params", []):
+        raise _AlphaMismatch(".params", a.get("params"), b.get("params"))
+    if a.get("returns", []) != b.get("returns", []):
+        raise _AlphaMismatch(".returns", a.get("returns"), b.get("returns"))
+    bindings = {p["name"]: p["name"] for p in a.get("params", [])}
+    bindings.update({r["name"]: r["name"] for r in a.get("returns", [])})
+    rev = dict(bindings)
+
+    a_funs, b_funs = a.get("spec_funs", []), b.get("spec_funs", [])
+    if len(a_funs) != len(b_funs):
+        raise _AlphaMismatch(".spec_funs[len]", len(a_funs), len(b_funs))
+    for i, (fa, fb) in enumerate(zip(a_funs, b_funs)):
+        p = f".spec_funs[{i}]"
+        if set(fa.keys()) != set(fb.keys()):
+            raise _AlphaMismatch(p, fa, fb)
+        if fa.get("name") != fb.get("name"):
+            raise _AlphaMismatch(f"{p}.name", fa.get("name"), fb.get("name"))
+        pa, pb = fa.get("params", []), fb.get("params", [])
+        if len(pa) != len(pb):
+            raise _AlphaMismatch(f"{p}.params[len]", len(pa), len(pb))
+        fbindings, frev = {}, {}
+        for xa, xb in zip(pa, pb):
+            if xa.get("type") != xb.get("type"):
+                raise _AlphaMismatch(f"{p}.params.type", xa, xb)
+            fbindings[xa["name"]] = xb["name"]
+            frev[xb["name"]] = xa["name"]
+            if xa["name"] != xb["name"]:
+                renames.add(f"{xa['name']}->{xb['name']}")
+        for k in fa:
+            if k in ("name", "params"):
+                continue
+            _alpha_expr(fa[k], fb[k], fbindings, frev, f"{p}.{k}", renames)
+
+    known = {"params", "returns", "spec_funs", "body"}
+    for key in (set(a.keys()) | set(b.keys())) - known:
+        _alpha_expr(a.get(key), b.get(key), bindings, rev, f".{key}", renames)
+
+    _alpha_stmts(a["body"], b["body"], dict(bindings), dict(rev), ".body", renames)
+    return sorted(renames)
 
 
 def _task_self_calls(task: dict) -> bool:
@@ -1674,11 +2044,28 @@ def inverse_test(task: dict, timeout_s: float = DEFAULT_TIMEOUT_S) -> dict:
     third; the second is handled by returning `status="recursive"` with
     an interp-domain comparison left to the caller rather than a JSON
     diff, per 18.4's own words: "the recursive tasks are compared by
-    interp on the domain rather than by JSON").
+    interp on the domain rather than by JSON"), PLUS two more this
+    module's own measurement against the 11 committed tasks and
+    `fuzz_lower.build_corpus(20, seed=20260905)` found necessary
+    (integrator fix 2026-09-06, task item 3): a negative literal folded
+    to one canonical form (`_fold_neg`) and a consistent alpha-renaming
+    of locals/bound variables the file-global renamer applies across
+    scopes that never interact (`_alpha_equal_tasks`) -- 20 of the 31
+    raw mismatches were exactly these two; the remaining 2 turned out to
+    be a fourth, previously-undocumented asymmetry of the SAME shape as
+    the third (`+`/`*` are associative and commutative over t's integer
+    domain exactly like `and`/`or` are, and Dafny's own grammar reprints
+    a chain of either strictly left-associative regardless of how it was
+    built), so `_canon_expr` normalises them the same way. A residual
+    mismatch after all four is a real lifter fault, not a known
+    round-trip artefact.
 
-    Returns a dict with `status` one of: `"match"`, `"mismatch"` (plus
-    `expected`/`got`), `"recursive"` (plus `lowered_task`, the round
-    tripped task, for the caller to compare via interp), or
+    Returns a dict with `status` one of: `"match"` (plus `normalized`,
+    the fold/rename normalisations that actually fired, `[]` if none
+    were needed), `"mismatch"` (plus `expected`/`got`/`diff_path`,
+    `normalized` for whichever of the four fired but still left a real
+    difference), `"recursive"` (plus `lowered_task`, the round tripped
+    task, for the caller to compare via interp), or
     `"waits-for-integrator"` (plus `stage`, the first stub hit) when
     `lift_resolve.resolve`, `lift_parse.parse`/`gradable_methods`,
     `lift_classify.classify`, or `lift_rewrite.rewrite` is not
@@ -1741,6 +2128,16 @@ def inverse_test(task: dict, timeout_s: float = DEFAULT_TIMEOUT_S) -> dict:
     if _task_self_calls(task):
         return {"status": "recursive", "lowered_task": got_task}
     a, b = _canon_task(task), _canon_task(got_task)
+    normalized = []
+    if _has_neg_literal(task) or _has_neg_literal(got_task):
+        normalized.append("neg-literal-folded")
     if a == b:
-        return {"status": "match"}
-    return {"status": "mismatch", "expected": a, "got": b}
+        return {"status": "match", "normalized": normalized}
+    try:
+        renames = _alpha_equal_tasks(a, b)
+    except _AlphaMismatch as e:
+        return {"status": "mismatch", "expected": a, "got": b,
+               "diff_path": e.path, "normalized": normalized}
+    if renames:
+        normalized.append("alpha-renamed:" + ",".join(renames))
+    return {"status": "match", "normalized": normalized}

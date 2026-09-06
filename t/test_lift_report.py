@@ -241,30 +241,82 @@ def test_decision17_lifted_vs_counted() -> None:
 # ---------------------------------------------------------------------------
 
 def test_lift_file_stub_no_crash() -> None:
-    names = [line.strip() for line in INFRAGMENT_TXT.read_text(encoding="utf-8").splitlines()
-             if line.strip()][:5]
-    assert names, "infragment.txt produced no names"
-    for name in names:
-        p = CORPUS_DIR / name
-        assert p.is_file(), f"missing corpus file: {p}"
+    """Integrator fix 2026-09-06: this test used to rely on every stage
+    module actually being an unimplemented stub, which stopped being
+    true once the front end was written -- `lift_file` no longer reaches
+    `module-not-implemented` on real corpus files at all. The DEGRADE
+    PATH `_stage_call` implements (any stage's `NotImplementedError`
+    recorded as `reason="module-not-implemented"`, naming that stage,
+    rather than crashing the whole run) is still real code this file
+    must cover, so this test exercises it directly: monkeypatch ONE real
+    stage (`lift_classify.classify`, a middle stage -- the resolve-stage
+    shape alone would not tell `lift_file`'s per-METHOD degrade path
+    (`outcome.methods[i].refusal`) apart from its per-FILE one
+    (`outcome.resolve_refusal`), which is a different code path) to
+    raise `NotImplementedError`, and asserts the outcome names exactly
+    that stage, not merely "some failure"."""
+    import lift_classify
+
+    p = CORPUS_DIR / "Clover_abs.dfy"
+    assert p.is_file(), f"missing corpus file: {p}"
+
+    orig_classify = lift_classify.classify
+
+    def _stub(*a, **kw):
+        raise NotImplementedError("lift_classify.classify: stubbed for this test")
+
+    lift_classify.classify = _stub
+    try:
         outcome = lifter.lift_file(p)
-        assert outcome.resolve_refusal is not None
-        assert outcome.resolve_refusal.reason == "module-not-implemented"
-        assert outcome.resolve_refusal.stage == "resolve"
-        assert outcome.methods == []
-    print(f"test_lift_file_stub_no_crash: {len(names)} files, all "
-          f"module-not-implemented, no crash")
+    finally:
+        lift_classify.classify = orig_classify
+
+    assert outcome.resolve_refusal is None, outcome.resolve_refusal
+    assert outcome.parse_refusal is None, outcome.parse_refusal
+    assert len(outcome.methods) >= 1, "Clover_abs.dfy should have >= 1 gradable method"
+    m = outcome.methods[0]
+    assert m.refusal is not None, m
+    assert m.refusal.reason == "module-not-implemented", m.refusal
+    assert m.refusal.token == "lift_classify.classify", m.refusal
+    assert m.refusal.stage == "classify", m.refusal
+    print("test_lift_file_stub_no_crash: a stubbed lift_classify.classify degrades "
+          "to a module-not-implemented method refusal naming that stage, no crash")
 
 
 def test_resumability_no_recompute() -> None:
+    """Integrator fix 2026-09-06: this test used to assert
+    `resolve_refusal.reason == "module-not-implemented"`, which was only
+    ever true because `lift_resolve.resolve` was a stub -- on the real
+    front end `Clover_abs.dfy` genuinely lifts, so that assertion no
+    longer exercises resumability at all (a real bug that made every
+    call fail identically would have passed it too). The real behaviour
+    to test is `lift_file`'s own resumability contract from its
+    docstring: "loads and returns that marker's `FileOutcome` ... without
+    calling any of the five pipeline modules again". Proven here on a
+    real, cheap file (`Clover_abs.dfy`, `skip_check=True` so the run
+    needs no dafny) by monkeypatching `lift_resolve.resolve` to raise
+    AFTER the first (genuine) call: a second, non-forced call that
+    still comes back clean could only have done so by hitting the
+    on-disk cache, since calling the patched `resolve` would surface as
+    an `"error"`-reason refusal (`_stage_call` catches and records any
+    exception, so this could not simply crash the test either way -- the
+    boom's ABSENCE from the second call's outcome is what proves the
+    cache path, not merely "no exception propagated"); `force=True`
+    afterwards proves the same monkeypatch really would have been
+    caught, so the second call's clean result is not vacuous."""
     import lift_resolve
 
     p = CORPUS_DIR / "Clover_abs.dfy"
     assert p.is_file()
     tmp = Path(tempfile.mkdtemp(prefix="lift_report_resume_"))
     try:
-        out1 = lifter.lift_file(p, out_dir=tmp)
-        assert out1.resolve_refusal.reason == "module-not-implemented"
+        out1 = lifter.lift_file(p, out_dir=tmp, skip_check=True)
+        assert out1.resolve_refusal is None, out1.resolve_refusal
+        assert out1.parse_refusal is None, out1.parse_refusal
+        assert len(out1.methods) >= 1, "Clover_abs.dfy should have >= 1 gradable method"
+        assert out1.methods[0].refusal is None, out1.methods[0].refusal
+        assert out1.methods[0].checked is False, "skip_check=True must not run lift_check"
+        assert out1.methods[0].task is not None
         marker = tmp / "Clover_abs.outcome.json"
         assert marker.is_file()
 
@@ -275,23 +327,28 @@ def test_resumability_no_recompute() -> None:
 
         lift_resolve.resolve = _boom
         try:
-            out2 = lifter.lift_file(p, out_dir=tmp)  # not forced: must hit cache
+            out2 = lifter.lift_file(p, out_dir=tmp, skip_check=True)  # not forced: must hit cache
         finally:
             lift_resolve.resolve = orig_resolve
-        assert out2.resolve_refusal.reason == "module-not-implemented", (
-            "resumed call should reuse the cached record, not recompute")
+        assert out2.resolve_refusal is None, (
+            f"resumed call should reuse the cached record, not recompute: {out2.resolve_refusal}")
+        assert len(out2.methods) == len(out1.methods)
+        assert out2.methods[0].refusal is None, out2.methods[0].refusal
+        assert out2.methods[0].checked is False
 
         lift_resolve.resolve = _boom
         try:
-            out3 = lifter.lift_file(p, out_dir=tmp, force=True)  # forced: must recompute
+            out3 = lifter.lift_file(p, out_dir=tmp, force=True, skip_check=True)  # forced: must recompute
         finally:
             lift_resolve.resolve = orig_resolve
-        assert out3.resolve_refusal.reason == "error", out3.resolve_refusal
+        assert out3.resolve_refusal is not None and out3.resolve_refusal.reason == "error", (
+            out3.resolve_refusal)
         assert "must not be called" in out3.resolve_refusal.token
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print("test_resumability_no_recompute: cached call skipped lift_resolve.resolve; "
-          "--force recomputed it")
+    print("test_resumability_no_recompute: a real lift on Clover_abs.dfy cached "
+          "cleanly; the resumed call skipped lift_resolve.resolve entirely "
+          "(proved by --force actually hitting the monkeypatch)")
 
 
 def test_lifter_cli_list_resumable(slow: bool = False) -> None:
@@ -356,10 +413,24 @@ def test_build_table_and_report_totals() -> None:
         summary = lift_census.summarize(rows)
         assert summary.census_in_method_rows == 77, summary.census_in_method_rows
         assert summary.census_in_program_rows == 77, summary.census_in_program_rows
-        assert summary.method_lifted == 0, summary.method_lifted
-        assert summary.disagreement_counts.get("undecided") == 77, summary.disagreement_counts
+        # Integrator fix 2026-09-06: this test asserted `method_lifted ==
+        # 0` / `undecided == 77` / `agree == 0`, which was only ever true
+        # because the front end was a stub and every one of the 77 fell
+        # through as `module-not-implemented` (mapped to "undecided" by
+        # this module's own documented choice, same as `test_verdict_
+        # incomplete_pipeline_undecided` above tests directly). The real
+        # front end lifts 76 of the 77 and checks them clean (measured
+        # here, and independently by `cd t && rm -rf out/lift && python3
+        # lifter.py --list infragment.txt --out out/lift --jobs 4
+        # --timeout 200` then `lift_census.py` over the same subset:
+        # identical 76/77, same one holdout); the numbers below are that
+        # measurement, not a guess -- a real regression should move them,
+        # which is the point of asserting exact counts rather than "some
+        # positive number".
+        assert summary.method_lifted == 76, summary.method_lifted
+        assert summary.disagreement_counts.get("agree") == 76, summary.disagreement_counts
+        assert summary.disagreement_counts.get("undecided") == 1, summary.disagreement_counts
         assert summary.disagreement_counts.get("lifter", 0) == 0
-        assert summary.disagreement_counts.get("agree", 0) == 0
         assert summary.disagreement_counts.get("gap-name", 0) == 0
 
         md_path, json_path = lift_census.write_report(rows, tmp / "report")
@@ -392,6 +463,11 @@ OWN_TESTS = [
     test_decision17_lifted_vs_counted,
     test_lift_file_stub_no_crash,
     test_resumability_no_recompute,
+]
+
+# Runs the full 77 under dafny (about eight minutes since the modules became
+# real), so it is a --slow test; the fast suite keeps the 5-file CLI slice.
+SLOW_TESTS = [
     test_build_table_and_report_totals,
 ]
 
@@ -416,9 +492,21 @@ def run(slow: bool = False) -> None:
         failures += 1
         print(f"test_lifter_cli_list_resumable: FAILED: {e}")
 
+    ran_slow = 0
+    for fn in SLOW_TESTS:
+        if not slow:
+            print(f"{fn.__name__}: skipped (pass --slow)")
+            continue
+        ran_slow += 1
+        try:
+            fn()
+        except AssertionError as e:
+            failures += 1
+            print(f"{fn.__name__}: FAILED: {e}")
+
     if failures:
         raise AssertionError(f"{failures} failure(s) in test_lift_report")
-    print(f"test_lift_report: {len(OWN_TESTS) + 1} checks passed"
+    print(f"test_lift_report: {len(OWN_TESTS) + 1 + ran_slow} checks passed"
           f"{' (slow: full 77)' if slow else ''}")
 
 

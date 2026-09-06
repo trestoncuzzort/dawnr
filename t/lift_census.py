@@ -352,6 +352,20 @@ def build_table(census_path: Path, corpus_dir: Path,
     corpus_dir = Path(corpus_dir)
     records = json.loads(census_path.read_text(encoding="utf-8"))
 
+    # `lift_file`'s own resumability marker gets `out_dir.mkdir(parents=
+    # True, exist_ok=True)` (lifter.py's `_write_outcome`), but only at
+    # the END of a file's pipeline; the check stage's scratch `.dfy`
+    # files (`lift_check.check`, reached mid-pipeline) are written
+    # straight into `out_dir` with no mkdir of their own -- fine when the
+    # CLI calls this (`lifter.py`'s own `main()` creates `--out` up
+    # front), a `FileNotFoundError` on the first method that reaches
+    # `check` when a caller (this function; `test_build_table_and_
+    # report_totals`'s fresh tempdir) hands `lift_file` a directory that
+    # does not exist yet otherwise. Integrator fix 2026-09-06, found via
+    # exactly that crash on `Clover_abs.dfy`.
+    if out_dir is not None:
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+
     rows: list[CensusRow] = []
     for census_record in records:
         dfy_path = corpus_dir / census_record["file"]
