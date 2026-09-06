@@ -8,3 +8,6 @@ data/*.jsonl merge=union
 # checkout must not change their bytes. autocrlf=true on Windows turned the
 # committed out/ fixtures CRLF and their hashes with them (2026-09-02).
 t/** text=auto eol=lf
+
+# nl/: imported problem corpora. Gzipped JSONL, 918 MB, too big for git proper.
+nl/data/*.jsonl.gz filter=lfs diff=lfs merge=lfs -text
