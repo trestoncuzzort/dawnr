@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""lower_framac.py — lower t v0+v1 tasks to ACSL-annotated C; the sixth kernel.
+"""lower_framac.py: lower t v0+v1 tasks to ACSL-annotated C; the sixth kernel.
 
-THE SEMANTIC LINE, corrected 2026-09-01 — the old one was WRONG, and the
+THE SEMANTIC LINE, corrected 2026-09-01. The old one was WRONG, and the
 error was a false theorem, not a wording slip. It read: "C's int is a machine
-type, but WP WITHOUT -wp-rte reasons about the arithmetic mathematically — so
+type, but WP WITHOUT -wp-rte reasons about the arithmetic mathematically, so
 this lowering matches t's mathematical integers exactly." Only the
 ARITHMETIC is mathematical without -wp-rte. The TYPING is not: WP's default
 model constrains every C `int` with is_sint32, so `x <= 2^31-1` was granted
@@ -21,8 +21,8 @@ program this lowering could emit whose program variables are unbounded. What
 a C int MEANS to the prover is a model, and the model is a flag: the adapter
 pins -wp-model Typed+nat (verifiers/framac.py, MODEL), WP's natural
 arithmetic, under which a C integer carries no range hypothesis at all.
-Everything below — `int` formals, `int` locals, `int *s` elements, the `int
-s_n` length — is therefore a mathematical integer, and the ACSL side already
+Everything below, the `int` formals, `int` locals, `int *s` elements and the
+`int s_n` length, is therefore a mathematical integer, and the ACSL side already
 used `integer` for spec-level quantities and bound variables. The two files
 are one instrument: this C read under the default model is a proof of
 something t did not ask.
@@ -34,8 +34,8 @@ v1 mapping (measured on frama-c 33.0 / alt-ergo 2.4.3-free, 2026-08-31):
   seq        -> `int *s` plus a fresh length parameter `s_n`, with emitted
                 preconditions `s_n >= 0` and `\\valid_read(s + (0 .. s_n-1))`.
   forall/    -> `\\forall integer i; lo <= i < hi ==> body` (and the && form
-  exists        for exists). Bound vars are ACSL `integer` — mathematical.
-  while      -> `loop invariant` per invariant (order preserved — the twin
+  exists        for exists). Bound vars are ACSL `integer`, mathematical.
+  while      -> `loop invariant` per invariant (order preserved, because the twin
                 depends on it), `loop assigns` (collected from the body),
                 `loop variant` from the required decreases clause.
   spec_funs  -> recursive ACSL logic functions (`logic integer f(...) = ...`),
@@ -45,28 +45,28 @@ v1 mapping (measured on frama-c 33.0 / alt-ergo 2.4.3-free, 2026-08-31):
                 decreases obligation itself: one `lemma f_terminates_k` per
                 self-call, stating measure' >= 0 && measure' < measure under
                 that call's path condition. Those lemmas are proof goals in
-                the same file — unproved means REFUTED, not a shrug.
+                the same file: unproved means REFUTED, not a shrug.
   recursion  -> a real recursive C function with an ACSL `decreases` clause;
                 WP's variant PO at the call site is the termination proof
                 (measured: `decreases 0` on factorial leaves the variant goal
                 unproved).
 
 DEFINEDNESS, honestly: `at` outside [0, len) is undefined in t. For
-EXECUTABLE positions this lowering discharges it — every unconditionally
+EXECUTABLE positions this lowering discharges it: every unconditionally
 evaluated `at` in a statement gets a `/*@ assert 0 <= i < s_n; */` proof
 obligation in front of the statement, and a conditionally evaluated `at` in
 executable position is an explicit NotImplementedError (never silently
 emitted as C UB). For SPEC positions (requires/ensures/invariants/spec_fun
 bodies) WP's logic is total: an out-of-range s[i] denotes an UNCONSTRAINED
 value under the memory model, so no proof can depend on any particular
-out-of-range content — weaker than Dafny-style well-formedness checking,
+out-of-range content, weaker than Dafny-style well-formedness checking,
 stronger than totalizing to a fixed value. That gap is this backend's known
 softness, recorded here rather than papered over.
 
 Bodies lower to statements: locals are C locals, the return name is a local
 returned at the end, `bool` is C int 0/1 (spec side renders bool vars as
 `x != 0` and bool equality as `<==>`). Every function gets `assigns
-\\nothing;` — it is provable (t bodies never write memory) and it is what
+\\nothing;`, which is provable (t bodies never write memory) and is what
 makes recursive calls modular.
 """
 from __future__ import annotations
@@ -163,7 +163,7 @@ def _gap(rendered: str) -> str:
 
 def term(e: dict, ctx: Ctx) -> str:
     """ACSL term. int-typed terms are `integer`-valued; bool-typed terms are
-    ACSL boolean terms (comparisons / && / || / ! coerce in term position —
+    ACSL boolean terms (comparisons / && / || / ! coerce in term position,
     measured on the count spec_fun's guard)."""
     if "int" in e:
         return str(e["int"])
@@ -376,7 +376,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str) -> str:
 def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
     """(seq, index-expr) pairs for every `at` in an executable expression.
     Unconditionally evaluated ats are returned (they get an assert);
-    a conditionally evaluated at is refused — emitting it without a
+    a conditionally evaluated at is refused, because emitting it without a
     dischargeable guard would silently totalize `at` as C UB."""
     out = []
     if "ite" in e:
@@ -395,7 +395,7 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
     if op == "at":
         if not uncond:
             raise NotImplementedError(
-                "conditionally evaluated `at` in executable position — "
+                "conditionally evaluated `at` in executable position: "
                 "definedness not dischargeable by a plain assert")
         out += code_ats(args[1], env, uncond)
         out.append((seq_var(args[0], env), args[1]))
@@ -469,7 +469,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
             w = s["while"]
             if code_ats(w["cond"], ctx.env):
                 raise NotImplementedError(
-                    "`at` in a while condition — its per-iteration "
+                    "`at` in a while condition: its per-iteration "
                     "definedness assert has no statement to precede")
             ann = [f"{indent}  loop invariant {pred(i, ctx)};"
                    for i in w.get("invariants", [])]
@@ -561,7 +561,7 @@ def self_calls(e: dict, fun: str, path: list) -> list:
 
 def spec_fun_acsl(f: dict, funs: dict) -> list:
     """The recursive logic definition plus its measured termination lemmas
-    (WP does not check logic-function termination itself — see docstring)."""
+    (WP does not check logic-function termination itself; see docstring)."""
     env = {p["name"]: p["type"] for p in f["params"]}
     labeled = funs[f["name"]]["labeled"]
     lab = "{L}" if labeled else ""

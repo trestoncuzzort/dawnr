@@ -1,7 +1,7 @@
-"""t.verifiers.framac — the sixth kernel: Frama-C/WP over ACSL contracts.
+"""t.verifiers.framac, the sixth kernel: Frama-C/WP over ACSL contracts.
 
 Pins: Frama-C 33.0 (Arsenic) + alt-ergo 2.4.3-free (NEVER opam's alt-ergo
-2.6.x, which is non-commercial — the WS-7 licensing catch), via opam.
+2.6.x, which is non-commercial, the WS-7 licensing catch), via opam.
 
 THE REFUTED DOCTRINE, remeasured 2026-09-02, because the old one violated
 the law verifiers/__init__.py states (ROADMAP 10.7: a goal whose own status
@@ -45,7 +45,7 @@ not t's semantics at all: -wp-model now pins Typed+nat, without which every
 C `int` came with is_sint32 and the kernel proved bounded theorems for
 unbounded t tasks. See MODEL below for the measurement.
 
--wp-cache none because a proof cache poisons flake_check — a cached verdict
+-wp-cache none because a proof cache poisons flake_check: a cached verdict
 re-measures nothing.
 
 THE AUDIT ARCHITECTURE (Wave-2/3, all points measured 2026-08-31):
@@ -56,7 +56,7 @@ THE AUDIT ARCHITECTURE (Wave-2/3, all points measured 2026-08-31):
   (measured on parse_error.c), so a source line cannot forge the anchor.
 * The ban scan runs on the kernel's OWN normalized view (`frama-c -print`):
   macros are expanded (macro_axiom.c), backslash-newline splices are undone
-  (splice_axiom.c), and plain C comments are dropped (overfire_admit.c) —
+  (splice_axiom.c), and plain C comments are dropped (overfire_admit.c),
   three evasions the raw regex provably mis-scores. Raw-text scanning is only
   the fallback when the file does not parse, where VERIFIED is unreachable.
 * `axiomatic`/`axiom` are banned because WP assumes axioms globally and emits
@@ -77,16 +77,16 @@ THE AUDIT ARCHITECTURE (Wave-2/3, all points measured 2026-08-31):
   of budget failed to reach.
 * TOOL_ERROR is live: absent/dead kernel binary, empty kernel output,
   `[wp] User Error` / `Plug-in wp aborted` (measured with an unknown prover:
-  exit 0, no Proved line — exit codes alone cannot be trusted), and a
+  exit 0, no Proved line, so exit codes alone cannot be trusted), and a
   `Failed:` prover status outside a smoke test. A prover failure is never
-  REFUTED — it is not evidence.
+  REFUTED, because it is not evidence.
 
 THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
 
 1. -wp-smoke-tests, WP's own instrument: it asks the prover to derive \\false
    from each contract's hypotheses and from each program point's path
    condition, and reports `(Doomed)` / `Failed smoke-test`. That catches
-   vacuity sitting in a *hypothesis position* — `requires 0 == 1` and
+   vacuity sitting in a *hypothesis position*, `requires 0 == 1` and
    `requires bad(x) >= 0` over an inconsistent definition both measured
    Doomed (requires_false.c, e2_reqbad.c).
 
@@ -95,7 +95,7 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    two non-well-founded-definition probes, because the contradiction is
    laundered into an ensures *antecedent*, which is not a smoke position, and
    because alt-ergo only instantiates a definition axiom when a term over
-   that symbol is in scope — no smoke goal mentions the symbol, so
+   that symbol is in scope: no smoke goal mentions the symbol, so
    `Smoke Tests: 1 / 1` passes over a theory that is flatly inconsistent.
    Both holes are live soundness failures, not cosmetic ones: with
    `logic integer bad(integer n) = bad(n) + 1;` in scope,
@@ -106,8 +106,8 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    So the adapter puts the term in scope and asks the kernel. For every
    RECURSIVE logic/predicate definition in the kernel's own normalized AST it
    synthesizes two probe functions carrying COMPLEMENTARY preconditions over
-   that symbol — `F(a) >= 0` / `F(a) < 0` for a logic function, `P(a)` /
-   `!P(a)` for a predicate — and re-runs WP restricted to them with -wp-fct.
+   that symbol, `F(a) >= 0` / `F(a) < 0` for a logic function, `P(a)` /
+   `!P(a)` for a predicate, and re-runs WP restricted to them with -wp-fct.
    No consistent theory can make both members of a complementary pair
    underivable-from, so BOTH smoke goals coming back `(Doomed)` is a kernel
    proof that the file's logic environment is inconsistent -> VACUOUS. The
@@ -122,13 +122,13 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    contradiction at this budget, and WP checks logic-function termination
    never (lower_framac.py's docstring records the same measurement from the
    other side). Frama-C 33 has no `decreases` clause for a logic definition
-   at all — `decreases` inside a `logic ... = ...;` annotation is a parse
-   error, measured — so the only expressible well-foundedness obligation is
+   at all: `decreases` inside a `logic ... = ...;` annotation is a parse
+   error, measured, so the only expressible well-foundedness obligation is
    the emitted-goal form the lowering already produces: one
    `lemma <F>_terminates_<k>` per recursive call, stating that the measure is
    bounded and decreases. A recursive F with no such obligation is refused.
    This is a naming convention and is therefore NOT what the soundness claim
-   rests on — instrument 2 runs first and decides on kernel evidence; this
+   rests on. Instrument 2 runs first and decides on kernel evidence; this
    only fails closed on definitions whose inconsistency alt-ergo did not
    find.
 """
@@ -162,7 +162,7 @@ PROBE_WALL_S = 120
 # step-budget twin: WP exposes -wp-smoke-timeout only, and on a recursive
 # definition NO smoke goal is refutable, so each one burns its full wall
 # (factorial.c: 5.4s at 2s, 8.0s at 5s, 33s at 30s). Correcting the record
-# above: for the twins -wp-steps is NOT what ends the failing goal — every
+# above: for the twins -wp-steps is NOT what ends the failing goal: every
 # twin in out/*.c fails `[Timeout]`, never `[Stepout]`, at 2s and at 30s
 # alike, so alt-ergo never reaches 20 000 steps on those VCs and the wall is
 # the operative budget bound there. Raising it buys no verdict, only
@@ -173,7 +173,7 @@ SMOKE_TIMEOUT_S = 5
 # THE ARITHMETIC MODEL, pinned 2026-09-01 because the default one was
 # UNSOUND for t. WP's default machine-integer model types every C `int` with
 # is_sint32, so the hypothesis `x <= 2^31-1` is handed to the prover for
-# free — and SPEC.md says t integers are mathematical and unbounded.
+# free, and SPEC.md says t integers are mathematical and unbounded.
 # MEASURED on the differential fuzzer's probes: under the default model
 # framac VERIFIED fz_p_intwidth (ensures r <= 2^31-1 with both branches
 # live) while dafny, verus, spark, lean, rocq and fstar REFUTED it, and the
@@ -187,7 +187,7 @@ SMOKE_TIMEOUT_S = 5
 # kernels, and all 22 committed cells (11 real VERIFIED, 11 twin REFUTED)
 # are unchanged, goal counts included.
 #
-# This is the ONE place the choice can be made — ACSL's unbounded `integer`
+# This is the ONE place the choice can be made: ACSL's unbounded `integer`
 # is a LOGIC type, and Frama-C 33 rejects it for a ghost variable and for a
 # ghost function's parameters and result (both measured: "syntax error ...
 # before or at token"), so no C program lower_framac.py could emit carries
@@ -203,7 +203,7 @@ GOAL_PREFIX = MODEL.lower().replace("+", "_") + "_"
 # -wp-par defaults to the machine's core count (measured: `default: 120` on
 # this box), which is the roadmap's "prover auto-detect" left unpinned. It is
 # verdict-relevant, not cosmetic: the bound that ends a failing goal here is a
-# wall, so how much CPU each prover gets decides how far it got — the same
+# wall, so how much CPU each prover gets decides how far it got, the same
 # witness taken at -wp-par 120 and re-taken on a laptop is not the same
 # experiment. Pinned at 4, which any machine can honour; on factorial.c the
 # measured wall is 22.7s at 1, 10.2s at 4, 8.0s at 8.
@@ -211,7 +211,7 @@ PAR = 4
 
 # admit/assumes discharge goals by fiat at the use site; axiomatic/axiom are
 # assumed globally with no emitted goal (see module docstring, measured);
-# `requires \false` kept although smoke tests subsume it — the regex is the
+# `requires \false` kept although smoke tests subsume it, because the regex is the
 # second line and costs nothing.
 BANNED = re.compile(
     r"\badmit\b|\bassumes\b|\baxiomatic\b|\baxiom\b|requires\s+\\false",
@@ -521,7 +521,7 @@ def _ver() -> str:
 
 def _run(cmd: list, wall: int):
     """(returncode, decoded output). Decoded errors='replace' because kernel
-    diagnostics echo raw source bytes — text=True would re-crash on the very
+    diagnostics echo raw source bytes, and text=True would re-crash on the very
     non-UTF8 probes safe_text exists for."""
     p = subprocess.run(cmd, capture_output=True, timeout=wall)
     return p.returncode, (p.stdout.decode("utf-8", errors="replace")

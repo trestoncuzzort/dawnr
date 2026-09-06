@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""metamorphic.py — verdict invariance of the seven lowerings under rewrites
+"""metamorphic.py: verdict invariance of the seven lowerings under rewrites
 that PROVABLY preserve SPEC.md semantics.
 
 Why this instrument and not another round of differential fuzzing. run_all.py
@@ -24,7 +24,7 @@ WHAT EACH VERDICT MOVE MEANS, and the taxonomy is load-bearing:
     KNOWN-FALSE by an exhibited witness, a VERIFIED on either side is an
     UNSOUNDNESS; otherwise it is a lowering bug of unknown direction.
   - anything <-> TIMEOUT / UNPROVED: the solver worked harder under the
-    rewrite and ran out. INCOMPLETENESS, not unsoundness — SPEC.md's taxonomy
+    rewrite and ran out. INCOMPLETENESS, not unsoundness, per SPEC.md's taxonomy
     rule is that a budget exhaustion is never a refutation, and the same rule
     forbids reading it as a verdict change here. Reported as robustness.
   - anything <-> LOWER-ERROR / ABSTAIN: the rewrite left the fragment one
@@ -40,15 +40,15 @@ that argument over a bounded domain, never its justification: a bounded search
 is a sound proof of falsity and is not a sound proof of truth. A tripwire hit
 is a bug in THIS file and is reported as such, never as a kernel finding.
 
-Own output directory, never t/out/ — the suite's drivers own those filenames
+Own output directory, never t/out/, because the suite's drivers own those filenames
 (run_par.py's _live_conflict records what two writers cost). Base and variants
 each get their own subdirectory and keep the SAME task name, so the lowered
 files differ only by the rewrite and never by an identifier the lowering might
 derive a module or theorem name from.
 
 WHAT THE FIRST RUN MEASURED (2026-09-01, the training box, all seven kernels
-of t/AGREEMENT.md): 79 base tasks — 10 true by construction, 15 false by an
-exhibited witness to `ensures`, 54 generated — 1199 variants over 18
+of t/AGREEMENT.md): 79 base tasks, 10 true by construction, 15 false by an
+exhibited witness to `ensures` and 54 generated, giving 1199 variants over 18
 transformations, 1278 cases, 8798 kernel invocations. 0 tripwire hits. 212
 verdict moves, EVERY one reproducing at flake n=3 and none of them an
 unsoundness: 0 cases where a kernel VERIFIED a task with a witness against it,
@@ -74,7 +74,7 @@ suite does not generate:
      task true by construction.
   3. The verus adapter's `_REQ_FALSE` regex scans a `requires` for a bare
      `false` token. `c or false` is the same precondition as `c`, and it turns
-     VERIFIED into VACUOUS and REFUTED into VACUOUS — the vacuity screen fires
+     VERIFIED into VACUOUS and REFUTED into VACUOUS, because the vacuity screen fires
      before the kernel's own verdict is read. The regex's comment records its
      false NEGATIVES; this is the false-positive direction. ROADMAP.md 10.2 is
      the standing conclusion: semantic vacuity is not decidable by regex.
@@ -87,7 +87,7 @@ suite does not generate:
      quantifying over the copy), and lean/rocq/fstar REFUTE a task all seven
      verify without the copy. dafny/verus/framac keep the fact because a WP
      caller retains it; spark TIMEOUTs. Reported as REFUTED, which is the
-     taxonomy violation ROADMAP.md 10.1 names — the obligation the lowering
+     taxonomy violation ROADMAP.md 10.1 names: the obligation the lowering
      emitted is strictly STRONGER than the one SPEC.md states, so this can
      only cost a proof, never buy one.
   5. The fstar adapter scores MALFORMED whenever its query log holds no
@@ -98,7 +98,7 @@ suite does not generate:
      `s[(j * 1)]` are not trigger candidates, so the same quantifier loses
      its instantiation. Verus makes it a hard error ("Could not automatically
      infer triggers"); Dafny emits the brittleness WARNING and, because
-     `--allow-warnings` is off, exits 2 — which verifiers/dafny.py maps to
+     `--allow-warnings` is off, exits 2, which verifiers/dafny.py maps to
      MALFORMED even though Dafny's own tally on the same run reads "2
      verified, 0 errors". Measured on one task Dafny also reported "this
      invariant could not be proved to be maintained" for `s[(j * 1)]` and the
@@ -308,8 +308,8 @@ def t_rename(task):
     SPEC.md's semantics is environment lookup by name under the scope rule
     ("`requires` sees params; `ensures` sees params and returns; body
     expressions see params, returns, and locals declared above them"), so a
-    bijective renaming onto FRESH names — fresh, so no binder can capture an
-    occurrence that was free — leaves every lookup, and therefore every value,
+    bijective renaming onto FRESH names, fresh so that no binder can capture an
+    occurrence that was free, leaves every lookup, and therefore every value,
     unchanged. The task's own name is NOT renamed: it is the self-call target
     and, in several lowerings, the emitted module/theorem identifier, and
     holding it fixed keeps the variant's identity comparable to the base's."""
@@ -540,7 +540,7 @@ def t_demorgan(task):
     The definedness obligation is the one that makes this non-trivial under
     SPEC.md. On the left, `a_k` need only be defined when a_1..a_{k-1} are all
     true. On the right, `not a_k` is reached only when `not a_1` .. `not
-    a_{k-1}` are all false, i.e. when a_1..a_{k-1} are all true — the same
+    a_{k-1}` are all false, i.e. when a_1..a_{k-1} are all true, the same
     condition, argument by argument. So the rewrite neither adds nor discharges
     a definedness obligation, and classical De Morgan gives the value."""
     cands = [p for p, n, _t, kind in _all_body_sites(task)
@@ -702,7 +702,7 @@ def t_let_copy(task):
     substituting it for every body occurrence of `p` changes no value. The
     local's name is fresh, so nothing is captured; `requires`/`ensures` are
     untouched and still name the parameter, which is still a parameter.
-    v1 only — v0 has no local declarations."""
+    v1 only; v0 has no local declarations."""
     if task["t"] != 1:
         return None
     ints = [p["name"] for p in task["params"] if p["type"] == "int"]
@@ -742,7 +742,7 @@ def t_pad(task):
     v0: v0 has no locals, and lower_rocq.py's body_expr0 requires a v0 body to
     be ONE statement (measured: appending a statement makes it raise, which
     run_all records as LOWER-ERROR rather than a verdict), so the v0 padding is
-    a tautological guard around the whole body instead — `if TRUE then B else
+    a tautological guard around the whole body instead, `if TRUE then B else
     B`. The condition is a closed comparison, defined everywhere and true, so
     the then-branch runs and B is exactly what ran before; the else-branch is
     the same B, so the rewrite is value-preserving even read as a plain `if`."""
@@ -886,13 +886,13 @@ TRANSFORMS = [
 
 
 # ---------------------------------------------------------------------------
-# The tripwire. NOT the justification — see the module docstring.
+# The tripwire. NOT the justification; see the module docstring.
 # ---------------------------------------------------------------------------
 
 def _observe(task, env0, ret):
     """What SPEC.md says is observable about one run: the return value, or the
     definedness/annotation failure that replaced it, plus each ensures clause.
-    Budget exhaustion is not an observation — the padded variant costs a step
+    Budget exhaustion is not an observation: the padded variant costs a step
     more, so a run that hits the cap on one side and not the other is dropped
     rather than compared."""
     funs = fz._funs_of(task, task["body"])
@@ -927,7 +927,7 @@ def _equivalent(base, variant, name_map, rng, k=120):
     """Bounded cross-check of a transformation against the interpreter.
 
     A disagreement PROVES the rewrite is not meaning-preserving and the
-    transformation is withdrawn. Agreement proves nothing — it is a tripwire on
+    transformation is withdrawn. Agreement proves nothing; it is a tripwire on
     the argument in the transformation's docstring, and the argument is what
     the soundness of this instrument rests on."""
     ret_b = base["returns"][0]["name"]
@@ -959,7 +959,7 @@ def constructed(rng, k):
     paths and emits one clause `pc implies r == val` per leaf `assign r :=
     val`, with `pc` the conjunction of the conditions along that path and the
     else-arm's condition negated by fuzz_lower._negate (NEGCMP for a
-    comparison, `not` otherwise — an exact negation, since every v0 operator
+    comparison, `not` otherwise, an exact negation, since every v0 operator
     is total). The body assigns `val` to `r` exactly on the inputs where `pc`
     holds, so every clause is true at EVERY input, and `requires` is empty so
     "every input" is not narrowed. v0 has no partial operator (SPEC.md admits
@@ -1119,7 +1119,7 @@ def run_cells(pending, jobs, n_flake, label="", checkpoint: Path | None = None):
     Measured 2026-09-01 on the training box: a sweep of 8798 cells sharing the
     machine with two other campaigns fell from 17 cells/s to 1.9 cells/s, so a
     result held only in memory until the last cell is a result that a kill
-    loses entirely. The file is JSONL and append-only for that reason — a
+    loses entirely. The file is JSONL and append-only for that reason: a
     partial sweep still has every verdict it paid for."""
     res = {}
     t0 = time.time()
@@ -1176,7 +1176,7 @@ def main() -> int:
             cols.append((bname, be.version()))
             present.append((bname, importlib.import_module(lmod).lower, sfx))
         except (Exception, SystemExit) as e:              # noqa: BLE001
-            cols.append((bname, f"ABSENT — {e}"))
+            cols.append((bname, f"ABSENT: {e}"))
     if len(present) < 2:
         print("REFUSED: fewer than two kernels present; invariance across one "
               "kernel is one opinion, not an invariance.")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""t/truth_fuzz.py — grade the seven lowerings against truth known BEFORE any
+"""t/truth_fuzz.py: grade the seven lowerings against truth known BEFORE any
 kernel runs (ROADMAP.md 10.1), not against each other.
 
 Differential fuzzing (fuzz_lower.py) compares kernels to kernels, so a
@@ -13,7 +13,7 @@ counterexample settles it) and is never a sound proof of TRUTH (a property can
 hold on [-40,40] and fail at 2^40). The two labels therefore come from
 different instruments and the code keeps them apart:
 
-  TRUE   — by CONSTRUCTION only. `denote()` computes the body's own denotation
+  TRUE   : by CONSTRUCTION only. `denote()` computes the body's own denotation
            as a pure t expression (assign substitutes; `if` merges with `ite`,
            whose laziness is `if`'s), so `ensures r == denote(body)` holds at
            every input by structural induction on the body. Weakenings,
@@ -21,13 +21,13 @@ different instruments and the code keeps them apart:
            justification in `why`; none of them appeals to a test. The bounded
            scan run over every TRUE task is a BUG-CATCH on this file: a hit
            aborts the run, it never promotes a task.
-  FALSE  — by exhibited WITNESS: a concrete input where `requires` holds, the
+  FALSE  : by exhibited WITNESS: a concrete input where `requires` holds, the
            body yields a value, and `ensures` evaluates false. Checked twice,
            by t/interp.py and by `ck_ens` below, which is written from SPEC.md
            in a different style (UNDEF sentinel and an operator table instead
            of exceptions and an if-chain) so one coding slip cannot appear in
            both. No witness, no FALSE label and the candidate is discarded.
-  ILLDEF — `ensures` (or the body) is undefined somewhere `requires` admits.
+  ILLDEF : `ensures` (or the body) is undefined somewhere `requires` admits.
            SPEC.md "Definedness" makes a lowering that silently totalizes `at`
            wrong, so a sound kernel must not VERIFY; this is a separate label
            from FALSE because reporting a definedness failure as a refutation
@@ -164,7 +164,7 @@ def denote(body: list, sigma: dict) -> dict:
     `if` merges to `ite`, whose evaluation rule (SPEC.md gate 1: the taken
     branch only) is `if`'s, so the merge preserves definedness as well as
     value. Names a branch declares are dropped at the merge: SPEC.md's scope
-    rule does not let them escape. `while` raises — the loop family states its
+    rule does not let them escape. `while` raises, because the loop family states its
     own invariant argument instead of claiming a closed form here."""
     s = dict(sigma)
     for st in body:
@@ -186,7 +186,7 @@ def denote(body: list, sigma: dict) -> dict:
 
 
 def mirror(task: dict, body: list | None = None) -> dict:
-    """`denote(body)[r]` — the expression `ensures r == mirror(task)` makes
+    """`denote(body)[r]`, the expression `ensures r == mirror(task)` makes
     true at every input by construction."""
     body = task["body"] if body is None else body
     ret = task["returns"][0]["name"]
@@ -237,8 +237,8 @@ def finish(task: dict) -> dict:
 
 # ---------------------------------------------------------------------------
 # The independent checker. Re-read of SPEC.md in a deliberately different
-# style from interp.ev — an UNDEF sentinel instead of exceptions, an operator
-# table instead of an if-chain — so a single coding slip cannot appear in both
+# style from interp.ev, an UNDEF sentinel instead of exceptions and an operator
+# table instead of an if-chain, so a single coding slip cannot appear in both
 # and bless the same wrong witness. Used ONLY to confirm a FALSE label.
 # ---------------------------------------------------------------------------
 
@@ -253,7 +253,7 @@ UNDEF = _Undef()
 class CkBudget(Exception):
     """A cap was hit, so this input decides nothing. Kept apart from UNDEF
     because folding budget exhaustion into "no value" would let an ILLDEF
-    label be confirmed by a loop that merely ran long — the taxonomy error
+    label be confirmed by a loop that merely ran long: the taxonomy error
     ROADMAP.md 10.1 forbids, one level down."""
 
 _TAB = {
@@ -539,7 +539,7 @@ def scan_true(task: dict, limit: int = 768):
 # ---------------------------------------------------------------------------
 # Random body generation. Integer parameters and total operators only: the
 # mirror is licensed by `denote`, and `denote`'s definedness argument is only
-# as good as the body's — a partial body would make `ensures r == D` true
+# as good as the body's, since a partial body would make `ensures r == D` true
 # exactly where the body has a value and leave the kernel a definedness
 # obligation the task never stated. The seq families below guard `at`
 # explicitly instead.
@@ -685,7 +685,7 @@ def fam_mirror(rng, n):
         out.append(rec(w, "TRUE", "construction", why, "weaken", tag=nm))
 
         # PERTURB: known-FALSE candidates. Each needs an exhibited witness or
-        # it is discarded — a mutation is not a falsity proof.
+        # it is discarded: a mutation is not a falsity proof.
         pf = [("plus1", op("==", V("r"), op("+", D, I(1)))),
               ("gt", op(">", V("r"), D)),
               ("lt", op("<", V("r"), D)),
@@ -1157,7 +1157,7 @@ def fam_syntax(rng):
 
 
 def fam_quant():
-    """Bounded quantifiers over integer ranges — no sequence, so a verdict here
+    """Bounded quantifiers over integer ranges, with no sequence, so a verdict here
     is about the quantifier lowering alone."""
     out = []
     n = V("n")
@@ -1645,7 +1645,7 @@ def main() -> int:
     for r, w in bad[:20]:
         print(f"  DISCARD {r['task']['name']} [{r['truth']}] {w}")
     if any(r["truth"] == "TRUE" for r, _ in bad):
-        print("FATAL: a TRUE label failed its own counterexample scan — the "
+        print("FATAL: a TRUE label failed its own counterexample scan; the "
               "construction in this file is wrong, and no finding downstream "
               "would be worth anything. Nothing was run.")
         for r, w in bad:
@@ -1666,7 +1666,7 @@ def main() -> int:
         try:
             ver = importlib.import_module(f"verifiers.{bname}").version()
         except (Exception, SystemExit) as e:               # noqa: BLE001
-            cols.append((bname, f"ABSENT — {e}"))
+            cols.append((bname, f"ABSENT: {e}"))
             continue
         cols.append((bname, ver))
         present.append((bname, importlib.import_module(lmod).lower, suffix))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""fuzz_lower.py — differential fuzzing of the SEVEN LOWERINGS against one
+"""fuzz_lower.py: differential fuzzing of the SEVEN LOWERINGS against one
 reference semantics for t.
 
 The suite's claim is not "seven kernels agree"; it is "seven kernels agree
@@ -32,14 +32,14 @@ Three independent instruments, in order of strength:
      needed for exit-entailment / preservation (INVARIANT-DROP) is decided by
      the interpreter, not by the kernel. A twin that VERIFIES is then either a
      vacuous spec (twin provably differs, kernel accepts it anyway) or a
-     benign no-op mutation (twin computes the same thing) — the flip rule
+     benign no-op mutation (twin computes the same thing), and the flip rule
      cannot tell those apart on its own, and the difference is what the
      two-mutation discipline is actually worth.
 
 WHAT THIS FILE CANNOT REACH, stated so it is not mistaken for coverage:
 division and modulo. SPEC.md removes them from v0 AND v1 by name ("Division
 and modulo are deliberately absent from v0 AND v1"), so no well-formed t task
-contains one; all seven lowerings reject the operator token instead — six
+contains one; all seven lowerings reject the operator token instead, six
 with an unhandled ValueError, lower_lean.py with a NotImplementedError
 (measured on the fz_p_nodiv probe below). Fuzzing "division by a
 possibly-zero operand" is therefore not a gap in this generator, it is a gap
@@ -82,7 +82,7 @@ BACKENDS = [
 ]
 
 # ===========================================================================
-# 1. Reference interpreter — SPEC.md semantics, partiality included.
+# 1. Reference interpreter: SPEC.md semantics, partiality included.
 # ===========================================================================
 
 
@@ -144,7 +144,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
             raise Budget("quantifier range")
         acc = (kind == "forall")
         # SPEC.md: "the body must be defined for every value of the bound
-        # variable in [lo, hi)" — so the body is evaluated at EVERY point even
+        # variable in [lo, hi)", so the body is evaluated at EVERY point even
         # after the result is decided. An empty range decides without ever
         # needing the body, which is why [0,0) over an undefined body is
         # defined and true.
@@ -166,7 +166,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         sub = {p["name"]: a for p, a in zip(f["params"], args)}
         if "_exec" in f:
             # SPEC.md gate 3: a body self-call is a call of the task itself.
-            # Executed for real, not modelled by its contract — ground truth
+            # Executed for real, not modelled by its contract: ground truth
             # has to be the value, and the contract is what the KERNEL uses.
             body, ret = f["_exec"]
             st.d += 1
@@ -284,7 +284,7 @@ def exec_body(body: list, env: dict, funs: dict, st: St, check_ann: bool):
 
 
 # ===========================================================================
-# 2. Well-formedness — SYNTAX.md grammar plus SPEC.md's scope rules.
+# 2. Well-formedness: SYNTAX.md grammar plus SPEC.md's scope rules.
 # ===========================================================================
 
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
@@ -1314,7 +1314,7 @@ def probes() -> list[dict]:
         "it by a machine type proves a false statement")
 
     # The three above all put the machine-representability question inside a
-    # branch, which WP's smoke test then reports as unreachable (VACUOUS) —
+    # branch, which WP's smoke test then reports as unreachable (VACUOUS),
     # a refusal, not a false proof. These three keep BOTH branches reachable
     # in every backend, so a backend whose t int is a machine type reaches
     # VERIFIED on a task the interpreter refutes, and the flip rule counts it.
@@ -1347,7 +1347,7 @@ def probes() -> list[dict]:
     # A seq's ELEMENTS are mathematical integers too, and no probe reached
     # them until 2026-09-01: lower_framac.py's `int *s` made every element
     # is_sint32 under WP's default model, and this task proved 10/10 goals
-    # there — VERIFIED with its twin REFUTED, so the flip rule would have
+    # there, VERIFIED with its twin REFUTED, so the flip rule would have
     # COUNTED a false theorem. The length probe above does not cover it: a
     # lowering can bound the elements while leaving the length free.
     add({"t": 1, "name": "fz_p_elemwidth", "gate": "quantifiers",
@@ -1578,7 +1578,7 @@ def build_corpus(n: int, seed: int):
 
 
 # ===========================================================================
-# 7. Driver — own out/ directory, lowering in the parent, verify in a pool.
+# 7. Driver: own out/ directory, lowering in the parent, verify in a pool.
 # ===========================================================================
 
 def _cell(bname: str, real: str, twin: str, n: int):
@@ -1603,7 +1603,7 @@ def run(corpus, outdir: Path, jobs: int, n_flake: int, only=None):
             cols.append((bname, be.version()))
             present.append((bname, importlib.import_module(lmod).lower, sfx))
         except (Exception, SystemExit) as e:                 # noqa: BLE001
-            cols.append((bname, f"ABSENT — {e}"))
+            cols.append((bname, f"ABSENT: {e}"))
     rows = {t["name"]: {} for t in corpus}
     pending = []
     for bname, lower, sfx in present:
@@ -1690,7 +1690,7 @@ def analyse(corpus, rows):
                  "inv": task.get("_inv")})
         # THE FLIP, counted. A twin that comes back TIMEOUT or UNPROVED is
         # neither a disagreement (nothing contradicts it) nor a survivor (it
-        # did not verify), so until 2026-09-01 it was reported as NOTHING —
+        # did not verify), so until 2026-09-01 it was reported as NOTHING,
         # and a kernel that had stopped refuting altogether read as a clean
         # run. MEASURED that day: spark went from 101/110 flips to 0/359
         # across three fresh seeds while `disagreements` stayed at 4. The
@@ -1748,7 +1748,7 @@ def main() -> int:
     for b in sorted(nf):
         c = {o: nf[b].count(o) for o in sorted(set(nf[b]))}
         print(f"  NO-FLIP {b}: {len(nf[b])} real-VERIFIED cells whose twin "
-              f"was not REFUTED — {c}")
+              f"was not REFUTED: {c}")
     for d in res["disagreements"]:
         print(f"  DISAGREE {d['task']} [{d['family']}] "
               f"verified={d['verified']} refuted={d['refuted']} "

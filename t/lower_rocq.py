@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""lower_rocq.py — lower t tasks (v0 and v1) to the Rocq Prover; the fifth kernel.
+"""lower_rocq.py: lower t tasks (v0 and v1) to the Rocq Prover; the fifth kernel.
 
 v0 (`"t": 0`): function, theorem, and the uniform destruct-then-lia proof.
 The shape is the original lowering's; the `if` condition accepts the full Exp
@@ -15,7 +15,7 @@ v1 (`"t": 1`) opens the three gates for this backend:
   finite sequence and such a pair are observationally identical: `at` is only
   ever *defined* inside [0, len), and every definedness obligation is emitted
   as its own lemma (Dafny-style well-formedness, discharged by the kernel,
-  never silently totalized away — the `<name>_def_k` lemmas below).
+  never silently totalized away; see the `<name>_def_k` lemmas below).
 
   LOOPS. A while loop becomes a structural Fixpoint over nat fuel on the
   tuple of mutable state, plus one lemma proved by induction on fuel: if the
@@ -23,13 +23,13 @@ v1 (`"t": 1`) opens the three gates for this backend:
   the invariants and the negated guard. The fuel account needs no separate
   nonnegativity argument: with fuel 0 the hypothesis says decreases < 0, and
   the guard must then be false or the task's own decreases-nonnegative
-  obligation is violated — both discharged by the same engine. The theorem
+  obligation is violated, both discharged by the same engine. The theorem
   runs the loop at fuel S (Z.to_nat decreases0), always sufficient.
 
   RECURSION. spec_funs and self-recursive bodies become fuel Fixpoints with a
   wrapper at fuel S (Z.to_nat measure). Per spec_fun the generator emits a
   fuel-irrelevance lemma (any fuel above the declared measure computes the
-  same value — this IS the termination theorem for the declared measure) and
+  same value, which IS the termination theorem for the declared measure) and
   the defining-equation lemma used for rewriting. A self-recursive task gets
   a fuel-indexed spec lemma by induction on fuel; the induction hypothesis is
   exactly the modular contract of the self-call (callee requires proved at the
@@ -39,7 +39,7 @@ v1 (`"t": 1`) opens the three gates for this backend:
   PROOFS. One engine, generic over every task: invertible structural steps,
   deterministic saturation (merge seq-application arguments lia proves equal;
   resolve implications with leaf-provable antecedents; instantiate
-  forall-hypotheses at seq-application arguments — E-matching lite), guarded
+  forall-hypotheses at seq-application arguments, E-matching lite), guarded
   case splits (lia-undecidable antecedents; equality of two seq-application
   arguments), then a shallow goal-directed search (witnesses, disjuncts,
   f_equal, backward chaining). Every discharge ends in the kernel: lia,
@@ -51,7 +51,7 @@ v1 (`"t": 1`) opens the three gates for this backend:
   harness hands a measured twin witness it can ground.
 
 Every file ends with `Print Assumptions`, so the axiom audit ships inside the
-artifact. No Admitted, no Axiom — the adapter bans the tokens outright.
+artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
 """
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ import interp                                  # noqa: E402
 from verifiers import rocq as rocq_backend     # noqa: E402
 
 # --------------------------------------------------------------------------
-# v0 path — frozen; identical to the original lowering.
+# v0 path, frozen and identical to the original lowering.
 # --------------------------------------------------------------------------
 
 PROP_OPS = {"==": "=", "!=": "<>", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
@@ -78,7 +78,7 @@ NARY = {"and": "/\\", "or": "\\/"}
 # The cbn arm is reached only by a condition built with a boolean connective
 # (SYNTAX.md's Stmt row puts a full Expr under `if`): the comparison destructs
 # leave `negb true` / `false && _` behind, which lia cannot read. Whitelisted
-# delta only — a bare `simpl`/`cbn` here would unfold Z.add against the goal,
+# delta only, because a bare `simpl`/`cbn` here would unfold Z.add against the goal,
 # the failure measured on the v1 loop lemma (fz_v1loop_007).
 TACTIC = (
     "  intros; unfold {name}_t;\n"
@@ -183,7 +183,7 @@ def lower_v0(task: dict, body: list, witness: dict | None = None) -> str:
 
 
 # --------------------------------------------------------------------------
-# v1 — shared tactic prelude (validated piece by piece against coqc 9.2
+# v1: shared tactic prelude (validated piece by piece against coqc 9.2
 # before this generator existed; see the session's proto files).
 # --------------------------------------------------------------------------
 
@@ -208,7 +208,7 @@ Ltac t_numeral t :=
    is load-bearing twice over: when one term occurs inside the other the
    containing term must be the one replaced, or the merge re-creates its own
    trigger and t_base diverges (measured: merging i with i+1-1 the wrong way
-   grew -1+1 chains without bound — count_matches' 180 s rocq timeout); and a
+   grew -1+1 chains without bound, count_matches' 180 s rocq timeout); and a
    numeral is never the term being replaced *)
 Ltac t_merge a b :=
   first
@@ -218,13 +218,13 @@ Ltac t_merge a b :=
   | tryif (t_numeral a) then fail else idtac; replace a with b in * by lia
   ].
 
-(* Case-split a decided Z boolean EVERYWHERE it occurs — hypotheses included.
+(* Case-split a decided Z boolean EVERYWHERE it occurs, hypotheses included.
    `destruct (Z.ltb_spec a b)` abstracts the conclusion only, so a boolean
    that structural inversion had already moved into a hypothesis was never
    split: 19 of the 24 bool-returning fuzz tasks refuted under rocq while six
    other kernels verified them (measured 2026-09-01). Replacing the boolean
    by its truth value reaches goal and hypotheses alike AND removes the match
-   trigger, so the arm cannot re-fire — a hypothesis-side `destruct` would
+   trigger, so the arm cannot re-fire, whereas a hypothesis-side `destruct` would
    loop, since it leaves the boolean standing in the hypothesis.
    Each split first tries the branch the context already decides: that costs
    two lia calls and saves a doubling of the goal, and it is what keeps the
@@ -408,7 +408,7 @@ Ltac t_split1 :=
   end.
 
 (* the leading lia closes contradictory contexts before the merge rules can
-   see them — with False in scope lia proves any equality, and an equality
+   see them: with False in scope lia proves any equality, and an equality
    merge under False would replace terms back and forth forever *)
 Ltac t_base := repeat (first [ solve [ lia ] | t_inv1 | t_sat1 | t_split1 ]).
 
@@ -1210,7 +1210,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
         + ["Heq"])
 
     # The induction step needs exactly one reduction: the fixpoint's own
-    # iota step on `S fu`. `simpl` also unfolds Z.add against the goal —
+    # iota step on `S fu`. `simpl` also unfolds Z.add against the goal,
     # measured on fz_v1loop_007, where `4 + i' * 1` became a raw match on the
     # binary positive, past which neither lia nor `apply IH` can go (six
     # kernels verified that task, rocq refuted it). Whitelisted delta keeps

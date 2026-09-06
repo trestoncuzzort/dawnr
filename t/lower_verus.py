@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""lower_verus.py — lower t tasks (v0 and v1) to Verus; the second kernel.
+"""lower_verus.py: lower t tasks (v0 and v1) to Verus; the second kernel.
 
 THE SEMANTIC DECISION, made with a witness rather than by silence: t
 integers are mathematical integers. Verus's `int` type IS mathematical, but
-only in ghost/proof code — executable code uses machine ints with overflow
+only in ghost/proof code; executable code uses machine ints with overflow
 obligations. So every t task lowers to `proof fn`, which preserves t's
 semantics exactly; the exec/i64 arm (with explicit range obligations) is a
 later gate, opened when t grows machine-int types. Choosing exec now would
 silently change what a t task MEANS between Dafny (int = mathematical) and
-Verus — exactly the class of cross-backend semantic drift t exists to
+Verus, exactly the class of cross-backend semantic drift t exists to
 surface, not commit.
 
 v1 additions, and the two decisions they forced (both measured, not guessed):
@@ -16,22 +16,22 @@ v1 additions, and the two decisions they forced (both measured, not guessed):
 LOOPS. Verus refuses `while` in proof mode ("cannot use while in proof or
 spec mode", measured on 0.2026.08.30). Machine-checked iteration in ghost
 code is done by recursion, so each t `while` is lowered to a recursive
-helper proof fn — requires = the invariants, ensures = the invariants over
+helper proof fn, with requires = the invariants and ensures = the invariants over
 the returned state plus the negated guard, decreases = the loop's own
 measure. That IS t's loop rule (SPEC.md gate 2), enforced modularly: the
 caller proves the invariants on entry (call-site requires), the helper
 proves one iteration preserves them (recursive call's requires) and that
 the measure is nonnegative and strictly decreasing (Verus's decreases
 check), and after the loop the caller knows exactly invariants + !guard
-(the helper's ensures — proof fns are opaque) and nothing more. No exec
+(the helper's ensures, since proof fns are opaque) and nothing more. No exec
 arm, no machine ints, no semantic drift.
 
 DEFINEDNESS. Verus spec code is total: `Seq::index` out of bounds is an
 unspecified value guarded only by `recommends`, which the kernel does not
 enforce. A lowering that leaned on that would silently totalize `at`,
 which SPEC.md declares wrong. So this lowering computes the definedness
-condition D(e) of every expression it emits — the exact left-to-right
-short-circuit rules of SPEC.md "Definedness" — and makes Verus discharge
+condition D(e) of every expression it emits, the exact left-to-right
+short-circuit rules of SPEC.md "Definedness", and makes Verus discharge
 it: as an `assert` immediately before each body statement that needs one
 (where the kernel has the path facts, guard, and invariants in context),
 and as standalone well-formedness lemmas for spec positions (each requires
@@ -114,7 +114,7 @@ def expr(e: dict) -> str:
     raise ValueError(f"t has no operator {op!r}")
 
 
-# ---------------------------------------------------------------- v0 path —
+# ----------------------------------------------------------------- v0 path
 # byte-identical to the original lowering for "t": 0 tasks.
 
 def body_expr(body: list, ret: str) -> str:
@@ -145,7 +145,7 @@ def lower_v0(task: dict, body: list, witness: dict | None = None) -> str:
         "}\n\n} // verus!\n\nfn main() {}\n")
 
 
-# ------------------------------------------------- definedness conditions —
+# -------------------------------------------------- definedness conditions
 # D(e) per SPEC.md "Definedness": the exact left-to-right short-circuit
 # rules, computed as a t expression so it is lowered by the same expr().
 
@@ -301,7 +301,7 @@ def _declared(body: list) -> set:
 # ------------------------------------------------------------------ v1 path
 
 def _has_nonlinear(e: dict) -> bool:
-    """True iff e contains a product of two non-literal factors — the shape
+    """True iff e contains a product of two non-literal factors, the shape
     Verus's default solver profile (nonlinear arithmetic off, measured:
     sum_upto's invariant preservation fails without help) cannot decide."""
     if "ite" in e:
@@ -354,7 +354,7 @@ def _prenex(e: dict, fresh) -> tuple[list[str], dict]:
     into guards of the matrix. Sound because the binders are fresh and every
     hoisted forall is in a positive position. The point (measured): a
     definedness forall's body often has no function-application term, so
-    Verus cannot infer a trigger for it — hoisting the binder into the
+    Verus cannot infer a trigger for it, so hoisting the binder into the
     enclosing lemma's parameters removes the SMT quantifier entirely."""
     if "forall" in e:
         q = e["forall"]
@@ -453,7 +453,7 @@ class _V1:
         return lines
 
     # -- loops: proof mode has no while (measured), so the loop rule is  --
-    # -- encoded as a recursive helper lemma — see module docstring.     --
+    # -- encoded as a recursive helper lemma; see module docstring.      --
     def loop(self, w: dict, scope: dict, ind: str) -> list[str]:
         k = self.loop_ix
         self.loop_ix += 1
@@ -474,7 +474,7 @@ class _V1:
         assigned = _assigned(w["body"]) - _declared(w["body"])
         state = [n for n in scope if scope[n][1] and n in assigned]
         ro = [n for n in scope if n not in state]
-        assert state, "loop body assigns nothing in scope — not lowerable"
+        assert state, "loop body assigns nothing in scope, not lowerable"
 
         if len(state) == 1:
             m = {state[0]: "t_res"}
@@ -496,7 +496,7 @@ class _V1:
         ens_s = ",\n        ".join(ens)
 
         # Invariants with nonlinear terms need Verus's sanctioned escape
-        # hatch — assert ... by (nonlinear_arith) with explicit premises —
+        # hatch, assert ... by (nonlinear_arith) with explicit premises,
         # because the default solver profile has nonlinear arithmetic off
         # (measured; Dafny's does not). The premises are exactly t's
         # preservation rule: all invariants plus the guard at entry; the

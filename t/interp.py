@@ -1,9 +1,9 @@
-"""t/interp.py — a reference interpreter for a t body over a FIXED bounded
+"""t/interp.py: a reference interpreter for a t body over a FIXED bounded
 input domain, and the witness search that makes a twin a measurement.
 
 Why this file exists, measured: over 1395 tasks from fuzz_lower.py's
 generator (7 seeds x 200, less the 5 its own well-formedness check rejects),
-129 twins — 9.2%, 13 to 22 per seed — compute the same value as the real
+129 twins, 9.2% and 13 to 22 per seed, compute the same value as the real
 body on every input the fuzzer sampled. On those tasks the twin is not a broken
 program, so a REFUTED verdict is luck and a VERIFIED one cannot be told apart
 from a vacuous spec.
@@ -17,14 +17,14 @@ harness imports this one, so importing it back would be a cycle. What that
 duplication is worth was OVER-STATED here until 2026-09-01, and the
 correction matters because this file is being promoted to ground-truth
 oracle: fuzz_lower.ev is a CLONE of `ev` below, not an independent reading of
-SPEC.md — same dispatch order, same short-circuit idioms, same `not (0 <= i
+SPEC.md: same dispatch order, same short-circuit idioms, same `not (0 <= i
 < len(s))` guard, same forall accumulator; the diff is `args` renamed to `a`
 plus formatting. Agreement between the two is therefore evidence of faithful
 copying and NOT evidence against a shared misconception, which is exactly the
 failure ROADMAP.md 10.1 exists to catch. The real independent check is
 described under "Validation" below. One deliberate divergence from
 fuzz_lower, stated because it is a semantic choice and not an accident: a
-self-call inside a TWIN body resolves to the twin (SPEC.md gate 3 — the
+self-call inside a TWIN body resolves to the twin (SPEC.md gate 3, the
 self-call denotes the task's own function, and in the twin lowering that
 function is the twin), where fuzz_lower.twin_semantics resolves it to the
 real body.
@@ -35,8 +35,8 @@ bounded search is a sound proof of FALSITY and never of TRUTH:
   - against a from-scratch re-implementation written in a deliberately
     different style (option-typed definedness instead of exceptions,
     closure-compiled expressions, immutable state-passing): 263 664
-    (task, input) triples over 248 tasks — the 11 committed plus 3 seeds of
-    the generator — with 0 disagreements on value, on `requires` and on
+    (task, input) triples over 248 tasks, the 11 committed plus 3 seeds of
+    the generator, with 0 disagreements on value, on `requires` and on
     `ensures`, compared TYPE-AWARE so True and 1 do not pass for each other.
     That comparison was itself mutation-tested: ten seeded misconceptions
     (32-bit wraparound; `at` totalized three ways; non-short-circuit and /
@@ -46,7 +46,7 @@ bounded search is a sound proof of FALSITY and never of TRUTH:
   - against all seven kernels on 20 probes whose verdict SPEC.md's text
     entails: no kernel VERIFIED any probe this file calls FALSE or
     UNDEFINED, and on 16 generated tasks where this file exhibits a concrete
-    counterexample, dafny, verus, lean and rocq REFUTED all 16 — 64 of 64
+    counterexample, dafny, verus, lean and rocq REFUTED all 16, 64 of 64
     cells. Every remaining disagreement ran the other way (this file says
     TRUE, a kernel says REFUTED) and every one of those diagnosed to the
     kernel side: a tactic or SMT call that could not discharge a true goal,
@@ -93,7 +93,7 @@ MAX_STATES = 20_000      # loop states per INVARIANT-DROP check;
 class Undef(Exception):
     """SPEC.md "Definedness": `at` outside [0, len) has no value, and neither
     does a read of a return name before its first assignment. Never a Python
-    IndexError or a None that compares — either would be the totalization
+    IndexError or a None that compares, either of which would be the totalization
     SPEC.md calls wrong."""
 
 
@@ -162,7 +162,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         # SPEC.md gate 1: a quantifier denotes a BOOLEAN. Without the cast the
         # accumulator returns the body's own last value, so an int-bodied
         # quantifier would yield an int that Python's == then compares equal
-        # to True — the bool/int conflation this oracle must not have.
+        # to True, the bool/int conflation this oracle must not have.
         return bool(acc)
     if "call" in e:
         c = e["call"]
@@ -357,7 +357,7 @@ def _dedup(vs):
 
 
 def literals(node) -> list[int]:
-    """Every integer literal in the task, in pre-order of first appearance —
+    """Every integer literal in the task, in pre-order of first appearance,
     the constants the spec and the body actually compare against."""
     out = []
     if isinstance(node, dict):
@@ -516,7 +516,7 @@ class Reference:
         SPEC.md "The twins" defines the witness as a VALUE DIFFERENCE, and
         that is what this returns, unchanged. `_ens` records separately
         whether the twin's value also falsifies `ensures` at that point,
-        because only that is grounds for saying a kernel MUST refute — see
+        because only that is grounds for saying a kernel MUST refute; see
         refuting_witness, which searches for one."""
         funs = funs_of(self.task, twin_body)
         for env0, real in self.points:
@@ -544,7 +544,7 @@ class Reference:
 
     def refuting_witness(self, twin_body: list) -> dict | None:
         """The first domain point where the twin's value FALSIFIES `ensures`
-        — the only kind of witness that entails a sound kernel must refute
+        the only kind of witness that entails a sound kernel must refute
         the twin. Separate from `witness` and never called by the twin
         ladder, because SPEC.md defines twin acceptance by value difference
         and changing that would move every published measurement. This is
@@ -585,7 +585,7 @@ class _Admissible:
     keeps everything else. So a candidate state that moves an UNMODIFIED
     local off the value the code before the loop gave it is a state the
     kernel refutes on sight, and a "witness" standing on one is not evidence
-    the kernel must refute the twin — it is a false accusation of vacuity.
+    the kernel must refute the twin; it is a false accusation of vacuity.
 
     MEASURED 2026-09-01 on the smallest task with that shape (a local `m :=
     n` never assigned in the loop, invariant `m == n` dropped): the old
@@ -658,7 +658,7 @@ def invariant_witness(task: dict, loop: dict, kept: list,
     Either means a kernel MUST refute the twin. Neither means a twin that
     verifies says nothing, and harness.make_twin moves on.
 
-    The state must also be one the kernel cannot rule out — see _Admissible,
+    The state must also be one the kernel cannot rule out; see _Admissible,
     without which this returns witnesses dafny and verus were measured to
     verify straight through."""
     funs = funs_of(task, task["body"])

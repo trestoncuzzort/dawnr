@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""lower_spark.py — lower t v0/v1 tasks to SPARK 2014; the third kernel.
+"""lower_spark.py: lower t v0/v1 tasks to SPARK 2014; the third kernel.
 
 THE SEMANTIC DECISION, same doctrine as the Verus backend: t integers are
-mathematical. Ada's Integer is a machine type with overflow — lowering to it
+mathematical. Ada's Integer is a machine type with overflow, so lowering to it
 would make `abs` unprovable at Integer'First and silently change what the
 task means. Ada 2022's Big_Integer (Ada.Numerics.Big_Numbers.Big_Integers)
 IS mathematical and gnatprove proves over it directly.
@@ -46,7 +46,7 @@ array index type is discrete and therefore bounded: S'Length <= Integer'Last
 holds by typing, so the kernel was handed `len(s) <= 2^31-1` for free.
 SPEC.md gives a seq only `len(s) >= 0`. MEASURED on the fuzzer's fz_p_seqlen
 probe (ensures len(s) <= 2^31-1 with both branches live): spark VERIFIED it
-while dafny, verus, lean, rocq and fstar REFUTED it — a false theorem, the
+while dafny, verus, lean, rocq and fstar REFUTED it, a false theorem, the
 same disease as lower_framac.py's C int. The seq is now
 
     package Seqs is new SPARK.Containers.Functional.Infinite_Sequences
@@ -56,7 +56,7 @@ whose Length returns Big_Natural (no upper bound) and whose Get is indexed
 by a Big_Integer position. Its private part is `pragma SPARK_Mode (Off)`, so
 the prover sees the public axiomatization and nothing of the bounded
 representation underneath: the emitted obligation is about sequences of
-arbitrary mathematical length. len(s) >= 0 — SPEC.md's one seq assumption —
+arbitrary mathematical length. len(s) >= 0, SPEC.md's one seq assumption,
 comes from Length's own Big_Natural result subtype, not from an assumption
 this lowering writes.
 
@@ -74,7 +74,7 @@ gnatprove quantifies over the cursor type under R_Has, so this IS t's
 quantifier over [lo, hi) with no machine slice and no bound to hoist.
 MEASURED (2026-09-01, gnatprove FSF 16.1.0): `for all K in T_Range'(0, N) =>
 K <= Integer'Last` with N unconstrained goes `medium: postcondition might
-fail` — the range is genuinely unbounded — while all_nonneg, contains,
+fail`, because the range is genuinely unbounded, while all_nonneg, contains,
 count_matches, linear_search and seq_max still prove. This replaces the
 previous `for all K in Integer` encoding and the hoisted `bounds_ok`
 obligation it owed, and with them the four ABSTAIN paths that existed only
@@ -87,8 +87,8 @@ expressions, so SPEC.md's left-to-right definedness contexts land exactly on
 GNATprove's own RTE-checking contexts; `at` lowers to `Elem (S, I)`, whose
 own precondition `0 <= I and then I < Len (S)` is exactly t's definedness
 side condition and is discharged by the kernel at every use. (Seqs.Get is
-total in the shipped non-defensive SPARKlib build — reading out of range
-yields an unconstrained value — so the obligation must be, and is, stated on
+total in the shipped non-defensive SPARKlib build, and reading out of range
+yields an unconstrained value, so the obligation must be, and is, stated on
 the wrapper rather than borrowed from the library.)
 
 THE COUNTEREXAMPLE INSTANCE, added 2026-09-01 because the sound numeric model
@@ -104,11 +104,11 @@ a prover check means the counterexample was generated AND confirmed by
 gnatprove's runtime assertion checker. Both halves fail on Big_Integer, for
 two different reasons, both read off `gnatprove -d`'s own RAC verdict line:
 
-  * a Big_Integer PARAMETER gets no value in the model —
+  * a Big_Integer PARAMETER gets no value in the model,
     "Small-step: RES_INCOMPLETE, Reason: No counterexample value for program
-    parameter x" — so the abs twin carries no cntexmp field at all;
-  * a Big_Integer EXPRESSION cannot be executed by the RAC —
-    "Small-step: RES_INCOMPLETE, Reason: expr with private type" — so even
+    parameter x", so the abs twin carries no cntexmp field at all;
+  * a Big_Integer EXPRESSION cannot be executed by the RAC,
+    "Small-step: RES_INCOMPLETE, Reason: expr with private type", so even
     when every free variable is an Integer and the model IS built (probe
     p_ce1: `To_Big_Integer (X) >= 0`, cntexmp X = -1 present), the verdict
     stays NON_CONFORMITY_OR_SUBCONTRACT_WEAKNESS and severity stays "medium".
@@ -129,31 +129,31 @@ machine-integer inputs with exact arithmetic.
 
   * SOUNDNESS OF VERIFIED is untouched: F over Big_Integer keeps its Post,
     and verifiers/spark.py refuses VERIFIED while any check is unproved. An
-    extra obligation can only make a proof harder, never possible — measured
+    extra obligation can only make a proof harder, never possible, measured
     on the boundary probes, which still resolve: fz_p_bigrange and
     fz_p_bigwide VERIFIED, fz_p_seqlen / fz_p_elemwidth / fz_p_biglen /
     fz_p_attotal not verified.
   * SOUNDNESS OF REFUTED is the instance being FAITHFUL: a machine integer is
     a t integer, so a counterexample to F_Ce is a counterexample to the task
-    — provided the instance computed the same value t does. That holds iff no
+    That holds provided the instance computed the same value t does. That holds iff no
     operation overflows, which is why the instance is emitted only when this
     file can bound every int-valued node of the task by construction:
     |parameter| <= 2^40 (CE_WINDOW) and every derived magnitude <= 2^100
     (CE_CAP), inside Long_Long_Long_Integer's 2^127. The bound is computed on
     t's own AST, over the SAME substitution walk `compile` performs, and any
-    node it cannot bound — a loop, a call, recursion, a seq, a quantifier, an
-    oversized literal — makes the instance not be emitted at all.
+    node it cannot bound, whether a loop, a call, recursion, a seq, a quantifier
+    or an oversized literal, makes the instance not be emitted at all.
   * THE CHECK MUST ALSO BE CHEAP TO EXECUTE, because severity "high" is the
     RAC actually running it. MEASURED: the same shape with a quantifier over
     the window, `for all K in 0 .. 2**40`, reports
     "Small-step: RES_INCOMPLETE, Reason: out of fuel" and falls back to
-    "medium" — so a machine-typed quantifier would cost the refutation it was
+    "medium", so a machine-typed quantifier would cost the refutation it was
     emitted to buy. Quantifiers are outside the fragment for that reason as
     much as for the bound.
   * AN UNPROVABLE OVERFLOW CHECK CANNOT BECOME A REFUTATION, which is the
     second line under the bound analysis: severity "high" is the small-step
     RAC having EXECUTED the check and seen it fail ("VERDICT: NON_CONFORMITY"
-    above), so a check no concrete input can fail cannot reach it — a bound
+    above), so a check no concrete input can fail cannot reach it, and a bound
     the prover fails to see costs a proof, not a false countermodel.
     MEASURED both ways: X*X at |X| <= 2^40 proves and the cell VERIFIES;
     X*X*X is over CE_CAP, gets no instance, and the (genuinely false) task
@@ -185,7 +185,7 @@ committed tasks, spark only, --steps 20000:
 The instance's Pre is deliberately empty and the task's `requires` is folded
 into its Post as an implication: a Pre unsatisfiable inside the 2^40 window
 would raise VC_INCONSISTENT_PRE, which verifiers/spark.py rules VACUOUS on
-the whole file — a wrong verdict bought from a construct that exists only to
+the whole file, a wrong verdict bought from a construct that exists only to
 carry a witness. `requires -> ensures` cannot be always-False here, because
 the twin operators never touch `ensures` (harness.py) and the real proves it.
 
@@ -292,7 +292,7 @@ CE_PREAMBLE = f"""\
 
 class _NoCe(Exception):
     """The task is outside the instance's reach; emit no instance. Never a
-    lowering failure — the unbounded theorem is unaffected."""
+    lowering failure; the unbounded theorem is unaffected."""
 
 
 def _ce_cap(n: int) -> int:
@@ -564,7 +564,7 @@ class Lower:
     # clause() and req_clause() are gone with the machine-Integer quantifier
     # encoding they served: T_Range carries no bounds obligation to hoist, so
     # every position (requires included) is just expr(). The four ABSTAIN
-    # paths that guarded the hoist are gone with it — see the header.
+    # paths that guarded the hoist are gone with it; see the header.
 
     # --- statements --------------------------------------------------------
 

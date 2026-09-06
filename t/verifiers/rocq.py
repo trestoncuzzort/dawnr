@@ -1,6 +1,6 @@
-"""t.verifiers.rocq — the fifth kernel: the Rocq Prover (né Coq).
+"""t.verifiers.rocq: the fifth kernel: the Rocq Prover (né Coq).
 
-Kernel-checked like Lean, solverless like Lean — determinism is
+Kernel-checked like Lean, solverless like Lean, so determinism is
 architectural. The pin is opam's rocq 9.2.0 (coqc + coqchk from the same
 switch; the opam route's rocq-stdlib.9.2.0 does not exist, which the install
 attempt measured the hard way).
@@ -10,13 +10,13 @@ VERIFIED requires positive evidence, not exit-0 (contract; Wave-1 audit
 
   1. coqc accepts the source (exit 0);
   2. the source declares at least one named obligation
-     (Theorem/Lemma/Corollary/Fact/Remark/Proposition/Property) — a file
+     (Theorem/Lemma/Corollary/Fact/Remark/Proposition/Property); a file
      with zero theorems is MALFORMED, never VERIFIED;
   3. an ADAPTER-GENERATED audit file Requires the compiled unit and runs
      `Print Assumptions t_unit.<thm>.` for EVERY declared obligation: the
      audit run must exit 0, print exactly one "Closed under the global
      context" per obligation, and print no "Axioms:" section. The audit
-     stdout contains only this adapter's commands' output — a sentinel the
+     stdout contains only this adapter's commands' output, a sentinel the
      SOURCE prints (string_inject.v: Eval compute of the sentinel string;
      param_decoy.v / conjecture_decoy.v / funext_decoy.v: a decoy
      `Print Assumptions triv` on an honest True lemma) never reaches it.
@@ -47,7 +47,7 @@ Verdict classification (coqc/coqchk 9.2.0, re-measured on this machine
       here too)
   "Syntax error" / "was not found" / "Illegal"                 -> MALFORMED
   source not valid UTF-8 (coqc 9.2 tolerates stray bytes in
-      comments — junk_nonutf8.v measured — but this adapter's
+      comments, junk_nonutf8.v measured, but this adapter's
       token scan would run on a lossy decode)                  -> MALFORMED
   zero declared theorems / audit cannot resolve a declared
       obligation name                                          -> MALFORMED
@@ -64,12 +64,12 @@ UNPROVED markers are tested before MALFORMED; both exit nonzero.
 The ban regex is the SECOND line of defense: it scans the source with
 comments and string literals stripped (each replaced by one space, so a
 token split by a comment cannot re-fuse: `Axi(**)om` lexes as two idents in
-Coq and stays two words here — overfire_axiom_comment.v and
+Coq and stays two words here; overfire_axiom_comment.v and
 overfire_admit_comment.v measured the old in-comment ban as a false
 VACUOUS), case-sensitively (Coq vernacular is case-sensitive; lowercase
 `context` is an Ltac keyword in honest generated files), on both the raw
 text and its NFKC normalization (fullwidth homoglyphs fold to ASCII; a
-non-foldable homoglyph like Cyrillic А in `Аxiom` fails coqc's parser —
+non-foldable homoglyph like Cyrillic А in `Аxiom` fails coqc's parser,
 homoglyph_axiom.v measured MALFORMED). A ban token that slips through
 still cannot yield a false VERIFIED: the audit + coqchk checks above do
 not depend on it.
@@ -252,7 +252,7 @@ def verify(path: Path, budget: int = 0) -> Result:
         return done(Outcome.VACUOUS, error="banned token(s) in source")
 
     # coqc derives a module name from the basename and rejects dots, so the
-    # harness's *.twin.v files would be MALFORMED for filename reasons — the
+    # harness's *.twin.v files would be MALFORMED for filename reasons, and the
     # same trap GNAT's naming convention set, in Rocq costume. The adapter
     # owns the on-disk name; the witness hash binds to the SOURCE bytes,
     # which are copied verbatim (no decode/re-encode round trip).
@@ -278,7 +278,7 @@ def verify(path: Path, budget: int = 0) -> Result:
             return done(Outcome.MALFORMED, exit_code=p.returncode)
         if not thms:
             return done(Outcome.MALFORMED, exit_code=p.returncode,
-                        error="no named theorem declared — no proof "
+                        error="no named theorem declared, no proof "
                               "obligation to verify")
 
         # positive check 1: adapter-controlled per-theorem closedness audit.
@@ -312,7 +312,7 @@ def verify(path: Path, budget: int = 0) -> Result:
         # artifact; a source-printed line cannot appear here either.
         if not COQCHK:
             return done(Outcome.TOOL_ERROR,
-                        error="no coqchk/rocqchk beside the pinned coqc — "
+                        error="no coqchk/rocqchk beside the pinned coqc: "
                               "independent kernel re-check unavailable")
         try:
             c = subprocess.run([COQCHK, "-silent", "-o", "-norec", "t_unit"],

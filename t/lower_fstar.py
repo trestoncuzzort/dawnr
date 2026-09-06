@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""lower_fstar.py — lower t tasks (v0 and v1) to F*; the seventh kernel.
+"""lower_fstar.py: lower t tasks (v0 and v1) to F*; the seventh kernel.
 
 F*'s type system does most of t's work natively; this file records exactly
 what is delegated to the kernel and what is refused:
@@ -7,8 +7,8 @@ what is delegated to the kernel and what is refused:
   DEFINEDNESS. `at` lowers to FStar.Seq.index, whose domain refinement
   (i:nat{i < Seq.length s}) turns every t definedness obligation into a
   subtyping check discharged by the kernel under the path conditions F*'s
-  VC generator already tracks — left-to-right through /\\, ==>, if-then-else,
-  && and || — which are t's rules (SPEC.md "Definedness"). Nothing is
+  VC generator already tracks, left-to-right through /\\, ==>, if-then-else,
+  && and ||, which are t's rules (SPEC.md "Definedness"). Nothing is
   totalized: an unguarded `at` fails the file with number 19, never passes.
 
   LOOPS. F*'s pure fragment has no while statement, so a while loop lowers
@@ -19,8 +19,8 @@ what is delegated to the kernel and what is refused:
   requires = task requires + invariants in stated order (the twin operator
   depends on that order), ensures = invariants + negated guard over the
   returned state, decreases = the loop's required decreases clause.
-  Termination is F*'s precedes check on the int measure — new value >= 0
-  and < old at the recursive call, under the guard — exactly t's
+  Termination is F*'s precedes check on the int measure, new value >= 0
+  and < old at the recursive call under the guard, exactly t's
   obligation, discharged by the kernel (measured on the Shape probes,
   2026-08-31).
 
@@ -33,11 +33,11 @@ what is delegated to the kernel and what is refused:
   assumed of the result) at every call.
 
 Statement bodies lower by symbolic execution to one expression (per-var
-if-merge — the Rocq lowering's approach): every t body ends each path in an
+if-merge, the Rocq lowering's approach): every t body ends each path in an
 assign, so the final environment entry for the return name IS the function
 body, and a value computed under a branch stays under that branch's guard.
 
-ABSTAINS (NotImplementedError — recorded, never faked): a quantifier in
+ABSTAINS (NotImplementedError, recorded and never faked): a quantifier in
 computational position; more than one loop, nested loops, a loop under a
 conditional, or a loop plus self-recursion in one body; identifiers that
 collide with F* keywords, or carry an uppercase initial (F* term names are
@@ -93,7 +93,7 @@ def _ck(name: str) -> str:
 
 
 def _collect_names(obj) -> set[str]:
-    """Every string anywhere in the task JSON — a superset of every
+    """Every string anywhere in the task JSON, a superset of every
     identifier in scope, so a name absent from it is fresh everywhere."""
     out: set[str] = set()
     if isinstance(obj, dict):
@@ -196,7 +196,7 @@ class Ctx:
 
     # ------------------------------------------------------- rendering ----
     def zx(self, e: dict, env: dict, local: dict) -> str:
-        """Int-valued term — the same syntax serves spec and code in F*."""
+        """Int-valued term; the same syntax serves spec and code in F*."""
         if "int" in e:
             n = e["int"]
             return f"({n})" if n < 0 else str(n)
@@ -378,7 +378,7 @@ def loop_assigned(body: list) -> set:
 def find_while(body: list):
     """(prefix, while, suffix) for exactly one top-level while and none
     nested; (body, None, []) when no while at all. Same refusals as the
-    Rocq lowering — a shape it cannot express is an ABSTAIN, not a guess."""
+    Rocq lowering: a shape it cannot express is an ABSTAIN, not a guess."""
     def any_while(stmts):
         for s in stmts:
             if "while" in s:
@@ -445,7 +445,7 @@ def task_spec(cx: Ctx, task: dict) -> tuple[str, str]:
 
 
 def gen_fun(cx: Ctx, task: dict, body: list) -> str:
-    """Straight-line/if body — possibly self-recursive (F* checks the
+    """Straight-line/if body, possibly self-recursive (F* checks the
     decreases measure and applies the contract modularly at self-calls)."""
     name = task["name"]
     ret = task["returns"][0]["name"]

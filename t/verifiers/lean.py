@@ -1,10 +1,10 @@
-r"""t.verifiers.lean — the fourth kernel, and the first proof assistant.
+r"""t.verifiers.lean: the fourth kernel, and the first proof assistant.
 
-Shape difference, stated first: Lean has no SMT sidecar — "verified" means
+Shape difference, stated first: Lean has no SMT sidecar, so "verified" means
 THE KERNEL ACCEPTED A PROOF TERM. t's Lean lowering must therefore emit a
 proof, and v0's fragment (linear integer arithmetic) makes that mechanical:
 `omega` is a decision procedure for LIA living in core Lean, and its output
-is still kernel-checked — the tactic is automation, never the authority.
+is still kernel-checked; the tactic is automation, never the authority.
 
 VERIFIED requires POSITIVE EVIDENCE, not absence of complaints. Wave-1
 audit (2026-08-31, lean 4.33.1) produced nine false VERIFIEDs against the
@@ -24,13 +24,13 @@ theorem carrying a per-run random nonce plus its own `#print axioms` for
 the sentinel and for each extracted name, and accepts only audit lines
 printed AFTER the sentinel's own line (the nonce cannot be forged by the
 source; lean prints messages in file order, and the appended commands are
-last — measured 2026-08-31: a trailing `#guard_msgs (drop info) in` or
+last, measured 2026-08-31: a trailing `#guard_msgs (drop info) in` or
 `#exit` in the source suppresses/absorbs appended commands, which then
 FAILS this check rather than passing it). VERIFIED requires ALL of:
   - at least one `theorem` declaration in the source (zero -> MALFORMED);
   - no banned token (below) in the comment/string-stripped, NFKC-normalized
-    source (-> VACUOUS, without consulting the kernel: the measured trap —
-    in-file set_option overrides the CLI budget — is why the scan is first);
+    source (-> VACUOUS, without consulting the kernel: the measured trap,
+    an in-file set_option overriding the CLI budget, is why the scan is first);
   - exit 0;
   - the nonce sentinel audit line present in the output (absent, or empty
     output, -> TOOL_ERROR: kernel evidence was not produced);
@@ -290,7 +290,7 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
         if idx < 0:
             outcome = Outcome.TOOL_ERROR
             error = ("adapter audit sentinel missing from tool output "
-                     "(empty or suppressed) — kernel evidence absent; "
+                     "(empty or suppressed): kernel evidence absent; "
                      f"output tail: {out[-200:]!r}")
         elif bad_axioms:
             outcome = Outcome.VACUOUS

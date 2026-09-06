@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""run_par.py — cell-parallel driver for the t suite; run_all.py is the
-reference instrument. Cells (task, backend) are independent — distinct
-out/ filenames — so this computes the identical (real, twin, agreed) tuple
+"""run_par.py: cell-parallel driver for the t suite; run_all.py is the
+reference instrument. Cells (task, backend) are independent, with distinct
+out/ filenames, so this computes the identical (real, twin, agreed) tuple
 per cell over a ProcessPoolExecutor instead of a for-loop, writing the
 identical t/AGREEMENT.md format so the two tables diff cleanly modulo the
 timestamp line.
 
-Cross-check against run_all.py: DONE 2026-08-31, ubuntu-box — the two
+Cross-check against run_all.py: DONE 2026-08-31, ubuntu-box: the two
 tables are byte-identical modulo the timestamp line (65/66 cells
 verified/refuted, the same count_matches x rocq timeout finding, exit 1
 from both), serial 27 min vs parallel 9 min, the parallel time being the
 slowest single cell (that rocq timeout, 3 x 180 s wall). Standing rule:
 divergence between the two tables is a finding about the suite, not a
-driver bug to paper over — parallel is a second measurement, never a
+driver bug to paper over. Parallel is a second measurement, never a
 faster stand-in trusted by default.
 """
 from __future__ import annotations
@@ -58,8 +58,8 @@ def main() -> int:
     # Mutual exclusion is the lock file taken in __main__ (verifiers.
     # acquire_run_lock), on every platform. A /proc scan used to sit here
     # as an extra Linux-only check, matching any process whose argv held
-    # "run_par.py"; it refused against its own launcher — `timeout 600
-    # python3 run_par.py`, nohup, sh -c — because the wrapper's argv
+    # "run_par.py"; it refused against its own launcher,
+    # `timeout 600 python3 run_par.py` and nohup and sh -c, because the argv
     # carries the script name too (measured 2026-09-02 inside a tup guest,
     # exit 2, zero cells run). The lock already answers the question the
     # scan was asking, so the scan is gone.
@@ -92,7 +92,7 @@ def main() -> int:
             backend = importlib.import_module(f"verifiers.{bname}")
             ver = backend.version()     # binary probe: exactly once, only here, in the parent
         except (Exception, SystemExit) as e:               # noqa: BLE001
-            cols.append((bname, f"ABSENT — {e}"))
+            cols.append((bname, f"ABSENT: {e}"))
             continue
         cols.append((bname, ver))
         present.append((bname, importlib.import_module(lmod).lower, suffix))
@@ -111,7 +111,7 @@ def main() -> int:
             if twin_body is None:
                 rows[name][bname] = ("no-twin", "no-twin", True)
                 all_ok = False
-                print(f"  {name} x {bname}: no twin — "
+                print(f"  {name} x {bname}: no twin, "
                       f"{harness.REFUSALS[op]}  <-- FINDING")
                 continue
             try:
@@ -120,12 +120,12 @@ def main() -> int:
             except NotImplementedError as e:
                 rows[name][bname] = ("abstain", "abstain", True)
                 all_ok = False
-                print(f"  {name} x {bname}: ABSTAIN — {e}")
+                print(f"  {name} x {bname}: ABSTAIN: {e}")
                 continue
             except Exception as e:                          # noqa: BLE001
                 rows[name][bname] = ("lower-error", "lower-error", True)
                 all_ok = False
-                print(f"  {name} x {bname}: LOWER-ERROR — {type(e).__name__}: {e}")
+                print(f"  {name} x {bname}: LOWER-ERROR {type(e).__name__}: {e}")
                 continue
             # newline="\n": the lowering's bytes are the verdict basis, hashed
             # into AGREEMENT.md. Path.write_text defaults to os.linesep, so a
@@ -160,14 +160,14 @@ def main() -> int:
     if len(present_names) < MIN_KERNELS:
         print(f"\nREFUSED: {len(present_names)} kernel(s) available, "
               f"{MIN_KERNELS} required. Agreement across fewer than two "
-              f"kernels is not agreement — it is one opinion, or none. "
+              f"kernels is not agreement; it is one opinion, or none. "
               f"AGREEMENT.md not written.")
         for b, v in cols:
             if v.startswith("ABSENT"):
                 print(f"  {b}: {v}")
         return 2
     if not tasks:
-        print("\nREFUSED: no tasks in t/tasks/ — nothing was verified. "
+        print("\nREFUSED: no tasks in t/tasks/, nothing was verified. "
               "AGREEMENT.md not written.")
         return 2
 

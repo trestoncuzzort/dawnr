@@ -1,42 +1,42 @@
 #!/usr/bin/env python3
-"""lower_lean.py — lower t tasks (v0 and v1) to Lean 4; the proof-assistant kernel.
+"""lower_lean.py: lower t tasks (v0 and v1) to Lean 4; the proof-assistant kernel.
 
 THE PROOF-ASSISTANT DIFFERENCE, made concrete: the lowering emits functions,
 theorems stating every ensures clause with the return name replaced by the
-applied function, and PROOFS. Lean has no SMT sidecar — every verdict is the
+applied function, and PROOFS. Lean has no SMT sidecar, so every verdict is the
 kernel accepting (or rejecting) a proof term. The automation used is real and
 kernel-checked: `omega` (linear integer arithmetic) and `grind` (congruence +
 E-matching + case splits + linear arith, in core Lean since 4.22). No proof
 term is hand-plumbed per task; every tactic script below is derived from the
 BODY SHAPE by one rule, identically for every task:
 
-  SIMPLE     (no loop, no self-call — all v0 tasks, and collapse-if twins
+  SIMPLE     (no loop, no self-call: all v0 tasks, and collapse-if twins
               whose recursion collapsed away): one function, one theorem,
               `unfold; grind`. The v0 lesson is kept: every script is a
               `first | ... | grind [f]` so a twin whose shape no longer fits
               the primary script fails on TRUTH (grind reasoning about the
               unfolded body), never on tactic shape.
   RECURSIVE  (body self-calls): the function takes the conjoined `requires`
-              as a hypothesis argument — Lean-native partial functions — and
+              as a hypothesis argument, Lean-native partial functions, and
               every self-call discharges the callee's requires with a real
               `by omega/grind` proof; `termination_by (decreases).toNat`
               carries the t termination obligation. The theorem is itself
               recursive: it binds its own induction hypothesis as a `have`
               guarded by t's decreases obligation (0 <= smaller < current),
-              then unfolds one step, splits the branches, and grinds — the
+              then unfolds one step, splits the branches, and grinds, and the
               IH is the modular contract of every smaller call.
               (fun_induction was measured and refused: grind cannot bridge
               the dependent requires-proof argument across arithmetic
-              normalization — gcd's `a - b` leaf never met its induction
+              normalization: gcd's `a - b` leaf never met its induction
               hypothesis.)
   LOOP       (body contains one top-level while): the loop becomes a
               tail-recursive function over the mutable state; the invariants
-              become hypotheses of a recursive helper theorem — the induction
+              become hypotheses of a recursive helper theorem, and the induction
               hypothesis is literally the invariant list. Guard-true steps
               re-enter the lemma at the symbolically-updated state (invariant
               preservation, by grind); guard-false discharges the ensures
               from invariants + ¬guard (by grind). Merged if-updates are
-              pre-`split` so grind reasons per-branch — measured: without the
+              pre-`split` so grind reasons per-branch. Measured: without the
               split, grind loses the existential-invariant preservation of
               seq_max in cutsat case explosions.
 
@@ -51,7 +51,7 @@ definedness obligations also prove.
 
 Existential-invariant establishment gets one generic heuristic: if plain
 grind fails, retry with the range's lower endpoint as witness (`exact ⟨lo,
-by grind⟩`) — needed because Int-literal toNat indices normalize away the
+by grind⟩`), needed because Int-literal toNat indices normalize away the
 E-matching pattern grind would use to find the witness itself (measured on
 seq_max's `∃ j ∈ [0,1)` at r = s[0]).
 
@@ -669,7 +669,7 @@ class Lower:
         # modular contract of every smaller call. (fun_induction is not used:
         # measured on gcd, grind cannot bridge the dependent proof argument
         # across arithmetic normalization; `simp only [self]` is not usable
-        # inside a WF-recursive proof — the self-reference is a raw fixpoint
+        # inside a WF-recursive proof: the self-reference is a raw fixpoint
         # hypothesis. The guard is t's own decreases obligation: >= 0 and
         # strictly smaller.)
         primed = {p["name"]: self.fresh(p["name"])

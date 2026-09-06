@@ -1,14 +1,14 @@
-"""t.verifiers.verus — the second kernel.
+"""t.verifiers.verus, the second kernel.
 
 Verdict mapping (Verus 0.2026.08.30.b432e82, per the WS-7 dossier and
 measured here): exit codes are 0/1 only, so the taxonomy comes from
 --output-json plus the message stream. VERIFIED demands POSITIVE evidence,
 all five at once: verification-results present, errors == 0 with success,
 verified >= 1, at least one non-spec fn carrying a real `ensures` clause,
-and — the last gate — a kernel-native vacuity probe that comes back clean.
+and, as the last gate, a kernel-native vacuity probe that comes back clean.
 The Wave-1 audit (2026-08-31) measured success=true with verified=0 for an
 empty verus!{} block, a spec-only file, and a #[verifier::external] theorem
-— all three scored VERIFIED under the old errors==0 test. verified counts
+All three scored VERIFIED under the old errors==0 test. verified counts
 only functions whose obligations the solver actually discharged, so
 verified >= 1 is the obligation evidence; the ensures scan closes the
 remaining trivial pass (exec fn with no ensures: verified=1, zero theorems).
@@ -33,7 +33,7 @@ in order of what they cost:
    requires clauses verbatim, no ensures, and a body of exactly
    `assert(false);`. If the solver proves it, the precondition is
    unsatisfiable and every obligation the original function "discharged"
-   under it proved nothing — VACUOUS. Appending rather than rewriting is
+   under it proved nothing, so VACUOUS. Appending rather than rewriting is
    what makes it robust: the probe fn sees the file's own spec fns, types
    and imports, so it compiles whenever the original does.
 
@@ -48,11 +48,11 @@ in order of what they cost:
    Self-check, because a probe that silently fails to compile would report
    every precondition as unsatisfiable: the appended block ends with a
    canary proof fn with NO requires and the same `assert(false);`. It must
-   come back refuted. If it does not — the probe file did not build, the
-   run timed out, the JSON did not parse — the instrument had no reading,
+   come back refuted. If it does not, because the probe file did not build, the
+   run timed out or the JSON did not parse, the instrument had no reading,
    so the file cannot be certified: TOOL_ERROR, never VERIFIED. Same for a
    function the probe cannot express (generics, a where clause, or a `self`
-   receiver — none of which t emits): refuse the file rather than skip the
+   receiver, none of which t emits): refuse the file rather than skip the
    function.
 
    Cost, measured 2026-08-31 on this box: the probe is the LAST gate, so it
@@ -66,7 +66,7 @@ soundness claim rests on. The ban is prefix-matched (`assume\\w*` etc.)
 because Wave-1's \\b-delimited exact words missed assume_specification and
 #[verifier::external] ('_' is a word char, and `external` was not listed).
 `requires false` is the same hazard from the other side (measured VERIFIED,
-Wave-1 h_reqfalse). Both are strictly redundant now — --no-cheating and the
+Wave-1 h_reqfalse). Both are strictly redundant now: --no-cheating and the
 smoke probe catch a superset, including the cases the regexes provably miss:
 `requires 1 == 0` and `requires x < x` carry no `false` token at all, and
 `requires ({ let b = false; b })` hides the token behind a `{` the
@@ -81,10 +81,10 @@ _probe_vacuity's job, which asks the solver for a model instead of guessing
 from spelling.
 The scans are deliberately asymmetric about inert text:
   - ban + requires-false run on the RAW decoded source (a hit in a comment
-    or string over-flags to VACUOUS — fails closed; stripping first would
+    or string over-flags to VACUOUS, which fails closed; stripping first would
     let a stripper bug hide a live assume behind a `"//"` string);
   - the positive ensures evidence runs on comment/string-MASKED source (a
-    masking bug can only hide a real ensures, which scores MALFORMED —
+    masking bug can only hide a real ensures, which scores MALFORMED,
     fails closed; raw text would let `// ensures` fake the evidence).
 Ban matching also folds NFKC + common Cyrillic homoglyphs + zero-width
 chars: a look-alike `аssume` is not the Verus builtin (rustc rejects the
@@ -92,17 +92,17 @@ identifier, so verified>=1 already refuses the file); folding upgrades that
 refusal to VACUOUS.
 
 TIMEOUT: the Wave-1 sniff (`"rlimit" and "exceeded" anywhere in output)
-was source-spoofable — a comment `// rlimit exceeded` is quoted verbatim in
+was source-spoofable: a comment `// rlimit exceeded` is quoted verbatim in
 the diagnostic gutter, flipping a REFUTED into TIMEOUT (measured,
 c_rlimitword). The check is now anchored to the tool's own header line
-(`error:`/`note:` at column 0 — gutter-quoted source always carries a
+(`error:`/`note:` at column 0, since gutter-quoted source always carries a
 `N | ` prefix), uses the exact phrase embedded in the rust_verify binary
 (": Resource limit (rlimit) exceeded"), and additionally requires
 errors > 0 in verification-results (a compile_error! spoof fails rustc with
 errors == 0 and stays MALFORMED).
 
 Budget: --rlimit (solver resource multiplier), deterministic where
-wall-clock is not — same doctrine as Dafny's. The bundled Z3 is used as
+wall-clock is not, the same doctrine as Dafny's. The bundled Z3 is used as
 shipped; the release bundle pins it, and version() records the identity.
 
 REFUTED (ROADMAP 10.7, measured 2026-09-02 on 0.2026.08.30.b432e82): Verus
@@ -171,7 +171,7 @@ BANNED = re.compile(r"\b(?:assume|admit|external)\w*")
 
 # requires-false: scan from `requires` up to the next clause keyword or
 # block/statement delimiter for a bare `false` token. Stops at '{', so a
-# `false` hidden behind an ite inside a requires clause escapes this regex —
+# `false` hidden behind an ite inside a requires clause escapes this regex,
 # as does `requires 0 == 1`, and no regex decides satisfiability. Both are
 # measured evasions (n_reqfalse_brace, n_reqvac); _probe_vacuity is what
 # actually closes them.
@@ -267,7 +267,7 @@ def _mask_inert(s: str) -> str:
     signature parser can only lose a function (a lost requires-carrying fn
     would skip its probe, so the parser is cross-checked by the canary and
     by the ban/requires-false scans on raw text). Char literals are not
-    lexed — one codepoint cannot spell a keyword, and a '"' char literal at
+    lexed: one codepoint cannot spell a keyword, and a '"' char literal at
     worst opens a phantom string, which again only over-masks. t's lowering
     emits exactly one comment (`// verus!`) and no string/char literals."""
     out: list[str] = []
@@ -323,7 +323,7 @@ def _mask_inert(s: str) -> str:
     return "".join(out)
 
 
-# ------------------------------------------ the native vacuity instrument —
+# ------------------------------------------ the native vacuity instrument
 # A Verus fn signature is `[spec|proof|exec] fn NAME [<GEN>] (PARAMS)
 # [-> RET] [where W] CLAUSE* { BODY }`. The parser below needs exactly two
 # things per function: the parameter list and the requires clauses, so it
@@ -489,9 +489,9 @@ def _probe_vacuity(text: str, budget: int) -> tuple[str, dict]:
     """Ask the solver whether any function's precondition is unsatisfiable.
 
     Returns (status, detail) with status one of:
-      "clean"    — every precondition has a model, or none exist to probe
-      "vacuous"  — assert(false) was PROVED under some precondition
-      "unusable" — the instrument gave no reading; the caller must refuse
+      "clean"    : every precondition has a model, or none exist to probe
+      "vacuous"  : assert(false) was PROVED under some precondition
+      "unusable" : the instrument gave no reading; the caller must refuse
     """
     fns = _fns(text)
     targets = [f for f in fns
@@ -753,7 +753,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         # vr exists but nothing was refuted and the positive-evidence gate
         # did not open: rustc rejected the file before verification, OR the
         # run discharged zero obligations (verified == 0: empty verus block,
-        # spec-only file, external-annotated theorem — all measured
+        # spec-only file, external-annotated theorem, all measured
         # success=true in Wave-1), OR no ensures survives outside
         # comments/strings (zero stated theorems). MALFORMED, never
         # UNPROVED and never VERIFIED. The first repair here matched "error[" in

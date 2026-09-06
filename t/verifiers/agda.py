@@ -1,4 +1,4 @@
-"""t.verifiers.agda — the seventh kernel's adapter; the LOWERING IS PARKED.
+"""t.verifiers.agda: the seventh kernel's adapter; the LOWERING IS PARKED.
 
 Stated first, because it is the point: Agda's stdlib has no omega/lia-class
 decision procedure, so a MECHANICAL proof-synthesis template for t's LIA
@@ -9,7 +9,7 @@ artifacts t exists to refuse. So: the adapter below is real and measured;
 `lower_agda.py` does not exist yet; ROADMAP.md carries the parked gate.
 
 Verdict classification (Agda 2.8.0 arm64 binary, measured on this machine
-2026-08-31 — exit 0 accepted, exit 42 for EVERY failure, discriminated by
+2026-08-31: exit 0 accepted, exit 42 for EVERY failure, discriminated by
 the stable bracketed error names):
   banned token in SOURCE (postulate / TERMINATING pragma /
       a missing --safe would be a lowering bug)             -> VACUOUS
@@ -19,7 +19,7 @@ the stable bracketed error names):
   type-check errors ([UnequalTerms], ...)                   -> REFUTED
   wall backstop                                             -> TIMEOUT
 --safe is ALWAYS passed; the module/filename convention is handled the way
-GNAT's and Rocq's were — the adapter owns the on-disk name (module T_Unit,
+GNAT's and Rocq's were, so the adapter owns the on-disk name (module T_Unit,
 file T_Unit.agda in a scratch dir); the witness hash binds to source bytes.
 Budget: RTS heap cap plus the wall backstop; no per-proof deterministic
 counter exists at the CLI.

@@ -1,22 +1,22 @@
-"""discover.py — find a kernel's binary without hardcoding one machine's paths.
+"""discover.py: find a kernel's binary without hardcoding one machine's paths.
 
 Every adapter used to name a macOS/arm64 install location as its default:
 `~/.local/verus/verus-arm64-macos/verus`, `gnatprove-aarch64-darwin-16.1.0-1`,
 and so on. That works exactly on the machine those were installed on. Clone the
-repository onto the Ubuntu box and t finds no kernel at all — not because the
+repository onto the Ubuntu box and t finds no kernel at all, not because the
 kernels are absent, but because the adapter is looking somewhere that only
 exists on a Mac.
 
 Resolution order, most explicit first:
-  1. the adapter's environment variable (T_VERUS_BIN, T_GNATPROVE, ...) —
+  1. the adapter's environment variable (T_VERUS_BIN, T_GNATPROVE, ...),
      always wins, so a pinned install can be named exactly;
-  2. PATH — the normal way a tool is found, and the way opam, elan, rustup and
+  2. PATH, the normal way a tool is found, and the way opam, elan, rustup and
      package managers all expect;
   3. glob patterns under $HOME for the tarball-style installs that never put
      anything on PATH.
 
 `missing()` returns why nothing was found, so an absent kernel produces a
-sentence rather than a stack trace — t/run_all.py prints it as ABSENT and
+sentence rather than a stack trace; t/run_all.py prints it as ABSENT and
 carries on with the kernels that are present. A kernel that cannot be found is
 recorded, never silently skipped.
 """

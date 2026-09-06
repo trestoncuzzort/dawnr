@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""run_all.py — every t task through every available kernel; agreement is the
+"""run_all.py: every t task through every available kernel; agreement is the
 instrument.
 
 Writes t/AGREEMENT.md: one row per task, one column per backend, each cell the
 (real, twin) outcome pair. Full agreement means every kernel VERIFIED the real
 lowering and REFUTED the twin. A DISAGREEMENT is not an error in this script's
-eyes — it is a finding, the cross-verifier analogue of the paper's
+eyes. It is a finding, the cross-verifier analogue of the paper's
 interpreter-pin discovery, and it is written into the table and exits nonzero
 so it cannot pass silently.
 
@@ -36,7 +36,7 @@ BACKENDS = [
     ("rocq", "lower_rocq", "v"),
     ("fstar", "lower_fstar", "fst"),
     # agda: adapter exists (verifiers/agda.py, taxonomy measured 2026-08-31);
-    # the LOWERING is parked — no lia/omega analogue in the stdlib means the
+    # the LOWERING is parked: no lia/omega analogue in the stdlib means the
     # proof-synthesis template is a design problem, recorded in ROADMAP.md.
     # It joins this list when lower_agda.py exists and flips honestly.
 ]
@@ -55,7 +55,7 @@ def main() -> int:
             # missing raises SystemExit carrying the sentence that says where
             # it looked. Catching only Exception let that kill the whole run
             # instead of recording one absent kernel.
-            cols.append((bname, f"ABSENT — {e}"))
+            cols.append((bname, f"ABSENT: {e}"))
             continue
         lower = importlib.import_module(lmod).lower
         cols.append((bname, ver))
@@ -69,7 +69,7 @@ def main() -> int:
                 cell = ("no-twin", "no-twin", True)
                 rows[task["name"]][bname] = cell
                 all_ok = False
-                print(f"  {task['name']} x {bname}: no twin — "
+                print(f"  {task['name']} x {bname}: no twin, "
                       f"{harness.REFUSALS[op]}  <-- FINDING")
                 continue
             try:
@@ -80,7 +80,7 @@ def main() -> int:
                 cell = ("abstain", "abstain", True)
                 rows[task["name"]][bname] = cell
                 all_ok = False
-                print(f"  {task['name']} x {bname}: ABSTAIN — {e}")
+                print(f"  {task['name']} x {bname}: ABSTAIN: {e}")
                 continue
             except Exception as e:                        # noqa: BLE001
                 # The lowering cannot express this task yet and did not say
@@ -89,7 +89,7 @@ def main() -> int:
                 cell = ("lower-error", "lower-error", True)
                 rows[task["name"]][bname] = cell
                 all_ok = False
-                print(f"  {task['name']} x {bname}: LOWER-ERROR — "
+                print(f"  {task['name']} x {bname}: LOWER-ERROR "
                       f"{type(e).__name__}: {e}")
                 continue
             real = harness.OUT / f"{task['name']}.{suffix}"
@@ -108,7 +108,7 @@ def main() -> int:
                   + f"   (twin witness: {harness.witness(w)})")
 
     # VACUOUS AGREEMENT IS NOT AGREEMENT. With no kernel installed the loop
-    # above never runs, all_ok stays True, and this printed FULL AGREEMENT —
+    # above never runs, all_ok stays True, and this printed FULL AGREEMENT,
     # measured on a fresh Ubuntu box with nothing installed. A tool that
     # reports success after measuring nothing is the exact failure this
     # project exists to refuse, so a run with too few kernels is now an
@@ -117,20 +117,20 @@ def main() -> int:
     MIN_KERNELS = int(os.environ.get("T_MIN_KERNELS", "2"))
     # REFUSE BEFORE WRITING. The table write used to come first, so a
     # refused run (zero kernels on a fresh clone) replaced the committed
-    # 77-cell AGREEMENT.md with an empty one — measured 2026-09-02 on a
+    # 77-cell AGREEMENT.md with an empty one, measured 2026-09-02 on a
     # Windows box, 21 lines changed, restored by git checkout. A refusal
     # must leave the committed evidence untouched; the witness for this is
     # a zero-kernel run after which the file's sha256 is unchanged.
     if len(present) < MIN_KERNELS:
         print(f"\nREFUSED: {len(present)} kernel(s) available, {MIN_KERNELS} "
               f"required. Agreement across fewer than two kernels is not "
-              f"agreement — it is one opinion, or none. AGREEMENT.md not written.")
+              f"agreement; it is one opinion, or none. AGREEMENT.md not written.")
         for b, v in cols:
             if v.startswith("ABSENT"):
                 print(f"  {b}: {v}")
         return 2
     if not tasks:
-        print("\nREFUSED: no tasks in t/tasks/ — nothing was verified. "
+        print("\nREFUSED: no tasks in t/tasks/, nothing was verified. "
               "AGREEMENT.md not written.")
         return 2
 
@@ -161,7 +161,7 @@ def main() -> int:
     (HERE / "AGREEMENT.md").write_text("\n".join(lines) + "\n",
                                        encoding="utf-8", newline="\n")
     print(f"\n{len(present)} kernels, {len(tasks)} tasks: "
-          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT — a finding, see t/AGREEMENT.md'}")
+          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, a finding, see t/AGREEMENT.md'}")
     return 0 if all_ok else 1
 
 
