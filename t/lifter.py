@@ -149,6 +149,12 @@ def _stage_call(stage: str, token: str, line: int, fn, *args, **kwargs):
 
 def _scratch_dfy_path(out_dir: Optional[Path], stem: str, method_name: str) -> Path:
     if out_dir is not None:
+        # Created here, not by _write_outcome: the check stage writes its
+        # .check.dfy into this directory BEFORE any outcome is written, so a
+        # fresh --out made every early file raise FileNotFoundError inside
+        # lift_check and get filed as `refused:error`. A lift that a missing
+        # directory turned into a refusal is a corrupted row, not a slow one.
+        out_dir.mkdir(parents=True, exist_ok=True)
         return out_dir / f"{stem}.{method_name}.check.dfy"
     fd, name = tempfile.mkstemp(suffix=".dfy", prefix=f"{stem}.{method_name}.")
     os.close(fd)
@@ -724,9 +730,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not targets:
         parser.error("give a .dfy file, --list PATH, --dir PATH, or --census")
 
+    args.out.mkdir(parents=True, exist_ok=True)
     summary = _run_many(targets, args.out, args.jobs, args.timeout,
                          args.force, args.skip_check)
-    args.out.mkdir(parents=True, exist_ok=True)
     with (args.out / "run_summary.json").open("w", encoding="utf-8", newline="\n") as f:
         json.dump(summary, f, indent=2, sort_keys=True)
         f.write("\n")
