@@ -246,6 +246,8 @@ pass); the name in a comment is inert, exactly like the ban scan.
 """
 from __future__ import annotations
 
+import re
+
 import sys
 from pathlib import Path
 
@@ -426,7 +428,21 @@ RANGE_PREAMBLE = """\
 
 
 def cap(name: str) -> str:
+    """The Ada spelling of a t name. Ada identifiers may not carry two
+    underscores in a row or end in one, and the lifter's file-qualified task
+    names do (clover_abs__abs, measured 2026-09-06: gnatprove refused every
+    lifted task at the package name). A run of k >= 2 underscores becomes
+    `_` + "x" * (k - 1) + `_`, a trailing underscore gains an `x`, and
+    `lower` abstains when two distinct t names meet after this mapping, so
+    a rename is never silently a capture. Names without such runs are
+    unchanged, so every committed task's Ada text is byte-identical."""
+    name = _ADA_RUN.sub(lambda m: "_" + "x" * (len(m.group()) - 1) + "_", name)
+    if name.endswith("_"):
+        name += "x"
     return name.capitalize()
+
+
+_ADA_RUN = re.compile(r"_{2,}")
 
 
 # --- name capture ----------------------------------------------------------
@@ -804,6 +820,15 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         raise NotImplementedError(
             f"spark: t name(s) {clash} collide with the emitted package's own "
             f"names ({sorted(RESERVED)})")
+    named = sorted(bound_names(task, body) | {task["name"]})
+    by_ada = {}
+    for n in named:
+        by_ada.setdefault(cap(n).lower(), []).append(n)
+    merged = sorted(v for v in by_ada.values() if len(v) > 1)
+    if merged:
+        raise NotImplementedError(
+            f"spark: t names {merged} spell the same Ada identifier after the "
+            f"underscore rule in cap()")
 
     spec_funs = [L.lower_spec_fun(sf) for sf in task.get("spec_funs", [])]
 

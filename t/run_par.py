@@ -65,9 +65,26 @@ def main() -> int:
     # scan was asking, so the scan is gone.
     ap = argparse.ArgumentParser()
     ap.add_argument("--jobs", type=int, default=None)
-    jobs_arg = ap.parse_args().jobs
-    tasks = sorted((HERE / "tasks").glob("*.json"))
-    cols, rows, all_ok = [], {t.stem: {} for t in tasks}, True
+    # The three paths below default to the committed layout, so a bare run
+    # is byte-identical to before; a sweep over another corpus (ROADMAP 12.5,
+    # the lifted DafnyBench tasks, 2026-09-06) passes all three so it never
+    # touches t/tasks, t/out or t/AGREEMENT.md.
+    ap.add_argument("--tasks", type=Path, default=HERE / "tasks",
+                    help="directory of task JSON files (default t/tasks)")
+    ap.add_argument("--out", type=Path, default=HERE / "out",
+                    help="directory for lowered sources and kernel logs (default t/out)")
+    ap.add_argument("--table", type=Path, default=HERE / "AGREEMENT.md",
+                    help="where the agreement table is written (default t/AGREEMENT.md)")
+    args = ap.parse_args()
+    jobs_arg = args.jobs
+    harness.OUT = args.out
+    harness.OUT.mkdir(parents=True, exist_ok=True)
+    tasks = sorted(args.tasks.glob("*.json"))
+    # Rows are keyed by the task's own name, which is what every cell and
+    # every output file uses; on the committed corpus the file stem is the
+    # same string, on a lifted corpus it is not (Clover_abs.Abs.json holds
+    # the task named clover_abs__abs, measured 2026-09-06).
+    cols, rows, all_ok = [], {harness.load(t)["name"]: {} for t in tasks}, True
     present = []                        # (bname, lower_fn, suffix), probed backends only
 
     for bname, lmod, suffix in BACKENDS:
@@ -172,19 +189,31 @@ def main() -> int:
     lines += ["", f"Kernels present: {len(present_names)} of {len(cols)} "
               f"({', '.join(present_names) if present_names else 'NONE'})"]
     lines += ["", "Backends:"] + [f"- {b}: {v}" for b, v in cols]
-    lines += ["", f"Verdict basis: every source file hashed; e.g. "
-              f"`abs.dfy` {sha256_file(harness.OUT / 'abs.dfy')[:16]}…, "
-              f"`abs.rs` {sha256_file(harness.OUT / 'abs.rs')[:16]}…"]
-    (HERE / "AGREEMENT.md").write_text("\n".join(lines) + "\n",
-                                       encoding="utf-8", newline="\n")
+    # The example hashes name the first task that has both files, which is
+    # abs on the committed corpus (so the default table is unchanged).
+    ex = next((t for t in tasks if (harness.OUT / f"{harness.load(t)['name']}.dfy").exists()
+               and (harness.OUT / f"{harness.load(t)['name']}.rs").exists()), None)
+    if ex is not None:
+        exn = harness.load(ex)["name"]
+        lines += ["", f"Verdict basis: every source file hashed; e.g. "
+                  f"`{exn}.dfy` {sha256_file(harness.OUT / f'{exn}.dfy')[:16]}…, "
+                  f"`{exn}.rs` {sha256_file(harness.OUT / f'{exn}.rs')[:16]}…"]
+    else:
+        lines += ["", "Verdict basis: every source file hashed."]
+    args.table.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(f"\n{len(present_names)} kernels, {len(tasks)} tasks: "
-          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT — a finding, see t/AGREEMENT.md'}")
+          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, a finding, see ' + str(args.table)}")
     return 0 if all_ok else 1
 
 
 if __name__ == "__main__":
     from verifiers import acquire_run_lock
-    _lock = acquire_run_lock(HERE / "out")
+    # Lock the out directory the run will write, which is t/out unless
+    # --out says otherwise (a sweep into its own directory must not be
+    # refused by, or refuse, a table run on the committed tasks).
+    _pre = argparse.ArgumentParser(add_help=False)
+    _pre.add_argument("--out", type=Path, default=HERE / "out")
+    _lock = acquire_run_lock(_pre.parse_known_args()[0].out)
     if not callable(_lock):
         print(f"REFUSED: {_lock}")
         raise SystemExit(2)
