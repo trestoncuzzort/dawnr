@@ -1820,11 +1820,18 @@ def run(slow: bool = False) -> None:
             print(f"{fn.__name__}: FAILED (exception): {e}")
 
     print("-- seed acceptance (acceptance a) --")
-    try:
-        test_seed_acceptance()
-    except AssertionError as e:
-        failures += 1
-        print(f"test_seed_acceptance: FAILED: {e}")
+    # The seed pairs under inventory/ were hand-lifted by a person and cannot
+    # be regenerated from the corpus, so a checkout without them is a machine
+    # missing a fixture, not a lifter that got the answer wrong.
+    if not corpora.available(corpora.INVENTORY_DIR):
+        print("test_seed_acceptance: skipped, "
+              + corpora.why_missing(corpora.INVENTORY_DIR))
+    else:
+        try:
+            test_seed_acceptance()
+        except AssertionError as e:
+            failures += 1
+            print(f"test_seed_acceptance: FAILED: {e}")
 
     print("-- infragment acceptance (acceptance b) --")
     try:
