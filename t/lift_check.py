@@ -1661,7 +1661,15 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     # 'agrees on N points'" where N is a BOUNDED test -- M (`n_points`,
     # the task's full interp point count) names what was bounded away so
     # a capped row is never misread as full-domain agreement.
-    record.differential_verdict = f"agrees on {points_n} of {n_points} points"
+    #
+    # Guarded on `diff_checked`, which it was not until 2026-09-06. The
+    # arm-unavailable branch above sets its own verdict and this line then
+    # overwrote it, so a run whose harness printed no tally at all came out
+    # reading "agrees on 0 of 81 points". Measured over the 785: three
+    # methods said that, and all three counted among the ones that pass
+    # every check. An arm that did not run has not agreed with anything.
+    if diff_checked:
+        record.differential_verdict = f"agrees on {points_n} of {n_points} points"
 
     # (6) interp third arm (18.5), over the SAME capped points the
     # differential run actually executed (`printed`'s indices are

@@ -242,6 +242,56 @@ So conditions 1, 2 and 3 are met for these 24, condition 4 passes for these 24, 
 condition 5 still forbids a corpus number, because 24 in-fragment arithmetic problems are
 not evidence about 24,748.
 
+## The same question over the whole lifted corpus
+
+The tier above is 24 programs. The lifter's own 785 run now gives the number for
+all 160 methods that lift and pass every check, because the ladder arm already ran
+for each of them and the count is in the sidecars.
+
+```
+points actually run per method: min 0, median 62, mean 198, max 512
+total points run across the corpus: 31,696
+
+  1 to 9 points      8 methods
+  10 to 49          72 methods
+  50 to 199         26 methods
+  200 to 511        19 methods
+  512, the cap      35 methods
+
+truncated by DIFF_MAX_POINTS: 38 of 160 (23.8%),
+  and those ran on 35.1% of their own domain on average
+```
+
+**The median lifted method's body is checked on 62 inputs.** Half the corpus sits
+below that, 72 methods run on fewer than 50, and 8 run on fewer than 10. This is
+the sample the Dell's own ROADMAP means when it says the 12.5 sweep's coverage
+number "is bounded by the fidelity sample nl/FIDELITY.md describes".
+
+### A row that agreed with nothing
+
+Three of the 160 read `agrees on 0 of 81 points`, `0 of 43` and `0 of 94`, each
+carrying the warning `differential run printed no points=/bad= tally`. The arm
+had not run at all.
+
+That was a defect in `lift_check.check`, fixed 2026-09-06. The no-tally branch
+sets `differential_verdict = "arm-unavailable: ..."` and clears `diff_checked`,
+and then the line at the end of the function overwrote it unconditionally:
+
+```python
+record.differential_verdict = f"agrees on {points_n} of {n_points} points"
+```
+
+The warning survived; the verdict did not. So a harness that printed nothing was
+recorded as agreement and counted among the methods that pass every check. The
+line is now guarded on `diff_checked`.
+
+The underlying event turns out to be transient rather than a property of those
+programs: re-lifting one of the three serially gives `agrees on 81 of 81 points`
+with no warnings, so the harness failed to produce a tally under four-way load
+and produced one when idle. That makes the fix matter more, not less. Before it,
+a load-dependent failure of the body-fidelity arm was indistinguishable in the
+table from a body that had been checked and agreed.
+
 ## Re-running the numbers
 
 ```bash
