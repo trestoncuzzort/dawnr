@@ -1806,8 +1806,40 @@ def parse(text: str) -> Module:
     line_starts = _compute_line_starts(text)
     tokens = _lex(text, start, line_starts)
     parser = _Parser(tokens, text)
-    decls = parser.parse_module_decls()
+    try:
+        decls = parser.parse_module_decls()
+    except LiftParseError as e:
+        # Section 18.2: a refusal names the construct in the census's
+        # vocabulary where one exists, never a bare token. A file that
+        # declares a bitvector type and then stalls the parse is a
+        # `bitvector` refusal whatever token it stalled on.
+        #
+        # `|` is the case that made this necessary. The other bitvector
+        # operators (`<<`, `>>`, `&`, `^`) are folded into `_parse_mul` so
+        # they at least tokenise, but `|` cannot join them: it is also the
+        # cardinality bracket `|s|`, and giving it a binary tier would
+        # break every sequence length in the corpus. Naming the refusal is
+        # the fix the design asks for; widening the grammar is not.
+        # Measured 2026-09-06: dafny-synthesis_task_id_799.dfy, token `|`
+        # at rprint line 122, source `(n << d) | (n >> (32 - d))` over
+        # `bv32`, the one file in the 785 still reading `parse-failure`.
+        if e.reason == "parse-failure" and _declares_bitvector(text):
+            raise LiftParseError(e.token, e.line, str(e),
+                                 reason="bitvector") from None
+        raise
     return Module(decls=tuple(decls), call_graph=call_graph, source_path=None)
+
+
+def _declares_bitvector(text: str) -> bool:
+    """True when the rprint says the file uses a bitvector type.
+
+    Two witnesses, either sufficient: dafny's own preamble line, and a
+    `bv<N>` type written in a declaration. The preamble line alone is not
+    enough because `print_dafny`'s output (the section 10(b) fixpoint feeds
+    it back through here) does not reproduce the preamble."""
+    if "bitvector types in use" in text:
+        return True
+    return re.search(r"\bbv\d+\b", text) is not None
 
 
 def gradable_methods(module: Module) -> list[MethodDecl]:
