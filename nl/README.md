@@ -171,11 +171,21 @@ release.
 
 ## Known limitations
 
-- **No cross-source deduplication.** APPS and CodeContests are both substantially
-  Codeforces-derived and overlap; nothing has been deduplicated against anything else.
-- **No decontamination.** These are widely-used benchmarks present in many pretraining
-  corpora. Evaluating on `humaneval` or `mbpp_test` after training on the rest is
-  contaminated until proven otherwise.
+- **Cross-source duplication is measured, not removed.** `scripts/corpus_audit.py`
+  normalises every problem statement (casefold, drop punctuation, collapse whitespace) and
+  hashes it. Of 24,747 statements, 23,336 are distinct; 1,356 duplicate groups hold 2,767
+  records, **11.18% of the corpus**. 362 of those groups cross a source boundary and
+  **every one of them is APPS against CodeContests**, which is what this entry always
+  suspected and now knows. The other 994 are duplicates inside a single source. Byte
+  equality after normalisation is a FLOOR: it catches verbatim reuse and misses paraphrase,
+  so the real overlap is larger. Nothing is deduplicated; the numbers are here so a
+  training run can decide.
+- **Decontamination is bounded inside this corpus only.** Of HumanEval's 164, **0** appear
+  in any trainable split here. Of `mbpp_test`'s 500, **3 (0.6%)** do. That is the whole of
+  what a local computation can settle. These benchmarks sit inside many pretraining
+  corpora, and no amount of hashing in this repo speaks to that; evaluating on `humaneval`
+  or `mbpp_test` after training on public text is contaminated until someone proves
+  otherwise.
 - **Nothing has been executed.** No solution was run against its own tests to confirm it
   passes, and no `incorrect_solution` was run to confirm it fails. Both labels are taken
   on upstream's word.

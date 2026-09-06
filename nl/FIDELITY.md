@@ -212,11 +212,43 @@ differential run is superlinear: 512 points take 7.5 s, 2,048 take 87 s. More po
 therefore the wrong lever. **492 human-chosen points is the right one:** deterministic,
 independent of the program's own literals, and nearly free against the Dafny budget.
 
+## What the gate says today
+
+`t/lift_gate.py` runs both arms over the tier and exits nonzero while anything is
+unproven. First full run, 2026-09-06, on the MacBook:
+
+```
+MBPP-DFY gate tier: 24 programs (in fragment, with human points)
+  both arms bad=0:      24 of 24
+  a disagreement:       0
+  an arm unavailable:   0
+  points run:           5697 ladder, 71 human
+GATE PASSED on 24 programs: both arms bad=0.
+```
+
+Read that narrowly, because it is a narrow claim. **24, not 164.** The gate can only
+speak about a program that the census calls in fragment AND that carries a human-written
+point inside t's `int`/`bool`/`seq<int>` types: 25 of the 164 are in fragment, 96 carry a
+usable point, and 24 satisfy both. The other 140 are not passing, they are unmeasured, and
+the reason they are unmeasured is that t's fragment does not reach them yet.
+
+The per-program point counts are worth reading too. The ladder arm ranges from 12 points
+(`task_762`, IsMonthWith30Days) to 512, the `DIFF_MAX_POINTS` ceiling, which 9 of the 24
+hit; those nine are checked on a quarter of their own interp domain. The human arm is 3
+points per program, 71 in total. Three independent points is not many. It is more than
+zero, which is what the tier had this morning.
+
+So conditions 1, 2 and 3 are met for these 24, condition 4 passes for these 24, and
+condition 5 still forbids a corpus number, because 24 in-fragment arithmetic problems are
+not evidence about 24,748.
+
 ## Re-running the numbers
 
 ```bash
-cd t && python3 fidelity_domain.py           # the table above
-cd t && python3 fidelity_domain.py --json    # same, machine-readable
+cd t && python3 fidelity_domain.py           # the domain table above
+cd t && python3 mbpp_dfy.py                  # the tier and its human points
+cd t && python3 lift_gate.py                 # both arms; exit 1 if unproven
+cd nl && python3 scripts/corpus_audit.py     # overlap and leakage
 ```
 
 The tool reads task JSON and counts what `interp.domain` yields. It needs no dafny, no
