@@ -4,7 +4,7 @@ the shared driver contract this file follows: a module-level
 `run(slow: bool = False) -> None` that raises `AssertionError` on
 failure and prints a one-line summary).
 
-Run directly with `cd /home/tmcuzzort/tup/t && python3 test_lift_report.py`,
+Run directly with `cd <repo>/t && python3 test_lift_report.py`,
 or via the shared driver: `python3 test_lifter.py test_lift_report`.
 
 Covers, per this implementer's acceptance list:
@@ -32,13 +32,14 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import corpora
 import lift_census
 import lifter
 from lift_ast import Refusal
 
-CORPUS_DIR = Path("/home/tmcuzzort/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth")
-CENSUS_JSON = Path("/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/census.json")
-INFRAGMENT_TXT = Path("/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/infragment.txt")
+CORPUS_DIR = corpora.CORPUS_DIR
+CENSUS_JSON = corpora.CENSUS_JSON
+INFRAGMENT_TXT = corpora.INFRAGMENT_TXT
 
 
 # ---------------------------------------------------------------------------
@@ -583,6 +584,10 @@ SLOW_TESTS = [
 def run(slow: bool = False) -> None:
     """Called by `test_lifter.py`'s driver (`python3 test_lifter.py
     test_lift_report [--slow]`); also runnable standalone."""
+    if not corpora.available(CORPUS_DIR, CENSUS_JSON, INFRAGMENT_TXT):
+        print("test_lift_report: skipped, "
+              + corpora.why_missing(CORPUS_DIR, CENSUS_JSON, INFRAGMENT_TXT))
+        return
     failures = 0
     for fn in OWN_TESTS:
         try:

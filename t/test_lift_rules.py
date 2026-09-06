@@ -21,8 +21,8 @@ of these appear in the 77 in-fragment files or the 21 seeds (both
 exercised below); where they were guessed at all it is a best effort,
 never load-bearing for this file's own PASS/FAIL verdicts.
 
-Run as: cd /home/tmcuzzort/tup/t && python3 test_lifter.py test_lift_rules
-   or directly: cd /home/tmcuzzort/tup/t && python3 test_lift_rules.py
+Run as: cd <repo>/t && python3 test_lifter.py test_lift_rules
+   or directly: cd <repo>/t && python3 test_lift_rules.py
 """
 
 from __future__ import annotations
@@ -34,14 +34,15 @@ import sys
 import traceback
 from pathlib import Path
 
+import corpora
 import lift_ast as A
 import lift_classify as C
 import lift_rewrite as R
 import fuzz_lower
 import interp
 
-CORPUS_RPRINT = Path("/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/dpn/corpus_rprint")
-INFRAGMENT = Path("/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/infragment.txt")
+CORPUS_RPRINT = corpora.CORPUS_RPRINT
+INFRAGMENT = corpora.INFRAGMENT_TXT
 
 
 # ===========================================================================
@@ -1800,6 +1801,10 @@ UNIT_TESTS = [
 # ===========================================================================
 
 def run(slow: bool = False) -> None:
+    if not corpora.available(CORPUS_RPRINT, INFRAGMENT):
+        print("test_lift_rules: skipped, "
+              + corpora.why_missing(CORPUS_RPRINT, INFRAGMENT))
+        return
     failures = 0
 
     print("-- unit tests (acceptance c) --")

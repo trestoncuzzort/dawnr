@@ -3,8 +3,8 @@
 front-end implementer per LIFTER-DESIGN.md's header table; imported and run
 by `test_lifter.py`'s `main`, house rule: no pytest, no unittest.
 
-    cd /home/tmcuzzort/tup/t && python3 test_lifter.py test_lift_front
-    cd /home/tmcuzzort/tup/t && python3 test_lifter.py test_lift_front --slow
+    cd <repo>/t && python3 test_lifter.py test_lift_front
+    cd <repo>/t && python3 test_lifter.py test_lift_front --slow
 
 Fast tests (default, always run, no dafny invocation) exercise the parser
 directly against the banked rprints under
@@ -24,17 +24,29 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+import corpora
 import lift_ast
 import lift_parse as lp
 import lift_resolve as lr
 from test_lifter import SEEDS
 
-RPRINT_DIR = Path("/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/dpn/corpus_rprint")
-INFRAGMENT_FILE = Path("/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/infragment.txt")
-CORPUS_DIR = Path("/home/tmcuzzort/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth")
+RPRINT_DIR = corpora.CORPUS_RPRINT
+INFRAGMENT_FILE = corpora.INFRAGMENT_TXT
+CORPUS_DIR = corpora.CORPUS_DIR
 
-INFRAGMENT_NAMES = [ln.strip() for ln in INFRAGMENT_FILE.read_text(encoding="utf-8").splitlines()
-                     if ln.strip()]
+
+def infragment_names() -> list[str]:
+    """The in-fragment file names, read on demand.
+
+    This was a module-level `read_text()`, which made `import
+    test_lift_front` raise FileNotFoundError on any machine without the
+    corpus. `test_lifter.py`'s dispatcher catches ImportError but not
+    OSError, so that one line took the whole suite down instead of skipping
+    the modules that need a corpus. Read it inside the tests that use it."""
+    return [ln.strip() for ln in
+            INFRAGMENT_FILE.read_text(encoding="utf-8").splitlines()
+            if ln.strip()]
+
 
 MAX_DAFNY_WORKERS = 4  # house rule: at most 4 concurrent dafny processes on this box
 
@@ -90,9 +102,10 @@ def test_ast_shape_on_abs() -> None:
 def test_77_infragment_parse_clean() -> None:
     """Acceptance (b): all 77 in-fragment banked rprints parse with zero
     refusals. Pure parsing, no dafny invocation -- fast enough by default."""
+    names = infragment_names()
     ok = 0
     fails = []
-    for name in INFRAGMENT_NAMES:
+    for name in names:
         text = _rprint_for(name).read_text(encoding="utf-8", errors="replace")
         try:
             lp.parse(text)
@@ -100,7 +113,7 @@ def test_77_infragment_parse_clean() -> None:
         except lp.LiftParseError as e:
             fails.append((name, e.token, e.line))
     assert not fails, f"{len(fails)} of the 77 in-fragment files failed to parse: {fails[:5]}"
-    assert ok == len(INFRAGMENT_NAMES) == 77, ok
+    assert ok == len(names) == 77, ok
     print(f"test_77_infragment_parse_clean: {ok}/77 in-fragment files parse with zero refusals")
 
 
@@ -240,7 +253,7 @@ def test_77_fixpoint() -> None:
 
     results = []
     with ThreadPoolExecutor(max_workers=MAX_DAFNY_WORKERS) as ex:
-        futs = [ex.submit(check_one, name) for name in INFRAGMENT_NAMES]
+        futs = [ex.submit(check_one, name) for name in infragment_names()]
         for fut in as_completed(futs):
             results.append(fut.result())
 
@@ -286,6 +299,10 @@ SLOW_TESTS = [test_785_parse_or_refuse, test_77_fixpoint, test_resolve_18_1_full
 
 
 def run(slow: bool = False) -> None:
+    if not corpora.available(RPRINT_DIR, INFRAGMENT_FILE, CORPUS_DIR):
+        print("test_lift_front: skipped, " + corpora.why_missing(
+            RPRINT_DIR, INFRAGMENT_FILE, CORPUS_DIR))
+        return
     tests = list(FAST_TESTS)
     if slow:
         tests += SLOW_TESTS

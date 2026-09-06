@@ -1,10 +1,10 @@
 """Plain-python test driver for the lifter (no pytest, no unittest -- house
-rule: run as `cd /home/tmcuzzort/tup/t && python3 test_lifter.py`).
+rule: run as `cd <repo>/t && python3 test_lifter.py`).
 
 Two jobs:
 
 1. `SEEDS`, a module-level list resolving every hand-lifted seed pair under
-   `/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/inventory/{lifts,
+   `$T_CORPORA/lifter-design-2026-09-05/inventory/{lifts,
    lift3}/*.json` to its corpus source file and source method name (see
    `_resolve_seeds`'s docstring for how each was found, and
    `SEEDS_UNMAPPED` for anything that could not be). Every implementer's
@@ -37,18 +37,22 @@ import importlib
 import sys
 from pathlib import Path
 
+import corpora
+
 # ---------------------------------------------------------------------------
-# Fixture roots. These live outside the repo (t-corpora is a data checkout
-# on this box, not a committed directory), so they are plain absolute
-# constants rather than something computed relative to this file -- the
-# same way lift_census.py's production callers point --census-json/
-# --corpus-dir at wherever census.json and DafnyBench actually are. Wrapped
-# in pathlib.Path throughout so every join and every file open downstream
-# is Windows-safe even though these particular roots are this box's own.
+# Fixture roots. These live outside the repo (t-corpora is a data checkout,
+# not a committed directory), so they are resolved rather than computed
+# relative to this file -- the same way lift_census.py's production callers
+# point --census-json/--corpus-dir at wherever census.json and DafnyBench
+# actually are. They used to be one box's absolute paths, which made this
+# suite unrunnable anywhere else; corpora.py resolves them from $T_CORPORA
+# and falls back to ~/t-corpora, the location lifter-design/README.md always
+# named. Wrapped in pathlib.Path throughout so every join and every file open
+# downstream is Windows-safe.
 # ---------------------------------------------------------------------------
 
-INVENTORY_DIR = Path("/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/inventory")
-CORPUS_DIR = Path("/home/tmcuzzort/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth")
+INVENTORY_DIR = corpora.INVENTORY_DIR
+CORPUS_DIR = corpora.CORPUS_DIR
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +172,10 @@ def test_seeds_resolve() -> None:
     (a loose textual check -- `lift_parse.parse` is the real authority
     once it exists; this only guards against a typo in the table above)."""
     assert SEEDS, "SEEDS must not be empty"
+    if not corpora.available(INVENTORY_DIR, CORPUS_DIR):
+        print("test_seeds_resolve: skipped, "
+              + corpora.why_missing(INVENTORY_DIR, CORPUS_DIR))
+        return
     seen_names = set()
     for seed_json, corpus_path, method in SEEDS:
         assert seed_json.is_file(), f"missing seed json: {seed_json}"
@@ -249,6 +257,12 @@ def _run_implementer_module(name: str, slow: bool) -> int:
         return 1
     except NotImplementedError as e:
         print(f"{name}: not implemented ({e})")
+        return 0
+    except OSError as e:
+        # A module that reaches for the corpus without checking first. Not a
+        # test failure: the checkout is deliberately outside the repo, so its
+        # absence is an ordinary state of an ordinary machine.
+        print(f"{name}: skipped (corpus not available: {e})")
         return 0
 
 

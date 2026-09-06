@@ -14,7 +14,7 @@ counting unit) and 17 (a lifted task that t's own instruments refuse gets
 its own column, not folded into "lift failed"). Reads `t/coverage_census
 .py`'s output shape only (`census.json`: a list of 785 records, each with
 a `"file"` key and one boolean per gap name -- see `census.json` itself,
-already on disk at `/home/tmcuzzort/t-corpora/lifter-design-2026-09-05
+already on disk at `$T_CORPORA/lifter-design-2026-09-05
 /census.json`); this module never regenerates census.json, only reads it.
 
 Architecture role (LIFTER-DESIGN.md section 2's table, copied verbatim):

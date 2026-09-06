@@ -53,16 +53,15 @@ from typing import Optional
 
 from lift_ast import LiftRecord, Refusal
 
+import corpora
 import lift_check
 import lift_classify
 import lift_parse
 import lift_resolve
 import lift_rewrite
 
-DEFAULT_CORPUS_DIR = Path(
-    "/home/tmcuzzort/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth")
-DEFAULT_CENSUS_JSON = Path(
-    "/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/census.json")
+DEFAULT_CORPUS_DIR = corpora.CORPUS_DIR
+DEFAULT_CENSUS_JSON = corpora.CENSUS_JSON
 DEFAULT_OUT_DIR = Path(__file__).resolve().parent / "out" / "lift"
 HARD_JOBS_CAP = 4  # each job may run dafny; this box allows at most 4 concurrent
 
