@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""boundary_probe.py — grade the seven lowerings against SPEC.md's INTEGER
+"""boundary_probe.py: grade the seven lowerings against SPEC.md's INTEGER
 and SEQUENCE models, by construction rather than by consensus.
 
 WHY THIS IS NOT fuzz_lower.py. That file's strongest instrument is
@@ -25,7 +25,7 @@ between SPEC.md's unbounded integers and a machine-integer model:
     (`ensures r == x*x` with `x` up to 2^40). Every kernel must VERIFY it. A
     REFUTED is the same disease from the other side.
 
-HOW EACH LABEL WAS ESTABLISHED — the generator's own soundness, and the one
+HOW EACH LABEL WAS ESTABLISHED, the generator's own soundness and the one
 thing that would make every finding below worthless if it were fudged. A
 bounded search over a finite domain is a SOUND proof of FALSITY (one
 counterexample settles it) and is NOT a sound proof of TRUTH (a property can
@@ -41,17 +41,17 @@ hold on [-40, 40] and fail at 2^40). So:
   run. It is a guard on the generator, never the basis of a label.
 
   KNOWN-FALSE is established by an EXHIBITED WITNESS wherever one is
-  representable — a concrete input, checked here by interp.py, on which the
+  representable: a concrete input, checked here by interp.py, on which the
   body's own value falsifies `ensures`. Four families cannot exhibit one:
   a seq of length 2^31 does not fit in memory, and a quantifier over
   [0, 2^31+3) exceeds interp.py's step cap. Those carry
   `_basis="construction"` with the falsifying point named in prose, and are
-  reported separately from the witnessed ones — never presented as measured.
+  reported separately from the witnessed ones, never presented as measured.
 
 THE INSTRUMENT HAS MEASURED POWER, which is a separate claim from its
 verdicts and is worth more than either. Re-running three of the known-FALSE
-probes under Frama-C's DEFAULT arithmetic model — the one lower_framac.py
-carried before the 2026-09-01 repair — proves them: bp_f_ub31, bp_f_elem_ub31
+probes under Frama-C's DEFAULT arithmetic model, the one lower_framac.py
+carried before the 2026-09-01 repair, proves them: bp_f_ub31, bp_f_elem_ub31
 and bp_f_len_ub31 each close `Proved goals: 7 / 7` there and `6 / 7` under the
 pinned `-wp-model Typed+nat` (measured 2026-09-01, frama-c 33.0 / alt-ergo
 2.4.3-free). So this corpus VERIFIES a false theorem against the broken
@@ -76,12 +76,12 @@ Backends section:
     lower_spark.py (Infinite_Sequences over Big_Integer) hold against a
     corpus that does not trust them, and no other backend has the disease.
   * The bound is what the verdict turns on, per column. All seven kernels
-    VERIFY bp_k_ub31 / bp_k_elem_ub31 / bp_k_len_ub31 — the same three claims
-    with the machine range written in as `requires` — and six of seven REFUTE
+    VERIFY bp_k_ub31 / bp_k_elem_ub31 / bp_k_len_ub31, the same three claims
+    with the machine range written in as `requires`, and six of seven REFUTE
     the unhypothesised partners. Only the hypothesis moved.
   * INCOMPLETENESS, reported as refutation. Eight cells REFUTE a task true by
     construction. `bp_t_sq` (`r == x*x` and `r >= 0`) is refuted by verus,
-    lean and rocq — nonlinear arithmetic, not a bounded model (verus prints
+    lean and rocq, on nonlinear arithmetic rather than a bounded model (verus prints
     "postcondition not satisfied" on the `r >= 0` clause; lean's audit shows
     `sorryAx`, its tactic script having failed). `bp_t_qexists` is refuted by
     dafny, lean, rocq AND fstar and verified by spark and framac: a WRONG
@@ -99,7 +99,7 @@ Backends section:
     integer 9223372036854775808" (bp_f_elemreach63, bp_f_lenreach63); spec
     position is unaffected, since ACSL `integer` is unbounded. And a
     quantifier naming no term over its bound variable is inexpressible in two
-    kernels — dafny 4.11 warns "Could not find a trigger for this quantifier"
+    kernels: dafny 4.11 warns "Could not find a trigger for this quantifier"
     (fatal under --allow-warnings false), verus 0.2026.08.30 errors "Could not
     automatically infer triggers". The bp_*_qtrig* probes carry the same range
     question with `at(s, i)` as a trigger, and both columns then answer it
@@ -145,8 +145,8 @@ BACKENDS = [
 
 # The sweep that guards a KNOWN-TRUE label. interp.ladders puts the task's own
 # literals and their neighbours at the front of the domain, so a task whose
-# spec names 2^31-1 is swept at 2^31-2, 2^31-1 and 2^31 — the points where a
-# machine-model confusion would show — inside this cap.
+# spec names 2^31-1 is swept at 2^31-2, 2^31-1 and 2^31, the points where a
+# machine-model confusion would show, inside this cap.
 SWEEP_POINTS = 400
 
 
@@ -252,7 +252,7 @@ def _band_id(name, extra, **meta):
 
 
 def _band_seq(name, extra, **meta):
-    """`if len(s) > 0 then r = 1 else r = 0` — the empty and non-empty cases
+    """`if len(s) > 0 then r = 1 else r = 0`, the empty and non-empty cases
     are both reachable for any seq model, so the discriminating clause is the
     only thing a verdict can turn on."""
     return dict(
@@ -273,7 +273,7 @@ def _reach(name, cond, requires, **meta):
     when `cond` is satisfiable, and it states no width literal in the
     postcondition, so a lowering cannot answer it by rejecting a bound. Under
     a bounded model the `then` branch is DEAD, which a smoke-test-carrying
-    kernel reports as VACUOUS — a distinct signal from VERIFIED, graded
+    kernel reports as VACUOUS, a distinct signal from VERIFIED, graded
     separately below."""
     return dict(
         {"t": 1, "name": name, "gate": "quantifiers",
@@ -321,7 +321,7 @@ def corpus() -> list[dict]:
         _truth="false", _family="control", _basis="witness",
         _witness={"s": (0, 0, 0, 0, 0)},
         _why="len(s) = 5 falsifies it; the small-magnitude twin of "
-             "bp_f_len_ub31 — same clause, constant 4 instead of 2^31-1"))
+             "bp_f_len_ub31, same clause, constant 4 instead of 2^31-1"))
     add(_band_seq(
         "bp_c_elemsmall", [IMP(OP(">", LEN("s"), I(0)),
                                OP("<=", AT("s", I(0)), I(4)))],
@@ -495,7 +495,7 @@ def corpus() -> list[dict]:
     # would grant for free written out as an explicit `requires`. That makes
     # the pair differ in EXACTLY the hypothesis under test, so a kernel that
     # REFUTES the partner and VERIFIES this one has refused for that reason
-    # and no other — the discriminating power of the probe, measured in that
+    # and no other: the discriminating power of the probe, measured in that
     # column rather than assumed.
     add(_band_hi(
         "bp_k_ub31", [OP("<=", V("r"), I(2 ** 31 - 1))],
@@ -739,7 +739,7 @@ def check_labels(tasks: list[dict]) -> tuple[list[str], dict]:
     input must actually falsify `ensures` under interp.py. One counterexample
     is a sound proof of falsity.
 
-    A KNOWN-TRUE label is NOT confirmed here and cannot be — a bounded sweep
+    A KNOWN-TRUE label is NOT confirmed here and cannot be: a bounded sweep
     proves nothing about 2^40. The sweep below can only REFUTE such a label,
     and a refutation is a bug in this file, not a finding about a kernel.
 
@@ -752,13 +752,13 @@ def check_labels(tasks: list[dict]) -> tuple[list[str], dict]:
         name = t["name"]
         clean = {k: v for k, v in t.items() if not k.startswith("_")}
         for e in check_wf(clean):
-            errs.append(f"{name}: not a well-formed t task — {e}")
+            errs.append(f"{name}: not a well-formed t task, {e}")
         if t["_truth"] == "false" and t["_basis"] == "witness":
             st, val = evaluate(t, dict(t["_witness"]))
             if st != "violated":
                 errs.append(f"{name}: claimed FALSE by witness "
                             f"{t['_witness']}, but interp.py says {st} "
-                            f"(r = {val}) — the label is unproven")
+                            f"(r = {val}), so the label is unproven")
         if t["_truth"] == "true":
             names = [(p["name"], p["type"]) for p in clean["params"]]
             n = 0
@@ -771,7 +771,7 @@ def check_labels(tasks: list[dict]) -> tuple[list[str], dict]:
                              for k, v in env0.items()}
                     errs.append(
                         f"{name}: claimed TRUE by construction, but interp.py "
-                        f"falsifies it at {shown} (r = {val}, {st}) — the "
+                        f"falsifies it at {shown} (r = {val}, {st}), so the "
                         f"construction is wrong")
                     break
             decided[name] = n
@@ -801,7 +801,7 @@ def run(tasks, outdir: Path, jobs: int, flake: int, only=None):
             cols.append((bname, be.version()))
             present.append((bname, importlib.import_module(lmod).lower, sfx))
         except (Exception, SystemExit) as e:                 # noqa: BLE001
-            cols.append((bname, f"ABSENT — {e}"))
+            cols.append((bname, f"ABSENT: {e}"))
     rows = {t["name"]: {} for t in tasks}
     pending = []
     for bname, lower, sfx in present:
@@ -910,7 +910,7 @@ def report(tasks, rows, cols, per, shared, majority, present, decided):
     n_true = len(tasks) - n_false
     out = []
     w = out.append
-    w("# t boundary discrimination — unbounded vs machine integers")
+    w("# t boundary discrimination: unbounded against machine integers")
     w("")
     w("Truth is SPEC.md, not consensus. FALSE tasks are true only under a "
       "bounded model; a VERIFIED is an unsoundness. TRUE tasks need a value, "
@@ -968,7 +968,7 @@ def report(tasks, rows, cols, per, shared, majority, present, decided):
         if rec["flaked"]:
             w(f"- FLAKED across runs: {', '.join(rec['flaked'])}")
     w("")
-    w("## Shared errors — what consensus grading cannot see")
+    w("## Shared errors: what consensus grading cannot see")
     if not shared:
         w("None: on every task at least one kernel that answered gave the "
           "SPEC.md answer.")
@@ -976,16 +976,16 @@ def report(tasks, rows, cols, per, shared, majority, present, decided):
         w(f"- `{name}` (known {truth.upper()}, wrong in {len(wrong)}/"
           f"{len(wrong)} answering kernels): "
           + ", ".join(f"{b}={o}" for b, o in got.items())
-          + f" — {by_name[name]['_why']}")
+          + f": {by_name[name]['_why']}")
     w("")
-    w("## Wrong majorities — where a consensus grader would assert the "
+    w("## Wrong majorities: where a consensus grader would assert the "
       "wrong answer")
     if not majority:
         w("None.")
     for name, truth, got, wrong in majority:
         w(f"- `{name}` (known {truth.upper()}; {', '.join(wrong)} wrong): "
           + ", ".join(f"{b}={o}" for b, o in got.items())
-          + f" — {by_name[name]['_basis']}")
+          + f": {by_name[name]['_basis']}")
     w("")
     w("## Coverage of the label guard")
     w("Known-true labels rest on construction alone. The sweep is a guard "
@@ -1032,7 +1032,7 @@ def main() -> int:
     print(f"label guard: {n_true} known-true tasks swept over "
           f"{SWEEP_POINTS} domain points with no violation"
           + (f"; {len(unexercised)} not exercised at all by the sweep "
-             f"({', '.join(unexercised)}) — their clauses exceed "
+             f"({', '.join(unexercised)}), their clauses exceed "
              f"interp.py's step cap, so the guard says nothing about them"
              if unexercised else ""))
     if a.check_only:

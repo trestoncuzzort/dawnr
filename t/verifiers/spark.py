@@ -1,10 +1,10 @@
-"""t.verifiers.spark — the third kernel: GNATprove (SPARK 2014, Why3 + Z3).
+"""t.verifiers.spark, the third kernel: GNATprove (SPARK 2014, Why3 + Z3).
 
 Verdicts are classified from the kernel's own machine-written audit (the
 per-unit .spark JSON), because gnatprove was MEASURED (2026-08-31, FSF
 16.1.0-1, confirmed on x86_64-linux) to exit 0 for a full proof, for an
-unproved postcondition, for a file that does not even parse, AND — Wave-1
-audit, 2026-08-31 — for eight files where the proof obligation was justified,
+unproved postcondition, for a file that does not even parse, AND, per the Wave-1
+audit of 2026-08-31, for eight files where the proof obligation was justified,
 skipped, or never generated at all:
     any "error:" line                 -> MALFORMED (checked FIRST; a broken
                                           file can produce both)
@@ -17,18 +17,18 @@ skipped, or never generated at all:
                                           a pass.
     clean audit but nonzero exit      -> TOOL_ERROR
 
-REFUTED IS NOT "UNPROVED" — the Wave-4 repair, 2026-09-01. The adapter used to
+REFUTED IS NOT "UNPROVED": the Wave-4 repair, 2026-09-01. The adapter used to
 map any "medium:" or "high:" line on stdout to REFUTED. A gnatprove `medium`
 means "could not prove", which is INCOMPLETENESS; the differential fuzzer
 (t/fuzz_lower.py, 218 tasks) MEASURED the misfire on seven true seq-scan
-tasks — fz_v1scan_047/073/089/099/122/172/175 — where six kernels VERIFIED and
+tasks, fz_v1scan_047/073/089/099/122/172/175, where six kernels VERIFIED and
 spark claimed a refutation whose own audit read
 `VC_POSTCONDITION medium/limit`: the 20000-step budget ran out. ROADMAP 7.4
 and verifiers/__init__.py already forbid folding a deterministic resource-out
 into REFUTED, so the text rule was breaking the taxonomy's own invariant.
 
 What the audit distinguishes, all MEASURED on this install:
-  * gnatprove's unproved_status vocabulary is exactly three words —
+  * gnatprove's unproved_status vocabulary is exactly three words:
     "limit" (the --steps budget ran out), "gave_up" (the prover answered
     Unknown, MEASURED as Z3 "Unknown\\n(sat)" after 1 step), "unknown".
     NONE of the three is a countermodel; unproved_status alone therefore
@@ -46,13 +46,13 @@ What the audit distinguishes, all MEASURED on this install:
   * a flow check that fails carries how_proved "flow", severity "high",
     status "unknown" and no cntexmp (probe t_p5: `X := Z` with Z
     uninitialized). Flow analysis is complete, not a solver, so its "high" is
-    also a definite defect — it is the one high without a countermodel that
+    also a definite defect: it is the one high without a countermodel that
     still rules REFUTED.
 
 Hence: REFUTED needs severity "high" (plus a cntexmp for a prover check);
 "limit" is TIMEOUT; everything else unproved is UNPROVED. See
-_classify_unproved. The flags that make this measurable —
---counterexamples=on --check-counterexamples=on --ce-steps=<steps> — are
+_classify_unproved. The flags that make this measurable,
+--counterexamples=on --check-counterexamples=on --ce-steps=<steps>, are
 hardening flags in ROADMAP 7.3's sense and are recorded in Result.budget: a
 run without them is a weaker instrument that cannot see a countermodel at all.
 --ce-steps is pinned to the run's own --steps because the switch it replaces
@@ -60,7 +60,7 @@ is a wall-clock timeout, and a wall clock is not machine-independent; the
 counterexample was MEASURED identical at ce-steps 100/1000/20000/100000.
 
 WHAT THE REPAIR COST, and it is a finding about the corpus, not about this
-rule: under the honest rule NONE of the 11 committed twins is REFUTED —
+rule: under the honest rule NONE of the 11 committed twins is REFUTED,
 9 report medium/limit (TIMEOUT) and abs/max report medium/gave_up (UNPROVED),
 and not one carries a counterexample. All 11 real lowerings still VERIFY, so
 the spark column is now verified/timeout and verified/unproved, never
@@ -68,7 +68,7 @@ verified/refuted. The cause is the seq/int model, MEASURED as a matched pair
 that differs only in the numeric type: the abs twin (Post => F'Result >= 0
 and (F'Result = X or F'Result = -X) over a body returning -X) reports
 severity "high" with a counterexample when X : Integer, and severity "medium"
-with no counterexample when X : Big_Integer — at 20000 AND at 200000 steps,
+with no counterexample when X : Big_Integer, at 20000 AND at 200000 steps,
 and under --prover=all. Big_Integer is private, so gnatprove has no model to
 build. A SPARK twin written over Big_Integer therefore CANNOT be refuted with
 evidence by this kernel, whatever the budget. Loosening the rule back would
@@ -78,32 +78,32 @@ to be bought from the lowering instead.
 POSITIVE EVIDENCE (the contract): exit 0 under --quiet was MEASURED to be
 what pragma SPARK_Mode (Off), pragma/aspect Import, and pragma Annotate
 (GNATprove, Skip_Proof|Skip_Flow_And_Proof|False_Positive|Intentional, ...)
-all produce — with zero checks proved. So VERIFIED additionally requires,
+all produce, with zero checks proved. So VERIFIED additionally requires,
 from gnatprove's own gnatprove/*.spark JSON in the scratch dir (written by
 the tool, not printable or suppressible by the source, unlike stdout):
   * >= 1 proof entry with severity "info" (a check actually proved), of
     which >= 1 is rule VC_POSTCONDITION (every t lowering puts a Post on F);
   * no proof entry justified or unproved (annot_kind / severity != "info":
-    MEASURED shape of Annotate False_Positive/Intentional under --quiet —
+    MEASURED shape of Annotate False_Positive/Intentional under --quiet:
     the medium entry stays in the JSON while stdout goes silent);
   * empty pragma_assume / skip_proof / skip_flow_proof lists (MEASURED:
     Skip_Proof fills skip_proof while printing nothing);
   * every entity in the "spark" map analyzed "all" (MEASURED: an Import'd or
-    SPARK_Mode-Off body leaves "spec" or an empty map — the theorem's body
+    SPARK_Mode-Off body leaves "spec" or an empty map, so the theorem's body
     was never in the proof's scope).
 
-SEMANTIC VACUITY — two kernel-native instruments, neither of them lexical.
+SEMANTIC VACUITY: two kernel-native instruments, neither of them lexical.
 
 (1) gnatprove's own proof warnings, --proof-warnings=on. MEASURED on the
-    Wave-2 probes: a contradictory Pre — Pre => Big_Integer'(1) =
+    Wave-2 probes: a contradictory Pre, Pre => Big_Integer'(1) =
     Big_Integer'(2), which discharges a FALSE Post at exit 0 with severity
-    "info" — puts a proof entry {rule: VC_INCONSISTENT_PRE, severity:
+    "info", puts a proof entry {rule: VC_INCONSISTENT_PRE, severity:
     "warning", message: "precondition is always False"} in the .spark JSON:
     the kernel itself saying the hypothesis is unsatisfiable, in its own
     machine-written record. The three always-False rules
     (VC_INCONSISTENT_PRE / _POST / _ASSUME) rule VACUOUS. The detection is
-    semantic, not syntactic — MEASURED to fire on
-    Pre => (X > 0 and then X < 0) as well — and MEASURED to fire on none of
+    semantic, not syntactic, MEASURED to fire on
+    Pre => (X > 0 and then X < 0) as well, and MEASURED to fire on none of
     the 22 honest files (11 real + 11 twin).
 
     VC_UNREACHABLE_BRANCH and VC_DEAD_CODE are NOT verdicts here, MEASURED:
@@ -124,7 +124,7 @@ SEMANTIC VACUITY — two kernel-native instruments, neither of them lexical.
     --steps budget whether F's postcondition still proves. If it does, the
     contract says nothing about the computed result and the cell is VACUOUS.
     MEASURED: F's VC_POSTCONDITION goes "info" -> "medium" on all 22 honest
-    files and stays "info" on all three Wave-2 holes — full separation. The
+    files and stays "info" on all three Wave-2 holes, full separation. The
     oracle runs ONLY when every other gate has already said VERIFIED, so
     refuted twins never pay for it. F's postcondition is identified by
     gnatprove's own entity table (entities[id].name ending in ".F"), not by
@@ -132,7 +132,7 @@ SEMANTIC VACUITY — two kernel-native instruments, neither of them lexical.
 
     The oracle is fail-closed: a source the completion scanner cannot
     rewrite, a havoc run that emits "error:", or a havoc run with no
-    VC_POSTCONDITION for F is TOOL_ERROR, never VERIFIED — the adapter may
+    VC_POSTCONDITION for F is TOOL_ERROR, never VERIFIED: the adapter may
     not certify what its own instrument could not examine.
 
 THE CERTIFICATE CHANNEL (10.8, 2026-09-02): the flips the honest rule gave
@@ -151,25 +151,25 @@ UNPROVED, REFUTED-the-demotion, and inert respectively.
 Budget: --steps, gnatprove's explicitly machine-independent deterministic
 bound; the havoc run reuses it, so "provable against an arbitrary result" is
 judged at exactly the standard the real run was judged at. The havoc run's
-unproved F postcondition was MEASURED to reach "medium" two ways —
+unproved F postcondition was MEASURED to reach "medium" two ways,
 unproved_status "gave_up" (Z3 answered "Unknown (sat)": abs, max, sum_upto)
-and "limit" (the 20000 steps ran out: the other 8 tasks) — so a "limit"
+and "limit" (the 20000 steps ran out: the other 8 tasks), so a "limit"
 result cannot be refused as inconclusive: demanding "gave_up" would turn 8
 of the 11 honest cells into TIMEOUT. Both are recorded in extras["f_post"].
 Prover pinned to the bundled Z3 with --prover=z3.
 
 `pragma Assume`, SPARK_Mode Off, Import, and GNATprove justification
-annotations prove or excuse anything — t never emits them; the adapter rules
+annotations prove or excuse anything: t never emits them; the adapter rules
 VACUOUS on sight (BANNED below). That ban is the
 cheap second line, not the guarantee: the guarantee is the audit requirements
 plus the two instruments above. The ban scan runs on _active_code():
 comments, string literals and character literals stripped (a commented
-"pragma Assume" is inert — Wave-1 probe p12 measured the unstripped scan
+"pragma Assume" is inert: Wave-1 probe p12 measured the unstripped scan
 overfiring VACUOUS on an honest proof) and unicode homoglyphs folded to
 ASCII (probe p11; GNAT itself rejects non-ASCII program text with "error:
 illegal character", so folding cannot excuse real code).
 
-Assertion_Policy (Ignore) needs no ban: MEASURED (p06/p07) — gnatprove
+Assertion_Policy (Ignore) needs no ban: MEASURED (p06/p07): gnatprove
 proves the ignored assertions anyway and still reports "medium:".
 
 gnatprove requires a project; each verify runs in a scratch dir with a
@@ -184,7 +184,7 @@ fz_p_seqlen probe six other kernels REFUTE). So a source that withs
 SPARK.Containers gets the shipped library added to its project: the
 sparklib.gpr copy below is the vendor's own sparklib.gpr.templ with an
 Object_Dir under our control, and `Externally_Built => True` because the
-library is proved by AdaCore, not here — MEASURED without it, gnatprove
+library is proved by AdaCore, not here. MEASURED without it, gnatprove
 analyzed all of SPARKlib (25s, and "medium:" lines from
 spark-lemmas-floating_point_arithmetic.ads that would have refuted every
 seq task). GPR_PROJECT_PATH points at the toolchain's own lib/gnat so
@@ -195,8 +195,8 @@ That library arrives with entities of its own, and _classify_audit's
 "every entity analyzed all" rule had to learn about them: a generic
 instantiation's members legitimately sit at "spec" because their bodies are
 in the library, not here. The rule is now scoped to entities DECLARED IN the
-analyzed file, with instantiations recognized structurally — an entity whose
-members' primary sloc is another file — never by name. A subprogram declared
+analyzed file, with instantiations recognized structurally, an entity whose
+members' primary sloc is another file, never by name. A subprogram declared
 in the t artifact with no completion (the uninterpreted-function trick, the
 thing this rule exists to catch) has no such members and is still MALFORMED.
 """
@@ -373,7 +373,7 @@ def _end_of_expression(src: str, i: int) -> int:
 def _havoc_source(src: str) -> tuple[str | None, str]:
     """F's completion replaced by a call to an Import'd contract-free
     function, so F'Result is an arbitrary value of the return type. Returns
-    (text, "") or (None, why) — and (None, why) is fail-closed at the call
+    (text, "") or (None, why), and (None, why) is fail-closed at the call
     site, never a pass."""
     fn = (HAVOC_FN + "_"
           + hashlib.sha256(src.encode("utf-8", "replace")).hexdigest()[:12])
@@ -436,7 +436,7 @@ def _classify_unproved(un: list[dict]) -> tuple[str, str]:
 
 def _read_audit(work: Path) -> tuple[dict | None, str]:
     """Summarize gnatprove/*.spark. (None, why) when the audit is absent or
-    unreadable — that is TOOL_ERROR, never a pass: the kernel's own record
+    unreadable. That is TOOL_ERROR, never a pass: the kernel's own record
     is the only acceptable positive evidence."""
     gdir = work / "gnatprove"
     files = sorted(gdir.glob("*.spark")) if gdir.is_dir() else []
@@ -476,7 +476,7 @@ def _read_audit(work: Path) -> tuple[dict | None, str]:
             if rule == "VC_POSTCONDITION" \
                     and owner.rsplit(".", 1)[-1] == "F":
                 # severity + why it went unproved; NEITHER "limit" nor
-                # "gave_up" is a countermodel (header) — this string is the
+                # "gave_up" is a countermodel (header), so this string is the
                 # havoc oracle's info/not-info signal, nothing more.
                 a["f_post"].append(
                     f"{entry.get('severity')}/"
@@ -530,8 +530,8 @@ def _read_audit(work: Path) -> tuple[dict | None, str]:
                if ((v or {}).get("sloc") or [{}])[0].get("file") == here}
         # An instantiation is recognized structurally, never by name: it is
         # an entity of ours whose members are declared in another file. A
-        # subprogram declared here with no completion — the uninterpreted-
-        # function trick this rule exists to catch — has no such members.
+        # subprogram declared here with no completion, the uninterpreted-
+        # function trick this rule exists to catch, has no such members.
         foreign = {n.rsplit(".", 1)[0]
                    for k, v in ents.items()
                    for n in [(v or {}).get("name", "")]
@@ -546,7 +546,7 @@ def _read_audit(work: Path) -> tuple[dict | None, str]:
 
 def _classify_audit(a: dict) -> tuple[str, str]:
     """Every run with a readable audit lands here; the audit decides. Returns
-    (outcome, reason). VERIFIED here is provisional — verify() must still
+    (outcome, reason). VERIFIED here is provisional: verify() must still
     clear it through the havoc oracle."""
     if a["contradictory"]:
         return Outcome.VACUOUS, (
@@ -595,14 +595,14 @@ def _classify_audit(a: dict) -> tuple[str, str]:
     if a["proved"] == 0:
         return Outcome.MALFORMED, (
             "zero checks proved (audit shows no proof obligations were "
-            "generated — SPARK_Mode Off / Import / empty unit shape)")
+            "generated: SPARK_Mode Off / Import / empty unit shape)")
     if not a["entities"] or any(v != "all" for v in a["entities"].values()):
         return Outcome.MALFORMED, (
             f"body not fully analyzed: entities {a['entities']} "
             f"(an entity below \"all\" has code outside the proof's scope)")
     if a["post_proved"] == 0:
         return Outcome.MALFORMED, (
-            "no VC_POSTCONDITION proved — the artifact's theorem (the Post "
+            "no VC_POSTCONDITION proved; the artifact's theorem (the Post "
             "on F) was never discharged")
     return Outcome.VERIFIED, ""
 
@@ -610,7 +610,7 @@ def _classify_audit(a: dict) -> tuple[str, str]:
 def _ce_flags(budget: int) -> list[str]:
     """The counterexample channel, off by default in gnatprove. Without it
     severity never reaches "high" and a genuinely false postcondition is
-    byte-identical to a starved true one (header, probes p4/p1) — the adapter
+    byte-identical to a starved true one (header, probes p4/p1), so the adapter
     would have no evidence with which to refuse the old text rule.
     --ce-steps is pinned to the run's own --steps: the switch it replaces is a
     wall-clock timeout, and ROADMAP 7.3 requires a machine-independent bound."""
@@ -652,7 +652,7 @@ def _run(src_text: str, unit: str, budget: int, warnings: bool,
 def _havoc_verdict(src_text: str, unit: str, budget: int) -> tuple[str, str]:
     """The weak-spec oracle. VERIFIED only when F's postcondition FAILS
     against an arbitrary result; VACUOUS when it still proves; TOOL_ERROR
-    when the oracle could not be applied — never a pass on ignorance."""
+    when the oracle could not be applied, never a pass on ignorance."""
     hv, why = _havoc_source(src_text)
     if hv is None:
         return Outcome.TOOL_ERROR, f"havoc oracle not applicable: {why}"
@@ -720,7 +720,7 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
         # No stdout branch survives here. gnatprove's "medium:"/"high:" lines
         # used to decide REFUTED from this point; the audit says which of the
         # two they were (header), and stdout cannot say. The returncode is
-        # likewise not a classifier — ROADMAP 7.4 forbids one — but a clean
+        # likewise not a classifier, ROADMAP 7.4 forbids one, but a clean
         # audit under a nonzero exit is an inconsistency the adapter must not
         # certify past.
         outcome, why = _classify_audit(audit)

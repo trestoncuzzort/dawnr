@@ -1,19 +1,19 @@
-"""t/harness.py — the backend-independent part of running a t task.
+"""t/harness.py: the backend-independent part of running a t task.
 
 One implementation of: task loading, the twin operators, the flake
 discipline, and the flip rule (real VERIFIED and twin REFUTED, or the task
 is refused). Lowering files supply only syntax; verdicts come only from
 t.verifiers backends.
 
-Twin operators (SPEC.md "The twins", v2 — the ladder below, tried in order):
-  INVARIANT-DROP  (v1) — delete one invariant of one loop (pre-order).
-  COLLAPSE-IF     (v0) — replace one `if` (pre-order) with its then-branch.
-  NEGATE-COND          — swap one `if`'s branches, which is `not cond`.
-  COMPARE-FLIP         — `<`<->`<=`, `>`<->`>=` in one executable expression.
-  BOUNDARY-SWAP        — swap the operands of one order comparison.
-  OFF-BY-ONE           — +/-1 on one literal, `at` index, or loop bound.
-  WRONG-VAR            — one variable occurrence replaced by another one.
-  DROP-GUARD           — drop one conjunct of an `if`/`while` condition.
+Twin operators (SPEC.md "The twins", v2, the ladder below, tried in order):
+  INVARIANT-DROP  (v1): delete one invariant of one loop (pre-order).
+  COLLAPSE-IF     (v0): replace one `if` (pre-order) with its then-branch.
+  NEGATE-COND         : swap one `if`'s branches, which is `not cond`.
+  COMPARE-FLIP        : `<`<->`<=`, `>`<->`>=` in one executable expression.
+  BOUNDARY-SWAP       : swap the operands of one order comparison.
+  OFF-BY-ONE          : +/-1 on one literal, `at` index, or loop bound.
+  WRONG-VAR           : one variable occurrence replaced by another one.
+  DROP-GUARD          : drop one conjunct of an `if`/`while` condition.
 
 Selection is derived from the body, never configured per task, and is
 deterministic: operators in the fixed order above, sites within an operator in
@@ -23,7 +23,7 @@ rungs reproduce the v1 rule exactly wherever it was already load-bearing.
 
 A witness is a measurement, not an assumption (t/interp.py; the house rule
 applied to the harness itself). Measured over 1395 generated tasks from
-fuzz_lower.py (7 seeds x 200), 129 twins — 9.2% — computed the same value
+fuzz_lower.py (7 seeds x 200), 129 twins, 9.2%, computed the same value
 as the real program on every input tested: for those the "measured flip"
 measured nothing, since no behavioural difference existed for a kernel to
 detect. So:
@@ -33,7 +33,7 @@ detect. So:
   - INVARIANT-DROP, whose twin computes the SAME value by construction, is
     accepted only with a loop state the surviving invariants no longer cover
     (exit entailment or preservation).
-No witness on any rung and the task is REFUSED — an unmeasurable twin is
+No witness on any rung and the task is REFUSED: an unmeasurable twin is
 reported as such rather than passed off as a flip.
 
 The twin NEVER touches `requires`, `ensures`, `spec_funs`, or `decreases`:
@@ -173,8 +173,8 @@ def _splice(body: list, path: tuple, stmts: list):
 
 
 def _stmts(body: list, scope: list, prefix: tuple = ()):
-    """Pre-order over statements — statement, then into `if` branches and
-    `while` bodies — yielding (path, stmt, scope), where scope is the
+    """Pre-order over statements: statement, then into `if` branches and
+    `while` bodies, yielding (path, stmt, scope), where scope is the
     (name, type) pairs a substitution at that statement may use. A `var`
     statement is yielded BEFORE its own name enters scope: its initialiser
     cannot see it."""
@@ -194,7 +194,7 @@ def _stmts(body: list, scope: list, prefix: tuple = ()):
 def _exprs(body: list, scope: list):
     """Pre-order over the expressions a twin may break: `if`/`while`
     conditions, assignment right-hand sides, local initialisers. Never
-    `invariants` or `decreases` — dropping an invariant is INVARIANT-DROP's
+    `invariants` or `decreases`, because dropping an invariant is INVARIANT-DROP's
     job, and a rewritten `decreases` would break termination rather than the
     thing under test. Yields (path, expr, scope, kind)."""
     for p, s, sc in _stmts(body, scope):
@@ -285,8 +285,8 @@ def _c_wrong_var(body, scope):
     # Params and locals only, on BOTH sides of the substitution. The return
     # name is not a target: a body that reads it before its first assignment
     # is ill-formed rather than wrong, and a lowering rejects it instead of
-    # refuting it, which loses the flip. It is not a source either — nor is a
-    # quantifier's bound variable — because neither carries a declared type
+    # refuting it, which loses the flip. It is not a source either, nor is a
+    # quantifier's bound variable, because neither carries a declared type
     # here, and substituting across types would emit a twin no lowering can
     # even typecheck.
     for path, e, sc, _k in _exprs(body, scope):
@@ -354,7 +354,7 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
     ref = interp.Reference(task)
     if not ref.points:
         # UNMEASURABLE, which is a different refusal from "the twin computes
-        # the same thing" — and the two causes are worth telling apart.
+        # the same thing", and the two causes are worth telling apart.
         return None, ("no-input" if not ref.n_req else "real-undefined"), None
     # A witness that merely shows real and twin compute DIFFERENT values is
     # not grounds for expecting a refutation: a loose `ensures` can be
@@ -412,7 +412,7 @@ def make_twin(body: list, task: dict | None = None
     """Deterministic twin selection. Returns (twin_body, operator_name), or
     (None, reason) when no operator produced a witness.
 
-    `task` is what makes the choice measurable — without params, requires and
+    `task` is what makes the choice measurable: without params, requires and
     ensures there is nothing to run the twin on. A body-only call is the
     UNGROUNDED v1 rule, kept for callers that carry their own semantic
     instrument (fuzz_lower.py decides twin strength with its own interpreter
@@ -430,14 +430,14 @@ def make_twin(body: list, task: dict | None = None
 
 
 REFUSALS = {
-    "no-operator": "no `if` and no invariant — nothing to mutate, so the "
+    "no-operator": "no `if` and no invariant, nothing to mutate, so the "
                    "twin is undefined",
     "no-witness": "every mutation on the ladder computes what the real body "
-                  "computes, on the whole bounded domain — nothing to measure",
-    "no-input": "no input in the bounded domain satisfies `requires` — a "
+                  "computes, on the whole bounded domain, nothing to measure",
+    "no-input": "no input in the bounded domain satisfies `requires`, a "
                 "vacuous precondition, so there is nothing to measure",
     "real-undefined": "the real body returns no value on any input that "
-                      "satisfies `requires` — nothing for a twin to differ "
+                      "satisfies `requires`, nothing for a twin to differ "
                       "from",
     "candidate-budget": f"no witness within {MAX_CANDIDATES} candidates",
 }
@@ -445,7 +445,7 @@ REFUSALS = {
 
 def witness(w: dict | None) -> str:
     """One line naming the input (or loop state) that makes the twin a
-    measurement — the thing a REFUTED verdict is a verdict ABOUT."""
+    measurement, the thing a REFUTED verdict is a verdict ABOUT."""
     if not w:
         return "none"
     kind = w.get("_kind")
@@ -465,7 +465,7 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
 
     twin_body, op, w = twin_cached(task)
     if twin_body is None:
-        print(f"  {name}: REFUSED — {REFUSALS[op]}")
+        print(f"  {name}: REFUSED, {REFUSALS[op]}")
         return False
 
     real = OUT / f"{name}.{suffix}"
@@ -478,14 +478,14 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
     r_real, agree_r = flake_check(backend.verify, real)
     r_twin, agree_t = flake_check(backend.verify, twin)
     if not (agree_r and agree_t):
-        print(f"  {name}: REFUSED — verdicts flaked across runs")
+        print(f"  {name}: REFUSED, verdicts flaked across runs")
         return False
     flip = (r_real.outcome == Outcome.VERIFIED
             and r_twin.outcome == Outcome.REFUTED)
     tag = (f"COUNTS  (real VERIFIED, {op} twin REFUTED, witness {witness(w)})"
            if flip else
            f"REFUSED (real {r_real.outcome}, {op} twin {r_twin.outcome}"
-           + (f" — vacuous spec: the twin is broken on {witness(w)} and the "
+           + (f", vacuous spec: the twin is broken on {witness(w)} and the "
               f"kernel accepted it anyway)"
               if r_twin.outcome == Outcome.VERIFIED else ")"))
     print(f"  {name}: {tag}")
