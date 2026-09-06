@@ -407,7 +407,7 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
     try:
         module = lift_parse.parse(result.rprint_text)
     except lift_parse.LiftParseError as e:
-        outcome.parse_refusal = Refusal(reason="parse-failure", token=e.token,
+        outcome.parse_refusal = Refusal(reason=getattr(e, "reason", None) or "parse-failure", token=e.token,
                                          line=e.line, stage="parse")
         if out_dir is not None:
             _write_outcome(outcome, Path(out_dir), stem)

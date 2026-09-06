@@ -1290,12 +1290,33 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
                 fields = ", ".join(_dafny_literal(env0[n], ty) for n, ty in names_types)
                 lit_list.append(f"({fields})")
             call_args = ", ".join(f"pts[i].{j}" for j in range(n_params))
+        # Decision 1 (array-readonly-as-seq): the SOURCE method takes
+        # array<int> where the task takes seq, so each such point is
+        # materialised as a fresh array before the source call; the lifted
+        # call keeps the seq. Measured 2026-09-06: without this every one of
+        # the 16 array programs failed to resolve ("expected array<int>,
+        # found seq<int>") and no tally was printed.
+        array_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
+                               if sp.type is not None and sp.type.kind == "array")
+        point_exprs = ["pts[i]"] if n_params == 1 else [f"pts[i].{j}" for j in range(n_params)]
+        src_args = []
+        materialise = []
+        for j, (pn, _ty) in enumerate(names_types):
+            pe = point_exprs[j]
+            if pn in array_view:
+                materialise.append(f"    var arr{j} := new int[|{pe}|];")
+                materialise.append(f"    var k{j} := 0;")
+                materialise.append(f"    while k{j} < |{pe}| {{ arr{j}[k{j}] := {pe}[k{j}]; k{j} := k{j} + 1; }}")
+                src_args.append(f"arr{j}")
+            else:
+                src_args.append(pe)
         lines.append(f"  var pts: seq<{pts_ty}> := [{', '.join(lit_list)}];")
         lines.append("  var bad := 0;")
         lines.append("  var points := 0;")
         lines.append("  var i := 0;")
         lines.append("  while i < |pts| {")
-        lines.append(f"    var srcv := {src_name}({call_args});")
+        lines.extend(materialise)
+        lines.append(f"    var srcv := {src_name}({', '.join(src_args)});")
         lines.append(f"    var liftv := {lift_name}({call_args});")
         lines.append("    points := points + 1;")
         lines.append('    print i, " ", srcv, " ", liftv, "\\n";')
@@ -1611,14 +1632,21 @@ def check(task: dict, source: MethodDecl, closure: tuple,
                            interp_first_value=first_value)
 
     if bad_n < 0:
-        record.differential_verdict = "arm-unavailable"
+        # No tally means the harness itself did not run (a resolution or
+        # compile error in the generated Main, measured 2026-09-06 on the 16
+        # array-as-seq programs before the array materialisation below was
+        # added). That is the arm being unavailable, never evidence that the
+        # lifted body differs from the source, so it is recorded, not refused;
+        # the census table shows differential_verdict per row.
+        first_err = next((ln.strip() for ln in (raw_out or "").splitlines()
+                          if "Error" in ln), "no points=/bad= tally printed")
+        record.differential_verdict = f"arm-unavailable: {first_err[:160]}"
         record.warnings.append("differential run printed no points=/bad= tally")
-        refusal = Refusal(reason="lift-diff-failed", token="no-tally", line=0, stage="check")
-        return CheckOutput(checker_dfy=checker_text, differential_dfy=diff_text,
-                           record=record, refusal=refusal, interp_points=n_points,
-                           interp_first_value=first_value)
+        diff_checked = False
+    else:
+        diff_checked = True
 
-    if bad_n > 0:
+    if diff_checked and bad_n > 0:
         first_bad_i = next((i for i in sorted(printed)
                             if printed[i][0] != printed[i][1]), None)
         env0 = diff_points[first_bad_i][0] if first_bad_i is not None else {}

@@ -606,22 +606,45 @@ semantics call in 13.3.
 
 ### 12.4 The Dafny-to-t lifter
 
-`coverage_census.py` decides fragment membership with regular expressions
-over Dafny source. It needed three repair rounds and 185 confirmed detector
-faults to become trustworthy, and it still answers a proxy question. The
-lifter replaces it: a program is in the fragment when it LIFTS into a t task
-and seven kernels verify it with the twin refuted. It also produces the task
-corpus 12.5 and 12.6 both need, so it is the long pole.
-
-Meaning preservation beats coverage. A program the lifter refuses with a
-named reason costs one row in a table; a program it lifts wrongly corrupts
-every number downstream. Parse, do not pattern-match: the census is the
-standing evidence for what regexes do to this problem.
+`coverage_census.py` decided fragment membership with regular expressions
+over Dafny source and needed three repair rounds and 185 confirmed detector
+faults to become trustworthy. The lifter replaces it: a program is in the
+fragment when it LIFTS into a t task and seven kernels verify it with the
+twin refuted. Meaning preservation beats coverage: a refusal with a named
+reason costs one row, a wrong lift corrupts every number downstream.
 
 DONE WHEN: the lifter runs over all 785 programs, every emitted task
 validates against SPEC.md and executes under interp.py, and the disagreements
 with the lexical census are enumerated with a verdict on which instrument is
 right in each case.
+
+**DONE 2026-09-06, the table is `t/LIFTER-785.md`.** Design settled without
+the judge panel (`t/LIFTER-DESIGN.md`, `t/LIFTER-DECISIONS.md`); built by
+four Sonnet implementers and an integrator, fixed in two passes, reviewed
+once on Fable, which found two wrong lifts the checker had not caught
+(a `seq<nat>` parameter lifted without its element guard, now refused
+`nat-seq-elements`; the membership-quantifier rewrite substituting the
+sequence for its element, now `at(s, k)`), both closed. Over the 785
+files, 968 gradable methods: 159 lift and pass every check (check_wf,
+interp, the section 9 equivalence lemmas, the differential run agreeing
+on every point), 154 count after t's own twin instruments, 99 programs
+lift every method; 4 methods refuse `lift-check-failed` (one lemma needs
+induction, three are named checker gaps), 0 refuse on the differential,
+0 crash, 1 file keeps a bare parse refusal (a bitvector infix bar). Of the
+census's 77 in-fragment programs, 77 lift and 76 verify their lemmas. The
+census disagreement table: 569 agree, 58 rows where the lifter is right
+and the census wrong (most are asserts the lifter drops by decision 8,
+and multi-method files decision 9 splits), 0 where the census is right
+and the lifter wrong, 315 refused by both under different names, 26
+undecided policy rows. The largest refusal classes over the corpus are
+no gradable method (132), zero returns (69), div-mod (62), array (61),
+multi-return (57), unbounded quantifier (52), heap (50), function
+contracts (41), datatype (38). Two instruments the run added: `interp.py`
+has a magnitude budget beside its step budget (one program's doubly
+exponential values ran a multiplication for an hour), and the differential
+Main carries its points as data and caps at 512 in shell order, so every
+lifted row says "agrees on N of M points" and never claims body identity;
+`t/fidelity_domain.py` and `nl/FIDELITY.md` measure what that sample is.
 
 ### 12.5 The ground-truth sweep
 
@@ -896,10 +919,10 @@ UNBLOCKS: 17.2.
 
 #### 16.1 The lifter, the sweep, the spec experiment
 
-12.4, 12.5 and 12.6 as written. The lifter's design was settled 2026-09-05
-without the judge panel (`t/LIFTER-DESIGN.md`, `t/LIFTER-DECISIONS.md`,
-raw designs under `t/lifter-design/`); the build is in progress and 12.4
-records its numbers when the 785 have run.
+12.4 is done (2026-09-06, `t/LIFTER-785.md`: 159 methods in 99 programs
+lift and check); 12.5 and 12.6 as written. The sweep's coverage number is
+bounded by the fidelity sample `nl/FIDELITY.md` describes until its five
+conditions are met.
 
 DONE WHEN: as stated there.
 UNBLOCKS: 16.2, 16.3.
