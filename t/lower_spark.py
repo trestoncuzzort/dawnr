@@ -256,6 +256,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                   # noqa: E402
+import interp                                    # noqa: E402
 from verifiers import spark as spark_backend     # noqa: E402
 
 TYPE = {"int": "Big_Integer", "bool": "Boolean", "seq": "Seq"}
@@ -738,8 +739,9 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
 
       * "exit" (a loop state, from INVARIANT-DROP): the goal is the negated
         exit-entailment VC at the state, requires and then the surviving
-        invariants and then not cond and then not ensures, every variable a
-        literal. That is byte-for-byte the statement interp.invariant_witness
+        invariants and then not cond and then not ensures at the RETURN,
+        the state run through the statements after the loop first
+        (interp.exit_env; since 2026-09-07), every variable a literal. That is byte-for-byte the statement interp.invariant_witness
         measured (admissibility included), restated to the kernel: a state
         the survivors admit, at the loop's exit, where the theorem fails.
         The twin body's own loop supplies the survivors, so the certificate
@@ -777,10 +779,21 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
             if len(loops) != 1:
                 return ""
             loop = loops[0]
+            # The obligation is at the RETURN: the loop-exit state run
+            # through whatever follows the loop (interp.exit_env, None under
+            # an enclosing loop). A tail loop runs nothing and the goal is
+            # unchanged. Measured 2026-09-07 (ROADMAP 12.5): slow_max
+            # assigns its result after its loop, and this goal, stating
+            # not-ensures at the loop's own state, minted REFUTED on a twin
+            # gnatprove proves.
+            post = interp.exit_env(task, body, loop, vals)
+            if post is None:
+                return ""
             parts = [L.expr(e, sub) for e in task.get("requires", [])]
             parts += [L.expr(i, sub) for i in loop.get("invariants", [])]
             parts.append(f"(not {L.expr(loop['cond'], sub)})")
-            ens = [L.expr(e, sub) for e in task["ensures"]]
+            ens = [L.expr(e, {**sub, ret: _cert_lit(post[ret])})
+                   for e in task["ensures"]]
         else:
             return ""
     except (ValueError, KeyError, NotImplementedError):

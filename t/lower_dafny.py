@@ -652,10 +652,22 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             loop = _twin_loop(task["body"], twin_body)
             if loop is None:
                 return None
+            # The obligation is at the RETURN: the loop-exit state run
+            # through whatever follows the loop (interp.exit_env, None under
+            # an enclosing loop). A tail loop runs nothing and the formula
+            # is unchanged. Measured 2026-09-07 (ROADMAP 12.5): slow_max
+            # assigns z after its loop, and this lemma, stating not-ensures
+            # at the loop's own z, minted REFUTED on a twin dafny proves.
+            ret = task["returns"][0]["name"]
+            post = interp.exit_env(task, twin_body, loop, names)
+            if post is None:
+                return None
+            m2 = dict(m)
+            m2[ret] = _tlit(post[ret])
             parts = [subst(rq, m) for rq in task.get("requires", [])]
             parts += [subst(iv, m) for iv in loop.get("invariants", [])]
             parts.append(_not(subst(loop["cond"], m)))
-            parts.append(_not(_conj([subst(en, m)
+            parts.append(_not(_conj([subst(en, m2)
                                      for en in task["ensures"]])))
         else:
             return None          # preservation / undefined: see above

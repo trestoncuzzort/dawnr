@@ -57,6 +57,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                   # noqa: E402
+import interp                                    # noqa: E402
 from verifiers import verus as verus_backend     # noqa: E402
 
 BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
@@ -788,10 +789,23 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
             loop = _twin_loop(task["body"], twin_body)
             if loop is None:
                 return None
+            # The obligation is at the RETURN: the loop-exit state run
+            # through whatever follows the loop (interp.exit_env, which is
+            # None under an enclosing loop, where the exit re-enters it). A
+            # tail loop runs nothing and the formula is what it always was.
+            # Measured 2026-09-07 (ROADMAP 12.5): slow_max assigns z after
+            # its loop, and a certificate stating not-ensures at the loop's
+            # own z minted REFUTED on a twin every kernel proves.
+            ret = task["returns"][0]["name"]
+            post = interp.exit_env(task, twin_body, loop, names)
+            if post is None:
+                return None
+            m2 = dict(m)
+            m2[ret] = _tlit(post[ret])
             parts += [subst(iv, m) for iv in loop.get("invariants", [])]
             parts.append({"op": "not", "args": [subst(loop["cond"], m)]})
             parts.append({"op": "not", "args": [
-                _conj([subst(en, m) for en in task["ensures"]])]})
+                _conj([subst(en, m2) for en in task["ensures"]])]})
         else:
             return None          # preservation / undefined: see above
         return _unroll(_conj(parts), [_UNROLL_CAP])

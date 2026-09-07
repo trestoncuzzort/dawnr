@@ -141,12 +141,18 @@ demanded. lower_spark.py restates the harness's measured witness as one
 ground goal named t_refutation_certificate in the twin file; the audit rule
 at CERT_ENTITY below mints REFUTED only when the kernel discharges every
 check of that goal, a rejected certificate is UNPROVED (never REFUTED), and
-a file whose active code carries the name can never mint VERIFIED. MEASURED
+a file whose active code carries the name can never mint VERIFIED. A
+certificate discharged on a file whose every other check proved reads
+MALFORMED (the coherence gate, 2026-09-07, fstar's rule): the kernel proved
+the twin, so the goal claiming its Post fails is evidence of nothing;
+measured on the 159 lifted tasks, slow_max read REFUTED here on a twin
+gnatprove proves. MEASURED
 2026-09-02: the nine verified/timeout twins all read verified/refuted under
 the unchanged 20000-step budget, every real cell stays VERIFIED, and the
 soundness probes (planted name without goals, false certificate, accepted
 certificate planted in a real program, name in a comment) land UNPROVED,
-UNPROVED, REFUTED-the-demotion, and inert respectively.
+UNPROVED, REFUTED-the-demotion (MALFORMED since the coherence gate), and
+inert respectively.
 
 Budget: --steps, gnatprove's explicitly machine-independent deterministic
 bound; the havoc run reuses it, so "provable against an arbitrary result" is
@@ -570,6 +576,20 @@ def _classify_audit(a: dict) -> tuple[str, str]:
     cert = a["cert"]
     if cert["proved"] or cert["unproved"]:
         if not cert["unproved"] and cert["post_proved"]:
+            if not a["unproved"]:
+                # THE COHERENCE GATE (2026-09-07, fstar's rule adopted):
+                # every check of the program itself proved beside the
+                # certificate, so the kernel proved the twin and a goal
+                # claiming its Post fails at the witness is incoherent
+                # with that, evidence of nothing. Until this gate the
+                # return below minted REFUTED from the certificate alone.
+                # Measured on the 159 lifted tasks (ROADMAP 12.5): slow_max
+                # read REFUTED here on a twin gnatprove proves, an exit
+                # witness on a loop the method assigns after.
+                return Outcome.MALFORMED, (
+                    "certificate discharged on a file whose every other "
+                    "check proved: the kernel proved the twin, so the "
+                    "witness refutes nothing")
             return Outcome.REFUTED, (
                 "kernel accepted the t_refutation_certificate goal: the "
                 "measured witness instantiation of the spec is proved to "

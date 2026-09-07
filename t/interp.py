@@ -646,6 +646,67 @@ class _Admissible:
         return tuple(env.get(n) for n in self.fixed) in self._reachable(key)
 
 
+def continuation(body: list, loop: dict) -> list | None:
+    """The statements that run after `loop` exits, in order: the rest of its
+    own block, then the rest of each enclosing `if`'s block, outward to the
+    method's end. None when `loop` is not in `body`, or sits under an
+    enclosing `while`: that loop's exit re-enters the outer one, whose
+    invariant is the obligation there, so there is no straight run to the
+    return to state. Identity, not equality: `loop` is the very dict
+    `harness._invariant_candidates` yielded (or a lowering's `_twin_loop`
+    found), because a body may hold two equal loops."""
+    for i, s in enumerate(body):
+        if "while" in s:
+            if s["while"] is loop:
+                return body[i + 1:]
+            if _holds(s["while"]["body"], loop):
+                return None
+        elif "if" in s:
+            for branch in (s["if"]["then"], s["if"]["else"]):
+                if _holds(branch, loop):
+                    inner = continuation(branch, loop)
+                    return None if inner is None else inner + body[i + 1:]
+    return None
+
+
+def _holds(body: list, loop: dict) -> bool:
+    for s in body:
+        if "while" in s:
+            if s["while"] is loop or _holds(s["while"]["body"], loop):
+                return True
+        elif "if" in s:
+            if _holds(s["if"]["then"], loop) or _holds(s["if"]["else"], loop):
+                return True
+    return False
+
+
+def exit_env(task: dict, body: list, loop: dict, state: dict) -> dict | None:
+    """The environment at the method's return when `loop` (a dict inside
+    `body`) exits in `state`: the continuation, run from that state. `state`
+    maps every name in scope at the loop, params included, to a value. None
+    when the loop has no continuation (under an enclosing while) or the run
+    is undefined or over budget; a tail loop runs nothing and returns
+    `state` unchanged.
+
+    This is where the exit obligation lives. A kernel judges `ensures` at
+    the return, and when statements follow the loop the loop-exit state is
+    not the return state: slow_max (DafnyBench) assigns its result after
+    its loop, and an exit witness judged at the loop's own `z` read REFUTED
+    in three columns on a twin every kernel proves (measured 2026-09-07,
+    ROADMAP 12.5). Every certificate builder that restates an exit witness
+    goes through here, so the witness and its certificate name the same
+    obligation."""
+    cont = continuation(body, loop)
+    if cont is None:
+        return None
+    env = dict(state)
+    try:
+        exec_body(cont, env, funs_of(task, body), St())
+    except (Undef, Budget, RecursionError, ValueError):
+        return None
+    return env
+
+
 def invariant_witness(task: dict, loop: dict, kept: list,
                       names: list[tuple[str, str]],
                       limit: int = MAX_STATES) -> dict | None:
@@ -660,8 +721,15 @@ def invariant_witness(task: dict, loop: dict, kept: list,
 
     The state must also be one the kernel cannot rule out; see _Admissible,
     without which this returns witnesses dafny and verus were measured to
-    verify straight through."""
+    verify straight through.
+
+    Exit entailment is judged at the RETURN, not at the loop: the state is
+    run through whatever follows the loop first (exit_env), because that is
+    where a kernel judges `ensures`. A loop under an enclosing while yields
+    no exit witness at all (no straight run to the return; its exit
+    obligation is the outer invariant), and the ladder moves on."""
     funs = funs_of(task, task["body"])
+    cont = continuation(task["body"], loop)
     req = task.get("requires", [])
     ens = task["ensures"]
     adm = _Admissible(task, loop, names, funs)
@@ -675,7 +743,11 @@ def invariant_witness(task: dict, loop: dict, kept: list,
             if not all(ev(c, env, funs, st) for c in kept):
                 continue
             if not ev(loop["cond"], env, funs, st):
-                if not all(ev(c, env, funs, st) for c in ens):
+                if cont is None:
+                    continue
+                post = dict(env)
+                exec_body(cont, post, funs, st)
+                if not all(ev(c, post, funs, st) for c in ens):
                     w = _shown(env)
                     w["_kind"] = "exit"
                     return w

@@ -646,7 +646,7 @@ Main carries its points as data and caps at 512 in shell order, so every
 lifted row says "agrees on N of M points" and never claims body identity;
 `t/fidelity_domain.py` and `nl/FIDELITY.md` measure what that sample is.
 
-### 12.5 The ground-truth sweep
+### 12.5 The ground-truth sweep: DONE 2026-09-07, 30 of 159 in all seven
 
 Run the lifted corpus through the full pipeline, seven kernels, real and
 twin, flake-checked. This is the first coverage number that means what the
@@ -716,6 +716,39 @@ Also named, unchanged: 19 fstar malformed reals and 8 abstentions (13.2),
 58 framac exit-witness timeouts (10.7's residual), 17 dafny and 12 fstar
 preservation twins without certificates, 5 dafny verified twins for 12.3,
 26 lean and 16 spark abstentions.
+
+**DONE 2026-09-07.** Table: `t/COVERAGE-lifted-785.md` (159 lifted tasks,
+seven kernels, 32 jobs, 751 s, 0 flaked cells). Counts: dafny 129, spark
+100, verus 92, fstar 91, lean 81, rocq 79, framac 63; 30 of 159 in all
+seven; 5 of the 26 lifted MBPP-DFY, against the 1.0 bar of 82 of 164. Two
+instrument changes closed the hurdle above, both regression-checked on the
+committed 77-cell matrix (identical modulo its header): (1) the exit
+witness is judged at the return, `interp.exit_env` runs the loop-exit
+state through the statements after the loop before `ensures` is read, in
+the witness search and in the dafny, verus, spark and fstar certificate
+builders, which now restate the obligation lean and rocq already did; a
+loop under an enclosing while yields no exit witness. Re-selection over
+the 159 changed 3 twins (slow_max to a collapse-if value witness, findMax
+and gcdI to a different dropped invariant) and left 151 identical. (2) The
+coherence gate, fstar's rule, in dafny, verus, spark and lean: a
+certificate on a file the main run verified reads MALFORMED, never
+REFUTED, measured with a true certificate planted in the verified abs
+real (MALFORMED in all four, the abs twin still REFUTED, the real still
+VERIFIED). Dafny's gate also demands exit 0 and no out-of-resource line,
+because its tally does not count a starved method as an error (three
+square twins read "1 verified, 0 errors, 1 out of resource" on the first
+attempt and would have lost honest refutations). Net against the morning
+table: 9 cells. 3 dafny REFUTED became MALFORMED (downWhileGreater and
+two mult tasks, twins dafny proves by inferring the dropped bound back;
+verus and spark, with no inference, still refute them), slow_max earned
+verified/refuted in framac, rocq and fstar on its new witness, findMax in
+lean and rocq, gcdI's twin in rocq. Residuals, by owner: 58 framac
+exit-witness timeouts and 3 vacuous twins (10.7); preservation witnesses
+uncertificated in every column, 17 dafny and 12 fstar, the largest single
+lever, one certificate shape for seven columns; 19 fstar malformed reals
+and 8 abstentions (13.2); 5 dafny verified twins and 3 inference-admitted
+witnesses (12.3, 13.3); 26 lean and 16 spark abstentions (lowering gaps).
+Reading: the closing section of the table.
 
 ### 12.6 The spec experiment
 

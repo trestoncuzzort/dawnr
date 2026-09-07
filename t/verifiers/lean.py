@@ -60,6 +60,9 @@ certificate rows and UNPROVED 2026-09-02):
   banned token in stripped source                            -> VACUOUS
   zero theorem declarations (empty/comments-only/junk)       -> MALFORMED
   "maxHeartbeats" / "deterministic timeout" in output        -> TIMEOUT
+  t_refutation_certificate declared, audit clean, and every
+      other theorem audits clean too (the file verified)     -> MALFORMED
+                                              (the coherence gate, 2026-09-07)
   t_refutation_certificate declared, audit clean             -> REFUTED
   t_refutation_certificate declared, rejected or unaudited   -> UNPROVED
   exit 0, sentinel + all audits present, allowlisted         -> VERIFIED
@@ -278,7 +281,28 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
                 {a.strip() for a in (axs or "").split(",")
                  if a.strip()} <= AXIOM_ALLOW
                 for axs in cert_lines)
-            if cert_ok:
+            # THE COHERENCE GATE (2026-09-07, fstar's rule adopted): when
+            # the file's other theorems, the twin's own, audit clean beside
+            # an accepted certificate, the kernel proved the twin and the
+            # claim that its theorem fails at the witness is incoherent
+            # with that, evidence of nothing. A failed proof carries
+            # sorryAx and cannot pass this test. Measured 0 of 80 lean
+            # cells on the 159 lifted tasks; dafny, verus and spark were
+            # measured to need the gate (ROADMAP 12.5), and one rule for
+            # every certificate column is the point.
+            others = [t for t in theorems if t != CERT_NAME]
+            others_ok = bool(others) and all(
+                any((nm == t or nm.endswith("." + t))
+                    and {a.strip() for a in (axs or "").split(",")
+                         if a.strip()} <= AXIOM_ALLOW
+                    for nm, axs in AUDIT_LINE.findall(out[idx:]))
+                for t in others)
+            if cert_ok and others_ok:
+                outcome = Outcome.MALFORMED
+                error = ("certificate accepted on a file whose own theorems "
+                         "audit clean: the kernel proved the twin, so the "
+                         "witness refutes nothing")
+            elif cert_ok:
                 outcome = Outcome.REFUTED
             else:
                 outcome = Outcome.UNPROVED

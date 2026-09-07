@@ -1,4 +1,4 @@
-# t cross-kernel agreement — 2026-09-07 16:48Z
+# t cross-kernel agreement — 2026-09-07 17:53Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column.
 
@@ -36,7 +36,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | malformed / malformed |
 | dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_index__min | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater | verified / malformed | verified / refuted | verified / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileNotEqual | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
@@ -47,7 +47,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_success_1__is_even | verified / refuted | verified / refuted | verified / refuted | verified / timeout | abstain / abstain | unproved / refuted | verified / refuted |
 | dafny_tmp_tmp0wu8wmfr_tests_f1a__f | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | malformed / malformed |
 | dafny_tmp_tmpj88zq5zt_2_kontrakte_max__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_tmp_tmpmvs2dmry_slowmax__slow_max | verified / refuted | verified / refuted | verified / refuted | verified / verified | unproved / unproved | verified / unproved | verified / malformed |
+| dafny_tmp_tmpmvs2dmry_slowmax__slow_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_examples1__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_examples1__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_examples2__product | verified / refuted | unproved / refuted | unproved / timeout | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
@@ -68,12 +68,12 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find | verified / unproved | abstain / abstain | verified / unproved | abstain / abstain | verified / unproved | unproved / unproved | verified / unproved |
 | mieic_mfes_tmp_tmpq3ho7nve_exams_appeal_20_p4__calcF | verified / refuted | unproved / refuted | abstain / abstain | timeout / vacuous | abstain / abstain | unproved / refuted | unproved / refuted |
 | mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / unproved | verified / refuted |
-| metodos_formais_tmp_tmpbez22nnn_aula_2_ex1__mult | verified / refuted | unproved / refuted | unproved / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted |
+| metodos_formais_tmp_tmpbez22nnn_aula_2_ex1__mult | verified / malformed | unproved / refuted | unproved / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted |
 | metodos_formais_tmp_tmpbez22nnn_aula_2_ex2__pot | verified / refuted | unproved / refuted | timeout / refuted | verified / timeout | unproved / refuted | unproved / refuted | unproved / refuted |
 | metodos_formais_tmp_tmpbez22nnn_aula_4_ex3__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / timeout | unproved / refuted | unproved / unproved | unproved / refuted |
 | metodos_formais_tmp_tmpql2hwcsh_invariantes_fatorial2__fatorial | verified / unproved | unproved / unproved | abstain / abstain | verified / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
 | metodos_formais_tmp_tmpql2hwcsh_invariantes_fibonacci__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / timeout | unproved / refuted | unproved / unproved | unproved / refuted |
-| metodos_formais_tmp_tmpql2hwcsh_invariantes_multiplicador__mult | verified / refuted | unproved / refuted | unproved / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted |
+| metodos_formais_tmp_tmpql2hwcsh_invariantes_multiplicador__mult | verified / malformed | unproved / refuted | unproved / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted |
 | metodos_formais_tmp_tmpql2hwcsh_invariantes_potencia__pot | verified / refuted | unproved / refuted | timeout / refuted | verified / timeout | unproved / refuted | unproved / refuted | unproved / refuted |
 | prog_fun_solutions_tmp_tmp7_gmnz5f_extra_pow__pow | verified / refuted | unproved / refuted | abstain / abstain | verified / vacuous | abstain / abstain | verified / refuted | verified / refuted |
 | prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum | verified / refuted | unproved / refuted | abstain / abstain | verified / vacuous | abstain / abstain | unproved / refuted | unproved / refuted |
@@ -88,7 +88,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__factIter | verified / unproved | unproved / unproved | timeout / timeout | verified / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__fibIter | verified / unproved | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / timeout | unproved / unproved | unproved / refuted | verified / refuted |
-| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / timeout | unproved / unproved | unproved / unproved | verified / refuted |
+| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / timeout | unproved / unproved | unproved / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / timeout | unproved / unproved | unproved / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_10_hoangkim_ex10_hoangkim__square0 | verified / refuted | unproved / refuted | verified / refuted | verified / timeout | unproved / refuted | unproved / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_10_hoangkim_ex10_hoangkim__square1 | verified / refuted | unproved / refuted | verified / refuted | verified / timeout | unproved / refuted | unproved / refuted | verified / refuted |
@@ -154,7 +154,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_projects_tmp_tmpjutqwjv4_tutorial_tutorial__computeFib | verified / refuted | unproved / refuted | abstain / abstain | timeout / vacuous | abstain / abstain | unproved / refuted | unproved / refuted |
 | formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__sqrSum1 | verified / unproved | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
-| laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise12__findMax | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / unproved | verified / unproved | verified / refuted |
+| laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise12__findMax | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / refuted | verified / refuted |
 | laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise9__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / timeout | unproved / refuted | unproved / unproved | unproved / refuted |
 | nitwit_tmp_tmplm098gxz_nit__max_nit | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | verified / refuted |
 | se2011_tmp_tmp71eb82zt_ass1_ex4__eval | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
@@ -177,131 +177,110 @@ Backends:
 
 Verdict basis: every source file hashed; e.g. `clover_abs__abs.dfy` 33f1a307d5f4103c…, `clover_abs__abs.rs` 732e707fbd23a808…
 
-## Reading, written after the run (2026-09-07; regenerating the table drops this section, re-append it)
+## Reading, written after the run (2026-09-07 17:53Z; regenerating the table drops this section, re-append it)
 
-This is the 2026-09-06 sweep re-run after fstar adopted the certificate
-protocol (85bbe5f): the same 159 tasks, the same 48 jobs, 607 s, 0 flaked
-cells. Six columns are cell for cell identical to the committed 2026-09-06
-table; every changed cell is in fstar, 34 of them. Counts (real VERIFIED,
-twin REFUTED) per column, and how many tasks count in how many columns:
+Third sweep of the day over the same 159 lifted tasks: 32 jobs, 751 s, 0
+flaked cells. The morning run (d3d88e3) closed fstar's Error-19 door and
+found six REFUTED cells with no failing proof behind them; this run has the
+two instrument changes that answer it, both regression-checked on the
+committed 77-cell matrix (`AGREEMENT.md` identical modulo its header,
+twice). Counts (real VERIFIED, twin REFUTED) per column, and how many tasks
+count in how many columns:
 
 | kernel | counts of 159 | largest non-counting classes |
 |---|---|---|
-| dafny | 132 | 17 verified/unproved (preservation twins carry no certificate), 5 verified/verified, 5 no-twin |
+| dafny | 129 | 17 verified/unproved (preservation twins carry no certificate), 5 verified/verified, 5 no-twin, 3 verified/malformed |
 | spark | 100 | 16 abstain, 9 timeout/refuted, 7 verified/timeout, 6 timeout/timeout, 5 unproved/refuted |
 | verus | 92 | 34 unproved/refuted, 10 unproved/unproved, 5 verified/unproved, 5 no-twin, 5 verified/verified |
-| fstar | 90 | 18 unproved/refuted, 15 malformed/refuted, 10 verified/unproved, 8 abstain, 5 no-twin, 5 unproved/unproved, 4 malformed/malformed, 2 verified/malformed, 2 verified/verified |
-| lean | 80 | 26 abstain, 24 unproved/refuted, 15 unproved/unproved, 9 verified/unproved, 5 no-twin |
-| rocq | 77 | 47 unproved/refuted, 8 verified/unproved, 8 unproved/unproved, 7 abstain, 5 no-twin |
-| framac | 62 | 58 verified/timeout, 15 timeout/timeout, 6 verified/verified, 5 no-twin, 3 verified/vacuous |
+| fstar | 91 | 18 unproved/refuted, 15 malformed/refuted, 10 verified/unproved, 8 abstain, 5 no-twin, 5 unproved/unproved, 4 malformed/malformed, 2 verified/verified, 1 verified/malformed |
+| lean | 81 | 26 abstain, 24 unproved/refuted, 15 unproved/unproved, 8 verified/unproved, 5 no-twin |
+| rocq | 79 | 48 unproved/refuted, 7 abstain, 7 unproved/unproved, 6 verified/unproved, 5 no-twin |
+| framac | 63 | 58 verified/timeout, 15 timeout/timeout, 5 verified/verified, 5 no-twin, 3 verified/vacuous |
 
 | columns counting | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 |---|---|---|---|---|---|---|---|---|
-| tasks | 30 | 32 | 24 | 12 | 10 | 4 | 25 | 22 |
+| tasks | 30 | 34 | 23 | 12 | 7 | 6 | 25 | 22 |
 
-So 30 of 159 lifted tasks meet the seven-column bar, the same 30 as before
-the door closed. Of the 26 lifted MBPP-DFY tasks (dafny_synthesis_task_id_*),
-5 do; the 1.0 coverage bar is 82 of that family's 164.
+So 30 of 159 lifted tasks meet the seven-column bar, the same 30 as this
+morning and as 2026-09-06. Of the 26 lifted MBPP-DFY tasks
+(dafny_synthesis_task_id_*), 5 do; the 1.0 coverage bar is 82 of that
+family's 164.
 
-**What closing fstar's door cost, cell by cell.** The column went from 100
-to 90, and the 34 changed cells sort into four classes:
+**The two instrument changes, and what each moved.**
 
-- 18 refuted/refuted became unproved/refuted: reals fstar cannot prove,
-  every one a nat-typed loop, whose twins now refute through a discharged
-  certificate. Incompleteness reads as incompleteness, and the refutation
-  beside it is earned.
-- 5 refuted/refuted became unproved/unproved: the same kind of real, whose
-  twin carries a preservation witness, which the protocol does not
-  certificate.
-- 10 verified/refuted became verified/unproved: twins that refuted on Error
-  19 alone and carry no certificate. 7 are preservation witnesses; 3 are
-  value witnesses the builder refuses, find (compare-flip, a witness that
-  does not falsify ensures), kthElement (off-by-one, the twin is undefined
-  at the witness), minUnderSpec (collapse-if+nonrefuting).
-- 1 verified/verified became verified/malformed: slow_max, read below.
+1. The exit witness is judged at the return. `interp.exit_env` runs the
+   loop-exit state through the statements that follow the loop before
+   `ensures` is read, in the witness search (`invariant_witness`) and in
+   the dafny, verus, spark and fstar certificate builders, which now
+   restate the same obligation lean and rocq already did. A loop under an
+   enclosing while has no straight run to the return and yields no exit
+   witness; a tail loop runs nothing and its formula is byte-identical to
+   before, which is why the committed matrix did not move. Re-selecting
+   every lifted twin against the morning's log: 151 identical, 5 refused
+   as before, 3 changed, exactly the three top-level loops with code after
+   them. slow_max's exit witness no longer witnesses (its return is
+   assigned after the loop and satisfies the spec), so the ladder moved to
+   collapse-if with the value witness a=1, b=0 (real 1, twin 0); findMax
+   and ex06_solution gcdI moved to invariant-drop#1, a different dropped
+   invariant, with exit witnesses that hold at the return. The four exit
+   witnesses under an `if` held as they were.
+2. The coherence gate, fstar's rule, in dafny, verus, spark and lean: a
+   certificate on a file whose main run verified reads MALFORMED, never
+   REFUTED, because the kernel's proof of the twin and a claim that the
+   twin's theorem fails at the witness cannot both be evidence. Measured
+   with a true ground certificate planted in the verified abs real:
+   MALFORMED in all four columns, the abs twin still REFUTED, the real
+   still VERIFIED. Dafny's gate also demands exit 0 and no "out of
+   resource" line: its tally does not count a starved method as an error,
+   and on the first attempt three square twins (square, sqare, sqare2)
+   read "1 verified, 0 errors, 1 out of resource", the lemma verified and
+   the method not, and lost honest refutations to the gate on the counts
+   alone. They keep verified/refuted here: a starved main run plus an
+   accepted certificate is the protocol's own door (TIMEOUT plus
+   certificate), as in fstar.
 
-Of fstar's 146 twins, 126 carry a certificate. The 20 that do not: 12
-preservation witnesses, the 3 value witnesses above, and the 5
-collapse-if+nonrefuting twins of the 12.3 class (medianOfThree, training1
-abs and max, aula2 m4 and max), whose witness shows a different value and
-not a falsified ensures. Ceiling for the column under this protocol: 126.
+Net against the morning table, 9 cells:
 
-**The finding this run made: REFUTED with no failing proof behind it.**
-slow_max's fstar cell reads verified/malformed because the adapter found a
-certificate on a twin file that verifies, which it refuses to call a
-refutation (`verifiers/fstar.py`, the certificate gate). The same twin
-reads verified/refuted in dafny, verus and spark. Measured the same day:
-for every cell reading verified/refuted in dafny, verus, spark, lean and
-rocq (481 cells), the same twin body was lowered with no witness, so no
-certificate, and run through the column's own adapter. A twin the kernel
-VERIFIES on its own is a REFUTED the certificate minted alone:
+- dafny, 3 verified/refuted to verified/malformed: downWhileGreater and
+  the two mult tasks. Each drops a bound invariant (`i >= 0`, `m >= 0`)
+  that dafny infers back from the guard and the body, so dafny proves the
+  twin and the witness state (i=-1, m=-1), admissible under the havoc
+  rule `_Admissible` models, is one dafny never admits. verus and spark
+  have no such inference, fail these twins, and keep verified/refuted,
+  which is honest in those columns. The three cells are a reading class
+  beside 12.3's verified twins, not a count.
+- slow_max, on its new value witness: framac verified/verified to
+  verified/refuted (its own countermodel), rocq verified/unproved to
+  verified/refuted, fstar verified/malformed to verified/refuted. dafny,
+  verus and spark read verified/refuted as before, now on a witness that
+  refutes. lean unproved/unproved, unchanged.
+- findMax: lean and rocq verified/unproved to verified/refuted on the
+  new twin. gcdI: rocq unproved/unproved to unproved/refuted.
 
-| column | verified / refuted cells | twin verifies without its certificate |
-|---|---|---|
-| dafny | 132 | 4: slow_max, downWhileGreater, aula_2_ex1 mult, invariantes_multiplicador mult |
-| verus | 92 | 1: slow_max |
-| spark | 100 | 1: slow_max |
-| lean | 80 | 0 |
-| rocq | 77 | 0 |
+**What still stands**, in the order it costs:
 
-Two mechanisms, both on the exit-witness protocol:
-
-1. Code after the loop. slow_max assigns `z` again after its loop. The exit
-   witness (a=0, b=1, x_v=0, y_v=1, z=0) is the loop-exit state, and the
-   certificate states not-ensures at that z, but the method returns
-   z := b = 1, which satisfies the spec. `interp.invariant_witness`
-   evaluates ensures on the loop state, and the dafny, verus, spark and
-   fstar certificate builders restate exactly that. lean and rocq execute
-   the suffix first (`lower_lean.py` near line 1212, `lower_rocq._loop_cert`)
-   and read unproved here, which is the honest cell. The corpus holds 7
-   exit witnesses on loops that are not the method's last statement: 3 at
-   top level (slow_max, findMax, ex06_solution gcdI) and 4 under an `if`
-   (a1, uiowa computeFib, fibonacci2, vsi b1 add). Only slow_max's twin is
-   a correct program; the other 6 twins fail their proofs, so their cells
-   happen to be right while the certificate's obligation is the wrong one.
-2. The kernel's own invariant inference. downWhileGreater and the two mult
-   tasks drop a bound invariant (`i >= 0`, `m >= 0`). The witness state
-   (i=-1; m=-1) satisfies the surviving invariants and the negated guard
-   and falsifies ensures, so a kernel with only the havoc rule must refute
-   the twin, and verus and spark do. Dafny infers the dropped bound from
-   the guard and the body and proves the twin. `_Admissible` models the
-   havoc rule (SPEC.md gate 2), the weakest rule, and dafny's is stronger.
-
-Both are the class ROADMAP 10.7 purged, incompleteness sold as refutation
-turned around: a proof the kernel completes, sold as a refutation. They
-arrive from the witness side, and the adapters let them through because
-they mint REFUTED from the certificate alone: dafny's main run on slow_max's
-twin reads "2 verified, 0 errors" and the cell still reads refuted. fstar's
-rule is the closure the other columns lack: a certificate on a file that
-verifies reads MALFORMED, and REFUTED needs the main run to have failed
-(UNPROVED or TIMEOUT) plus an accepted certificate. With the six cells
-removed, dafny counts 128, verus 91, spark 99, and the seven-column count
-stays 30 (none of the four tasks counted in all seven). What does not
-change: the 52 exit witnesses on top-level tail loops, where the loop state
-is the return state and the formula is the kernel's own exit obligation.
-
-**What still stands from the 2026-09-06 reading**, in the order it costs:
-
-1. framac: 58 verified/timeout, the invariant-drop twins whose witness is a
-   loop-exit state, where WP's step budget fires before a countermodel
+1. framac: 58 verified/timeout, the invariant-drop twins whose witness is
+   a loop-exit state, where WP's step budget fires before a countermodel
    (ROADMAP 10.7 named this on the committed corpus); 3 verified/vacuous
    on countToAndReturnN, extra_pow and extra_sum, where its vacuity probe
    fires on the twin and wants reading.
-2. fstar: 19 malformed reals (15 malformed/refuted, 4 malformed/malformed),
+2. Preservation witnesses carry no certificate in any column: dafny's 17
+   verified/unproved, fstar's 12 uncertificated twins, and their share of
+   verus's, lean's and rocq's verified/unproved (LIFTER-DESIGN.md section
+   13 predicted this). One certificate shape would earn those cells back
+   in seven columns at once; the largest single lever in this table.
+3. fstar: 19 malformed reals (15 malformed/refuted, 4 malformed/malformed),
    identifiers that are F* keywords or lack the lowercase initial (`val`),
    and shapes its lowering does not have (a loop under a conditional,
    nested loops: 8 abstentions). 13.2.
-3. verus (34) and rocq (47) fail to prove reals that dafny proves,
-   nonlinear arithmetic and the nat invariants; honest incompleteness, the
-   cost per column of proving without hints (decision 8). fstar's 18 now
-   sit in the same class.
-4. Preservation witnesses carry no certificate in any column: dafny's 17
-   verified/unproved, fstar's 12 uncertificated twins (LIFTER-DESIGN.md
-   section 13 predicted this). A preservation certificate would earn those
-   cells back in every column at once.
+4. verus (34), rocq (48) and fstar (18) fail to prove reals that dafny
+   proves, nonlinear arithmetic and the nat invariants; honest
+   incompleteness, the cost per column of proving without hints
+   (decision 8).
 5. dafny: 5 twins VERIFIED (medianOfThree, training1 abs and max, aula2 m4
-   and max), the 12.3 class, each either a decorative spec or a twin that
-   does not differ, to be read.
+   and max), the 12.3 class, and now 3 twins MALFORMED by the coherence
+   gate, the inference class above; both are witnesses that do not
+   witness for this kernel, to be read together under 12.3 and 13.3.
 6. lean abstains on 26 (bool returns, else-less ifs, nested loops) and
    spark on 16; lowering gaps, not verdicts.
 

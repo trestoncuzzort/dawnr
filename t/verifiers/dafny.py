@@ -10,7 +10,11 @@ applies it:
                                       any warning: dafny's default is
                                       --allow-warnings false, so a warning
                                       alone ends the run at exit 2)
-    t_refutation_certificate named -> never VERIFIED. REFUTED if and only
+    t_refutation_certificate named -> never VERIFIED. MALFORMED when the
+                                      main run itself verified: nothing
+                                      failed for a certificate to explain
+                                      (the coherence gate, 2026-09-07).
+                                      Otherwise REFUTED if and only
                                       if the isolated certificate run below
                                       is accepted; otherwise TIMEOUT when
                                       the main run said "out of resource"
@@ -158,8 +162,10 @@ lemma in a trait or class).
 Two closures make the name safe: a file carrying the certificate name (raw
 NFKC-normalized text, comments included) can NEVER mint VERIFIED, so
 planting it in a real program only demotes that program (measured: the
-honest lemma copied into a verified real program reads REFUTED, never
-VERIFIED); and a certificate the kernel rejects or cannot read mints
+honest lemma copied into a verified real program reads MALFORMED, never
+VERIFIED; it read REFUTED until the coherence gate of 2026-09-07, which
+refuses a certificate on a file the main run verified); and a certificate
+the kernel rejects or cannot read mints
 UNPROVED, never REFUTED (measured on the abs twin: `ensures 1 == 2` reads
 UNPROVED; every requires form named above reads UNPROVED, `requires false`
 with the honest ensures at exit 2 of the isolated run and the rest by the
@@ -594,6 +600,30 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
                 err = "verified but warned, not counted: " + diag[-200:]
         else:
             outcome = Outcome.MALFORMED
+    elif (cert_present and p.returncode == 0 and not oor and fin is not None
+          and n_errors == 0 and n_verified >= 1):
+        # THE COHERENCE GATE (2026-09-07, fstar's rule adopted). The main
+        # run discharged every obligation in the file, the twin's own
+        # included. A certificate claims the twin's theorem is false at the
+        # witness; a file that also verifies is incoherent, and the claim
+        # is evidence of nothing. Until this gate the branch below minted
+        # REFUTED here from the lemma alone. Measured on the 159 lifted
+        # tasks (ROADMAP 12.5): four cells read REFUTED on a twin dafny
+        # proves, slow_max (an exit witness on a loop the method assigns
+        # after) and downWhileGreater plus two mult tasks (a dropped bound
+        # invariant dafny's own inference recovers, which _Admissible's
+        # havoc rule does not model).
+        #
+        # Exit 0 and no "out of resource" are part of the test, not
+        # decoration: dafny's tally does not count a starved method as an
+        # error, so "1 verified, 0 errors, 1 out of resource" (measured on
+        # three lifted square twins the same day: the lemma verified, the
+        # method did not) read as a verified file to a gate on the counts
+        # alone and demoted three honest refutations to MALFORMED.
+        outcome = Outcome.MALFORMED
+        err = ("certificate present on a file that verified: the kernel "
+               "proved the twin, so the witness refutes nothing")
+        cert["coherence"] = "file verified"
     elif cert_present:
         # Certificate discipline (module docstring): never VERIFIED; the
         # kernel's acceptance of the one declared lemma, in its own isolated

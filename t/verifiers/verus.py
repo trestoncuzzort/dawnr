@@ -134,7 +134,11 @@ REFUTED if and only if the kernel both DECLARED that goal (its own
 func-details listing from the first run, never a regex alone) and
 ACCEPTED it in a second, targeted run (--verify-root --verify-function,
 errors == 0 and verified >= 1; measured: the targeted run carries no
-"success" field). Two closures make the name safe: a file carrying the
+"success" field), and the main run FAILED: a file whose every goal
+discharged, the certificate's included, reads MALFORMED (the coherence
+gate, 2026-09-07, fstar's rule), because a claim that the twin's theorem
+is false at the witness cannot sit beside the kernel's proof of that
+theorem. Two closures make the name safe: a file carrying the
 certificate name can NEVER mint VERIFIED, so planting it in a real
 program only demotes that program; and a certificate the kernel rejects
 or cannot read mints UNPROVED, never REFUTED. All demotion gates
@@ -717,6 +721,21 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
             err = "vacuity probe gave no reading: " + probe.get("why", "?")
         else:
             outcome = Outcome.VERIFIED
+    elif (cert_present and vr.get("errors", 1) == 0 and vr.get("success")
+          and verified >= 1):
+        # THE COHERENCE GATE (2026-09-07, fstar's rule adopted): every goal
+        # in the file discharged, the twin's own included, so a certificate
+        # claiming the twin's theorem false at the witness is incoherent
+        # with the kernel's own verdict and evidence of nothing. Until this
+        # gate the branch below minted REFUTED here from the goal alone.
+        # Measured on the 159 lifted tasks (ROADMAP 12.5): slow_max read
+        # REFUTED on a twin verus proves, an exit witness on a loop the
+        # method assigns after.
+        outcome = Outcome.MALFORMED
+        err = ("certificate present on a file that verified: the kernel "
+               "proved the twin, so the witness refutes nothing")
+        cert = {"present": True, "declared_to_kernel": cert_declared,
+                "coherence": "file verified"}
     elif cert_present:
         # Certificate discipline (module docstring): never VERIFIED; the
         # kernel's acceptance of the one declared goal is the only thing
