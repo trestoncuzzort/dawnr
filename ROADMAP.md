@@ -680,12 +680,42 @@ lemma. Measured: all 11 committed twins refute through it, the 77-cell
 matrix is IDENTICAL to the committed one (zero cells changed, so the door
 closed at no cost in flips), and all four decoys behave (a real carrying a
 true certificate reads MALFORMED, a twin carrying a false one reads
-UNPROVED). Next: re-run the 159-task sweep, which is now a mechanical
-re-measurement rather than a design question, and only then is the
-seven-column count a number. Also named: 19 fstar malformed reals and 8 abstentions (13.2), 58
-framac exit-witness timeouts (10.7's residual), 17 dafny preservation
-twins without certificates, 5 dafny verified twins for 12.3, 26 lean and
-16 spark abstentions.
+UNPROVED). Re-run below.
+
+**RE-MEASURED 2026-09-07, and the re-run found the next hurdle.** The
+sweep re-run with the door closed (same 159 tasks, 48 jobs, 607 s, 0
+flaked cells): fstar 100 to 90, the other six columns cell for cell
+identical, 30 of 159 in all seven unchanged, 5 of the 26 MBPP-DFY
+unchanged. The 34 fstar cells sort into 18 unproved/refuted
+(incompleteness now read as incompleteness, the twin refuted through the
+certificate), 5 unproved/unproved and 10 verified/unproved
+(uncertificated preservation and non-refuting witnesses), and 1
+verified/malformed, slow_max, which is the hurdle: a certificate on a twin
+file fstar VERIFIES. Measured across the five other certificate columns by
+lowering every verified/refuted twin with no witness and running it
+through its own adapter (481 cells): 6 twins the kernel proves on its own
+read REFUTED, 4 in dafny, 1 in verus, 1 in spark, 0 in lean and rocq. Two
+mechanisms: (1) code after the loop, where the exit witness is the
+loop-exit state but the method assigns the return again (slow_max; 7 such
+witnesses in the corpus, 6 of whose twins fail anyway), because
+`interp.invariant_witness` and the dafny, verus, spark and fstar
+certificate builders evaluate ensures on the loop state while lean and
+rocq execute the suffix first; (2) dafny's own invariant inference
+recovering a dropped bound invariant (downWhileGreater, two mult tasks),
+which `_Admissible`'s havoc rule does not model. The adapters let both
+through because they mint REFUTED from the certificate alone; fstar's gate
+(a certificate on a file that verifies reads MALFORMED, REFUTED only from
+UNPROVED or TIMEOUT plus an accepted certificate) is the closure. With the
+six cells out: dafny 128, verus 91, spark 99, seven-column count 30.
+Reading: `t/COVERAGE-lifted-785.md`. Next: the witness search and the
+four certificate builders evaluate ensures after the statements that
+follow the loop and refuse exit witnesses under an enclosing loop; dafny,
+verus, spark and lean take fstar's gate; the committed 77-cell matrix
+must come back identical; then the sweep re-runs and the counts are read.
+Also named, unchanged: 19 fstar malformed reals and 8 abstentions (13.2),
+58 framac exit-witness timeouts (10.7's residual), 17 dafny and 12 fstar
+preservation twins without certificates, 5 dafny verified twins for 12.3,
+26 lean and 16 spark abstentions.
 
 ### 12.6 The spec experiment
 
