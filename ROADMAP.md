@@ -1154,7 +1154,7 @@ through nf4, the bare base through the same transformers path is its own
 column, and the training effect is read against it. `loop_curve.py` writes
 `LOOP-CURVE.md`, one column per round, one row per stage, over the pool
 and over the 322 held out. On the held-out 322: well-formed 25 (ollama), 41
-(same-path control), 45 (round 1); tests pass 5, 7, 8. The kernel rows for the control and round 1 follow in the next commit, from the queued run. The
+(same-path control), 45 (round 1); tests pass 5, 7, 8. Through the kernels, on the same 322: verified with a refuted twin in some column 6 (ollama), 16 (control), 18 (round 1); in all seven 2, 1, 1; some column and passing tests 3, 4, 4; all seven and passing tests 0, 0, 0. The
 inference path moved well-formedness more than one round of DPO on 189
 pairs did, which is the first fact of the curve and the reason the control
 column exists. Next hurdle on the curve: round 2's positives from round

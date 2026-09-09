@@ -15,11 +15,11 @@ them touched.
 | replies | 368 | 368 | 368 |
 | well-formed | 51 | 66 | 72 |
 | tests pass | 23 | 22 | 25 |
-| reached the kernels | 51 | pending | pending |
-| verified with a refuted twin, some column | 28 | pending | pending |
-| verified with a refuted twin, all seven | 3 | pending | pending |
-| some column and tests pass | 20 | pending | pending |
-| all seven and tests pass | 1 | pending | pending |
+| reached the kernels | 51 | 66 | 72 |
+| verified with a refuted twin, some column | 28 | 39 | 44 |
+| verified with a refuted twin, all seven | 3 | 3 | 2 |
+| some column and tests pass | 20 | 19 | 21 |
+| all seven and tests pass | 1 | 2 | 1 |
 
 Refusals at extract, by cause:
 
@@ -33,13 +33,13 @@ Per kernel, verified with a refuted twin (over the well-formed tasks):
 
 | kernel | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 |
 |---|---:|---:|---:|
-| dafny | 28 | pending | pending |
-| framac | 27 | pending | pending |
-| fstar | 9 | pending | pending |
-| lean | 23 | pending | pending |
-| rocq | 27 | pending | pending |
-| spark | 26 | pending | pending |
-| verus | 27 | pending | pending |
+| dafny | 28 | 39 | 44 |
+| framac | 27 | 39 | 44 |
+| fstar | 9 | 11 | 9 |
+| lean | 23 | 36 | 40 |
+| rocq | 27 | 39 | 44 |
+| spark | 26 | 34 | 40 |
+| verus | 27 | 39 | 44 |
 
 Most frequent refusal texts (line numbers folded):
 
@@ -54,11 +54,11 @@ Most frequent refusal texts (line numbers folded):
 | replies | 322 | 322 | 322 |
 | well-formed | 25 | 41 | 45 |
 | tests pass | 5 | 7 | 8 |
-| reached the kernels | 25 | pending | pending |
-| verified with a refuted twin, some column | 6 | pending | pending |
-| verified with a refuted twin, all seven | 2 | pending | pending |
-| some column and tests pass | 3 | pending | pending |
-| all seven and tests pass | 0 | pending | pending |
+| reached the kernels | 25 | 41 | 45 |
+| verified with a refuted twin, some column | 6 | 16 | 18 |
+| verified with a refuted twin, all seven | 2 | 1 | 1 |
+| some column and tests pass | 3 | 4 | 4 |
+| all seven and tests pass | 0 | 0 | 0 |
 
 Refusals at extract, by cause:
 
@@ -75,11 +75,11 @@ Refusals at extract, by cause:
 | replies | 46 | 46 | 46 |
 | well-formed | 26 | 25 | 27 |
 | tests pass | 18 | 15 | 17 |
-| reached the kernels | 26 | pending | pending |
-| verified with a refuted twin, some column | 22 | pending | pending |
-| verified with a refuted twin, all seven | 1 | pending | pending |
-| some column and tests pass | 17 | pending | pending |
-| all seven and tests pass | 1 | pending | pending |
+| reached the kernels | 26 | 25 | 27 |
+| verified with a refuted twin, some column | 22 | 23 | 26 |
+| verified with a refuted twin, all seven | 1 | 2 | 1 |
+| some column and tests pass | 17 | 15 | 17 |
+| all seven and tests pass | 1 | 2 | 1 |
 
 Refusals at extract, by cause:
 
