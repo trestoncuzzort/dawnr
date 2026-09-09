@@ -20,6 +20,49 @@ built on.
 
 ---
 
+## Where we are (2026-09-09)
+
+Measured, not intended; the instruments that produced each number are in
+the repo beside it.
+
+- **t's fragment**: integers, booleans, sequences of integers as values
+  (indexing, length, functional update, `seq(n, v)`, extensional equality),
+  bounded quantifiers, `if`/`else`, loops with invariants and a `decreases`,
+  spec functions with recursion, Euclidean `/` and `%`, early `return`. The
+  next construct is in progress: sequence literals, concatenation and slices
+  (`t/SPEC.md`, "Sequences: literals, concatenation, slices"), the substrate
+  for strings, which both censuses rank first.
+- **Seven kernels grade every task, real and twin**: Dafny, Verus, SPARK,
+  Frama-C, Lean 4, Rocq and F\*. The 17 committed tasks read
+  verified/refuted in all seven columns except `reverse` in six
+  (`t/AGREEMENT.md`).
+- **The Dafny lifter and the sweep**: 24 decision rows
+  (`t/LIFTER-DECISIONS.md`), 204 DafnyBench methods lifted, checked by lemma
+  and by differential run, and swept through all seven kernels: 42 count in
+  all seven columns, 61 in six (`t/COVERAGE-lifted-785.md`). The lexical
+  census puts 190 of 643 gradable DafnyBench programs in the fragment
+  (`t/COVERAGE-dafnybench.md`); on the LLM-shaped MBPP-DFY subset the census
+  says 72 of 164 and the lifter lifts 42.
+- **The corpus t is aimed at**: `nl/`, 24,748 natural-language problems with
+  tests (MBPP, HumanEval, APPS, CodeContests). Its census
+  (`t/COVERAGE-nl.md`) reads 4,239 function-shaped problems, 449 in the
+  fragment today, 20,509 stdin-shaped, and strings as the top gap (18,361).
+  No coverage number over it counts until the lifter is shown faithful on the
+  simplest tasks (`nl/FIDELITY.md`).
+- **The training loop, forge's track (ROADMAP WS-18)**: a model writes a t
+  task from the problem text, the kernels grade it, the refuted twin with its
+  witness is the bug it trains on. Built and measured once at 1.5B
+  (`t/LOOP-CURVE.md`): on 322 held-out MBPP problems, answers verified with a
+  refuted twin in some column 6 (round 0 through ollama), 16 (the same base
+  through the transformers path), 18 (after one round of DPO on 189 twin
+  pairs). The inference path moved more than the training round did, which
+  is why the control column exists. Round 2 samples eight answers per train
+  problem with the tests in the reward.
+- **tup 0.1 boots** (above); the x86_64 build waits on a KVM group
+  membership.
+
+---
+
 ## The two halves
 
 ### tup the distribution
@@ -254,10 +297,11 @@ distro and the language are where the work goes next.
   asks the kernel (`--warn-contradictory-assumptions`) instead of grepping
   for words, and the remaining vacuity checks belong in the lowerings, which
   hold the AST, not in the adapters, which hold only text.
-- **t is still small on purpose:** integers, sequences, loops with
-  invariants, recursion via spec funs; no heap, no floats, no concurrency,
-  two mutation operators. Expressiveness gates open with measurements, not
-  intentions.
+- **t is still small on purpose:** integers, sequences of integers, loops
+  with invariants, recursion via spec funs, early return; no heap, no
+  floats, no strings yet, no concurrency; seven mutation operators plus the
+  invariant drop, each refutation earned at a witness. Expressiveness gates
+  open with measurements, not intentions.
 
 ## Layout
 
@@ -265,6 +309,7 @@ distro and the language are where the work goes next.
 |---|---|
 | [`tup/`](tup/) | the distribution's build system, overrides, receipts |
 | [`t/`](t/) | the language, its lowerings, and its verifier adapters |
+| [`nl/`](nl/) | 24,748 natural-language problems with tests, the corpus t is aimed at |
 | [`locallm/`](locallm/) | train a model from scratch on your own machine (MIT) |
 | [`ROADMAP.md`](ROADMAP.md) | what happens next, adversarially reviewed |
 | [`forge/`](forge/) | the research pipeline and its instruments |
