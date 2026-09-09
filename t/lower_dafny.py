@@ -45,6 +45,15 @@ v1 mapping, gate by gate (SPEC.md):
     nonzero obligation is discharged the same way `at`'s range check is:
     Dafny's own well-formedness checking rejects `/` or `%` by a possibly-
     zero divisor unless guarded, nothing here totalizes it.
+  early exit (added 2026-09-08, SPEC.md "Early exit (v1)"): `return Expr;`
+    lowers to `r := Expr; return;` (Dafny takes no expression on `return`
+    once the method has an out-parameter). Dafny checks the method's
+    `ensures` at every `return`, and does not ask for the loop's invariant
+    there, which is exactly the rule SPEC.md states, so `stmts` needs
+    nothing beyond the two-line form: no separate exit-path bookkeeping,
+    no invariant re-check to suppress. Nothing else in this file walks
+    statement kinds exhaustively (`_twin_loop` and interp.py's `exit_env`
+    helper only look for `while`/`if`), so `return` needed no other case.
 
 Stdlib only, same reason as dataset_gate.py.
 """
@@ -239,6 +248,23 @@ def stmts(body: list, indent: str, ctx: _Ctx) -> str:
             out.extend(indent + p for p in pre)
             out.append(f"{indent}var {d['name']}: {TYPES[d['type']]} "
                        f":= {rhs};")
+        elif "return" in s:
+            # Early exit (v1, SPEC.md, added 2026-09-08): `return Expr;`
+            # assigns Expr to the out-parameter and ends the method right
+            # there. Dafny's `return` takes no expression when the method
+            # has out-parameters (they are ordinary locals by then), so
+            # this lowers to the assignment followed by a bare `return;`.
+            # Dafny checks every `ensures` at each `return`, exactly the
+            # obligation SPEC.md states, and does NOT ask for the loop's
+            # invariant at a `return` inside it: no lowering is needed to
+            # get that for free, the kernel's own return rule already
+            # skips it.
+            name, e = s["return"]
+            pre = []
+            rhs = body_expr(e, ctx, pre)
+            out.extend(indent + p for p in pre)
+            out.append(f"{indent}{name} := {rhs};")
+            out.append(f"{indent}return;")
         elif "if" in s:
             c = s["if"]
             pre = []

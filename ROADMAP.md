@@ -27,7 +27,9 @@ anchor, a version matrix, a third ruler), and a v16 of the paper.
 On 2026-09-02 the focus moved to t and tup only; `forge/` and `locallm/`
 are out of scope and nothing above is scheduled. On 2026-09-05 the paper
 was re-decided as a t-first systems paper, with the DPO work reduced to one
-paragraph citing v15 and tup to one paragraph. Two things from that era
+paragraph citing v15 and tup to one paragraph; its related-work landscape
+and gap analysis, 232 candidates found and the nearest checked by hand, is
+`t/RELATED-WORK.md` (2026-09-09). Two things from that era
 still bind this file: the receipt discipline (a number is published beside
 the instrument that produced it, and the instrument is pinned), and the
 standing lesson that plans are claims and are checked against the bytes
@@ -848,36 +850,106 @@ case split); lean's probe `x % y >= 0` under `x < 0, y > 0` unproved;
 `if` without `else` is now the largest model-side loss. Surface: `/` and
 `%` at the `*` precedence, round trip 1549 of 1549 after the fuzz family settled.
 
-**early-exit: measured and stated 2026-09-08; the core landed, the seven
-lowerings are the open work.** Measured first: 138 of 785 DafnyBench
-programs return early, but only 4 have it as their sole gap (9 with
-div-mod), so on DafnyBench the construct unlocks almost nothing today; its
-weight is the Python side, where it is the top gap of MBPP's reference
-solutions (62 of 974) and the shape a model writes for `is_prime` and
-every search. SPEC.md "Early exit (v1)": `{"return": [ID, Expr]}`, written
-`return Expr;`, names the task's return as `assign` does, assigns and ends
-the task; a statement after it in its block is refused as unreachable;
-inside a loop it owes the ensures, not the invariant. Landed: the
-interpreter (`exec_body` returns a flag the nested calls propagate),
-`check_wf` (typing, the return name, unreachability), the notation (parse,
-print, round trip 1549 of 1549), the twin walker (`_exprs` yields the
-returned expression). No lowering emits it: every column raises on the
-statement and a task with `return` reads error or abstain, so the
-committed corpus carries none yet. The plan for the fan-out, same shape as
-div-mod's: dafny, verus, spark and framac emit their native return
-statements (Dafny checks ensures at each return and needs no invariant
-there; verus and C likewise; SPARK `return` inside a function body);
-lean, rocq and fstar change their loop encoding so the recursive loop
-function yields either the loop state or an exit value, with the
-invariant proved only on the continue path and the ensures on both; the
-lifter maps Dafny's mid-body `return` (lift_classify's early-exit
-refusal, tail returns already rewritten); a fuzz family of search loops
-with a return, and probes for a return inside a loop and for the
-unreachable-statement rule; two committed tasks, `first_even` (return
-inside a loop over a seq, uses `%`) and `is_prime` (return inside a loop
-with div-mod), so the flip table carries both new constructs at once.
-DONE WHEN as stated above; the sweep's numbers move only when the lifter
-maps the 4 plus whatever arrays and div-mod free later.
+**early-exit LANDED 2026-09-09; the adversarial reproduction is the open
+clause, and spark's two reals are the named residual.** SPEC.md "Early exit
+(v1)": `{"return": [ID, Expr]}`, written `return Expr;`, names the task's
+return as `assign` does, assigns it and ends the task; a statement after it
+in its block is refused as unreachable; inside a loop it owes the ensures,
+not the invariant. Measured first, and still the reading: 138 of 785
+DafnyBench programs return early, 4 as their sole gap (9 with div-mod); the
+construct's weight is the Python side, the top gap of MBPP's reference
+solutions (62 of 974). Core: interp's `exec_body` returns a flag the nested
+`if` and `while` propagate; `check_wf` types the expression, pins the name
+and refuses the unreachable statement; the notation parses and prints it,
+round trip 1582 of 1582 (1604 seen, 22 rejected); the twin walker mutates
+the returned expression. Seven lowerings, three native and four by
+encoding, each file carrying a dated note with its measurements: dafny
+emits `r := Expr; return;` (Dafny checks the ensures at every return and
+owes no invariant there); verus its own `return Expr;`, and where the loop
+is its recursive helper the helper's result becomes a flagged triple
+(returned, value, state) with the ensures proved on the returning arm;
+framac a real C `return`, owing the definedness asserts an assignment's
+right-hand side owes, WP proving the ensures at every exit and the
+certificate replay stopping at the return; spark cannot emit `return` at
+all (everything its lowering writes is an expression function in a package
+spec, and gnatprove refuses a subprogram body there, measured), so
+`compile_r` threads an (Esc, Ret) pair by substitution, a loop whose body
+can return carries both as fields of its state record and its Post weakens
+to `if Esc then True else invariants and not cond`; fstar's `<name>_loop`
+returns `either ret_t state`, `Inl v` at a return with no invariant owed,
+`Inr s` at a normal exit; lean threads a `returned` path condition through
+its symbolic executor, every later effect guarded by its negation, the loop
+function a nested dependent `if`; rocq's loop `Fixpoint` returns (state,
+bool) and its induction lemma's conclusion becomes a disjunction, the
+returning arm owing the ensures from invariant, guard and branch condition,
+the other the old invariant and frame, with a witness-instantiation tactic
+(`t_go_ext`) confined to return-bearing loops after threading it through
+the shared tactic pushed digit_sum and seq_max past the wall clock. Two
+committed tasks: `first_even` (return inside a loop over a seq, uses `%`)
+and `is_prime` (return false inside a loop, div-mod). The flip table,
+AGREEMENT.md at 15 tasks: the 13 old rows cell for cell as before;
+`first_even` verified/refuted in dafny, verus, lean, rocq and fstar, framac
+verified with its loop-twin timeout, spark timeout on both; `is_prime`
+verified/refuted in dafny, verus, lean and fstar, framac verified/timeout,
+spark real timeout with the twin refuted, rocq unproved on both (the
+return-path obligation is `false = true <-> forall d, 2 <= d < n -> n mod d
+<> 0`, closed only by instantiating the forall at the loop's own `d`, which
+`t_go_ext` does not reach: the honest cell). So spark proves neither real
+at 20000 steps: its substitution encoding is the column's residual and its
+next hurdle. Ground truth: `truth_fuzz.py` 407 tasks, 2842 cells,
+REFUTES-TRUE 0, the one unsound cell framac's spec-fun-body definedness
+gap as in both earlier audits, and cell for cell as the div-mod audit
+except four spark cells that moved from timeout to verified (that
+night's load against the wall backstop), no cell lost; fuzz family `v1exit` (search loops: first index, exists, divisor,
+integer square root; 400 generated instances, 0 check_wf errors, all
+verified under ground truth), 22 drawn tasks plus the 4 probes, 175
+cells at flake 3: 0 disagreements, 0 against ground truth; reals
+verified in dafny 24 of 25, fstar 24, verus 23, lean 23, framac 22, rocq
+21, spark 1 (24 timeouts: the residual above, at scale); the
+integer-square-root shape reads malformed in verus (no trigger can be
+inferred for a quantifier whose only terms are arithmetic, `j * j < n`,
+the same without a return) and in rocq (the return-bearing loop lemma's
+generated proof ends in "No applicable tactic" on the nonlinear ensures,
+an unproved read as malformed, fail closed); the two dafny twins that
+verified are drops of a range invariant the remaining quantified
+invariant carries, harmless mutations. The four probes under run_par: the
+return inside a loop verified/refuted in dafny, verus, lean, rocq and
+fstar, framac verified/timeout, spark timeout/refuted; a return in both
+branches of an `if` with nothing after it verified/refuted in six and
+vacuous in framac (every path returns, the trailing return is dead code,
+WP's smoke test fires and the adapter reads vacuity, fail closed, the
+edge t_div's case split already showed); the false mirror, whose ensures
+claims the found element is positive, verifies nowhere; the
+unreachable-statement probe reads "no twin" under run_par, which grades
+what it is handed, since the refusal lives in `check_wf` ("statement
+after return is unreachable"), which the lifter, the fuzzer and the spec
+experiment call. Lifter: LIFTER-DECISIONS.md row
+21 maps a non-tail `return e;` to the statement and keeps break and
+continue refused; of the 9 candidate programs (4 sole gap plus 5 with
+div-mod), 6 are break or continue, 1 lifts (dafny-workout ex09 ComputeFib,
+staged, so the sweep is 180 tasks), 1 is a bare `return;` with its result
+unassigned on that path (leetcode 0069 sqrt), 1 fails its spec-fun lemma
+(summer-school exercise02 test_prime, `L_fun_divides`). The census
+detector split the same way: `early-exit` now names break and continue
+alone (38 of 785, 6 sole), a non-tail return is the `early-return` burden;
+both census tables regenerated with the current detectors, DafnyBench in
+fragment 77 to 105 of 643 gradable, MBPP-DFY 41 of 164 lexically in
+fragment, the gate order now array, early-exit (break/continue),
+string-char, real. Sweep: `t/COVERAGE-lifted-785.md` at 180 tasks (32 jobs alone, 1783 s,
+0 flaked cells) reads 32 in all seven, as before; the new task counts in
+dafny only; eleven lean abstains became readings, one of them counting, and
+no cell was lost; MBPP-DFY 38 lifted and 7 in all seven, unchanged. The same
+table swept at 96 jobs finished in 1507 s with 9 cells flaked on
+byte-identical sources (spark's and framac's wall backstops under load),
+the measured cost of running the spark column wide; the parallel twin
+ladder inside a cell is the next speed hurdle, since a cell makes six
+sequential kernel calls. The 368 spec-experiment replies
+re-parsed under the grammar with `return`: no count moves (213 fail to
+parse, 85 fail check_wf, 70 well-formed): 12 replies use a return
+statement and every one fails earlier on something else (a second `spec`
+block after the task in 5, `^` in 2, `if` without `else` in 2, Dafny's bare
+`return;` in 2, `[` in a signature in 1), so the construct's value for 12.6
+waits on the next model run.
 
 ### 12.8 Standing items
 

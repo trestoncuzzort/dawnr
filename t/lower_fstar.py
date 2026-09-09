@@ -39,6 +39,32 @@ what is delegated to the kernel and what is refused:
   obligation, discharged by the kernel (measured on the Shape probes,
   2026-08-31).
 
+  EARLY EXIT (2026-09-08). A `return` inside the loop body (SPEC.md "Early
+  exit") makes `<name>_loop`'s result an `either ret_t state_ty`, F*'s
+  builtin sum type, instead of the bare state: `Inl v` when this call
+  returned a value (never recursing further; the loop's invariant is not
+  owed there), or `Inr s` when the guard went false and the loop exited
+  normally with state `s` (invariant and negated guard, unchanged from
+  before early exit existed). The value case's postcondition is literally
+  the task's own `ensures` applied to the returned value, not a formula
+  re-derived here: F*'s VC generator already carries the guard and the
+  returning branch's own condition as hypotheses at that program point
+  (they are the literal `if` nesting the recursive call sits under), so
+  proving `ensures` there is the same kind of obligation the normal exit
+  already discharges from the invariant and the negated guard. `exec_flow`
+  (below `exec_straight`) computes that condition and value once, by
+  symbolic execution parallel to the ordinary per-var if-merge: a `return`
+  is always the last statement of its own block (SPEC.md), so an `if` that
+  returns in one branch only changes what the SIBLINGS after it see, never
+  what came before. A `return` outside any loop lowers the same way, in
+  `gen_fun`: no `either`, just `if <condition> then <value> else
+  <fallthrough>` in the function body. A `return` in a loop's prefix or
+  suffix (not the loop body itself, and not a loop-free body) is not
+  lowered: `exec_straight` abstains rather than drop it, since threading
+  the outcome type there would also condition the loop call itself, which
+  gen_loop does not build; no committed task needs it, both first_even and
+  is_prime put their `return` directly in the loop body.
+
   RECURSION. spec_funs lower to `let rec ... : Tot ... (decreases m)`; a
   self-recursive task lowers to a `let rec` carrying its contract as Pure
   requires/ensures plus the task decreases clause. Self-calls stay in
@@ -350,13 +376,30 @@ def _decls(stmts: list) -> set[str]:
     return out
 
 
-def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict) -> dict:
-    """env maps mutable name -> term (absent = the name itself); local maps
-    locals -> t type. Branch-declared locals do not escape their branch;
-    a mutable first assigned inside a branch still merges."""
+# --------------------------------------------------------------- return ----
+# Early exit (SPEC.md "Early exit", stated 2026-09-08). `exec_flow` is
+# `exec_straight`'s generalisation: it threads a `(retcond, retval)` pair
+# alongside the merged environment, so a `return` can be handled the same
+# way an `if`-merge already is, with no new representation. `retcond` is a
+# bx expression ("false" when no path taken so far returns, "true" when
+# every path does, or an `if`-merge of the two otherwise); `retval` is the
+# value the return statement computed, rendered like any assign's
+# right-hand side, meaningful exactly where `retcond` holds and otherwise a
+# well-typed placeholder (`dummy`) so every branch of every generated `if`
+# still typechecks. A bare `return` is always the LAST statement of its own
+# block (SPEC.md: "no statement of its own block may follow it"), so it
+# never needs to skip over siblings; an `if` that returns in one branch is
+# not necessarily last, so statements after it execute along the
+# non-returning path only, via the recursive call on `stmts[idx + 1:]`.
+def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str):
     env = dict(env)
-    for s in stmts:
-        if "assign" in s:
+    for idx, s in enumerate(stmts):
+        if "return" in s:
+            name, e = s["return"]
+            t = local.get(name) or cx.tys[name]
+            val = cx.bx(e, env, local) if t == "bool" else cx.zx(e, env, local)
+            return env, "true", val
+        elif "assign" in s:
             v, e = s["assign"]
             t = local.get(v) or cx.tys[v]
             env[v] = (cx.bx(e, env, local) if t == "bool"
@@ -371,17 +414,75 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict) -> dict:
         elif "if" in s:
             c = s["if"]
             cb = cx.bx(c["cond"], env, local)
-            env_t = exec_straight(cx, c["then"], env, dict(local))
-            env_e = exec_straight(cx, c["else"], env, dict(local))
+            env_t, rc_t, rv_t = exec_flow(cx, c["then"], env, dict(local), dummy)
+            env_e, rc_e, rv_e = exec_flow(cx, c["else"], env, dict(local), dummy)
             drop = _decls(c["then"]) | _decls(c["else"])
+            merged = {}
             for v in sorted((set(env_t) | set(env_e) | set(env)) - drop):
                 tv, ev = env_t.get(v, v), env_e.get(v, v)
-                env[v] = tv if tv == ev else f"(if {cb} then {tv} else {ev})"
+                merged[v] = tv if tv == ev else f"(if {cb} then {tv} else {ev})"
+            if rc_t == "false" and rc_e == "false":
+                env = merged
+                continue
+            # `rc_e == "false"` (only `then` returns) collapses to `cb`
+            # itself rather than `(if cb then true else false)`, and
+            # likewise the other way; this is the shape both committed
+            # early-exit tasks hit (`if cond { return } else {}`), so it
+            # keeps the emitted term legible instead of double-wrapping.
+            if rc_t == "true" and rc_e == "true":
+                rc_if = "true"
+            elif rc_e == "false":
+                rc_if = cb
+            elif rc_t == "false":
+                rc_if = f"(not {cb})"
+            else:
+                rc_if = f"(if {cb} then {rc_t} else {rc_e})"
+            if rc_e == "false":
+                rv_if = rv_t
+            elif rc_t == "false":
+                rv_if = rv_e
+            elif rv_t == rv_e:
+                rv_if = rv_t
+            else:
+                rv_if = f"(if {cb} then {rv_t} else {rv_e})"
+            rest_env, rc_rest, rv_rest = exec_flow(
+                cx, stmts[idx + 1:], merged, local, dummy)
+            if rc_if == "false":
+                return rest_env, rc_rest, rv_rest
+            if rc_rest == "false":
+                return rest_env, rc_if, rv_if
+            overall_rc = "true" if rc_if == "true" \
+                else f"(if {rc_if} then true else {rc_rest})"
+            overall_rv = rv_if if rv_if == rv_rest \
+                else f"(if {rc_if} then {rv_if} else {rv_rest})"
+            return rest_env, overall_rc, overall_rv
         elif "while" in s:
             raise AssertionError("while must be split out before exec")
         else:
             raise ValueError(f"t -> fstar: no statement {list(s)!r}")
-    return env
+    return env, "false", dummy
+
+
+def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict) -> dict:
+    """env maps mutable name -> term (absent = the name itself); local maps
+    locals -> t type. Branch-declared locals do not escape their branch;
+    a mutable first assigned inside a branch still merges.
+
+    A thin wrapper over `exec_flow` for the call sites that do not carry an
+    outcome type to report a `return` through: a loop's prefix and suffix.
+    SPEC.md lets a `return` appear inside an `if` there too (nothing bars it
+    syntactically as long as it is the last statement of its own branch),
+    but that would require the loop itself, and everything after it in the
+    enclosing block, to run conditionally on "did the prefix already
+    return" -- a shape gen_loop does not build. Abstain rather than drop
+    the return's effect; the two committed early-exit tasks both put their
+    `return` inside the loop body, which `exec_flow` handles directly."""
+    env2, retcond, _ = exec_flow(cx, stmts, env, local, "0")
+    if retcond != "false":
+        raise NotImplementedError(
+            "fstar lowering: a `return` in a loop's prefix or suffix is "
+            "not lowered yet")
+    return env2
 
 
 def loop_assigned(body: list) -> set:
@@ -470,15 +571,28 @@ def task_spec(cx: Ctx, task: dict) -> tuple[str, str]:
 
 def gen_fun(cx: Ctx, task: dict, body: list) -> str:
     """Straight-line/if body, possibly self-recursive (F* checks the
-    decreases measure and applies the contract modularly at self-calls)."""
+    decreases measure and applies the contract modularly at self-calls).
+
+    A `return` outside any loop (SPEC.md "Early exit") is exactly a return
+    inside an `if` in straight-line code here: `exec_flow` reports it as
+    `(retcond, retval)` and the function body becomes
+    `if retcond then retval else <fallthrough>`, with F*'s own VC generator
+    carrying every accumulated branch condition as a hypothesis when it
+    checks the task's `ensures` at `retval`, the same way it already does
+    for the fallthrough value."""
     name = task["name"]
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
     pb, _ = param_binders(task)
     req, ens = task_spec(cx, task)
-    env = exec_straight(cx, body, {ret: "false" if ret_t == "bool" else "0"},
-                        {})
-    expr = env[ret]
+    dummy = "false" if ret_t == "bool" else "0"
+    env, retcond, retval = exec_flow(cx, body, {ret: dummy}, {}, dummy)
+    if retcond == "false":
+        expr = env[ret]
+    elif retcond == "true":
+        expr = retval
+    else:
+        expr = f"(if {retcond} then {retval} else {env[ret]})"
     selfrec = has_self_call(body, name)
     dec = ""
     if selfrec:
@@ -530,42 +644,90 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     dec = cx.zx(w["decreases"], {}, local)
     reqs = [cx.prop(e, {}, {}) for e in task.get("requires", [])]
 
-    step_env = exec_straight(cx, w["body"], {}, dict(local))
+    dummy = "false" if ret_t == "bool" else "0"
+    step_env, body_rc, body_rv = exec_flow(cx, w["body"], {}, dict(local), dummy)
     step = " ".join(step_env.get(v, v) for v in svars)
     env_post = exec_straight(cx, suffix, {}, dict(local))
     result = env_post.get(ret, ret)
 
     post = _conj(invs + [f"(~ {guard_p})"])
     if len(svars) == 1:
-        loop_ty = TY[stys[svars[0]]]
-        loop_ens = f"(fun {svars[0]} -> {post})"
+        state_ty = TY[stys[svars[0]]]
         state_out = svars[0]
-        bind = f"let {svars[0]}"
     else:
-        loop_ty = "(" + " & ".join(TY[stys[v]] for v in svars) + ")"
-        ob = cx.fresh()
-        loop_ens = (f"(fun {ob} -> let ({', '.join(svars)}) = {ob} in "
-                    f"{post})")
+        state_ty = "(" + " & ".join(TY[stys[v]] for v in svars) + ")"
         state_out = "(" + ", ".join(svars) + ")"
-        bind = f"let ({', '.join(svars)})"
 
     init = " ".join(env_pre.get(v, v) for v in svars)
     fbind = "".join(f"let {v} = {env_pre.get(v, v)} in\n  " for v in fvars)
+
+    if body_rc == "false":
+        # No `return` in the loop body: unchanged since before early exit
+        # existed. `state_out` doubles as both the plain recursive result
+        # and, in exec_straight's merged environment, the destructuring
+        # pattern bound by `bind` below.
+        if len(svars) == 1:
+            loop_ens = f"(fun {svars[0]} -> {post})"
+            bind = f"let {svars[0]}"
+        else:
+            ob = cx.fresh()
+            loop_ens = (f"(fun {ob} -> let ({', '.join(svars)}) = {ob} in "
+                        f"{post})")
+            bind = f"let ({', '.join(svars)})"
+        return (f"let rec {lname} {pb}{fb} {sb}\n"
+                f"  : Pure {state_ty}\n"
+                f"    (requires {_conj(reqs + invs)})\n"
+                f"    (ensures {loop_ens})\n"
+                f"    (decreases {dec})\n"
+                f"= if {guard_b}\n"
+                f"  then {lname} {pargs}{fargs} {step}\n"
+                f"  else {state_out}\n"
+                f"\n"
+                f"let {name} {pb}\n"
+                f"  : Pure {TY[ret_t]}\n"
+                f"    (requires {req})\n"
+                f"    (ensures {ens})\n"
+                f"= {fbind}{bind} = {lname} {pargs}{fargs} {init} in\n"
+                f"  {result}\n")
+
+    # A `return` inside the loop body (SPEC.md "Early exit", 2026-09-08).
+    # `<lname>` now yields ONE of two outcomes, encoded as F*'s builtin
+    # `either`: `Inl v` when the body returned a value on this call (never
+    # recursing further; the invariant is not owed there, only the task's
+    # own `ensures`), or `Inr s` when the guard went false and the loop
+    # exited normally with the same state `s` as before (the invariant and
+    # negated guard, exactly as when there is no early exit). The value
+    # case's postcondition is literally the task's own `ens` applied to the
+    # returned value: F*'s VC generator already carries `guard_b` and the
+    # returning branch's own condition (folded into `body_rc`/`body_rv` by
+    # exec_flow) as hypotheses at that program point, from the `if guard_b
+    # then (if body_rc then Inl body_rv else ...)` shape below, so proving
+    # `ens body_rv` there is the same kind of obligation the normal exit
+    # discharges from the invariant and the negated guard.
+    outcome_ty = f"(either {TY[ret_t]} {state_ty})"
+    rvar = cx.fresh()
+    loop_ens = (f"(fun res -> match res with "
+                f"| Inl {rvar} -> ({ens} {rvar}) "
+                f"| Inr {state_out} -> {post})")
+    then_branch = f"(if {body_rc} then Inl {body_rv} else {lname} {pargs}{fargs} {step})"
+    else_branch = f"Inr {state_out}"
+    wvar = cx.fresh()
     return (f"let rec {lname} {pb}{fb} {sb}\n"
-            f"  : Pure {loop_ty}\n"
+            f"  : Pure {outcome_ty}\n"
             f"    (requires {_conj(reqs + invs)})\n"
             f"    (ensures {loop_ens})\n"
             f"    (decreases {dec})\n"
             f"= if {guard_b}\n"
-            f"  then {lname} {pargs}{fargs} {step}\n"
-            f"  else {state_out}\n"
+            f"  then {then_branch}\n"
+            f"  else {else_branch}\n"
             f"\n"
             f"let {name} {pb}\n"
             f"  : Pure {TY[ret_t]}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens})\n"
-            f"= {fbind}{bind} = {lname} {pargs}{fargs} {init} in\n"
-            f"  {result}\n")
+            f"= {fbind}match {lname} {pargs}{fargs} {init} with\n"
+            f"  | Inl {wvar} -> {wvar}\n"
+            f"  | Inr {state_out} -> {result}\n")
 
 
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call

@@ -158,9 +158,10 @@ class Scope:
     renames: dict = field(default_factory=dict)   # dafny name -> t name
     types: dict = field(default_factory=dict)      # t name -> "int"|"bool"|"seq"
     nat: list = field(default_factory=list)        # dafny names known nat-typed here
+    ret_name: str = ""                             # dafny name of the task's return
 
     def copy(self) -> "Scope":
-        return Scope(dict(self.renames), dict(self.types), list(self.nat))
+        return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name)
 
 
 # ---------------------------------------------------------------------------
@@ -446,11 +447,16 @@ def _has_self_call(body: list, target: str) -> bool:
 
 def _desugar_returns(stmts: tuple, tail: bool, ret_name: str, record: LiftRecord) -> tuple:
     """Section 4.5's three `return` rows, applied before the generic
-    statement lift ever sees a `ReturnStmt` (by the time `rewrite` calls
-    this, `classify` has already confirmed every non-tail return was
-    refused `early-exit`, so every remaining `ReturnStmt` is in tail
-    position and safe to desugar here). Every one of the three rows logs
-    as `tail-return` (18.2's single vocabulary name for all three)."""
+    statement lift ever sees a `ReturnStmt` in TAIL position: those three
+    rows (bare `return;`, `return r;`, `return e;`, all in the body's own
+    tail position) desugar away here and log as `tail-return` (18.2's
+    single vocabulary name for all three). A non-tail `ReturnStmt` --
+    early exit, SPEC.md 2026-09-08, LIFTER-DECISIONS.md row 21 -- is no
+    longer refused by `classify`, and this function leaves it untouched
+    (it falls through to the trailing `else: out.append(s)` below,
+    unmatched by every `isinstance` check here); `_lift_stmt`'s own
+    `ReturnStmt` branch turns it into t's `{"return": [ret, e]}`
+    statement instead."""
     out = []
     n = len(stmts)
     for i, s in enumerate(stmts):
@@ -653,6 +659,22 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
         record.rewrites.append(Rewrite(rule="lemma-call-dropped", line=s.line))
         return []
 
+    if cls == "ReturnStmt":
+        # Early exit (v1, SPEC.md, 2026-09-08): a non-tail `ReturnStmt`
+        # reaches here unchanged (`_desugar_returns` only touches TAIL
+        # returns; classify no longer refuses any other position --
+        # LIFTER-DECISIONS.md row 21). `return e;` lifts `e`; a bare
+        # `return;` means the out-parameter was assigned earlier on this
+        # path (section 4.7's definite-assignment check confirmed it), so
+        # it reads back as the return variable itself.
+        t_ret = scope.renames[scope.ret_name]
+        if s.values:
+            e = _lift_expr(s.values[0], scope, fn_names, self_name, task_name, record, renamer)
+        else:
+            e = {"var": t_ret}
+        record.rewrites.append(Rewrite(rule="early-exit-return", line=s.line))
+        return [{"return": [t_ret, e]}]
+
     raise ValueError(f"lift_rewrite: no statement mapping for {s!r} (a lift_classify bug: "
                       f"this construct should have been refused before rewrite ran)")
 
@@ -786,6 +808,7 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     ret = method.returns[0]
     t_ret = renamer.fresh(ret.name, record, "return")
     scope.renames[ret.name] = t_ret
+    scope.ret_name = ret.name
     ret_is_nat = ret.type is not None and ret.type.kind == "nat"
     ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
     scope.types[t_ret] = ret_ty

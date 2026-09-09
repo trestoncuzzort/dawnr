@@ -46,6 +46,53 @@ definite-assignment `let mut` locals, the final expression returns the
 return name, spec_funs become `spec fn ... decreases`, and a
 self-recursive body becomes a recursive proof fn carrying the task's own
 decreases measure.
+
+EARLY EXIT (2026-09-08, SPEC.md "Early exit"). `{"return": [ID, Expr]}`
+lowers to Verus's own `return Expr;`, which is what the module's exec/proof
+split already needed: the recursive loop helper's decreases and invariant
+obligations attach to its OWN return, and Verus checks the ensures at
+every return with no loop-invariant obligation there, exactly SPEC.md's
+rule. Measured with two probes through the verus binary directly: an exec
+fn with a native `while` (invariants, named return) accepts a `return`
+inside the loop and checks the ensures at that exit only, never asking for
+the invariant there (probe_ret_exec.rs); a recursive `proof fn` accepts
+the same thing (probe_ret_proof.rs), which is what matters here since v1
+loops already lower to recursion, never a native `while` (see LOOPS
+above). A `return` directly in the task's own body emits a bare
+`return Expr;` (`_V1.stmts`'s `wrap=None` case). A `return` inside a loop
+is different: that loop's helper can no longer just return the state
+tuple, since one call of it can end the whole task instead of one more
+iteration, so `_may_return` flags any loop whose body returns (directly,
+through an `if`, or through a nested loop's own already-wrapped result),
+and such a helper's result becomes `(bool, return-type, state-tuple)`:
+flag, the task's return value if set, the loop state otherwise. Its
+ensures splits the same way -- the flagged branch owes the task's own
+`ensures`, never the loop's invariants, matching the SPEC.md text above
+verbatim -- and its call site propagates a set flag onward as a real
+`return`, wrapped again if the call site is itself inside another such
+loop (`_V1.loop`'s `wrap` parameter). The returned expression owes the
+same `_assert_defined` (definedness asserts, div/mod bridging) as an
+assign's right-hand side, added to `_V1.stmts`'s "return" case. `_assigned`
+deliberately gets no "return" case (a return's target is not per-iteration
+loop state, see its docstring); `_body_calls` and `_twin_loop` do, the
+former for self-recursion detection, the latter needing none in practice
+since a `return` statement carries no nested body to walk into. `_sym`
+gives up (None) on a body containing a return, the same as it already
+does for a nested while, so the nonlinear_arith bridge is skipped rather
+than built from a post-state that free early exit makes non-equational.
+The v0 path never sees a `return` (v1-only per SPEC.md); `body_expr`'s
+existing fallback already refuses cleanly for any body it cannot express.
+
+A second, unrelated fix rode in on top of this because is_prime.json's own
+`forall d. 2<=d<n ==> n mod d != 0` needed it: unlike every prior committed
+task's quantifiers, which index a Seq and so give Verus's automatic
+trigger inference something to grab, this one is pure arithmetic and Verus
+refused it outright ("Could not automatically infer triggers for this
+quantifier"). `expr()`'s forall/exists case now supplies an explicit
+`#![trigger n % d]` whenever the body has no indexable (`at`/`call`) term
+of its own (`_has_indexable`, `_mod_div_trigger`); every prior task's
+quantifiers keep their free automatic inference untouched, so all 13
+previously committed tasks (v0 and v1 alike) still lower byte-identically.
 """
 from __future__ import annotations
 
@@ -105,6 +152,63 @@ _SUFFIX_INT = False   # v1 only: literals as `(7int)` so ite branches infer
                       # output stays byte-identical with bare literals.
 
 
+def _has_indexable(e: dict) -> bool:
+    """True iff e contains a Seq index (`at`) or a `call` anywhere -- the
+    shapes Verus's automatic trigger inference picks up on its own for a
+    quantifier body. Used only to decide whether a forall/exists needs an
+    EXPLICIT trigger (see `_mod_div_trigger` and `expr()`'s forall/exists
+    case); every committed task's quantifiers index a Seq, so this is true
+    for all of them and none gets an explicit trigger it didn't already
+    have (v0 and the pre-2026-09-08 v1 output are unaffected)."""
+    if "op" in e:
+        if e["op"] == "at":
+            return True
+        return any(_has_indexable(a) for a in e.get("args", []))
+    if "call" in e:
+        return True
+    if "ite" in e:
+        c = e["ite"]
+        return any(_has_indexable(c[k]) for k in ("cond", "then", "else"))
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        return any(_has_indexable(q[k]) for k in ("lo", "hi", "body"))
+    return False
+
+
+def _mod_div_trigger(e: dict) -> dict | None:
+    """First `mod`/`div` application in e, pre-order, or None. is_prime's
+    ensures/invariant (SPEC.md "Early exit" corpus, 2026-09-08) is
+    `forall d. 2<=d<n ==> n mod d != 0`: pure arithmetic, no Seq index or
+    call, so Verus's automatic inference refuses it outright ("Could not
+    automatically infer triggers for this quantifier", measured on
+    is_prime.rs before this fix). `n mod d` is exactly the term that
+    should fire the quantifier, so `expr()` supplies it explicitly via
+    `#![trigger ...]` whenever `_has_indexable` says auto-inference has
+    nothing else to go on."""
+    if "op" in e:
+        if e["op"] in ("mod", "div"):
+            return e
+        for a in e.get("args", []):
+            r = _mod_div_trigger(a)
+            if r is not None:
+                return r
+        return None
+    if "call" in e:
+        for a in e["call"]["args"]:
+            r = _mod_div_trigger(a)
+            if r is not None:
+                return r
+        return None
+    if "ite" in e:
+        c = e["ite"]
+        for k in ("cond", "then", "else"):
+            r = _mod_div_trigger(c[k])
+            if r is not None:
+                return r
+        return None
+    return None
+
+
 def expr(e: dict) -> str:
     if "_seq" in e:
         # Private ground node, emitted only by the refutation certificate
@@ -130,9 +234,14 @@ def expr(e: dict) -> str:
         q = e[kind]
         v, lo, hi, body = q["var"], expr(q["lo"]), expr(q["hi"]), expr(q["body"])
         rng = f"({lo} <= {v} && {v} < {hi})"
+        trig = ""
+        if not _has_indexable(q["body"]):
+            t = _mod_div_trigger(q["body"])
+            if t is not None:
+                trig = f" #![trigger {expr(t)}]"
         if kind == "forall":
-            return f"(forall|{v}: int| {rng} ==> {body})"
-        return f"(exists|{v}: int| {rng} && {body})"
+            return f"(forall|{v}: int|{trig} {rng} ==> {body})"
+        return f"(exists|{v}: int|{trig} {rng} && {body})"
     op, args = e["op"], [expr(a) for a in e.get("args", [])]
     if op == "neg":
         return f"(-{args[0]})"
@@ -297,6 +406,8 @@ def _body_calls(body: list, name: str) -> bool:
     for s in body:
         if "assign" in s and _calls(s["assign"][1], name):
             return True
+        if "return" in s and _calls(s["return"][1], name):
+            return True
         if "var" in s and _calls(s["var"]["init"], name):
             return True
         if "if" in s:
@@ -314,6 +425,13 @@ def _body_calls(body: list, name: str) -> bool:
 
 
 def _assigned(body: list) -> set:
+    # 2026-09-08 (SPEC.md "Early exit"): deliberately no `return` case. This
+    # set feeds `loop()`'s choice of which scope names are ordinary loop
+    # STATE, threaded through the recursive helper's arguments every
+    # iteration. A `return`'s target is not that: it is produced at most
+    # once, on the exit path, and `loop()` carries it through a separate
+    # wrapped-result slot (see `_may_return` below), never as per-iteration
+    # state. Folding it in here would double up the two mechanisms.
     out = set()
     for s in body:
         if "assign" in s:
@@ -335,6 +453,26 @@ def _declared(body: list) -> set:
         elif "while" in s:
             out |= _declared(s["while"]["body"])
     return out
+
+
+def _may_return(body: list) -> bool:
+    """True iff `body` contains a `return` (SPEC.md "Early exit",
+    2026-09-08), directly, inside an `if` branch, or inside a nested
+    `while`'s body. The nested-loop case matters: a nested loop that may
+    return already wraps ITS OWN result (see `loop()`), so the loop
+    enclosing it also needs the wrapped-result treatment purely to
+    propagate that outward, even though no `return` sits directly in its
+    own body."""
+    for s in body:
+        if "return" in s:
+            return True
+        if "if" in s:
+            if _may_return(s["if"]["then"]) or _may_return(s["if"].get("else") or []):
+                return True
+        if "while" in s:
+            if _may_return(s["while"]["body"]):
+                return True
+    return False
 
 
 # ------------------------------------------------------------------ v1 path
@@ -363,12 +501,19 @@ def _sym(body: list, env: dict) -> dict | None:
     """Equational symbolic execution of a loop body: the effect of one
     iteration as a map from each variable to a t expression over the entry
     values, if-joins merged with ite. None when the body contains a nested
-    while (its effect is not equational)."""
+    while (its effect is not equational), or, 2026-09-08 (SPEC.md "Early
+    exit"), a `return`: an iteration that can escape the loop entirely has
+    no single equational post-state either, so the nonlinear_arith bridge
+    in `loop()` is skipped and preservation is left to Verus unaided (an
+    UNPROVED cell there is not a failure, just no committed task needs
+    both a nonlinear invariant and a `return` in the same loop yet)."""
     env = dict(env)
     for s in body:
         if "assign" in s:
             n, e = s["assign"]
             env[n] = subst(e, env)
+        elif "return" in s:
+            return None
         elif "var" in s:
             v = s["var"]
             env[v["name"]] = subst(v["init"], env)
@@ -485,6 +630,23 @@ def _div_mod_law(x: dict, y: dict, ind: str) -> str:
             f"{ind};")
 
 
+def _dummy(ty: str) -> str:
+    """A throwaway literal of Verus type `ty`, for the slot a wrapped loop
+    helper's result (SPEC.md "Early exit", 2026-09-08) leaves unused: the
+    return value when the call did not return, or the state tuple when it
+    did. Its VALUE is never read (the ensures conditions each slot on the
+    same flag that decided which one is meaningful); it only has to
+    type-check. Built via `expr()` so it picks up the same `_SUFFIX_INT`
+    literal form (`0int`) v1 already emits everywhere else."""
+    if ty == "int":
+        return expr({"int": 0})
+    if ty == "bool":
+        return expr({"bool": False})
+    if ty == "Seq<int>":
+        return expr({"_seq": []})
+    raise ValueError(f"verus: no dummy literal for type {ty!r}")
+
+
 class _V1:
     def __init__(self, task: dict):
         self.task = task
@@ -520,8 +682,19 @@ class _V1:
         for x, y in _div_mod_pairs(e):
             lines.append(_div_mod_law(x, y, ind))
 
-    def stmts(self, body: list, scope: dict, ind: str) -> list[str]:
-        """scope: ordered {name: (verus_type, mutable)}. Returns lines."""
+    def stmts(self, body: list, scope: dict, ind: str,
+              wrap: str | None = None) -> list[str]:
+        """scope: ordered {name: (verus_type, mutable)}. Returns lines.
+
+        `wrap` (SPEC.md "Early exit", 2026-09-08) is None when `body` runs
+        directly in the task's own proof fn: a `return` there is a bare
+        Verus `return value;`, ending the task exactly as it ends the
+        interpreter's exec_body. Inside a loop helper whose body may
+        return (`_may_return`), `wrap` is instead the Verus expression for
+        THAT helper's own state tuple, so a `return` there emits
+        `return (true, value, wrap);` -- the helper's wrapped result, see
+        `loop()` -- and a nested loop's own wrapped result is re-wrapped
+        the same way at its call site below."""
         lines: list[str] = []
         for s in body:
             if "assign" in s:
@@ -530,6 +703,15 @@ class _V1:
                     f"assign to {name}, not a mutable name in scope"
                 self._assert_defined(e, lines, ind)
                 lines.append(f"{ind}{name} = {expr(e)};")
+            elif "return" in s:
+                rname, e = s["return"]
+                assert rname == self.task["returns"][0]["name"], \
+                    f"return names {rname}, expected {self.task['returns'][0]['name']}"
+                self._assert_defined(e, lines, ind)
+                if wrap is None:
+                    lines.append(f"{ind}return {expr(e)};")
+                else:
+                    lines.append(f"{ind}return (true, {expr(e)}, {wrap});")
             elif "var" in s:
                 v = s["var"]
                 self._assert_defined(v["init"], lines, ind)
@@ -540,20 +722,21 @@ class _V1:
                 c = s["if"]
                 self._assert_defined(c["cond"], lines, ind)
                 lines.append(f"{ind}if {expr(c['cond'])} {{")
-                lines += self.stmts(c["then"], dict(scope), ind + "    ")
+                lines += self.stmts(c["then"], dict(scope), ind + "    ", wrap)
                 if c["else"]:
                     lines.append(f"{ind}}} else {{")
-                    lines += self.stmts(c["else"], dict(scope), ind + "    ")
+                    lines += self.stmts(c["else"], dict(scope), ind + "    ", wrap)
                 lines.append(f"{ind}}}")
             elif "while" in s:
-                lines += self.loop(s["while"], scope, ind)
+                lines += self.loop(s["while"], scope, ind, wrap)
             else:
                 raise ValueError(f"t v1 -> verus: unknown statement {s!r}")
         return lines
 
     # -- loops: proof mode has no while (measured), so the loop rule is  --
     # -- encoded as a recursive helper lemma; see module docstring.      --
-    def loop(self, w: dict, scope: dict, ind: str) -> list[str]:
+    def loop(self, w: dict, scope: dict, ind: str,
+             wrap: str | None = None) -> list[str]:
         k = self.loop_ix
         self.loop_ix += 1
         invs = w.get("invariants", [])
@@ -576,30 +759,73 @@ class _V1:
         assert state, "loop body assigns nothing in scope, not lowerable"
 
         if len(state) == 1:
-            m = {state[0]: "t_res"}
-            res_ty = scope[state[0]][0]
+            state_ty = scope[state[0]][0]
             res_val = state[0]
         else:
-            m = {v: f"t_res.{j}" for j, v in enumerate(state)}
-            res_ty = "(" + ", ".join(scope[v][0] for v in state) + ")"
+            state_ty = "(" + ", ".join(scope[v][0] for v in state) + ")"
             res_val = "(" + ", ".join(state) + ")"
+
+        # EARLY EXIT (2026-09-08, SPEC.md "Early exit"). A `return` inside
+        # this loop's body -- directly, in an `if`, or through a nested
+        # loop's already-wrapped result -- means one call of the recursive
+        # helper can end the whole TASK instead of one more iteration, so
+        # its result can no longer be just the state tuple: it becomes
+        # (t_res.0: bool, did this call return?; t_res.1: the task's return
+        # value if so; t_res.2: the loop state tuple if not). The ensures
+        # splits the same way: on the return branch the task owes its own
+        # `ensures` (substituting the return name), never the invariants,
+        # exactly as SPEC.md states; on the other branch it owes
+        # invariants + negated guard as before. Measured (probe_ret_proof.rs,
+        # 2026-09-08): Verus accepts a native `return` inside a recursive
+        # `proof fn` and checks the ensures at that exit with no
+        # loop-invariant obligation -- the same rule probe_ret_exec.rs shows
+        # for a native `while` in an exec fn with a named return.
+        may_ret = _may_return(w["body"])
+        base = "t_res.2" if may_ret else "t_res"
+        if len(state) == 1:
+            m = {state[0]: base}
+        else:
+            m = {v: f"{base}.{j}" for j, v in enumerate(state)}
+
+        if may_ret:
+            rname = self.task["returns"][0]["name"]
+            rtype = TYPES[self.task["returns"][0]["type"]]
+            res_ty = f"(bool, {rtype}, {state_ty})"
+            m_ret = {rname: "t_res.1"}
+            ens = ([f"t_res.0 ==> {expr(subst(en, m_ret))}"
+                    for en in self.task["ensures"]]
+                   + [f"(!t_res.0) ==> {expr(subst(iv, m))}" for iv in invs]
+                   + [f"(!t_res.0) ==> (!{expr(subst(cond, m))})"])
+            base_val = f"(false, {_dummy(rtype)}, {res_val})"
+            # The return branch owes the task's OWN `ensures`, which may
+            # read the task's `requires` (e.g. a bound on a parameter), so
+            # those go into the helper's own requires alongside the
+            # invariants; harmless when unused, since they hold at every
+            # call site (established once at task entry, never reassigned).
+            req_clauses = list(self.task.get("requires", [])) + invs
+        else:
+            res_ty = state_ty
+            ens = ([expr(subst(i, m)) for i in invs]
+                   + [f"(!{expr(subst(cond, m))})"])
+            base_val = res_val
+            req_clauses = invs
+        ens_s = ",\n        ".join(ens)
 
         hname = f"t_lp_{self.name}_{k}"
         ps = ", ".join(f"{n}: {scope[n][0]}" for n in ro + state)
         req = ""
-        if invs:
+        if req_clauses:
             req = ("    requires\n        "
-                   + ",\n        ".join(expr(i) for i in invs) + ",\n")
-        ens = ([expr(subst(i, m)) for i in invs]
-               + [f"(!{expr(subst(cond, m))})"])
-        ens_s = ",\n        ".join(ens)
+                   + ",\n        ".join(expr(i) for i in req_clauses) + ",\n")
 
         # Invariants with nonlinear terms need Verus's sanctioned escape
         # hatch, assert ... by (nonlinear_arith) with explicit premises,
         # because the default solver profile has nonlinear arithmetic off
         # (measured; Dafny's does not). The premises are exactly t's
         # preservation rule: all invariants plus the guard at entry; the
-        # conclusion is the invariant over the symbolic post-state.
+        # conclusion is the invariant over the symbolic post-state. `_sym`
+        # gives up (None) when the body may return, same as a nested while,
+        # so this is skipped in that case; see `_sym`'s docstring.
         nl = [j for j, iv in enumerate(invs) if _has_nonlinear(iv)]
         old_lets, bridge = "", []
         if nl:
@@ -618,7 +844,8 @@ class _V1:
                     for j in nl]
 
         hscope = {n: (scope[n][0], n in state) for n in ro + state}
-        inner = self.stmts(w["body"], hscope, "        ") + bridge
+        inner = self.stmts(w["body"], hscope, "        ",
+                            res_val if may_ret else None) + bridge
         shadows = "".join(f"    let mut {v} = {v};\n" for v in state)
         args = ", ".join(ro + state)
         self.helpers.append(
@@ -631,16 +858,27 @@ class _V1:
             + "\n".join(inner) + "\n"
             f"        {hname}({args})\n"
             "    } else {\n"
-            f"        {res_val}\n"
+            f"        {base_val}\n"
             "    }\n"
             "}\n")
 
         tmp = f"t_tmp{k}"
         lines = [f"{ind}let {tmp} = {hname}({args});"]
-        if len(state) == 1:
-            lines.append(f"{ind}{state[0]} = {tmp};")
+        if may_ret:
+            if wrap is None:
+                lines.append(f"{ind}if {tmp}.0 {{ return {tmp}.1; }}")
+            else:
+                lines.append(
+                    f"{ind}if {tmp}.0 {{ return (true, {tmp}.1, {wrap}); }}")
+            if len(state) == 1:
+                lines.append(f"{ind}{state[0]} = {tmp}.2;")
+            else:
+                lines += [f"{ind}{v} = {tmp}.2.{j};" for j, v in enumerate(state)]
         else:
-            lines += [f"{ind}{v} = {tmp}.{j};" for j, v in enumerate(state)]
+            if len(state) == 1:
+                lines.append(f"{ind}{state[0]} = {tmp};")
+            else:
+                lines += [f"{ind}{v} = {tmp}.{j};" for j, v in enumerate(state)]
         return lines
 
     # -- whole task ------------------------------------------------------

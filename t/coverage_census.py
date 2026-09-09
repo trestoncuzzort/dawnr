@@ -696,22 +696,39 @@ def _tail(s: str, bstart: int, bend: int, kw: int, after: int) -> bool:
 
 def _returns(s: str) -> tuple[bool, bool]:
     """(early, trailing): control that leaves a method other than by falling
-    off the end of its body. Only `method` bodies are scanned: a return in a
-    lemma, function or predicate is proof scaffolding, never a program exit.
-    A return in TAIL position (last in the body, or last in an if/else branch
-    or match arm that is itself last) is the trailing-return burden; every
-    other return, and any break or continue, is early. A bare `label` is not
-    an exit, it anchors old@L."""
+    off the end of its body, RETURN statements only (`_break_continue`
+    below is the separate signal for break/continue). Only `method` bodies
+    are scanned: a return in a lemma, function or predicate is proof
+    scaffolding, never a program exit. A return in TAIL position (last in
+    the body, or last in an if/else branch or match arm that is itself
+    last) is the trailing-return burden; every other return is early. A
+    bare `label` is not an exit, it anchors old@L.
+
+    Both are in-fragment burdens as of SPEC.md's "Early exit (v1)"
+    (2026-09-08, LIFTER-DECISIONS.md row 21): a tail return lifts by
+    dropping (already the `trailing-return` burden), and a non-tail
+    return now lifts to t's `{"return": [ret, e]}` statement (the
+    `early-return` burden below), so neither counts as an `early-exit`
+    gap any more -- that name now names break/continue alone."""
     early = trailing = False
     for bstart, bend in _method_bodies(s):
-        if re.search(r"\bbreak\b|\bcontinue\b", s[bstart:bend]):
-            early = True
         for m in re.finditer(r"\breturn\b", s[bstart:bend]):
             if _tail(s, bstart, bend, bstart + m.start(), bstart + m.end()):
                 trailing = True
             else:
                 early = True
     return early, trailing
+
+
+def _break_continue(s: str) -> bool:
+    """A `break` or `continue` in a method body: still outside t's
+    fragment. SPEC.md's `return` statement (2026-09-08) covers only
+    `return`, so `early-exit` (the gap) now names this alone --
+    LIFTER-DECISIONS.md row 21."""
+    for bstart, bend in _method_bodies(s):
+        if re.search(r"\bbreak\b|\bcontinue\b", s[bstart:bend]):
+            return True
+    return False
 
 
 # An element assignment is a STATEMENT; the `:=` inside a functional update
@@ -1177,7 +1194,7 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "multi-method": ("gap", lambda s: _method_count(s) > 1, "more than one method (Main, and the method of function method, excluded)"),
     "multi-return": ("gap", _multi_return, "several return values"),
     "zero-returns": ("gap", _zero_returns, "a method with no return value (t returns exactly one)"),
-    "early-exit": ("gap", lambda s: _returns(s)[0], "a return that is not in tail position of a method body, or a break or continue"),
+    "early-exit": ("gap", _break_continue, "a break or continue statement in a method body"),
     "seq-return": ("gap", _seq_return, "sequence-valued return of a method or a function"),
     "seq-literal": ("gap", _seq_literal, "sequence literal [..] in an expression"),
     "seq-slice": ("gap", _has(r"\[[^\]]*\.\.[^\]]*\]"), "slicing s[a..b]"),
@@ -1213,6 +1230,7 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "no-if-no-loop": ("burden", lambda s: not re.search(r"\bif\b|\bwhile\b", s), "straight-line body: the twin ladder has only its extensional operators to try"),
     "frame-clause": ("burden", _has(r"\bmodifies\b|\breads\b"), "modifies / reads (array frames when no class is present)"),
     "trailing-return": ("burden", lambda s: _returns(s)[1], "a return as the last statement (assign the result instead)"),
+    "early-return": ("burden", lambda s: _returns(s)[0], "a return that is not in tail position of a method body (lifts to t's early-exit `return` statement)"),
     "main-harness": ("burden", _has(r"\bmethod\s+Main\b"), "a Main test harness (stripped before tagging)"),
     "while-no-decreases": ("burden", lambda s: any(
         "decreases" not in s[m.end():m.end() + 400].split("{", 1)[0]

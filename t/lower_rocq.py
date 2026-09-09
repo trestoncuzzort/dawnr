@@ -26,6 +26,27 @@ v1 (`"t": 1`) opens the three gates for this backend:
   obligation is violated, both discharged by the same engine. The theorem
   runs the loop at fuel S (Z.to_nat decreases0), always sufficient.
 
+  EARLY EXIT (2026-09-08, SPEC.md "Early exit (v1)"). A loop body may
+  contain `return`, so the Fixpoint's result is enriched to a pair (state
+  tuple, bool): the bool is true exactly when some iteration returned. One
+  step of exec_straight already computes the fully-guarded per-iteration
+  state (a variable freezes at its old value on the returning branch, via
+  the same if-then-else merge `if` uses for its two arms), so the same
+  tuple feeds both outcomes of the fixpoint's inner `if returned`; no
+  separate "kept going" state is ever computed. The induction lemma's
+  conclusion becomes a disjunction: returned owes the task's ensures
+  directly (from the invariant, the guard, and whichever branch condition
+  set the flag; never the invariant, exactly as SPEC.md says a `return`
+  does not owe it), not-returned owes the old invariant/frame conclusion
+  unchanged. A loop with no `return` anywhere in its body takes the
+  original single-outcome path verbatim (has_return/_DONE is empty), so
+  this feature is additive: the other 13 tasks' generated Coq is
+  unaffected. Scope: `return` is supported inside a loop's own body and in
+  straight-line/if code with no loop at all (gen_plain needs no changes,
+  since exec_straight's guarding handles it for free); a `return` in a
+  loop's prefix or suffix is not threaded into skipping the loop itself,
+  since no committed task needs it yet.
+
   RECURSION. spec_funs and self-recursive bodies become fuel Fixpoints with a
   wrapper at fuel S (Z.to_nat measure). Per spec_fun the generator emits a
   fuel-irrelevance lemma (any fuel above the declared measure computes the
@@ -538,6 +559,40 @@ Ltac t_go n :=
 
 Ltac t_vc0 := solve [ t_go 6%nat ].
 
+(* Early exit (SPEC.md, 2026-09-08): closing a `return`'s ensures obligation
+   from raw invariant/guard/branch-condition facts can need instantiating a
+   `forall _ : Z, _` hypothesis at a witness that is not a seq application
+   (t_sat1's own instantiation rule only reaches `f x` for a var-headed
+   `f`, e.g. `s i`; an early-return branch's own equality, like `n mod d =
+   0`, witnesses the negation of an invariant `forall d2, ... -> n mod d2
+   <> 0` at `d`, and `t_mod n` is not a variable). t_go_ext tries every
+   (forall-hypothesis, Z-variable) pair as a LAST resort, closing with
+   t_base (deterministic saturation, which can itself resolve the
+   freshly-posed `A -> B` once `A` is leaf-provable, t_sat1's own rule)
+   rather than recursing into a second t_go, so one pair's attempt cannot
+   multiply into a full nested search. This is kept OUT of t_go itself
+   (used by every obligation in every task) and out of t_dis; only the
+   generated proof for a `return`-bearing loop's step_done=true branch
+   ever mentions t_dis_ext, so a task with no `return` never even attempts
+   this arm. Measured need: threading it through t_go directly (so every
+   t_dis call in every task tried it as a last resort) pushed digit_sum
+   and seq_max past the 180s wall clock, both carrying seq foralls this
+   arm tried for no benefit; confined here, neither slows down at all. *)
+Ltac t_go_ext n :=
+  first
+  [ solve [ t_go n ]
+  | multimatch goal with
+    | H : forall _ : Z, _ |- _ =>
+        multimatch goal with
+        | y : Z |- _ =>
+            let I := constr:(H y) in
+            let T := type of I in
+            tryif (t_have T) then fail else idtac;
+            solve [ pose proof I; t_base; t_leaf ]
+        end
+    end
+  ].
+
 Ltac t_sweep :=
   repeat (match goal with
           | |- context [?a <? ?b] => destruct (Z.ltb_spec a b)
@@ -556,11 +611,19 @@ POST_SF = r"""Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]
 Ltac t_side := first [ assumption | solve [ lia ]
                      | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]
                      | solve [ t_eqs_h; t_vc0 ] ].
+(* Early exit (2026-09-08): t_dis with t_go_ext's extra witness-instantiation
+   arm, used ONLY in a `return`-bearing loop's step_done=true proof branch
+   (see gen_loop / PRELUDE's t_go_ext). t_go_ext tries the cheap t_go path
+   first, so this costs a task with no `return` nothing: nothing it emits
+   ever calls t_dis_ext. *)
+Ltac t_dis_ext := first [ solve [ t_go_ext 6%nat ] | solve [ t_eqs; t_go_ext 6%nat ]
+                        | solve [ t_eqs_h; t_go_ext 6%nat ] ]
+              || fail "unsolved t verification condition".
 """
 
 RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
             "match", "with", "end", "fix", "Prop", "Set", "Type", "fuel", "fu",
-            "s_len", "mod"}
+            "s_len", "mod", "rflag", "rf"}
 # "mod" is a Rocq notation token (`_ mod _` from ZArith, active regardless of
 # scope), so a t identifier literally named `mod` fails to parse as a binder;
 # "div" carries no such notation and needs no reservation (checked against
@@ -851,6 +914,22 @@ def has_self_call(node, name: str) -> bool:
     return False
 
 
+def has_return(body: list) -> bool:
+    """True iff `body` contains a `return` statement at any depth (through
+    `if`/`while`). Early exit (SPEC.md, 2026-09-08): a loop whose body has no
+    `return` is lowered exactly as before (v1's original single-outcome
+    Fixpoint); one that does gets the two-outcome encoding in `gen_loop`."""
+    for s in body:
+        if "return" in s:
+            return True
+        if "if" in s and (has_return(s["if"]["then"])
+                          or has_return(s["if"]["else"])):
+            return True
+        if "while" in s and has_return(s["while"]["body"]):
+            return True
+    return False
+
+
 def loop_assigned(body: list) -> set:
     """Syntactic assigned set of a loop body, SPEC.md's frame rule: a while
     loop havocs exactly the variables assigned in its body."""
@@ -897,52 +976,103 @@ def find_while(body: list):
     return body[:k], w, body[k + 1:]
 
 
+# Early exit (SPEC.md, 2026-09-08): env's synthetic "has this path already
+# returned" flag. Never a valid t identifier (see RESERVED/_ck), so it can
+# never collide with a source variable; absent means "false", read back via
+# env.get(_DONE, "false"). A body with no `return` anywhere never writes
+# this key, so exec_straight's output (and everything built on it) is
+# byte-identical to before `return` existed: the whole feature is additive.
+_DONE = "__returned__"
+
+
 def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                   defs_ctx: list[str] | None, defs_binders: list[str],
                   acc: list) -> dict:
     """Symbolic execution of straight-line + if statements. env maps mutable
     var -> term; local maps locals -> type (also recorded in cx.tys). When
     defs_ctx is not None, definedness obligations are collected along the
-    path conditions."""
+    path conditions.
+
+    `return` (SPEC.md "Early exit"): sets the return name and marks _DONE
+    true. Every assignment textually after a possibly-taken return is
+    frozen on the paths where _DONE already holds, via the same
+    if-then-else merge `if` already builds for its own two branches: `if
+    __returned__ then <old value> else <this statement's new value>`. Since
+    well-formedness bars anything from following a return WITHIN its own
+    block, the only way _DONE can be a non-literal term (rather than a
+    constant "true"/"false") reaching a later statement is that an
+    enclosing `if` returned on one arm and not the other; the merge below
+    already produces exactly that ITE for _DONE itself, so the freezing
+    composes to any nesting depth for free. Definedness obligations for a
+    statement that only runs on the surviving (non-returned) path are
+    collected under the extra hypothesis `~ done`: a frozen variable's old
+    value was already proved defined at the point it froze, so demanding
+    it again here would be strictly stronger than necessary, and for a
+    task with no `return` this adds nothing (`done` is the literal
+    "false", so no hypothesis is added and no lemma text changes)."""
     env = dict(env)
     for s in stmts:
+        done = env.get(_DONE, "false")
+        cur_ctx = (None if defs_ctx is None else
+                  (defs_ctx if done == "false"
+                   else defs_ctx + [f"(~ ({done} = true))"]))
         if "assign" in s:
             v, e = s["assign"]
             assert v in env, f"assign to undeclared {v}"
             t = local.get(v) or cx.tys[v]
-            if defs_ctx is not None:
-                cx.defs(e, defs_ctx, defs_binders, acc, env, local)
-            env[v] = (cx.bx(e, env, local) if t == "bool"
-                      else cx.zx(e, env, local))
+            if cur_ctx is not None:
+                cx.defs(e, cur_ctx, defs_binders, acc, env, local)
+            raw = (cx.bx(e, env, local) if t == "bool"
+                  else cx.zx(e, env, local))
+            env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
+        elif "return" in s:
+            v, e = s["return"]
+            assert v in env, f"return to undeclared {v}"
+            t = local.get(v) or cx.tys[v]
+            if cur_ctx is not None:
+                cx.defs(e, cur_ctx, defs_binders, acc, env, local)
+            raw = (cx.bx(e, env, local) if t == "bool"
+                  else cx.zx(e, env, local))
+            # true unconditionally: either this is the return that first
+            # sets _DONE, or the statement is dead (done was already true)
+            # and the guard below keeps `v` at its already-frozen value.
+            env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
+            env[_DONE] = "true"
         elif "var" in s:
             d = s["var"]
             v = _ck(d["name"])
             assert v not in cx.tys and v not in local, f"redeclared {v}"
             local[v] = d["type"]
             cx.tys[v] = d["type"]
-            if defs_ctx is not None:
-                cx.defs(d["init"], defs_ctx, defs_binders, acc, env, local)
+            if cur_ctx is not None:
+                cx.defs(d["init"], cur_ctx, defs_binders, acc, env, local)
+            # a fresh local has no prior value to freeze to; SPEC.md's
+            # return leaves no statement of its own block to run after it,
+            # and this lowering never carries a not-yet-declared local past
+            # the point a return could matter (find_while/gen_loop only
+            # feed `return`-bearing bodies to the loop-body path, where
+            # `var` never appears), so no guard is needed here.
             env[v] = (cx.bx(d["init"], env, local) if d["type"] == "bool"
                       else cx.zx(d["init"], env, local))
         elif "if" in s:
             c = s["if"]
-            if defs_ctx is not None:
-                cx.defs(c["cond"], defs_ctx, defs_binders, acc, env, local)
+            if cur_ctx is not None:
+                cx.defs(c["cond"], cur_ctx, defs_binders, acc, env, local)
             cp = cx.prop(c["cond"], env, local)
             cb = cx.bx(c["cond"], env, local)
             env_t = exec_straight(
                 cx, c["then"], env, local,
-                None if defs_ctx is None else defs_ctx + [cp],
+                None if cur_ctx is None else cur_ctx + [cp],
                 defs_binders, acc)
             env_e = exec_straight(
                 cx, c["else"], env, local,
-                None if defs_ctx is None else defs_ctx + [f"(~ {cp})"],
+                None if cur_ctx is None else cur_ctx + [f"(~ {cp})"],
                 defs_binders, acc)
-            for v in env:
-                if env_t.get(v, env[v]) != env_e.get(v, env[v]):
-                    env[v] = (f"(if {cb} then {env_t[v]} else {env_e[v]})")
-                else:
-                    env[v] = env_t.get(v, env[v])
+            for v in set(env) | set(env_t) | set(env_e):
+                base = env.get(v, "false" if v == _DONE else None)
+                tv = env_t.get(v, base)
+                ev = env_e.get(v, base)
+                env[v] = tv if tv == ev else f"(if {cb} then {tv} else {ev})"
         elif "while" in s:
             raise AssertionError("while must be split out before exec")
         else:
@@ -1282,6 +1412,11 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     step_env = exec_straight(cx, w["body"], id_env, dict(local),
                              list(body_ctx), [], obls)
     step_terms = " ".join(step_env[v] for v in svars)
+    # Early exit (SPEC.md, 2026-09-08): step_env's synthetic _DONE entry is
+    # the literal "false" unless w["body"] actually executed a `return`
+    # (exec_straight only ever writes it after seeing one), so this is
+    # exactly has_return(w["body"]) without a second traversal.
+    step_done = step_env.get(_DONE, "false")
 
     # suffix (after the loop): requires + invariants + ~guard
     post_ctx = inv_ctx + [f"(~ {guard_p})"]
@@ -1339,14 +1474,9 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     ini_asserts = "".join(
         f"  assert (Hini{k+1} : {cx.prop(e, {v: env_pre[v] for v in svars}, local)}) by t_dis.\n"
         for k, e in enumerate(w.get("invariants", [])))
-    pose_args = " ".join(
-        ["(S (Z.to_nat {d}))".format(d=dec0), param_names, init_terms,
-         primed_names]
-        + [f"Hl{k+1}" for k in range(n_lens)]
-        + [f"Hreq{k+1}" for k in range(n_reqs)]
-        + ["Hfb"]
-        + [f"Hini{k+1}" for k in range(n_invs)]
-        + ["Heq"])
+    lens_intro = " ".join(f"Hl{k+1}" for k in range(n_lens))
+    reqs_intro = " ".join(f"Hreq{k+1}" for k in range(n_reqs))
+    ini_intro = " ".join(f"Hini{k+1}" for k in range(n_invs))
 
     # The induction step needs exactly one reduction: the fixpoint's own
     # iota step on `S fu`. `simpl` also unfolds Z.add against the goal,
@@ -1355,7 +1485,19 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     # kernels verified that task, rocq refuted it). Whitelisted delta keeps
     # the arithmetic in the form the induction hypothesis is stated in.
 
-    return f"""{def_txt}
+    if step_done == "false":
+        # No `return` in this loop's body: identical to the lowering before
+        # SPEC.md's early exit landed (2026-09-08).
+        pose_args = " ".join(
+            ["(S (Z.to_nat {d}))".format(d=dec0), param_names, init_terms,
+             primed_names]
+            + [f"Hl{k+1}" for k in range(n_lens)]
+            + [f"Hreq{k+1}" for k in range(n_reqs)]
+            + ["Hfb"]
+            + [f"Hini{k+1}" for k in range(n_invs)]
+            + ["Heq"])
+
+        return f"""{def_txt}
 Fixpoint {name}_loop (fuel : nat) {pb} {sb} : {tup_ty} :=
   match fuel with
   | O => {tup}
@@ -1388,15 +1530,102 @@ Theorem {name}_t_spec :
   forall {pb},
 {lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
-  intros {param_names} {' '.join(f'Hl{k+1}' for k in range(n_lens))} {' '.join(f'Hreq{k+1}' for k in range(n_reqs))}.
+  intros {param_names} {lens_intro} {reqs_intro}.
   unfold {name}_t.
   destruct ({name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms})
     as {pat_p} eqn:Heq.
   cbn beta iota.
   assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
 {ini_asserts}  pose proof ({name}_loop_spec {pose_args}) as Hout.
-  clear Hfb Heq {' '.join(f'Hini{k+1}' for k in range(n_invs))}.
+  clear Hfb Heq {ini_intro}.
   t_dis.
+Qed.
+"""
+
+    # Early exit (SPEC.md, 2026-09-08): w["body"] contains a `return`, so
+    # the loop can end two ways, and the Fixpoint's result carries which
+    # one happened as a second, bool component ("did this run end via
+    # return"). `step_tup`/`step_done` (from exec_straight above) are
+    # already the fully-guarded per-iteration outcome: on the branch that
+    # returns, step_tup's `ret` component already holds the returned value
+    # and every other component is frozen at its pre-step value (dead,
+    # since a `true` step_done discards the continuation state below); on
+    # the branch that doesn't, step_tup is exactly the old step_terms
+    # tuple. So the SAME step_tup feeds both arms of the fixpoint's inner
+    # `if`, and no separate "continued" state is ever computed.
+    #
+    # The induction lemma's conclusion becomes a disjunction on that flag:
+    # returned (rflag' = true) owes the task's ensures directly, at the
+    # invariant, the guard, and whichever branch condition step_done
+    # encodes (never the loop invariant itself, which a `return` explicitly
+    # does not owe per SPEC.md); not-returned (rflag' = false) owes exactly
+    # the old invariant-preservation/frame conclusion. The final theorem's
+    # `if rflag' then ret else <suffix>` collapses to whichever side Hout
+    # gives it, via t_dis's own subst/if-reduction, so the true-side
+    # obligation there is discharged the moment it lands (it IS the
+    # lemma's own true-side conclusion, restated at `ret`'s primed name) --
+    # all the actual proof burden sits inside {name}_loop_spec, in the one
+    # new goal a `return` adds: closing ensures from raw invariant/guard/
+    # branch-condition facts, which can need instantiating a `forall`
+    # hypothesis at a witness the file's automation did not need before
+    # (see t_go's new arm in PRELUDE, dated the same day).
+    step_tup = "(" + ", ".join(step_env[v] for v in svars) + ")"
+    ret_p = primed[0]
+    ens_prime = ensures_text(cx, ret_p)
+    rf, rfp = f"{name}_rf", f"{name}_rflag'"
+    concl_full = f"(({rfp} = true /\\ {ens_prime}) \\/ ({rfp} = false /\\ ({concl})))"
+
+    pose_args = " ".join(
+        ["(S (Z.to_nat {d}))".format(d=dec0), param_names, init_terms,
+         primed_names, rf]
+        + [f"Hl{k+1}" for k in range(n_lens)]
+        + [f"Hreq{k+1}" for k in range(n_reqs)]
+        + ["Hfb"]
+        + [f"Hini{k+1}" for k in range(n_invs)]
+        + ["Heq"])
+
+    return f"""{def_txt}
+Fixpoint {name}_loop (fuel : nat) {pb} {sb} : ({tup_ty.removesuffix("%type")} * bool)%type :=
+  match fuel with
+  | O => ({tup}, false)
+  | S fu =>
+      if {guard_b}
+      then (if {step_done} then ({step_tup}, true) else {name}_loop fu {pargs} {step_terms})
+      else ({tup}, false)
+  end.
+
+Definition {name}_t {pb} : {rty(ret_t)} :=
+  let '({tup}, {rf}) := {name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms} in
+  if {rf} then {ret} else {result_term}.
+
+Lemma {name}_loop_spec :
+  forall (fuel : nat) {pb} {sb} {sb_p} ({rfp} : bool),
+{lemma_hyps}  {dec} < Z.of_nat fuel ->
+{inv_hyps}  {name}_loop fuel {pargs} {state_names} = ({tup_p}, {rfp}) ->
+  {concl_full}.
+Proof.
+  induction fuel as [|fu IH];
+  intros {param_names} {state_names} {primed_names} {rfp} {' '.join(hyp_names)};
+  cbn [{name}_loop]; t_sweep;
+  first [ solve [ apply IH; t_side ]
+        | (let Heq := fresh "Heq" in
+           intro Heq; inversion Heq; subst; clear Heq; t_dis_ext)
+        | fail 1 "unsolved t verification condition" ].
+Qed.
+
+Theorem {name}_t_spec :
+  forall {pb},
+{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
+Proof.
+  intros {param_names} {lens_intro} {reqs_intro}.
+  unfold {name}_t.
+  destruct ({name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms})
+    as [{pat_p} {rf}] eqn:Heq.
+  cbn beta iota.
+  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
+{ini_asserts}  pose proof ({name}_loop_spec {pose_args}) as Hout.
+  clear Hfb Heq {ini_intro}.
+  t_dis_ext.
 Qed.
 """
 

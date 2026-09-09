@@ -246,26 +246,40 @@ class Violation(Exception):
         self.detail = detail
 
 
-def exec_body(body: list, env: dict, funs: dict, st: St, check_ann: bool):
+def exec_body(body: list, env: dict, funs: dict, st: St,
+              check_ann: bool) -> bool:
     """Execute statements, mutating env. When check_ann, every loop's
     invariants and decreases obligation (SPEC.md gate 2: >= 0 under the
     guard, strictly decreasing per iteration) is CHECKED on this input, so a
     generated annotation that is merely wrong is separated from a lowering
-    that is unfaithful."""
+    that is unfaithful.
+
+    Returns True when a `return` statement (SPEC.md "Early exit",
+    2026-09-08) ended the run, mirroring interp.exec_body's flag: the value
+    is in env under the return name, every enclosing block stops, and (per
+    SPEC.md) the loop that was exited owes nothing here for its invariant
+    or decreases at that point, so an early return skips those checks for
+    the iteration that returned rather than failing them."""
     for s in body:
         st.tick()
         if "assign" in s:
             name, e = s["assign"]
             env[name] = ev(e, env, funs, st)
+        elif "return" in s:
+            name, e = s["return"]
+            env[name] = ev(e, env, funs, st)
+            return True
         elif "var" in s:
             d = s["var"]
             env[d["name"]] = ev(d["init"], env, funs, st)
         elif "if" in s:
             c = s["if"]
             if ev(c["cond"], env, funs, st):
-                exec_body(c["then"], env, funs, st, check_ann)
+                if exec_body(c["then"], env, funs, st, check_ann):
+                    return True
             else:
-                exec_body(c["else"], env, funs, st, check_ann)
+                if exec_body(c["else"], env, funs, st, check_ann):
+                    return True
         elif "while" in s:
             w = s["while"]
             invs = w.get("invariants", [])
@@ -283,7 +297,8 @@ def exec_body(body: list, env: dict, funs: dict, st: St, check_ann: bool):
                 if check_ann and d0 < 0:
                     raise Violation("decreases",
                                     f"measure {d0} < 0 under the guard")
-                exec_body(w["body"], env, funs, st, check_ann)
+                if exec_body(w["body"], env, funs, st, check_ann):
+                    return True
                 d1 = ev(w["decreases"], env, funs, st)
                 if check_ann and not d1 < d0:
                     raise Violation("decreases",
@@ -293,6 +308,7 @@ def exec_body(body: list, env: dict, funs: dict, st: St, check_ann: bool):
                     raise Budget("loop cap")
         else:
             raise ValueError(f"t has no statement {s!r}")
+    return False
 
 
 # ===========================================================================
@@ -775,6 +791,10 @@ def CALL(f, *a):
 
 def ASG(x, e):
     return {"assign": [x, e]}
+
+
+def RET(x, e):
+    return {"return": [x, e]}
 
 
 def IFS(c, t, e):
@@ -1315,6 +1335,115 @@ def f_v1divmod(rng, idx):
     raise AssertionError("unreachable shape")
 
 
+def f_v1exit(rng, idx):
+    """SPEC.md "Early exit (v1)": search loops that return the moment they
+    find what they are looking for, rather than threading a not-yet-found
+    flag through the invariant to the end. Four shapes:
+      first    - first index i in [0, len(s)) with s[i] op c, returning i
+                 inside the loop and -1 after it (t/tasks/first_even.json's
+                 shape, generalized over the comparison via `_pred`).
+      exists   - exists an i with s[i] op c: true inside the loop, false
+                 after it (one ensures clause, the quantifier itself).
+      divisor  - first divisor of n in [2, n), returning it inside the loop
+                 and -1 (n is prime) after it.
+      sqrt     - first k with k*k >= n, returning inside the loop; the loop
+                 always returns before its guard can go false, so the
+                 statement after it is dead but still required (every path
+                 to the end of the body assigns the return).
+    Every shape's invariant tracks only "not found below i" (or "no k below
+    i works" for sqrt): SPEC.md says a return owes the loop nothing at that
+    exit, so the not-yet-found case is the only one the loop itself has to
+    preserve, and the invariant is correspondingly one clause simpler than
+    f_v1scan's threaded-flag search."""
+    kind = rng.choice(["first", "exists", "divisor", "sqrt"])
+    me = f"fz_v1exit_{idx:03d}"
+    if kind in ("first", "exists"):
+        extra = rng.random() < 0.5
+        params = [{"name": "s", "type": "seq"}]
+        names = []
+        if extra:
+            params.append({"name": "x", "type": "int"})
+            names = ["x"]
+        p_i, op, rhs = _pred(rng, AT("s", V("i")), names)
+        p_j = OP(op, AT("s", V("j")), rhs)
+        loop = WH(OP("<", V("i"), LEN("s")),
+                  [AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+                   FA("j", I(0), V("i"), _negate(p_j))],
+                  OP("-", LEN("s"), V("i")),
+                  [IFS(p_i,
+                       [RET("r", V("i") if kind == "first" else BL(True))],
+                       []),
+                   ASG("i", OP("+", V("i"), I(1)))])
+        body = [LOC("i", "int", I(0)), loop]
+        if kind == "first":
+            body.append(ASG("r", I(-1)))
+            ens = [OP("or", OP("==", V("r"), I(-1)),
+                      OP("and", OP(">=", V("r"), I(0)),
+                         OP("<", V("r"), LEN("s")),
+                         OP(op, AT("s", V("r")), rhs))),
+                   OP("implies", OP("==", V("r"), I(-1)),
+                      FA("i", I(0), LEN("s"),
+                         _negate(OP(op, AT("s", V("i")), rhs)))),
+                   OP("implies", OP("!=", V("r"), I(-1)),
+                      FA("j", I(0), V("r"), _negate(p_j)))]
+            ret_ty = "int"
+        else:
+            body.append(ASG("r", BL(False)))
+            ens = [OP("==", V("r"), EX("i", I(0), LEN("s"), p_i))]
+            ret_ty = "bool"
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": params, "returns": [{"name": "r", "type": ret_ty}],
+                "requires": [], "ensures": ens, "body": body}
+    if kind == "divisor":
+        body = [LOC("i", "int", I(2)),
+                WH(OP("<", V("i"), V("n")),
+                   [AND(OP(">=", V("i"), I(2)), OP("<=", V("i"), V("n"))),
+                    FA("j", I(2), V("i"),
+                       OP("!=", OP("mod", V("n"), V("j")), I(0)))],
+                   OP("-", V("n"), V("i")),
+                   [IFS(OP("==", OP("mod", V("n"), V("i")), I(0)),
+                        [RET("r", V("i"))], []),
+                    ASG("i", OP("+", V("i"), I(1)))]),
+                ASG("r", I(-1))]
+        ens = [OP("or", OP("==", V("r"), I(-1)),
+                  OP("and", OP(">=", V("r"), I(2)), OP("<", V("r"), V("n")),
+                     OP("==", OP("mod", V("n"), V("r")), I(0)))),
+               OP("implies", OP("==", V("r"), I(-1)),
+                  FA("j", I(2), V("n"),
+                     OP("!=", OP("mod", V("n"), V("j")), I(0)))),
+               OP("implies", OP("!=", V("r"), I(-1)),
+                  FA("j", I(2), V("r"),
+                     OP("!=", OP("mod", V("n"), V("j")), I(0))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "n", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [OP(">=", V("n"), I(2))],
+                "ensures": ens, "body": body}
+    # sqrt: least k >= 0 with k*k >= n; the loop bound k <= n always finds
+    # one (k = n suffices for n >= 1, k = 0 for n == 0), so the fallback
+    # assign after the loop is unreachable but still required by
+    # well-formedness: every path to the end of the body assigns `r`.
+    body = [LOC("k", "int", I(0)),
+            WH(OP("<=", V("k"), V("n")),
+               [OP(">=", V("k"), I(0)),
+                FA("j", I(0), V("k"),
+                   OP("<", OP("*", V("j"), V("j")), V("n")))],
+               OP("-", V("n"), V("k")),
+               [IFS(OP(">=", OP("*", V("k"), V("k")), V("n")),
+                    [RET("r", V("k"))], []),
+                ASG("k", OP("+", V("k"), I(1)))]),
+            ASG("r", V("k"))]
+    ens = [OP("and", OP(">=", V("r"), I(0)),
+              OP(">=", OP("*", V("r"), V("r")), V("n"))),
+           FA("j", I(0), V("r"),
+              OP("<", OP("*", V("j"), V("j")), V("n")))]
+    return {"t": 1, "name": me, "gate": "loops",
+            "params": [{"name": "n", "type": "int"}],
+            "returns": [{"name": "r", "type": "int"}],
+            "requires": [OP(">=", V("n"), I(0))],
+            "ensures": ens, "body": body}
+
+
 def f_wrong(rng, idx):
     """Category B: correct-by-construction, then ONE clause perturbed so the
     task is FALSE on a witness the interpreter finds. Every kernel must
@@ -1352,6 +1481,7 @@ FAMILIES = [
     ("v1def", f_v1def, 3),
     ("v1nest", f_v1nest, 1),
     ("v1divmod", f_v1divmod, 3),
+    ("v1exit", f_v1exit, 3),
     ("wrong", f_wrong, 3),
 ]
 
@@ -1674,6 +1804,76 @@ def probes() -> list[dict]:
                      [ASG("r", OP("+", V("r"), I(1))),
                       ASG("i", OP("+", V("i"), I(1)))])]},
         "refuted", "decreases 0 never strictly decreases", adversarial=True)
+
+    # --- SPEC.md "Early exit (v1)": `return` evaluates Expr, assigns it to
+    # the return variable, and ends the task; inside a loop it leaves
+    # without owing the loop's invariant, only the ensures.
+    add({"t": 1, "name": "fz_p_ret_first", "gate": "loops",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}], "requires": [],
+         "ensures": [OP("or", OP("==", V("r"), I(-1)),
+                        OP("and", OP(">=", V("r"), I(0)),
+                           OP("<", V("r"), LEN("s")),
+                           OP("<", AT("s", V("r")), I(0)))),
+                     OP("implies", OP("==", V("r"), I(-1)),
+                        FA("i", I(0), LEN("s"),
+                           OP(">=", AT("s", V("i")), I(0)))),
+                     OP("implies", OP("!=", V("r"), I(-1)),
+                        FA("j", I(0), V("r"),
+                           OP(">=", AT("s", V("j")), I(0))))],
+         "body": [LOC("i", "int", I(0)),
+                  WH(OP("<", V("i"), LEN("s")),
+                     [AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+                      FA("j", I(0), V("i"), OP(">=", AT("s", V("j")), I(0)))],
+                     OP("-", LEN("s"), V("i")),
+                     [IFS(OP("<", AT("s", V("i")), I(0)),
+                          [RET("r", V("i"))], []),
+                      ASG("i", OP("+", V("i"), I(1)))]),
+                  ASG("r", I(-1))]},
+        "verified",
+        "first negative index, returned from inside the loop: the return "
+        "owes the ensures at that exit, not the loop invariant, and both "
+        "the return and the natural exit (r = -1) satisfy it")
+    add({"t": 1, "name": "fz_p_ret_unreachable",
+         "params": [{"name": "x", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}], "requires": [],
+         "ensures": [OP("==", V("r"), V("x"))],
+         "body": [RET("r", V("x")), ASG("r", I(0))]},
+        "wf-refused",
+        "a statement follows a return in the same block; SPEC.md says no "
+        "statement of its own block may follow it, and check_wf refuses",
+        adversarial=True)
+    add({"t": 1, "name": "fz_p_ret_falsens", "gate": "loops",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}], "requires": [],
+         "ensures": [OP("implies", OP("!=", V("r"), I(-1)),
+                        OP(">", AT("s", V("r")), I(0)))],
+         "body": [LOC("i", "int", I(0)),
+                  WH(OP("<", V("i"), LEN("s")),
+                     [AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+                      FA("j", I(0), V("i"), OP(">=", AT("s", V("j")), I(0)))],
+                     OP("-", LEN("s"), V("i")),
+                     [IFS(OP("<", AT("s", V("i")), I(0)),
+                          [RET("r", V("i"))], []),
+                      ASG("i", OP("+", V("i"), I(1)))]),
+                  ASG("r", I(-1))]},
+        "refuted",
+        "the body returns the first NEGATIVE index, but the ensures claims "
+        "the found element is positive: false at the return, the obligation "
+        "SPEC.md says a return owes there", adversarial=True)
+    add({"t": 1, "name": "fz_p_ret_bothbranches",
+         "params": [{"name": "x", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}], "requires": [],
+         "ensures": [OP(">=", V("r"), I(0)),
+                     OP("or", OP("==", V("r"), V("x")),
+                        OP("==", V("r"), OP("neg", V("x"))))],
+         "body": [IFS(OP(">=", V("x"), I(0)),
+                      [RET("r", V("x"))],
+                      [RET("r", OP("neg", V("x")))])]},
+        "verified",
+        "a return in both arms of an if, nothing after it: well-formed "
+        "(each arm's return is the last statement of its own block), and "
+        "each arm owes the ensures at its own return")
     return P
 
 

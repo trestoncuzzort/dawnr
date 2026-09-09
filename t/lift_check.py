@@ -2152,6 +2152,17 @@ def _alpha_stmts(a_list: list, b_list: list, bindings: dict, rev: dict,
             if na != nb:
                 renames.add(f"{na}->{nb}")
             _alpha_expr(ea, eb, bindings, rev, f"{p}.assign[1]", renames)
+        elif "return" in sa:
+            # Early exit (v1, SPEC.md, 2026-09-08): a `return` names the
+            # task's own return variable, never a local, so it is
+            # compared exactly like `assign` above.
+            na, ea = sa["return"]
+            nb, eb = sb["return"]
+            if na not in bindings or bindings[na] != nb:
+                raise _AlphaMismatch(f"{p}.return[0]", na, nb)
+            if na != nb:
+                renames.add(f"{na}->{nb}")
+            _alpha_expr(ea, eb, bindings, rev, f"{p}.return[1]", renames)
         elif "var" in sa:
             da, db = sa["var"], sb["var"]
             if da.get("type") != db.get("type"):

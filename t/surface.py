@@ -20,14 +20,14 @@ accepted more than the AST would be a second, undocumented language.
 
 THE ROUND TRIP, measured (2026-09-04, this file's --check):
 
-  parse(print(t)) == t, canonical JSON, on 1549 of 1549 tasks. The corpus is
+  parse(print(t)) == t, canonical JSON, on 1582 of 1582 tasks. The corpus is
   the 11 committed tasks in t/tasks/ plus fuzz_lower.build_corpus over seeds
   1 through 7: 200 generated plus 19 hand-built probes per seed, 1574 in all,
   less the 16 that check_wf rejects, which carry constructs t does not have
-  and are therefore not t tasks. 1401 of the 1549 are distinct by canonical
+  and are therefore not t tasks. 1424 of the 1582 are distinct by canonical
   form; the repeats are the 19 probes, which build_corpus emits once per seed.
 
-  print(parse(text)) == text on the second pass for all 1549, so printing is
+  print(parse(text)) == text on the second pass for all 1582, so printing is
   idempotent and every task has one normal form in the notation.
 
   The 7 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
@@ -42,7 +42,7 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   1 through 5. That instrument samples the GRAMMAR, not t's semantics, and it
   is the one that found this file's only real defect (note 1 below). It is
   permanent, not scaffolding for this wave: a corpus can only exercise the
-  shapes its generators emit, so the defect it found is one the 1549-task
+  shapes its generators emit, so the defect it found is one the 1582-task
   corpus structurally cannot contain, and the next such defect will be too.
 
 TWO PLACES WHERE THE OBVIOUS NOTATION WOULD HAVE LOST INFORMATION, since
@@ -56,7 +56,7 @@ written differently:
      argument's printed form STARTS WITH A DIGIT. The test is on the text
      and not on the node because `neg` of `at` on a literal base prints
      `18[false]`, and `-18[false]` reparses as `at` of the literal `-18`.
-     That shape does not occur in the 1549-task corpus and was found by
+     That shape does not occur in the 1582-task corpus and was found by
      --fuzz; it is the one defect the corpus alone would have missed.
      Everywhere else `-e` is `neg`, as SYNTAX.md writes it.
 

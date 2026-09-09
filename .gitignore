@@ -95,3 +95,4 @@ forge/sync_public.py
 
 # Rocq/lia proof cache the rocq lowering runs leave beside the sources; regenerated, never evidence.
 t/.lia.cache
+t/.frama-c/

@@ -146,11 +146,18 @@ def _collect_names(x, out: set) -> None:
 
 def loop_assigned(body: list) -> set:
     """Syntactic assigned set of a loop body, SPEC.md's frame rule: a while
-    loop havocs exactly the variables assigned in its body."""
+    loop havocs exactly the variables assigned in its body. `return`
+    (SPEC.md "Early exit", 2026-09-08) assigns its target the same as
+    `assign` does, matching interp.py's `assigned()`: a loop whose only
+    write to the task's return name is a `return` must not be given a
+    frame hypothesis pinning that name to its entry value, since the
+    return path changes it."""
     out: set = set()
     for s in body:
         if "assign" in s:
             out.add(s["assign"][0])
+        elif "return" in s:
+            out.add(s["return"][0])
         elif "if" in s:
             out |= loop_assigned(s["if"]["then"])
             out |= loop_assigned(s["if"]["else"])
@@ -407,59 +414,148 @@ class Lower:
     # ---------- statements ----------
 
     def sym(self, stmts: list, env: dict, types: dict,
-            keys: list[str]) -> tuple[dict, list]:
+            keys: list[str], returned: str = "False") -> tuple[dict, list, str]:
         """Forward symbolic execution of a loop-free statement list.
-        Returns (updated env over `keys`, definedness obligations, each
-        already guarded by its path condition)."""
+        Returns (updated env over `keys`, definedness obligations each
+        already guarded by its path condition, `returned`).
+
+        `returned` (SPEC.md "Early exit", 2026-09-08) is itself a path
+        condition: the Lean Prop text (default the literal `False`) that
+        holds along exactly the paths that already hit a `return` before
+        this point. Every effect below it is guarded by its negation, so
+        a value a `return` set is frozen rather than overwritten by a
+        later statement on the same path, and every obligation past it
+        is only owed when that path in fact keeps running -- matching
+        interp.py's exec_body, where a `return` ends the whole enclosing
+        block. When the body never returns, `returned` stays the literal
+        "False" throughout and every guard below is a no-op, so this is
+        byte-identical to the pre-return lowering for every task without
+        one."""
         obs: list = []
         env = dict(env)
+
+        def guard(v):
+            if v is None:
+                return None
+            return v if returned == "False" else f"(¬{returned} → {v})"
+
         for s in stmts:
             if "assign" in s:
                 x, e = s["assign"]
-                obs.append(self.dcond(e, env, types))
-                env[x] = self.term(e, env, types)
+                obs.append(guard(self.dcond(e, env, types)))
+                new = self.term(e, env, types)
+                env[x] = new if returned == "False" else (
+                    f"(if {returned} then {env.get(x, x)} else {new})")
+            elif "return" in s:
+                x, e = s["return"]
+                obs.append(guard(self.dcond(e, env, types)))
+                new = self.term(e, env, types)
+                env[x] = new if returned == "False" else (
+                    f"(if {returned} then {env.get(x, x)} else {new})")
+                returned = "True"
             elif "var" in s:
                 d = s["var"]
                 types[d["name"]] = d["type"]
-                obs.append(self.dcond(d["init"], env, types))
+                obs.append(guard(self.dcond(d["init"], env, types)))
                 env[d["name"]] = self.term(d["init"], env, types)
             elif "if" in s:
                 c = s["if"]
-                obs.append(self.dcond(c["cond"], env, types))
+                obs.append(guard(self.dcond(c["cond"], env, types)))
                 cp = self.prop(c["cond"], env, types)
-                env_t, obs_t = self.sym(c["then"], env, types, keys)
-                env_e, obs_e = self.sym(c["else"], env, types, keys)
+                env_t, obs_t, ret_t = self.sym(c["then"], env, types, keys,
+                                               returned)
+                env_e, obs_e, ret_e = self.sym(c["else"], env, types, keys,
+                                               returned)
                 obs += [f"({cp} → {o})" for o in obs_t if o is not None]
                 obs += [f"(¬{cp} → {o})" for o in obs_e if o is not None]
                 for k in set(env_t) | set(env_e):
                     t, f = env_t.get(k, k), env_e.get(k, k)
                     env[k] = t if t == f else f"(if {cp} then {t} else {f})"
+                if ret_t == ret_e:
+                    returned = ret_t
+                elif ret_t == "True" and ret_e == "False":
+                    returned = cp
+                elif ret_t == "False" and ret_e == "True":
+                    returned = f"(¬{cp})"
+                else:
+                    returned = f"(({cp} → {ret_t}) ∧ (¬{cp} → {ret_e}))"
             elif "while" in s:
                 raise NotImplementedError(
                     "nested / multiple loops are not lowered for lean")
             else:
                 raise NotImplementedError(f"statement {list(s)} unknown")
-        return env, [o for o in obs if o is not None]
+        return env, [o for o in obs if o is not None], returned
+
+    def _always_returns(self, stmts: list) -> bool:
+        """True when every path through `stmts` ends in `return` (SPEC.md
+        "Early exit", 2026-09-08: "A path may end in return instead of an
+        assignment"). Used to tell, for an `if` with statements after it,
+        which branch's tail is unreachable and which continues into the
+        rest of the block."""
+        if not stmts:
+            return False
+        s = stmts[-1]
+        if "return" in s:
+            return True
+        if "if" in s:
+            c = s["if"]
+            return (self._always_returns(c["then"])
+                    and self._always_returns(c["else"]))
+        return False
 
     def to_expr(self, stmts: list, env: dict, types: dict) -> tuple[str, list]:
         """Loop-free body -> one expression computing the return value,
         with dependent ifs (branch hypotheses feed the requires/termination
-        side proofs of self-calls). Returns (expr, definedness obligations)."""
+        side proofs of self-calls). Returns (expr, definedness obligations).
+
+        A `return` (SPEC.md "Early exit", 2026-09-08) outside any loop is
+        just another way for a path to reach its final value: as the last
+        statement of a branch it is the base case below (parallel to a
+        tail `assign` to the return name); as the *other* branch of a
+        non-tail `if`, that branch's value is the task's result on that
+        path and the statements after the `if` are on the surviving
+        branch only (handled by the two one-sided cases below)."""
         if not stmts:
             raise NotImplementedError(
                 "a path that assigns nothing is not lowered for lean")
         s, rest = stmts[0], stmts[1:]
-        if "if" in s and not rest:
+        if "if" in s:
             c = s["if"]
             ob0 = self.dcond(c["cond"], env, types)
             cp = self.prop(c["cond"], env, types)
-            te, obs_t = self.to_expr(c["then"], env, types)
-            fe, obs_e = self.to_expr(c["else"], env, types)
+            if not rest:
+                te, obs_t = self.to_expr(c["then"], env, types)
+                fe, obs_e = self.to_expr(c["else"], env, types)
+                obs = ([ob0] if ob0 else []) \
+                    + [f"({cp} → {o})" for o in obs_t] \
+                    + [f"(¬{cp} → {o})" for o in obs_e]
+                return (
+                    f"(if {self.fresh_hyp()} : {cp} then {te} else {fe})",
+                    obs)
+            then_ret = self._always_returns(c["then"])
+            else_ret = self._always_returns(c["else"])
+            if then_ret and not else_ret:
+                te, obs_t = self.to_expr(c["then"], env, types)
+                fe, obs_e = self.to_expr(list(c["else"]) + rest, env, types)
+            elif else_ret and not then_ret:
+                te, obs_t = self.to_expr(list(c["then"]) + rest, env, types)
+                fe, obs_e = self.to_expr(c["else"], env, types)
+            else:
+                raise NotImplementedError(
+                    "statements after a branch are not lowered for lean")
             obs = ([ob0] if ob0 else []) \
                 + [f"({cp} → {o})" for o in obs_t] \
                 + [f"(¬{cp} → {o})" for o in obs_e]
             return (f"(if {self.fresh_hyp()} : {cp} then {te} else {fe})",
                     obs)
+        if "return" in s:
+            x, e = s["return"]
+            if x != self.ret:
+                raise NotImplementedError(
+                    f"return assigns {x!r}, not the return")
+            ob = self.dcond(e, env, types)
+            t = self.term(e, env, types, dep=True)
+            return t, ([ob] if ob else [])
         if "assign" in s:
             x, e = s["assign"]
             ob = self.dcond(e, env, types)
@@ -824,11 +920,22 @@ class Lower:
 
         # state = return var + every local declared before the loop
         state = [self.ret] + [s["var"]["name"] for s in prefix if "var" in s]
-        env0, obs_pre = self.sym(prefix, {}, types, state)
+        env0, obs_pre, _ = self.sym(prefix, {}, types, state)
         for v in state:
             if v not in env0:
-                raise NotImplementedError(
-                    f"state var {v!r} uninitialized before the loop")
+                # SPEC.md "Early exit" (2026-09-08): the return name need
+                # not be set before the loop when the only writes to it
+                # are a `return` inside the loop (or the suffix after it);
+                # a placeholder zero-value seeds the recursion and is
+                # provably overwritten on every path before it is read
+                # (loop_assigned already excludes it from the frame set
+                # in that case, so nothing depends on this placeholder).
+                zero = {"int": "(0 : Int)", "bool": "false"}.get(
+                    self.rett) if v == self.ret else None
+                if zero is None:
+                    raise NotImplementedError(
+                        f"state var {v!r} uninitialized before the loop")
+                env0[v] = zero
         state_nt = [(v, types[v]) for v in state]
         sb = self.binders(state_nt)
         snames = " ".join(state)
@@ -837,23 +944,44 @@ class Lower:
         invs = w.get("invariants", [])
         guard_p = self.prop(w["cond"], {}, types)
         guard_d = self.dcond(w["cond"], {}, types)
-        env_b, obs_body = self.sym(w["body"], {}, dict(types), state)
+        env_b, obs_body, ret_cond = self.sym(w["body"], {}, dict(types),
+                                             state)
+        has_return = ret_cond != "False"
         rec_args = " ".join(env_b.get(v, v) for v in state)
         dec = self.term(w["decreases"], {}, types)
         dec_d = self.dcond(w["decreases"], {}, types)
         if suffix:
-            env_s, obs_suf = self.sym(suffix, {}, dict(types), state)
+            env_s, obs_suf, _ = self.sym(suffix, {}, dict(types), state)
             result = env_s.get(self.ret, self.ret)
         else:
             obs_suf, result = [], self.ret
 
-        out = [f"def {self.name}_t_loop {pb} {sb} : "
-               f"{self.lean_type(self.rett)} :=\n"
-               f"  if _hg : {guard_p} then\n"
-               f"    {self.name}_t_loop {pnames} {rec_args}\n"
-               f"  else {result}\n"
-               f"termination_by ({dec}).toNat\n"
-               f"decreasing_by all_goals (first | omega | grind)\n"]
+        # a `return` inside the loop body (SPEC.md "Early exit",
+        # 2026-09-08) makes the guard-true step a dependent if on
+        # `ret_cond`, the SAME idiom already used for the guard `_hg` and
+        # for every dependent branch in `to_expr`/`term`: no new outcome
+        # type, so the invariant's own shape is untouched and only the
+        # guard-true step of `_t_loop_spec` gains a second case. A body
+        # with no `return` reaches `ret_cond == "False"` and this is
+        # byte-identical to the pre-return lowering.
+        if has_return:
+            retval = env_b.get(self.ret, self.ret)
+            out = [f"def {self.name}_t_loop {pb} {sb} : "
+                   f"{self.lean_type(self.rett)} :=\n"
+                   f"  if _hg : {guard_p} then\n"
+                   f"    (if _hr : {ret_cond} then {retval}\n"
+                   f"     else {self.name}_t_loop {pnames} {rec_args})\n"
+                   f"  else {result}\n"
+                   f"termination_by ({dec}).toNat\n"
+                   f"decreasing_by all_goals (first | omega | grind)\n"]
+        else:
+            out = [f"def {self.name}_t_loop {pb} {sb} : "
+                   f"{self.lean_type(self.rett)} :=\n"
+                   f"  if _hg : {guard_p} then\n"
+                   f"    {self.name}_t_loop {pnames} {rec_args}\n"
+                   f"  else {result}\n"
+                   f"termination_by ({dec}).toNat\n"
+                   f"decreasing_by all_goals (first | omega | grind)\n"]
         init_args = " ".join(env0[v] for v in state)
         out.append(f"def {self.name}_t {pb} : "
                    f"{self.lean_type(self.rett)} :=\n"
@@ -911,6 +1039,22 @@ class Lower:
         hfrs = "".join(f"\n    (hfr{k + 1} : {v} = {env0[v]})"
                        for k, v in enumerate(frame))
         applied_loop = f"({self.name}_t_loop {pnames} {snames})"
+        # guard-true step: with a `return` (SPEC.md "Early exit",
+        # 2026-09-08), `repeat split` also splits the new `_hr` dependent
+        # if, giving one goal per outcome -- the continue case still
+        # recurses into the invariant (`apply ..._loop_spec <;> grind`),
+        # but the return case's goal is `ensures` at the returned value
+        # directly (no recursive call to apply), so it is owed straight
+        # from the invariants, the guard and `_hr` by `grind` alone.
+        # `first` tries the recursive shape and falls back to plain grind,
+        # so this also covers any already-resolved merge-if goal exactly
+        # as the no-return lowering did. A body with no `return` keeps
+        # the original single-tactic line, byte-identical.
+        then_tac = (
+            f"all_goals (first | (apply {self.name}_t_loop_spec <;> "
+            f"grind{self.ga}) | grind{self.ga})"
+            if has_return else
+            f"all_goals (apply {self.name}_t_loop_spec <;> grind{self.ga})")
         out.append(
             f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs}"
             f"{hfrs} :\n"
@@ -918,8 +1062,7 @@ class Lower:
             f"  rw [{self.name}_t_loop.eq_def]\n"
             f"  split\n"
             f"  · repeat split\n"
-            f"    all_goals (apply {self.name}_t_loop_spec <;> "
-            f"grind{self.ga})\n"
+            f"    {then_tac}\n"
             f"  · grind{self.ga}\n"
             f"termination_by ({dec}).toNat\n"
             f"decreasing_by all_goals (first | omega | grind)\n")
@@ -1328,7 +1471,7 @@ class Lower:
             parts.append((self.prop(guard, tenv, types),
                           self._prove(guard, tenv, venv, types)))
             types2 = dict(types)
-            env_b, _ = self.sym(wh["body"], tenv, types2, state)
+            env_b, _, _ = self.sym(wh["body"], tenv, types2, state)
             step_tenv = {**tenv, **env_b}
             venv_step = dict(venv)
             interp.exec_body(wh["body"], venv_step, self.cert_funs,

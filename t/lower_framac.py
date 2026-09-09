@@ -106,6 +106,27 @@ returned at the end, `bool` is C int 0/1 (spec side renders bool vars as
 `x != 0` and bool equality as `<==>`). Every function gets `assigns
 \\nothing;`, which is provable (t bodies never write memory) and is what
 makes recursive calls modular.
+
+RETURN, added 2026-09-08 (SPEC.md "Early exit"). `{"return": [ID, Expr]}`
+lowers to a real C `return`: `Expr` sits in the same position as an
+assignment's right-hand side, so `stmts()` gives it the same at_asserts
+(the `at` bound, the `!= 0` divisor) before assigning it to the return
+name and emitting `return <name>;`, from whatever `if`/`while` nesting it
+sits at. This is exactly WP's rule and SPEC's: the postcondition is
+checked at every return, and the loop invariant is not owed there, because
+C's `return` leaves the loop without going through its header again.
+Nothing may follow a `return` in its own block (well-formedness's job,
+not this file's), so the statement after the enclosing `if` is dead only
+on the branch that returned, never on the other, and no
+-wp-smoke-dead-local-init goal is at risk. `assigned_names()` counts the
+return name as assigned, so a return inside a loop body puts it in that
+loop's `loop assigns` frame like any other write. The certificate replay
+(`_cert_stmts`) treats a replayed return as a stop signal threaded back
+through `if`/`while`: since the replay is concrete, the state after a
+return already holds the exact final values, so the certificate simply
+emits no more C for the rest of the body (matching check_wf's refusal of
+trailing statements) rather than emitting its own control-flow return
+inside the always-`void` certificate function.
 """
 from __future__ import annotations
 
@@ -480,13 +501,28 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str) -> str:
 
 def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
     """Definedness obligations for every `at`, `div` and `mod` in an
-    executable expression, as tagged tuples: `("at", seq, index-expr)` or
-    `("nz", divisor-expr)`. Unconditionally evaluated occurrences are
-    returned (they get an assert in front of the statement); a
-    conditionally evaluated one is refused, because emitting it without a
-    dischargeable guard would silently totalize the operator as C UB (an
-    unguarded `at` as out-of-bounds access, an unguarded `div`/`mod` as
-    division by zero)."""
+    executable expression, as tagged tuples: `("at", seq, index-expr)`,
+    `("nz", divisor-expr)`, or `("dm", div-or-mod-node)`. Unconditionally
+    evaluated occurrences are returned (they get an assert in front of the
+    statement); a conditionally evaluated one is refused, because emitting
+    it without a dischargeable guard would silently totalize the operator
+    as C UB (an unguarded `at` as out-of-bounds access, an unguarded
+    `div`/`mod` as division by zero).
+
+    "dm", added 2026-09-08 alongside `return`: MEASURED on is_prime, whose
+    `return` sits behind `if (n % d == 0)`. WP proves `t_mod(n,d) == 0` as
+    a hypothesis instantly when it is stated as a logic call (probe:
+    `requires t_mod(n,d)==0` discharges the postcondition's existential in
+    under 20ms), but times out (20000 steps, 60s wall) when the only
+    hypothesis is the raw inlined C ternary `cexpr` renders for `mod`
+    (same value, unfolds to the same formula by `t_mod`'s own definition,
+    measured equal in isolation in under 15ms): the postcondition's
+    `\\exists`/negated-`\\forall` needs a GROUND `t_mod(n, d)` term to
+    match its trigger and instantiate `d`, and the raw ternary alone never
+    puts that logic-shaped term anywhere in scope. So a `div`/`mod` node
+    now also gets a value-bridging assert, `(raw expr) == (logic call)`,
+    giving WP the exact term its own quantifiers need without changing
+    what is proved, only what is available to prove it with."""
     out = []
     if "ite" in e:
         i = e["ite"]
@@ -517,6 +553,7 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
         out += code_ats(args[0], env, uncond)
         out += code_ats(args[1], env, uncond)
         out.append(("nz", args[1]))
+        out.append(("dm", e))
         return out
     if op in ("and", "or"):
         out += code_ats(args[0], env, uncond)
@@ -532,16 +569,31 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
     return out
 
 
-def at_asserts(e: dict, ctx: Ctx, indent: str) -> list:
+def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
+               task_name: str | None = None) -> list:
+    """`funs`/`task_name` are given by callers that emit real, branching C
+    (stmts()): they let the "dm" tag add the raw/logic bridging assert
+    (see code_ats). The certificate replay (_cert_stmts) calls this
+    without them, deliberately: its own `_cert_cexpr` already resolves
+    every div/mod to a branch-free ground form, and rendering one through
+    plain `cexpr` here would put a live ternary back into the certificate,
+    exactly the dead-code-smoke hazard `_cert_cexpr`'s docstring measured
+    and fixed."""
     out = []
     for tag, *rest in code_ats(e, ctx.env):
         if tag == "at":
             s, ix = rest
             out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
                        f"&& ({term(ix, ctx)}) < {s}_n; */")
-        else:                                      # "nz": div/mod divisor
+        elif tag == "nz":
             (yx,) = rest
             out.append(f"{indent}/*@ assert ({term(yx, ctx)}) != 0; */")
+        else:                                      # "dm": bridging assert
+            (node,) = rest
+            if funs is not None and task_name is not None:
+                out.append(f"{indent}/*@ assert "
+                           f"({cexpr(node, ctx.env, funs, task_name)}) == "
+                           f"({term(node, ctx)}); */")
     return out
 
 
@@ -551,6 +603,8 @@ def assigned_names(body: list) -> tuple[list, list]:
     for s in body:
         if "assign" in s:
             hit.append(s["assign"][0])
+        elif "return" in s:
+            hit.append(s["return"][0])
         elif "var" in s:
             dec.append(s["var"]["name"])
         elif "if" in s:
@@ -571,18 +625,37 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
         if "assign" in s:
             name, e = s["assign"]
             assert name in ctx.env, f"assign to undeclared {name}"
-            out += at_asserts(e, ctx, indent)
+            out += at_asserts(e, ctx, indent, ctx.funs, task_name)
             out.append(f"{indent}{name} = "
                        f"{cexpr(e, ctx.env, ctx.funs, task_name)};")
+        elif "return" in s:
+            # Early exit (v1, 2026-09-08): `Expr` is in the same position as
+            # an assignment's right-hand side, so it owes the same
+            # definedness asserts (the `at` bound, the `!= 0` divisor). A
+            # real C `return` then ends the function immediately, from
+            # whatever nesting depth of `if`/`while` it sits at, which is
+            # exactly SPEC's rule: WP proves `ensures` at every return and
+            # never demands the enclosing loop's invariant there, because
+            # the loop is simply not reached again. Nothing may follow this
+            # statement in its own block (well-formedness's job, not this
+            # file's), so no dead-code smoke goal can arise from it: the
+            # code after the enclosing `if` remains reachable on the other
+            # branch, never on this one.
+            name, e = s["return"]
+            assert name in ctx.env, f"return of undeclared {name}"
+            out += at_asserts(e, ctx, indent, ctx.funs, task_name)
+            out.append(f"{indent}{name} = "
+                       f"{cexpr(e, ctx.env, ctx.funs, task_name)};")
+            out.append(f"{indent}return {name};")
         elif "var" in s:
             v = s["var"]
-            out += at_asserts(v["init"], ctx, indent)
+            out += at_asserts(v["init"], ctx, indent, ctx.funs, task_name)
             ctx = ctx.bind(v["name"], v["type"])
             out.append(f"{indent}int {v['name']} = "
                        f"{cexpr(v['init'], ctx.env, ctx.funs, task_name)};")
         elif "if" in s:
             c = s["if"]
-            out += at_asserts(c["cond"], ctx, indent)
+            out += at_asserts(c["cond"], ctx, indent, ctx.funs, task_name)
             out.append(f"{indent}if "
                        f"({cexpr(c['cond'], ctx.env, ctx.funs, task_name)}) "
                        f"{{")
@@ -905,11 +978,21 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
 
 
 def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
-                out: list, count: list) -> Ctx:
+                out: list, count: list) -> tuple:
     """Branch-free replay of `body` at state `st`: straight-line C plus one
     assert per branch decision. Locals are predeclared by the caller, so a
     `var` statement lands as a plain assignment (an unrolled loop iteration
-    would otherwise redeclare it)."""
+    would otherwise redeclare it).
+
+    Returns `(ctx, stopped)`. `stopped` is True once a `return` (SPEC.md
+    "Early exit", 2026-09-08) has been replayed: `st` already holds the
+    exact final ground values interp.py would compute (the replay is
+    concrete, so nothing after a return can change them, the same fact
+    that lets check_wf refuse a statement after one), so this function
+    simply stops emitting C for the rest of `body` and every enclosing
+    caller propagates the flag and stops too, rather than emitting a
+    literal C `return` inside the certificate (which stays `void` and
+    reaches its closing assert unconditionally either way)."""
     ind = "  "
     for s in body:
         count[0] += 1
@@ -923,6 +1006,15 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             out += dm_asserts
             out.append(f"{ind}{n} = {rhs};")
             st[n] = _cev(e, st)
+        elif "return" in s:
+            n, e = s["return"]
+            out += at_asserts(e, ctx, ind)
+            dm_asserts: list = []
+            rhs = _cert_cexpr(e, ctx, st, ctx.funs, name, dm_asserts, ind)
+            out += dm_asserts
+            out.append(f"{ind}{n} = {rhs};")
+            st[n] = _cev(e, st)
+            return ctx, True
         elif "var" in s:
             v = s["var"]
             out += at_asserts(v["init"], ctx, ind)
@@ -939,23 +1031,32 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             g = pred(c["cond"], ctx)
             taken = _cev(c["cond"], st)
             out.append(f"{ind}/*@ assert {g if taken else f'(!{g})'}; */")
-            ctx = _cert_stmts(c["then"] if taken else c["else"],
-                              ctx, st, name, out, count)
+            ctx, stopped = _cert_stmts(c["then"] if taken else c["else"],
+                                       ctx, st, name, out, count)
+            if stopped:
+                return ctx, True
         elif "while" in s:
             w = s["while"]
             if code_ats(w["cond"], ctx.env):
                 raise _CertSkip("`at`/`div`/`mod` in a while condition")
             g = pred(w["cond"], ctx)
+            stopped = False
             while _cev(w["cond"], st):
                 count[0] += 1
                 if count[0] > MAX_CERT_STMTS:
                     raise _CertSkip("replay exceeds the statement cap")
                 out.append(f"{ind}/*@ assert {g}; */")
-                ctx = _cert_stmts(w["body"], ctx, st, name, out, count)
-            out.append(f"{ind}/*@ assert (!{g}); */")
+                ctx, stopped = _cert_stmts(w["body"], ctx, st, name, out,
+                                           count)
+                if stopped:
+                    break
+            if not stopped:
+                out.append(f"{ind}/*@ assert (!{g}); */")
+            else:
+                return ctx, True
         else:
             raise _CertSkip(f"no replay for statement {s!r}")
-    return ctx
+    return ctx, False
 
 
 def _tty(v):

@@ -235,6 +235,31 @@ interior capital. (RESERVED clashes are checked case-insensitively since
 10.8, because Ada resolves names case-insensitively: a t param named
 r_first would capitalize to R_first and silently capture R_First.)
 
+EARLY EXIT (SPEC.md, 2026-09-08, ROADMAP 12.7). `return Expr;` cannot become
+an actual Ada `return` statement: everything in this file is an expression
+function (SHAPE, above), and a full subprogram body -- statements, a loop,
+`return` included -- is not a basic_declarative_item, so it cannot be given
+directly in the package spec this file writes. MEASURED: a plain
+`function F (...) is R : ...; begin ... return R; end F;` placed where an
+expression function sits (probe t_probe1.ads) makes gnatprove refuse Phase 2
+with "begin block not allowed in package spec" before a single VC is
+generated. So `return` is lowered the same way everything else here is: by
+substitution. Lower.compile_r is compile()'s return-aware twin, threading an
+`esc`/`val` pair (an Ada boolean and the return name's value at that escape)
+alongside the ordinary env; has_return() decides, per statement list,
+whether compile() (unchanged) or compile_r runs, so a body without a
+`return` anywhere -- every one of the 13 previously committed tasks --
+lowers byte-for-byte as before. A loop whose body can return gets two extra
+fields on its W_k state record, Esc and Ret, and its Post is weakened to
+`(if W_k'Result.Esc then True else (invariants and then not cond))`: SPEC.md
+says a return leaves the loop without owing the invariant at that point, and
+this is that rule stated to the kernel. The task's `ensures` is still owed
+at that exit like any other, but that obligation is F's own Post applied to
+F'Result uniformly regardless of path, so it needs no separate restatement.
+Definedness is inherited for free: a return's expression goes through the
+same self.expr() an assignment's right-hand side does, so Elem/T_Div/T_Mod's
+Pre checks land at the same call sites either way.
+
 THE REFUTATION CERTIFICATE (10.8, 2026-09-02). The instance above recovered
 abs and max; the other nine committed twins stayed verified/timeout, and
 the cause was REPRODUCED before this section was written: every one is a
@@ -431,6 +456,13 @@ def _ce_stmts(stmts: list, env: dict) -> dict:
                 env[v] = _ce_max(et[v], ee[v])
         elif "while" in s:
             raise _NoCe("while loop: no static bound on the accumulated value")
+        elif "return" in s:
+            # SPEC.md "Early exit" (2026-09-08): no machine mirror. F_Ce is
+            # one expression function with no way to stop partway through,
+            # so a task that can return early gets no instance, the same
+            # fail-closed treatment already given to loops, calls, seq ops
+            # and quantifiers above.
+            raise _NoCe("return: no machine mirror for early exit")
         else:
             raise _NoCe(f"statement {sorted(s)!r}")
     return env
@@ -552,17 +584,50 @@ def bound_names(task: dict, body: list) -> set:
 
 def loop_assigned(body: list) -> set:
     """Syntactic assigned set of a loop body, SPEC.md's frame rule: a while
-    loop havocs exactly the variables assigned in its body."""
+    loop havocs exactly the variables assigned in its body. A `return`
+    (SPEC.md "Early exit", 2026-09-08) assigns its target exactly like an
+    `assign` does before ending the task, and interp.assigned() already
+    counts it that way; matched here so the target becomes a field of the
+    loop's own state record (see lower_while's body_has_return path)."""
     out: set = set()
     for s in body:
         if "assign" in s:
             out.add(s["assign"][0])
+        elif "return" in s:
+            out.add(s["return"][0])
         elif "if" in s:
             out |= loop_assigned(s["if"]["then"])
             out |= loop_assigned(s["if"]["else"])
         elif "while" in s:
             out |= loop_assigned(s["while"]["body"])
     return out
+
+
+def _dead_lit(t: str) -> str:
+    """A well-typed placeholder Ada literal for a state var this file lets
+    into a loop's call site unassigned (SPEC.md "Early exit": the return
+    target, when nothing before the loop ever set it). Never read for its
+    value; only its type has to line up."""
+    return {"int": "Big_Integer'(0)", "bool": "False",
+           "seq": "Seqs.Empty_Sequence"}[t]
+
+
+def has_return(body: list) -> bool:
+    """Whether `body` can reach a `return` statement at any depth (SPEC.md
+    "Early exit", 2026-09-08), mirroring the same recursive shape as
+    loop_assigned/interp.assigned(). Drives the return-aware statement
+    lowering below (Lower.compile_r, lower_while's body_has_return path): a
+    body with no `return` anywhere keeps compile()/lower_while() exactly as
+    they were before this note, byte-for-byte."""
+    for s in body:
+        if "return" in s:
+            return True
+        if "if" in s and (has_return(s["if"]["then"])
+                          or has_return(s["if"]["else"])):
+            return True
+        if "while" in s and has_return(s["while"]["body"]):
+            return True
+    return False
 
 
 class Lower:
@@ -685,19 +750,144 @@ class Lower:
                         env[v] = f"(if {cond} then {et[v]} else {ee[v]})"
             elif "while" in s:
                 env = self.lower_while(s["while"], env, types, psub)
+            elif "return" in s:
+                # SPEC.md "Early exit" (2026-09-08). compile() is the
+                # ORIGINAL, non-return-aware statement compiler: `lower()`
+                # and lower_while() route any body has_return() finds a
+                # `return` in through compile_r below instead, so a
+                # `return` reaching here would be a routing bug, not a
+                # task shape compile() should ever try to interpret.
+                raise NotImplementedError(
+                    "spark: return statement reached compile(); "
+                    "has_return()-routing should have used compile_r")
             else:
                 raise ValueError(f"unknown statement {sorted(s)!r}")
         return env
 
+    # compile_r() is compile()'s return-aware twin (SPEC.md "Early exit",
+    # 2026-09-08, ROADMAP 12.7). Only called on a statement list has_return()
+    # finds a `return` in, from lower() at the task's top level and from
+    # lower_while() for a loop whose own body can return; every other body
+    # keeps compile()/lower_while() exactly as they read before this note,
+    # byte-for-byte, since neither is touched by anything below.
+    #
+    # A `return` cannot become an actual Ada `return` statement: everything
+    # this file emits is an expression function (SHAPE, header), and a full
+    # subprogram body (statements, a loop, `return`) is not a
+    # basic_declarative_item, so it cannot be given directly in the package
+    # spec this file writes. MEASURED (2026-09-08, probe t_probe1.ads: a
+    # plain `function F (...) is R : ...; begin ... return R; end F;` right
+    # where an expression function sits): gnatprove refuses Phase 2 with
+    # "begin block not allowed in package spec" before a single VC is even
+    # generated. So `return` is lowered the same way everything else here
+    # is: by substitution, threading one more pair of facts alongside the
+    # ordinary env -- `esc`, an Ada boolean expression (None standing for
+    # the literal False) that is true exactly when some execution of the
+    # statement list reached a `return`, and `val`, the Ada expression for
+    # the return name's value at that escape (defined whenever esc is not
+    # None). A `return`'s own target is folded into env exactly like an
+    # assign's, so downstream code that is not itself escape-aware (a
+    # later `if` merge, a recursive call's arguments) reads an ordinary
+    # substitution and stays correct: it is simply describing "the value
+    # under the hypothesis nothing escaped", which is exactly what a
+    # non-escaping continuation needs, and is discarded wherever an escape
+    # is live (lower_while's Esc branch, lower()'s final (if esc then val
+    # else env[ret]) merge) in favour of `val`.
+    def compile_r(self, stmts: list, env: dict, types: dict, psub: dict,
+                  ret_name: str):
+        env, types = dict(env), dict(types)
+        esc = None
+        val = None
+
+        def combine(local_esc, local_val):
+            nonlocal esc, val
+            if esc is None:
+                esc, val = local_esc, local_val
+            elif local_esc is not None:
+                val = f"(if {esc} then {val} else {local_val})"
+                esc = f"({esc} or else {local_esc})"
+            # local_esc is None: this statement never escapes, so whatever
+            # esc/val already stand (from earlier in the same list) are
+            # unaffected.
+
+        for s in stmts:
+            if "assign" in s:
+                v, e = s["assign"]
+                if v not in env:
+                    raise ValueError(f"assign to undeclared {v!r}")
+                env[v] = self.expr(e, {**psub, **env})
+            elif "return" in s:
+                name, e = s["return"]
+                new_val = self.expr(e, {**psub, **env})
+                env[name] = new_val
+                combine("True", new_val)
+            elif "var" in s:
+                d = s["var"]
+                env[d["name"]] = self.expr(d["init"], {**psub, **env})
+                types[d["name"]] = d["type"]
+            elif "if" in s:
+                c = s["if"]
+                cond = self.expr(c["cond"], {**psub, **env})
+                default = env.get(ret_name)
+                et, esc_then, val_then = self.compile_r(
+                    c["then"], env, types, psub, ret_name)
+                ee, esc_else, val_else = self.compile_r(
+                    c["else"], env, types, psub, ret_name)
+                for v in env:
+                    if et[v] == ee[v]:
+                        env[v] = et[v]
+                    elif et[v] is None or ee[v] is None:
+                        raise NotImplementedError(
+                            f"spark: {v!r} assigned on only one branch of "
+                            f"an `if` and read later; no join value")
+                    else:
+                        env[v] = f"(if {cond} then {et[v]} else {ee[v]})"
+                if esc_then is None and esc_else is None:
+                    local_esc, local_val = None, None
+                else:
+                    then_e = esc_then if esc_then is not None else "False"
+                    else_e = esc_else if esc_else is not None else "False"
+                    local_esc = f"(if {cond} then {then_e} else {else_e})"
+                    then_v = val_then if esc_then is not None else default
+                    else_v = val_else if esc_else is not None else default
+                    local_val = f"(if {cond} then {then_v} else {else_v})"
+                combine(local_esc, local_val)
+            elif "while" in s:
+                env, wesc, wval = self.lower_while(
+                    s["while"], env, types, psub, ret_name)
+                combine(wesc, wval)
+            else:
+                raise ValueError(f"unknown statement {sorted(s)!r}")
+        return env, esc, val
+
     def lower_while(self, w: dict, env: dict, types: dict,
-                    psub: dict) -> dict:
+                    psub: dict, ret_name: str | None = None):
+        """Lower one while loop to its W_k helper. `ret_name` is None for
+        every call site compile() makes (the original, non-return-aware
+        shape, returned as a plain env dict, unchanged since before SPEC.md
+        "Early exit"); compile_r() always passes the task's return name, and
+        gets back (env, esc, val) instead -- esc/val are None/None when
+        THIS loop's own body (body_has_return below) has no return in it,
+        exactly mirroring compile_r's own convention."""
         if "decreases" not in w:
             raise ValueError("while without a decreases clause")
         self.wcount += 1
         name, tname = f"W_{self.wcount}", f"W_{self.wcount}_State"
         state = list(env.keys())
+        body_has_return = ret_name is not None and has_return(w["body"])
         for v in state:
             if env[v] is None:
+                if body_has_return and v == ret_name:
+                    # The return target may be genuinely unassigned before
+                    # the loop (SPEC.md "Early exit": first_even, is_prime
+                    # both reach their while with `r` never yet assigned).
+                    # No invariant or Pre/Post above ever mentions it here
+                    # (a loop's own contract is stated over the state it
+                    # HAVOCS, and nothing upstream could have constrained a
+                    # name nothing has touched yet), so entry has no fact to
+                    # lose by treating it as a normal (if unconstrained)
+                    # state field instead of refusing the loop outright.
+                    continue
                 raise NotImplementedError(
                     f"spark: loop reached with {v!r} unassigned; the state "
                     f"record has no value for it")
@@ -708,7 +898,10 @@ class Lower:
         # value for it. (Before 2026-09-02 the record held ALL of env, and
         # the Post said only invariants + not guard about it, the
         # havoc-everything theorem: fr_probe_ret / fr_probe_local went
-        # TIMEOUT here while Dafny, Verus and Frama-C proved them.)
+        # TIMEOUT here while Dafny, Verus and Frama-C proved them.) A
+        # `return`'s target counts as assigned here too (loop_assigned,
+        # 2026-09-08), so it becomes a state field exactly when the body can
+        # actually set it.
         hav = loop_assigned(w["body"])
         mut = [v for v in state if v in hav]
         if not mut:
@@ -730,7 +923,12 @@ class Lower:
         d = self.expr(w["decreases"], entry)
         variant = f"(if {d} >= 0 then {d} else 0)"
         inner = {v: cap(v) for v in state}
-        benv = self.compile(w["body"], inner, types, psub)
+        if body_has_return:
+            benv, besc, bval = self.compile_r(
+                w["body"], inner, types, psub, ret_name)
+        else:
+            benv = self.compile(w["body"], inner, types, psub)
+            besc = bval = None
         cond = self.expr(w["cond"], {**psub, **inner})
         rec_args = [cap(p["name"]) for p in tparams] \
             + [benv[v] for v in state]
@@ -739,10 +937,40 @@ class Lower:
         aspects = []
         if pre:
             aspects.append(f"Pre  => {pre}")
-        aspects.append(f"Post => {post}")
+        if body_has_return:
+            # SPEC.md "Early exit": a return inside the loop leaves it
+            # without owing the invariant at that point. The task's own
+            # `ensures` is still owed at that exit, like any other, but
+            # that obligation sits on F's Post (lower(), below), which
+            # applies uniformly to F'Result whichever path produced it;
+            # nothing here needs to restate it.
+            aspects.append(
+                f"Post => (if {name}'Result.Esc then True else ({post}))")
+        else:
+            aspects.append(f"Post => {post}")
         aspects.append(f"Subprogram_Variant => (Decreases => {variant})")
-        fields = "\n".join(f"      {cap(v)} : {TYPE[types[v]]};"
-                           for v in mut)
+        ret_type = TYPE[self.task["returns"][0]["type"]]
+        if body_has_return:
+            fields = "\n".join(f"      {cap(v)} : {TYPE[types[v]]};"
+                               for v in mut)
+            fields += f"\n      Esc : Boolean;\n      Ret : {ret_type};"
+            esc_fields = ", ".join(f"{cap(v)} => {benv[v]}" for v in mut)
+            base_case = (f"{tname}'({agg}, Esc => False, "
+                        f"Ret => {cap(ret_name)})")
+            recurse_or_escape = (
+                f"(if {besc}\n"
+                f"         then {tname}'({esc_fields}, Esc => True, "
+                f"Ret => {bval})\n"
+                f"         else {name} ({', '.join(rec_args)}))")
+            body_expr = (f"(if {cond}\n"
+                        f"        then {recurse_or_escape}\n"
+                        f"        else {base_case})")
+        else:
+            fields = "\n".join(f"      {cap(v)} : {TYPE[types[v]]};"
+                               for v in mut)
+            body_expr = (f"(if {cond}\n"
+                        f"        then {name} ({', '.join(rec_args)})\n"
+                        f"        else {tname}'({agg}))")
         self.helpers.append(
             f"   type {tname} is record\n{fields}\n   end record;\n"
             f"\n"
@@ -750,14 +978,23 @@ class Lower:
             f"   with\n     " + ",\n     ".join(aspects) + ";\n"
             f"\n"
             f"   {sig}\n"
-            f"   is ((if {cond}\n"
-            f"        then {name} ({', '.join(rec_args)})\n"
-            f"        else {tname}'({agg})));\n")
+            f"   is ({body_expr});\n")
+        # A state var may still be Python None here: the pre-check above lets
+        # exactly the unassigned return-target case through (SPEC.md "Early
+        # exit"), so it needs a placeholder Ada value for the call site --
+        # dead on arrival, since nothing upstream constrains or reads it
+        # before the loop assigns (or returns) it for real.
         out_args = [cap(p["name"]) for p in tparams] \
-            + [env[v] for v in state]
+            + [(env[v] if env[v] is not None else _dead_lit(types[v]))
+               for v in state]
         call = f"{name} ({', '.join(out_args)})"
-        return {v: (f"{call}.{cap(v)}" if v in mut else env[v])
-                for v in state}
+        out_env = {v: (f"{call}.{cap(v)}" if v in mut else env[v])
+                  for v in state}
+        if ret_name is None:
+            return out_env
+        if body_has_return:
+            return out_env, f"{call}.Esc", f"{call}.Ret"
+        return out_env, None, None
 
     # --- spec_funs ---------------------------------------------------------
 
@@ -913,13 +1150,18 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,
     # which is a wrong answer rather than a missing one.
-    reserved_lc = {r.lower() for r in RESERVED}
+    # `Esc`/`Ret` (SPEC.md "Early exit", 2026-09-08) only enter the emitted
+    # package when a loop actually escapes, so they are only reserved for a
+    # task has_return finds a `return` in; the other 13 committed tasks'
+    # RESERVED set, and therefore their output, is untouched.
+    reserved = RESERVED | ({"Esc", "Ret"} if has_return(body) else set())
+    reserved_lc = {r.lower() for r in reserved}
     clash = sorted(n for n in bound_names(task, body)
                    if n.lower() in reserved_lc)
     if clash:
         raise NotImplementedError(
             f"spark: t name(s) {clash} collide with the emitted package's own "
-            f"names ({sorted(RESERVED)})")
+            f"names ({sorted(reserved)})")
     named = sorted(bound_names(task, body) | {task["name"]})
     by_ada = {}
     for n in named:
@@ -932,11 +1174,27 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
 
     spec_funs = [L.lower_spec_fun(sf) for sf in task.get("spec_funs", [])]
 
-    env = L.compile(body, {ret["name"]: None}, {ret["name"]: ret["type"]},
-                    psub)
-    if env[ret["name"]] is None:
-        raise ValueError(f"body never assigns {ret['name']!r}")
-    final = env[ret["name"]]
+    # SPEC.md "Early exit" (2026-09-08): a body that can `return` is lowered
+    # through compile_r, which threads the escape alongside the ordinary
+    # substitution env; one without it keeps compile() exactly as it read
+    # before this note. Either way F's Post (below) is the task's `ensures`
+    # applied uniformly to F'Result, so the exit obligation SPEC.md states
+    # ("the task owes its ensures there as at every exit") falls out of
+    # this merge for free rather than needing its own restatement.
+    if has_return(body):
+        env, esc, val = L.compile_r(
+            body, {ret["name"]: None}, {ret["name"]: ret["type"]}, psub,
+            ret["name"])
+        if env[ret["name"]] is None:
+            raise ValueError(f"body never assigns {ret['name']!r}")
+        final = env[ret["name"]] if esc is None \
+            else f"(if {esc} then {val} else {env[ret['name']]})"
+    else:
+        env = L.compile(body, {ret["name"]: None}, {ret["name"]: ret["type"]},
+                        psub)
+        if env[ret["name"]] is None:
+            raise ValueError(f"body never assigns {ret['name']!r}")
+        final = env[ret["name"]]
 
     aspects = []
     reqs = [L.expr(e, psub) for e in task.get("requires", [])]

@@ -436,24 +436,26 @@ def bound_quantifier(q: Quantifier):
 
 
 # ---------------------------------------------------------------------------
-# Tail-return scan (section 4.5's three `return` rows). Returns
-# (issues, rewrites) where issues are early-exit refusal candidates and
-# rewrites are `tail-return` candidates (both as plain tuples the caller
-# turns into Refusal / Rewrite objects).
+# Tail/early-return scan (section 4.5's three `return` rows, plus SPEC.md
+# "Early exit (v1)", 2026-09-08). Returns (issues, rewrites) where issues
+# are refusal candidates still raised here (none, as of the early-exit
+# rule below -- `break`/`continue` are refused by `_scan_node_for_issues`'s
+# generic pass instead, not here) and rewrites are (line, kind) pairs,
+# kind one of "tail" (a return in tail position, desugared away by
+# `lift_rewrite._desugar_returns`) or "early" (any other return, mapped to
+# t's `{"return": [ret, e]}` statement -- LIFTER-DECISIONS.md row 21).
+# Both as plain tuples the caller turns into Rewrite objects.
 # ---------------------------------------------------------------------------
 
 def scan_returns(stmts: tuple[Stmt, ...], tail: bool
-                  ) -> tuple[list[tuple[int, str, str]], list[tuple[int, int]]]:
+                  ) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]]]:
     issues: list[tuple[int, str, str]] = []
-    rewrites: list[tuple[int, int]] = []  # (line, _) just to carry the line
+    rewrites: list[tuple[int, str]] = []  # (line, "tail" | "early")
     n = len(stmts)
     for i, s in enumerate(stmts):
         this_tail = tail and (i == n - 1)
         if isinstance(s, ReturnStmt):
-            if this_tail:
-                rewrites.append((s.line, 0))
-            else:
-                issues.append((s.line, "early-exit", "return"))
+            rewrites.append((s.line, "tail" if this_tail else "early"))
         elif isinstance(s, IfStmt):
             i2, r2 = scan_returns(s.then, this_tail)
             issues += i2
@@ -611,8 +613,12 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     if method.body is not None:
         ri, rr = scan_returns(method.body, True)
         issues += ri
-        if rr:
-            rewrites.append(Rewrite(rule="tail-return", line=rr[0][0]))
+        tail_lines = [l for l, k in rr if k == "tail"]
+        early_lines = [l for l, k in rr if k == "early"]
+        if tail_lines:
+            rewrites.append(Rewrite(rule="tail-return", line=tail_lines[0]))
+        if early_lines:
+            rewrites.append(Rewrite(rule="early-exit-return", line=early_lines[0]))
 
     # -- quantifier boundedness -------------------------------------------
     for root in scope_roots:
