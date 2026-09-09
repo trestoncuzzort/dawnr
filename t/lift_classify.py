@@ -153,6 +153,20 @@ def _is_seq_of_nat(t: Optional[Type]) -> bool:
             and _is_nat(t.args[0]))
 
 
+def _is_char(t: Optional[Type]) -> bool:
+    return t is not None and t.kind == "char"
+
+
+def _is_seq_of_char(t: Optional[Type]) -> bool:
+    # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code points
+    # (v1)"): `seq<char>` written that way is `string` by another name
+    # ("string of anything nested is not", the task's own words) -- one
+    # level of char elements only, the same one-level rule
+    # `_is_seq_of_int`/`_is_seq_of_nat` already carry.
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and _is_char(t.args[0]))
+
+
 def _is_array_of_int(t: Optional[Type]) -> bool:
     return (t is not None and t.kind == "array" and not t.nullable
             and len(t.args) == 1 and _is_int_like(t.args[0]))
@@ -160,9 +174,14 @@ def _is_array_of_int(t: Optional[Type]) -> bool:
 
 def _type_issue(t: Optional[Type]) -> Optional[str]:
     """Section 4.2's type table, as a refusal reason or None when the type
-    is one this lifter can carry (int/nat/bool/seq<int|nat>). Array is
-    handled by the caller separately (it needs a whole-closure usage
-    check, decision 1 / section 18.6, not a local type test)."""
+    is one this lifter can carry (int/nat/bool/seq<int|nat|char>/char/
+    string -- row 28, 2026-09-09: a char is a t int and a string a t seq,
+    so neither refuses on its type alone here any more; what still
+    refuses about them needs the method's own scope, not a bare `Type`
+    node, and lives in `classify`'s own dedicated pass, see that row's
+    own comment there). Array is handled by the caller separately (it
+    needs a whole-closure usage check, decision 1 / section 18.6, not a
+    local type test)."""
     if t is None:
         return "untyped-var"
     if t.kind in ("int", "nat", "bool"):
@@ -174,7 +193,10 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             # (section 7); the lifter carries no per-element guard for a
             # bare `seq`, so this is refused rather than silently widened.
             return "nat-seq-elements"
-        if len(t.args) == 1 and _is_int_like(t.args[0]):
+        if len(t.args) == 1 and (_is_int_like(t.args[0]) or _is_char(t.args[0])):
+            # Row 28: `seq<char>` is `string` written another way (SPEC.md
+            # "Strings as sequences of code points (v1)"), so it carries
+            # here exactly as `seq<int>` already does.
             return None
         return "nested-seq"
     if t.kind == "array":
@@ -184,7 +206,16 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     if t.kind == "real":
         return "real"
     if t.kind in ("char", "string"):
-        return "string-char"
+        # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code
+        # points (v1)"): a Dafny `char` is a t int (its own code point),
+        # a `string` a t `seq` of them -- the same type the lifter
+        # already gives `seq<int>` -- so neither refuses on its type
+        # alone any more (`string-char` used to be raised here
+        # unconditionally). What still refuses is narrower and lives in
+        # the dedicated pass below (`char-arith`, `char-cast-unbounded`,
+        # `string-lib`, `char-literal-nonbmp`), which needs the method's
+        # own scope to decide, not a bare `Type` node.
+        return None
     if t.kind == "set" or t.kind == "iset":
         return "set"
     if t.kind in ("map", "imap"):
@@ -234,8 +265,16 @@ def _declared_kind(t: Optional[Type]) -> Optional[str]:
         return "bool"
     if t.kind in ("int", "nat"):
         return "int"
-    if t.kind == "seq" and len(t.args) == 1 and _is_int_like(t.args[0]):
+    if t.kind == "char":
+        # Row 28: a char IS its code point, one t int; this row's
+        # int/bool/seq vocabulary has no separate "char" kind (a
+        # +/-'s char-ness is `_is_char_expr`'s own, narrower question,
+        # below, needed only where the distinction actually matters).
+        return "int"
+    if t.kind == "seq" and len(t.args) == 1 and (_is_int_like(t.args[0]) or _is_char(t.args[0])):
         return "seq"
+    if t.kind == "string":
+        return "seq"  # row 28: string is seq<int> by another name
     if t.kind == "array" and not t.nullable and _is_array_of_int(t):
         return "seq"
     return None
@@ -249,8 +288,10 @@ def expr_kind(e: Expr, lookup) -> Optional[str]:
         return "int"
     if isinstance(e, BoolLit):
         return "bool"
-    if isinstance(e, (CharLit, StringLit)):
-        return None
+    if isinstance(e, CharLit):
+        return "int"  # row 28: a char literal is its code point
+    if isinstance(e, StringLit):
+        return "seq"  # row 28: a string literal is the seq literal of code points
     if isinstance(e, Ident):
         return lookup(e.name)
     if isinstance(e, Old):
@@ -374,16 +415,195 @@ def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
     all -- included); else the section-5 reason the FIRST offending
     element names -- `nested-seq` for a nested display (or anything else
     this row cannot type as `int`, the same bucket `_type_issue` already
-    uses for "seq of anything but int/nat"), `string-char` for a literal
-    char/string element."""
+    uses for "seq of anything but int/nat"). Row 28 (2026-09-09): a char
+    literal element (`['a', 'b']`) is no longer refused here at all --
+    `expr_kind` now types a `CharLit` `int` (its own code point), so it
+    falls straight through to the ordinary "every element int" reading,
+    unlike a `StringLit` element (`["ab", "cd"]`, a display of DISPLAYS
+    in effect, `expr_kind` typing it `seq`), which still lands on
+    `nested-seq` below -- "string of anything nested is not [in the
+    fragment]", the task's own words for row 28's own refusal list."""
     for el in n.elems:
         if isinstance(el, SeqDisplay):
             return "nested-seq"
-        if isinstance(el, (CharLit, StringLit)):
-            return "string-char"
         if expr_kind(el, env.get) != "int":
             return "nested-seq"
     return None
+
+
+# ---------------------------------------------------------------------------
+# Row 28 (2026-09-09, SPEC.md "Strings as sequences of code points (v1)"):
+# a Dafny `char` is a t int, the code point; `string` a t `seq` of them.
+# `expr_kind`/`_declared_kind` above already fold char into the SAME "int"
+# kind a plain int has (a char IS its code point, no separate t kind), so
+# this section answers the two narrower questions that folding loses: a
+# Binary +/-'s operand is SPECIFICALLY char (Dafny gives `char + char` and
+# `char - char` an overflow/underflow proof obligation t cannot state,
+# measured on dafny 4.11.0 -- `char-arith`, refused), and a Cast's own
+# safety (`char as int` is always the identity; `int as char` only when
+# the operand is visibly already a code point -- a literal in range or a
+# char cast back -- else `char-cast-unbounded`).
+# ---------------------------------------------------------------------------
+
+_CHAR_ESCAPES = {"n": 10, "t": 9, "r": 13, "0": 0, "'": 39, '"': 34, "\\": 92}
+
+# Measured on dafny 4.11.0 (this task's own environment): the DEFAULT run
+# (no `--unicode-char` flag at all, what `lifter.py`/`lift_check.py` both
+# invoke) already accepts the FULL Unicode range for `as char` and for a
+# char VALUE generally -- `1114111 as char`/`70000 as char` both verify
+# with no obligation beyond "not negative, not above 1114111" -- so a
+# cast's own safety bound and a char parameter's/return's own domain
+# guard (below) both use 1114111, SPEC.md's own "an int in [0, 1114111]".
+_CHAR_MAX = 1114111
+# A LITERAL's own decodability is a narrower, more conservative question
+# than a value's general validity: SPEC.md's row 28 mapping says "a Dafny
+# char is a UTF-16 code unit unless the program is compiled with
+# --unicode-char, so a literal outside the Basic Multilingual Plane is
+# refused rather than guessed" -- measured to be stale as a claim about
+# THIS dafny's default (see `_CHAR_MAX`'s own comment), but still the
+# stated, deliberate policy for what this lifter decodes from LITERAL
+# syntax, so literal decoding keeps the more conservative BMP bound
+# (0xFFFF) rather than widening to match the value bound above.
+_CHAR_LITERAL_MAX = 0xFFFF
+
+
+def _decode_one_char(text: str, i: int):
+    """One Dafny character starting at `text[i]` (never a delimiting
+    quote): the standard escapes measured on dafny 4.11.0 (`'\\n'` -> 10,
+    `'\\t'` -> 9, `'\\r'` -> 13, `'\\0'` -> 0, `'\\''` -> 39, `'\\"'` -> 34,
+    `'\\\\'` -> 92), the full-range escape `\\U{H+}` (measured: the ONLY
+    valid spelling for a non-ASCII code point on this dafny -- `\\u{H+}`
+    (lowercase u) and `\\{H+}` (no letter at all) are both parse errors),
+    or one literal, unescaped
+    character read by Python's own code-point indexing (Python's `str` is
+    already code-point-indexed, so one raw BMP or astral character -- no
+    `\\U{...}` needed -- decodes correctly here with no special case).
+    Returns `(codepoint, index just past it)`; `codepoint` is `None` when
+    the escape is not one of these (never measured to occur in the
+    corpus, refused rather than guessed, `char-literal-nonbmp`)."""
+    c = text[i]
+    if c != "\\":
+        return ord(c), i + 1
+    nxt = text[i + 1] if i + 1 < len(text) else ""
+    if nxt in _CHAR_ESCAPES:
+        return _CHAR_ESCAPES[nxt], i + 2
+    if nxt == "U" and text[i + 2:i + 3] == "{":
+        end = text.find("}", i + 3)
+        if end == -1:
+            return None, len(text)
+        try:
+            return int(text[i + 3:end], 16), end + 1
+        except ValueError:
+            return None, end + 1
+    return None, min(i + 2, len(text))
+
+
+def decode_char_literal(text: str):
+    """Row 28: the code point a Dafny char literal `text` (QUOTES
+    INCLUDED, exactly `CharLit.text`) denotes, or `None` when it cannot
+    be decoded safely -- an unrecognised escape, or a code point beyond
+    `_CHAR_LITERAL_MAX` (see that name's own comment)."""
+    inner = text[1:-1]
+    if not inner:
+        return None
+    cp, end = _decode_one_char(inner, 0)
+    if cp is None or end != len(inner) or cp > _CHAR_LITERAL_MAX:
+        return None
+    return cp
+
+
+def decode_string_literal(text: str):
+    """Row 28: the list of code points a Dafny string literal `text`
+    (quotes included, `StringLit.text`) denotes, `[]` for `\"\"`, or
+    `None` when any character fails to decode (`decode_char_literal`'s
+    own rule, applied character by character)."""
+    inner = text[1:-1]
+    out: list[int] = []
+    i = 0
+    while i < len(inner):
+        cp, i = _decode_one_char(inner, i)
+        if cp is None or cp > _CHAR_LITERAL_MAX:
+            return None
+        out.append(cp)
+    return out
+
+
+def _build_char_names(method: MethodDecl, closure: tuple[Decl, ...]):
+    """Row 28's own narrower companion to `_build_kind_env`: two sets,
+    (char-typed names, string/seq<char>-typed names), by DECLARED type
+    only (params, the one return, every closure function's own params,
+    and locals) -- an untyped `var c := 'a';` is section 4.2's own
+    `untyped-var` territory already, not this row's, and no initialiser
+    -inference is attempted (unlike `_build_kind_env`'s int/bool/seq
+    reading) since char-ness only ever matters for a NAME this simple
+    reading can already see is declared one."""
+    chars: set[str] = set()
+    seqs: set[str] = set()
+
+    def note(name: Optional[str], t: Optional[Type]) -> None:
+        if name is None or t is None:
+            return
+        if t.kind == "char":
+            chars.add(name)
+        elif t.kind == "string" or _is_seq_of_char(t):
+            seqs.add(name)
+
+    for p in method.params:
+        note(p.name, p.type)
+    if len(method.returns) == 1:
+        note(method.returns[0].name, method.returns[0].type)
+    for d in closure:
+        if isinstance(d, FunctionDecl):
+            for p in d.params:
+                note(p.name, p.type)
+    for root in [method] + list(closure):
+        for n in walk(root):
+            if isinstance(n, VarDeclStmt):
+                for nm in n.names:
+                    note(nm.name, nm.type)
+    return chars, seqs
+
+
+def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset()) -> bool:
+    """Row 28: best-effort "this expression's Dafny type is exactly
+    char", the one question `expr_kind`'s int/bool/seq vocabulary cannot
+    answer since it folds char into plain int by design. Used only for a
+    Binary +/-'s operand (char-arith) and a Cast's own safety
+    (char-as-int/int-as-char); `Index` on a NAMED string/seq<char>
+    receiver (`s[i]`, e.g. two characters of a string compared or cast)
+    is the one non-leaf shape measured worth carrying -- anything else
+    (a spec_fun call's own return, an arbitrary Binary/Chain result) is
+    `False`, the conservative answer, never a guess."""
+    if isinstance(e, CharLit):
+        return True
+    if isinstance(e, Ident):
+        return e.name in char_names
+    if isinstance(e, Old):
+        return _is_char_expr(e.arg, char_names, char_seq_names)
+    if isinstance(e, Cast):
+        return e.type.kind == "char"
+    if isinstance(e, IfExpr):
+        return (_is_char_expr(e.then, char_names, char_seq_names)
+                and _is_char_expr(e.else_, char_names, char_seq_names))
+    if isinstance(e, Index) and isinstance(e.base, Ident):
+        return e.base.name in char_seq_names
+    return False
+
+
+def _char_cast_safe(base: Expr, char_names: set, char_seq_names: set) -> bool:
+    """Row 28's own condition for accepting `n as char`: the task's own
+    words, "ONLY when the lifter can see the operand is a code point
+    already (a char cast back, or a literal in range)". A literal is
+    checked against `_CHAR_MAX` (the value bound, not the more
+    conservative literal-decoding bound: dafny itself accepts any
+    literal up to 1114111 here with no extra obligation, measured, and
+    this is a CAST's safety, not a literal's own decoding)."""
+    if isinstance(base, IntLit) and 0 <= base.value <= _CHAR_MAX:
+        return True
+    if (isinstance(base, Cast) and base.type.kind == "int"
+            and _is_char_expr(base.base, char_names, char_seq_names)):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -1277,9 +1497,11 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
             # this widening explicitly); a `seq<nat>` return carries no
             # per-element `>= 0` guarantee (t has none to give it, the
             # same gap decision 14 names for a `seq<nat>` LOCAL/PARAM,
-            # deliberately accepted here as the weaker theorem). Any
-            # other seq shape (nested, bool, char) stays refused.
-            if not (_is_seq_of_int(rt) or _is_seq_of_nat(rt)):
+            # deliberately accepted here as the weaker theorem). Row 28
+            # (2026-09-09): `seq<char>` (`string` written that way) reads
+            # the same as `seq<int>` too. Any other seq shape (nested,
+            # bool) stays refused.
+            if not (_is_seq_of_int(rt) or _is_seq_of_nat(rt) or _is_seq_of_char(rt)):
                 issues.append((ret_param.line, "seq-return", ret_param.name))
         elif (rt is not None and rt.kind == "array" and not rt.nullable
                 and _is_array_of_int(rt) and array_mutation is not None
@@ -1337,6 +1559,7 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     # lifts the same way a plain seq does, per SPEC.md's own note that
     # `a[..]` on an array parameter "is the parameter itself, unchanged".
     kind_env = _build_kind_env(method, closure)
+    char_names, char_seq_names = _build_char_names(method, closure)
     mutated_array_name = array_mutation.name if array_mutation is not None else None
     for root in scope_roots:
         for n in walk(root):
@@ -1359,6 +1582,22 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
                         rewrites.append(Rewrite(rule="seq-slice-lifted", line=n.line))
                 else:
                     issues.append((n.line, "seq-slice", "[..]"))
+            elif isinstance(n, Binary) and n.op in ("+", "-") and (
+                    _is_char_expr(n.left, char_names, char_seq_names)
+                    or _is_char_expr(n.right, char_names, char_seq_names)):
+                # Row 28: `char + char`/`char - char` verify on dafny
+                # 4.11.0 with an overflow/underflow proof obligation
+                # (measured: t8/t9.dfy above), a fact t's plain,
+                # unbounded int addition/subtraction has no way to
+                # state; refused rather than silently widened into an
+                # int op that drops the obligation. (Only `+`/`-` are
+                # ever reachable here: `*`/`/`/`%` on char is a Dafny
+                # TYPE ERROR, measured, so classify never sees one.)
+                # Checked BEFORE the plain `+` seq/int reading below,
+                # since a char operand types "int" under `expr_kind`
+                # (row 28 folds char into int there on purpose) and
+                # would otherwise silently pass as ordinary arithmetic.
+                issues.append((n.line, "char-arith", n.op))
             elif isinstance(n, Binary) and n.op == "+":
                 lk = expr_kind(n.left, kind_env.get)
                 rk = expr_kind(n.right, kind_env.get)
@@ -1368,6 +1607,44 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
                     pass  # ordinary arithmetic, unaffected by rows 25-27
                 else:
                     issues.append((n.line, "seq-typing", "+"))
+            elif isinstance(n, Chain) and len(n.ops) == 1 and n.ops[0] in ("<", "<=", ">", ">="):
+                # Row 28: an ORDER comparison on a seq-typed operand --
+                # measured on dafny 4.11.0 to be "proper prefix"/"prefix"
+                # semantics, not the lexicographic order a first guess
+                # (and the task's own framing) would assume ("ac" < "b"
+                # and "b" < "ac" both false) -- is not an operator t has
+                # on seqs at all (SPEC.md: "Lexicographic order on
+                # strings is not an operator"), string or plain seq<int>
+                # alike; `_lift_chain` would otherwise print it straight
+                # through as an int comparison with no complaint, since a
+                # single relational op is never type-checked there.
+                if (expr_kind(n.operands[0], kind_env.get) == "seq"
+                        or expr_kind(n.operands[1], kind_env.get) == "seq"):
+                    issues.append((n.line, "string-lib", n.ops[0]))
+            elif isinstance(n, (CharLit, StringLit)):
+                bad = (decode_char_literal(n.text) if isinstance(n, CharLit)
+                       else decode_string_literal(n.text))
+                if bad is None:
+                    issues.append((n.line, "char-literal-nonbmp", n.text))
+            elif isinstance(n, Cast):
+                # Row 28: `Cast` handling MOVED here from
+                # `_scan_node_for_issues` in full (see that function's own
+                # docstring) -- every cast, accepted or not, is decided in
+                # this one place now. `char as int` is always the
+                # identity (a char already IS its code point); `int as
+                # char` only when `_char_cast_safe` can see the operand
+                # is already one (a literal in range, or a cast back);
+                # every other cast (`as nat`, `as real`, an unsafe `as
+                # char`, ...) keeps the old, generic `as-cast` refusal.
+                if n.type.kind == "char":
+                    if _char_cast_safe(n.base, char_names, char_seq_names):
+                        rewrites.append(Rewrite(rule="int-as-char-lifted", line=n.line))
+                    else:
+                        issues.append((n.line, "char-cast-unbounded", "as char"))
+                elif n.type.kind == "int" and _is_char_expr(n.base, char_names, char_seq_names):
+                    rewrites.append(Rewrite(rule="char-as-int-lifted", line=n.line))
+                else:
+                    issues.append((n.line, "as-cast", "as"))
 
     # -- definite assignment of the return, every path (section 4.7) -----
     if ret_param is not None and method.body is not None:
@@ -1468,7 +1745,14 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     (2026-09-09) have their own dedicated, type-aware pass in `classify`
     (`_build_kind_env`/`expr_kind`), since deciding whether they fire
     needs more context (the method's own param/return/local types) than
-    this generic per-node scan carries."""
+    this generic per-node scan carries. `Cast` is no longer refused here
+    either, same reason, same move: row 28 (2026-09-09) needs to know
+    whether a cast's OWN operand is char-typed (`char as int`, always
+    safe; `int as char`, safe only when the operand is visibly already a
+    code point) before it can tell an accepted char cast from every
+    other cast this lifter still refuses `as-cast` (`as nat`, `as real`,
+    ...), so ALL `Cast` handling, accepted and refused alike, moved to
+    that same dedicated pass."""
     if isinstance(n, SeqUpdate):
         issues.append((n.line, "seq-update", ":="))
     elif isinstance(n, (Old, Fresh)):
@@ -1519,8 +1803,6 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         issues.append((n.line, "seq-comprehension", "seq-comprehension"))
     elif isinstance(n, TupleExpr):
         issues.append((n.line, "tuple", "(...)"))
-    elif isinstance(n, Cast):
-        issues.append((n.line, "as-cast", "as"))
     elif isinstance(n, TypeTest):
         issues.append((n.line, "as-cast", "is"))
     elif isinstance(n, Member) and n.name != "Length":

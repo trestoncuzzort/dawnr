@@ -1,4 +1,4 @@
-# t coverage census: dafnybench (785 programs)
+# t coverage census: DafnyBench (785 programs)
 
 What this corpus needs that t does not have, program by program, and
 which gate opens the most programs. Lexical census, no kernel run; the
@@ -8,22 +8,21 @@ seven kernels verify its t rendering. Method and detectors at the end.
 ## Headline
 
 - programs: 785; with a method carrying its own ensures (gradable): 643
-- in t's fragment today: **277** of 643 gradable (43.1%)
-- gradable programs blocked by exactly one gap: 117
+- in t's fragment today: **292** of 643 gradable (45.4%)
+- gradable programs blocked by exactly one gap: 131
 
 ## Gaps, by programs that need them
 
 | gap | programs | sole blocker for (gradable) | meaning |
 |---|---|---|---|
 | zero-returns | 185 | 10 | a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array |
-| set | 130 | 8 | set, iset, multiset, set comprehension or set literal |
-| multi-method | 125 | 5 | more than one graded method (Main excluded) where some method's body calls ANOTHER declared method by name -- decision 9 lifts one task per method, so independent methods (no cross-call) are the burden multi-method-independent, not this gap |
-| string-char | 94 | 15 | string or char type |
+| set | 130 | 12 | set, iset, multiset, set comprehension or set literal |
+| multi-method | 125 | 9 | more than one graded method (Main excluded) where some method's body calls ANOTHER declared method by name -- decision 9 lifts one task per method, so independent methods (no cross-call) are the burden multi-method-independent, not this gap |
 | generics | 80 | 1 | type parameters |
-| array | 79 | 5 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
+| array | 79 | 15 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
 | heap | 78 | 1 | classes, object allocation, this |
-| multi-return | 74 | 32 | several return values |
-| nested-seq | 74 | 12 | a nested seq or array, or a seq of non-int elements |
+| multi-return | 74 | 34 | several return values |
+| nested-seq | 74 | 17 | a nested seq or array, or a seq of non-int elements |
 | datatype | 69 | 1 | algebraic datatypes and match |
 | array-mutation | 49 | 0 | array mutation decision 22 does not map: more than one mutated array, multiset over a mutated array's slice, or a modifies clause naming anything but the one array |
 | unbounded-quantifier | 49 | 1 | quantifier without an int range |
@@ -40,11 +39,12 @@ seven kernels verify its t rendering. Method and detectors at the end.
 | tuple | 19 | 2 | tuples |
 | bitvector | 6 | 1 | bit vectors or bitwise operators |
 | decreases-star | 6 | 0 | decreases * (a loop or call allowed not to terminate) |
+| string-lib | 6 | 0 | the string LIBRARY t's v1 seq-of-code-points model does not cover: an order comparison (<, <=, >, >=) adjacent to a string literal (measured proper-prefix, not lexicographic, but still not a t operator on seqs either way), or multiset/set of char -- lexical and approximate, UNDER-counts an order comparison between two bare string-typed names with no literal on either side (see the comment above _string_lib) |
 | extreme-predicate | 5 | 0 | least / greatest predicate: an inductive or coinductive definition, not a well-founded recursion (least and greatest LEMMAS stay hints) |
 | mutual-recursion | 4 | 0 | spec functions that call each other (t allows self-calls and calls to earlier functions) |
 | seq-comprehension | 3 | 0 | seq(n, i => e) -- t's fill is constant-valued, this is not (v1 gap, unlike rows 25-27) |
-| early-exit | 3 | 0 | a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop) |
-| char-arith | 3 | 0 | char arithmetic |
+| early-exit | 3 | 1 | a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop) |
+| char-arith | 3 | 3 | char arithmetic |
 | iterator | 2 | 0 | iterators |
 | function-method | 1 | 0 | compiled functions |
 
@@ -52,29 +52,29 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | multi-return | 32 | 309 | 48.1% |
-| 2 | string-char | 17 | 326 | 50.7% |
-| 3 | nested-seq | 17 | 343 | 53.3% |
-| 4 | array | 16 | 359 | 55.8% |
-| 5 | real | 15 | 374 | 58.2% |
-| 6 | set | 15 | 389 | 60.5% |
-| 7 | multi-method | 14 | 403 | 62.7% |
-| 8 | zero-returns | 49 | 452 | 70.3% |
-| 9 | array-mutation | 24 | 476 | 74.0% |
-| 10 | heap | 16 | 492 | 76.5% |
-| 11 | generics | 14 | 506 | 78.7% |
-| 12 | higher-order | 12 | 518 | 80.6% |
-| 13 | nondet | 11 | 529 | 82.3% |
-| 14 | bodyless-method | 11 | 540 | 84.0% |
-| 15 | unbounded-quantifier | 10 | 550 | 85.5% |
-| 16 | datatype | 13 | 563 | 87.6% |
-| 17 | io | 10 | 573 | 89.1% |
-| 18 | bodyless-function | 8 | 581 | 90.4% |
-| 19 | such-that-exec | 8 | 589 | 91.6% |
-| 20 | module | 9 | 598 | 93.0% |
-| 21 | map | 7 | 605 | 94.1% |
-| 22 | type-decl | 10 | 615 | 95.6% |
-| 23 | tuple | 11 | 626 | 97.4% |
+| 1 | multi-return | 34 | 326 | 50.7% |
+| 2 | nested-seq | 17 | 343 | 53.3% |
+| 3 | array | 16 | 359 | 55.8% |
+| 4 | real | 15 | 374 | 58.2% |
+| 5 | set | 14 | 388 | 60.3% |
+| 6 | multi-method | 14 | 402 | 62.5% |
+| 7 | zero-returns | 48 | 450 | 70.0% |
+| 8 | array-mutation | 24 | 474 | 73.7% |
+| 9 | heap | 15 | 489 | 76.0% |
+| 10 | generics | 14 | 503 | 78.2% |
+| 11 | higher-order | 12 | 515 | 80.1% |
+| 12 | nondet | 11 | 526 | 81.8% |
+| 13 | bodyless-method | 11 | 537 | 83.5% |
+| 14 | unbounded-quantifier | 10 | 547 | 85.1% |
+| 15 | datatype | 13 | 560 | 87.1% |
+| 16 | io | 10 | 570 | 88.6% |
+| 17 | bodyless-function | 8 | 578 | 89.9% |
+| 18 | type-decl | 6 | 584 | 90.8% |
+| 19 | map | 6 | 590 | 91.8% |
+| 20 | module | 9 | 599 | 93.2% |
+| 21 | such-that-exec | 11 | 610 | 94.9% |
+| 22 | tuple | 10 | 620 | 96.4% |
+| 23 | string-lib | 6 | 626 | 97.4% |
 | 24 | decreases-star | 5 | 631 | 98.1% |
 | 25 | bitvector | 4 | 635 | 98.8% |
 | 26 | early-exit | 3 | 638 | 99.2% |
@@ -87,22 +87,21 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | string-char | 13 | 118 | 72.0% |
-| 2 | nested-seq | 13 | 131 | 79.9% |
-| 3 | real | 9 | 140 | 85.4% |
-| 4 | set | 6 | 146 | 89.0% |
-| 5 | multi-return | 4 | 150 | 91.5% |
-| 6 | char-arith | 3 | 153 | 93.3% |
-| 7 | array | 2 | 155 | 94.5% |
-| 8 | bitvector | 2 | 157 | 95.7% |
-| 9 | zero-returns | 1 | 158 | 96.3% |
-| 10 | early-exit | 1 | 159 | 97.0% |
-| 11 | multi-method | 1 | 160 | 97.6% |
-| 12 | array-mutation | 1 | 161 | 98.2% |
-| 13 | unbounded-quantifier | 1 | 162 | 98.8% |
-| 14 | tuple | 1 | 163 | 99.4% |
-| 15 | higher-order | 0 | 163 | 99.4% |
-| 16 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | nested-seq | 13 | 131 | 79.9% |
+| 2 | real | 9 | 140 | 85.4% |
+| 3 | set | 6 | 146 | 89.0% |
+| 4 | multi-return | 4 | 150 | 91.5% |
+| 5 | char-arith | 3 | 153 | 93.3% |
+| 6 | array | 2 | 155 | 94.5% |
+| 7 | bitvector | 2 | 157 | 95.7% |
+| 8 | zero-returns | 1 | 158 | 96.3% |
+| 9 | early-exit | 1 | 159 | 97.0% |
+| 10 | multi-method | 1 | 160 | 97.6% |
+| 11 | array-mutation | 1 | 161 | 98.2% |
+| 12 | unbounded-quantifier | 1 | 162 | 98.8% |
+| 13 | tuple | 1 | 163 | 99.4% |
+| 14 | higher-order | 0 | 163 | 99.4% |
+| 15 | seq-comprehension | 1 | 164 | 100.0% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
@@ -112,10 +111,10 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 105 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 118 |
 | GitHub (Dafny) | 76 | 72 | 28 |
 | GitHub (Program-Verification-Dataset) | 65 | 48 | 7 |
-| Clover | 62 | 62 | 28 |
+| Clover | 62 | 62 | 30 |
 | GitHub (dafny-language-server) | 43 | 17 | 4 |
 | GitHub (Dafny-Exercises) | 21 | 20 | 12 |
 | GitHub (dafny) | 18 | 14 | 4 |
@@ -255,6 +254,7 @@ more than one gate.
 | early-return | 107 | a return that is not in tail position of a method body (lifts to t's early-exit `return` statement) |
 | main-harness | 105 | a Main test harness (stripped before tagging) |
 | for-loop | 100 | for loop (a while with a bound) |
+| string-as-seq | 94 | a string or char used only the way t's seq of code points already covers: literals, |s|, indexing, +, a slice, ==/!=, char comparisons (<,<=,>,>=), as int -- SPEC.md 'Strings as sequences of code points', LIFTER-DECISIONS.md row 28 |
 | parallel-assign | 88 | x, y := a, b (sequenced through a temporary) |
 | multi-method-independent | 86 | more than one graded method, none calling another by name -- decision 9 lifts one task per method, so no packaging decision is needed |
 | seq-return | 78 | sequence-valued return of a method or a function -- lifts as a seq return (LIFTER-DECISIONS.md rows 22/25-27) |
@@ -287,6 +287,7 @@ more than one gate.
 - BelowZero.dfy
 - CVS-handout1_tmp_tmptm52no3k_1.dfy
 - Clover_abs.dfy
+- Clover_all_digits.dfy
 - Clover_array_append.dfy
 - Clover_array_concat.dfy
 - Clover_array_product.dfy
@@ -301,6 +302,7 @@ more than one gate.
 - Clover_is_even.dfy
 - Clover_linear_search1.dfy
 - Clover_linear_search2.dfy
+- Clover_match.dfy
 - Clover_max_array.dfy
 - Clover_min_array.dfy
 - Clover_min_of_two.dfy
@@ -436,6 +438,7 @@ more than one gate.
 - dafny-programs_tmp_tmpcwodh6qh_src_factorial.dfy
 - dafny-synthesis_task_id_101.dfy
 - dafny-synthesis_task_id_106.dfy
+- dafny-synthesis_task_id_113.dfy
 - dafny-synthesis_task_id_126.dfy
 - dafny-synthesis_task_id_127.dfy
 - dafny-synthesis_task_id_133.dfy
@@ -446,10 +449,14 @@ more than one gate.
 - dafny-synthesis_task_id_17.dfy
 - dafny-synthesis_task_id_170.dfy
 - dafny-synthesis_task_id_171.dfy
+- dafny-synthesis_task_id_18.dfy
 - dafny-synthesis_task_id_2.dfy
 - dafny-synthesis_task_id_227.dfy
+- dafny-synthesis_task_id_230.dfy
 - dafny-synthesis_task_id_234.dfy
+- dafny-synthesis_task_id_238.dfy
 - dafny-synthesis_task_id_240.dfy
+- dafny-synthesis_task_id_242.dfy
 - dafny-synthesis_task_id_249.dfy
 - dafny-synthesis_task_id_257.dfy
 - dafny-synthesis_task_id_261.dfy
@@ -457,6 +464,7 @@ more than one gate.
 - dafny-synthesis_task_id_266.dfy
 - dafny-synthesis_task_id_267.dfy
 - dafny-synthesis_task_id_268.dfy
+- dafny-synthesis_task_id_269.dfy
 - dafny-synthesis_task_id_273.dfy
 - dafny-synthesis_task_id_279.dfy
 - dafny-synthesis_task_id_282.dfy
@@ -466,6 +474,7 @@ more than one gate.
 - dafny-synthesis_task_id_304.dfy
 - dafny-synthesis_task_id_307.dfy
 - dafny-synthesis_task_id_309.dfy
+- dafny-synthesis_task_id_396.dfy
 - dafny-synthesis_task_id_397.dfy
 - dafny-synthesis_task_id_404.dfy
 - dafny-synthesis_task_id_406.dfy
@@ -481,9 +490,11 @@ more than one gate.
 - dafny-synthesis_task_id_445.dfy
 - dafny-synthesis_task_id_447.dfy
 - dafny-synthesis_task_id_452.dfy
+- dafny-synthesis_task_id_454.dfy
 - dafny-synthesis_task_id_458.dfy
 - dafny-synthesis_task_id_470.dfy
 - dafny-synthesis_task_id_472.dfy
+- dafny-synthesis_task_id_474.dfy
 - dafny-synthesis_task_id_476.dfy
 - dafny-synthesis_task_id_554.dfy
 - dafny-synthesis_task_id_555.dfy
@@ -518,16 +529,20 @@ more than one gate.
 - dafny-synthesis_task_id_637.dfy
 - dafny-synthesis_task_id_641.dfy
 - dafny-synthesis_task_id_728.dfy
+- dafny-synthesis_task_id_732.dfy
 - dafny-synthesis_task_id_733.dfy
+- dafny-synthesis_task_id_741.dfy
 - dafny-synthesis_task_id_743.dfy
 - dafny-synthesis_task_id_751.dfy
 - dafny-synthesis_task_id_755.dfy
+- dafny-synthesis_task_id_759.dfy
 - dafny-synthesis_task_id_760.dfy
 - dafny-synthesis_task_id_762.dfy
 - dafny-synthesis_task_id_769.dfy
 - dafny-synthesis_task_id_77.dfy
 - dafny-synthesis_task_id_770.dfy
 - dafny-synthesis_task_id_775.dfy
+- dafny-synthesis_task_id_79.dfy
 - dafny-synthesis_task_id_790.dfy
 - dafny-synthesis_task_id_793.dfy
 - dafny-synthesis_task_id_798.dfy

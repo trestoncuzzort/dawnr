@@ -276,7 +276,19 @@ def _lex(text: str, start: int, line_starts: list[int]) -> list[Token]:
             j = i + 1
             if j < n and text[j] == "\\":
                 j += 2
-                if j - 1 < n and text[j - 1] == "{":
+                # `\U{H+}` (row 28, 2026-09-09, SPEC.md "Strings as
+                # sequences of code points (v1)"): the only valid
+                # spelling of a full-range unicode escape on this dafny
+                # (measured: `'\U{1F600}'` verifies and runs; `'\{41}'`
+                # -- no `U` -- and `'\u{41}'` -- lowercase `u` -- are
+                # both parse errors), so this checks for `U` THEN `{`, not a
+                # bare `{` (which never follows a backslash in valid
+                # Dafny and used to be checked here instead, dead code
+                # that left `j` short of the closing `}`/`'` for any
+                # `\U{...}` literal, desynchronising the rest of the
+                # lexer instead of handing `lift_classify.py` a
+                # well-formed token to name a refusal on).
+                if j - 1 < n and text[j - 1] == "U" and j < n and text[j] == "{":
                     while j < n and text[j] != "}":
                         j += 1
                     j += 1

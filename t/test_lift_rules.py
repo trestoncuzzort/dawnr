@@ -2176,18 +2176,42 @@ method BadNestedLit() returns (r: int)
     assert isinstance(v, C.Refusal) and v.reason == "nested-seq", (
         f"expected nested-seq refusal, got {v}")
 
+    # Row 28 (2026-09-09): a char-literal ELEMENT of a seq display no
+    # longer refuses `string-char` -- `'a'`/`'b'` are their own code
+    # points, ordinary int elements once `expr_kind` types a `CharLit`
+    # `int` -- so this used to be `BadCharLit`/`string-char` and is now a
+    # clean lift, indistinguishable in the JSON from `[97, 98]`.
     char_src = """
-method BadCharLit() returns (r: int)
+method CharSeqLit() returns (r: seq<int>)
+  ensures r == ['a', 'b']
+{
+  r := ['a', 'b'];
+}
+"""
+    char_task, char_rec = _lift_one(char_src, "CharSeqLit")
+    assert "seq-literal-lifted" in _rule_names(char_rec)
+    assert char_task["body"][0]["assign"] == ["r", {"op": "seq", "args": [
+        {"int": 97}, {"int": 98}]}]
+
+    # A display of STRING elements, though, is a display of DISPLAYS in
+    # effect (`expr_kind` types a `StringLit` `seq`, not `int`) -- "string
+    # of anything nested is not [in the fragment]", row 28's own words --
+    # so this still refuses `nested-seq`, the same bucket a literal
+    # nested int display already used above.
+    nested_string_src = """
+method BadNestedStringLit() returns (r: int)
   ensures r == 0
 {
-  var x := ['a', 'b'];
+  var x := ["ab", "cd"];
   r := 0;
 }
 """
-    v2 = _classify_one(char_src, "BadCharLit")
-    assert isinstance(v2, C.Refusal) and v2.reason == "string-char", (
-        f"expected string-char refusal, got {v2}")
-    print("test_seq_literal_lifted: '[1,2,3]'/'[]' -> op:seq; nested/char elements still refused")
+    v2 = _classify_one(nested_string_src, "BadNestedStringLit")
+    assert isinstance(v2, C.Refusal) and v2.reason == "nested-seq", (
+        f"expected nested-seq refusal, got {v2}")
+    print("test_seq_literal_lifted: '[1,2,3]'/'[]' -> op:seq; nested display "
+          "still refused; a char-literal element (row 28) lifts, a nested "
+          "string element still refuses nested-seq")
 
 
 def test_seq_append_in_loop_and_prepend() -> None:
@@ -2352,6 +2376,259 @@ method BadSeqRet(n: int) returns (r: seq<bool>)
           "seq<bool> still does")
 
 
+# ===========================================================================
+# Row 28 (2026-09-09, SPEC.md "Strings as sequences of code points (v1)"):
+# a Dafny `char` is a t int (its own code point), a `string` a t `seq` of
+# them. Cases below: the literal and its escapes, |s|/index/concat/slice/
+# equality (row 25-27's own machinery, unchanged), a char comparison, `as
+# int`/`as char`, and the refusals (`char-arith`, `char-cast-unbounded`,
+# `string-lib`, `nested-seq`).
+# ===========================================================================
+
+def test_char_literal_and_escapes() -> None:
+    # Measured on dafny 4.11.0 (`dafny run` printing `c as int`, task's own
+    # scratch notes): '\n'->10 '\t'->9 '\r'->13 '\0'->0 '\''->39 '\"'->34
+    # '\\'->92, the standard escapes SPEC.md's row 28 mapping names.
+    cases = [
+        ("'a'", 97), ("'A'", 65), ("'0'", 48),
+        ("'\\n'", 10), ("'\\t'", 9), ("'\\r'", 13), ("'\\0'", 0),
+        ("'\\''", 39), ("'\\\"'", 34), ("'\\\\'", 92),
+    ]
+    for lit, cp in cases:
+        src = f"""
+method M(c: char) returns (r: bool)
+  ensures true
+{{
+  r := c == {lit};
+}}
+"""
+        task, rec = _lift_one(src, "M")
+        assert "char-literal-lifted" in _rule_names(rec)
+        assert task["body"][0]["assign"] == ["r", {"op": "==", "args": [
+            {"var": "c"}, {"int": cp}]}], f"{lit}: {task['body'][0]['assign']}"
+    print("test_char_literal_and_escapes: 'a'/'A'/'0' and \\n \\t \\r \\0 \\' \\\" \\\\ "
+          "all decode to their measured code points")
+
+
+def test_string_literal_lifted() -> None:
+    src = """
+method AbcSeq() returns (r: string)
+  ensures r == "abc"
+{
+  r := "abc";
+}
+"""
+    task, rec = _lift_one(src, "AbcSeq")
+    assert "string-literal-lifted" in _rule_names(rec)
+    assert task["returns"][0]["type"] == "seq"
+    assert task["body"][0]["assign"] == ["r", {"op": "seq", "args": [
+        {"int": 97}, {"int": 98}, {"int": 99}]}]
+
+    empty_src = """
+method EmptyStr() returns (r: string)
+  ensures r == ""
+{
+  r := "";
+}
+"""
+    empty_task, empty_rec = _lift_one(empty_src, "EmptyStr")
+    assert "string-literal-lifted" in _rule_names(empty_rec)
+    assert empty_task["body"][0]["assign"] == ["r", {"op": "seq", "args": []}]
+    print('test_string_literal_lifted: "abc" -> seq literal of code points; "" -> []')
+
+
+def test_string_ops_len_index_concat_slice_as_int() -> None:
+    len_src = """
+method Len(s: string) returns (r: int)
+  ensures r == |s|
+{
+  r := |s|;
+}
+"""
+    t1, _rec1 = _lift_one(len_src, "Len")
+    assert t1["body"][0]["assign"] == ["r", {"op": "len", "args": [{"var": "s"}]}]
+
+    idx_src = """
+method IndexAsInt(s: string, i: int) returns (r: int)
+  requires 0 <= i < |s|
+  ensures r == (s[i] as int)
+{
+  r := s[i] as int;
+}
+"""
+    t2, rec2 = _lift_one(idx_src, "IndexAsInt")
+    assert "char-as-int-lifted" in _rule_names(rec2)
+    assert t2["body"][0]["assign"] == ["r", {"op": "at", "args": [{"var": "s"}, {"var": "i"}]}]
+
+    concat_src = """
+method Concat(a: string, b: string) returns (r: string)
+  ensures r == a + b
+{
+  r := a + b;
+}
+"""
+    t3, rec3 = _lift_one(concat_src, "Concat")
+    assert "seq-concat-lifted" in _rule_names(rec3)
+    assert t3["body"][0]["assign"] == ["r", {"op": "+", "args": [{"var": "a"}, {"var": "b"}]}]
+
+    slice_src = """
+method FirstTwo(s: string) returns (r: string)
+  requires |s| >= 2
+  ensures r == s[0..2]
+{
+  r := s[0..2];
+}
+"""
+    t4, rec4 = _lift_one(slice_src, "FirstTwo")
+    assert "seq-slice-lifted" in _rule_names(rec4)
+    assert t4["body"][0]["assign"] == ["r", {"op": "slice", "args": [
+        {"var": "s"}, {"int": 0}, {"int": 2}]}]
+    print("test_string_ops_len_index_concat_slice_as_int: |s| -> len, "
+          "s[i] as int -> at (the identity), a + b -> +, s[0..2] -> slice")
+
+
+def test_char_comparison_and_cast() -> None:
+    cmp_src = """
+method CmpChars(c1: char, c2: char) returns (r: bool)
+  ensures true
+{
+  r := c1 < c2;
+}
+"""
+    t1, _rec1 = _lift_one(cmp_src, "CmpChars")
+    assert t1["body"][0]["assign"] == ["r", {"op": "<", "args": [
+        {"var": "c1"}, {"var": "c2"}]}]
+
+    lit_cast_src = """
+method LitCast() returns (r: char)
+  ensures true
+{
+  r := 97 as char;
+}
+"""
+    t2, rec2 = _lift_one(lit_cast_src, "LitCast")
+    assert "int-as-char-lifted" in _rule_names(rec2)
+    assert t2["body"][0]["assign"] == ["r", {"int": 97}]
+
+    roundtrip_src = """
+method RoundTrip(c: char) returns (r: char)
+  ensures true
+{
+  r := (c as int) as char;
+}
+"""
+    t3, rec3 = _lift_one(roundtrip_src, "RoundTrip")
+    assert "char-as-int-lifted" in _rule_names(rec3)
+    assert "int-as-char-lifted" in _rule_names(rec3)
+    assert t3["body"][0]["assign"] == ["r", {"var": "c"}]
+    print("test_char_comparison_and_cast: c1 < c2 -> plain int '<'; "
+          "97 as char and (c as int) as char both lift as the identity")
+
+
+def test_char_and_string_range_guards() -> None:
+    """Row 28's own analogue of decision 4/6's nat-param-guard: without
+    this, the differential harness's own conversion of a sampled point
+    back into a Dafny char/string (needed since the source's own
+    parameter is genuinely char/string-typed) can pick a code point
+    outside [0, 1114111] and crash `dafny run` outright (measured,
+    task's own scratch notes), not merely mis-compare."""
+    char_src = """
+method Id(c: char) returns (r: char)
+  ensures r == c
+{
+  r := c;
+}
+"""
+    task, rec = _lift_one(char_src, "Id")
+    assert "char-param-guard" in _rule_names(rec)
+    assert "char-return-guard" in _rule_names(rec)
+    guard_c = {"op": "and", "args": [
+        {"op": ">=", "args": [{"var": "c"}, {"int": 0}]},
+        {"op": "<=", "args": [{"var": "c"}, {"int": 1114111}]}]}
+    guard_r = {"op": "and", "args": [
+        {"op": ">=", "args": [{"var": "r"}, {"int": 0}]},
+        {"op": "<=", "args": [{"var": "r"}, {"int": 1114111}]}]}
+    assert guard_c in task["requires"], task["requires"]
+    assert guard_r in task["ensures"], task["ensures"]
+
+    str_src = """
+method Id2(s: string) returns (r: string)
+  ensures r == s
+{
+  r := s;
+}
+"""
+    _task2, rec2 = _lift_one(str_src, "Id2")
+    assert "string-elements-requires" in _rule_names(rec2)
+    print("test_char_and_string_range_guards: a char param/return gets "
+          "0 <= v <= 1114111 as a requires/ensures; a string param gets "
+          "the same per element")
+
+
+def test_char_string_refusals() -> None:
+    arith_src = """
+method CharPlusChar(c1: char, c2: char) returns (r: char)
+  ensures true
+{
+  r := c1 + c2;
+}
+"""
+    v1 = _classify_one(arith_src, "CharPlusChar")
+    assert isinstance(v1, C.Refusal) and v1.reason == "char-arith", (
+        f"expected char-arith refusal, got {v1}")
+
+    unbounded_cast_src = """
+method BadCast(n: int) returns (r: char)
+  ensures true
+{
+  r := n as char;
+}
+"""
+    v2 = _classify_one(unbounded_cast_src, "BadCast")
+    assert isinstance(v2, C.Refusal) and v2.reason == "char-cast-unbounded", (
+        f"expected char-cast-unbounded refusal, got {v2}")
+
+    # Measured on dafny 4.11.0 (t6.dfy/t6run.dfy, task's own scratch
+    # notes): `<`/`<=` on seq/string is PROPER-PREFIX semantics, not
+    # lexicographic ("ac" < "b" and "b" < "ac" both false) -- still not
+    # an operator t has on seqs either way (SPEC.md: "Lexicographic
+    # order on strings is not an operator").
+    order_cmp_src = """
+method BadCmp(s: string, t: string) returns (r: bool)
+  ensures true
+{
+  r := s < t;
+}
+"""
+    v3 = _classify_one(order_cmp_src, "BadCmp")
+    assert isinstance(v3, C.Refusal) and v3.reason == "string-lib", (
+        f"expected string-lib refusal, got {v3}")
+
+    # "string of anything nested is not [in the fragment]" (row 28's own
+    # words): a `seq<string>` parameter is a nested seq, same bucket a
+    # nested int display or a nested string LITERAL already use.
+    nested_string_src = """
+method BadNestedString(s: seq<string>) returns (r: int)
+  ensures true
+{
+  r := 0;
+}
+"""
+    v4 = _classify_one(nested_string_src, "BadNestedString")
+    assert isinstance(v4, C.Refusal) and v4.reason == "nested-seq", (
+        f"expected nested-seq refusal, got {v4}")
+
+    # `s in t` (a substring test): measured directly (t7.dfy, task's own
+    # scratch notes) NOT to type-check in Dafny at all when both are
+    # string ("expecting element type to be assignable to char (got
+    # string)") -- structurally impossible in a verified corpus program,
+    # so there is nothing to refuse here; recorded as a comment, not an
+    # assertion, since there is no shape to construct.
+    print("test_char_string_refusals: c1+c2 -> char-arith; n as char "
+          "(unbounded) -> char-cast-unbounded; s < t -> string-lib; "
+          "seq<string> param -> nested-seq")
+
+
 UNIT_TESTS = [
     test_chain_desugared, test_iff_to_eq, test_nat_return_ensures,
     test_nat_invariant_added_and_dedup, test_spec_fun_totalised,
@@ -2376,6 +2653,10 @@ UNIT_TESTS = [
     test_seq_slice_readonly_array_whole_unchanged,
     test_seq_slice_mutated_array_bounded_stays_refused,
     test_seq_concat_typing_refused, test_seq_return_unblocked,
+    test_char_literal_and_escapes, test_string_literal_lifted,
+    test_string_ops_len_index_concat_slice_as_int,
+    test_char_comparison_and_cast, test_char_and_string_range_guards,
+    test_char_string_refusals,
 ]
 
 

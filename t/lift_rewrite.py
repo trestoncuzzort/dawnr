@@ -49,18 +49,18 @@ from pathlib import Path
 from typing import Optional
 
 from lift_ast import (
-    Assign, Binary, BlockStmt, BoolLit, BreakStmt, Call, Chain, ClauseAdded,
-    ClauseDropped, ContinueStmt, Decl, DecreasesClause, EnsuresClause,
-    Expr, ForStmt, Fresh, FunctionDecl, Ident, IfExpr, IfStmt, Iff,
-    Implies, Index, IntLit, InvariantClause, LabelStmt, LemmaDecl,
+    Assign, Binary, BlockStmt, BoolLit, BreakStmt, Call, Cast, Chain,
+    CharLit, ClauseAdded, ClauseDropped, ContinueStmt, Decl, DecreasesClause,
+    EnsuresClause, Expr, ForStmt, Fresh, FunctionDecl, Ident, IfExpr, IfStmt,
+    Iff, Implies, Index, IntLit, InvariantClause, LabelStmt, LemmaDecl,
     LiftRecord, Lhs, MethodDecl, Module, NaryBool, NewRhs, Old, Param,
     Quantifier, ReadsClause, Rename, RequiresClause, ReturnStmt, Rewrite,
-    SeqDisplay, Slice, Stmt, Type, Unary, VarDeclStmt, WhileStmt,
+    SeqDisplay, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
     ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier,
-    expr_kind, find_array_mutation, scan_breaks, scan_null_checks, walk,
-    unchanged_at_every_call,
+    decode_char_literal, decode_string_literal, expr_kind, find_array_mutation,
+    scan_breaks, scan_null_checks, walk, unchanged_at_every_call, _is_seq_of_char,
 )
 
 
@@ -120,9 +120,12 @@ def _t_type_of(t: Optional[Type]) -> str:
         return "int"
     if t.kind == "bool":
         return "bool"
-    if t.kind in ("seq", "array"):
+    if t.kind in ("seq", "array", "string"):
+        # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code
+        # points (v1)"): `string` is the same t `seq` a Dafny
+        # `seq<int>`/`array<int>` already lifts to.
         return "seq"
-    return "int"  # int, nat
+    return "int"  # int, nat, char (row 28: char is its own code point)
 
 
 def _rw_seq_kind(e: Expr, scope: "Scope") -> Optional[str]:
@@ -144,6 +147,27 @@ def _rw_seq_kind(e: Expr, scope: "Scope") -> Optional[str]:
 
 def _ge0(t_name: str) -> dict:
     return {"op": ">=", "args": [{"var": t_name}, {"int": 0}]}
+
+
+_CHAR_MAX = 1114111  # SPEC.md "an int in [0, 1114111]"; see lift_classify's
+                      # own `_CHAR_MAX` comment for the measurement behind it
+
+
+def _char_range(t_name: str) -> dict:
+    """Row 28's own analogue of `_ge0`, for a char param/return: t's
+    plain int has no notion of a char's own valid domain (SPEC.md: "No
+    overflow semantics (mathematical integers)"), so a char parameter
+    is restated as a `requires 0 <= v <= 1114111` exactly the way decision
+    4/decision 6's `nat-param-guard` restates a nat parameter's own `>=
+    0`, and a char return the matching `ensures` -- otherwise the
+    lifted task's interp domain samples arbitrary ints where the source
+    could only ever have been called with a valid char, a real
+    widening of the theorem, and (measured directly, `trun.dfy` in the
+    task's own scratch notes) the differential harness's own `n as char`
+    conversion of an out-of-range point CRASHES the whole `dafny run`
+    process rather than merely mis-comparing."""
+    return {"op": "and", "args": [_ge0(t_name),
+                                   {"op": "<=", "args": [{"var": t_name}, {"int": _CHAR_MAX}]}]}
 
 
 def _and(parts: list) -> dict:
@@ -406,6 +430,21 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         return {"int": e.value}
     if isinstance(e, BoolLit):
         return {"bool": e.value}
+    if isinstance(e, CharLit):
+        # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code
+        # points (v1)"): a char literal is its own code point, as a t
+        # int; `lift_classify.decode_char_literal` already confirmed
+        # this decodes (a lift_classify bug otherwise, same contract as
+        # every other node here).
+        cp = decode_char_literal(e.text)
+        record.rewrites.append(Rewrite(rule="char-literal-lifted", line=e.line))
+        return {"int": cp}
+    if isinstance(e, StringLit):
+        # Row 28: a string literal is t's seq literal of code points,
+        # `""` the empty one (SPEC.md's own notation table).
+        cps = decode_string_literal(e.text)
+        record.rewrites.append(Rewrite(rule="string-literal-lifted", line=e.line))
+        return {"op": "seq", "args": [{"int": cp} for cp in cps]}
     if isinstance(e, Ident):
         return {"var": scope.renames.get(e.name, e.name)}
     if isinstance(e, Unary):
@@ -518,6 +557,21 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
                  for el in e.elems]
         record.rewrites.append(Rewrite(rule="seq-literal-lifted", line=e.line))
         return {"op": "seq", "args": elems}
+    if isinstance(e, Cast):
+        # Row 28: `classify` has already confirmed this is one of the
+        # two safe shapes (`char as int`, always; `int as char`, only
+        # when the operand is visibly a code point already) -- both
+        # directions are the plain identity on the lifted side, since a
+        # char and its code point are ONE t int (SPEC.md: "the char
+        # already is its code point"). Any other cast is a
+        # lift_classify bug (should have refused `as-cast` already).
+        if e.type.kind in ("int", "char"):
+            record.rewrites.append(Rewrite(
+                rule="char-as-int-lifted" if e.type.kind == "int" else "int-as-char-lifted",
+                line=e.line))
+            return _lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)
+        raise ValueError(f"lift_rewrite: unsupported cast {e!r} (a lift_classify "
+                          f"bug: this should have been refused before rewrite ran)")
     if isinstance(e, Fresh):
         # Decision 22: `fresh(b)` on the returned array is dropped, not
         # lifted -- the common case (a TOP-LEVEL ensures conjunct) is
@@ -1308,6 +1362,7 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         t_ret = renamer.fresh(f"{mutated_param_name}_out", record, "return")
         ret_ty = "seq"
         ret_is_nat = False
+        ret_is_char = False
         scope.types[t_ret] = ret_ty
         returns_out = [{"name": t_ret, "type": ret_ty}]
         record.rewrites.append(Rewrite(rule="array-mutation-fresh-return", line=method.line))
@@ -1317,7 +1372,8 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         scope.renames[ret.name] = t_ret
         scope.ret_name = ret.name
         ret_is_nat = ret.type is not None and ret.type.kind == "nat"
-        if ret.type is not None and ret.type.kind in ("array", "seq"):
+        ret_is_char = ret.type is not None and ret.type.kind == "char"
+        if ret.type is not None and ret.type.kind in ("array", "seq", "string"):
             # Decision 22 "alloc-fill": the return itself (or a local
             # later assigned to it) is `new int[n]`/`new nat[n]`-bound;
             # its Dafny type says seq return, not `_t_type_of`'s default.
@@ -1326,7 +1382,9 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             # either element type) reads the same way; `_t_type_of`
             # already does this, but that helper is not called here --
             # this branch predates it and is kept explicit for the
-            # `nat`-tracking `ret_is_nat` line above it.
+            # `nat`-tracking `ret_is_nat` line above it. Row 28
+            # (2026-09-09): `string` joins `array`/`seq` here for the
+            # same reason.
             ret_ty = "seq"
         else:
             ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
@@ -1374,7 +1432,8 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             array_len_expr = _lift_expr(alloc_fill_size_expr, scope, fn_names, method.name,
                                         task_name, record, renamer)
 
-    # -- requires: nat-param-guard first, then array<nat> elements, then source
+    # -- requires: nat-param-guard first, then char-param-guard (row 28),
+    # then array<nat> elements, then source
     requires_out = []
     for p in method.params:
         if p.type is not None and p.type.kind == "nat":
@@ -1382,6 +1441,13 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             requires_out.append(_ge0(tn))
             record.clauses_added.append(ClauseAdded(rule="nat-param-guard", text=f"{tn} >= 0"))
             record.rewrites.append(Rewrite(rule="nat-param-guard", line=p.line))
+    for p in method.params:
+        if p.type is not None and p.type.kind == "char":
+            tn = scope.renames[p.name]
+            requires_out.append(_char_range(tn))
+            record.clauses_added.append(ClauseAdded(rule="char-param-guard",
+                                                     text=f"0 <= {tn} <= {_CHAR_MAX}"))
+            record.rewrites.append(Rewrite(rule="char-param-guard", line=p.line))
     for p in method.params:
         if (p.type is not None and p.type.kind == "array" and len(p.type.args) == 1
                 and p.type.args[0].kind == "nat"):
@@ -1392,6 +1458,33 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             requires_out.append(clause)
             record.clauses_added.append(ClauseAdded(rule="nat-elements-requires", text=f"forall k. {tn}[k] >= 0"))
             record.rewrites.append(Rewrite(rule="nat-elements-requires", line=p.line))
+    for p in method.params:
+        if p.type is not None and (p.type.kind == "string" or _is_seq_of_char(p.type)):
+            # Row 28's own analogue of `nat-elements-requires`: a string
+            # is a t seq of PLAIN ints with no per-element bound (t has
+            # none to give a bare seq -- decision 14's own gap, same
+            # reasoning `nat-elements-requires` exists to close for
+            # `array<nat>`), so without this the differential harness's
+            # own per-point conversion of a string PARAMETER's sampled
+            # seq<int> value back into a Dafny `string` (`k as char` per
+            # element, needed since the source's own parameter is
+            # genuinely `string`-typed, not `seq<int>`) can pick a
+            # code point outside [0, 1114111] and CRASH the whole `dafny
+            # run` process (measured directly, `trun.dfy`: "Unhandled
+            # exception... Value does not fall within the expected
+            # range"), not merely mis-compare.
+            tn = scope.renames[p.name]
+            k = renamer.fresh("k", record, "quantbind")
+            elem = {"op": "at", "args": [{"var": tn}, {"var": k}]}
+            body = {"op": "and", "args": [
+                {"op": ">=", "args": [elem, {"int": 0}]},
+                {"op": "<=", "args": [elem, {"int": _CHAR_MAX}]}]}
+            clause = {"forall": {"var": k, "lo": {"int": 0},
+                                  "hi": {"op": "len", "args": [{"var": tn}]}, "body": body}}
+            requires_out.append(clause)
+            record.clauses_added.append(ClauseAdded(
+                rule="string-elements-requires", text=f"forall k. 0 <= {tn}[k] <= {_CHAR_MAX}"))
+            record.rewrites.append(Rewrite(rule="string-elements-requires", line=p.line))
     for spec in method.specs:
         if isinstance(spec, RequiresClause):
             src_e = _strip_null_checks(spec.expr, scope.null_drop_ids, record, spec.line)
@@ -1431,6 +1524,13 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         ensures_out.append(_ge0(t_ret))
         record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret} >= 0"))
         record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
+    if ret_is_char:
+        # Row 28's own analogue of `nat-return-ensures` (see `_char_range`'s
+        # own comment for why this is needed, not merely tidy).
+        ensures_out.append(_char_range(t_ret))
+        record.clauses_added.append(ClauseAdded(rule="char-return-guard",
+                                                 text=f"0 <= {t_ret} <= {_CHAR_MAX}"))
+        record.rewrites.append(Rewrite(rule="char-return-guard", line=method.line))
     if array_len_expr is not None:
         ensures_out.append({"op": "==", "args": [{"op": "len", "args": [{"var": t_ret}]}, array_len_expr]})
         record.clauses_added.append(ClauseAdded(rule="array-length-return-ensures",

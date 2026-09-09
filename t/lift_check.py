@@ -237,9 +237,21 @@ def _print_expr(e, rename: dict) -> str:
     if isinstance(e, BoolLit):
         return "true" if e.value else "false"
     if isinstance(e, CharLit):
-        return f"'{e.text}'"
+        # Row 28 (2026-09-09): `CharLit.text`/`StringLit.text` already
+        # carry the surrounding quotes verbatim (`lift_parse.py`'s
+        # tokenizer hands `tok_text = text[i:j]`, opening delimiter
+        # through closing one INCLUSIVE), so re-wrapping in another pair
+        # here double-quoted every one of them (`'a'` printed as `''a''`)
+        # -- unreachable and untested before this row (every char/string
+        # use refused earlier, at the type check), now load-bearing: the
+        # checker file re-emits the SOURCE's own literal for its
+        # equivalence lemmas, and a double-quoted one is a Dafny parse
+        # error. `lift_parse.py`'s OWN `_print_expr` (a separate, unrelated
+        # printer) already gets this right (`return e.text`, no
+        # re-wrapping); this brings the two in line.
+        return e.text
     if isinstance(e, StringLit):
-        return '"' + e.text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        return e.text
     if isinstance(e, Ident):
         return rename.get(e.name, e.name)
     if isinstance(e, Old):
@@ -526,62 +538,108 @@ def _closure_rename_map(source: MethodDecl, closure: tuple) -> dict:
 # clause, and its own `expr`/`stmts` helpers are private to that module.
 # ===========================================================================
 
-def _t_expr(e: dict, arr: frozenset = frozenset()) -> str:
-    """`arr` names the task's own params that a source `array<int>`
-    parameter was lifted to (decision 1, `array-readonly-as-seq`): the
-    checker lemma keeps ONE lemma parameter per such argument, typed
-    `array<int>` to match the source clause, so a bare task-side reference
-    to that name would be the array value itself, not a seq -- `|a|` on an
-    `array<int>` is a Dafny type error (measured: Clover_max_array's
-    L_req/L_ens/L_inv/L_dec, "size operator expects a collection argument
-    (instead got array<int>)"). Printing the task side's reference to that
-    name as `(a[..])` states it over the array's sequence view instead, so
-    both sides of the lemma talk about the same object per LIFTER-DESIGN.md
-    section 9 / the array-readonly-as-seq decision's rationale."""
+def _fn_param_views(params) -> dict:
+    """Row 28: a closure FUNCTION's own char/string-typed params, keyed
+    by name, in `_view_text`'s vocabulary -- distinct from the METHOD
+    -level `views` dict `_build_checker_parts` builds (a spec_fun's own
+    parameter names are a separate scope with no reason to share a
+    method param's name OR its type; a bug caught directly, measured:
+    `dafny-synthesis_task_id_113` IsInteger's own `isDigit(c: char)`,
+    `c` absent from the method-level `views` entirely since the METHOD
+    itself has no `c` parameter, called the LIFTED spec_fun with a bare
+    `char`-typed `c` and failed to resolve, "incorrect argument type for
+    function parameter 'c' (expected int, found char)")."""
+    out: dict = {}
+    for p in params:
+        if p.type is None:
+            continue
+        if p.type.kind == "char":
+            out[p.name] = "char"
+        elif p.type.kind == "string" or (p.type.kind == "seq" and len(p.type.args) == 1
+                                          and p.type.args[0].kind == "char"):
+            out[p.name] = "string"
+    return out
+
+
+def _view_text(name: str, views: dict) -> str:
+    """The lifted side's own reference to a lemma-parameter `name`, when
+    the lemma signature declares it in the SOURCE's own type rather than
+    t's (decision 1's `array_view`, generalised by row 28 to `string`/
+    `char`): `views[name]` is `\"array\"` (`(a[..])`, decision 1's own
+    text, unchanged), `\"string\"` (a `seq<int>` VIEW of a string built by
+    a bounded `seq(...)` comprehension: SPEC.md's own model says a string
+    IS this sequence of code points, and `at`/`len`/`+`/slice/`==` on the
+    substituted text then just work, exactly as `(a[..])` does for an
+    array, since the substituted expression genuinely has Dafny type
+    `seq<int>`) or `\"char\"` (`(c as int)`, always safe, row 28). Absent
+    or any other value: the bare name, unchanged."""
+    kind = views.get(name)
+    if kind == "array":
+        return f"({name}[..])"
+    if kind == "string":
+        return (f"(seq(|{name}|, (k: int) requires 0 <= k < |{name}| "
+                 f"=> {name}[k] as int))")
+    if kind == "char":
+        return f"({name} as int)"
+    return name
+
+
+def _t_expr(e: dict, views: dict = {}) -> str:
+    """`views` names the task's own params/return that a source type
+    OTHER than t's own (`array<int>`, decision 1's `array-readonly-as-seq`,
+    or `string`/`char`, row 28's own mapping) was lifted to: the checker
+    lemma keeps ONE lemma parameter per such argument, typed to the
+    SOURCE's own type so the source-side clause reads naturally, so a
+    bare task-side reference to that name has to be VIEWED as its t
+    shape instead -- `|a|` on an `array<int>` is a Dafny type error
+    (measured: Clover_max_array's L_req/L_ens/L_inv/L_dec, "size operator
+    expects a collection argument (instead got array<int>)"), and a
+    string-typed `s[i]` is `char`, not the `int` the lifted clause means
+    by `at`. `_view_text` does the one substitution every leaf reference
+    needs; see its own docstring for the three shapes."""
     if "int" in e:
         return str(e["int"])
     if "bool" in e:
         return "true" if e["bool"] else "false"
     if "var" in e:
-        name = e["var"]
-        return f"({name}[..])" if name in arr else name
+        return _view_text(e["var"], views)
     if "ite" in e:
         c = e["ite"]
-        return (f"(if {_t_expr(c['cond'], arr)} then {_t_expr(c['then'], arr)} "
-                f"else {_t_expr(c['else'], arr)})")
+        return (f"(if {_t_expr(c['cond'], views)} then {_t_expr(c['then'], views)} "
+                f"else {_t_expr(c['else'], views)})")
     if "forall" in e or "exists" in e:
         kw = "forall" if "forall" in e else "exists"
         q = e[kw]
         joiner = "==>" if kw == "forall" else "&&"
-        return (f"({kw} {q['var']}: int :: {_t_expr(q['lo'], arr)} <= {q['var']} "
-                f"< {_t_expr(q['hi'], arr)} {joiner} {_t_expr(q['body'], arr)})")
+        return (f"({kw} {q['var']}: int :: {_t_expr(q['lo'], views)} <= {q['var']} "
+                f"< {_t_expr(q['hi'], views)} {joiner} {_t_expr(q['body'], views)})")
     if "call" in e:
         c = e["call"]
-        args = ", ".join(_t_expr(a, arr) for a in c["args"])
+        args = ", ".join(_t_expr(a, views) for a in c["args"])
         return f"{c['fun']}({args})"
     op = e["op"]
     args = e.get("args", [])
     if op == "neg":
-        return f"(-{_t_expr(args[0], arr)})"
+        return f"(-{_t_expr(args[0], views)})"
     if op == "not":
-        return f"(!{_t_expr(args[0], arr)})"
+        return f"(!{_t_expr(args[0], views)})"
     if op == "len":
-        return f"|{_t_expr(args[0], arr)}|"
+        return f"|{_t_expr(args[0], views)}|"
     if op == "at":
-        return f"{_t_expr(args[0], arr)}[{_t_expr(args[1], arr)}]"
+        return f"{_t_expr(args[0], views)}[{_t_expr(args[1], views)}]"
     if op in ("and", "or"):
         joiner = " && " if op == "and" else " || "
-        return "(" + joiner.join(_t_expr(a, arr) for a in args) + ")"
+        return "(" + joiner.join(_t_expr(a, views) for a in args) + ")"
     if op == "implies":
-        return f"({_t_expr(args[0], arr)} ==> {_t_expr(args[1], arr)})"
+        return f"({_t_expr(args[0], views)} ==> {_t_expr(args[1], views)})"
     if op in ("+", "-", "*", "<", "<=", ">", ">=", "==", "!="):
-        return f"({_t_expr(args[0], arr)} {op} {_t_expr(args[1], arr)})"
+        return f"({_t_expr(args[0], views)} {op} {_t_expr(args[1], views)})"
     if op in ("div", "mod"):
         # SPEC.md "Division and modulo (v1)": Dafny's own `/` and `%` on
         # int are Euclidean too (measured on dafny 4.11.0), at the same
         # precedence as `*`, so `div`/`mod` print straight back to `/`/`%`.
         dfy_op = "/" if op == "div" else "%"
-        return f"({_t_expr(args[0], arr)} {dfy_op} {_t_expr(args[1], arr)})"
+        return f"({_t_expr(args[0], views)} {dfy_op} {_t_expr(args[1], views)})"
     if op == "seq":
         # Rows 25-27 (2026-09-09, SPEC.md "Sequences: literals,
         # concatenation, slices (v1)"): `{"op": "seq", "args": [...]}` is
@@ -590,16 +648,16 @@ def _t_expr(e: dict, arr: frozenset = frozenset()) -> str:
         # already prints `(a + b)`, valid Dafny for both int addition
         # and seq concatenation (t's own `+` is polymorphic the same
         # way, per SPEC.md).
-        return "[" + ", ".join(_t_expr(a, arr) for a in args) + "]"
+        return "[" + ", ".join(_t_expr(a, views) for a in args) + "]"
     if op == "slice":
-        return f"{_t_expr(args[0], arr)}[{_t_expr(args[1], arr)}..{_t_expr(args[2], arr)}]"
+        return f"{_t_expr(args[0], views)}[{_t_expr(args[1], views)}..{_t_expr(args[2], views)}]"
     raise ValueError(f"lift_check._t_expr: unknown t operator {op!r}")
 
 
-def _t_conj(exprs: list, arr: frozenset = frozenset()) -> str:
+def _t_conj(exprs: list, views: dict = {}) -> str:
     if not exprs:
         return "true"
-    return " && ".join(f"({_t_expr(e, arr)})" for e in exprs)
+    return " && ".join(f"({_t_expr(e, views)})" for e in exprs)
 
 
 def _conj_text(exprs: list, rename: dict) -> str:
@@ -989,21 +1047,46 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # lifted to a task `seq<int>` param of the SAME name. The checker
     # lemmas (below) keep one parameter per argument, typed to the
     # SOURCE's type so the source clause reads naturally (`a.Length`,
-    # `a[k]`); `array_view` names which task params that leaves typed
-    # `array<int>` in the lemma signature, so every LIFTED-side reference
-    # to one of them must print as its sequence view `a[..]`, not bare
-    # `a` -- `_t_expr`/`_t_conj` do that substitution when passed this set.
-    # Decision 22 extends this to the RETURN too, exactly the same way,
-    # whenever `ret_type_src` says it is an array (both its shapes: the
-    # synthesized "modifies-param" return and the "alloc-fill" return).
-    array_view_names = {tp["name"] for sp, tp in zip(source.params, task["params"])
-                        if sp.type is not None and sp.type.kind == "array"}
-    if ret_type_src is not None and ret_type_src.kind == "array":
-        array_view_names.add(ret["name"])
-    array_view = frozenset(array_view_names)
-    lifted_req = _t_conj(task.get("requires", []), array_view)
+    # `a[k]`); `views` names which task params/return that leaves typed
+    # something OTHER than t's own shape in the lemma signature, and
+    # WHICH other shape (`\"array\"`, `\"string\"`, `\"char\"`), so every
+    # LIFTED-side reference to one of them must print as its t-shaped
+    # view instead of bare -- `_t_expr`/`_t_conj`/`_view_text` do that
+    # substitution. Decision 22 extends the array case to the RETURN too,
+    # exactly the same way, whenever `ret_type_src` says it is an array
+    # (both its shapes: the synthesized "modifies-param" return and the
+    # "alloc-fill" return); row 28 (2026-09-09, SPEC.md "Strings as
+    # sequences of code points (v1)") adds `string`/`char` params and
+    # return, the same "one lemma parameter, typed to the source" reading.
+    views: dict = {}
+    for sp, tp in zip(source.params, task["params"]):
+        if sp.type is None:
+            continue
+        if sp.type.kind == "array":
+            views[tp["name"]] = "array"
+        elif sp.type.kind == "string":
+            views[tp["name"]] = "string"
+        elif sp.type.kind == "char":
+            views[tp["name"]] = "char"
+    if ret_type_src is not None:
+        if ret_type_src.kind == "array":
+            views[ret["name"]] = "array"
+        elif ret_type_src.kind == "string":
+            views[ret["name"]] = "string"
+        elif ret_type_src.kind == "char":
+            views[ret["name"]] = "char"
+    lifted_req = _t_conj(task.get("requires", []), views)
 
-    # (3) L_fun_F per spec_fun whose closure function is found.
+    # (3) L_fun_F per spec_fun whose closure function is found. `args`
+    # (raw names) calls the SOURCE function, whose own params genuinely
+    # carry the source's types; `lifted_args` (row 28: `_view_text` per
+    # param) calls the LIFTED spec_fun, whose own signature is t's shape
+    # throughout (`seq`/`int`) -- calling it with a bare `string`/`char`
+    # -typed name would be a Dafny type error the way a bare `array<int>`
+    # already was before decision 1's own `array_view` (untouched by this
+    # row: no spec_fun taking an array param has been measured yet, so
+    # `lifted_args` leaves that case as `args` did before, a pre-existing
+    # gap this row does not claim to close).
     for fd in fdecls:
         f = _match_spec_fun(fd, task.get("spec_funs", []), record)
         if f is None:
@@ -1014,6 +1097,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         lemma_names.append(name)
         ps = ", ".join(f"{p.name}: {_lemma_param_type(p.type)}" for p in fd.params)
         args = ", ".join(p.name for p in fd.params)
+        fd_views = _fn_param_views(fd.params)
+        lifted_args = ", ".join(_view_text(p.name, fd_views) for p in fd.params)
         nat_clause = _and([f"{p.name} >= 0" for p in fd.params if _is_nat_type(p.type)])
         p_src = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)],
                            rename)
@@ -1023,7 +1108,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         if p_src != "true":
             lines.append(f"  requires {p_src}")
         fn_src = rename.get(fd.name, fd.name)
-        lines.append(f"  ensures {fn_src}({args}) == {f['name']}({args})")
+        lines.append(f"  ensures {fn_src}({args}) == {f['name']}({lifted_args})")
         lines.append("{ }")
         lines.append("")
 
@@ -1116,7 +1201,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         ens_exprs = [_split_array_post_state(e, array_mutation.name, post_ident) for e in ens_exprs]
     src_ens_conj = _conj_text(ens_exprs, crename)
     ret_type_clause = (f"{ret['name']} >= 0" if _is_nat_type(ret_type_src) else "true")
-    lifted_ens = _t_conj(task.get("ensures", []), array_view)
+    lifted_ens = _t_conj(task.get("ensures", []), views)
     hint_lines = []
     for fd in fdecls:
         f = _match_spec_fun(fd, task.get("spec_funs", []), record)
@@ -1124,14 +1209,20 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             continue
         binders = ", ".join(f"{p.name}: {_lemma_param_type(p.type)}" for p in fd.params)
         args = ", ".join(p.name for p in fd.params)
+        fd_views = _fn_param_views(fd.params)
+        lifted_args = ", ".join(_view_text(p.name, fd_views) for p in fd.params)
         nat_clause = _and([f"{p.name} >= 0" for p in fd.params if _is_nat_type(p.type)])
         p_src = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)],
                            rename)
         guard = _and([nat_clause, p_src])
         fn_src = rename.get(fd.name, fd.name)
+        # `L_fun_{f['name']}(args)`: L_fun's OWN signature (`ps` above, in
+        # its own defining loop) is typed to the SOURCE's params too, so
+        # calling it with raw `args` is right, unlike the direct
+        # `f['name'](...)` call just before it, which needs `lifted_args`.
         hint_lines.append(
             f"  forall {binders} | {guard} ensures "
-            f"{fn_src}({args}) == {f['name']}({args}) {{ L_fun_{f['name']}({args}); }}")
+            f"{fn_src}({args}) == {f['name']}({lifted_args}) {{ L_fun_{f['name']}({args}); }}")
     lines.append(f"lemma L_ens({lem_ps_ens})")
     lines.append(f"  requires {_and([lifted_req, ens_length_fact])}")
     lines.append(f"  ensures ({_and([ret_type_clause, ens_length_fact, src_ens_conj])}) <==> ({lifted_ens})")
@@ -1221,7 +1312,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             # CURRENT (so-far) value, same as in the ensures clause above.
             inv_exprs = [_split_array_post_state(e, array_mutation.name, post_ident) for e in inv_exprs]
         src_inv = _conj_text(inv_exprs, loop_crename)
-        lifted_inv = (_t_conj(task_loops[k].get("invariants", []), array_view)
+        lifted_inv = (_t_conj(task_loops[k].get("invariants", []), views)
                      if k < len(task_loops) else "true")
         # Same reason as L_ens's forall hint (section 9 item 5, measured):
         # Dafny will not apply a spec_fun's equivalence lemma unprompted.
@@ -1312,7 +1403,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             name = f"L_dec_{k}"
             lemma_names.append(name)
             src_dec = _print_expr(dec_specs[0].exprs[0], loop_crename)
-            lifted_dec = _t_expr(task_loops[k]["decreases"], array_view)
+            lifted_dec = _t_expr(task_loops[k]["decreases"], views)
             lines.append(f"lemma {name}({ps_inv})")
             if this_length_fact != "true":
                 lines.append(f"  requires {this_length_fact}")
@@ -1443,6 +1534,38 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
     names_types = _param_names_types(task)
     n_params = len(names_types)
 
+    # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code points
+    # (v1)"): `dafny run` prints/compares a `string`/`char` value in ITS
+    # OWN shape ("abc", a bare character with no quoting), never t's
+    # bracketed `seq<int>`/plain int (measured: tprint.dfy in the task's
+    # own scratch notes -- `Id("abc")` prints `abc`, not `[97, 98, 99]`),
+    # so `src_value_expr` below is always converted to t's shape BEFORE
+    # printing/comparing, one bounded `seq(...)` comprehension per string
+    # (always safe, `char as int` never fails) or one `as int` per char.
+    ret_type_src0 = source.returns[0].type if source.returns else None
+
+    def _ret_view(expr: str) -> str:
+        """The source's own return value `expr`, converted to t's own
+        shape for printing/comparing against `liftv`: decision 22's
+        `array<int>` -> `expr[..]` (a seq view, unchanged from before this
+        row); row 28's `string`/`seq<char>` -> a bounded `seq(...)`
+        comprehension casting every element to `int` (always safe: `char
+        as int` never fails, so this needs no range guard the way the
+        PARAMETER direction, below, does); row 28's `char` -> `expr as
+        int` (likewise always safe). Anything else is unchanged."""
+        if ret_type_src0 is None:
+            return expr
+        is_seq_of_char = (ret_type_src0.kind == "seq" and len(ret_type_src0.args) == 1
+                          and ret_type_src0.args[0].kind == "char")
+        if ret_type_src0.kind == "array":
+            return f"{expr}[..]"
+        if ret_type_src0.kind == "string" or is_seq_of_char:
+            return (f"(seq(|{expr}|, (k: int) requires 0 <= k < |{expr}| "
+                     f"=> {expr}[k] as int))")
+        if ret_type_src0.kind == "char":
+            return f"({expr} as int)"
+        return expr
+
     lines.append("method Main() {")
     if n_params == 0:
         # interp's domain for a 0-param method is degenerate (>= 1 trivial
@@ -1454,10 +1577,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
         for i in range(len(points)):
             lines.append("  {")
             lines.append(f"    var srcv := {src_name}();")
+            src_value_expr = _ret_view("srcv")
             lines.append(f"    var liftv := {lift_name}();")
             lines.append("    points := points + 1;")
-            lines.append(f'    print {i}, " ", srcv, " ", liftv, "\\n";')
-            lines.append("    if srcv != liftv { bad := bad + 1; }")
+            lines.append(f'    print {i}, " ", {src_value_expr}, " ", liftv, "\\n";')
+            lines.append(f"    if {src_value_expr} != liftv {{ bad := bad + 1; }}")
             lines.append("  }")
     else:
         if n_params == 1:
@@ -1481,6 +1605,22 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
         # found seq<int>") and no tally was printed.
         array_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
                                if sp.type is not None and sp.type.kind == "array")
+        # Row 28: the SOURCE method takes `string`/`char` where the task
+        # takes `seq`/`int`; each such point is converted before the
+        # source call (a string via the same bounded `seq(...)`
+        # comprehension `_ret_view` uses, a char via a plain `as char`),
+        # the lifted call keeping the task's own `seq`/`int` shape
+        # unchanged. Safe by construction: `char-param-guard`/
+        # `string-elements-requires` (lift_rewrite.py) already keep every
+        # sampled point's value(s) in `[0, 1114111]`, the one thing that
+        # makes `as char` not crash (measured, `trun.dfy`).
+        string_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
+                                if sp.type is not None
+                                and (sp.type.kind == "string"
+                                     or (sp.type.kind == "seq" and len(sp.type.args) == 1
+                                         and sp.type.args[0].kind == "char")))
+        char_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
+                              if sp.type is not None and sp.type.kind == "char")
         point_exprs = ["pts[i]"] if n_params == 1 else [f"pts[i].{j}" for j in range(n_params)]
         src_args = []
         materialise = []
@@ -1504,6 +1644,13 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
                 if array_mutation is not None and array_mutation.kind == "modifies-param" \
                         and pn == array_mutation.name:
                     mutated_arg_var = f"arr{j}"
+            elif pn in string_view:
+                materialise.append(
+                    f"    var s{j} := seq(|{pe}|, (k: int) requires 0 <= k < |{pe}| "
+                    f"=> {pe}[k] as char);")
+                src_args.append(f"s{j}")
+            elif pn in char_view:
+                src_args.append(f"({pe} as char)")
             else:
                 src_args.append(pe)
         lines.append(f"  var pts: seq<{pts_ty}> := [{', '.join(lit_list)}];")
@@ -1519,11 +1666,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
             src_value_expr = f"{mutated_arg_var}[..]"
         else:
             lines.append(f"    var srcv := {src_name}({', '.join(src_args)});")
-            # decision 22 "alloc-fill": the source's own return type is
-            # `array<int>` where the task's is `seq`; compare seq views.
-            ret_type_src = source.returns[0].type if source.returns else None
-            src_value_expr = "srcv[..]" if (ret_type_src is not None
-                                            and ret_type_src.kind == "array") else "srcv"
+            # decision 22 "alloc-fill" (array) / row 28 (string, char):
+            # the source's own return type may not be t's own shape;
+            # `_ret_view` converts it to one that compares against
+            # `liftv` correctly.
+            src_value_expr = _ret_view("srcv")
         lines.append(f"    var liftv := {lift_name}({call_args});")
         lines.append("    points := points + 1;")
         lines.append(f'    print i, " ", {src_value_expr}, " ", liftv, "\\n";')

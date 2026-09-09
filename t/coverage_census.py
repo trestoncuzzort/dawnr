@@ -1429,6 +1429,47 @@ def _tuple(s: str) -> bool:
     return False
 
 
+# ---------------------------------------------------------------- row 28
+# LIFTER-DECISIONS.md row 28 (2026-09-09, SPEC.md "Strings as sequences of
+# code points (v1)"): a Dafny `char` is a t int, a `string` a t `seq` of
+# them, so the single `string-char` gap this file used to raise on any
+# `string`/`char`/`seq<char>` type or literal splits the way
+# `t/nl_census.py` already splits its own string gap -- `string-as-seq`
+# (a BURDEN: literals, `|s|`, indexing, `+`, a slice, `==`/`!=`,
+# `<`/`<=`/`>`/`>=` between two chars, `as int`, all already in t's
+# fragment via the seq machinery rows 25-27 landed) versus `string-lib`
+# (a GAP: what still needs a string library or char arithmetic t does not
+# have). `string-lib`'s own two lexical signals: an order comparison
+# adjacent to a string LITERAL (measured on dafny 4.11.0, t6.dfy/t6run.dfy
+# in the task's own scratch notes: `<`/`<=`/`>`/`>=` on `string`/`seq<char>`
+# is PROPER-PREFIX semantics, not lexicographic as a first guess -- and a
+# first guess this file's own author also made, per
+# AssertivePrograming_tmp_tmpwf43uz0e_Find_Substring.dfy's own comment,
+# "`<=` on sequences is the prefix relation" -- but still not an operator
+# t has on seqs either way, SPEC.md: "Lexicographic order on strings is
+# not an operator"), and multiset/set of char. Lexical and approximate
+# like every detector here, and UNDER-counts on purpose in the same
+# direction `seq-concat` already does: an order comparison between two
+# BARE string-typed NAMES with no literal on either side (`s1 < s2`) is
+# invisible to it, since telling `s1`/`s2` are string-typed at all needs
+# the lifter's own type knowledge (`lift_classify.expr_kind`), not a
+# lexical scan. `s in t` (a substring test) needs no detector: measured
+# directly (t7.dfy) NOT to type-check in Dafny at all when both sides are
+# string ("expecting element type to be assignable to char (got
+# string)"), so it cannot occur in a verified corpus program. A nested
+# string (`seq<string>`, `seq<seq<char>>`) is already the EXISTING
+# `nested-seq` gap's own territory (its regex already matches `seq<` not
+# followed by `int`/`nat`), unchanged by this row. `char-arith` (the
+# actual `c + 1`-shaped construct, decision-vocabulary's own name) is
+# unaffected: its regex predates this row and is not part of this split.
+_STRING_ORDER_CMP = re.compile(r'"[^"]*"\s*(?:<=|>=|<|>)|(?:<=|>=|<|>)\s*"[^"]*"')
+_STRING_SET_KIND = re.compile(r"\b(?:multiset|set|iset)\s*<\s*char\s*>")
+
+
+def _string_lib(s: str) -> bool:
+    return bool(_STRING_ORDER_CMP.search(s)) or bool(_STRING_SET_KIND.search(s))
+
+
 DETECTORS: dict[str, tuple[str, object, str]] = {
     # gaps: outside t's fragment
     # Decision 22 (LIFTER-DECISIONS.md row 22, 2026-09-09): an
@@ -1450,7 +1491,7 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     # are Euclidean too, measured, so the lifter maps them one to one
     # with no domain restriction. Like the other in-fragment binary
     # operators (`+`, `-`, `*`, ...), it carries no detector here.
-    "string-char": ("gap", _has(r"\bstring\b|\bchar\b|\bseq<char>"), "string or char type"),
+    "string-lib": ("gap", _string_lib, "the string LIBRARY t's v1 seq-of-code-points model does not cover: an order comparison (<, <=, >, >=) adjacent to a string literal (measured proper-prefix, not lexicographic, but still not a t operator on seqs either way), or multiset/set of char -- lexical and approximate, UNDER-counts an order comparison between two bare string-typed names with no literal on either side (see the comment above _string_lib)"),
     "set": ("gap", _set, "set, iset, multiset, set comprehension or set literal"),
     "map": ("gap", _has(r"\bi?map<|\bmap\s+" + IDENT + r"\s*(?::|\|)|\bmap\s*\["), "map, imap, map comprehension or map literal"),
     "heap": ("gap", _has(r"\bclass\b|\btrait\b|\bfresh\b|\bthis\b|\bnew\s+" + IDENT + r"\s*[(;]"), "classes, object allocation, this"),
@@ -1481,6 +1522,13 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "char-arith": ("gap", _has(r"\bas\s+char\b|\bchar\s*\("), "char arithmetic"),
     "such-that-exec": ("gap", lambda s: any(_such_that_sites(s)), "assign-such-that :| in executable code (nondeterministic choice)"),
     # burdens: t can say it another way
+    # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code points
+    # (v1)"): `string-char`'s old regex, now a burden -- literals,
+    # length, index, concat, slice, equality, char comparisons and `as
+    # int` all lift (LIFTER-DECISIONS.md row 28); reclassified gap ->
+    # burden, key renamed to match `t/nl_census.py`'s own `string-as-seq`
+    # (`string-char`'s literal-forcing in `tag()` below renamed to match).
+    "string-as-seq": ("burden", _has(r"\bstring\b|\bchar\b|\bseq<char>"), "a string or char used only the way t's seq of code points already covers: literals, |s|, indexing, +, a slice, ==/!=, char comparisons (<,<=,>,>=), as int -- SPEC.md 'Strings as sequences of code points', LIFTER-DECISIONS.md row 28"),
     "array-as-seq": ("burden", lambda s: _array_shapes(s)[0], "array<int>/array<nat> (one dimension): read-only, mutated in place under modifies, or allocated and filled -- lifts to seq (decision 1, decision 22)"),
     "zero-returns-array": ("burden", lambda s: _zero_return_shapes(s)[0], "a method with no return whose effect is its one array, lifted as a seq return by row 22 (LIFTER-DECISIONS.md row 22's modifies-param shape)"),
     "multi-method-independent": ("burden", lambda s: _multi_method_shapes(s)[0], "more than one graded method, none calling another by name -- decision 9 lifts one task per method, so no packaging decision is needed"),
@@ -1569,7 +1617,11 @@ def tag(src: str) -> dict:
             for k, (kind, fn, _) in DETECTORS.items()}
     tags["main-harness"] = has_main
     if seen["string_lit"] or seen["char_lit"]:
-        tags["string-char"] = True
+        # Row 28: any string/char literal is the burden `string-as-seq`
+        # (t already has a t seq of code points to give it), not a gap on
+        # its own -- `string-lib`'s own two signals (`_string_lib`) are
+        # unaffected by mere literal presence.
+        tags["string-as-seq"] = True
     tags["gaps"] = sorted(k for k in GAPS if tags[k])
     tags["in_fragment"] = (not tags["gaps"]) and tags["has-method"] and tags["method-with-ensures"]
     return tags
