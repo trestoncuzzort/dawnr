@@ -1,0 +1,647 @@
+#!/usr/bin/env python3
+"""spec_experiment.py -- ROADMAP 12.6, the spec experiment.
+
+The training thesis in one sentence: a model can write a t task, specification
+included, from a natural-language problem, and seven kernels grading it give
+a signal worth training on. This measures that once, on MBPP, with a local
+model. Two failures are different and both matter, so they are reported
+apart and never added: a task can VERIFY with a REFUTED twin and still not
+be the program the problem asked for (a spec the kernels accept about the
+wrong function), and a task can pass the problem's own tests and not verify
+(a program the kernels cannot prove, or a spec they cannot prove of it).
+
+Stages, each idempotent, records under out/spec-experiment/<model-tag>/:
+
+  pool      the MBPP problems whose every test assertion is in t's fragment
+            (int, bool, seq of int arguments; mbpp_dfy.parse_assertion) and
+            whose expected result is int or bool, t's only return types.
+            368 of 974 on 2026-09-08; 67 of them are MBPP-DFY problems.
+  generate  one reply per problem from a local model through ollama's chat
+            API, temperature 0 and a fixed seed, so the table is
+            reproducible from the recorded prompt. raw/<task_id>.json keeps
+            the prompt, the reply, token counts, timings and the model
+            digest. A problem with a record on disk is not re-asked.
+  extract   the reply's fenced t block -> surface.parse -> a task named
+            mbpp_<task_id>__<fn> -> fuzz_lower.check_wf -> tasks/<name>.json.
+            Every refusal is named (no-block, parse:<message>, wf:<messages>)
+            and counted; nothing is dropped silently.
+  tests     interp runs each task on the problem's own assertion points,
+            mapped positionally onto the task's parameters. Per point: pass,
+            fail (with the values), requires-excluded (the model's
+            precondition rejects a test input), undefined, budget, or a
+            signature mismatch. A problem passes when every point passes.
+  table     joins the above with the kernel table run_par.py wrote over
+            tasks/ (--tasks --out --table) into one markdown report: counts
+            per stage, per-kernel verified/refuted counts, the seven-column
+            count, and the cross-tabulation of "verifies with a refuted
+            twin" against "passes its tests", which is 12.6's DONE WHEN.
+
+Usage, in order:
+
+    python3 spec_experiment.py generate --model qwen2.5-coder:7b [--limit N]
+    python3 spec_experiment.py extract  --model qwen2.5-coder:7b
+    python3 spec_experiment.py tests    --model qwen2.5-coder:7b
+    python3 run_par.py --tasks out/spec-experiment/qwen2.5-coder-7b/tasks \\
+        --out out/spec-experiment/qwen2.5-coder-7b/kernels \\
+        --table out/spec-experiment/qwen2.5-coder-7b/kernels.md
+    python3 spec_experiment.py table    --model qwen2.5-coder:7b \\
+        --out SPEC-EXPERIMENT-mbpp.md
+
+The server is the caller's: `ollama serve` bound to one GPU, started for
+the run and killed at its end (the standing rule on this box). This file
+never starts one; generate refuses with the connection error when none
+answers. Standard library only, plus t's own modules.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+import fuzz_lower      # noqa: E402  (check_wf)
+import harness         # noqa: E402
+import interp          # noqa: E402
+import mbpp_dfy        # noqa: E402
+import surface         # noqa: E402
+
+OUT_ROOT = HERE / "out" / "spec-experiment"
+FEWSHOT = ["abs", "max", "sum_upto", "linear_search", "gcd"]
+BACKENDS = ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
+
+
+def model_tag(model: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "-", model)
+
+
+def outdir(model: str) -> Path:
+    d = OUT_ROOT / model_tag(model)
+    for sub in ("raw", "tasks"):
+        (d / sub).mkdir(parents=True, exist_ok=True)
+    return d
+
+
+# ------------------------------------------------------------------ pool --
+
+def pool() -> dict[int, dict]:
+    """task_id -> {"rec": mbpp record, "points": parsed assertions, "fn": name}.
+    Every assertion parses into t's fragment and every expected value is an
+    int or a bool. A problem with even one refused assertion is out, and the
+    refusal reasons are counted in `pool_report`."""
+    recs = mbpp_dfy.mbpp_records()
+    out = {}
+    for tid, r in sorted(recs.items()):
+        pts = [mbpp_dfy.parse_assertion(a) for a in r["test_list"]]
+        if not pts or not all(p["ok"] for p in pts):
+            continue
+        if not all(p["expected"][0] in ("int", "bool") for p in pts):
+            continue
+        fns = {p["fn"] for p in pts}
+        if len(fns) != 1:
+            continue
+        out[tid] = {"rec": r, "points": pts, "fn": fns.pop()}
+    return out
+
+
+def pool_report() -> dict:
+    recs = mbpp_dfy.mbpp_records()
+    why: dict[str, int] = {}
+    n_ok = 0
+    for tid, r in recs.items():
+        pts = [mbpp_dfy.parse_assertion(a) for a in r["test_list"]]
+        bad = [p["why"] for p in pts if not p["ok"]]
+        if not bad and pts and all(p["expected"][0] in ("int", "bool") for p in pts):
+            n_ok += 1
+            continue
+        for w in bad or ["expected:%s" % ",".join(sorted({p["expected"][0] for p in pts if p["ok"]}))]:
+            key = w.split(":")[0] + ":" + w.split(":")[1].split("(")[0] if ":" in w else w
+            why[key] = why.get(key, 0) + 1
+    return {"problems": len(recs), "in_pool": n_ok, "refused": why}
+
+
+# ---------------------------------------------------------------- prompt --
+
+GRAMMAR = """\
+t is a tiny verified language. A t task is written like this:
+
+    t 0                            (t 1 when the task uses locals, loops,
+                                    seq, quantifiers, spec funs or recursion)
+    gate loops                     (t 1 only: loops | recursion | quantifiers)
+    task NAME(p1: int, p2: seq) returns (r: int)
+      requires EXPR                (zero or more; conjoined)
+      ensures EXPR                 (one or more; conjoined; the contract)
+      decreases EXPR               (only when the task calls itself)
+    spec fun F(a: int): int         (optional helper for the spec, t 1 only)
+      decreases a
+    = EXPR
+    {
+      STATEMENTS
+    }
+
+Types: int (unbounded mathematical integer), bool, seq (a read-only sequence
+of ints, parameters only). Exactly one return, int or bool. Every path
+through the body must assign the return variable.
+
+Statements:  r := EXPR;    var i: int := EXPR;    if EXPR { ... } else { ... }
+             while EXPR invariant EXPR ... decreases EXPR { ... }
+Every while needs invariants strong enough to prove the ensures at exit and
+one decreases expression that is >= 0 and strictly decreases. `else { }` may
+be empty but must be present.
+
+Expressions: integer literals, true, false, names, ( ), + - * (no division,
+no modulo, no shifts), unary -, == != < <= > >=, not, and, or, ==> (implies),
+if C then A else B, len(s), s[i], forall i in [lo, hi) . BODY,
+exists i in [lo, hi) . BODY, F(args) for a spec fun.
+
+RULES THE PARSER ENFORCES. These operators and names DO NOT EXIST in t and
+make the task unparseable: / % ** ^ & | << >> bin abs min max pow sum
+range. There are no strings, floats, tuples, arrays, dictionaries, sets or
+comments. Quantifier ranges are half-open: `forall i in [lo, hi) . P` means
+lo <= i < hi. Every `if` has both branches: `if C { ... } else { ... }`,
+with `else { }` when there is nothing to do. A task that calls itself
+needs `gate recursion` and a `decreases EXPR` line after its ensures, and
+its ensures may not mention the task's own name (use a spec fun). A
+condition is a bool expression: write `r := (a == b);`, never `r := a == b
+? ...`. Loop variables are declared with `var i: int := 0;`.
+
+Division and modulo are not in the language. If the problem needs them,
+compute the quantity with a loop of repeated subtraction, or define it with
+a recursive spec fun; never write / or %.
+
+The ensures must say what the result IS, not merely that it exists; a spec
+the tests would disagree with is wrong, and `ensures true` is worthless.
+requires must admit every input the tests use. Encode a list as a seq of
+ints and a yes/no answer as bool.
+
+Reply with exactly one t task inside a ```t fenced block and nothing else.
+"""
+
+
+def fewshot_text() -> str:
+    parts = []
+    for name in FEWSHOT:
+        task = harness.load(HERE / "tasks" / f"{name}.json")
+        parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
+    return "\n\n".join(parts)
+
+
+def build_prompt(entry: dict) -> list[dict]:
+    r = entry["rec"]
+    tests = "\n".join(r["test_list"])
+    arity = len(entry["points"][0]["args"])
+    kinds = ", ".join(a[0] for a in entry["points"][0]["args"])
+    ret = entry["points"][0]["expected"][0]
+    user = (f"Problem: {r['text'].strip()}\n\nTests:\n{tests}\n\n"
+            f"Write the t task named `{entry['fn']}` with {arity} parameter(s) "
+            f"of type(s) {kinds}, in the order the tests pass them, returning "
+            f"{ret}. The tests must pass and the ensures must specify the "
+            f"result.")
+    return [{"role": "system", "content": GRAMMAR + "\nExamples of complete t tasks:\n\n" + fewshot_text()},
+            {"role": "user", "content": user}]
+
+
+# -------------------------------------------------------------- generate --
+
+def chat(host: str, model: str, messages: list[dict], options: dict, timeout: float) -> dict:
+    body = {"model": model, "stream": False, "messages": messages, "options": options}
+    req = urllib.request.Request(f"http://{host}/api/chat", data=json.dumps(body).encode("utf-8"),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def model_digest(host: str, model: str) -> str:
+    try:
+        req = urllib.request.Request(f"http://{host}/api/show", data=json.dumps({"model": model}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            d = json.loads(resp.read().decode("utf-8"))
+        det = d.get("details", {})
+        return json.dumps({k: det.get(k) for k in ("family", "parameter_size", "quantization_level")},
+                          sort_keys=True) + " sha256:" + hashlib.sha256(json.dumps(d.get("modelfile", ""), sort_keys=True).encode()).hexdigest()[:16]
+    except (urllib.error.URLError, OSError, ValueError):
+        return "unknown"
+
+
+def cmd_generate(args) -> int:
+    d = outdir(args.model)
+    P = pool()
+    ids = sorted(P)
+    if args.limit:
+        ids = ids[:args.limit]
+    options = {"temperature": 0, "seed": args.seed, "num_ctx": args.num_ctx,
+               "num_predict": args.num_predict}
+    digest = model_digest(args.host, args.model)
+    done = asked = 0
+    t_start = time.monotonic()
+    for tid in ids:
+        rec_path = d / "raw" / f"{tid}.json"
+        if rec_path.exists():
+            done += 1
+            continue
+        messages = build_prompt(P[tid])
+        t0 = time.monotonic()
+        try:
+            resp = chat(args.host, args.model, messages, options, args.timeout)
+        except (urllib.error.URLError, OSError) as e:
+            print(f"generate: task {tid}: no answer from {args.host}: {e}", file=sys.stderr)
+            return 2
+        wall = time.monotonic() - t0
+        record = {"task_id": tid, "fn": P[tid]["fn"], "model": args.model, "digest": digest,
+                  "options": options, "messages": messages,
+                  "reply": resp.get("message", {}).get("content", ""),
+                  "prompt_tokens": resp.get("prompt_eval_count"),
+                  "reply_tokens": resp.get("eval_count"),
+                  "eval_s": round((resp.get("eval_duration") or 0) / 1e9, 3),
+                  "wall_s": round(wall, 3), "done_reason": resp.get("done_reason")}
+        rec_path.write_text(json.dumps(record, indent=1), encoding="utf-8")
+        asked += 1
+        done += 1
+        if asked % 10 == 0 or asked == 1:
+            el = time.monotonic() - t_start
+            print(f"generate: {done}/{len(ids)} ({asked} asked this run, {el:.0f} s, "
+                  f"{el / asked:.1f} s each)", flush=True)
+    print(f"generate: {done} of {len(ids)} problems have a reply on disk")
+    return 0
+
+
+# --------------------------------------------------------------- extract --
+
+FENCE = re.compile(r"```(?:t|text)?\s*\n(.*?)```", re.S)
+HEAD = re.compile(r"(?m)^t [01]\b")
+
+
+def find_block(reply: str) -> str | None:
+    m = FENCE.search(reply)
+    if m:
+        return m.group(1)
+    m = HEAD.search(reply)
+    if m:
+        return reply[m.start():]
+    return None
+
+
+def rename_task(task: dict, new: str) -> dict:
+    """Rename the task and every self-call in its body and spec."""
+    old = task["name"]
+
+    def walk(node):
+        if isinstance(node, dict):
+            if "call" in node and node["call"].get("fun") == old:
+                node["call"]["fun"] = new
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+    walk(task["body"])
+    walk(task.get("ensures", []))
+    walk(task.get("requires", []))
+    walk(task.get("spec_funs", []))
+    task["name"] = new
+    return task
+
+
+def cmd_extract(args) -> int:
+    d = outdir(args.model)
+    P = pool()
+    results = {}
+    for rec_path in sorted((d / "raw").glob("*.json"), key=lambda p: int(p.stem)):
+        rec = json.loads(rec_path.read_text(encoding="utf-8"))
+        tid = rec["task_id"]
+        entry = {"task_id": tid, "fn": rec["fn"], "reply_tokens": rec.get("reply_tokens"),
+                 "done_reason": rec.get("done_reason")}
+        block = find_block(rec["reply"])
+        if block is None:
+            entry["stage"] = "no-block"
+            results[tid] = entry
+            continue
+        entry["block_sha256"] = hashlib.sha256(block.encode("utf-8")).hexdigest()[:16]
+        try:
+            task = surface.parse(block)
+        except surface.SurfaceError as e:
+            entry["stage"] = "parse"
+            entry["why"] = str(e)[:200]
+            results[tid] = entry
+            continue
+        except Exception as e:                                  # noqa: BLE001
+            entry["stage"] = "parse"
+            entry["why"] = f"{type(e).__name__}: {e}"[:200]
+            results[tid] = entry
+            continue
+        entry["model_name"] = task.get("name")
+        name = f"mbpp_{tid}__{rec['fn']}"
+        if not fuzz_lower.NAME_RE.match(name):
+            name = f"mbpp_{tid}"
+        task = rename_task(task, name)
+        try:
+            errs = fuzz_lower.check_wf(task)
+        except Exception as e:                                  # noqa: BLE001
+            errs = [f"check_wf raised {type(e).__name__}: {e}"[:200]]
+        if errs:
+            entry["stage"] = "wf"
+            entry["why"] = "; ".join(errs)[:300]
+            results[tid] = entry
+            continue
+        entry["stage"] = "task"
+        entry["name"] = name
+        entry["t"] = task["t"]
+        entry["gate"] = task.get("gate")
+        entry["params"] = [p["type"] for p in task["params"]]
+        entry["returns"] = task["returns"][0]["type"]
+        entry["loops"] = _count(task["body"], "while")
+        entry["selfcall"] = fuzz_lower._self_calls(task["body"], name)
+        (d / "tasks" / f"{name}.json").write_text(json.dumps(task, indent=1), encoding="utf-8")
+        results[tid] = entry
+    (d / "extract.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
+    stages = {}
+    for e in results.values():
+        stages[e["stage"]] = stages.get(e["stage"], 0) + 1
+    print(f"extract: {len(results)} replies; " + ", ".join(f"{k} {v}" for k, v in sorted(stages.items())))
+    return 0
+
+
+def _count(body, key) -> int:
+    n = 0
+    for s in body:
+        if key in s:
+            n += 1
+        if "while" in s:
+            n += _count(s["while"]["body"], key)
+        elif "if" in s:
+            n += _count(s["if"]["then"], key) + _count(s["if"]["else"], key)
+    return n
+
+
+# ----------------------------------------------------------------- tests --
+
+def run_point(task: dict, point: dict) -> dict:
+    """One assertion against the task: {"verdict": pass|fail|requires-excluded|
+    undefined|budget|arity|type, ...}. Arguments map positionally."""
+    params = task["params"]
+    args = point["args"]
+    if len(args) != len(params):
+        return {"verdict": "arity", "why": f"{len(args)} args for {len(params)} params"}
+    env = {}
+    for p, (kind, val) in zip(params, args):
+        if kind != p["type"]:
+            return {"verdict": "type", "why": f"{p['name']} is {p['type']}, test passes {kind}"}
+        env[p["name"]] = tuple(val) if kind == "seq" else val
+    ret = task["returns"][0]["name"]
+    funs = interp.funs_of(task, task["body"])
+    st = interp.St()
+    try:
+        if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
+            return {"verdict": "requires-excluded"}
+        env2 = dict(env)
+        env2[ret] = None
+        interp.exec_body(task["body"], env2, funs, st)
+        got = env2[ret]
+    except interp.Undef as u:
+        return {"verdict": "undefined", "why": str(u)[:120]}
+    except (interp.Budget, RecursionError) as b:
+        return {"verdict": "budget", "why": str(b)[:120]}
+    ekind, eval_ = point["expected"]
+    if got is None:
+        return {"verdict": "undefined", "why": "no path assigned the return"}
+    ok = (isinstance(got, bool) == (ekind == "bool")) and got == eval_
+    return {"verdict": "pass" if ok else "fail", "got": interp._j(got), "expected": eval_}
+
+
+def cmd_tests(args) -> int:
+    d = outdir(args.model)
+    P = pool()
+    ext = json.loads((d / "extract.json").read_text(encoding="utf-8"))
+    results = {}
+    for tid_s, e in ext.items():
+        if e["stage"] != "task":
+            continue
+        tid = int(tid_s)
+        task = harness.load(d / "tasks" / f"{e['name']}.json")
+        pts = [run_point(task, p) for p in P[tid]["points"]]
+        verdicts = [p["verdict"] for p in pts]
+        if all(v == "pass" for v in verdicts):
+            overall = "pass"
+        elif any(v in ("arity", "type") for v in verdicts):
+            overall = "signature"
+        elif any(v == "fail" for v in verdicts):
+            overall = "fail"
+        elif any(v == "requires-excluded" for v in verdicts):
+            overall = "requires-excluded"
+        else:
+            overall = "undefined"
+        results[tid] = {"name": e["name"], "overall": overall, "points": pts}
+    (d / "tests.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
+    tally = {}
+    for r in results.values():
+        tally[r["overall"]] = tally.get(r["overall"], 0) + 1
+    print(f"tests: {len(results)} tasks; " + ", ".join(f"{k} {v}" for k, v in sorted(tally.items())))
+    return 0
+
+
+# ----------------------------------------------------------------- table --
+
+def parse_kernel_table(path: Path) -> tuple[list[str], dict[str, dict[str, str]]]:
+    cols, rows = [], {}
+    if not path.exists():
+        return cols, rows
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if cells[0] == "task":
+            cols = cells[1:]
+            continue
+        if not cols or len(cells) != len(cols) + 1 or set(cells[0]) <= {"-"}:
+            continue
+        rows[cells[0]] = dict(zip(cols, cells[1:]))
+    return cols, rows
+
+
+def cmd_table(args) -> int:
+    d = outdir(args.model)
+    P = pool()
+    ext = json.loads((d / "extract.json").read_text(encoding="utf-8"))
+    tests = json.loads((d / "tests.json").read_text(encoding="utf-8")) if (d / "tests.json").exists() else {}
+    cols, cells = parse_kernel_table(d / "kernels.md")
+    raw_n = len(list((d / "raw").glob("*.json")))
+    dfy_ids = set()
+    try:
+        import corpora
+        if corpora.available(corpora.CORPUS_DIR):
+            dfy_ids = set(mbpp_dfy.dfy_task_ids(corpora.CORPUS_DIR))
+    except Exception:                                           # noqa: BLE001
+        pass
+
+    def counts_in(row: dict) -> int:
+        return sum(1 for c in cols if row.get(c) == "verified / refuted")
+
+    lines = []
+    L = lines.append
+    L(f"# The spec experiment on MBPP: {args.model}")
+    L("")
+    L("ROADMAP 12.6. One reply per problem, temperature 0, fixed seed; the")
+    L("prompt is `spec_experiment.build_prompt` (grammar, five committed tasks")
+    L("as examples, the problem text and its three assertions). Every stage")
+    L("is a count, every refusal is named, and the two failures 12.6 keeps")
+    L("apart are kept apart here: a task that VERIFIES with a REFUTED twin,")
+    L("and a task that passes the problem's own tests.")
+    L("")
+    # stage counts
+    stages = {}
+    for e in ext.values():
+        stages[e["stage"]] = stages.get(e["stage"], 0) + 1
+    n_tasks = stages.get("task", 0)
+    L("## Stages")
+    L("")
+    L("| stage | count |")
+    L("|---|---:|")
+    L(f"| MBPP problems whose tests are in t's fragment (the pool) | {len(P)} |")
+    L(f"| replies recorded | {raw_n} |")
+    L(f"| replies with a t block | {raw_n - stages.get('no-block', 0)} |")
+    L(f"| blocks that parse | {n_tasks + stages.get('wf', 0)} |")
+    L(f"| tasks that are well-formed (graded below) | {n_tasks} |")
+    L("")
+    if stages.get("parse") or stages.get("wf"):
+        L("Refusals, by named reason:")
+        L("")
+        why = {}
+        for e in ext.values():
+            if e["stage"] in ("parse", "wf"):
+                key = e["stage"] + ": " + re.sub(r"\d+", "N", e.get("why", "")).split(";")[0][:70]
+                why[key] = why.get(key, 0) + 1
+        for k, v in sorted(why.items(), key=lambda kv: -kv[1])[:25]:
+            L(f"- {v} x `{k}`")
+        L("")
+    # tests
+    tally = {}
+    for r in tests.values():
+        tally[r["overall"]] = tally.get(r["overall"], 0) + 1
+    L("## The problem's own tests (interp on the MBPP assertions)")
+    L("")
+    L("| outcome | tasks |")
+    L("|---|---:|")
+    for k in ("pass", "fail", "requires-excluded", "undefined", "signature"):
+        if tally.get(k):
+            L(f"| {k} | {tally[k]} |")
+    L("")
+    # kernels
+    L("## The seven kernels (real / twin), over the well-formed tasks")
+    L("")
+    if cells:
+        per = {c: sum(1 for r in cells.values() if r.get(c) == "verified / refuted") for c in cols}
+        L("| kernel | verified / refuted | of tasks |")
+        L("|---|---:|---:|")
+        for c in cols:
+            L(f"| {c} | {per[c]} | {len(cells)} |")
+        L("")
+        hist = {}
+        for r in cells.values():
+            k = counts_in(r)
+            hist[k] = hist.get(k, 0) + 1
+        L("| columns counting | " + " | ".join(str(k) for k in range(len(cols), -1, -1)) + " |")
+        L("|---|" + "---|" * (len(cols) + 1))
+        L("| tasks | " + " | ".join(str(hist.get(k, 0)) for k in range(len(cols), -1, -1)) + " |")
+        L("")
+        twin_refused = sum(1 for r in cells.values() if all(v == "no-twin / no-twin" for v in r.values()))
+        L(f"Tasks with no twin at all (every mutation on the ladder computes what the real body computes, or no input satisfies requires): {twin_refused}.")
+        L("")
+    else:
+        L("(no kernel table yet: run run_par.py over tasks/ and re-run table)")
+        L("")
+    # cross-tab
+    L("## 12.6's table: verifies with a refuted twin, against passes its tests")
+    L("")
+    name_to_tid = {e["name"]: int(t) for t, e in ext.items() if e["stage"] == "task"}
+    if cells and tests:
+        buckets = {}
+        rows_out = []
+        for name, row in cells.items():
+            tid = name_to_tid.get(name)
+            tr = tests.get(str(tid), {}).get("overall", "?")
+            k = counts_in(row)
+            seven = k == len(cols)
+            any_ = k >= 1
+            key = ("all seven" if seven else ("some column" if any_ else "none"), "tests pass" if tr == "pass" else f"tests {tr}")
+            buckets[key] = buckets.get(key, 0) + 1
+            rows_out.append((tid, name, k, tr, row))
+        L("| verifies with refuted twin in | tests pass | tests fail | requires-excluded | undefined | signature |")
+        L("|---|---:|---:|---:|---:|---:|")
+        for band in ("all seven", "some column", "none"):
+            vals = [buckets.get((band, f"tests {t}"), 0) for t in ("pass", "fail", "requires-excluded", "undefined", "signature")]
+            L(f"| {band} | " + " | ".join(str(v) for v in vals) + " |")
+        L("")
+        both7 = buckets.get(("all seven", "tests pass"), 0)
+        both1 = both7 + buckets.get(("some column", "tests pass"), 0)
+        L(f"**{both7} of {len(P)} problems** got a task that verifies with a refuted twin in all seven columns and passes its tests; "
+          f"{both1} in at least one column. Verified-with-twin but failing its tests, the class 12.6 warns about: "
+          f"{buckets.get(('all seven', 'tests fail'), 0)} in all seven, {buckets.get(('some column', 'tests fail'), 0)} in some column.")
+        L("")
+        if dfy_ids:
+            sub = [r for r in rows_out if r[0] in dfy_ids]
+            s7 = sum(1 for r in sub if r[2] == len(cols) and r[3] == "pass")
+            n_dfy_pool = len(set(P) & dfy_ids)
+            L(f"MBPP-DFY subset: {n_dfy_pool} pool problems are MBPP-DFY problems (ROADMAP 16.2's family); "
+              f"{len(sub)} of them reached the kernels and {s7} verify in all seven and pass their tests.")
+            L("")
+        L("## Every task")
+        L("")
+        L("| task_id | task | columns counting | tests | " + " | ".join(cols) + " |")
+        L("|---:|---|---:|---|" + "---|" * len(cols))
+        for tid, name, k, tr, row in sorted(rows_out):
+            L(f"| {tid} | {name} | {k} | {tr} | " + " | ".join(row.get(c, "") for c in cols) + " |")
+        L("")
+    else:
+        L("(needs both tests.json and kernels.md)")
+        L("")
+    # refusals detail
+    L("## Problems that produced no graded task")
+    L("")
+    L("| task_id | fn | stage | why |")
+    L("|---:|---|---|---|")
+    for tid_s, e in sorted(ext.items(), key=lambda kv: int(kv[0])):
+        if e["stage"] != "task":
+            L(f"| {tid_s} | {e['fn']} | {e['stage']} | {e.get('why', '')[:120].replace('|', '/')} |")
+    L("")
+    Path(args.out).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"table: wrote {args.out}")
+    return 0
+
+
+# ------------------------------------------------------------------ main --
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    for name in ("pool", "generate", "extract", "tests", "table"):
+        p = sub.add_parser(name)
+        p.add_argument("--model", default="qwen2.5-coder:7b")
+        if name == "generate":
+            p.add_argument("--host", default="127.0.0.1:11434")
+            p.add_argument("--limit", type=int, default=0)
+            p.add_argument("--seed", type=int, default=1)
+            p.add_argument("--num-ctx", type=int, default=8192)
+            p.add_argument("--num-predict", type=int, default=1024)
+            p.add_argument("--timeout", type=float, default=600.0)
+        if name == "table":
+            p.add_argument("--out", default=str(HERE / "SPEC-EXPERIMENT-mbpp.md"))
+    args = ap.parse_args(argv)
+    if args.cmd == "pool":
+        rep = pool_report()
+        print(json.dumps(rep, indent=1))
+        return 0
+    return {"generate": cmd_generate, "extract": cmd_extract,
+            "tests": cmd_tests, "table": cmd_table}[args.cmd](args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

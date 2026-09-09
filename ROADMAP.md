@@ -750,7 +750,7 @@ and 8 abstentions (13.2); 5 dafny verified twins and 3 inference-admitted
 witnesses (12.3, 13.3); 26 lean and 16 spark abstentions (lowering gaps).
 Reading: the closing section of the table.
 
-### 12.6 The spec experiment
+### 12.6 The spec experiment: DONE 2026-09-08, measured once on MBPP with a 7B model, and the reward needs the tests
 
 The whole training thesis is that a model can write a t task, specification
 included, from a natural-language problem, and that seven kernels grading it
@@ -772,6 +772,32 @@ and cost no API budget.
 DONE WHEN: a measured table of how many model-written t tasks verify with a
 refuted twin, and how many of those also pass the problem's own test cases,
 because those two failures are different and both matter.
+
+**DONE 2026-09-08.** Table: `t/SPEC-EXPERIMENT-mbpp.md`, instrument
+`t/spec_experiment.py` (pool, generate, extract, tests, table; run_par.py
+grades). qwen2.5-coder:7b (Q4_K_M) on GPU 0 through ollama, temperature 0,
+one reply per problem, over the 368 MBPP problems whose three assertions
+are in t's fragment with an int or bool result. 64 replies became
+well-formed t tasks; 43 verify with a refuted twin in at least one column,
+4 in all seven (maximum, max_of_two, gcd, fibonacci: near-copies of the
+prompt's examples); 33 of the 43 pass the problem's own assertions and 10
+fail them. Per 368: 1.1% reach the seven-column bar and pass their tests,
+9.0% verify somewhere and pass, 17.4% are well-formed t. Of the 304
+losses, 139 reach for an operator t lacks (division or modulo 102, bitwise
+37), 46 write an `if` with no `else`, 69 slip on notation, and 50 are
+well-formedness refusals (16 of them only the `t 0`/`t 1` header). The
+finding for the thesis: 35 of the 64 tasks carry a spec that is the body
+verbatim (`ensures r == E`, body `r := E`); 34 of those verify with a
+refuted twin, 27 pass their tests, and 8 of the 10 verified-but-wrong
+tasks are of that shape (dog_age: `r == human_years * 7`, verified,
+refuted twin, wrong). The twin discipline cannot tell a restated body from
+a specification; the tests can, and fstar's zero-obligation rule flags
+exactly those 32 as MALFORMED. So the reward is "verifies with a refuted
+twin AND passes the problem's tests", never the first alone, which on this
+sample is 77% precise. Next, when VRAM allows a model that can write a
+loop invariant: the same table with a larger model and several samples per
+problem, and div-mod (12.7) before any of it, since it alone bars 102 of
+368 problems. HumanEval is 16.3.
 
 ### 12.7 Constructs, in the measured order
 
