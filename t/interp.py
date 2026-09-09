@@ -257,7 +257,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
     raise ValueError(f"t has no operator {op!r}")
 
 
-def exec_body(body: list, env: dict, funs: dict, st: St, hook=None) -> None:
+def exec_body(body: list, env: dict, funs: dict, st: St, hook=None) -> bool:
     """Run statements for their VALUE only. Invariants and `decreases` are not
     checked here: this interpreter answers "what does the twin compute", and a
     twin whose annotations are broken is exactly what the kernel is asked to
@@ -266,31 +266,43 @@ def exec_body(body: list, env: dict, funs: dict, st: St, hook=None) -> None:
     `hook(stmt, env)` fires once per ARRIVAL at a `while` header, before the
     guard. invariant_witness needs it to learn what an actual execution puts
     in the variables the loop does not assign; default None leaves behaviour
-    unchanged for every other caller."""
+    unchanged for every other caller.
+
+    Returns True when a `return` statement (SPEC.md "Early exit",
+    2026-09-08) ended the run: the value is in env under the return name,
+    and every enclosing block stops. Callers that run a whole body may
+    ignore the flag; the nested calls below propagate it."""
     for s in body:
         st.tick()
         if "assign" in s:
             name, e = s["assign"]
             env[name] = ev(e, env, funs, st)
+        elif "return" in s:
+            name, e = s["return"]
+            env[name] = ev(e, env, funs, st)
+            return True
         elif "var" in s:
             d = s["var"]
             env[d["name"]] = ev(d["init"], env, funs, st)
         elif "if" in s:
             c = s["if"]
-            exec_body(c["then"] if ev(c["cond"], env, funs, st) else c["else"],
-                      env, funs, st, hook)
+            if exec_body(c["then"] if ev(c["cond"], env, funs, st) else c["else"],
+                         env, funs, st, hook):
+                return True
         elif "while" in s:
             w = s["while"]
             if hook is not None:
                 hook(s, env)
             it = 0
             while ev(w["cond"], env, funs, st):
-                exec_body(w["body"], env, funs, st, hook)
+                if exec_body(w["body"], env, funs, st, hook):
+                    return True
                 it += 1
                 if it > MAX_LOOP:
                     raise Budget("loop cap")
         else:
             raise ValueError(f"t has no statement {s!r}")
+    return False
 
 
 def assigned(body: list, out: set | None = None) -> set:
@@ -303,6 +315,8 @@ def assigned(body: list, out: set | None = None) -> set:
     for s in body:
         if "assign" in s:
             out.add(s["assign"][0])
+        elif "return" in s:
+            out.add(s["return"][0])
         elif "var" in s and isinstance(s["var"], dict):
             out.add(s["var"]["name"])
         elif "if" in s:

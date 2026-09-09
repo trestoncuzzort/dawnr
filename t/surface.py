@@ -20,14 +20,14 @@ accepted more than the AST would be a second, undocumented language.
 
 THE ROUND TRIP, measured (2026-09-04, this file's --check):
 
-  parse(print(t)) == t, canonical JSON, on 1556 of 1556 tasks. The corpus is
+  parse(print(t)) == t, canonical JSON, on 1549 of 1549 tasks. The corpus is
   the 11 committed tasks in t/tasks/ plus fuzz_lower.build_corpus over seeds
   1 through 7: 200 generated plus 19 hand-built probes per seed, 1574 in all,
   less the 16 that check_wf rejects, which carry constructs t does not have
-  and are therefore not t tasks. 1406 of the 1556 are distinct by canonical
+  and are therefore not t tasks. 1401 of the 1549 are distinct by canonical
   form; the repeats are the 19 probes, which build_corpus emits once per seed.
 
-  print(parse(text)) == text on the second pass for all 1556, so printing is
+  print(parse(text)) == text on the second pass for all 1549, so printing is
   idempotent and every task has one normal form in the notation.
 
   The 7 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
@@ -42,7 +42,7 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   1 through 5. That instrument samples the GRAMMAR, not t's semantics, and it
   is the one that found this file's only real defect (note 1 below). It is
   permanent, not scaffolding for this wave: a corpus can only exercise the
-  shapes its generators emit, so the defect it found is one the 1556-task
+  shapes its generators emit, so the defect it found is one the 1549-task
   corpus structurally cannot contain, and the next such defect will be too.
 
 TWO PLACES WHERE THE OBVIOUS NOTATION WOULD HAVE LOST INFORMATION, since
@@ -56,7 +56,7 @@ written differently:
      argument's printed form STARTS WITH A DIGIT. The test is on the text
      and not on the node because `neg` of `at` on a literal base prints
      `18[false]`, and `-18[false]` reparses as `at` of the literal `-18`.
-     That shape does not occur in the 1556-task corpus and was found by
+     That shape does not occur in the 1549-task corpus and was found by
      --fuzz; it is the one defect the corpus alone would have missed.
      Everywhere else `-e` is `neg`, as SYNTAX.md writes it.
 
@@ -159,7 +159,7 @@ class SurfaceError(Exception):
 
 KEYWORDS = {
     "t", "gate", "task", "returns", "requires", "ensures", "decreases",
-    "spec", "fun", "var", "while", "invariant", "if", "then", "else",
+    "spec", "fun", "return", "var", "while", "invariant", "if", "then", "else",
     "forall", "exists", "in", "len", "true", "false", "and", "or", "not",
     "int", "bool", "seq",
 }
@@ -232,6 +232,7 @@ VAL_TYPES = ("int", "bool", "seq")
 
 class Parser:
     def __init__(self, src: str):
+        self.ret_name = None      # set by program(); a bare stmt has no task
         self.toks = lex(src)
         self.i = 0
 
@@ -286,6 +287,7 @@ class Parser:
         self.eat("kw", "returns")
         self.eat("sym", "(")
         rname = self.name()
+        self.ret_name = rname
         self.eat("sym", ":")
         rtype = self.vtype(("int", "bool"))
         self.eat("sym", ")")
@@ -359,6 +361,15 @@ class Parser:
 
     def stmt(self) -> dict:
         t = self.tok
+        if self.opt("kw", "return"):
+            # SPEC.md "Early exit" (2026-09-08): the AST names the task's
+            # return variable, as assign does, so the interpreter needs no
+            # context to run it; the notation fills the name from the header.
+            if self.ret_name is None:
+                raise SurfaceError("line %d: return outside a task" % t.line)
+            e = self.expr()
+            self.opt("sym", ";")
+            return {"return": [self.ret_name, e]}
         if t.kind == "id":
             target = self.name()
             self.eat("sym", ":=")
@@ -665,6 +676,9 @@ def pstmts(body: list, ind: str) -> list:
         if not isinstance(s, dict) or len(s) != 1:
             raise SurfaceError("not a statement node: %r" % (s,))
         kind = next(iter(s))
+        if kind == "return":
+            out.append("%sreturn %s;" % (ind, pexpr(s["return"][1], 0)))
+            continue
         if kind == "assign":
             tgt, val = s["assign"]
             out.append("%s%s := %s;" % (ind, _ident(tgt), pexpr(val)))

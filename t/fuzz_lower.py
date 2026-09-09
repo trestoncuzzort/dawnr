@@ -454,7 +454,21 @@ def check_wf(task: dict) -> list[str]:
                                "result": ret["type"], "body": None,
                                "decreases": None}
     _check_stmts(task["body"], dict(eenv), bfuns, ver, errs, {ret["name"]})
+    _check_returns(task["body"], ret["name"], errs)
     return errs
+
+
+def _check_returns(body, rname, errs):
+    """Every `return` names the task's return variable, never a local that
+    happens to be assignable in scope (SPEC.md Early exit)."""
+    for s in body:
+        if "return" in s and s["return"][0] != rname:
+            errs.append(f"return names {s['return'][0]}, not the task's return {rname}")
+        elif "if" in s:
+            _check_returns(s["if"]["then"], rname, errs)
+            _check_returns(s["if"]["else"], rname, errs)
+        elif "while" in s:
+            _check_returns(s["while"]["body"], rname, errs)
 
 
 def _check_stmts(body, env, funs, ver, errs, assignable):
@@ -496,6 +510,17 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
                 if _ty(inv, env, funs, ver, errs, set()) != "bool":
                     errs.append("loop invariant is not bool")
             _check_stmts(w["body"], dict(env), funs, ver, errs, set(assignable))
+        elif "return" in s:
+            if ver == 0:
+                errs.append("return in a v0 task")
+            n, e = s["return"]
+            if n not in assignable:
+                errs.append(f"return names {n}, not the task's return")
+            t = _ty(e, env, funs, ver, errs, set())
+            if t != env.get(n):
+                errs.append(f"return {n}: {t} into {env.get(n)}")
+            if s is not body[-1]:
+                errs.append("statement after return is unreachable (SPEC.md Early exit)")
         else:
             errs.append(f"t has no statement {sorted(s)!r}")
 

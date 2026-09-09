@@ -200,6 +200,8 @@ def _exprs(body: list, scope: list):
     for p, s, sc in _stmts(body, scope):
         if "assign" in s:
             yield p + ("assign", 1), s["assign"][1], sc, "rhs"
+        elif "return" in s:
+            yield p + ("return", 1), s["return"][1], sc, "rhs"
         elif "var" in s:
             yield p + ("var", "init"), s["var"]["init"], sc, "init"
         elif "if" in s:

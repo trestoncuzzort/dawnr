@@ -171,6 +171,7 @@ New Stmt forms:
 
 ```
 {"var": {"name": ID, "type": "int"|"bool", "init": Expr}}    // local, initialized
+{"return": [ID, Expr]}                                       // early exit: ID is the return name
 {"while": {"cond": Expr,
            "invariants": [Expr, ...],       // conjoined; may be empty
            "decreases": Expr,               // required on every loop
@@ -261,6 +262,29 @@ The spec side of a recursive task is anchored by a spec_fun (`ensures r ==
 fact(n)`), never by the task's own name: an `ensures` that referenced the
 task itself would be redefined by the twin along with the body, and the flip
 would measure nothing.
+
+### Early exit (v1)
+
+`{"return": [ID, Expr]}`, written `return Expr;`. `ID` must be the task's
+return name (the AST carries it, as `assign` does, so an interpreter runs
+the statement without context). It evaluates `Expr`, assigns it to the
+return variable, and ends the task: no statement of its own block may
+follow it (well-formedness refuses an unreachable statement), and no later
+statement of any enclosing block runs. A path may end in `return` instead
+of an assignment. Inside a loop, a `return` leaves the loop without owing
+the loop's invariant at that point; the task owes its `ensures` there as
+at every exit. Definedness rules are unchanged: `Expr` is in the same
+position as an assignment's right-hand side.
+
+Stated 2026-09-08 (ROADMAP 12.7) from the measurement that early exit is
+the top gap of MBPP's Python reference solutions (62 of 974) and appears
+in 138 of the 785 DafnyBench programs. Lowering status: no column lowers
+it yet. dafny, verus, spark and framac have a return statement; lean, rocq
+and fstar encode a loop as a recursive function and must return an
+outcome (exited with a value, or the loop state) whose invariant shape
+differs on the two paths. Until the lowerings land, a task with `return`
+reads abstain or error in every column, and the committed corpus carries
+none.
 
 ## The twins
 

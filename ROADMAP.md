@@ -846,7 +846,38 @@ in all seven (30 of 159 before), MBPP-DFY 38 lifted and 7 in all seven
 reads 10 of the 20 new reals vacuous (WP's dead-code smoke on the t_div
 case split); lean's probe `x % y >= 0` under `x < 0, y > 0` unproved;
 `if` without `else` is now the largest model-side loss. Surface: `/` and
-`%` at the `*` precedence, round trip 1556 of 1556.
+`%` at the `*` precedence, round trip 1549 of 1549 after the fuzz family settled.
+
+**early-exit: measured and stated 2026-09-08; the core landed, the seven
+lowerings are the open work.** Measured first: 138 of 785 DafnyBench
+programs return early, but only 4 have it as their sole gap (9 with
+div-mod), so on DafnyBench the construct unlocks almost nothing today; its
+weight is the Python side, where it is the top gap of MBPP's reference
+solutions (62 of 974) and the shape a model writes for `is_prime` and
+every search. SPEC.md "Early exit (v1)": `{"return": [ID, Expr]}`, written
+`return Expr;`, names the task's return as `assign` does, assigns and ends
+the task; a statement after it in its block is refused as unreachable;
+inside a loop it owes the ensures, not the invariant. Landed: the
+interpreter (`exec_body` returns a flag the nested calls propagate),
+`check_wf` (typing, the return name, unreachability), the notation (parse,
+print, round trip 1549 of 1549), the twin walker (`_exprs` yields the
+returned expression). No lowering emits it: every column raises on the
+statement and a task with `return` reads error or abstain, so the
+committed corpus carries none yet. The plan for the fan-out, same shape as
+div-mod's: dafny, verus, spark and framac emit their native return
+statements (Dafny checks ensures at each return and needs no invariant
+there; verus and C likewise; SPARK `return` inside a function body);
+lean, rocq and fstar change their loop encoding so the recursive loop
+function yields either the loop state or an exit value, with the
+invariant proved only on the continue path and the ensures on both; the
+lifter maps Dafny's mid-body `return` (lift_classify's early-exit
+refusal, tail returns already rewritten); a fuzz family of search loops
+with a return, and probes for a return inside a loop and for the
+unreachable-statement rule; two committed tasks, `first_even` (return
+inside a loop over a seq, uses `%`) and `is_prime` (return inside a loop
+with div-mod), so the flip table carries both new constructs at once.
+DONE WHEN as stated above; the sweep's numbers move only when the lifter
+maps the 4 plus whatever arrays and div-mod free later.
 
 ### 12.8 Standing items
 
