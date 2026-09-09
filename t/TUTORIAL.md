@@ -93,7 +93,7 @@ whiteboard:
 ## Lesson 2: values and types
 
 A **value** is a piece of data. A **type** says what kind of data. t has
-three types, and the small number is on purpose:
+three base types, plus a pair of them, and the small number is on purpose:
 
 - **`int`**: a whole number: … -2, -1, 0, 1, 2 … Here is the surprise if
   you've programmed before: t's integers are *mathematical* integers. They
@@ -106,6 +106,16 @@ three types, and the small number is on purpose:
   change are enormously easier to reason about. Most of the pain in proving
   programs correct comes from things changing behind your back.) A `seq` can
   only arrive as an input.
+- **A pair `(T1, T2)`**: two values held together, each an `int`, a `bool`
+  or a `seq`, like `(int, int)` or `(bool, seq)`. Write `(x, y)` to build
+  one; `p.0` and `p.1` take it apart, and both are always defined, whatever
+  `p` holds. Two pairs are `==` when both components match; there is no
+  `<` on a pair, only on an `int`. This is how a value with two parts
+  moves through t as one: a Dafny method that `returns (a: int, b: int)`
+  becomes a task with one return of type `(int, int)`, and a Python
+  function that returns a tuple becomes one t value the same way.
+  `tasks/divmod_pair.json` (no loop) and `tasks/min_max.json` (a loop
+  that fills both components together) are the examples.
 
 There is no text type, no decimal-point type. Not yet, on purpose: every
 piece of t exists only once six independent proof kernels agree on exactly

@@ -13,17 +13,18 @@ its proofs mean anything, because a parser and a printer that disagree prove
 things about a program nobody wrote. Measured by `python3 t/surface.py
 --check`:
 
-- `parse(print(t)) == t` on **1628 of 1628** tasks, compared as canonical
-  JSON. The corpus is the 11 committed tasks in `tasks/` plus
-  `fuzz_lower.build_corpus` over seeds 1 through 7, which is 1400 generated
-  tasks plus the 19 hand-built probes per seed, 1648 in all, less the 20 that
-  `check_wf` rejects for carrying constructs t does not have. 1432 of the
-  1628 are distinct; the repeats are the probes, which recur once per seed.
-- `print(parse(text)) == text` on all 1628, so every task has exactly one
+- `parse(print(t)) == t` on **1670 of 1670** tasks, compared as canonical
+  JSON. The corpus is the 21 committed tasks in `tasks/` plus
+  `fuzz_lower.build_corpus` over seeds 1 through 7, less the 17 that
+  `check_wf` rejects for carrying constructs t does not have, 1687 seen in
+  all. 1447 of the 1670 are distinct; the repeats are the hand-built probes,
+  which recur once per seed.
+- `print(parse(text)) == text` on all 1670, so every task has exactly one
   normal form in the notation.
-- The **7 `written:` lines on this page parse, unedited**, to the JSON they
-  sit beside. That is what makes this grammar the documented notation rather
-  than a new one that resembles it.
+- The **13 examples on the `written:` lines of this page parse, unedited**,
+  to the JSON they sit beside (some lines carry more than one, separated by
+  `·`). That is what makes this grammar the documented notation rather than
+  a new one that resembles it.
 - **100000 of 100000** random ASTs drawn from the grammar itself round trip
   (`--fuzz 20000`, seeds 1 through 5). That instrument samples the grammar
   instead of t's semantics, so it reaches shapes no corpus generator emits,
@@ -54,6 +55,7 @@ Task     ::= { "t": 0|1, "name": Id,
                "body": [ Stmt+ ] }              (* every path ends in assign *)
 
 Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09 *)
+           | {"pair": [Type, Type]}             (* v1, since 2026-09-10; written (T1, T2); T1, T2 int/bool/seq, no pair of pairs *)
 
 Expr     ::= {"int": integer}                   (* mathematical integer *)
            | {"bool": true|false}                                        (* v1 *)
@@ -72,6 +74,7 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "update" | "fill"                  (* v1; written s[i := v] and seq(n, v) *)
            | "seq" | "slice"                    (* v1; written [a, b] (any arity, [] empty) and s[a..b];
                                                    "+" on two seqs is concatenation *)
+           | "pair" | "fst" | "snd"             (* v1, since 2026-09-10; written (e1, e2), p.0, p.1 *)
 
 Stmt     ::= {"assign": [Id, Expr]}
            | {"if":    {"cond": Expr, "then": [Stmt*], "else": [Stmt*]}}
@@ -178,6 +181,32 @@ escapes `\n` `\t` `\r` `\0` `\'` `\\`, a string also `\"`, and either can
 spell a code point by its hex value as `\u{H...H}`, 1 to 6 hex digits. The
 printer always emits ints and seq literals, never quotes, so `'a'` prints
 as `97` and `"abc"` as `[97, 98, 99]`.
+
+### Pairs (v1)
+
+```json
+{"op": "pair", "args": [{"var": "a"}, {"var": "b"}]}
+{"op": "fst",  "args": [{"var": "p"}]}
+{"op": "snd",  "args": [{"var": "p"}]}
+{"var": {"name": "r", "type": {"pair": ["int", "int"]},
+         "init": {"op": "pair", "args": [{"var": "x"}, {"var": "y"}]}}}
+```
+written: `(a, b)` · `p.0` · `p.1` · `var r: (int, int) := (x, y);`
+
+Since 2026-09-10 (SPEC.md "Pairs (v1)"), a pair is a value: `{"pair": [T1,
+T2]}`, each of `T1`, `T2` one of `int`, `bool`, `seq`, written `(int,
+int)` or `(bool, seq)`, usable as a param, return or local type. `(e1,
+e2)` builds one; `p.0` and `p.1` project, both always defined on a pair.
+`==` and `!=` on two pairs of the same type are componentwise, the same
+polymorphic operator as on two ints, two bools or two seqs; a `==` across
+two DIFFERENT pair types is ill-formed, as is any of `< <= > >=` on a
+pair, since a pair has no order. `(e)` alone, no comma, is still grouping,
+never a pair. Not in v1: a pair of pairs, a seq of pairs, a pair of three.
+`tasks/divmod_pair.json` (`r := (x div y, x mod y);`, loop-free) and
+`tasks/min_max.json` (a loop keeping both bounds in one pass, `r :=
+(lo, hi);` after it exits) are the committed examples. The twin ladder's
+WRONG-VAR rung gained one move for this construct: it also swaps a
+`pair`'s two components, and swaps `fst` for `snd` in a projection.
 
 ### Locals and loops (gate 2)
 
@@ -291,6 +320,8 @@ exercises all six.
 No unbounded quantifiers. No
 mutation of sequences in place (a seq is a value, updated functionally), no
 arrays, no heap, no aliasing. No mutual recursion, no higher-order
-functions, no nested seqs, no characters or strings yet. One return value.
-Gates open with measurements, not intentions; see `AGREEMENT.md` for what
-each kernel has actually verified.
+functions, no nested seqs. A character and a string are sugar over `int`
+and `seq`, not their own types; a pair is one value, no pair of pairs, no
+seq of pairs, no triple. One return value. Gates open with measurements,
+not intentions; see `AGREEMENT.md` for what each kernel has actually
+verified.

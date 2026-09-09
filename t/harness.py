@@ -12,7 +12,9 @@ Twin operators (SPEC.md "The twins", v2, the ladder below, tried in order):
   COMPARE-FLIP        : `<`<->`<=`, `>`<->`>=` in one executable expression.
   BOUNDARY-SWAP       : swap the operands of one order comparison.
   OFF-BY-ONE          : +/-1 on one literal, `at` index, or loop bound.
-  WRONG-VAR           : one variable occurrence replaced by another one.
+  WRONG-VAR           : one variable occurrence replaced by another one, or
+                        (SPEC.md "Pairs", 2026-09-10) a pair's two components
+                        swapped, or `fst`/`snd` swapped in one projection.
   DROP-GUARD          : drop one conjunct of an `if`/`while` condition.
 
 Selection is derived from the body, never configured per task, and is
@@ -308,6 +310,14 @@ def _c_wrong_var(body, scope):
     # quantifier's bound variable, because neither carries a declared type
     # here, and substituting across types would emit a twin no lowering can
     # even typecheck.
+    #
+    # SPEC.md "Pairs" (2026-09-10) gives this same rung one more move, at
+    # zero new syntax: a `pair` node with its two components swapped, and a
+    # `fst`/`snd` projection with the other one substituted. Both read the
+    # OTHER thing already in reach at that site, exactly what a var-for-var
+    # substitution does; `_sub`'s generic op/args walk already reaches these
+    # nodes; no `at`/`slice`/`update` treatment is needed here, only these
+    # two new node shapes.
     for path, e, sc, _k in _exprs(body, scope):
         ty_of = dict(sc)
         for sp, node in _sub(e, path):
@@ -316,6 +326,13 @@ def _c_wrong_var(body, scope):
                 for alt, alt_ty in sc:
                     if alt != node["var"] and alt_ty == ty:
                         yield _replace(body, sp, {"var": alt})
+            elif node.get("op") == "pair":
+                a, b = node["args"]
+                yield _replace(body, sp, {"op": "pair", "args": [b, a]})
+            elif node.get("op") == "fst":
+                yield _replace(body, sp, {"op": "snd", "args": node["args"]})
+            elif node.get("op") == "snd":
+                yield _replace(body, sp, {"op": "fst", "args": node["args"]})
 
 
 def _c_drop_guard(body, scope):

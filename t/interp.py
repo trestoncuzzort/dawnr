@@ -61,6 +61,7 @@ content-derived like the operators it chooses between.
 from __future__ import annotations
 
 import itertools
+from dataclasses import dataclass
 
 # Per-input caps. An input that exceeds one is DISCARDED (no verdict), never
 # counted as agreement: a twin that merely runs out of budget has not been
@@ -99,6 +100,28 @@ class Undef(Exception):
 
 class Budget(Exception):
     """A cap above was hit; this input decides nothing."""
+
+
+@dataclass(frozen=True)
+class Pair:
+    """SPEC.md "Pairs" (2026-09-10): the runtime value of `{"op": "pair",
+    "args": [a, b]}`. Kept OUT of Python's tuple on purpose: seqs are Python
+    tuples (SPEC.md "Sequences as values"), and `_tv` below tags a value by
+    `type(v).__name__` so a value witness can never mistake one t type for
+    another (gate 1's int/bool distinction is the same mechanism); a bare
+    `(a, b)` tuple would collide with a length-2 seq under that tag, which is
+    exactly the confusion `_tv` exists to rule out. `@dataclass(frozen=True)`
+    gives a componentwise `__eq__` for free, which is `==`/`!=` on two pairs
+    (SPEC.md: "the polymorphic `==` again, two ints, two bools, two seqs,
+    two pairs") and never true against a tuple of the same two values since
+    the generated `__eq__` first checks `other.__class__ is self.__class__`;
+    and a hash derived from the same two fields, needed because the domain
+    ladders below (`_ladder`) dedup pair values through a set. Pairs have no
+    order (SPEC.md: "`< <= > >=` stay int-only"), so no `__lt__` etc. is
+    defined, on purpose: check_wf refuses the syntax before a Pair would ever
+    reach one."""
+    a: object
+    b: object
 
 
 MAX_SEQ = 1 << 16          # fill length cap, the seq analogue of MAX_BITS
@@ -251,6 +274,16 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if not (0 <= lo <= hi <= len(s)):
             raise Undef(f"slice bounds [{lo}..{hi}] outside 0 <= a <= b <= {len(s)}")
         return tuple(s[lo:hi])
+    if op == "pair":
+        # SPEC.md "Pairs" (2026-09-10): (a, b), a value defined iff both
+        # components are (every argument above is already evaluated).
+        return Pair(a[0], a[1])
+    if op == "fst":
+        # p.0: always defined on a pair (check_wf refuses a non-pair operand
+        # before this ever runs).
+        return a[0].a
+    if op == "snd":
+        return a[0].b
     if op == "+":
         if isinstance(a[0], tuple):
             # s + t on two seqs is concatenation (SPEC.md "Sequences:
@@ -467,6 +500,25 @@ def ladders(task: dict) -> dict:
     return {"int": ints, "seq": _seq_ladder(alpha), "bool": BOOLS}
 
 
+PAIR_SHELL = 24          # 2-argument shell cap, the same magnitude
+                         # _seq_ladder gives its own 2-tuples.
+
+
+def _ladder(lad: dict, ty) -> tuple:
+    """The value ladder for type `ty`: "int"/"bool"/"seq" index `lad`
+    directly; a pair type `{"pair": [T1, T2]}` (SPEC.md "Pairs", 2026-09-10)
+    is built by combining the two component ladders in shell order, so the
+    near corner (both components small) comes first, exactly as
+    `_seq_ladder` orders sequences and for the same reason: the arity cap
+    below trims the far corner of the product, not the near one. T1 and T2
+    are always base types (no pair of pairs), so this does not recurse."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        return tuple(_dedup([Pair(a, b) for a, b in
+                             _shell([lad[t1], lad[t2]], PAIR_SHELL)]))
+    return lad[ty]
+
+
 def _shell(lists: list, limit: int):
     """Cartesian product in shell order: every tuple whose largest ladder
     index is d, for d ascending. Lexicographic order would hold the first
@@ -492,7 +544,7 @@ def domain(task: dict, names: list[tuple[str, str]],
     """All assignments to `names` (a list of (name, type)) from `task`'s
     ladders, capped at `limit` points in shell order."""
     lad = ladders(task)
-    lists = [lad[ty] for _, ty in names]
+    lists = [_ladder(lad, ty) for _, ty in names]
     for combo in _shell(lists, limit):
         yield {n: v for (n, _), v in zip(names, combo)}
 
@@ -502,13 +554,20 @@ def _names(task: dict) -> list[tuple[str, str]]:
 
 
 def _j(v):
+    if isinstance(v, Pair):
+        # SPEC.md "Pairs": shown as a 2-list, recursing so a seq component
+        # (itself a tuple) prints as a list too rather than as a raw tuple.
+        return [_j(v.a), _j(v.b)]
     return list(v) if isinstance(v, tuple) else v
 
 
 def _tv(v):
     """A value tagged with its t TYPE. Python makes True == 1, so a bare `!=`
     would call a bool-returning twin and an int-returning real body equal and
-    silently drop the witness; SPEC.md gate 1 keeps int and bool distinct."""
+    silently drop the witness; SPEC.md gate 1 keeps int and bool distinct.
+    A Pair's `type(v).__name__` is "Pair", never "tuple", so this keeps a
+    pair distinct from a same-shaped seq for the same reason (SPEC.md
+    "Pairs": "the runtime value of a pair must be DISTINCT from a seq")."""
     return ("bool", v) if isinstance(v, bool) else (type(v).__name__, v)
 
 

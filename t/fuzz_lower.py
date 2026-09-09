@@ -360,13 +360,31 @@ V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
           "and", "or", "not", "implies"}
 # div and mod are v1 (SPEC.md "Division and modulo", 2026-09-08): Euclidean,
 # undefined at y == 0, so v1's definedness rules apply to them as to at.
-V1_OPS = V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
+# pair, fst, snd are v1 (SPEC.md "Pairs", 2026-09-10): a pair is a value, and
+# `fst`/`snd` are its only projections.
+V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
+         | {"pair", "fst", "snd"})
 TERNARY = {"update", "slice"}
 VARIADIC = {"seq"}      # the literal: any arity, zero included
-UNARY = {"neg", "not", "len"}
+UNARY = {"neg", "not", "len", "fst", "snd"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
+BASE_TYPES = ("int", "bool", "seq")     # every T1, T2 a pair may hold
+
+
+def _valid_type(t) -> bool:
+    """A well-formed t TYPE: "int", "bool", "seq", or a pair
+    `{"pair": [T1, T2]}` with T1, T2 each one of int/bool/seq (SPEC.md
+    "Pairs", 2026-09-10): no pair of pairs, no seq of pairs, no pair of
+    three. Anything else (an unknown string, a malformed dict, a pair whose
+    own component is itself a dict) is refused here rather than left for a
+    KeyError or a silent pass three checks later."""
+    if t in BASE_TYPES:
+        return True
+    return (isinstance(t, dict) and set(t) == {"pair"}
+            and isinstance(t["pair"], list) and len(t["pair"]) == 2
+            and all(c in BASE_TYPES for c in t["pair"]))
 
 
 def _ty(e, env, funs, ver, errs, bound):
@@ -465,6 +483,27 @@ def _ty(e, env, funs, ver, errs, bound):
         if ts[0] != "int" or ts[1] != "int":
             errs.append("fill wants (int, int)")
         return "seq"
+    if op == "pair":
+        # SPEC.md "Pairs" (2026-09-10): (e1, e2), typed from its operands;
+        # T1, T2 must each be int, bool or seq. There is no way to spell a
+        # "seq of pairs" as a type in t (seq is not parameterised), so the
+        # only shape to refuse here is a pair of pairs, one level at a time:
+        # a pair nested as either operand already failed this same check
+        # when IT was typed, so ts[0]/ts[1] not in BASE_TYPES catches it.
+        if ts[0] not in BASE_TYPES or ts[1] not in BASE_TYPES:
+            errs.append("pair components must be int, bool or seq "
+                        "(no pair of pairs, no pair of three)")
+        return {"pair": ts}
+    if op in ("fst", "snd"):
+        # p.0 / p.1: SPEC.md "Pairs". Only a pair operand is defined; a
+        # non-pair operand (including a pair-of-something gone wrong above,
+        # which types as None or a bad dict) is refused with a clear reason
+        # rather than an IndexError three lines from now.
+        t0 = ts[0]
+        if not (isinstance(t0, dict) and set(t0) == {"pair"}):
+            errs.append(f"{op} wants a pair operand, found {t0!r}")
+            return None
+        return t0["pair"][0 if op == "fst" else 1]
     if op in ("+", "-", "*", "neg", "div", "mod"):
         if any(t != "int" for t in ts):
             errs.append(f"{op} over non-int")
@@ -474,9 +513,15 @@ def _ty(e, env, funs, ver, errs, bound):
             errs.append(f"{op} is int-only (SPEC.md gate 1)")
         return "bool"
     if op in ("==", "!="):
-        # Two seqs compare extensionally since SPEC.md "Sequences as values".
+        # Two seqs compare extensionally since SPEC.md "Sequences as
+        # values"; two pairs compare componentwise since SPEC.md "Pairs"
+        # (2026-09-10), "the polymorphic == again" -- dict equality on the
+        # two type dicts already refuses a `==` across two DIFFERENT pair
+        # types (a pair of (int, int) against a pair of (bool, int)), same
+        # as it refuses int against seq.
         if ts[0] != ts[1]:
-            errs.append(f"{op} wants two ints, two bools or two seqs")
+            errs.append(f"{op} wants two ints, two bools, two seqs or two "
+                       f"pairs of the same type")
         return "bool"
     if any(t != "bool" for t in ts):
         errs.append(f"{op} over non-bool")
@@ -508,6 +553,12 @@ def check_wf(task: dict) -> list[str]:
     penv = {p["name"]: p["type"] for p in task["params"]}
     if ver == 0 and any(t != "int" for t in penv.values()):
         errs.append("v0 has int only")
+    for p in task["params"]:
+        if not _valid_type(p["type"]):
+            errs.append(f"param {p['name']} has an invalid type: {p['type']!r}")
+    for r in task["returns"]:
+        if not _valid_type(r["type"]):
+            errs.append(f"return {r['name']} has an invalid type: {r['type']!r}")
     for i, f in enumerate(task.get("spec_funs", [])):
         fenv = {p["name"]: p["type"] for p in f["params"]}
         earlier = {g["name"]: g for g in task["spec_funs"][:i]}
@@ -570,6 +621,9 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
             d = s["var"]
             if d["name"] in env:
                 errs.append(f"local {d['name']} shadows a name in scope")
+            if not _valid_type(d["type"]):
+                errs.append(f"local {d['name']} has an invalid type: "
+                           f"{d['type']!r}")
             if _ty(d["init"], env, funs, ver, errs, set()) != d["type"]:
                 errs.append(f"local {d['name']} init type mismatch")
             env[d["name"]] = d["type"]

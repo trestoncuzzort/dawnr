@@ -103,7 +103,8 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
                  Clause* SpecFun* Block
     Clause   ::= "requires" Expr | "ensures" Expr | "decreases" Expr
     Params   ::= (Id ":" Type ("," Id ":" Type)*)?
-    Type     ::= "int" | "bool" | "seq"
+    Type     ::= BaseType | "(" BaseType "," BaseType ")"  (* pair: v1, since 2026-09-10; no pair of pairs *)
+    BaseType ::= "int" | "bool" | "seq"
     SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" ("int"|"bool")
                  "decreases" Expr "=" Expr
     Block    ::= "{" Stmt* "}"
@@ -123,11 +124,12 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
     Add      ::= Mul (("+"|"-") Mul)*             (* left associative *)
     Mul      ::= Unary (("*"|"/"|"%") Unary)*     (* left associative; / % are div mod *)
     Unary    ::= "-" NAT | "-" Unary | Postfix
-    Postfix  ::= Atom ("[" Expr (":=" Expr)? "]")*   (* `at`; with ":=" `update` *)
+    Postfix  ::= Atom (("[" Expr (":=" Expr)? "]") | ("." ("0"|"1")))*
+                                       (* `[...]` at/update; `.0`/`.1` fst/snd, v1 since 2026-09-10 *)
     Atom     ::= NAT | "true" | "false" | "len" "(" Expr ")"
                | "seq" "(" Expr "," Expr ")"       (* `fill`: seq(n, v) *)
                | Id "(" (Expr ("," Expr)*)? ")"   (* call *)
-               | Id | "(" Expr ")"
+               | Id | "(" Expr ("," Expr)? ")"    (* grouping, or the pair literal (v1, 2026-09-10) *)
 
 Usage:
 
@@ -361,6 +363,20 @@ class Parser:
                                % (t.line, t.text, " ".join(allowed)))
         return t.text
 
+    def ptype(self):
+        """A t TYPE: int/bool/seq, or a pair `(T1, T2)` (SPEC.md "Pairs",
+        2026-09-10). T1 and T2 are read with `vtype()`, not `ptype()`
+        itself, because there is no pair of pairs to recurse into; this is
+        the one place the grammar's `Type` and `BaseType` differ."""
+        if self.at("sym", "("):
+            self.eat("sym", "(")
+            t1 = self.vtype()
+            self.eat("sym", ",")
+            t2 = self.vtype()
+            self.eat("sym", ")")
+            return {"pair": [t1, t2]}
+        return self.vtype()
+
     # -- program -----------------------------------------------------------
 
     def program(self) -> dict:
@@ -379,7 +395,7 @@ class Parser:
         rname = self.name()
         self.ret_name = rname
         self.eat("sym", ":")
-        rtype = self.vtype()
+        rtype = self.ptype()
         self.eat("sym", ")")
         task["returns"] = [{"name": rname, "type": rtype}]
 
@@ -418,7 +434,7 @@ class Parser:
             while True:
                 pn = self.name()
                 self.eat("sym", ":")
-                out.append({"name": pn, "type": self.vtype()})
+                out.append({"name": pn, "type": self.ptype()})
                 if not self.opt("sym", ","):
                     break
         self.eat("sym", ")")
@@ -469,7 +485,7 @@ class Parser:
         if self.opt("kw", "var"):
             vn = self.name()
             self.eat("sym", ":")
-            ty = self.vtype()
+            ty = self.ptype()
             self.eat("sym", ":=")
             init = self.expr()
             self.opt("sym", ";")
@@ -580,32 +596,50 @@ class Parser:
 
     def p_postfix(self) -> dict:
         e = self.p_atom()
-        while self.opt("sym", "["):
-            if self.opt("sym", ".."):
-                # s[..b] is s[0..b] (SPEC.md "Sequences: literals,
-                # concatenation, slices"): sugar the parser expands, the
-                # AST carries the three-argument slice only.
-                hi = self.expr()
-                self.eat("sym", "]")
-                e = {"op": "slice", "args": [e, {"int": 0}, hi]}
-                continue
-            idx = self.expr()
-            if self.opt("sym", ":="):
-                val = self.expr()
-                self.eat("sym", "]")
-                e = {"op": "update", "args": [e, idx, val]}
-                continue
-            if self.opt("sym", ".."):
-                if self.opt("sym", "]"):
-                    # s[a..] is s[a..len(s)].
-                    e = {"op": "slice", "args": [e, idx, {"op": "len", "args": [e]}]}
+        while True:
+            if self.opt("sym", "["):
+                if self.opt("sym", ".."):
+                    # s[..b] is s[0..b] (SPEC.md "Sequences: literals,
+                    # concatenation, slices"): sugar the parser expands, the
+                    # AST carries the three-argument slice only.
+                    hi = self.expr()
+                    self.eat("sym", "]")
+                    e = {"op": "slice", "args": [e, {"int": 0}, hi]}
                     continue
-                hi = self.expr()
+                idx = self.expr()
+                if self.opt("sym", ":="):
+                    val = self.expr()
+                    self.eat("sym", "]")
+                    e = {"op": "update", "args": [e, idx, val]}
+                    continue
+                if self.opt("sym", ".."):
+                    if self.opt("sym", "]"):
+                        # s[a..] is s[a..len(s)].
+                        e = {"op": "slice",
+                             "args": [e, idx, {"op": "len", "args": [e]}]}
+                        continue
+                    hi = self.expr()
+                    self.eat("sym", "]")
+                    e = {"op": "slice", "args": [e, idx, hi]}
+                    continue
                 self.eat("sym", "]")
-                e = {"op": "slice", "args": [e, idx, hi]}
+                e = {"op": "at", "args": [e, idx]}
                 continue
-            self.eat("sym", "]")
-            e = {"op": "at", "args": [e, idx]}
+            if self.opt("sym", "."):
+                # p.0 / p.1: the pair projections (SPEC.md "Pairs",
+                # 2026-09-10). The lexer already tokenises "." and a
+                # following NAT separately (there is no float literal in t
+                # to collide with), so `.` here is unambiguously a
+                # projection and not a decimal point; only these two digits
+                # are the grammar, exactly as `and` at arity 1 has none.
+                tok = self.eat("nat")
+                if tok.text not in ("0", "1"):
+                    raise SurfaceError("line %d: a pair projection is .0 "
+                                       "or .1, found .%s"
+                                       % (tok.line, tok.text))
+                e = {"op": "fst" if tok.text == "0" else "snd", "args": [e]}
+                continue
+            break
         return e
 
     def p_atom(self) -> dict:
@@ -645,6 +679,12 @@ class Parser:
             return {"op": "fill", "args": [n, v]}
         if self.opt("sym", "("):
             e = self.expr()
+            if self.opt("sym", ","):
+                # (e1, e2): the pair literal (SPEC.md "Pairs", 2026-09-10).
+                # `(e)` alone, no comma, stays grouping, as it always was.
+                e2 = self.expr()
+                self.eat("sym", ")")
+                return {"op": "pair", "args": [e, e2]}
             self.eat("sym", ")")
             return e
         if self.opt("sym", "["):
@@ -713,7 +753,8 @@ P_POSTFIX = 9
 _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
 _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice": 3, "implies": 2,
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
-          "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2}
+          "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
+          "pair": 2, "fst": 1, "snd": 1}
 
 
 def _wrap(text: str, prec: int, floor: int) -> str:
@@ -786,6 +827,15 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # to the same AST.
         return _wrap("%s[%s..%s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1]),
                                      pexpr(args[2])), P_POSTFIX, floor)
+    if op == "pair":
+        # (e1, e2) (SPEC.md "Pairs", 2026-09-10): its own delimiters, like
+        # `seq`'s `[...]` or `call`'s `f(...)`, so no `_wrap` floor applies.
+        return "(%s, %s)" % (pexpr(args[0]), pexpr(args[1]))
+    if op in ("fst", "snd"):
+        # p.0 / p.1: the projections, postfix like `at`.
+        return _wrap("%s.%s" % (pexpr(args[0], P_POSTFIX),
+                                "0" if op == "fst" else "1"),
+                     P_POSTFIX, floor)
     if op == "neg":
         # `-(5)`, never `-5`: the bare form is the literal node. The test is
         # on the printed text and not on the node, because `neg` of `at` on a
@@ -827,6 +877,21 @@ def _ident(name) -> str:
     return name
 
 
+def _print_type(t) -> str:
+    """int/bool/seq print as themselves; a pair `{"pair": [T1, T2]}`
+    (SPEC.md "Pairs", 2026-09-10) prints as `(T1, T2)`, the notation
+    `ptype()` parses back. Anything else is not a t type."""
+    if isinstance(t, dict):
+        p = t.get("pair")
+        if (set(t) == {"pair"} and isinstance(p, list) and len(p) == 2
+                and all(c in VAL_TYPES for c in p)):
+            return "(%s, %s)" % (p[0], p[1])
+        raise SurfaceError("not a t type: %r" % (t,))
+    if t not in VAL_TYPES:
+        raise SurfaceError("not a t type: %r" % (t,))
+    return t
+
+
 def pstmts(body: list, ind: str) -> list:
     out = []
     for s in body:
@@ -842,7 +907,8 @@ def pstmts(body: list, ind: str) -> list:
         elif kind == "var":
             v = s["var"]
             out.append("%svar %s: %s := %s;"
-                       % (ind, _ident(v["name"]), v["type"], pexpr(v["init"])))
+                       % (ind, _ident(v["name"]), _print_type(v["type"]),
+                          pexpr(v["init"])))
         elif kind == "if":
             f = s["if"]
             out.append("%sif %s {" % (ind, pexpr(f["cond"], P_IMPLIES)))
@@ -885,11 +951,12 @@ def print_task(task: dict) -> str:
     lines = ["t %d" % t["t"]]
     if "gate" in t:
         lines.append("gate %s" % _ident(t["gate"]))
-    ps = ", ".join("%s: %s" % (_ident(p["name"]), p["type"])
+    ps = ", ".join("%s: %s" % (_ident(p["name"]), _print_type(p["type"]))
                    for p in t["params"])
     r = t["returns"][0]
     lines.append("task %s(%s) returns (%s: %s)"
-                 % (_ident(t["name"]), ps, _ident(r["name"]), r["type"]))
+                 % (_ident(t["name"]), ps, _ident(r["name"]),
+                    _print_type(r["type"])))
     for e in t["requires"]:
         lines.append("  requires %s" % pexpr(e))
     for e in t["ensures"]:
@@ -897,7 +964,7 @@ def print_task(task: dict) -> str:
     if "decreases" in t:
         lines.append("  decreases %s" % pexpr(t["decreases"]))
     for fn in t.get("spec_funs", []):
-        fps = ", ".join("%s: %s" % (_ident(p["name"]), p["type"])
+        fps = ", ".join("%s: %s" % (_ident(p["name"]), _print_type(p["type"]))
                         for p in fn["params"])
         lines.append("spec fun %s(%s): %s" % (_ident(fn["name"]), fps,
                                               fn["result"]))
@@ -943,6 +1010,14 @@ WRITTEN = [
     ("expr", "'a'", {"int": 97}),
     ("expr", '"abc"',
      {"op": "seq", "args": [{"int": 97}, {"int": 98}, {"int": 99}]}),
+    # SPEC.md "Pairs (v1)", added 2026-09-10.
+    ("expr", "(a, b)",
+     {"op": "pair", "args": [{"var": "a"}, {"var": "b"}]}),
+    ("expr", "p.0", {"op": "fst", "args": [{"var": "p"}]}),
+    ("expr", "p.1", {"op": "snd", "args": [{"var": "p"}]}),
+    ("stmt", "var r: (int, int) := (x, y);",
+     {"var": {"name": "r", "type": {"pair": ["int", "int"]},
+              "init": {"op": "pair", "args": [{"var": "x"}, {"var": "y"}]}}}),
 ]
 
 # Three more char/string probes (SPEC.md "Strings as sequences of code
@@ -1045,6 +1120,7 @@ def _rand_expr(rng, depth: int) -> dict:
     kind = rng.choice([
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
         "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
+        "pair", "fst", "snd",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -1083,6 +1159,10 @@ def _rand_expr(rng, depth: int) -> dict:
     if kind == "slice":
         return {"op": "slice", "args": [_rand_expr(rng, d), _rand_expr(rng, d),
                                         _rand_expr(rng, d)]}
+    if kind == "pair":
+        return {"op": "pair", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
+    if kind in ("fst", "snd"):
+        return {"op": kind, "args": [_rand_expr(rng, d)]}
     if kind == "ite":
         return {"ite": {"cond": _rand_expr(rng, d), "then": _rand_expr(rng, d),
                         "else": _rand_expr(rng, d)}}
@@ -1095,6 +1175,16 @@ def _rand_expr(rng, depth: int) -> dict:
                               for _ in range(rng.randint(0, 3))]}}
 
 
+def _rand_type(rng):
+    """int/bool/seq, or a pair of two of them (SPEC.md "Pairs", 2026-09-10),
+    so the round trip exercises `(T1, T2)` in the same places it already
+    exercises the base types: params, returns, locals."""
+    if rng.random() < 0.25:
+        return {"pair": [rng.choice(["int", "bool", "seq"]),
+                         rng.choice(["int", "bool", "seq"])]}
+    return rng.choice(["int", "bool", "seq"])
+
+
 def _rand_stmts(rng, depth: int, k: int) -> list:
     out = []
     for _ in range(k):
@@ -1104,7 +1194,7 @@ def _rand_stmts(rng, depth: int, k: int) -> list:
                                    _rand_expr(rng, rng.randint(0, 3))]})
         elif choice < 0.65:
             out.append({"var": {"name": rng.choice(_FUZZ_NAMES),
-                                "type": rng.choice(["int", "bool"]),
+                                "type": _rand_type(rng),
                                 "init": _rand_expr(rng, 2)}})
         elif choice < 0.85:
             out.append({"if": {"cond": _rand_expr(rng, 2),
@@ -1124,10 +1214,10 @@ def _rand_stmts(rng, depth: int, k: int) -> list:
 
 def _rand_task(rng) -> dict:
     task = {"t": rng.choice([0, 1]), "name": rng.choice(_FUZZ_NAMES),
-            "params": [{"name": nm, "type": rng.choice(["int", "bool", "seq"])}
+            "params": [{"name": nm, "type": _rand_type(rng)}
                        for nm in rng.sample(_FUZZ_NAMES, rng.randint(0, 3))],
             "returns": [{"name": rng.choice(_FUZZ_NAMES),
-                         "type": rng.choice(["int", "bool"])}],
+                         "type": _rand_type(rng)}],
             "requires": [_rand_expr(rng, 3) for _ in range(rng.randint(0, 2))],
             "ensures": [_rand_expr(rng, 3) for _ in range(rng.randint(1, 2))]}
     if rng.random() < 0.4:

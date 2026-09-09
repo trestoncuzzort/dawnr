@@ -496,10 +496,14 @@ grouping) and `p.0`, `p.1` for the projections; the AST carries `pair`,
 Two committed tasks carry the construct: `divmod_pair` (loop-free:
 `requires y > 0`, `r := (x div y, x mod y)`, `ensures r.0 * y + r.1 == x`,
 `0 <= r.1`, `r.1 < y`; twin `wrong-var`, the components swapped, refuted
-at `x = 1, y = 2`) and `min_max` (a loop over a non-empty seq that keeps
+at `x = 1, y = 1`, the first point of the domain's shell order that breaks
+`r.1 < y`) and `min_max` (a loop over a non-empty seq that keeps
 both bounds in one pass and returns `(lo, hi)`, ensures every element
 between `r.0` and `r.1` and each attained; the coupled `(int, int)` loop
-shape the measurement counts 26 of; twin an invariant drop). The twin
+shape the measurement counts 26 of; twin `collapse-if`, the first guard
+collapsed, refuted at `s = [0, 1]`: no invariant drop of this task is
+witnessable by bounded execution, measured at fifteen times the state
+cap, so the ladder falls through to the next rung). The twin
 ladder gains one move: `wrong-var` swaps the two components of a `pair`
 and swaps `fst` for `snd` in a projection; `off-by-one` reaches a
 component as any int. The fuzz family `v1pairs` measures which twins
