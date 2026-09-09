@@ -186,7 +186,12 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
     if isinstance(e, Binary):
         left = _lift_expr(e.left, scope, fn_names, self_name, task_name, record, renamer)
         right = _lift_expr(e.right, scope, fn_names, self_name, task_name, record, renamer)
-        return {"op": e.op, "args": [left, right]}
+        # `/` -> "div", `%` -> "mod" (SPEC.md "Division and modulo (v1)"):
+        # Dafny's own `/` and `%` on int are Euclidean, measured on dafny
+        # 4.11.0, matching t's div/mod one to one, so no domain narrowing
+        # or totalising wrapper is needed here, only the name change.
+        op = {"/": "div", "%": "mod"}.get(e.op, e.op)
+        return {"op": op, "args": [left, right]}
     if isinstance(e, NaryBool):
         args = [_lift_expr(a, scope, fn_names, self_name, task_name, record, renamer) for a in e.args]
         return {"op": ("and" if e.op == "&&" else "or"), "args": args}

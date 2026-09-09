@@ -228,6 +228,20 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return _bounded(a[0] - a[1])
     if op == "*":
         return _bounded(a[0] * a[1])
+    if op in ("div", "mod"):
+        # SPEC.md "Division and modulo" (2026-09-08): Euclidean, the
+        # convention SMT-LIB, Dafny, Boogie, Verus, Lean 4 and F* share and
+        # the one DafnyBench's own `/` and `%` mean, so the lifter maps them
+        # one to one. q = x div y and r = x mod y are the unique integers
+        # with x == q * y + r and 0 <= r < |y|. y == 0 is undefined, a
+        # definedness obligation every lowering owes, exactly like `at`
+        # outside [0, len). Python's % with |y| gives the Euclidean r
+        # directly, and the quotient is then exact.
+        x, y = a
+        if y == 0:
+            raise Undef(f"{op} by zero")
+        r = x % abs(y)
+        return r if op == "mod" else _bounded((x - r) // y)
     if op == "==":
         return a[0] == a[1]
     if op == "!=":

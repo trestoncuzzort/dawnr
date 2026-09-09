@@ -819,6 +819,35 @@ DONE WHEN: each construct is in SPEC.md with a semantics stated for every
 column, lowered in all seven, and an adversarial reader has reproduced its
 flip table from clean scratch. Per ROADMAP 10.4, not before.
 
+**div-mod LANDED 2026-09-08; the adversarial reproduction is the open
+clause.** SPEC.md "Division and modulo (v1)": Euclidean, `x == q*y + r`
+with `0 <= r < |y|`, undefined at `y == 0` as a definedness obligation
+like `at`; written `/` and `%`. Chosen because it is the convention of
+SMT-LIB, Dafny, Boogie, Verus, Lean 4 and F*, measured on the pinned
+kernels the same day, and of every DafnyBench program, so the lifter maps
+Dafny's operators one to one with no domain restriction. Each column's
+native convention was measured on the four sign cases: dafny, verus, lean
+and fstar Euclidean (emitted natively; lean's and verus's totality at zero
+is never relied on, the obligation carries it), rocq floor and spark, C and
+ACSL truncating (t_div and t_mod defined in the kernel's own terms, with
+proved lemmas in rocq; spark's obvious `X mod abs(Y)` form and framac's
+exact-division form both timed out on the law and were replaced by a
+sign-corrected form that proves). Two committed tasks carry the flip
+table: `remainder` (the law as its ensures) reads verified/refuted in all
+seven; `digit_sum` in six with framac's loop-twin timeout; the eleven old
+rows of AGREEMENT.md are byte-identical. Ground truth: `truth_fuzz.py` 407
+tasks, REFUTES-TRUE 0; fuzz family `v1divmod` 0 disagreements, 0 against
+truth; four probes as read in `t/COVERAGE-lifted-785.md`. Lifter: 28
+programs whose only gap was div-mod, 20 lift and check, 3 fail the
+invariant lemma on nonlinear invariants; the sweep over 179 tasks reads 32
+in all seven (30 of 159 before), MBPP-DFY 38 lifted and 7 in all seven
+(26 and 5). The 368 spec-experiment replies re-parsed: 155 parse (114),
+70 well-formed (64), 45 verify with a refuted twin (43). Residuals: framac
+reads 10 of the 20 new reals vacuous (WP's dead-code smoke on the t_div
+case split); lean's probe `x % y >= 0` under `x < 0, y > 0` unproved;
+`if` without `else` is now the largest model-side loss. Surface: `/` and
+`%` at the `*` precedence, round trip 1556 of 1556.
+
 ### 12.8 Standing items
 
 Surface syntax landed 2026-09-04 (`t/surface.py`, round trip verified on

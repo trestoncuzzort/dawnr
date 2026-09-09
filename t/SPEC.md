@@ -36,9 +36,12 @@ syntax.
 
 `OP` ∈ arithmetic `+ - * neg` (neg is unary), comparison `== != < <= > >=`,
 logic `and or not implies`. `and`/`or` are n-ary; `not`/`neg` unary; the rest
-binary. Division and modulo are deliberately absent from v0 AND v1 (their
-semantics differ across the WS-7 backends, Euclidean against truncating, and t
-refuses to paper over a semantic difference with a syntax).
+binary. Division and modulo are absent from v0; v1 has them as `div` and
+`mod` (below), with one semantics stated for every column, since 2026-09-08.
+Until then they were absent from v1 too, because the seven kernels split
+three ways on negative operands (Euclidean, truncating, floor) and t refuses
+to paper over a semantic difference with a syntax; the gate opened by
+stating the semantics and measuring each column against it.
 
 ### Stmt (v0)
 
@@ -61,10 +64,35 @@ New type: `"seq"`, a finite immutable sequence of mathematical integers.
 Usable as a parameter type only (not a return type in v1). New type:
 `"bool"`, usable as a return or local type.
 
+### Division and modulo (v1)
+
+`{"op": "div", "args": [x, y]}` and `{"op": "mod", "args": [x, y]}`, both
+int × int → int, written `x / y` and `x % y` in the notation. The semantics
+is Euclidean: for `y != 0`, `q = div(x, y)` and `r = mod(x, y)` are the
+unique integers with `x == q * y + r` and `0 <= r < |y|`. So `-7 / 2 == -4`,
+`-7 % 2 == 1`, `7 / -2 == -3`, `7 % -2 == 1`, `-7 / -2 == 4`, `-7 % -2 == 1`.
+At `y == 0` both are undefined, a definedness obligation under the rules
+below, exactly as `at` is undefined outside `[0, len)`.
+
+Why Euclidean: it is the convention of SMT-LIB's `div`/`mod`, Dafny, Boogie,
+Verus and Lean 4's `Int` division, F*'s `/` and `%` (all measured on the
+pinned kernels, 2026-09-08), and therefore of every DafnyBench program, so
+the lifter maps Dafny's `/` and `%` one to one with no domain restriction.
+Where a kernel's native operator is not Euclidean (rocq 9.2's `Z.div` and
+`Z.modulo` are floor; SPARK, C and ACSL truncate), its lowering defines
+`div` and `mod` in the kernel's own terms (`mod(x, y) = x mod |y|` in the
+kernel's floor or sign-of-divisor modulo with a positive divisor, then
+`div(x, y) = (x - mod(x, y)) / y`, an exact division) and proves nothing
+about the operator by name: the committed task `remainder` states the
+Euclidean law as its `ensures` and a column that verifies it has shown its
+lowering implements this semantics; the twin table shows the twin refuted.
+No lowering may emit a kernel's native `/` or `%` where that kernel's
+convention differs from this one.
+
 ### Definedness
 
-v1 admits one partial operator (`at`, below), so definedness is part of the
-semantics and is stated once: `and`, `or` evaluate left to right and the
+v1 admits partial operators (`at`, `div` and `mod`, above), so definedness
+is part of the semantics and is stated once: `and`, `or` evaluate left to right and the
 k-th argument need only be defined when no earlier argument decided the
 result (`and`: all earlier args true; `or`: all earlier args false).
 `implies p q`: q need only be defined when p is true. `ite`: the taken
@@ -301,7 +329,7 @@ vacuous, or the dropped invariant's obligation is one the kernel re-derives.
 ## What v1 does not claim
 
 No unbounded quantifiers. No arrays-with-mutation, no heap, no aliasing:
-`seq` is a value. No division or modulo. No overflow semantics (mathematical
+`seq` is a value. No overflow semantics (mathematical
 integers; bounded backends owe explicit range obligations). One return
 value. No mutual recursion, no higher-order functions, no seq-valued
 returns or seq literals. These are gates to open with measurements, not

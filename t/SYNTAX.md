@@ -13,13 +13,13 @@ its proofs mean anything, because a parser and a printer that disagree prove
 things about a program nobody wrote. Measured by `python3 t/surface.py
 --check`:
 
-- `parse(print(t)) == t` on **1528 of 1528** tasks, compared as canonical
+- `parse(print(t)) == t` on **1556 of 1556** tasks, compared as canonical
   JSON. The corpus is the 11 committed tasks in `tasks/` plus
   `fuzz_lower.build_corpus` over seeds 1 through 7, which is 1400 generated
-  tasks plus the 19 hand-built probes per seed, 1544 in all, less the 16 that
+  tasks plus the 19 hand-built probes per seed, 1574 in all, less the 18 that
   `check_wf` rejects for carrying constructs t does not have. 1406 of the
-  1528 are distinct; the repeats are the probes, which recur once per seed.
-- `print(parse(text)) == text` on all 1528, so every task has exactly one
+  1556 are distinct; the repeats are the probes, which recur once per seed.
+- `print(parse(text)) == text` on all 1556, so every task has exactly one
   normal form in the notation.
 - The **7 `written:` lines on this page parse, unedited**, to the JSON they
   sit beside. That is what makes this grammar the documented notation rather
@@ -64,7 +64,8 @@ Expr     ::= {"int": integer}                   (* mathematical integer *)
            | {"exists": {"var": Id, "lo": Expr, "hi": Expr, "body": Expr}}  (* v1 *)
            | {"call":   {"fun": Id, "args": [Expr*]}}                    (* v1 *)
 
-Op       ::= "+" | "-" | "*" | "neg"            (* neg unary; NO div, NO mod *)
+Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
+           | "div" | "mod"                     (* v1; written / and %; Euclidean *)
            | "==" | "!=" | "<" | "<=" | ">" | ">="
            | "and" | "or" | "not" | "implies"   (* and/or n-ary, short-circuit *)
            | "len" | "at"                       (* v1, seq only *)
@@ -101,9 +102,7 @@ Every v0 task is valid v1, byte for byte.
 written: `x < 0 ==> r == -x`
 
 Integers are **mathematical**: unbounded, no overflow, in every backend or
-that backend abstains. Division and modulo do not exist in t; the WS-7
-kernels disagree on their semantics (Euclidean vs truncating), and t refuses
-to paper over a semantic difference with a syntax.
+that backend abstains. Division and modulo are `div` and `mod` since 2026-09-08, Euclidean and undefined at a zero divisor (SPEC.md "Division and modulo"); a column whose native operator differs defines them in its own terms.
 
 ### Assignment and if (v0)
 
@@ -232,15 +231,15 @@ exercises all six.
 
 | refused | why |
 |---|---|
-| `div`, `mod` | they do not exist in t, so they have no notation |
+| `div`, `mod` | written `/` and `%` at the `*` precedence, left associative; v1 only |
 | a chained comparison, `a == b == c` | there is no AST node for it, and reading it as a conjunction would invent one |
-| `and`/`or` at arity 1 | the AST admits it and `a and` is not a sentence; it occurs 0 times in the 1528 tasks, and `print` raises rather than emit text that reads as a different tree |
+| `and`/`or` at arity 1 | the AST admits it and `a and` is not a sentence; it occurs 0 times in the 1556 tasks, and `print` raises rather than emit text that reads as a different tree |
 | a keyword as a name | `len` cannot be both an operator and a spec_fun |
 | **comments** | a comment has no AST node, so it cannot survive `print(parse(text)) == text`; admitting one would make the round trip conditional, and the round trip is the only reason the syntax exists |
 
 ## What does not exist (on purpose)
 
-No div/mod. No unbounded quantifiers. No
+No unbounded quantifiers. No
 mutation of sequences, no arrays, no heap, no aliasing. No mutual recursion,
 no higher-order functions, no seq returns, no seq literals. One return value.
 Gates open with measurements, not intentions; see `AGREEMENT.md` for what

@@ -52,6 +52,34 @@ v1 (`"t": 1`) opens the three gates for this backend:
 
 Every file ends with `Print Assumptions`, so the axiom audit ships inside the
 artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
+
+  DIVISION AND MODULO (2026-09-08). SPEC.md's `div`/`mod` are Euclidean; rocq
+  9.2's native Z.div/Z.modulo are floor (measured: (-7)/2 = -4, (-7) mod 2 =
+  1, 7/(-2) = -4, 7 mod (-2) = -1, (-7)/(-2) = 3, (-7) mod (-2) = -1, so the
+  floor pair disagrees with Euclid on every negative-divisor case; Z.quot,
+  Z.rem truncate instead and agree with neither). Per SPEC.md's rule that no
+  lowering may emit a kernel's native `/` or `%` where the convention
+  differs, this file never emits Z.div/Z.modulo for t's div/mod: it defines
+  its own `t_mod x y := Z.modulo x (Z.abs y)` and `t_div x y := (x - t_mod x
+  y) / y` in the preamble (PRELUDE, below), proves `t_mod_bound` (0 <= t_mod
+  x y < |y| given y <> 0) and `t_div_mod_eq` (x = t_div x y * y + t_mod x y
+  given y <> 0) there by reflexivity-checked ground facts plus
+  Z.mod_pos_bound/Z.div_mod/Z.div_mul, and confirms the six Euclidean facts
+  by vm_compute before relying on them. Neither t_div nor t_mod is
+  transparent to lia (opaque Definitions, not notations), so the proof
+  engine's saturation step t_dm1 asserts both lemmas into context, once per
+  ground (x, y) pair it finds under `t_div`/`t_mod` in the goal or a
+  hypothesis, discharging their `y <> 0` side condition the same way every
+  other leaf goal is discharged here (t_leaf). Definedness at y == 0 is
+  carried entirely by that side condition: `defs()` emits a `(y <> 0)`
+  obligation for every `div`/`mod` node exactly where it emits `at`'s
+  `(0 <= idx < len)` obligation, in the same *_def_k lemma calculus, proved
+  by t_dis wherever the caller's requires/invariants/earlier ensures make it
+  available (never inside t_mod/t_div themselves, which are total in Rocq:
+  t_mod x 0 = x mod 0 = 0, t_div x 0 = x / 0 = 0, so totality there proves
+  nothing about t's own undefinedness). `mod` collides with a Rocq notation
+  token and cannot name a binder, so it joins RESERVED; `div` has no such
+  collision (checked against coqc 9.2) and needs none.
 """
 from __future__ import annotations
 
@@ -407,10 +435,79 @@ Ltac t_split1 :=
       end
   end.
 
+(* t_div / t_mod (2026-09-08): rocq 9.2's native Z.div and Z.modulo are
+   FLOOR (measured: (-7)/2 = -4, (-7) mod 2 = 1, 7/(-2) = -4, 7 mod (-2) =
+   -1, (-7)/(-2) = 3, (-7) mod (-2) = -1; Z.quot/Z.rem truncate instead),
+   while SPEC.md's "Division and modulo (v1)" is Euclidean: for y <> 0,
+   0 <= mod(x, y) < |y| and x = div(x, y) * y + mod(x, y). Neither native
+   Rocq operator is the one door SPEC.md allows ("no lowering may emit a
+   kernel's native `/` or `%` where that kernel's convention differs"), so
+   this lowering defines its own pair in the kernel's own terms: t_mod
+   folds the sign into the divisor before taking Z.modulo, which for a
+   positive divisor already gives the Euclidean remainder in [0, |y|),
+   and t_div is then the exact quotient of what's left. Both are total
+   Rocq functions (t_mod x 0 = x mod 0 = 0 by Z.modulo's own convention,
+   t_div x 0 = x / 0 = 0), so t's own y = 0 undefinedness is carried
+   entirely by the `y <> 0` definedness obligation emitted below, in the
+   same *_def_k calculus as `at`'s [0, len) obligation, never by these
+   definitions pretending 0 is a legal divisor. *)
+Definition t_mod (x y : Z) : Z := Z.modulo x (Z.abs y).
+Definition t_div (x y : Z) : Z := (x - t_mod x y) / y.
+
+Lemma t_mod_bound : forall x y : Z, y <> 0 -> 0 <= t_mod x y < Z.abs y.
+Proof.
+  intros x y Hy. unfold t_mod. apply Z.mod_pos_bound. lia.
+Qed.
+
+Lemma t_div_mod_eq : forall x y : Z, y <> 0 -> x = t_div x y * y + t_mod x y.
+Proof.
+  intros x y Hy.
+  unfold t_div, t_mod in *.
+  assert (Hb : Z.abs y <> 0) by lia.
+  assert (Hdm : x = (Z.abs y) * (x / Z.abs y) + x mod (Z.abs y))
+    by (apply Z.div_mod; exact Hb).
+  set (k := x / Z.abs y) in *.
+  set (r := x mod Z.abs y) in *.
+  assert (Hxr : x - r = Z.abs y * k) by lia.
+  rewrite Hxr.
+  destruct (Z.abs_eq_or_opp y) as [Habs | Habs].
+  - assert (Hq : k * y / y = k) by (apply Z.div_mul; exact Hy).
+    replace (Z.abs y * k) with (k * y) by lia.
+    rewrite Hq. lia.
+  - assert (Hq : (-k) * y / y = -k) by (apply Z.div_mul; exact Hy).
+    replace (Z.abs y * k) with ((-k) * y) by lia.
+    rewrite Hq. lia.
+Qed.
+
+(* Saturation step for t_div/t_mod: neither is transparent to lia (each is
+   an opaque-to-arithmetic Definition, not a notation), so a goal or
+   hypothesis mentioning `t_div a b` or `t_mod a b` gets the two facts
+   above asserted about that exact (a, b) once, guarded by t_have on the
+   div_mod_eq instance itself so repeat cannot re-derive it forever. The
+   `y <> 0` side condition is discharged the same way every other leaf
+   obligation is here (t_leaf: lia / assumption / congruence / ...); when
+   it is not yet provable, the assert fails, match backtracks to another
+   occurrence or clause, and t_split1's case splits get a chance to make
+   `b <> 0` available before t_dm1 is retried. *)
+Ltac t_dm_derive a b :=
+  tryif (t_have constr:(a = t_div a b * b + t_mod a b)) then fail else idtac;
+  let Hb := fresh "Hb" in
+  assert (Hb : b <> 0) by t_leaf;
+  pose proof (t_div_mod_eq a b Hb);
+  pose proof (t_mod_bound a b Hb).
+
+Ltac t_dm1 :=
+  match goal with
+  | |- context [t_div ?a ?b] => t_dm_derive a b
+  | H : context [t_div ?a ?b] |- _ => t_dm_derive a b
+  | |- context [t_mod ?a ?b] => t_dm_derive a b
+  | H : context [t_mod ?a ?b] |- _ => t_dm_derive a b
+  end.
+
 (* the leading lia closes contradictory contexts before the merge rules can
    see them: with False in scope lia proves any equality, and an equality
    merge under False would replace terms back and forth forever *)
-Ltac t_base := repeat (first [ solve [ lia ] | t_inv1 | t_sat1 | t_split1 ]).
+Ltac t_base := repeat (first [ solve [ lia ] | t_inv1 | t_sat1 | t_dm1 | t_split1 ]).
 
 (* goal-directed shallow search *)
 Ltac t_go n :=
@@ -451,16 +548,23 @@ Ltac t_sweep :=
           end).
 """
 
-# emitted after the spec_fun section, since t_eqs names their equation lemmas
-POST_SF = r"""Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ] ]
+# emitted after the spec_fun section, since t_eqs/t_eqs_h name their
+# equation lemmas
+POST_SF = r"""Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]
+                          | solve [ t_eqs_h; t_vc0 ] ]
               || fail "unsolved t verification condition".
 Ltac t_side := first [ assumption | solve [ lia ]
-                     | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ] ].
+                     | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]
+                     | solve [ t_eqs_h; t_vc0 ] ].
 """
 
 RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
             "match", "with", "end", "fix", "Prop", "Set", "Type", "fuel", "fu",
-            "s_len"}
+            "s_len", "mod"}
+# "mod" is a Rocq notation token (`_ mod _` from ZArith, active regardless of
+# scope), so a t identifier literally named `mod` fails to parse as a binder;
+# "div" carries no such notation and needs no reservation (checked against
+# coqc 9.2, 2026-09-08).
 
 
 def _ck(name: str) -> str:
@@ -509,7 +613,7 @@ class Ctx:
         if "call" in e:
             return self.sfres[e["call"]["fun"]]
         op = e["op"]
-        if op in ("+", "-", "*", "neg", "len", "at"):
+        if op in ("+", "-", "*", "neg", "len", "at", "div", "mod"):
             return "int"
         return "bool"
 
@@ -560,6 +664,14 @@ class Ctx:
         if op in ("+", "-", "*"):
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {op} {b})"
+        if op in ("div", "mod"):
+            # SPEC.md "Division and modulo (v1)" is Euclidean; rocq's native
+            # Z.div/Z.modulo are floor (measured, see t_div/t_mod's own
+            # comment in PRELUDE), so the lowering never emits `/` or `mod`
+            # here, only the kernel-local t_div/t_mod defined in the preamble.
+            a, b = (self.zx(x, env, local) for x in e["args"])
+            fn = "t_div" if op == "div" else "t_mod"
+            return f"({fn} {a} {b})"
         raise ValueError(f"t v1 -> rocq: not an int expression: {op!r}")
 
     def bx(self, e: dict, env: dict, local: dict) -> str:
@@ -663,8 +775,11 @@ class Ctx:
     # -- definedness obligations ------------------------------------------
     def defs(self, e: dict, ctx: list[str], binders: list[str],
              acc: list, env: dict, local: dict) -> None:
-        """Collect (binders, hyps, idx, len) for every `at` in e, honoring the
-        SPEC's left-to-right / taken-branch definedness rules."""
+        """Collect (binders, hyps, concl) for every `at`, `div` and `mod` in
+        e, honoring the SPEC's left-to-right / taken-branch definedness
+        rules. concl is `(0 <= idx < len)` for `at`, `(y <> 0)` for `div`
+        and `mod` (SPEC.md: "at y == 0 both are UNDEFINED, a definedness
+        obligation exactly like `at` outside [0, len)")."""
         if "int" in e or "bool" in e or "var" in e:
             return
         if "forall" in e or "exists" in e:
@@ -694,8 +809,14 @@ class Ctx:
         if op == "at":
             self.defs(e["args"][1], ctx, binders, acc, env, local)
             fn, ln = self.seq_fn(e["args"][0], env)
-            acc.append((list(binders), list(ctx),
-                        self.zx(e["args"][1], env, local), ln))
+            idx = self.zx(e["args"][1], env, local)
+            acc.append((list(binders), list(ctx), f"(0 <= {idx} < {ln})"))
+            return
+        if op in ("div", "mod"):
+            self.defs(e["args"][0], ctx, binders, acc, env, local)
+            self.defs(e["args"][1], ctx, binders, acc, env, local)
+            y = self.zx(e["args"][1], env, local)
+            acc.append((list(binders), list(ctx), f"({y} <> 0)"))
             return
         if op == "len":
             return
@@ -864,7 +985,7 @@ def emit_def_lemmas(cx: Ctx, name: str, obls: list, extra_binders: str = "",
     out = []
     counter = counter if counter is not None else [0]
     pb, _ = param_binders(cx)
-    for binders, hyps, idx, ln in obls:
+    for binders, hyps, concl in obls:
         counter[0] += 1
         k = counter[0]
         allb = " ".join(x for x in [pb, extra_binders, " ".join(binders)] if x)
@@ -872,7 +993,7 @@ def emit_def_lemmas(cx: Ctx, name: str, obls: list, extra_binders: str = "",
         hyp_txt = "".join(f"  {h} ->\n" for h in hs)
         out.append(
             f"Lemma {name}_def_{k} : forall {allb},\n{hyp_txt}"
-            f"  (0 <= {idx} < {ln}).\n"
+            f"  {concl}.\n"
             f"Proof. intros. t_dis. Qed.\n")
     return "\n".join(out)
 
@@ -921,8 +1042,8 @@ def emit_spec_funs(cx: Ctx) -> str:
         obls: list = []
         cx.defs(sf["body"], [], [], obls, {}, {})
         cx._sf_obls = getattr(cx, "_sf_obls", [])
-        for binders, hyps, idx, ln in obls:
-            cx._sf_obls.append((f, btxt, sf_lens, binders, hyps, idx, ln))
+        for binders, hyps, concl in obls:
+            cx._sf_obls.append((f, btxt, sf_lens, binders, hyps, concl))
 
         chunks.append(f"""Fixpoint sf_{f}_fuel (fuel : nat) {btxt} : {res} :=
   match fuel with
@@ -943,7 +1064,7 @@ Proof.
   cbn [sf_{f}_fuel]; t_sweep;
   repeat first [ reflexivity
                | solve [ lia ]
-               | solve [ apply IH; lia ]
+               | solve [ apply IH; repeat t_dm1; lia ]
                | f_equal ].
   all: fail "unsolved t verification condition".
 Qed.
@@ -955,7 +1076,7 @@ Proof.
   intros; unfold sf_{f} at 1; cbn [sf_{f}_fuel]; t_sweep;
   repeat first [ reflexivity
                | solve [ lia ]
-               | solve [ unfold sf_{f}; apply sf_{f}_fuel_irrel; lia ]
+               | solve [ unfold sf_{f}; apply sf_{f}_fuel_irrel; repeat t_dm1; lia ]
                | f_equal ].
   all: fail "unsolved t verification condition".
 Qed.
@@ -967,16 +1088,34 @@ Qed.
 
     if eqs:
         eq_tac = " ".join(f"try rewrite {e};" for e in eqs)
+        # t_eqs unfolds a spec_fun equation in the GOAL (needed when the
+        # goal's own application is the one recursion's own step exposes,
+        # e.g. count_matches: the loop's forward step lands on count(s,x,
+        # i+1) in the goal, one unfold away from the invariant's count(s,x,
+        # i)). t_eqs_h unfolds it in HYPOTHESES only (`in * |-`, never the
+        # goal), needed the opposite way round: digit_sum's invariant `r +
+        # dsum(m) = dsum(n)` carries the application at the OLD state in a
+        # hypothesis, and it is that occurrence, not the goal's dsum(m/10)
+        # at the NEW state, that one unfold away from closing the step.
+        # Rewriting the wrong side (the goal's dsum(m/10)) only grows a
+        # fresh, unrelated application and cannot converge, so both are
+        # kept as separate `solve` alternatives in t_dis/t_side (below)
+        # rather than combined: a rewrite that helps one shape is dead
+        # weight, never harm, on the other, since `first` restores the
+        # goal between alternatives (measured on digit_sum, 2026-09-08).
+        eq_tac_h = " ".join(f"try rewrite {e} in * |-;" for e in eqs)
         chunks.append(f"Ltac t_eqs := {eq_tac} idtac.\n")
+        chunks.append(f"Ltac t_eqs_h := {eq_tac_h} idtac.\n")
     else:
         chunks.append("Ltac t_eqs := idtac.\n")
+        chunks.append("Ltac t_eqs_h := idtac.\n")
     return "\n".join(chunks)
 
 
 def emit_sf_def_lemmas(cx: Ctx, counter: list) -> str:
     """Definedness lemmas for spec_fun bodies (emitted after t_dis exists)."""
     out = []
-    for f, btxt, sf_lens, binders, hyps, idx, ln in getattr(cx, "_sf_obls", []):
+    for f, btxt, sf_lens, binders, hyps, concl in getattr(cx, "_sf_obls", []):
         counter[0] += 1
         k = counter[0]
         allb = " ".join(x for x in [btxt, " ".join(binders)] if x)
@@ -984,7 +1123,7 @@ def emit_sf_def_lemmas(cx: Ctx, counter: list) -> str:
         hyp_txt = "".join(f"  {h} ->\n" for h in hs)
         out.append(
             f"Lemma {cx.task['name']}_def_{k} : forall {allb},\n{hyp_txt}"
-            f"  (0 <= {idx} < {ln}).\n"
+            f"  {concl}.\n"
             f"Proof. intros. t_dis. Qed.\n")
     return "\n".join(out)
 
@@ -1131,7 +1270,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     for e in w.get("invariants", []):
         iob: list = []
         cx.defs(e, list(inv_ctx), [], iob, id_env, local)
-        obls += [(b, h, i, l) for (b, h, i, l) in iob]
+        obls += iob
         inv_ctx.append(cx.prop(e, id_env, local))
     # guard + decreases definedness under requires + invariants
     gob: list = []
@@ -1313,7 +1452,7 @@ Proof.
 {eq_lines}  t_sweep;
   repeat first [ reflexivity
                | solve [ lia ]
-               | solve [ apply IH; lia ]
+               | solve [ apply IH; repeat t_dm1; lia ]
                | (lazymatch goal with |- _ /\\ _ => split end)
                | f_equal ].
   all: fail "unsolved t verification condition".

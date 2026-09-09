@@ -215,7 +215,7 @@ def resolve(dfy_path: Path, timeout_s: float = DEFAULT_TIMEOUT_S) -> ResolveResu
     `parse-failure` (unknown token).
 
     MAY NOT decide: nothing about constructs -- no refusal reason from
-    section 5's construct vocabulary (`array`, `div-mod`, `assume`, ...)
+    section 5's construct vocabulary (`array`, `heap`, `assume`, ...)
     is ever raised here; those all require a parsed AST and belong to
     `lift_classify.py`. A timeout on any of the three invocations is
     reported as `resolve-failure` with the timeout named in `token`, never

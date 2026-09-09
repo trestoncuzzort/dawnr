@@ -11,6 +11,21 @@ what is delegated to the kernel and what is refused:
   && and ||, which are t's rules (SPEC.md "Definedness"). Nothing is
   totalized: an unguarded `at` fails the file with number 19, never passes.
 
+  DIV/MOD (2026-09-08). `div` and `mod` lower to F*'s native `/` and `%`
+  (Prims.op_Division, Prims.op_Modulus) on int. Measured on F* 2026.08.30:
+  assert_norm proves (-7)/2 = -4, (-7)%2 = 1, 7/(-2) = -3, 7%(-2) = 1,
+  (-7)/(-2) = 4 and (-7)%(-2) = 1, all six of SPEC.md's Euclidean facts, so
+  the native operators need no reencoding. Definedness is discharged the
+  same way `at` is: F*'s `/` and `%` type the divisor as `y:int{y <> 0}`,
+  so `x / y` is not well-typed until the kernel proves `y <> 0` from the
+  path condition, exactly the subtyping check `at` gets from Seq.index's
+  refinement. Measured directly: a term `x / y` with `y` an unrefined int
+  parameter fails to typecheck, and passes once `y <> 0` is in scope
+  (a requires clause, an `if y <> 0` guard, or a refined binder). So the
+  printer emits `(a / b)` and `(a % b)` with no extra guard, the same
+  parenthesisation `*` gets, since F*'s `/` and `%` bind at the same
+  precedence as `*`.
+
   LOOPS. F*'s pure fragment has no while statement, so a while loop lowers
   to a top-level `let rec <name>_loop` over params, the frame (mutable
   names the loop body never assigns, passed back unchanged so the caller
@@ -61,7 +76,7 @@ from verifiers import fstar as fstar_backend     # noqa: E402
 
 TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int"}
 CMP = {"<": "<", "<=": "<=", ">": ">", ">=": ">="}
-ARITH = {"+": "+", "-": "-", "*": "*"}
+ARITH = {"+": "+", "-": "-", "*": "*", "div": "/", "mod": "%"}
 
 RESERVED = {
     "abstract", "admit", "and", "assert", "assume", "attributes", "begin",

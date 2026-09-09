@@ -207,7 +207,7 @@ def mirror(task: dict, body: list | None = None) -> dict:
 # different lowering path than the committed corpus does.
 # ---------------------------------------------------------------------------
 
-V1_OPS = {"len", "at"}
+V1_OPS = {"len", "at", "div", "mod"}
 
 
 def _uses_v1(node) -> bool:
@@ -353,6 +353,16 @@ def ck(e, env, funs, fuel):
     if o == "at":
         s, i = vs
         return s[i] if 0 <= i < len(s) else UNDEF
+    if o in ("div", "mod"):
+        # SPEC.md "Division and modulo": Euclidean, undefined at y == 0,
+        # written from scratch here (not from interp.ev or fuzz_lower.ev)
+        # in this file's own UNDEF-sentinel style: r = x mod |y| in
+        # [0, |y|), q = (x - r) // y exactly.
+        x, y = vs
+        if y == 0:
+            return UNDEF
+        r = x % abs(y)
+        return r if o == "mod" else (x - r) // y
     if o in _TAB:
         return _TAB[o](vs[0], vs[1])
     raise ValueError(f"t has no operator {o!r}")
@@ -537,12 +547,17 @@ def scan_true(task: dict, limit: int = 768):
 
 
 # ---------------------------------------------------------------------------
-# Random body generation. Integer parameters and total operators only: the
-# mirror is licensed by `denote`, and `denote`'s definedness argument is only
-# as good as the body's, since a partial body would make `ensures r == D` true
-# exactly where the body has a value and leave the kernel a definedness
-# obligation the task never stated. The seq families below guard `at`
-# explicitly instead.
+# Random body generation. Integer parameters and TOTAL operators, `div` and
+# `mod` included since 2026-09-08: the mirror is licensed by `denote`, and
+# `denote`'s definedness argument is only as good as the body's, since a
+# partial body would make `ensures r == D` true exactly where the body has a
+# value and leave the kernel a definedness obligation the task never stated.
+# `div`/`mod` are partial in general (undefined at y == 0, SPEC.md "Division
+# and modulo"), so here the divisor is always a nonzero LITERAL from
+# DIVISORS, never a sub-term that could evaluate to 0; that keeps every
+# generated div/mod node total for every input, licensing the same
+# structural-induction TRUE label as +/-/*/neg do. The seq families below
+# guard `at` explicitly instead.
 # ---------------------------------------------------------------------------
 
 # Non-negative only. `neg` supplies negative values instead, because a
@@ -551,6 +566,7 @@ def scan_true(task: dict, limit: int = 768):
 # 2026-09-01 on gt_mirror_005) and belongs in fam_syntax where the finding is
 # legible, not spread through every generated body as MALFORMED noise.
 LITS = (0, 1, 2, 3, 5, 7, 10, 100)
+DIVISORS = (-10, -7, -5, -3, -2, 2, 3, 5, 7, 10)
 
 
 def gen_int(rng, names, d):
@@ -558,9 +574,11 @@ def gen_int(rng, names, d):
         if rng.random() < 0.65:
             return V(rng.choice(names))
         return I(rng.choice(LITS))
-    o = rng.choice(("+", "-", "*", "neg", "+", "-"))
+    o = rng.choice(("+", "-", "*", "neg", "+", "-", "div", "mod"))
     if o == "neg":
         return op("neg", gen_int(rng, names, d - 1))
+    if o in ("div", "mod"):
+        return op(o, gen_int(rng, names, d - 1), I(rng.choice(DIVISORS)))
     return op(o, gen_int(rng, names, d - 1), gen_int(rng, names, d - 1))
 
 

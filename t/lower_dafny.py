@@ -36,6 +36,15 @@ v1 mapping, gate by gate (SPEC.md):
     argument) because unconditional evaluation there could smuggle in a
     precondition the taken path never owed. No task should put one there
     (SPEC: self-calls appear only where evaluation order is unobservable).
+  div/mod (added 2026-09-08): measured on dafny 4.11.0, `-7 / 2 == -4`,
+    `-7 % 2 == 1`, `7 / -2 == -3`, `7 % -2 == 1`, `-7 / -2 == 4` and
+    `-7 % -2 == 1` all verify, so Dafny's native `/` and `%` are the same
+    Euclidean operators SPEC.md's "Division and modulo (v1)" states, and t's
+    `div`/`mod` lower straight to them, same precedence as `*`, same
+    parenthesization discipline as every other binop here. The divisor-
+    nonzero obligation is discharged the same way `at`'s range check is:
+    Dafny's own well-formedness checking rejects `/` or `%` by a possibly-
+    zero divisor unless guarded, nothing here totalizes it.
 
 Stdlib only, same reason as dataset_gate.py.
 """
@@ -57,7 +66,8 @@ from verifiers import dafny as dafny_backend        # noqa: E402
 OUT = HERE / "out"
 
 BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
-           "+": "+", "-": "-", "*": "*", "implies": "==>"}
+           "+": "+", "-": "-", "*": "*", "div": "/", "mod": "%",
+           "implies": "==>"}
 NARY_OPS = {"and": "&&", "or": "||"}
 TYPES = {"int": "int", "bool": "bool", "seq": "seq<int>"}
 
@@ -542,6 +552,15 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         if not (0 <= i < len(s)):
             raise interp.Undef(f"at index {i} outside [0,{len(s)})")
         return out, s[i]
+    if op in ("div", "mod"):
+        # Same Euclidean law as interp.ev and SPEC.md "Division and modulo":
+        # q = x div y, r = x mod y are the unique pair with x == q*y + r and
+        # 0 <= r < |y|; y == 0 is undefined, exactly like `at` out of range.
+        x, y = vs
+        if y == 0:
+            raise interp.Undef(f"{op} by zero")
+        r = x % abs(y)
+        return out, (r if op == "mod" else (x - r) // y)
     if op in _ARITH:
         return out, _ARITH[op](vs[0], vs[1])
     raise ValueError(f"t has no operator {op!r}")

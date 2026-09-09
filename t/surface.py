@@ -20,14 +20,14 @@ accepted more than the AST would be a second, undocumented language.
 
 THE ROUND TRIP, measured (2026-09-04, this file's --check):
 
-  parse(print(t)) == t, canonical JSON, on 1528 of 1528 tasks. The corpus is
+  parse(print(t)) == t, canonical JSON, on 1556 of 1556 tasks. The corpus is
   the 11 committed tasks in t/tasks/ plus fuzz_lower.build_corpus over seeds
-  1 through 7: 200 generated plus 19 hand-built probes per seed, 1544 in all,
+  1 through 7: 200 generated plus 19 hand-built probes per seed, 1574 in all,
   less the 16 that check_wf rejects, which carry constructs t does not have
-  and are therefore not t tasks. 1406 of the 1528 are distinct by canonical
+  and are therefore not t tasks. 1406 of the 1556 are distinct by canonical
   form; the repeats are the 19 probes, which build_corpus emits once per seed.
 
-  print(parse(text)) == text on the second pass for all 1528, so printing is
+  print(parse(text)) == text on the second pass for all 1556, so printing is
   idempotent and every task has one normal form in the notation.
 
   The 7 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
@@ -42,7 +42,7 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   1 through 5. That instrument samples the GRAMMAR, not t's semantics, and it
   is the one that found this file's only real defect (note 1 below). It is
   permanent, not scaffolding for this wave: a corpus can only exercise the
-  shapes its generators emit, so the defect it found is one the 1528-task
+  shapes its generators emit, so the defect it found is one the 1556-task
   corpus structurally cannot contain, and the next such defect will be too.
 
 TWO PLACES WHERE THE OBVIOUS NOTATION WOULD HAVE LOST INFORMATION, since
@@ -56,7 +56,7 @@ written differently:
      argument's printed form STARTS WITH A DIGIT. The test is on the text
      and not on the node because `neg` of `at` on a literal base prints
      `18[false]`, and `-18[false]` reparses as `at` of the literal `-18`.
-     That shape does not occur in the 1528-task corpus and was found by
+     That shape does not occur in the 1556-task corpus and was found by
      --fuzz; it is the one defect the corpus alone would have missed.
      Everywhere else `-e` is `neg`, as SYNTAX.md writes it.
 
@@ -71,8 +71,10 @@ decision this file is not entitled to make:
 
   - No comments. A comment is text with no AST node, so it cannot survive
     print(parse(text)) and would make the round trip conditional.
-  - No `div`, no `mod`. They do not exist in t (SPEC.md: the WS-7 kernels
-    disagree on their semantics), so they have no notation.
+  - `/` and `%` are `div` and `mod` (SPEC.md "Division and modulo", since
+    2026-09-08: Euclidean, undefined at a zero divisor). Before that day t had
+    neither and the notation refused the slash; the refusal probe now checks
+    that the WORD div is not an operator in the notation.
   - No chained comparison. `a == b == c` is rejected rather than read as a
     conjunction; the AST has no node for it and inventing one would be a new
     construct.
@@ -109,7 +111,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
     Not      ::= "not" Not | Cmp
     Cmp      ::= Add (("=="|"!="|"<"|"<="|">"|">=") Add)?   (* non-associative *)
     Add      ::= Mul (("+"|"-") Mul)*             (* left associative *)
-    Mul      ::= Unary ("*" Unary)*               (* left associative *)
+    Mul      ::= Unary (("*"|"/"|"%") Unary)*     (* left associative; / % are div mod *)
     Unary    ::= "-" NAT | "-" Unary | Postfix
     Postfix  ::= Atom ("[" Expr "]")*             (* the `at` operator *)
     Atom     ::= NAT | "true" | "false" | "len" "(" Expr ")"
@@ -164,7 +166,7 @@ KEYWORDS = {
 
 # Longest match first: "==>" before "==" before "=", ":=" before ":".
 SYMBOLS = ["==>", "==", "!=", "<=", ">=", ":=", "=", "<", ">", "+", "-", "*",
-           "(", ")", "[", "]", "{", "}", ",", ".", ":", ";"]
+           "/", "%", "(", ")", "[", "]", "{", "}", ",", ".", ":", ";"]
 
 _ID = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _NAT = re.compile(r"[0-9]+")
@@ -220,6 +222,11 @@ def lex(src: str) -> list:
 # ===========================================================================
 
 CMP_OPS = {"==", "!=", "<", "<=", ">", ">="}
+# The multiplicative symbols and the AST operators they denote. `/` and `%`
+# are SPEC.md's div and mod (Euclidean, 2026-09-08); the notation is sugar
+# and the AST op names are the words, as SPEC.md writes them.
+_MUL_OPS = {"*": "*", "/": "div", "%": "mod"}
+_OP_TEXT = {"div": "/", "mod": "%"}
 VAL_TYPES = ("int", "bool", "seq")
 
 
@@ -455,9 +462,10 @@ class Parser:
 
     def p_mul(self) -> dict:
         left = self.p_unary()
-        while self.at("sym", "*"):
-            self.eat("sym", "*")
-            left = {"op": "*", "args": [left, self.p_unary()]}
+        while self.at("sym", "*") or self.at("sym", "/") or self.at("sym", "%"):
+            sym = self.toks[self.i].text
+            self.eat("sym", sym)
+            left = {"op": _MUL_OPS[sym], "args": [left, self.p_unary()]}
         return left
 
     def p_unary(self) -> dict:
@@ -549,9 +557,9 @@ P_MUL = 7
 P_UNARY = 8
 P_POSTFIX = 9
 
-_BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL}
+_BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
 _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "implies": 2,
-          "+": 2, "-": 2, "*": 2,
+          "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2}
 
 
@@ -637,7 +645,7 @@ def pexpr(e, floor: int = P_QUANT) -> str:
                                    pexpr(args[1], P_CMP + 1)), P_CMP, floor)
     if op in _BINPREC:
         prec = _BINPREC[op]
-        return _wrap("%s %s %s" % (pexpr(args[0], prec), op,
+        return _wrap("%s %s %s" % (pexpr(args[0], prec), _OP_TEXT.get(op, op),
                                    pexpr(args[1], prec + 1)), prec, floor)
     raise SurfaceError("operator %r is not in t; see SPEC.md" % op)
 
@@ -797,7 +805,7 @@ REFUSALS = [
                [{"name": "r", "type": "int"}], "requires": [], "ensures":
                [{"bool": True}], "body": [{"assign": ["r", {
                    "op": "/", "args": [{"int": 4}, {"int": 2}]}]}]},
-     "div has no notation because t has no div"),
+     "the AST operator is the word div; a slash is not an operator name"),
     ("print", {"t": 0, "name": "a1", "params": [], "returns":
                [{"name": "r", "type": "bool"}], "requires": [], "ensures":
                [{"op": "and", "args": [{"bool": True}]}], "body":
@@ -810,8 +818,8 @@ REFUSALS = [
      "a keyword cannot be a name"),
     ("parse", "t 1 task f(x: int) returns (r: int) ensures 1 == 2 == 3 { r := 0 }",
      "comparisons do not chain"),
-    ("parse", "t 1 task f(x: int) returns (r: int) ensures x / 2 == 0 { r := 0 }",
-     "there is no / to lex into an operator"),
+    ("parse", "t 1 task f(x: int) returns (r: int) ensures x div 2 == 0 { r := 0 }",
+     "div is written /, the word is the AST's and not the notation's"),
     ("parse", "t 1 task f(x: int) returns (r: int) ensures true { r := 0 } // done",
      "there are no comments"),
 ]
@@ -852,7 +860,7 @@ def _rand_expr(rng, depth: int) -> dict:
     if kind == "var":
         return {"var": rng.choice(_FUZZ_NAMES)}
     if kind == "bin":
-        return {"op": rng.choice(["+", "-", "*"]),
+        return {"op": rng.choice(["+", "-", "*", "div", "mod"]),
                 "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind == "cmp":
         return {"op": rng.choice(sorted(CMP_OPS)),

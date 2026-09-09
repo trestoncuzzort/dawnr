@@ -1163,7 +1163,11 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     # gaps: outside t's fragment
     "array": ("gap", _has(r"\barray\d*\b|\bnew\s+" + IDENT + r"\s*\["), "array type or allocation"),
     "array-mutation": ("gap", _has(_ARRAY_MUT), "element assignment a[i] := e"),
-    "div-mod": ("gap", _has(r"(?<![/*])/(?![/*=])|%"), "integer division or modulo"),
+    # div-mod (`/`, `%` on int) is in t's fragment since SPEC.md's
+    # "Division and modulo (v1)" (2026-09-08): Dafny's own `/` and `%`
+    # are Euclidean too, measured, so the lifter maps them one to one
+    # with no domain restriction. Like the other in-fragment binary
+    # operators (`+`, `-`, `*`, ...), it carries no detector here.
     "string-char": ("gap", _has(r"\bstring\b|\bchar\b|\bseq<char>"), "string or char type"),
     "set": ("gap", _set, "set, iset, multiset, set comprehension or set literal"),
     "map": ("gap", _has(r"\bi?map<|\bmap\s+" + IDENT + r"\s*(?::|\|)|\bmap\s*\["), "map, imap, map comprehension or map literal"),

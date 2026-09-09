@@ -63,6 +63,44 @@ out-of-range content, weaker than Dafny-style well-formedness checking,
 stronger than totalizing to a fixed value. That gap is this backend's known
 softness, recorded here rather than papered over.
 
+DIV/MOD, added 2026-09-08. Measured convention: both ACSL's logic `/`/`%`
+(over mathematical `integer`, no -wp-rte) and C's executable `/`/`%` under
+-wp-model Typed+nat truncate toward zero, matching each other and the ACSL
+manual's own definition, and matching neither SPEC.md's Euclidean
+convention (probes acsl_div/acsl_floor: TIMEOUT on the six SPEC.md example
+equalities; acsl_trunc and the executable c_div probe: VERIFIED on the same
+six, truncating). So this lowering never emits a bare `/`/`%` for t's `div`
+and `mod`: it defines them in the kernel's own truncating terms. ACSL side,
+declared once per file that uses either op (T_DIVMOD_ACSL, emitted before
+any spec_fun so spec_funs may use them):
+
+    logic integer t_mod(integer x, integer y) =
+      (x % y < 0) ? x % y + \\abs(y) : x % y;
+    logic integer t_div(integer x, integer y) =
+      (x % y < 0) ? (x / y) - (y > 0 ? 1 : -1) : x / y;
+
+(truncating `%` carries the sign of x or is 0; shifting a negative
+truncating remainder up by |y| gives the Euclidean remainder in [0, |y|),
+and t_div is the truncating quotient with the matching -1/+1 correction.
+Measured 2026-09-08: defining t_div as the exact division `(x -
+t_mod(x, y)) / y` TIMEOUTs on the general identity `x == t_div(x,y)*y +
+t_mod(x,y)` (alt-ergo cannot see the subtraction is a multiple of y
+unaided); the correction form VERIFIES it, because it telescopes to WP's
+own native `x == (x/y)*y + x%y` plus linear arithmetic, nothing
+division-shaped left over.) `term()` renders `div`/`mod` as
+`t_div`/`t_mod` calls; C executable position (`cexpr()`) inlines the same
+formula with C's own `/`/`%` so the two sides stay syntactically parallel.
+Definedness: y == 0 is undefined by SPEC.md, the same shape as `at`'s bound
+check, so `defs()` adds `y != 0` to the domain obligation of any spec
+expression containing `div`/`mod`, and executable position gets a
+`/*@ assert (y) != 0; */` immediately before the statement (code_ats/
+at_asserts, generalized to carry tagged `("at", ...)` and `("nz", ...)`
+obligations; a conditionally evaluated `div`/`mod`, like a conditionally
+evaluated `at`, is an explicit NotImplementedError rather than silent UB).
+Unlike `at`, t_div/t_mod are themselves total at y == 0 (ACSL's own `/`/`%`
+are, measured), so this obligation is owed to SPEC.md's semantics, not to
+keeping the kernel from choking.
+
 Bodies lower to statements: locals are C locals, the return name is a local
 returned at the end, `bool` is C int 0/1 (spec side renders bool vars as
 `x != 0` and bool equality as `<==>`). Every function gets `assigns
@@ -83,6 +121,45 @@ from verifiers import framac as framac_backend   # noqa: E402
 
 ARITH = {"+": "+", "-": "-", "*": "*"}
 CMP = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">="}
+DIVMOD = ("div", "mod")
+
+# t_div/t_mod (2026-09-08): SPEC.md's Euclidean div/mod, defined in this
+# kernel's own truncating terms (measured below, ACSL DIVISION section).
+# Both ACSL's logic `/`/`%` and C's executable `/`/`%` under -wp-model
+# Typed+nat truncate toward zero (measured: acsl_trunc / c_div probes both
+# VERIFIED on the six SPEC.md examples, acsl_div and acsl_floor both
+# TIMEOUT), so truncating `%` carries the sign of x (or is 0), and the
+# Euclidean remainder is the truncating one shifted up by |y| exactly when
+# it is negative. t_div is the truncating quotient with the matching -1/+1
+# correction (sign of y), NOT `(x - t_mod(x, y)) / y`: that exact-division
+# form measured a TIMEOUT on the general identity `x == t_div(x,y)*y +
+# t_mod(x,y)` (alt-ergo cannot see the subtraction is a multiple of y
+# without help), while the correction form measured VERIFIED, because it
+# telescopes to WP's own native division identity `x == (x/y)*y + x%y`
+# plus linear arithmetic on the correction/adjustment terms, nothing
+# division-shaped left to prove.
+T_DIVMOD_ACSL = (
+    "/*@\n"
+    "  logic integer t_mod(integer x, integer y) =\n"
+    "    (x % y < 0) ? x % y + \\abs(y) : x % y;\n"
+    "  logic integer t_div(integer x, integer y) =\n"
+    "    (x % y < 0) ? (x / y) - (y > 0 ? 1 : -1) : x / y;\n"
+    "*/\n"
+)
+
+
+def _has_divmod(x) -> bool:
+    """Whether `div`/`mod` occurs anywhere in a task/body structure (spec or
+    executable position); over-inclusive on purpose, an unused ACSL logic
+    definition costs nothing and this only gates whether t_div/t_mod are
+    declared at all."""
+    if isinstance(x, dict):
+        if x.get("op") in DIVMOD:
+            return True
+        return any(_has_divmod(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_has_divmod(v) for v in x)
+    return False
 
 
 # ---------------------------------------------------------------- typing ----
@@ -102,7 +179,7 @@ def typ(e: dict, env: dict, funs: dict) -> str:
     if "call" in e:
         return funs[e["call"]["fun"]]["result"]
     op = e["op"]
-    if op in ("len", "at", "neg") or op in ARITH:
+    if op in ("len", "at", "neg") or op in ARITH or op in DIVMOD:
         return "int"
     return "bool"                                # cmp, and, or, not, implies
 
@@ -195,6 +272,9 @@ def term(e: dict, ctx: Ctx) -> str:
     if op in ("and", "or"):
         glue = " && " if op == "and" else " || "
         return "(" + glue.join(term(a, ctx) for a in args) + ")"
+    if op in DIVMOD:
+        fn = "t_div" if op == "div" else "t_mod"
+        return f"{fn}({term(args[0], ctx)}, {term(args[1], ctx)})"
     if op in ARITH or op in CMP:
         o = ARITH.get(op) or CMP[op]
         return f"({term(args[0], ctx)} {o} {term(args[1], ctx)})"
@@ -227,8 +307,16 @@ def defs(e: dict, ctx: Ctx):
     as total ACSL logic functions, so an `at` INSIDE a spec_fun applied
     outside its guarded range keeps the reflexivity hole; the committed
     tasks guard their ranges, and hostile tasks are the ground-truth
-    fuzzer's beat. Division is not in t, so `at` is the only partial
-    operation this must cover.
+    fuzzer's beat.
+
+    `div`/`mod` (2026-09-08) is t's second partial operator: SPEC.md leaves
+    both undefined at y == 0, so the domain obligation emitted here is
+    `y != 0`, the same shape as `at`'s bound check. t_div/t_mod (see
+    T_DIVMOD_ACSL above) are themselves total ACSL logic functions, well
+    defined at y == 0 too (ACSL's own `/`/`%` are, measured), so nothing
+    breaks if this obligation goes undischarged; it is emitted purely
+    because SPEC.md says y == 0 is undefined, not because the kernel would
+    otherwise crash.
     """
     if "int" in e or "bool" in e or "var" in e:
         return None
@@ -262,6 +350,10 @@ def defs(e: dict, ctx: Ctx):
         i = term(args[1], ctx)
         n = seq_var(args[0], ctx.env) + "_n"
         return _conj([defs(args[1], ctx), f"(0 <= ({i}) && ({i}) < {n})"])
+    if op in DIVMOD:
+        y = term(args[1], ctx)
+        return _conj([defs(args[0], ctx), defs(args[1], ctx),
+                      f"(({y}) != 0)"])
     if op in ("and", "or", "implies"):
         acc, guards = [defs(args[0], ctx)], []
         for k, a in enumerate(args[1:], 1):
@@ -366,6 +458,19 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str) -> str:
         glue = " && " if op == "and" else " || "
         return ("(" + glue.join(cexpr(a, env, funs, task_name)
                                 for a in args) + ")")
+    if op in DIVMOD:
+        # C's `/`/`%` truncate toward zero (measured, see T_DIVMOD_ACSL);
+        # mirrors t_mod/t_div syntactically (same case split, same
+        # correction) so WP sees the identical shape it proves at the ACSL
+        # level.
+        xc = cexpr(args[0], env, funs, task_name)
+        yc = cexpr(args[1], env, funs, task_name)
+        rem = f"(({xc}) % ({yc}))"
+        if op == "mod":
+            return (f"({rem} < 0 ? {rem} + "
+                    f"(({yc}) < 0 ? -({yc}) : ({yc})) : {rem})")
+        quo = f"(({xc}) / ({yc}))"
+        return (f"({rem} < 0 ? {quo} - (({yc}) > 0 ? 1 : -1) : {quo})")
     if op in ARITH or op in CMP:
         o = ARITH.get(op) or CMP[op]
         return (f"({cexpr(args[0], env, funs, task_name)} {o} "
@@ -374,10 +479,14 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str) -> str:
 
 
 def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
-    """(seq, index-expr) pairs for every `at` in an executable expression.
-    Unconditionally evaluated ats are returned (they get an assert);
-    a conditionally evaluated at is refused, because emitting it without a
-    dischargeable guard would silently totalize `at` as C UB."""
+    """Definedness obligations for every `at`, `div` and `mod` in an
+    executable expression, as tagged tuples: `("at", seq, index-expr)` or
+    `("nz", divisor-expr)`. Unconditionally evaluated occurrences are
+    returned (they get an assert in front of the statement); a
+    conditionally evaluated one is refused, because emitting it without a
+    dischargeable guard would silently totalize the operator as C UB (an
+    unguarded `at` as out-of-bounds access, an unguarded `div`/`mod` as
+    division by zero)."""
     out = []
     if "ite" in e:
         i = e["ite"]
@@ -398,7 +507,16 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
                 "conditionally evaluated `at` in executable position: "
                 "definedness not dischargeable by a plain assert")
         out += code_ats(args[1], env, uncond)
-        out.append((seq_var(args[0], env), args[1]))
+        out.append(("at", seq_var(args[0], env), args[1]))
+        return out
+    if op in DIVMOD:
+        if not uncond:
+            raise NotImplementedError(
+                "conditionally evaluated `div`/`mod` in executable "
+                "position: definedness not dischargeable by a plain assert")
+        out += code_ats(args[0], env, uncond)
+        out += code_ats(args[1], env, uncond)
+        out.append(("nz", args[1]))
         return out
     if op in ("and", "or"):
         out += code_ats(args[0], env, uncond)
@@ -415,9 +533,16 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
 
 
 def at_asserts(e: dict, ctx: Ctx, indent: str) -> list:
-    return [f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
-            f"&& ({term(ix, ctx)}) < {s}_n; */"
-            for s, ix in code_ats(e, ctx.env)]
+    out = []
+    for tag, *rest in code_ats(e, ctx.env):
+        if tag == "at":
+            s, ix = rest
+            out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
+                       f"&& ({term(ix, ctx)}) < {s}_n; */")
+        else:                                      # "nz": div/mod divisor
+            (yx,) = rest
+            out.append(f"{indent}/*@ assert ({term(yx, ctx)}) != 0; */")
+    return out
 
 
 def assigned_names(body: list) -> tuple[list, list]:
@@ -469,8 +594,9 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
             w = s["while"]
             if code_ats(w["cond"], ctx.env):
                 raise NotImplementedError(
-                    "`at` in a while condition: its per-iteration "
-                    "definedness assert has no statement to precede")
+                    "`at`/`div`/`mod` in a while condition: its "
+                    "per-iteration definedness assert has no statement to "
+                    "precede")
             ann = [f"{indent}  loop invariant {pred(i, ctx)};"
                    for i in w.get("invariants", [])]
             hit, dec = assigned_names(w["body"])
@@ -665,6 +791,16 @@ def _cev(e: dict, st: dict):
         if not 0 <= i < len(s):
             raise _CertSkip("undefined at in replay")
         return s[i]
+    if op in DIVMOD:
+        # SPEC.md Euclidean div/mod, same ground formula as interp.py: the
+        # Python `%` with an absolute-value modulus already returns the
+        # Euclidean remainder (always in [0, |y|)), so the quotient falls
+        # out of the division law exactly.
+        x, y = _cev(args[0], st), _cev(args[1], st)
+        if y == 0:
+            raise _CertSkip(f"undefined {op} in replay")
+        r = x % abs(y)
+        return r if op == "mod" else (x - r) // y
     if op == "neg":
         return -_cev(args[0], st)
     if op == "not":
@@ -685,6 +821,89 @@ def _cev(e: dict, st: dict):
     raise _CertSkip(f"no ground evaluation for operator {op!r}")
 
 
+def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
+                asserts: list, ind: str) -> str:
+    """cexpr(), specialized for the certificate replay: every `div`/`mod`
+    is rendered branch-free (no C ternary), the ground-decided condition
+    going to `asserts` instead.
+
+    Measured 2026-09-08 on remainder's wrong-var twin (x -> y makes the
+    mod `y % y`, always 0): cexpr()'s ternary form for div/mod put a live
+    `?:` in the certificate function, and -wp-smoke-dead-local-init flagged
+    its now-unreachable positive-remainder arm as dead code
+    (typed_nat_t_certificate_wp_smoke_dead_code_s24/s25). Ordinary dead
+    code in a t function is fine (`_all_obligations_proved` subtracts smoke
+    tallies), but the certificate's OWN audit (`_cert_status`) requires
+    every goal of its enclosing function proved with no such exemption, so
+    a live ternary there can never mint, only fail (the certificate
+    section docstring's branch discipline, now extended to div/mod). The
+    fix mirrors how `if`/`while` are unrolled: resolve the ternary at the
+    ground state, assert the resolved condition (a real, Qed-checked goal,
+    not an assumption), and emit only the taken arm."""
+    if not _has_divmod(e):
+        return cexpr(e, ctx.env, funs, name)
+    if "ite" in e:
+        raise _CertSkip("`ite` in executable position within the "
+                        "certificate replay")
+    if "call" in e:
+        raise _CertSkip("call in executable position within the "
+                        "certificate replay")
+    op, args = e["op"], e.get("args", [])
+    if op in DIVMOD:
+        x_e, y_e = args
+        xc = _cert_cexpr(x_e, ctx, st, funs, name, asserts, ind)
+        yc = _cert_cexpr(y_e, ctx, st, funs, name, asserts, ind)
+        xv, yv = _cev(x_e, st), _cev(y_e, st)
+        if yv == 0:
+            raise _CertSkip(f"undefined {op} in replay")
+        qv = abs(xv) // abs(yv)
+        if (xv < 0) != (yv < 0):
+            qv = -qv
+        rv = xv - qv * yv                       # C-truncating remainder
+        rem = f"(({xc}) % ({yc}))"
+        neg = rv < 0
+        asserts.append(f"{ind}/*@ assert {rem} {'<' if neg else '>='} 0; */")
+        if op == "mod":
+            if not neg:
+                return rem
+            ysign_neg = yv < 0
+            asserts.append(f"{ind}/*@ assert ({yc}) "
+                           f"{'<' if ysign_neg else '>'} 0; */")
+            return f"({rem} + ({f'-({yc})' if ysign_neg else yc}))"
+        quo = f"(({xc}) / ({yc}))"
+        if not neg:
+            return quo
+        ysign_pos = yv > 0
+        asserts.append(f"{ind}/*@ assert ({yc}) "
+                       f"{'>' if ysign_pos else '<'} 0; */")
+        return f"({quo} - ({'1' if ysign_pos else '-1'}))"
+    if op == "len":
+        return f"{seq_var(args[0], ctx.env)}_n"
+    if op == "at":
+        return (f"{seq_var(args[0], ctx.env)}"
+                f"[{_cert_cexpr(args[1], ctx, st, funs, name, asserts, ind)}]")
+    if op == "neg":
+        sub = _cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)
+        return f"(-{_gap(sub)})"
+    if op == "not":
+        sub = _cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)
+        return f"(!{sub})"
+    if op == "implies":
+        a, b = (_cert_cexpr(x, ctx, st, funs, name, asserts, ind)
+                for x in args)
+        return f"((!({a})) || ({b}))"
+    if op in ("and", "or"):
+        glue = " && " if op == "and" else " || "
+        return "(" + glue.join(_cert_cexpr(a, ctx, st, funs, name, asserts,
+                                           ind) for a in args) + ")"
+    if op in ARITH or op in CMP:
+        o = ARITH.get(op) or CMP[op]
+        a = _cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)
+        b = _cert_cexpr(args[1], ctx, st, funs, name, asserts, ind)
+        return f"({a} {o} {b})"
+    raise ValueError(f"t has no operator {op!r}")
+
+
 def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
                 out: list, count: list) -> Ctx:
     """Branch-free replay of `body` at state `st`: straight-line C plus one
@@ -699,14 +918,20 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
         if "assign" in s:
             n, e = s["assign"]
             out += at_asserts(e, ctx, ind)
-            out.append(f"{ind}{n} = {cexpr(e, ctx.env, ctx.funs, name)};")
+            dm_asserts: list = []
+            rhs = _cert_cexpr(e, ctx, st, ctx.funs, name, dm_asserts, ind)
+            out += dm_asserts
+            out.append(f"{ind}{n} = {rhs};")
             st[n] = _cev(e, st)
         elif "var" in s:
             v = s["var"]
             out += at_asserts(v["init"], ctx, ind)
             ctx = ctx.bind(v["name"], v["type"])
-            out.append(f"{ind}{v['name']} = "
-                       f"{cexpr(v['init'], ctx.env, ctx.funs, name)};")
+            dm_asserts: list = []
+            rhs = _cert_cexpr(v["init"], ctx, st, ctx.funs, name,
+                              dm_asserts, ind)
+            out += dm_asserts
+            out.append(f"{ind}{v['name']} = {rhs};")
             st[v["name"]] = _cev(v["init"], st)
         elif "if" in s:
             c = s["if"]
@@ -719,7 +944,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
         elif "while" in s:
             w = s["while"]
             if code_ats(w["cond"], ctx.env):
-                raise _CertSkip("`at` in a while condition")
+                raise _CertSkip("`at`/`div`/`mod` in a while condition")
             g = pred(w["cond"], ctx)
             while _cev(w["cond"], st):
                 count[0] += 1
@@ -842,6 +1067,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                 f"for seq {s}")
 
     header = []
+    if _has_divmod(task) or _has_divmod(body):
+        header.append(T_DIVMOD_ACSL.rstrip("\n"))
     for f in task.get("spec_funs", []):
         header += spec_fun_acsl(f, funs)
 

@@ -36,14 +36,16 @@ Three independent instruments, in order of strength:
      cannot tell those apart on its own, and the difference is what the
      two-mutation discipline is actually worth.
 
-WHAT THIS FILE CANNOT REACH, stated so it is not mistaken for coverage:
-division and modulo. SPEC.md removes them from v0 AND v1 by name ("Division
-and modulo are deliberately absent from v0 AND v1"), so no well-formed t task
-contains one; all seven lowerings reject the operator token instead, six
-with an unhandled ValueError, lower_lean.py with a NotImplementedError
-(measured on the fz_p_nodiv probe below). Fuzzing "division by a
-possibly-zero operand" is therefore not a gap in this generator, it is a gap
-in t.
+DIVISION AND MODULO (v1, since 2026-09-08): `div` and `mod` are Euclidean,
+undefined at y == 0 exactly as `at` is undefined outside [0, len), per
+SPEC.md's "Division and modulo (v1)" section. The `f_v1divmod` family below
+generates well-formed tasks over both operators, and this file's own `ev`
+clone implements them the same way t/interp.py does: `r = x % abs(y)`, an
+Undef at y == 0. Before this date the operators did not exist and the note
+here said so; the fz_p_nodiv probe is the one thing that note left behind,
+and it still holds for a different reason, given below where the probe is
+defined: the JSON op name is the word `div`, and a literal slash token is
+still not one.
 
 Own output directory, never t/out/: the suite's drivers write t/out/ and a
 second writer of the same filenames corrupts both runs (run_par.py's
@@ -212,6 +214,16 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return args[0] - args[1]
     if op == "*":
         return args[0] * args[1]
+    if op in ("div", "mod"):
+        # SPEC.md "Division and modulo": Euclidean, undefined at y == 0.
+        # A CLONE of interp.ev's own div/mod arm (see this file's module
+        # docstring on why the clone is a clone and not a shared import):
+        # r = x mod |y| in [0, |y|), q = (x - r) // y exactly.
+        x, y = args
+        if y == 0:
+            raise Undef(f"{op} by zero")
+        r = x % abs(y)
+        return r if op == "mod" else (x - r) // y
     if op == "==":
         return args[0] == args[1]
     if op == "!=":
@@ -290,7 +302,9 @@ def exec_body(body: list, env: dict, funs: dict, st: St, check_ann: bool):
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
           "and", "or", "not", "implies"}
-V1_OPS = V0_OPS | {"len", "at"}
+# div and mod are v1 (SPEC.md "Division and modulo", 2026-09-08): Euclidean,
+# undefined at y == 0, so v1's definedness rules apply to them as to at.
+V1_OPS = V0_OPS | {"len", "at", "div", "mod"}
 UNARY = {"neg", "not", "len"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
@@ -368,7 +382,7 @@ def _ty(e, env, funs, ver, errs, bound):
         if ts[0] != "seq" or ts[1] != "int":
             errs.append("at wants (seq, int)")
         return "int"
-    if op in ("+", "-", "*", "neg"):
+    if op in ("+", "-", "*", "neg", "div", "mod"):
         if any(t != "int" for t in ts):
             errs.append(f"{op} over non-int")
         return "int"
@@ -1220,6 +1234,62 @@ def f_v1nest(rng, idx):
             "body": body}
 
 
+DIVMOD_K = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+
+def f_v1divmod(rng, idx):
+    """v1 "Division and modulo" (SPEC.md, 2026-09-08): three shapes over the
+    Euclidean `div`/`mod` pair. `ceildiv` and `law` get a COLLAPSE-IF twin
+    from their `if`; `digitsum` gets INVARIANT-DROP from its loop."""
+    shape = rng.choice(["ceildiv", "digitsum"])
+    me = f"fz_v1divmod_{idx:03d}"
+    if shape == "ceildiv":
+        # Ceiling division built from floor-style Euclidean div/mod: exact
+        # when k divides x, one more than the floor otherwise. The `if` is a
+        # real branch, not a filler one: COLLAPSE-IF applies the exact-case
+        # formula everywhere, which is wrong whenever k does not divide x, so
+        # the twin is refutable.
+        k = rng.choice(DIVMOD_K)
+        body = [IFS(OP("==", OP("mod", V("x"), I(k)), I(0)),
+                    [ASG("r", OP("div", V("x"), I(k)))],
+                    [ASG("r", OP("+", OP("div", V("x"), I(k)), I(1)))])]
+        ens = [OP(">=", OP("*", V("r"), I(k)), V("x")),
+               OP("<", OP("*", OP("-", V("r"), I(1)), I(k)), V("x"))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "x", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body}
+    if shape == "digitsum":
+        # Generalizes t/tasks/digit_sum.json (base 10, a spec_fun) to a
+        # random base k and a closed-form ensures instead: peeling the last
+        # base-k digit (mod k) and shifting (div k) both preserve r + i's
+        # residue mod (k - 1), which is why a digit sum agrees with its own
+        # number mod (k - 1). Same invariant shape, no spec_fun needed.
+        k = rng.choice([2, 3, 4, 5, 8, 10, 16])
+        m = k - 1
+        body = [ASG("r", I(0)), LOC("i", "int", V("n")),
+                WH(OP(">", V("i"), I(0)),
+                   [OP(">=", V("i"), I(0)),
+                    OP("==", OP("mod", OP("+", V("r"), V("i")), I(m)),
+                       OP("mod", V("n"), I(m)))],
+                   V("i"),
+                   [ASG("r", OP("+", V("r"), OP("mod", V("i"), I(k)))),
+                    ASG("i", OP("div", V("i"), I(k)))])]
+        ens = [OP("==", OP("mod", V("r"), I(m)), OP("mod", V("n"), I(m)))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "n", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [OP(">=", V("n"), I(0))],
+                "ensures": ens, "body": body}
+    # The Euclidean law itself is NOT a fuzz shape: a straight-line body has
+    # no branch whose arms are both correct and different, and a no-op `if`
+    # (measured 2026-09-08: 11 of 21 family tasks) gives a twin that
+    # computes the same value and survives in every column. The law lives
+    # in the committed task t/tasks/remainder.json, whose grounded ladder
+    # finds a wrong-var twin.
+    raise AssertionError("unreachable shape")
+
+
 def f_wrong(rng, idx):
     """Category B: correct-by-construction, then ONE clause perturbed so the
     task is FALSE on a witness the interpreter finds. Every kernel must
@@ -1256,6 +1326,7 @@ FAMILIES = [
     ("v1rec", f_v1rec, 3),
     ("v1def", f_v1def, 3),
     ("v1nest", f_v1nest, 1),
+    ("v1divmod", f_v1divmod, 3),
     ("wrong", f_wrong, 3),
 ]
 
@@ -1393,8 +1464,14 @@ def probes() -> list[dict]:
         "a quantifier range wider than a machine int; SPEC.md's bounded "
         "quantifier is over mathematical integers")
 
-    # --- "Division and modulo are deliberately absent from v0 AND v1."
-    # Not a task: a direct check that no lowering silently emits one.
+    # --- "the AST operator is the word div" (surface.py's own REFUSALS
+    # entry, and SPEC.md's notation section): `/` and `%` are surface
+    # NOTATION for the JSON ops `div` and `mod`, never JSON op names
+    # themselves. Before 2026-09-08 this probe measured "no lowering may
+    # accept division at all"; div and mod exist now, so what is left to
+    # measure is narrower but still real: the literal slash token is not,
+    # and never was, a t operator, so every lowering must still reject it
+    # rather than mistake it for `div`.
     add({"t": 0, "name": "fz_p_nodiv",
          "params": [{"name": "x", "type": "int"}],
          "returns": [{"name": "r", "type": "int"}], "requires": [],
@@ -1403,8 +1480,68 @@ def probes() -> list[dict]:
                       [ASG("r", {"op": "/", "args": [V("x"), I(2)]})],
                       [ASG("r", I(0))])]},
         "lower-error",
-        "`/` is not a t operator; every lowering must reject the token rather "
-        "than pick a division semantics", adversarial=True)
+        "`/` (the bare slash) is not a t operator, `div` is; every lowering "
+        "must reject the token rather than treat it as division",
+        adversarial=True)
+
+    # --- SPEC.md "Division and modulo (v1)" and "Undefined requires
+    # (normative)", together: y == 0 is undefined exactly as `at` outside
+    # [0, len) is, and a `requires` undefined at every type-correct input is
+    # DEFECTIVE, so a lowering able to detect it must surface the defect
+    # rather than verify.
+    add({"t": 1, "name": "fz_p_divreq0",
+         "params": [{"name": "x", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [OP("==", OP("div", V("x"), I(0)), I(0))],
+         "ensures": [OP("==", V("r"), I(0))],
+         "body": [ASG("r", I(0))]},
+        "refuted",
+        "`x / 0` has no value at any x, so `requires x / 0 == 0` is "
+        "undefined at every type-correct input, not merely narrowed; the "
+        "task is DEFECTIVE and the real lowering must not VERIFY, exactly "
+        "as the analogous `at` probe SPEC.md records under 'Undefined "
+        "requires'", adversarial=True)
+
+    # --- SPEC.md "At y == 0 both are undefined": `y - y` is well-defined
+    # (it is 0), but dividing by it is not, so this body has no value at any
+    # input reachable from `requires`, without a literal 0 in sight. A
+    # lowering that only pattern-matches a literal zero divisor and misses
+    # this one silently totalizes.
+    add({"t": 1, "name": "fz_p_divzero_expr",
+         "params": [{"name": "x", "type": "int"}, {"name": "y", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}], "requires": [],
+         "ensures": [OP("==", V("r"), I(0))],
+         "body": [ASG("r", OP("div", V("x"), OP("-", V("y"), V("y"))))]},
+        "refuted",
+        "`y - y` is always 0, so `x / (y - y)` is undefined at every input; "
+        "a lowering that discharges div's definedness obligation must "
+        "refute rather than totalize it", adversarial=True)
+
+    # --- The column-semantics probe (SPEC.md "Why Euclidean"): 0 <= x mod y
+    # < |y| holds for every nonzero y regardless of x's sign, so x % y >= 0
+    # even at x < 0. A lowering that emits its kernel's native truncating
+    # `%` (sign follows the dividend) instead of redefining it as Euclidean
+    # fails this one at x < 0, y > 0 specifically.
+    add({"t": 1, "name": "fz_p_modsign_true",
+         "params": [{"name": "x", "type": "int"}, {"name": "y", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [OP("<", V("x"), I(0)), OP(">", V("y"), I(0))],
+         "ensures": [OP(">=", OP("mod", V("x"), V("y")), I(0))],
+         "body": [ASG("r", OP("mod", V("x"), V("y")))]},
+        "verified",
+        "x % y >= 0 at every input requires admits, by SPEC.md's Euclidean "
+        "law; a column whose lowering falls back to a truncating native "
+        "`%` for negative x is not measuring this semantics")
+    add({"t": 1, "name": "fz_p_modsign_false",
+         "params": [{"name": "x", "type": "int"}, {"name": "y", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [OP("<", V("x"), I(0)), OP(">", V("y"), I(0))],
+         "ensures": [OP("<", OP("mod", V("x"), V("y")), I(0))],
+         "body": [ASG("r", OP("mod", V("x"), V("y")))]},
+        "refuted",
+        "the mirror of fz_p_modsign_true: x % y < 0 is false under "
+        "Euclidean semantics at every input the requires admits, so no "
+        "lowering that implements SPEC.md's div/mod may verify it")
 
     # --- The wave law: an unsatisfiable hypothesis discharges an obligation
     # that proves nothing. Only a KERNEL-NATIVE vacuity instrument sees it.

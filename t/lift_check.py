@@ -576,6 +576,12 @@ def _t_expr(e: dict, arr: frozenset = frozenset()) -> str:
         return f"({_t_expr(args[0], arr)} ==> {_t_expr(args[1], arr)})"
     if op in ("+", "-", "*", "<", "<=", ">", ">=", "==", "!="):
         return f"({_t_expr(args[0], arr)} {op} {_t_expr(args[1], arr)})"
+    if op in ("div", "mod"):
+        # SPEC.md "Division and modulo (v1)": Dafny's own `/` and `%` on
+        # int are Euclidean too (measured on dafny 4.11.0), at the same
+        # precedence as `*`, so `div`/`mod` print straight back to `/`/`%`.
+        dfy_op = "/" if op == "div" else "%"
+        return f"({_t_expr(args[0], arr)} {dfy_op} {_t_expr(args[1], arr)})"
     raise ValueError(f"lift_check._t_expr: unknown t operator {op!r}")
 
 

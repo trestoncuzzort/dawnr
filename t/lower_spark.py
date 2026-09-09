@@ -91,6 +91,46 @@ total in the shipped non-defensive SPARKlib build, and reading out of range
 yields an unconstrained value, so the obligation must be, and is, stated on
 the wrapper rather than borrowed from the library.)
 
+DIV/MOD (2026-09-08, SPEC.md "Division and modulo"). MEASURED on this
+install (probes p_euclid.ads, p_facts.ads, gnatprove FSF 16.1.0, Big_Integer
+throughout): Ada's `/` truncates toward zero (-7/2 = -3, 7/-2 = -3, -7/-2 =
+3, all proved), `mod` takes the sign of the divisor, i.e. floor-modulo
+(-7 mod 2 = 1, 7 mod -2 = -1, -7 mod -2 = -1, all proved), and `rem` takes
+the sign of the dividend (-7 rem 2 = -1, 7 rem -2 = 1, -7 rem -2 = -1, all
+proved). None of the three is SPEC.md's Euclidean law (0 <= r < |y|) when
+the divisor is negative, so native `/` and `mod` may not be emitted for t's
+`div`/`mod`, exactly as the header's SHAPE section already forbids for `at`.
+So, beside `Len` and `Elem`, this lowering defines two more expression
+functions, `T_Mod` and `T_Div`, both with `Pre => Y /= Big_Integer'(0)`, over
+`/` and `rem` rather than `mod`: `X = (X / Y) * Y + (X rem Y)` is a fact
+GNATprove proves in one step (MEASURED, probe p_law1.ads), while the same
+identity restated with `X mod abs (Y)` and a second division, the reading
+that would follow directly from "mod against a positive divisor already IS
+the Euclidean remainder", TIMES OUT (MEASURED, probe p_law2.ads, same shape,
+only the operators differ) rather than failing to prove; that construction
+was not shipped for exactly that reason. `X rem Y` already has magnitude
+< |Y|, sign of the dividend; only its sign needs straightening to land in
+`[0, |Y|)`, which needs no further division:
+
+    T_Mod (X, Y) = if X rem Y >= 0 then X rem Y else (X rem Y) + abs (Y)
+    T_Div (X, Y) = if X rem Y >= 0 then X / Y
+                   elsif Y > 0 then (X / Y) - 1 else (X / Y) + 1
+
+a nonnegative remainder is kept (it already satisfies the bound whatever
+sign Y has); a negative one gains `abs (Y)` and the truncating quotient
+steps by one toward -infinity to compensate, so the whole identity reduces
+to linear arithmetic over `/`'s and `rem`'s own defining law and the kernel
+proves it directly (MEASURED, probe p_law3.ads: the identity and both
+Euclidean bounds verify). Definedness at y = 0 is discharged the same way as
+`at`'s: the Pre is checked by the kernel at every call site, and `div`/`mod`
+lower to `T_Div (a, b)` / `T_Mod (a, b)`, never to native `/`/`mod`/`rem`.
+The counterexample mirror (F_Ce, below) does not cover div/mod: _ce_bound
+has no case for them and raises its own `_NoCe`, so a task using div/mod
+simply gets no F_Ce instance, the same abstention already applied to seq
+ops, calls and quantifiers there; nothing about T_Div/T_Mod needs a
+machine-int mirror to be sound, but a mirror was not built, and the
+committed `remainder`/`digit_sum` cells are checked through F alone.
+
 THE COUNTEREXAMPLE INSTANCE, added 2026-09-01 because the sound numeric model
 above closed gnatprove's refutation channel completely: after the move to
 Big_Integer the SPARK flip rate went 91.8% -> 0.0%. REPRODUCED before this
@@ -262,6 +302,7 @@ from verifiers import spark as spark_backend     # noqa: E402
 TYPE = {"int": "Big_Integer", "bool": "Boolean", "seq": "Seq"}
 CMP = {"==": "=", "!=": "/=", "<": "<", "<=": "<=", ">": ">", ">=": ">="}
 ARITH = {"+": "+", "-": "-", "*": "*"}
+DIVMOD = {"div": "T_Div", "mod": "T_Mod"}
 NARY = {"and": "and then", "or": "or else"}
 
 # Every Ada name this file puts in the emitted package. A t identifier that
@@ -269,7 +310,8 @@ NARY = {"and": "and then", "or": "or else"}
 # instead (the W_k helpers are checked separately, by count).
 RESERVED = frozenset((
     "F", "Seq", "Seqs", "Len", "Elem", "T_Range", "R_First", "R_Has",
-    "R_Next", "Big_Integer", "Boolean", "T_Refutation_Certificate"))
+    "R_Next", "Big_Integer", "Boolean", "T_Refutation_Certificate",
+    "T_Div", "T_Mod"))
 
 # The counterexample instance (header). The window is above 2^31 so that a
 # lowering which had silently kept a 32-bit model would be caught by the
@@ -342,6 +384,12 @@ def _ce_bound(e: dict, env: dict):
     op = e["op"]
     if op in ("len", "at"):
         raise _NoCe("seq operator")
+    if op in ("div", "mod"):
+        # No machine mirror (header, DIV/MOD): T_Div/T_Mod are Big_Integer
+        # expression functions, so F_Ce (Ce_Num inputs) could not call them
+        # even if a bound existed. Abstain, the same fail-closed treatment
+        # already given to seq ops, calls and quantifiers here.
+        raise _NoCe(f"{op!r}: no machine mirror for T_Div/T_Mod")
     bs = [_ce_bound(a, env) for a in e.get("args", [])]
     if op in ("not", "and", "or", "implies") or op in CMP:
         return None
@@ -427,6 +475,37 @@ RANGE_PREAMBLE = """\
      (C + Big_Integer'(1));
 """
 
+# div/mod (see the header's DIV/MOD section). Built on `/` and `rem`, not
+# `mod`: `X = (X / Y) * Y + (X rem Y)` is the pair GNATprove proves in one
+# step (MEASURED, probe p_law1.ads), while the same fact stated over
+# `X mod abs (Y)` and a second division (the naive reading of "mod against a
+# positive divisor is the Euclidean remainder") TIMES OUT at the standard
+# budget (MEASURED, probe p_law2.ads: VC_POSTCONDITION medium/limit, same
+# shape, only the operators differ) rather than failing to prove; a tenfold
+# budget was not tried because the fix costs nothing. `X rem Y` already has
+# magnitude < |Y|; only its sign needs straightening to land in [0, |Y|):
+# nonnegative, keep it (it already satisfies SPEC.md's bound whatever sign Y
+# has); negative, add |Y| to the remainder and correspondingly step the
+# truncating quotient by one toward -infinity. No further division is ever
+# introduced, so the identity is linear arithmetic over `/`'s and `rem`'s own
+# defining law, which the prover discharges directly (MEASURED, probe
+# p_law3.ads: the identity and both Euclidean bounds verify).
+DIVMOD_PREAMBLE = """\
+   function T_Mod (X, Y : Big_Integer) return Big_Integer is
+     (if (X rem Y) >= Big_Integer'(0)
+      then (X rem Y)
+      else (X rem Y) + abs (Y))
+   with Pre => Y /= Big_Integer'(0);
+
+   function T_Div (X, Y : Big_Integer) return Big_Integer is
+     (if (X rem Y) >= Big_Integer'(0)
+      then (X / Y)
+      elsif Y > Big_Integer'(0)
+      then (X / Y) - Big_Integer'(1)
+      else (X / Y) + Big_Integer'(1))
+   with Pre => Y /= Big_Integer'(0);
+"""
+
 
 def cap(name: str) -> str:
     """The Ada spelling of a t name. Ada identifiers may not carry two
@@ -492,6 +571,7 @@ class Lower:
         self.helpers: list[str] = []   # emitted W_k record types + functions
         self.wcount = 0
         self.needs_range = False       # set by the first lowered quantifier
+        self.needs_divmod = False      # set by the first lowered div/mod
         self.spec_fun_names = {sf["name"] for sf in task.get("spec_funs", [])}
         # The counterexample instance walks the SAME tree with the SAME
         # operator table; only the numeric type of a literal differs, so a
@@ -560,6 +640,13 @@ class Lower:
             return f"({args[0]} {CMP[op]} {args[1]})"
         if op in ARITH:
             return f"({args[0]} {ARITH[op]} {args[1]})"
+        if op in DIVMOD:
+            # Never native `/`/`mod` (header, DIV/MOD): both are wrong for a
+            # negative divisor. T_Div/T_Mod's shared Pre => Y /= 0 is
+            # SPEC.md's definedness obligation, checked at this call site
+            # exactly as Elem's Pre discharges `at`.
+            self.needs_divmod = True
+            return f"{DIVMOD[op]} ({args[0]}, {args[1]})"
         raise ValueError(f"t has no operator {op!r}")
 
     # clause() and req_clause() are gone with the machine-Integer quantifier
@@ -882,6 +969,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [SEQ_PREAMBLE]
     if L.needs_range:
         parts += [RANGE_PREAMBLE]
+    if L.needs_divmod:
+        parts += [DIVMOD_PREAMBLE]
     for sf in spec_funs:
         parts += [sf]
     for h in L.helpers:

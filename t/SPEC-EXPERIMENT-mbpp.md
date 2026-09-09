@@ -546,3 +546,29 @@ temperature above 0, any model larger than 7B, HumanEval (16.3), and
 whether a header-only repair (`t 0` to `t 1`) or an `else { }` insertion
 would be fair game for the extract stage; both are recorded as refusal
 classes here and left unrepaired, so the table is what the model wrote.
+
+## Addendum, 2026-09-08 evening: the same 368 replies under a t with division
+
+t gained `div` and `mod` later the same day (SPEC.md "Division and
+modulo", ROADMAP 12.7). The 368 replies above were re-parsed unchanged
+under the new grammar, no model call, and the well-formed tasks re-run
+through the seven kernels (`out/spec-experiment/qwen2.5-coder-7b-divmod/`,
+same instrument, `--model qwen2.5-coder:7b-divmod`):
+
+| stage | before | with div and mod |
+|---|---:|---:|
+| blocks that parse | 114 | 155 |
+| well-formed tasks | 64 | 70 |
+| pass their tests | 41 | 44 |
+| verify with a refuted twin, at least one column | 43 | 45 |
+| of those, pass their tests | 33 | 34 |
+| verify with a refuted twin, all seven | 4 | 4 |
+
+Of the 102 replies that had reached for `/` or `%`, 41 moved: 6 straight
+to well-formed tasks and 35 to a well-formedness refusal, almost all the
+model writing `t 0` over an operator that is v1 (`v1 expression form in a
+v0 task`, `v0 has int only`). The four seven-column tasks are the same
+four. So division was the largest single parse loss and not the largest
+loss: the `if` with no `else` (55 replies) and the notation slips remain,
+and a 7B model at temperature 0 does not become a t writer because the
+language gained an operator it kept asking for.

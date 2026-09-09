@@ -660,10 +660,14 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     """One generic pass catching every section-5 row that is a plain
     "does this construct appear anywhere" test. Rows needing context
     (self-recursion shape, tail returns, quantifier bounds, decreases,
-    the read-only-array condition) have their own dedicated scans."""
-    if isinstance(n, Binary) and n.op in ("/", "%"):
-        issues.append((n.line, "div-mod", n.op))
-    elif isinstance(n, SeqDisplay):
+    the read-only-array condition) have their own dedicated scans.
+
+    `Binary` nodes with op `/` or `%` are no longer refused here: SPEC.md
+    "Division and modulo (v1)" (2026-09-08) gives t Euclidean `div`/`mod`,
+    the same convention Dafny's own `/` and `%` use on `int` (measured on
+    dafny 4.11.0), so `lift_rewrite.py` maps them one to one and no
+    div-mod issue is raised."""
+    if isinstance(n, SeqDisplay):
         issues.append((n.line, "seq-literal", "[...]"))
     elif isinstance(n, Slice):
         issues.append((n.line, "seq-slice", "[..]"))

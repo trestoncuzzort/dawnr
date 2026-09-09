@@ -60,8 +60,42 @@ import harness                                   # noqa: E402
 import interp                                    # noqa: E402
 from verifiers import verus as verus_backend     # noqa: E402
 
+# DIVISION AND MODULO (2026-09-08, SPEC.md "Division and modulo (v1)").
+# Measured on 0.2026.08.30.b432e82 with a six-fact probe on spec `int`
+# (probe_div.rs): `assert(-7 / 2 == -4 && -7 % 2 == 1 && 7 / -2 == -3 &&
+# 7 % -2 == 1 && -7 / -2 == 4 && -7 % -2 == 1)` verified with 0 errors, so
+# Verus's native `/` and `%` on `int` ARE Euclidean, t's own convention:
+# `div`/`mod` emit natively (BIN_OPS below), no kernel-terms redefinition
+# needed. y == 0: a second probe (probe_div0.rs) shows `x / 0 == 0` and
+# `x % 0 == 0` both FAIL to verify for symbolic x, so Verus's `/`/`%` are
+# total in the type system (never a trap) but carry no known value at
+# y == 0, the same "unspecified, not undefined-in-Rust's-sense" posture
+# SMT-LIB gives division by zero. That is exactly what SPEC.md's
+# definedness discipline needs: `defined()` below adds `y != 0` to a
+# div/mod's obligation, the same shape as `at`'s bound, and every emission
+# site asserts it before the value is used, so the y == 0 case is never
+# actually reached by a proof this lowering emits; the operator's own
+# totality is not relied on.
+#
+# The Euclidean defining law `x == (x div y) * y + (x mod y)` is native
+# for the RANGE half (`0 <= x%y`, `x%y < y || x%y < -y`: probe_range.rs,
+# 0 errors unaided) but NOT for the multiplicative half: Verus's default
+# solver profile has nonlinear arithmetic off (see LOOPS in the module
+# docstring), and `(x/y)*y` multiplies two non-literal terms, so
+# probe_law.rs (`ensures x == (x/y)*y + (x%y)` alone) fails with
+# "postcondition not satisfied". `_div_mod_law` below asserts that half
+# explicitly via `by (nonlinear_arith) requires y != 0` (probe_law3.rs /
+# probe_law4.rs, 0 errors; probe_law5.rs confirms the `requires` is a real
+# obligation, not an assumption: drop the ambient `y != 0` and it reads
+# "requires not satisfied"), emitted at every statement that introduces a
+# div/mod term (`_assert_defined`), which is what makes `remainder`'s
+# `ensures x == (x div y) * y + r` provable. `digit_sum` needed no such
+# help: its recursive spec_fun never multiplies a div/mod result, so its
+# loop-invariant preservation goes through on the native range facts and
+# ordinary spec_fun unfolding alone.
 BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
-           "+": "+", "-": "-", "*": "*", "implies": "==>"}
+           "+": "+", "-": "-", "*": "*", "implies": "==>",
+           "div": "/", "mod": "%"}
 NARY_OPS = {"and": "&&", "or": "||"}
 TYPES = {"int": "int", "bool": "bool", "seq": "Seq<int>"}
 
@@ -194,6 +228,10 @@ def defined(e: dict) -> dict:
             {"op": "<=", "args": [{"int": 0}, i]},
             {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
         return _conj([defined(s), defined(i), bound])
+    if op in ("div", "mod"):
+        x, y = args
+        nonzero = {"op": "!=", "args": [y, {"int": 0}]}
+        return _conj([defined(x), defined(y), nonzero])
     if op == "and":
         res = TRUE
         for a in reversed(args):
@@ -389,6 +427,64 @@ def _prenex(e: dict, fresh) -> tuple[list[str], dict]:
     return [], e
 
 
+def _div_mod_pairs(e: dict) -> list[tuple[dict, dict]]:
+    """Every distinct (x, y) operand pair fed to a `div` or `mod`
+    application anywhere in e, first-seen order, deduplicated by rendered
+    Verus text (so `div(m, 10)` and a later `mod(m, 10)` in the same
+    statement share one bridging fact, see _div_mod_law)."""
+    seen: dict[tuple[str, str], tuple[dict, dict]] = {}
+
+    def walk(n: dict) -> None:
+        if "ite" in n:
+            c = n["ite"]
+            walk(c["cond"]); walk(c["then"]); walk(c["else"])
+            return
+        if "call" in n:
+            for a in n["call"]["args"]:
+                walk(a)
+            return
+        if "forall" in n or "exists" in n:
+            q = n.get("forall") or n.get("exists")
+            walk(q["lo"]); walk(q["hi"]); walk(q["body"])
+            return
+        if "op" in n:
+            if n["op"] in ("div", "mod"):
+                x, y = n["args"]
+                seen.setdefault((expr(x), expr(y)), (x, y))
+            for a in n.get("args", []):
+                walk(a)
+
+    walk(e)
+    return list(seen.values())
+
+
+def _div_mod_law(x: dict, y: dict, ind: str) -> str:
+    """The Euclidean defining identity `x == (x div y) * y + (x mod y)`,
+    established by nonlinear_arith. Measured 2026-09-08: Verus's default
+    solver profile (nonlinear arithmetic off) cannot discharge this
+    unaided (probe_law.rs: `ensures x == (x/y)*y + (x%y)` with `requires
+    y != 0` alone, postcondition not satisfied) because `(x/y)*y`
+    multiplies two non-literal terms, but `by (nonlinear_arith) requires
+    y != 0 { }` / `requires y != 0;` both close it (probe_law3.rs,
+    probe_law4.rs). The range half of the law, `0 <= x%y` and
+    `x%y < y || x%y < -y`, is native (probe_range.rs, 0 errors, no hint
+    needed) so only the multiplicative identity is asserted here. Sound
+    and task-independent: it is a fact about `/` and `%` themselves, true
+    for every y != 0, and the `requires` premise is exactly the
+    definedness obligation this div/mod already owes (SPEC.md, `defined()`
+    above), so it can never smuggle in a task's own obligation as a
+    hypothesis; Verus still has to prove that premise from ambient facts
+    (measured, probe_law5.rs: dropping the ambient `y != 0` turns this
+    into "requires not satisfied")."""
+    ident = {"op": "==", "args": [x, {"op": "+", "args": [
+        {"op": "*", "args": [{"op": "div", "args": [x, y]}, y]},
+        {"op": "mod", "args": [x, y]}]}]}
+    nz = {"op": "!=", "args": [y, {"int": 0}]}
+    return (f"{ind}assert({expr(ident)}) by (nonlinear_arith)\n"
+            f"{ind}    requires\n{ind}        {expr(nz)},\n"
+            f"{ind};")
+
+
 class _V1:
     def __init__(self, task: dict):
         self.task = task
@@ -421,6 +517,8 @@ class _V1:
         ob = defined(e)
         if ob != TRUE:
             lines.append(f"{ind}assert({expr(ob)});")
+        for x, y in _div_mod_pairs(e):
+            lines.append(_div_mod_law(x, y, ind))
 
     def stmts(self, body: list, scope: dict, ind: str) -> list[str]:
         """scope: ordered {name: (verus_type, mutable)}. Returns lines."""
@@ -695,6 +793,16 @@ def _gint(e) -> int:
     if op in ("+", "-", "*") and len(args) == 2:
         a, b = _gint(args[0]), _gint(args[1])
         return a + b if op == "+" else (a - b if op == "-" else a * b)
+    if op in ("div", "mod") and len(args) == 2:
+        # Same Euclidean rule as interp.py's ev() for "div"/"mod": the
+        # unique q, r with a == q*b + r and 0 <= r < |b|. b == 0 is
+        # undefined (SPEC.md), so it refuses rather than fabricating a
+        # bound, the same fail-closed posture as every other case here.
+        a, b = _gint(args[0]), _gint(args[1])
+        if b == 0:
+            raise ValueError("quantifier bound: division by zero")
+        r = a % abs(b)
+        return r if op == "mod" else (a - r) // b
     raise ValueError(f"quantifier bound not ground: {e!r}")
 
 

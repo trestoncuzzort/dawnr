@@ -104,6 +104,25 @@ from verifiers import lean as lean_backend     # noqa: E402
 
 CMP_OPS = {"<": "<", "<=": "≤", ">": ">", ">=": "≥"}
 ARITH_OPS = {"+", "-", "*"}
+# div/mod (SPEC.md "Division and modulo", 2026-09-08): measured on lean
+# 4.33.1, core only, no Mathlib: `(-7:Int)/2=-4`, `(-7:Int)%2=1`, `7/-2=-3`,
+# `7%-2=1`, `-7/-2=4`, `-7%-2=1` all hold by `decide`, and the truncating and
+# floor expectations fail, so Lean's native Int `/` and `%` (Int.ediv /
+# Int.emod under the hood) already are SPEC.md's Euclidean law and the
+# lowering emits them as-is, no reimplementation. But that native division is
+# total (`x / 0 = 0`, `x % 0 = x` by definition), so t's undefinedness at
+# y == 0 is not enforced by the kernel: dcond() below adds the `y ≠ 0`
+# obligation for both, discharged the same way as `at`'s `0 <= i < len`, as
+# a separate _wf theorem, never folded into the total computation.
+DIV_MOD = {"div": "/", "mod": "%"}
+# The Euclidean law and its range fact are core lemmas about Lean's native
+# (already-Euclidean) Int `/` and `%`, but measured (2026-09-08, on
+# remainder's own contract) NOT to carry a grind/simp e-matching pattern
+# that fires on the ring-normalized `a / b * b` term a goal like remainder's
+# actually has, so naming them in a grind hint list does not help: they are
+# supplied as ordinary `have` hypotheses instead (divmod_prelude/_close
+# below) and a closing `omega` does the rest, since omega is exactly linear
+# arithmetic once the facts are local terms.
 CERT_NAME = "t_refutation_certificate"         # the contract with the adapter
 MAX_ENUM = 16     # ground quantifier enumeration cap; witness domains are
                   # small (interp ladders), so past this the generic closers
@@ -193,7 +212,7 @@ class Lower:
                 return self.rett
             return self.sfuns[f]["result"]
         op = e["op"]
-        if op in ARITH_OPS or op in ("neg", "len", "at"):
+        if op in ARITH_OPS or op in DIV_MOD or op in ("neg", "len", "at"):
             return "int"
         return "bool"
 
@@ -243,6 +262,9 @@ class Lower:
         if op in ARITH_OPS:
             a, b = (self.term(x, env, types, dep) for x in e["args"])
             return f"({a} {op} {b})"
+        if op in DIV_MOD:
+            a, b = (self.term(x, env, types, dep) for x in e["args"])
+            return f"({a} {DIV_MOD[op]} {b})"
         raise NotImplementedError(
             f"boolean operator {op!r} in computational position "
             "is not lowered for lean")
@@ -354,6 +376,12 @@ class Lower:
             return self._conj([
                 self.dcond(s, env, types), self.dcond(i, env, types),
                 f"(((0 : Int) ≤ {it}) ∧ ({it} < {ln}))"])
+        if op in DIV_MOD:
+            x, y = e["args"]
+            yt = self.term(y, env, types)
+            return self._conj([
+                self.dcond(x, env, types), self.dcond(y, env, types),
+                f"({yt} ≠ (0 : Int))"])
         if op in ("and", "or"):
             def chain(args):
                 if not args:
@@ -501,6 +529,77 @@ class Lower:
         return "\n    ∧ ".join(self.prop(e, env, self.types)
                                for e in self.task["ensures"])
 
+    # ---------- div/mod closing (SPEC.md "Division and modulo") ----------
+    # Measured 2026-09-08 on remainder's own contract: grind's e-matching
+    # does not fire on Int.emod_add_ediv_mul against the ring-normalized
+    # `a / b * b` subterm it needs to rewrite (nor on the two range lemmas),
+    # so a task whose spec states the Euclidean law itself (remainder's
+    # ensures does, literally) leaves grind unable to close it even with
+    # the lemma named as a hint. The fix is not a better hint: these three
+    # core facts about Lean's native (already-Euclidean since measured
+    # 4.33.1) `/` and `%` are supplied as ordinary hypotheses instead, and
+    # a plain `omega` closes from there, which is pure linear arithmetic
+    # once the facts are local terms. Applied only where the theorem's own
+    # binder set already covers every free variable of the pair (params,
+    # or params + loop state), never task-globally, so a spec_fun's own
+    # _wf theorem never sees a stray loop-state variable it never bound.
+    def divmod_pairs(self, nodes: list, env: dict, types: dict) -> list:
+        """Every distinct (numerator, denominator) term pair reachable
+        under a div/mod op in `nodes`, lowered under `env`/`types` exactly
+        as the enclosing goal was, so the pair's own text matches what
+        appears (or will appear, post-unfold) in that goal."""
+        seen: set = set()
+        out: list = []
+
+        def walk(x):
+            if isinstance(x, dict):
+                if x.get("op") in DIV_MOD:
+                    a, b = x["args"]
+                    pair = (self.term(a, env, types),
+                            self.term(b, env, types))
+                    if pair not in seen:
+                        seen.add(pair)
+                        out.append(pair)
+                for v in x.values():
+                    walk(v)
+            elif isinstance(x, list):
+                for v in x:
+                    walk(v)
+
+        for n in nodes:
+            walk(n)
+        return out
+
+    def divmod_prelude(self, pairs: list) -> str:
+        """`have`-lines putting the Euclidean law and its two range facts
+        into context, ground terms Lean already proves natively about its
+        own `/` and `%` (Int.emod_add_ediv_mul, Int.emod_nonneg,
+        Int.emod_lt, the last sign-agnostic via Int.natAbs, which omega
+        normalizes on its own, so no case split on the divisor's sign is
+        needed)."""
+        lines = []
+        for a, b in pairs:
+            hne, h1, h2, h3 = (self.fresh_hyp(), self.fresh_hyp(),
+                              self.fresh_hyp(), self.fresh_hyp())
+            lines.append(f"have {hne} : {b} ≠ (0 : Int) := (by "
+                        f"first | assumption | decide | omega | "
+                        f"grind{self.ga})")
+            lines.append(f"have {h1} := Int.emod_add_ediv_mul {a} {b}")
+            lines.append(f"have {h2} := Int.emod_nonneg {a} {hne}")
+            lines.append(f"have {h3} := Int.emod_lt {a} {hne}")
+        return "; ".join(lines)
+
+    def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
+        """`base` tried first; a div/mod-priming + omega fallback added
+        only when `nodes` actually contains a div/mod application. A
+        no-op (returns `base` unchanged) for every task that doesn't touch
+        div/mod, so the eleven pre-existing tasks see byte-identical
+        tactic scripts."""
+        pairs = self.divmod_pairs(nodes, env, types)
+        if not pairs:
+            return base
+        return f"first | ({base}) | ({self.divmod_prelude(pairs)}; omega)"
+
     # ---------- spec_funs ----------
 
     def emit_sfuns(self) -> tuple[str, list[tuple[str, str]]]:
@@ -520,8 +619,10 @@ class Lower:
             d = self.dcond(f["body"], {}, dict(ptypes))
             if d is not None:
                 tname = f"{f['name']}_s_wf"
+                tac = self._close([f["body"]], {}, dict(ptypes),
+                                  f"grind{self.ga}")
                 out.append(f"theorem {tname} {pb} :\n    {d} := by\n"
-                           f"  grind{self.ga}\n")
+                           f"  {tac}\n")
                 thms.append((tname, "definedness of spec_fun "
                              + f["name"]))
         return "\n".join(out), thms
@@ -550,9 +651,10 @@ class Lower:
             k += 1
             hyps = "".join(f"{self.prop(x, {}, self.types)} → "
                            for x in reqs[:i])
+            tac = self._close([r], {}, self.types, f"grind{self.ga}")
             out.append(f"theorem {self.name}_t_wf{k} "
                        f"{self.binders(params_nt)} :\n    {hyps}{d} := by\n"
-                       f"  grind{self.ga}\n")
+                       f"  {tac}\n")
             thms.append((f"{self.name}_t_wf{k}", f"definedness of requires "
                          f"clause {i + 1}"))
         ens = self.task["ensures"]
@@ -565,9 +667,10 @@ class Lower:
             hyps = "".join(f"{p} → " for p in self.pre_props())
             hyps += "".join(f"{self.prop(x, {}, self.types)} → "
                             for x in ens[:i])
+            tac = self._close([e], {}, self.types, f"grind{self.ga}")
             out.append(f"theorem {self.name}_t_wf{k} "
                        f"{self.binders(eb)} :\n    {hyps}{d} := by\n"
-                       f"  grind{self.ga}\n")
+                       f"  {tac}\n")
             thms.append((f"{self.name}_t_wf{k}", f"definedness of ensures "
                          f"clause {i + 1}"))
         return "\n".join(out), thms, k
@@ -621,18 +724,22 @@ class Lower:
         ob = self._conj(obs)
         if ob is not None:
             hyps = "".join(f"{p} → " for p in self.pre_props())
+            tac = self._close([self.body], {}, self.types,
+                              f"grind{self.ga}")
             out.append(f"theorem {self.name}_t_wfbody {pb} :\n"
-                       f"    {hyps}{ob} := by\n  grind{self.ga}\n")
+                       f"    {hyps}{ob} := by\n  {tac}\n")
             thms.append((f"{self.name}_t_wfbody", "body definedness"))
         applied = f"({self.name}_t {pnames})"
         hpre = (f" (hpre : {self.pre_conj()})"
                 if self.task.get("requires") else "")
+        spec_tac = self._close([self.task["ensures"], self.body], {},
+                               self.types, f"grind{self.ga}")
         out.append(
             f"theorem {self.name}_t_spec {pb}{hpre} :\n"
             f"    {self.post_conj(applied)} := by\n"
             f"  first\n"
             f"  | (unfold {self.name}_t\n"
-            f"     grind{self.ga})\n"
+            f"     {spec_tac})\n"
             f"  | grind [{self.name}_t"
             + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
                if self.sfuns else "") + "]\n")

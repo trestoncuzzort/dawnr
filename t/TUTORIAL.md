@@ -118,13 +118,20 @@ what it means.
 An **expression** is anything that has a value: `5`, `x`, `x + 1`,
 `x + 1 > y`. Expressions are how you compute and how you state promises.
 
-**Arithmetic**: `+`, `-`, `*`, and `-x` (negation). That's all.
+**Arithmetic**: `+`, `-`, `*`, `-x` (negation), and in `t 1` tasks `/`
+(integer division) and `%` (remainder).
 
-Where is division? **t has no ÷ and no remainder.** Reason: the six kernels
-t answers to disagree about what `-7 ÷ 2` should be (some say -3, some say
--4; both conventions are respectable). t's rule for every disagreement like
-this: leave the feature out rather than quietly pick a side. You will see
-that rule again.
+Division needs a word about a disagreement. The kernels t answers to did
+not all agree about what `-7 / 2` should be (some say -3, some say -4, and
+both conventions are respectable), and for a while t had no division at
+all rather than quietly pick a side. It now picks a side out loud: `/` and
+`%` are *Euclidean*, which means the remainder is never negative. So `-7 / 2`
+is `-4` and `-7 % 2` is `1`, because `-7 == -4 * 2 + 1`. Dividing by zero is
+not an error message, it is *undefined*: a task that could divide by zero
+has to prove it never does, the same way it has to prove a sequence index is
+in range. Kernels whose own division rounds differently are told exactly
+what t means, and are checked on it. You will see that rule again: when
+kernels disagree, state one meaning and measure every kernel against it.
 
 **Comparisons**: `==` (equal; two symbols, because a single `=` is not an
 expression in t at all), `!=`, `<`, `<=`, `>`, `>=`. A comparison's value is
