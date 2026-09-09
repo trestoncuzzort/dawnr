@@ -1263,7 +1263,7 @@ column exists. Next hurdle on the curve: round 2's positives from round
 carry the tests, 12.6's finding, since 35 of the 7B's 43 verified specs
 restated their bodies.
 
-**Round 2, the expert-iteration round (in progress 2026-09-09 evening).**
+**Round 2, the expert-iteration round (DONE 2026-09-10, the curve's second fact below).**
 The split is fixed for every later round: 161 eval problems never trained
 on, 207 train (`out/loop/split.json`, every other id of round 1's held-out
 set by sorted order plus the 46 problems round 1's positives came from).
@@ -1282,6 +1282,45 @@ of the curve, with round 0, the control and round 1 recomputed on the same
 161. The pass@8 facts on the eval split (any well-formed, any test-passing,
 any positive at the bar) are a free measurement of the sampler and are
 reported beside the pairs, never trained on.
+
+**Round 2 measured (2026-09-10).** The sampler ran eight samples per
+train problem from the round-1 adapter (the eval split was not sampled,
+so the pass@8 eval row in `out/loop/DATASET-r2.md` is empty by
+construction, not a measurement): 61 of the 207 train problems produced a
+well-formed sample, 27 a sample passing every test, 23 a positive at the
+bar (tests pass and verified with a refuted twin in at least four
+columns). Over the 171 deduplicated well-formed samples the two failures
+12.6 keeps apart split almost evenly: 84 pass their tests (60 of them
+verified in six or seven columns) and 87 fail them, 58 of those verified
+in six or seven columns, the spec-restates-the-body class again. The
+dataset: 384 pairs after merging (89 lifted, 100 from the 7B's round 0,
+195 from the samples), 82 SFT positives; the sample negatives are 54
+malformed blocks, 25 answers that fail the tests (15 of them verified
+somewhere), and 140 twins with a witness (off-by-one 70, wrong-var 40,
+collapse-if 7, negate-cond 3). Training: 3 epochs, 144 DPO steps, 28
+minutes on a shared card, reward accuracy 1.0 on nearly every logged
+batch. The eval column, greedy on the 161 never-trained problems
+(`LOOP-CURVE.md`, held-out table; columns ollama round 0, same-path
+control, round 1, round 2): well-formed 14, 24, 24, 23; tests pass 3, 5,
+5, 3; verified with a refuted twin in some column 4, 9, 9, 15; in all
+seven 1, 1, 1, 3; some column and passing tests 2, 2, 2, 2; all seven and
+passing tests 0, 0, 0, 0; parse refusals 108, 110, 109, 107. The second
+fact of the curve: one round of expert iteration moved the axis the
+reward had many pairs on (the twin pairs, kernel-verifiability, 9 to 15
+in some column and 1 to 3 in all seven) and not the axis it had few
+pairs on (the tests, 5 to 3, with 25 test-failing negatives against 140
+twins), and did not touch the wall in front of both, the notation: two
+thirds of every column's replies fail to parse on the same Python
+leakage (`&`, `^`, a `for` comprehension, a method call with `.`), and 54
+malformed negatives did not move that count by more than two. Verified
+and failing the tests, the class 12.6 warns about, is 13 of round 2's 23
+well-formed eval tasks (3 in all seven), up from 7 of 24 in round 1. Next
+hurdle, in the measured order: the parse wall (a grammar-constrained
+decoder or a repair pass on the five leak shapes, measured on the same
+161 before any training), then positives in the hundreds per round (the
+7B as the sampler, or 32 samples at 1.5B) so the tests axis has pairs to
+learn from; no round is compared under the version-2 prompt until the
+control is re-measured under it (12.7's rule).
 
 ## The road to 1.0 (opened 2026-09-05)
 
