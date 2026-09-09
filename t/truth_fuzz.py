@@ -207,7 +207,7 @@ def mirror(task: dict, body: list | None = None) -> dict:
 # different lowering path than the committed corpus does.
 # ---------------------------------------------------------------------------
 
-V1_OPS = {"len", "at", "div", "mod"}
+V1_OPS = {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
 
 
 def _uses_v1(node) -> bool:
@@ -353,6 +353,26 @@ def ck(e, env, funs, fuel):
     if o == "at":
         s, i = vs
         return s[i] if 0 <= i < len(s) else UNDEF
+    if o == "update":
+        # SPEC.md "Sequences as values" (2026-09-09): s[i := v], the same
+        # definedness as `at`; a fresh tuple, never a mutation of `s`.
+        s, i, v = vs
+        return (s[:i] + (v,) + s[i + 1:]) if 0 <= i < len(s) else UNDEF
+    if o == "fill":
+        # seq(n, v): DEFINED IFF n >= 0.
+        n, v = vs
+        return (v,) * n if n >= 0 else UNDEF
+    if o == "seq":
+        # SPEC.md "Sequences: literals, concatenation, slices" (2026-09-09):
+        # [e1, ..., en], every argument already evaluated above (any UNDEF
+        # arg was caught by the `any(v is UNDEF for v in vs)` check that
+        # precedes this dispatch), so a literal is defined iff all its
+        # elements are.
+        return tuple(vs)
+    if o == "slice":
+        # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s); elements a..b-1.
+        s, lo, hi = vs
+        return tuple(s[lo:hi]) if 0 <= lo <= hi <= len(s) else UNDEF
     if o in ("div", "mod"):
         # SPEC.md "Division and modulo": Euclidean, undefined at y == 0,
         # written from scratch here (not from interp.ev or fuzz_lower.ev)
@@ -364,6 +384,9 @@ def ck(e, env, funs, fuel):
         r = x % abs(y)
         return r if o == "mod" else (x - r) // y
     if o in _TAB:
+        # `+` is here too: on two seqs (Python tuples) `+` is already
+        # concatenation, the same overload SPEC.md's `+` gives it, so no
+        # special case is needed for it as there was for `at`/`slice`.
         return _TAB[o](vs[0], vs[1])
     raise ValueError(f"t has no operator {o!r}")
 
@@ -640,6 +663,46 @@ def base_task(name, params, ret_type="int"):
             "requires": [], "ensures": [], "body": []}
 
 
+def base_seq_task(name, seq_params, ret_type="seq"):
+    """`base_task`'s seq-typed twin for `fam_seqops_mirror`, params named
+    `s0`/`s1` rather than `t`: `t` is the surface syntax's own
+    format-version keyword and has no notation as a parameter name
+    (SPEC.md's own committed sequence tasks hit the same wall, 2026-09-09;
+    fuzz_lower.py's f_v1seqops names its second seq `u` for the same
+    reason)."""
+    return {"name": name,
+            "params": [{"name": p, "type": "seq"} for p in seq_params],
+            "returns": [{"name": "r", "type": ret_type}],
+            "requires": [], "ensures": [], "body": []}
+
+
+# ---------------------------------------------------------------------------
+# Random seq body generation (SPEC.md "Sequences: literals, concatenation,
+# slices (v1)", 2026-09-09), on the same TOTAL-operators discipline as
+# gen_int/gen_bool above: `denote`'s TRUE label is only as good as the
+# body's own definedness, so every node gen_seq can produce must be defined
+# at EVERY input, with no requires to narrow the domain (fam_mirror never
+# writes one either). `seq` (the literal) and `+` (concatenation) are
+# unconditionally total per SPEC.md. `slice` in general is not (0 <= a <=
+# b <= len(s) is a real obligation, guarded EXPLICITLY in fuzz_lower.py's
+# f_v1seqops and truth_fuzz's own hand-built fam_definedness/fam_width
+# instead of drawn at random here), so the one slice shape below is pinned
+# to the WHOLE range, s[0..len(s)], which SPEC.md's own bounds make total
+# by construction (0 <= 0 <= len(s) <= len(s) always) the same way a fixed
+# nonzero DIVISORS literal keeps `div`/`mod` total for gen_int.
+# ---------------------------------------------------------------------------
+
+def gen_seq(rng, seqnames, d):
+    if d <= 0 or rng.random() < 0.4:
+        if seqnames and rng.random() < 0.7:
+            return V(rng.choice(seqnames))
+        return op("seq", *[I(rng.choice(LITS)) for _ in range(rng.randint(0, 3))])
+    if rng.random() < 0.5:
+        return op("+", gen_seq(rng, seqnames, d - 1), gen_seq(rng, seqnames, d - 1))
+    inner = gen_seq(rng, seqnames, d - 1)
+    return op("slice", inner, I(0), op("len", inner))
+
+
 # ---------------------------------------------------------------------------
 # Families.
 # ---------------------------------------------------------------------------
@@ -729,6 +792,82 @@ def fam_mirror(rng, n):
         elif wit:
             out.append(rec(f, "ORACLE-SPLIT", "none",
                            "interp.py and ck_ens disagree", "oracle-split", wit))
+    return out
+
+
+def fam_seqops_mirror(rng, n):
+    """`fam_mirror`'s MIRROR + WEAKEN + PERTURB, over `gen_seq` instead of
+    `gen_int`/`gen_body` (SPEC.md "Sequences: literals, concatenation,
+    slices (v1)", 2026-09-09). `denote`/`mirror`/`subst` above are already
+    generic in the operator name, so `seq`, `+` and `slice` needed no
+    change there; what they needed was `V1_OPS` (this file's own
+    `_uses_v1`) and `ck`'s operator table, both extended above, and a
+    generator whose every node is TOTAL by construction (see gen_seq's
+    docstring), the same discipline gen_int already keeps for `div`/`mod`.
+
+    Every ensures stays element-wise (`at(r, k) == at(D, k)`), never a
+    whole-seq `r == D`: fuzz_lower.py's f_v1seqval family already measures
+    spark's whole-seq-`==` gap on its own terms, and a TRUE label earned
+    through it here would let that gap read as spark merely being
+    incomplete on every task in this family rather than the one thing it
+    actually is."""
+    out, i = [], 0
+    while len([r for r in out if r["family"] == "seqops_mirror"]) < n:
+        i += 1
+        if i > 40 * n:
+            break
+        np = rng.randint(1, 2)
+        seqnames = ["s0", "s1"][:np]
+        D = gen_seq(rng, seqnames, 3)
+        if size(D) > 160:
+            continue
+        t = base_seq_task(f"gt_seqops_{i:03d}", seqnames)
+        t["body"] = [{"assign": ["r", D]}]
+        ens_eq = [op("==", op("len", V("r")), op("len", D)),
+                 fa("k", I(0), op("len", V("r")),
+                    op("==", op("at", V("r"), V("k")), op("at", D, V("k"))))]
+        t["ensures"] = ens_eq
+        finish(t)
+        out.append(rec(t, "TRUE", "construction",
+                       "denote() is SPEC.md's statement semantics read "
+                       "compositionally, `seq`/`+`/`slice` included; r == D "
+                       "holds at every input by structural induction on the "
+                       "body, stated element-wise rather than by the "
+                       "whole-seq `==` this family deliberately avoids",
+                       "seqops_mirror"))
+
+        # WEAKEN: len(r) == len(D) alone, entailed by the element-wise fact
+        # above, no appeal to a test.
+        w = base_seq_task(f"gt_seqops_weaken_{i:03d}_len", seqnames)
+        w["body"] = json.loads(json.dumps(t["body"]))
+        w["ensures"] = [op("==", op("len", V("r")), op("len", D))]
+        finish(w)
+        out.append(rec(w, "TRUE", "construction",
+                       "the element-wise fact entails the two seqs have "
+                       "the same length", "seqops_weaken"))
+
+        # PERTURB: every kept element off by one, element-wise, the same
+        # shape fuzz_lower.py's fz_p_seqeq_false uses and for the same
+        # reason: a witness needs len(D) >= 1, so this is FALSE at every
+        # non-empty draw, not at every draw (an empty D makes the forall
+        # vacuously true, SPEC.md's own rule for an empty range).
+        f = base_seq_task(f"gt_seqops_false_{i:03d}", seqnames)
+        f["body"] = json.loads(json.dumps(t["body"]))
+        f["ensures"] = [op("==", op("len", V("r")), op("len", D)),
+                       fa("k", I(0), op("len", V("r")),
+                          op("==", op("at", V("r"), V("k")),
+                             op("+", op("at", D, V("k")), I(1))))]
+        finish(f)
+        wit = falsify(f)
+        if wit and not wit.get("_disagreement"):
+            out.append(rec(f, "FALSE", "witness",
+                           "every element off by one, false at any non-"
+                           "empty draw of D, agreed by interp.py and "
+                           "ck_ens", "seqops_false", wit))
+        elif wit:
+            out.append(rec(f, "ORACLE-SPLIT", "none",
+                           "interp.py and ck_ens disagree", "oracle-split",
+                           wit))
     return out
 
 
@@ -1573,6 +1712,12 @@ def build(seed: int, n_mirror: int):
     trues = [r for r in recs if r["truth"] == "TRUE"
              and r["family"] in ("mirror", "algebra")]
     recs += fam_metamorphic(rng, trues[:max(8, n_mirror // 2)])
+    # Appended LAST, after every existing family has already drawn what it
+    # draws from `rng`: fam_seqops_mirror's own draws land strictly after
+    # theirs in the stream, so a seed's pre-existing task set (name, body,
+    # truth label, everything) is byte-identical to what it was before this
+    # family existed. Only the seqops_* names are new.
+    recs += fam_seqops_mirror(rng, max(4, n_mirror // 4))
     seen, out = set(), []
     for r in recs:
         nm = r["task"]["name"]

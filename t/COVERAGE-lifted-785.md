@@ -1,4 +1,4 @@
-# t cross-kernel agreement — 2026-09-09 20:01Z
+# t cross-kernel agreement — 2026-09-09 22:27Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column.
 
@@ -30,10 +30,10 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot2 | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
 | dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mfirstMaximum | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1 | verified / refuted | malformed / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero | verified / refuted | abstain / abstain | verified / refuted | abstain / abstain | verified / refuted | unproved / refuted | verified / refuted |
+| dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | unproved / refuted | verified / refuted |
 | dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax | verified / refuted | malformed / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafnyexercises_tmp_tmpd6qyevja_part1_q1__addArrays | verified / refuted | unproved / refuted | timeout / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
-| dafnyprograms_tmp_tmp74_f9k_c_invertarray__invertArray | verified / refuted | abstain / abstain | verified / refuted | abstain / abstain | verified / refuted | timeout / refuted | verified / refuted |
+| dafnyprograms_tmp_tmp74_f9k_c_invertarray__invertArray | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | timeout / refuted | verified / refuted |
 | dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_a2_q1_trimmed_copy_______mult | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
 | dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_week5_computepower__calcPower | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_programs_tmp_tmp99966ew4_mymax__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -54,8 +54,8 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileNotEqual | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_min__min | verified / refuted | unproved / refuted | timeout / timeout | verified / refuted | verified / unproved | verified / unproved | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_smallnum__add_small_numbers | verified / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / unproved | unproved / refuted | unproved / refuted |
+| dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_min__min | verified / refuted | unproved / refuted | timeout / timeout | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_smallnum__add_small_numbers | verified / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_square__square | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_success_1__is_even | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | verified / refuted |
 | dafny_tmp_tmp0wu8wmfr_tests_f1a__f | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | malformed / malformed |
@@ -81,7 +81,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_countandreturn__countToAndReturnN | verified / refuted | verified / refuted | abstain / abstain | verified / vacuous | verified / unproved | verified / refuted | verified / refuted |
 | m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted |
 | m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find | verified / unproved | abstain / abstain | verified / unproved | abstain / abstain | verified / unproved | unproved / unproved | verified / unproved |
+| mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find | verified / unproved | verified / unproved | verified / unproved | abstain / abstain | verified / unproved | unproved / unproved | verified / unproved |
 | mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_8_sum__sum | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
 | mieic_mfes_tmp_tmpq3ho7nve_exams_appeal_20_p4__calcF | verified / refuted | unproved / refuted | abstain / abstain | timeout / vacuous | unproved / unproved | unproved / refuted | unproved / refuted |
 | mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
@@ -123,7 +123,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | bbfny_tmp_tmpw4m0jvl0_enjoying__abs | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | bbfny_tmp_tmpw4m0jvl0_enjoying__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__arraySum | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__isPrime | verified / refuted | unproved / refuted | timeout / timeout | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
+| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__isPrime | verified / refuted | unproved / refuted | timeout / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
 | cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
 | cs245_verification_tmp_tmp0h_nxhqp_a8_q1__a8Q1 | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
@@ -133,11 +133,13 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | cs357_tmp_tmpn4fsvwzs_lab7_question2__two | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | cs357_tmp_tmpn4fsvwzs_lab7_question5__a1 | verified / refuted | verified / refuted | verified / timeout | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_fibonacci__computeFib | verified / refuted | unproved / refuted | abstain / abstain | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
+| dafny_duck_tmp_tmplawbgxjo_p3__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted |
 | dafny_exercise_tmp_tmpouftptir_appendarray__appendArray | verified / refuted | verified / refuted | verified / timeout | verified / malformed | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafny_exercise_tmp_tmpouftptir_maxarray__maxArray | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_language_server_tmp_tmpkir0kenl_test_vsi_benchmarks_b1__add | verified / refuted | verified / refuted | verified / timeout | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
 | dafny_language_server_tmp_tmpkir0kenl_test_dafny2_turingfactorial__computeFactorial | verified / unproved | unproved / unproved | unproved / timeout | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
+| dafny_language_server_tmp_tmpkir0kenl_test_tutorial_maximum__maximum | verified / unproved | unproved / refuted | unproved / refuted | abstain / abstain | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_learn_tmp_tmpn94ir40q_r01_assertions__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_learn_tmp_tmpn94ir40q_r01_assertions__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
 | dafny_learn_tmp_tmpn94ir40q_r01_functions__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -153,12 +155,14 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_synthesis_task_id_171__pentagonPerimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
 | dafny_synthesis_task_id_227__minOfThree | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_234__cubeVolume | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| dafny_synthesis_task_id_257__swap | verified / unproved | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / unproved | verified / refuted |
+| dafny_synthesis_task_id_261__elementWiseDivision | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_264__dogYears | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
 | dafny_synthesis_task_id_266__lateralSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
 | dafny_synthesis_task_id_268__starNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
 | dafny_synthesis_task_id_279__nthDecagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
 | dafny_synthesis_task_id_292__quotient | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_3__isNonPrime | verified / verified | abstain / abstain | timeout / timeout | abstain / abstain | unproved / refuted | timeout / refuted | unproved / unproved |
+| dafny_synthesis_task_id_3__isNonPrime | verified / verified | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | timeout / refuted | unproved / unproved |
 | dafny_synthesis_task_id_304__elementAtIndexAfterRotation | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_309__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_397__medianOfThree | verified / verified | verified / verified | verified / verified | verified / verified | verified / unproved | verified / verified | verified / verified |
@@ -172,10 +176,11 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_synthesis_task_id_577__factorialOfLastDigit | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_58__hasOppositeSign | verified / refuted | verified / refuted | verified / refuted | verified / unproved | abstain / abstain | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_581__squarePyramidSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_586__splitAndAppend | verified / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | unproved / refuted | verified / refuted |
 | dafny_synthesis_task_id_59__nthOctagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
 | dafny_synthesis_task_id_598__isArmstrong | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | timeout / timeout | timeout / timeout |
 | dafny_synthesis_task_id_600__isEven | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_605__isPrime | verified / verified | abstain / abstain | timeout / timeout | abstain / abstain | unproved / refuted | unproved / refuted | unproved / unproved |
+| dafny_synthesis_task_id_605__isPrime | verified / verified | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
 | dafny_synthesis_task_id_610__removeElement | verified / refuted | unproved / refuted | timeout / timeout | verified / malformed | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafny_synthesis_task_id_625__swapFirstAndLast | verified / refuted | verified / refuted | verified / refuted | verified / timeout | unproved / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_626__areaOfLargestTriangleInSemicircle | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
@@ -222,59 +227,66 @@ Backends:
 
 Verdict basis: every source file hashed; e.g. `clover_abs__abs.dfy` 33f1a307d5f4103c…, `clover_abs__abs.rs` 732e707fbd23a808…
 
-## Reading, written after the run (2026-09-09, break as a lifter rule, null checks dropped; regenerating the table drops this section, re-append it)
+## Reading, written after the run (2026-09-09, the sequence trio in all seven kernels; regenerating the table drops this section, re-append it)
 
-Eighth sweep. 204 tasks: the seventh sweep's 198 plus six from
-LIFTER-DECISIONS.md rows 23 and 24 (a `break` whose loop is the tail of the
-method lifts to t's early exit; `x != null` on a non-null array is
-dropped): KatzManna's NinetyOne, cmsc433's IsPrime, MBPP-DFY 3 IsNonPrime
-and 605 IsPrime by row 23, and cmsc433's ArraySum and Reverse, which
-re-lifting that file under the current rows brought along. 6 jobs, run
-beside the 1.5B round-0 kernel stage the whole time (the launcher's retry
-loop re-ran the finished sweep four more times before it was caught, which
-is why the header reads 20:01Z), 0 flaked cells: every one of the 2,544
-lowered sources shared with the seventh sweep is byte-identical, and every
-one of the 198 shared rows reads cell for cell as before.
+Ninth sweep. 209 tasks: the eighth sweep's 204 plus the five that
+LIFTER-DECISIONS.md rows 25 to 27 (a Dafny display to the literal, `+` on
+two seqs to concatenation, `s[a..b]` and its sugars to the slice) lift and
+pass every check: dafny-duck's max, the language server tutorial's
+maximum, and MBPP-DFY 257 swap, 261 elementWiseDivision and 586
+splitAndAppend. 6 jobs, run after the fuzz re-run had freed the provers
+and beside the loop's round-2 training on the GPU, 26 minutes, 0 flaked
+cells. Of the lowered sources shared with the eighth sweep, 2,218 are
+byte-identical (every dafny, spark, framac, fstar and verus file, and 322
+of the lean files); all 372 rocq sources differ, by the prelude that grew
+73 lines for the sequence trio, and rocq's 204 shared rows read cell for
+cell as before, so the prelude changed no verdict; 24 lean sources (12
+tasks) differ by the bridge lemmas the residual work added, and two lean
+cells moved, both twins from unproved to refuted (bql's min, and
+add_small_numbers). The other moved cells are the abstains the
+guard-obligation work removed: verus lowers a partial `at` in guard
+position now, so its five abstains read mfirstCero and invertArray
+verified/refuted, mfes's find verified/unproved (the twin dafny cannot
+refute either), and the two MBPP-DFY IsPrime shapes unproved/unproved (a
+`div` in the `decreases` of a proof function, the kernel limit named in
+ROADMAP 12.7); framac's three abstains read invertArray
+verified/malformed (the buffer-length gate every seq-return task hits)
+and the two IsPrime shapes timeout/timeout (the nonlinear divisor fact).
+One cell moved on load alone: cmsc433's isPrime twin in spark, timeout in
+the eighth sweep, refuted here.
 
-| kernel | counts of 204 | largest non-counting classes |
+| kernel | counts of 209 | largest non-counting classes |
 |---|---:|---|
-| dafny | 169 | 17 verified/unproved, 7 verified/verified, 6 no-twin, 3 verified/malformed, 2 timeout/refuted |
-| spark | 127 | 19 abstain, 17 timeout/refuted, 10 timeout/timeout, 9 verified/timeout, 6 no-twin |
-| framac | 125 | 15 timeout/refuted, 14 verified/timeout, 12 verified/malformed, 7 timeout/timeout, 6 no-twin |
-| verus | 122 | 45 unproved/refuted, 11 unproved/unproved, 6 no-twin, 5 abstain, 5 verified/verified |
-| fstar | 121 | 20 malformed/refuted, 19 unproved/refuted, 12 abstain, 9 verified/unproved, 8 unproved/unproved |
-| rocq | 111 | 50 unproved/refuted, 12 abstain, 8 unproved/unproved, 6 no-twin, 5 verified/unproved |
-| lean | 104 | 32 unproved/refuted, 26 unproved/unproved, 25 abstain, 10 verified/unproved, 6 no-twin |
+| dafny | 172 | 19 verified/unproved, 7 verified/verified, 6 no-twin, 3 verified/malformed, 2 timeout/refuted |
+| spark | 129 | 20 timeout/refuted, 19 abstain, 9 verified/timeout, 9 timeout/timeout, 6 unproved/refuted |
+| framac | 127 | 15 timeout/refuted, 15 verified/timeout, 13 verified/malformed, 9 timeout/timeout, 6 no-twin |
+| verus | 126 | 48 unproved/refuted, 13 unproved/unproved, 6 no-twin, 5 verified/unproved, 5 verified/verified |
+| fstar | 125 | 20 malformed/refuted, 20 unproved/refuted, 12 abstain, 9 verified/unproved, 8 unproved/unproved |
+| rocq | 112 | 52 unproved/refuted, 12 abstain, 8 unproved/unproved, 6 verified/unproved, 6 no-twin |
+| lean | 107 | 36 unproved/refuted, 25 unproved/unproved, 25 abstain, 9 verified/unproved, 6 no-twin |
 
 | columns counting | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 |---|---|---|---|---|---|---|---|---|
-| tasks | 42 | 61 | 19 | 16 | 6 | 9 | 24 | 27 |
+| tasks | 42 | 61 | 23 | 16 | 5 | 10 | 24 | 28 |
 
-42 of 204 meet the seven-column bar (42 of 198) and 61 count in six (60).
-Of the 42 lifted MBPP-DFY tasks (40), 8 count in all seven (8); the 1.0 bar
-is 82 of 164.
+42 of 209 meet the seven-column bar (42 of 204) and 61 count in six (61).
+Of the 45 lifted MBPP-DFY tasks (42), 8 count in all seven (8); the 1.0
+bar is 82 of 164.
 
-**The six new rows.** cmsc433's Reverse counts in six, framac
-verified/malformed on the buffer-length gate like every seq-return task.
-ArraySum counts in dafny alone (verus, lean, rocq and fstar unproved, spark
-and framac timeouts on the real: a loop summing a seq, the same shape as
-Clover's arraySum row). The four break tasks are the finding: the two
-MBPP-DFY IsPrime shapes loop on `while i <= n / 2`, and a `div` in a loop
-guard is a definedness obligation neither verus ("partial `at` in guard
-position not implemented") nor framac ("its per-iteration definedness
-assert has no statement to precede") lowers yet, so both ABSTAIN, and the
-committed `is_prime` never showed it because its guard is `i * i <= n`;
-dafny proves both reals and also proves their invariant-drop twins (the
-dropped range invariant is one Dafny's return path does not need, the
-harmless-drop class of ROADMAP 12.3), lean and rocq refute the twins on the
-preservation witness, spark times out. cmsc433's IsPrime, the same shape
-with a `%`, reads dafny verified/refuted, three columns abstain and spark
-and framac time out. NinetyOne, the one task with a duplicated
-continuation, reads dafny verified/unproved and framac vacuous on both
-(every path of its lowered body returns before the trailing return, the
-dead-code vacuity the 12.7 probe named), unproved elsewhere: McCarthy 91
-under a nested-loop encoding is not a shape any column but dafny takes.
-Residuals named by this sweep, each a count: `div`/`mod` in a loop guard in
-verus and framac (2 tasks here, and the census puts `n / 2` bounds in many
-of the MBPP loops); the harmless invariant drop that dafny proves (7
-verified/verified rows now, 5 before).
+**The five new rows.** dafny-duck's max counts in five (lean
+unproved/refuted, rocq timeout/refuted: a maximum over a seq with a
+two-clause ensures). 261 elementWiseDivision counts in five (verus
+unproved/refuted, spark timeout/refuted: an append loop under `div`).
+257 swap, the loop-free `[a[1], a[0]]` shape, counts in four: dafny and
+rocq read verified/unproved, a twin the certificate does not refute in
+either, and framac verified/timeout. 586 splitAndAppend, `l[n..] +
+l[..n]`, counts in two (dafny, fstar): verus, lean and rocq leave the
+real unproved, spark times out, and framac abstains on a fresh `s + t`
+into the output buffer, its named refusal. The language server's maximum
+counts in none: dafny proves the real and cannot refute the twin, the
+other five leave the real unproved, framac abstains. Residuals named by
+this sweep, each a count: the surviving twin on a loop-free seq literal
+(swap, in two columns) and on the two maximum shapes; framac's fresh
+concatenation refusal (1 task here, 6 of the census's 50); the IsPrime
+pair's `div` in a `decreases` (verus, 2) and nonlinear timeout (framac,
+2), unchanged from the eighth sweep's finding.

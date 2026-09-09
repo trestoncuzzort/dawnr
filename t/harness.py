@@ -283,6 +283,15 @@ def _c_off_by_one(body, scope):
                     yield _replace(body, sp + ("args", 0),
                                    {"op": "+", "args": [node["args"][0],
                                                         {"int": d}]})
+            elif node.get("op") == "slice":
+                # s[a +- 1 .. b] and s[a .. b +- 1] (SPEC.md "Sequences:
+                # literals, concatenation, slices"): the wrong window, one
+                # element too many or too few at either end.
+                for k in (1, 2):
+                    for d in (1, -1):
+                        yield _replace(body, sp + ("args", k),
+                                       {"op": "+", "args": [node["args"][k],
+                                                            {"int": d}]})
             elif node.get("op") in ORDER_OPS and kind == "cond-while":
                 # The loop bound: `i < len(s)` has no literal to move.
                 for d in (1, -1):

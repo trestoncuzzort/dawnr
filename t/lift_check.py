@@ -582,6 +582,17 @@ def _t_expr(e: dict, arr: frozenset = frozenset()) -> str:
         # precedence as `*`, so `div`/`mod` print straight back to `/`/`%`.
         dfy_op = "/" if op == "div" else "%"
         return f"({_t_expr(args[0], arr)} {dfy_op} {_t_expr(args[1], arr)})"
+    if op == "seq":
+        # Rows 25-27 (2026-09-09, SPEC.md "Sequences: literals,
+        # concatenation, slices (v1)"): `{"op": "seq", "args": [...]}` is
+        # a Dafny sequence display, `[]` for no arguments. `+` on two
+        # seqs needs no case of its own here: the "+" branch above
+        # already prints `(a + b)`, valid Dafny for both int addition
+        # and seq concatenation (t's own `+` is polymorphic the same
+        # way, per SPEC.md).
+        return "[" + ", ".join(_t_expr(a, arr) for a in args) + "]"
+    if op == "slice":
+        return f"{_t_expr(args[0], arr)}[{_t_expr(args[1], arr)}..{_t_expr(args[2], arr)}]"
     raise ValueError(f"lift_check._t_expr: unknown t operator {op!r}")
 
 

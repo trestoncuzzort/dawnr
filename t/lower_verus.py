@@ -180,6 +180,139 @@ VERIFIED, twin REFUTED); all 15 previously committed tasks still read
 records, and `out/abs.rs`, `out/first_even.rs` and `out/digit_sum.rs`
 (one v0, two v1 with a loop, chosen to cover both lowering paths) are
 byte-identical before and after this change.
+
+SEQUENCES: LITERALS, CONCATENATION, SLICES (2026-09-09, SPEC.md
+"Sequences: literals, concatenation, slices (v1)"). Three new Expr forms,
+each mapped straight onto a kernel-native form, measured with a probe file
+before touching the lowering: `{"op": "seq", "args": [...]}` (`[e1, ...,
+en]`) is vstd's own `seq!` macro, `s + t` on two seqs is Verus's native
+`Add` impl for `Seq<int>` (`s.add(t)` under the hood, measured identical
+either way, probe_seq_basic.rs), and `{"op": "slice", "args": [s, a, b]}`
+(`s[a..b]`) is `s.subrange(a, b)` (vstd::seq::Seq::subrange). None of the
+three needed a new BIN_OPS/NARY_OPS entry beyond `expr()`'s own "seq" and
+"slice" cases: `+` was ALREADY in BIN_OPS, mapped to Rust's own `+`, and
+Verus's operator overloading picks the `Seq<int>` impl or the `int` one by
+the same operand types the SOURCE expression already carries, exactly as
+SPEC.md states ("one operator name, polymorphic by the types of its
+operands exactly as `==` already is") -- no dispatch this file has to do
+itself. The empty literal renders as `Seq::<int>::empty()` rather than
+`seq![]`, reusing the spelling the certificate builder's private `_seq`
+ground node already had (`expr()`'s "_seq" case, present since "Sequences
+as values"), so there are now two AST shapes ({"op":"seq","args":[]} from
+a t task, {"_seq":[]} from a witness) that render identically rather than
+two macros to keep in sync.
+
+DEFINEDNESS. `seq` and `+` cost NOTHING new: both are total per SPEC.md
+("a literal is defined iff all its elements are"; "a concatenation is
+defined iff both arguments are"), which is exactly the formula `defined()`'s
+existing catch-all already computes for every operator not given its own
+case (`_conj([defined(a) for a in args])`) -- `+` was already routed
+through it for the int/int case, and the seq/seq case asks the identical
+question of the identical two arguments, so `defined()` needed no new
+branch for either op. `slice` is the one that costs something: Verus's
+`subrange` carries a `recommends`, not a `requires` (measured,
+probe_subrange2.rs: an unguarded out-of-bound `s.subrange(0, 1)` on an
+empty `s` compiles with only a "recommendation not met" NOTE, no error,
+and critically does NOT totalize -- the very next line's
+`assert(r.len() == 1)` genuinely FAILS to verify, so an unguarded slice is
+neither rejected nor silently given the length its caller expects). A
+lowering that emitted `subrange` bare would therefore neither catch a bad
+slice (no requires to fail) nor prove anything false about it (no
+totalized value to exploit): it would just read UNPROVED wherever the
+bound actually matters, which is not the same failure as `at`'s but is the
+same WRONGNESS SPEC.md's "Definedness" section forbids. So `defined()`
+gets a "slice" case emitting the obligation the docstring above already
+gives a name to: `0 <= a && a <= b && b <= len(s)`, discharged by the
+existing `_assert_defined`/`_wf_lemma` machinery with no new plumbing,
+the same shape as `at`'s two-conjunct bound with one more clause.
+
+MEASURED, tasks/tail.json (`r := s[1..]`, loop-free) and
+tasks/filter_pos.json (`r := r + [s[i]]` inside a loop, plus `r := []` for
+the initial empty literal): both COUNT on first measurement, no lowering
+fix needed beyond the `expr()`/`defined()` cases above. tail's twin
+(off-by-one, `s[2..len(s)]` on a length-1 `s`) is an "undefined" witness
+handled with NO new certificate code: `_undef_obligation` already replays
+`defined()` over the twin body, and the new "slice" case is what it finds
+false (witness s=[0]: `0 <= 2 && 2 <= 1 && 1 <= 1` fails on its middle
+conjunct), so the certificate the existing machinery emits is
+`!(0 <= (1+1) && (1+1) <= len(s) && len(s) <= len(s))`, ground, and Verus
+accepts it under compute_only. filter_pos's twin is an ordinary
+invariant-drop "exit" witness, the kind every loop task already
+certifies; its exit state's `r` substitutes a seq literal (`seq![1int]`)
+through the same `_tlit`/`expr()` path "Sequences as values" already
+built. Neither task exercised `_gint`, `_tlit`, or `_unroll` beyond what
+they already handled, so no certificate-builder code changed. swap and
+reverse are BYTE-IDENTICAL to their prior `out/` sources (`cmp`, all four
+files), confirming the two new `expr()`/`defined()` cases are additive
+and untaken by any previously committed task. Cells (out/agent-verus-
+seqops/, this run): tail COUNTS (real VERIFIED, twin REFUTED, witness
+s=[0] -> slice bounds [2..1] outside 0<=a<=b<=1), filter_pos COUNTS (real
+VERIFIED, twin REFUTED, invariant-drop#1, witness s=[], i=1, r=[1]), swap
+and reverse unchanged (both COUNT, byte-identical sources). No kernel
+trigger-inference gap was hit: tail's and filter_pos's foralls both index
+a Seq (`r[k]`, `s[k+1]`) so `_has_indexable` already lets Verus's
+automatic inference find them, same as every previously committed seq
+task; `slice` itself needed no trigger case in `_has_indexable` or
+`_mod_div_trigger` since no committed quantifier body contains one.
+
+GUARD DEFINEDNESS (2026-09-09, the residual t/COVERAGE-lifted-785.md names:
+"a `div`/`mod` in a loop guard is a definedness obligation ... verus ...
+doesn't lower yet"). `loop()` used to raise NotImplementedError outright
+whenever `defined(cond)` or `defined(decreases)` was non-trivial, which is
+exactly what the two MBPP-DFY IsPrime tasks hit (`while i <= n / 2`, guard
+and decreases both containing `n div 2`; the committed `is_prime` never
+showed this because its own guard is `i * i <= n`, no div/mod at all).
+Fixed the same way an ordinary statement's obligation is discharged: the
+combined obligation `defined(cond) && defined(decreases)`, plus every
+div/mod pair's Euclidean-law bridge (`_div_mod_law`, deduplicated across
+`cond` and `decreases`), is emitted as the FIRST lines of the recursive
+loop helper's own body, before the `if {cond} {...}` that is the only
+place `cond` is ever evaluated. This covers every evaluation of the guard,
+including the outermost one, since even the initial call from the loop's
+own call site runs through this same helper body; no call-site or
+`req_clauses` change was needed, since the assert is proved from the
+helper's own `requires` (already every invariant in scope), the same
+context an ordinary in-body `_assert_defined` already relies on. Trivial
+(`_conj([defined(cond), defined(decreases)]) == TRUE`, true for every
+previously committed loop task) emits nothing, so `is_prime`, `first_even`
+and `tail` are byte-identical before and after this change (checked
+directly, `cmp`, real and twin, all six files).
+
+That fix turns the two IsPrime tasks' verdict from ABSTAIN into a real
+kernel attempt, and surfaces a SECOND, separate residual: Verus's
+automatic termination check for a `proof fn`'s recursive `decreases`
+clause cannot discharge one containing `div` or `mod` at all, regardless
+of provability. Measured by isolating the two loop clauses on a minimal
+probe (`i <= n / 2` as the guard alone, decreases `n - i`: verifies;
+decreases `(n / 2) - i` alone, guard linear: "could not prove
+termination" at the recursive call; decreases `n % 5 - i` alone: same
+failure; decreases `n * 2 - i`, a literal-multiplication analogue: no
+termination error). No hint closes it: an explicit local `assert` of the
+same nonneg/strict-decrease facts before the call, `#[verifier::nonlinear]`
+on the helper, restating the guard or the Euclidean law as an extra
+`requires` clause, and wrapping the division in its own non-recursive
+`spec fn` (hoping the checker would treat it as an opaque call rather than
+expanding it) were all tried and none changes the error. There is no
+escape hatch to reach for either: `strings` on the installed
+`rust_verify` binary (0.2026.08.30.b432e82) shows `decreases_by` and
+`decreases_when` exist as attributes, but both carry the diagnostic "only
+spec functions can use decreases_by/recommends_by" / "only spec functions
+can use decreases_when" -- neither is available on a `proof fn`, which is
+what every t loop helper is (see LOOPS above). Since the task's own
+`decreases` is `n div 2 - i` and this lowering owes it verbatim, not a
+kernel-friendlier equivalent (SPEC.md: `decreases` is an Expr like any
+other, faithfully rendered, not re-derived), there is nothing left for
+THIS lowering to do about it: `dafny_synthesis_task_id_3__isNonPrime` and
+`dafny_synthesis_task_id_605__isPrime` both read verus unproved/unproved
+(real and twin alike, `out/agent-verus-guard/`, PATH including
+`~/.cargo/bin` so `rustup` resolves) -- the kernel's own message is
+"could not prove termination" at the recursive call, not a fault in
+either the real body or the invariant-drop twin, and not a defect in the
+task's invariants either (nothing about the INVARIANTS blocks this; the
+decreases clause alone does, independent of every other clause on the
+loop). Measured (`cmp`, real and twin): `is_prime`, `first_even` and
+`tail` are unaffected by either finding, byte-identical to their
+committed `out/*.rs`.
 """
 from __future__ import annotations
 
@@ -342,6 +475,31 @@ def expr(e: dict) -> str:
         return f"{args[0]}.update({args[1]}, {args[2]})"
     if op == "fill":
         return f"Seq::new({args[0]} as nat, |_t_fill_i: int| {args[1]})"
+    if op == "seq":
+        # SPEC.md "Sequences: literals, concatenation, slices" (2026-09-09):
+        # [e1, ..., en], n >= 0. `seq!` is vstd's own literal macro; the
+        # empty case renders as `Seq::<int>::empty()` (measured,
+        # probe_seq_basic.rs: both forms verify, and `seq![]` is not needed
+        # since this file already has the empty-literal spelling from the
+        # certificate builder's `_seq` node below). Each element is
+        # rendered by `expr()` like any other operand, so a non-literal
+        # element (filter_pos's `seq![s[i]]`) picks up the same suffixing
+        # and indexing this file already emits everywhere else.
+        if not args:
+            return "Seq::<int>::empty()"
+        return "seq![" + ", ".join(args) + "]"
+    if op == "slice":
+        # s[a..b]: vstd's own `Seq::subrange`, measured (probe_seq_expr.rs,
+        # probe_subrange2.rs). Its own `recommends` is NOT enforced by the
+        # kernel (measured: an unguarded out-of-bound `subrange` compiles
+        # with only a "recommendation not met" NOTE, and a false claim
+        # about its result -- e.g. the length postcondition -- correctly
+        # FAILS to verify rather than being handed a totalized value), so
+        # this op carries no defaults of its own; `defined()`'s "slice"
+        # case below is what actually keeps this lowering honest, exactly
+        # as SPEC.md requires ("a definedness obligation ... exactly as
+        # `at`").
+        return f"{args[0]}.subrange({args[1]}, {args[2]})"
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
@@ -438,6 +596,25 @@ def defined(e: dict) -> dict:
         n, v = args
         nonneg = {"op": ">=", "args": [n, {"int": 0}]}
         return _conj([defined(n), defined(v), nonneg])
+    if op == "slice":
+        # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s) (SPEC.md "Sequences:
+        # literals, concatenation, slices", 2026-09-09), a definedness
+        # obligation under these rules exactly as `at` outside [0, len) --
+        # Verus's own `subrange` only carries a `recommends`, which the
+        # kernel does not enforce (measured, see `expr()`'s "slice" case),
+        # so this file owes the bound itself or a bad slice would silently
+        # totalize. `seq` (the literal) and `+` (concatenation, on two
+        # seqs as much as on two ints) need no case here: both are total
+        # per SPEC.md ("a literal is defined iff all its elements are";
+        # "a concatenation is defined iff both arguments are"), exactly the
+        # formula the existing catch-all below already computes for every
+        # total operator, `+` included.
+        s, a, b = args
+        bound = {"op": "and", "args": [
+            {"op": "<=", "args": [{"int": 0}, a]},
+            {"op": "<=", "args": [a, b]},
+            {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}
+        return _conj([defined(s), defined(a), defined(b), bound])
     if op in ("div", "mod"):
         x, y = args
         nonzero = {"op": "!=", "args": [y, {"int": 0}]}
@@ -842,11 +1019,39 @@ class _V1:
         self.loop_ix += 1
         invs = w.get("invariants", [])
         cond, dec = w["cond"], w["decreases"]
-        for label, e in (("cond", cond), ("decreases", dec)):
-            if defined(e) != TRUE:
-                raise NotImplementedError(
-                    f"verus: definedness obligation on loop {label} "
-                    f"(partial `at` in guard position) not implemented")
+
+        # GUARD DEFINEDNESS (2026-09-09, the residual COVERAGE-lifted-785.md
+        # names: a `div`/`mod` in a loop guard -- `cond` or `decreases` --
+        # is a definedness obligation neither of these two shared no-op
+        # `TRUE` conditions the check used to require. `cond` and
+        # `decreases` are each evaluated once per call of the recursive
+        # helper below (`cond` by the `if` at its top, `decreases` by
+        # Verus's own termination check over the same call), so their
+        # combined obligation is asserted as the FIRST statement of the
+        # helper body -- see `guard_pre` near the helper's own text --
+        # which covers every evaluation, including the very first, since
+        # even the outermost call site runs through this same body. That
+        # assert is discharged from the helper's own `requires` (every
+        # invariant already in scope there, see `req_clauses` below), the
+        # identical mechanism an ordinary statement's `_assert_defined`
+        # already uses; no separate wf lemma is needed since this is a
+        # statement position, not a declarative one, and no call-site
+        # change is needed either, since the assert lives inside the
+        # callee. Trivial for every previously committed loop task
+        # (`is_prime` included: its guard is `i * i <= n`, no div/mod) so
+        # `guard_ob` there stays `TRUE` and nothing is emitted, keeping
+        # `is_prime`, `first_even` and `tail` byte-identical.
+        guard_ob = _conj([defined(cond), defined(dec)])
+        guard_lines: list[str] = []
+        if guard_ob != TRUE:
+            guard_lines.append(f"    assert({expr(guard_ob)});")
+        gd_pairs: dict[tuple[str, str], tuple[dict, dict]] = {}
+        for e in (cond, dec):
+            for x, y in _div_mod_pairs(e):
+                gd_pairs.setdefault((expr(x), expr(y)), (x, y))
+        for x, y in gd_pairs.values():
+            guard_lines.append(_div_mod_law(x, y, "    "))
+        guard_pre = "".join(line + "\n" for line in guard_lines)
 
         # invariant k may assume invariants 1..k-1 (SPEC.md definedness)
         allvars = [(n, t) for n, (t, _m) in scope.items()]
@@ -954,7 +1159,7 @@ class _V1:
             f"{req}    ensures\n        {ens_s},\n"
             f"    decreases {expr(dec)},\n"
             "{\n"
-            f"{old_lets}{shadows}"
+            f"{old_lets}{shadows}{guard_pre}"
             f"    if {expr(cond)} {{\n"
             + "\n".join(inner) + "\n"
             f"        {hname}({args})\n"

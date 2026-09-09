@@ -1081,6 +1081,66 @@ for-desugaring gap named on 2026-09-09 morning), 2 fail `L_fun` on
 `IsOdd`/`IsEven` predicates; the remaining 5 are string, cast, nested-seq,
 multi-return and slice gaps the census also names. Sweep: 204 tasks (198 plus the six), 6 jobs, 0 flaked cells, every one of the 2,544 lowered sources shared with the seventh sweep byte-identical and every shared row cell for cell as before; 42 of 204 in all seven (42 of 198) and 61 in six (60), MBPP-DFY 42 lifted and 8 in all seven; of the six new rows cmsc433's Reverse counts in six, and the two MBPP-DFY IsPrime shapes ABSTAIN in verus and framac on a `div` in the loop guard (`while i <= n / 2`), a definedness obligation neither lowers in guard position, the residual this wave names for those two columns, while dafny proves their invariant-drop twins (the harmless-drop class of 12.3) and lean and rocq refute them.
 
+**sequence literals, concatenation and slices LANDED 2026-09-10 (the
+substrate for strings); the adversarial reproduction is the open clause.**
+Chosen by two censuses that agree: on the 785, 50 of the 643 gradable
+programs are blocked by sequence operations alone (28 append a singleton
+`r := r + [x]`, 27 start from `[]`, 30 slice, 10 prepend, 6 concatenate
+slices; 30 of the 50 are MBPP-DFY), and on the 24,748 nl/ problems a
+literal is needed by 8,599, concatenation by 6,030, a slice by 3,305, while
+the top gap there, strings at 18,361, is a sequence of characters that
+needs exactly these three before a character type means anything. SPEC.md
+"Sequences: literals, concatenation, slices (v1)": `{"op": "seq", "args":
+[...]}` written `[a, b]` (`[]` empty, elements int), `+` on two seqs is
+concatenation, one operator name polymorphic by operand type exactly as
+`==` already is, and `{"op": "slice", "args": [s, a, b]}` written
+`s[a..b]`, defined iff `0 <= a <= b <= len(s)`, with `s[a..]` and `s[..b]`
+as parser sugar printed back in the three-argument form. Core: interp
+(tuple concatenation under the length cap, a slice outside its bounds
+undefined), check_wf (a variadic literal, the ternary slice, `+` typed on
+seqs), the notation (the `..` symbol, the literal in atom position, the
+slice in postfix position; round trip 1630 of 1630 and 3,000 random ASTs),
+the twin walker (off-by-one now reaches both bounds of a slice). Two
+committed tasks: `tail` (loop-free, `r := s[1..]`, twin an off-by-one
+refuted at `s = [0]`) and `filter_pos` (a loop appending `r := r + [s[i]]`
+under `len(r) <= i` and a value invariant, the append idiom the census
+counts, twin an invariant drop). Seven lowerings, each with a dated note:
+dafny's own display, `+` and `s[a..b]`, the slice's definedness Dafny's well-formedness check (a probe with an unguarded bound rejects); verus `seq![..]`, `Seq::add` through the native `+`, `subrange(a, b)` with the obligation emitted by the lowering since vstd's `subrange` only recommends its bounds (an unguarded slice warns and never totalises, measured), and its `defined()` is the certificate formula F* shares, so one slice case served two columns; fstar `Seq.append` over `Seq.create 1 e` for a literal, `Seq.slice` whose refinement rejects an out-of-range slice at typing, every lemma firing on its SMT pattern with none named; lean the list literal, `++`, `(s.drop a.toNat).take (b - a).toNat` (measured against `List.extract`, no gain), two hand-proved read lemmas `t_seq_append_get` and `t_seq_slice_get`, the termination bridge extended with `length_append`, `length_take`, `length_drop`, and a latent defect fixed in the certificate emitter (a nested `have ... := by` that Lean's parser swallowed the rest of the tactic into, dead code until `filter_pos`'s value-invariant certificate reached it); rocq the literal as a chain of `t_upd` over `t_fill 0`, opaque `t_app` with a three-way case split and `t_slice` with an unconditional rewrite, joined into `t_inv1`, the prelude 73 lines longer in every file and identical elsewhere; spark a literal as `Seqs.Add` over `Seqs.Empty_Sequence`, `T_Concat` and `T_Slice` as recursive functions in the generic with `Post` contracts for length and elements and `Pre => 0 <= A <= B <= Length (S)`, a static type reader threaded through the compiler so a seq `+` is told from an int `+` (Ada has no `+` on the generic), 0 timeouts twice; framac a slice in read position as the sub-buffer `(s + a, b - a)` with no copy, a slice assigned to the output buffer as a copy loop, a literal as stores, and a CAPACITY mode for the append idiom: the output buffer's size is read off the task's first `len(r) <= E` or `== E` ensures, the logical length tracked in an `r_len` local with an implicit `0 <= r_len` invariant (the matching upper bound was tried and measured WRONG: it made the postcondition provable without the task's own `i <= len(s)` invariant, so the invariant-drop twin verified and the file read MALFORMED; only the lower bound belongs to the lowering, the upper bound is the author's), and named refusals for a slice into a capacity buffer, a fresh `s + t`, and a bare seq value in ACSL term position. Every column reads `tail` and `filter_pos` verified/refuted and `swap` and `reverse` byte-identical, measured by each agent in its own column before the matrix. The flip table, AGREEMENT.md at 19 tasks: `tail` and `filter_pos` verified/refuted in all seven columns, the 17 older rows cell for cell as before, 18 of 19 in all seven, `reverse` in six on framac's coherence gate as before (run at 16 jobs beside the loop's sampling job, 0 flaked). Fuzz
+family `v1seqops` (tail and head slices, a parameter window, an append
+loop, a filter loop, concatenation of two parameters, a rotation, a
+prepend loop, and five probes): 17 instances plus the 5 probes at n=400 seed 1, 154 cells at flake 3, graded for the first time with the grounded twin ladder and its witness (the fuzz driver had used the body-only rule, which gave every loop-free shape no twin at all and every twin no certificate, so a first run read 78 no-flip cells and 10 no-twin tasks; `fuzz_lower.build_corpus` and the grading path now call `harness.twin_cached`, the same instrument `run_par` uses): 0 disagreements, 0 against ground truth, 0 twins surviving; verified/refuted in verus 19 of 19, dafny 18, spark 18, fstar 18, rocq 17, framac 14 (two abstains on a fresh `s + t` into the output buffer, the named refusal), lean 13 (six loop shapes unproved on the real, its residual); the three probes true by construction (`len([]) == 0`, the concatenation length, a literal index) have no falsifying twin and read no-twin, as they should. Ground truth: the regression run beside the loop's grading job crashed in spark's scratch cleanup (`OSError: Directory not empty: 'gnatprove'`, two runs sharing one working directory), re-run alone before this paragraph is final. Lifter:
+LIFTER-DECISIONS.md rows 25 to 27 map a Dafny display to the literal, a
+`+` on two seqs to `+`, `s[a..b]` and its sugars to the slice, and the
+`seq<int>` return refusal that outlived the seq-return construct is gone;
+of the 51 programs the census blocks on sequence operations alone, 5 lift and pass every check (dafny-duck's max, the language server's Maximum, MBPP-DFY 257 Swap, 261 ElementWiseDivision, 586 SplitAndAppend), 13 lift and fail the checker (6 on `L_inv_0`, the for-loop invariant lemma named twice today, 2 on `L_req`, 1 on `L_fun`, 3 differential-run timeouts under the night's load, 1 a spec-function `decreases` typing gap), and 33 are refused earlier: 15 for a quantifier the lifter reads as unbounded (the two-binder shape again, now the largest single lifter residual), 7 for a function contract, 4 at parse on `let`, 4 for a bounded slice of a mutated array (row 22's own refusal), 3 others. Census: `seq-literal`, `seq-slice`, `seq-return` and `seq-update`
+are burdens now and `seq-concat` a new one; with two refinements the shape measurement earned the same night (a zero-return method whose effect is its one array is row 22's shape and a burden, `zero-returns-array` 43 programs; a file whose methods never call each other is a burden, `multi-method-independent` 86), DafnyBench in fragment 190 to 277 of 643 (43.1 percent), the greedy order now `multi-return` (32), `string-char` (17), `nested-seq` (17), `array` (16), `real` (15), `set` (15); MBPP-DFY 72 to 105 of 164 lexically in fragment, order `string-char` (13), `nested-seq` (13), `real` (9), `set` (6), `multi-return` (4); the lifter half 45 lifted. Sweep: 209 tasks (the 204 plus the five rows 25 to 27 lift), 6 jobs, 26 minutes, 0 flaked cells; 42 in all seven (42 of 204), 61 in six (61), 23 in five (19); the five new rows count in five, five, four, two and none (dafny-duck's max, 261 elementWiseDivision, 257 swap whose twin survives in dafny and rocq, 586 splitAndAppend on which framac abstains by the fresh-concatenation refusal, the language server's maximum); 2,218 shared lowered sources byte-identical, rocq's 372 all changed by the prelude with its 204 rows cell for cell as before, lean's 24 changed sources moving two surviving twins to refuted; the guard-obligation work turned verus's five abstains into two verified/refuted, one verified/unproved and the two IsPrime unproved/unproved cells the `decreases` limit predicts, and framac's three abstains into one verified/malformed and two timeouts (COVERAGE-lifted-785.md, the ninth Reading).
+The spec experiment's prompt grammar does not yet carry the forms on
+purpose: the loop's round 2 was sampling under the round-1 prompt while
+this landed, and the curve compares rounds under one prompt; the forms
+enter the prompt as its version 2 with the control column re-measured
+under it. Residuals: the two-binder quantifier the lifter reads as unbounded (15 refusals among the 51, 7 among the break programs, the largest lifter residual, next lifter row); the checker's `L_inv_0` and `L_ens` lemmas on for-loop invariants and array quantifiers (6 of the 13 check failures here, 13 rows on MBPP-DFY); verus cannot prove termination of a proof function whose `decreases` contains `div` or `mod` (both MBPP-DFY IsPrime tasks unproved after the guard obligation landed, a kernel limit with no hint that closes it); framac's IsPrime pair times out on the nonlinear divisor fact four other columns also fail, and its certificate builder has no preservation-witness kind; framac abstains on a fresh `s + t` into the output buffer; lean's six loop shapes in the family and five lifted seq loops; the ground-truth regression still to re-run alone; and two designs the shape measurement earned: a pair type for the 46 coupled `(int, int)` loop outputs among 73 multi-return methods with a sentinel rule for the 7 `(bool, int)` searches, and batching for the 6,291 multi-test-case stdin problems the signature instrument refuses. Next construct: the character type and
+strings as sequences of characters.
+
+**strings as sequences of code points, notation LANDED 2026-09-10; the
+lifter row and the pool are the open clauses.** SPEC.md "Strings as
+sequences of code points (v1)" adds no type and no operator: a character
+is its code point, a string a `seq` of them, and the notation's `'a'` and
+`"abc"` are sugar the parser expands to `{"int": 97}` and the seq literal,
+never printed (round trip 1668 of 1668, 9 of 9 written lines, 3 literal
+probes, 3,000 random ASTs). The nl/ census split its top gap on that
+line: `string-as-seq` is a burden on 13,339 problems, `string-lib` (the
+Python library: `split` 17,355 uses, `join`, `count`, `strip`, `format`)
+stays a gap on 13,266 (sole blocker for 225 function-shaped problems);
+function-shaped in fragment 449 to 511, stdin would-be 361 to 698. Beside
+it the stdin instrument `nl_stdin.py` (`COVERAGE-nl-stdin.md`): of 20,509
+stdin problems 3,058 take a typed signature that fits every sample (`n`
+then a sequence 948, one int 615, two ints 543) and 203 are in the pool
+today; the largest refusal is the multi-test-case wrapper (6,291), the
+next construct on that corpus. Open: LIFTER-DECISIONS.md row 28 (Dafny
+`string`/`char` to seq/int), the spec experiment's pool version 2 with
+string tests as code points, and the prompt's version 2 with the new forms,
+measured against the control column before any round is compared under it.
+
 ### 12.8 Standing items
 
 **The cell runs its six kernel calls at once (2026-09-09).** run_par and

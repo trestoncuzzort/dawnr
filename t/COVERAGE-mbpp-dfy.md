@@ -6,59 +6,54 @@ over them alone before opening a gate for them. The census half reuses
 `coverage_census.greedy` unchanged, so it reproduces the MBPP section of
 `COVERAGE-dafnybench.md`; the lifter half is read from a completed run.
 
-MBPP-DFY: 164 programs, 164 gradable, 72 lexically in fragment
+MBPP-DFY: 164 programs, 164 gradable, 105 lexically in fragment
 
 ## The census curve (gap sets, so a real gate walk)
 
 | step | gate | newly unlocked | cumulative | of 164 |
 |---|---|---:|---:|---:|
-| 1 | string-char | 9 | 81 | 49.4% |
-| 2 | real | 9 | 90 | 54.9% |
-| 3 | set | 6 | 96 | 58.5% |
-| 4 | nested-seq | 6 | 102 | 62.2% |
-| 5 | seq-literal | 4 | 106 | 64.6% |
-| 6 | seq-return | 23 | 129 | 78.7% |
-| 7 | seq-slice | 15 | 144 | 87.8% |
-| 8 | multi-return | 4 | 148 | 90.2% |
-| 9 | char-arith | 3 | 151 | 92.1% |
-| 10 | array | 2 | 153 | 93.3% |
-| 11 | zero-returns | 2 | 155 | 94.5% |
-| 12 | bitvector | 2 | 157 | 95.7% |
-| 13 | multi-method | 1 | 158 | 96.3% |
-| 14 | early-exit | 2 | 160 | 97.6% |
-| 15 | array-mutation | 1 | 161 | 98.2% |
-| 16 | unbounded-quantifier | 1 | 162 | 98.8% |
-| 17 | tuple | 1 | 163 | 99.4% |
-| 18 | higher-order | 0 | 163 | 99.4% |
-| 19 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | string-char | 13 | 118 | 72.0% |
+| 2 | nested-seq | 13 | 131 | 79.9% |
+| 3 | real | 9 | 140 | 85.4% |
+| 4 | set | 6 | 146 | 89.0% |
+| 5 | multi-return | 4 | 150 | 91.5% |
+| 6 | char-arith | 3 | 153 | 93.3% |
+| 7 | array | 2 | 155 | 94.5% |
+| 8 | bitvector | 2 | 157 | 95.7% |
+| 9 | zero-returns | 1 | 158 | 96.3% |
+| 10 | early-exit | 1 | 159 | 97.0% |
+| 11 | multi-method | 1 | 160 | 97.6% |
+| 12 | array-mutation | 1 | 161 | 98.2% |
+| 13 | unbounded-quantifier | 1 | 162 | 98.8% |
+| 14 | tuple | 1 | 163 | 99.4% |
+| 15 | higher-order | 0 | 163 | 99.4% |
+| 16 | seq-comprehension | 1 | 164 | 100.0% |
 
-Reaches WS-16.2's bar of 82 at step 2, on opening `real` (90).
+Reaches WS-16.2's bar of 82 at step 1, on opening `string-char` (118).
 
 ## What the lifter actually did to the same programs
 
-164 files with a record, 167 method rows, 42 lifted.
+164 files with a record, 167 method rows, 45 lifted.
 
 | first refusal | rows |
 |---|---:|
-| seq-return | 18 |
+| lift-check-failed | 21 |
+| unbounded-quantifier | 21 |
 | string-char | 14 |
 | nested-seq | 13 |
-| lift-check-failed | 13 |
-| unbounded-quantifier | 12 |
 | heap | 10 |
 | real | 9 |
 | as-cast | 7 |
-| div-mod | 5 |
 | function-contract | 4 |
 | multi-return | 4 |
 | zero-returns | 4 |
 | set | 3 |
+| lift-diff-failed | 3 |
+| array | 3 |
 | let-expression | 3 |
-| array | 2 |
 | higher-order | 1 |
-| seq-slice | 1 |
-| seq-literal | 1 |
 | parse-failure | 1 |
+| div-mod | 1 |
 
 A first-refusal count is a LOWER bound on what opening that gate
 buys: the lifter stops at the first construct it cannot take, so a
@@ -69,7 +64,7 @@ program counted under one gate may be blocked by others behind it.
 | | count |
 |---|---:|
 | files with both a census record and a lifter record | 164 |
-| the census calls in fragment (no gaps) | 72 |
-| the lifter lifted at least one method | 42 |
-| lifted although the census named a gap | 1 |
-| census-clean but nothing lifted | 31 |
+| the census calls in fragment (no gaps) | 105 |
+| the lifter lifted at least one method | 45 |
+| lifted although the census named a gap | 0 |
+| census-clean but nothing lifted | 60 |

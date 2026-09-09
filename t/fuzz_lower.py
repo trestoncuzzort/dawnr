@@ -226,7 +226,29 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if n > MAX_SEQ:
             raise Budget("seq length cap")
         return (v,) * n
+    if op == "seq":
+        # SPEC.md "Sequences: literals, concatenation, slices" (2026-09-09):
+        # [e1, ..., en], every argument already evaluated above, so a
+        # literal is defined iff all its elements are. A CLONE of
+        # interp.ev's own seq arm.
+        return tuple(args)
+    if op == "slice":
+        # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s); elements a..b-1. A
+        # CLONE of interp.ev's own slice arm.
+        s, lo, hi = args
+        if not (0 <= lo <= hi <= len(s)):
+            raise Undef(f"slice bounds [{lo}..{hi}] outside "
+                        f"0 <= a <= b <= {len(s)}")
+        return tuple(s[lo:hi])
     if op == "+":
+        if isinstance(args[0], tuple):
+            # s + t on two seqs is concatenation (SPEC.md "Sequences:
+            # literals, concatenation, slices"): always defined, the
+            # length cap the only limit, as for fill. A CLONE of
+            # interp.ev's own + arm.
+            if len(args[0]) + len(args[1]) > MAX_SEQ:
+                raise Budget("seq length cap")
+            return args[0] + tuple(args[1])
         return args[0] + args[1]
     if op == "-":
         return args[0] - args[1]
@@ -338,8 +360,9 @@ V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
           "and", "or", "not", "implies"}
 # div and mod are v1 (SPEC.md "Division and modulo", 2026-09-08): Euclidean,
 # undefined at y == 0, so v1's definedness rules apply to them as to at.
-V1_OPS = V0_OPS | {"len", "at", "div", "mod", "update", "fill"}
-TERNARY = {"update"}
+V1_OPS = V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
+TERNARY = {"update", "slice"}
+VARIADIC = {"seq"}      # the literal: any arity, zero included
 UNARY = {"neg", "not", "len"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
@@ -406,11 +429,25 @@ def _ty(e, env, funs, ver, errs, bound):
         errs.append(f"{op} takes one argument")
     if op in TERNARY and len(args) != 3:
         errs.append(f"{op} takes three arguments")
-    if op not in UNARY and op not in NARY and op not in TERNARY and len(args) != 2:
+    if (op not in UNARY and op not in NARY and op not in TERNARY
+            and op not in VARIADIC and len(args) != 2):
         errs.append(f"{op} takes two arguments")
     if op in NARY and len(args) < 2:
         errs.append(f"{op} needs at least two arguments")
     ts = [_ty(a, env, funs, ver, errs, bound) for a in args]
+    if op == "seq":
+        # SPEC.md "Sequences: literals, concatenation, slices": [e1, ..., en]
+        # of ints, [] included.
+        if any(t != "int" for t in ts):
+            errs.append("seq literal wants int elements")
+        return "seq"
+    if op == "slice":
+        if ts[0] != "seq" or ts[1] != "int" or ts[2] != "int":
+            errs.append("slice wants (seq, int, int)")
+        return "seq"
+    if op == "+" and len(ts) == 2 and ts == ["seq", "seq"]:
+        # s + t on two seqs is concatenation, the same polymorphism as ==.
+        return "seq"
     if op == "len":
         if ts[0] != "seq":
             errs.append("len of a non-seq")
@@ -812,6 +849,18 @@ def FILL(n, v):
     return OP("fill", n, v)
 
 
+def SEQ(*es):
+    return OP("seq", *es)
+
+
+def SLICE(s, a, b):
+    return OP("slice", V(s), a, b)
+
+
+def CAT(a, b):
+    return OP("+", a, b)
+
+
 def FA(v, lo, hi, b):
     return {"forall": {"var": v, "lo": lo, "hi": hi, "body": b}}
 
@@ -858,10 +907,14 @@ def _defined_first(invs):
     way; the family's first draft put the value invariant first and read
     unproved in six columns on every loop shape (Dafny: "index out of
     range" on the invariant itself). Invariants with no `at` keep their
-    order and go first; the rest follow in their order."""
+    order and go first; the rest follow in their order. `slice` carries the
+    same obligation, 0 <= a <= b <= len(s) (2026-09-09, sequence ops), so an
+    invariant that slices under loop-varying bounds is held back exactly
+    like one that indexes."""
     def has_at(e):
         if isinstance(e, dict):
-            return e.get("op") in ("at", "update") or any(has_at(v) for v in e.values())
+            return (e.get("op") in ("at", "update", "slice")
+                   or any(has_at(v) for v in e.values()))
         if isinstance(e, list):
             return any(has_at(v) for v in e)
         return False
@@ -1704,6 +1757,179 @@ def f_v1seqval(rng, idx):
             "_shape": "idwrite"}
 
 
+def f_v1seqops(rng, idx):
+    """SPEC.md "Sequences: literals, concatenation, slices (v1)"
+    (2026-09-09): the literal, `+` concatenation and `slice`, on top of
+    "Sequences as values"'s `at`/`update`/`fill`. Every ensures below is
+    element-wise (`forall k in [0, len(r)) . r[k] == ...`), never a
+    whole-seq `==`: SPEC.md's `==` on two seqs is extensional and
+    f_v1seqval's fz_p_seqeq_* probes already measure that gap on its own,
+    so this family stays on the ground `at`/`slice` reads a lowering
+    cannot totalize away. Loop invariants go through WH_DF: `_defined_first`
+    now treats `slice` the same as `at`/`update` (2026-09-09), so a
+    length/range invariant is checked before one that slices or indexes."""
+    me = f"fz_v1seqops_{idx:03d}"
+    shape = rng.choice(["tail", "head", "window", "append_loop",
+                        "filter_loop", "concat_params", "rotate",
+                        "prepend_loop"])
+
+    if shape in ("tail", "head"):
+        # A slice of a parameter with a requires on its length: SPEC.md's
+        # own committed `tail` task, plus its mirror `head`.
+        if shape == "tail":
+            body = [ASG("r", SLICE("s", I(1), LEN("s")))]
+            ens = [OP("==", LEN("r"), OP("-", LEN("s"), I(1))),
+                  FA("k", I(0), LEN("r"),
+                     OP("==", AT("r", V("k")),
+                        AT("s", OP("+", V("k"), I(1)))))]
+        else:
+            body = [ASG("r", SLICE("s", I(0), OP("-", LEN("s"), I(1))))]
+            ens = [OP("==", LEN("r"), OP("-", LEN("s"), I(1))),
+                  FA("k", I(0), LEN("r"),
+                     OP("==", AT("r", V("k")), AT("s", V("k"))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [OP(">=", LEN("s"), I(1))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "window":
+        # s[a..b] with a, b PARAMETERS, exactly SPEC.md's own definedness
+        # obligation stated as a requires: 0 <= a <= b <= len(s).
+        body = [ASG("r", SLICE("s", V("a"), V("b")))]
+        ens = [OP("==", LEN("r"), OP("-", V("b"), V("a"))),
+              FA("k", I(0), LEN("r"),
+                 OP("==", AT("r", V("k")),
+                    AT("s", OP("+", V("a"), V("k")))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "a", "type": "int"},
+                          {"name": "b", "type": "int"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [AND(OP("<=", I(0), V("a")),
+                                OP("<=", V("a"), V("b")),
+                                OP("<=", V("b"), LEN("s")))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "append_loop":
+        # r := r + [f(s[i])] for every element: the census's top append
+        # idiom (SPEC.md "Sequences: literals, concatenation, slices",
+        # 28 of 50 blocked DafnyBench programs), now over `+` and `seq`
+        # rather than `update` into a pre-filled `r`.
+        c = rng.choice([-5, -3, -2, -1, 1, 2, 3, 5])
+
+        def f(x):
+            return OP("+", x, I(c))
+
+        body = [ASG("r", SEQ()), LOC("i", "int", I(0)),
+               WH_DF(OP("<", V("i"), LEN("s")),
+                  [OP("==", LEN("r"), V("i")),
+                   AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+                   FA("k", I(0), V("i"),
+                      OP("==", AT("r", V("k")), f(AT("s", V("k")))))],
+                  OP("-", LEN("s"), V("i")),
+                  [ASG("r", CAT(V("r"), SEQ(f(AT("s", V("i")))))),
+                   ASG("i", OP("+", V("i"), I(1)))])]
+        ens = [OP("==", LEN("r"), LEN("s")),
+              FA("k", I(0), LEN("s"),
+                 OP("==", AT("r", V("k")), f(AT("s", V("k")))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "filter_loop":
+        # r := r + [s[i]] under a condition: `filter_pos`'s shape, now
+        # measured for `len(r) <= len(s)` and an element PROPERTY (every
+        # kept element satisfies the predicate) rather than a positional
+        # correspondence, since a dropped element breaks any index-by-index
+        # relation between r and s.
+        kind = rng.choice(["nonneg", "gt", "lt"])
+        c = rng.choice([-3, -2, -1, 0, 1, 2, 3])
+
+        def pred(x):
+            if kind == "nonneg":
+                return OP(">=", x, I(0))
+            if kind == "gt":
+                return OP(">", x, I(c))
+            return OP("<", x, I(c))
+
+        body = [ASG("r", SEQ()), LOC("i", "int", I(0)),
+               WH_DF(OP("<", V("i"), LEN("s")),
+                  [OP("<=", LEN("r"), V("i")),
+                   AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+                   FA("k", I(0), LEN("r"), pred(AT("r", V("k"))))],
+                  OP("-", LEN("s"), V("i")),
+                  [IFS(pred(AT("s", V("i"))),
+                       [ASG("r", CAT(V("r"), SEQ(AT("s", V("i")))))],
+                       []),
+                   ASG("i", OP("+", V("i"), I(1)))])]
+        ens = [OP("<=", LEN("r"), LEN("s")),
+              FA("k", I(0), LEN("r"), pred(AT("r", V("k"))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "concat_params":
+        # r := s + u, the polymorphic `+` at its own two-parameter shape.
+        # SPEC.md writes the concatenation `s + t`, but `t` is the surface
+        # syntax's own format-version keyword (`t 0` / `t 1` opens every
+        # file), so a parameter named `t` has no notation as a name
+        # (2026-09-09, the sequences-as-values family hit the same wall);
+        # `u` is the second seq here instead.
+        body = [ASG("r", CAT(V("s"), V("u")))]
+        ens = [OP("==", LEN("r"), OP("+", LEN("s"), LEN("u"))),
+              FA("k", I(0), LEN("s"),
+                 OP("==", AT("r", V("k")), AT("s", V("k")))),
+              FA("k", I(0), LEN("u"),
+                 OP("==", AT("r", OP("+", V("k"), LEN("s"))), AT("u", V("k"))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "u", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "rotate":
+        # s[1..] + s[..1]: `slice` and `+` composed, under len(s) > 0 so
+        # both slices, and the rotated-in element at index 0, are in range.
+        body = [ASG("r", CAT(SLICE("s", I(1), LEN("s")),
+                             SLICE("s", I(0), I(1))))]
+        ens = [OP("==", LEN("r"), LEN("s")),
+              FA("k", I(0), OP("-", LEN("s"), I(1)),
+                 OP("==", AT("r", V("k")),
+                    AT("s", OP("+", V("k"), I(1))))),
+              OP("==", AT("r", OP("-", LEN("s"), I(1))), AT("s", I(0)))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [OP(">", LEN("s"), I(0))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    # prepend_loop: r := [s[i]] + r builds the reverse of s, one element at
+    # a time from the front; r[k] == s[i-1-k] for k in [0,i) is the
+    # invariant this shape earns, not the append_loop's r[k] == f(s[k]).
+    body = [ASG("r", SEQ()), LOC("i", "int", I(0)),
+           WH_DF(OP("<", V("i"), LEN("s")),
+              [OP("==", LEN("r"), V("i")),
+               AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+               FA("k", I(0), V("i"),
+                  OP("==", AT("r", V("k")),
+                     AT("s", OP("-", OP("-", V("i"), I(1)), V("k")))))],
+              OP("-", LEN("s"), V("i")),
+              [ASG("r", CAT(SEQ(AT("s", V("i"))), V("r"))),
+               ASG("i", OP("+", V("i"), I(1)))])]
+    ens = [OP("==", LEN("r"), LEN("s")),
+          FA("k", I(0), LEN("s"),
+             OP("==", AT("r", V("k")),
+                AT("s", OP("-", OP("-", LEN("s"), I(1)), V("k")))))]
+    return {"t": 1, "name": me, "gate": "loops",
+            "params": [{"name": "s", "type": "seq"}],
+            "returns": [{"name": "r", "type": "seq"}],
+            "requires": [], "ensures": ens, "body": body,
+            "_shape": "prepend_loop"}
+
+
 def f_wrong(rng, idx):
     """Category B: correct-by-construction, then ONE clause perturbed so the
     task is FALSE on a witness the interpreter finds. Every kernel must
@@ -1743,6 +1969,7 @@ FAMILIES = [
     ("v1divmod", f_v1divmod, 3),
     ("v1exit", f_v1exit, 3),
     ("v1seqval", f_v1seqval, 4),
+    ("v1seqops", f_v1seqops, 4),
     ("wrong", f_wrong, 3),
 ]
 
@@ -2248,6 +2475,82 @@ def probes() -> list[dict]:
         "the return statement's Expr is `update` itself, SPEC.md Early "
         "exit's position for it is the same as an assignment's "
         "right-hand side, and the update is in bounds by requires")
+
+    # --- SPEC.md "Sequences: literals, concatenation, slices (v1)"
+    # (2026-09-09): `slice` is DEFINED IFF 0 <= a <= b <= len(s), the same
+    # partiality shape as `at`/`update`, and a requires that fails to
+    # exclude the bad bound lets an undefined slice through, exactly as
+    # fz_p_upd_oob and fz_p_fill_neg do for `update` and `fill`.
+    add({"t": 1, "name": "fz_p_slice_oob", "gate": "quantifiers",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [],
+         "ensures": [OP("==", LEN("r"), OP("+", LEN("s"), I(1)))],
+         "body": [ASG("r", SLICE("s", I(0), OP("+", LEN("s"), I(1))))]},
+        "refuted",
+        "s[0..len(s)+1] has no value at any length, unguarded by any "
+        "requires; ground_truth's kind is undefined-body, which the "
+        "verdict rule reports as refuted, the file's convention for an "
+        "ill-defined real body, exactly as fz_p_upd_oob's totalized "
+        "`update` reads refuted rather than a distinct outcome",
+        adversarial=True)
+    add({"t": 1, "name": "fz_p_slice_rev", "gate": "quantifiers",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [],
+         "ensures": [OP("==", LEN("r"), I(0))],
+         "body": [ASG("r", SLICE("s", I(3), I(1)))]},
+        "refuted",
+        "s[3..1] violates 0 <= a <= b at every input regardless of len(s) "
+        "(3 <= 1 is false unconditionally), so the body has no value on "
+        "the whole domain; reported refuted for the same reason "
+        "fz_p_slice_oob is",
+        adversarial=True)
+
+    # --- SPEC.md "Sequences: literals, concatenation, slices (v1)": the
+    # empty literal and the concatenation identity `[] + s == s`, element-
+    # wise (never the whole-seq `==` fz_p_seqeq_* already measures).
+    add({"t": 1, "name": "fz_p_lit_empty", "gate": "quantifiers",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [],
+         "ensures": [OP("==", OP("len", SEQ()), I(0)),
+                     OP("==", LEN("r"), LEN("s")),
+                     FA("k", I(0), LEN("s"),
+                        OP("==", AT("r", V("k")), AT("s", V("k"))))],
+         "body": [ASG("r", CAT(SEQ(), V("s")))]},
+        "verified",
+        "len([]) == 0 by SPEC.md's literal rule, and [] + s == s "
+        "element-wise since concatenation's k-th element is s[k] once "
+        "len([]) == 0 shifts every index by nothing")
+
+    # --- `+` on two seqs: length is additive, the property `concat_params`
+    # (f_v1seqops) states element-wise; here as a direct arithmetic fact,
+    # no loop and no `at`.
+    add({"t": 1, "name": "fz_p_concat_len", "gate": "quantifiers",
+         # `u`, not `t`: `t` is the surface syntax's own format-version
+         # keyword and has no notation as a parameter name.
+         "params": [{"name": "s", "type": "seq"}, {"name": "u", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("+", LEN("s"), LEN("u")))],
+         "body": [ASG("r", OP("len", CAT(V("s"), V("u"))))]},
+        "verified",
+        "len(s + u) == len(s) + len(u) by SPEC.md's concatenation rule, "
+        "for any two seqs, no requires needed since `+` on two seqs is "
+        "always defined")
+
+    # --- The literal indexed directly, no parameter and no loop: SPEC.md's
+    # `seq` denotes the sequence whose k-th element is the k-th argument.
+    add({"t": 1, "name": "fz_p_lit_index",
+         "params": [],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), I(5))],
+         "body": [ASG("r", OP("at", SEQ(I(3), I(5), I(7)), I(1)))]},
+        "verified",
+        "[3, 5, 7][1] == 5 by SPEC.md's literal rule, the k-th argument "
+        "at index k, with no parameter and no loop to obscure it")
     return P
 
 
@@ -2280,7 +2583,14 @@ def build_corpus(n: int, seed: int):
         if key in seen:
             continue
         seen.add(key)
-        twin, op = harness.make_twin(task["body"])
+        # The GROUNDED ladder (harness.twin_for, the one run_par grades
+        # with), since 2026-09-09 night: the body-only rule knew only
+        # collapse-if and invariant-drop, so every loop-free, if-free
+        # shape (a slice, a concatenation, a literal) was dropped here
+        # before any kernel saw it, measured on the v1seqops family: 19 of
+        # 1000 kept, 0 of the five loop-free shapes. A task the ladder
+        # cannot witness is refused, as the sweep refuses it.
+        twin, op = harness.make_twin(task["body"], task)
         if twin is None:
             continue                           # no twin: SPEC.md refuses it
         task["_family"] = fam
@@ -2348,14 +2658,19 @@ def run(corpus, outdir: Path, jobs: int, n_flake: int, only=None):
             if task.get("_wf_errors"):
                 rows[name][bname] = ("wf-error", "wf-error", True, 0)
                 continue
-            twin_body, op = harness.make_twin(task["body"])
+            # The grounded ladder with its witness, as run_par grades
+            # (2026-09-09 night): the body-only rule gave loop-free shapes
+            # no twin at all and gave the lowerings no witness, so every
+            # twin read unproved instead of refuted (measured on the
+            # v1seqops family: 78 no-flip cells, 10 of 22 tasks no-twin).
+            clean = {k: v for k, v in task.items() if not k.startswith("_")}
+            twin_body, op, wit = harness.twin_cached(clean)
             if twin_body is None:
                 rows[name][bname] = ("no-twin", "no-twin", True, 0)
                 continue
-            clean = {k: v for k, v in task.items() if not k.startswith("_")}
             try:
                 rs = lower(clean, task["body"])
-                ts = lower(clean, twin_body)
+                ts = lower(clean, twin_body, witness=wit)
             except NotImplementedError as e:
                 rows[name][bname] = ("abstain", str(e)[:120], True, 0)
                 continue

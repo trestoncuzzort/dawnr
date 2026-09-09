@@ -234,7 +234,7 @@ hand on 2026-09-09 in addition to the workflow's verification.
 | Lean Kernel Arena | multi-checker trust, ground truth | 3 (checked) | accept/reject grading of many checkers | translation, twin, reward |
 | SV-COMP 2024 | multi-checker trust | 2 (contested) | witness validation by independent tools, disagreement as metric | interlingua, twin per task |
 | Comparator | multi-checker trust | 2 | replay through two kernels, statement match gate | heterogeneous logics, twin |
-| Who Watches the Provers? | multi-checker trust | 2 | the argument, a documented kernel bug | any translation step |
+| Who Watches the Provers? (blog essay, 2026-03-16) | multi-checker trust | 2 | the argument, a documented kernel bug | any translation step |
 | hax (Cryspen) | interlingua | 3 (checked) | mechanical lowering of one source to Lean, F*, Rocq | agreement table, twin, spec-first source |
 | Why3 | interlingua | 2 (contested) | one IVL to many provers, dependency of two columns | agreement table, twin, fuzzing of its own drivers |
 | TPTP/TSTP, CASC | interlingua, benchmark | 3 | one format, many provers, SZS verdict vocabulary | programs, translation, twin |
@@ -249,7 +249,7 @@ hand on 2026-09-09 in addition to the workflow's verification.
 | Automating FV with RL (Tan 2026) | LLM reward | 3 (checked) | GRPO against Dafny, names specification hacking | several kernels, twin, tests in the reward |
 | Re:Form (Yan et al.) | LLM reward | sweep, checked abstract | RL with Dafny feedback, DafnyComp | several kernels, twin |
 | AlphaVerus | LLM reward, lifting | 2 (contested) | DafnyBench to Verus, critique against reward hacking | kernels beyond one, formal fidelity |
-| A Benchmark for Vericoding | benchmark, lifting | 2 (contested) | 12,504 tasks over three kernels, cheating filter | agreement across kernels, formal fidelity |
+| A Benchmark for Vericoding | benchmark, lifting | 2 (contested) | 12,504 tasks over three kernels, an anti-cheating validator on generated solutions (no benchmark-level triviality filter) | agreement across kernels, formal fidelity |
 | DafnyBench, MBPP-DFY (Misu et al.), Verina, Clover, SpecCoder, Verus-SpecGym | benchmarks | 2 to 3 | the corpora and the single-kernel grading t lifts from | cross-kernel grading, twins |
 | Testing Dafny / XDsmith | verifier fuzzing | 3 | verdict known by construction | several kernels, a lowering to fuzz |
 | fuzz-d, DafnyFuzz, Crash-free Deductive Verifiers, Boogie MBT | verifier fuzzing | sweep only | fuzzing verifiers and IVLs | ground truth across a fan-out |
@@ -269,20 +269,44 @@ hand on 2026-09-09 in addition to the workflow's verification.
 Ranked by how much each changes what the paper has to say.
 
 1. Falda, "Federated Formal Verification: Cross-Backend Citation, Cross-Axis Convergence, and AI-Orchestrated Proof Dispatch for Production Systems", arXiv 2606.02019 (2026). The nearest claim to the agreement table; the paper must position against it.
-2. Lean Kernel Arena (arena.lean-lang.org) and de Moura, "Who Watches the Provers?" (2026). The argument and the running instance for many independent checkers.
-3. Beyer, "State of the Art in Software Verification and Witness Validation: SV-COMP 2024", TACAS 2024. Witness validation and disagreement as headline metrics at scale.
+2. Lean Kernel Arena (arena.lean-lang.org, repo github.com/leanprover/lean-kernel-arena, accessed 2026-09-09: 19 checkers, 114 valid and 73 invalid proofs, ranked by wrongly accepted invalid proofs, then wrongly rejected valid ones; pin the access date and archive results.json when a number is quoted, the round is live) and de Moura, "Who Watches the Provers?", an essay on leodemoura.github.io dated 2026-03-16, not a paper: no arXiv or Crossref record exists and the Arena repo names no paper, so cite the URL and the date. The argument and the running instance for many independent checkers. One wording rule: the Arena scores each checker against a known expected outcome, not agreement among kernels.
+3. Beyer, "State of the Art in Software Verification and Witness Validation: SV-COMP 2024", TACAS 2024, doi 10.1007/978-3-031-57256-2_15. Witness validation at scale (59 verifiers, 17 validators, 13.6 million validation runs; a verdict scores only when a validator confirms it, a wrong proof costs 32 points against 16 for a false alarm). Not cross-tool adjudication: no tool checks another's verdict; wrong verdicts are judged against benchmark ground truth and published per tool, and validators are a separate tool class. Write "penalised, published per-tool wrong verdicts", never "cross-tool wrong-verdict reporting".
 4. Cryspen, hax (github.com/cryspen/hax). One Rust source mechanically lowered to Lean, F* and Rocq.
-5. Filliâtre and Paskevich, "Why3: Where Programs Meet Provers", ESOP 2013. The ancestor of one spec, many provers, and a dependency of two columns.
-6. Tan, "Automating Formal Verification with Reinforcement Learning and Recursive Inference", arXiv 2605.30914 (2026), and Yan et al., "Re:Form", arXiv 2507.16331. RL against a verifier and specification hacking, the failure 12.6 measured.
+5. Filliâtre and Paskevich, "Why3, Where Programs Meet Provers", ESOP 2013, LNCS 7792 pp. 125 to 128, doi 10.1007/978-3-642-37036-6_8 (the published title carries a dash, not a colon). One format for many provers, and a dependency of two columns. The "ancestor of multi-prover grading" reading is ours, not the paper's: the four pages contain no grading, scoring, abstention or refutation. Why3's model is disjunctive (one prover discharging a condition suffices, the herd raises the hit rate on one obligation) where t's grading is conjunctive and per column, and Why3 generates conditions once and encodes them per backend where t regenerates the obligations inside each kernel. State both differences. Lead, not verified: Bobot, Filliâtre, Marché, Paskevich, "Why3: Shepherd your herd of provers", Boogie 2011.
+6. Tan, "Automating Formal Verification with Reinforcement Learning and Recursive Inference", arXiv 2605.30914 (2026, a thesis-style preprint, not a conference paper), and Yan et al., "Re:Form", arXiv 2507.16331 (v4 header: published in Transactions on Machine Learning Research, May 2026). RL against a verifier and specification hacking, the failure 12.6 measured.
 7. Aggarwal, Parno, Welleck, "AlphaVerus", arXiv 2412.06176. DafnyBench lifted to one kernel, reward hacking named and filtered.
-8. Bursuc et al., "A Benchmark for Vericoding", arXiv 2509.22908. The multi-kernel benchmark to compare the spec experiment against.
+8. Bursuc et al., "A Benchmark for Vericoding", arXiv 2509.22908. The multi-kernel benchmark to compare the spec experiment against: 12,504 specifications (3,029 Dafny, 2,334 Verus, 7,141 Lean), assembled from curated sources plus LLM translation between the three languages (6,174 of the 12,504 are new or translated; the originals include Python-sourced APPS and HumanEval), with an anti-cheating validator on generated solutions and an LLM judge on translated specs. There is no benchmark-level triviality filter: weak and incomplete specs are kept on purpose, and the authors' own sample reads 9 percent too weak and 15 percent poorly translated.
 9. Irfan, Porncharoenwase, Rakamarić, Rungta, Torlak, "Testing Dafny", ISSTA 2022. Ground truth by construction for one verifier.
 10. Amaral, Mendes, Campos, "MutDafny", arXiv 2511.15403. The single-kernel form of the twin.
 11. Parthasarathy, Dardinier, Bonneau, Müller, Summers, "Towards Trustworthy Automated Program Verifiers", PLDI 2024. The proved-lowering alternative to agreement.
-12. Loughridge et al., "DafnyBench", arXiv 2406.08467, and Misu et al., "Towards AI-Assisted Synthesis of Verified Dafny Methods", arXiv 2402.00247. The corpora the lifter and the spec experiment consume.
+12. Loughridge et al., "DafnyBench", arXiv 2406.08467, and Misu et al., "Towards AI-Assisted Synthesis of Verified Dafny Methods", arXiv 2402.00247. The corpora the lifter and the spec experiment consume. DafnyBench is 782 programs from three sources (556 scraped from GitHub, 62 Clover, 164 dafny-synthesis MBPP translations), about 53,000 lines; "real-world" is not the paper's adjective and fits only the 556; its task fills `assert` and `invariant` hints with `requires` and `ensures` held fixed, which is why the census can read the specs as given.
 13. Klein et al., "seL4", SOSP 2009; Kumar et al., CakeML; Wheeler, Diverse Double-Compiling. The verified substrate and trusting-trust lineage tup names as its horizon.
 14. Guix, "The full-source bootstrap" (2023); StageX; Trustix. The receipted-build lineage and the multi-builder form of the witness.
 15. Sutcliffe, TPTP and CASC; Hurd, OpenTheory (NFM 2011). Thirty years of one format, many provers.
+
+### Corrections from the citation audit of 2026-09-09
+
+Thirteen entries of this list were audited against their sources by
+Treston's literature workflow (the records are the appendix of
+LITERATURE-2026-09.md). The corrections are folded into the entries
+above; the ones that change a claim rather than a spelling are these.
+"Who Watches the Provers?" is an essay on de Moura's blog, not a paper,
+and the Lean Kernel Arena is cited as an artifact with an access date.
+SV-COMP publishes per-tool wrong verdicts against ground truth; it does
+not have tools adjudicate each other. Why3 is disjunctive over provers
+where t is conjunctive per column, and its grading lineage is our
+reading. The Vericoding benchmark keeps weak specs and filters cheating
+in generated solutions, not in the benchmark. DafnyBench's "real-world"
+covers 556 of 782. Two numbers carry a hazard when quoted: Tan's 2.2 to
+58.1 percent verified reward is the figure that paper discounts as
+measured on a specification-hacked dataset (the post-filter pair is 9.7
+to 31.1 percent verified pass rate, 9.7 the final checkpoint after a
+24.7 peak, and the 31.1 run changes base model, framework, reward and
+budget at once), and VERINA's 72.6 percent code and 4.9 percent proof
+are v3 numbers (v1 and v2 read 61.4 and 3.6), so cite arXiv:2505.23135v3
+and carry the 52.3 percent spec figure beside them. hax has six backends,
+of which only F* is labelled stable by its authors; Lean is routed
+through Aeneas and Rocq is experimental.
 
 ## Appendix: every candidate the search found
 
@@ -358,7 +382,7 @@ evidence.
 ### verified code benchmark (4)
 
 - [4] MBPP-DFY / "Towards AI-Assisted Synthesis of Verified Dafny Methods" (Misu et al.) (paper) https://arxiv.org/pdf/2402.00247 : First empirical study of LLMs (GPT-4, PaLM-2) synthesizing verified Dafny methods from 153-178 MBPP-derived problems, finding CoT+few-shot verifies 58%.
-- [3] VERINA (Verifiable Code Generation Arena) (benchmark) https://arxiv.org/pdf/2505.23135 : 189-task Lean 4 benchmark for jointly grading generated code, specification, and proof, showing best models get only ~5% proof success though 73% code correctness.
+- [3] VERINA (Verifiable Code Generation Arena) (benchmark) https://arxiv.org/pdf/2505.23135 : 189-task Lean benchmark for modular, composable grading of generated code, specification, and proof, showing best models get only ~5% proof success though 73% code correctness.
 - [2] VeriBench (Lean 4 end-to-end) (benchmark) https://openreview.net/forum?id=P7NUVF6wo4 : Benchmark requiring LLMs to generate full Lean 4 implementation, spec/theorems, and machine-checked proof from a Python reference, end to end.
 - [2] VeruSAGE (benchmark) https://arxiv.org/abs/2512.18436 : 849-task benchmark of Verus proof obligations from real open-source Rust systems, studying agentic (multi-agent) LLM strategies for writing correctness proofs.
 

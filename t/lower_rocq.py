@@ -227,6 +227,155 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   (r's function, r's length, i) hit this on the first attempt, fixed by
   parenthesizing only the slots whose type actually contains "->" (so a
   non-seq task's tuple type is untouched, confirmed by the same diff).
+
+  SEQUENCES: LITERALS, CONCATENATION, SLICES (2026-09-09, SPEC.md
+  "Sequences: literals, concatenation, slices (v1)", ROADMAP 12.7, the
+  wave right after "Sequences as values" above). Three new expressions:
+  `seq` (the literal `[e1, ..., en]`, n >= 0, `[]` the empty seq), `+` on
+  two seqs (concatenation, the SAME token as int `+`, polymorphic by
+  operand type exactly as `==` already is), and `slice` (`s[a..b]`,
+  DEFINED IFF `0 <= a <= b <= len(s)`).
+
+  REPRESENTATION. Still the function+length pair; no new representation
+  decision needed, only two more operators in it and one that needs none
+  at all. `t_app f g n := fun k => if k <? n then f k else g (k - n)` and
+  `t_slice f a := fun k => f (a + k)` are opaque top-level Definitions,
+  the SAME shape t_upd/t_fill/t_div/t_mod already have (never Notations,
+  so cbn's whitelisted delta never unfolds them; TOTAL in Rocq, so
+  totality proves nothing about t's own undefinedness, carried entirely by
+  defs()'s own obligations). The LITERAL gets no opaque Definition of its
+  own at all: since a literal's arity n is always a concrete Python int at
+  lowering time (the AST node has exactly that many arguments, never a
+  symbolic count), `seq_fn` builds it as a chain of `t_upd` over `t_fill
+  0` (index 0 first, ..., n - 1 last; `[]` is bare `t_fill 0` at length
+  0), reusing t_upd/t_fill and their reading tactics VERBATIM. This is the
+  cheapest possible design: zero new PRELUDE surface for the operator the
+  census measures as most common (27 of 643 gradable DafnyBench programs
+  start a sequence from `[]`; a literal is needed by 8,599 of the 24,748
+  nl/ problems), riding entirely on machinery "Sequences as values"
+  already proved out on swap's nested update.
+
+  TACTICS. `t_app_case` mirrors `t_upd_case`'s three-branch shape (try
+  `k < n` directly by lia, try `n <= k` directly by lia, else split on
+  `k <? n` and recurse): it has no `is_var` guard on `f`/`g` (t_upd_case's
+  own precedent), so it fires on a NESTED t_app/t_upd exactly as
+  t_upd_case already does on a nested update, one layer per case split,
+  until the innermost function is `t_fill` (t_fill_get) or a bare
+  param/state variable (t_sat1's existing merge/E-matching arms).
+  `t_slice` needs no case split at all: SPEC.md's own definition is an
+  unconditional index shift, so `t_slice_get` is a bare rewrite, the same
+  shape `t_fill_get` already has. Both join t_inv1's match, goal and
+  hypothesis position, immediately after t_upd/t_fill's own entries.
+
+  DEFINEDNESS. `seq` (the literal) and `+` (concatenation) add no
+  obligation of their own: SPEC.md says a literal is defined iff every
+  element is and a concatenation iff both operands are, which is exactly
+  what falling through to `defs()`'s existing generic per-argument
+  recursion already gives, so those two cost nothing new in the *_def_k
+  lemma calculus. `slice` is the one that costs something: every `slice`
+  node emits `(0 <= a <= b <= len(s))` as its own lemma, in the same
+  calculus as `at`'s `(0 <= idx < len)`, one more `Lemma <name>_def_k` per
+  slice site the caller's requires/invariants/earlier ensures must make
+  provable. `_first_undef` (the twin certificate side) gets the matching
+  case, replaying interp.ev's own bound at the concrete witness and
+  returning its negation; `seq`/`+` again need no case of their own there,
+  falling to the existing generic per-argument walk, which already visits
+  arguments in interp.ev's own left-to-right order.
+
+  MEASURED (2026-09-09, coqc 9.2.0, this box, tasks/tail.json and
+  tasks/filter_pos.json, both real vs twin). tail (loop-free: `r :=
+  s[1..len(s)]`) reads real VERIFIED (0.54 s) / twin REFUTED (0.51 s): the
+  twin ladder's only body-level OFF-BY-ONE candidate is the slice's own
+  literal `1`, and the chosen mutant (`s[2..len(s)]`) is UNDEFINED at the
+  measured witness s=[0] (slice bounds [2..1] outside `0 <= a <= b <=
+  1`), so the twin's certificate is `_undef_cert` extended with this
+  file's new `slice` case in `_first_undef`, no def_text, no reference to
+  `tail_t` at all, the same shape swap's own undefined witness already
+  established. filter_pos (a loop appending `r := r + [s[i]]` under `if
+  s[i] > 0`) reads real VERIFIED (0.69 s) / twin REFUTED (0.52 s): the
+  chosen mutant is invariant-drop#1 (dropping `0 <= i`, the first
+  invariant), an "exit" witness at s=[], i=1, r=[1] (a state the surviving
+  invariants and the negated guard admit but the task's own ensures does
+  not), so the twin's certificate is `_loop_cert`'s EXISTING machinery,
+  unmodified: the concatenation and literal inside the loop body only
+  ever reach `seq_fn`, never a new code path in the certificate builders
+  themselves. Neither committed task exercises `t_app_case`'s nested-
+  update-shaped recursion or a literal with more than one element, so
+  those remain measured only by construction (the same proof shape
+  t_upd_case already carries, re-timed) and the fuzz family SPEC.md names
+  (v1seqops), not yet run.
+
+  swap and reverse (out/agent-rocq-seqops/{swap,reverse}{,_twin}.v vs the
+  out/{swap,reverse}{,_twin}.v this file's PRIOR run produced, diffed with
+  `diff`, not literal `cmp`): all four files gain ONLY this date's PRELUDE
+  block (t_app/t_slice + t_app_case/t_slice_get, 73 inserted lines, zero
+  deleted, at the same point in each file, right after t_upd_case),
+  exactly the "pure insertions, no deletions" shape the 2026-09-09
+  "Sequences as values" note above already established for first_even/
+  digit_sum/seq_max when t_upd/t_fill first landed; outside that shared,
+  file-wide PRELUDE growth every byte is unchanged, since neither task's
+  body reaches `seq`, `+`, or `slice`. Both still read COUNTS (rc=0,
+  swap.v 0.57 s / swap_twin.v 0.54 s, reverse.v 0.68 s / reverse_twin.v
+  0.55 s), matching their prior measurement.
+
+  THE RESIDUAL: seq `==`/`!=` IN COMPUTATIONAL POSITION (2026-09-09).
+  EQUALITY, above, only ever put seq `==`/`!=` in Prop position (`prop()`'s
+  extensional forall); `bx()` abstained on the same operator in a
+  computational `if`/loop-guard position ("no Fixpoint walks a symbolic
+  length to compute a bool"). `t_seq_eqb (n : Z) (f g : Z -> Z) : bool`
+  (PRELUDE, joins t_upd/t_fill/t_app/t_slice/t_div/t_mod's own opaque-
+  Definition-plus-reading-tactic shape) closes it: a Fixpoint over
+  `Z.to_nat n` (an auxiliary `t_seq_eqb_nat` indexed by nat and folded with
+  `andb`/`Z.eqb`, the SAME fuel-over-`Z.to_nat` idiom this file's loop and
+  recursion Fixpoints already use), proved correct by `t_seq_eqb_spec :
+  t_seq_eqb n f g = true <-> (forall k, 0 <= k < n -> f k = g k)`
+  unconditionally (n < 0 makes both sides vacuously true, so no `0 <= n`
+  side condition is needed) via one auxiliary induction lemma,
+  `t_seq_eqb_nat_spec`. `bx()` now lowers `s == t` to `(len s =? len t) &&
+  t_seq_eqb (len s) s t` (negated by `negb` for `!=`), the length check
+  first since `t_seq_eqb`'s own length argument is only meaningful once the
+  two seqs actually match; the proof side reads it back with
+  `t_seq_eqb_case` (PRELUDE), joined into t_inv1's match immediately after
+  `t_slice`'s own two entries, goal and hypothesis position: an
+  unconditional two-way split via `Sumbool.sumbool_of_bool` (no "try
+  directly by lia" shortcut, unlike t_ltb_case/t_eqb_case, since whether two
+  whole seqs agree is not lia-decidable from raw context), `replace ... in
+  *` rewriting every occurrence the same way every other case-split tactic
+  here does, `t_seq_eqb_spec` turning the true branch into a `forall k, ...`
+  fact for `t_sat1`'s existing E-matching arms and the false branch into
+  that fact's negation via the iff's contrapositive, so the false-branch
+  case closes by the same `H : A -> False, D : A |- _` resolution `t_sat1`
+  already has for every other implication hypothesis. One sharp edge, found
+  by compiling a standalone PRELUDE probe before touching this file: `Ltac
+  name args := ... assert (F : ...) by (intro H; ...H...)` (singular
+  `intro`) fails to elaborate ("H was not found") when `H` is later
+  referenced inside the SAME `by`-clause, reproduced in isolation down to
+  zero Ltac arguments (coqc 9.2.0, this box); `intros H` (plural) does not
+  have this bug, so `t_seq_eqb_case`'s false-branch assert uses `intros Hc`
+  rather than the `intro Heq` singular form the file's generated (not
+  hand-written PRELUDE) proof text uses elsewhere without incident.
+
+  MEASURED (2026-09-09, coqc 9.2.0, this box, harness.run_task, `verifiers.
+  rocq`). A scratch probe (not committed to tasks/: params s, t : seq,
+  requires len(s) == len(t), body `if s == t then r := 1 else r := 0`,
+  ensures `r == 1 <-> (forall k, 0 <= k < len(s) -> s[k] == t[k])`) reads
+  COUNTS in out/agent-rocq-seqeq/ (real VERIFIED, collapse-if twin REFUTED,
+  witness s=[0], t=[1]: real returns 0, the twin that drops the `if` and
+  always takes the then-branch returns 1), 2.5 s total. The six-task
+  regression (swap, reverse, tail, filter_pos, seq_max, is_prime; none of
+  whose bodies use seq `==`/`!=` in computational position, all of whose
+  ENSURES already used the extensional `prop()` form before this change)
+  reads COUNTS unchanged in out/agent-rocq-seqeq/, matching AGREEMENT.md's
+  rocq column exactly: swap 3.6 s, reverse 3.7 s, tail 2.6 s, filter_pos
+  3.1 s, seq_max 77.2 s, is_prime 6.6 s, all inside the 180 s budget. Every
+  file in that six-task set gains ONLY this date's PRELUDE block (105
+  inserted lines, zero deleted: the 103-line t_seq_eqb block plus one line
+  each for its two t_inv1 match-arm entries), at the same three points in
+  every file (diffed against out/swap.v and out/is_prime.v, this file's
+  PRIOR run), the same "pure insertions, no deletions" shape every PRELUDE
+  growth this file has made all carries; source outside that shared block
+  is byte-identical, since none of the six reaches `==`/`!=` on a seq in
+  computational position.
 """
 from __future__ import annotations
 
@@ -503,6 +652,178 @@ Ltac t_upd_case f i v k :=
         destruct (Z.eqb_spec k i); [congruence|reflexivity]) ]
   ].
 
+(* t_app / t_slice (2026-09-09): SPEC.md "Sequences: literals, concatenation,
+   slices (v1)" adds `seq` (the literal `[e1, ..., en]`), `+` on two seqs
+   (concatenation, the SAME operator token as int `+`, polymorphic by
+   operand type exactly as `==` already is: `Ctx.ty` decides which one a
+   `+` node is BEFORE `seq_fn`/`zx` is ever called on it, so this file
+   never needs to case on operand type inside a single emitted term) and
+   `slice` (s[a..b], DEFINED IFF 0 <= a <= b <= len(s)). Two more pieces of
+   the same function+length model t_upd/t_fill already gave `update`/
+   `fill` (2026-09-09, above): `t_app f g n` is the seq whose first `n`
+   elements are `f`'s and whose rest are `g`'s, shifted (SPEC.md: "the
+   sequence of length len(s) + len(t) whose element at i is s[i] for
+   i < len(s) and t[i - len(s)] otherwise"); `t_slice f a` is `f` reindexed
+   by `a` (SPEC.md: "the sequence of length b - a whose element at k is
+   s[a + k]", the length itself computed at the call site as `b - a`, not
+   carried by `t_slice`). Both are opaque top-level Definitions, never
+   Notations (t_div/t_mod's own precedent): TOTAL in Rocq, so as with every
+   other opaque seq op here, totality proves nothing about t's own
+   undefinedness. `+`'s SPEC.md text is "always defined" (no obligation of
+   its own; `defs()` still walks both operands for THEIR obligations, e.g.
+   an `at` nested inside one), while `slice`'s `0 <= a <= b <= len(s)` is a
+   definedness obligation in the same *_def_k calculus as `at`'s own
+   `(0 <= idx < len)`, emitted at every `slice` node (`defs()`, below).
+
+   `t_app_case` mirrors `t_upd_case`'s three-branch shape (try in-range
+   directly by lia, try out-of-range directly by lia, else split and
+   recurse on `k <? n`), the same `t_ltb_case` shape the boolean case
+   splits already use, so it also fires on a NESTED t_app/t_upd (a
+   concatenation of two literals, or a literal appended to a slice) one
+   layer at a time, exactly the precedent `t_upd_case`'s own comment
+   states for a nested update. `t_slice` needs no case split to read: SPEC.md's
+   own definition is an unconditional index shift, no branch, so
+   `t_slice_get` is a bare rewrite, the same shape `t_fill_get` already
+   has.
+
+   The LITERAL `seq(e1, ..., en)` itself gets no new opaque Definition or
+   reading tactic at all: since n is always a concrete count at lowering
+   time (the AST literal has exactly that many arguments), `seq_fn` builds
+   it as a chain of `t_upd`s over `t_fill 0` (index 0 first, then 1, ...,
+   then n - 1; `[]` is bare `t_fill 0` at length 0, its function value
+   never read since nothing is in range), reusing t_upd_case/t_fill_get
+   verbatim, the same multi-layer reduction swap's own nested update
+   already exercises (probe_seq.v/probe5.v, 2026-09-09). *)
+Definition t_app (f g : Z -> Z) (n : Z) : Z -> Z :=
+  fun k => if k <? n then f k else g (k - n).
+
+Definition t_slice (f : Z -> Z) (a : Z) : Z -> Z :=
+  fun k => f (a + k).
+
+Lemma t_slice_get : forall (f : Z -> Z) (a k : Z), t_slice f a k = f (a + k).
+Proof. reflexivity. Qed.
+
+Ltac t_app_case f g n k :=
+  first
+  [ replace (t_app f g n k) with (f k) in * by (unfold t_app;
+      replace (k <? n) with true by (symmetry; apply Z.ltb_lt; lia);
+      reflexivity)
+  | replace (t_app f g n k) with (g (k - n)) in * by (unfold t_app;
+      replace (k <? n) with false by (symmetry; apply Z.ltb_ge; lia);
+      reflexivity)
+  | let E := fresh "Eb" in
+    assert (E : k < n \/ n <= k) by lia; destruct E as [E|E];
+    [ replace (t_app f g n k) with (f k) in * by (unfold t_app;
+        replace (k <? n) with true by (symmetry; apply Z.ltb_lt; exact E);
+        reflexivity)
+    | replace (t_app f g n k) with (g (k - n)) in * by (unfold t_app;
+        replace (k <? n) with false by (symmetry; apply Z.ltb_ge; exact E);
+        reflexivity) ]
+  ].
+
+(* t_seq_eqb (2026-09-09): SPEC.md "Sequences as values (v1)" makes `==`/
+   `!=` on two seqs extensional (EQUALITY, above: a length equation
+   conjoined with a bounded forall), which `prop()` already states directly
+   since a Prop admits an unbounded forall; a seq `==`/`!=` in COMPUTATIONAL
+   position (`bx()`) had no decidable lowering (the file's own EQUALITY
+   comment: "no Fixpoint walks a symbolic length to compute a bool") and
+   abstained. `t_seq_eqb` is that Fixpoint: a bounded recursion over
+   `Z.to_nat n` (the SAME fuel-over-`Z.to_nat` idiom every loop/recursion
+   Fixpoint in this file already uses, never a fresh recursion principle),
+   comparing index `n - 1` down to `0` with `Z.eqb`, folded by `andb`. It is
+   an opaque top-level Definition (never a Notation), the SAME shape t_upd/
+   t_fill/t_app/t_slice/t_div/t_mod already have: cbn's whitelisted delta
+   never unfolds it, and totality in Rocq (t_seq_eqb is defined for every n,
+   f, g, including n < 0, where it is vacuously `true`) proves nothing about
+   t's own use of it, which `bx()` only ever applies to a length already
+   known nonnegative (MODEL, above: `0 <= s_len` accompanies every seq in
+   scope).
+
+   `t_seq_eqb_spec` is the two-directions-at-once statement `bx()` and the
+   proof engine both need: `t_seq_eqb n f g = true <-> (forall k, 0 <= k <
+   n -> f k = g k)`, proved unconditionally (no `0 <= n` side condition:
+   both sides are vacuously true when n < 0, so the iff holds either way,
+   one fewer obligation for `t_seq_eqb_case` below to discharge). It rests
+   on an auxiliary lemma over the nat-indexed recursion,
+   `t_seq_eqb_nat_spec`, by induction on the fuel; `t_seq_eqb_spec` itself
+   case-splits only on the sign of n to relate `Z.of_nat (Z.to_nat n)` to
+   n (`Z.to_nat`'s own definition: the `Zneg` case is `O` by construction,
+   proved by `reflexivity`, not a library lemma whose exact name would need
+   trusting).
+
+   `t_seq_eqb_case` mirrors `t_beq_case`'s shape (an unconditional two-way
+   split, no "try directly by lia" shortcut: unlike `t_ltb_case`/`t_eqb_case`,
+   whether two whole seqs agree is not a fact lia can decide from raw
+   context, however deep the case-split arms tried): `Sumbool.sumbool_of_bool`
+   turns the boolean into a `{= true} + {= false}` disjunction, `replace ...
+   in *` (the file's own convention throughout, `t_ltb_case` on down) then
+   rewrites every occurrence in goal and hypotheses alike, and
+   `t_seq_eqb_spec` immediately turns the true branch into the usable
+   `forall k, ...` fact (`apply ... in`, the same move `t_dm1` makes with
+   `t_div_mod_eq`) so `t_sat1`'s existing E-matching arms can instantiate it
+   at whatever seq-application argument the goal needs; the false branch
+   gets the fact's NEGATION the same way (through the iff's
+   contrapositive), which is exactly what closes the false-branch case in
+   the probe below, by the same `H : A -> False, D : A |- _` resolution
+   step `t_sat1` already has for every other implication hypothesis. Joins
+   t_inv1's match immediately after `t_slice`'s own two entries, goal and
+   hypothesis position, ending in `t_bred_all` like every other boolean
+   case-split tactic here (t_ltb_case/t_leb_case/t_eqb_case/t_beq_case),
+   since `t_seq_eqb` typically sits inside the `andb` `bx()` composes it
+   into (`(len s =? len t) && t_seq_eqb (len s) s t`) and that andb needs
+   reducing once both operands are literals. *)
+Fixpoint t_seq_eqb_nat (m : nat) (f g : Z -> Z) : bool :=
+  match m with
+  | O => true
+  | S m' => andb (Z.eqb (f (Z.of_nat m')) (g (Z.of_nat m'))) (t_seq_eqb_nat m' f g)
+  end.
+
+Definition t_seq_eqb (n : Z) (f g : Z -> Z) : bool :=
+  t_seq_eqb_nat (Z.to_nat n) f g.
+
+Lemma t_seq_eqb_nat_spec : forall (m : nat) (f g : Z -> Z),
+  t_seq_eqb_nat m f g = true <->
+  (forall k : Z, 0 <= k < Z.of_nat m -> f k = g k).
+Proof.
+  induction m as [| m' IH]; intros f g; cbn [t_seq_eqb_nat].
+  - split; [ intros _ k Hk; exfalso; lia | intros _; reflexivity ].
+  - rewrite Bool.andb_true_iff, Z.eqb_eq.
+    split.
+    + intros [Hfg Hrec] k Hk.
+      destruct (Z.eq_dec k (Z.of_nat m')) as [->|Hne].
+      * exact Hfg.
+      * apply (proj1 (IH f g) Hrec). lia.
+    + intros H. split.
+      * apply H. lia.
+      * apply (proj2 (IH f g)). intros k Hk. apply H. lia.
+Qed.
+
+Lemma t_seq_eqb_spec : forall (n : Z) (f g : Z -> Z),
+  t_seq_eqb n f g = true <-> (forall k : Z, 0 <= k < n -> f k = g k).
+Proof.
+  intros n f g. unfold t_seq_eqb. rewrite t_seq_eqb_nat_spec.
+  destruct (Z.le_gt_cases 0 n) as [Hn | Hn].
+  - replace (Z.of_nat (Z.to_nat n)) with n by lia. reflexivity.
+  - assert (Hz : Z.to_nat n = 0%nat).
+    { destruct n as [| p | p].
+      - exfalso; lia.
+      - exfalso; lia.
+      - reflexivity. }
+    rewrite Hz. split; intros _ k Hk; exfalso; lia.
+Qed.
+
+Ltac t_seq_eqb_case n f g :=
+  let E := fresh "Es" in
+  destruct (Sumbool.sumbool_of_bool (t_seq_eqb n f g)) as [E|E];
+  [ let F := fresh "Ef" in
+    pose proof (proj1 (t_seq_eqb_spec n f g) E) as F;
+    replace (t_seq_eqb n f g) with true in * by (symmetry; exact E)
+  | let F := fresh "Ef" in
+    assert (F : ~ (forall k : Z, 0 <= k < n -> f k = g k))
+      by (intros Hc; apply (proj2 (t_seq_eqb_spec n f g)) in Hc; congruence);
+    replace (t_seq_eqb n f g) with false in * by (symmetry; exact E)
+  ]; t_bred_all.
+
 (* invertible structural steps *)
 Ltac t_inv1 :=
   match goal with
@@ -522,6 +843,9 @@ Ltac t_inv1 :=
   | |- context [Bool.eqb ?a ?b] => t_beq_case a b
   | |- context [t_upd ?f ?i ?v ?k] => t_upd_case f i v k
   | |- context [t_fill ?v ?k] => rewrite (t_fill_get v k)
+  | |- context [t_app ?f ?g ?n ?k] => t_app_case f g n k
+  | |- context [t_slice ?f ?a ?k] => rewrite (t_slice_get f a k)
+  | |- context [t_seq_eqb ?n ?f ?g] => t_seq_eqb_case n f g
   | |- context [orb _ _] => progress t_bred
   | |- context [andb _ _] => progress t_bred
   | |- context [negb _] => progress t_bred
@@ -539,6 +863,9 @@ Ltac t_inv1 :=
   | H : context [Bool.eqb ?a ?b] |- _ => t_beq_case a b
   | H : context [t_upd ?f ?i ?v ?k] |- _ => t_upd_case f i v k
   | H : context [t_fill ?v ?k] |- _ => rewrite (t_fill_get v k) in H
+  | H : context [t_app ?f ?g ?n ?k] |- _ => t_app_case f g n k
+  | H : context [t_slice ?f ?a ?k] |- _ => rewrite (t_slice_get f a k) in H
+  | H : context [t_seq_eqb ?n ?f ?g] |- _ => t_seq_eqb_case n f g
   end.
 
 (* deterministic saturation steps *)
@@ -914,9 +1241,16 @@ class Ctx:
         if "call" in e:
             return self.sfres[e["call"]["fun"]]
         op = e["op"]
-        if op in ("+", "-", "*", "neg", "len", "at", "div", "mod"):
+        if op == "+":
+            # SPEC.md "Sequences: literals, concatenation, slices (v1)":
+            # `+` is polymorphic by operand type exactly as `==` already
+            # is (two ints, two seqs); a `+` whose left operand is a seq
+            # is concatenation, the same rule `bx`/`prop`'s own `==`
+            # dispatch already uses.
+            return "seq" if self.ty(e["args"][0], local) == "seq" else "int"
+        if op in ("-", "*", "neg", "len", "at", "div", "mod"):
             return "int"
-        if op in ("update", "fill"):
+        if op in ("update", "fill", "seq", "slice"):
             return "seq"
         return "bool"
 
@@ -935,7 +1269,11 @@ class Ctx:
         `t_fill` are opaque top-level Definitions (PRELUDE, dated
         2026-09-09), read back by t_upd_case/t_fill_get inside the proof
         engine rather than by unfolding, the same convention as t_div/
-        t_mod."""
+        t_mod. `seq` (SPEC.md "Sequences: literals, concatenation, slices
+        (v1)"), the literal, is a chain of t_upd over t_fill 0, no new
+        opaque Definition; `+` on two seqs is t_app, `slice` is t_slice,
+        both the SAME opaque-Definition-plus-reading-tactic shape as
+        t_upd/t_fill (PRELUDE)."""
         local = local or {}
         if "var" in e:
             v = e["var"]
@@ -960,6 +1298,41 @@ class Ctx:
             ln = self.zx(n, env, local)
             val = self.zx(v, env, local)
             return f"(t_fill {val})", ln
+        if op == "seq":
+            # SPEC.md "Sequences: literals, concatenation, slices (v1)":
+            # [e1, ..., en], every argument an int, the k-th argument is
+            # the k-th element (0-indexed), n >= 0 with [] the empty seq
+            # (len([]) == 0). n is always a concrete Python int here (the
+            # AST literal has exactly that many arguments), so this needs
+            # no new opaque Definition or reading tactic: it builds a
+            # chain of t_upd over t_fill 0 (index 0 first, ..., n - 1
+            # last), reusing t_upd_case/t_fill_get verbatim (PRELUDE's own
+            # comment, "the LITERAL... gets no new opaque Definition").
+            fn = "(t_fill 0)"
+            for k, a in enumerate(e["args"]):
+                val = self.zx(a, env, local)
+                fn = f"(t_upd {fn} {k} {val})"
+            return fn, str(len(e["args"]))
+        if op == "+":
+            # SPEC.md: `+` on two seqs is concatenation (Ctx.ty already
+            # decided this node is seq-typed before seq_fn was called on
+            # it). t_app is the PRELUDE's own opaque Definition + case-
+            # split tactic (t_app_case), the same shape t_upd/t_fill/
+            # t_div/t_mod already have.
+            s, t = e["args"]
+            fn_s, ln_s = self.seq_fn(s, env, local)
+            fn_t, ln_t = self.seq_fn(t, env, local)
+            return f"(t_app {fn_s} {fn_t} {ln_s})", f"({ln_s} + {ln_t})"
+        if op == "slice":
+            # SPEC.md: s[a..b], elements a..b-1, length b - a. t_slice is a
+            # plain index shift (PRELUDE); the inner seq's own length is
+            # not needed to build the slice's fn/len pair, only for its
+            # definedness obligation (`defs()`, below, computes it itself).
+            s, a, b = e["args"]
+            fn_s, _ = self.seq_fn(s, env, local)
+            av = self.zx(a, env, local)
+            bv = self.zx(b, env, local)
+            return f"(t_slice {fn_s} {av})", f"({bv} - {av})"
         raise ValueError(f"t v1 -> rocq: not a seq expression: {op!r}")
 
     def call(self, e: dict, env: dict, local: dict) -> str:
@@ -1036,18 +1409,24 @@ class Ctx:
         if op in ("==", "!="):
             t = self.ty(e["args"][0], local)
             if t == "seq":
-                # SPEC.md "Sequences as values (v1)": seq `==`/`!=` are
-                # extensional (equal lengths, equal elements at every
-                # index), which is a Prop (a bounded forall), not a
-                # decidable bool here: no Fixpoint walks a symbolic length
-                # to compute one. `prop()` is where `==`/`!=` on two seqs
-                # is actually needed (SPEC.md's own example, the `ensures
-                # r == s` shape); a seq comparison in computational
-                # position abstains rather than guessing, the same
-                # decision quantifiers-in-bx already make above.
-                raise NotImplementedError(
-                    "rocq lowering: seq == / != in computational position "
-                    "has no decidable lowering here")
+                # The residual (2026-09-09): seq `==`/`!=` in COMPUTATIONAL
+                # position used to abstain outright (no Fixpoint walked a
+                # symbolic length to compute a bool; `prop()`'s extensional
+                # forall, above, only ever landed in Prop position). PRELUDE's
+                # `t_seq_eqb` (a bounded Fixpoint over `Z.to_nat` of the
+                # shared length, same idiom as every loop/recursion Fixpoint
+                # in this file) makes it decidable: lengths first (cheap,
+                # `Z.eqb`, short-circuits the general case, and is what makes
+                # `t_seq_eqb`'s own length argument meaningful when the two
+                # seqs are not equal length to begin with), then `t_seq_eqb`
+                # over the shared length, `&&`'d together. `t_seq_eqb_spec`
+                # (PRELUDE) is what lets the proof engine read this back
+                # (`t_seq_eqb_case`, joined into t_inv1's match beside
+                # t_upd_case/t_app_case).
+                fn_a, ln_a = self.seq_fn(e["args"][0], env, local)
+                fn_b, ln_b = self.seq_fn(e["args"][1], env, local)
+                core = f"(({ln_a} =? {ln_b}) && t_seq_eqb {ln_a} {fn_a} {fn_b})"
+                return core if op == "==" else f"(negb {core})"
             if t == "bool":
                 a, b = (self.bx(x, env, local) for x in e["args"])
                 core = f"(Bool.eqb {a} {b})"
@@ -1199,6 +1578,26 @@ class Ctx:
             self.defs(v, ctx, binders, acc, env, local)
             nn = self.zx(n, env, local)
             acc.append((list(binders), list(ctx), f"({nn} >= 0)"))
+            return
+        if op == "slice":
+            # SPEC.md "Sequences: literals, concatenation, slices (v1)":
+            # s[a..b], DEFINED IFF 0 <= a <= b <= len(s), a definedness
+            # obligation under the same rules as `at`'s own `(0 <= idx <
+            # len)`, emitted here exactly where `at`'s is. `seq` (the
+            # literal) and `+` (concatenation on two seqs) get no case of
+            # their own: SPEC.md says a literal is defined iff every
+            # element is and a concatenation iff both operands are,
+            # nothing more, so they fall through to the generic recursion
+            # below, which is exactly that.
+            s, a, b = e["args"]
+            self.defs(s, ctx, binders, acc, env, local)
+            self.defs(a, ctx, binders, acc, env, local)
+            self.defs(b, ctx, binders, acc, env, local)
+            _, ln = self.seq_fn(s, env, local)
+            av = self.zx(a, env, local)
+            bv = self.zx(b, env, local)
+            acc.append((list(binders), list(ctx),
+                        f"(0 <= {av} /\\ {av} <= {bv} /\\ {bv} <= {ln})"))
             return
         if op in ("div", "mod"):
             self.defs(e["args"][0], ctx, binders, acc, env, local)
@@ -2806,6 +3205,31 @@ def _first_undef(e, env: dict, funs: dict):
         if n < 0:
             return f"~ ({_zlit(n)} >= 0)"
         return _first_undef(v_e, env, funs)
+    if op == "slice":
+        # SPEC.md "Sequences: literals, concatenation, slices (v1)":
+        # s[a..b], DEFINED IFF 0 <= a <= b <= len(s), interp.ev's own
+        # bound (matching `at`/`update`'s pattern above); `seq` (the
+        # literal) and `+` (concatenation) carry no bound of their own
+        # (interp.ev evaluates every argument unconditionally, left to
+        # right, and returns), so they fall to the generic recursion
+        # below, in that same order.
+        s_e, lo_e, hi_e = e["args"]
+        r = _first_undef(s_e, env, funs)
+        if r is not None:
+            return r
+        r = _first_undef(lo_e, env, funs)
+        if r is not None:
+            return r
+        r = _first_undef(hi_e, env, funs)
+        if r is not None:
+            return r
+        s = interp.ev(s_e, env, funs, interp.St())
+        lo = interp.ev(lo_e, env, funs, interp.St())
+        hi = interp.ev(hi_e, env, funs, interp.St())
+        if not (0 <= lo <= hi <= len(s)):
+            return (f"~ (0 <= {_zlit(lo)} /\\ {_zlit(lo)} <= {_zlit(hi)} "
+                    f"/\\ {_zlit(hi)} <= {_zlit(len(s))})")
+        return None
     if op in ("div", "mod"):
         a_e, b_e = e["args"]
         r = _first_undef(a_e, env, funs)

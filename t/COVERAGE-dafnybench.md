@@ -8,45 +8,41 @@ seven kernels verify its t rendering. Method and detectors at the end.
 ## Headline
 
 - programs: 785; with a method carrying its own ensures (gradable): 643
-- in t's fragment today: **190** of 643 gradable (29.5%)
-- gradable programs blocked by exactly one gap: 131
+- in t's fragment today: **277** of 643 gradable (43.1%)
+- gradable programs blocked by exactly one gap: 117
 
 ## Gaps, by programs that need them
 
 | gap | programs | sole blocker for (gradable) | meaning |
 |---|---|---|---|
-| zero-returns | 215 | 25 | a method with no return value (t returns exactly one) |
-| multi-method | 212 | 14 | more than one method (Main, and the method of function method, excluded) |
-| seq-slice | 164 | 18 | slicing s[a..b] |
-| set | 130 | 3 | set, iset, multiset, set comprehension or set literal |
-| seq-literal | 113 | 1 | sequence literal [..] in an expression |
-| string-char | 94 | 11 | string or char type |
+| zero-returns | 185 | 10 | a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array |
+| set | 130 | 8 | set, iset, multiset, set comprehension or set literal |
+| multi-method | 125 | 5 | more than one graded method (Main excluded) where some method's body calls ANOTHER declared method by name -- decision 9 lifts one task per method, so independent methods (no cross-call) are the burden multi-method-independent, not this gap |
+| string-char | 94 | 15 | string or char type |
 | generics | 80 | 1 | type parameters |
-| array | 79 | 4 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
-| seq-return | 78 | 0 | sequence-valued return of a method or a function |
-| heap | 78 | 0 | classes, object allocation, this |
-| multi-return | 74 | 27 | several return values |
-| nested-seq | 74 | 6 | a nested seq or array, or a seq of non-int elements |
+| array | 79 | 5 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
+| heap | 78 | 1 | classes, object allocation, this |
+| multi-return | 74 | 32 | several return values |
+| nested-seq | 74 | 12 | a nested seq or array, or a seq of non-int elements |
 | datatype | 69 | 1 | algebraic datatypes and match |
 | array-mutation | 49 | 0 | array mutation decision 22 does not map: more than one mutated array, multiset over a mutated array's slice, or a modifies clause naming anything but the one array |
 | unbounded-quantifier | 49 | 1 | quantifier without an int range |
 | module | 43 | 1 | modules and imports |
-| higher-order | 40 | 3 | lambdas or function types |
-| bodyless-function | 40 | 1 | an uninterpreted function or predicate: a declaration with no body, constrained only by axioms |
+| higher-order | 40 | 4 | lambdas or function types |
+| bodyless-function | 40 | 2 | an uninterpreted function or predicate: a declaration with no body, constrained only by axioms |
 | type-decl | 33 | 0 | newtype, type synonyms, subset types |
-| real | 32 | 9 | real numbers |
+| real | 32 | 11 | real numbers |
 | map | 31 | 0 | map, imap, map comprehension or map literal |
 | io | 24 | 0 | print or expect |
 | bodyless-method | 24 | 0 | a method declared without a body |
-| nondet | 22 | 3 | nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case } |
+| nondet | 22 | 5 | nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case } |
 | such-that-exec | 21 | 0 | assign-such-that :| in executable code (nondeterministic choice) |
-| tuple | 19 | 1 | tuples |
-| seq-update | 15 | 0 | functional update s[i := v] |
+| tuple | 19 | 2 | tuples |
 | bitvector | 6 | 1 | bit vectors or bitwise operators |
 | decreases-star | 6 | 0 | decreases * (a loop or call allowed not to terminate) |
 | extreme-predicate | 5 | 0 | least / greatest predicate: an inductive or coinductive definition, not a well-founded recursion (least and greatest LEMMAS stay hints) |
 | mutual-recursion | 4 | 0 | spec functions that call each other (t allows self-calls and calls to earlier functions) |
-| seq-comprehension | 3 | 0 | seq(n, i => e) |
+| seq-comprehension | 3 | 0 | seq(n, i => e) -- t's fill is constant-valued, this is not (v1 gap, unlike rows 25-27) |
 | early-exit | 3 | 0 | a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop) |
 | char-arith | 3 | 0 | char arithmetic |
 | iterator | 2 | 0 | iterators |
@@ -56,64 +52,57 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | multi-return | 27 | 217 | 33.7% |
-| 2 | zero-returns | 25 | 242 | 37.6% |
-| 3 | multi-method | 34 | 276 | 42.9% |
-| 4 | seq-slice | 26 | 302 | 47.0% |
-| 5 | string-char | 17 | 319 | 49.6% |
-| 6 | array | 28 | 347 | 54.0% |
-| 7 | real | 16 | 363 | 56.5% |
-| 8 | set | 15 | 378 | 58.8% |
-| 9 | array-mutation | 21 | 399 | 62.1% |
-| 10 | seq-literal | 13 | 412 | 64.1% |
-| 11 | seq-return | 35 | 447 | 69.5% |
-| 12 | nested-seq | 24 | 471 | 73.3% |
-| 13 | heap | 15 | 486 | 75.6% |
-| 14 | generics | 13 | 499 | 77.6% |
-| 15 | higher-order | 12 | 511 | 79.5% |
-| 16 | nondet | 11 | 522 | 81.2% |
-| 17 | bodyless-method | 11 | 533 | 82.9% |
-| 18 | unbounded-quantifier | 10 | 543 | 84.4% |
-| 19 | datatype | 12 | 555 | 86.3% |
-| 20 | io | 10 | 565 | 87.9% |
-| 21 | seq-update | 8 | 573 | 89.1% |
-| 22 | bodyless-function | 8 | 581 | 90.4% |
-| 23 | such-that-exec | 8 | 589 | 91.6% |
-| 24 | module | 9 | 598 | 93.0% |
-| 25 | map | 7 | 605 | 94.1% |
-| 26 | type-decl | 10 | 615 | 95.6% |
-| 27 | tuple | 11 | 626 | 97.4% |
-| 28 | decreases-star | 5 | 631 | 98.1% |
-| 29 | bitvector | 4 | 635 | 98.8% |
-| 30 | early-exit | 3 | 638 | 99.2% |
-| 31 | char-arith | 3 | 641 | 99.7% |
-| 32 | seq-comprehension | 1 | 642 | 99.8% |
-| 33 | iterator | 1 | 643 | 100.0% |
+| 1 | multi-return | 32 | 309 | 48.1% |
+| 2 | string-char | 17 | 326 | 50.7% |
+| 3 | nested-seq | 17 | 343 | 53.3% |
+| 4 | array | 16 | 359 | 55.8% |
+| 5 | real | 15 | 374 | 58.2% |
+| 6 | set | 15 | 389 | 60.5% |
+| 7 | multi-method | 14 | 403 | 62.7% |
+| 8 | zero-returns | 49 | 452 | 70.3% |
+| 9 | array-mutation | 24 | 476 | 74.0% |
+| 10 | heap | 16 | 492 | 76.5% |
+| 11 | generics | 14 | 506 | 78.7% |
+| 12 | higher-order | 12 | 518 | 80.6% |
+| 13 | nondet | 11 | 529 | 82.3% |
+| 14 | bodyless-method | 11 | 540 | 84.0% |
+| 15 | unbounded-quantifier | 10 | 550 | 85.5% |
+| 16 | datatype | 13 | 563 | 87.6% |
+| 17 | io | 10 | 573 | 89.1% |
+| 18 | bodyless-function | 8 | 581 | 90.4% |
+| 19 | such-that-exec | 8 | 589 | 91.6% |
+| 20 | module | 9 | 598 | 93.0% |
+| 21 | map | 7 | 605 | 94.1% |
+| 22 | type-decl | 10 | 615 | 95.6% |
+| 23 | tuple | 11 | 626 | 97.4% |
+| 24 | decreases-star | 5 | 631 | 98.1% |
+| 25 | bitvector | 4 | 635 | 98.8% |
+| 26 | early-exit | 3 | 638 | 99.2% |
+| 27 | char-arith | 3 | 641 | 99.7% |
+| 28 | seq-comprehension | 1 | 642 | 99.8% |
+| 29 | iterator | 1 | 643 | 100.0% |
 
 
 ### The same order on the MBPP-DFY family alone (164 gradable, the LLM-shaped subset)
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | string-char | 9 | 81 | 49.4% |
-| 2 | real | 9 | 90 | 54.9% |
-| 3 | set | 6 | 96 | 58.5% |
-| 4 | nested-seq | 6 | 102 | 62.2% |
-| 5 | seq-literal | 4 | 106 | 64.6% |
-| 6 | seq-return | 23 | 129 | 78.7% |
-| 7 | seq-slice | 15 | 144 | 87.8% |
-| 8 | multi-return | 4 | 148 | 90.2% |
-| 9 | char-arith | 3 | 151 | 92.1% |
-| 10 | array | 2 | 153 | 93.3% |
-| 11 | zero-returns | 2 | 155 | 94.5% |
-| 12 | bitvector | 2 | 157 | 95.7% |
-| 13 | multi-method | 1 | 158 | 96.3% |
-| 14 | early-exit | 2 | 160 | 97.6% |
-| 15 | array-mutation | 1 | 161 | 98.2% |
-| 16 | unbounded-quantifier | 1 | 162 | 98.8% |
-| 17 | tuple | 1 | 163 | 99.4% |
-| 18 | higher-order | 0 | 163 | 99.4% |
-| 19 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | string-char | 13 | 118 | 72.0% |
+| 2 | nested-seq | 13 | 131 | 79.9% |
+| 3 | real | 9 | 140 | 85.4% |
+| 4 | set | 6 | 146 | 89.0% |
+| 5 | multi-return | 4 | 150 | 91.5% |
+| 6 | char-arith | 3 | 153 | 93.3% |
+| 7 | array | 2 | 155 | 94.5% |
+| 8 | bitvector | 2 | 157 | 95.7% |
+| 9 | zero-returns | 1 | 158 | 96.3% |
+| 10 | early-exit | 1 | 159 | 97.0% |
+| 11 | multi-method | 1 | 160 | 97.6% |
+| 12 | array-mutation | 1 | 161 | 98.2% |
+| 13 | unbounded-quantifier | 1 | 162 | 98.8% |
+| 14 | tuple | 1 | 163 | 99.4% |
+| 15 | higher-order | 0 | 163 | 99.4% |
+| 16 | seq-comprehension | 1 | 164 | 100.0% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
@@ -123,29 +112,29 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 72 |
-| GitHub (Dafny) | 76 | 72 | 19 |
-| GitHub (Program-Verification-Dataset) | 65 | 48 | 4 |
-| Clover | 62 | 62 | 19 |
-| GitHub (dafny-language-server) | 43 | 17 | 2 |
-| GitHub (Dafny-Exercises) | 21 | 20 | 2 |
-| GitHub (dafny) | 18 | 14 | 3 |
-| GitHub (SENG) | 14 | 11 | 2 |
-| GitHub (dafny-exercise) | 12 | 11 | 3 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 105 |
+| GitHub (Dafny) | 76 | 72 | 28 |
+| GitHub (Program-Verification-Dataset) | 65 | 48 | 7 |
+| Clover | 62 | 62 | 28 |
+| GitHub (dafny-language-server) | 43 | 17 | 4 |
+| GitHub (Dafny-Exercises) | 21 | 20 | 12 |
+| GitHub (dafny) | 18 | 14 | 4 |
+| GitHub (SENG) | 14 | 11 | 5 |
+| GitHub (dafny-exercise) | 12 | 11 | 4 |
 | GitHub (ironsync-osdi) | 12 | 3 | 0 |
 | GitHub (dafl) | 11 | 5 | 3 |
 | GitHub (protocol-verification-fa) | 11 | 1 | 0 |
 | GitHub (Metodos) | 10 | 9 | 8 |
-| GitHub (Final-Project-Dafny) | 9 | 8 | 1 |
-| GitHub (Software-Verification) | 9 | 9 | 2 |
+| GitHub (Final-Project-Dafny) | 9 | 8 | 2 |
+| GitHub (Software-Verification) | 9 | 9 | 3 |
 | GitHub (DafnyProjects) | 8 | 7 | 0 |
 | GitHub (Prog-Fun-Solutions) | 8 | 8 | 7 |
-| GitHub (Programmverifikation-und-synthese) | 7 | 7 | 2 |
-| GitHub (cs245-verification) | 7 | 6 | 4 |
-| GitHub (dafny-duck) | 7 | 6 | 1 |
+| GitHub (Programmverifikation-und-synthese) | 7 | 7 | 4 |
+| GitHub (cs245-verification) | 7 | 6 | 5 |
+| GitHub (dafny-duck) | 7 | 6 | 4 |
 | GitHub (Software-building-and-verification-Projects) | 6 | 5 | 0 |
 | GitHub (Workshop) | 6 | 6 | 4 |
-| GitHub (llm-verified-eval) | 6 | 5 | 0 |
+| GitHub (llm-verified-eval) | 6 | 5 | 3 |
 | GitHub (t) | 6 | 5 | 2 |
 | GitHub (MFES) | 5 | 5 | 3 |
 | GitHub (MIEIC) | 5 | 5 | 2 |
@@ -176,7 +165,7 @@ more than one gate.
 | GitHub (vfag) | 3 | 2 | 0 |
 | GitHub (703FinalProject) | 2 | 0 | 0 |
 | GitHub (CS) | 2 | 1 | 0 |
-| GitHub (CVS-handout) | 2 | 2 | 0 |
+| GitHub (CVS-handout) | 2 | 2 | 1 |
 | GitHub (Dafny-Practice) | 2 | 2 | 0 |
 | GitHub (Dafny-VMC) | 2 | 0 | 0 |
 | GitHub (DafnyExercises) | 2 | 1 | 1 |
@@ -192,9 +181,9 @@ more than one gate.
 | GitHub (laboratory) | 2 | 2 | 2 |
 | GitHub (metodosFormais) | 2 | 2 | 2 |
 | GitHub (veribetrkv-osdi) | 2 | 0 | 0 |
-| GitHub (630-dafny) | 1 | 1 | 0 |
+| GitHub (630-dafny) | 1 | 1 | 1 |
 | GitHub (BPTree-verif) | 1 | 1 | 0 |
-| GitHub (BelowZero.dfy) | 1 | 1 | 0 |
+| GitHub (BelowZero.dfy) | 1 | 1 | 1 |
 | GitHub (BinaryAddition.dfy) | 1 | 1 | 0 |
 | GitHub (BinarySearchTree) | 1 | 1 | 0 |
 | GitHub (CO3408-Advanced-Software-Modelling-Assignment-2022-23-Part-2-A-Specification-Spectacular) | 1 | 1 | 0 |
@@ -211,7 +200,7 @@ more than one gate.
 | GitHub (MFDS) | 1 | 0 | 0 |
 | GitHub (ProjectosCVS) | 1 | 1 | 0 |
 | GitHub (QS) | 1 | 1 | 0 |
-| GitHub (RollingMax.dfy) | 1 | 1 | 0 |
+| GitHub (RollingMax.dfy) | 1 | 1 | 1 |
 | GitHub (SiLemma) | 1 | 0 | 0 |
 | GitHub (Simulink-To) | 1 | 1 | 0 |
 | GitHub (Trab1-Metodos-Formais) | 1 | 1 | 0 |
@@ -241,7 +230,7 @@ more than one gate.
 | GitHub (type-definition) | 1 | 0 | 0 |
 | GitHub (veri-titan) | 1 | 0 | 0 |
 | GitHub (verification-class) | 1 | 0 | 0 |
-| GitHub (verified-isort) | 1 | 1 | 0 |
+| GitHub (verified-isort) | 1 | 1 | 1 |
 | GitHub (verified-using-dafny) | 1 | 1 | 0 |
 | GitHub (vmware-verification-) | 1 | 0 | 0 |
 
@@ -258,15 +247,22 @@ more than one gate.
 | frame-clause | 192 | modifies / reads (array frames when no class is present) |
 | no-if-no-loop | 192 | straight-line body: the twin ladder has only its extensional operators to try |
 | if-no-else | 167 | if without else |
+| seq-slice | 164 | slicing s[a..b], s[a..], s[..b] -- lifts to t's slice, sugars expanded (LIFTER-DECISIONS.md row 27) |
+| seq-concat | 155 | + on two seqs (concatenation) -- lifts to t's own + (LIFTER-DECISIONS.md row 26); lexical and approximate, UNDER-counts (see comment above) |
 | seq-membership | 133 | in / !in (a bounded exists over a seq; set and map membership are their own gaps) |
 | trailing-return | 125 | a return as the last statement (assign the result instead) |
+| seq-literal | 113 | sequence literal [..] in an expression -- lifts to t's seq literal (LIFTER-DECISIONS.md row 25) |
 | early-return | 107 | a return that is not in tail position of a method body (lifts to t's early-exit `return` statement) |
 | main-harness | 105 | a Main test harness (stripped before tagging) |
 | for-loop | 100 | for loop (a while with a bound) |
 | parallel-assign | 88 | x, y := a, b (sequenced through a temporary) |
+| multi-method-independent | 86 | more than one graded method, none calling another by name -- decision 9 lifts one task per method, so no packaging decision is needed |
+| seq-return | 78 | sequence-valued return of a method or a function -- lifts as a seq return (LIFTER-DECISIONS.md rows 22/25-27) |
 | iff | 77 | <==> (== on bools) |
+| zero-returns-array | 43 | a method with no return whose effect is its one array, lifted as a seq return by row 22 (LIFTER-DECISIONS.md row 22's modifies-param shape) |
 | break-as-return | 36 | an unlabeled break whose innermost loop is the tail of the method body, with at most a straight-line continuation after it (lifts to t's early-exit `return` of the method's own result, LIFTER-DECISIONS.md row 23) |
 | as-cast | 15 | as int / as nat casts |
+| seq-update | 15 | functional update s[i := v] -- lifts to t's update (LIFTER-DECISIONS.md decision 22/row 22, landed 2026-09-09 morning) |
 
 ## Hints (proof scaffolding a kernel may need; t has none)
 
@@ -287,12 +283,19 @@ more than one gate.
 
 ## In fragment today
 
+- 630-dafny_tmp_tmpz2kokaiq_Solution.dfy
+- BelowZero.dfy
+- CVS-handout1_tmp_tmptm52no3k_1.dfy
 - Clover_abs.dfy
+- Clover_array_append.dfy
+- Clover_array_concat.dfy
 - Clover_array_product.dfy
 - Clover_array_sum.dfy
 - Clover_avg.dfy
 - Clover_binary_search.dfy
 - Clover_cal_sum.dfy
+- Clover_copy_part.dfy
+- Clover_double_array_elements.dfy
 - Clover_find.dfy
 - Clover_integer_square_root.dfy
 - Clover_is_even.dfy
@@ -301,19 +304,37 @@ more than one gate.
 - Clover_max_array.dfy
 - Clover_min_array.dfy
 - Clover_min_of_two.dfy
+- Clover_remove_front.dfy
+- Clover_replace.dfy
 - Clover_return_seven.dfy
 - Clover_rotate.dfy
+- Clover_swap_in_array.dfy
+- Clover_test_array.dfy
 - Clover_triple.dfy
 - Clover_triple3.dfy
 - Clover_triple4.dfy
+- Clover_update_array.dfy
 - Dafny-Exercises_tmp_tmpjm75muf__Session10Exercises_ExerciseBarrier.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session2Exercises_ExerciseFibonacci.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session2Exercises_ExercisePositive.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session2Exercises_ExerciseSquare_root.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session4Exercises_ExerciseAllEqual.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session4Exercises_ExerciseContained.dfy
 - Dafny-Exercises_tmp_tmpjm75muf__Session4Exercises_ExercisefirstZero.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session5Exercises_ExerciseSumElems.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session6Exercises_ExerciseCountEven.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session6Exercises_ExerciseCountMin.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session6Exercises_ExercisePeekSum.dfy
+- Dafny-Exercises_tmp_tmpjm75muf__Session7Exercises_ExerciseReplace.dfy
 - Dafny-experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array.dfy
 - DafnyExercises_tmp_tmpd6qyevja_Part1_Q1.dfy
+- Dafny_Learning_Experience_tmp_tmpuxvcet_u_week8_12_week9_lemma.dfy
 - Dafny_Programs_tmp_tmp99966ew4_binary_search.dfy
 - Dafny_Programs_tmp_tmp99966ew4_lemma.dfy
 - Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_ComputePower.dfy
+- Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_CopyMatrix.dfy
 - Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_Cube.dfy
+- Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_DoubleArray.dfy
 - Dafny_Verify_tmp_tmphq7j0row_Fine_Tune_Examples_50_examples_BinarySearch.dfy
 - Dafny_Verify_tmp_tmphq7j0row_Fine_Tune_Examples_50_examples_SumArray.dfy
 - Dafny_Verify_tmp_tmphq7j0row_Fine_Tune_Examples_normal_data_completion_MaxPerdV2.dfy
@@ -327,8 +348,15 @@ more than one gate.
 - Dafny_Verify_tmp_tmphq7j0row_dataset_bql_exampls_SmallNum.dfy
 - Dafny_Verify_tmp_tmphq7j0row_dataset_bql_exampls_Square.dfy
 - Dafny_Verify_tmp_tmphq7j0row_dataset_error_data_real_error_IsEven_success_1.dfy
+- Dafny_tmp_tmp0wu8wmfr_Heimaverkefni 1_LinearSearch.dfy
+- Dafny_tmp_tmp0wu8wmfr_tests_F1a.dfy
+- Dafny_tmp_tmp0wu8wmfr_tests_Search1000.dfy
 - Dafny_tmp_tmp0wu8wmfr_tests_SumIntsLoop.dfy
 - Dafny_tmp_tmpmvs2dmry_SlowMax.dfy
+- Dafny_tmp_tmpmvs2dmry_pancakesort_flip.dfy
+- Dafny_tmp_tmpv_d3qi10_2_min.dfy
+- Dafny_tmp_tmpv_d3qi10_3_cumsum.dfy
+- Final-Project-Dafny_tmp_tmpmcywuqox_Attempts_Exercise3_Increment_Array.dfy
 - Final-Project-Dafny_tmp_tmpmcywuqox_Attempts_Exercise6_Binary_Search.dfy
 - FlexWeek_tmp_tmpc_tfdj_3_ex2.dfy
 - FormalMethods_tmp_tmpvda2r3_o_dafny_Invariants_ex1.dfy
@@ -359,14 +387,24 @@ more than one gate.
 - Prog-Fun-Solutions_tmp_tmp7_gmnz5f_mockExam2_p5.dfy
 - Prog-Fun-Solutions_tmp_tmp7_gmnz5f_mockExam2_p6.dfy
 - Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_algorithms and leetcode_examples_bubblesort.dfy
+- Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_algorithms and leetcode_leetcode_FindPivotIndex.dfy
 - Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_algorithms and leetcode_leetcode_lc-remove-element.dfy
 - Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_basic examples_find_max.dfy
+- Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_basic examples_sumto_sol.dfy
+- Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_from dafny main repo_dafny2_Classics.dfy
 - Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_vampire project_original_Searching.dfy
+- Programmverifikation-und-synthese_tmp_tmppurk6ime_PVS_Assignment_ex_05_Hoangkim_ex_05_Hoangkim.dfy
 - Programmverifikation-und-synthese_tmp_tmppurk6ime_PVS_Assignment_ex_06_Hoangkim_ex06-solution.dfy
 - Programmverifikation-und-synthese_tmp_tmppurk6ime_PVS_Assignment_ex_06_Hoangkim_ex_06_hoangkim.dfy
+- Programmverifikation-und-synthese_tmp_tmppurk6ime_example_DafnyIntro_01_Simple_Loops.dfy
+- RollingMax.dfy
+- SENG2011_tmp_tmpgk5jq85q_ass1_ex8.dfy
+- SENG2011_tmp_tmpgk5jq85q_exam_ex2.dfy
 - SENG2011_tmp_tmpgk5jq85q_exam_ex3.dfy
 - SENG2011_tmp_tmpgk5jq85q_flex_ex1.dfy
+- SENG2011_tmp_tmpgk5jq85q_p2.dfy
 - Software-Verification_tmp_tmpv4ueky2d_Best Time to Buy and Sell Stock_best_time_to_buy_and_sell_stock.dfy
+- Software-Verification_tmp_tmpv4ueky2d_Remove Duplicates from Sorted Array_remove_duplicates_from_sorted_array.dfy
 - Software-Verification_tmp_tmpv4ueky2d_Remove Element_remove_element.dfy
 - TFG_tmp_tmpbvsao41w_Algoritmos Dafny_suma_it.dfy
 - Workshop_tmp_tmp0cu11bdq_Lecture_Answers_max_array.dfy
@@ -376,77 +414,117 @@ more than one gate.
 - cs245-verification_tmp_tmp0h_nxhqp_A8_Q1.dfy
 - cs245-verification_tmp_tmp0h_nxhqp_A8_Q2.dfy
 - cs245-verification_tmp_tmp0h_nxhqp_Assignments_simple.dfy
+- cs245-verification_tmp_tmp0h_nxhqp_SortingIssues_FirstAttempt.dfy
 - cs245-verification_tmp_tmp0h_nxhqp_power.dfy
 - cs357_tmp_tmpn4fsvwzs_lab7_question2.dfy
 - dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_binary-search.dfy
 - dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_fibonacci.dfy
 - dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_find.dfy
+- dafny-duck_tmp_tmplawbgxjo_p1.dfy
 - dafny-duck_tmp_tmplawbgxjo_p2.dfy
+- dafny-duck_tmp_tmplawbgxjo_p3.dfy
+- dafny-duck_tmp_tmplawbgxjo_p4.dfy
 - dafny-exercise_tmp_tmpouftptir_appendArray.dfy
 - dafny-exercise_tmp_tmpouftptir_countNeg.dfy
 - dafny-exercise_tmp_tmpouftptir_maxArray.dfy
+- dafny-exercise_tmp_tmpouftptir_zapNegatives.dfy
+- dafny-language-server_tmp_tmpkir0kenl_Test_dafny1_Cubes.dfy
 - dafny-language-server_tmp_tmpkir0kenl_Test_dafny2_COST-verif-comp-2011-1-MaxArray.dfy
 - dafny-language-server_tmp_tmpkir0kenl_Test_dafny2_TuringFactorial.dfy
+- dafny-language-server_tmp_tmpkir0kenl_Test_tutorial_maximum.dfy
 - dafny-programs_tmp_tmpcwodh6qh_src_expt.dfy
 - dafny-programs_tmp_tmpcwodh6qh_src_factorial.dfy
 - dafny-synthesis_task_id_101.dfy
+- dafny-synthesis_task_id_106.dfy
 - dafny-synthesis_task_id_126.dfy
 - dafny-synthesis_task_id_127.dfy
 - dafny-synthesis_task_id_133.dfy
 - dafny-synthesis_task_id_135.dfy
 - dafny-synthesis_task_id_14.dfy
 - dafny-synthesis_task_id_145.dfy
+- dafny-synthesis_task_id_161.dfy
 - dafny-synthesis_task_id_17.dfy
 - dafny-synthesis_task_id_170.dfy
 - dafny-synthesis_task_id_171.dfy
+- dafny-synthesis_task_id_2.dfy
 - dafny-synthesis_task_id_227.dfy
 - dafny-synthesis_task_id_234.dfy
+- dafny-synthesis_task_id_240.dfy
+- dafny-synthesis_task_id_249.dfy
+- dafny-synthesis_task_id_257.dfy
+- dafny-synthesis_task_id_261.dfy
 - dafny-synthesis_task_id_264.dfy
 - dafny-synthesis_task_id_266.dfy
 - dafny-synthesis_task_id_267.dfy
 - dafny-synthesis_task_id_268.dfy
+- dafny-synthesis_task_id_273.dfy
 - dafny-synthesis_task_id_279.dfy
 - dafny-synthesis_task_id_282.dfy
 - dafny-synthesis_task_id_284.dfy
 - dafny-synthesis_task_id_292.dfy
 - dafny-synthesis_task_id_3.dfy
 - dafny-synthesis_task_id_304.dfy
+- dafny-synthesis_task_id_307.dfy
 - dafny-synthesis_task_id_309.dfy
 - dafny-synthesis_task_id_397.dfy
 - dafny-synthesis_task_id_404.dfy
 - dafny-synthesis_task_id_406.dfy
+- dafny-synthesis_task_id_412.dfy
 - dafny-synthesis_task_id_414.dfy
+- dafny-synthesis_task_id_426.dfy
 - dafny-synthesis_task_id_431.dfy
 - dafny-synthesis_task_id_432.dfy
 - dafny-synthesis_task_id_433.dfy
 - dafny-synthesis_task_id_435.dfy
+- dafny-synthesis_task_id_436.dfy
 - dafny-synthesis_task_id_441.dfy
+- dafny-synthesis_task_id_445.dfy
 - dafny-synthesis_task_id_447.dfy
 - dafny-synthesis_task_id_452.dfy
 - dafny-synthesis_task_id_458.dfy
 - dafny-synthesis_task_id_470.dfy
 - dafny-synthesis_task_id_472.dfy
+- dafny-synthesis_task_id_476.dfy
+- dafny-synthesis_task_id_554.dfy
 - dafny-synthesis_task_id_555.dfy
 - dafny-synthesis_task_id_567.dfy
+- dafny-synthesis_task_id_572.dfy
+- dafny-synthesis_task_id_576.dfy
 - dafny-synthesis_task_id_577.dfy
+- dafny-synthesis_task_id_578.dfy
+- dafny-synthesis_task_id_579.dfy
 - dafny-synthesis_task_id_58.dfy
 - dafny-synthesis_task_id_581.dfy
+- dafny-synthesis_task_id_586.dfy
+- dafny-synthesis_task_id_587.dfy
+- dafny-synthesis_task_id_588.dfy
 - dafny-synthesis_task_id_59.dfy
+- dafny-synthesis_task_id_591.dfy
 - dafny-synthesis_task_id_594.dfy
 - dafny-synthesis_task_id_598.dfy
 - dafny-synthesis_task_id_600.dfy
+- dafny-synthesis_task_id_603.dfy
 - dafny-synthesis_task_id_605.dfy
 - dafny-synthesis_task_id_610.dfy
 - dafny-synthesis_task_id_616.dfy
+- dafny-synthesis_task_id_618.dfy
 - dafny-synthesis_task_id_62.dfy
 - dafny-synthesis_task_id_622.dfy
+- dafny-synthesis_task_id_623.dfy
+- dafny-synthesis_task_id_625.dfy
 - dafny-synthesis_task_id_626.dfy
+- dafny-synthesis_task_id_627.dfy
+- dafny-synthesis_task_id_629.dfy
 - dafny-synthesis_task_id_637.dfy
 - dafny-synthesis_task_id_641.dfy
+- dafny-synthesis_task_id_728.dfy
 - dafny-synthesis_task_id_733.dfy
+- dafny-synthesis_task_id_743.dfy
 - dafny-synthesis_task_id_751.dfy
+- dafny-synthesis_task_id_755.dfy
 - dafny-synthesis_task_id_760.dfy
 - dafny-synthesis_task_id_762.dfy
+- dafny-synthesis_task_id_769.dfy
 - dafny-synthesis_task_id_77.dfy
 - dafny-synthesis_task_id_770.dfy
 - dafny-synthesis_task_id_775.dfy
@@ -468,8 +546,12 @@ more than one gate.
 - dafny_examples_tmp_tmp8qotd4ez_leetcode_0069-sqrt.dfy
 - dafny_examples_tmp_tmp8qotd4ez_leetcode_0070-climbing-stairs.dfy
 - dafny_misc_tmp_tmpg4vzlnm1_rosetta_code_factorial.dfy
+- dafny_tmp_tmp59p638nn_examples_minmax2.dfy
 - laboratory_tmp_tmps8ws6mu2_dafny-tutorial_exercise12.dfy
 - laboratory_tmp_tmps8ws6mu2_dafny-tutorial_exercise9.dfy
+- llm-verified-eval_tmp_tmpd2deqn_i_dafny_3.dfy
+- llm-verified-eval_tmp_tmpd2deqn_i_dafny_5.dfy
+- llm-verified-eval_tmp_tmpd2deqn_i_dafny_9.dfy
 - metodosFormais_tmp_tmp4q2kmya4_T1-MetodosFormais_examples_ex1.dfy
 - metodosFormais_tmp_tmp4q2kmya4_T1-MetodosFormais_examples_somatoriov2.dfy
 - se2011_tmp_tmp71eb82zt_ass1_ex4.dfy
@@ -477,6 +559,7 @@ more than one gate.
 - t1_MF_tmp_tmpi_sqie4j_exemplos_colecoes_arrays_ex4.dfy
 - t1_MF_tmp_tmpi_sqie4j_exemplos_introducao_ex4.dfy
 - tangent-finder_tmp_tmpgyzf44ve_circles.dfy
+- verified-isort_tmp_tmp7hhb8ei__dafny_isort.dfy
 
 ## Method
 

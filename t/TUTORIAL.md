@@ -255,6 +255,42 @@ invariant says what the elements written so far are; nothing says which
 elements did not change, because nothing can change: `r` is a new value
 every time.
 
+**Writing a list down, joining two, taking a piece.** `[3, 5, 7]` is a
+list of three; `[]` is the empty list. `s + t` is `s` followed by `t` (the
+same `+` you use on numbers; t knows which one you mean from what is on
+either side). `s[a..b]` is the piece of `s` from position `a` up to but not
+including `b`, so it has `b - a` elements, and it is defined only when
+`0 <= a <= b <= len(s)`; `s[1..]` means "from 1 to the end" and `s[..b]`
+"from the start up to b". The common shape is a loop that grows a list one
+element at a time:
+
+```
+r := [];
+var i: int := 0;
+while i < len(s)
+  invariant 0 <= i
+  invariant i <= len(s)
+  invariant len(r) <= i
+  invariant forall k in [0, len(r)) . r[k] > 0
+  decreases len(s) - i
+{
+  if s[i] > 0 { r := r + [s[i]]; } else { }
+  i := i + 1;
+}
+```
+
+which keeps the positive elements of `s` (`tasks/filter_pos.json`). Note
+the invariant order: the one that bounds `len(r)` comes before the one
+that reads `r[k]`, because each invariant is checked with only the earlier
+ones known.
+
+**Strings, briefly.** A string is a list of code points: write `"abc"` or
+`'a'` and t sees numbers, `[97, 98, 99]` or `97`. Nothing new to learn,
+because everything above, `len`, `s[i]`, `+`, a slice, `==`, already works
+on it; t adds no string type and no string operator, just the two literal
+forms. Escapes `\n`, `\t`, `\r`, `\0`, `\'`, `\\`, and, inside `"..."`,
+`\"`, spell the usual control characters and the quote marks.
+
 ---
 
 ## Lesson 7: forall and exists: claims about many things at once

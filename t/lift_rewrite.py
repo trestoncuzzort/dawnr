@@ -55,11 +55,11 @@ from lift_ast import (
     Implies, Index, IntLit, InvariantClause, LabelStmt, LemmaDecl,
     LiftRecord, Lhs, MethodDecl, Module, NaryBool, NewRhs, Old, Param,
     Quantifier, ReadsClause, Rename, RequiresClause, ReturnStmt, Rewrite,
-    Slice, Stmt, Type, Unary, VarDeclStmt, WhileStmt,
+    SeqDisplay, Slice, Stmt, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
     ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier,
-    find_array_mutation, scan_breaks, scan_null_checks, walk,
+    expr_kind, find_array_mutation, scan_breaks, scan_null_checks, walk,
     unchanged_at_every_call,
 )
 
@@ -123,6 +123,23 @@ def _t_type_of(t: Optional[Type]) -> str:
     if t.kind in ("seq", "array"):
         return "seq"
     return "int"  # int, nat
+
+
+def _rw_seq_kind(e: Expr, scope: "Scope") -> Optional[str]:
+    """Rows 25-27's `expr_kind` (`lift_classify.py`), reusing the live
+    `Scope` this module already threads through the lift as the lookup:
+    an `Ident`'s t-name, then that t-name's own `scope.types` entry
+    (`scope.renames`/`scope.types` are the definitive, already-resolved
+    answer by the time `_lift_expr` runs -- a function's own return kind
+    is NOT resolved here, unlike `classify`'s `_build_kind_env`, since a
+    `+` over a spec_fun call reaching this point was already accepted by
+    `classify`; the only thing this module still needs to decide is
+    whether to record `seq-concat-lifted`, never whether to accept). Used
+    only for that bookkeeping, never to accept or refuse anything."""
+    def lookup(name: str) -> Optional[str]:
+        tname = scope.renames.get(name)
+        return scope.types.get(tname) if tname is not None else None
+    return expr_kind(e, lookup)
 
 
 def _ge0(t_name: str) -> dict:
@@ -402,6 +419,14 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         # 4.11.0, matching t's div/mod one to one, so no domain narrowing
         # or totalising wrapper is needed here, only the name change.
         op = {"/": "div", "%": "mod"}.get(e.op, e.op)
+        if e.op == "+" and _rw_seq_kind(e, scope) == "seq":
+            # Row 26 (2026-09-09): t's own `+` is polymorphic by operand
+            # type exactly as `==` already is (SPEC.md "Sequences:
+            # literals, concatenation, slices (v1)"), so the JSON shape
+            # above needs no change at all for a seq concatenation --
+            # this only records the provenance `classify` already
+            # confirmed (both operands seq-typed).
+            record.rewrites.append(Rewrite(rule="seq-concat-lifted", line=e.line))
         return {"op": op, "args": [left, right]}
     if isinstance(e, NaryBool):
         args = [_lift_expr(a, scope, fn_names, self_name, task_name, record, renamer) for a in e.args]
@@ -459,18 +484,40 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         raise ValueError(f"lift_rewrite: unsupported old(...) shape {inner!r} (a lift_classify "
                           f"bug: this should have been refused before rewrite ran)")
     if isinstance(e, Slice):
-        # Decision 22: `a[..]` with NO `old` wrapper -- the whole-array
-        # view, identity on a value seq -- reads as whatever `a`'s
-        # ambient t-name currently is (the return, once the mutated
-        # array's body priming has run; the array itself unchanged in
-        # every other context). A bounded slice (`lo`/`hi` given) is a
-        # lift_classify bug reaching here: only the unbounded form is
-        # ever accepted.
+        # `a[..]` with NO `old` wrapper and NEITHER bound given -- the
+        # whole-seq view, identity on a value seq (decision 22's own
+        # reading, now also reachable for any other seq-typed receiver:
+        # SPEC.md "a[..] on an array parameter ... is the parameter
+        # itself" applies just as well to a read-only array or a plain
+        # seq local/param/return, not only the row-22 mutated array) --
+        # reads as whatever the base's ambient t-name currently is.
         if e.lo is None and e.hi is None:
             record.rewrites.append(Rewrite(rule="whole-slice-as-seq", line=e.line))
             return _lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)
-        raise ValueError(f"lift_rewrite: unsupported bounded slice {e!r} (a lift_classify bug: "
-                          f"this should have been refused before rewrite ran)")
+        # Row 27 (2026-09-09): a BOUNDED slice, or one of its two sugars
+        # (`s[a..]` for `s[a..len(s)]`, `s[..b]` for `s[0..b]`) -- SPEC.md
+        # "Sequences: literals, concatenation, slices (v1)" states the
+        # AST always carries the three-argument form, the sugar expanded
+        # here. `classify` has already confirmed the receiver is
+        # seq-typed and, when it is decision 22's own mutated array, that
+        # this slice is its accepted UNBOUNDED one (handled above) --
+        # any bounded slice reaching here is never that array (row 22's
+        # own refusal stands for a bounded slice of it).
+        base_e = _lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)
+        lo_e = ({"int": 0} if e.lo is None
+                else _lift_expr(e.lo, scope, fn_names, self_name, task_name, record, renamer))
+        hi_e = ({"op": "len", "args": [base_e]} if e.hi is None
+                else _lift_expr(e.hi, scope, fn_names, self_name, task_name, record, renamer))
+        record.rewrites.append(Rewrite(rule="seq-slice-lifted", line=e.line))
+        return {"op": "slice", "args": [base_e, lo_e, hi_e]}
+    if isinstance(e, SeqDisplay):
+        # Row 25 (2026-09-09): `[e1, ..., en]` (or `[]`, elems empty) is
+        # t's literal one to one; `classify` has already confirmed every
+        # element is int-typed (`_seq_literal_issue`).
+        elems = [_lift_expr(el, scope, fn_names, self_name, task_name, record, renamer)
+                 for el in e.elems]
+        record.rewrites.append(Rewrite(rule="seq-literal-lifted", line=e.line))
+        return {"op": "seq", "args": elems}
     if isinstance(e, Fresh):
         # Decision 22: `fresh(b)` on the returned array is dropped, not
         # lifted -- the common case (a TOP-LEVEL ensures conjunct) is
@@ -912,7 +959,14 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 scope.types[tname] = ty
                 if nm.type is not None and nm.type.kind == "nat":
                     scope.nat.append(nm.name)
-                default = {"bool": False} if ty == "bool" else {"int": 0}
+                # `var r: seq;` with no initialiser needs a seq-shaped
+                # default (rows 25-27, 2026-09-09), not the int/bool
+                # default below -- an empty literal, `{"op": "seq",
+                # "args": []}`, since `[]` is t's own empty seq value.
+                if ty == "seq":
+                    default = {"op": "seq", "args": []}
+                else:
+                    default = {"bool": False} if ty == "bool" else {"int": 0}
                 out.append({"var": {"name": tname, "type": ty, "init": default}})
                 record.rewrites.append(Rewrite(rule="default-init", line=s.line))
                 record.clauses_added.append(ClauseAdded(rule="default-init", text=f"{tname} := {default}"))
@@ -929,7 +983,20 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                     ty = "seq"
                 else:
                     rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
-                    ty = _t_type_of(nm.type)
+                    if nm.type is not None:
+                        ty = _t_type_of(nm.type)
+                    else:
+                        # Rows 25-27: an UNTYPED local (`var r := [];`,
+                        # `var r := r + [x];`) is exactly as common a
+                        # Dafny style as a typed one, and its own
+                        # initialiser -- a literal, a slice, a `+`
+                        # concatenation -- is the only place its kind
+                        # comes from; `_t_type_of(None)` used to default
+                        # to "int" unconditionally, sound only because a
+                        # seq-shaped initialiser was always refused
+                        # before ever reaching here.
+                        inferred = _rw_seq_kind(rhs, scope)
+                        ty = inferred if inferred in ("int", "bool", "seq") else "int"
                 tname = renamer.fresh(nm.name, record, "local")
                 scope.renames[nm.name] = tname
                 scope.types[tname] = ty
@@ -1250,10 +1317,16 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         scope.renames[ret.name] = t_ret
         scope.ret_name = ret.name
         ret_is_nat = ret.type is not None and ret.type.kind == "nat"
-        if ret.type is not None and ret.type.kind == "array":
+        if ret.type is not None and ret.type.kind in ("array", "seq"):
             # Decision 22 "alloc-fill": the return itself (or a local
             # later assigned to it) is `new int[n]`/`new nat[n]`-bound;
             # its Dafny type says seq return, not `_t_type_of`'s default.
+            # Rows 25-27 (2026-09-09): a Dafny `seq<int>`/`seq<nat>`
+            # return (`classify` no longer refuses `seq-return` on
+            # either element type) reads the same way; `_t_type_of`
+            # already does this, but that helper is not called here --
+            # this branch predates it and is kept explicit for the
+            # `nat`-tracking `ret_is_nat` line above it.
             ret_ty = "seq"
         else:
             ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"

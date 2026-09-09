@@ -419,7 +419,7 @@ would currently read that REFUTED rather than MALFORMED. Not fixed here
 whichever pass next touches `verifiers/framac.py`.
 
 SURPRISES. Four lifted tasks (mfirstCero, factorialOfLastDigit,
-invertArray, fcul_exercises_10/find) raise a bare `NotImplementedError`
+invertArray, fcul_exercises_10/find) raised a bare `NotImplementedError`
 out of `lower()` when called on `task["body"]` directly through
 `harness.run_task` -- a pre-existing limit in the REAL body's own
 lowering (a conditionally-evaluated `at`/`div`/`mod` in a `while`
@@ -430,11 +430,200 @@ fires identically with the gate in place. COVERAGE-lifted-785.md already
 reads these four `abstain / abstain`, which is `run_par.py`'s own
 wrapper catching this same exception, not measured directly here since
 RULES scoped this pass away from `run_par.py`/`run_all.py`; counted as
-unchanged above. Six more lifted tasks that read `no-twin / no-twin` in
-COVERAGE-lifted-785.md print a REFUSED reason from `harness.run_task`
-instead (twin_cached found no operator, no input, or no witness) --
-the identical refusal, before `certificate()` runs at all, just a
-different label than the sweep driver's; also counted as unchanged.
+unchanged above (as of THIS pass -- see the WHILE-GUARD DEFINEDNESS note
+below `at_asserts`/`stmts()`'s `while` case: invertArray's own abstain
+was actually the UNCONDITIONAL case that note fixes, not the conditional
+one this paragraph names, and it now lowers; the other three still
+abstain for the reasons stated here, unchanged). Six more lifted tasks
+that read `no-twin / no-twin` in COVERAGE-lifted-785.md print a REFUSED
+reason from `harness.run_task` instead (twin_cached found no operator,
+no input, or no witness) -- the identical refusal, before `certificate()`
+runs at all, just a different label than the sweep driver's; also
+counted as unchanged.
+
+SEQ OPS (`seq`, `+` concatenation, `slice`), added 2026-09-09 (SPEC.md
+"Sequences: literals, concatenation, slices (v1)", the wave after
+"Sequences as values"). Three new Expr forms, landed within the SAME
+buffer model the seq-value machinery already established: a seq PARAM is
+`int *s, int s_n` (`\\valid_read`), a seq RETURN is a caller-provided
+output buffer (`\\valid`, `\\separated`), and a value with no closed-form
+length has no buffer to give it.
+
+  A literal `[e1, ..., en]` (n >= 0) assigned to a seq-typed name is n
+  individual stores, 0 for `[]` (`seq_assign_lines`'s new `seq` case): a
+  FULL REPLACEMENT of the target's value, never additive.
+
+  A slice `s[a..b]` in READ position (an argument to `at`/`len`, or
+  nested inside another spec expression) is pure formula substitution,
+  not a copy: `len(s[a..b])` renders as `(b) - (a)`, `s[a..b][k]` as
+  `s[(a)+(k)]` (`_seq_len_render`/`_seq_at_render`, consumed by `term()`,
+  and `defs()`'s new `slice`/`at`-on-a-slice cases for the definedness
+  obligation `0 <= a <= b <= len(s)`, the same shape as `at`'s own
+  bound). `r := s[a..b]` into the OUTPUT buffer (`tail`'s own shape,
+  loop-free) IS a copy loop (real pointer arithmetic over real memory,
+  `seq_assign_lines`'s `slice` case, `src[(a)+__k]` read into
+  `target[__k]`), the buffer's length pinned exactly as `update`/`fill`
+  already were, `_expr_seq_len`'s new `slice` case (`b - a`) resolving it
+  through `_seq_len_track` with no other change needed: EXACT mode,
+  unchanged machinery.
+
+  `+` is polymorphic by operand type, exactly as `==` already was for
+  seqs (`typ()`'s new case, checking the first operand's type): two ints
+  add, two seqs concatenate. Assigned to a seq-typed name and
+  self-referential on the left (`r := r + [x]`, the append idiom,
+  `filter_pos`'s own shape, the LLM-shaped idiom the census counts) it
+  needs the buffer's CAPACITY, not its exact length: `_ret_capacity`
+  reads it straight off the task's own first `ensures` of the shape
+  `len(ret) <= E`/`== E` (`filter_pos` states `len(r) <= len(s)`,
+  `E = len(s)`) when `_seq_len_track` cannot resolve an exact length
+  (the append sits inside a data-dependent `if`/`while`, so its own
+  before/after check already, correctly, drops the name) -- a
+  seq-returning task with neither a closed-form length nor such an
+  `ensures` bound ABSTAINS, `NotImplementedError`, never guesses one.
+  CAPACITY MODE: `requires {ret}_n == E;` pins the buffer's SIZE; the
+  buffer's actual, data-dependent final length is tracked by a fresh
+  LOCAL, `{ret}_len`, threaded through the body by a new `Ctx` field,
+  `seq_len` (name -> the ACSL rendering of that seq's CURRENT length,
+  overriding the default `{name}_n`): `{ret}_len` itself while still
+  inside the function (a loop invariant, an inner `assign`'s definedness,
+  ordinary local scope), `\\result` in the function's own post-state
+  (`ensures` has no locals in scope, so the C function's return type
+  becomes `int` in CAPACITY mode instead of `void`, `\\result` carrying
+  the buffer's true final length -- no committed task returns both a seq
+  and a scalar, so nothing clashes). An append is `r[r_len] = x; r_len =
+  r_len + 1;` with the owed assert `r_len + <count> <= r_n` emitted
+  first (`seq_assign_lines`'s new `+` case, self-referential only;
+  non-self concatenation, e.g. a fresh `r := s + t`, is refused by name,
+  not measured). `assigned_names` grew a `seq_caps` parameter so a loop
+  that appends also frames its own length local in `loop assigns`
+  (`stmts()`'s `while` case passes `ctx.seq_len`) -- the CAPACITY-mode
+  local is real program state a loop writes, exactly like any other, and
+  WP's frame check fails on an unlisted write exactly as it would for
+  any other omitted name.
+
+  Two measured hazards, both found by running frama-c, neither guessed:
+  (1) `filter_pos`'s own `Loop assigns (2/2)` goal (proving the
+  just-written `r + (r_len - 1)` lies inside `r`'s own valid range) read
+  an honest Alt-Ergo STEP LIMIT with no implicit bound on `r_len` at all
+  -- WP does not carry a per-statement `assert` across loop iterations,
+  and the task's own invariants never state `r_len >= 0` (nothing else
+  implies it either). Fixed by an IMPLICIT loop invariant, `0 <=
+  {r_len};`, emitted whenever a loop's own frame carries a CAPACITY
+  name's length local (`stmts()`'s `while` case) -- an encoding artifact,
+  true by construction (the local only ever starts at 0 or a literal's
+  own count and only increases), owed to WP, not to the task. (2) The
+  matching UPPER bound, `r_len <= {ret}_n`, was tried first (the
+  natural-looking `0 <= r_len <= r_n` pairing) and MEASURED WRONG: it
+  made `filter_pos`'s postcondition `\\result <= len(s)` provable via
+  `r_n == len(s)` alone, with no dependency on the task's own `i <=
+  len(s)` invariant at all, so the `invariant-drop#1` twin (which drops
+  exactly that invariant) verified in FULL -- both the twin's own
+  contract and the certificate's negation of it accepted, the coherence
+  gate correctly reading the file MALFORMED instead of the intended
+  REFUTED. The upper bound is TASK semantics (on `filter_pos` it already
+  follows from `i <= len(s)` and `len(r) <= i`, chained through `r_n ==
+  len(s)`, exactly the chain an INVARIANT-DROP twin threatens), not an
+  encoding artifact, and does not belong in an implicit invariant; only
+  the lower bound does.
+
+  `_undef_certificate`'s own definedness rule, `defs_t` (the t-Expr
+  mirror of `defs()`, used to DECIDE a witness's failing obligation
+  before any ACSL exists to check it against), grew matching `slice` and
+  `at`-on-a-slice cases (`tail`'s twin, `off-by-one` on the slice's lower
+  bound, measures an `undefined` witness, `s=[0]`, mutant slice bounds
+  `[2..1]` outside `0 <= a <= b <= 1`): without them, `defs_t` fell to
+  its generic fallthrough, silently missing the slice's own `0 <= a <= b
+  <= len(s)` obligation (still SOUND -- `interp.ev`'s own bounds check
+  still raises `Undef` for real when reached, and `_undef_certificate`'s
+  broad `except` swallows that same exception -- just uncertified, a
+  TIMEOUT-shaped miss rather than the intended REFUTED).
+
+  MEASURED: `tail` and `filter_pos`, real and twin (COUNTS both,
+  matching the SPEC section's own committed-task discussion): `tail`
+  real VERIFIED, `off-by-one` twin REFUTED (`undefined` witness, the
+  slice-bound case above); `filter_pos` real VERIFIED, `invariant-drop#1`
+  twin REFUTED (`exit` witness, `s=[], i=1, r=[1]`, no new certificate
+  mechanism needed -- CAPACITY mode's `\\result` rendering already
+  applies to `_exit_certificate`'s own final `ensures` assert through the
+  same `ctx.seq_len`-less `Ctx` it always built, which happens to be
+  correct there since that ctx's `r_n` IS the witness's own declared
+  array length, not the real function's capacity). The 15 previously
+  committed tasks plus `swap`/`reverse` (17 total, AGREEMENT.md's framac
+  column) diff byte-for-byte identical, real and twin, to the
+  pre-construct lowering: `reverse` stays exactly `real verified /
+  invariant-drop#1 twin malformed`, the coherence-gate case the seq-value
+  wave's own dated note already recorded, untouched by this wave (its
+  body uses `fill`/`update` only, never `seq`/`+`/`slice`).
+
+  NOT implemented, found by construction rather than assumed: a slice
+  assigned into a CAPACITY-mode buffer (no committed task); concatenation
+  whose left operand is not the assignment's own target, i.e. a fresh `r
+  := s + t` neither operand self-referential (`_expr_seq_len`'s `+` case
+  resolves this correctly for EXACT mode when both operands are
+  independently closed-form, but `seq_assign_lines`'s `+` case still
+  refuses to WRITE one, by name, since no committed task needs the C
+  text); an append whose source is neither a bare seq variable nor a
+  `seq` literal; a `seq`/`slice`/seq-typed `+` reaching ACSL term
+  position directly rather than through `at`/`len` or a body assignment
+  (`term()`'s new refusals, mirroring `update`/`fill`'s pre-existing
+  one). Each raises `NotImplementedError` by name, never guesses.
+
+WHILE-GUARD DEFINEDNESS, added 2026-09-09, the eighth sweep's residual
+(COVERAGE-lifted-785.md): the two MBPP-DFY tasks (`dafny_synthesis_
+task_id_3__isNonPrime`, `dafny_synthesis_task_id_605__isPrime`) loop on
+`while i <= n / 2`, and this lowering used to ABSTAIN on any `at`/`div`/
+`mod` appearing unconditionally in a `while` guard, full stop: there was
+no single statement its definedness assert could go in front of. Fixed in
+`stmts()`'s `while` case and mirrored in `_cert_stmts()`'s (see the dated
+comments there): the guard's `at_asserts` are now emitted twice, once
+immediately before the `while` (the first evaluation) and once as the
+first statement of the loop body (every later evaluation, justified by
+the same induction the loop invariant itself relies on -- see the
+comment at the fix site for the full argument). MEASURED (both lifted
+tasks, plus is_prime/first_even/filter_pos as a regression check, via
+harness.run_task with OUT pointed at out/agent-framac-guard):
+
+  - is_prime, first_even, filter_pos: byte-identical C, real and twin,
+    to the pre-fix `out/*.c` (their guards have no `at`/`div`/`mod`, so
+    `at_asserts` returns `[]` at both new call sites and nothing changes
+    structurally -- confirmed by `cmp`, not just by construction).
+  - Both lifted tasks: the ABSTAIN is gone, real C is now emitted, and
+    the new guard-definedness asserts (the divisor-nonzero check and the
+    raw/logic bridging assert for `n / 2`) both discharge in the
+    milliseconds range (Qed or fast Alt-Ergo) on every run -- the fix
+    itself works exactly as measured on is_prime's existing `if`-position
+    analog. But the outcome is `timeout / timeout`, not the hoped
+    `verified / refuted`, for two SEPARATE reasons this fix does not
+    touch and did not introduce:
+    1. The real function's own trailing `ensures` (unchanged by this
+       fix) needs a fact neither of the new asserts states or implies:
+       no divisor of `n` lies in `(n/2, n)`. That is genuinely harder
+       than anything div/mod definedness requires (it is nonlinear,
+       needs `n = d*q` reasoning for a non-constant `d`), and alt-ergo
+       does not close it within any budget tried, [Timeout]/[Stepout]
+       alike at 10s/20000 steps (the pinned budget), 60s/200000 steps,
+       and 300s/500000 steps (all three tried by hand, same goal name
+       `..._ensures` failing every time, well under a second of actual
+       solver work reported each try -- a wall/step ceiling never
+       reached, not a close call). Consistent with the wider census:
+       COVERAGE-lifted-785.md already reads this same real function
+       unproved or timeout on four of the other six kernels (verus,
+       spark, lean, rocq, fstar); only dafny's automation closes it.
+    2. Independently, the invariant-drop twin's witness for both tasks
+       is kind `"preservation"` (measured: `harness.twin_cached` on
+       both), the one witness kind `certificate()`'s dispatch does not
+       cover ("return None # preservation: see the section note",
+       above `_exit_certificate`) -- so REFUTED is structurally
+       unreachable for this twin regardless of how the real function
+       fares; its outcome is whatever WP naturally does with the
+       dropped invariant, which is also TIMEOUT here (the same `ensures`
+       goal, plus one more Stepout goal the drop exposes).
+  Neither gap is this fix's to close (a certificate mechanism for
+  `preservation` witnesses, and whatever hint alt-ergo would need for
+  the divisor-range fact, are each their own measured pass), so this note
+  reports the honest cells rather than the hoped ones: `timeout /
+  timeout` for both, up from `abstain / abstain`, the ABSTAIN itself
+  eliminated as designed.
 """
 from __future__ import annotations
 
@@ -514,6 +703,18 @@ def typ(e: dict, env: dict, funs: dict) -> str:
     op = e["op"]
     if op in SEQOPS:
         return "seq"
+    if op == "seq" or op == "slice":
+        # SPEC.md "Sequences: literals, concatenation, slices" (2026-09-09):
+        # a literal `[e1, ..., en]` and a slice `s[a..b]` both denote seq
+        # values, exactly like `update`/`fill`.
+        return "seq"
+    if op == "+":
+        # `+` is polymorphic by operand type, exactly as `==` already is
+        # for seqs (SPEC.md, same section): two seqs concatenate, two ints
+        # add. The first operand's type decides which (ill-typed mixes are
+        # not this lowering's job to reject; t's own well-formedness check
+        # is).
+        return "seq" if typ(e["args"][0], env, funs) == "seq" else "int"
     if op in ("len", "at", "neg") or op in ARITH or op in DIVMOD:
         return "int"
     return "bool"                                # cmp, and, or, not, implies
@@ -532,19 +733,55 @@ def seq_var(e: dict, env: dict) -> str:
     raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
 
+def _seq_len_render(e: dict, ctx) -> str:
+    """ACSL rendering of `len(e)`, `e` a READ-position SeqExpr: a bare seq
+    variable (the ordinary case, `{s}_n` unless `ctx.seq_len` overrides it
+    for a capacity-tracked return, see the seq value machinery section) or
+    a `slice` (2026-09-09, SPEC.md "Sequences: literals, concatenation,
+    slices"). A slice's length is pure formula substitution (`s[a..b]` has
+    length `b - a` by definition): no backing buffer is needed for this
+    rendering since ACSL terms are logic, not memory, unlike a slice
+    materialized into an OUTPUT buffer (`seq_assign_lines`'s `slice`
+    case), which is real pointer arithmetic over real memory."""
+    if e.get("op") == "slice":
+        _, lo, hi = e["args"]
+        return f"(({term(hi, ctx)}) - ({term(lo, ctx)}))"
+    v = seq_var(e, ctx.env)
+    return ctx.seq_len.get(v, f"{v}_n")
+
+
+def _seq_at_render(e: dict, k_render: str, ctx) -> str:
+    """ACSL rendering of `at(e, k)`, `e` a READ-position SeqExpr and
+    `k_render` the already-rendered index term. A slice's element `k` is
+    the base's element `a + k` (`s[a..b][k] == s[a+k]`, SPEC.md's own
+    definition), again a formula rewrite, not a copy."""
+    if e.get("op") == "slice":
+        s, lo, _ = e["args"]
+        return f"{seq_var(s, ctx.env)}[({term(lo, ctx)}) + ({k_render})]"
+    return f"{seq_var(e, ctx.env)}[{k_render}]"
+
+
 # ---------------------------------------------------------- ACSL (spec) -----
 
 class Ctx:
     """Rendering context for ACSL: env (name->type), funs (spec_fun table +
-    the task itself), ret (return name to render as \\result, or None), and
-    label (the memory label attached to labeled logic-fun calls)."""
-    def __init__(self, env, funs, ret=None, label="Here"):
+    the task itself), ret (return name to render as \\result, or None),
+    label (the memory label attached to labeled logic-fun calls), and
+    seq_len (2026-09-09: name -> ACSL rendering of that seq's CURRENT
+    length, overriding the default `{name}_n`; empty for every seq return
+    whose length is pinned exactly, see `_expr_seq_len`/`lower()`, and
+    non-empty only for a CAPACITY-tracked return -- `\\result` in the
+    function's own post-state (`ensures`), the running local `r_len` while
+    still inside the body (invariants can see a local; `ensures` cannot),
+    see the seq value machinery section's CAPACITY discussion)."""
+    def __init__(self, env, funs, ret=None, label="Here", seq_len=None):
         self.env, self.funs, self.ret, self.label = env, funs, ret, label
+        self.seq_len = seq_len or {}
 
     def bind(self, name, ty):
         env2 = dict(self.env)
         env2[name] = ty
-        return Ctx(env2, self.funs, self.ret, self.label)
+        return Ctx(env2, self.funs, self.ret, self.label, self.seq_len)
 
 
 def acsl_call(c: dict, ctx: Ctx) -> str:
@@ -600,9 +837,9 @@ def term(e: dict, ctx: Ctx) -> str:
         raise NotImplementedError("quantifier in ACSL term position")
     op, args = e["op"], e.get("args", [])
     if op == "len":
-        return f"{seq_var(args[0], ctx.env)}_n"
+        return _seq_len_render(args[0], ctx)
     if op == "at":
-        return f"{seq_var(args[0], ctx.env)}[{term(args[1], ctx)}]"
+        return _seq_at_render(args[0], term(args[1], ctx), ctx)
     if op == "neg":
         return f"(-{_gap(term(args[0], ctx))})"
     if op == "not":
@@ -630,6 +867,33 @@ def term(e: dict, ctx: Ctx) -> str:
             f"`{op}` has no ACSL term rendering (no backing buffer here); "
             f"seq values may only be produced as the right-hand side of a "
             f"body assignment to a seq-typed name")
+    if op == "seq":
+        # A literal `[e1, ..., en]` (2026-09-09) is the same shape as
+        # `update`/`fill` above: it denotes a fresh seq value with no
+        # backing buffer at this position, so it has no term rendering
+        # except as the whole right-hand side of a body assignment.
+        raise NotImplementedError(
+            "`seq` (a literal) has no ACSL term rendering (no backing "
+            "buffer here); seq values may only be produced as the "
+            "right-hand side of a body assignment to a seq-typed name")
+    if op == "slice" and typ(e, ctx.env, ctx.funs) == "seq":
+        # A slice reaching TERM position directly (not as `at`/`len`'s own
+        # operand, handled above by `_seq_len_render`/`_seq_at_render`) is
+        # the same gap: no backing buffer for a bare seq value.
+        raise NotImplementedError(
+            "`slice` reaching ACSL term position directly has no "
+            "rendering; this lowering only supports a slice in READ "
+            "position as `at`'s or `len`'s own argument, or as the whole "
+            "right-hand side of a body assignment to a seq-typed name")
+    if op == "+" and typ(e, ctx.env, ctx.funs) == "seq":
+        # Concatenation (2026-09-09), the seq-typed half of the
+        # polymorphic `+`: same gap again, never silently treated as int
+        # addition (ARITH's own `+` below would render two POINTERS with
+        # `+`, a different and wrong theorem).
+        raise NotImplementedError(
+            "seq concatenation (`+`) has no ACSL term rendering (no "
+            "backing buffer here); seq values may only be produced as "
+            "the right-hand side of a body assignment to a seq-typed name")
     if op in ARITH or op in CMP:
         o = ARITH.get(op) or CMP[op]
         return f"({term(args[0], ctx)} {o} {term(args[1], ctx)})"
@@ -703,8 +967,35 @@ def defs(e: dict, ctx: Ctx):
     op, args = e["op"], e.get("args", [])
     if op == "at":
         i = term(args[1], ctx)
-        n = seq_var(args[0], ctx.env) + "_n"
+        base = args[0]
+        if base.get("op") == "slice":
+            # `at` on a slice (2026-09-09, read position): defined iff the
+            # SLICE itself is (its own `0 <= a <= b <= len(s)` domain,
+            # picked up via `defs(base, ctx)` below hitting the `slice`
+            # case) AND the index is within the slice's own length, `b -
+            # a`, not the base's.
+            n = _seq_len_render(base, ctx)
+            return _conj([defs(base, ctx), defs(args[1], ctx),
+                          f"(0 <= ({i}) && ({i}) < {n})"])
+        n = ctx.seq_len.get(seq_var(base, ctx.env),
+                            f"{seq_var(base, ctx.env)}_n")
         return _conj([defs(args[1], ctx), f"(0 <= ({i}) && ({i}) < {n})"])
+    if op == "slice":
+        # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s) (SPEC.md "Sequences:
+        # literals, concatenation, slices", 2026-09-09), the same
+        # obligation shape as `at`'s own bound, over the whole range
+        # rather than a point. Reached both directly (a slice used as a
+        # whole spec expression, e.g. inside `at`/`len`'s own definedness
+        # above) and via the generic fallthrough at the bottom of this
+        # function (a literal's or concatenation's own defs already walk
+        # every arg, and a slice inside either would land here too).
+        s_e, lo, hi = args
+        lo_t, hi_t = term(lo, ctx), term(hi, ctx)
+        n = seq_var(s_e, ctx.env)
+        nlen = ctx.seq_len.get(n, f"{n}_n")
+        return _conj([defs(lo, ctx), defs(hi, ctx),
+                      f"(0 <= ({lo_t}) && ({lo_t}) <= ({hi_t}) "
+                      f"&& ({hi_t}) <= {nlen})"])
     if op == "update":
         # SPEC.md "Sequences as values" (2026-09-09): `s[i := v]` is
         # DEFINED IFF `0 <= i < len(s)`, the identical shape as `at`'s own
@@ -781,8 +1072,10 @@ def pred(e: dict, ctx: Ctx) -> str:
             # backend has no ACSL rendering of a raw `update`/`fill`
             # value outside a body assignment, see `term()`).
             a, b = seq_var(args[0], ctx.env), seq_var(args[1], ctx.env)
-            eq = (f"(({a}_n == {b}_n) && "
-                 f"(\\forall integer __k; 0 <= __k && __k < {a}_n "
+            an = ctx.seq_len.get(a, f"{a}_n")
+            bn = ctx.seq_len.get(b, f"{b}_n")
+            eq = (f"(({an} == {bn}) && "
+                 f"(\\forall integer __k; 0 <= __k && __k < {an} "
                  f"==> {a}[__k] == {b}[__k]))")
             return eq if op == "==" else f"(!{eq})"
         return f"({term(args[0], ctx)} {CMP[op]} {term(args[1], ctx)})"
@@ -1079,17 +1372,50 @@ def _expr_seq_len(e: dict, lens: dict) -> dict | None:
     """The t Expr for the length of the seq value `e` denotes, given the
     lengths already tracked for every seq name in scope (`lens`), or None
     when `e`'s length cannot be determined this way (SPEC.md's grammar:
-    a seq-typed assignment's right-hand side is always a bare seq
-    variable, `update`, or `fill`; `update` preserves its base's length,
-    `fill`'s length is its own first argument, a variable's length is
-    whatever is already tracked for it)."""
+    a seq-typed assignment's right-hand side is a bare seq variable,
+    `update`, `fill`, a `seq` literal, a `slice`, or a `+` concatenation;
+    `update` preserves its base's length, `fill`'s length is its own
+    first argument, a literal's length is its own element count, a
+    slice's is `b - a`, a concatenation's is the sum of its two operands'
+    -- each resolved recursively, so `[]  + [x]` or `s[0..k] + t`
+    resolve exactly as a bare literal or slice would; a variable's length
+    is whatever is already tracked for it).
+
+    2026-09-09 (SPEC.md "Sequences: literals, concatenation, slices"):
+    `seq`/`slice`/`+` added alongside the pre-existing `update`/`fill`.
+    Extending `+` here is SAFE for the append idiom (`r := r + [x]`,
+    self-referential, `filter_pos`'s own shape) even though it can, on a
+    SINGLE static pass, resolve to a numeric value (e.g. `r`'s tracked
+    length 0 plus a length-1 literal, giving 1): the append always sits
+    inside a data-dependent `if`/`while` whose own branch- or
+    iteration-count disagreement already drops the name from `lens`
+    (`_seq_len_track`'s `if`/`while` handling, unchanged), so this
+    extension never lets a genuinely unbounded append masquerade as a
+    closed form; it only lets a LOOP-FREE concatenation of two
+    already-resolved operands (e.g. `r := s + t`, neither self-referential
+    nor inside a loop) resolve exactly, which no committed task needs but
+    which costs nothing extra to support correctly."""
     if "var" in e:
         return lens.get(e["var"])
-    if "op" in e and e["op"] == "update":
+    if "op" not in e:
+        return None
+    op = e["op"]
+    if op == "update":
         base = e["args"][0]
         return lens.get(base.get("var")) if "var" in base else None
-    if "op" in e and e["op"] == "fill":
+    if op == "fill":
         return e["args"][0]
+    if op == "seq":
+        return {"int": len(e["args"])}
+    if op == "slice":
+        _, lo, hi = e["args"]
+        return {"op": "-", "args": [hi, lo]}
+    if op == "+":
+        a_len = _expr_seq_len(e["args"][0], lens)
+        b_len = _expr_seq_len(e["args"][1], lens)
+        if a_len is None or b_len is None:
+            return None
+        return {"op": "+", "args": [a_len, b_len]}
     return None
 
 
@@ -1139,41 +1465,93 @@ def _seq_len_track(body: list, lens: dict) -> None:
                     lens.pop(k, None)
 
 
+def _ret_capacity(task: dict, ret: str) -> dict | None:
+    """CAPACITY, 2026-09-09 (the append idiom, `r := r + [x]`). When a seq
+    RETURN's exact length has no closed form over the params
+    (`_seq_len_track` above failed to resolve it, `filter_pos`'s own
+    shape: a while loop appends conditionally, so no single static length
+    survives the loop's own before/after check), the return buffer still
+    needs SOME `requires`-time bound to size its `\\valid`/`\\separated`
+    obligations from -- not the true final length (data-dependent, known
+    only at runtime), but a CAPACITY the true length never exceeds. This
+    is exactly what the task's own `ensures` already states, because the
+    whole point of stating `len(r) <= len(s)` (or `== `) is to bound the
+    result: the first `ensures` of the shape `len(ret) <= E` or `len(ret)
+    == E` gives E, read directly off the task rather than re-derived,
+    since the task author already proved (informally) that E bounds the
+    append loop's own iteration count. None when no such ensures exists,
+    the caller's (`lower()`'s) signal to abstain rather than guess a
+    buffer size."""
+    def is_len_ret(e):
+        return (isinstance(e, dict) and e.get("op") == "len"
+                and e.get("args", [{}])[0].get("var") == ret)
+    for e in task.get("ensures", []):
+        if e.get("op") in ("<=", "==") and "args" in e:
+            a, b = e["args"]
+            if is_len_ret(a):
+                return b
+    return None
+
+
 def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
                      funs: dict, task_name: str) -> list:
     """C statements implementing `target := e`, `target` a seq-typed name,
-    `e` a bare seq variable (a full copy), `update`, or `fill` (the only
-    shapes `_expr_seq_len` and `seq_var` admit). Every one of these writes
-    `target`'s buffer through real memory stores: `update`'s base operand,
-    when it names a DIFFERENT buffer than `target` (swap's `r := s[i :=
-    ...]`, its first write to `r`), is copied in first, a whole-buffer
-    loop with invariant `target[t] == base[t]` for `t` below the loop
-    counter, exactly SPEC.md's "equal to `s` at every index but `i`"; a
-    SELF update (`r := r[j := tmp]`, swap's second write, and reverse's
-    per-iteration `r := r[i := ...]`) skips the copy, since `target`
-    already holds exactly what `base` denotes. `fill` never reads a prior
-    value, so the whole buffer is written by one loop, no copy. Measured
-    2026-09-09 by hand (frama-c/WP) on both tasks in exactly this shape
-    before this function was written (RULES: measure first)."""
+    `e` a bare seq variable (a full copy), `update`, `fill`, a `seq`
+    literal, a `slice`, or `+` (concatenation, added 2026-09-09). Every one
+    of these writes `target`'s buffer through real memory stores:
+    `update`'s base operand, when it names a DIFFERENT buffer than
+    `target` (swap's `r := s[i := ...]`, its first write to `r`), is
+    copied in first, a whole-buffer loop with invariant `target[t] ==
+    base[t]` for `t` below the loop counter, exactly SPEC.md's "equal to
+    `s` at every index but `i`"; a SELF update (`r := r[j := tmp]`,
+    swap's second write, and reverse's per-iteration `r := r[i := ...]`)
+    skips the copy, since `target` already holds exactly what `base`
+    denotes. `fill` never reads a prior value, so the whole buffer is
+    written by one loop, no copy. Measured 2026-09-09 by hand (frama-c/WP)
+    on both tasks in exactly this shape before this function was written
+    (RULES: measure first).
+
+    `seq`/`slice`/`+`, added the same night for SPEC.md "Sequences:
+    literals, concatenation, slices": a literal is `len(args)` individual
+    stores (0 for `[]`); a slice is a copy loop reading `src[a + __t]`
+    instead of `src[__t]`, the buffer's length pinned exactly as today
+    from the ensures (`tail`'s shape, EXACT mode, `ctx.seq_len` empty for
+    `target`); `+` is the append idiom, `r := r + [...]` (or, more
+    generally, `r := r + t` for a bare seq `t`) -- CAPACITY mode only
+    (`target in ctx.seq_len`, see the seq value machinery section's
+    CAPACITY discussion and `_ret_capacity`), self-referential on the
+    left by construction (only `filter_pos`'s own shape is measured; a
+    non-self-referential `+`, e.g. a fresh `r := s + t` neither operand
+    being `target`, is not implemented, since no committed task needs
+    it). `ctx.seq_len[target]` names the LOCAL tracking the buffer's
+    CURRENT logical length (`r_len`); an append emits the SPEC's own
+    obligation, `r_len + <appended count> <= r_n`, before writing, and
+    advances `r_len` by that count afterward -- `r[r_len] = x; r_len =
+    r_len + 1;` for the measured singleton-literal shape."""
     out = []
     xn = f"{target}_n"
+    cap = ctx.seq_len.get(target)          # the length-local, CAPACITY mode
 
-    def _copy_loop(src: str) -> list:
+    def _copy_loop(src: str, off: str | None = None) -> list:
+        idx_t = f"({off}) + __t" if off is not None else "__t"
+        idx_k = f"({off}) + __k" if off is not None else "__k"
         return [
             f"{indent}/*@",
             f"{indent}  loop invariant 0 <= __k <= {xn};",
             f"{indent}  loop invariant \\forall integer __t; "
-            f"0 <= __t < __k ==> {target}[__t] == {src}[__t];",
+            f"0 <= __t < __k ==> {target}[__t] == {src}[{idx_t}];",
             f"{indent}  loop assigns __k, {target}[0 .. {xn} - 1];",
             f"{indent}  loop variant {xn} - __k;",
             f"{indent}*/",
             f"{indent}for (int __k = 0; __k < {xn}; __k++) "
-            f"{target}[__k] = {src}[__k];",
+            f"{target}[__k] = {src}[{idx_k}];",
         ]
 
     if "var" in e:
         src = seq_var(e, ctx.env)
         out += _copy_loop(src)
+        if cap is not None:
+            out.append(f"{indent}{cap} = {xn};")
         return out
     op, args = e["op"], e["args"]
     if op == "update":
@@ -1205,29 +1583,137 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
             f"{target}[__k] = {vc};",
         ]
         return out
+    if op == "slice":
+        # `r := s[a..b]` into the OUTPUT buffer (2026-09-09, `tail`'s own
+        # shape): a copy loop reading `src[a + __t]`, the buffer's length
+        # pinned exactly as today from the ensures (`_expr_seq_len`'s new
+        # `slice` case gives `b - a`, EXACT mode). CAPACITY mode is not
+        # exercised by any committed task (a slice assigned into a
+        # counted return) but is handled the same way `var`'s copy is,
+        # above: whatever the buffer's current length local tracks, a
+        # full replacement sets it to the number of elements this loop
+        # actually wrote, `xn`.
+        s_e, lo, hi = args
+        out += at_asserts(lo, ctx, indent, funs, task_name)
+        out += at_asserts(hi, ctx, indent, funs, task_name)
+        src = seq_var(s_e, ctx.env)
+        lo_c = cexpr(lo, ctx.env, funs, task_name)
+        hi_c = cexpr(hi, ctx.env, funs, task_name)
+        out.append(f"{indent}/*@ assert 0 <= ({lo_c}) && ({lo_c}) <= "
+                   f"({hi_c}) && ({hi_c}) <= {src}_n; */")
+        out += _copy_loop(src, off=lo_c)
+        if cap is not None:
+            out.append(f"{indent}{cap} = {xn};")
+        return out
+    if op == "+":
+        # `r := r + [...]` (2026-09-09, the append idiom, `filter_pos`'s
+        # own shape) or, more generally, `r := r + t` for a bare seq `t`:
+        # CAPACITY mode only, self-referential on the left. See this
+        # function's own docstring for what is and is not measured here.
+        if cap is None:
+            raise NotImplementedError(
+                "seq concatenation assigned to an EXACT-length return "
+                "(its length already pinned by `requires` from "
+                "`_seq_len_track`) is not implemented by this lowering; "
+                "only the append idiom into a CAPACITY-tracked buffer "
+                "(`_ret_capacity`) is measured")
+        left, right = args
+        if not ("var" in left and left["var"] == target):
+            raise NotImplementedError(
+                "seq concatenation whose left operand is not the "
+                "assignment's own target is not implemented by this "
+                "lowering; only the append idiom `r := r + ...` is "
+                "measured")
+        if "var" in right:
+            src = seq_var(right, ctx.env)
+            cnt = f"{src}_n"
+            out.append(f"{indent}/*@ assert ({cap}) + ({cnt}) <= "
+                       f"{xn}; */")
+            out += [
+                f"{indent}/*@",
+                f"{indent}  loop invariant 0 <= __k <= {cnt};",
+                f"{indent}  loop invariant \\forall integer __t; "
+                f"0 <= __t < __k ==> "
+                f"{target}[({cap}) + __t] == {src}[__t];",
+                f"{indent}  loop assigns __k, "
+                f"{target}[({cap}) .. {xn} - 1];",
+                f"{indent}  loop variant {cnt} - __k;",
+                f"{indent}*/",
+                f"{indent}for (int __k = 0; __k < {cnt}; __k++) "
+                f"{target}[({cap}) + __k] = {src}[__k];",
+            ]
+            out.append(f"{indent}{cap} = ({cap}) + ({cnt});")
+            return out
+        if right.get("op") == "seq":
+            for a in right["args"]:
+                out += at_asserts(a, ctx, indent, funs, task_name)
+            n = len(right["args"])
+            out.append(f"{indent}/*@ assert ({cap}) + {n} <= {xn}; */")
+            for k, a in enumerate(right["args"]):
+                vc = cexpr(a, ctx.env, funs, task_name)
+                out.append(f"{indent}{target}[({cap}) + {k}] = {vc};")
+            out.append(f"{indent}{cap} = ({cap}) + {n};")
+            return out
+        raise NotImplementedError(
+            f"append source {right!r}: only a bare seq variable or a "
+            f"`seq` literal is implemented as the right operand of `+` "
+            f"by this lowering")
+    if op == "seq":
+        # `[e1, ..., en]` (2026-09-09): n individual stores, 0 for `[]`.
+        # A FULL REPLACEMENT of `target`'s value (never additive; the
+        # append idiom is expressed through `+`, above), so a
+        # CAPACITY-tracked target's length local is set to n directly,
+        # not advanced.
+        for a in args:
+            out += at_asserts(a, ctx, indent, funs, task_name)
+        n = len(args)
+        if cap is not None:
+            out.append(f"{indent}/*@ assert {n} <= {xn}; */")
+        for k, a in enumerate(args):
+            vc = cexpr(a, ctx.env, funs, task_name)
+            out.append(f"{indent}{target}[{k}] = {vc};")
+        if cap is not None:
+            out.append(f"{indent}{cap} = {n};")
+        return out
     raise NotImplementedError(
         f"seq-typed assignment from operator {op!r}: v1's grammar only "
-        f"assigns a bare seq variable, `update`, or `fill` to a seq-typed "
-        f"name")
+        f"assigns a bare seq variable, `update`, `fill`, `seq`, `slice`, "
+        f"or `+` to a seq-typed name")
 
 
-def assigned_names(body: list) -> tuple[list, list]:
-    """(assign targets, locals declared) in order, recursively."""
+def assigned_names(body: list, seq_caps: dict | None = None
+                   ) -> tuple[list, list]:
+    """(assign targets, locals declared) in order, recursively. `seq_caps`
+    (2026-09-09, `ctx.seq_len`: return-name -> its length-tracking local)
+    makes an assignment to a CAPACITY-tracked seq return also count as an
+    assignment to that local, so the loop that assigns it (`filter_pos`'s
+    own shape) correctly frames both in its `loop assigns` (see `stmts()`'s
+    `while` case, the only caller of this function): the local is real C
+    state the loop writes (`r_len = r_len + 1;`), just as `r`'s own
+    buffer is, and WP's frame check fails on an unlisted write exactly as
+    it would for any other omitted name."""
+    seq_caps = seq_caps or {}
     hit, dec = [], []
     for s in body:
         if "assign" in s:
-            hit.append(s["assign"][0])
+            n = s["assign"][0]
+            hit.append(n)
+            if n in seq_caps:
+                hit.append(seq_caps[n])
         elif "return" in s:
-            hit.append(s["return"][0])
+            n = s["return"][0]
+            hit.append(n)
+            if n in seq_caps:
+                hit.append(seq_caps[n])
         elif "var" in s:
             dec.append(s["var"]["name"])
         elif "if" in s:
             for br in (s["if"]["then"], s["if"]["else"]):
-                h, d = assigned_names(br)
+                h, d = assigned_names(br, seq_caps)
                 hit += h
                 dec += d
         elif "while" in s:
-            h, d = assigned_names(s["while"]["body"])
+            h, d = assigned_names(s["while"]["body"], seq_caps)
             hit += h
             dec += d
     return hit, dec
@@ -1279,7 +1765,18 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
             if ctx.env[name] == "seq":
                 out += seq_assign_lines(name, e, ctx, indent, ctx.funs,
                                         task_name)
-                out.append(f"{indent}return;")
+                # CAPACITY mode (2026-09-09): the C function's own
+                # `\result` carries the buffer's actual final logical
+                # length (see the seq value machinery section's CAPACITY
+                # discussion), so an early exit returns the length local
+                # `ctx.seq_len` names for this target instead of a bare,
+                # void `return;`. Not exercised by any committed task
+                # (neither `tail` nor `filter_pos` returns the seq early)
+                # but kept correct rather than left to crash or lie.
+                if name in ctx.seq_len:
+                    out.append(f"{indent}return {ctx.seq_len[name]};")
+                else:
+                    out.append(f"{indent}return;")
             else:
                 out += at_asserts(e, ctx, indent, ctx.funs, task_name)
                 out.append(f"{indent}{name} = "
@@ -1314,25 +1811,92 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
             out.append(f"{indent}}}")
         elif "while" in s:
             w = s["while"]
-            if code_ats(w["cond"], ctx.env):
-                raise NotImplementedError(
-                    "`at`/`div`/`mod` in a while condition: its "
-                    "per-iteration definedness assert has no statement to "
-                    "precede")
+            # WHILE-GUARD DEFINEDNESS, added 2026-09-09 (the eighth sweep's
+            # residual, COVERAGE-lifted-785.md: the two MBPP-DFY
+            # IsPrime/IsNonPrime tasks loop on `while i <= n / 2`). A
+            # `div`/`mod`/`at` in the GUARD is evaluated once before the loop
+            # and once more per iteration, and unlike every other position
+            # this lowering handles (`if` conditions, assignments, returns),
+            # the guard's own evaluation precedes the loop body, not a
+            # statement inside it -- there was no single statement its
+            # assert could go in front of, so this lowering used to ABSTAIN
+            # (NotImplementedError) on any such guard rather than emit an
+            # under-checked one.
+            #
+            # The fix: emit the same `at_asserts` twice. Once immediately
+            # before the `while` -- this discharges the guard's FIRST
+            # evaluation, proved from whatever state the code before the
+            # loop established. And once as the FIRST statement of the loop
+            # body -- this discharges every LATER evaluation, because WP's
+            # own loop-preservation step already proves "loop invariant &&
+            # cond" generically for an arbitrary reachable loop-head state
+            # (not just the concrete one that happened to enter this
+            # iteration), so an assert stated there under that same
+            # hypothesis pair is proved for every state a later guard
+            # re-evaluation will actually see, by the same induction the
+            # invariant itself relies on. MEASURED on both lifted tasks
+            # (divisor a literal `2`, never zero): this placement is what WP
+            # proves; the alternative the residual note flagged as a
+            # fallback (the assert as the LAST statement of the body
+            # instead, after the increment) was not needed. A guard whose
+            # divisor could reach zero, or an `at` whose index could leave
+            # bounds, now reads UNPROVED at this assert rather than letting
+            # unchecked C UB through silently -- the gap this fix closes.
+            guard_ats_pre = at_asserts(w["cond"], ctx, indent, ctx.funs,
+                                       task_name)
+            guard_ats_body = at_asserts(w["cond"], ctx, indent + "  ",
+                                        ctx.funs, task_name)
             ann = [f"{indent}  loop invariant {pred(i, ctx)};"
                    for i in w.get("invariants", [])]
-            hit, dec = assigned_names(w["body"])
+            hit, dec = assigned_names(w["body"], ctx.seq_len)
             frame = [n for n in dict.fromkeys(hit) if n not in dec]
+            # CAPACITY mode's implicit LOWER bound (2026-09-09): `0 <=
+            # r_len` is a MATHEMATICAL fact about any seq's length (never
+            # negative), true by construction of the encoding itself
+            # (`r_len` only ever starts at 0 or a literal's own element
+            # count, and only ever increases), but WP does not know it
+            # carries across loop iterations unless it is stated as an
+            # invariant too. MEASURED on `filter_pos`: omitting it left
+            # `Loop assigns (2/2)` (proving the just-written location `r +
+            # (r_len - 1)` lies inside `r`'s own `\valid`-ed range) an
+            # honest ALT-ERGO STEP LIMIT, because that lower bound has no
+            # other source (the task's own invariants never state it;
+            # nothing about `i`'s own bound implies it).
+            #
+            # Deliberately NOT the matching upper bound `r_len <= {n}_n`:
+            # that one is TASK semantics, not an encoding artifact -- on
+            # `filter_pos` it already follows from the task's OWN stated
+            # invariants (`i <= len(s)` and `len(r) <= i`, chained through
+            # `r_n == len(s)`), exactly the chain an INVARIANT-DROP twin
+            # threatens. MEASURED: adding it here anyway (tried first, the
+            # natural-looking `0 <= r_len <= r_n` pairing) made the loop's
+            # own `assigns` goal `Qed`-trivial to `true` even with `i <=
+            # len(s)` dropped, since `r_len <= r_n` alone (not via `i`)
+            # already closes the postcondition `\result <= len(s)` (`r_n
+            # == len(s)` by `requires`) -- an ENCODING artifact standing
+            # in for task semantics the mutation was supposed to remove,
+            # which made the twin verify in FULL and the file read
+            # MALFORMED (both the twin's own contract and the
+            # certificate's negation of it accepted, a contradiction) in
+            # place of the intended REFUTED. Emitted only for a capacity
+            # name whose length local this loop's own `frame` already
+            # carries (it actually writes it), never blanket for every
+            # capacity-tracked return in scope.
+            for n, ln in ctx.seq_len.items():
+                if ln in frame:
+                    ann.append(f"{indent}  loop invariant 0 <= {ln};")
             targets = [_assigns_target(n, ctx) for n in frame]
             ann.append(f"{indent}  loop assigns "
                        f"{', '.join(targets) if targets else chr(92) + 'nothing'};")
             ann.append(f"{indent}  loop variant ({term(w['decreases'], ctx)});")
+            out += guard_ats_pre
             out.append(f"{indent}/*@")
             out += ann
             out.append(f"{indent}*/")
             out.append(f"{indent}while "
                        f"({cexpr(w['cond'], ctx.env, ctx.funs, task_name)}) "
                        f"{{")
+            out += guard_ats_body
             out += stmts(w["body"], ctx, task_name, indent + "  ")
             out.append(f"{indent}}}")
         else:
@@ -1752,12 +2316,28 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             if stopped:
                 return ctx, True
         elif "while" in s:
+            # WHILE-GUARD DEFINEDNESS (2026-09-09, see `stmts()`'s own
+            # `while` case for the full note): this replay is already fully
+            # UNROLLED (each concrete pass through the Python loop below is
+            # one literal guard re-evaluation in the emitted straight-line
+            # C), so, unlike `stmts()`, there is no ambiguity about
+            # "before the loop" vs. "top of the body" -- `at_asserts` goes
+            # immediately before EVERY concrete evaluation of `w["cond"]`,
+            # the continuation checks and the final exit check alike, each
+            # discharged from exactly the accumulated state at that point
+            # (the same discipline `assign`/`return`/`if` already use
+            # above). No `code_ats`-driven refusal is needed any more: a
+            # divisor that could concretely be zero, or an index that could
+            # concretely leave bounds, now fails at its own `at_asserts`
+            # line rather than skipping the whole certificate.
             w = s["while"]
-            if code_ats(w["cond"], ctx.env):
-                raise _CertSkip("`at`/`div`/`mod` in a while condition")
             g = pred(w["cond"], ctx)
             stopped = False
-            while _cev(w["cond"], st):
+            while True:
+                out += at_asserts(w["cond"], ctx, ind)
+                if not _cev(w["cond"], st):
+                    out.append(f"{ind}/*@ assert (!{g}); */")
+                    break
                 count[0] += 1
                 if count[0] > MAX_CERT_STMTS:
                     raise _CertSkip("replay exceeds the statement cap")
@@ -1766,9 +2346,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
                                            count)
                 if stopped:
                     break
-            if not stopped:
-                out.append(f"{ind}/*@ assert (!{g}); */")
-            else:
+            if stopped:
                 return ctx, True
         else:
             raise _CertSkip(f"no replay for statement {s!r}")
@@ -1890,11 +2468,27 @@ def defs_t(e: dict):
                         "args": [{"op": "not", "args": [i["cond"]]}, de]}])
     op, args = e["op"], e.get("args", [])
     if op == "at":
+        # `s` may itself be a `slice` (2026-09-09, read position: `at`'s
+        # own bound is relative to the slice's length, `defs_t(s)` below
+        # picking up the slice's OWN domain obligation, `0 <= a <= b <=
+        # len(base)`, when it is one; a no-op (`None`) when `s` is the
+        # ordinary bare variable).
         s = args[0]
         bound = {"op": "and", "args": [
             {"op": "<=", "args": [{"int": 0}, args[1]]},
             {"op": "<", "args": [args[1], {"op": "len", "args": [s]}]}]}
-        return _t_and([defs_t(args[1]), bound])
+        return _t_and([defs_t(s), defs_t(args[1]), bound])
+    if op == "slice":
+        # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s) (SPEC.md "Sequences:
+        # literals, concatenation, slices", 2026-09-09), mirroring `defs`
+        # ACSL-side case for case.
+        s, lo, hi = args
+        bound = {"op": "and", "args": [
+            {"op": "and", "args": [
+                {"op": "<=", "args": [{"int": 0}, lo]},
+                {"op": "<=", "args": [lo, hi]}]},
+            {"op": "<=", "args": [hi, {"op": "len", "args": [s]}]}]}
+        return _t_and([defs_t(lo), defs_t(hi), bound])
     if op == "update":
         s = args[0]
         bound = {"op": "and", "args": [
@@ -2218,21 +2812,58 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # writes; the real and twin lowerings of the same task can therefore
     # legitimately compute different (but here, on both committed tasks,
     # equal) length expressions.
+    #
+    # CAPACITY mode, added 2026-09-09 (SPEC.md "Sequences: literals,
+    # concatenation, slices", the append idiom `r := r + [x]`,
+    # `filter_pos`'s own shape): when the exact length has no closed form
+    # (the append sits inside a data-dependent `if`/`while`, so
+    # `_seq_len_track`'s own before/after check drops it, exactly as
+    # designed), `_ret_capacity` reads a CAPACITY bound E directly off the
+    # task's first `ensures` of the shape `len(ret) <= E`/`== E` and pins
+    # `requires {ret}_n == E` as the buffer's SIZE, not its final content
+    # length. The buffer's actual, data-dependent final length is tracked
+    # by a fresh LOCAL, `{ret}_len`, threaded through the body via
+    # `ctx.seq_len` ({ret: "{ret}_len"} while still inside the function,
+    # where `len(ret)` in a loop invariant renders as that local; {ret:
+    # "\\result"} in the function's own post-state, where `ensures` -- no
+    # locals in scope there -- reads the SAME final count off the C
+    # function's own return value instead, so the C function itself
+    # becomes non-void, `int`, in CAPACITY mode, holding the buffer's true
+    # length rather than a scalar answer (no committed task returns both a
+    # seq and a scalar, so there is no clash to resolve here). EXACT mode
+    # (`ret in lens`, `tail`'s own shape, unchanged from before this
+    # construct) leaves `ctx.seq_len` empty everywhere, `{ret}_n` meaning
+    # exactly what it always has.
     ret_len_expr = None
+    capacity_mode = False
+    LEN = f"{ret}_len"
     if rett == "seq":
         lens = {s: {"op": "len", "args": [{"var": s}]} for s in seqs}
         _seq_len_track(body, lens)
-        if ret not in lens:
-            raise NotImplementedError(
-                f"seq return {ret!r}'s length is not statically "
-                f"determinable from the task's params (needed to size its "
-                f"output buffer's `requires`); see the seq value "
-                f"machinery section above `assigned_names`")
-        ret_len_expr = lens[ret]
+        if ret in lens:
+            ret_len_expr = lens[ret]
+        else:
+            capacity_mode = True
+            ret_len_expr = _ret_capacity(task, ret)
+            if ret_len_expr is None:
+                raise NotImplementedError(
+                    f"seq return {ret!r}'s length is not statically "
+                    f"determinable from the task's params (needed to size "
+                    f"its output buffer's `requires`), and no `ensures` "
+                    f"of the shape `len({ret}) <= E` or `== E` gives a "
+                    f"CAPACITY bound either; see the seq value machinery "
+                    f"section above `assigned_names` and `_ret_capacity`")
+            if LEN in used:
+                raise NotImplementedError(
+                    f"name {LEN} collides with the synthetic length-"
+                    f"tracking local this lowering needs for the "
+                    f"CAPACITY-tracked return {ret}")
 
+    body_seq_len = {ret: LEN} if capacity_mode else {}
     spec_ctx = Ctx(env, funs, ret=None, label="Here")
     post_ctx = Ctx(env, funs, ret=(ret if rett != "seq" else None),
-                   label="Here")
+                   label="Here",
+                   seq_len=({ret: "\\result"} if capacity_mode else {}))
     clauses = []
     all_seqs = list(seqs)
     for s in seqs:
@@ -2285,7 +2916,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     if rett == "seq":
         cparams += [f"int *{ret}", f"int {ret}_n"]
 
-    body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here"),
+    body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here",
+                                 seq_len=body_seq_len),
                        name, "  ")
     cert = (certificate(task, body, witness, env, funs, used)
             if witness is not None else None)
@@ -2300,16 +2932,30 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # body (no `return` at all, or a `return` that leaves a path falling
     # through) still gets it, unchanged.
     #
-    # A seq return (2026-09-09) is `void`: the "return value" already
-    # lives in the caller-provided buffer, so no trailing statement is
-    # ever needed, `return;` or otherwise -- a body that falls off the end
-    # having already written every element it owes is exactly correct,
-    # and a body with its own early `return;` (see `stmts()`) needs
-    # nothing after it either.
-    tail = ("" if rett == "seq" or _always_returns(body)
-            else f"  return {ret};\n")
-    ret_decl = "" if rett == "seq" else f"  int {ret};\n"
-    cfun_ret_ty = "void" if rett == "seq" else "int"
+    # A seq return (2026-09-09) is `void` in EXACT mode: the "return
+    # value" already lives in the caller-provided buffer, so no trailing
+    # statement is ever needed, `return;` or otherwise -- a body that
+    # falls off the end having already written every element it owes is
+    # exactly correct, and a body with its own early `return;` (see
+    # `stmts()`) needs nothing after it either.
+    #
+    # CAPACITY mode (2026-09-09) is `int` instead: the buffer's actual
+    # final logical length has nowhere else externally visible to live
+    # (see the note above this function's Ctx construction), so it is
+    # the C function's own scalar return value, and the fall-through tail
+    # -- omitted, like the scalar case, exactly when `_always_returns`
+    # already covers every path with an explicit `return` -- reports the
+    # length LOCAL `{ret}_len` rather than the seq name itself.
+    if rett == "seq" and not capacity_mode:
+        tail = ""
+    elif rett == "seq":
+        tail = "" if _always_returns(body) else f"  return {LEN};\n"
+    else:
+        tail = "" if _always_returns(body) else f"  return {ret};\n"
+    ret_decl = (f"  int {LEN};\n" if capacity_mode else
+               ("" if rett == "seq" else f"  int {ret};\n"))
+    cfun_ret_ty = ("void" if rett == "seq" and not capacity_mode
+                  else "int")
     return ("\n".join(header) + ("\n" if header else "")
             + "/*@\n" + "\n".join(clauses) + "\n*/\n"
             + f"{cfun_ret_ty} {name}_t({', '.join(cparams)}) {{\n"

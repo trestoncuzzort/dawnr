@@ -932,6 +932,44 @@ def _method_count(s: str) -> int:
     return len(re.findall(r"\bmethod\b(?!\s+Main\b)", s))
 
 
+def _multi_method_shapes(s: str) -> tuple:
+    """(any_burden, any_gap): measured (a read-only pass over the
+    census-gradable 643, 2026-09-09), 27 of 34 AST-analysed
+    multi-method files (79 percent) have methods that never call each
+    other, and the lifter already lifts one task per gradable method
+    (decision 9) -- so more than one graded method (`Main` excluded) is
+    the burden `multi-method-independent` UNLESS some method's own body
+    calls ANOTHER declared method by name (an identifier immediately
+    followed by `(` matching a DECLARED `method` name other than its
+    own; a function or lemma call is not this row's business, an
+    ordinary spec_fun/lemma application every single-method file
+    already has), which keeps `multi-method` the gap it always was --
+    a call across methods is a real packaging question (which one is
+    "the" task, and what a cross-call even means once each is lifted
+    separately) decision 9 never answered. Approximate like
+    `_mutual_recursion`'s own per-declaration body scan: one graded
+    method calling itself (self-recursion) is not "another" method and
+    is excluded from the call set."""
+    names = [nm for kw, nm, j in _declarations(s) if kw == "method" and nm != "Main"]
+    if len(names) <= 1:
+        return False, False
+    name_set = set(names)
+    calls_other = False
+    for kw, nm, j in _declarations(s):
+        if kw != "method" or nm == "Main":
+            continue
+        b = _OPEN_BRACE.search(s, j)
+        if b is None:
+            continue
+        e = _delim_close(s, b.start(), "{", "}")
+        body = s[b.start():e if e > 0 else len(s)]
+        others = name_set - {nm}
+        if any(re.search(r"\b" + re.escape(o) + r"\s*\(", body) for o in others):
+            calls_other = True
+            break
+    return (not calls_other), calls_other
+
+
 def _multi_return(s: str) -> bool:
     """More than one return value: a comma at depth 0 of the parenthesised
     list after `returns`. A comma inside a tuple type `(int, int)` or inside
@@ -1229,10 +1267,55 @@ def _bodyless(s: str, want_method: bool) -> bool:
                if (kw == "method") == want_method)
 
 
-def _zero_returns(s: str) -> bool:
-    return any(not re.match(r"\s*returns\b", s[j:])
-               for kw, nm, j in _declarations(s)
-               if kw == "method" and nm != "Main")
+def _zero_return_shapes(s: str) -> tuple:
+    """(any_burden, any_gap): measured (a read-only pass over the
+    census-gradable 643, 2026-09-09), every one of `zero-returns`'
+    25 sole-blocker files is a method with no return that mutates
+    exactly one array parameter under `modifies` -- LIFTER-DECISIONS.md
+    row 22's "modifies-param" shape, which already lifts (a fresh seq
+    return). So a zero-return, non-Main method whose OWN `modifies`
+    names exactly one array parameter (one clause, one bare identifier)
+    and whose OWN body mutates only that one name is the burden
+    `zero-returns-array`, "a method with no return whose effect is its
+    one array, lifted as a seq return by row 22"; every OTHER
+    zero-return method (no array effect at all, a lemma written as a
+    method, one that only prints) keeps `zero-returns` a gap.
+    Approximate and per-declaration, `_array_shapes`'s own pattern: a
+    DIFFERENT method in the same file may be the one whose modifies
+    clause or mutation shape fails this row's own conditions
+    (`_array_mutation_refused`'s per-file reading, narrowed here to
+    the one zero-return method's own header and body)."""
+    any_burden = any_gap = False
+    for kw, nm, j in _declarations(s):
+        if kw != "method" or nm == "Main":
+            continue
+        if re.match(r"\s*returns\b", s[j:]):
+            continue
+        b = _OPEN_BRACE.search(s, j)
+        if b is None or not _has_body(s, j):
+            any_gap = True
+            continue
+        header = s[j:b.start()]
+        e = _delim_close(s, b.start(), "{", "}")
+        body = s[b.start():e if e > 0 else len(s)]
+        mods = re.findall(r"\bmodifies\b([^\n{;]*)", header)
+        if len(mods) != 1:
+            any_gap = True
+            continue
+        clause = re.split(r"\b(?:requires|ensures|invariant|decreases|modifies|reads)\b",
+                           mods[0])[0]
+        parts = [p.strip() for p in clause.split(",") if p.strip()]
+        if len(parts) != 1 or not re.fullmatch(IDENT, parts[0]):
+            any_gap = True
+            continue
+        target = parts[0]
+        mut_names = {m.group(1) for m in _ARRAY_MUT_TARGET.finditer(body)}
+        bad_multiset = _has(r"\bmultiset\s*\(")(body) and re.search(r"\[\s*\.\.\s*\]", body)
+        if mut_names and mut_names == {target} and not bad_multiset:
+            any_burden = True
+        else:
+            any_gap = True
+    return any_burden, any_gap
 
 
 def _mutual_recursion(s: str) -> bool:
@@ -1373,15 +1456,11 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "heap": ("gap", _has(r"\bclass\b|\btrait\b|\bfresh\b|\bthis\b|\bnew\s+" + IDENT + r"\s*[(;]"), "classes, object allocation, this"),
     "datatype": ("gap", _has(r"\b(?:co)?datatype\b|\bmatch\b"), "algebraic datatypes and match"),
     "nondet": ("gap", lambda s: _NONDET.search(s) is not None, "nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case }"),
-    "multi-method": ("gap", lambda s: _method_count(s) > 1, "more than one method (Main, and the method of function method, excluded)"),
+    "multi-method": ("gap", lambda s: _multi_method_shapes(s)[1], "more than one graded method (Main excluded) where some method's body calls ANOTHER declared method by name -- decision 9 lifts one task per method, so independent methods (no cross-call) are the burden multi-method-independent, not this gap"),
     "multi-return": ("gap", _multi_return, "several return values"),
-    "zero-returns": ("gap", _zero_returns, "a method with no return value (t returns exactly one)"),
+    "zero-returns": ("gap", lambda s: _zero_return_shapes(s)[1], "a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array"),
     "early-exit": ("gap", _break_continue, "a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop)"),
-    "seq-return": ("gap", _seq_return, "sequence-valued return of a method or a function"),
-    "seq-literal": ("gap", _seq_literal, "sequence literal [..] in an expression"),
-    "seq-slice": ("gap", _has(r"\[[^\]]*\.\.[^\]]*\]"), "slicing s[a..b]"),
-    "seq-update": ("gap", _seq_update, "functional update s[i := v]"),
-    "seq-comprehension": ("gap", _has(r"\bseq\s*\("), "seq(n, i => e)"),
+    "seq-comprehension": ("gap", _has(r"\bseq\s*\("), "seq(n, i => e) -- t's fill is constant-valued, this is not (v1 gap, unlike rows 25-27)"),
     "nested-seq": ("gap", _has(r"\b(?:seq|array\d*)<\s*(?:seq|array\d*)<|\bseq<\s*(?!int\b|nat\b)" + IDENT), "a nested seq or array, or a seq of non-int elements"),
     "unbounded-quantifier": ("gap", _unbounded_quantifier, "quantifier without an int range"),
     "real": ("gap", _has(r"\breal\b|(?<![\w.])\d+\.\d+(?![\w.])"), "real numbers"),
@@ -1403,6 +1482,29 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "such-that-exec": ("gap", lambda s: any(_such_that_sites(s)), "assign-such-that :| in executable code (nondeterministic choice)"),
     # burdens: t can say it another way
     "array-as-seq": ("burden", lambda s: _array_shapes(s)[0], "array<int>/array<nat> (one dimension): read-only, mutated in place under modifies, or allocated and filled -- lifts to seq (decision 1, decision 22)"),
+    "zero-returns-array": ("burden", lambda s: _zero_return_shapes(s)[0], "a method with no return whose effect is its one array, lifted as a seq return by row 22 (LIFTER-DECISIONS.md row 22's modifies-param shape)"),
+    "multi-method-independent": ("burden", lambda s: _multi_method_shapes(s)[0], "more than one graded method, none calling another by name -- decision 9 lifts one task per method, so no packaging decision is needed"),
+    # Rows 25-27 (2026-09-09, SPEC.md "Sequences: literals, concatenation,
+    # slices (v1)"): a sequence literal, a slice and its two sugars, and a
+    # seq-typed return all lift now (LIFTER-DECISIONS.md rows 25-27); a
+    # functional update `s[i := v]` lifts too, as t's `update` (decision
+    # 22 landed it 2026-09-09 morning, one row for the STATEMENT shape
+    # `a[i] := e`, `_seq_update` here the EXPRESSION shape `s[i := v]`,
+    # both now the same t operator). Reclassified gap -> burden, keys
+    # unchanged so the tables stay comparable across the reclassification.
+    "seq-return": ("burden", _seq_return, "sequence-valued return of a method or a function -- lifts as a seq return (LIFTER-DECISIONS.md rows 22/25-27)"),
+    "seq-literal": ("burden", _seq_literal, "sequence literal [..] in an expression -- lifts to t's seq literal (LIFTER-DECISIONS.md row 25)"),
+    "seq-slice": ("burden", _has(r"\[[^\]]*\.\.[^\]]*\]"), "slicing s[a..b], s[a..], s[..b] -- lifts to t's slice, sugars expanded (LIFTER-DECISIONS.md row 27)"),
+    "seq-update": ("burden", _seq_update, "functional update s[i := v] -- lifts to t's update (LIFTER-DECISIONS.md decision 22/row 22, landed 2026-09-09 morning)"),
+    # No detector fired on `+` between two seqs before rows 25-27 (t had
+    # no seq concatenation to measure against); this one is lexical and
+    # approximate on purpose -- `+ [`, `] +`, or `..] +` -- so it UNDER
+    # -COUNTS: `r := a + b;` between two bare seq-typed names (no bracket
+    # adjacent to the `+` at all) never matches, only a `+` next to a
+    # display or a slice does. A real count needs the lifter's own type
+    # knowledge (`lift_classify.expr_kind`), not a lexical scan; this
+    # detector names the burden's LOWER bound, not its true size.
+    "seq-concat": ("burden", _has(r"\+\s*\[|\]\s*\+|\.\.\s*\]\s*\+"), "+ on two seqs (concatenation) -- lifts to t's own + (LIFTER-DECISIONS.md row 26); lexical and approximate, UNDER-counts (see comment above)"),
     "nat": ("burden", _has(r"\bnat\b"), "nat, as int with a >= 0 clause"),
     "for-loop": ("burden", _has(r"\bfor\s+" + IDENT + r"\s*:="), "for loop (a while with a bound)"),
     "iff": ("burden", _has(r"<==>"), "<==> (== on bools)"),

@@ -328,7 +328,8 @@ extensionally: equal lengths and equal elements at every index. Types:
 `seq` may be declared as a return (`returns (r: seq)`) and as a local
 (`var a: seq := s;`), and assigned and returned like an int. `at`, `len`,
 the bounded quantifiers and the definedness rules are unchanged. What is
-still not in v1: seq literals, slices, nested seqs, seqs of bools.
+still not in v1: nested seqs, seqs of bools (literals, concatenation and
+slices are the next section).
 
 The lifter's mapping (LIFTER-DECISIONS.md row 22): `a[i] := e` becomes
 `a := a[i := e]`; `new int[n]` becomes `seq(n, 0)`; a method that
@@ -338,6 +339,112 @@ reading as `a[k]` and post-state `a[k]` as the return's element; `fresh(b)`
 on a returned array is dropped. Each lowering's dated note records the
 kernel's own sequence type, its update and construction forms, and what
 extensional equality costs it.
+
+### Sequences: literals, concatenation, slices (v1)
+
+Stated 2026-09-09 (ROADMAP 12.7, the wave after "Sequences as values").
+Measured first, twice. On the 785 DafnyBench programs, 50 of the 643
+gradable are blocked by sequence operations alone: 28 build a sequence by
+appending a singleton (`r := r + [x]`), 27 start from `[]`, 30 slice, 10
+prepend a singleton, 6 concatenate two slices. On the 24,748 nl/ problems
+(`COVERAGE-nl.md`), a sequence literal is needed by 8,599, concatenation
+by 6,030, a slice by 3,305, and a string, the top gap at 18,361, is a
+sequence of characters that needs exactly these three operations before
+the character type means anything. So t takes the three on sequences of
+ints now, values throughout, and the character type is the wave after.
+
+New Expr forms:
+
+```
+{"op": "seq",    "args": [Expr, ...]}                 // [e1, ..., en]; n >= 0; [] is the empty seq
+{"op": "+",      "args": [SeqExpr, SeqExpr]}          // s + t: + on two seqs is concatenation; always defined
+{"op": "slice",  "args": [SeqExpr, IntExpr, IntExpr]} // s[a..b]; DEFINED IFF 0 <= a <= b <= len(s)
+```
+
+`seq` denotes the sequence of length n whose k-th element is the k-th
+argument, every argument an int; with no arguments it is the empty
+sequence, and `len([]) == 0`. `+` on two seqs denotes the sequence of length
+`len(s) + len(t)` whose element at `i` is `s[i]` for `i < len(s)` and
+`t[i - len(s)]` otherwise: one operator name, polymorphic by the types of
+its operands exactly as `==` already is (two ints, two bools, two seqs). `slice` denotes the sequence of length `b - a`
+whose element at `k` is `s[a + k]`; it is undefined unless
+`0 <= a <= b <= len(s)`, a definedness obligation under the rules above,
+exactly as `at` outside `[0, len)`. The notation also writes `s[a..]` for
+`s[a..len(s)]` and `s[..b]` for `s[0..b]`; both are sugar the parser
+expands, the AST carries only the three-argument form. A `+` whose operands are one int and one seq is
+ill-typed, as a `==` across types is. Every argument of a literal is evaluated, so a literal is
+defined iff all its elements are; a concatenation is defined iff both arguments
+are. Nothing else changes: `at`, `len`, `update`, `fill`, extensional `==`
+and the bounded quantifiers apply to the new values as to any seq, the loop
+frame rule havocs a seq variable by name, and the interpreter's length cap
+(`interp.MAX_SEQ`) bounds a literal and a concatenation as it bounds
+`fill`. What is still not in v1: nested seqs, seqs of bools, membership as
+an operator (`x in s` stays the lifter's bounded `exists`, decision 2),
+characters and strings.
+
+Two committed tasks carry the construct: `tail` (loop-free: a slice and a
+literal, `ensures len(r) == len(s) - 1` and every element) and
+`filter_pos` (a loop that appends to a seq return, `r := r + [s[i]]`, with
+`len(r) <= i` and a value invariant, the LLM-shaped append idiom the census
+counts). The twin ladder needs no new operator: `off-by-one` reaches a
+slice bound and an appended index, `wrong-var` swaps the sequence
+concatenated, `collapse-if` drops the filter's test; the fuzz family
+`v1seqops` measures which of them refute, per column. Each lowering's
+dated note records the kernel's own literal, append and slice forms, what
+the slice's definedness obligation costs it, and, for framac, which shapes
+its buffer encoding refuses (a concatenation's length is data-dependent
+in a loop; an output buffer needs a caller-pinned bound, so a
+seq-returning task that appends must state `len(r) <= E` for an `E` over
+the parameters, or framac abstains).
+
+The lifter's mapping (LIFTER-DECISIONS.md rows 25 to 27): a Dafny
+sequence display `[e1, ..., en]` is the literal, `[]` the empty one; `+`
+on two seqs is the same `+`; `s[a..b]`, `s[a..]`, `s[..b]` are the slice and
+its two sugars, and `a[..]` on an array parameter (the whole array, already
+a seq by decision 1) is the parameter itself.
+
+### Strings as sequences of code points (v1)
+
+Stated 2026-09-09, the same night as the sequence trio, and measured
+first: on the 24,748 nl/ problems the top gap is `string-char` at 18,361
+(`COVERAGE-nl.md`, the sole blocker for 347 function-shaped problems); on
+the 785 DafnyBench programs 94 use a string or a char, 7 as their sole
+gap; 14 MBPP-DFY methods are refused for it first. t adds no type and no
+operator for them. A character is its Unicode code point, an int in
+`[0, 1114111]`; a string is a `seq` of code points. Everything a string
+does in Dafny (`seq<char>`) or in a Python test, t already does on a seq:
+`len`, indexing, `+`, a slice, extensional `==`, a comparison of two
+characters as ints, a bounded quantifier over positions.
+
+What the notation adds is two literal forms, both sugar the parser
+expands and the printer never emits:
+
+```
+'a'          // a char literal: {"int": 97}, the code point; escapes '\n' '\t' '\'' '\\'
+"abc"        // a string literal: {"op": "seq", "args": [{"int": 97}, {"int": 98}, {"int": 99}]}; "" is []
+```
+
+The AST carries ints and seqs only, so a lowering never sees a character
+and every column's existing sequence lowering covers a string; the round
+trip holds on the AST (`parse(print(t)) == t`) and the canonical text
+prints code points as ints. What is given up, on purpose: the char/int
+type distinction. Dafny refuses `'a' + 1`; t computes 98, and a task that
+wants a character to stay one states it. Lexicographic order on strings is
+not an operator: a task states it with quantifiers or a spec function, as
+it states any order. Not in v1: the library a Python solution leans on
+(`split`, `upper`, `strip`, `join`, `format`); those are functions a task
+writes, or a later gate, and the census counts them apart from the seq
+shapes (`string-as-seq` the burden, `string-lib` the gap).
+
+The lifter's mapping (LIFTER-DECISIONS.md row 28): Dafny `string` is
+`seq`, `char` is `int`, a char literal its code point, a string literal the
+seq literal, `c as int` and `i as char` the identity, and a comparison of
+chars an int comparison; a Dafny char is a UTF-16 code unit unless the
+program is compiled with `--unicode-char`, so a literal outside the Basic
+Multilingual Plane is refused rather than guessed. MBPP tests whose
+arguments or results are Python strings enter the spec experiment's pool
+as code-point sequences (`mbpp_dfy.parse_assertion`), which is the pool's
+version 2.
 
 ## The twins
 
@@ -409,6 +516,8 @@ No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an
 array with mutation is a `seq` updated functionally ("Sequences as
 values"). No overflow semantics (mathematical integers; bounded backends
 owe explicit range obligations). One return value. No mutual recursion,
-no higher-order functions, no seq literals, no slices, no nested seqs.
+no higher-order functions, no nested seqs, no string library
+(sequence literals, concatenation and slices landed 2026-09-09; a string
+is a seq of code points, same night).
 These are gates to open with measurements, not omissions to apologize
 for.

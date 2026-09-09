@@ -30,9 +30,10 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   print(parse(text)) == text on the second pass for all 1628, so printing is
   idempotent and every task has one normal form in the notation.
 
-  The 7 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
-  beside. That is the check that this grammar is the documented notation and
-  not a new one that resembles it.
+  The 9 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
+  beside (two added 2026-09-09 for the char and string literals below). That
+  is the check that this grammar is the documented notation and not a new
+  one that resembles it.
 
   6 of 6 shapes the notation must refuse are refused (REFUSALS, below):
   div, `and` at arity 1, a keyword used as a name, a chained comparison, `/`
@@ -44,6 +45,15 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   permanent, not scaffolding for this wave: a corpus can only exercise the
   shapes its generators emit, so the defect it found is one the 1628-task
   corpus structurally cannot contain, and the next such defect will be too.
+
+  3 of 3 char/string literal probes (LITERALS, below; SPEC.md "Strings as
+  sequences of code points (v1)") parse to the stated AST and reparse
+  correctly from their own canonical print, which is never the literal
+  text: `'a'` prints as `97`, `"ab" + "c"` as `[97, 98] + [99]`, `""` as
+  `[]`. These are the one place in this file where the two passes above
+  are deliberately over DIFFERENT text: the first pass is the invariant
+  (a char or string literal parses to its code point(s)); the second, as
+  always, is on the canonical text the first pass's AST prints to.
 
 TWO PLACES WHERE THE OBVIOUS NOTATION WOULD HAVE LOST INFORMATION, since
 both are live in the corpus and both round trip only because they are
@@ -167,10 +177,20 @@ KEYWORDS = {
 
 # Longest match first: "==>" before "==" before "=", ":=" before ":".
 SYMBOLS = ["==>", "==", "!=", "<=", ">=", ":=", "=", "<", ">", "+", "-", "*",
-           "/", "%", "(", ")", "[", "]", "{", "}", ",", ".", ":", ";"]
+           "/", "%", "(", ")", "[", "]", "{", "}", ",", "..", ".", ":", ";"]
 
 _ID = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _NAT = re.compile(r"[0-9]+")
+
+# Escapes shared by char and string literals (SPEC.md "Strings as sequences
+# of code points (v1)"): the four the spec names, plus \r and \0 since a
+# code point is any int in [0, 1114111] and those two are as ordinary as \n
+# and \t, plus \" so a string can hold a quote. A char literal has no
+# textual use for \" but accepting it there too costs nothing and avoids a
+# rule that only one of the two literal forms recognises an escape.
+_ESCAPES = {"n": 10, "t": 9, "r": 13, "0": 0, "'": 39, '"': 34, "\\": 92}
+_HEXDIGIT = "0123456789abcdefABCDEF"
+MAX_CODE_POINT = 1114111  # SPEC.md: a character is an int in [0, 1114111].
 
 
 class Tok:
@@ -183,8 +203,63 @@ class Tok:
         return "%s(%r)" % (self.kind, self.text)
 
 
+def _lex_quoted(src: str, i: int, line: int, quote: str):
+    """Scan a char or string literal body, `i` just past the opening quote.
+    Returns (code points, index just past the closing quote). A literal
+    never spans a line, so `line` does not change: a bare newline or the
+    end of input before the closing quote is the same "unterminated"
+    error. Escapes: \\n \\t \\r \\0 \\' \\" \\\\, plus \\u{H...H} (1 to 6
+    hex digits) for any other code point."""
+    n = len(src)
+    pts = []
+    while True:
+        if i >= n or src[i] == "\n":
+            raise SurfaceError("line %d: unterminated literal" % line)
+        c = src[i]
+        if c == quote:
+            return pts, i + 1
+        if c == "\\":
+            if i + 1 >= n or src[i + 1] == "\n":
+                raise SurfaceError("line %d: unterminated literal" % line)
+            e = src[i + 1]
+            if e == "u":
+                j = i + 2
+                if j >= n or src[j] != "{":
+                    raise SurfaceError(
+                        "line %d: bad escape \\u, expected \\u{HEX}" % line)
+                j += 1
+                k = j
+                while k < n and k - j < 6 and src[k] in _HEXDIGIT:
+                    k += 1
+                if k == j:
+                    raise SurfaceError(
+                        "line %d: \\u{} needs at least one hex digit" % line)
+                if k >= n or src[k] != "}":
+                    raise SurfaceError(
+                        "line %d: \\u{...} escape missing closing }" % line)
+                cp = int(src[j:k], 16)
+                if cp > MAX_CODE_POINT:
+                    raise SurfaceError(
+                        "line %d: \\u{%s} exceeds the maximum code point %d"
+                        % (line, src[j:k], MAX_CODE_POINT))
+                pts.append(cp)
+                i = k + 1
+                continue
+            if e in _ESCAPES:
+                pts.append(_ESCAPES[e])
+                i += 2
+                continue
+            raise SurfaceError("line %d: bad escape \\%s" % (line, e))
+        pts.append(ord(c))
+        i += 1
+
+
 def lex(src: str) -> list:
-    """kinds: id, kw, nat, sym, eof. No comments: see the docstring."""
+    """kinds: id, kw, nat, char, str, sym, eof. No comments: see the
+    docstring. `char` and `str` tokens carry the decoded value directly
+    (an int, a list of ints) rather than the source text: SurfaceError on
+    an unterminated literal, a bad escape, or a char literal that does not
+    hold exactly one code point."""
     toks, i, line, n = [], 0, 1, len(src)
     while i < n:
         c = src[i]
@@ -194,6 +269,20 @@ def lex(src: str) -> list:
         if c == "\n":
             line += 1
             i += 1
+            continue
+        if c == "'":
+            start = i
+            pts, i = _lex_quoted(src, i + 1, line, "'")
+            if len(pts) != 1:
+                raise SurfaceError(
+                    "line %d: a char literal holds exactly one code point, "
+                    "found %d" % (line, len(pts)))
+            toks.append(Tok("char", pts[0], start, line))
+            continue
+        if c == '"':
+            start = i
+            pts, i = _lex_quoted(src, i + 1, line, '"')
+            toks.append(Tok("str", pts, start, line))
             continue
         m = _ID.match(src, i)
         if m:
@@ -492,11 +581,28 @@ class Parser:
     def p_postfix(self) -> dict:
         e = self.p_atom()
         while self.opt("sym", "["):
+            if self.opt("sym", ".."):
+                # s[..b] is s[0..b] (SPEC.md "Sequences: literals,
+                # concatenation, slices"): sugar the parser expands, the
+                # AST carries the three-argument slice only.
+                hi = self.expr()
+                self.eat("sym", "]")
+                e = {"op": "slice", "args": [e, {"int": 0}, hi]}
+                continue
             idx = self.expr()
             if self.opt("sym", ":="):
                 val = self.expr()
                 self.eat("sym", "]")
                 e = {"op": "update", "args": [e, idx, val]}
+                continue
+            if self.opt("sym", ".."):
+                if self.opt("sym", "]"):
+                    # s[a..] is s[a..len(s)].
+                    e = {"op": "slice", "args": [e, idx, {"op": "len", "args": [e]}]}
+                    continue
+                hi = self.expr()
+                self.eat("sym", "]")
+                e = {"op": "slice", "args": [e, idx, hi]}
                 continue
             self.eat("sym", "]")
             e = {"op": "at", "args": [e, idx]}
@@ -506,6 +612,16 @@ class Parser:
         t = self.tok
         if t.kind == "nat":
             return {"int": int(self.eat("nat").text)}
+        if t.kind == "char":
+            # 'a': sugar for its code point (SPEC.md "Strings as sequences
+            # of code points (v1)"). The printer never emits this form.
+            return {"int": self.eat("char").text}
+        if t.kind == "str":
+            # "abc": sugar for the seq literal of its code points; "" is
+            # []. Same spec section; same non-canonical relationship to
+            # the printer.
+            return {"op": "seq",
+                    "args": [{"int": cp} for cp in self.eat("str").text]}
         if self.at("kw", "true"):
             self.eat("kw")
             return {"bool": True}
@@ -531,6 +647,17 @@ class Parser:
             e = self.expr()
             self.eat("sym", ")")
             return e
+        if self.opt("sym", "["):
+            # [e1, ..., en], the sequence literal; [] the empty sequence
+            # (SPEC.md "Sequences: literals, concatenation, slices").
+            args = []
+            if not self.at("sym", "]"):
+                while True:
+                    args.append(self.expr())
+                    if not self.opt("sym", ","):
+                        break
+            self.eat("sym", "]")
+            return {"op": "seq", "args": args}
         if t.kind == "id":
             ident = self.name()
             if self.opt("sym", "("):
@@ -584,7 +711,7 @@ P_UNARY = 8
 P_POSTFIX = 9
 
 _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
-_ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "implies": 2,
+_ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice": 3, "implies": 2,
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2}
 
@@ -649,6 +776,16 @@ def pexpr(e, floor: int = P_QUANT) -> str:
                                        pexpr(args[2])), P_POSTFIX, floor)
     if op == "fill":
         return "seq(%s, %s)" % (pexpr(args[0]), pexpr(args[1]))
+    if op == "seq":
+        # The literal, any arity including zero (SPEC.md "Sequences:
+        # literals, concatenation, slices"); `[]` is the empty sequence.
+        return "[%s]" % ", ".join(pexpr(a) for a in args)
+    if op == "slice":
+        # Always the three-argument form: the parser's `s[a..]` and `s[..b]`
+        # sugars print back as `s[a..len(s)]` and `s[0..b]`, which reparse
+        # to the same AST.
+        return _wrap("%s[%s..%s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1]),
+                                     pexpr(args[2])), P_POSTFIX, floor)
     if op == "neg":
         # `-(5)`, never `-5`: the bare form is the literal node. The test is
         # on the printed text and not on the node, because `neg` of `at` on a
@@ -776,7 +913,7 @@ def print_task(task: dict) -> str:
 # 5. The measurement. Every number this file claims is produced here.
 # ===========================================================================
 
-# The seven `written:` lines of SYNTAX.md, each beside the JSON it annotates.
+# The nine `written:` lines of SYNTAX.md, each beside the JSON it annotates.
 # This table is what makes the grammar the DOCUMENTED notation rather than a
 # new one that resembles it; --check parses each and compares to that JSON.
 WRITTEN = [
@@ -802,6 +939,28 @@ WRITTEN = [
      {"var": {"name": "i", "type": "int", "init": {"int": 1}}}),
     ("expr", "gcds(a, b)",
      {"call": {"fun": "gcds", "args": [{"var": "a"}, {"var": "b"}]}}),
+    # SPEC.md "Strings as sequences of code points (v1)", added 2026-09-09.
+    ("expr", "'a'", {"int": 97}),
+    ("expr", '"abc"',
+     {"op": "seq", "args": [{"int": 97}, {"int": 98}, {"int": 99}]}),
+]
+
+# Three more char/string probes (SPEC.md "Strings as sequences of code
+# points (v1)"), checked differently from WRITTEN above: a char or string
+# literal is sugar the printer never emits, so unlike every WRITTEN line its
+# own text is not the canonical print of the AST it parses to. --check
+# verifies both passes on these: the text parses to the stated AST (the
+# first pass, the invariant given non-canonical text), and printing that
+# AST and reparsing IT recovers the same AST (the second pass, always on
+# canonical text, exactly as the docstring's two-pass description reads
+# when the source is not already in canonical form).
+LITERALS = [
+    ("'a'", {"int": 97}),
+    ('"ab" + "c"',
+     {"op": "+", "args": [
+         {"op": "seq", "args": [{"int": 97}, {"int": 98}]},
+         {"op": "seq", "args": [{"int": 99}]}]}),
+    ('""', {"op": "seq", "args": []}),
 ]
 
 
@@ -885,7 +1044,7 @@ def _rand_expr(rng, depth: int) -> dict:
     d = depth - 1
     kind = rng.choice([
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
-        "len", "at", "update", "fill", "ite", "quant", "call",
+        "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -918,6 +1077,12 @@ def _rand_expr(rng, depth: int) -> dict:
                                          _rand_expr(rng, d)]}
     if kind == "fill":
         return {"op": "fill", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
+    if kind == "seq":
+        return {"op": "seq", "args": [_rand_expr(rng, d)
+                                      for _ in range(rng.randint(0, 3))]}
+    if kind == "slice":
+        return {"op": "slice", "args": [_rand_expr(rng, d), _rand_expr(rng, d),
+                                        _rand_expr(rng, d)]}
     if kind == "ite":
         return {"ite": {"cond": _rand_expr(rng, d), "then": _rand_expr(rng, d),
                         "else": _rand_expr(rng, d)}}
@@ -1017,6 +1182,31 @@ def check(seeds, n, verbose: bool) -> int:
         else:
             fails.append(("written:%s" % text, "parsed to %r" % (got,)))
     print("  %d of %d parse to the JSON they annotate" % (w_ok, len(WRITTEN)))
+
+    print("\nchar/string literal probes")
+    l_ok = 0
+    for text, want in LITERALS:
+        try:
+            got = parse_expr(text)
+        except SurfaceError as exc:
+            fails.append(("literal:%s" % text, "parse: %s" % exc))
+            continue
+        if json.dumps(got, sort_keys=True) != json.dumps(want, sort_keys=True):
+            fails.append(("literal:%s" % text, "parsed to %r" % (got,)))
+            continue
+        try:
+            canon_text = pexpr(want)
+            back = parse_expr(canon_text)
+        except SurfaceError as exc:
+            fails.append(("literal:%s" % text, "reparse of print: %s" % exc))
+            continue
+        if json.dumps(back, sort_keys=True) != json.dumps(want, sort_keys=True):
+            fails.append(("literal:%s" % text,
+                          "print %r reparses to %r" % (canon_text, back)))
+            continue
+        l_ok += 1
+    print("  %d of %d parse to the stated AST and reparse from their "
+          "canonical print" % (l_ok, len(LITERALS)))
 
     print("\nshapes the notation must refuse")
     r_ok = 0

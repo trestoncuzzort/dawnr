@@ -34,6 +34,36 @@ touch the GPU.
 same quant config, same generate() call) -- a round-0-equivalent control
 that is not ollama, useful for isolating "transformers vs ollama sampling"
 from "adapter vs no adapter" if the two ever disagree.
+
+Sampling mode (added 2026-09-09), for expert iteration: --samples K > 1 asks
+for K replies per problem instead of one greedy reply, so a round can keep
+several candidate solutions per problem rather than a single point estimate.
+The answers that VERIFY with a refuted twin (run_par.py's kernels) and pass
+the problem's own tests (spec_experiment.py tests) become the next round's
+positives; the ones that fail the tests become its negatives. Each sample k
+(0-based) is a full spec-experiment record, written to its own tag directory
+spec_experiment.outdir(f"{tag}-s{k}") so the existing extract/tests/table
+and run_par.py stages consume it with `--model <tag>-s<k>`, unchanged, once
+per k. K samples for one problem come from ONE model.generate call
+(num_return_sequences=K, do_sample=True, --temperature/--top-p), seeded
+right before the call from a hash of (--seed, task_id) so a re-run
+reproduces the same K replies byte for byte. K=1 (the default) is the
+original greedy path, untouched: do_sample=False, one record, one tag
+directory. --temperature must be > 0 when --samples > 1 (sampling with
+temperature 0 is degenerate); it is refused otherwise, before the GPU is
+touched.
+
+    ~/.venv-train/bin/python loop_generate.py --adapter out/loop/adapter-r1 \\
+        --tag qwen2.5-coder-1.5b-r1 --samples 8 --temperature 0.8
+
+Memory: K sequences of a ~1,600-token prompt plus up to --max-new new
+tokens on a 1.5B nf4 base is small, but if K * --max-new is large this
+catches torch.cuda.OutOfMemoryError, halves the batch, and retries the K
+samples as two or more smaller generate() calls (each with its own chunk
+seed derived from (--seed, task_id, chunk) so the fallback path is also
+reproducible), printing a line when it happens. Per-sample eval_s and
+wall_s are the whole batched call's time divided by K (there is no
+per-sample timer inside one generate() call); options records this.
 """
 from __future__ import annotations
 
@@ -41,6 +71,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -86,7 +117,14 @@ def pick_gpu(explicit: int | None) -> tuple[int, dict[int, int]]:
 
 # --------------------------------------------------------------- ids --
 
-def select_ids(limit: int, ids_arg: str, only_heldout: str) -> tuple[dict, list]:
+def parse_ids_text(text: str) -> set[int]:
+    """Comma- or newline-separated task ids -> a set of ints. Blank pieces
+    (blank lines, trailing commas) are ignored."""
+    parts = re.split(r"[,\n]+", text)
+    return {int(x) for x in (p.strip() for p in parts) if x}
+
+
+def select_ids(limit: int, ids_arg: str, only_heldout: str, ids_file: str = "") -> tuple[dict, list]:
     P = se.pool()
     ids = sorted(P)
     if only_heldout:
@@ -96,8 +134,14 @@ def select_ids(limit: int, ids_arg: str, only_heldout: str) -> tuple[dict, list]
         # "heldout" is accepted too in case that shape changes.
         allow = set(held.get("heldout_task_ids") or held.get("heldout") or [])
         ids = [i for i in ids if i in allow]
+    # --ids and --ids-file are both "restrict to" filters; given together
+    # their union applies (anything named by either survives).
+    want: set[int] = set()
     if ids_arg:
-        want = {int(x) for x in ids_arg.split(",") if x.strip()}
+        want |= parse_ids_text(ids_arg)
+    if ids_file:
+        want |= parse_ids_text(Path(ids_file).read_text(encoding="utf-8"))
+    if want:
         ids = [i for i in ids if i in want]
     if limit:
         ids = ids[:limit]
@@ -123,6 +167,82 @@ def adapter_digest(adapter_dir: Path) -> str:
     return "unknown"
 
 
+# ----------------------------------------------------------- sample seed --
+
+def derive_seed(seed: int, task_id: int, chunk: int | None = None) -> int:
+    """Deterministic torch.manual_seed input from (seed, task_id[, chunk]),
+    so a re-run with the same --seed reproduces the same K samples. `chunk`
+    is only set on the OOM-fallback path (distinct sub-calls need distinct
+    seeds); the normal one-call path omits it so its seed does not depend on
+    whether the fallback ever triggers elsewhere."""
+    key = f"{seed}:{task_id}" if chunk is None else f"{seed}:{task_id}:{chunk}"
+    h = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    return int(h[:16], 16) % (2 ** 31 - 1)
+
+
+def generate_samples(torch_mod, model, tokenizer, input_ids, attention_mask, eos_id,
+                     args, tid: int, K: int):
+    """K sampled replies for one problem, as ONE num_return_sequences=K
+    model.generate call whenever it fits. Returns (new_token_slices, elapsed_s,
+    oom_hit) where new_token_slices is a list of K 1-D tensors (prompt
+    stripped, still possibly right-padded -- callers trim to eos) and
+    elapsed_s covers the whole call chain (all sub-calls if it fell back).
+
+    torch is passed in rather than imported at module level: it is loaded
+    lazily inside main(), after the GPU is picked, so a no-op run never
+    touches CUDA.
+
+    On torch.cuda.OutOfMemoryError from the single K-wide call, halves the
+    batch and regenerates as two or more smaller calls, each seeded from
+    (--seed, task_id, chunk) so the fallback path is itself reproducible on
+    a re-run. If even batch size 1 OOMs, the error propagates (nothing left
+    to shrink)."""
+    prompt_len = input_ids.shape[-1]
+    t0 = time.monotonic()
+    try:
+        torch_mod.manual_seed(derive_seed(args.seed, tid))
+        with torch_mod.no_grad():
+            out = model.generate(
+                input_ids, attention_mask=attention_mask, max_new_tokens=args.max_new,
+                do_sample=True, temperature=args.temperature, top_p=args.top_p,
+                num_return_sequences=K, pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=eos_id)
+        return [out[i][prompt_len:] for i in range(K)], time.monotonic() - t0, False
+    except torch_mod.cuda.OutOfMemoryError:
+        print(f"loop_generate: task {tid}: CUDA OOM generating all {K} samples in one "
+              f"call; falling back to smaller batches", flush=True)
+        torch_mod.cuda.empty_cache()
+
+    slices = []
+    chunk = 0
+    remaining = K
+    batch = max(1, K // 2)
+    while remaining > 0:
+        this = min(batch, remaining)
+        while True:
+            try:
+                torch_mod.manual_seed(derive_seed(args.seed, tid, chunk))
+                with torch_mod.no_grad():
+                    out = model.generate(
+                        input_ids, attention_mask=attention_mask, max_new_tokens=args.max_new,
+                        do_sample=True, temperature=args.temperature, top_p=args.top_p,
+                        num_return_sequences=this, pad_token_id=tokenizer.pad_token_id,
+                        eos_token_id=eos_id)
+                break
+            except torch_mod.cuda.OutOfMemoryError:
+                torch_mod.cuda.empty_cache()
+                if this == 1:
+                    raise
+                this = max(1, this // 2)
+                batch = this   # keep later chunks at the size that worked
+                print(f"loop_generate: task {tid}: still OOM, shrinking chunk to {this}",
+                      flush=True)
+        slices.extend(out[i][prompt_len:] for i in range(this))
+        remaining -= this
+        chunk += 1
+    return slices, time.monotonic() - t0, True
+
+
 # --------------------------------------------------------------- misc --
 
 def print_followups(tag: str) -> None:
@@ -138,6 +258,15 @@ def print_followups(tag: str) -> None:
           f"--out SPEC-EXPERIMENT-{tag_dir}.md")
 
 
+def print_sample_followups(tag: str, K: int) -> None:
+    tags = [f"{tag}-s{k}" for k in range(K)]
+    print()
+    print(f"sample tag directories ({K}): " + ", ".join(tags))
+    print(f"follow-up commands for one sample (repeat for each of the {K} tags above, "
+          f"substituting --model):")
+    print_followups(tags[0])
+
+
 # ------------------------------------------------------------------ main --
 
 def main() -> int:
@@ -150,23 +279,64 @@ def main() -> int:
     ap.add_argument("--base", default=DEFAULT_BASE)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--ids", default="", help="comma-separated task ids, e.g. 100,101")
+    ap.add_argument("--ids-file", default="",
+                    help="path to a file of comma- or newline-separated task ids; "
+                         "unions with --ids if both are given")
     ap.add_argument("--gpu", type=int, default=None, help="pin a GPU index; default: most free VRAM")
     ap.add_argument("--max-new", type=int, default=1024)
     ap.add_argument("--only-heldout", default="", help="path to a heldout.json; restricts to its held-out ids")
-    ap.add_argument("--seed", type=int, default=1, help="recorded in the digest/options only; generation is greedy")
+    ap.add_argument("--samples", type=int, default=1,
+                    help="K replies per problem (default 1: today's single greedy reply). "
+                         "K > 1 samples K replies in one model.generate call per problem "
+                         "and writes each to its own <tag>-s<k> tag directory")
+    ap.add_argument("--temperature", type=float, default=0.0,
+                    help="sampling temperature; must be > 0 when --samples > 1 "
+                         "(ignored, generation stays greedy, when --samples is 1)")
+    ap.add_argument("--top-p", type=float, default=0.95, help="nucleus sampling p, used only when --samples > 1")
+    ap.add_argument("--seed", type=int, default=1,
+                    help="--samples 1: recorded in the digest/options only, generation is greedy. "
+                         "--samples > 1: seeds torch.manual_seed, derived per (seed, task_id), "
+                         "right before each problem's generate call, so a re-run reproduces the "
+                         "same K samples")
     ap.add_argument("--min-free-mib", type=int, default=MIN_FREE_MIB)
     args = ap.parse_args()
 
-    d = se.outdir(args.tag)
-    P, ids = select_ids(args.limit, args.ids, args.only_heldout)
-    todo = [tid for tid in ids if not (d / "raw" / f"{tid}.json").exists()]
+    K = args.samples
+    if K < 1:
+        print(f"loop_generate: --samples must be >= 1, got {K}")
+        return 2
+    if K > 1 and args.temperature <= 0:
+        print(f"loop_generate: --samples {K} > 1 requires --temperature > 0 "
+              f"(got {args.temperature}); sampling at temperature 0 is degenerate. Refusing "
+              f"before touching the GPU.")
+        return 2
+
+    if K == 1:
+        tag_dirs = [se.outdir(args.tag)]
+    else:
+        tag_dirs = [se.outdir(f"{args.tag}-s{k}") for k in range(K)]
+
+    P, ids = select_ids(args.limit, args.ids, args.only_heldout, args.ids_file)
+    if K == 1:
+        todo = [tid for tid in ids if not (tag_dirs[0] / "raw" / f"{tid}.json").exists()]
+    else:
+        todo = [tid for tid in ids
+                if not all((dk / "raw" / f"{tid}.json").exists() for dk in tag_dirs)]
     already = len(ids) - len(todo)
-    print(f"loop_generate: {len(ids)} problems selected, {already} already on disk, "
-          f"{len(todo)} to generate")
+    if K == 1:
+        print(f"loop_generate: {len(ids)} problems selected, {already} already on disk, "
+              f"{len(todo)} to generate")
+    else:
+        print(f"loop_generate: {len(ids)} problems selected, {already} already have all "
+              f"{K} samples on disk, {len(todo)} to generate (a partial set on disk still "
+              f"counts as to-generate: the whole K-set for a problem is regenerated together)")
     if not todo:
         print("loop_generate: nothing to do (no selected id needs a raw record); "
               "not touching the GPU")
-        print_followups(args.tag)
+        if K == 1:
+            print_followups(args.tag)
+        else:
+            print_sample_followups(args.tag, K)
         return 0
 
     # --------------------------------------------------- GPU, before torch
@@ -223,9 +393,6 @@ def main() -> int:
               f"adapter_digest={adapter_hash} torch={torch.__version__} "
               f"transformers={transformers.__version__}")
 
-    options = {"temperature": 0, "seed": args.seed, "max_new_tokens": args.max_new,
-               "note": "greedy transformers generate"}
-
     eos_id = tokenizer.eos_token_id
     if eos_id is None:
         eos_set: set[int] = set()
@@ -234,6 +401,18 @@ def main() -> int:
     else:
         eos_set = set(eos_id)
 
+    def trim_to_eos(new_tok) -> tuple["torch.Tensor", bool]:  # noqa: F821 (torch imported in main)
+        """new_tok is a 1-D new-token tensor, possibly right-padded (batched
+        sampling pads shorter sequences to the batch's longest). Trim at the
+        first eos token so reply/reply_tokens describe what the model
+        actually said, not the padding."""
+        ids_list = new_tok.tolist()
+        for i, t in enumerate(ids_list):
+            if t in eos_set:
+                return new_tok[:i + 1], True
+        return new_tok, False
+
+    oom_hit_any = False
     t_start = time.monotonic()
     asked = 0
     for tid in todo:
@@ -251,27 +430,56 @@ def main() -> int:
             attention_mask = attention_mask.to(dev)
         prompt_tokens = int(input_ids.shape[-1])
 
-        t_gen0 = time.monotonic()
-        with torch.no_grad():
-            out = model.generate(
-                input_ids, attention_mask=attention_mask, max_new_tokens=args.max_new,
-                do_sample=False, pad_token_id=tokenizer.pad_token_id, eos_token_id=eos_id)
-        eval_s = time.monotonic() - t_gen0
+        if K == 1:
+            t_gen0 = time.monotonic()
+            with torch.no_grad():
+                out = model.generate(
+                    input_ids, attention_mask=attention_mask, max_new_tokens=args.max_new,
+                    do_sample=False, pad_token_id=tokenizer.pad_token_id, eos_token_id=eos_id)
+            eval_s = time.monotonic() - t_gen0
 
-        new_tokens = out[0][input_ids.shape[-1]:]
-        reply = tokenizer.decode(new_tokens, skip_special_tokens=True)
-        reply_tokens = int(new_tokens.shape[-1])
-        hit_eos = reply_tokens > 0 and int(new_tokens[-1].item()) in eos_set
-        done_reason = "stop" if hit_eos else "length"
+            new_tokens = out[0][input_ids.shape[-1]:]
+            reply = tokenizer.decode(new_tokens, skip_special_tokens=True)
+            reply_tokens = int(new_tokens.shape[-1])
+            hit_eos = reply_tokens > 0 and int(new_tokens[-1].item()) in eos_set
+            done_reason = "stop" if hit_eos else "length"
+            wall = time.monotonic() - t_task0
 
-        wall = time.monotonic() - t_task0
+            options = {"temperature": 0, "seed": args.seed, "max_new_tokens": args.max_new,
+                       "note": "greedy transformers generate"}
+            record = {"task_id": tid, "fn": entry["fn"], "model": args.tag, "digest": digest,
+                      "options": options, "messages": messages, "reply": reply,
+                      "prompt_tokens": prompt_tokens, "reply_tokens": reply_tokens,
+                      "eval_s": round(eval_s, 3), "wall_s": round(wall, 3),
+                      "done_reason": done_reason}
+            (tag_dirs[0] / "raw" / f"{tid}.json").write_text(
+                json.dumps(record, indent=1), encoding="utf-8")
+        else:
+            new_slices, elapsed, oom_hit = generate_samples(
+                torch, model, tokenizer, input_ids, attention_mask, eos_id, args, tid, K)
+            oom_hit_any = oom_hit_any or oom_hit
+            per_sample_t = elapsed / K
+            note = ("sampled transformers generate (do_sample=True); eval_s and wall_s "
+                    "are the whole num_return_sequences batch call's time divided evenly "
+                    "across the K samples, not a per-sample timer")
+            if oom_hit:
+                note += "; CUDA OOM fallback triggered: batch was split into smaller generate() calls"
+            for k, new_tok in enumerate(new_slices):
+                trimmed, hit_eos = trim_to_eos(new_tok)
+                reply = tokenizer.decode(trimmed, skip_special_tokens=True)
+                reply_tokens = int(trimmed.shape[-1])
+                done_reason = "stop" if hit_eos else "length"
+                options = {"temperature": args.temperature, "top_p": args.top_p,
+                           "seed": args.seed, "sample_index": k, "num_samples": K,
+                           "max_new_tokens": args.max_new, "note": note}
+                record = {"task_id": tid, "fn": entry["fn"], "model": f"{args.tag}-s{k}",
+                          "digest": digest, "options": options, "messages": messages,
+                          "reply": reply, "prompt_tokens": prompt_tokens,
+                          "reply_tokens": reply_tokens, "eval_s": round(per_sample_t, 3),
+                          "wall_s": round(per_sample_t, 3), "done_reason": done_reason}
+                (tag_dirs[k] / "raw" / f"{tid}.json").write_text(
+                    json.dumps(record, indent=1), encoding="utf-8")
 
-        record = {"task_id": tid, "fn": entry["fn"], "model": args.tag, "digest": digest,
-                  "options": options, "messages": messages, "reply": reply,
-                  "prompt_tokens": prompt_tokens, "reply_tokens": reply_tokens,
-                  "eval_s": round(eval_s, 3), "wall_s": round(wall, 3),
-                  "done_reason": done_reason}
-        (d / "raw" / f"{tid}.json").write_text(json.dumps(record, indent=1), encoding="utf-8")
         asked += 1
         if asked % 10 == 0 or asked == 1:
             el = time.monotonic() - t_start
@@ -284,7 +492,11 @@ def main() -> int:
     print(f"peak VRAM: {peak:.2f} GB")
     print(f"wall time: {wall_total:.1f} s ({wall_total / max(asked, 1):.1f} s/problem)")
     print(f"GPU used: {gpu}")
-    print_followups(args.tag)
+    if K == 1:
+        print_followups(args.tag)
+    else:
+        print(f"CUDA OOM fallback triggered: {'yes' if oom_hit_any else 'no'}")
+        print_sample_followups(args.tag, K)
     return 0
 
 

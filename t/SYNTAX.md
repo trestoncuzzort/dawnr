@@ -70,6 +70,8 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "and" | "or" | "not" | "implies"   (* and/or n-ary, short-circuit *)
            | "len" | "at"                       (* v1, seq only *)
            | "update" | "fill"                  (* v1; written s[i := v] and seq(n, v) *)
+           | "seq" | "slice"                    (* v1; written [a, b] (any arity, [] empty) and s[a..b];
+                                                   "+" on two seqs is concatenation *)
 
 Stmt     ::= {"assign": [Id, Expr]}
            | {"if":    {"cond": Expr, "then": [Stmt*], "else": [Stmt*]}}
@@ -138,6 +140,44 @@ defined only for `0 <= i < len(s)`), `seq(n, v)` builds `n` copies of `v`
 two seqs is extensional. `tasks/swap.json` and `tasks/reverse.json` are
 the committed examples: `r := s[i := s[j]]; r := r[j := tmp];` and
 `r := seq(len(s), 0); ... r := r[i := s[len(s) - 1 - i]];`.
+
+Since the same evening (SPEC.md "Sequences: literals, concatenation,
+slices"):
+
+```json
+{"op": "seq",   "args": [{"int": 3}, {"var": "x"}]}
+{"op": "seq",   "args": []}
+{"op": "+",     "args": [{"var": "s"}, {"op": "seq", "args": [{"var": "x"}]}]}
+{"op": "slice", "args": [{"var": "s"}, {"int": 1}, {"op": "len", "args": [{"var": "s"}]}]}
+```
+written: `[3, x]` · `[]` · `s + [x]` · `s[1..len(s)]`, also `s[1..]`
+
+A literal takes any number of int elements, `[]` being the empty seq. `+`
+on two seqs is concatenation, the same operator name as on ints, chosen by
+the types of its operands exactly as `==` is; a `+` across the two types
+is ill-formed. `s[a..b]` is the slice with elements `a` to `b - 1`,
+**defined only for `0 <= a <= b <= len(s)`**; the notation also accepts
+`s[a..]` for `s[a..len(s)]` and `s[..b]` for `s[0..b]`, and prints the
+three-argument form back. `tasks/tail.json` (`r := s[1..];`) and
+`tasks/filter_pos.json` (`r := r + [s[i]];` inside a loop) are the
+committed examples.
+
+Since 2026-09-09 (SPEC.md "Strings as sequences of code points (v1)"), two
+more literal forms are sugar the parser expands and the printer never
+emits:
+
+```json
+{"int": 97}
+{"op": "seq", "args": [{"int": 97}, {"int": 98}, {"int": 99}]}
+```
+written: `'a'` · `"abc"`
+
+A character is its Unicode code point, an int in `[0, 1114111]`; a string
+is a `seq` of code points, `""` being the empty seq. Both forms accept the
+escapes `\n` `\t` `\r` `\0` `\'` `\\`, a string also `\"`, and either can
+spell a code point by its hex value as `\u{H...H}`, 1 to 6 hex digits. The
+printer always emits ints and seq literals, never quotes, so `'a'` prints
+as `97` and `"abc"` as `[97, 98, 99]`.
 
 ### Locals and loops (gate 2)
 
@@ -249,7 +289,8 @@ exercises all six.
 ## What does not exist (on purpose)
 
 No unbounded quantifiers. No
-mutation of sequences, no arrays, no heap, no aliasing. No mutual recursion,
-no higher-order functions, no seq returns, no seq literals. One return value.
+mutation of sequences in place (a seq is a value, updated functionally), no
+arrays, no heap, no aliasing. No mutual recursion, no higher-order
+functions, no nested seqs, no characters or strings yet. One return value.
 Gates open with measurements, not intentions; see `AGREEMENT.md` for what
 each kernel has actually verified.

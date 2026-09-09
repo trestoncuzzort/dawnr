@@ -41,7 +41,7 @@ the typed JSON values directly. Every other APPS and CodeContests problem is
 `stdin`-shaped: its io-types are read lexically off the sample `input` and
 `output` text, token by token (every token an integer fits int/seq of int;
 a non-integer token means a string is needed; a decimal point means a real
-is needed), which can only ever detect `string-char` and `real` -- a stdin
+is needed), which can only ever detect `string-as-seq` and `real` -- a stdin
 sample cannot show a map, a set, a tuple or a nested sequence, so those gaps
 are not attempted for stdin-shaped problems and the io-types side of the
 census under-counts them there by construction.
@@ -100,11 +100,14 @@ APPS_SPLITS = ("apps_raw_train.jsonl.gz", "apps_raw_test.jsonl.gz")
 CC_SPLITS = ("codecontests_train.jsonl.gz", "codecontests_valid.jsonl.gz",
              "codecontests_test.jsonl.gz")
 
-# The nine io-type gap names shared between the io-types channel (what the
+# The eight io-type gap names shared between the io-types channel (what the
 # tests need) and the solution-constructs channel (what the reference
 # solution's AST needs); the remaining gap and burden names below belong to
-# the solution-constructs channel only.
-IO_GAP_NAMES = ("string-char", "real", "nested-seq", "map", "set", "tuple",
+# the solution-constructs channel only. `string-as-seq` is also read off
+# io-types (a str-typed argument, return, or stdin sample token) but is a
+# BURDEN, not a gap (SPEC.md's "Strings as sequences of code points"), so
+# it is tracked apart from this tuple, not inside it.
+IO_GAP_NAMES = ("real", "nested-seq", "map", "set", "tuple",
                 "multi-return", "none-type", "any-type")
 
 # -------------------------------------------------------------- DETECTORS
@@ -115,9 +118,12 @@ IO_GAP_NAMES = ("string-char", "real", "nested-seq", "map", "set", "tuple",
 # `solution_tags()` and `io_type_tags()`.
 DETECTORS: dict[str, tuple[str, str]] = {
     # gaps: outside t's fragment (io-types and/or solution AST)
-    "string-char": ("gap", "string or char type: a str literal, an f-string, "
-                    "a str method (upper/lower/split/join/strip/replace/"
-                    "startswith/endswith/format), or a str-typed io value"),
+    "string-lib": ("gap", "the Python string LIBRARY, not the seq-of-code-"
+                   "points model SPEC.md's v1 covers: any str method call "
+                   "(upper/lower/split/join/strip/replace/startswith/"
+                   "endswith/find/count/isdigit/...), an f-string or "
+                   "`.format()`, `str()` or a based `int(x, base)` "
+                   "conversion of a string, or `sorted()` on a string"),
     "real": ("gap", "real numbers: a float literal, true division `/`, "
              "math.sqrt, float(), or a decimal-valued io token"),
     "nested-seq": ("gap", "a seq of seq, or a subscript of a subscript: "
@@ -158,6 +164,13 @@ DETECTORS: dict[str, tuple[str, str]] = {
            "solution (for a stdin-shaped problem, I/O is the shape itself, "
            "not a separate gap)"),
     # burdens: t can say it another way, at a cost
+    "string-as-seq": ("burden", "a string used only the way t's `seq` of "
+                       "code points already covers: a str literal, a "
+                       "str-typed io value, indexing/len/slicing/"
+                       "concatenation/comparison of strings, `ord`/`chr`, "
+                       "iterating over a string, or `in` on a string (a "
+                       "bounded exists) -- SPEC.md's 'Strings as sequences "
+                       "of code points'"),
     "recursion": ("burden", "the solution's function calls itself; t "
                   "supports this through spec functions (self-calls and "
                   "calls to earlier functions), so it is a burden, not a "
@@ -185,12 +198,14 @@ STRING_METHODS = {"upper", "lower", "split", "join", "strip", "lstrip",
                    "rstrip", "replace", "startswith", "endswith", "format",
                    "capitalize", "title", "isdigit", "isalpha", "isupper",
                    "islower", "zfill", "center", "ljust", "rjust",
-                   "partition", "splitlines", "encode", "swapcase"}
+                   "partition", "splitlines", "encode", "swapcase",
+                   "find", "count"}
 MAP_CALLS = {"dict", "defaultdict", "Counter", "OrderedDict"}
 SET_CALLS = {"set", "frozenset"}
 SORT_CALLS = {"sorted"}
 MATH_BUILTIN_CALLS = {"min", "max", "sum", "abs"}
 APPEND_METHODS = {"append", "extend", "insert"}
+ORD_CHR_CALLS = {"ord", "chr"}
 
 
 # ---------------------------------------------------------- solution AST
@@ -206,6 +221,30 @@ def _call_name(node: ast.Call) -> str | None:
 def _is_self_call(node: ast.AST, fn_name: str) -> bool:
     return any(isinstance(n, ast.Call) and _call_name(n) == fn_name
                for n in ast.walk(node))
+
+
+def _looks_stringy(node: ast.AST) -> bool:
+    """Shallow syntactic check, no variable-type inference: does this
+    expression obviously produce a str? Used only to decide whether
+    `sorted(...)` is sorting a string (also tags `string-lib`, since
+    Python's sorted() returns a list of characters, not a string, so
+    reasoning about the result needs more than the seq-of-code-points
+    model) versus sorting a list (`sort` burden only, untouched). A
+    string held in a plain variable is not recognized this way and is
+    undercounted here, see Method."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return True
+    if isinstance(node, ast.JoinedStr):
+        return True
+    if isinstance(node, ast.Attribute) and node.attr in STRING_METHODS:
+        return True
+    if isinstance(node, ast.Call):
+        name = _call_name(node)
+        if name == "str":
+            return True
+        if isinstance(node.func, ast.Attribute) and node.func.attr in STRING_METHODS:
+            return True
+    return False
 
 
 def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
@@ -249,11 +288,11 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
     for node in ast.walk(tree):
         if isinstance(node, ast.Constant):
             if isinstance(node.value, str) and node.value != "":
-                tags["string-char"] = True
+                tags["string-as-seq"] = True
             elif isinstance(node.value, float):
                 tags["real"] = True
         elif isinstance(node, ast.JoinedStr):  # f-string
-            tags["string-char"] = True
+            tags["string-lib"] = True
         elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
             tags["real"] = True
         elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
@@ -300,7 +339,7 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             tags["unbounded-loop"] = True
         elif isinstance(node, ast.Attribute):
             if node.attr in STRING_METHODS:
-                tags["string-char"] = True
+                tags["string-lib"] = True
             if node.attr in APPEND_METHODS:
                 tags["seq-append"] = True
             if node.attr == "sort":
@@ -315,10 +354,18 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
                 tags["set"] = True
             elif name in SORT_CALLS:
                 tags["sort"] = True
+                if node.args and _looks_stringy(node.args[0]):
+                    tags["string-lib"] = True
             elif name in MATH_BUILTIN_CALLS:
                 tags["builtin-math"] = True
             elif name == "float":
                 tags["real"] = True
+            elif name in ORD_CHR_CALLS:
+                tags["string-as-seq"] = True
+            elif name == "str":
+                tags["string-lib"] = True
+            elif name == "int" and len(node.args) >= 2:
+                tags["string-lib"] = True
             elif name in ("map", "filter") and any(isinstance(a, ast.Lambda) for a in node.args):
                 tags["closure"] = True
             elif name == "print":
@@ -357,11 +404,14 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
 
 # ------------------------------------------------------------- io-types
 def _mbpp_arg_kind_gap(why: str) -> str | None:
-    """Map one mbpp_dfy.parse_assertion refusal reason to an io-type gap
-    name, where the reason names a type mbpp_dfy's own _literal() refused.
-    Structural refusals (a comparison other than ==, an unparseable
-    assertion shape, a keyword argument, ...) name no type and map to
-    nothing; they are still recorded as raw refusals in the JSON."""
+    """Map one mbpp_dfy.parse_assertion refusal reason to an io-type gap or
+    burden name, where the reason names a type mbpp_dfy's own _literal()
+    refused. Every mapped name is a gap except `str`, which maps to the
+    burden `string-as-seq` (mbpp_io_tags sorts gap from burden by
+    DETECTORS' own kind). Structural refusals (a comparison other than ==,
+    an unparseable assertion shape, a keyword argument, ...) name no type
+    and map to nothing; they are still recorded as raw refusals in the
+    JSON."""
     if ":" not in why:
         return None
     prefix, rest = why.split(":", 1)
@@ -375,7 +425,7 @@ def _mbpp_arg_kind_gap(why: str) -> str | None:
         if rest == "seq":
             return "nested-seq"
     mapping = {
-        "str": "string-char", "float": "real", "dict": "map", "set": "set",
+        "str": "string-as-seq", "float": "real", "dict": "map", "set": "set",
         "tuple": "tuple", "bool": None, "NoneType": "none-type",
     }
     if rest in mapping:
@@ -385,13 +435,14 @@ def _mbpp_arg_kind_gap(why: str) -> str | None:
     return "any-type"
 
 
-def mbpp_io_tags(test_list: list[str]) -> tuple[set[str], set[str], list[str], bool, str | None]:
-    """(io_types, gaps, raw_refusals, all_ok, fn_name) for one MBPP problem's
-    test_list, using mbpp_dfy.parse_assertion on every assertion (reused,
-    not reimplemented). `all_ok` and a single `fn_name` across every
-    assertion mirror spec_experiment.pool()'s own admission rule."""
+def mbpp_io_tags(test_list: list[str]) -> tuple[set[str], set[str], set[str], list[str], bool, str | None]:
+    """(io_types, gaps, burdens, raw_refusals, all_ok, fn_name) for one MBPP
+    problem's test_list, using mbpp_dfy.parse_assertion on every assertion
+    (reused, not reimplemented). `all_ok` and a single `fn_name` across
+    every assertion mirror spec_experiment.pool()'s own admission rule."""
     io_types: set[str] = set()
     gaps: set[str] = set()
+    burdens: set[str] = set()
     refusals: list[str] = []
     fns: set[str] = set()
     all_ok = bool(test_list)
@@ -410,12 +461,12 @@ def mbpp_io_tags(test_list: list[str]) -> tuple[set[str], set[str], list[str], b
             refusals.append(parsed["why"])
             g = _mbpp_arg_kind_gap(parsed["why"])
             if g:
-                gaps.add(g)
+                (burdens if g in BURDENS else gaps).add(g)
     single_fn = len(fns) == 1
     fn_name = next(iter(fns)) if single_fn else None
     if not single_fn:
         all_ok = False
-    return io_types, gaps, refusals, all_ok, fn_name
+    return io_types, gaps, burdens, refusals, all_ok, fn_name
 
 
 TYPING_REAL = {"float", "Decimal"}
@@ -467,7 +518,7 @@ def _annotation_kinds(ann: ast.AST | None) -> set[str]:
             if node.id == "bool":
                 return
             if node.id in TYPING_STR:
-                out.add("string-char")
+                out.add("string-as-seq")
                 return
             if node.id in TYPING_REAL:
                 out.add("real")
@@ -489,38 +540,45 @@ def _annotation_kinds(ann: ast.AST | None) -> set[str]:
     return out
 
 
-def humaneval_io_tags(prompt: str, entry_point: str) -> tuple[set[str], set[str]]:
-    """(io_types, gaps) read off the typed def line in `prompt`."""
+def humaneval_io_tags(prompt: str, entry_point: str) -> tuple[set[str], set[str], set[str]]:
+    """(io_types, gaps, burdens) read off the typed def line in `prompt`;
+    an annotation kind is sorted into gaps or burdens by DETECTORS' own
+    kind (`string-as-seq`, from a `str` annotation, is the only burden
+    `_annotation_kinds` can produce)."""
     io_types: set[str] = set()
     gaps: set[str] = set()
+    burdens: set[str] = set()
     try:
         tree = ast.parse(prompt)
     except SyntaxError:
-        return io_types, {"any-type"}
+        return io_types, {"any-type"}, burdens
     fn = None
     for n in ast.walk(tree):
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == entry_point:
             fn = n
             break
     if fn is None:
-        return io_types, {"any-type"}
+        return io_types, {"any-type"}, burdens
     args = list(fn.args.args)
     for a in args:
         ks = _annotation_kinds(a.annotation)
         if not ks:
             io_types.add("param")
-        gaps |= ks
+        gaps |= {k for k in ks if k in GAPS}
+        burdens |= {k for k in ks if k in BURDENS}
     ret_ks = _annotation_kinds(fn.returns)
     if "tuple" in ret_ks:
         ret_ks.discard("tuple")
         ret_ks.add("multi-return")
-    gaps |= ret_ks
-    return io_types, gaps
+    gaps |= {k for k in ret_ks if k in GAPS}
+    burdens |= {k for k in ret_ks if k in BURDENS}
+    return io_types, gaps, burdens
 
 
 def _json_value_kinds(v, depth: int = 0) -> set[str]:
     """One decoded JSON value (from APPS's typed `fn_name` io) -> io-type
-    gap names, or empty if it fits int/bool/seq<int>."""
+    gap or burden names, or empty if it fits int/bool/seq<int> (a str value
+    yields the burden `string-as-seq`)."""
     if isinstance(v, bool):
         return set()
     if isinstance(v, int):
@@ -528,7 +586,7 @@ def _json_value_kinds(v, depth: int = 0) -> set[str]:
     if isinstance(v, float):
         return {"real"}
     if isinstance(v, str):
-        return {"string-char"}
+        return {"string-as-seq"}
     if v is None:
         return {"none-type"}
     if isinstance(v, list):
@@ -560,8 +618,11 @@ def _flatten_text(x, depth: int = 0) -> str:
 
 
 def _lexical_tokens_kinds(text: str) -> set[str]:
-    """Stdin sample text -> io-type gaps found lexically: every whitespace
-    token tried as an int, then a float, else it is a string token."""
+    """Stdin sample text -> io-type gap/burden names found lexically: every
+    whitespace token tried as an int, then a float, else it is a string
+    token (the burden `string-as-seq`, not a gap: a stdin-shaped problem's
+    sample text needing a string does not by itself block
+    `would_be_in_fragment_with_signature`, only a decimal token does)."""
     out: set[str] = set()
     for tok in text.split():
         try:
@@ -575,7 +636,7 @@ def _lexical_tokens_kinds(text: str) -> set[str]:
             continue
         except ValueError:
             pass
-        out.add("string-char")
+        out.add("string-as-seq")
     return out
 
 
@@ -623,10 +684,10 @@ def process_mbpp(limit: int | None = None) -> list[dict]:
             n += 1
             task_id = rec["task_id"]
             test_list = rec.get("test_list") or []
-            io_types, io_gaps, refusals, all_ok, fn_name = mbpp_io_tags(test_list)
+            io_types, io_gaps, io_burdens, refusals, all_ok, fn_name = mbpp_io_tags(test_list)
             sol_tags = solution_tags(rec.get("code", ""), fn_name, function_shaped=True)
             sol_gaps = {k for k in sol_tags if k in GAPS}
-            burdens = {k for k in sol_tags if k in BURDENS}
+            burdens = {k for k in sol_tags if k in BURDENS} | io_burdens
             gaps = io_gaps | sol_gaps
             in_frag = all_ok and function_in_fragment(io_gaps, sol_gaps)
             out.append(make_record(
@@ -646,11 +707,11 @@ def process_humaneval(limit: int | None = None) -> list[dict]:
             break
         n += 1
         entry = rec["entry_point"]
-        io_types, io_gaps = humaneval_io_tags(rec["prompt"], entry)
+        io_types, io_gaps, io_burdens = humaneval_io_tags(rec["prompt"], entry)
         full_src = rec["prompt"] + rec.get("canonical_solution", "")
         sol_tags = solution_tags(full_src, entry, function_shaped=True)
         sol_gaps = {k for k in sol_tags if k in GAPS}
-        burdens = {k for k in sol_tags if k in BURDENS}
+        burdens = {k for k in sol_tags if k in BURDENS} | io_burdens
         gaps = io_gaps | sol_gaps
         in_frag = function_in_fragment(io_gaps, sol_gaps)
         out.append(make_record(
@@ -690,9 +751,13 @@ def process_apps(limit: int | None = None) -> list[dict]:
                 outputs = io.get("outputs") or []
                 for row in inputs[:5]:
                     for v in (row if isinstance(row, list) else [row]):
-                        io_gaps |= _json_value_kinds(v)
+                        ks = _json_value_kinds(v)
+                        io_gaps |= {k for k in ks if k in GAPS}
+                        burdens |= {k for k in ks if k in BURDENS}
                 for row in outputs[:5]:
-                    io_gaps |= _json_value_kinds(row)
+                    ks = _json_value_kinds(row)
+                    io_gaps |= {k for k in ks if k in GAPS}
+                    burdens |= {k for k in ks if k in BURDENS}
                 if first_sol is None:
                     sol_tags = {}
                 else:
@@ -710,8 +775,10 @@ def process_apps(limit: int | None = None) -> list[dict]:
                 raw_out = io.get("outputs")
                 sample_in = _flatten_text(raw_in[:3]) if isinstance(raw_in, list) else ""
                 sample_out = _flatten_text(raw_out[:3]) if isinstance(raw_out, list) else ""
-                io_gaps = _lexical_tokens_kinds(sample_in) | _lexical_tokens_kinds(sample_out)
+                lex = _lexical_tokens_kinds(sample_in) | _lexical_tokens_kinds(sample_out)
+                io_gaps = {k for k in lex if k in GAPS}
                 burdens.add("stdin-to-signature")
+                burdens |= {k for k in lex if k in BURDENS}
                 if first_sol is None:
                     sol_tags = {}
                 else:
@@ -719,9 +786,9 @@ def process_apps(limit: int | None = None) -> list[dict]:
                 sol_gaps = {k for k in sol_tags if k in GAPS}
                 burdens |= {k for k in sol_tags if k in BURDENS}
                 gaps = io_gaps | sol_gaps
-                fits_ints = "string-char" not in io_gaps and "real" not in io_gaps
+                io_sample_ok = "real" not in io_gaps
                 parsed_ok = first_sol is not None and "py2-unparseable" not in sol_tags
-                would_be_in_fragment = fits_ints and not sol_gaps and parsed_ok
+                would_be_in_fragment = io_sample_ok and not sol_gaps and parsed_ok
                 out.append(make_record(
                     "APPS", pid, "stdin", set(), gaps, burdens, False,
                     {"split": stub, "has_solution": first_sol is not None,
@@ -750,8 +817,9 @@ def process_codecontests(limit: int | None = None) -> list[dict]:
             tests = rec.get("public_tests") or []
             sample_in = " ".join(t.get("input", "") for t in tests[:3])
             sample_out = " ".join(t.get("output", "") for t in tests[:3])
-            io_gaps = _lexical_tokens_kinds(sample_in) | _lexical_tokens_kinds(sample_out)
-            burdens = {"stdin-to-signature"}
+            lex = _lexical_tokens_kinds(sample_in) | _lexical_tokens_kinds(sample_out)
+            io_gaps = {k for k in lex if k in GAPS}
+            burdens = {"stdin-to-signature"} | {k for k in lex if k in BURDENS}
             if first_sol is None:
                 sol_tags = {}
             else:
@@ -759,9 +827,9 @@ def process_codecontests(limit: int | None = None) -> list[dict]:
             sol_gaps = {k for k in sol_tags if k in GAPS}
             burdens |= {k for k in sol_tags if k in BURDENS}
             gaps = io_gaps | sol_gaps
-            fits_ints = "string-char" not in io_gaps and "real" not in io_gaps
+            io_sample_ok = "real" not in io_gaps
             parsed_ok = first_sol is not None and "py2-unparseable" not in sol_tags
-            would_be_in_fragment = fits_ints and not sol_gaps and parsed_ok
+            would_be_in_fragment = io_sample_ok and not sol_gaps and parsed_ok
             out.append(make_record(
                 "CodeContests", pid, "stdin", set(), gaps, burdens, False,
                 {"split": stub, "has_solution": first_sol is not None,
@@ -930,21 +998,24 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("blocks (`public_tests` for CodeContests), token by token on")
     w("whitespace -- every token that parses as `int` needs nothing, a")
     w("token that parses as `float` but not `int` needs `real`, anything")
-    w("else needs `string-char`. A lexical scan cannot show a map, a set, a")
-    w("tuple or a nested sequence, so those four gaps are never attempted")
-    w("for a stdin-shaped problem's io-types; only its SOLUTION's AST can")
-    w("still tag them.")
+    w("else needs the burden `string-as-seq`. A lexical scan cannot show a")
+    w("map, a set, a tuple or a nested sequence, so those four gaps are")
+    w("never attempted for a stdin-shaped problem's io-types; only its")
+    w("SOLUTION's AST can still tag them.")
     w("")
     w("A stdin-shaped problem is never `in_fragment`: SYNTAX.md and the")
     w("brief for this file agree a signature has to exist before a")
     w("problem can be posed to t at all, which is the `stdin-to-signature`")
     w("burden every stdin-shaped problem carries. `would_be_in_fragment_"
       "with_signature` in the JSON (and the by-source table above) marks")
-    w("the ones whose sample io is all-integer and whose solution tags no")
-    w("gap -- everything BUT the missing signature already fits. A problem")
-    w("with no Python solution, or whose chosen solution is")
+    w("the ones whose sample io has no decimal-valued (`real`) token and")
+    w("whose solution tags no gap -- everything BUT the missing signature")
+    w("already fits; a string token in the sample is no longer")
+    w("disqualifying on its own, since `string-as-seq` is a burden, not a")
+    w("gap. A problem with no Python solution, or whose chosen solution is")
     w("`py2-unparseable`, is never marked this way even when its sample io")
-    w("is all-integer: the solution side is unmeasured, not measured clean.")
+    w("has no `real` token: the solution side is unmeasured, not measured")
+    w("clean.")
     w("")
     w("Solution-construct detection walks the parsed `ast` once per")
     w("solution; each DETECTORS entry below is either a node-type check")
@@ -980,10 +1051,36 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("- Python's own `int` is unbounded, like t's, so no `bigint` detector")
     w("  exists and no problem is ever blocked on integer width;")
     w("- an f-string, `.format()`, and every string method in a fixed list")
-    w("  (`STRING_METHODS` in nl_census.py) all tag the single `string-char`")
+    w("  (`STRING_METHODS` in nl_census.py) all tag the single `string-lib`")
     w("  gap rather than each having a name of their own, since all three")
-    w("  mean the same thing for t: the value in play is not an int, a")
-    w("  bool, or a seq of int;")
+    w("  need the Python string LIBRARY, not just the seq-of-code-points")
+    w("  model SPEC.md's v1 covers; a bare str/f-string/char literal, by")
+    w("  contrast, tags only the burden `string-as-seq`;")
+    w("- `count` is in `STRING_METHODS` even though `list.count(..)` uses")
+    w("  the same attribute name; a solution counting occurrences in a")
+    w("  list, not a string, is over-counted into `string-lib` here, the")
+    w("  same name-only approximation `.sort` already accepts elsewhere;")
+    w("- `ord`/`chr` calls tag `string-as-seq` (a burden: t already has")
+    w("  the code point, this is only the name Python gives it);")
+    w("- `str(..)` is tagged `string-lib` unconditionally, the same")
+    w("  treatment `float(..)` already gets; `int(..)` is tagged only when")
+    w("  called with an explicit base (`int(x, 16)`), unambiguous string")
+    w("  parsing -- a bare `int(x)` is NOT tagged even when x is a string,")
+    w("  since the common `int(input())` idiom would otherwise swamp")
+    w("  `string-lib` on nearly every stdin-shaped solution with input-")
+    w("  parsing boilerplate a signature-extraction step would remove, not")
+    w("  the algorithmic core; this undercounts genuine string-to-int")
+    w("  parsing written without a base argument;")
+    w("- `sorted(..)` always tags the `sort` burden, and additionally tags")
+    w("  `string-lib` only when its argument is SYNTACTICALLY a string (a")
+    w("  literal, an f-string, a `str(..)` call, or a chained string-")
+    w("  method call) -- `sorted(a_variable)` is not resolved to a type")
+    w("  and is undercounted when the variable holds a string;")
+    w("- iterating over a string, and `in` on a string, are not detected")
+    w("  as their own AST shape (both look identical to the same")
+    w("  operation on a list without type inference); a solution doing")
+    w("  only this and nothing else stringy is invisible to")
+    w("  `string-as-seq`, an undercount left as-is rather than built out;")
     w("- a `SyntaxError` on `ast.parse` (most often Python 2: a `print`")
     w("  statement, `raw_input`, an octal literal) is recorded as the")
     w("  `py2-unparseable` burden and stops solution-construct detection")

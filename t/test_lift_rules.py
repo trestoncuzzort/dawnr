@@ -2138,6 +2138,220 @@ method BreakInIfBranch(n: int, flag: bool) returns (r: int)
     print("test_break_in_tail_if_branch_accepted: while loop last in a tail if-branch -> break-as-return")
 
 
+def test_seq_literal_lifted() -> None:
+    src = """
+method Lit(x: int) returns (r: seq<int>)
+  ensures r == [1, 2, 3]
+{
+  r := [1, 2, 3];
+}
+"""
+    task, rec = _lift_one(src, "Lit")
+    assert "seq-literal-lifted" in _rule_names(rec)
+    assert task["body"][0]["assign"] == ["r", {"op": "seq", "args": [
+        {"int": 1}, {"int": 2}, {"int": 3}]}]
+    assert task["ensures"][0] == {"op": "==", "args": [
+        {"var": "r"}, {"op": "seq", "args": [{"int": 1}, {"int": 2}, {"int": 3}]}]}
+
+    empty_src = """
+method EmptyLit() returns (r: seq<int>)
+  ensures r == []
+{
+  r := [];
+}
+"""
+    empty_task, empty_rec = _lift_one(empty_src, "EmptyLit")
+    assert "seq-literal-lifted" in _rule_names(empty_rec)
+    assert empty_task["body"][0]["assign"] == ["r", {"op": "seq", "args": []}]
+
+    nested_src = """
+method BadNestedLit() returns (r: int)
+  ensures r == 0
+{
+  var x := [[1], [2]];
+  r := 0;
+}
+"""
+    v = _classify_one(nested_src, "BadNestedLit")
+    assert isinstance(v, C.Refusal) and v.reason == "nested-seq", (
+        f"expected nested-seq refusal, got {v}")
+
+    char_src = """
+method BadCharLit() returns (r: int)
+  ensures r == 0
+{
+  var x := ['a', 'b'];
+  r := 0;
+}
+"""
+    v2 = _classify_one(char_src, "BadCharLit")
+    assert isinstance(v2, C.Refusal) and v2.reason == "string-char", (
+        f"expected string-char refusal, got {v2}")
+    print("test_seq_literal_lifted: '[1,2,3]'/'[]' -> op:seq; nested/char elements still refused")
+
+
+def test_seq_append_in_loop_and_prepend() -> None:
+    append_src = """
+method AppendLoop(n: int) returns (r: seq<int>)
+  ensures true
+{
+  r := [];
+  var i := 0;
+  while i < n
+    invariant 0 <= i
+    decreases n - i
+  {
+    r := r + [i];
+    i := i + 1;
+  }
+}
+"""
+    task, rec = _lift_one(append_src, "AppendLoop")
+    assert "seq-concat-lifted" in _rule_names(rec)
+    loop_body = task["body"][2]["while"]["body"]
+    assert loop_body[0]["assign"] == ["r", {"op": "+", "args": [
+        {"var": "r"}, {"op": "seq", "args": [{"var": "i"}]}]}]
+
+    prepend_src = """
+method Prepend(x: int) returns (r: seq<int>)
+  ensures true
+{
+  r := [];
+  r := [x] + r;
+}
+"""
+    task2, rec2 = _lift_one(prepend_src, "Prepend")
+    assert "seq-concat-lifted" in _rule_names(rec2)
+    assert task2["body"][1]["assign"] == ["r", {"op": "+", "args": [
+        {"op": "seq", "args": [{"var": "x"}]}, {"var": "r"}]}]
+    print("test_seq_append_in_loop_and_prepend: 'r + [x]' and '[x] + r' both op:+, seq-concat-lifted")
+
+
+def test_seq_concat_of_slices() -> None:
+    src = """
+method ConcatSlices(a: seq<int>, b: seq<int>, i: int, j: int) returns (r: seq<int>)
+  ensures true
+{
+  r := a[..i] + b[j..];
+}
+"""
+    task, rec = _lift_one(src, "ConcatSlices")
+    assert "seq-concat-lifted" in _rule_names(rec)
+    assert "seq-slice-lifted" in _rule_names(rec)
+    assert task["body"][0]["assign"] == ["r", {"op": "+", "args": [
+        {"op": "slice", "args": [{"var": "a"}, {"int": 0}, {"var": "i"}]},
+        {"op": "slice", "args": [{"var": "b"}, {"var": "j"}, {"op": "len", "args": [{"var": "b"}]}]}]}]
+    print("test_seq_concat_of_slices: 'a[..i] + b[j..]' -> op:+ of two op:slice")
+
+
+def test_seq_slice_sugars() -> None:
+    src = """
+method Slices(s: seq<int>, a: int, b: int) returns (r: seq<int>)
+  ensures true
+{
+  var p := s[a..b];
+  var q := s[a..];
+  var w := s[..b];
+  r := p;
+}
+"""
+    task, rec = _lift_one(src, "Slices")
+    assert "seq-slice-lifted" in _rule_names(rec)
+    assert task["body"][0]["var"]["init"] == {"op": "slice", "args": [
+        {"var": "s"}, {"var": "a"}, {"var": "b"}]}
+    assert task["body"][1]["var"]["init"] == {"op": "slice", "args": [
+        {"var": "s"}, {"var": "a"}, {"op": "len", "args": [{"var": "s"}]}]}
+    assert task["body"][2]["var"]["init"] == {"op": "slice", "args": [
+        {"var": "s"}, {"int": 0}, {"var": "b"}]}
+    for local in task["body"][:3]:
+        assert local["var"]["type"] == "seq"
+    print("test_seq_slice_sugars: 's[a..b]', 's[a..]', 's[..b]' all -> op:slice, three-argument form")
+
+
+def test_seq_slice_readonly_array_whole_unchanged() -> None:
+    src = """
+method WholeArraySlice(a: array<int>) returns (r: seq<int>)
+  ensures true
+{
+  r := a[..];
+}
+"""
+    task, rec = _lift_one(src, "WholeArraySlice")
+    assert "whole-slice-as-seq" in _rule_names(rec)
+    assert "seq-slice-lifted" not in _rule_names(rec)
+    assert task["body"][0]["assign"] == ["r", {"var": "a"}]
+    print("test_seq_slice_readonly_array_whole_unchanged: read-only array<int>'s "
+          "'a[..]' is the parameter itself, unchanged")
+
+
+def test_seq_slice_mutated_array_bounded_stays_refused() -> None:
+    src = """
+method MutSlice(a: array<int>, i: int, v: int)
+  modifies a
+  requires 0 <= i && i < a.Length
+  ensures true
+{
+  a[i] := v;
+  var p := a[0..1];
+}
+"""
+    v = _classify_one(src, "MutSlice")
+    assert isinstance(v, C.Refusal) and v.reason == "seq-slice", (
+        f"expected seq-slice refusal, got {v}")
+    print("test_seq_slice_mutated_array_bounded_stays_refused: row 22's own bounded-slice "
+          "refusal on the ONE mutated array is unchanged by row 27")
+
+
+def test_seq_concat_typing_refused() -> None:
+    src = """
+method BadPlus(n: int, s: seq<int>) returns (r: int)
+  ensures r == 0
+{
+  var x := n + s;
+  r := 0;
+}
+"""
+    v = _classify_one(src, "BadPlus")
+    assert isinstance(v, C.Refusal) and v.reason == "seq-typing", (
+        f"expected seq-typing refusal, got {v}")
+    print("test_seq_concat_typing_refused: 'n + s' (int + seq) refuses seq-typing")
+
+
+def test_seq_return_unblocked() -> None:
+    int_src = """
+method Identity(s: seq<int>) returns (r: seq<int>)
+  ensures r == s
+{
+  r := s;
+}
+"""
+    task, _rec = _lift_one(int_src, "Identity")
+    assert task["returns"][0]["type"] == "seq"
+
+    nat_src = """
+method NatSeqRet(n: int) returns (r: seq<nat>)
+  ensures true
+{
+  r := [];
+}
+"""
+    nat_task, _rec2 = _lift_one(nat_src, "NatSeqRet")
+    assert nat_task["returns"][0]["type"] == "seq"
+
+    bad_src = """
+method BadSeqRet(n: int) returns (r: seq<bool>)
+  ensures true
+{
+  r := [];
+}
+"""
+    v = _classify_one(bad_src, "BadSeqRet")
+    assert isinstance(v, C.Refusal) and v.reason == "seq-return", (
+        f"expected seq-return refusal, got {v}")
+    print("test_seq_return_unblocked: seq<int>/seq<nat> returns no longer refuse seq-return; "
+          "seq<bool> still does")
+
+
 UNIT_TESTS = [
     test_chain_desugared, test_iff_to_eq, test_nat_return_ensures,
     test_nat_invariant_added_and_dedup, test_spec_fun_totalised,
@@ -2157,6 +2371,11 @@ UNIT_TESTS = [
     test_null_check_dropped_non_nullable_array, test_null_check_dropped_conjunct,
     test_null_check_nullable_array_stays_refused, test_null_check_dropped_reversed,
     test_null_check_in_or_stays_refused,
+    test_seq_literal_lifted, test_seq_append_in_loop_and_prepend,
+    test_seq_concat_of_slices, test_seq_slice_sugars,
+    test_seq_slice_readonly_array_whole_unchanged,
+    test_seq_slice_mutated_array_bounded_stays_refused,
+    test_seq_concat_typing_refused, test_seq_return_unblocked,
 ]
 
 

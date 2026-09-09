@@ -290,6 +290,308 @@ reverse's shape), so `_dec_needs_seq_bridge` correctly does not fire and
 this file is untouched by the fix in this note; the pointwise-to-
 structural list-equality bridge is a distinct, still-open gap, left
 honestly unproved rather than folded into this fix's scope.
+
+SEQUENCES: LITERALS, CONCATENATION, SLICES (2026-09-09, SPEC.md "Sequences:
+literals, concatenation, slices (v1)", ROADMAP 12.7): three more Expr forms
+on `List Int` values, the wave after "Sequences as values" landed the type
+itself. `{"op": "seq", "args": [...]}` (`[e1, ..., en]`, n >= 0, `[]` the
+empty seq) is a plain Lean list literal, `([e1, ..., en] : List Int)`, total
+type ascription so the empty case elaborates. `{"op": "+", "args": [s, t]}`
+on two seqs is `s ++ t`: `+` is polymorphic by operand type exactly as `==`
+already is (two ints, two bools, two seqs), told apart in `sort()`/`term()`
+by the first operand's own sort, computed recursively -- `sort()` gained
+exactly this one branch, checked before the existing `ARITH_OPS` case so
+int `+` is unaffected. `{"op": "slice", "args": [s, a, b]}` (`s[a..b]`) is
+`(s.drop a.toNat).take (b - a).toNat`, per SPEC.md's own suggested encoding;
+`List.extract` was measured against it and rejected -- on lean 4.33.1 it is
+`@[reducible] def List.extract l start stop := (l.drop start).take (stop -
+start)` verbatim, with no `length`/`getElem` lemmas of its own, so it would
+buy nothing over `.drop`/`.take` directly and add an extra unfold. `at`'s
+own convention (Int cast through `.toNat`) is reused throughout, so `at`,
+`update`, `fill`, extensional `==` and the bounded quantifiers apply to a
+literal/concatenation/slice exactly as to any other seq, with zero new
+code: only `sort()`, `term()` and `dcond()` gained the three new op cases.
+
+DEFINEDNESS. A literal is defined iff its elements are, a concatenation iff
+both operands are ("always defined" beyond that) -- both fall straight
+through `dcond()`'s existing generic per-argument case, no new code. A
+slice costs one new obligation, `0 <= a <= b <= len(s)`, exactly parallel to
+`at`'s `0 <= i < len`; `dcond()` gained one branch for `op == "slice"`,
+emitted wherever `at`'s already is (a separate `_wf` theorem / program-point
+obligation under SPEC.md's calculus, never folded into the total
+`.drop`/`.take` computation itself, which -- like `at`'s `!` -- silently
+totalizes out of range rather than being partial in Lean's sense).
+
+LEMMAS. Measured on lean 4.33.1, core only, exactly the read-after-write
+bridge "Sequences as values" needed for `.set`/`List.replicate`, now needed
+again for `++`/`.take`/`.drop`: a READ after one of these, once the index
+is the `.toNat`-cast Int this file's `at` convention uses, is past grind's
+default e-matching reach the same way (measured directly on filter_pos's
+own value-invariant preservation goal, the append idiom `r := r + [s[i]]`,
+and on tail's own ensures, the slice `r := s[1..]`). Two more lemmas,
+`t_seq_append_get` and `t_seq_slice_get`, hand-proved once (mirroring
+`t_seq_update_get`/`t_seq_fill_get`: totalize via `getElem!_pos`, then
+`List.getElem_append` / `List.getElem_take`+`List.getElem_drop`, `omega` on
+the `.toNat` cast) and closed the same way, `grind only` (never plain
+`grind`, for the identical reason: `only` is what stops the default-set
+search that hits Lean's recursion-depth cap, not the lemmas alone --
+confirmed by hand: `grind [t_seq_append_get]` on the append case still hit
+the cap in a scratch probe, `grind only [t_seq_append_get, ...]` did not).
+`List.length_append`/`List.length_take`/`List.length_drop` are already in
+grind's own default simp set (measured, parallel to `length_set`/
+`length_replicate`), but are named in `_seq_hints()` regardless, since
+`grind only` drops the default set entirely and needs them named to use
+them at all. `self.seq_mut` (update/fill) and the new `self.seq_new`
+(literal/concat/slice, detected via `_has`/`_has_seq_plus` -- the latter
+walks for a `+` node whose first operand's sort is `seq`, an
+under-approximation for a `+` on a purely-local seq var not yet in
+`self.types`, but every task that does that also carries a `seq`/`slice`
+node somewhere else in the same tree, so nothing is missed in practice)
+gate independently: `_seq_hints()`, `_gr()`, `_close()` fire on EITHER
+flag; `emit_seq_helpers()` emits each pair of lemmas only under its own
+flag; `_dec()`/`_dec_needs_seq_bridge()` extend the termination-bridge
+`simp only` set with the append/take/drop length lemmas only when
+`self.seq_new` actually matched (textually, ` ++ `/`.take (`/`.drop ` in
+the state var's current symbolic value), so a task using update/fill alone
+still gets exactly its prior two-name simp set, byte-identical, and vice
+versa. Neither task measured here (tail, filter_pos) exercises this last
+bridge: tail has no loop, and filter_pos's `decreases` (`len(s) - i`) never
+names the mutated `r`, so `_dec_needs_seq_bridge` correctly reads False for
+both, same as reverse's `s`-only measure before it.
+
+A LATENT PARSER BUG, found by filter_pos's own certificate. `_enum()` (the
+certificate's ground case-split over a quantifier's bounded range) built
+`have {hv} : {disj} := by {tac}; rcases ...` with the nested `by` block
+bare, not parenthesized. Every certificate bullet is itself wrapped in
+`(...)` (`certificate()`'s `· tac` lines, `_prove`'s own parenthesized
+returns), and inside such a paren-group Lean's tactic-sequence parser has
+no indentation to delimit the `by` block, so it swallows every following
+`;`-separated tactic INTO the `have`'s own proof term instead of
+sequencing them after it: `first | omega | ...` alone already closes
+`{disj}`, so the swallowed remainder (`rcases ...; subst ...; first |
+decide | ...`) then runs against zero goals and vanishes silently, leaving
+the certificate's actual target (the `intro`'d quantifier body) completely
+untouched and the theorem UNPROVED with a context that looks superficially
+fine (`_h3 : k = 0` present, goal still `... > 0`, no error hinting at the
+real cause). Reproduced in isolation (a four-line scratch probe: identical
+tactic text succeeds as separate lines, fails once wrapped in one `(...)`)
+and confirmed to predate this construct as DEAD code, never live: no
+`out/*.lean` committed before today contains `rcases _h` at all, so no
+prior task's certificate ever exercised `_enum` with a following tactic to
+swallow. filter_pos's own value invariant (`forall k, r[k] > 0`) is the
+first one-element (`hi - lo == 1`) enumeration built inside a certificate,
+which is exactly what exposed it. Fixed by parenthesizing the nested `by`
+alone (`:= (by {tac})`), a one-token change with no other effect on the
+generated proof; `grep -rl "rcases _h" out/*.lean` before the fix returns
+nothing, so this is proven dead for every task lowered before today, and
+swap/reverse (both real and twin) are diffed byte-identical against their
+committed `out/` copies after the fix, confirming it changed nothing they
+depend on.
+
+MEASURED (`tasks/tail.json`, `tasks/filter_pos.json`, plus swap and reverse
+for regression, via `harness.run_task` against the lean backend, matching
+this note's own reproduction command): tail COUNTS (real VERIFIED,
+off-by-one twin REFUTED, witness s=[0] -> real [], twin slice bounds
+[2..1] outside 0 <= a <= b <= 1 -- the off-by-one rung reaches the slice's
+own upper bound, exactly SPEC.md's prediction, and the certificate is the
+"undefined witness" kind, `_cert_undefined`, unmodified by this note since
+it was already generic over `to_expr`'s obligations). filter_pos COUNTS
+(real VERIFIED, invariant-drop#1 twin REFUTED, witness exit at s=[], i=1,
+r=[1] -- dropping `i <= len(s)` lets the exit state run past the array,
+`_cert_loop`'s existing "exit" kind, also unmodified). swap and reverse
+UNCHANGED: both real and twin sources diffed byte-identical (`cmp`) against
+`out/swap.lean`, `out/reverse.lean`, `out/swap_twin.lean`,
+`out/reverse_twin.lean`. The other 15 pre-existing committed tasks
+(`tasks/*.json` minus swap/reverse/tail/filter_pos) were swept too as a
+regression check, all 19 COUNT with no exceptions, and abs/first_even/
+digit_sum/is_prime/seq_max/sum_upto/linear_search/gcd/fib/factorial/max/
+remainder/all_nonneg/contains/count_matches (every pre-existing task with
+a committed `out/*.lean`) diffed byte-identical too -- `self.seq_new` reads
+False for every one of them (none touches `seq`/`slice`/seq-`+`), so
+nothing about their tactic scripts or termination bridges changed.
+
+THE SEQ-LOOP RESIDUAL (2026-09-09, fourth sweep). The five lifted tasks
+COVERAGE-lifted-785.md names as this column's own residual --
+clover_rotate__rotate, dafny_synthesis_task_id_625__swapFirstAndLast,
+clover_linear_search1__linearSearch,
+dafny_tmp_tmpmvs2dmry_pancakesort_flip__flip and
+seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven -- were lowered and run
+individually (`harness.run_task` against `out/lifted-tasks/`, real and
+twin, into `out/agent-lean-seqloops/`). One closed outright; the other
+four's actual open goals turn out to be three distinct, genuine gaps, not
+one, and only the first was closable within this sweep.
+
+CLOSED: clover_rotate__rotate. Two separate defects, both found by
+lowering it, neither previously measured (COVERAGE-lifted-785.md's own
+"unproved/refuted" row predates the "Sequences: literals, concatenation,
+slices (v1)" wave landing the same day):
+  crash    lowering rotate at all raised `KeyError: 'i'` inside `sort()`,
+           from `emit_clause_wfs`'s `_close` -> `divmod_pairs`'s raw-AST
+           `walk`, which does not use `prop()`/`dcond()`'s own recursion
+           and so never binds a `forall`'s own variable into `types`
+           before recursing into its body; rotate's own ensures, `b[i] ==
+           a[(i+offset) mod len(a)]`, is the first task lowered whose
+           `mod` sits inside a `forall` AND has a `+` as its numerator
+           (`sort()`'s new "+" case, added for seq-`+`, looks up
+           `types[e["var"]]` unconditionally). Fixed by making `walk`
+           return immediately on a `forall`/`exists` node: `env`/`types`
+           there are the OUTER clause's, so the bound variable has no
+           entry regardless, and even given one, a `have` built from it
+           would sit before any `intro` of the quantifier in the tactic
+           script `divmod_pairs` feeds -- unsound to hoist regardless of
+           whether it crashes. Dead code for every task lowered before
+           today (no committed task combines `mod` and a `forall`-bound
+           `+`), confirmed by the regression below.
+  unclosed goal  with the crash gone, three WF theorems (the ensures
+           forall itself, its lone loop invariant, and the loop body's
+           own per-step `at`/`mod` obligation) still failed: `grind`
+           alone cannot derive the bound `0 <= (i+offset) mod len(a) <
+           len(a)` (needing `len(a) ≠ 0`, itself only derivable from the
+           SAME forall's own `0 <= i < len(a)` binder, or in the loop
+           body's case from `hinv2`/the guard, both later in the SAME
+           theorem's own hypothesis chain), and the existing div/mod
+           bridge (`divmod_pairs`/`divmod_prelude`, "Division and modulo",
+           2026-09-08) is a `have` sequence built to run BEFORE any
+           `intro` -- sound only when the divisor's nonzero side
+           condition needs nothing but the theorem's own parameters,
+           never anything still sitting behind a `->` or a `forall` in
+           the goal itself. Two new, general mechanisms, both added to
+           `_close` (used by `emit_clause_wfs`/`spec_funs`/`lower_rec`)
+           and, newly, to `_gr` (used by every loop invariant/guard/
+           decreases/body WF theorem via a `nodes` argument every
+           pre-existing call site still omits):
+             quantified   `_quant_pairs` walks a clause looking for a
+                          bare top-level `forall` (descending through
+                          `and`, needed below) whose body reaches a
+                          div/mod op, and builds its bridge under a FIXED
+                          local name (`_qz0`, `_qzlo0`, `_qzhi0`) for the
+                          bound variable and its two range facts --
+                          `intro` does not care what display name the
+                          goal's own binder carries (`self.fresh`'s
+                          counter need not be reproduced), so this works
+                          regardless of what name `dcond`'s own statement
+                          used.
+             chained      neither call site threads the count of leading
+                          `requires`/earlier-clause/invariant hypotheses
+                          through to here, so both the quantified bridge
+                          and the free-standing one are tried under a
+                          GUESSED leading `intro` chain, 0..MAX_LEAD (8)
+                          throwaway names, one candidate per guess (all
+                          folded into one `_divmod_branches` helper). A
+                          wrong guess either leaves a `have` unable to
+                          typecheck against a still arrow-headed goal, or
+                          `intro` runs out of binders outright -- both
+                          are ordinary tactic failures `first` falls
+                          through on, never a wrong proof.
+           The chained repeats (nlead > 0) of the free-standing bridge
+           are gated behind `self.seq_mut or self.seq_new` (measured:
+           UNGATED, they changed digit_sum's and remainder's tactic text
+           without changing either verdict -- both already close at
+           nlead=0, a literal divisor's nonzero-ness needing nothing from
+           the chain -- so gating was needed to hold this sweep's own
+           byte-identical bar). The quantified bridge itself is NOT
+           gated: it is a correctness fix, not an optional extra, needed
+           in any column with a div/mod inside a forall, seq task or not
+           -- and leaving it gated would have meant reproducing a bug
+           already latent in the committed `first_even.lean`/
+           `is_prime.lean` (below) rather than finishing the fix.
+  MEASURED. `clover_rotate__rotate` COUNTS: real VERIFIED, invariant-drop
+           twin REFUTED, witness exit at a=[], offset=0, i_v=0, b=[0].
+  A LATENT BUG, found by the regression, not by rotate. The pre-fix
+  `divmod_pairs` walk's silent skip into a `forall` (see "crash" above)
+  meant `first_even_t_wf2`/`wf3` and `is_prime`'s equivalent, both
+  committed under the 2026-09-08 "Division and modulo" wave, already
+  carried a `have` citing `s[(i).toNat]!` -- a bare `i`, which NEITHER
+  theorem's own parameter list nor its `forall`'s own (correctly fresh)
+  binder name (`i_1`, `i_3`, ...) ever introduces. Dead since the day it
+  landed: `grind` alone, tried first in the same `first | ... | ...`,
+  already closes both goals, so the broken second alternative was never
+  elaborated far enough to error. This sweep's quantified bridge
+  replaces that dead branch with a working one (the same `_qz`-named
+  `intro`, ungated as above), so `first_even.lean`/`is_prime.lean` (and
+  their twins) are the only pre-existing committed files that do NOT
+  diff byte-identical any more -- the diff is confined to each file's
+  trailing, still-unreached alternative, both files still COUNT.
+
+NOT CLOSED, three distinct genuine gaps -- named per the residual's own
+allowance, none forced.
+
+  dafny_tmp_tmpmvs2dmry_pancakesort_flip__flip and (independently)
+  clover_linear_search1__linearSearch share ONE gap, not a lemma but a
+  hole in `lower_loop`'s own architecture: `_t_loop`'s bare recursive
+  definition carries NO invariant -- only the immediate guard hypothesis
+  (`_hg`) is in scope at its own `decreasing_by`, unlike `_t_loop_spec`,
+  which binds the full invariant list as explicit hypotheses. Every
+  previously-lowered loop's `decreases` measure happens to be provably
+  monotone from the guard ALONE (reverse/tail/filter_pos/rotate/getEven:
+  guard is `i < len(...)`, decreases is exactly `len(...) - i`, so the
+  guard directly bounds the one step that matters). flip's guard is `i <
+  j` but `decreases` is bare `j`; linear_search's guard is `n ≠ len(a)`
+  (an equality test, not an order) and `decreases` is the absolute-value
+  `if n <= len(a) then len(a) - n else n - len(a)`. Both measures
+  genuinely INCREASE once the state leaves the region the loop's own
+  (invariant-only) `j >= num/2 >= 0` / `n <= len(a)` keeps it inside --
+  confirmed by isolating each `decreasing_by` goal in a scratch file:
+  `omega` reports a live counterexample rather than closing, and for
+  linear_search's own goal a ground instantiation (n=10, a_len=5) makes
+  the inequality false by direct computation. This is not an automation
+  gap `omega`/`grind` are merely failing to search hard enough for -- the
+  obligation as posed is false, and no tactic can close a false goal
+  honestly. Closing it for real needs `_t_loop` to carry a domain
+  restriction (a proof-carrying hypothesis threaded through every
+  recursive call and re-established at each step, the same shape
+  `requires` already gets in the RECURSIVE shape) -- a change to
+  `_t_loop`'s own signature reaching `_t`, `_t_loop_spec`'s applied
+  terms and `_cert_loop`'s certificate construction alike, far past a
+  bridge lemma or a hint set, and too wide a blast radius to gate safely
+  in the time this sweep had; left honestly unproved rather than forced.
+  Exact failing goal (flip, `_t_loop`'s own `decreasing_by`, `omega`):
+  hypotheses `_hg : i < j`, `h : j.toNat ≤ (j + -1).toNat`, `h_1 : j ≤ 0`,
+  goal `False` -- `omega` reports this as satisfiable, i.e. the measure
+  does not decrease when `j ≤ 0`, a state the guard alone never excludes.
+
+  dafny_synthesis_task_id_625__swapFirstAndLast (a SIMPLE, loop-free
+  shape: `a_out := a; tmp := a_out[0]; a_out := a_out[0 := a_out[len-1]];
+  a_out := a_out[len-1 := tmp]`, two SEQUENTIAL updates to the same
+  variable) needs a read after BOTH updates bridged in one hop past
+  `.toNat`: `_t_spec`'s own goal, after `unfold`, is (in full) `r2[0]! =
+  a[len(r2)-1]!` where `r2 = r1.set (len r1 - 1) a[0]!` and `r1 = a.set 0
+  a[len a - 1]!` -- composing `t_seq_update_get` TWICE (once through
+  each `.set`, case-splitting on whether `0 = len(r1) - 1` decides
+  whether the read lands on the second write or must fall through to the
+  first). Measured directly: `grind only [t_seq_update_get,
+  List.length_set]`, plain `grind [t_seq_update_get, List.length_set]`
+  (no `only`), and `simp only [t_seq_update_get, List.length_set] <;>
+  omega` (simp reports `t_seq_update_get` UNUSED, never firing at all)
+  all fail on the same residual goal. `t_seq_update_get` bridges exactly
+  one `.set`; nothing in this file composes it across two nested ones
+  automatically, and no second lemma for that composition exists yet.
+  Left unproved rather than hand-rolling a one-task lemma.
+
+  seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven times out (the exact
+  behaviour COVERAGE-lifted-785.md recorded) inside `_t_loop_spec` itself
+  -- `(deterministic) timeout at isDefEq`/`whnf`, 200000 heartbeats,
+  never reaching a `grind failed` report at all. Its invariant combines
+  an `if`-guarded seq write with a `mod`-inside-`forall` value invariant
+  (`a_out[j] % 2 = 0` for `j < i_v`), so the preservation step needs the
+  seq read-after-write bridge AND a mod fact AND the `if`'s own branch
+  split simultaneously; this is the same class of recursion-depth/
+  E-matching blowup "THE DECREASING-BY GAP" and "SEQUENCES AS VALUES"
+  above were written for, but on a goal neither `_seq_hints` nor this
+  sweep's own div/mod bridges are shaped to reach in time, not a missing
+  lemma name. Left honestly at timeout.
+
+REGRESSION. Every task in `tasks/*.json` (19: the 15 pre-existing plus
+swap/reverse/tail/filter_pos) was swept through `harness.run_all` against
+the lean backend: all 19 still COUNT, identically to before this sweep.
+`cmp` against the committed `out/*.lean` (real and twin): 15 of 19 byte-
+identical; `first_even`/`is_prime` differ only in the dead-branch fix
+above (verdicts unchanged); `digit_sum`/`remainder` byte-identical (the
+chained-bridge gate holds). `clover_rotate__rotate` is the only one of
+the five residual tasks that moved cells, unproved/refuted ->
+verified/refuted; the other four's cells are unchanged from
+COVERAGE-lifted-785.md (unproved/unproved for linear_search and flip,
+unproved/refuted for swapFirstAndLast, timeout/timeout for getEven).
 """
 from __future__ import annotations
 
@@ -396,6 +698,19 @@ class Lower:
                         or self._has(task, "op", "fill")
                         or self._has(body, "op", "update")
                         or self._has(body, "op", "fill"))
+        # SPEC.md "Sequences: literals, concatenation, slices (v1)"
+        # (2026-09-09): does this lowering touch a seq literal, a slice, or
+        # a `+` that concatenates two seqs (as opposed to adding two ints --
+        # `+` is polymorphic by operand type, exactly as `==` already is).
+        # Gates the append/slice helper lemmas below and their grind-only
+        # fallback, parallel to `seq_mut` above; False for every task that
+        # predates this construct, so nothing about their output changes.
+        self.seq_new = (self._has(task, "op", "seq")
+                        or self._has(task, "op", "slice")
+                        or self._has(body, "op", "seq")
+                        or self._has(body, "op", "slice")
+                        or self._has_seq_plus(task, dict(self.types))
+                        or self._has_seq_plus(body, dict(self.types)))
 
     # ---------- naming ----------
 
@@ -430,9 +745,15 @@ class Lower:
                 return self.rett
             return self.sfuns[f]["result"]
         op = e["op"]
+        if op == "+":
+            # SPEC.md "Sequences: literals, concatenation, slices (v1)":
+            # `+` is polymorphic by operand type exactly as `==` already
+            # is (two ints, two bools, two seqs) -- told apart by the
+            # first operand's own sort.
+            return "seq" if self.sort(e["args"][0], types) == "seq" else "int"
         if op in ARITH_OPS or op in DIV_MOD or op in ("neg", "len", "at"):
             return "int"
-        if op in ("update", "fill"):
+        if op in ("update", "fill", "seq", "slice"):
             return "seq"
         return "bool"
 
@@ -486,8 +807,32 @@ class Lower:
             n = self.term(e["args"][0], env, types, dep)
             v = self.term(e["args"][1], env, types, dep)
             return f"(List.replicate ({n}).toNat {v})"
+        if op == "seq":
+            # SPEC.md "Sequences: literals, concatenation, slices (v1)":
+            # `[e1, ..., en]`, n >= 0, `[]` the empty seq; a plain Lean
+            # list literal, total type ascription so `[]` elaborates.
+            elems = ", ".join(self.term(a, env, types, dep)
+                              for a in e.get("args", []))
+            return f"([{elems}] : List Int)"
+        if op == "slice":
+            # `s[a..b]`: `List.take`/`List.drop` composed, per SPEC.md's
+            # own suggested encoding (measured over `List.extract`: the
+            # pinned Lean's `List.extract` is `take (stop-start) (drop
+            # start l)` with no dedicated length/getElem simp lemmas of
+            # its own, so it buys nothing `.drop`/`.take` don't already
+            # have); definedness (`0 <= a <= b <= len s`) is a separate
+            # obligation in dcond(), not enforced here.
+            s = self.term(e["args"][0], env, types, dep)
+            a = self.term(e["args"][1], env, types, dep)
+            b = self.term(e["args"][2], env, types, dep)
+            return f"(({s}.drop ({a}).toNat).take (({b} - {a}).toNat))"
         if op == "neg":
             return f"(-{self.term(e['args'][0], env, types, dep)})"
+        if op == "+" and self.sort(e["args"][0], types) == "seq":
+            # `+` on two seqs: concatenation, always defined, polymorphic
+            # by operand type exactly as `==` already is.
+            a, b = (self.term(x, env, types, dep) for x in e["args"])
+            return f"({a} ++ {b})"
         if op in ARITH_OPS:
             a, b = (self.term(x, env, types, dep) for x in e["args"])
             return f"({a} {op} {b})"
@@ -619,6 +964,21 @@ class Lower:
             return self._conj([
                 self.dcond(n, env, types), self.dcond(v, env, types),
                 f"({nt} ≥ (0 : Int))"])
+        if op == "slice":
+            # SPEC.md: `s[a..b]` DEFINED IFF `0 <= a <= b <= len(s)`, a
+            # definedness obligation exactly like `at`'s `0 <= i < len`.
+            # `+` (seq concatenation) and `seq` (the literal) need no
+            # obligation of their own beyond their arguments' -- "always
+            # defined" / "defined iff all its elements are" -- so both
+            # fall through to the generic per-argument case at the bottom.
+            s, a, b = e["args"]
+            at_ = self.term(a, env, types)
+            bt = self.term(b, env, types)
+            ln = f"((({self.term(s, env, types)}).length : Int))"
+            return self._conj([
+                self.dcond(s, env, types), self.dcond(a, env, types),
+                self.dcond(b, env, types),
+                f"(((0 : Int) ≤ {at_}) ∧ ({at_} ≤ {bt}) ∧ ({bt} ≤ {ln}))"])
         if op in DIV_MOD:
             x, y = e["args"]
             yt = self.term(y, env, types)
@@ -853,6 +1213,29 @@ class Lower:
             return any(self._has(v, key, val) for v in x)
         return False
 
+    def _has_seq_plus(self, x, types: dict) -> bool:
+        """True if some `+` node in x concatenates two seqs (its first
+        operand's sort is `seq`, `+` polymorphic by operand type exactly
+        as `==` already is). Best-effort at __init__ time: `types` is only
+        params + the return (local `var` declarations are not tracked
+        here), but every task whose `+` concatenates a local-only seq var
+        also carries a `seq`/`slice`/`update`/`fill` node somewhere in the
+        same task, which `seq_new`'s other checks already catch, so the
+        under-approximation here costs nothing observable. A malformed or
+        untyped subterm (self.sort raising) is skipped, not fatal, since
+        this only decides whether to emit an unused helper lemma."""
+        if isinstance(x, dict):
+            if x.get("op") == "+":
+                try:
+                    if self.sort(x["args"][0], types) == "seq":
+                        return True
+                except (KeyError, IndexError):
+                    pass
+            return any(self._has_seq_plus(v, types) for v in x.values())
+        if isinstance(x, list):
+            return any(self._has_seq_plus(v, types) for v in x)
+        return False
+
     def _self_calls(self, x) -> bool:
         if isinstance(x, dict):
             if "call" in x and isinstance(x["call"], dict) \
@@ -893,12 +1276,26 @@ class Lower:
         """Every distinct (numerator, denominator) term pair reachable
         under a div/mod op in `nodes`, lowered under `env`/`types` exactly
         as the enclosing goal was, so the pair's own text matches what
-        appears (or will appear, post-unfold) in that goal."""
+        appears (or will appear, post-unfold) in that goal.
+
+        A div/mod under a `forall`/`exists` (SPEC.md "Sequences: literals,
+        concatenation, slices (v1)", measured 2026-09-09 on clover_rotate's
+        own ensures, `a[(i+offset) mod len(a)]` inside a bound-`i` forall)
+        is skipped rather than walked: `env`/`types` here are the OUTER
+        clause's, so the bound variable has no entry (`self.sort` on it
+        raised `KeyError` before this fix), and even given one, a `have`
+        line built from it would sit before any `intro` of the quantifier
+        in the tactic script this feeds (`divmod_prelude`), naming a
+        variable not yet in scope -- unsound to hoist regardless. Whether
+        `grind` alone still closes a quantified div/mod goal is measured
+        per task, not assumed here."""
         seen: set = set()
         out: list = []
 
         def walk(x):
             if isinstance(x, dict):
+                if "forall" in x or "exists" in x:
+                    return
                 if x.get("op") in DIV_MOD:
                     a, b = x["args"]
                     pair = (self.term(a, env, types),
@@ -935,18 +1332,140 @@ class Lower:
             lines.append(f"have {h3} := Int.emod_lt {a} {hne}")
         return "; ".join(lines)
 
-    def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
-        """`base` tried first; a div/mod-priming + omega fallback added
-        only when `nodes` actually contains a div/mod application, and the
-        seq-update/fill fallback (see `_seq_hints`/`_gr` below) added
-        whenever the task touches `update`/`fill` at all. A no-op (returns
-        `base` unchanged) for every task that touches neither, so the
-        fifteen pre-existing tasks see byte-identical tactic scripts."""
+    # A div/mod bridge (`divmod_pairs`/`divmod_prelude`) is a `have`
+    # sequence: it only typechecks once every name it mentions is
+    # actually in the local context. Two ways that can fail, both
+    # measured 2026-09-09 (third sweep) on clover_rotate's own residual:
+    #   quantified   a div/mod reachable only inside a `forall`'s body
+    #                (`b[i] == a[(i+offset) mod len(a)]`) needs the bound
+    #                variable introduced first; `divmod_pairs`'s own walk
+    #                (above) deliberately skips into a forall/exists
+    #                rather than crash on its missing type (or, worse,
+    #                emit a `have` naming a variable not yet in scope).
+    #                `intro` does not care what display name the goal's
+    #                own binder carries, so a fixed local name works.
+    #   chained      a WF theorem's goal is `H1 -> H2 -> ... -> G` (earlier
+    #                requires/ensures clauses, or a loop's invariants,
+    #                chained as hypotheses); the divisor's own `b ≠ 0` side
+    #                condition (rotate's is `len(a) ≠ 0`, from the SAME
+    #                chain, e.g. `i_v < len(a)`) is unreachable by
+    #                `assumption`/`omega` until that chain is introduced,
+    #                even when the div/mod itself is not quantified at all
+    #                (measured on rotate's own wf3, "definedness of the
+    #                loop body": the bridge alone left `_h9 : len(a) ≠ 0`
+    #                unproved with an empty context).
+    # Neither call site threads the leading chain's length through, so
+    # both branches below are tried under a guessed `intro` prefix,
+    # 0..MAX_LEAD throwaway names, one candidate per guess: a wrong guess
+    # either leaves a `have` unable to typecheck against a still
+    # arrow-headed goal, or `intro` runs out of binders outright, so
+    # `first` just falls through to the next guess, never masking a
+    # genuine failure as a proof. `nlead=0` reproduces the exact prior
+    # (un-prefixed) text, so any task whose bridge already worked without
+    # a leading chain succeeds on the very first candidate, unchanged.
+    MAX_LEAD = 8
+
+    def _quant_pairs(self, e, env: dict, types: dict,
+                     depth: int = 0) -> list[tuple[str, str, str, list]]:
+        """Every bare top-level `forall` reachable in `e` (descending only
+        through `and`, the one combinator measured wrapping a quantified
+        invariant alongside a plain one, getEven's own invariant 2) whose
+        body reaches a div/mod op, as `(bound_name, lo_hyp, hi_hyp,
+        pairs)`."""
+        if not isinstance(e, dict):
+            return []
+        if "forall" in e:
+            q = e["forall"]
+            if not self._has_divmod(q["body"]):
+                return []
+            zn, zlo, zhi = f"_qz{depth}", f"_qzlo{depth}", f"_qzhi{depth}"
+            env2 = {**env, q["var"]: zn}
+            types2 = {**types, q["var"]: "int"}
+            pairs = self.divmod_pairs([q["body"]], env2, types2)
+            return [(zn, zlo, zhi, pairs)] if pairs else []
+        if e.get("op") == "and":
+            out = []
+            for a in e.get("args", []):
+                out += self._quant_pairs(a, env, types, depth + 1)
+            return out
+        return []
+
+    @staticmethod
+    def _has_divmod(x) -> bool:
+        if isinstance(x, dict):
+            if x.get("op") in DIV_MOD:
+                return True
+            return any(Lower._has_divmod(v) for v in x.values())
+        if isinstance(x, list):
+            return any(Lower._has_divmod(v) for v in x)
+        return False
+
+    def _divmod_branches(self, nodes: list, env: dict,
+                         types: dict) -> list[str]:
+        """`first`-alternatives closing a div/mod obligation reachable in
+        `nodes`. The free-standing (non-quantified) bridge alone, exactly
+        the pre-2026-09-09-third-sweep text, is ALWAYS the first
+        candidate (or the only one) -- every div/mod task lowered before
+        today closed on it (or never reached it, `grind` alone already
+        sufficing). Its `intro`-guessed CHAINED repeats (nlead > 0) are
+        extra fallbacks added only when `self.seq_mut or self.seq_new`
+        (gated the same way `_seq_hints` already is: the only task
+        measured needing them, clover_rotate, is a seq task, and a
+        non-seq div/mod task with a literal divisor -- digit_sum,
+        remainder -- already closes at nlead=0, so gating keeps their
+        text byte-identical).
+
+        The QUANTIFIED variants (`_quant_pairs`) are UNGATED: a task with
+        a div/mod reachable only inside a `forall` needs its bound
+        variable `intro`'d before any bridge referencing it can even
+        typecheck, in every column, seq or not. Reproducing the pre-fix
+        `divmod_pairs` walk here would mean keeping its bug: measured on
+        the ALREADY-COMMITTED first_even.lean and is_prime.lean, the old
+        walk skipped past the quantifier without renaming, so the `have`
+        it built cited the SOURCE variable name (`i`) as if free, which
+        no theorem in either file ever binds -- dead code, latent since
+        the 2026-09-08 "Division and modulo" wave, never exercised
+        because plain `grind` already closed both goals on its own. This
+        sweep's first fix (the crash on clover_rotate, `divmod_pairs`
+        skipping into a forall/exists entirely) turned that silent bug
+        into the honest absence it always should have been; leaving the
+        REPLACEMENT (a working, intro'd bridge) ungated finishes the fix
+        instead of reintroducing the old broken text under a new gate.
+        The verdict is unchanged either way (`grind` alone still closes
+        first_even's and is_prime's own goals first), so this is a
+        tactic-text correction with no behavioural effect -- measured:
+        `first_even.lean`/`is_prime.lean` now differ from the previously
+        committed copies in exactly their trailing (never-reached)
+        alternative text, both still COUNT, byte-identical everywhere
+        else."""
         pairs = self.divmod_pairs(nodes, env, types)
         branches = []
         if pairs:
             branches.append(f"({self.divmod_prelude(pairs)}; omega)")
-        if self.seq_mut:
+        quants = []
+        for n in nodes:
+            quants += self._quant_pairs(n, env, types)
+        for nlead in range(self.MAX_LEAD + 1):
+            lead = f"intro{' _' * nlead}; " if nlead else ""
+            if pairs and nlead and (self.seq_mut or self.seq_new):
+                branches.append(f"({lead}{self.divmod_prelude(pairs)}; "
+                               f"omega)")
+            for zn, zlo, zhi, qpairs in quants:
+                branches.append(
+                    f"({lead}intro {zn} {zlo} {zhi}; "
+                    f"{self.divmod_prelude(qpairs)}; omega)")
+        return branches
+
+    def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
+        """`base` tried first; the div/mod bridges above added only when
+        `nodes` actually reaches a div/mod application, and the
+        seq-update/fill fallback (see `_seq_hints`/`_gr` below) added
+        whenever the task touches `update`/`fill` at all. A no-op
+        (returns `base` unchanged) for every task that touches neither,
+        so the fifteen pre-existing tasks see byte-identical tactic
+        scripts."""
+        branches = self._divmod_branches(nodes, env, types)
+        if self.seq_mut or self.seq_new:
             branches.append(f"(grind only [{self._seq_hints()}])")
         if not branches:
             return base
@@ -973,20 +1492,52 @@ class Lower:
     # ...]` does not). Emitted only when `self.seq_mut`, so the
     # pre-existing tasks never see them.
     def _seq_hints(self) -> str:
-        return ", ".join(
-            ["t_seq_update_get", "t_seq_fill_get",
-             "List.length_set", "List.length_replicate"]
-            + [f"{f}_s" for f in self.sfuns])
+        names = []
+        if self.seq_mut:
+            names += ["t_seq_update_get", "t_seq_fill_get",
+                      "List.length_set", "List.length_replicate"]
+        if self.seq_new:
+            # SPEC.md "Sequences: literals, concatenation, slices (v1)"
+            # (2026-09-09): the same recursion-depth wall the update/fill
+            # bridge above was built for, measured again on filter_pos's
+            # own value-invariant preservation goal, the LLM-shaped append
+            # idiom `r := r + [s[i]]` -- a read after `++` past the
+            # `.toNat` cast needs `t_seq_append_get` the same way a read
+            # after `.set` needed `t_seq_update_get`; a read after a slice
+            # (tail's own ensures, `r[k] == s[k+1]` with `r = s[1..]`)
+            # needs `t_seq_slice_get` the same way. `List.length_append`/
+            # `List.length_take`/`List.length_drop` are already in grind's
+            # default simp set (measured, parallel to `length_set`/
+            # `length_replicate`), but named here too since `grind only`
+            # drops the default set entirely.
+            names += ["t_seq_append_get", "t_seq_slice_get",
+                      "List.length_append", "List.length_take",
+                      "List.length_drop"]
+        return ", ".join(names + [f"{f}_s" for f in self.sfuns])
 
-    def _gr(self) -> str:
+    def _gr(self, nodes: list | None = None, env: dict | None = None,
+           types: dict | None = None) -> str:
         """`grind{self.ga}`, the plain call used everywhere in this file;
         with the seq fallback appended (parenthesized, so it drops into
         any `first | ... | ...` or `<;>` call site unchanged) whenever
-        `self.seq_mut`. Identical text to before otherwise."""
+        `self.seq_mut or self.seq_new`, and (SPEC.md "Division and
+        modulo" + "Sequences: literals, concatenation, slices (v1)",
+        third sweep, 2026-09-09) the same div/mod and quantified-div/mod
+        bridges `_close` builds, when `nodes` (the raw clause(s) this
+        theorem's goal was built from) is passed -- every pre-existing
+        call site passes nothing, so their text is unaffected; only the
+        loop invariant/guard/decreases WF theorems (clover_rotate's own
+        residual, measured 2026-09-09) pass their source clause."""
         base = f"grind{self.ga}"
-        if not self.seq_mut:
+        branches = []
+        if nodes is not None:
+            branches += self._divmod_branches(nodes, env or {},
+                                              types or self.types)
+        if self.seq_mut or self.seq_new:
+            branches.append(f"grind only [{self._seq_hints()}]")
+        if not branches:
             return base
-        return f"(first | {base} | grind only [{self._seq_hints()}])"
+        return "(first | " + base + " | " + " | ".join(branches) + ")"
 
     def _dec(self, needed: bool = False) -> str:
         """The `decreasing_by` line used at every termination proof site in
@@ -1018,30 +1569,76 @@ class Lower:
         byte-identical outside the seq-helper prelude (measured: reverse's
         two `decreasing_by` lines are unaffected, since `s`, the variable
         its `decreases` names, is read-only; the mutated return `r` never
-        appears in a decreases clause in any task lowered so far)."""
-        alt = (" | (simp only [List.length_set, List.length_replicate]; "
-              "omega)") if needed else ""
+        appears in a decreases clause in any task lowered so far).
+
+        SPEC.md "Sequences: literals, concatenation, slices (v1)"
+        (2026-09-09) extends the same bridge to `++`/`.take`/`.drop`:
+        `List.length_append`/`List.length_take`/`List.length_drop` join
+        the alternative's simp set, but ONLY the names for the mechanism
+        that actually fired (`self.seq_mut` for `.set`/`.replicate`,
+        `self.seq_new` for `++`/slice), so a task using update/fill alone
+        still gets exactly the prior two-name simp set, byte-identical."""
+        extra = []
+        if needed and self.seq_mut:
+            extra += ["List.length_set", "List.length_replicate"]
+        if needed and self.seq_new:
+            extra += ["List.length_append", "List.length_take",
+                      "List.length_drop"]
+        alt = (" | (simp only [" + ", ".join(extra) + "]; omega)"
+              if extra else "")
         return f"decreasing_by all_goals (first | omega{alt} | grind)\n"
 
     def _dec_needs_seq_bridge(self, dec_expr: dict, env: dict) -> bool:
         """True iff `dec_expr` (a loop's `decreases`) names a state
         variable whose CURRENT symbolic value (`env`, from `sym()`) is
         itself an `update`/`fill` term -- textually, contains a Lean
-        `.set `/`List.replicate ` call -- so the auto-generated
-        termination goal for the recursive call needs the length bridge
-        `_dec(needed=True)` supplies. False whenever `not self.seq_mut`,
-        so it never fires for a pre-existing task."""
-        if not self.seq_mut:
+        `.set `/`List.replicate ` call -- or (2026-09-09) a `++`/slice
+        term -- textually, ` ++ `/`.take (`/`.drop ` -- so the
+        auto-generated termination goal for the recursive call needs the
+        length bridge `_dec(needed=True)` supplies. False whenever
+        neither `self.seq_mut` nor `self.seq_new`, so it never fires for
+        a task that predates either construct."""
+        if not (self.seq_mut or self.seq_new):
             return False
         names: set = set()
         _collect_names(dec_expr, names)
-        return any(".set " in env.get(v, "") or "List.replicate " in env.get(v, "")
-                  for v in names)
 
+        def touched(v: str) -> bool:
+            val = env.get(v, "")
+            if self.seq_mut and (".set " in val
+                                 or "List.replicate " in val):
+                return True
+            if self.seq_new and (" ++ " in val or ".take (" in val
+                                 or ".drop " in val):
+                return True
+            return False
+
+        return any(touched(v) for v in names)
+
+    # SPEC.md "Sequences: literals, concatenation, slices (v1)" (2026-09-09):
+    # two more hand-proved bridge lemmas, parallel to `t_seq_update_get`/
+    # `t_seq_fill_get` above and needed for the identical reason -- a read
+    # after `++` or a slice, once the index is the Int-cast-through-
+    # `.toNat` this file's `at` already uses, is past grind's default
+    # e-matching reach (measured on filter_pos's value-invariant
+    # preservation goal, the append idiom, and on tail's own ensures, the
+    # slice). `t_seq_append_get` totalizes `List.getElem_append`'s
+    # dependent split the same way `t_seq_update_get` totalizes
+    # `List.getElem_set`'s; `t_seq_slice_get` composes `List.getElem_take`
+    # and `List.getElem_drop` the same way, both proved once here and
+    # closed by `grind only` (never plain `grind`, for the same reason:
+    # `only` is what stops the default-set search that hit the recursion
+    # cap in the first place). `List.extract` was measured against this
+    # `drop`-then-`take` encoding and rejected: on lean 4.33.1 it unfolds
+    # to exactly `take (stop - start) (drop start l)` with no lemmas of
+    # its own, so it would only add an extra unfold with nothing to show
+    # for it.
     def emit_seq_helpers(self) -> str:
-        if not self.seq_mut:
+        if not (self.seq_mut or self.seq_new):
             return ""
-        return (
+        parts = []
+        if self.seq_mut:
+            parts.append(
             "theorem t_seq_update_get (l : List Int) (i j : Int) (v : Int)\n"
             "    (hi : (0 : Int) ≤ i) (hiu : i < ((l.length : Int)))\n"
             "    (hj : (0 : Int) ≤ j) (hju : j < ((l.length : Int))) :\n"
@@ -1069,6 +1666,50 @@ class Lower:
             "    rw [List.length_replicate]; omega\n"
             "  rw [getElem!_pos (List.replicate (n).toNat v) (j).toNat hb,"
             " List.getElem_replicate]\n")
+        if self.seq_new:
+            parts.append(
+            "theorem t_seq_append_get (l1 l2 : List Int) (j : Int)\n"
+            "    (hj : (0 : Int) ≤ j) "
+            "(hju : j < (((l1 ++ l2).length : Int))) :\n"
+            "    (l1 ++ l2)[(j).toNat]! =\n"
+            "      if j < ((l1.length : Int)) then l1[(j).toNat]! "
+            "else l2[(j - (l1.length : Int)).toNat]! := by\n"
+            "  have hlen : (l1 ++ l2).length = l1.length + l2.length :=\n"
+            "    List.length_append\n"
+            "  have hbl : (j).toNat < (l1 ++ l2).length := by omega\n"
+            "  rw [getElem!_pos (l1 ++ l2) (j).toNat hbl, "
+            "List.getElem_append]\n"
+            "  split\n"
+            "  · next hh =>\n"
+            "    rw [if_pos (by omega : j < ((l1.length : Int)))]\n"
+            "    have hbl1 : (j).toNat < l1.length := hh\n"
+            "    exact (getElem!_pos l1 (j).toNat hbl1).symm\n"
+            "  · next hh =>\n"
+            "    rw [if_neg (by omega : ¬ j < ((l1.length : Int)))]\n"
+            "    have hbl2 : (j).toNat - l1.length < l2.length := by omega\n"
+            "    have heq : (j).toNat - l1.length "
+            "= (j - (l1.length : Int)).toNat := by omega\n"
+            "    exact (getElem!_pos l2 ((j).toNat - l1.length) hbl2).symm."
+            "trans\n"
+            "      (congrArg (l2[·]!) heq)\n"
+            "\n"
+            "theorem t_seq_slice_get (s : List Int) (a b j : Int)\n"
+            "    (ha : (0 : Int) ≤ a) (hab : a ≤ b) "
+            "(hbl : b ≤ ((s.length : Int)))\n"
+            "    (hj : (0 : Int) ≤ j) (hju : j < b - a) :\n"
+            "    ((s.drop a.toNat).take (b - a).toNat)[(j).toNat]! "
+            "= s[(a + j).toNat]! := by\n"
+            "  have hb1 : (j).toNat "
+            "< ((s.drop a.toNat).take (b - a).toNat).length := by\n"
+            "    rw [List.length_take, List.length_drop]\n"
+            "    omega\n"
+            "  rw [getElem!_pos ((s.drop a.toNat).take (b - a).toNat) "
+            "(j).toNat hb1,\n"
+            "      List.getElem_take, List.getElem_drop]\n"
+            "  have hb2 : (a.toNat + j.toNat) < s.length := by omega\n"
+            "  have heq : a.toNat + j.toNat = (a + j).toNat := by omega\n"
+            "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n")
+        return "\n".join(parts)
 
     # ---------- spec_funs ----------
 
@@ -1151,9 +1792,12 @@ class Lower:
         header = (f"-- t task {self.name!r} -> lean4, generated by "
                   f"lower_lean.py; every verdict is the kernel's.\n")
         seq_src = self.emit_seq_helpers()
-        seq_thms = ([("t_seq_update_get", "seq update-read bridge"),
+        seq_thms = (([("t_seq_update_get", "seq update-read bridge"),
                      ("t_seq_fill_get", "seq fill-read bridge")]
                     if self.seq_mut else [])
+                    + ([("t_seq_append_get", "seq append-read bridge"),
+                        ("t_seq_slice_get", "seq slice-read bridge")]
+                       if self.seq_new else []))
         sf_src, sf_thms = self.emit_sfuns()
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
         body = self.body
@@ -1383,31 +2027,48 @@ class Lower:
             d = self.dcond(iv, {}, types)
             if d is not None:
                 wfs.append((pre_hyps + inv_props[:i], d,
-                            f"definedness of invariant {i + 1}"))
+                            f"definedness of invariant {i + 1}", [iv]))
         if guard_d is not None:
             wfs.append((pre_hyps + inv_props, guard_d,
-                        "definedness of the loop guard"))
+                        "definedness of the loop guard", [w["cond"]]))
         if dec_d is not None:
             wfs.append((pre_hyps + inv_props + [guard_p], dec_d,
-                        "definedness of the loop decreases"))
+                        "definedness of the loop decreases",
+                        [w["decreases"]]))
         ob = self._conj(obs_body)
         if ob is not None:
             wfs.append((pre_hyps + inv_props + [guard_p], ob,
-                        "definedness of the loop body"))
+                        "definedness of the loop body", [w["body"]]))
         ob = self._conj(obs_pre)
         if ob is not None:
-            wfs.append((pre_hyps, ob, "definedness before the loop"))
+            wfs.append((pre_hyps, ob, "definedness before the loop",
+                        [prefix]))
         ob = self._conj(obs_suf)
         if ob is not None:
             wfs.append((pre_hyps + inv_props + [f"(¬{guard_p})"], ob,
-                        "definedness after the loop"))
-        for hyps, obg, why in wfs:
+                        "definedness after the loop", [suffix]))
+        for hyps, obg, why, src in wfs:
             wf_k += 1
             binders = pb + (" " + sb if "before the loop" not in why
                             else "")
             chain = "".join(f"{h} → " for h in hyps)
+            # SPEC.md "Sequences: literals, concatenation, slices (v1)"
+            # (third sweep, 2026-09-09): the div/mod bridges only fire
+            # when this task touches seq at all (`self.seq_mut` or
+            # `self.seq_new`, clover_rotate's own gate) -- a non-seq loop
+            # task with div/mod already verifying via plain `grind` (e.g.
+            # digit_sum, first_even, is_prime, remainder) gets `nodes`
+            # withheld, so `_gr()` returns its exact pre-existing text;
+            # measured directly (`cmp` against `out/*.lean`), passing
+            # `src` unconditionally changed their tactic TEXT (an inert
+            # extra `first`-alternative, never reached, since `grind`
+            # alone already closed every one of those goals) without
+            # changing any verdict, which still fails the byte-identical
+            # bar this sweep holds itself to.
+            gr_nodes = src if (self.seq_mut or self.seq_new) else None
             out.append(f"theorem {self.name}_t_wf{wf_k} {binders} :\n"
-                       f"    {chain}{obg} := by\n  {self._gr()}\n")
+                       f"    {chain}{obg} := by\n"
+                       f"  {self._gr(gr_nodes, {}, types)}\n")
             thms.append((f"{self.name}_t_wf{wf_k}", why))
 
         # the helper lemma: invariants in, ensures-of-loop-value out.
@@ -1518,12 +2179,31 @@ class Lower:
               alts: list[str]) -> str:
         """Case-split an Int bound over the ground range [lo, hi) and close
         every branch: each alternative is tried on each branch, and a wrong
-        pairing fails harmlessly inside `first`."""
+        pairing fails harmlessly inside `first`.
+
+        The `have`'s `by` block is parenthesized (`:= (by ...)`), not bare
+        (SPEC.md "Sequences: literals, concatenation, slices (v1)",
+        2026-09-09, first exercised by filter_pos's own single-element
+        value-invariant witness, `hi - lo == 1`): measured directly, a bare
+        `have h : T := by X; rest...` sitting inside an outer `(...)`-
+        wrapped tactic sequence (every certificate bullet is one) has no
+        indentation to delimit the `by` block, so Lean's parser folds
+        `rest` INTO the `have`'s own proof of `T` instead of sequencing it
+        after -- `X` alone already closes `T`, so `rest` then runs on zero
+        goals and silently vanishes, leaving the certificate's actual goal
+        (the `intro`'d forall body) untouched and the theorem unsolved.
+        Reproduced in isolation (a bare `(intro ...; have _h3 : k = 0 :=
+        by omega; rcases ...; subst ...; first | decide | ...)` fails
+        exactly this way; wrapping the `by` alone in parens fixes it, nothing
+        else does) and confirmed dead code for every task lowered before
+        this construct: no committed `out/*.lean` file contains `rcases _h`
+        at all, so this bug was latent, never triggered, until a
+        single-element certificate enumeration first exercised it."""
         hv = self.fresh_hyp()
         disj = " ∨ ".join(f"{b} = ({k} : Int)" for k in range(lo, hi))
         pats = " | ".join([hv] * (hi - lo))
         uniq = list(dict.fromkeys(alts))
-        return (f"have {hv} : {disj} := by {self._bounds_close(h1, h2)}; "
+        return (f"have {hv} : {disj} := (by {self._bounds_close(h1, h2)}); "
                 f"rcases {hv} with {pats} <;> subst {hv} <;> "
                 "first | " + " | ".join(uniq))
 

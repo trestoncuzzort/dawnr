@@ -241,7 +241,24 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if n > MAX_SEQ:
             raise Budget("seq length cap")
         return (v,) * n
+    if op == "seq":
+        # SPEC.md "Sequences: literals, concatenation, slices" (2026-09-09):
+        # [e1, ..., en], every element evaluated, so defined iff all are.
+        return tuple(a)
+    if op == "slice":
+        # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s); the elements a..b-1.
+        s, lo, hi = a
+        if not (0 <= lo <= hi <= len(s)):
+            raise Undef(f"slice bounds [{lo}..{hi}] outside 0 <= a <= b <= {len(s)}")
+        return tuple(s[lo:hi])
     if op == "+":
+        if isinstance(a[0], tuple):
+            # s + t on two seqs is concatenation (SPEC.md "Sequences:
+            # literals, concatenation, slices"): always defined, the
+            # length cap the only limit, as for fill.
+            if len(a[0]) + len(a[1]) > MAX_SEQ:
+                raise Budget("seq length cap")
+            return a[0] + tuple(a[1])
         return _bounded(a[0] + a[1])
     if op == "-":
         return _bounded(a[0] - a[1])

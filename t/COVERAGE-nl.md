@@ -16,40 +16,40 @@ detectors at the end.
   - APPS: 10000
   - CodeContests: 13610
 - function-shaped: 4239; stdin-shaped: 20509
-- in t's fragment today: **449** of 4239 function-shaped (10.6%)
-- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **361** of 20509 (1.8%)
-- function-shaped problems blocked by exactly one gap: 982
+- in t's fragment today: **511** of 4239 function-shaped (12.1%)
+- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **698** of 20509 (3.4%)
+- function-shaped problems blocked by exactly one gap: 1212
 
 ## Gaps, by problems that need them
 
 | gap | problems | sole blocker for (function-shaped) | meaning |
 |---|---|---|---|
-| string-char | 18361 | 347 | string or char type: a str literal, an f-string, a str method (upper/lower/split/join/strip/replace/startswith/endswith/format), or a str-typed io value |
-| seq-literal | 8599 | 35 | a sequence literal [..] in an expression (the next wave; t builds sequences with seq(n, v) and functional update today) |
+| string-lib | 13266 | 225 | the Python string LIBRARY, not the seq-of-code-points model SPEC.md's v1 covers: any str method call (upper/lower/split/join/strip/replace/startswith/endswith/find/count/isdigit/...), an f-string or `.format()`, `str()` or a based `int(x, base)` conversion of a string, or `sorted()` on a string |
+| seq-literal | 8599 | 48 | a sequence literal [..] in an expression (the next wave; t builds sequences with seq(n, v) and functional update today) |
 | tuple | 7906 | 53 | tuple unpacking beyond a same-length parallel assignment, a tuple parameter, or a tuple-typed io value |
-| seq-append | 6030 | 3 | sequence concatenation `+` or .append()/.extend() (the next wave after v1's functional update and seq(n, v); not yet in the fragment) |
-| unbounded-loop | 4403 | 16 | while True, or a break/continue (t has no while-true, no continue, and a break is only in the fragment as a tail-position return, decision 23 -- not distinguished here, see Method) |
-| import | 3932 | 38 | an import other than math, sys or typing: an unmodeled library the solution's meaning depends on |
-| nested-seq | 3704 | 81 | a seq of seq, or a subscript of a subscript: list of lists in the solution or in a sample io value |
-| real | 3517 | 180 | real numbers: a float literal, true division `/`, math.sqrt, float(), or a decimal-valued io token |
-| seq-slice | 3305 | 45 | slicing s[a:b] (the next wave) |
-| map | 2463 | 16 | dict literal, dict(), defaultdict, Counter, or a dict-typed io value |
-| closure | 2243 | 25 | a lambda, a nested def, or map/filter with a lambda |
-| generator | 1686 | 51 | a generator expression or a generator function (yield): t has no lazy or deferred evaluation |
-| class | 1641 | 55 | a class definition (t has no classes, no heap) |
-| set | 1604 | 18 | set literal, set(), frozenset(), a set/dict comprehension's set form |
-| exception | 502 | 4 | try/except/raise |
+| seq-append | 6030 | 1 | sequence concatenation `+` or .append()/.extend() (the next wave after v1's functional update and seq(n, v); not yet in the fragment) |
+| unbounded-loop | 4403 | 21 | while True, or a break/continue (t has no while-true, no continue, and a break is only in the fragment as a tail-position return, decision 23 -- not distinguished here, see Method) |
+| import | 3932 | 149 | an import other than math, sys or typing: an unmodeled library the solution's meaning depends on |
+| nested-seq | 3704 | 106 | a seq of seq, or a subscript of a subscript: list of lists in the solution or in a sample io value |
+| real | 3517 | 208 | real numbers: a float literal, true division `/`, math.sqrt, float(), or a decimal-valued io token |
+| seq-slice | 3305 | 65 | slicing s[a:b] (the next wave) |
+| map | 2463 | 33 | dict literal, dict(), defaultdict, Counter, or a dict-typed io value |
+| closure | 2243 | 27 | a lambda, a nested def, or map/filter with a lambda |
+| generator | 1686 | 65 | a generator expression or a generator function (yield): t has no lazy or deferred evaluation |
+| class | 1641 | 112 | a class definition (t has no classes, no heap) |
+| set | 1604 | 29 | set literal, set(), frozenset(), a set/dict comprehension's set form |
+| exception | 502 | 7 | try/except/raise |
 | global | 316 | 0 | global or nonlocal: mutable state outside the function, which t's pure functions have no notion of |
-| any-type | 141 | 0 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
-| none-type | 99 | 12 | Optional[..] or an explicit None return/argument |
-| multi-return | 43 | 2 | a function-shaped problem returning a tuple (several return values; t returns exactly one) |
-| io | 30 | 1 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
+| any-type | 141 | 43 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
+| none-type | 99 | 15 | Optional[..] or an explicit None return/argument |
+| multi-return | 43 | 3 | a function-shaped problem returning a tuple (several return values; t returns exactly one) |
+| io | 30 | 2 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
 
 ## Greedy gate order, whole corpus (function-shaped population)
 
 | step | gate | newly unlocked | cumulative in fragment | of function-shaped |
 |---|---|---|---|---|
-| 1 | string-char | 370 | 819 | 19.3% |
+| 1 | string-lib | 308 | 819 | 19.3% |
 | 2 | real | 231 | 1050 | 24.8% |
 | 3 | import | 195 | 1245 | 29.4% |
 | 4 | generator | 205 | 1450 | 34.2% |
@@ -74,14 +74,14 @@ A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
 more than one gate.
 
-### MBPP greedy gate order (974 function-shaped, 239 in fragment today)
+### MBPP greedy gate order (974 function-shaped, 236 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | string-char | 116 | 355 | 36.4% |
-| 2 | import | 86 | 441 | 45.3% |
-| 3 | real | 89 | 530 | 54.4% |
-| 4 | tuple | 64 | 594 | 61.0% |
+| 1 | real | 165 | 401 | 41.2% |
+| 2 | import | 86 | 487 | 50.0% |
+| 3 | tuple | 58 | 545 | 56.0% |
+| 4 | string-lib | 49 | 594 | 61.0% |
 | 5 | nested-seq | 45 | 639 | 65.6% |
 | 6 | generator | 52 | 691 | 70.9% |
 | 7 | seq-slice | 37 | 728 | 74.7% |
@@ -96,12 +96,12 @@ more than one gate.
 | 16 | class | 4 | 972 | 99.8% |
 | 17 | exception | 2 | 974 | 100.0% |
 
-### HumanEval greedy gate order (164 function-shaped, 0 in fragment today)
+### HumanEval greedy gate order (164 function-shaped, 5 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | string-char | 9 | 9 | 5.5% |
-| 2 | any-type | 52 | 61 | 37.2% |
+| 1 | any-type | 43 | 48 | 29.3% |
+| 2 | string-lib | 13 | 61 | 37.2% |
 | 3 | real | 10 | 71 | 43.3% |
 | 4 | seq-slice | 10 | 81 | 49.4% |
 | 5 | seq-literal | 9 | 90 | 54.9% |
@@ -118,11 +118,11 @@ more than one gate.
 | 16 | tuple | 1 | 162 | 98.8% |
 | 17 | exception | 2 | 164 | 100.0% |
 
-### APPS greedy gate order (3101 function-shaped, 210 in fragment today)
+### APPS greedy gate order (3101 function-shaped, 270 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | string-char | 245 | 455 | 14.7% |
+| 1 | string-lib | 185 | 455 | 14.7% |
 | 2 | real | 143 | 598 | 19.3% |
 | 3 | class | 161 | 759 | 24.5% |
 | 4 | generator | 159 | 918 | 29.6% |
@@ -148,16 +148,17 @@ more than one gate.
 
 | source | problems | function-shaped | stdin-shaped | in fragment | stdin in fragment once signature extracted |
 |---|---|---|---|---|---|
-| MBPP | 974 | 974 | 0 | 239 | 0 |
-| HumanEval | 164 | 164 | 0 | 0 | 0 |
-| APPS | 10000 | 3101 | 6899 | 210 | 181 |
-| CodeContests | 13610 | 0 | 13610 | 0 | 180 |
+| MBPP | 974 | 974 | 0 | 236 | 0 |
+| HumanEval | 164 | 164 | 0 | 5 | 0 |
+| APPS | 10000 | 3101 | 6899 | 270 | 331 |
+| CodeContests | 13610 | 0 | 13610 | 0 | 367 |
 
 ## Burdens (expressible in t at a translation cost)
 
 | burden | problems | meaning |
 |---|---|---|
 | stdin-to-signature | 20509 | a stdin-shaped problem carries no function signature; one has to be extracted from its input format before t can pose the problem at all |
+| string-as-seq | 13339 | a string used only the way t's `seq` of code points already covers: a str literal, a str-typed io value, indexing/len/slicing/concatenation/comparison of strings, `ord`/`chr`, iterating over a string, or `in` on a string (a bounded exists) -- SPEC.md's 'Strings as sequences of code points' |
 | builtin-math | 6624 | min, max, sum or abs; t can express each but has no builtin for any of them |
 | comprehension | 5920 | a list/set/dict comprehension over ints; t writes this as an explicit loop or a quantifier |
 | sort | 2908 | sorted() or .sort(); expressible in t but needs a spec, not a builtin |
@@ -166,7 +167,7 @@ more than one gate.
 
 ## Method
 
-Run time: 43.8s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
+Run time: 48.1s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
 unread. `mbpp_dfy.parse_assertion` is reused for every MBPP
 assertion (spec_experiment.py's `pool()` uses the same function to
 decide the same question, whether a problem's tests fit t's
@@ -192,20 +193,23 @@ io-types come from a lexical scan of up to 3 sample `input`/`output`
 blocks (`public_tests` for CodeContests), token by token on
 whitespace -- every token that parses as `int` needs nothing, a
 token that parses as `float` but not `int` needs `real`, anything
-else needs `string-char`. A lexical scan cannot show a map, a set, a
-tuple or a nested sequence, so those four gaps are never attempted
-for a stdin-shaped problem's io-types; only its SOLUTION's AST can
-still tag them.
+else needs the burden `string-as-seq`. A lexical scan cannot show a
+map, a set, a tuple or a nested sequence, so those four gaps are
+never attempted for a stdin-shaped problem's io-types; only its
+SOLUTION's AST can still tag them.
 
 A stdin-shaped problem is never `in_fragment`: SYNTAX.md and the
 brief for this file agree a signature has to exist before a
 problem can be posed to t at all, which is the `stdin-to-signature`
 burden every stdin-shaped problem carries. `would_be_in_fragment_with_signature` in the JSON (and the by-source table above) marks
-the ones whose sample io is all-integer and whose solution tags no
-gap -- everything BUT the missing signature already fits. A problem
-with no Python solution, or whose chosen solution is
+the ones whose sample io has no decimal-valued (`real`) token and
+whose solution tags no gap -- everything BUT the missing signature
+already fits; a string token in the sample is no longer
+disqualifying on its own, since `string-as-seq` is a burden, not a
+gap. A problem with no Python solution, or whose chosen solution is
 `py2-unparseable`, is never marked this way even when its sample io
-is all-integer: the solution side is unmeasured, not measured clean.
+has no `real` token: the solution side is unmeasured, not measured
+clean.
 
 Solution-construct detection walks the parsed `ast` once per
 solution; each DETECTORS entry below is either a node-type check
@@ -241,10 +245,36 @@ rather than hidden:
 - Python's own `int` is unbounded, like t's, so no `bigint` detector
   exists and no problem is ever blocked on integer width;
 - an f-string, `.format()`, and every string method in a fixed list
-  (`STRING_METHODS` in nl_census.py) all tag the single `string-char`
+  (`STRING_METHODS` in nl_census.py) all tag the single `string-lib`
   gap rather than each having a name of their own, since all three
-  mean the same thing for t: the value in play is not an int, a
-  bool, or a seq of int;
+  need the Python string LIBRARY, not just the seq-of-code-points
+  model SPEC.md's v1 covers; a bare str/f-string/char literal, by
+  contrast, tags only the burden `string-as-seq`;
+- `count` is in `STRING_METHODS` even though `list.count(..)` uses
+  the same attribute name; a solution counting occurrences in a
+  list, not a string, is over-counted into `string-lib` here, the
+  same name-only approximation `.sort` already accepts elsewhere;
+- `ord`/`chr` calls tag `string-as-seq` (a burden: t already has
+  the code point, this is only the name Python gives it);
+- `str(..)` is tagged `string-lib` unconditionally, the same
+  treatment `float(..)` already gets; `int(..)` is tagged only when
+  called with an explicit base (`int(x, 16)`), unambiguous string
+  parsing -- a bare `int(x)` is NOT tagged even when x is a string,
+  since the common `int(input())` idiom would otherwise swamp
+  `string-lib` on nearly every stdin-shaped solution with input-
+  parsing boilerplate a signature-extraction step would remove, not
+  the algorithmic core; this undercounts genuine string-to-int
+  parsing written without a base argument;
+- `sorted(..)` always tags the `sort` burden, and additionally tags
+  `string-lib` only when its argument is SYNTACTICALLY a string (a
+  literal, an f-string, a `str(..)` call, or a chained string-
+  method call) -- `sorted(a_variable)` is not resolved to a type
+  and is undercounted when the variable holds a string;
+- iterating over a string, and `in` on a string, are not detected
+  as their own AST shape (both look identical to the same
+  operation on a list without type inference); a solution doing
+  only this and nothing else stringy is invisible to
+  `string-as-seq`, an undercount left as-is rather than built out;
 - a `SyntaxError` on `ast.parse` (most often Python 2: a `print`
   statement, `raw_input`, an octal literal) is recorded as the
   `py2-unparseable` burden and stops solution-construct detection

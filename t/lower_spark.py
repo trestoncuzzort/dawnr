@@ -438,6 +438,123 @@ abs.ads, out/first_even.ads and out/digit_sum.ads are byte-identical
 before and after this change (diffed against the working tree as it
 stood at the start of this task, not against git HEAD, which was
 mid-commit on an unrelated EARLY EXIT repair at the time).
+
+SEQUENCES: LITERALS, CONCATENATION, SLICES (SPEC.md, 2026-09-09). The three
+new expression forms -- `{"op": "seq", "args": [...]}`, `+` on two seqs
+(concatenation), `{"op": "slice", "args": [s, a, b]}` -- land on the same
+generic (SEQUENCES AS VALUES's own Seqs = SPARK.Containers.Functional.
+Infinite_Sequences over Big_Integer) with the same discipline: a Pre stating
+the definedness side condition where one exists, a Post stating Length and
+Get so gnatprove can use the result without re-deriving it, and no change
+at all to the 17 tasks committed before this pair (measured below).
+
+  * literal: `[e1, ..., en]` needs no new preamble function at all. n is
+    fixed at lowering time (the AST's own argument count), so it is a
+    plain Seqs.Empty_Sequence/Seqs.Add chain, unrolled once per call site
+    in expr() itself -- exactly "Seqs.Empty plus Seqs.Add", the header's
+    own first-choice reading. Add's own Post (SEQUENCES AS VALUES already
+    leans on it for T_Update/T_Fill) gives Length and Get at each step
+    statically, so there is nothing to state on a literal that Add has not
+    already proved.
+
+  * concatenation: `+` on two seqs, told apart from int `+` by
+    Lower._ty, a small static type reader added for exactly this (t's
+    `==` needed no such reader: Ada's own polymorphic "=" already
+    resolves it at every type this file maps; `+` has no such resolution,
+    Seq carries no "+" or "&" at all in this SPARKlib install). No
+    library concatenates two whole sequences, so T_Concat is two
+    functions in T_Fill's own recursive shape: T_Concat_Aux(S, T, N) is
+    "S with the first N elements of T appended", recursive on N counting
+    UP from 0 (Add(T_Concat_Aux(S, T, N-1), Elem(T, N-1))), and
+    T_Concat(S, T) is T_Concat_Aux(S, T, Len(T)), its own Post restating
+    Aux's Post at N = Len(T) with no further reasoning. Gated on
+    needs_concat (also turns needs_range on, the elementwise Post is
+    stated over T_Range, T_Fill's own pairing).
+
+  * slice: `s[a..b]`, DEFINED IFF 0 <= a <= b <= len(s), a definedness
+    obligation the same shape as `at`'s and `update`'s, checked at
+    T_Slice's own Pre and, for the twin's certificate, at a new `slice`
+    case in defined() (below). No library sub-sequence constructor
+    either, so T_Slice is the T_Fill shape again, this time counting DOWN
+    from B: T_Slice(S,A,B) unfolds to Add(T_Slice(S,A,B-1), Elem(S,B-1)),
+    bottoming out at the empty slice A=B, so the recursion unwinds in
+    INCREASING index order (A, A+1, ..., B-1), matching "the element at k
+    is s[a+k]" directly. Gated on needs_slice, also turning needs_range on
+    with it.
+
+  * the twin path needed one extension: certificate()'s "undefined" kind
+    (SEQUENCES AS VALUES's own `_undef_obligation`) had a case for `at`,
+    `update`, `fill`, `div`, `mod` but not yet `slice`; added to defined()
+    the same shape as `at`'s and `update`'s own bound, above. tail's
+    off-by-one twin (`s[1..len(s)]` mutated to `s[2..len(s)]`) is exactly
+    this: undefined at the witness s=[0] (slice bounds [2..1], since
+    len(s)=1), the first slice-shaped "undefined" witness measured;
+    filter_pos's twin (invariant-drop#1, dropping the `len(r) <= i`
+    invariant) needed no such extension, an ordinary "exit" witness the
+    same kind reverse and seq_max already certify.
+
+  * a type reader was the one genuinely new piece of machinery: Lower._ty
+    walks the ORIGINAL AST (never the rendered Ada text) to answer
+    int/bool/seq for one expression, mirroring interp.ev's runtime
+    isinstance(a[0], tuple) check statically, needed because Ada picks
+    the `+`/T_Concat choice at code-generation time, not proof time.
+    `types` (var name -> "int"/"bool"/"seq") already existed as a
+    parameter compile()/compile_r()/lower_while() threaded for locals
+    (SEQUENCES AS VALUES); it now also carries every task PARAMETER from
+    the top of lower() (previously only the return name was seeded in,
+    since nothing before this pair needed a param's type once lowering,
+    only Ada text, had begun). certificate() and _undef_obligation() have
+    no AST-level `types` to thread -- both work from a witness's own
+    ground values -- so each builds one straight from the witness (list
+    seq, bool before int, exactly _cert_lit's own reading order).
+
+MEASURED (2026-09-09, gnatprove FSF 16.1.0, --steps 20000): tail and
+filter_pos both COUNT (real VERIFIED, twin REFUTED: tail's off-by-one
+twin at the slice bound above, filter_pos's invariant-drop#1); swap and
+reverse are unaffected, out/swap.ads, out/reverse.ads, out/swap_twin.ads
+and out/reverse_twin.ads byte-identical before and after this change
+(cmp, all four); all four cells verified on the first run, no re-run
+against the shared box's load needed.
+
+WHOLE-SEQ `==`/`!=` (SPEC.md, 2026-09-09), the residual the banking
+paragraph above left open: two candidate T_Eq designs were measured
+(EQ_PREAMBLE's own comment has the detail), a qualified call to the
+generic's own "=" and a Len/Elem/T_Range restatement of SPEC.md's
+extensional definition. Both closed four isolated probes with 0 unproved
+(an elementwise-equal hypothesis implies T_Eq, the converse, cross-
+constructor equality, a concrete false instance), which is where the
+first candidate shipped and was WRONG: on the actual shape this exists
+for, a loop-computed seq compared whole against a parameter
+(fz_p_seqeq_true/false, fuzz_lower.py), the qualified-call form's real
+cell read TIMEOUT, reproduced uncontended (harness.run_task, one
+gnatprove call, 46s wall against the 180s backstop, so not load and not
+the wall backstop) at the standard 20000-step budget: SPARKlib's own "="
+quantifies with its native Iterable cursor over Sequence, a different
+range representation from the T_Range cursor every loop invariant here
+is already stated over, and bridging the two on top of a recursive-call
+unfold missed the budget. The Len/Elem/T_Range form shares its
+quantifier encoding with the loop invariants directly, and MEASURED
+(harness.run_task, same probe, uncontended) reads real VERIFIED, twin
+REFUTED, 55.8s. fuzz_lower.py's own family (--tasks
+fz_p_seqeq_true,fz_p_seqeq_false, --only spark, --jobs 4, uncontended):
+fz_p_seqeq_true verified/refuted; fz_p_seqeq_false's twin also REFUTED
+(the certificate carries a T_Eq goal through cleanly, "Keep the
+certificate path working" holds), but its OWN real cell reads TIMEOUT,
+not REFUTED. That is not a defect this pair introduces: fz_p_seqeq_false
+is an adversarial task whose ground truth is already false in its own
+body, seq-typed and inside a loop, so it sits outside ce_instance's
+fragment (ret type "seq" is not in CE_TYPE) exactly like every other
+seq/loop false-ground-truth real cell already committed here, and this
+kernel's Big_Integer model cannot mint a real-side REFUTED without the
+certificate mechanism, which exists for TWINS, not for a task's own
+body (THE COUNTEREXAMPLE INSTANCE and THE REFUTATION CERTIFICATE,
+above, both predate this pair). fuzz_lower.py's own scoring agrees:
+disagreements 0, vs-truth 0, twin-survived 0, no-flip 0 on this family.
+Regression: swap, reverse, tail, filter_pos (none states a whole-seq
+`==`) re-lowered byte-identical to out/*.ads, real and twin, both before
+and after the switch from the qualified-call candidate to the
+Len/Elem/T_Range one; none of the 19 tasks committed before this pair
+moves.
 """
 from __future__ import annotations
 
@@ -466,7 +583,8 @@ NARY = {"and": "and then", "or": "or else"}
 RESERVED = frozenset((
     "F", "Seq", "Seqs", "Len", "Elem", "T_Range", "R_First", "R_Has",
     "R_Next", "Big_Integer", "Boolean", "T_Refutation_Certificate",
-    "T_Div", "T_Mod", "T_Update", "T_Fill"))
+    "T_Div", "T_Mod", "T_Update", "T_Fill", "T_Slice", "T_Concat",
+    "T_Concat_Aux", "T_Eq"))
 
 # The counterexample instance (header). The window is above 2^31 so that a
 # lowering which had silently kept a 32-bit model would be caught by the
@@ -537,10 +655,16 @@ def _ce_bound(e: dict, env: dict):
     if "call" in e:
         raise _NoCe("call: a spec fun or recursion has no static bound")
     op = e["op"]
-    if op in ("len", "at", "update", "fill"):
-        # SPEC.md "Sequences as values" (2026-09-09): update/fill are seq
-        # operators too, the same fail-closed treatment already given to
-        # len/at here; a seq subexpression has no machine mirror to bound.
+    if op in ("len", "at", "update", "fill", "seq", "slice"):
+        # SPEC.md "Sequences as values" (2026-09-09) / "Sequences:
+        # literals, concatenation, slices" (2026-09-09): every seq
+        # operator gets the same fail-closed treatment, len/at included --
+        # a seq subexpression has no machine mirror to bound. A seq `+`
+        # (concatenation) needs no entry of its own here: its operands are
+        # walked by the fallthrough below exactly like an int `+`'s, and
+        # inductively at least one of them bottoms out at one of the ops
+        # named on this line (or an unbound `var`, already _NoCe below),
+        # so the walk always raises before returning a bound for it.
         raise _NoCe("seq operator")
     if op in ("div", "mod"):
         # No machine mirror (header, DIV/MOD): T_Div/T_Mod are Big_Integer
@@ -616,6 +740,63 @@ SEQ_PREAMBLE = """\
    function Elem (S : Seq; I : Big_Integer) return Big_Integer is
      (Seqs.Get (S, I + Big_Integer'(1)))
    with Pre => I >= Big_Integer'(0) and then I < Len (S);
+"""
+
+# t's `==`/`!=` on two whole seqs is extensional (SPEC.md, SEQUENCES AS
+# VALUES's own note: banked 2026-09-09, IMPLEMENTED the same night). Ada's
+# own "=" resolves t's `==` at Big_Integer and Boolean with no help (CMP,
+# plain infix), because those are the language's own predefined types; Seq
+# is a private type inside a generic instantiation, and MEASURED (probe
+# p_seq2.ads, the earlier banking) that its "=" is "not directly visible"
+# as an infix operator without a `use Seqs;` this file will not add
+# unconditionally (the same regression `use` would cause T_Update was
+# measured to cause, above).
+#
+# TWO CANDIDATES were measured, not one. The first try leaned on the
+# generic's OWN "=", called by QUALIFIED function-call name rather than
+# infix (`Seqs."=" (S, T)`, "not directly visible" being specifically
+# about the notation that resolves an infix operator, not about calling it
+# by selected-component name the way every OTHER Seqs operation here
+# already is): MEASURED (probes p_eqB/p_eqC, gnatprove FSF 16.1.0, --steps
+# 20000) it needs no `use` at all, and four isolated probes (an
+# elementwise-equal HYPOTHESIS implies T_Eq; the converse recovers Elem
+# from T_Eq; two seqs built by different constructors that are
+# extensionally the same value are still seen as equal; a concrete false
+# instance is refutable) all closed with 0 unproved, faster than the
+# second candidate below (18.9s vs 21.0s) and with no T_Range dependency.
+# It shipped first on that evidence and was WRONG: MEASURED next on the
+# actual shape this exists for (fz_p_seqeq_true/false, fuzz_lower.py,
+# --tasks fz_p_seqeq_true,fz_p_seqeq_false), the real cell read TIMEOUT,
+# reproduced on an uncontended box (harness.run_task alone, one gnatprove
+# call, 46s wall against a 180s backstop, so not the wall backstop and not
+# load) at the standard 20000-step budget. The isolated probes had hidden
+# the gap: they handed the prover an elementwise-equal HYPOTHESIS already
+# stated in T_Range terms at the SAME scope as the goal, which is not what
+# a loop-computed value offers. A real task's loop invariant is stated
+# over T_Range (this file's own 0-based Big_Integer cursor, RANGE_PREAMBLE
+# above); Seqs."="'s own Post quantifies with SPARKlib's NATIVE Iterable
+# cursor over Sequence ("for all N in Left"), a different range
+# representation. Proving T_Eq(F'Result, S) from the loop helper's Post
+# therefore asks the prover to bridge two quantifier encodings on top of
+# unfolding a recursive call, and that combination missed the budget.
+#
+# T_Eq is therefore the SECOND candidate, SPEC.md's definition restated
+# directly over Len/Elem/T_Range with no library help, the same shape
+# T_Fill/T_Slice/T_Concat already use, and gated to also turn needs_range
+# on with it (below), exactly as needs_fill/needs_slice/needs_concat do.
+# MEASURED (2026-09-09, harness.run_task, fz_p_seqeq_true, gnatprove FSF
+# 16.1.0, --steps 20000, uncontended): real VERIFIED, invariant-drop twin
+# REFUTED. The elementwise fact now shares its quantifier encoding with
+# every loop invariant this file already emits, so proving T_Eq from a
+# loop helper's Post is the same T_Range-to-T_Range match that
+# Len(F'Result) = Len(S) already was, not a bridge between two encodings.
+# needs_eq (expr(), below) gates it exactly as needs_update gates
+# UPDATE_PREAMBLE, so no already-committed task's output moves (none of
+# the 19 tasks committed before this one states a whole-seq `==`).
+EQ_PREAMBLE = """\
+   function T_Eq (S, T : Seq) return Boolean is
+     (Len (S) = Len (T)
+      and then (for all K in T_Range'(0, Len (S)) => Elem (S, K) = Elem (T, K)));
 """
 
 # s[i := v] (SPEC.md "Sequences as values", 2026-09-09), DEFINED IFF
@@ -720,6 +901,80 @@ FILL_PREAMBLE = """\
    function T_Fill (N : Big_Integer; V : Big_Integer) return Seq is
      (if N = Big_Integer'(0) then Seqs.Empty_Sequence
       else Seqs.Add (T_Fill (N - Big_Integer'(1), V), V));
+"""
+
+# s[a..b] (SPEC.md "Sequences: literals, concatenation, slices", 2026-09-09):
+# DEFINED IFF 0 <= a <= b <= len(s), the same shape of side condition as
+# `at`'s and `update`'s, checked by the kernel at T_Slice's own Pre. No
+# library "sub-sequence" constructor exists either (SEQ_PREAMBLE's own
+# comment, same reason FILL_PREAMBLE has no library constructor to call),
+# so T_Slice is built the same way T_Fill is, one element per step, except
+# it counts DOWN from B rather than up from 0: T_Slice(S,A,B) unfolds to
+# Add(T_Slice(S,A,B-1), Elem(S,B-1)), so the recursion bottoms out at the
+# empty slice A=B and each level appends the next element in INCREASING
+# index order as the recursion unwinds (A, A+1, ..., B-1), matching
+# SPEC.md's "the element at k is s[a+k]" directly. Gated on needs_slice
+# (expr(), below), which also turns needs_range on with it, exactly as
+# needs_fill does: the elementwise fact is stated over T_Range. MEASURED
+# (2026-09-09, probe p_seq3.ads, --steps 20000): both Len(Result) = B - A
+# and the elementwise fact discharge by gnatprove's automatic induction on
+# the Subprogram_Variant, the same T_Fill pattern, no separate lemma.
+SLICE_PREAMBLE = """\
+   function T_Slice (S : Seq; A : Big_Integer; B : Big_Integer) return Seq
+   with
+     Pre  => A >= Big_Integer'(0) and then A <= B and then B <= Len (S),
+     Post => Len (T_Slice'Result) = B - A
+       and then (for all K in T_Range'(0, B - A) =>
+                   Elem (T_Slice'Result, K) = Elem (S, A + K)),
+     Subprogram_Variant => (Decreases => B - A);
+
+   function T_Slice (S : Seq; A : Big_Integer; B : Big_Integer) return Seq is
+     (if A = B then Seqs.Empty_Sequence
+      else Seqs.Add (T_Slice (S, A, B - Big_Integer'(1)),
+                     Elem (S, B - Big_Integer'(1))));
+"""
+
+# s + t on two seqs (SPEC.md "Sequences: literals, concatenation, slices",
+# 2026-09-09): concatenation, always defined. Ada's own polymorphic "="
+# resolves t's `==` at every type this file maps without help (CMP), but
+# `+` has no such resolution: Seq carries no "+" operator at all (grepped
+# against this SPARKlib install: no "&", no "Concat"), so this file builds
+# one, gated on needs_concat (expr(), below, which decides seq-`+` from
+# int-`+` by the STATIC type of the left operand, Lower._ty, since Ada
+# picks the overload at compile time, not proof time). No library
+# constructor appends a whole sequence either, so T_Concat is two
+# functions in the T_Fill/T_Slice shape: T_Concat_Aux(S, T, N) is "S with
+# the first N elements of T appended", recursive on N counting UP from 0
+# (Add(T_Concat_Aux(S, T, N-1), Elem(T, N-1)), the same append-last-as-you
+# -unwind shape SLICE_PREAMBLE's own note explains), and T_Concat(S, T) is
+# just T_Concat_Aux(S, T, Len(T)), its own Post restating Aux's Post at
+# N = Len(T) with no further reasoning needed. MEASURED (2026-09-09, probe
+# p_seq3.ads, --steps 20000): Len, the S-prefix fact and the T-suffix fact
+# all discharge by the same automatic induction T_Fill and T_Slice use.
+CONCAT_PREAMBLE = """\
+   function T_Concat_Aux (S, T : Seq; N : Big_Integer) return Seq
+   with
+     Pre  => N >= Big_Integer'(0) and then N <= Len (T),
+     Post => Len (T_Concat_Aux'Result) = Len (S) + N
+       and then (for all K in T_Range'(0, Len (S)) =>
+                   Elem (T_Concat_Aux'Result, K) = Elem (S, K))
+       and then (for all K in T_Range'(0, N) =>
+                   Elem (T_Concat_Aux'Result, Len (S) + K) = Elem (T, K)),
+     Subprogram_Variant => (Decreases => N);
+
+   function T_Concat_Aux (S, T : Seq; N : Big_Integer) return Seq is
+     (if N = Big_Integer'(0) then S
+      else Seqs.Add (T_Concat_Aux (S, T, N - Big_Integer'(1)),
+                     Elem (T, N - Big_Integer'(1))));
+
+   function T_Concat (S, T : Seq) return Seq is
+     (T_Concat_Aux (S, T, Len (T)))
+   with
+     Post => Len (T_Concat'Result) = Len (S) + Len (T)
+       and then (for all K in T_Range'(0, Len (S)) =>
+                   Elem (T_Concat'Result, K) = Elem (S, K))
+       and then (for all K in T_Range'(0, Len (T)) =>
+                   Elem (T_Concat'Result, Len (S) + K) = Elem (T, K));
 """
 
 
@@ -840,6 +1095,9 @@ class Lower:
         self.needs_divmod = False      # set by the first lowered div/mod
         self.needs_fill = False        # set by the first lowered fill()
         self.needs_update = False      # set by the first lowered update
+        self.needs_slice = False       # set by the first lowered slice()
+        self.needs_concat = False      # set by the first lowered seq `+`
+        self.needs_eq = False          # set by the first lowered seq ==/!=
         self.spec_fun_names = {sf["name"] for sf in task.get("spec_funs", [])}
         # The counterexample instance walks the SAME tree with the SAME
         # operator table; only the numeric type of a literal differs, so a
@@ -849,7 +1107,61 @@ class Lower:
 
     # --- expressions -------------------------------------------------------
 
-    def expr(self, e: dict, sub: dict) -> str:
+    def _ty(self, e: dict, types: dict) -> str:
+        """A static reading of `e`'s t type ("int"/"bool"/"seq"), needed
+        only to tell a seq `+` (concatenation) from an int `+` (addition)
+        BEFORE any Ada text is emitted (SPEC.md "Sequences: literals,
+        concatenation, slices", 2026-09-09). t's `==` needed no such
+        reading: Ada's own polymorphic "=" already resolves it at every
+        type this file maps (Big_Integer, Boolean, Seq). `+` has no such
+        resolution -- grepped against this SPARKlib install, Sequence
+        carries no "+" and no "&" -- so the choice between native `+` and
+        T_Concat has to be made here, statically, mirroring the same
+        isinstance(a[0], tuple) check interp.ev makes at runtime (SPEC.md's
+        own rule: a `+` whose operands disagree in type is ill-typed, so
+        only args[0] is consulted, never both). `types` is whatever dict
+        the caller already threads for `var` types: compile()/compile_r()/
+        lower_while() thread task params + return + locals throughout
+        (lower()'s initial call now seeds params in, SPEC.md "Sequences as
+        values" already seeded return + locals); lower_spec_fun() builds
+        one from the spec_fun's own params; certificate()/_undef_obligation
+        read it off the witness's own ground values instead, since there is
+        no AST-level `types` dict at a witness."""
+        if "int" in e:
+            return "int"
+        if "bool" in e:
+            return "bool"
+        if "var" in e:
+            v = e["var"]
+            if v not in types:
+                raise ValueError(f"unbound variable {v!r}")
+            return types[v]
+        if "ite" in e:
+            return self._ty(e["ite"]["then"], types)
+        if "call" in e:
+            fun = e["call"]["fun"]
+            if fun == self.task["name"]:
+                return self.task["returns"][0]["type"]
+            for sf in self.task.get("spec_funs", []):
+                if sf["name"] == fun:
+                    return sf["result"]
+            raise ValueError(f"call to unknown function {fun!r}")
+        if "forall" in e or "exists" in e:
+            return "bool"
+        op = e["op"]
+        if op in ("len", "at"):
+            return "int"
+        if op in ("update", "fill", "seq", "slice"):
+            return "seq"
+        if op in ("neg", "-", "*", "div", "mod"):
+            return "int"
+        if op == "+":
+            return self._ty(e["args"][0], types)
+        if op in ("not", "and", "or", "implies") or op in CMP:
+            return "bool"
+        raise ValueError(f"t has no operator {op!r}")
+
+    def expr(self, e: dict, sub: dict, types: dict) -> str:
         if "int" in e:
             # Qualified: a bare literal fails resolution where both operands
             # of an operator are literal-bearing (measured: "expected type
@@ -869,28 +1181,30 @@ class Lower:
             self.needs_range = True
             q = e["forall"] if "forall" in e else e["exists"]
             v = cap(q["var"])
-            lo, hi = self.expr(q["lo"], sub), self.expr(q["hi"], sub)
+            lo = self.expr(q["lo"], sub, types)
+            hi = self.expr(q["hi"], sub, types)
             # The cursor IS the mathematical bound variable: T_Range's cursor
             # type is Big_Integer, so [lo, hi) is not sliced to a machine type
             # and there is no range obligation to owe (see the header).
-            body = self.expr(q["body"], {**sub, q["var"]: v})
+            body = self.expr(q["body"], {**sub, q["var"]: v},
+                             {**types, q["var"]: "int"})
             kind = "for all" if "forall" in e else "for some"
             return f"({kind} {v} in T_Range'({lo}, {hi}) => {body})"
         if "ite" in e:
             c = e["ite"]
-            return (f"(if {self.expr(c['cond'], sub)} "
-                    f"then {self.expr(c['then'], sub)} "
-                    f"else {self.expr(c['else'], sub)})")
+            return (f"(if {self.expr(c['cond'], sub, types)} "
+                    f"then {self.expr(c['then'], sub, types)} "
+                    f"else {self.expr(c['else'], sub, types)})")
         if "call" in e:
             c = e["call"]
             fun = "F" if c["fun"] == self.task["name"] else cap(c["fun"])
             if c["fun"] != self.task["name"] \
                     and c["fun"] not in self.spec_fun_names:
                 raise ValueError(f"call to unknown function {c['fun']!r}")
-            args = [self.expr(a, sub) for a in c["args"]]
+            args = [self.expr(a, sub, types) for a in c["args"]]
             return f"{fun} ({', '.join(args)})" if args else fun
         op = e["op"]
-        args = [self.expr(a, sub) for a in e.get("args", [])]
+        args = [self.expr(a, sub, types) for a in e.get("args", [])]
         if op == "len":
             return f"Len ({args[0]})"
         if op == "at":
@@ -913,6 +1227,38 @@ class Lower:
             self.needs_range = True
             n, v = args
             return f"T_Fill ({n}, {v})"
+        if op == "seq":
+            # [e1, ..., en] (SPEC.md "Sequences: literals, concatenation,
+            # slices", 2026-09-09), [] the empty seq. n is fixed at
+            # lowering time (the AST's own arg count), so this is a plain
+            # constructor chain over Seqs.Empty_Sequence/Seqs.Add, exactly
+            # the "Seqs.Empty plus Seqs.Add" the header calls for; no new
+            # recursive helper or Post is needed because Add's OWN Post
+            # (SEQ_PREAMBLE's neighbour in the SPARKlib spec) already gives
+            # gnatprove Length and Get at each step, statically unrolled.
+            out = "Seqs.Empty_Sequence"
+            for a in args:
+                out = f"Seqs.Add ({out}, {a})"
+            return out
+        if op == "slice":
+            # s[a..b] (SPEC.md "Sequences: literals, concatenation,
+            # slices", 2026-09-09): T_Slice's own Pre is the definedness
+            # side condition (0 <= a <= b <= len(s)), checked by the kernel
+            # at this call site exactly as Elem's/T_Update's Pre are
+            # (SLICE_PREAMBLE).
+            self.needs_slice = True
+            self.needs_range = True
+            s, a, b = args
+            return f"T_Slice ({s}, {a}, {b})"
+        if op == "+" and self._ty(e["args"][0], types) == "seq":
+            # s + t on two seqs is concatenation (SPEC.md "Sequences:
+            # literals, concatenation, slices", 2026-09-09), told apart
+            # from int `+` by Lower._ty, above, since Ada's `+` is not
+            # polymorphic the way t's is (CONCAT_PREAMBLE).
+            self.needs_concat = True
+            self.needs_range = True
+            s, t = args
+            return f"T_Concat ({s}, {t})"
         if op == "neg":
             return f"(-{args[0]})"
         if op == "not":
@@ -921,6 +1267,17 @@ class Lower:
             return f"(if {args[0]} then {args[1]} else True)"
         if op in NARY:
             return "(" + f" {NARY[op]} ".join(args) + ")"
+        if op in ("==", "!=") and self._ty(e["args"][0], types) == "seq":
+            # Whole-seq `==`/`!=` is extensional (SPEC.md "Sequences as
+            # values"), told apart from int/bool `==` the same way seq `+`
+            # is (Lower._ty, CONCAT_PREAMBLE's own note): Ada's own "=" is
+            # polymorphic enough to resolve t's `==` at Big_Integer and
+            # Boolean without help, but not at Seq, a private type inside a
+            # generic instantiation (EQ_PREAMBLE).
+            self.needs_eq = True
+            self.needs_range = True
+            eq = f"T_Eq ({args[0]}, {args[1]})"
+            return eq if op == "==" else f"(not {eq})"
         if op in CMP:
             return f"({args[0]} {CMP[op]} {args[1]})"
         if op in ARITH:
@@ -949,14 +1306,14 @@ class Lower:
                 v, e = s["assign"]
                 if v not in env:
                     raise ValueError(f"assign to undeclared {v!r}")
-                env[v] = self.expr(e, {**psub, **env})
+                env[v] = self.expr(e, {**psub, **env}, types)
             elif "var" in s:
                 d = s["var"]
-                env[d["name"]] = self.expr(d["init"], {**psub, **env})
+                env[d["name"]] = self.expr(d["init"], {**psub, **env}, types)
                 types[d["name"]] = d["type"]
             elif "if" in s:
                 c = s["if"]
-                cond = self.expr(c["cond"], {**psub, **env})
+                cond = self.expr(c["cond"], {**psub, **env}, types)
                 et = self.compile(c["then"], env, types, psub)
                 ee = self.compile(c["else"], env, types, psub)
                 for v in env:
@@ -1035,19 +1392,19 @@ class Lower:
                 v, e = s["assign"]
                 if v not in env:
                     raise ValueError(f"assign to undeclared {v!r}")
-                env[v] = self.expr(e, {**psub, **env})
+                env[v] = self.expr(e, {**psub, **env}, types)
             elif "return" in s:
                 name, e = s["return"]
-                new_val = self.expr(e, {**psub, **env})
+                new_val = self.expr(e, {**psub, **env}, types)
                 env[name] = new_val
                 combine("True", new_val)
             elif "var" in s:
                 d = s["var"]
-                env[d["name"]] = self.expr(d["init"], {**psub, **env})
+                env[d["name"]] = self.expr(d["init"], {**psub, **env}, types)
                 types[d["name"]] = d["type"]
             elif "if" in s:
                 c = s["if"]
-                cond = self.expr(c["cond"], {**psub, **env})
+                cond = self.expr(c["cond"], {**psub, **env}, types)
                 default = env.get(ret_name)
                 et, esc_then, val_then = self.compile_r(
                     c["then"], env, types, psub, ret_name)
@@ -1136,11 +1493,12 @@ class Lower:
                   **{v: (f"{name}'Result.{cap(v)}" if v in mut else cap(v))
                      for v in state}}
         invs = w.get("invariants", [])
-        pre = "\n       and then ".join(self.expr(i, entry) for i in invs)
-        post_parts = [self.expr(i, result) for i in invs]
-        post_parts.append(f"(not {self.expr(w['cond'], result)})")
+        pre = "\n       and then ".join(
+            self.expr(i, entry, types) for i in invs)
+        post_parts = [self.expr(i, result, types) for i in invs]
+        post_parts.append(f"(not {self.expr(w['cond'], result, types)})")
         post = "\n       and then ".join(post_parts)
-        d = self.expr(w["decreases"], entry)
+        d = self.expr(w["decreases"], entry, types)
         variant = f"(if {d} >= 0 then {d} else 0)"
         inner = {v: cap(v) for v in state}
         if body_has_return:
@@ -1149,7 +1507,7 @@ class Lower:
         else:
             benv = self.compile(w["body"], inner, types, psub)
             besc = bval = None
-        cond = self.expr(w["cond"], {**psub, **inner})
+        cond = self.expr(w["cond"], {**psub, **inner}, types)
         rec_args = [cap(p["name"]) for p in tparams] \
             + [benv[v] for v in state]
         agg = ", ".join(f"{cap(v)} => {cap(v)}" for v in mut)
@@ -1170,7 +1528,7 @@ class Lower:
             # what exhausted the 20000-step budget (see the note below).
             ens_sub = {**psub, ret_name: f"{name}'Result.Ret"}
             ens = "\n       and then ".join(
-                self.expr(e, ens_sub) for e in self.task["ensures"])
+                self.expr(e, ens_sub, types) for e in self.task["ensures"])
             aspects.append(
                 f"Post => (if {name}'Result.Esc then ({ens}) "
                 f"else ({post}))")
@@ -1228,7 +1586,8 @@ class Lower:
 
     def lower_spec_fun(self, sf: dict) -> str:
         sub = {p["name"]: cap(p["name"]) for p in sf["params"]}
-        d = self.expr(sf["decreases"], sub)
+        types = {p["name"]: p["type"] for p in sf["params"]}
+        d = self.expr(sf["decreases"], sub, types)
         plist = "; ".join(f"{cap(p['name'])} : {TYPE[p['type']]}"
                           for p in sf["params"])
         sig = f"function {cap(sf['name'])} ({plist}) return " \
@@ -1238,7 +1597,7 @@ class Lower:
                 f"(Decreases => (if {d} >= 0 then {d} else 0));\n"
                 f"\n"
                 f"   {sig} is\n"
-                f"     ({self.expr(sf['body'], sub)});\n")
+                f"     ({self.expr(sf['body'], sub, types)});\n")
 
 
 CERT_NAME = "T_Refutation_Certificate"
@@ -1333,6 +1692,17 @@ def defined(e: dict) -> dict:
         n, v = args
         nonneg = {"op": ">=", "args": [n, {"int": 0}]}
         return _t_conj([defined(n), defined(v), nonneg])
+    if op == "slice":
+        # s[a..b] (SPEC.md "Sequences: literals, concatenation, slices",
+        # 2026-09-09): DEFINED IFF 0 <= a <= b <= len(s), a definedness
+        # obligation the same shape as `at`'s and `update`'s bound, above.
+        s, a, b = args
+        bound = {"op": "and", "args": [
+            {"op": "<=", "args": [{"int": 0}, a]},
+            {"op": "and", "args": [
+                {"op": "<=", "args": [a, b]},
+                {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}]}
+        return _t_conj([defined(s), defined(a), defined(b), bound])
     if op in ("div", "mod"):
         x, y = args
         nonzero = {"op": "!=", "args": [y, {"int": 0}]}
@@ -1351,7 +1721,12 @@ def defined(e: dict) -> dict:
     if op == "implies":
         p, q = args
         return _t_conj([defined(p), _t_guard(p, defined(q))])
-    # total operators: not neg len + - * == != < <= > >=
+    # total operators: not neg len + - * == != < <= > >= seq. A seq literal
+    # and a seq `+` (concatenation) are both total given their operands are
+    # (SPEC.md "Sequences: literals, concatenation, slices", 2026-09-09:
+    # "a literal is defined iff all its elements are; a concatenation is
+    # defined iff both arguments are"), exactly the generic conjunction
+    # this fallthrough already builds.
     return _t_conj([defined(a) for a in args])
 
 
@@ -1383,6 +1758,15 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
     certificate."""
     env_py = {n: (tuple(v) if isinstance(v, list) else v)
               for n, v in vals.items()}
+    # A static `types` dict for Lower._ty (SPEC.md "Sequences: literals,
+    # concatenation, slices", 2026-09-09: needed to render a seq `+` inside
+    # `ob` as T_Concat rather than native `+`), read off the SAME grown
+    # values `env_py` already carries -- there is no AST-level types dict at
+    # a witness, only the ground values interp.ev itself computed, so the
+    # Python shape (bool before int, a tuple for a seq) stands in for it.
+    types = {n: ("seq" if isinstance(v, tuple) else
+                "bool" if isinstance(v, bool) else "int")
+            for n, v in env_py.items()}
     sub = dict(sub)
     funs = interp.funs_of(task, twin_body)
     st = interp.St()
@@ -1396,9 +1780,11 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                 return None
             ob = defined(e)
             if ob != TRUE and not interp.ev(ob, env_py, funs, st):
-                return f"(not {L.expr(ob, sub)})"
+                return f"(not {L.expr(ob, sub, types)})"
             val = interp.ev(e, env_py, funs, st)
             env_py[name] = val
+            types[name] = ("seq" if isinstance(val, tuple) else
+                           "bool" if isinstance(val, bool) else "int")
             sub[name] = _cert_lit(list(val) if isinstance(val, tuple)
                                   else val)
     except (interp.Undef, interp.Budget, RecursionError):
@@ -1468,9 +1854,18 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
     vals = {k: v for k, v in w.items() if not k.startswith("_")}
     sub = {k: _cert_lit(v) for k, v in vals.items()}
     ret = task["returns"][0]["name"]
+    # A static `types` dict for Lower._ty (SPEC.md "Sequences: literals,
+    # concatenation, slices", 2026-09-09), read off the witness's own
+    # ground values exactly as _undef_obligation's does, plus the task's
+    # own declared return type: the return is never itself a witness input,
+    # so it would otherwise be missing from a `vals`-derived reading.
+    types = {k: ("seq" if isinstance(v, list) else
+                "bool" if isinstance(v, bool) else "int")
+            for k, v in vals.items()}
+    types[ret] = task["returns"][0]["type"]
     ens = None
     try:
-        parts = [L.expr(e, sub) for e in task.get("requires", [])]
+        parts = [L.expr(e, sub, types) for e in task.get("requires", [])]
         if kind == "value":
             if w.get("_ens") is not True:
                 return ""
@@ -1478,7 +1873,8 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
                 return ""
             args = ", ".join(sub[p["name"]] for p in task["params"])
             call = f"F ({args})" if args else "F"
-            ens = [L.expr(e, {**sub, ret: call}) for e in task["ensures"]]
+            ens = [L.expr(e, {**sub, ret: call}, types)
+                   for e in task["ensures"]]
         elif kind == "exit":
             loops = _cert_loops(body)
             if len(loops) != 1:
@@ -1494,9 +1890,9 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
             post = interp.exit_env(task, body, loop, vals)
             if post is None:
                 return ""
-            parts += [L.expr(i, sub) for i in loop.get("invariants", [])]
-            parts.append(f"(not {L.expr(loop['cond'], sub)})")
-            ens = [L.expr(e, {**sub, ret: _cert_lit(post[ret])})
+            parts += [L.expr(i, sub, types) for i in loop.get("invariants", [])]
+            parts.append(f"(not {L.expr(loop['cond'], sub, types)})")
+            ens = [L.expr(e, {**sub, ret: _cert_lit(post[ret])}, types)
                    for e in task["ensures"]]
         elif kind == "undefined":
             ob = _undef_obligation(task, body, sub, vals, L)
@@ -1529,6 +1925,15 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     L = Lower(task)
     ret = task["returns"][0]
     psub = {p["name"]: cap(p["name"]) for p in task["params"]}
+    # SPEC.md "Sequences: literals, concatenation, slices" (2026-09-09): the
+    # `types` dict Lower._ty reads (a seq `+` vs an int `+`) has to carry
+    # every param from the start, not just the return + locals compile()/
+    # compile_r() already tracked (SEQUENCES AS VALUES, 2026-09-09): a `+`
+    # on two PARAMETERS (unlike tail/filter_pos's own bodies, which concat
+    # a param with a freshly-built literal or slice) would otherwise read
+    # an unbound name here.
+    base_types = {**{p["name"]: p["type"] for p in task["params"]},
+                 ret["name"]: ret["type"]}
     # SPEC.md "Sequences as values" (2026-09-09): seq is now a return and
     # local type too, not just a parameter type, so the preamble condition
     # widens to match: the task's own return, a spec_fun's result, or a
@@ -1578,28 +1983,26 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # this merge for free rather than needing its own restatement.
     if has_return(body):
         env, esc, val = L.compile_r(
-            body, {ret["name"]: None}, {ret["name"]: ret["type"]}, psub,
-            ret["name"])
+            body, {ret["name"]: None}, base_types, psub, ret["name"])
         if env[ret["name"]] is None:
             raise ValueError(f"body never assigns {ret['name']!r}")
         final = env[ret["name"]] if esc is None \
             else f"(if {esc} then {val} else {env[ret['name']]})"
     else:
-        env = L.compile(body, {ret["name"]: None}, {ret["name"]: ret["type"]},
-                        psub)
+        env = L.compile(body, {ret["name"]: None}, base_types, psub)
         if env[ret["name"]] is None:
             raise ValueError(f"body never assigns {ret['name']!r}")
         final = env[ret["name"]]
 
     aspects = []
-    reqs = [L.expr(e, psub) for e in task.get("requires", [])]
+    reqs = [L.expr(e, psub, base_types) for e in task.get("requires", [])]
     if reqs:
         aspects.append("Pre  => " + "\n       and then ".join(reqs))
     post_sub = {**psub, ret["name"]: "F'Result"}
     aspects.append("Post => " + "\n       and then ".join(
-        L.expr(e, post_sub) for e in task["ensures"]))
+        L.expr(e, post_sub, base_types) for e in task["ensures"]))
     if "decreases" in task:
-        d = L.expr(task["decreases"], psub)
+        d = L.expr(task["decreases"], psub, base_types)
         aspects.append(f"Subprogram_Variant => "
                        f"(Decreases => (if {d} >= 0 then {d} else 0))")
 
@@ -1624,8 +2027,14 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [UPDATE_PREAMBLE]
     if L.needs_range:
         parts += [RANGE_PREAMBLE]
+    if L.needs_eq:
+        parts += [EQ_PREAMBLE]
     if L.needs_fill:
         parts += [FILL_PREAMBLE]
+    if L.needs_slice:
+        parts += [SLICE_PREAMBLE]
+    if L.needs_concat:
+        parts += [CONCAT_PREAMBLE]
     if L.needs_divmod:
         parts += [DIVMOD_PREAMBLE]
     for sf in spec_funs:
@@ -1677,12 +2086,13 @@ def ce_instance(task: dict, body: list) -> str:
             _ce_bound(e, {**pbound, ret["name"]: env[ret["name"]]})
         L = Lower(task, ce=True)
         psub = {p["name"]: cap(p["name"]) for p in task["params"]}
-        cenv = L.compile(body, {ret["name"]: None},
-                         {ret["name"]: ret["type"]}, psub)
+        base_types = {**{p["name"]: p["type"] for p in task["params"]},
+                     ret["name"]: ret["type"]}
+        cenv = L.compile(body, {ret["name"]: None}, base_types, psub)
         final = cenv[ret["name"]]
         post_sub = {**psub, ret["name"]: "F_Ce'Result"}
-        ens = [L.expr(e, post_sub) for e in task["ensures"]]
-        reqs = [L.expr(e, psub) for e in task.get("requires", [])]
+        ens = [L.expr(e, post_sub, base_types) for e in task["ensures"]]
+        reqs = [L.expr(e, psub, base_types) for e in task.get("requires", [])]
     except (_NoCe, ValueError, NotImplementedError, KeyError):
         # Outside the fragment. The unbounded theorem above is the artifact;
         # the instance is an addition, and its absence costs a refutation,

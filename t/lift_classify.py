@@ -70,15 +70,15 @@ from typing import Iterator, Optional
 from lift_ast import (
     Assign, AssignSuchThat, AssertStmt, AssertByStmt, AssumeStmt, Binary,
     BlockStmt, BoolLit, BreakStmt, Call, CallStmt, CalcStmt, Cardinality,
-    Cast, Chain, ContinueStmt, Decl, DecreasesClause, EnsuresClause, Expr,
+    Cast, Chain, CharLit, ContinueStmt, Decl, DecreasesClause, EnsuresClause, Expr,
     ExpectStmt, ForStmt, ForallStmt, FunctionDecl, Fresh, Iff, IfCaseStmt,
     IfExpr, IfStmt, Implies, Index, Ident, IntLit, InvariantClause,
     LabelStmt, LemmaDecl, Lhs, MapDisplay, Member, MethodDecl,
     ModifiesClause, Module, NaryBool, NewRhs, Node, Old, Param, PrintStmt,
     Quantifier, ReadsClause, Refusal, RequiresClause, RevealStmt,
     ReturnStmt, Rewrite, SeqDisplay, SeqUpdate, SetDisplay, SkippedDecl,
-    Slice, Spec, Star, Stmt, TupleExpr, Type, TypeTest, Unary, VarDeclStmt,
-    WhileCaseStmt, WhileStmt, Comprehension,
+    Slice, Spec, Star, Stmt, StringLit, TupleExpr, Type, TypeTest, Unary,
+    VarDeclStmt, WhileCaseStmt, WhileStmt, Comprehension,
 )
 
 
@@ -200,6 +200,190 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     if t.kind == "id":
         return "generics" if t.args else "datatype"
     return "type-decl"
+
+
+# ---------------------------------------------------------------------------
+# Rows 25-27 (2026-09-09, SPEC.md "Sequences: literals, concatenation,
+# slices (v1)"): a small, best-effort, non-flow-sensitive "int" | "bool" |
+# "seq" kind inference, needed only to settle three questions -- a `+`'s
+# two operands, a slice's receiver, a literal's own elements -- never a
+# full type checker (Dafny already type-checked the source; where this
+# cannot settle a kind, the caller refuses `seq-typing` rather than
+# guess). `expr_kind` is the one shared computation (`scan_breaks`'s
+# pattern): `classify` calls it with a plain dict's `.get` (`_build_kind
+# _env`, static declared-type knowledge only); `lift_rewrite.rewrite`
+# calls it with a small wrapper over its own live `Scope` (`_rw_lookup`
+# there), consulted only to decide whether a `+` gets recorded `seq
+# -concat-lifted` -- never to accept or refuse anything, that is this
+# module's decision alone, already settled by the time rewrite runs.
+# ---------------------------------------------------------------------------
+
+def _declared_kind(t: Optional[Type]) -> Optional[str]:
+    """The static half of `expr_kind`'s question: a parameter's, return's
+    or local's OWN declared type, read as `int`/`bool`/`seq` wherever
+    rows 25-27 can use it. `None` for anything this row does not resolve
+    (an untyped local -- its initialiser is the only other source of a
+    kind, `expr_kind` itself -- or a seq element type this row does not
+    carry, already refused `nat-seq-elements`/`nested-seq` elsewhere by
+    `_type_issue`, whether or not this function also happens to call it
+    seq). `nat` reads as `int`: t tracks no separate nat-ness at this
+    grain, decision 4/14's own territory, not this row's."""
+    if t is None:
+        return None
+    if t.kind == "bool":
+        return "bool"
+    if t.kind in ("int", "nat"):
+        return "int"
+    if t.kind == "seq" and len(t.args) == 1 and _is_int_like(t.args[0]):
+        return "seq"
+    if t.kind == "array" and not t.nullable and _is_array_of_int(t):
+        return "seq"
+    return None
+
+
+def expr_kind(e: Expr, lookup) -> Optional[str]:
+    """Best-effort `int`/`bool`/`seq` kind of `e`. `lookup(name)` resolves
+    an `Ident` (or a `Call`'s callee) to its known kind, `None` when
+    unknown -- see the section banner above for who passes what."""
+    if isinstance(e, IntLit):
+        return "int"
+    if isinstance(e, BoolLit):
+        return "bool"
+    if isinstance(e, (CharLit, StringLit)):
+        return None
+    if isinstance(e, Ident):
+        return lookup(e.name)
+    if isinstance(e, Old):
+        return expr_kind(e.arg, lookup)
+    if isinstance(e, SeqDisplay):
+        return "seq"
+    if isinstance(e, Slice):
+        return "seq"
+    if isinstance(e, Unary):
+        return "bool" if e.op == "!" else "int"
+    if isinstance(e, Binary):
+        if e.op == "+":
+            lk = expr_kind(e.left, lookup)
+            rk = expr_kind(e.right, lookup)
+            if lk == "seq" and rk == "seq":
+                return "seq"
+            if lk == "int" and rk == "int":
+                return "int"
+            return None
+        return "int"  # `- * / %`: t has none of these on seq
+    if isinstance(e, (NaryBool, Implies, Iff, Chain, Quantifier)):
+        return "bool"
+    if isinstance(e, Index):
+        return "int"
+    if isinstance(e, Cardinality):
+        return "int"
+    if isinstance(e, Member):
+        return "int"  # `.Length`; anything else is refused `datatype` elsewhere
+    if isinstance(e, IfExpr):
+        tk, ek = expr_kind(e.then, lookup), expr_kind(e.else_, lookup)
+        return tk if tk == ek else None
+    if isinstance(e, Call) and isinstance(e.fn, Ident):
+        return lookup(e.fn.name)
+    return None
+
+
+def _closure_fn_kinds(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str, str]:
+    """dafny name -> kind for every `Call` `expr_kind` might need to
+    resolve: the method's own name (a self-recursive call, section 4.5),
+    keyed to its own return's kind, and every closure function's own
+    declared return (a `predicate`'s is implicitly `bool`). Anything
+    this cannot resolve (a call of a DIFFERENT method, already refused
+    `calls-other-method` elsewhere) is simply absent."""
+    kinds: dict[str, str] = {}
+    if method.name and len(method.returns) == 1:
+        k = _declared_kind(method.returns[0].type)
+        if k is not None:
+            kinds[method.name] = k
+    for d in closure:
+        if isinstance(d, FunctionDecl) and d.name:
+            k = "bool" if d.is_predicate else _declared_kind(d.ret_type)
+            if k is not None:
+                kinds[d.name] = k
+    return kinds
+
+
+def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str, str]:
+    """Name -> `int`/`bool`/`seq` for rows 25-27's own questions: every
+    parameter and the one return by declared type (the method's own and
+    every closure function's -- a `+`/slice/literal can sit inside a
+    spec_fun's body too, `classify`'s own `scope_roots` reaches both),
+    every closure function/the method's own name by `_closure_fn_kinds`,
+    every local the body declares -- by its own declared type where
+    given, else `expr_kind` of its initialiser (so `var t := s + [x];`
+    types `t` `seq` from its own right-hand side, recursively) -- and
+    every quantifier binder / `for`-loop variable, by ITS declared type
+    or else `int` (section 6's own quantifier-boundedness and decision
+    15's `for`-loop rows both restrict this lifter to int/nat binders,
+    so `int` is never a guess here, only a name this row would otherwise
+    see as `None` and wrongly refuse `seq-typing` on -- measured:
+    `forall i :: ... ==> r[|s| + i] == a[i]`'s `|s| + i` is plain int
+    arithmetic over a quantifier binder, not a `+` this row should ever
+    touch). A flat, block-scope-blind forward pass over `walk`'s own
+    traversal order: Dafny already block-scopes and type-checked the
+    source, and this row only ever needs a best-effort answer, refusing
+    `seq-typing` when it truly has none, never a wrong kind silently
+    accepted. `setdefault` throughout: an outer param/return/local name
+    a quantifier binder or `for`-var happens to share is not clobbered
+    by the (rare) shadowing case, the more common reading kept."""
+    env: dict[str, str] = dict(_closure_fn_kinds(method, closure))
+    for p in method.params:
+        k = _declared_kind(p.type)
+        if k is not None:
+            env[p.name] = k
+    if len(method.returns) == 1:
+        k = _declared_kind(method.returns[0].type)
+        if k is not None:
+            env[method.returns[0].name] = k
+    for d in closure:
+        if isinstance(d, FunctionDecl):
+            for p in d.params:
+                k = _declared_kind(p.type)
+                if k is not None:
+                    env.setdefault(p.name, k)
+    for root in [method] + list(closure):
+        for n in walk(root):
+            if isinstance(n, VarDeclStmt):
+                if n.init:
+                    for nm, rhs in zip(n.names, n.init):
+                        k = _declared_kind(nm.type)
+                        if k is None and isinstance(rhs, Expr):
+                            k = expr_kind(rhs, env.get)
+                        if k is not None:
+                            env[nm.name] = k
+                else:
+                    for nm in n.names:
+                        k = _declared_kind(nm.type)
+                        if k is not None:
+                            env[nm.name] = k
+            elif isinstance(n, Quantifier):
+                for b in n.binders:
+                    env.setdefault(b.name, _declared_kind(b.type) or "int")
+            elif isinstance(n, ForStmt):
+                env.setdefault(n.var, _declared_kind(n.var_type) or "int")
+    return env
+
+
+def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
+    """Row 25: `None` when every element of the Dafny sequence display
+    `n` is int-typed (so it lifts to t's literal, `[]` -- no elements at
+    all -- included); else the section-5 reason the FIRST offending
+    element names -- `nested-seq` for a nested display (or anything else
+    this row cannot type as `int`, the same bucket `_type_issue` already
+    uses for "seq of anything but int/nat"), `string-char` for a literal
+    char/string element."""
+    for el in n.elems:
+        if isinstance(el, SeqDisplay):
+            return "nested-seq"
+        if isinstance(el, (CharLit, StringLit)):
+            return "string-char"
+        if expr_kind(el, env.get) != "int":
+            return "nested-seq"
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1086,7 +1270,17 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     if ret_param is not None:
         rt = ret_param.type
         if rt is not None and rt.kind == "seq":
-            issues.append((ret_param.line, "seq-return", ret_param.name))
+            # Rows 25-27 (2026-09-09): a `seq<int>`/`seq<nat>` return is
+            # an ordinary seq return -- t has had these since decision
+            # 22 opened "Sequences as values (v1)" -- so it no longer
+            # refuses `seq-return` on element type alone (SPEC.md notes
+            # this widening explicitly); a `seq<nat>` return carries no
+            # per-element `>= 0` guarantee (t has none to give it, the
+            # same gap decision 14 names for a `seq<nat>` LOCAL/PARAM,
+            # deliberately accepted here as the weaker theorem). Any
+            # other seq shape (nested, bool, char) stays refused.
+            if not (_is_seq_of_int(rt) or _is_seq_of_nat(rt)):
+                issues.append((ret_param.line, "seq-return", ret_param.name))
         elif (rt is not None and rt.kind == "array" and not rt.nullable
                 and _is_array_of_int(rt) and array_mutation is not None
                 and array_mutation.kind == "alloc-fill"):
@@ -1128,6 +1322,52 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     for root in scope_roots:
         for n in walk(root):
             _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids)
+
+    # -- sequences: literal, concat, slice (rows 25-27, 2026-09-09) ------
+    # `SeqDisplay`/`Slice`/a `+` on seqs used to be unconditional
+    # refusals (`_scan_node_for_issues`, before this row); now each
+    # fires only when this row cannot actually map it, using
+    # `_build_kind_env`'s best-effort typing. A slice needs one more
+    # check `_scan_node_for_issues` cannot make on its own: decision
+    # 22's own `array-mutation`'s ONE mutated array still refuses a
+    # BOUNDED slice of itself (`a[lo..hi]`, `a[lo..]`, `a[..hi]` --
+    # only its unbounded `a[..]`, already exempted via `accepted_ids`,
+    # maps); every OTHER seq-typed receiver (a read-only array
+    # parameter, a seq local/parameter/return, a slice-of-a-slice) now
+    # lifts the same way a plain seq does, per SPEC.md's own note that
+    # `a[..]` on an array parameter "is the parameter itself, unchanged".
+    kind_env = _build_kind_env(method, closure)
+    mutated_array_name = array_mutation.name if array_mutation is not None else None
+    for root in scope_roots:
+        for n in walk(root):
+            if isinstance(n, SeqDisplay):
+                bad = _seq_literal_issue(n, kind_env)
+                if bad is not None:
+                    issues.append((n.line, bad, "[...]"))
+                else:
+                    rewrites.append(Rewrite(rule="seq-literal-lifted", line=n.line))
+            elif isinstance(n, Slice):
+                if id(n) in accepted_ids:
+                    continue  # decision 22's own unbounded exemption, unchanged
+                if (mutated_array_name is not None and isinstance(n.base, Ident)
+                        and n.base.name == mutated_array_name):
+                    issues.append((n.line, "seq-slice", "[..]"))
+                elif expr_kind(n.base, kind_env.get) == "seq":
+                    if n.lo is None and n.hi is None:
+                        rewrites.append(Rewrite(rule="whole-slice-as-seq", line=n.line))
+                    else:
+                        rewrites.append(Rewrite(rule="seq-slice-lifted", line=n.line))
+                else:
+                    issues.append((n.line, "seq-slice", "[..]"))
+            elif isinstance(n, Binary) and n.op == "+":
+                lk = expr_kind(n.left, kind_env.get)
+                rk = expr_kind(n.right, kind_env.get)
+                if lk == "seq" and rk == "seq":
+                    rewrites.append(Rewrite(rule="seq-concat-lifted", line=n.line))
+                elif lk == "int" and rk == "int":
+                    pass  # ordinary arithmetic, unaffected by rows 25-27
+                else:
+                    issues.append((n.line, "seq-typing", "+"))
 
     # -- definite assignment of the return, every path (section 4.7) -----
     if ret_param is not None and method.body is not None:
@@ -1223,13 +1463,13 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     "Division and modulo (v1)" (2026-09-08) gives t Euclidean `div`/`mod`,
     the same convention Dafny's own `/` and `%` use on `int` (measured on
     dafny 4.11.0), so `lift_rewrite.py` maps them one to one and no
-    div-mod issue is raised."""
-    if isinstance(n, SeqDisplay):
-        issues.append((n.line, "seq-literal", "[...]"))
-    elif isinstance(n, Slice):
-        if id(n) not in accepted_ids:
-            issues.append((n.line, "seq-slice", "[..]"))
-    elif isinstance(n, SeqUpdate):
+    div-mod issue is raised. `SeqDisplay`, `Slice` and a `+` on seqs are
+    likewise no longer refused unconditionally here: rows 25-27
+    (2026-09-09) have their own dedicated, type-aware pass in `classify`
+    (`_build_kind_env`/`expr_kind`), since deciding whether they fire
+    needs more context (the method's own param/return/local types) than
+    this generic per-node scan carries."""
+    if isinstance(n, SeqUpdate):
         issues.append((n.line, "seq-update", ":="))
     elif isinstance(n, (Old, Fresh)):
         if id(n) not in accepted_ids:

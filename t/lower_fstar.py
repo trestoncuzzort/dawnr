@@ -142,6 +142,73 @@ what is delegated to the kernel and what is refused:
   `tasks/*.json` COUNT, the 15 old ones reading exactly AGREEMENT.md's
   fstar column (verified/refuted throughout).
 
+  SEQUENCES: LITERALS, CONCATENATION, SLICES (2026-09-09, SPEC.md
+  "Sequences: literals, concatenation, slices (v1)"). Three new Expr
+  forms, each a kernel-native FStar.Seq form: `{"op": "seq", "args": [e1,
+  ..., en]}` (`[e1, ..., en]`, n >= 0) is nested `Seq.append (Seq.create 1
+  ei) ...`, bottoming out at a bare `Seq.create 1 en` for the last element
+  (never an append-to-empty) and at the existing `Seq.createL #int []`
+  spelling (the ground `_seq` literal's own, "Sequences as values") for
+  n == 0; `s + t` with both operands seqs is `Seq.append s t`, the SAME
+  `+` int addition already renders, dispatched by operand type in `ty()`
+  exactly as `==` already is (`_pty`'s posture: one operator name, no new
+  syntax); `s[a..b]` is `Seq.slice s a b`. `sx` (the seq-valued term
+  renderer) grew a `_literal` helper plus the `"seq"`/`"+"`/`"slice"`
+  cases; `ty()` grew a `"+"`-is-seq-when-its-first-operand-is check ahead
+  of the ARITH fallthrough that used to claim every `+` unconditionally.
+  No new lemma is invoked by name anywhere in this: `Seq.create`'s
+  `lemma_index_create`, `Seq.append`'s `lemma_len_append` and
+  `lemma_index_app1`/`lemma_index_app2`, and `Seq.slice`'s
+  `lemma_len_slice`/`lemma_index_slice` (all four SMTPat'd on the literal
+  terms in ulib/FStar.Seq.Base.fsti) fire the moment the term appears,
+  the same "no assist needed" posture `Seq.upd`/`Seq.create`/`Seq.equal`
+  already have. Measured 2026-09-09 on F* 2026.08.30 (P5.fst/P6.fst): a
+  direct probe proving, for UNINTERPRETED int binders (not ground
+  literals), the index-0/index-1/length facts about a 2-element seq built
+  either `Seq.createL [e1;e2]` or `Seq.append (Seq.create 1 e1) (Seq.create
+  1 e2)` verified for BOTH encodings with no assist -- this is not a case
+  where one form fails -- so `_literal` uses the append/create1 form
+  because it needs one spelling at every literal length rather than two
+  (a one-element literal, the `r := r + [s[i]]` append idiom filter_pos
+  measures, already has to be `Seq.create 1 e` on its own regardless, so
+  building n>1 literals from the same pair costs nothing extra).
+    DEFINEDNESS. `seq` and `+` cost nothing new to THIS file: neither
+  emits a guard, because F*'s own signatures for `Seq.create`/`Seq.append`
+  carry none (SPEC.md: a literal is defined iff every element is, a
+  concatenation iff both operands are, exactly what evaluating the
+  sub-expressions already costs). `slice` is the one that costs something,
+  the same shape `at` already costs: `Seq.slice`'s own ulib signature is
+  `#a:Type -> s:seq a -> i:nat -> j:nat{i <= j && j <= length s}`
+  (FStar.Seq.Base.fsti), so `i:nat`/`j:nat` forces `0 <= a` and `0 <= b`
+  and `j`'s refinement forces `a <= b <= len(s)`: a subtyping check the
+  kernel is already forced to discharge from the ambient path condition,
+  nothing re-derived or re-guarded here. Confirmed by probe (P7.fst):
+  `Seq.slice s 0 (Seq.length s + 1)` on an unrefined `s` fails typing,
+  Error 19, "Subtyping check failed ... Expected type j:
+  Prims.nat{0 <= j && j <= FStar.Seq.Base.length s}", never a bare pass,
+  while the same call with `0 <= a /\\ a <= b /\\ b <= Seq.length s` in
+  scope verifies with no further help.
+    The certificate path needed NO new code in this file: `lower_verus.py`
+  (imported, the shared `certificate_formula`) gained a `defined()` case
+  for `"slice"` the same day, from the same SPEC.md section, as part of
+  its own column's pass on this construct; `_certificate` here already
+  calls `lower_verus.certificate_formula` and renders whatever formula
+  comes back through the existing `cx.prop(formula, {}, {})` call, exactly
+  as it has since 2026-09-06, so tail's off-by-one twin (`s[2..len(s)]` on
+  a length-1 `s`, an "undefined" witness) certifies and REFUTES with no
+  code added here beyond the `sx`/`ty` cases above.
+    MEASURED (`out/agent-fstar-seqops/`, F* 2026.08.30): tail (`r :=
+  s[1..]`, loop-free) COUNTS, real VERIFIED, off-by-one twin REFUTED,
+  witness s=[0] -> real [], twin "slice bounds [2..1] outside
+  0 <= a <= b <= 1". filter_pos (`r := r + [s[i]]` inside a loop, `r := []`
+  the initial literal) COUNTS, real VERIFIED, invariant-drop#1 twin
+  REFUTED, witness exit at s=[], i=1, r=[1]. swap and reverse are BYTE-
+  IDENTICAL to their prior `out/swap.fst`, `out/reverse.fst`,
+  `out/swap_twin.fst`, `out/reverse_twin.fst` (`cmp`, all four), and a
+  full `run_all` over every task in `tasks/*.json` (19 tasks) COUNTS with
+  no REFUSED or flaked verdict, confirming the new `ty()`/`sx()` cases are
+  additive and untaken by any previously committed task.
+
 Statement bodies lower by symbolic execution to one expression (per-var
 if-merge, the Rocq lowering's approach): every t body ends each path in an
 assign, so the final environment entry for the return name IS the function
@@ -304,7 +371,13 @@ class Ctx:
         if "call" in e:
             return self.funs[e["call"]["fun"]]["result"]
         op = e["op"]
-        if op in ("update", "fill"):
+        if op in ("update", "fill", "seq", "slice"):
+            return "seq"
+        if op == "+" and self.ty(e["args"][0], local) == "seq":
+            # SPEC.md "Sequences: literals, concatenation, slices": `+` is
+            # polymorphic by operand type exactly as `==` already is, so
+            # the ARITH table below (which only ever means int `+`) is
+            # consulted only once a seq-typed left operand is ruled out.
             return "seq"
         if op in ARITH or op in ("neg", "len", "at"):
             return "int"
@@ -345,7 +418,70 @@ class Ctx:
         if op == "fill":
             n, v = e["args"]
             return f"(Seq.create {self.zx(n, env, local)} {self.zx(v, env, local)})"
+        if op == "seq":
+            return self._literal(e["args"], env, local)
+        if op == "+":
+            s, t = e["args"]
+            return (f"(Seq.append {self.sx(s, env, local)} "
+                    f"{self.sx(t, env, local)})")
+        if op == "slice":
+            s, a, b = e["args"]
+            # SPEC.md: DEFINED IFF 0 <= a <= b <= len(s), the same shape of
+            # obligation `at` gets from Seq.index's domain refinement.
+            # F*'s own `Seq.slice` signature is
+            #   #a:Type -> s:seq a -> i:nat -> j:nat{i <= j && j <= length s}
+            # (ulib/FStar.Seq.Base.fsti), so `i:nat`/`j:nat` already forces
+            # `0 <= a` and `0 <= b` and the refinement on `j` forces
+            # `a <= b <= len(s)`: nothing here re-derives or re-guards what
+            # that signature already requires, exactly the DIV/MOD and
+            # `at`/`update`/`fill` posture. A slice whose bounds fail this
+            # is therefore ill-typed at the call site, not a false ensures
+            # -- confirmed by probe (P7.fst, see the 2026-09-09 "Sequences:
+            # literals, concatenation, slices" note below): `Seq.slice s 0
+            # (Seq.length s + 1)` on an unrefined `s` fails Error 19,
+            # "Subtyping check failed ... Expected type j: Prims.nat{0 <= j
+            # && j <= FStar.Seq.Base.length s}", while `Seq.slice s a b`
+            # with `a b:int{0 <= a /\ a <= b /\ b <= Seq.length s}` in scope
+            # verifies with no further help.
+            return (f"(Seq.slice {self.sx(s, env, local)} "
+                    f"{self.zx(a, env, local)} {self.zx(b, env, local)})")
         raise NotImplementedError(f"seq position holds non-variable {e!r}")
+
+    def _literal(self, args: list, env: dict, local: dict) -> str:
+        """`[e1, ..., en]` (SPEC.md "Sequences: literals, concatenation,
+        slices"), n >= 0. Rendered as nested `Seq.append (Seq.create 1 ei)
+        ...`, bottoming out at a bare `Seq.create 1 en` for the last
+        element rather than an append-to-empty. Measured 2026-09-09
+        (P5.fst/P6.fst, F* 2026.08.30): a direct probe proving, for
+        UNINTERPRETED int binders e1 e2 (not ground literals), both
+        `Seq.index (Seq.createL [e1;e2]) 0/1 == e1/e2` and `Seq.length
+        (Seq.createL [e1;e2]) == 2`, and the same three facts about
+        `Seq.append (Seq.create 1 e1) (Seq.create 1 e2)`, verified with `()`
+        for BOTH encodings, no assist needed either way -- so this is not a
+        case where one form fails and the other doesn't. The nested
+        append/create1 form is used anyway because it needs only one
+        spelling, not two: a one-element literal (the `r := r + [s[i]]`
+        append idiom `filter_pos` measures) already has to render as
+        `Seq.create 1 e` on its own regardless of what an n>1 literal does,
+        since `+`'s own seq case (below) is `Seq.append`, so building n>1
+        literals from the same `Seq.append`/`Seq.create` pair means every
+        literal, at every length, resolves to a term the `+` case, the
+        `at`/`update`/`fill` case (SPEC.md "Sequences as values") and the
+        ordinary lemma set (`lemma_index_create`, `lemma_len_append`,
+        `lemma_index_app1`/`lemma_index_app2`, all SMTPat'd on the literal
+        terms in ulib/FStar.Seq.Base.fsti) already cover, rather than adding
+        `Seq.createL`'s separate `createL_post`/`seq_to_list` machinery for
+        no measured benefit. The empty literal `[]` keeps the existing
+        `Seq.createL #int []` spelling (the ground `_seq` literal's own,
+        established 2026-09-06/09), since `Seq.append`/`Seq.create` has no
+        zero-argument form of its own to fall back on."""
+        if not args:
+            return "(Seq.createL #int [])"
+        head, *rest = args
+        h = self.zx(head, env, local)
+        if not rest:
+            return f"(Seq.create 1 {h})"
+        return f"(Seq.append (Seq.create 1 {h}) {self._literal(rest, env, local)})"
 
     def call(self, e: dict, env: dict, local: dict) -> str:
         c = e["call"]

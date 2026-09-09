@@ -125,6 +125,69 @@ v1 mapping, gate by gate (SPEC.md):
     15 read `verified / refuted` through the real dafny kernel, unchanged
     from AGREEMENT.md's dafny column. All 17 tasks in `tasks/*.json` COUNT.
 
+  sequence literals, concatenation, slices (added 2026-09-09, SPEC.md
+    "Sequences: literals, concatenation, slices (v1)"): all three of the
+    kernel's own forms, no totalizing needed. `{"op": "seq", "args":
+    [e1, ..., en]}` is Dafny's own sequence display, `[e1, ..., en]`, `[]`
+    for n == 0. `{"op": "+", "args": [s, t]}` with both operands seqs needed
+    NO new codegen at all: BIN_OPS already maps t's `+` straight to Dafny's
+    `+`, and Dafny's `+` is itself overloaded over `seq<int>` as
+    concatenation exactly as t's is, measured on a probe (`s + [9]` next to
+    plain int `+` in the same method, one verified obligation, 0 errors) as
+    the SPEC.md text predicts ("one operator name, polymorphic ... exactly
+    as `==`"): the kernel's own overload resolution IS the type dispatch the
+    task brief asked this file to make, so there is nothing to write.
+    `{"op": "slice", "args": [s, a, b]}` is Dafny's own `s[a..b]`. The
+    slice's definedness obligation, `0 <= a <= b <= len(s)`, is discharged
+    the same way `at`'s and `update`'s are: Dafny's own well-formedness
+    checking, nothing here totalizes it. Measured on a probe: `s[1..5]`
+    with no bound on `|s|` rejects at exit 4 with two errors ("lower bound
+    out of range", "upper bound below lower bound or above length of
+    sequence") on the same line; the identical call guarded by
+    `requires |s| >= 5` verifies clean. Two committed tasks carry the
+    construct: `tail` (loop-free, `r := s[1..len(s)]`) and `filter_pos` (a
+    loop appending `r := r + [s[i]]`).
+      What DID need work, same as the update/fill wave: the twin path for a
+    witness `_kind == "undefined"` reached through a slice. `tail`'s
+    canonical twin is OFF-BY-ONE on the slice's lower bound (`s[1..len(s)]`
+    -> `s[(1+1)..len(s)]`); on the smallest admissible input (s=[0]) the
+    real body has a value (`[]`) and the twin's does not (`[2..1]` fails
+    `a <= b`), the same shape swap's `at`-index twin had. `_ev_undef` and
+    `_DefViol` gained two cases: `"seq"` is trivial (every element already
+    evaluated by the generic arg loop above it, so `list(a)` is the value,
+    always defined once its elements are, matching interp.ev's own `"seq"`
+    case); `"slice"` builds a THREE-part ground guard, `0 <= a`, `a <= b`,
+    `b <= len(s)`, conjoined, where `at`'s and `update`'s guard is two-part
+    (a single index bound) because a slice's obligation is a range, not a
+    point. `"+"` needed nothing in `_ev_undef` either: it already read
+    `a[0] + a[1]`, and Python's `+` on two lists concatenates exactly as
+    interp.ev's own `"+"` case does, so the mirror was already correct for
+    the seq case without anyone having written it for that purpose.
+    `_ev` (the general evaluator the "value"/"exit"-kind certificates
+    unroll and prune through) got NO new cases: neither task's `requires`,
+    `ensures`, nor surviving `invariants` mention `seq`, `+`, or `slice`
+    directly, only `at`/`len`/comparisons, so nothing in the certificate
+    formula for either task's witness ever reaches those ops. A future task
+    whose spec itself states a seq literal, concatenation, or slice (not
+    just its body) would need that gap closed then, not before; nothing
+    here claims it is closed now.
+      Measured, own column, on `tasks/tail.json` and `tasks/filter_pos.json`
+    (`harness.run_task`, this file's `lower`, the real dafny kernel):
+    `tail` COUNTS, real VERIFIED, off-by-one twin REFUTED via the new
+    undefined-kind slice certificate (witness s=[0] -> real [], twin slice
+    bounds [2..1] outside 0 <= a <= b <= 1). `filter_pos` COUNTS, real
+    VERIFIED, invariant-drop twin REFUTED via the unchanged exit-kind
+    certificate (witness exit at s=[], i=1, r=[1]): the loop's own `seq`
+    literal (`r := []`) and append (`r := r + [s[i]]`) needed no new
+    certificate machinery because the twin here breaks on the dropped
+    invariant, not on a seq op, and the existing `_name_seqs`/`_tlit`/
+    `_seq_lit` chain already names seq witness values regardless of which
+    op produced them. `swap` and `reverse` (no new ops in either) are
+    UNCHANGED: `harness.run_task` still COUNTS both, and their lowered
+    sources, real and twin, are byte-identical (`cmp`) to the committed
+    `out/swap.dfy`, `out/swap_twin.dfy`, `out/reverse.dfy`,
+    `out/reverse_twin.dfy`.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -201,6 +264,10 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return f"{args[0]}[{args[1]} := {args[2]}]"
     if op == "fill":
         return f"seq({args[0]}, _ => {args[1]})"
+    if op == "seq":
+        return "[" + ", ".join(args) + "]"
+    if op == "slice":
+        return f"{args[0]}[{args[1]}..{args[2]}]"
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
@@ -303,6 +370,10 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
             return f"{args[0]}[{args[1]} := {args[2]}]"
         if op == "fill":
             return f"seq({args[0]}, _ => {args[1]})"
+        if op == "seq":
+            return "[" + ", ".join(args) + "]"
+        if op == "slice":
+            return f"{args[0]}[{args[1]}..{args[2]}]"
         if op in BIN_OPS:
             return f"({args[0]} {BIN_OPS[op]} {args[1]})"
         raise ValueError(f"t has no operator {op!r}")
@@ -852,6 +923,23 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
         if n < 0:
             raise _DefViol({"op": ">=", "args": [_tlit(n), {"int": 0}]})
         return [v] * n
+    if op == "seq":
+        # [e1, ..., en]: every element already evaluated above (a itself is
+        # the list of results), always defined once its elements are, same
+        # as interp.ev's "seq" case.
+        return list(a)
+    if op == "slice":
+        # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s), interp.ev's own rule,
+        # a three-part guard (at's/update's is two) because the bound is a
+        # range, not a single index.
+        s, lo, hi = a
+        if not (0 <= lo <= hi <= len(s)):
+            raise _DefViol({"op": "and", "args": [
+                {"op": "<=", "args": [{"int": 0}, _tlit(lo)]},
+                {"op": "and", "args": [
+                    {"op": "<=", "args": [_tlit(lo), _tlit(hi)]},
+                    {"op": "<=", "args": [_tlit(hi), {"int": len(s)}]}]}]})
+        return s[lo:hi]
     if op == "+":
         return a[0] + a[1]
     if op == "-":
