@@ -1322,6 +1322,123 @@ decoder or a repair pass on the five leak shapes, measured on the same
 learn from; no round is compared under the version-2 prompt until the
 control is re-measured under it (12.7's rule).
 
+## WS-19: the frontier moves (opened 2026-09-10)
+
+Treston, 2026-09-09: "the front tier survey is gonna be groundbreaking for
+what we are doing so take it as extremely important." The survey is
+`t/FRONTIER-2026.md` (2026-09-09: seven axes of what front tier means in
+2026, t's position on each, fourteen ranked moves, three things t can
+offer the field; 191 candidates, 60 read, 80 kept after a critic pass and
+a second independent fetch of nearly every number; PDF in ~/tup-reports,
+every source saved under ~/tup-reports/papers). On 2026-09-10 every move
+went through a second adversarial pass, two skeptics each, one checking
+the cited number against its source and one checking the claimed effect
+against t's own numbers, and a judge wrote the verdict under each move:
+14 moves, 1 kept as written, 12 corrected, 1 dropped (the escape-hatch
+audit, already built into all seven verifiers), 0 unverified. Three cited
+numbers were wrong in kind (SAFE's 43.17 percent is Accuracy at 1, the
+AutoVerus 37-of-150 does not appear in its paper, Vero's 368 and 20,440
+were mixed), and the file says so under each move. The survey's summary,
+which t's own instruments bear out: t leads on one axis nobody else
+measures (seven-kernel joint agreement with a certified refutation, 42 of
+209), is two to five orders of magnitude behind on corpus scale, and has
+no repair loop, which the field's 2026 numbers name as the lever that
+moves results most for the least engineering.
+
+The moves, in the order t takes them. The order is the survey's rank
+corrected by the skeptics and by what t already measured (the loop's
+second fact in WS-18, the nl/ stdin instrument, the trio's residual
+notes), cheapest measurable move first. Each carries its evidence, the
+number it is expected to move, and the first hurdle.
+
+**1. The repair loop, starting at the parser (survey move 1).** Evidence:
+Tan, arXiv 2605.30914 (held-out verified pass rate 9.7 to 31.1 percent
+with multi-turn verifier feedback; the paper's own limitations call the
+pair confounded across several changes at once, so it is a direction, not
+a size); AutoVerus, arXiv 2409.13082 (91.3 percent with an error-driven
+repair bank; the per-phase count the survey first quoted is not in the
+paper). t's own fact comes first: two thirds of every column's replies on
+the 161 eval problems fail to PARSE (107 to 110 of 161, LOOP-CURVE.md) on
+five Python leak shapes (`&`, `^`, a `for` comprehension, a `.` method
+call, `/`) before any kernel is reached. So the loop begins with the
+parser's own message (surface.py names the token and the line), then
+check_wf's, then the interpreter's failing assertion, then each kernel's
+failure text, each a bounded retry. Expected effect: the parse row of the
+curve first, then the tests row, measured greedy on the same 161 with the
+same-path control and the round-2 adapter at k retries, before any
+training. First hurdle: no kernel has an error-to-prompt adapter; the
+first measurement needs none, since the parser, check_wf and interp
+messages exist today.
+
+**2. The data multiplier over the verified corpus (survey move 12).**
+Evidence: ATLAS, arXiv 2512.10173 (2,751 verified Dafny programs into
+19,385 training examples); SAFE, arXiv 2410.15756 (a debugging objective
+lifting Accuracy at 2 from 46.76 to 49.64 percent at matched budget). t's
+own fact: round 2 had 82 positives and learned the axis with 140 twin
+pairs, not the one with 25 test pairs (WS-18). Of the four variants, three
+need no new plumbing and can be emitted today from the 42 all-seven and
+61 six-of-seven lifted tasks, the 19 committed tasks and the fuzz families:
+NL-to-spec, spec-to-body, invariant infilling; only spec-repair needs the
+(failed attempt, message, fix) trail the harness does not keep yet, which
+move 1 builds. Expected effect: positives in the hundreds per round at no
+proof cost. First hurdle: the pair schema in loop_dataset.py has one shape
+(a positive and its twin); the three new shapes need their own.
+
+**3. The bottleneck column on the sweep (survey move 6).** Evidence: the
+Lean Kernel Arena's per-checker table (arena.lean-lang.org, accessed
+2026-09-09). The skeptic computed it from the ninth sweep: of the 61
+six-of-seven tasks, lean alone blocks 21, fstar 19, framac 9, rocq 7,
+verus 5, spark 0. Expected effect: "61 in six" becomes a list with owners,
+and the order of kernel work is lean, fstar, framac, not spark (survey
+move 7, closing spark's seq equality, was dropped for that reason: it was
+already closed and moves no count). First hurdle: none; a column in
+run_par's table and a per-column count in the Reading.
+
+**4. The ladder as a completeness measurement, before any score (survey
+move 2, demoted).** Evidence: SpecCoder, arXiv 2607.04232 (completeness
+0.1707 to 0.7820); MutDafny, arXiv 2511.15403. The skeptic's finding:
+34 of the 35 restate-the-body specs on the 7B's 64 are already refuted
+under the single-twin rule, so a score over the ladder will not separate a
+vacuous spec from a genuine one by itself. So: measure first. The grounded
+ladder refutes each rung through the interpreter at a witness, free of
+kernels, so the fraction of rungs refuted is measured against the tests
+on the 64 well-formed specs and on round 2's 23; only if it separates
+the two classes does it enter a reward. First hurdle: the measurement.
+
+**5. The construct line, unchanged (survey moves 4, 5, 11, 12.7's own
+order).** Pairs are stated (SPEC.md "Pairs (v1)"), the DafnyBench census's
+top gap, the survey's skeptic confirming multi-return leads the full 643
+and string-char only the MBPP-DFY family. Strings finish with lifter row 28
+and pool version 2 (in progress). `string-lib` (13,266 nl/ problems, 225
+sole) is a candidate wave that needs its own SPEC.md semantics decision
+(which of split, join, count, strip, format have one meaning in seven
+kernels), not a bypass of one. The stdin signature is measured
+(COVERAGE-nl-stdin.md: 203 validated of 20,509, about 40 percent over the
+511 function-shaped problems in fragment, not a doubling), and what
+remains is the multi-test-case wrapper as a SPEC decision. MBPP-DFY: 45 of
+164 lifted, 8 in all seven; the all-seven bar has moved 5 to 8 across five
+construct waves against named blockers, a grind, not a quick win.
+
+**6. The preregistered reward ablation (survey move 14).** Evidence: "When
+the Reward Suite Is Leaky", arXiv 2607.11022 (a 0.20-point gap against a
+preregistered 1.5-point margin). Two arms, verify-in-one-kernel against
+seven-kernel verify-plus-refuted-twin, matched seeds, the margin declared
+before the run. The skeptic's correction: GPU cost per round is tens of
+minutes, so the hurdle is the missing leaky-arm pipeline (a one-kernel
+reward path in loop_dataset.py), not the box.
+
+**7. Downstream of 1 and 2:** branching on partial diagnostics (survey
+move 3; the AlphaVerus number is a Llama-3.1-70B REBASE result over
+verifier scores and messages together), the self-debugging objective
+(move 13, SAFE's 2.88 points), the AlgoVeri comparison (move 10, kept as
+written: its 77 tasks need a construct census against t first), and the
+discipline as a field-facing artifact (move 8, sound, its headline
+numbers re-pulled once 13.3 is resolved).
+
+DONE WHEN: moves 1 to 4 each have a measured row in the curve or the
+sweep, in this order; 5 closes on 12.7's line; 6 has its two arms
+declared and run once.
+
 ## The road to 1.0 (opened 2026-09-05)
 
 WS-12 is the next six sessions. This is everything after them, to the two

@@ -446,6 +446,76 @@ arguments or results are Python strings enter the spec experiment's pool
 as code-point sequences (`mbpp_dfy.parse_assertion`), which is the pool's
 version 2.
 
+### Pairs (v1)
+
+Stated 2026-09-10 (ROADMAP 12.7, the wave after strings). Measured first,
+twice. On the 785 DafnyBench programs, `multi-return` heads the census's
+greedy order once the sequence trio landed: 71 gradable programs carry it,
+27 are blocked by it alone, and of the 73 multi-return methods among the
+parsed files 66 return two values (46 `(int, int)`, 6 `(nat, nat)`, 3 the
+`(bool, int)` flag-and-value idiom, 2 `(seq<int>, seq<int>)`), 43 carry a
+loop, and 26 of the `(int, int)` methods compute both values in one loop,
+so the two are one coupled result and not two tasks (the shape
+measurement of 2026-09-09 that settled `zero-returns` and `multi-method`
+as burdens). On the 24,748 nl/ problems, `tuple` is the third gap after
+strings and the string library: 7,906 problems build or unpack a tuple, 53
+are blocked by it alone, while a function returning several values is 43.
+So t takes a pair as a value. One construct serves both corpora: the
+Dafny method with two returns (the lifter turns two named outs into one
+pair return) and the Python tuple (a value passed, returned, compared),
+and a pair of two base types is the whole of v1.
+
+New type: `{"pair": [T1, T2]}`, each of `T1`, `T2` one of `"int"`,
+`"bool"`, `"seq"`; written `(int, int)`, `(bool, seq)`. A parameter,
+return or local type. Not in v1: a pair of pairs, a seq of pairs, a pair
+of three.
+
+New Expr forms:
+
+```
+{"op": "pair", "args": [Expr, Expr]}   // (a, b); a pair value; defined iff both components are
+{"op": "fst",  "args": [PairExpr]}      // p.0; always defined on a pair
+{"op": "snd",  "args": [PairExpr]}      // p.1; always defined on a pair
+```
+
+`pair` denotes the pair whose first component is its first argument and
+whose second is its second; `fst` and `snd` project, `fst((a, b)) == a`
+and `snd((a, b)) == b`. `==` and `!=` on two pairs of one type are
+componentwise, the polymorphic `==` again (two ints, two bools, two seqs,
+two pairs); `< <= > >=` stay int-only, so a pair has no order. A `pair`
+whose operands disagree with the declared type, a projection of anything
+but a pair, and a `==` across pair types are ill-typed. Nothing else
+changes: the loop frame rule havocs a pair variable by name, a bound
+variable is still an int, and a component obeys its own type's rules
+(`len` and `at` reach a seq component through `fst` or `snd`, with the
+same definedness obligations). The notation writes `(e1, e2)` for the
+pair (a parenthesised expression with a comma; `(e)` alone is still
+grouping) and `p.0`, `p.1` for the projections; the AST carries `pair`,
+`fst`, `snd` and nothing else.
+
+Two committed tasks carry the construct: `divmod_pair` (loop-free:
+`requires y > 0`, `r := (x div y, x mod y)`, `ensures r.0 * y + r.1 == x`,
+`0 <= r.1`, `r.1 < y`; twin `wrong-var`, the components swapped, refuted
+at `x = 1, y = 2`) and `min_max` (a loop over a non-empty seq that keeps
+both bounds in one pass and returns `(lo, hi)`, ensures every element
+between `r.0` and `r.1` and each attained; the coupled `(int, int)` loop
+shape the measurement counts 26 of; twin an invariant drop). The twin
+ladder gains one move: `wrong-var` swaps the two components of a `pair`
+and swaps `fst` for `snd` in a projection; `off-by-one` reaches a
+component as any int. The fuzz family `v1pairs` measures which twins
+refute, per column.
+
+Each lowering uses its kernel's own product and records it in a dated
+note: dafny and verus tuples with `.0` and `.1`, lean `Int × Int` with
+`.1` and `.2`, rocq `Z * Z` with `fst` and `snd`, fstar `int & int`, spark
+a record type declared per pair type inside the task's package, framac a
+struct returned by value with `\result.a` and `\result.b` in ACSL, or a
+named refusal where the memory model or a seq component costs the
+certificate. The lifter's mapping (LIFTER-DECISIONS.md row 29): a method
+`returns (a: T1, b: T2)` lifts to one return `r: (T1, T2)`, `a` and `b`
+become locals, every exit returns `(a, b)`, and `a`, `b` in `ensures`
+become `r.0`, `r.1`; three or more returns stay refused, by name.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
@@ -518,6 +588,7 @@ values"). No overflow semantics (mathematical integers; bounded backends
 owe explicit range obligations). One return value. No mutual recursion,
 no higher-order functions, no nested seqs, no string library
 (sequence literals, concatenation and slices landed 2026-09-09; a string
-is a seq of code points, same night).
+is a seq of code points, same night). A pair is one value ("Pairs",
+stated 2026-09-10): no pair of pairs, no seq of pairs, no triple.
 These are gates to open with measurements, not omissions to apologize
 for.
