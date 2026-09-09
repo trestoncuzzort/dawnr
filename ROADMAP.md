@@ -1136,10 +1136,7 @@ it the stdin instrument `nl_stdin.py` (`COVERAGE-nl-stdin.md`): of 20,509
 stdin problems 3,058 take a typed signature that fits every sample (`n`
 then a sequence 948, one int 615, two ints 543) and 203 are in the pool
 today; the largest refusal is the multi-test-case wrapper (6,291), the
-next construct on that corpus. Open: LIFTER-DECISIONS.md row 28 (Dafny
-`string`/`char` to seq/int), the spec experiment's pool version 2 with
-string tests as code points, and the prompt's version 2 with the new forms,
-measured against the control column before any round is compared under it.
+next construct on that corpus. Pool version 2 measured the same night (SPEC-EXPERIMENT-pool-v2.md, `--pool v2`, `--prompt v2`, both default to v1 so every existing column stays byte-identical): 606 MBPP problems against v1's 368, the 238 added being 148 blocked by a string argument, 16 by a string result and 74 by nothing string-shaped at all (a `seq` return became legal on 2026-09-09 and the pool had not been re-read; named, not folded into the strings count), every one with all three tests parsed; 368 still refused, 359 for exactly one reason, `arg:tuple` (129) and `arg:seq-of-seq` (94) the largest, the pairs and nested-seq gates in that order; the v2 prompt carries the sequence forms and the string sugar with two verified few-shot tasks; a latent comparison bug in `run_point` (interp's tuple against the assertion's list, unreachable under v1) fixed. Open: LIFTER-DECISIONS.md row 28 (Dafny `string`/`char` to seq/int, in progress), and the control column re-measured under the version-2 prompt before any round is compared under it.
 
 ### 12.8 Standing items
 

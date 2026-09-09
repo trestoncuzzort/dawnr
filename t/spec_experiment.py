@@ -92,18 +92,48 @@ def outdir(model: str) -> Path:
 
 # ------------------------------------------------------------------ pool --
 
-def pool() -> dict[int, dict]:
+POOL_VERSIONS = ("v1", "v2")
+
+
+def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
+    """(strings, allowed-expected-kinds) for a pool version.
+
+    v1 (default): `mbpp_dfy.parse_assertion`'s own default, `strings=False`;
+    a test carrying a Python string anywhere is refused (`arg:str` /
+    `expected:str`), and the only return types are int and bool, t's only
+    return types when this pool was measured (2026-09-08). Byte-for-byte
+    what `pool()` always did.
+
+    v2: `strings=True` (SPEC.md "Strings as sequences of code points"), so a
+    Python string literal parses into a t character or a t `seq` of code
+    points instead of being refused; the expected value may now also be a
+    `seq` (a string result), since `seq` has been a legal t return type
+    since 2026-09-09 ("Sequences as values")."""
+    if version == "v2":
+        return True, ("int", "bool", "seq")
+    if version == "v1":
+        return False, ("int", "bool")
+    raise ValueError("pool version must be v1 or v2, got %r" % version)
+
+
+def pool(version: str = "v1") -> dict[int, dict]:
     """task_id -> {"rec": mbpp record, "points": parsed assertions, "fn": name}.
-    Every assertion parses into t's fragment and every expected value is an
-    int or a bool. A problem with even one refused assertion is out, and the
-    refusal reasons are counted in `pool_report`."""
+
+    v1 (default, unchanged since 2026-09-08): every assertion parses into
+    t's int/bool/seq<int> argument fragment and every expected value is an
+    int or a bool. v2: strings are admitted (arguments and results), typed
+    as seq (mbpp_dfy.parse_assertion(strings=True)), and a seq expected
+    value is admitted too. Either way a problem with even one refused
+    assertion is out, and the refusal reasons are counted in
+    `pool_report`."""
+    strings, allowed = _pool_settings(version)
     recs = mbpp_dfy.mbpp_records()
     out = {}
     for tid, r in sorted(recs.items()):
-        pts = [mbpp_dfy.parse_assertion(a) for a in r["test_list"]]
+        pts = [mbpp_dfy.parse_assertion(a, strings=strings) for a in r["test_list"]]
         if not pts or not all(p["ok"] for p in pts):
             continue
-        if not all(p["expected"][0] in ("int", "bool") for p in pts):
+        if not all(p["expected"][0] in allowed for p in pts):
             continue
         fns = {p["fn"] for p in pts}
         if len(fns) != 1:
@@ -112,14 +142,15 @@ def pool() -> dict[int, dict]:
     return out
 
 
-def pool_report() -> dict:
+def pool_report(version: str = "v1") -> dict:
+    strings, allowed = _pool_settings(version)
     recs = mbpp_dfy.mbpp_records()
     why: dict[str, int] = {}
     n_ok = 0
     for tid, r in recs.items():
-        pts = [mbpp_dfy.parse_assertion(a) for a in r["test_list"]]
+        pts = [mbpp_dfy.parse_assertion(a, strings=strings) for a in r["test_list"]]
         bad = [p["why"] for p in pts if not p["ok"]]
-        if not bad and pts and all(p["expected"][0] in ("int", "bool") for p in pts):
+        if not bad and pts and all(p["expected"][0] in allowed for p in pts):
             n_ok += 1
             continue
         for w in bad or ["expected:%s" % ",".join(sorted({p["expected"][0] for p in pts if p["ok"]}))]:
@@ -185,16 +216,160 @@ ints and a yes/no answer as bool.
 Reply with exactly one t task inside a ```t fenced block and nothing else.
 """
 
+PROMPT_VERSIONS = ("v1", "v2")
 
-def fewshot_text() -> str:
+# GRAMMAR_V2 is GRAMMAR plus the sequence trio (literal, concatenation,
+# slice) and the string sugar (SPEC.md "Sequences: literals, concatenation,
+# slices" and "Strings as sequences of code points"), both stated 2026-09-09,
+# after this file's v1 GRAMMAR was written. It is a separate constant, not a
+# patch to GRAMMAR, so that --prompt v1 (the default) stays byte-for-byte
+# what it always was.
+GRAMMAR_V2 = """\
+t is a tiny verified language. A t task is written like this:
+
+    t 0                            (t 1 when the task uses locals, loops,
+                                    seq, quantifiers, spec funs or recursion)
+    gate loops                     (t 1 only: loops | recursion | quantifiers)
+    task NAME(p1: int, p2: seq) returns (r: int)
+      requires EXPR                (zero or more; conjoined)
+      ensures EXPR                 (one or more; conjoined; the contract)
+      decreases EXPR               (only when the task calls itself)
+    spec fun F(a: int): int         (optional helper for the spec, t 1 only)
+      decreases a
+    = EXPR
+    {
+      STATEMENTS
+    }
+
+Types: int (unbounded mathematical integer), bool, seq (a sequence of ints;
+usable as a parameter, a return, or a local, t 1 only). Exactly one return,
+int, bool, or seq. Every path through the body must assign the return
+variable.
+
+Statements:  r := EXPR;    var i: int := EXPR;    var a: seq := EXPR;
+             if EXPR { ... } else { ... }
+             while EXPR invariant EXPR ... decreases EXPR { ... }
+Every while needs invariants strong enough to prove the ensures at exit and
+one decreases expression that is >= 0 and strictly decreases. `else { }` may
+be empty but must be present.
+
+Expressions: integer literals, true, false, names, ( ), + - * (no division,
+no modulo, no shifts), unary -, == != < <= > >=, not, and, or, ==> (implies),
+if C then A else B, len(s), s[i], forall i in [lo, hi) . BODY,
+exists i in [lo, hi) . BODY, F(args) for a spec fun.
+
+SEQUENCES: [e1, ..., en] is a sequence literal, any number of int elements,
+[] the empty sequence. s + t concatenates two sequences (the same + used on
+numbers; t picks the meaning from the types on either side, an int-and-seq
++ is ill-typed). s[a..b] is the slice from position a up to but not
+including b, defined only when 0 <= a <= b <= len(s); s[a..] means
+s[a..len(s)] and s[..b] means s[0..b]. s[i := v] is s with position i
+replaced by v (same range rule); seq(n, v) is n copies of v. Two sequences
+are == when they have the same length and the same element at every
+position.
+
+STRINGS: t has no string type and no string operator. A character is its
+Unicode code point, a plain int; a string is a seq of those ints. 'a' is a
+character literal, its code point (so 'a' is 97), and "abc" is a string
+literal, the sequence [97, 98, 99]; "" is the empty string, the same value
+as []. Escapes \\n \\t \\r \\0 \\' \\\\, and inside "..." also \\", spell the
+usual control characters and the quote marks. Everything above (len, s[i],
++, a slice, ==) already works on a string because a string is a seq; there
+is no split, upper, strip, or join in the language.
+
+RULES THE PARSER ENFORCES. These operators and names DO NOT EXIST in t and
+make the task unparseable: / % ** ^ & | << >> bin abs min max pow sum
+range. There are no floats, tuples, arrays, dictionaries, sets, comments, or
+string library (split, upper, strip, join): write what a string's method
+would have done with the sequence operations above, a loop, or a spec fun.
+Quantifier ranges are half-open: `forall i in [lo, hi) . P` means
+lo <= i < hi. Every `if` has both branches: `if C { ... } else { ... }`,
+with `else { }` when there is nothing to do. A task that calls itself
+needs `gate recursion` and a `decreases EXPR` line after its ensures, and
+its ensures may not mention the task's own name (use a spec fun). A
+condition is a bool expression: write `r := (a == b);`, never `r := a == b
+? ...`. Loop variables are declared with `var i: int := 0;` and sequence
+locals with `var a: seq := EXPR;`.
+
+Division and modulo are not in the language. If the problem needs them,
+compute the quantity with a loop of repeated subtraction, or define it with
+a recursive spec fun; never write / or %.
+
+The ensures must say what the result IS, not merely that it exists; a spec
+the tests would disagree with is wrong, and `ensures true` is worthless.
+requires must admit every input the tests use. Encode a list or a string as
+a seq of ints (the notation's "..." and 'x' are sugar for exactly that) and
+a yes/no answer as bool.
+
+Reply with exactly one t task inside a ```t fenced block and nothing else.
+"""
+
+# Two extra few-shot examples for --prompt v2, using the construct v1's
+# five (FEWSHOT, above) never touch: a sequence literal, concatenation, a
+# slice, and the char/string sugar. Kept as hand-written SURFACE TEXT, not
+# round-tripped through a committed tasks/*.json and surface.print_task
+# (fewshot_text's v1 path, below): the printer never emits 'a'/"abc" (SPEC.md
+# "Strings as sequences of code points"; surface.py prints only the plain
+# int/seq literals they expand to), so a canonical print of these two tasks
+# would show the model [72, 101, ...] instead of "Hello, " and teach nothing
+# about the sugar the pool's v2 strings need. Each is verified well-formed
+# (surface.parse then fuzz_lower.check_wf) and its own tests run through
+# interp in test_mbpp_dfy.py; neither is committed under tasks/.
+FEWSHOT_V2_EXTRA = [
+    ("greet", """\
+t 1
+gate quantifiers
+task greet(name: seq) returns (r: seq)
+  ensures len(r) == len(name) + 7
+  ensures r[0..7] == "Hello, "
+  ensures r[7..len(r)] == name
+{
+  r := "Hello, " + name;
+}
+"""),
+    ("extract_digits", """\
+t 1
+gate loops
+task extract_digits(s: seq) returns (r: seq)
+  ensures len(r) <= len(s)
+  ensures forall k in [0, len(r)) . r[k] >= '0' and r[k] <= '9'
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) <= i
+    invariant forall k in [0, len(r)) . r[k] >= '0' and r[k] <= '9'
+    decreases len(s) - i
+  {
+    if s[i] >= '0' and s[i] <= '9' {
+      r := r + [s[i]];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+"""),
+]
+
+
+def fewshot_text(version: str = "v1") -> str:
+    if version not in PROMPT_VERSIONS:
+        raise ValueError("prompt version must be v1 or v2, got %r" % version)
     parts = []
     for name in FEWSHOT:
         task = harness.load(HERE / "tasks" / f"{name}.json")
         parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
+    if version == "v2":
+        for _, text in FEWSHOT_V2_EXTRA:
+            parts.append("```t\n" + text.rstrip() + "\n```")
     return "\n\n".join(parts)
 
 
-def build_prompt(entry: dict) -> list[dict]:
+def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
+    if version not in PROMPT_VERSIONS:
+        raise ValueError("prompt version must be v1 or v2, got %r" % version)
     r = entry["rec"]
     tests = "\n".join(r["test_list"])
     arity = len(entry["points"][0]["args"])
@@ -205,7 +380,8 @@ def build_prompt(entry: dict) -> list[dict]:
             f"of type(s) {kinds}, in the order the tests pass them, returning "
             f"{ret}. The tests must pass and the ensures must specify the "
             f"result.")
-    return [{"role": "system", "content": GRAMMAR + "\nExamples of complete t tasks:\n\n" + fewshot_text()},
+    grammar = GRAMMAR_V2 if version == "v2" else GRAMMAR
+    return [{"role": "system", "content": grammar + "\nExamples of complete t tasks:\n\n" + fewshot_text(version)},
             {"role": "user", "content": user}]
 
 
@@ -234,7 +410,7 @@ def model_digest(host: str, model: str) -> str:
 
 def cmd_generate(args) -> int:
     d = outdir(args.model)
-    P = pool()
+    P = pool(args.pool)
     ids = sorted(P)
     if args.limit:
         ids = ids[:args.limit]
@@ -248,7 +424,7 @@ def cmd_generate(args) -> int:
         if rec_path.exists():
             done += 1
             continue
-        messages = build_prompt(P[tid])
+        messages = build_prompt(P[tid], args.prompt)
         t0 = time.monotonic()
         try:
             resp = chat(args.host, args.model, messages, options, args.timeout)
@@ -257,6 +433,7 @@ def cmd_generate(args) -> int:
             return 2
         wall = time.monotonic() - t0
         record = {"task_id": tid, "fn": P[tid]["fn"], "model": args.model, "digest": digest,
+                  "pool_version": args.pool, "prompt_version": args.prompt,
                   "options": options, "messages": messages,
                   "reply": resp.get("message", {}).get("content", ""),
                   "prompt_tokens": resp.get("prompt_eval_count"),
@@ -313,7 +490,7 @@ def rename_task(task: dict, new: str) -> dict:
 
 def cmd_extract(args) -> int:
     d = outdir(args.model)
-    P = pool()
+    P = pool(args.pool)
     results = {}
     for rec_path in sorted((d / "raw").glob("*.json"), key=lambda p: int(p.stem)):
         rec = json.loads(rec_path.read_text(encoding="utf-8"))
@@ -413,13 +590,21 @@ def run_point(task: dict, point: dict) -> dict:
     ekind, eval_ = point["expected"]
     if got is None:
         return {"verdict": "undefined", "why": "no path assigned the return"}
-    ok = (isinstance(got, bool) == (ekind == "bool")) and got == eval_
+    # interp represents a seq value as a tuple (env setup above does the
+    # same on the way in); mbpp_dfy.parse_assertion's expected value is a
+    # plain list, so a seq comparison needs the same normalization the
+    # arguments already get, or a correct seq answer compares unequal to
+    # itself (tuple != list) and every seq-expected point misreports
+    # "fail". Unreachable under the v1 pool, which never admits a seq
+    # expected value; live once --pool v2 does.
+    eval_cmp = tuple(eval_) if ekind == "seq" else eval_
+    ok = (isinstance(got, bool) == (ekind == "bool")) and got == eval_cmp
     return {"verdict": "pass" if ok else "fail", "got": interp._j(got), "expected": eval_}
 
 
 def cmd_tests(args) -> int:
     d = outdir(args.model)
-    P = pool()
+    P = pool(args.pool)
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8"))
     results = {}
     for tid_s, e in ext.items():
@@ -469,7 +654,7 @@ def parse_kernel_table(path: Path) -> tuple[list[str], dict[str, dict[str, str]]
 
 def cmd_table(args) -> int:
     d = outdir(args.model)
-    P = pool()
+    P = pool(args.pool)
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8"))
     tests = json.loads((d / "tests.json").read_text(encoding="utf-8")) if (d / "tests.json").exists() else {}
     cols, cells = parse_kernel_table(d / "kernels.md")
@@ -625,7 +810,17 @@ def main(argv=None) -> int:
     for name in ("pool", "generate", "extract", "tests", "table"):
         p = sub.add_parser(name)
         p.add_argument("--model", default="qwen2.5-coder:7b")
+        p.add_argument("--pool", choices=POOL_VERSIONS, default="v1",
+                        help="v1 (default, frozen 2026-09-08: int/bool "
+                             "arguments and results only) or v2 (admits "
+                             "MBPP tests whose arguments or results are "
+                             "Python strings, typed as seq)")
         if name == "generate":
+            p.add_argument("--prompt", choices=PROMPT_VERSIONS, default="v1",
+                            help="v1 (default, frozen) or v2 (grammar and "
+                                 "few-shots add the sequence literal/"
+                                 "concat/slice trio and the char/string "
+                                 "sugar)")
             p.add_argument("--host", default="127.0.0.1:11434")
             p.add_argument("--limit", type=int, default=0)
             p.add_argument("--seed", type=int, default=1)
@@ -636,7 +831,7 @@ def main(argv=None) -> int:
             p.add_argument("--out", default=str(HERE / "SPEC-EXPERIMENT-mbpp.md"))
     args = ap.parse_args(argv)
     if args.cmd == "pool":
-        rep = pool_report()
+        rep = pool_report(args.pool)
         print(json.dumps(rep, indent=1))
         return 0
     return {"generate": cmd_generate, "extract": cmd_extract,

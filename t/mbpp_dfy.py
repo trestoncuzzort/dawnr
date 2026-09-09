@@ -82,21 +82,40 @@ def dfy_task_ids(corpus_dir: Path) -> dict[int, Path]:
 # Turning one Python assertion into a t-typed point.
 # ---------------------------------------------------------------------------
 
-def _literal(node: ast.AST):
+def _literal(node: ast.AST, strings: bool = False):
     """A Python AST node as an int, bool, or list-of-int; else raise.
 
     Deliberately narrow. `ast.literal_eval` would happily return a string, a
     dict or a float, and the caller's job is to REFUSE those by name rather
     than carry them into a Dafny harness that has no word for them.
+
+    `strings` (default False, v1's behaviour, byte-for-byte): when True (the
+    pool's version 2, SPEC.md "Strings as sequences of code points"), a
+    Python str literal is no longer refused. Its code points are `ord(c)`
+    for each character of the ALREADY-DECODED unicode string `ast.parse`
+    handed back, so an escape (`\\n`, `\\t`, `\\u0041`, ...) is resolved by
+    Python's own parser before this function ever sees it, and a character
+    outside ASCII is its code point, not a byte. A length-1 string is a t
+    CHARACTER, `{"int": codepoint}`, exactly as the notation's `'a'` is
+    sugar for `{"int": 97}`; any other length (0 included) is a t STRING, a
+    `seq` of code points, exactly as `"abc"` is sugar for the seq literal.
+    This mirrors the one place t itself cannot tell a one-character string
+    from a character: SPEC.md draws no line between them, so neither does
+    this parser.
     """
     if isinstance(node, ast.Constant):
         if isinstance(node.value, bool):
             return ("bool", node.value)
         if isinstance(node.value, int):
             return ("int", node.value)
+        if strings and isinstance(node.value, str):
+            codepoints = [ord(c) for c in node.value]
+            if len(codepoints) == 1:
+                return ("int", codepoints[0])
+            return ("seq", codepoints)
         raise _Unsupported(type(node.value).__name__)
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
-        kind, v = _literal(node.operand)
+        kind, v = _literal(node.operand, strings)
         if kind != "int":
             raise _Unsupported("negated-" + kind)
         return ("int", -v)
@@ -105,7 +124,7 @@ def _literal(node: ast.AST):
             raise _Unsupported("tuple")
         items = []
         for el in node.elts:
-            kind, v = _literal(el)
+            kind, v = _literal(el, strings)
             if kind != "int":
                 raise _Unsupported("seq-of-" + kind)
             items.append(v)
@@ -124,13 +143,19 @@ class _Unsupported(Exception):
     """An argument outside t's int/bool/seq<int> fragment, named."""
 
 
-def parse_assertion(src: str) -> dict:
+def parse_assertion(src: str, strings: bool = False) -> dict:
     """One MBPP `assert` line as {ok, fn, args, expected} or {ok: False, why}.
 
     Only the shape `assert f(a, b, ...) == expected` is accepted, plus the
     bare `assert f(...)` and `assert not f(...)` forms, which MBPP uses for
     boolean answers. Anything else (a comparison chain, `math.isclose`, an
     `in` test) is refused by name.
+
+    `strings` (default False): passed straight to `_literal`. False is v1,
+    unchanged; True is the pool's version 2, where a Python string literal
+    argument or expected value parses into a t character (a length-1
+    string) or a t `seq` of code points (any other length), instead of
+    being refused as `arg:str` / `expected:str`.
     """
     try:
         tree = ast.parse(src.strip(), mode="exec")
@@ -165,7 +190,7 @@ def parse_assertion(src: str) -> dict:
     args = []
     for a in call.args:
         try:
-            args.append(_literal(a))
+            args.append(_literal(a, strings))
         except _Unsupported as u:
             return {"ok": False, "why": "arg:%s" % u}
 
@@ -173,7 +198,7 @@ def parse_assertion(src: str) -> dict:
         expected = ("bool", not negate)
     else:
         try:
-            expected = _literal(rhs)
+            expected = _literal(rhs, strings)
         except _Unsupported as u:
             return {"ok": False, "why": "expected:%s" % u}
         if negate:
