@@ -1118,7 +1118,48 @@ untouched for the same reason: a receipt is evidence, and .gitattributes says
 to hand it back exactly as committed. Reprinting any of these is a decision
 to take on purpose.
 
-`forge/` and `locallm/` remain out of scope.
+`forge/` and `locallm/` were out of scope from 2026-09-02 to 2026-09-09; Treston
+brought them back on 2026-09-09 as parts of one project ("they just got left
+behind while we were focusing on t and tup"), forge as the training end of
+the t loop (WS-18 below), locallm as the tinkering lab; section 0's own plan
+stays superseded.
+
+**The nl/ census (2026-09-09).** `nl_census.py` and `COVERAGE-nl.md`, the
+DafnyBench census's instrument over the 24,748 nl/ problems: 4,239 are
+function-shaped and 449 of those are in t's fragment today; 20,509 are
+stdin-shaped, of which 361 would be in fragment once a signature is
+extracted from the input format, a construct in its own right for APPS and
+CodeContests. Top gaps by programs needing them: `string-char` 18,361
+(sole blocker for 347 function-shaped problems), `seq-literal` 8,599,
+`tuple` 7,906, `seq-append` 6,030, `nested-seq` 3,704, `real` 3,517
+(sole 180), `seq-slice` 3,305; the whole-corpus greedy order opens with
+`string-char`, `real`, `import`, `generator`, `nested-seq`, `seq-slice`,
+and on MBPP alone with `string-char` (116), `import`, `real`, `tuple`. A
+lexical and AST census of reference solutions, over-approximating what a t
+answer would need; nl/FIDELITY.md's gate on corpus numbers is untouched.
+The judgement recorded beside it: almost-all-of-nl/ as a literal target is
+the wrong size for a seven-kernel floor (each construct costs seven
+lowerings and the compounding of twin operators and certificates; the
+23,600 stdin problems are string and float programs whose bugs are not the
+invariant bugs a kernel catches; bug data scales with verified answers per
+problem, not with problems), so the working target is the function-shaped
+tier over ints, bools, sequences and strings, grown by this census's order.
+
+## WS-18: the training loop, forge's track (opened 2026-09-09)
+
+Treston's direction of 2026-09-09: t must take in almost all of the nl/
+corpus so models can be trained on the bugs the kernels find, the errors
+flattening round over round with every failure naming its cause. forge is
+the training end of that loop and locallm the lab beside it, both back in
+scope the same day. The code lives in `t/` because it imports t's own
+modules (`loop_dataset.py`, `loop_train.py`, `loop_generate.py`,
+`loop_curve.py`, all measured once below); forge's earlier pipeline
+(Ollama-tag generation, Unsloth, Dafny mutations) is the pattern they were
+built from and stays as it is until something in it is measured to help.
+The instrument is `LOOP-CURVE.md`: one column per round, one row per stage
+of the spec experiment, over the pool and over a held-out set, with a
+same-path control column because the inference path moved the numbers
+more than the first training round did.
 
 **The training loop's first curve, at 1.5B (2026-09-09).** Treston set the
 direction the same day: t must take in almost all of the nl/ corpus so
@@ -1162,26 +1203,25 @@ column exists. Next hurdle on the curve: round 2's positives from round
 carry the tests, 12.6's finding, since 35 of the 7B's 43 verified specs
 restated their bodies.
 
-**The nl/ census (2026-09-09).** `nl_census.py` and `COVERAGE-nl.md`, the
-DafnyBench census's instrument over the 24,748 nl/ problems: 4,239 are
-function-shaped and 449 of those are in t's fragment today; 20,509 are
-stdin-shaped, of which 361 would be in fragment once a signature is
-extracted from the input format, a construct in its own right for APPS and
-CodeContests. Top gaps by programs needing them: `string-char` 18,361
-(sole blocker for 347 function-shaped problems), `seq-literal` 8,599,
-`tuple` 7,906, `seq-append` 6,030, `nested-seq` 3,704, `real` 3,517
-(sole 180), `seq-slice` 3,305; the whole-corpus greedy order opens with
-`string-char`, `real`, `import`, `generator`, `nested-seq`, `seq-slice`,
-and on MBPP alone with `string-char` (116), `import`, `real`, `tuple`. A
-lexical and AST census of reference solutions, over-approximating what a t
-answer would need; nl/FIDELITY.md's gate on corpus numbers is untouched.
-The judgement recorded beside it: almost-all-of-nl/ as a literal target is
-the wrong size for a seven-kernel floor (each construct costs seven
-lowerings and the compounding of twin operators and certificates; the
-23,600 stdin problems are string and float programs whose bugs are not the
-invariant bugs a kernel catches; bug data scales with verified answers per
-problem, not with problems), so the working target is the function-shaped
-tier over ints, bools, sequences and strings, grown by this census's order.
+**Round 2, the expert-iteration round (in progress 2026-09-09 evening).**
+The split is fixed for every later round: 161 eval problems never trained
+on, 207 train (`out/loop/split.json`, every other id of round 1's held-out
+set by sorted order plus the 46 problems round 1's positives came from).
+Six steps: the sampler (`loop_generate.py --samples K --temperature T`,
+one generate call per problem, one tag directory per sample) and the
+dataset builder with the tests in the reward (`loop_dataset.py
+--from-samples`: a chosen answer passes every test and verifies with a
+refuted twin in at least four columns; the rejected side is its twin with
+a witness, or the model's own well-formed answers that fail the tests, the
+ones that verified somewhere first since those are 12.6's
+spec-restates-the-body class, or a malformed block); eight samples per
+train problem from the round-1 adapter; grading of every sample by
+extract, tests and the seven kernels; the pairs; round-2 training; greedy
+generation on the 161 eval problems through the kernels, the next column
+of the curve, with round 0, the control and round 1 recomputed on the same
+161. The pass@8 facts on the eval split (any well-formed, any test-passing,
+any positive at the bar) are a free measurement of the sampler and are
+reported beside the pairs, never trained on.
 
 ## The road to 1.0 (opened 2026-09-05)
 
