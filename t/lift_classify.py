@@ -63,6 +63,7 @@ theorem the checker (`lift_check.py`) verifies.
 from __future__ import annotations
 
 import dataclasses
+import re
 from dataclasses import dataclass, field
 from typing import Iterator, Optional
 
@@ -496,8 +497,22 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
     """None if `param_name` (an `array<int|nat>` parameter) satisfies the
     read-only condition everywhere in the method's closure; else the
     section-5 reason it fails with (`array-mutation` for a write,
-    `array` for anything else that disqualifies it -- new, or being
-    passed to another call)."""
+    `array` for anything else that disqualifies it -- being passed to
+    another call, an aliasing concern this shim cannot verify past).
+
+    A `new` allocation ANYWHERE in the method used to disqualify every
+    array param outright (decision 1's original, conservative reading);
+    decision 22 narrows that. Dafny forbids assigning to an in-parameter
+    (`a := new int[5];` does not resolve when `a` is a parameter), so a
+    `NewRhs` can never alias `param_name` -- it is always bound to a
+    local or the return, a DIFFERENT name decision 22's own
+    `find_array_mutation` classifies on its own terms. Dropping this
+    check only WIDENS acceptance (a method that used to fail this
+    condition because of an unrelated `new` may now pass it); no method
+    that satisfied the OLD, stricter condition can newly fail it, so no
+    currently-lifted task can change here (an already-successful lift's
+    scope has no `NewRhs` in it at all -- if it did, this branch would
+    have refused it before decision 22 existed)."""
     scope: list[Node] = [method] + list(closure)
     for root in scope:
         for n in walk(root):
@@ -511,9 +526,263 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
                 for a in args:
                     if isinstance(a, Ident) and a.name == param_name:
                         return "array"
-            if isinstance(n, NewRhs):
-                return "array"
     return None
+
+
+def _array_passed_to_call(name: str, method: MethodDecl, closure: tuple[Decl, ...]) -> bool:
+    """True iff `name` appears as a bare argument to some call anywhere
+    in the method's closure -- the aliasing half of `array_readonly
+    _issue`, factored out so decision 22's mutated array can reuse it
+    without also tripping that function's own array-mutation check
+    (which the mutated array is EXPECTED to trip)."""
+    for root in [method] + list(closure):
+        for n in walk(root):
+            if isinstance(n, (Call, CallStmt)):
+                for a in n.args:
+                    if isinstance(a, Ident) and a.name == name:
+                        return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Array mutation and allocation (decision 22 / SPEC.md "Sequences as values
+# (v1)"). An array parameter or local of int (or nat) elements is a `seq`;
+# `a[i] := e` becomes `a := a[i := e]`; `new int[n]` becomes `seq(n, 0)`.
+# Two shapes map:
+#
+#   "modifies-param": a method `modifies a` (exactly `a`, nothing else,
+#   on the method and every loop inside it) that writes `a[i] := e`
+#   somewhere. `a` becomes a seq PARAMETER and the task gets a FRESH seq
+#   return (`lift_rewrite.py` names it); the body is primed `<ret> := a;`
+#   so every later `a[i] := e` rewrites as an update of the return.
+#   Requires ZERO Dafny-declared returns: a method that already returns
+#   something (BubbleSort's `n`, removeElement's `i`) would need a SECOND
+#   return to also carry the array's final value, and t has exactly one.
+#
+#   "alloc-fill": a local or the return itself is bound to `new int[n]`
+#   (or `new nat[n]`, single dimension) and optionally filled by later
+#   `x[i] := e`; `new int[n]` becomes `fill(n, 0)` directly. The return's
+#   OWN Dafny type must be `array<int>`/`array<nat>` (non-nullable) for
+#   this to matter -- a plain local that is never returned is refused by
+#   the ordinary "local array" rule exactly as before.
+#
+# At most one array is mutated/allocated per method; a mutated array read
+# through another name (passed to a call), a modifies clause naming
+# anything but the one array, and every shape this row does not name
+# (two-dimensional arrays, non-int/nat elements, more than one mutated
+# array) are refused, `array-mutation` unless the type itself is bad
+# (`array`).
+# ---------------------------------------------------------------------------
+
+_ARRAY_NEW_SHAPE_RE = re.compile(r"^new\s+[A-Za-z_]\w*(?:<[^<>]*>)?\s*\[")
+_NEW_ARRAY_RE = re.compile(r"^new\s+(int|nat)\s*\[\s*([^\[\]]+?)\s*\]$")
+
+
+def _looks_like_array_new(rhs: "NewRhs") -> bool:
+    """True iff `rhs.text` is array-allocation SHAPED at all (a type
+    name immediately followed by `[`), as opposed to object construction
+    `new C(...)` or `new C;` -- Dafny's array `new` always uses brackets,
+    a class/trait `new` never does before its first `(`. This gates
+    `find_array_mutation` so it stays silent on a non-array `new`
+    exactly as it always was (nothing scanned `NewRhs` at all outside
+    `array_readonly_issue`'s per-array-param check before decision 22),
+    rather than newly refusing a method decision 22 has no business
+    looking at."""
+    return _ARRAY_NEW_SHAPE_RE.match(rhs.text.strip()) is not None
+
+
+def _new_array_size_text(rhs: "NewRhs") -> Optional[tuple[str, str]]:
+    """`(elem_kind, size_text)` when `rhs.text` is `new int[<expr>]` or
+    `new nat[<expr>]` (one dimension, no nested `[`/`]`, so `array2`'s
+    `new int[n, m]` and jagged `new int[n][m]` both fail the match); else
+    `None` (a bad element type or more than one dimension -- call only
+    after `_looks_like_array_new` has already confirmed this IS an array
+    allocation, not an unrelated heap allocation `new C(...)`)."""
+    m = _NEW_ARRAY_RE.match(rhs.text.strip())
+    if m is None:
+        return None
+    return m.group(1), m.group(2)
+
+
+@dataclass
+class ArrayMutation:
+    kind: str              # "modifies-param" | "alloc-fill"
+    name: str               # dafny name of the mutated/allocated array
+    elem_kind: str = "int"   # "int" | "nat", from the source's own typing
+
+
+def _index_assign_targets(method: MethodDecl) -> list[tuple[int, str]]:
+    """`(line, base_name)` for every `x[i] := e` (or `x[i], y[j] := ..`)
+    target anywhere in the method (body and specs both, so a loop's own
+    `modifies`/invariants are covered too); a target this shim cannot
+    resolve to a bare name (`a[i][j] := e`, `obj.a[i] := e`) is reported
+    with base_name `None` so the caller can refuse rather than ignore it."""
+    out: list[tuple[int, str]] = []
+    for n in walk(method):
+        if isinstance(n, Assign):
+            for lhs in n.targets:
+                if lhs.kind != "index":
+                    continue
+                if isinstance(lhs.base, Ident):
+                    out.append((n.line, lhs.base.name))
+                else:
+                    out.append((n.line, None))
+    return out
+
+
+def _alloc_bindings(method: MethodDecl) -> list[tuple[int, str, "NewRhs"]]:
+    """`(line, bound_name, NewRhs)` for every `name := new ...` or
+    `var name := new ...` in the method body (never in specs -- `new` is
+    not an expression a `requires`/`ensures`/`invariant` can contain)."""
+    out: list[tuple[int, str, "NewRhs"]] = []
+    if method.body is None:
+        return out
+    for n in walk(method.body):
+        if isinstance(n, Assign) and len(n.targets) == 1 and n.targets[0].kind == "name":
+            v = n.values[0] if n.values else None
+            if isinstance(v, NewRhs):
+                out.append((n.line, n.targets[0].name, v))
+        elif isinstance(n, VarDeclStmt) and n.init:
+            for nm, v in zip(n.names, n.init):
+                if isinstance(v, NewRhs):
+                    out.append((n.line, nm.name, v))
+    return out
+
+
+def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...]
+                         ) -> tuple[Optional[ArrayMutation], Optional[tuple[int, str, str]]]:
+    """The method's ONE mutated/allocated array, per the shapes above.
+    Returns `(mutation, None)` when found and well-shaped, `(None,
+    None)` when the method has no array index-assignment and no `new
+    int/nat[..]` allocation at all (nothing for this row to do -- the
+    caller falls back to the pre-decision-22 rules unchanged), or
+    `(None, issue)` with a section-5 `(line, reason, token)` issue when
+    array mutation/allocation IS present but not in a shape this row
+    maps."""
+    index_targets = _index_assign_targets(method)
+    allocs = _alloc_bindings(method)
+
+    bad_index = [(l, n) for l, n in index_targets if n is None]
+    if bad_index:
+        line = min(l for l, _ in bad_index)
+        return None, (line, "array-mutation", "nested-or-field-index")
+
+    good_alloc: dict[str, tuple[int, str, str]] = {}   # name -> (line, elem_kind, size_text)
+    bad_alloc_names: set[str] = set()
+    for line, name, rhs in allocs:
+        if not _looks_like_array_new(rhs):
+            continue  # object construction etc.: invisible to this row, as always
+        parsed = _new_array_size_text(rhs)
+        if parsed is None:
+            bad_alloc_names.add(name)
+            continue
+        elem_kind, size_text = parsed
+        if name not in good_alloc:
+            good_alloc[name] = (line, elem_kind, size_text)
+
+    mutated_names = {n for _, n in index_targets} | set(good_alloc)
+    if not mutated_names and not bad_alloc_names:
+        return None, None
+
+    if bad_alloc_names and (bad_alloc_names & mutated_names or not mutated_names):
+        # An allocation this row cannot map (array2, non-int/nat element,
+        # jagged) that is also index-assigned or allocation-only: refused
+        # by name here rather than falling through to the generic "local
+        # array" `array` reason, so the reason names the real construct.
+        line = min(l for l, n, _ in allocs if n in bad_alloc_names)
+        return None, (line, "array", "array2-or-bad-element")
+
+    if len(mutated_names) > 1:
+        line = min([l for l, n in index_targets if n in mutated_names]
+                    + [good_alloc[n][0] for n in mutated_names if n in good_alloc])
+        return None, (line, "array-mutation", "multi-array-mutation")
+
+    name = next(iter(mutated_names))
+    param = next((p for p in method.params if p.name == name), None)
+
+    if name in good_alloc:
+        _, elem_kind, _ = good_alloc[name]
+        if param is not None:
+            # A parameter can never be the target of `:=`-to-a-`new` in
+            # Dafny (in-parameters are not assignable); if the shim ever
+            # sees one anyway, treat it as unmapped rather than guess.
+            line = good_alloc[name][0]
+            return None, (line, "array-mutation", "param-reallocated")
+        return ArrayMutation(kind="alloc-fill", name=name, elem_kind=elem_kind), None
+
+    # Otherwise: an index-assigned name with no matching allocation --
+    # only a `modifies` PARAMETER is mapped; an index-assigned LOCAL with
+    # no `new` (impossible to construct in well-typed Dafny -- a local
+    # array must be initialised from `new` or another array-typed value,
+    # and only the `new` case is one this row maps) falls through
+    # unmapped.
+    if param is None:
+        line = min(l for l, n in index_targets if n == name)
+        return None, (line, "array-mutation", "local-index-assign-no-alloc")
+    if param.type is None or param.type.kind != "array" or param.type.nullable \
+            or not _is_array_of_int(param.type):
+        line = param.line
+        return None, (line, "array", "array2-or-bad-element")
+
+    modifies = [s for s in walk(method) if isinstance(s, ModifiesClause)]
+    if not modifies:
+        line = min(l for l, n in index_targets if n == name)
+        return None, (line, "array-mutation", "missing-modifies")
+    for mc in modifies:
+        if isinstance(mc.exprs, Star):
+            return None, (mc.line, "array-mutation", "modifies-other")
+        if len(mc.exprs) != 1 or not (isinstance(mc.exprs[0], Ident) and mc.exprs[0].name == name):
+            return None, (mc.line, "array-mutation", "modifies-other")
+
+    if _array_passed_to_call(name, method, closure):
+        # Aliasing: the mutated array is also read through another name
+        # (passed as an argument somewhere in the closure), which this
+        # shim cannot verify the callee's effect on.
+        return None, (param.line, "array", "aliased")
+
+    elem_kind = "nat" if param.type.args[0].kind == "nat" else "int"
+    return ArrayMutation(kind="modifies-param", name=name, elem_kind=elem_kind), None
+
+
+def _array_mutation_accepted_ids(method: MethodDecl, mutation: Optional[ArrayMutation],
+                                  ret_param: Optional[Param]) -> frozenset[int]:
+    """`id()`s of the `Old`/`Fresh`/`Slice` nodes decision 22 maps rather
+    than refuses (the `id()`-set pattern `_self_call_positions` already
+    uses for the same reason: a flat per-node scan has no context of its
+    own, so the exemption is looked up by node identity instead).
+
+    `old(a[k])` and `old(a[..])` on the ONE `modifies`-param array (`a`
+    reads as the parameter both inside and outside `old` in t; the scope
+    substitution that makes the OUTSIDE reading mean the return is
+    `lift_rewrite.py`'s job, not this one's); `a[..]` with no `old`
+    wrapper on that same name (post-state, reading as the return); and
+    `fresh(b)` where `b` is the return of a `alloc-fill` method whose
+    return type is `array<int|nat>` (SPEC.md: "`fresh(b)` on a returned
+    array is dropped'')."""
+    if mutation is None:
+        return frozenset()
+    ids: set[int] = set()
+    if mutation.kind == "modifies-param":
+        name = mutation.name
+        for n in walk(method):
+            if isinstance(n, Old):
+                inner = n.arg
+                if isinstance(inner, Index) and isinstance(inner.base, Ident) and inner.base.name == name:
+                    ids.add(id(n))
+                elif (isinstance(inner, Slice) and isinstance(inner.base, Ident)
+                        and inner.base.name == name and inner.lo is None and inner.hi is None):
+                    ids.add(id(n))
+                    ids.add(id(inner))
+            elif (isinstance(n, Slice) and isinstance(n.base, Ident)
+                    and n.base.name == name and n.lo is None and n.hi is None):
+                ids.add(id(n))
+    elif mutation.kind == "alloc-fill" and ret_param is not None \
+            and ret_param.type is not None and ret_param.type.kind == "array" \
+            and not ret_param.type.nullable and _is_array_of_int(ret_param.type):
+        for n in walk(method):
+            if isinstance(n, Fresh) and isinstance(n.arg, Ident) and n.arg.name == ret_param.name:
+                ids.add(id(n))
+    return frozenset(ids)
 
 
 # ---------------------------------------------------------------------------
@@ -552,9 +821,32 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
         if isinstance(d, FunctionDecl) and d.body is None:
             issues.append((d.line, "bodyless-function", d.name or "?"))
 
+    # -- array mutation / allocation (decision 22), ahead of the
+    # returns check: a `modifies-param` shape needs `method.returns`
+    # empty to qualify (its synthesized return is the array; a method
+    # that already returns something would need a SECOND return, which
+    # t cannot express), so the zero-returns row below must see the
+    # verdict first. --------------------------------------------------
+    array_mutation, mutation_issue = find_array_mutation(method, closure)
+    if mutation_issue is not None:
+        issues.append(mutation_issue)
+    if (array_mutation is not None and array_mutation.kind == "modifies-param"
+            and len(method.returns) >= 1):
+        # A method that ALREADY returns something (BubbleSort's own
+        # `n`, removeElement's own `i`) and modifies an array in place
+        # would need a SECOND return to also carry the array's final
+        # value; t has exactly one. Demote back to "no mutation found"
+        # so every check below falls back to its pre-decision-22 shape
+        # (the read-only-array condition correctly refuses the param
+        # for the write it truly has, and the modifies-clause check
+        # fires too), rather than silently dropping the array's effect.
+        issues.append((method.line, "array-mutation", "modifies-with-existing-return"))
+        array_mutation = None
+
     # -- returns: zero/multi first (section 5) --------------------------
     if len(method.returns) == 0:
-        issues.append((method.line, "zero-returns", method.name or "?"))
+        if array_mutation is None or array_mutation.kind != "modifies-param":
+            issues.append((method.line, "zero-returns", method.name or "?"))
     elif len(method.returns) > 1:
         issues.append((method.line, "multi-return", method.name or "?"))
 
@@ -577,28 +869,45 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
         rt = ret_param.type
         if rt is not None and rt.kind == "seq":
             issues.append((ret_param.line, "seq-return", ret_param.name))
+        elif (rt is not None and rt.kind == "array" and not rt.nullable
+                and _is_array_of_int(rt) and array_mutation is not None
+                and array_mutation.kind == "alloc-fill"):
+            pass  # decision 22: an allocated array return is a seq return
         else:
             reason = _type_issue(rt)
             if reason is not None and not (rt is not None and rt.kind == "nat"):
                 issues.append((ret_param.line, reason, ret_param.name))
 
     # -- read-only array condition (decision 1 / 18.6) -------------------
+    # the one array decision 22 accepts as mutated (if any) is validated
+    # by `find_array_mutation` itself and skips this loop entirely.
+    mutated_param_name = (array_mutation.name if array_mutation is not None
+                           and array_mutation.kind == "modifies-param" else None)
     for p in array_params:
+        if p.name == mutated_param_name:
+            continue
         bad = array_readonly_issue(p.name, method, closure)
         if bad is not None:
             issues.append((p.line, bad, p.name))
 
-    # -- modifies anywhere (method or a loop) => array-mutation ----------
-    for n in walk(method):
-        if isinstance(n, ModifiesClause):
-            issues.append((n.line, "array-mutation", "modifies"))
+    # -- modifies anywhere (method or a loop) => array-mutation, UNLESS
+    # decision 22 already validated it as the one accepted modifies
+    # clause (every `modifies` in `find_array_mutation` named exactly
+    # the mutated array, so nothing here would add a new issue -- but a
+    # `modifies` with no write at all, decision 14's own reason, is a
+    # shape `find_array_mutation` never sees, so this stays live then). -
+    if mutated_param_name is None:
+        for n in walk(method):
+            if isinstance(n, ModifiesClause):
+                issues.append((n.line, "array-mutation", "modifies"))
 
     # -- everything a single generic pass over every node can catch ------
     closure_names = {d.name for d in closure if d.name}
     method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
+    accepted_ids = _array_mutation_accepted_ids(method, array_mutation, ret_param)
     for root in scope_roots:
         for n in walk(root):
-            _scan_node_for_issues(n, issues, method.name, closure_names, method_names)
+            _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids)
 
     # -- definite assignment of the return, every path (section 4.7) -----
     if ret_param is not None and method.body is not None:
@@ -655,18 +964,24 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
         return Refusal(reason=reason, token=token, line=line, stage="classify")
 
     # -- plan the remaining rewrites (chains, iff, nat, split, etc.) ------
-    rewrites += _plan_rewrites(module, method, closure, ret_param, array_params)
+    rewrites += _plan_rewrites(module, method, closure, ret_param, array_params,
+                                mutated_param_name, array_mutation)
 
     return Liftable(method=method, closure=closure, rewrites=rewrites)
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
                            closure_names: set[str],
-                           method_names: set[str] = frozenset()) -> None:
+                           method_names: set[str] = frozenset(),
+                           accepted_ids: frozenset[int] = frozenset()) -> None:
     """One generic pass catching every section-5 row that is a plain
     "does this construct appear anywhere" test. Rows needing context
     (self-recursion shape, tail returns, quantifier bounds, decreases,
-    the read-only-array condition) have their own dedicated scans.
+    the read-only-array condition, decision 22's array mutation) have
+    their own dedicated scans; `accepted_ids` (from
+    `_array_mutation_accepted_ids`) is decision 22's way of exempting
+    the specific `Old`/`Fresh`/`Slice` nodes it maps rather than refuses,
+    by identity, since this scan otherwise has no context of its own.
 
     `Binary` nodes with op `/` or `%` are no longer refused here: SPEC.md
     "Division and modulo (v1)" (2026-09-08) gives t Euclidean `div`/`mod`,
@@ -676,11 +991,13 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     if isinstance(n, SeqDisplay):
         issues.append((n.line, "seq-literal", "[...]"))
     elif isinstance(n, Slice):
-        issues.append((n.line, "seq-slice", "[..]"))
+        if id(n) not in accepted_ids:
+            issues.append((n.line, "seq-slice", "[..]"))
     elif isinstance(n, SeqUpdate):
         issues.append((n.line, "seq-update", ":="))
     elif isinstance(n, (Old, Fresh)):
-        issues.append((n.line, "old", "old"))
+        if id(n) not in accepted_ids:
+            issues.append((n.line, "old", "old"))
     elif isinstance(n, Ident) and n.name == "null":
         # `a != null`, `a == null`: the parser has no dedicated NullLit
         # node (section 3's shim keeps `null` a bare Ident), but it is a
@@ -893,7 +1210,9 @@ def _is_int_expr_guess(e: Expr) -> bool:
 # ---------------------------------------------------------------------------
 
 def _plan_rewrites(module: Module, method: MethodDecl, closure: tuple[Decl, ...],
-                    ret_param: Optional[Param], array_params: list[Param]
+                    ret_param: Optional[Param], array_params: list[Param],
+                    mutated_param_name: Optional[str] = None,
+                    array_mutation: Optional[ArrayMutation] = None
                     ) -> list[Rewrite]:
     from lift_ast import Binary
     out: list[Rewrite] = []
@@ -921,7 +1240,12 @@ def _plan_rewrites(module: Module, method: MethodDecl, closure: tuple[Decl, ...]
                 out.append(Rewrite(rule="nat-invariant-added", line=n.line))
 
     for p in array_params:
+        if p.name == mutated_param_name:
+            continue
         out.append(Rewrite(rule="array-readonly-as-seq", line=p.line))
+
+    if array_mutation is not None:
+        out.append(Rewrite(rule="array-mutation-as-seq", line=method.line))
 
     for d in closure:
         if isinstance(d, FunctionDecl):

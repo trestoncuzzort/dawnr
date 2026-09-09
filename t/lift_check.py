@@ -781,6 +781,67 @@ def _clause_rename(source: MethodDecl, task: dict, record: LiftRecord,
         task["returns"][0]["name"])
 
 
+def _split_array_post_state(e: Expr, array_name: str, post_ident: str) -> Expr:
+    """Decision 22 "modifies-param": a COPY of `e` with every occurrence
+    of `Ident(array_name)` OUTSIDE an `Old(...)` wrapper replaced by
+    `Ident(post_ident)`. `array_name` is the one mutated array's source
+    name (Dafny repeats this ONE identifier for both its pre- and
+    post-state readings, `old(a[k])` and `a[k])`; `_print_expr` cannot
+    tell those apart through a single flat rename dict, so this rewrites
+    the AST first instead. Everything INSIDE `Old(...)` is left alone --
+    `crename[array_name]` already means the parameter there (the ordinary
+    positional param mapping `_clause_rename` sets up), and this checker
+    lemma has no heap mutation of its own for `old(...)` to look past, so
+    Dafny reads `old(a[k])` as plain `a[k]` regardless."""
+    if isinstance(e, Old):
+        return e
+    if isinstance(e, Ident):
+        return dataclasses.replace(e, name=post_ident) if e.name == array_name else e
+    if not dataclasses.is_dataclass(e):
+        return e
+    changed = {}
+    for f in dataclasses.fields(e):
+        v = getattr(e, f.name)
+        if isinstance(v, Expr):
+            nv = _split_array_post_state(v, array_name, post_ident)
+            if nv is not v:
+                changed[f.name] = nv
+        elif isinstance(v, tuple) and v and all(isinstance(x, Expr) for x in v):
+            nv = tuple(_split_array_post_state(x, array_name, post_ident) for x in v)
+            if nv != v:
+                changed[f.name] = nv
+    return dataclasses.replace(e, **changed) if changed else e
+
+
+def _strip_fresh_src(exprs: list, ret_name: Optional[str]) -> list:
+    """Decision 22 "alloc-fill": drop `fresh(b)` from the SOURCE ensures
+    list before printing, `b` being the source's own return -- symmetric
+    with `lift_rewrite._strip_fresh_conjuncts`, which already keeps it
+    out of the LIFTED side. `fresh(...)` on an arbitrary lemma parameter
+    (this checker lemma has no old-heap of its own) is not something
+    Dafny evaluates the way it would inside the method that actually
+    allocated `b`, so leaving it in on one side and not the other would
+    make the two conjunctions compare unrelated things, not equivalent
+    ones. A whole clause that IS `fresh(b)` is dropped outright; a
+    top-level `&&` conjunct that is `fresh(b)` is stripped from its
+    clause; anything else is untouched."""
+    if ret_name is None:
+        return exprs
+    out = []
+    for e in exprs:
+        if isinstance(e, Fresh) and isinstance(e.arg, Ident) and e.arg.name == ret_name:
+            continue
+        if isinstance(e, NaryBool) and e.op == "&&":
+            kept = [a for a in e.args
+                    if not (isinstance(a, Fresh) and isinstance(a.arg, Ident) and a.arg.name == ret_name)]
+            if not kept:
+                continue
+            out.append(kept[0] if len(kept) == 1 else dataclasses.replace(e, args=tuple(kept)))
+            continue
+        out.append(e)
+    return out
+
+
 def _expr_children(node):
     if not dataclasses.is_dataclass(node):
         return
@@ -882,6 +943,37 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
 
     lemma_names = []
     ret = task["returns"][0]
+
+    # Decision 22 (SPEC.md "Sequences as values (v1)"): the method's ONE
+    # mutated/allocated array, if any, re-derived with the SAME shared
+    # detector `lift_classify.py`/`lift_rewrite.py` use (never a second,
+    # possibly-disagreeing analysis). `array_mutation_ret_name` is `None`
+    # unless this checker file needs decision 22's own extra machinery.
+    import lift_classify
+    array_mutation, _ = lift_classify.find_array_mutation(source, closure)
+    mutated_param = (next((p for p in source.params if p.name == array_mutation.name), None)
+                     if array_mutation is not None and array_mutation.kind == "modifies-param"
+                     else None)
+    # `ret_type_src`: the DAFNY type the checker lemma's RETURN parameter
+    # should carry. Ordinarily the source's own declared return type; for
+    # a "modifies-param" mutation (no Dafny return at all -- the fresh
+    # return IS the mutated array's final state) it is that array's own
+    # declared type instead, so the lemma parameter reads `array<int>`,
+    # matching what the task's `seq` return actually stands for.
+    ret_type_src = (mutated_param.type if mutated_param is not None
+                    else (source.returns[0].type if source.returns else None))
+    # `fresh_ret_name`: the source's OWN return name, when this is
+    # decision 22's "alloc-fill" shape (`returns (b: array<int>) ensures
+    # fresh(b) && ...`) -- the one shape `fresh(...)` is dropped for, on
+    # BOTH sides of the equivalence (the lifted side already never emits
+    # it; `_strip_fresh_src` below keeps the source side symmetric, since
+    # `fresh(b)` on an arbitrary, unrelated lemma parameter is not
+    # something Dafny can evaluate the same way it would inside the
+    # method that actually allocated `b`).
+    fresh_ret_name = (source.returns[0].name
+                      if array_mutation is not None and array_mutation.kind == "alloc-fill"
+                      and source.returns else None)
+
     # Decision 1 (`array-readonly-as-seq`): a source `array<int>` param is
     # lifted to a task `seq<int>` param of the SAME name. The checker
     # lemmas (below) keep one parameter per argument, typed to the
@@ -890,8 +982,14 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # `array<int>` in the lemma signature, so every LIFTED-side reference
     # to one of them must print as its sequence view `a[..]`, not bare
     # `a` -- `_t_expr`/`_t_conj` do that substitution when passed this set.
-    array_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
-                           if sp.type is not None and sp.type.kind == "array")
+    # Decision 22 extends this to the RETURN too, exactly the same way,
+    # whenever `ret_type_src` says it is an array (both its shapes: the
+    # synthesized "modifies-param" return and the "alloc-fill" return).
+    array_view_names = {tp["name"] for sp, tp in zip(source.params, task["params"])
+                        if sp.type is not None and sp.type.kind == "array"}
+    if ret_type_src is not None and ret_type_src.kind == "array":
+        array_view_names.add(ret["name"])
+    array_view = frozenset(array_view_names)
     lifted_req = _t_conj(task.get("requires", []), array_view)
 
     # (3) L_fun_F per spec_fun whose closure function is found.
@@ -927,10 +1025,64 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # positional param/return correspondence, `record.rename_map` wins
     # where a real rename was logged).
     crename = _clause_rename(source, task, record, rename)
+    # Decision 22 "modifies-param": `crename[array_mutation.name]` (set by
+    # `_clause_rename` above, positionally, like every other param) stays
+    # the PARAMETER's own task name -- exactly right for `old(a[k])`,
+    # which this lemma's own printing leaves untouched (`_print_expr`'s
+    # `Old` case just recurses; nothing in a plain lemma body mutates `a`,
+    # so Dafny reads `old(a[k])` as `a[k]` regardless). A NON-old
+    # occurrence of `a` means the RETURN instead; since `_print_expr`
+    # cannot tell the two apart through one flat rename dict (the source
+    # text repeats the same identifier for both), `_split_array_post_state`
+    # rewrites every non-old occurrence in the ensures/invariant Expr
+    # TREES to a synthetic name first, and this is the one place that
+    # synthetic name's translation is declared.
+    post_ident = (f"__t22_{array_mutation.name}_post" if mutated_param is not None else None)
+    if post_ident is not None:
+        crename[post_ident] = ret["name"]
     src_params = list(source.params)
     task_params = task["params"]
     lem_ps = ", ".join(f"{tp['name']}: {_lemma_param_type(sp.type)}"
                        for sp, tp in zip(src_params, task_params))
+
+    # Decision 22's own fixes on the LIFTED side (`lift_rewrite`'s
+    # `array-length-return-ensures`, prepended to the task's own ensures,
+    # and `_add_array_length_invariants`, prepended to every loop that
+    # touches the mutated seq) both state `len(<something>) == <the
+    # array's own fixed length>` -- a fact the SOURCE never has to state
+    # (a real array's `.Length` is fixed by construction) and so an
+    # asymmetry an L_ens/L_inv `<==>` would otherwise read as a genuine
+    # disagreement. Granted via `requires` (the same technique
+    # `nat_clause` already uses below, for the identical reason), it
+    # lets Dafny discharge the LIFTED side's extra conjunct as
+    # already-known rather than needing it independently derived.
+    # `size_text`: the printed Dafny text of the array's own fixed
+    # length, shared by both facts below (`ret['name']` for L_ens -- the
+    # ONLY decision-22 name L_ens's signature ever declares -- and
+    # `mutated_len_tname`, return OR loop-local, for L_inv, since a
+    # "alloc-fill" local has not been copied to the return yet at any
+    # loop that still mutates it).
+    length_fact = "true"
+    ens_length_fact = "true"
+    mutated_len_tname = None
+    if array_mutation is not None:
+        mutated_len_tname = (ret["name"] if mutated_param is not None
+                             else crename.get(array_mutation.name, array_mutation.name))
+        if mutated_param is not None:
+            size_text = f"{crename[array_mutation.name]}.Length"
+        else:
+            size_text = None
+            for _line, _name, _rhs in lift_classify._alloc_bindings(source):
+                if _name == array_mutation.name and lift_classify._looks_like_array_new(_rhs):
+                    _parsed = lift_classify._new_array_size_text(_rhs)
+                    if _parsed is not None:
+                        import lift_rewrite
+                        size_ast = lift_rewrite._parse_size_expr(_parsed[1])
+                        size_text = _print_expr(size_ast, crename)
+                    break
+        if size_text is not None:
+            length_fact = f"{mutated_len_tname}.Length == {size_text}"
+            ens_length_fact = f"{ret['name']}.Length == {size_text}"
 
     # (4) L_req.
     lemma_names.append("L_req")
@@ -945,11 +1097,13 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
 
     # (5) L_ens.
     lemma_names.append("L_ens")
-    ret_type_src = source.returns[0].type if source.returns else None
     ret_lemma_ty = _lemma_param_type(ret_type_src)
     lem_ps_ens = lem_ps + (", " if lem_ps else "") + f"{ret['name']}: {ret_lemma_ty}"
-    src_ens_conj = _conj_text(
-        [sp.expr for sp in source.specs if isinstance(sp, EnsuresClause)], crename)
+    ens_exprs = [sp.expr for sp in source.specs if isinstance(sp, EnsuresClause)]
+    ens_exprs = _strip_fresh_src(ens_exprs, fresh_ret_name)
+    if post_ident is not None:
+        ens_exprs = [_split_array_post_state(e, array_mutation.name, post_ident) for e in ens_exprs]
+    src_ens_conj = _conj_text(ens_exprs, crename)
     ret_type_clause = (f"{ret['name']} >= 0" if _is_nat_type(ret_type_src) else "true")
     lifted_ens = _t_conj(task.get("ensures", []), array_view)
     hint_lines = []
@@ -968,8 +1122,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             f"  forall {binders} | {guard} ensures "
             f"{fn_src}({args}) == {f['name']}({args}) {{ L_fun_{f['name']}({args}); }}")
     lines.append(f"lemma L_ens({lem_ps_ens})")
-    lines.append(f"  requires {lifted_req}")
-    lines.append(f"  ensures ({_and([ret_type_clause, src_ens_conj])}) <==> ({lifted_ens})")
+    lines.append(f"  requires {_and([lifted_req, ens_length_fact])}")
+    lines.append(f"  ensures ({_and([ret_type_clause, ens_length_fact, src_ens_conj])}) <==> ({lifted_ens})")
     lines.append("{")
     lines.extend(hint_lines)
     lines.append("}")
@@ -1044,7 +1198,17 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
                            for n, t in zip(full_names, full_types))
         nat_clause = _and([f"{n} >= 0" for n, t in zip(full_names, full_types)
                           if _is_nat_type(t)])
+        # decision 22: only usable when THIS loop's own lemma parameters
+        # actually declare the mutated array's name (a loop textually
+        # before its allocation would not, though none of the shapes
+        # this row maps have one).
+        this_length_fact = length_fact if (array_mutation is not None
+                                           and mutated_len_tname in full_names) else "true"
         inv_exprs = [sp.expr for sp in loop.specs if isinstance(sp, InvariantClause)]
+        if post_ident is not None:
+            # decision 22: a mid-loop, non-`old` `a[k]` means the return's
+            # CURRENT (so-far) value, same as in the ensures clause above.
+            inv_exprs = [_split_array_post_state(e, array_mutation.name, post_ident) for e in inv_exprs]
         src_inv = _conj_text(inv_exprs, loop_crename)
         lifted_inv = (_t_conj(task_loops[k].get("invariants", []), array_view)
                      if k < len(task_loops) else "true")
@@ -1118,8 +1282,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # left-to-right `&&` short-circuit (the same discipline L_req
         # already relies on) establishes them before `src_inv`'s embedded
         # calls are evaluated.
-        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards])}")
-        lines.append(f"  ensures ({_and([nat_clause, call_guards, src_inv])}) <==> ({lifted_inv})")
+        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards, this_length_fact])}")
+        lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, src_inv])}) <==> ({lifted_inv})")
         if inv_hints:
             lines.append("{")
             lines.extend(inv_hints)
@@ -1139,6 +1303,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             src_dec = _print_expr(dec_specs[0].exprs[0], loop_crename)
             lifted_dec = _t_expr(task_loops[k]["decreases"], array_view)
             lines.append(f"lemma {name}({ps_inv})")
+            if this_length_fact != "true":
+                lines.append(f"  requires {this_length_fact}")
             lines.append(f"  ensures ({src_dec}) == ({lifted_dec})")
             lines.append("{ }")
             lines.append("")
@@ -1307,6 +1473,16 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
         point_exprs = ["pts[i]"] if n_params == 1 else [f"pts[i].{j}" for j in range(n_params)]
         src_args = []
         materialise = []
+        # Decision 22: the ONE array this source method mutates in place
+        # under `modifies` (if any), re-derived from the same shared
+        # detector the checker/rewriter use. When it applies, the source
+        # call is a bare STATEMENT (a "modifies-param" method has NO
+        # Dafny return to assign) and the value to compare is the
+        # materialised argument array's post-call state, `arr{j}[..]`,
+        # not a `srcv` that was never declared.
+        import lift_classify
+        array_mutation, _ = lift_classify.find_array_mutation(source, closure)
+        mutated_arg_var = None
         for j, (pn, _ty) in enumerate(names_types):
             pe = point_exprs[j]
             if pn in array_view:
@@ -1314,6 +1490,9 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
                 materialise.append(f"    var k{j} := 0;")
                 materialise.append(f"    while k{j} < |{pe}| {{ arr{j}[k{j}] := {pe}[k{j}]; k{j} := k{j} + 1; }}")
                 src_args.append(f"arr{j}")
+                if array_mutation is not None and array_mutation.kind == "modifies-param" \
+                        and pn == array_mutation.name:
+                    mutated_arg_var = f"arr{j}"
             else:
                 src_args.append(pe)
         lines.append(f"  var pts: seq<{pts_ty}> := [{', '.join(lit_list)}];")
@@ -1322,11 +1501,22 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
         lines.append("  var i := 0;")
         lines.append("  while i < |pts| {")
         lines.extend(materialise)
-        lines.append(f"    var srcv := {src_name}({', '.join(src_args)});")
+        if mutated_arg_var is not None:
+            # decision 22 "modifies-param": no source return at all -- the
+            # mutated argument array IS the observable, post-call.
+            lines.append(f"    {src_name}({', '.join(src_args)});")
+            src_value_expr = f"{mutated_arg_var}[..]"
+        else:
+            lines.append(f"    var srcv := {src_name}({', '.join(src_args)});")
+            # decision 22 "alloc-fill": the source's own return type is
+            # `array<int>` where the task's is `seq`; compare seq views.
+            ret_type_src = source.returns[0].type if source.returns else None
+            src_value_expr = "srcv[..]" if (ret_type_src is not None
+                                            and ret_type_src.kind == "array") else "srcv"
         lines.append(f"    var liftv := {lift_name}({call_args});")
         lines.append("    points := points + 1;")
-        lines.append('    print i, " ", srcv, " ", liftv, "\\n";')
-        lines.append("    if srcv != liftv { bad := bad + 1; }")
+        lines.append(f'    print i, " ", {src_value_expr}, " ", liftv, "\\n";')
+        lines.append(f"    if {src_value_expr} != liftv {{ bad := bad + 1; }}")
         lines.append("    i := i + 1;")
         lines.append("  }")
     lines.append('  print "points=", points, " bad=", bad, "\\n";')
@@ -1487,7 +1677,13 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
     return verdicts, exit_code, all_ok, first_bad, warnings, lowered_verdict
 
 
-_POINT_RE = re.compile(r"^(\d+) (\S+) (\S+)\s*$")
+# A `seq<int>` prints as `[1, 2, 3]` (measured: `dafny run`, spaces after
+# every comma) -- decision 22's seq-returning tasks are the first ones
+# through this harness whose printed VALUE can itself contain spaces, so
+# a field is either one bracketed `[...]` token (no nested brackets: t's
+# `seq<int>` elements are plain ints) or a bare `\S+` token, never a mix.
+_FIELD = r"(\[[^\[\]]*\]|\S+)"
+_POINT_RE = re.compile(r"^(\d+) " + _FIELD + r" " + _FIELD + r"\s*$")
 _TALLY_RE = re.compile(r"points=(\d+) bad=(\d+)")
 
 
@@ -1506,9 +1702,25 @@ def _run_differential(path: Path, timeout_s: float):
     return exit_code, printed, points_n, bad_n, out
 
 
+def _parse_dafny_seq(printed: str) -> Optional[tuple]:
+    """`"[1, 2, 3]"` -> `(1, 2, 3)`; `"[]"` -> `()`; `None` if `printed`
+    is not bracket-delimited at all (a plain int/bool value)."""
+    s = printed.strip()
+    if not (s.startswith("[") and s.endswith("]")):
+        return None
+    inner = s[1:-1].strip()
+    if not inner:
+        return ()
+    return tuple(int(x.strip()) for x in inner.split(","))
+
+
 def _dafny_value_matches(printed: str, py_value) -> bool:
     if isinstance(py_value, bool):
         return printed == ("true" if py_value else "false")
+    if isinstance(py_value, tuple):
+        # decision 22: a seq-typed result (interp.py's own seq representation).
+        parsed = _parse_dafny_seq(printed)
+        return parsed is not None and parsed == tuple(py_value)
     if isinstance(py_value, int):
         return printed == str(py_value)
     return printed == str(py_value)

@@ -849,6 +849,29 @@ def WH(c, invs, dec, b):
                       "decreases": dec, "body": b}}
 
 
+def _defined_first(invs):
+    """Invariants in the order a kernel can check them (2026-09-09, the
+    sequences-as-values family): every kernel checks an invariant's own
+    definedness with only the EARLIER invariants in context, so a value
+    invariant that reads r[k] must come after the invariants that bound
+    len(r) and the loop index. The committed reverse task is written that
+    way; the family's first draft put the value invariant first and read
+    unproved in six columns on every loop shape (Dafny: "index out of
+    range" on the invariant itself). Invariants with no `at` keep their
+    order and go first; the rest follow in their order."""
+    def has_at(e):
+        if isinstance(e, dict):
+            return e.get("op") in ("at", "update") or any(has_at(v) for v in e.values())
+        if isinstance(e, list):
+            return any(has_at(v) for v in e)
+        return False
+    return [e for e in invs if not has_at(e)] + [e for e in invs if has_at(e)]
+
+
+def WH_DF(c, invs, dec, b):
+    return WH(c, _defined_first(invs), dec, b)
+
+
 def AND(*a):
     return OP("and", *a) if len(a) > 1 else a[0]
 
@@ -1589,7 +1612,7 @@ def f_v1seqval(rng, idx):
             return OP("-", OP("-", LEN("s"), e), I(1))
 
         body = [ASG("r", FILL(LEN("s"), I(c0))), LOC("i", "int", I(0)),
-                WH(OP("<", V("i"), LEN("s")),
+                WH_DF(OP("<", V("i"), LEN("s")),
                    [FA("k", I(0), V("i"),
                        OP("==", AT("r", V("k")), AT("s", revidx(V("k"))))),
                     OP("==", LEN("r"), LEN("s")),
@@ -1608,7 +1631,7 @@ def f_v1seqval(rng, idx):
     if shape == "fillcopy":
         c0 = rng.choice([0, -1, 5, 9])
         body = [ASG("r", FILL(LEN("s"), I(c0))), LOC("i", "int", I(0)),
-                WH(OP("<", V("i"), LEN("s")),
+                WH_DF(OP("<", V("i"), LEN("s")),
                    [FA("k", I(0), V("i"),
                        OP("==", AT("r", V("k")), AT("s", V("k")))),
                     OP("==", LEN("r"), LEN("s")),
@@ -1625,7 +1648,7 @@ def f_v1seqval(rng, idx):
     if shape == "clampneg":
         c0 = rng.choice([0, -1, 9])
         body = [ASG("r", FILL(LEN("s"), I(c0))), LOC("i", "int", I(0)),
-                WH(OP("<", V("i"), LEN("s")),
+                WH_DF(OP("<", V("i"), LEN("s")),
                    [FA("k", I(0), V("i"),
                        OP("implies", OP("<", AT("s", V("k")), I(0)),
                           OP("==", AT("r", V("k")), I(0)))),
@@ -1666,7 +1689,7 @@ def f_v1seqval(rng, idx):
     ens_eq = (OP("==", V("r"), V("s")) if eq_form == "rs"
               else OP("==", V("s"), V("r")))
     body = [ASG("r", V("s")), LOC("i", "int", I(0)),
-            WH(OP("<", V("i"), LEN("s")),
+            WH_DF(OP("<", V("i"), LEN("s")),
                [FA("k", I(0), V("i"), inv_eq),
                 OP("==", LEN("r"), LEN("s")),
                 AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
@@ -2123,7 +2146,7 @@ def probes() -> list[dict]:
                         OP("==", AT("r", V("k")),
                            OP("+", AT("s", V("k")), I(1))))],
          "body": [ASG("r", V("s")), LOC("i", "int", I(0)),
-                  WH(OP("<", V("i"), LEN("s")),
+                  WH_DF(OP("<", V("i"), LEN("s")),
                      [FA("k", I(0), V("i"),
                          OP("==", AT("r", V("k")),
                             OP("+", AT("s", V("k")), I(1)))),
@@ -2177,7 +2200,7 @@ def probes() -> list[dict]:
          "returns": [{"name": "r", "type": "seq"}], "requires": [],
          "ensures": [OP("==", LEN("r"), LEN("s")), OP("==", V("r"), V("s"))],
          "body": [ASG("r", FILL(LEN("s"), I(0))), LOC("i", "int", I(0)),
-                  WH(OP("<", V("i"), LEN("s")),
+                  WH_DF(OP("<", V("i"), LEN("s")),
                      [FA("k", I(0), V("i"),
                          OP("==", AT("r", V("k")), AT("s", V("k")))),
                       OP("==", LEN("r"), LEN("s")),
@@ -2194,7 +2217,7 @@ def probes() -> list[dict]:
          "returns": [{"name": "r", "type": "seq"}], "requires": [],
          "ensures": [OP("==", LEN("r"), LEN("s")), OP("==", V("r"), V("s"))],
          "body": [ASG("r", FILL(LEN("s"), I(0))), LOC("i", "int", I(0)),
-                  WH(OP("<", V("i"), LEN("s")),
+                  WH_DF(OP("<", V("i"), LEN("s")),
                      [FA("k", I(0), V("i"),
                          OP("==", AT("r", V("k")),
                             OP("+", AT("s", V("k")), I(1)))),

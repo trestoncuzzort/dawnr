@@ -951,6 +951,75 @@ block after the task in 5, `^` in 2, `if` without `else` in 2, Dafny's bare
 `return;` in 2, `[` in a signature in 1), so the construct's value for 12.6
 waits on the next model run.
 
+**sequences as values LANDED 2026-09-09 (arrays with mutation); the
+adversarial reproduction is the open clause, and the design is one for
+Treston to ratify, since it was taken overnight.** Measured first on the
+785: 315 programs use an array, 157 assign an element, 130 only read one
+(the lifter already carried those as `seq`), 72 mutate a parameter in
+place under `modifies`, 85 allocate and fill. Every shape is a value
+computation once the array is a sequence, so SPEC.md "Sequences as values
+(v1)" takes arrays that way and nothing else: `{"op": "update", "args":
+[s, i, v]}` written `s[i := v]` (defined iff `0 <= i < len(s)`), `{"op":
+"fill", "args": [n, v]}` written `seq(n, v)` (defined iff `n >= 0`), `==`
+on two seqs extensional, and `seq` as a return and local type. No heap, no
+aliasing, and no element-level frame: the loop frame rule havocs a seq
+variable by name, and what its elements preserve is the invariant author's
+statement, which is what avoided the "element-level framing in six loop
+encodings" this section had budgeted for. Core: interp (fresh tuples, a
+length cap), check_wf (typing, arity, seq equality), the notation (round
+trip 1628 of 1628 after the fuzz family settled), the twin walker (the
+index of an update and the length of a fill are off-by-one targets), two
+committed tasks, `swap` (loop-free) and `reverse` (a loop over a
+seq-valued return). Seven lowerings, each with a dated note: dafny
+`s[i := v]` and `seq(n, _ => v)`, its own bound checks discharging both
+definedness obligations; verus `Seq::update` and `Seq::new(n as nat, |_|
+v)`, `==` on `Seq<int>` already extensional so `=~=` buys nothing; fstar
+`Seq.upd` and `Seq.create`, where F*'s own `==` on a seq fails and only
+`Seq.equal` proves, and a bare `Pure Seq.seq int` does not desugar
+(parenthesised at the three bare-type sites); lean `List.set` and
+`List.replicate` on `(i).toNat`, two hand-proved read-after-write lemmas
+and `grind only` to escape a recursion-depth cap, plus a latent bug in
+multi-statement bodies that swap was the first task to reach; rocq keeps
+sequences as a function with a length and adds opaque `t_upd` and `t_fill`
+with a case-split tactic, like `t_div`; spark `Seqs.Set` behind a `Pre`
+like `Elem` and a recursive `T_Fill` with a proved length, while
+whole-sequence `==` stays unlowered there (a task stating it reads
+MALFORMED, never a wrong proof, because the generic's `=` is not visible
+without a `use` that would change every seq-parameter task); framac the
+odd column, a seq return as a caller-provided output buffer with its
+length pinned by a requires, `\separated` load-bearing, updates as real
+stores, a fill whose length has no closed form over the parameters
+refused. swap's twin is refuted by an UNDEFINED witness (the mutant reads
+`s[i+1]` at `s=[0], i=0, j=0`), a kind no certificate builder had ever
+emitted: every column now certifies the twin's own definedness violation
+at the witness (lean's builder states the obligation false rather than
+comparing a totalised value, which happened to coincide on this witness).
+The flip table, AGREEMENT.md at 17 tasks, 176 s at 8 jobs, 0 flaked:
+`swap` and `reverse` read verified/refuted in all seven columns, the 13
+original rows cell for cell as before, and the two early-exit rows moved
+where the same night's residual fixes landed (spark's Esc arm now carries
+the ensures, so `first_even` and `is_prime` read verified/refuted there;
+rocq's witness instantiation closes `is_prime`; framac emits no trailing
+return after a body whose every path returns and a branch-free t_div, so
+nine of its ten vacuous lifted rows now read). Ground truth: `truth_fuzz.py` 407 tasks, 2842 cells, REFUTES-TRUE 0, the one unsound cell framac's spec-fun-body definedness gap as in every audit, and three lean cells moved from malformed to verified, no cell lost.
+Fuzz family `v1seqval` (six shapes, 17 instances plus 6 probes, 161 cells at flake 3): 0 disagreements, 0 against ground truth; reals verified 19 of 20 in dafny, verus, rocq and fstar, framac 19 with one timeout, spark 14 (the six `r == s` shapes read MALFORMED, the banked equality gap), lean 12 (six unproved and two timeouts on the loop shapes, its residual); the family's first draft put the value invariant before the length and range invariants and read unproved in six columns on every loop shape, which is now a stated rule in SPEC.md ("Invariants are checked in order"); framac's twins verify on 12 of those cells because its output buffer's length is a caller-pinned parameter, so the dropped length invariant is a fact it never needed, the re-derivation class the coherence gate exists for;
+the early-exit and div-mod families re-run on the changed lowerings read 0 disagreements and 0 against truth, with spark now verifying 17 of 18 early-exit reals (1 of 25 before the Esc-arm repair) and every div-mod real in every column. Lifter: LIFTER-DECISIONS.md row 22 maps `a[i] := e` to an update (parallel index swaps included), `new int[n]` to `seq(n, 0)`, a method that `modifies` one array and returns nothing to a seq parameter plus a fresh seq return primed with `<ret> := a` (`old(a[k])` reads the parameter, everything else the return), and a returned allocation to a seq return with `fresh(b)` dropped on both sides of the fidelity lemma; refused with a reason: two-dimensional and non-int arrays, more than one mutated array, `multiset` over a mutated slice, a `modifies` naming anything else, a mutated array also passed to a call, and a method with its own return plus `modifies` (three programs, BubbleSort among them). A seq's length is not a free fact the way an array's is, so the lifter states `len(<ret>) == <length>` as the task's first ensures and the first invariant of every loop that touches it. Of 105 candidate programs 29 lift and pass every check, the rest refused for heap 21, unbounded quantifier 15, function contract 11, array 9, no method 6, lift-check 6 (two a pre-existing for-loop desugaring gap in the checker lemma), old 3, array-mutation 3; 18 net new tasks staged, 198 in all, and the 180 old tasks re-lift byte-identical (one program's spec_funs order varies run to run, a pre-existing hash-order flake in the lifter's closure walk, named not fixed). Both census tables regenerated: in fragment 105 to 174 of 643 gradable, the `array` gap 308 to 79 programs (sole blocker 55 to 4), `array-mutation` 152 to 49 (sole 21 to 0), a new burden `array-as-seq` on 249, MBPP-DFY lexically in fragment 41 to 56 of 164. Sweep: `t/COVERAGE-lifted-785.md` at 198 tasks (6 jobs, 1232 s, 0 flaked)
+reads 32 in all seven as before and 51 in six (39 before); per column
+dafny 147 to 166, spark 114 to 126, verus 108 to 121, fstar 103 to 120,
+rocq 95 to 110, lean 92 to 97, framac 69 to 87; MBPP-DFY 40 lifted (38) and
+7 in all seven. Of the 180 old rows 21 cells moved and every one upward:
+the undefined-witness certificate closes kthElement and
+elementAtIndexAfterRotation in six columns each, and framac's nine
+vacuous rows read (seven verified/refuted, two honest timeouts). The 18 new
+rows count in six columns seven times and in five columns five times,
+none in all seven: lean reads unproved on most loops over a seq, spark
+times out on four, the residuals of the two columns. Residuals: spark's seq
+equality; framac's exit and undefined certificates are gated to
+seq-returning tasks because ungated they also close 9 of framac's 15
+committed loop-twin timeouts, which is the next measured change, not a
+side effect to bank silently; rocq abstains on seq equality in
+computational position.
+
 ### 12.8 Standing items
 
 **The cell runs its six kernel calls at once (2026-09-09).** run_par and

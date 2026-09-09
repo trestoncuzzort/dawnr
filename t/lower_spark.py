@@ -260,6 +260,44 @@ Definedness is inherited for free: a return's expression goes through the
 same self.expr() an assignment's right-hand side does, so Elem/T_Div/T_Mod's
 Pre checks land at the same call sites either way.
 
+EARLY EXIT, REPAIRED (2026-09-09). The paragraph's last two sentences above
+were wrong, and the wrongness was the whole defect: a bare `True` on the Esc
+arm of W_k's Post hands gnatprove no fact at all about Ret, so "F's own Post
+applies uniformly regardless of path" does not fall out for free, it still
+has to be proved, and with nothing to work from, the only way left to
+discharge F's Post on the escape path is to unroll the recursive W_k from
+scratch, which is exactly what exhausted the 20000-step budget. MEASURED
+before this fix: every return-bearing committed task read spark timeout
+(first_even: timeout/timeout, is_prime: timeout/refuted, AGREEMENT.md), and
+the early-exit fuzz family (26 generated tasks, fuzz_lower.py --tasks
+fz_v1exit_*/fz_p_ret_*) read 1 real VERIFIED against 24 TIMEOUT. In both
+cases gnatprove's own audit named the same unproved goal: VC_POSTCONDITION
+on F, severity medium, unproved_status "limit", F's own postcondition, not
+W_k's. The fix states, on the Esc arm, the task's own `ensures` with the
+return name substituted by `W_k'Result.Ret`: `(if W_k'Result.Esc then
+(ensures[Ret]) else (invariants and then not cond))`. That is the same
+obligation SPEC.md assigns a return inside a loop, owe the ensures, not the
+invariant, at that point, and the same one dafny, verus and rocq discharge
+for these tasks, now stated to this kernel instead of assumed away. A body
+with no `return` is untouched: has_return() still routes it through
+compile()/lower_while() exactly as before, and out/abs.ads and
+out/sum_upto.ads are byte-identical before and after this change. MEASURED
+after the fix: first_even and is_prime both read spark verified/refuted,
+all 15 committed tasks read verified/refuted (the other 13 unchanged, the
+two new rows now agree with dafny, verus and rocq), and the fuzz family's
+real column went 1/25 VERIFIED, 24/25 TIMEOUT to 24/25 VERIFIED, 1/25
+TIMEOUT. The one holdout, fz_p_ret_falsens, is an adversarial probe whose
+own ground truth is REFUTED, not VERIFIED, so a real-side TIMEOUT there is
+orthogonal to this fix, not a miss of it. The twin side of the fuzz family
+did not move as cleanly under the fuzzer's prescribed --jobs 8 concurrency:
+most twins read UNPROVED rather than REFUTED there, but a serial re-run of
+one (fz_v1exit_009) outside that contention discharged the
+T_Refutation_Certificate goal and read REFUTED, so the certificate
+mechanism (10.8) is intact and the jobs=8 reading looks like step-budget
+flakiness under load on a shared box, not a defect this change introduced.
+It is not chased further here: both committed return-bearing tasks, run one
+at a time by harness.run_task, flip cleanly to verified/refuted.
+
 THE REFUTATION CERTIFICATE (10.8, 2026-09-02). The instance above recovered
 abs and max; the other nine committed twins stayed verified/timeout, and
 the cause was REPRODUCED before this section was written: every one is a
@@ -294,9 +332,10 @@ the negation of the obligation the witness was measured against:
     own loop, so the certificate weakens nothing itself; it is emitted
     only when the twin body has exactly one loop.
 
-"undefined" and "preservation" witnesses are not certificated (fail
-closed; certificate() says why), and neither is any witness the lowering
-cannot express: those cells honestly keep the kernel's own verdict.
+"preservation" witnesses are not certificated (fail closed; certificate()
+says why), and neither is any witness the lowering cannot express: those
+cells honestly keep the kernel's own verdict. ("undefined" joined "value"
+and "exit" as certificatable 2026-09-09, SEQUENCES AS VALUES below.)
 
 MEASURED (2026-09-02, gnatprove FSF 16.1.0, --steps 20000, --prover=z3):
 all nine certificates discharge in seconds at the standard budget, seq
@@ -308,6 +347,97 @@ goals demotes it to UNPROVED; a false certificate is rejected (UNPROVED,
 never REFUTED); a kernel-accepted certificate planted in a real program
 demotes it to REFUTED (a demotion is the intended worst case, never a
 pass); the name in a comment is inert, exactly like the ban scan.
+
+SEQUENCES AS VALUES (SPEC.md, 2026-09-09). seq becomes a return and local
+type, not just a parameter type: `s[i := v]` (update, DEFINED IFF
+0 <= i < len(s)) and `seq(n, v)` (fill, DEFINED IFF n >= 0), plus
+extensional `==`/`!=` on two seqs. Landed for THE SEQ MODEL already in
+this file (SPARK.Containers.Functional.Infinite_Sequences over
+Big_Integer, header): a seq-valued return is a function returning Seq
+like any other TYPE-mapped result, a seq local is a field of the loop
+state record like any other (TYPE["seq"] = "Seq" already covered both,
+and _dead_lit already had a "seq" arm from EARLY EXIT), so the SHAPE and
+frame-rule plumbing needed no change at all. Two things were new:
+
+  * update: `T_Update (S, I, V) is (Seqs.Set (S, I + 1, V)) with
+    Pre => I >= 0 and then I < Len (S)`, the same 0-based-to-1-based
+    translation Elem already does for `at`. Kept in a SEPARATE preamble
+    block (UPDATE_PREAMBLE) gated on needs_update (expr(), like
+    needs_divmod), not folded into SEQ_PREAMBLE next to Len/Elem: an
+    earlier version put it there unconditionally and MEASURED changed
+    the emitted text of first_even.ads, contains.ads and every other
+    already-committed seq-PARAMETER task even though none of them calls
+    update(), a regression this construct's own rule forbids. Gated, all
+    15 previously committed tasks (out/abs.ads, out/first_even.ads,
+    out/digit_sum.ads included) are byte-identical before and after.
+    MEASURED (probe p_seq1.ads, --steps 20000): Seqs.Set's own Post
+    (Equal_Except, Inline_For_Proof) is enough on its own for the kernel
+    to prove Len (T_Update (S, I, V)) = Len (S), Elem (T_Update (S, I,
+    V), I) = V and "every other index unchanged" at a call site; nothing
+    is restated on T_Update itself.
+
+  * fill: no library constructor builds "n copies of v", so T_Fill is a
+    recursive expression function over Seqs.Add, the same shape every
+    W_k loop helper and spec_fun already is here, gated on needs_fill
+    (FILL_PREAMBLE). Its own elementwise fact needs the quantifier
+    (`for all K in T_Range'(0, N) => Elem (T_Fill'Result, K) = V`), so
+    needs_fill always turns needs_range on with it, whether or not the
+    task itself ever writes a `forall`. MEASURED (probe p_seq1.ads,
+    --steps 20000): both Len (T_Fill'Result) = N and the elementwise fact
+    discharge by gnatprove's automatic induction on the
+    Subprogram_Variant, no separate lemma needed.
+
+  * equality: banked, not implemented. MEASURED (probe p_seq2.ads): a
+    generic instantiation's own "=" (Seqs' own, extensional by its own
+    Post) is only reachable through `use Seqs;`, unlike an operator
+    declared directly in a non-generic package spec (gnatprove: "operator
+    ... is not directly visible", "use clause would make operation
+    legal"), and CMP's plain infix "=" / "/=" lowering has no static type
+    information to gate that `use` on only the tasks that need it. Adding
+    it unconditionally re-broke first_even.ads's byte-identity the same
+    way T_Update's first placement did (`use Seqs;` sits in SEQ_PREAMBLE,
+    which every seq-parameter task already emits) for a feature neither
+    swap nor reverse exercises (both compare elementwise via `at`, not
+    whole-seq `==`), so it is left undone: a t task that states `==`
+    between two whole seqs currently gets a clean MALFORMED (gnatprove's
+    own "not directly visible" error) rather than a wrong proof, and this
+    is banked for the next seq task that needs it, exactly the finding
+    lower_verus.py records for the same construct the same night (its
+    own `==`/`!=` needed no work, Verus's native Seq<int> "==" already IS
+    extensional visibly; this kernel's does not come for free).
+
+  * the twin path needed one extension MEASURED directly on the two new
+    tasks: swap's off-by-one twin (`tmp := s[i]` mutated to `s[i+1]`) is
+    UNDEFINED at its witness (s=[0], i=0, j=0: index 1 outside [0,1)),
+    the "undefined" witness shape certificate() had never had to certify
+    before (every one of the 15 tasks committed before this pair is
+    "value" or "exit"). Declining to certify it would leave swap
+    permanently UNPROVED on its twin cell, never REFUTED, so
+    `_undef_obligation` (mirroring lower_verus.py's function of the same
+    name, added the same night for the same gap) re-walks the twin body
+    with interp.ev, in the same order interp.py used to raise the
+    witnessing Undef, calling `defined()` (also mirrored from
+    lower_verus.py; SPEC.md's rule restated in this file's own
+    expression algebra) at each statement to find the first ground-false
+    obligation, then renders its negation through L's own expr(), the
+    same renderer certificate()'s other two kinds already use. MEASURED:
+    the certificate carries `(not (0 <= (i + 1) and then (i + 1) <
+    Len (s))))` at the witness's ground literals and gnatprove discharges
+    it. reverse needed no such extension: its measured twin
+    (invariant-drop#1) is an "exit" witness (s=[], i=0, r=[0]), the same
+    kind seq_max and first_even already certify, `_cert_lit` already had
+    a `list` arm (rendering a seq witness as a Seqs.Add chain) from
+    before this task, so a seq-valued exit witness slotted into the
+    existing path with no change there at all.
+
+MEASURED (2026-09-09, gnatprove FSF 16.1.0, --steps 20000): swap and
+reverse both COUNT (real VERIFIED, twin REFUTED); all 15 previously
+committed tasks still read verified/refuted one at a time (this column's
+verdicts flake under contention, harness.run_task's own posture); out/
+abs.ads, out/first_even.ads and out/digit_sum.ads are byte-identical
+before and after this change (diffed against the working tree as it
+stood at the start of this task, not against git HEAD, which was
+mid-commit on an unrelated EARLY EXIT repair at the time).
 """
 from __future__ import annotations
 
@@ -336,7 +466,7 @@ NARY = {"and": "and then", "or": "or else"}
 RESERVED = frozenset((
     "F", "Seq", "Seqs", "Len", "Elem", "T_Range", "R_First", "R_Has",
     "R_Next", "Big_Integer", "Boolean", "T_Refutation_Certificate",
-    "T_Div", "T_Mod"))
+    "T_Div", "T_Mod", "T_Update", "T_Fill"))
 
 # The counterexample instance (header). The window is above 2^31 so that a
 # lowering which had silently kept a 32-bit model would be caught by the
@@ -407,7 +537,10 @@ def _ce_bound(e: dict, env: dict):
     if "call" in e:
         raise _NoCe("call: a spec fun or recursion has no static bound")
     op = e["op"]
-    if op in ("len", "at"):
+    if op in ("len", "at", "update", "fill"):
+        # SPEC.md "Sequences as values" (2026-09-09): update/fill are seq
+        # operators too, the same fail-closed treatment already given to
+        # len/at here; a seq subexpression has no machine mirror to bound.
         raise _NoCe("seq operator")
     if op in ("div", "mod"):
         # No machine mirror (header, DIV/MOD): T_Div/T_Mod are Big_Integer
@@ -485,6 +618,29 @@ SEQ_PREAMBLE = """\
    with Pre => I >= Big_Integer'(0) and then I < Len (S);
 """
 
+# s[i := v] (SPEC.md "Sequences as values", 2026-09-09), DEFINED IFF
+# 0 <= i < len(s), the same side condition as `at`. Kept OUT of
+# SEQ_PREAMBLE and gated on needs_update (expr(), below) rather than
+# always emitted alongside Len/Elem: adding it unconditionally changed the
+# text of every already-committed seq-PARAMETER task (first_even, contains,
+# all_nonneg, count_matches, linear_search, seq_max) even though none of
+# them calls update(), which the regression rule (header) forbids for
+# first_even specifically; MEASURED, this refactor restores out/first_even
+# .ads to byte-identical. Seqs.Set's own Pre is 1-based (Position <= Last
+# (Container)), so the wrapper translates the 0-based index exactly the
+# way Elem does. Set's own Post (Equal_Except, Inline_For_Proof) already
+# gives length preservation and "every other index unchanged"; MEASURED
+# (probe p_seq1.ads, --steps 20000) that is enough for the kernel to prove
+# Len (T_Update (S, I, V)) = Len (S), Elem (T_Update (S, I, V), I) = V and
+# the untouched-elsewhere fact at a call site, so nothing more is restated
+# on T_Update itself, and no `use Seqs;` is needed for it: Seqs.Set is
+# called fully qualified, never as a bare operator.
+UPDATE_PREAMBLE = """\
+   function T_Update (S : Seq; I : Big_Integer; V : Big_Integer) return Seq is
+     (Seqs.Set (S, I + Big_Integer'(1), V))
+   with Pre => I >= Big_Integer'(0) and then I < Len (S);
+"""
+
 # A t quantifier ranges over mathematical [lo, hi). Ada's discrete types are
 # all bounded, so the range is a cursor-iterable whose cursor is Big_Integer;
 # gnatprove quantifies over the cursor type under R_Has. R_Next's V is unused
@@ -536,6 +692,34 @@ DIVMOD_PREAMBLE = """\
       then (X / Y) - Big_Integer'(1)
       else (X / Y) + Big_Integer'(1))
    with Pre => Y /= Big_Integer'(0);
+"""
+
+# fill(n, v) = seq(n, v) (SPEC.md "Sequences as values", 2026-09-09):
+# DEFINED IFF n >= 0. There is no library constructor for "n copies of v"
+# in SPARK.Containers.Functional.Infinite_Sequences (SEQ_PREAMBLE's own
+# comment recommends property functions over construction functions in
+# annotations, but a return VALUE has to be built somehow), so T_Fill is a
+# recursive expression function over Seqs.Add, one element per step, exactly
+# the shape every W_k loop helper and every spec_fun already is in this
+# file. needs_fill (expr(), below) always turns needs_range on with it: the
+# elementwise fact in T_Fill's own Post is stated over T_Range, so a task
+# that calls fill() gets the quantifier preamble even if it never writes a
+# `forall` of its own. MEASURED (2026-09-09, probe p_seq1.ads, --steps
+# 20000): both Len (T_Fill'Result) = N and the elementwise
+# (for all K in T_Range'(0, N) => Elem (T_Fill'Result, K) = V) discharge by
+# gnatprove's automatic induction on the Subprogram_Variant, no separate
+# lemma needed.
+FILL_PREAMBLE = """\
+   function T_Fill (N : Big_Integer; V : Big_Integer) return Seq
+   with
+     Pre  => N >= Big_Integer'(0),
+     Post => Len (T_Fill'Result) = N
+       and then (for all K in T_Range'(0, N) => Elem (T_Fill'Result, K) = V),
+     Subprogram_Variant => (Decreases => N);
+
+   function T_Fill (N : Big_Integer; V : Big_Integer) return Seq is
+     (if N = Big_Integer'(0) then Seqs.Empty_Sequence
+      else Seqs.Add (T_Fill (N - Big_Integer'(1), V), V));
 """
 
 
@@ -612,6 +796,23 @@ def _dead_lit(t: str) -> str:
            "seq": "Seqs.Empty_Sequence"}[t]
 
 
+def locals_seq(body: list) -> bool:
+    """Whether `body` declares a seq-typed local anywhere (SPEC.md
+    "Sequences as values", 2026-09-09: `var a: seq := ...;`), at any
+    nesting depth, mirroring loop_assigned/has_return's own recursive
+    shape. A task can need the seq preamble this way even when no
+    parameter and no return is a seq: a purely local seq computation."""
+    for s in body:
+        if "var" in s and s["var"]["type"] == "seq":
+            return True
+        if "if" in s and (locals_seq(s["if"]["then"])
+                          or locals_seq(s["if"]["else"])):
+            return True
+        if "while" in s and locals_seq(s["while"]["body"]):
+            return True
+    return False
+
+
 def has_return(body: list) -> bool:
     """Whether `body` can reach a `return` statement at any depth (SPEC.md
     "Early exit", 2026-09-08), mirroring the same recursive shape as
@@ -637,6 +838,8 @@ class Lower:
         self.wcount = 0
         self.needs_range = False       # set by the first lowered quantifier
         self.needs_divmod = False      # set by the first lowered div/mod
+        self.needs_fill = False        # set by the first lowered fill()
+        self.needs_update = False      # set by the first lowered update
         self.spec_fun_names = {sf["name"] for sf in task.get("spec_funs", [])}
         # The counterexample instance walks the SAME tree with the SAME
         # operator table; only the numeric type of a literal differs, so a
@@ -693,6 +896,23 @@ class Lower:
         if op == "at":
             s, i = args
             return f"Elem ({s}, {i})"
+        if op == "update":
+            # s[i := v] (SPEC.md "Sequences as values", 2026-09-09):
+            # T_Update's own Pre is `at`'s definedness side condition,
+            # discharged by the kernel at this call site exactly as Elem's
+            # is (UPDATE_PREAMBLE).
+            self.needs_update = True
+            s, i, v = args
+            return f"T_Update ({s}, {i}, {v})"
+        if op == "fill":
+            # seq(n, v) (SPEC.md "Sequences as values", 2026-09-09).
+            # T_Fill's own elementwise Post quantifies over T_Range, so a
+            # task that only ever calls fill() still needs the range
+            # preamble (FILL_PREAMBLE's own note).
+            self.needs_fill = True
+            self.needs_range = True
+            n, v = args
+            return f"T_Fill ({n}, {v})"
         if op == "neg":
             return f"(-{args[0]})"
         if op == "not":
@@ -938,14 +1158,22 @@ class Lower:
         if pre:
             aspects.append(f"Pre  => {pre}")
         if body_has_return:
-            # SPEC.md "Early exit": a return inside the loop leaves it
-            # without owing the invariant at that point. The task's own
-            # `ensures` is still owed at that exit, like any other, but
-            # that obligation sits on F's Post (lower(), below), which
-            # applies uniformly to F'Result whichever path produced it;
-            # nothing here needs to restate it.
+            # SPEC.md "Early exit", repaired 2026-09-09: a return inside
+            # the loop leaves it without owing the invariant at that
+            # point, but it DOES owe the task's own `ensures` right there,
+            # and that fact has to be stated on THIS Post, not deferred to
+            # F's. F's body only ever sees W_k across the call boundary
+            # (SHAPE: everything here is an expression function), so a
+            # bare `True` on the Esc arm hands gnatprove zero facts about
+            # Ret and the only way left to discharge F's Post is to
+            # unroll the recursive W_k from scratch, which is exactly
+            # what exhausted the 20000-step budget (see the note below).
+            ens_sub = {**psub, ret_name: f"{name}'Result.Ret"}
+            ens = "\n       and then ".join(
+                self.expr(e, ens_sub) for e in self.task["ensures"])
             aspects.append(
-                f"Post => (if {name}'Result.Esc then True else ({post}))")
+                f"Post => (if {name}'Result.Esc then ({ens}) "
+                f"else ({post}))")
         else:
             aspects.append(f"Post => {post}")
         aspects.append(f"Subprogram_Variant => (Decreases => {variant})")
@@ -1042,6 +1270,142 @@ def _cert_loops(body: list) -> list:
     return out
 
 
+TRUE = {"bool": True}
+
+
+def _t_conj(parts: list) -> dict:
+    parts = [p for p in parts if p != TRUE]
+    if not parts:
+        return TRUE
+    if len(parts) == 1:
+        return parts[0]
+    return {"op": "and", "args": parts}
+
+
+def _t_guard(p: dict, q: dict) -> dict:
+    """q need only be defined when p holds (SPEC.md "Definedness")."""
+    if q == TRUE:
+        return TRUE
+    return {"op": "implies", "args": [p, q]}
+
+
+def defined(e: dict) -> dict:
+    """SPEC.md's "Definedness" obligation for `e`, as a t-expression (TRUE
+    when the whole subtree is total). Mirrors lower_verus.py's function of
+    the same name, structure for structure: the rule is SPEC.md's, stated
+    once per kernel because each needs the obligation in its own
+    expression algebra, not because the rule itself differs kernel to
+    kernel. Used only by certificate()'s "undefined" case, below: every
+    OTHER definedness check this file emits is stated directly as a Pre
+    aspect at the call site (Elem/T_Update/T_Fill/T_Div/T_Mod), and needs
+    no separate t-expression reading of "defined" to do that."""
+    if "int" in e or "var" in e or "bool" in e:
+        return TRUE
+    if "ite" in e:
+        c = e["ite"]
+        dt, de = defined(c["then"]), defined(c["else"])
+        branch = (TRUE if dt == TRUE and de == TRUE
+                  else {"ite": {"cond": c["cond"], "then": dt, "else": de}})
+        return _t_conj([defined(c["cond"]), branch])
+    if "call" in e:
+        return _t_conj([defined(a) for a in e["call"]["args"]])
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        db = defined(q["body"])
+        body_ob = (TRUE if db == TRUE else
+                   {"forall": {"var": q["var"], "lo": q["lo"], "hi": q["hi"],
+                               "body": db}})
+        return _t_conj([defined(q["lo"]), defined(q["hi"]), body_ob])
+    op, args = e["op"], e.get("args", [])
+    if op == "at":
+        s, i = args
+        bound = {"op": "and", "args": [
+            {"op": "<=", "args": [{"int": 0}, i]},
+            {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
+        return _t_conj([defined(s), defined(i), bound])
+    if op == "update":
+        s, i, v = args
+        bound = {"op": "and", "args": [
+            {"op": "<=", "args": [{"int": 0}, i]},
+            {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
+        return _t_conj([defined(s), defined(i), defined(v), bound])
+    if op == "fill":
+        n, v = args
+        nonneg = {"op": ">=", "args": [n, {"int": 0}]}
+        return _t_conj([defined(n), defined(v), nonneg])
+    if op in ("div", "mod"):
+        x, y = args
+        nonzero = {"op": "!=", "args": [y, {"int": 0}]}
+        return _t_conj([defined(x), defined(y), nonzero])
+    if op == "and":
+        res = TRUE
+        for a in reversed(args):
+            res = _t_conj([defined(a), _t_guard(a, res)])
+        return res
+    if op == "or":
+        res = TRUE
+        for a in reversed(args):
+            res = _t_conj(
+                [defined(a), _t_guard({"op": "not", "args": [a]}, res)])
+        return res
+    if op == "implies":
+        p, q = args
+        return _t_conj([defined(p), _t_guard(p, defined(q))])
+    # total operators: not neg len + - * == != < <= > >=
+    return _t_conj([defined(a) for a in args])
+
+
+def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
+                      L: Lower) -> str | None:
+    """SPEC.md "Sequences as values" (2026-09-09): the twin's "undefined"
+    witness (SPEC.md "The twins": "the twin is undefined where the real
+    body has a value") carries no computed value for `ensures` to be
+    evaluated at, so the "value" certificate above has nothing to
+    substitute the return name with. What IS ground and checkable is the
+    partial operator's own definedness obligation: re-walk `twin_body`
+    with interp.ev, in the SAME left-to-right statement order interp.py's
+    own exec_body used to raise the Undef that minted this witness, calling
+    `defined()` (above, the one function this file trusts for the reading)
+    at each statement to find the first ground-false obligation, then
+    return its negation, rendered to Ada text through L's own expr() (the
+    SAME renderer every other certificate part uses, so there is no second
+    transcription to disagree with the real lowering). `sub` (var name ->
+    Ada text) and `env_py` (var name -> Python value, the tuples-for-seqs
+    form interp.ev itself uses) both grow as the walk proceeds, so a later
+    statement's own obligation sees the concrete values of every name the
+    twin already bound. Mirrors lower_verus.py's `_undef_obligation`
+    (2026-09-09) function for function: same walk, same fail-closed
+    exits, this file's own renderer in place of Verus's. Returns None on
+    an `if`, `while` or `return` before the failing statement (their own
+    definedness is not walked here, the same "not emitted" posture as
+    every other case in certificate()), or if the walk disagrees with the
+    witness and finds nothing false: an honest UNPROVED, never a wrong
+    certificate."""
+    env_py = {n: (tuple(v) if isinstance(v, list) else v)
+              for n, v in vals.items()}
+    sub = dict(sub)
+    funs = interp.funs_of(task, twin_body)
+    st = interp.St()
+    try:
+        for s in twin_body:
+            if "var" in s:
+                name, e = s["var"]["name"], s["var"]["init"]
+            elif "assign" in s:
+                name, e = s["assign"]
+            else:
+                return None
+            ob = defined(e)
+            if ob != TRUE and not interp.ev(ob, env_py, funs, st):
+                return f"(not {L.expr(ob, sub)})"
+            val = interp.ev(e, env_py, funs, st)
+            env_py[name] = val
+            sub[name] = _cert_lit(list(val) if isinstance(val, tuple)
+                                  else val)
+    except (interp.Undef, interp.Budget, RecursionError):
+        return None
+    return None
+
+
 def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
     """THE REFUTATION CERTIFICATE (10.8). One additional ground goal, named
     exactly T_Refutation_Certificate, that instantiates the harness witness
@@ -1049,7 +1413,7 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
     when gnatprove DISCHARGES every check of this function, and a file that
     so much as names it can never mint VERIFIED there.
 
-    Two witness kinds are certificatable in this kernel:
+    Three witness kinds are certificatable in this kernel:
 
       * "value" (a whole-program input): the goal is requires at the input,
         and then not (ensures at ret := F(input)). F is the file's own twin
@@ -1072,12 +1436,28 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
         weakens nothing itself. Emitted only when the twin body has exactly
         one loop, the one the witness's state ranges over.
 
-    "undefined" and "preservation" witnesses are NOT certificated: the first
-    has no value for the ensures to be evaluated at (the twin's definedness
-    failure is its own evidence, but not ground evidence this goal can
-    carry), and the second needs one symbolic body step from the state,
-    which this file does not yet trust itself to instantiate. Fail closed:
-    no certificate, and the cell honestly reads what the kernel could judge.
+      * "undefined" (SPEC.md "Sequences as values", 2026-09-09): the twin
+        has no value at the witness because some statement's right-hand
+        side hit a partial operator (`at`, `update`, `fill`, `div`, `mod`)
+        outside its domain, so there is no computed value for `ensures` to
+        be evaluated at, the way "value" above needs one. What IS ground
+        and checkable is the operator's own definedness obligation, false
+        at the witness: requires holds at the input, and that failing
+        obligation, re-derived by replaying the twin body with interp.ev
+        in the same order interp.py used to raise the witnessing Undef
+        (`_undef_obligation`, above), is asserted negated. MEASURED
+        2026-09-09: swap's off-by-one twin (`tmp := s[i]` mutated to
+        `s[i+1]`) is undefined at s=[0], i=0, j=0 (index 1 outside [0,1)),
+        the "undefined" shape interp.py's Reference.witness has always
+        been able to produce (SPEC.md "The twins") but that no task
+        committed before this pair ever measured; the certificate this
+        builds carries `(not (0 <= (i+1) and then (i+1) < Len (s))))` at
+        the witness's literals and gnatprove discharges it.
+
+    "preservation" witnesses are not certificated: it needs one symbolic
+    body step from the state, which this file does not yet trust itself to
+    instantiate. Fail closed: no certificate, and the cell honestly reads
+    what the kernel could judge.
 
     Any lowering failure (a name the witness does not value, an operator
     outside t) emits no certificate rather than a wrong one.
@@ -1088,7 +1468,9 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
     vals = {k: v for k, v in w.items() if not k.startswith("_")}
     sub = {k: _cert_lit(v) for k, v in vals.items()}
     ret = task["returns"][0]["name"]
+    ens = None
     try:
+        parts = [L.expr(e, sub) for e in task.get("requires", [])]
         if kind == "value":
             if w.get("_ens") is not True:
                 return ""
@@ -1096,7 +1478,6 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
                 return ""
             args = ", ".join(sub[p["name"]] for p in task["params"])
             call = f"F ({args})" if args else "F"
-            parts = [L.expr(e, sub) for e in task.get("requires", [])]
             ens = [L.expr(e, {**sub, ret: call}) for e in task["ensures"]]
         elif kind == "exit":
             loops = _cert_loops(body)
@@ -1113,18 +1494,23 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
             post = interp.exit_env(task, body, loop, vals)
             if post is None:
                 return ""
-            parts = [L.expr(e, sub) for e in task.get("requires", [])]
             parts += [L.expr(i, sub) for i in loop.get("invariants", [])]
             parts.append(f"(not {L.expr(loop['cond'], sub)})")
             ens = [L.expr(e, {**sub, ret: _cert_lit(post[ret])})
                    for e in task["ensures"]]
+        elif kind == "undefined":
+            ob = _undef_obligation(task, body, sub, vals, L)
+            if ob is None:
+                return ""
+            parts.append(ob)
         else:
             return ""
     except (ValueError, KeyError, NotImplementedError):
         return ""
-    neg = f"(not {ens[0]})" if len(ens) == 1 \
-        else "(not (" + " and then ".join(ens) + "))"
-    parts.append(neg)
+    if ens is not None:
+        neg = f"(not {ens[0]})" if len(ens) == 1 \
+            else "(not (" + " and then ".join(ens) + "))"
+        parts.append(neg)
     conj = "\n      and then ".join(parts)
     sig = f"function {CERT_NAME} return Boolean"
     return (f"   --  Refutation certificate: the measured witness, restated\n"
@@ -1143,9 +1529,18 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     L = Lower(task)
     ret = task["returns"][0]
     psub = {p["name"]: cap(p["name"]) for p in task["params"]}
-    needs_seq = any(p["type"] == "seq" for p in task["params"]) or any(
-        p["type"] == "seq"
-        for sf in task.get("spec_funs", []) for p in sf["params"])
+    # SPEC.md "Sequences as values" (2026-09-09): seq is now a return and
+    # local type too, not just a parameter type, so the preamble condition
+    # widens to match: the task's own return, a spec_fun's result, or a
+    # `var` declared seq anywhere in the body (locals_seq, below) all need
+    # it exactly as a seq parameter always did.
+    needs_seq = (
+        any(p["type"] == "seq" for p in task["params"])
+        or ret["type"] == "seq"
+        or any(p["type"] == "seq"
+              for sf in task.get("spec_funs", []) for p in sf["params"])
+        or any(sf["result"] == "seq" for sf in task.get("spec_funs", []))
+        or locals_seq(body))
 
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,
@@ -1225,8 +1620,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     parts += [f"package {pkg} with SPARK_Mode is", ""]
     if needs_seq:
         parts += [SEQ_PREAMBLE]
+    if L.needs_update:
+        parts += [UPDATE_PREAMBLE]
     if L.needs_range:
         parts += [RANGE_PREAMBLE]
+    if L.needs_fill:
+        parts += [FILL_PREAMBLE]
     if L.needs_divmod:
         parts += [DIVMOD_PREAMBLE]
     for sf in spec_funs:

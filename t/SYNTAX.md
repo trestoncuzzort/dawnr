@@ -13,13 +13,13 @@ its proofs mean anything, because a parser and a printer that disagree prove
 things about a program nobody wrote. Measured by `python3 t/surface.py
 --check`:
 
-- `parse(print(t)) == t` on **1584 of 1584** tasks, compared as canonical
+- `parse(print(t)) == t` on **1628 of 1628** tasks, compared as canonical
   JSON. The corpus is the 11 committed tasks in `tasks/` plus
   `fuzz_lower.build_corpus` over seeds 1 through 7, which is 1400 generated
-  tasks plus the 19 hand-built probes per seed, 1606 in all, less the 22 that
-  `check_wf` rejects for carrying constructs t does not have. 1426 of the
-  1584 are distinct; the repeats are the probes, which recur once per seed.
-- `print(parse(text)) == text` on all 1584, so every task has exactly one
+  tasks plus the 19 hand-built probes per seed, 1648 in all, less the 20 that
+  `check_wf` rejects for carrying constructs t does not have. 1432 of the
+  1628 are distinct; the repeats are the probes, which recur once per seed.
+- `print(parse(text)) == text` on all 1628, so every task has exactly one
   normal form in the notation.
 - The **7 `written:` lines on this page parse, unedited**, to the JSON they
   sit beside. That is what makes this grammar the documented notation rather
@@ -242,7 +242,7 @@ exercises all six.
 |---|---|
 | `div`, `mod` | written `/` and `%` at the `*` precedence, left associative; v1 only |
 | a chained comparison, `a == b == c` | there is no AST node for it, and reading it as a conjunction would invent one |
-| `and`/`or` at arity 1 | the AST admits it and `a and` is not a sentence; it occurs 0 times in the 1584 tasks, and `print` raises rather than emit text that reads as a different tree |
+| `and`/`or` at arity 1 | the AST admits it and `a and` is not a sentence; it occurs 0 times in the 1628 tasks, and `print` raises rather than emit text that reads as a different tree |
 | a keyword as a name | `len` cannot be both an operator and a spec_fun |
 | **comments** | a comment has no AST node, so it cannot survive `print(parse(text)) == text`; admitting one would make the round trip conditional, and the round trip is the only reason the syntax exists |
 

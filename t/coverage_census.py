@@ -745,6 +745,82 @@ _ARRAY_MUT = (r"(?:^|[;{}])\s*"
               r"(?:,\s*" + _PATH + r"\s*" + _IDX + r"*)*"
               r":=(?!=)")
 
+# Decision 22 (LIFTER-DECISIONS.md row 22, SPEC.md "Sequences as values
+# (v1)"): the base identifier of an element-assignment target (the same
+# statement `_ARRAY_MUT` recognises, captured this time instead of just
+# matched), used to count how many DISTINCT arrays a method mutates --
+# more than one is refused (row 22: "more than one mutated array per
+# method").
+_ARRAY_MUT_TARGET = re.compile(
+    r"(?:^|[;{}])\s*(" + IDENT + r")(?:\s*\.\s*" + IDENT + r")*\s*" + _IDX + r"+:=(?!=)", re.M)
+
+# A declared `array<..>`/`array2<..>`/`array3<..>` type, one dimension
+# marker (`2`/`3`/none), one nullability marker (`?`/none), one element
+# type. `new int[n]`/`new nat[n]` never spells the type this way (no
+# `<..>` at all -- element type and dimension are read off the `new`
+# expression instead, `_NEW_ARRAY_RE` below), so this alone under-counts
+# a bare `var b := new int[n];` local; `_array_shapes` folds both in.
+_ARRAY_TYPE_RE = re.compile(r"\barray(2|3)?(\?)?\s*<\s*([^<>]*)\s*>")
+# `new int[n]` / `new nat[n]`: one dimension (no `,` inside the bracket),
+# not immediately followed by a second `[..]` (Dafny's jagged-array
+# syntax, `new int[n][m]`, two allocations chained, not decision 22's
+# shape either).
+_NEW_ARRAY_RE = re.compile(r"\bnew\s+(" + IDENT + r")\s*\[([^\[\]]*)\](\s*\[)?")
+
+
+def _array_shapes(s: str) -> tuple:
+    """`(any_good, any_bad)`: whether SOME array-typed construct in `s`
+    is decision 22's mapped shape (1D, `int` or `nat` elements, non
+    -nullable -- read-only per decision 1, or mutated/allocated per
+    decision 22) and whether some OTHER one is not (`array2`/`array3`,
+    `array?<..>`, a non-int/non-nat element type, or a jagged/2D `new`).
+    Approximate like every detector here: a type SYNTAX match, not a
+    per-declaration usage analysis, so a file mixing a good and a bad
+    array sets both flags (each independently true of ITS OWN
+    declaration, never merged into one verdict)."""
+    any_good = any_bad = False
+    for m in _ARRAY_TYPE_RE.finditer(s):
+        dims, nullable, inner = m.group(1), m.group(2), m.group(3).strip()
+        if dims or nullable or inner not in ("int", "nat"):
+            any_bad = True
+        else:
+            any_good = True
+    for m in _NEW_ARRAY_RE.finditer(s):
+        elem, inner, jagged = m.group(1), m.group(2), m.group(3)
+        if elem not in ("int", "nat") or "," in inner or jagged:
+            any_bad = True
+        else:
+            any_good = True
+    return any_good, any_bad
+
+
+def _array_mutation_refused(s: str) -> bool:
+    """Decision 22's own refusal shapes, approximated: no element
+    assignment at all means this gap has nothing to say (row 1's
+    read-only condition is `array-as-seq`'s business, below, not this
+    one's); otherwise refused when MORE THAN ONE distinct array is
+    mutated in the method (`_ARRAY_MUT_TARGET`'s distinct base
+    identifiers), when a `multiset` wraps a whole-array slice (row 22:
+    "multiset ... stay refused", Clover_bubble_sort's own
+    `multiset(a[..])==multiset(old(a[..]))`), or when a `modifies`
+    clause names anything but exactly one bare identifier (`modifies
+    this`, `modifies a, b`, `modifies obj.arr` -- row 22: "any modifies
+    clause naming something other than the one array")."""
+    if not re.search(_ARRAY_MUT, s, re.M):
+        return False
+    if _has(r"\bmultiset\s*\(")(s) and re.search(r"\[\s*\.\.\s*\]", s):
+        return True
+    names = {m.group(1) for m in _ARRAY_MUT_TARGET.finditer(s)}
+    if len(names) > 1:
+        return True
+    for m in re.finditer(r"\bmodifies\b([^\n{;]*)", s):
+        clause = re.split(r"\b(?:requires|ensures|invariant|decreases|modifies|reads)\b",
+                          m.group(1))[0]
+        parts = [p.strip() for p in clause.split(",") if p.strip()]
+        if len(parts) != 1 or not re.fullmatch(IDENT, parts[0]):
+            return True
+    return False
+
 
 def _lambda(s: str) -> bool:
     for m in re.finditer(r"(?<![=<>!])=>", s):
@@ -1178,8 +1254,20 @@ def _tuple(s: str) -> bool:
 
 DETECTORS: dict[str, tuple[str, object, str]] = {
     # gaps: outside t's fragment
-    "array": ("gap", _has(r"\barray\d*\b|\bnew\s+" + IDENT + r"\s*\["), "array type or allocation"),
-    "array-mutation": ("gap", _has(_ARRAY_MUT), "element assignment a[i] := e"),
+    # Decision 22 (LIFTER-DECISIONS.md row 22, 2026-09-09): an
+    # `array<int>`/`array<nat>` (one dimension, non-nullable) is now
+    # in-fragment -- read-only per decision 1, mutated in place under
+    # `modifies`, or allocated and filled -- so `array` narrows to the
+    # shapes that still are not: `array2`/`array3`, `array?<..>`, and
+    # non-int/non-nat element types. `array-mutation` narrows the same
+    # way, to the mutation shapes decision 22 does not map (more than
+    # one mutated array, `multiset` over a mutated array's slice, a
+    # `modifies` clause naming anything but the one array); the mapped
+    # ones (single mutated array, single `modifies` target, or an
+    # allocate-and-fill) are `array-as-seq`, a burden now, like decision
+    # 1's read-only row always should have been but never had a name for.
+    "array": ("gap", lambda s: _array_shapes(s)[1], "array2/array3, array?<..> (nullable), or a non-int/non-nat element type"),
+    "array-mutation": ("gap", _array_mutation_refused, "array mutation decision 22 does not map: more than one mutated array, multiset over a mutated array's slice, or a modifies clause naming anything but the one array"),
     # div-mod (`/`, `%` on int) is in t's fragment since SPEC.md's
     # "Division and modulo (v1)" (2026-09-08): Dafny's own `/` and `%`
     # are Euclidean too, measured, so the lifter maps them one to one
@@ -1220,6 +1308,7 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "char-arith": ("gap", _has(r"\bas\s+char\b|\bchar\s*\("), "char arithmetic"),
     "such-that-exec": ("gap", lambda s: any(_such_that_sites(s)), "assign-such-that :| in executable code (nondeterministic choice)"),
     # burdens: t can say it another way
+    "array-as-seq": ("burden", lambda s: _array_shapes(s)[0], "array<int>/array<nat> (one dimension): read-only, mutated in place under modifies, or allocated and filled -- lifts to seq (decision 1, decision 22)"),
     "nat": ("burden", _has(r"\bnat\b"), "nat, as int with a >= 0 clause"),
     "for-loop": ("burden", _has(r"\bfor\s+" + IDENT + r"\s*:="), "for loop (a while with a bound)"),
     "iff": ("burden", _has(r"<==>"), "<==> (== on bools)"),

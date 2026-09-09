@@ -134,6 +134,18 @@ side, and the same total-logic softness in invariant and spec_fun-body
 positions, is recorded future work in that file's own docstring, not
 silently claimed here.
 
+**Invariants are checked in order (stated 2026-09-09, measured on the
+sequences-as-values fuzz family).** A loop's invariants are a list, and
+every kernel discharges the definedness of an invariant with only the
+earlier invariants of the same list in context, exactly as `and` reads
+left to right. So an invariant that reads `r[k]` for `k < i` must come
+after the invariants that bound `len(r)` and `i`; written the other way
+round, six columns read the task unproved on the invariant's own
+definedness (Dafny: "index out of range" on the invariant itself) while
+the interpreter, which only ever sees reachable states, saw nothing wrong.
+The committed `reverse` task is written in the checkable order: length,
+range, then the value invariant.
+
 ### Gate 1: quantifiers + sequences
 
 Semantics: a `seq` value s has a length `len(s) >= 0` and elements

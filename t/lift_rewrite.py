@@ -50,14 +50,15 @@ from typing import Optional
 from lift_ast import (
     Assign, Binary, BlockStmt, BoolLit, Call, Chain, ClauseAdded,
     ClauseDropped, Decl, DecreasesClause, EnsuresClause, Expr, ForStmt,
-    FunctionDecl, Ident, IfExpr, IfStmt, Iff, Implies, IntLit,
-    InvariantClause, LabelStmt, LemmaDecl, LiftRecord, MethodDecl, Module,
-    NaryBool, Param, Quantifier, ReadsClause, Rename, RequiresClause,
-    Rewrite, Stmt, Type, Unary, VarDeclStmt, WhileStmt,
+    Fresh, FunctionDecl, Ident, IfExpr, IfStmt, Iff, Implies, Index,
+    IntLit, InvariantClause, LabelStmt, LemmaDecl, LiftRecord, Lhs,
+    MethodDecl, Module, NaryBool, NewRhs, Old, Param, Quantifier,
+    ReadsClause, Rename, RequiresClause, Rewrite, Slice, Stmt, Type,
+    Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
-    Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier, walk,
-    unchanged_at_every_call,
+    ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier,
+    find_array_mutation, walk, unchanged_at_every_call,
 )
 
 
@@ -147,6 +148,35 @@ def _already_present(clause: dict, existing: list) -> bool:
     return False
 
 
+def _strip_fresh_conjuncts(e: Expr, ret_name: Optional[str],
+                            record: LiftRecord, line: int) -> Optional[Expr]:
+    """Decision 22: `fresh(b)` on the returned array is DROPPED, not
+    lifted (SPEC.md: "`fresh(b)` on a returned array is dropped''), `b`
+    being the source's own return -- `ret_name`, `None` unless this is
+    the "alloc-fill" shape. Only a TOP-LEVEL `&&` conjunct (`ensures
+    fresh(b) && b.Length == n && ...`) is stripped HERE; `Fresh`
+    anywhere else still reaches `_lift_expr`'s own fallback (`true`,
+    never a crash). Returns `None` when the whole clause was `fresh(b)`
+    alone (the caller drops the clause entirely)."""
+    if ret_name is None:
+        return e
+    if isinstance(e, Fresh) and isinstance(e.arg, Ident) and e.arg.name == ret_name:
+        record.rewrites.append(Rewrite(rule="fresh-dropped", line=line))
+        return None
+    if isinstance(e, NaryBool) and e.op == "&&":
+        kept = [a for a in e.args
+                if not (isinstance(a, Fresh) and isinstance(a.arg, Ident) and a.arg.name == ret_name)]
+        if len(kept) == len(e.args):
+            return e
+        record.rewrites.append(Rewrite(rule="fresh-dropped", line=line))
+        if not kept:
+            return None
+        if len(kept) == 1:
+            return kept[0]
+        return NaryBool(e.line, "&&", tuple(kept))
+    return e
+
+
 # ---------------------------------------------------------------------------
 # Scope: the live rename/type/nat-tracking environment threaded through the
 # body lift. Copied (not shared) whenever two branches must not leak
@@ -159,9 +189,128 @@ class Scope:
     types: dict = field(default_factory=dict)      # t name -> "int"|"bool"|"seq"
     nat: list = field(default_factory=list)        # dafny names known nat-typed here
     ret_name: str = ""                             # dafny name of the task's return
+    # Decision 22 (SPEC.md "Sequences as values (v1)"): a `modifies`-param
+    # array mutation's two names for one Dafny identifier. `renames` maps
+    # the array's dafny name to the RETURN's t-name everywhere by default
+    # (a `modifies`-param body is primed `<ret> := a;`, so an unguarded
+    # `a[k]` after that point IS the return's current value); `old(a[k])`/
+    # `old(a[..])` need the PARAMETER's own (pre-mutation) t-name instead,
+    # which is not recoverable from `renames` once the default above has
+    # overwritten it -- these two fields carry it alongside.
+    old_array_name: Optional[str] = None           # dafny name of the mutated array, or None
+    old_array_param_tname: Optional[str] = None     # its own t-name (pre-mutation)
 
     def copy(self) -> "Scope":
-        return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name)
+        return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
+                     self.old_array_name, self.old_array_param_tname)
+
+
+# ---------------------------------------------------------------------------
+# Decision 22's `new int[n]` / `new nat[n]` size expression. `lift_ast`'s
+# `NewRhs` keeps its source text verbatim, unparsed (it used to be always
+# a refusal, so nothing past the refusal read it -- see the node's own
+# docstring); this row needs the size EXPRESSION, not the text, to build
+# `{"op": "fill", "args": [size, {"int": 0}]}`. Reusing `lift_parse`'s own
+# tokenizer/parser on a tiny wrapper method is simpler and more robust
+# than a second hand-rolled expression parser here: `lift_parse.parse` is
+# the ONE place Dafny expression grammar is implemented, and the size
+# text (`a.Length`, `n`, `a.Length / 2`, `s.Length - 1`, ...) is always a
+# self-contained expression, never a statement.
+# ---------------------------------------------------------------------------
+
+def _parse_size_expr(size_text: str) -> Expr:
+    import lift_parse
+    src = f"method __t_decision22_snippet() returns (__r: int) {{ __r := {size_text}; }}"
+    module = lift_parse.parse(src)
+    for d in module.decls:
+        if isinstance(d, MethodDecl) and d.body:
+            s = d.body[0]
+            if isinstance(s, Assign) and s.values:
+                v = s.values[0]
+                if isinstance(v, Expr):
+                    return v
+    raise ValueError(f"lift_rewrite: could not re-parse array-size expression {size_text!r} "
+                      "(a lift_classify bug: this should have been validated before rewrite ran)")
+
+
+def _lift_new_array(rhs: NewRhs, scope: Scope, fn_names: dict, self_name: str,
+                     task_name: str, record: LiftRecord, renamer: "_Renamer") -> dict:
+    """`new int[n]` / `new nat[n]` -> `{"op": "fill", "args": [n, 0]}`
+    (SPEC.md "Sequences as values (v1)"; decision 22). Only ever called
+    where `lift_classify.find_array_mutation` has already confirmed
+    `rhs.text` matches this shape -- a mismatch here is a lift_classify
+    bug, not a fresh refusal to invent this late."""
+    from lift_classify import _new_array_size_text
+    parsed = _new_array_size_text(rhs)
+    if parsed is None:
+        raise ValueError(f"lift_rewrite: {rhs.text!r} is not a decision-22 array allocation "
+                          "(a lift_classify bug: this should have been refused before rewrite ran)")
+    _elem_kind, size_text = parsed
+    size_expr = _parse_size_expr(size_text)
+    size_lifted = _lift_expr(size_expr, scope, fn_names, self_name, task_name, record, renamer)
+    record.rewrites.append(Rewrite(rule="array-new-as-fill", line=rhs.line))
+    return {"op": "fill", "args": [size_lifted, {"int": 0}]}
+
+
+def _add_array_length_invariants(body_out: list, mutated_tname: str, len_expr: dict,
+                                  record: LiftRecord) -> None:
+    """Decision 22: unlike a real Dafny array (`.Length` fixed by
+    construction, so the SOURCE never has to state it as a loop
+    invariant), a `seq` variable's length is not automatically known
+    preserved across a `while` loop -- Dafny needs to be TOLD, or the
+    lowered task's own `ensures |ret| == ...` fails to verify even
+    though `update`/`fill` both provably preserve/define length (Clover
+    _array_product measured: without this, `ensures |c| == |a|` on the
+    LOWERED method itself does not verify). So every loop that assigns
+    `mutated_tname` gets `len(mutated_tname) == len_expr` appended to its
+    own invariant list, after the source's own invariants, unless
+    already present -- `len_expr` is `len(<the array's own PARAMETER>)`
+    for the "modifies-param" shape (unchanging by construction: nothing
+    resizes an array in place) or the lifted allocation-size expression
+    itself for "alloc-fill" (the value `fill(n, 0)` was given at the one
+    point it was created, before any loop could touch it)."""
+    fact = {"op": "==", "args": [{"op": "len", "args": [{"var": mutated_tname}]}, len_expr]}
+
+    def touches(node) -> bool:
+        if isinstance(node, dict):
+            if "assign" in node and node["assign"][0] == mutated_tname:
+                return True
+            return any(touches(v) for v in node.values())
+        if isinstance(node, list):
+            return any(touches(v) for v in node)
+        return False
+
+    def walk_stmts(stmts: list) -> None:
+        for s in stmts:
+            if not isinstance(s, dict):
+                continue
+            if "while" in s:
+                w = s["while"]
+                if touches(w["body"]) and fact not in w["invariants"]:
+                    # PREPENDED, unlike decision 5's `nat-invariant-added`
+                    # (which appends, deliberately, to keep the twin
+                    # ladder's INVARIANT-DROP site indices stable against
+                    # the AUTHOR's own invariants): here an author
+                    # invariant that reads the mutated seq bounded by
+                    # `len(<other side>)` needs THIS fact to be WELL
+                    # -DEFINED at all (SPEC.md: "each loop invariant may
+                    # assume earlier invariants in its list", so a fact
+                    # coming after cannot rescue one that reads out of
+                    # bounds before it) -- measured, Clover_double_array
+                    # _elements: appended, the lowered task's own
+                    # invariant list fails to verify ("index out of
+                    # range"); prepended, it verifies. This shifts every
+                    # author invariant's index by one on a decision-22
+                    # task, a cost row 22 accepts explicitly (a synthetic
+                    # invariant with no source line of its own to begin
+                    # with, so there is no author site to misattribute).
+                    w["invariants"].insert(0, fact)
+                    record.rewrites.append(Rewrite(rule="array-length-invariant-added", line=0))
+                walk_stmts(w["body"])
+            elif "if" in s:
+                walk_stmts(s["if"]["then"])
+                walk_stmts(s["if"].get("else", []))
+    walk_stmts(body_out)
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +376,51 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         target = task_name if fn == self_name else fn_names.get(fn, fn)
         args = [_lift_expr(a, scope, fn_names, self_name, task_name, record, renamer) for a in e.args]
         return {"call": {"fun": target, "args": args}}
+    if isinstance(e, Old):
+        # Decision 22: `old(a[k])` and `old(a[..])` on the ONE
+        # `modifies`-param mutated array read as the PARAMETER's own
+        # (pre-mutation) value -- `scope.old_array_param_tname`, set up
+        # once in `rewrite()`, not the ambient `scope.renames` entry for
+        # `a` (which the body's priming `<ret> := a;` has made mean the
+        # RETURN by the time any of this runs). Anything else under
+        # `old(...)` is a lift_classify bug: no other shape is accepted.
+        inner = e.arg
+        if (scope.old_array_name is not None and isinstance(inner, Index)
+                and isinstance(inner.base, Ident) and inner.base.name == scope.old_array_name):
+            idx = _lift_expr(inner.index, scope, fn_names, self_name, task_name, record, renamer)
+            record.rewrites.append(Rewrite(rule="old-array-elem-as-param", line=e.line))
+            return {"op": "at", "args": [{"var": scope.old_array_param_tname}, idx]}
+        if (scope.old_array_name is not None and isinstance(inner, Slice)
+                and isinstance(inner.base, Ident) and inner.base.name == scope.old_array_name
+                and inner.lo is None and inner.hi is None):
+            record.rewrites.append(Rewrite(rule="old-array-whole-as-param", line=e.line))
+            return {"var": scope.old_array_param_tname}
+        raise ValueError(f"lift_rewrite: unsupported old(...) shape {inner!r} (a lift_classify "
+                          f"bug: this should have been refused before rewrite ran)")
+    if isinstance(e, Slice):
+        # Decision 22: `a[..]` with NO `old` wrapper -- the whole-array
+        # view, identity on a value seq -- reads as whatever `a`'s
+        # ambient t-name currently is (the return, once the mutated
+        # array's body priming has run; the array itself unchanged in
+        # every other context). A bounded slice (`lo`/`hi` given) is a
+        # lift_classify bug reaching here: only the unbounded form is
+        # ever accepted.
+        if e.lo is None and e.hi is None:
+            record.rewrites.append(Rewrite(rule="whole-slice-as-seq", line=e.line))
+            return _lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)
+        raise ValueError(f"lift_rewrite: unsupported bounded slice {e!r} (a lift_classify bug: "
+                          f"this should have been refused before rewrite ran)")
+    if isinstance(e, Fresh):
+        # Decision 22: `fresh(b)` on the returned array is dropped, not
+        # lifted -- the common case (a TOP-LEVEL ensures conjunct) is
+        # stripped before this is ever reached (`_strip_fresh_conjuncts`
+        # in `rewrite()`); this is the fallback for the rare shape that
+        # is not top-level, so lifting never crashes on it. `true` is a
+        # sound (if unminimal) stand-in: fresh(b) is a definite-assignment
+        # fact about the source's OWN semantics, never a value fact any
+        # twin could exploit.
+        record.rewrites.append(Rewrite(rule="fresh-dropped", line=e.line))
+        return {"bool": True}
     raise ValueError(f"lift_rewrite: no expression mapping for {e!r} (a lift_classify bug: "
                       f"this construct should have been refused before rewrite ran)")
 
@@ -513,27 +707,71 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
     cls = s.__class__.__name__
     if cls == "Assign":
         if len(s.targets) > 1:
+            # Decision 22: a target can now be `x[i]` as well as `x`
+            # (Clover_reverse's `a[i], a[hi-i] := a[hi-i], a[i];`). Every
+            # right-hand side AND every index expression is evaluated in
+            # the PRE-state (Dafny's simultaneous-assignment rule, the
+            # same reason the existing name-only case routes through
+            # fresh temporaries at all), so both are computed in this
+            # first pass, before any write; the second pass then applies
+            # the writes in order, each `update` correctly composing on
+            # top of the last for two targets sharing one array (a swap
+            # via two disjoint indices reads back its own pre-state
+            # values, exactly as `_t_expr`/interp.py already model
+            # `update`).
             record.rewrites.append(Rewrite(rule="parallel-assign-temps", line=s.line))
             out = []
             temps = []
             for i, (lhs, rhs) in enumerate(zip(s.targets, s.values)):
-                tgt_t = scope.renames[lhs.name]
-                ty = scope.types.get(tgt_t, "int")
-                rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
+                base_name = lhs.base.name if lhs.kind == "index" else lhs.name
+                tgt_t = scope.renames[base_name]
+                # decision 22: an INDEX target's temp holds one ELEMENT
+                # (always `int`, v1's only array/seq element type), never
+                # the array's OWN type (`scope.types[tgt_t]` is `seq`) --
+                # measured, DafnyPrograms_..._invertarray: without this
+                # fix `fuzz_lower.check_wf` reads "update wants (seq, int,
+                # int)" (a `seq`-typed temp fed into `update`'s value slot).
+                ty = "int" if lhs.kind == "index" else scope.types.get(tgt_t, "int")
+                if isinstance(rhs, NewRhs):
+                    rhs_e = _lift_new_array(rhs, scope, fn_names, self_name, task_name, record, renamer)
+                else:
+                    rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
                 tmp = renamer.fresh(f"tmp{i}", record, "temp")
                 scope.types[tmp] = ty
                 out.append({"var": {"name": tmp, "type": ty, "init": rhs_e}})
-                temps.append((tgt_t, tmp))
-            for tgt_t, tmp in temps:
-                out.append({"assign": [tgt_t, {"var": tmp}]})
+                if lhs.kind == "index":
+                    idx_e = _lift_expr(lhs.index, scope, fn_names, self_name, task_name, record, renamer)
+                    temps.append((tgt_t, tmp, idx_e))
+                else:
+                    temps.append((tgt_t, tmp, None))
+            for tgt_t, tmp, idx_e in temps:
+                if idx_e is None:
+                    out.append({"assign": [tgt_t, {"var": tmp}]})
+                else:
+                    out.append({"assign": [tgt_t, {"op": "update",
+                                                     "args": [{"var": tgt_t}, idx_e, {"var": tmp}]}]})
             return out
         lhs = s.targets[0]
         rhs = s.values[0]
+        if lhs.kind == "index":
+            # Decision 22: `a[i] := e` -> `a := a[i := e]`. `a`'s current
+            # t-name (whatever `scope.renames` maps its dafny name to --
+            # the return, once a `modifies`-param body's priming
+            # `<ret> := a;` has run; the local/return itself for the
+            # alloc-fill shape) is both the read and the write side.
+            tgt_t = scope.renames[lhs.base.name]
+            idx_e = _lift_expr(lhs.index, scope, fn_names, self_name, task_name, record, renamer)
+            rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
+            record.rewrites.append(Rewrite(rule="array-elem-assign-as-update", line=s.line))
+            return [{"assign": [tgt_t, {"op": "update", "args": [{"var": tgt_t}, idx_e, rhs_e]}]}]
         tgt_t = scope.renames[lhs.name]
         if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) and rhs.fn.name == self_name:
             args = [_lift_expr(a, scope, fn_names, self_name, task_name, record, renamer) for a in rhs.args]
             return [{"assign": [tgt_t, {"call": {"fun": task_name, "args": args}}]}]
-        rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
+        if isinstance(rhs, NewRhs):
+            rhs_e = _lift_new_array(rhs, scope, fn_names, self_name, task_name, record, renamer)
+        else:
+            rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
         return [{"assign": [tgt_t, rhs_e]}]
 
     if cls == "VarDeclStmt":
@@ -552,8 +790,18 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 record.clauses_added.append(ClauseAdded(rule="default-init", text=f"{tname} := {default}"))
         else:
             for nm, rhs in zip(s.names, s.init):
-                rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
-                ty = _t_type_of(nm.type)
+                if isinstance(rhs, NewRhs):
+                    # Decision 22: `var b := new int[n];` (or `var b:
+                    # array<int> := new int[n];`) -- `nm.type` is often
+                    # `None` (Dafny infers it), so `_t_type_of(None)`
+                    # would default to "int"; the RHS shape is what says
+                    # this is a seq local, regardless of what the
+                    # declared type (if any) says.
+                    rhs_e = _lift_new_array(rhs, scope, fn_names, self_name, task_name, record, renamer)
+                    ty = "seq"
+                else:
+                    rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
+                    ty = _t_type_of(nm.type)
                 tname = renamer.fresh(nm.name, record, "local")
                 scope.renames[nm.name] = tname
                 scope.types[tname] = ty
@@ -790,6 +1038,31 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     task_name = f"{_sanitize_stem(source_path)}__{t_method}"
     record.method = t_method
 
+    array_mutation, _array_mutation_issue = find_array_mutation(method, closure)
+    mutated_param_name = (array_mutation.name if array_mutation is not None
+                           and array_mutation.kind == "modifies-param" else None)
+    # Decision 22 "alloc-fill": the SOURCE `new int[n]`'s size expression
+    # `n`, re-derived (never re-decided -- `find_array_mutation` already
+    # confirmed this exact allocation is the mapped one) here as a plain
+    # Dafny AST `Expr`, parsed but not yet LIFTED (that needs a scope with
+    # every relevant name already bound, built up over the rest of this
+    # function; done once `body_scope` exists, near the bottom). A `seq`'s
+    # length is not automatically invariant across a `while` loop the way
+    # a real array's `.Length` is, so this feeds the loop-invariant fix
+    # below (`_add_array_length_invariants`) that keeps the LOWERED task
+    # itself provable -- Clover_array_product measured: without it, the
+    # lowered method's own `ensures |c| == |a|` fails to verify, since
+    # nothing states `|c|` is preserved across the loop that builds it.
+    alloc_fill_size_expr = None
+    if array_mutation is not None and array_mutation.kind == "alloc-fill" and method.body is not None:
+        from lift_classify import _alloc_bindings, _looks_like_array_new, _new_array_size_text
+        for _line, _name, rhs in _alloc_bindings(method):
+            if _name == array_mutation.name and _looks_like_array_new(rhs):
+                parsed = _new_array_size_text(rhs)
+                if parsed is not None:
+                    alloc_fill_size_expr = _parse_size_expr(parsed[1])
+                break
+
     scope = Scope()
     params_out = []
     for p in method.params:
@@ -797,7 +1070,8 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         scope.renames[p.name] = tname
         if p.type is not None and p.type.kind == "array":
             ty = "seq"
-            record.rewrites.append(Rewrite(rule="array-readonly-as-seq", line=p.line))
+            if p.name != mutated_param_name:
+                record.rewrites.append(Rewrite(rule="array-readonly-as-seq", line=p.line))
         else:
             ty = _t_type_of(p.type)
         scope.types[tname] = ty
@@ -805,16 +1079,40 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             scope.nat.append(p.name)
         params_out.append({"name": tname, "type": ty})
 
-    ret = method.returns[0]
-    t_ret = renamer.fresh(ret.name, record, "return")
-    scope.renames[ret.name] = t_ret
-    scope.ret_name = ret.name
-    ret_is_nat = ret.type is not None and ret.type.kind == "nat"
-    ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
-    scope.types[t_ret] = ret_ty
-    if ret_is_nat:
-        scope.nat.append(ret.name)
-    returns_out = [{"name": t_ret, "type": ret_ty}]
+    if mutated_param_name is not None:
+        # Decision 22 "modifies-param" (SPEC.md "Sequences as values
+        # (v1)"): no Dafny `returns` at all (find_array_mutation/classify
+        # guarantee this -- a method that already returns something was
+        # demoted back to "no mutation found" in classify() and refused
+        # there instead). The fresh return's name is the mutated array's
+        # own dafny name with "_out" appended; `renamer.fresh` makes it
+        # collision-free the same way every other name here is (appending
+        # `_v`, `_v2`, ... if `<name>_out` is already taken), and the
+        # rename map records the choice like any other rename.
+        param_tname = scope.renames[mutated_param_name]
+        t_ret = renamer.fresh(f"{mutated_param_name}_out", record, "return")
+        ret_ty = "seq"
+        ret_is_nat = False
+        scope.types[t_ret] = ret_ty
+        returns_out = [{"name": t_ret, "type": ret_ty}]
+        record.rewrites.append(Rewrite(rule="array-mutation-fresh-return", line=method.line))
+    else:
+        ret = method.returns[0]
+        t_ret = renamer.fresh(ret.name, record, "return")
+        scope.renames[ret.name] = t_ret
+        scope.ret_name = ret.name
+        ret_is_nat = ret.type is not None and ret.type.kind == "nat"
+        if ret.type is not None and ret.type.kind == "array":
+            # Decision 22 "alloc-fill": the return itself (or a local
+            # later assigned to it) is `new int[n]`/`new nat[n]`-bound;
+            # its Dafny type says seq return, not `_t_type_of`'s default.
+            ret_ty = "seq"
+        else:
+            ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
+        scope.types[t_ret] = ret_ty
+        if ret_is_nat:
+            scope.nat.append(ret.name)
+        returns_out = [{"name": t_ret, "type": ret_ty}]
 
     # -- spec_funs: names first (so requires/ensures/body can all reference
     #    any closure function regardless of textual order), bodies next.
@@ -831,6 +1129,29 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             record.rewrites.append(Rewrite(rule="unused-function-dropped", line=d.line))
     if any(isinstance(x, MethodDecl) and x.name == "Main" for x in module.decls):
         record.clauses_dropped.append(ClauseDropped(rule="main-dropped", count=1))
+
+    # Decision 22: `len(t_ret) == array_len_expr`, the one fact a real
+    # Dafny array's `.Length` gives for free (fixed by construction) but
+    # a `seq` return does not -- computed once, here, so it can be BOTH
+    # the task's own first ensures clause (measured necessary: Dafny
+    # checks an ensures clause's well-definedness against `requires` and
+    # EARLIER ensures only, never against what the body's loop proved,
+    # so `s_out[i]`/`s[i]` bounded by `|s_out|` alone is "index out of
+    # range" without this) AND the fact `_add_array_length_invariants`
+    # prepends to every loop that touches the mutated seq (same
+    # well-definedness rule, one level down: SPEC.md "each loop
+    # invariant may assume earlier invariants in its list"). `scope` (not
+    # `body_scope`, which does not exist yet) is enough for either shape:
+    # the "modifies-param" reference is another PARAMETER's own length,
+    # and the "alloc-fill" size expression is measured, on every program
+    # this row's `find_array_mutation` accepts, to name only params.
+    array_len_expr = None
+    if array_mutation is not None:
+        if mutated_param_name is not None:
+            array_len_expr = {"op": "len", "args": [{"var": param_tname}]}
+        elif alloc_fill_size_expr is not None:
+            array_len_expr = _lift_expr(alloc_fill_size_expr, scope, fn_names, method.name,
+                                        task_name, record, renamer)
 
     # -- requires: nat-param-guard first, then array<nat> elements, then source
     requires_out = []
@@ -858,26 +1179,68 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             if len(parts) > 1:
                 record.rewrites.append(Rewrite(rule="split-conjuncts", line=spec.line))
 
+    # -- decision 22 "modifies-param": from here on `a` (the mutated
+    # array's dafny name) means the RETURN by default -- requires above
+    # already ran against the parameter's own name, so this is the
+    # right moment to flip it. `old(a[k])`/`old(a[..])` in the ensures
+    # below still need the parameter's ORIGINAL value, which is why
+    # `param_tname` was captured before this line and not simply
+    # discarded: `scope.old_array_param_tname` is `_lift_expr`'s only
+    # remaining way to reach it.
+    if mutated_param_name is not None:
+        scope.old_array_name = mutated_param_name
+        scope.old_array_param_tname = param_tname
+        scope.renames[mutated_param_name] = t_ret
+        scope.ret_name = mutated_param_name
+
     # -- ensures: nat-return-ensures first, then source
+    # decision 22 "alloc-fill": `fresh(b)` may name the source's OWN
+    # return (`b`), the only shape `fresh()` is ever accepted for
+    # (`_array_mutation_accepted_ids` in lift_classify.py); a
+    # "modifies-param" method has no Dafny return for `fresh()` to name
+    # at all, so `fresh_ret_name` is `None` there and any `Fresh` node
+    # would only ever reach `_lift_expr`'s own `{"bool": True}` fallback.
+    fresh_ret_name = (method.returns[0].name
+                       if mutated_param_name is None and method.returns else None)
     ensures_out = []
     if ret_is_nat:
         ensures_out.append(_ge0(t_ret))
         record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret} >= 0"))
-        record.rewrites.append(Rewrite(rule="nat-return-ensures", line=ret.line))
+        record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
+    if array_len_expr is not None:
+        ensures_out.append({"op": "==", "args": [{"op": "len", "args": [{"var": t_ret}]}, array_len_expr]})
+        record.clauses_added.append(ClauseAdded(rule="array-length-return-ensures",
+                                                 text=f"len({t_ret}) == <the mutated array's own length>"))
+        record.rewrites.append(Rewrite(rule="array-length-return-ensures", line=method.line))
     for spec in method.specs:
         if isinstance(spec, EnsuresClause):
-            e = _lift_expr(spec.expr, scope, fn_names, method.name, task_name, record, renamer)
+            src_e = _strip_fresh_conjuncts(spec.expr, fresh_ret_name, record, spec.line)
+            if src_e is None:
+                continue
+            e = _lift_expr(src_e, scope, fn_names, method.name, task_name, record, renamer)
             parts = _split_top_and(e)
             ensures_out.extend(parts)
             if len(parts) > 1:
                 record.rewrites.append(Rewrite(rule="split-conjuncts", line=spec.line))
 
     # -- body
-    desugared = _desugar_returns(method.body, True, ret.name, record)
+    desugared = _desugar_returns(method.body, True, scope.ret_name, record)
     body_out = []
     body_scope = scope.copy()
+    if mutated_param_name is not None:
+        # SPEC.md: "the body starts with `<ret> := a;` so every later
+        # `a[i] := e` rewrites to an update of the return". `param_tname`
+        # is the array's PARAMETER value; `t_ret` is the fresh return,
+        # already the target of every `a`-reference in `body_scope`
+        # (inherited from `scope` above) from here on.
+        body_out.append({"assign": [t_ret, {"var": param_tname}]})
     for s in desugared:
         body_out.extend(_lift_stmt(s, body_scope, fn_names, method.name, task_name, renamer, record))
+
+    if array_mutation is not None and array_len_expr is not None:
+        mutated_tname = body_scope.renames.get(array_mutation.name)
+        if mutated_tname is not None:
+            _add_array_length_invariants(body_out, mutated_tname, array_len_expr, record)
 
     task = {"t": 1, "name": task_name, "params": params_out, "returns": returns_out,
             "requires": requires_out, "ensures": ensures_out, "body": body_out}
