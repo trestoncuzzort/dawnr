@@ -13,13 +13,13 @@ its proofs mean anything, because a parser and a printer that disagree prove
 things about a program nobody wrote. Measured by `python3 t/surface.py
 --check`:
 
-- `parse(print(t)) == t` on **1582 of 1582** tasks, compared as canonical
+- `parse(print(t)) == t` on **1584 of 1584** tasks, compared as canonical
   JSON. The corpus is the 11 committed tasks in `tasks/` plus
   `fuzz_lower.build_corpus` over seeds 1 through 7, which is 1400 generated
-  tasks plus the 19 hand-built probes per seed, 1604 in all, less the 22 that
-  `check_wf` rejects for carrying constructs t does not have. 1424 of the
-  1582 are distinct; the repeats are the probes, which recur once per seed.
-- `print(parse(text)) == text` on all 1582, so every task has exactly one
+  tasks plus the 19 hand-built probes per seed, 1606 in all, less the 22 that
+  `check_wf` rejects for carrying constructs t does not have. 1426 of the
+  1584 are distinct; the repeats are the probes, which recur once per seed.
+- `print(parse(text)) == text` on all 1584, so every task has exactly one
   normal form in the notation.
 - The **7 `written:` lines on this page parse, unedited**, to the JSON they
   sit beside. That is what makes this grammar the documented notation rather
@@ -45,7 +45,7 @@ is the 3-ary node and `(a and b) and c` is not.
 ```ebnf
 Task     ::= { "t": 0|1, "name": Id,
                "params":  [ {"name": Id, "type": Type}* ],
-               "returns": [ {"name": Id, "type": "int"|"bool"} ],   (* exactly one *)
+               "returns": [ {"name": Id, "type": Type} ],          (* exactly one *)
                "requires": [ Expr* ],           (* conjoined; [] = true *)
                "ensures":  [ Expr+ ],           (* conjoined; non-empty *)
                "gate"?: "quantifiers"|"loops"|"recursion",
@@ -53,7 +53,7 @@ Task     ::= { "t": 0|1, "name": Id,
                "decreases"?: Expr,              (* v1; required iff body self-calls *)
                "body": [ Stmt+ ] }              (* every path ends in assign *)
 
-Type     ::= "int" | "bool" | "seq"             (* seq: v1, params only *)
+Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09 *)
 
 Expr     ::= {"int": integer}                   (* mathematical integer *)
            | {"bool": true|false}                                        (* v1 *)
@@ -69,10 +69,11 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "==" | "!=" | "<" | "<=" | ">" | ">="
            | "and" | "or" | "not" | "implies"   (* and/or n-ary, short-circuit *)
            | "len" | "at"                       (* v1, seq only *)
+           | "update" | "fill"                  (* v1; written s[i := v] and seq(n, v) *)
 
 Stmt     ::= {"assign": [Id, Expr]}
            | {"if":    {"cond": Expr, "then": [Stmt*], "else": [Stmt*]}}
-           | {"var":   {"name": Id, "type": "int"|"bool", "init": Expr}}    (* v1 *)
+           | {"var":   {"name": Id, "type": Type, "init": Expr}}            (* v1 *)
            | {"return": [Id, Expr]}                 (* v1; written `return Expr;`; ends the task *)
            | {"while": {"cond": Expr,
                         "invariants": [Expr*],
@@ -129,7 +130,14 @@ Ranges are half-open `[lo, hi)`; an empty range makes `forall` true and
 `exists` false. `s[i]` is **defined only for `0 <= i < len(s)`**, and the
 definedness rules in SPEC.md say whose job it is to guard it. A lowering
 that silently totalizes `at` is wrong. Quantifiers are bounded by design.
-`seq` is a value: no aliasing, no mutation, no heap.
+`seq` is a value: no aliasing, no mutation, no heap. Since 2026-09-09
+(SPEC.md "Sequences as values") a `seq` is also a return and local type,
+`s[i := v]` is the functional update (`{"op": "update", "args": [s, i, v]}`,
+defined only for `0 <= i < len(s)`), `seq(n, v)` builds `n` copies of `v`
+(`{"op": "fill", "args": [n, v]}`, defined only for `n >= 0`), and `==` on
+two seqs is extensional. `tasks/swap.json` and `tasks/reverse.json` are
+the committed examples: `r := s[i := s[j]]; r := r[j := tmp];` and
+`r := seq(len(s), 0); ... r := r[i := s[len(s) - 1 - i]];`.
 
 ### Locals and loops (gate 2)
 
@@ -234,7 +242,7 @@ exercises all six.
 |---|---|
 | `div`, `mod` | written `/` and `%` at the `*` precedence, left associative; v1 only |
 | a chained comparison, `a == b == c` | there is no AST node for it, and reading it as a conjunction would invent one |
-| `and`/`or` at arity 1 | the AST admits it and `a and` is not a sentence; it occurs 0 times in the 1582 tasks, and `print` raises rather than emit text that reads as a different tree |
+| `and`/`or` at arity 1 | the AST admits it and `a and` is not a sentence; it occurs 0 times in the 1584 tasks, and `print` raises rather than emit text that reads as a different tree |
 | a keyword as a name | `len` cannot be both an operator and a spec_fun |
 | **comments** | a comment has no AST node, so it cannot survive `print(parse(text)) == text`; admitting one would make the round trip conditional, and the round trip is the only reason the syntax exists |
 

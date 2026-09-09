@@ -320,7 +320,8 @@ V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
           "and", "or", "not", "implies"}
 # div and mod are v1 (SPEC.md "Division and modulo", 2026-09-08): Euclidean,
 # undefined at y == 0, so v1's definedness rules apply to them as to at.
-V1_OPS = V0_OPS | {"len", "at", "div", "mod"}
+V1_OPS = V0_OPS | {"len", "at", "div", "mod", "update", "fill"}
+TERNARY = {"update"}
 UNARY = {"neg", "not", "len"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
@@ -385,7 +386,9 @@ def _ty(e, env, funs, ver, errs, bound):
     args = e.get("args", [])
     if op in UNARY and len(args) != 1:
         errs.append(f"{op} takes one argument")
-    if op not in UNARY and op not in NARY and len(args) != 2:
+    if op in TERNARY and len(args) != 3:
+        errs.append(f"{op} takes three arguments")
+    if op not in UNARY and op not in NARY and op not in TERNARY and len(args) != 2:
         errs.append(f"{op} takes two arguments")
     if op in NARY and len(args) < 2:
         errs.append(f"{op} needs at least two arguments")
@@ -398,6 +401,15 @@ def _ty(e, env, funs, ver, errs, bound):
         if ts[0] != "seq" or ts[1] != "int":
             errs.append("at wants (seq, int)")
         return "int"
+    if op == "update":
+        # SPEC.md "Sequences as values": s[i := v] is (seq, int, int) -> seq.
+        if ts[0] != "seq" or ts[1] != "int" or ts[2] != "int":
+            errs.append("update wants (seq, int, int)")
+        return "seq"
+    if op == "fill":
+        if ts[0] != "int" or ts[1] != "int":
+            errs.append("fill wants (int, int)")
+        return "seq"
     if op in ("+", "-", "*", "neg", "div", "mod"):
         if any(t != "int" for t in ts):
             errs.append(f"{op} over non-int")
@@ -407,8 +419,9 @@ def _ty(e, env, funs, ver, errs, bound):
             errs.append(f"{op} is int-only (SPEC.md gate 1)")
         return "bool"
     if op in ("==", "!="):
-        if ts[0] != ts[1] or ts[0] == "seq":
-            errs.append(f"{op} wants two ints or two bools")
+        # Two seqs compare extensionally since SPEC.md "Sequences as values".
+        if ts[0] != ts[1]:
+            errs.append(f"{op} wants two ints, two bools or two seqs")
         return "bool"
     if any(t != "bool" for t in ts):
         errs.append(f"{op} over non-bool")

@@ -61,8 +61,9 @@ New top-level fields, all optional unless a gate below requires them:
 ```
 
 New type: `"seq"`, a finite immutable sequence of mathematical integers.
-Usable as a parameter type only (not a return type in v1). New type:
-`"bool"`, usable as a return or local type.
+A parameter type from the start; since 2026-09-09 also a return and local
+type ("Sequences as values" below). New type: `"bool"`, usable as a
+return or local type.
 
 ### Division and modulo (v1)
 
@@ -170,7 +171,7 @@ above them; invariants see all of those.
 New Stmt forms:
 
 ```
-{"var": {"name": ID, "type": "int"|"bool", "init": Expr}}    // local, initialized
+{"var": {"name": ID, "type": "int"|"bool"|"seq", "init": Expr}}    // local, initialized
 {"return": [ID, Expr]}                                       // early exit: ID is the return name
 {"while": {"cond": Expr,
            "invariants": [Expr, ...],       // conjoined; may be empty
@@ -286,6 +287,46 @@ differs on the two paths. Until the lowerings land, a task with `return`
 reads abstain or error in every column, and the committed corpus carries
 none.
 
+### Sequences as values (v1)
+
+Stated 2026-09-09 (ROADMAP 12.7, "arrays with mutation"). Measured first
+on the 785 DafnyBench programs: 315 use an array, 157 assign an element,
+130 only read one (the lifter already carries a read-only array as a
+`seq`), 72 mutate a parameter in place under `modifies`, 85 allocate an
+array and fill it. Every one of those shapes is a value computation once
+the array is a sequence: an in-place update is a functional update, an
+allocation is a filled sequence, and a method whose effect is its array is
+a task whose return is a `seq`. So t takes arrays this way, with no heap,
+no aliasing and no element-level frame: a `seq` local or return is a
+variable like any other, the loop frame rule havocs it by name, and what
+its elements preserve across an iteration is the invariant author's
+statement, as it is in Dafny with `seq` and in every functional kernel.
+
+New Expr forms:
+
+```
+{"op": "update", "args": [SeqExpr, IdxExpr, Expr]}   // s[i := v]; DEFINED IFF 0 <= i < len(s)
+{"op": "fill",   "args": [IntExpr, Expr]}            // seq(n, v): n copies of v; DEFINED IFF n >= 0
+```
+
+`update` denotes the sequence equal to `s` at every index but `i`, where it
+holds `v`; its length is `len(s)`. `fill` denotes the sequence of length
+`n` whose every element is `v`. `==` and `!=` now also apply to two seqs,
+extensionally: equal lengths and equal elements at every index. Types:
+`seq` may be declared as a return (`returns (r: seq)`) and as a local
+(`var a: seq := s;`), and assigned and returned like an int. `at`, `len`,
+the bounded quantifiers and the definedness rules are unchanged. What is
+still not in v1: seq literals, slices, nested seqs, seqs of bools.
+
+The lifter's mapping (LIFTER-DECISIONS.md row 22): `a[i] := e` becomes
+`a := a[i := e]`; `new int[n]` becomes `seq(n, 0)`; a method that
+`modifies a` and speaks of `old(a[..])` and `a[..]` in its ensures becomes
+a task with `a` as a `seq` parameter and a fresh `seq` return, `old(a[k])`
+reading as `a[k]` and post-state `a[k]` as the return's element; `fresh(b)`
+on a returned array is dropped. Each lowering's dated note records the
+kernel's own sequence type, its update and construction forms, and what
+extensional equality costs it.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
@@ -352,9 +393,10 @@ vacuous, or the dropped invariant's obligation is one the kernel re-derives.
 
 ## What v1 does not claim
 
-No unbounded quantifiers. No arrays-with-mutation, no heap, no aliasing:
-`seq` is a value. No overflow semantics (mathematical
-integers; bounded backends owe explicit range obligations). One return
-value. No mutual recursion, no higher-order functions, no seq-valued
-returns or seq literals. These are gates to open with measurements, not
-omissions to apologize for.
+No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an
+array with mutation is a `seq` updated functionally ("Sequences as
+values"). No overflow semantics (mathematical integers; bounded backends
+owe explicit range obligations). One return value. No mutual recursion,
+no higher-order functions, no seq literals, no slices, no nested seqs.
+These are gates to open with measurements, not omissions to apologize
+for.

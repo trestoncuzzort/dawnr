@@ -20,14 +20,14 @@ accepted more than the AST would be a second, undocumented language.
 
 THE ROUND TRIP, measured (2026-09-04, this file's --check):
 
-  parse(print(t)) == t, canonical JSON, on 1582 of 1582 tasks. The corpus is
+  parse(print(t)) == t, canonical JSON, on 1584 of 1584 tasks. The corpus is
   the 11 committed tasks in t/tasks/ plus fuzz_lower.build_corpus over seeds
   1 through 7: 200 generated plus 19 hand-built probes per seed, 1574 in all,
   less the 16 that check_wf rejects, which carry constructs t does not have
-  and are therefore not t tasks. 1424 of the 1582 are distinct by canonical
+  and are therefore not t tasks. 1426 of the 1584 are distinct by canonical
   form; the repeats are the 19 probes, which build_corpus emits once per seed.
 
-  print(parse(text)) == text on the second pass for all 1582, so printing is
+  print(parse(text)) == text on the second pass for all 1584, so printing is
   idempotent and every task has one normal form in the notation.
 
   The 7 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
@@ -42,7 +42,7 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   1 through 5. That instrument samples the GRAMMAR, not t's semantics, and it
   is the one that found this file's only real defect (note 1 below). It is
   permanent, not scaffolding for this wave: a corpus can only exercise the
-  shapes its generators emit, so the defect it found is one the 1582-task
+  shapes its generators emit, so the defect it found is one the 1584-task
   corpus structurally cannot contain, and the next such defect will be too.
 
 TWO PLACES WHERE THE OBVIOUS NOTATION WOULD HAVE LOST INFORMATION, since
@@ -56,7 +56,7 @@ written differently:
      argument's printed form STARTS WITH A DIGIT. The test is on the text
      and not on the node because `neg` of `at` on a literal base prints
      `18[false]`, and `-18[false]` reparses as `at` of the literal `-18`.
-     That shape does not occur in the 1582-task corpus and was found by
+     That shape does not occur in the 1584-task corpus and was found by
      --fuzz; it is the one defect the corpus alone would have missed.
      Everywhere else `-e` is `neg`, as SYNTAX.md writes it.
 
@@ -98,7 +98,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
                  "decreases" Expr "=" Expr
     Block    ::= "{" Stmt* "}"
     Stmt     ::= Id ":=" Expr ";"?
-               | "var" Id ":" ("int"|"bool") ":=" Expr ";"?
+               | "var" Id ":" Type ":=" Expr ";"?
                | "if" Expr Block "else" Block
                | "while" Expr ("invariant" Expr)* "decreases" Expr Block
     Expr     ::= "forall" Id "in" "[" Expr "," Expr ")" "." Expr
@@ -113,8 +113,9 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
     Add      ::= Mul (("+"|"-") Mul)*             (* left associative *)
     Mul      ::= Unary (("*"|"/"|"%") Unary)*     (* left associative; / % are div mod *)
     Unary    ::= "-" NAT | "-" Unary | Postfix
-    Postfix  ::= Atom ("[" Expr "]")*             (* the `at` operator *)
+    Postfix  ::= Atom ("[" Expr (":=" Expr)? "]")*   (* `at`; with ":=" `update` *)
     Atom     ::= NAT | "true" | "false" | "len" "(" Expr ")"
+               | "seq" "(" Expr "," Expr ")"       (* `fill`: seq(n, v) *)
                | Id "(" (Expr ("," Expr)*)? ")"   (* call *)
                | Id | "(" Expr ")"
 
@@ -289,7 +290,7 @@ class Parser:
         rname = self.name()
         self.ret_name = rname
         self.eat("sym", ":")
-        rtype = self.vtype(("int", "bool"))
+        rtype = self.vtype()
         self.eat("sym", ")")
         task["returns"] = [{"name": rname, "type": rtype}]
 
@@ -379,7 +380,7 @@ class Parser:
         if self.opt("kw", "var"):
             vn = self.name()
             self.eat("sym", ":")
-            ty = self.vtype(("int", "bool"))
+            ty = self.vtype()
             self.eat("sym", ":=")
             init = self.expr()
             self.opt("sym", ";")
@@ -492,6 +493,11 @@ class Parser:
         e = self.p_atom()
         while self.opt("sym", "["):
             idx = self.expr()
+            if self.opt("sym", ":="):
+                val = self.expr()
+                self.eat("sym", "]")
+                e = {"op": "update", "args": [e, idx, val]}
+                continue
             self.eat("sym", "]")
             e = {"op": "at", "args": [e, idx]}
         return e
@@ -512,6 +518,15 @@ class Parser:
             e = self.expr()
             self.eat("sym", ")")
             return {"op": "len", "args": [e]}
+        if self.at("kw", "seq"):
+            # seq(n, v), the `fill` constructor (SPEC.md "Sequences as values").
+            self.eat("kw")
+            self.eat("sym", "(")
+            n = self.expr()
+            self.eat("sym", ",")
+            v = self.expr()
+            self.eat("sym", ")")
+            return {"op": "fill", "args": [n, v]}
         if self.opt("sym", "("):
             e = self.expr()
             self.eat("sym", ")")
@@ -569,7 +584,7 @@ P_UNARY = 8
 P_POSTFIX = 9
 
 _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
-_ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "implies": 2,
+_ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "implies": 2,
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2}
 
@@ -629,6 +644,11 @@ def pexpr(e, floor: int = P_QUANT) -> str:
     if op == "at":
         return _wrap("%s[%s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1])),
                      P_POSTFIX, floor)
+    if op == "update":
+        return _wrap("%s[%s := %s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1]),
+                                       pexpr(args[2])), P_POSTFIX, floor)
+    if op == "fill":
+        return "seq(%s, %s)" % (pexpr(args[0]), pexpr(args[1]))
     if op == "neg":
         # `-(5)`, never `-5`: the bare form is the literal node. The test is
         # on the printed text and not on the node, because `neg` of `at` on a
@@ -865,7 +885,7 @@ def _rand_expr(rng, depth: int) -> dict:
     d = depth - 1
     kind = rng.choice([
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
-        "len", "at", "ite", "quant", "call",
+        "len", "at", "update", "fill", "ite", "quant", "call",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -893,6 +913,11 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"op": "len", "args": [_rand_expr(rng, d)]}
     if kind == "at":
         return {"op": "at", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
+    if kind == "update":
+        return {"op": "update", "args": [_rand_expr(rng, d), _rand_expr(rng, d),
+                                         _rand_expr(rng, d)]}
+    if kind == "fill":
+        return {"op": "fill", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind == "ite":
         return {"ite": {"cond": _rand_expr(rng, d), "then": _rand_expr(rng, d),
                         "else": _rand_expr(rng, d)}}

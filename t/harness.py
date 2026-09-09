@@ -270,10 +270,18 @@ def _c_off_by_one(body, scope):
             if "int" in node:
                 for d in (1, -1):
                     yield _replace(body, sp, {"int": node["int"] + d})
-            elif node.get("op") == "at":
+            elif node.get("op") in ("at", "update"):
+                # The index of a read or of a functional update (SPEC.md
+                # "Sequences as values"): s[i +- 1 := v] writes the wrong slot.
                 for d in (1, -1):
                     yield _replace(body, sp + ("args", 1),
                                    {"op": "+", "args": [node["args"][1],
+                                                        {"int": d}]})
+            elif node.get("op") == "fill":
+                # seq(n +- 1, v): the wrong length.
+                for d in (1, -1):
+                    yield _replace(body, sp + ("args", 0),
+                                   {"op": "+", "args": [node["args"][0],
                                                         {"int": d}]})
             elif node.get("op") in ORDER_OPS and kind == "cond-while":
                 # The loop bound: `i < len(s)` has no literal to move.

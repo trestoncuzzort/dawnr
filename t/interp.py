@@ -101,6 +101,9 @@ class Budget(Exception):
     """A cap above was hit; this input decides nothing."""
 
 
+MAX_SEQ = 1 << 16          # fill length cap, the seq analogue of MAX_BITS
+
+
 def _bounded(v):
     """The magnitude cap, applied to every arithmetic result: an int past
     MAX_BITS decides nothing, like a step past MAX_STEPS."""
@@ -222,6 +225,22 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if not (0 <= i < len(s)):
             raise Undef(f"at index {i} outside [0,{len(s)})")
         return s[i]
+    if op == "update":
+        # SPEC.md "Sequences as values" (2026-09-09): s[i := v], the same
+        # definedness as `at`; a fresh tuple, never a mutation in place.
+        s, i, v = a
+        if not (0 <= i < len(s)):
+            raise Undef(f"update index {i} outside [0,{len(s)})")
+        return s[:i] + (v,) + s[i + 1:]
+    if op == "fill":
+        # seq(n, v): DEFINED IFF n >= 0. A length past MAX_SEQ decides
+        # nothing, like an int past MAX_BITS.
+        n, v = a
+        if n < 0:
+            raise Undef(f"fill length {n} < 0")
+        if n > MAX_SEQ:
+            raise Budget("seq length cap")
+        return (v,) * n
     if op == "+":
         return _bounded(a[0] + a[1])
     if op == "-":
