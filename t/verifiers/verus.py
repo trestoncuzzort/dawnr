@@ -158,7 +158,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from . import Outcome, Result, safe_text, sha256_file
+from . import Outcome, Result, safe_text, sha256_file, run_tree
 from .discover import find, missing
 
 VERUS = find("T_VERUS_BIN", ['verus'], [".local/verus/**/verus"])
@@ -516,13 +516,13 @@ def _probe_vacuity(text: str, budget: int) -> tuple[str, dict]:
                                    + ", ".join(inexpressible[:5])}
     src, lines = _build_probe(text, targets)
     t0 = time.monotonic()
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         # Fixed basename: Verus derives the crate name from it, and a dot or
         # dash in the name is a rustc error (measured, the .twin.rs finding).
         f = Path(d) / "t_vacuity_probe.rs"
         f.write_text(src, encoding="utf-8")
         try:
-            p = subprocess.run(
+            p = run_tree(
                 [str(VERUS), "--output-json", "--no-cheating",
                  "--rlimit", str(budget), str(f)],
                 capture_output=True, text=True, timeout=WALL_S)
@@ -602,7 +602,7 @@ def _check_certificate(path: Path, budget: int) -> tuple[bool, dict]:
     never to REFUTED."""
     t0 = time.monotonic()
     try:
-        p = subprocess.run(
+        p = run_tree(
             [str(VERUS), "--output-json", "--no-cheating",
              "--rlimit", str(budget), "--verify-root",
              "--verify-function", CERT_NAME, str(path)],
@@ -664,7 +664,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
                            for f in _fns(text)))
     t0 = time.monotonic()
     try:
-        p = subprocess.run(
+        p = run_tree(
             [str(VERUS), "--output-json", "--no-cheating",
              "--rlimit", str(budget), str(path)],
             capture_output=True, text=True, timeout=WALL_S)

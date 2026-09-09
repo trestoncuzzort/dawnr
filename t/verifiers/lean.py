@@ -100,7 +100,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from . import Outcome, Result, safe_text, sha256_file
+from . import Outcome, Result, safe_text, sha256_file, run_tree
 from .discover import find, missing
 
 LEAN = find("T_LEAN_BIN", ['lean'], [".elan/bin/lean"])
@@ -232,7 +232,7 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
             f.write(path.read_bytes() + b"\n" + audit.encode("utf-8"))
         t0 = time.monotonic()
         try:
-            p = subprocess.run([str(LEAN), f"-DmaxHeartbeats={budget}", tmp],
+            p = run_tree([str(LEAN), f"-DmaxHeartbeats={budget}", tmp],
                                capture_output=True, text=True,
                                errors="replace", timeout=WALL_S)
         except subprocess.TimeoutExpired:

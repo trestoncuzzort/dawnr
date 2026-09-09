@@ -33,7 +33,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import Outcome, Result, sha256_file
+from . import Outcome, Result, sha256_file, run_tree
 from .discover import find, missing
 
 AGDA = find("T_AGDA", ['agda'], [".local/agda/**/agda", ".cabal/bin/agda"])
@@ -57,14 +57,14 @@ def verify(path: Path, budget: int = 0) -> Result:
     src = path.read_text(encoding="utf-8")
     banned = BANNED.findall(src)
     t0 = time.monotonic()
-    with tempfile.TemporaryDirectory(prefix="t-agda-") as td:
+    with tempfile.TemporaryDirectory(prefix="t-agda-", ignore_cleanup_errors=True) as td:
         unit = Path(td) / "T_Unit.agda"
         unit.write_text(re.sub(r"^module\s+\S+", "module T_Unit", src,
                                count=1, flags=re.MULTILINE)
                         if src.lstrip().startswith("module")
                         else src, encoding="utf-8")
         try:
-            p = subprocess.run([str(AGDA), "--safe", "T_Unit.agda"],
+            p = run_tree([str(AGDA), "--safe", "T_Unit.agda"],
                                capture_output=True, text=True,
                                timeout=WALL_S, cwd=td)
         except subprocess.TimeoutExpired:

@@ -87,7 +87,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from . import Outcome, Result, safe_text, sha256_file
+from . import Outcome, Result, safe_text, sha256_file, run_tree
 from .discover import find, missing
 
 COQC = find("T_COQC", ['coqc', 'rocq'], [".opam/*/bin/coqc"])
@@ -257,11 +257,11 @@ def verify(path: Path, budget: int = 0) -> Result:
     # owns the on-disk name; the witness hash binds to the SOURCE bytes,
     # which are copied verbatim (no decode/re-encode round trip).
     import tempfile
-    with tempfile.TemporaryDirectory(prefix="t-rocq-") as td:
+    with tempfile.TemporaryDirectory(prefix="t-rocq-", ignore_cleanup_errors=True) as td:
         unit = Path(td) / "t_unit.v"
         unit.write_bytes(src_bytes)
         try:
-            p = subprocess.run([COQC, "t_unit.v"], capture_output=True,
+            p = run_tree([COQC, "t_unit.v"], capture_output=True,
                                text=True, timeout=_left(deadline), cwd=td)
         except subprocess.TimeoutExpired:
             return done(Outcome.TIMEOUT, error="backstop fired")
@@ -291,7 +291,7 @@ def verify(path: Path, budget: int = 0) -> Result:
             + "".join(f"Print Assumptions t_unit.{t}.\n" for t in thms),
             encoding="utf-8")
         try:
-            a = subprocess.run([COQC, "t_audit.v"], capture_output=True,
+            a = run_tree([COQC, "t_audit.v"], capture_output=True,
                                text=True, timeout=_left(deadline), cwd=td)
         except subprocess.TimeoutExpired:
             return done(Outcome.TIMEOUT, error="backstop fired (audit)")
@@ -315,7 +315,7 @@ def verify(path: Path, budget: int = 0) -> Result:
                         error="no coqchk/rocqchk beside the pinned coqc: "
                               "independent kernel re-check unavailable")
         try:
-            c = subprocess.run([COQCHK, "-silent", "-o", "-norec", "t_unit"],
+            c = run_tree([COQCHK, "-silent", "-o", "-norec", "t_unit"],
                                capture_output=True, text=True,
                                timeout=_left(deadline), cwd=td)
         except subprocess.TimeoutExpired:

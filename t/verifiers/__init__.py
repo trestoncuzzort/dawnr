@@ -83,6 +83,35 @@ def sha256_file(p: Path) -> str:
     return h.hexdigest()
 
 
+def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
+             text=False, **kw):
+    """subprocess.run for a prover that forks. The child starts its own
+    session, and a timeout kills the whole process group before raising
+    TimeoutExpired, so a straggling z3, gnatwhy3 or alt-ergo cannot outlive
+    the scratch directory or the budget. Added 2026-09-09 after truth_fuzz
+    died in spark's TemporaryDirectory cleanup ("Directory not empty:
+    'gnatprove'"): subprocess.run's timeout kills gnatprove alone, and its
+    orphaned prover kept writing into the directory being removed. Same
+    return type as subprocess.run, so call sites read as before."""
+    import signal
+    import subprocess
+    proc = subprocess.Popen(
+        cmd, cwd=cwd, env=env, start_new_session=True,
+        stdout=subprocess.PIPE if capture_output else None,
+        stderr=subprocess.PIPE if capture_output else None,
+        text=text, **kw)
+    try:
+        out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.communicate()
+        raise
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+
+
 def _serial() -> bool:
     """T_CELL_SERIAL=1 restores the one-call-at-a-time form of flake_check
     and cell_pair, for measuring what concurrency itself changes."""

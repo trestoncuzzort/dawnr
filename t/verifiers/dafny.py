@@ -229,7 +229,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from . import Outcome, Result, safe_text, sha256_file
+from . import Outcome, Result, safe_text, sha256_file, run_tree
 from .discover import find, missing
 
 DAFNY = find("T_DAFNY", ["dafny"], [".local/dafny/dafny"])
@@ -478,7 +478,7 @@ def _check_certificate(path: Path, budget: int, banned: list,
     detail["main_errors_outside_methods"] = outside[:5]
     t0 = time.monotonic()
     try:
-        p = subprocess.run(
+        p = run_tree(
             [DAFNY, "verify", f"--filter-symbol={CERT_NAME}.",
              "--log-format", "text",
              "--resource-limit", str(budget),
@@ -546,7 +546,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     rprint: str | None = None
     t0 = time.monotonic()
     try:
-        p = subprocess.run(
+        p = run_tree(
             [DAFNY, "verify", "--resource-limit", str(budget),
              "--warn-contradictory-assumptions",
              "--rprint", rp_name, "--log-format", "text", str(path)],

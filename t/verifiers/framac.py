@@ -141,7 +141,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import Outcome, Result, safe_text, sha256_file
+from . import Outcome, Result, safe_text, sha256_file, run_tree
 from .discover import find, missing
 
 FRAMAC = find("T_FRAMAC", ['frama-c'], [".opam/*/bin/frama-c"])
@@ -473,7 +473,7 @@ def _consistency_probe(raw: str, defs: list, budget: int) -> tuple[list, str]:
     src, pairs = _probe_source(raw, defs)
     if not pairs:
         return [], "no probe expressible for the parameter types"
-    with tempfile.TemporaryDirectory(prefix="t-framac-probe-") as td:
+    with tempfile.TemporaryDirectory(prefix="t-framac-probe-", ignore_cleanup_errors=True) as td:
         f = Path(td) / "probe.c"
         f.write_text(src, encoding="utf-8")
         # -wp-fct restricts goal generation to the probes, so the original
@@ -523,7 +523,7 @@ def _run(cmd: list, wall: int):
     """(returncode, decoded output). Decoded errors='replace' because kernel
     diagnostics echo raw source bytes, and text=True would re-crash on the very
     non-UTF8 probes safe_text exists for."""
-    p = subprocess.run(cmd, capture_output=True, timeout=wall)
+    p = run_tree(cmd, capture_output=True, timeout=wall)
     return p.returncode, (p.stdout.decode("utf-8", errors="replace")
                           + p.stderr.decode("utf-8", errors="replace"))
 
@@ -612,7 +612,7 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
         # unproved partition and the certificate acceptance are judged on
         # (a summary line cannot say WHICH goal timed out, and a proved
         # certificate goal is invisible in the default text output).
-        with tempfile.TemporaryDirectory(prefix="t-framac-report-") as td:
+        with tempfile.TemporaryDirectory(prefix="t-framac-report-", ignore_cleanup_errors=True) as td:
             rj = Path(td) / "report.json"
             rc, out = _run(
                 [FRAMAC, "-wp", "-wp-model", MODEL, "-wp-prover", "alt-ergo",

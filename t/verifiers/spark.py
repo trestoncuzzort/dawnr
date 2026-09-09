@@ -218,7 +218,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from . import Outcome, Result, safe_text, sha256_file
+from . import Outcome, Result, safe_text, sha256_file, run_tree
 from .discover import find, missing
 
 GNATPROVE = find("T_GNATPROVE", ['gnatprove'], [".local/gnatprove/**/bin/gnatprove", ".alire/**/bin/gnatprove"])
@@ -643,7 +643,7 @@ def _run(src_text: str, unit: str, budget: int, warnings: bool,
     """One gnatprove run over src_text in a fresh scratch dir. Returns
     (proc | None, audit | None, why); proc None means the wall backstop
     fired."""
-    with tempfile.TemporaryDirectory(prefix="t-spark-") as td:
+    with tempfile.TemporaryDirectory(prefix="t-spark-", ignore_cleanup_errors=True) as td:
         work = Path(td)
         lib = _USES_SPARKLIB.search(src_text) is not None
         (work / "t_work.gpr").write_text(GPR_SPARKLIB if lib else GPR,
@@ -661,7 +661,7 @@ def _run(src_text: str, unit: str, budget: int, warnings: bool,
         if cntexmp:
             cmd += _ce_flags(budget)
         try:
-            p = subprocess.run(cmd, capture_output=True, text=True,
+            p = run_tree(cmd, capture_output=True, text=True,
                                timeout=WALL_S, cwd=work, env=_env())
         except subprocess.TimeoutExpired:
             return None, None, "wall backstop fired"

@@ -189,7 +189,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from . import Outcome, Result, safe_text, sha256_file
+from . import Outcome, Result, safe_text, sha256_file, run_tree
 from .discover import find, missing
 
 _GLOBS = [".local/fstar/fstar/bin/fstar.exe", ".local/fstar/**/bin/fstar.exe"]
@@ -269,7 +269,7 @@ def _check_certificate(fname: str, cwd: str, module: str,
     Returns (accepted, why). Anything short of a clean discharge is False, so
     a rejected or unrunnable certificate costs a flip and never fakes one."""
     try:
-        p = subprocess.run(
+        p = run_tree(
             # NOT --report_assumes error here: F* makes any use of
             # --admit_except itself an assume (Error 335, "Every use of this
             # option triggers an error: admit_except"), so the two flags
@@ -307,12 +307,12 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     fname = (m.group(1) + ".fst") if m else "T_unit.fst"
     bud = f"z3rlimit={budget} z3seed={Z3_SEED} z3={Z3_VERSION}"
     t0 = time.monotonic()
-    with tempfile.TemporaryDirectory(prefix="t-fstar-") as td:
+    with tempfile.TemporaryDirectory(prefix="t-fstar-", ignore_cleanup_errors=True) as td:
         # raw bytes, not the decoded scan text: F* must judge exactly the
         # bytes src_hash binds to (non-UTF8 then fails ITS lexer -> MALFORMED)
         (Path(td) / fname).write_bytes(raw)
         try:
-            p = subprocess.run(
+            p = run_tree(
                 [FSTAR, "--message_format", "json",
                  "--z3version", Z3_VERSION, "--z3seed", str(Z3_SEED),
                  "--z3rlimit", str(budget), "--report_assumes", "error",
