@@ -73,6 +73,75 @@ what is delegated to the kernel and what is refused:
   the modular contract (callee requires proved at the site, ensures
   assumed of the result) at every call.
 
+  SEQUENCES AS VALUES (2026-09-09, SPEC.md "Sequences as values"). `seq`
+  becomes a return and local type, not only a param's; `update` (`s[i :=
+  v]`) and `fill` (`seq(n, v)`) are new Expr forms; `==`/`!=` on two seqs
+  are extensional. `TY["seq"]` already existed (`Seq.seq int`, Gate 1's
+  own type), so params, spec_fun params and every binder needed no change;
+  what a seq RETURN or LOCAL needed was `sx` (below `seq_var`, which it
+  replaces), the seq-expression analogue of `zx`/`bx`, threaded through
+  `env` in `exec_flow`'s assign/var/return cases exactly as an int or bool
+  slot already was, plus `_dummy`/`_render` to dispatch a right-hand side
+  on its t type instead of the old two-way bool/int ternary repeated at
+  three call sites. Measured on F* 2026.08.30, no reencoding needed for
+  either op: `Seq.upd s i v` and `Seq.create n v` both verify unassisted
+  from an unrefined `s`/`n`/`i` given only the ambient `0 <= i < len(s)` /
+  `n >= 0` requires (P1.fst probe), because `Seq.upd`'s index parameter is
+  `n:nat{n < length s}` and `Seq.create`'s length is `nat`, the same
+  domain-refinement subtyping check `at` and `div`/`mod` already get, and
+  their own SMTPat'd index/length lemmas (`lemma_index_upd1/2`,
+  `lemma_index_create`) are automatic, no assist needed. Extensional `==`
+  is `Seq.equal`, NEVER F*'s own `==` on a `Seq.seq`: measured directly
+  (P2.fst), `Seq.upd s i (Seq.index s i) == s` (bare `==`) fails to prove,
+  Error 19, while `Seq.equal (Seq.upd s i (Seq.index s i)) s` and a second
+  probe swapping two out-of-order updates both verify with `()`, no lemma
+  invoked by name: `Seq.equal` is an opaque `Tot prop` whose own
+  `lemma_eq_intro`/`lemma_eq_elim` carry SMTPat keyed on the literal term
+  `Seq.equal s1 s2`, so writing that term at all triggers both directions
+  (pointwise facts -> `equal`, `equal` -> propositional `==`) with nothing
+  invoked here. The negative direction is NOT similarly automatic --
+  proving two seqs are NOT `Seq.equal` (a real length mismatch) came back
+  "incomplete quantifiers" (P2.neq_probe) -- so `!=` renders the same
+  honest `(~ (Seq.equal a b))` and is left for the kernel to prove or not;
+  no committed task needs it. The computational (non-spec) position uses
+  `Seq.eq`, the DECIDABLE bool form for `int`'s `eqtype`, whose own
+  postcondition is `r <==> Seq.equal a b`, so `bx`'s `==`/`!=` on seqs cost
+  no separate proof either. One rendering bug this surfaced and fixed:
+  `TY["seq"]` is two tokens (`Seq.seq int`) and a binder's enclosing parens
+  hid that everywhere `seq` was only ever a PARAM type, but a bare `Pure
+  {TY[ret_t]}` is not enclosed by anything -- measured, `Pure Seq.seq int
+  (requires ..) (ensures ..)` fails to desugar, "Unexpected arguments to
+  effect Prims.Pure" (F* error 146, P3.fst), while `Pure (Seq.seq int)
+  ...` and `either (Seq.seq int) int` (P4.fst) both verify -- so `_pty`
+  parenthesizes TY's value only at the three bare-type call sites (a
+  task's own `Pure`, a single-state-var loop helper's `Pure`, and
+  `outcome_ty`'s `either`) and TY itself stays bare, so abs.fst,
+  first_even.fst and digit_sum.fst (no seq return/update) are byte-
+  identical to before this change, diffed against a HEAD checkout.
+    The twin path needed one more thing: swap's canonical twin (no `if`,
+  so COLLAPSE-IF/NEGATE-COND/COMPARE-FLIP/BOUNDARY-SWAP all abstain; the
+  first OFF-BY-ONE candidate is the `at(s, i)` in `tmp := s[i]`, mutated to
+  `s[i+1]`) is a `_kind == "undefined"` witness (s=[0], i=0, j=0: the real
+  body has a value, the twin's `s[1]` does not), which `lower_verus.py`'s
+  shared `certificate_formula` did not certify when this file's own work
+  started (measured first: swap REFUSED, "real verified, off-by-one twin
+  unproved", F* Error 19 on the twin's own `Seq.index` subtyping check --
+  SPEC.md's "nothing is totalized", never a bare pass, exactly as
+  designed). `lower_verus.py` gained undefined-kind support the same day
+  (`_undef_obligation`, re-walking the twin's statements with `interp.ev`);
+  this file needed no code of its own for it beyond what was already
+  there, because the certificate is still an ordinary t Expr tree and the
+  same `cx.prop(formula, {}, {})` call already renders it. Measured after:
+  swap COUNTS (witness s=[0], i=0, j=0 -> real [0], twin "at index 1
+  outside [0,1)"), the certificate a ground fact with no seq-typed operand
+  at all (the guard is stated over the index and the concrete length, not
+  the sequence value), discharged by `assert_norm` with no SMT fallback
+  exactly as the value/exit cases already were. Regression: all 15 pre-
+  existing tasks' lowered output (`out/*.fst`, real and twin, byte for
+  byte) is unchanged from a HEAD checkout, and all 17 tasks in
+  `tasks/*.json` COUNT, the 15 old ones reading exactly AGREEMENT.md's
+  fstar column (verified/refuted throughout).
+
 Statement bodies lower by symbolic execution to one expression (per-var
 if-merge, the Rocq lowering's approach): every t body ends each path in an
 assign, so the final environment entry for the return name IS the function
@@ -103,6 +172,27 @@ from verifiers import fstar as fstar_backend     # noqa: E402
 TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int"}
 CMP = {"<": "<", "<=": "<=", ">": ">", ">=": ">="}
 ARITH = {"+": "+", "-": "-", "*": "*", "div": "/", "mod": "%"}
+
+
+def _pty(t: str) -> str:
+    """TY[t], parenthesized when it is more than one token (`Seq.seq int`,
+    2026-09-09: a seq return/local's type, unlike a binder's `(name:TY[t])`
+    where the enclosing parens already disambiguate it). Bare positions
+    need this and binder positions must NOT get it, measured directly:
+    `: Pure Seq.seq int (requires ...) (ensures ...)` fails to desugar,
+    "Unexpected arguments to effect Prims.Pure" (F* 2026.08.30 error 146,
+    Pure's grammar takes exactly one type field before its `(requires
+    ...)`/`(ensures ...)` clauses, so an unparenthesized two-token type
+    swallows `int` as a second argument to the effect), while `: Pure
+    (Seq.seq int) (requires ...) (ensures ...)` and `either (Seq.seq int)
+    int` both verify. TY itself stays bare so every existing `({name}:
+    {TY[...]})` binder (params, spec_fun params, loop-frame binders) is
+    untouched: those already sit inside their own enclosing parens and
+    changing TY's own value for a task with no seq return/local would have
+    changed abs.fst/first_even.fst/digit_sum.fst's bytes for no reason."""
+    v = TY[t]
+    return f"({v})" if " " in v else v
+
 
 RESERVED = {
     "abstract", "admit", "and", "assert", "assume", "attributes", "begin",
@@ -203,6 +293,8 @@ class Ctx:
             return "int"
         if "bool" in e:
             return "bool"
+        if "_seq" in e:
+            return "seq"
         if "var" in e:
             return local.get(e["var"]) or self.tys[e["var"]]
         if "forall" in e or "exists" in e:
@@ -212,23 +304,47 @@ class Ctx:
         if "call" in e:
             return self.funs[e["call"]["fun"]]["result"]
         op = e["op"]
+        if op in ("update", "fill"):
+            return "seq"
         if op in ARITH or op in ("neg", "len", "at"):
             return "int"
         return "bool"
 
-    def seq_var(self, e: dict, local: dict) -> str:
-        """v1 sequences are param-position values: a seq position must be a
-        seq-typed variable."""
+    def sx(self, e: dict, env: dict, local: dict) -> str:
+        """Seq-valued term. Through 2026-09-08 a seq position could only be
+        a variable or a ground `_seq` literal (the certificate's own
+        witness rendering); since 2026-09-09 ("Sequences as values", v1) a
+        seq local or return can be REASSIGNED to a fresh `update`/`fill`
+        term, exactly as an int local is, so a seq position is now any of:
+        a variable, looked up through `env` like `zx`/`bx` already do (not
+        just its bare name, which was fine only because no seq-typed
+        assignment existed to shadow it); a ground `_seq` literal; or
+        `update`/`fill` themselves, rendered to FStar.Seq's own `upd` and
+        `create`. Both are used with no reencoding and no extra guard, the
+        same posture DIV/MOD's note takes: `Seq.upd`'s index parameter is
+        `n:nat{n < length s}` and `Seq.create`'s length parameter is `nat`,
+        so `0 <= i < len(s)` (`update`) and `n >= 0` (`fill`) are, exactly
+        like `at`'s domain refinement, subtyping checks the kernel is
+        already forced to discharge from the ambient path condition:
+        nothing here re-derives or re-guards what F*'s own signatures
+        already require."""
         if "var" in e and (local.get(e["var"]) or self.tys.get(e["var"])) == "seq":
-            return e["var"]
+            return env.get(e["var"], e["var"])
         if "_seq" in e:
-            # A GROUND seq value, which only the refutation certificate below
-            # produces: the witness substitutes a concrete sequence into a
-            # seq-typed parameter. Nothing else in the lowering may reach
-            # here, and the certificate is the one place a seq position is
-            # not a variable.
+            # A GROUND seq value, which only the refutation certificate
+            # below produces (a witness substituting a concrete sequence
+            # into a seq-typed parameter or return) or a `fill`/`update`
+            # tree that bottoms out at one.
             items = "; ".join(str(int(v)) for v in e["_seq"])
             return f"(Seq.createL #int [{items}])"
+        op = e.get("op")
+        if op == "update":
+            s, i, v = e["args"]
+            return (f"(Seq.upd {self.sx(s, env, local)} "
+                    f"{self.zx(i, env, local)} {self.zx(v, env, local)})")
+        if op == "fill":
+            n, v = e["args"]
+            return f"(Seq.create {self.zx(n, env, local)} {self.zx(v, env, local)})"
         raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
     def call(self, e: dict, env: dict, local: dict) -> str:
@@ -237,7 +353,7 @@ class Ctx:
         parts = [c["fun"]]
         for formal, a in zip(info["params"], c["args"], strict=True):
             if formal["type"] == "seq":
-                parts.append(self.seq_var(a, local))
+                parts.append(self.sx(a, env, local))
             elif formal["type"] == "bool":
                 parts.append(self.bx(a, env, local))
             else:
@@ -261,9 +377,9 @@ class Ctx:
             return self.call(e, env, local)
         op = e.get("op")
         if op == "len":
-            return f"(Seq.length {self.seq_var(e['args'][0], local)})"
+            return f"(Seq.length {self.sx(e['args'][0], env, local)})"
         if op == "at":
-            return (f"(Seq.index {self.seq_var(e['args'][0], local)} "
+            return (f"(Seq.index {self.sx(e['args'][0], env, local)} "
                     f"{self.zx(e['args'][1], env, local)})")
         if op == "neg":
             return f"(- {self.zx(e['args'][0], env, local)})"
@@ -296,6 +412,14 @@ class Ctx:
             return f"({a} {CMP[op]} {b})"
         if op in ("==", "!="):
             t = self.ty(e["args"][0], local)
+            if t == "seq":
+                # Computational position: Seq.eq is the DECIDABLE bool
+                # form (int is an eqtype), r <==> Seq.equal a b by its own
+                # signature, so no separate proof is owed here beyond what
+                # `Seq.eq`'s postcondition already gives the kernel.
+                a, b = (self.sx(x, env, local) for x in e["args"])
+                core = f"(Seq.eq {a} {b})"
+                return core if op == "==" else f"(not {core})"
             rd = self.bx if t == "bool" else self.zx
             a, b = (rd(x, env, local) for x in e["args"])
             return f"({a} {'=' if op == '==' else '<>'} {b})"
@@ -349,9 +473,38 @@ class Ctx:
             a, b = (self.prop(x, env, local) for x in e["args"])
             return f"({a} ==> {b})"
         if op in ("==", "!="):
-            if self.ty(e["args"][0], local) == "bool":
+            t0 = self.ty(e["args"][0], local)
+            if t0 == "bool":
                 a, b = (self.prop(x, env, local) for x in e["args"])
                 core = f"({a} <==> {b})"
+            elif t0 == "seq":
+                # Extensional equality (SPEC.md "Sequences as values"):
+                # FStar.Seq.Base's `equal` is an opaque Tot prop, never F*'s
+                # own `==` on seq (measured false: a bare `s1 == s2` between
+                # two differently-built-but-pointwise-equal seqs is NOT
+                # proved by the ambient upd/index/create SMT patterns alone,
+                # 2026-09-09 probe P2.bare_eq_probe, Error 19). `equal`
+                # itself carries the round trip as two SMTPat'd lemmas keyed
+                # on the literal term `Seq.equal s1 s2`: lemma_eq_intro
+                # turns "same length, same index everywhere" (already
+                # ambient from upd/index/create's own patterns) into `equal
+                # s1 s2`, and lemma_eq_elim turns `equal s1 s2` into F*'s
+                # propositional `s1 == s2`. So rendering `==` as `Seq.equal`
+                # gets both directions for free the moment the term appears
+                # in the query; no lemma is invoked by name here. Measured
+                # 2026-09-09: P2.noop_probe and P2.swap_swap_probe (two
+                # pointwise-equal-but-differently-built seqs) both verify
+                # with `()`, no assist. The POSITIVE direction only:
+                # proving two seqs are NOT `Seq.equal` (a real length
+                # mismatch, `!=`) is not similarly pattern-driven --
+                # P2.neq_probe (create 2 v != create 3 v) came back
+                # "incomplete quantifiers", UNPROVED at the default budget
+                # -- so a `!=` on seqs is emitted the same honest way and
+                # left for the kernel to prove or not; no committed task
+                # needs it.
+                a, b = (self.sx(x, env, local) for x in e["args"])
+                core = f"(Seq.equal {a} {b})"
+                return core if op == "==" else f"(~ {core})"
             else:
                 a, b = (self.zx(x, env, local) for x in e["args"])
                 core = f"({a} == {b})"
@@ -376,6 +529,32 @@ def _decls(stmts: list) -> set[str]:
     return out
 
 
+def _render(cx: "Ctx", e: dict, t: str, env: dict, local: dict) -> str:
+    """An assign/var-init/return right-hand side, dispatched on its t type
+    (SPEC.md 2026-09-09: a seq is now a local/return type, not only a
+    param), so a seq-typed slot is threaded through `env` exactly like an
+    int or bool one, and a later `update`/`fill` sees the PREVIOUS value
+    through `sx`'s own env lookup rather than the bare variable name."""
+    if t == "bool":
+        return cx.bx(e, env, local)
+    if t == "seq":
+        return cx.sx(e, env, local)
+    return cx.zx(e, env, local)
+
+
+def _dummy(t: str) -> str:
+    """A throwaway, well-typed literal for a slot that types but is never
+    read (SPEC.md "Early exit"'s unreached branch, and a loop's initial
+    `env` before anything is threaded through it). `Seq.createL #int []`
+    matches the empty-seq literal the certificate below already emits for
+    `_seq: []`, rather than a second spelling of the same empty sequence."""
+    if t == "bool":
+        return "false"
+    if t == "seq":
+        return "(Seq.createL #int [])"
+    return "0"
+
+
 # --------------------------------------------------------------- return ----
 # Early exit (SPEC.md "Early exit", stated 2026-09-08). `exec_flow` is
 # `exec_straight`'s generalisation: it threads a `(retcond, retval)` pair
@@ -397,20 +576,18 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str):
         if "return" in s:
             name, e = s["return"]
             t = local.get(name) or cx.tys[name]
-            val = cx.bx(e, env, local) if t == "bool" else cx.zx(e, env, local)
+            val = _render(cx, e, t, env, local)
             return env, "true", val
         elif "assign" in s:
             v, e = s["assign"]
             t = local.get(v) or cx.tys[v]
-            env[v] = (cx.bx(e, env, local) if t == "bool"
-                      else cx.zx(e, env, local))
+            env[v] = _render(cx, e, t, env, local)
         elif "var" in s:
             d = s["var"]
             v = _ck(d["name"])
             assert v not in cx.tys and v not in local, f"redeclared {v}"
             local[v] = d["type"]
-            env[v] = (cx.bx(d["init"], env, local) if d["type"] == "bool"
-                      else cx.zx(d["init"], env, local))
+            env[v] = _render(cx, d["init"], d["type"], env, local)
         elif "if" in s:
             c = s["if"]
             cb = cx.bx(c["cond"], env, local)
@@ -585,7 +762,7 @@ def gen_fun(cx: Ctx, task: dict, body: list) -> str:
     ret_t = task["returns"][0]["type"]
     pb, _ = param_binders(task)
     req, ens = task_spec(cx, task)
-    dummy = "false" if ret_t == "bool" else "0"
+    dummy = _dummy(ret_t)
     env, retcond, retval = exec_flow(cx, body, {ret: dummy}, {}, dummy)
     if retcond == "false":
         expr = env[ret]
@@ -599,7 +776,7 @@ def gen_fun(cx: Ctx, task: dict, body: list) -> str:
         assert "decreases" in task, "self-recursive task without decreases"
         dec = f"\n    (decreases {cx.zx(task['decreases'], {}, {})})"
     return (f"let {'rec ' if selfrec else ''}{name} {pb}\n"
-            f"  : Pure {TY[ret_t]}\n"
+            f"  : Pure {_pty(ret_t)}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens}){dec}\n"
             f"= {expr}\n")
@@ -615,8 +792,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     lname = cx.fresh_named(f"{name}_loop")
 
     local: dict[str, str] = {}
-    env_pre = exec_straight(
-        cx, prefix, {ret: "false" if ret_t == "bool" else "0"}, local)
+    env_pre = exec_straight(cx, prefix, {ret: _dummy(ret_t)}, local)
     # SPEC.md frame rule: the loop havocs exactly the syntactic assigned set
     # of its body. Only those variables are threaded through the recursion;
     # every other mutable name is a plain binder of the helper, passed back
@@ -644,7 +820,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     dec = cx.zx(w["decreases"], {}, local)
     reqs = [cx.prop(e, {}, {}) for e in task.get("requires", [])]
 
-    dummy = "false" if ret_t == "bool" else "0"
+    dummy = _dummy(ret_t)
     step_env, body_rc, body_rv = exec_flow(cx, w["body"], {}, dict(local), dummy)
     step = " ".join(step_env.get(v, v) for v in svars)
     env_post = exec_straight(cx, suffix, {}, dict(local))
@@ -652,7 +828,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
 
     post = _conj(invs + [f"(~ {guard_p})"])
     if len(svars) == 1:
-        state_ty = TY[stys[svars[0]]]
+        state_ty = _pty(stys[svars[0]])
         state_out = svars[0]
     else:
         state_ty = "(" + " & ".join(TY[stys[v]] for v in svars) + ")"
@@ -684,7 +860,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
                 f"  else {state_out}\n"
                 f"\n"
                 f"let {name} {pb}\n"
-                f"  : Pure {TY[ret_t]}\n"
+                f"  : Pure {_pty(ret_t)}\n"
                 f"    (requires {req})\n"
                 f"    (ensures {ens})\n"
                 f"= {fbind}{bind} = {lname} {pargs}{fargs} {init} in\n"
@@ -704,7 +880,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     # then (if body_rc then Inl body_rv else ...)` shape below, so proving
     # `ens body_rv` there is the same kind of obligation the normal exit
     # discharges from the invariant and the negated guard.
-    outcome_ty = f"(either {TY[ret_t]} {state_ty})"
+    outcome_ty = f"(either {_pty(ret_t)} {state_ty})"
     rvar = cx.fresh()
     loop_ens = (f"(fun res -> match res with "
                 f"| Inl {rvar} -> ({ens} {rvar}) "
@@ -722,7 +898,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
             f"  else {else_branch}\n"
             f"\n"
             f"let {name} {pb}\n"
-            f"  : Pure {TY[ret_t]}\n"
+            f"  : Pure {_pty(ret_t)}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens})\n"
             f"= {fbind}match {lname} {pargs}{fargs} {init} with\n"
@@ -753,8 +929,30 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
 # the witness, and the ensures conjunction false at (input, r := the twin's
 # measured result) for a value witness; for an exit witness the surviving
 # invariants and the negated guard and the negated ensures at the measured
-# loop-exit state. Preservation and undefined witnesses are not certificated
-# and honestly read unproved.
+# loop-exit state; for an undefined witness (SPEC.md "Sequences as values",
+# 2026-09-09: the twin's own body hits `at`/`update`/`fill`/`div`/`mod`
+# outside its domain before any ensures instance can even be stated) requires
+# at the witness conjoined with the negated definedness obligation
+# `lower_verus._undef_obligation` finds by re-walking the twin's statements
+# with `interp.ev`. Preservation is still not certificated and honestly
+# reads unproved.
+#
+# Measured 2026-09-09 on swap's canonical twin (OFF-BY-ONE on the `at(s, i)`
+# in `tmp := s[i]`, mutated to `s[i+1]`; witness s=[0], i=0, j=0, undefined
+# because `s[1]` is out of range): before lower_verus.py's undefined-kind
+# support landed, `certificate_formula` returned None here and swap read
+# REFUSED, "real verified, off-by-one twin unproved" (F* Error 19 on the
+# twin's own `Seq.index` subtyping check -- SPEC.md's "nothing is
+# totalized", never a bare pass). With it, the formula renders as a ground
+# fact with no seq-typed operand at all (the guard is stated in terms of the
+# index and the concrete length, not the sequence value, matching every
+# other column's reading of this witness), `assert_norm` discharges it with
+# no SMT fallback exactly as the value/exit cases already do, and swap COUNTS
+# (witness s=[0], i=0, j=0 -> real [0], twin "at index 1 outside [0,1)").
+# This file's `sx`'s `_seq` literal path is exercised only by `requires`'
+# own `len(s)` here, not by anything the undefined case itself needed: no
+# new rendering code in this file, the same `cx.prop(formula, {}, {})` call
+# below carries it, because the formula is still an ordinary t Expr tree.
 #
 # F*'s ground evaluator is `assert_norm`, the analogue of verus's
 # compute_only: it normalises the proposition with no SMT fallback. Measured

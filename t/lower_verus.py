@@ -93,6 +93,93 @@ quantifier"). `expr()`'s forall/exists case now supplies an explicit
 of its own (`_has_indexable`, `_mod_div_trigger`); every prior task's
 quantifiers keep their free automatic inference untouched, so all 13
 previously committed tasks (v0 and v1 alike) still lower byte-identically.
+
+SEQUENCES AS VALUES (2026-09-09, SPEC.md "Sequences as values (v1)"),
+`update` (`s[i := v]`) and `fill` (`seq(n, v)`). Both are native in Verus's
+own vstd, so `expr()` just calls the vstd method: `update` emits
+`s.update(i, v)` (vstd::seq::Seq::update, measured, probe_update.rs: 0
+errors alongside a bound-checked `requires`), `fill` emits
+`Seq::new(n as nat, |_t_fill_i: int| v)` (vstd::seq::Seq::new takes a
+`nat` length and a `FnSpec(int) -> A`; measured, probe_fill_int.rs: an
+`int`-typed `n` with `n >= 0` in scope casts and verifies with no hint
+needed, the same `as nat` cast `at`'s own `len()` already relies on in
+the other direction). `TYPES["seq"]` (already `Seq<int>`, added ahead of
+this task) needed no change: a `seq` return, local, and loop-state slot
+were already generic over Verus type strings via `scope`'s `(type, mut)`
+entries, so a `Seq<int>`-typed loop variable is framed by name exactly
+like an `int` one, no code path cared which.
+
+DEFINEDNESS. `Seq::index` and `Seq::update` share the same
+`recommends`-only bound (measured, probe_update_oob.rs and
+probe_update_oob2.rs): out of `[0, len)`, `update`'s own length
+postcondition still holds (`s.update(i,v).len() == s.len()` verifies
+unconditionally) but the ELEMENT at `i` is left unconstrained -- an
+out-of-bound `s.update(i,v)[i] == v` fails to verify, the same
+"unspecified, not undefined-in-Rust's-sense" shape `at` already gets in
+this file, so `defined()`'s new "update" case owes `at`'s own bound
+(`0 <= i < len(s)`) plus definedness of all three sub-expressions,
+discharged by the same `_assert_defined` mechanism, no new machinery.
+`fill`'s bound is native too but from the other side: `n as nat` for a
+negative `n` does not trap, it silently produces length 0 (measured,
+probe_fill_neg.rs: `Seq::new(n as nat, ...).len() == n` FAILS to verify
+with no `n >= 0` in scope, so an unguarded `fill` would silently
+totalize exactly the way SPEC.md forbids), so `defined()`'s "fill" case
+owes `n >= 0` explicitly, the same shape as `div`/`mod`'s `y != 0`.
+
+EXTENSIONAL EQUALITY. Costs nothing extra: measured directly
+(probe_ext_eq.rs, `a.len()==b.len() && forall k. a[k]==b[k]` in
+`requires`, bare `a == b` in `ensures`, 0 errors; probe_ext_eq3.rs, a
+harder case with no given index facts at all,
+`a.update(i,x).update(i,y) == a.update(i,y)`, also 0 errors unaided) --
+Verus's `Seq<int>` compiles to Z3's native sequence sort in spec/proof
+mode, where `==` already denotes real extensional equality at the SMT
+level, not a derived or definitional one a lowering has to unlock with
+`=~=` (Verus's own extensionality macro, probed too: identical results
+with or without it, probe_ext_eq2.rs / probe_ext_eq3b.rs). So `BIN_OPS`
+needed no seq-specific entry: `"==" -> "=="` and `"!=" -> "!="`, already
+generic over int/bool, are exactly as sound for two `Seq<int>` operands
+and neither swap nor reverse (v1's two committed seq tasks) even
+exercises it directly (both specs compare elementwise via `at`), so this
+finding is banked for the next seq task that states `==` between two
+whole seqs, not exercised by either committed cell.
+
+THE TWIN PATH surfaced a gap the construct's own witnesses hit
+immediately: swap's measured twin (off-by-one on the `at` inside `tmp :=
+s[i]`, mutated to `s[i+1]`) is UNDEFINED at its witness (s=[0], i=0,
+j=0: index 1 outside [0,1)), the "_kind": "undefined" witness shape
+interp.py's `Reference.witness` has always been able to produce (SPEC.md
+"The twins": "the twin is undefined where the real body has a value" is
+one of the two accepted value-changing witness shapes) but that this
+file's certificate builder had never had to certify, since none of the
+13 tasks committed before this one ever measured it (checked directly:
+every one is "value" or "exit"). Declining to certify it would leave
+swap permanently UNPROVED on its twin cell, never REFUTED, so
+`_undef_obligation` closes it: re-walk the twin body with `interp.ev`,
+in the same left-to-right order interp.py used to raise the Undef that
+minted the witness, calling `defined()` (the one function this lowering
+already trusts for its own asserts, so no second reading of what
+"defined" means) at each statement to find the first ground-false
+obligation, then emit its negation, substituted with the witness's
+concrete values, as the certificate goal, joined with `parts` exactly
+like the "value" and "exit" kinds already are. Measured on swap: the
+obligation `0 <= (i+1) && (i+1) < len(s)` is false at the witness, the
+certificate carries `assert(!(...)) by (compute_only)`, and
+verifiers/verus.py accepted it, minting the REFUTED that made swap COUNT
+(`off-by-one twin REFUTED`, witness s=[0], i=0, j=0). reverse needed no
+such extension: its measured twin (invariant-drop#1) is an "exit"
+witness (s=[], i=0, r=[0]), the same kind seq_max and first_even already
+certify, and the ONLY change that mattered there was `_tlit` already
+accepting a list of ints as a `{"_seq": [...]}` node (present ahead of
+this task) and `expr()`'s existing `"_seq"` case (also already present)
+rendering it as `seq![(0int)]`, so a seq-valued witness slots into the
+existing "exit" certificate path with no new code.
+
+Regression, measured 2026-09-09: `swap` and `reverse` COUNT (real
+VERIFIED, twin REFUTED); all 15 previously committed tasks still read
+`verified / refuted` in the verus column exactly as t/AGREEMENT.md
+records, and `out/abs.rs`, `out/first_even.rs` and `out/digit_sum.rs`
+(one v0, two v1 with a loop, chosen to cover both lowering paths) are
+byte-identical before and after this change.
 """
 from __future__ import annotations
 
@@ -251,6 +338,10 @@ def expr(e: dict) -> str:
         return f"({args[0]}.len() as int)"
     if op == "at":
         return f"{args[0]}[{args[1]}]"
+    if op == "update":
+        return f"{args[0]}.update({args[1]}, {args[2]})"
+    if op == "fill":
+        return f"Seq::new({args[0]} as nat, |_t_fill_i: int| {args[1]})"
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
@@ -337,6 +428,16 @@ def defined(e: dict) -> dict:
             {"op": "<=", "args": [{"int": 0}, i]},
             {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
         return _conj([defined(s), defined(i), bound])
+    if op == "update":
+        s, i, v = args
+        bound = {"op": "and", "args": [
+            {"op": "<=", "args": [{"int": 0}, i]},
+            {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
+        return _conj([defined(s), defined(i), defined(v), bound])
+    if op == "fill":
+        n, v = args
+        nonneg = {"op": ">=", "args": [n, {"int": 0}]}
+        return _conj([defined(n), defined(v), nonneg])
     if op in ("div", "mod"):
         x, y = args
         nonzero = {"op": "!=", "args": [y, {"int": 0}]}
@@ -991,8 +1092,21 @@ class _V1:
 #   preservation: would need one loop iteration replayed inside the
 #     certificate; not emitted (no current twin produces this kind), so
 #     such a cell honestly reads unproved.
-#   undefined: the twin has no value at the witness, so there is no ground
-#     ensures instance to evaluate; not emitted.
+#   undefined (2026-09-09, SPEC.md "Sequences as values"): the twin has no
+#     value at the witness because some statement's right-hand side hit a
+#     partial operator (`at`, `update`, `fill`, `div`, `mod`) outside its
+#     domain before any `ensures` instance could even be stated, so there
+#     is nothing to substitute the return name with. What IS ground and
+#     checkable is the operator's own definedness obligation, which this
+#     lowering's `defined()` already computes for every honest assert it
+#     emits: requires holds at the witness, and that same obligation,
+#     re-evaluated with interp.ev over the SAME statements in the SAME
+#     order interp.py walked to raise the Undef that minted this witness
+#     kind, is false. `_undef_obligation` below does the walk and returns
+#     the first such false obligation, ground-substituted; None (no
+#     certificate, an honest unproved) on an `if`, `while`, or `return`
+#     before the failing statement, or if the walk disagrees with the
+#     witness and finds nothing false.
 # Bounded quantifiers whose bounds are ground after witness substitution
 # are unrolled here (finite conjunction/disjunction over the concrete
 # range, capped) because compute_only cannot evaluate int quantifiers; the
@@ -1114,6 +1228,52 @@ def certificate_formula(task: dict, twin_body: list, w: dict) -> dict | None:
     return _cert_formula(task, twin_body, w)
 
 
+def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict
+                       ) -> dict | None:
+    """The negated definedness obligation of the twin body's first
+    statement that has none, ground-substituted at the witness (SPEC.md
+    "Sequences as values", 2026-09-09; see the "undefined" entry in the
+    section comment above). Re-walks `twin_body` with interp.ev, in the
+    SAME left-to-right statement order interp.py's own exec_body used to
+    raise the Undef that minted this witness in the first place, so the
+    statement this finds is the same one interp.py found; `defined()` is
+    the identical function this lowering already trusts for every honest
+    assert it emits, so there is no second, independent reading of what
+    "defined" means. `m` (var name -> t literal) and `env_py` (var name ->
+    Python value, the tuples-for-seqs form interp.ev itself uses) both grow
+    as the walk proceeds, so a later statement's own obligation (`swap`'s
+    off-by-one twin fails on its very first statement, so no committed task
+    yet exercises this, but the mechanism is not special-cased to the
+    first) sees the concrete values of every name the twin already bound.
+    None on an `if`, `while`, or `return` before the failing statement
+    (their own definedness is not walked here, matching every other "not
+    emitted" case in this file); None if the walk exhausts the body
+    without a false obligation, refusing rather than certifying a formula
+    that would disagree with the witness that triggered it."""
+    env_py = {n: (tuple(v) if isinstance(v, list) else v)
+              for n, v in names.items()}
+    m = dict(m)
+    funs = interp.funs_of(task, twin_body)
+    st = interp.St()
+    try:
+        for s in twin_body:
+            if "var" in s:
+                name, e = s["var"]["name"], s["var"]["init"]
+            elif "assign" in s:
+                name, e = s["assign"]
+            else:
+                return None
+            ob = defined(e)
+            if ob != TRUE and not interp.ev(ob, env_py, funs, st):
+                return {"op": "not", "args": [subst(ob, m)]}
+            val = interp.ev(e, env_py, funs, st)
+            env_py[name] = val
+            m[name] = _tlit(list(val) if isinstance(val, tuple) else val)
+    except (interp.Undef, interp.Budget, RecursionError):
+        return None
+    return None
+
+
 def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
     kind = w.get("_kind")
     names = {k: v for k, v in w.items() if not k.startswith("_")}
@@ -1152,8 +1312,13 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
             parts.append({"op": "not", "args": [subst(loop["cond"], m)]})
             parts.append({"op": "not", "args": [
                 _conj([subst(en, m2) for en in task["ensures"]])]})
+        elif kind == "undefined":
+            ob = _undef_obligation(task, twin_body, m, names)
+            if ob is None:
+                return None
+            parts.append(ob)
         else:
-            return None          # preservation / undefined: see above
+            return None          # preservation: see above
         return _unroll(_conj(parts), [_UNROLL_CAP])
     except (ValueError, KeyError, TypeError, IndexError):
         return None

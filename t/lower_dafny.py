@@ -54,6 +54,76 @@ v1 mapping, gate by gate (SPEC.md):
     no invariant re-check to suppress. Nothing else in this file walks
     statement kinds exhaustively (`_twin_loop` and interp.py's `exit_env`
     helper only look for `while`/`if`), so `return` needed no other case.
+  sequences as values (added 2026-09-09, SPEC.md "Sequences as values
+    (v1)"): the kernel's native sequence type is `seq<int>` (already in
+    TYPES from Gate 1's `len`/`at`), and it already has a functional update
+    and a constructor: `s[i := v]` denotes the sequence equal to `s` except
+    at `i`, and `seq(n, f)` denotes the length-`n` sequence built from a
+    function `int -> int`, so `seq(n, v)` (v1's `fill`, a CONSTANT sequence)
+    lowers to `seq(n, _ => v)`, an unused-argument lambda, measured to
+    verify on 4.11.0. Both are DEFINED IFF the same bound `at` already
+    owes (`update`: `0 <= i < |s|`; `fill`: `n >= 0`), and Dafny's own
+    well-formedness checking discharges both natively and unconditionally,
+    exactly like `at`'s and `div`/`mod`'s: measured on a probe file, an
+    unguarded `s[i := v]` and `seq(n, _ => v)` each reject with "index out
+    of range" / "sequence size might be negative" at exit 4, and guarded
+    ones verify. Nothing here totalizes either op. `==`/`!=` needed no new
+    case: Dafny's `seq<int>` equality is already extensional (measured:
+    `[1,2,3] == [1,2,3]` and `[1,2,3] != [1,2,4]` both verify as lemmas),
+    and BIN_OPS's `==`/`!=` already emit Dafny's own `==`/`!=`, so v1's
+    "extensional equality" is the kernel's native equality, at no cost this
+    file has to pay. The type mapping (return, local, out-parameter, loop
+    state) needed no new code either: TYPES["seq"] = "seq<int>" already
+    covered every declaration site (`var d: TYPES[d['type']] := ...`, the
+    method's `returns (r: TYPES[...])`, params), because Gate 1 already
+    made `seq` a declarable type for `len`/`at`'s sake.
+      What DID need work is the twin path. swap's canonical twin (no `if`,
+    so COLLAPSE-IF/NEGATE-COND/COMPARE-FLIP/BOUNDARY-SWAP all abstain; the
+    first OFF-BY-ONE candidate is the `at(s, i)` in `tmp := s[i]`, mutated
+    to `s[i+1]`) is `_kind == "undefined"`: on the smallest admissible input
+    (s=[0], i=0, j=0) the real body has a value ([0]) and the twin's does
+    not (`s[1]` is out of range), which is a witness kind the certificate
+    protocol never covered before (the section comment above `_certificate`
+    said so explicitly: "preservation, undefined: not emitted; such a cell
+    honestly reads unproved"), because nothing upstream records WHICH node
+    failed, only interp.Undef's message string. Measured first, on swap
+    unchanged: REFUSED, "real verified, off-by-one twin unproved", exit 4
+    with no certificate to accept (the same could-not-prove/definitely-
+    false confusion "EXIT 4 IS NOT A REFUTATION" already names, just now
+    reachable through a seq index instead of a loop). `_ev_undef` and
+    `_exec_undef` close it: a small mirror of interp.ev/exec_body that
+    replays the twin's straight-line statements under the witness's
+    concrete values and, at the exact `at`/`update`/`fill`/`div`/`mod` node
+    that goes out of domain, raises `_DefViol` carrying the failing bound
+    as a ground guard (built from values already in hand, so no unrolling
+    is needed, unlike the quantifier case). Its negation is the certified
+    fact, composed with the substituted `requires` exactly like the value
+    and exit kinds. Measured after: swap COUNTS (witness s=[0], i=0, j=0 ->
+    real [0], twin "at index 1 outside [0,1)"), and the certificate lemma
+    Dafny accepts is `!((0 <= 1) && (1 < 1))`, a ground fact with no
+    seq-typed operand at all (the guard is stated in terms of the index and
+    the CONCRETE length, not the sequence value), so the existing seq-
+    naming machinery (`_name_seqs`, `used`, `_seq_lit`) was exercised only
+    by `requires`' own `len(s)`, not by anything this addition introduced.
+    Scope is deliberately narrow: a `while` reached before the violation,
+    or a quantifier or spec_fun call in the replay, aborts with ValueError
+    (caught by `_certificate`'s existing broad except) rather than guessing,
+    so a loop-carried undefined witness still honestly reads unproved,
+    unchanged from before.
+      reverse's canonical twin is ordinary INVARIANT-DROP (`_kind ==
+    "exit"`, the same path all the loop tasks already use), needing no new
+    machinery: the exit witness (s=[], i=0, r=[0]) substitutes a seq
+    literal for `r`, and the existing `_tlit`/`_name_seqs`/`_seq_lit` chain
+    (already built for `at`/`len` witnesses) named and let-bound it exactly
+    as it does every other seq witness, with `fill`'s own definedness
+    (`seq(len(s), 0)`, `len(s) >= 0` always true) needing no certificate
+    attention since the real program's `fill` call is never the twin's
+    broken statement here.
+      Regression, all 15 pre-existing tasks: lowered output (`out/*.dfy`,
+    real and twin, `lower()`'s return value byte for byte) is IDENTICAL
+    before and after this change (diffed against a HEAD worktree), and all
+    15 read `verified / refuted` through the real dafny kernel, unchanged
+    from AGREEMENT.md's dafny column. All 17 tasks in `tasks/*.json` COUNT.
 
 Stdlib only, same reason as dataset_gate.py.
 """
@@ -127,6 +197,10 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return f"|{args[0]}|"
     if op == "at":
         return f"{args[0]}[{args[1]}]"
+    if op == "update":
+        return f"{args[0]}[{args[1]} := {args[2]}]"
+    if op == "fill":
+        return f"seq({args[0]}, _ => {args[1]})"
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
@@ -225,6 +299,10 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
             return f"|{args[0]}|"
         if op == "at":
             return f"{args[0]}[{args[1]}]"
+        if op == "update":
+            return f"{args[0]}[{args[1]} := {args[2]}]"
+        if op == "fill":
+            return f"seq({args[0]}, _ => {args[1]})"
         if op in BIN_OPS:
             return f"({args[0]} {BIN_OPS[op]} {args[1]})"
         raise ValueError(f"t has no operator {op!r}")
@@ -672,6 +750,163 @@ def _seq_lit(v: tuple) -> str:
     return "[" + ", ".join(str(x) for x in v) + "]"
 
 
+# ------------------------------------------------- "undefined"-kind witness
+# Added 2026-09-09 (SPEC.md "Sequences as values"). The value/exit kinds
+# above certify that the ensures conjunction, or the loop-exit obligation,
+# comes out FALSE at a ground point. A `_kind == "undefined"` witness
+# (harness.py's interp.Reference.witness) is a different shape: the real
+# body has a value at the witness input and the twin's does not, because the
+# twin's own body hits a definedness obligation (`at`/`update`'s index
+# bound, `fill`'s length, `div`/`mod`'s nonzero divisor) unconditionally on
+# the taken path. Nothing upstream records WHICH node failed or what its
+# guard was, only interp.Undef's message string, so this replays the twin's
+# straight-line statements under the witness's concrete values (mirroring
+# interp.ev/exec_body exactly) and, instead of raising Undef, raises
+# _DefViol carrying the guard as a ground t Expr built from the concrete
+# values already in hand: no symbolic reasoning, no unrolling needed, since
+# every operand is a literal by construction. Its negation is the certified
+# theorem. This is the same treatment `div`/`mod` and `at` get everywhere
+# else in this file (Dafny's own well-formedness checking discharges the
+# guard in the MAIN run), turned into the ground fact the CERTIFICATE run
+# needs, because for this witness kind the main run's exit 4 is a real
+# well-formedness violation, not incompleteness, and a ground point makes
+# that provable instead of merely observed.
+#
+# Scope, deliberately narrow: only straight-line bodies (`var`, `assign`,
+# `return`, `if`) are replayed; a `while` reached before the violation
+# aborts the walk (ValueError, caught below), leaving the cell honestly
+# UNPROVED exactly as "preservation, undefined: not emitted" already leaves
+# a loop-carried undefined witness. A spec_fun call or quantifier inside the
+# body aborts the same way: nothing here claims those, only what interp.ev
+# already agrees is a plain arithmetic/seq operator.
+
+class _DefViol(Exception):
+    """The definedness obligation that failed during `_exec_undef`'s replay
+    of a twin body, as a ground guard Expr (no free variables): the
+    condition that SHOULD have held. Its negation, once proved, is the
+    refutation certificate's ground fact."""
+
+    def __init__(self, guard: dict):
+        self.guard = guard
+
+
+def _ev_undef(e: dict, env: dict, funs: dict, st):
+    """Mirror of interp.ev, raising _DefViol (not interp.Undef) at at's,
+    update's, fill's and div/mod's own definedness obligations, with the
+    guard built from the concrete values already computed. Every other node
+    is evaluated exactly as interp.ev evaluates it; a shape interp.ev has no
+    case for is not this mirror's to invent either, so it raises ValueError
+    (caught by _certificate's outer except) rather than guess."""
+    st.tick()
+    if "int" in e:
+        return e["int"]
+    if "bool" in e:
+        return e["bool"]
+    if "var" in e:
+        if e["var"] not in env:
+            raise interp.Undef(f"unbound {e['var']}")
+        return env[e["var"]]
+    if "ite" in e:
+        c = e["ite"]
+        cv = _ev_undef(c["cond"], env, funs, st)
+        return _ev_undef(c["then"] if cv else c["else"], env, funs, st)
+    if "forall" in e or "exists" in e or "call" in e:
+        raise ValueError("undefined-kind certificate: quantifier/call in body")
+    op = e["op"]
+    if op == "and":
+        for a in e["args"]:
+            if not _ev_undef(a, env, funs, st):
+                return False
+        return True
+    if op == "or":
+        for a in e["args"]:
+            if _ev_undef(a, env, funs, st):
+                return True
+        return False
+    if op == "implies":
+        return (not _ev_undef(e["args"][0], env, funs, st)
+                or bool(_ev_undef(e["args"][1], env, funs, st)))
+    a = [_ev_undef(x, env, funs, st) for x in e["args"]]
+    if op == "neg":
+        return -a[0]
+    if op == "not":
+        return not a[0]
+    if op == "len":
+        return len(a[0])
+    if op == "at":
+        s, i = a
+        if not (0 <= i < len(s)):
+            raise _DefViol({"op": "and", "args": [
+                {"op": "<=", "args": [{"int": 0}, _tlit(i)]},
+                {"op": "<", "args": [_tlit(i), {"int": len(s)}]}]})
+        return s[i]
+    if op == "update":
+        s, i, v = a
+        if not (0 <= i < len(s)):
+            raise _DefViol({"op": "and", "args": [
+                {"op": "<=", "args": [{"int": 0}, _tlit(i)]},
+                {"op": "<", "args": [_tlit(i), {"int": len(s)}]}]})
+        return s[:i] + [v] + s[i + 1:]
+    if op == "fill":
+        n, v = a
+        if n < 0:
+            raise _DefViol({"op": ">=", "args": [_tlit(n), {"int": 0}]})
+        return [v] * n
+    if op == "+":
+        return a[0] + a[1]
+    if op == "-":
+        return a[0] - a[1]
+    if op == "*":
+        return a[0] * a[1]
+    if op in ("div", "mod"):
+        x, y = a
+        if y == 0:
+            raise _DefViol({"op": "!=", "args": [_tlit(y), {"int": 0}]})
+        r = x % abs(y)
+        return r if op == "mod" else (x - r) // y
+    if op == "==":
+        return a[0] == a[1]
+    if op == "!=":
+        return a[0] != a[1]
+    if op == "<":
+        return a[0] < a[1]
+    if op == "<=":
+        return a[0] <= a[1]
+    if op == ">":
+        return a[0] > a[1]
+    if op == ">=":
+        return a[0] >= a[1]
+    raise ValueError(f"t has no operator {op!r}")
+
+
+def _exec_undef(body: list, env: dict, funs: dict, st) -> None:
+    """Mirror of interp.exec_body, straight-line subset only: replays
+    var/assign/return/if under the witness's concrete values, mutating
+    `env` exactly as an actual run would, until `_ev_undef` raises
+    _DefViol. A `while` reached before that point abstains (ValueError):
+    see the section comment above."""
+    for s in body:
+        st.tick()
+        if "assign" in s:
+            name, e = s["assign"]
+            env[name] = _ev_undef(e, env, funs, st)
+        elif "return" in s:
+            name, e = s["return"]
+            env[name] = _ev_undef(e, env, funs, st)
+            return
+        elif "var" in s:
+            d = s["var"]
+            env[d["name"]] = _ev_undef(d["init"], env, funs, st)
+        elif "if" in s:
+            c = s["if"]
+            cv = _ev_undef(c["cond"], env, funs, st)
+            _exec_undef(c["then"] if cv else c["else"], env, funs, st)
+        elif "while" in s:
+            raise ValueError("undefined-kind certificate: while in body")
+        else:
+            raise ValueError(f"t has no statement {s!r}")
+
+
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
     witness, or None when the witness is not expressible as a ground
@@ -714,8 +949,25 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             parts.append(_not(subst(loop["cond"], m)))
             parts.append(_not(_conj([subst(en, m2)
                                      for en in task["ensures"]])))
+        elif kind == "undefined":
+            # The twin's own body, replayed under the witness (see the
+            # section comment above `_DefViol`): the FIRST definedness
+            # obligation it hits unconditionally, as a ground guard. No
+            # violation on replay (our mirror disagreeing with interp.py's,
+            # or a `while`/quantifier/call the mirror abstains on) refuses
+            # the certificate rather than guessing.
+            env = dict(names)
+            st2 = interp.St()
+            try:
+                _exec_undef(twin_body, env, funs, st2)
+            except _DefViol as dv:
+                guard = dv.guard
+            else:
+                return None
+            parts = [subst(rq, m) for rq in task.get("requires", [])]
+            parts.append(_not(guard))
         else:
-            return None          # preservation / undefined: see above
+            return None          # preservation: see above
         bounds: list = []
         unrolled = _unroll(_conj(parts), funs, st, [_UNROLL_CAP], bounds)
         facts: dict = {}

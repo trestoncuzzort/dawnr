@@ -103,6 +103,7 @@ class Budget(Exception):
 MAX_STEPS = 400_000
 MAX_RANGE = 20_000        # a quantifier range wider than this is not sampled
 MAX_LOOP = 20_000
+MAX_SEQ = 1 << 16         # fill length cap, interp.py's MAX_SEQ mirrored
 
 
 MAX_DEPTH = 60            # self-call nesting; each level costs ~8 Python
@@ -208,6 +209,23 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if not (0 <= i < len(s)):
             raise Undef(f"at index {i} outside [0,{len(s)})")
         return s[i]
+    if op == "update":
+        # SPEC.md "Sequences as values" (2026-09-09): s[i := v], the same
+        # definedness as `at`. A CLONE of interp.ev's own update arm: a
+        # fresh tuple, never a mutation of `s`.
+        s, i, v = args
+        if not (0 <= i < len(s)):
+            raise Undef(f"update index {i} outside [0,{len(s)})")
+        return s[:i] + (v,) + s[i + 1:]
+    if op == "fill":
+        # seq(n, v): DEFINED IFF n >= 0. A length past MAX_SEQ decides
+        # nothing, like a quantifier range past MAX_RANGE.
+        n, v = args
+        if n < 0:
+            raise Undef(f"fill length {n} < 0")
+        if n > MAX_SEQ:
+            raise Budget("seq length cap")
+        return (v,) * n
     if op == "+":
         return args[0] + args[1]
     if op == "-":
@@ -786,6 +804,14 @@ def AT(s, i):
     return OP("at", V(s), i)
 
 
+def UPD(s, i, v):
+    return OP("update", V(s), i, v)
+
+
+def FILL(n, v):
+    return OP("fill", n, v)
+
+
 def FA(v, lo, hi, b):
     return {"forall": {"var": v, "lo": lo, "hi": hi, "body": b}}
 
@@ -825,6 +851,12 @@ def WH(c, invs, dec, b):
 
 def AND(*a):
     return OP("and", *a) if len(a) > 1 else a[0]
+
+
+def _range_req(name, hi):
+    """0 <= name < hi, the `at`/`update` in-bounds idiom used across the
+    index-taking families and f_v1seqval below."""
+    return AND(OP("<=", I(0), V(name)), OP("<", V(name), hi))
 
 
 CMPS = ["==", "!=", "<", "<=", ">", ">="]
@@ -1457,6 +1489,198 @@ def f_v1exit(rng, idx):
             "ensures": ens, "body": body}
 
 
+# --- 2026-09-09: SPEC.md "Sequences as values (v1)" -----------------------
+#
+# `update` (s[i := v]) and `fill` (seq(n, v)) are the two new v1 Expr forms;
+# check_wf, interp.py and surface.py already accept both, and a `seq`
+# return or local was accepted the same day. Six shapes, all correct by
+# construction, all returning a `seq`:
+#
+#   swap      loop-free: swap positions i and j.
+#   setpos    loop-free: set position i to a value.
+#   reverse   loop: reverse into a `fill`ed seq.
+#   fillcopy  loop: r := seq(len(s), 0), then copy s into r element by
+#             element; ensures pins r == s (seq `==` is extensional).
+#   clampneg  loop with an `if` inside: replace every negative element by
+#             0, leave the rest.
+#   idwrite   loop: r starts AS s and the loop writes each element back
+#             UNCHANGED (s[i] into r[i := s[i]]); the twin therefore
+#             computes the identical value (INVARIANT-DROP's own case, per
+#             SPEC.md "The twins": "computes the same value by
+#             construction"), so what has to carry the flip is the proof:
+#             `ensures r == s` plus the surviving (bound-only) invariant
+#             does not entail the dropped per-index equality, and
+#             invariant_load_bearing below is exactly what checks that,
+#             not the value.
+#
+# build_corpus's own twin selection (harness.make_twin, body-only) is the
+# UNGROUNDED v1 rule: `if` -> COLLAPSE-IF, an invariant-carrying `while` ->
+# INVARIANT-DROP, and NOTHING ELSE, unlike the full ladder harness.twin_for
+# runs. So swap and setpos, both loop-free, each wrap their real update in
+# an `if` whose OTHER arm is a genuine no-op (i == j; s[i] already == v):
+# not filler, because COLLAPSE-IF keeps exactly that no-op branch and the
+# real update is refutable against it wherever the guard was false. Every
+# loop shape puts its value-pinning invariant FIRST, matching
+# f_v1loop/f_v1scan's convention, because drop_first_invariant (the
+# ungrounded rule's INVARIANT-DROP) always drops invariant 0 of the first
+# invariant-carrying loop, and it is exactly that invariant whose absence
+# must leave `ensures` unreachable from what remains.
+
+def f_v1seqval(rng, idx):
+    me = f"fz_v1seqval_{idx:03d}"
+    shape = rng.choice(["swap", "setpos", "reverse", "fillcopy",
+                        "clampneg", "idwrite"])
+
+    if shape == "swap":
+        order = rng.choice(["ij", "ji"])
+        a, b = ("i", "j") if order == "ij" else ("j", "i")
+        real = [LOC("tmp", "int", AT("s", V(a))),
+                ASG("r", UPD("s", V(a), AT("s", V(b)))),
+                ASG("r", UPD("r", V(b), V("tmp")))]
+        body = [IFS(OP("==", V("i"), V("j")), [ASG("r", V("s"))], real)]
+        ens = [OP("==", LEN("r"), LEN("s")),
+               OP("==", AT("r", V("i")), AT("s", V("j"))),
+               OP("==", AT("r", V("j")), AT("s", V("i"))),
+               FA("k", I(0), LEN("s"),
+                  OP("implies",
+                     AND(OP("!=", V("k"), V("i")), OP("!=", V("k"), V("j"))),
+                     OP("==", AT("r", V("k")), AT("s", V("k")))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "i", "type": "int"},
+                          {"name": "j", "type": "int"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [_range_req("i", LEN("s")),
+                            _range_req("j", LEN("s"))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "setpos":
+        kind = rng.choice(["param", "add"])
+        if kind == "param":
+            params = [{"name": "s", "type": "seq"}, {"name": "i", "type": "int"},
+                      {"name": "v", "type": "int"}]
+            val = V("v")
+        else:
+            k = rng.choice([-5, -3, -2, -1, 1, 2, 3, 5])
+            params = [{"name": "s", "type": "seq"}, {"name": "i", "type": "int"}]
+            val = OP("+", AT("s", V("i")), I(k))
+        body = [IFS(OP("==", AT("s", V("i")), val),
+                    [ASG("r", V("s"))],
+                    [ASG("r", UPD("s", V("i"), val))])]
+        ens = [OP("==", LEN("r"), LEN("s")),
+               OP("==", AT("r", V("i")), val),
+               FA("k", I(0), LEN("s"),
+                  OP("implies", OP("!=", V("k"), V("i")),
+                     OP("==", AT("r", V("k")), AT("s", V("k")))))]
+        return {"t": 1, "name": me, "gate": "quantifiers", "params": params,
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [_range_req("i", LEN("s"))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "reverse":
+        c0 = rng.choice([0, -1, 3, 7])
+        form = rng.choice(["a", "b"])
+
+        def revidx(e):
+            # Two syntactically distinct, semantically equal renderings of
+            # len(s) - 1 - e, for corpus variety across draws.
+            if form == "a":
+                return OP("-", OP("-", LEN("s"), I(1)), e)
+            return OP("-", OP("-", LEN("s"), e), I(1))
+
+        body = [ASG("r", FILL(LEN("s"), I(c0))), LOC("i", "int", I(0)),
+                WH(OP("<", V("i"), LEN("s")),
+                   [FA("k", I(0), V("i"),
+                       OP("==", AT("r", V("k")), AT("s", revidx(V("k"))))),
+                    OP("==", LEN("r"), LEN("s")),
+                    AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+                   OP("-", LEN("s"), V("i")),
+                   [ASG("r", UPD("r", V("i"), AT("s", revidx(V("i"))))),
+                    ASG("i", OP("+", V("i"), I(1)))])]
+        ens = [OP("==", LEN("r"), LEN("s")),
+               FA("k", I(0), LEN("s"),
+                  OP("==", AT("r", V("k")), AT("s", revidx(V("k")))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "fillcopy":
+        c0 = rng.choice([0, -1, 5, 9])
+        body = [ASG("r", FILL(LEN("s"), I(c0))), LOC("i", "int", I(0)),
+                WH(OP("<", V("i"), LEN("s")),
+                   [FA("k", I(0), V("i"),
+                       OP("==", AT("r", V("k")), AT("s", V("k")))),
+                    OP("==", LEN("r"), LEN("s")),
+                    AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+                   OP("-", LEN("s"), V("i")),
+                   [ASG("r", UPD("r", V("i"), AT("s", V("i")))),
+                    ASG("i", OP("+", V("i"), I(1)))])]
+        ens = [OP("==", LEN("r"), LEN("s")), OP("==", V("r"), V("s"))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "clampneg":
+        c0 = rng.choice([0, -1, 9])
+        body = [ASG("r", FILL(LEN("s"), I(c0))), LOC("i", "int", I(0)),
+                WH(OP("<", V("i"), LEN("s")),
+                   [FA("k", I(0), V("i"),
+                       OP("implies", OP("<", AT("s", V("k")), I(0)),
+                          OP("==", AT("r", V("k")), I(0)))),
+                    FA("k", I(0), V("i"),
+                       OP("implies", OP(">=", AT("s", V("k")), I(0)),
+                          OP("==", AT("r", V("k")), AT("s", V("k"))))),
+                    OP("==", LEN("r"), LEN("s")),
+                    AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+                   OP("-", LEN("s"), V("i")),
+                   [IFS(OP("<", AT("s", V("i")), I(0)),
+                        [ASG("r", UPD("r", V("i"), I(0)))],
+                        [ASG("r", UPD("r", V("i"), AT("s", V("i"))))]),
+                    ASG("i", OP("+", V("i"), I(1)))])]
+        ens = [OP("==", LEN("r"), LEN("s")),
+               FA("k", I(0), LEN("s"),
+                  OP("implies", OP("<", AT("s", V("k")), I(0)),
+                     OP("==", AT("r", V("k")), I(0)))),
+               FA("k", I(0), LEN("s"),
+                  OP("implies", OP(">=", AT("s", V("k")), I(0)),
+                     OP("==", AT("r", V("k")), AT("s", V("k")))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    # idwrite: r starts AS s (not a fresh fill), and every iteration writes
+    # s[i] back into r[i]: the real body is a true no-op, so the twin
+    # (invariant-drop) computes the SAME value on every input, by
+    # construction (SPEC.md "The twins"). `ensures r == s` plus the
+    # surviving bound-only invariant is what has to make the dropped
+    # per-index equality load-bearing, not any value difference. `eq_form`
+    # is the same trick as reverse's `form`: two syntactically distinct,
+    # semantically equal operand orders, so idwrite is not the one shape
+    # in this family with zero entropy across draws.
+    eq_form = rng.choice(["rs", "sr"])
+    inv_eq = (OP("==", AT("r", V("k")), AT("s", V("k"))) if eq_form == "rs"
+              else OP("==", AT("s", V("k")), AT("r", V("k"))))
+    ens_eq = (OP("==", V("r"), V("s")) if eq_form == "rs"
+              else OP("==", V("s"), V("r")))
+    body = [ASG("r", V("s")), LOC("i", "int", I(0)),
+            WH(OP("<", V("i"), LEN("s")),
+               [FA("k", I(0), V("i"), inv_eq),
+                OP("==", LEN("r"), LEN("s")),
+                AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+               OP("-", LEN("s"), V("i")),
+               [ASG("r", UPD("r", V("i"), AT("s", V("i")))),
+                ASG("i", OP("+", V("i"), I(1)))])]
+    ens = [OP("==", LEN("r"), LEN("s")), ens_eq]
+    return {"t": 1, "name": me, "gate": "loops",
+            "params": [{"name": "s", "type": "seq"}],
+            "returns": [{"name": "r", "type": "seq"}],
+            "requires": [], "ensures": ens, "body": body,
+            "_shape": "idwrite"}
+
+
 def f_wrong(rng, idx):
     """Category B: correct-by-construction, then ONE clause perturbed so the
     task is FALSE on a witness the interpreter finds. Every kernel must
@@ -1495,6 +1719,7 @@ FAMILIES = [
     ("v1nest", f_v1nest, 1),
     ("v1divmod", f_v1divmod, 3),
     ("v1exit", f_v1exit, 3),
+    ("v1seqval", f_v1seqval, 4),
     ("wrong", f_wrong, 3),
 ]
 
@@ -1887,6 +2112,119 @@ def probes() -> list[dict]:
         "a return in both arms of an if, nothing after it: well-formed "
         "(each arm's return is the last statement of its own block), and "
         "each arm owes the ensures at its own return")
+
+    # --- SPEC.md "Sequences as values (v1)", 2026-09-09: `update` inside a
+    # loop, correctly bounded and correctly specified.
+    add({"t": 1, "name": "fz_p_upd_first", "gate": "loops",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}], "requires": [],
+         "ensures": [OP("==", LEN("r"), LEN("s")),
+                     FA("k", I(0), LEN("s"),
+                        OP("==", AT("r", V("k")),
+                           OP("+", AT("s", V("k")), I(1))))],
+         "body": [ASG("r", V("s")), LOC("i", "int", I(0)),
+                  WH(OP("<", V("i"), LEN("s")),
+                     [FA("k", I(0), V("i"),
+                         OP("==", AT("r", V("k")),
+                            OP("+", AT("s", V("k")), I(1)))),
+                      OP("==", LEN("r"), LEN("s")),
+                      AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+                     OP("-", LEN("s"), V("i")),
+                     [ASG("r", UPD("r", V("i"), OP("+", AT("s", V("i")), I(1)))),
+                      ASG("i", OP("+", V("i"), I(1)))])]},
+        "verified",
+        "update inside a loop, r[k] == s[k] + 1 everywhere: the invariant "
+        "matches the body exactly, so a faithful lowering of `update` "
+        "verifies it")
+
+    # --- "a lowering that silently totalizes at is wrong" (SPEC.md
+    # Definedness), now for `update`: s[i := v] is DEFINED IFF 0 <= i <
+    # len(s), and index len(s) is out of range at every length, empty
+    # included, with no `requires` guarding it.
+    add({"t": 1, "name": "fz_p_upd_oob", "gate": "quantifiers",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}], "requires": [],
+         "ensures": [OP("==", LEN("r"), LEN("s"))],
+         "body": [ASG("r", UPD("s", LEN("s"), I(0)))]},
+        "refuted",
+        "s[len(s) := 0] has no value at any length, unguarded by any "
+        "requires; ground_truth's kind is undefined-body, which the "
+        "verdict rule reports as refuted, the file's convention for an "
+        "ill-defined real body, exactly as fz_p_at_oob's totalized `at` "
+        "reads refuted rather than a distinct outcome",
+        adversarial=True)
+
+    # --- SPEC.md "fill ... DEFINED IFF n >= 0", and "Undefined requires
+    # (normative)": a requires clause that fails to exclude n < 0 is not a
+    # domain restriction, it lets an undefined `fill` through.
+    add({"t": 1, "name": "fz_p_fill_neg", "gate": "quantifiers",
+         "params": [{"name": "n", "type": "int"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [OP("<=", V("n"), I(100))],
+         "ensures": [OP("==", LEN("r"), V("n"))],
+         "body": [ASG("r", FILL(V("n"), I(0)))]},
+        "refuted",
+        "requires n <= 100 admits n = -1; seq(-1, 0) has no value, so the "
+        "real body is undefined at an input the requires lets through, "
+        "reported refuted for the same reason fz_p_upd_oob is",
+        adversarial=True)
+
+    # --- seq `==` is extensional (SPEC.md "Sequences as values"): a true
+    # and a false instance of the same `ensures r == s` shape, the body
+    # the only thing that differs.
+    add({"t": 1, "name": "fz_p_seqeq_true", "gate": "loops",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}], "requires": [],
+         "ensures": [OP("==", LEN("r"), LEN("s")), OP("==", V("r"), V("s"))],
+         "body": [ASG("r", FILL(LEN("s"), I(0))), LOC("i", "int", I(0)),
+                  WH(OP("<", V("i"), LEN("s")),
+                     [FA("k", I(0), V("i"),
+                         OP("==", AT("r", V("k")), AT("s", V("k")))),
+                      OP("==", LEN("r"), LEN("s")),
+                      AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+                     OP("-", LEN("s"), V("i")),
+                     [ASG("r", UPD("r", V("i"), AT("s", V("i")))),
+                      ASG("i", OP("+", V("i"), I(1)))])]},
+        "verified",
+        "r is s copied through update, index by index: r == s holds "
+        "extensionally, and a lowering with a faithful seq equality "
+        "verifies it")
+    add({"t": 1, "name": "fz_p_seqeq_false", "gate": "loops",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}], "requires": [],
+         "ensures": [OP("==", LEN("r"), LEN("s")), OP("==", V("r"), V("s"))],
+         "body": [ASG("r", FILL(LEN("s"), I(0))), LOC("i", "int", I(0)),
+                  WH(OP("<", V("i"), LEN("s")),
+                     [FA("k", I(0), V("i"),
+                         OP("==", AT("r", V("k")),
+                            OP("+", AT("s", V("k")), I(1)))),
+                      OP("==", LEN("r"), LEN("s")),
+                      AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+                     OP("-", LEN("s"), V("i")),
+                     [ASG("r", UPD("r", V("i"), OP("+", AT("s", V("i")), I(1)))),
+                      ASG("i", OP("+", V("i"), I(1)))])]},
+        "refuted",
+        "the mirror of fz_p_seqeq_true: every element is off by one, so r "
+        "== s is false at every non-empty s, the witness ground_truth "
+        "finds on the first sampled non-empty input")
+
+    # --- SPEC.md "Early exit (v1)" meets "Sequences as values": the
+    # returned value is itself an `update`, not a name read back.
+    add({"t": 1, "name": "fz_p_upd_ret",
+         "params": [{"name": "s", "type": "seq"}, {"name": "i", "type": "int"},
+                    {"name": "v", "type": "int"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [_range_req("i", LEN("s"))],
+         "ensures": [OP("==", LEN("r"), LEN("s")),
+                     OP("==", AT("r", V("i")), V("v")),
+                     FA("k", I(0), LEN("s"),
+                        OP("implies", OP("!=", V("k"), V("i")),
+                           OP("==", AT("r", V("k")), AT("s", V("k")))))],
+         "body": [RET("r", UPD("s", V("i"), V("v")))]},
+        "verified",
+        "the return statement's Expr is `update` itself, SPEC.md Early "
+        "exit's position for it is the same as an assignment's "
+        "right-hand side, and the update is in bounds by requires")
     return P
 
 

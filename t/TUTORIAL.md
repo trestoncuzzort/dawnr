@@ -235,6 +235,26 @@ because `and` checks left to right and stops early: by the time `s[i]` is
 looked at, `i < len(s)` is already known. Flip the order and the kernel will
 reject it: you looked before you proved it safe to look.
 
+**Building and changing a list.** A list is a value, so you never change
+one in place; you make a new one. `s[i := v]` is the list equal to `s`
+except that position `i` now holds `v` (same range rule as `s[i]`), and
+`seq(n, v)` is the list of `n` copies of `v` (`n` must be `>= 0`). A task
+can return a list (`returns r : seq`) and keep one in a local. Two lists
+are `==` when they have the same length and the same element at every
+position. Swapping two positions is two updates:
+
+```
+var tmp: int := s[i];
+r := s[i := s[j]];
+r := r[j := tmp];
+```
+
+and reversing a list is a loop that fills a fresh one, `r := seq(len(s), 0)`,
+then writes `r := r[i := s[len(s) - 1 - i]]` for each `i`. In both the
+invariant says what the elements written so far are; nothing says which
+elements did not change, because nothing can change: `r` is a new value
+every time.
+
 ---
 
 ## Lesson 7: forall and exists: claims about many things at once

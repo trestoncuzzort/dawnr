@@ -83,11 +83,113 @@ names, grind with explicit names, plus enumeration of ground-bounded
 quantifiers (native_decide stays banned). t/interp.py evaluation only
 CHOOSES the proof path (which conjunct fails, which index witnesses); every
 choice is then re-proved by the kernel, so a wrong choice can only cost the
-certificate, never mint one. An undefined-kind witness is not certificated:
-this lowering computes with the total s[i.toNat]!, so t's undefinedness has
-no ground negation here and the twin cell honestly reads unproved. A
-certificate the kernel rejects also reads unproved; only kernel acceptance
-mints REFUTED, and a file carrying the certificate name can never verify.
+certificate, never mint one. An undefined-kind witness (interp.py's Undef)
+is certificated too, since 2026-09-09 (below) for loop-free bodies; for a
+loop-shaped body it is still not: no ground negation is built there, and
+the twin cell honestly reads unproved. A certificate the kernel rejects
+also reads unproved; only kernel acceptance mints REFUTED, and a file
+carrying the certificate name can never verify.
+
+SEQUENCES AS VALUES (2026-09-09, SPEC.md "Sequences as values", ROADMAP
+12.7): `seq` was already Gate 1's `List Int` (a read-only param); this
+lands it as a return and local type, plus `update` (`s[i := v]`) and
+`fill` (`seq(n, v)`). Measured on lean 4.33.1, core only, no Mathlib:
+  native forms   `s[i := v]` -> `s.set (i).toNat v` (List.set); `seq(n, v)`
+                 -> `List.replicate (n).toNat v`; both TOTAL like `at`
+                 (List.set no-ops out of range, List.replicate clamps a
+                 negative length to 0 via `.toNat`), so definedness is
+                 owed the same separate way `at`'s `0 <= i < len` already
+                 is: `update`'s obligation is `0 <= i < len(s)`, `fill`'s
+                 is `n >= 0`, both in dcond().
+  extensional == `List` equality is already Lean's native `=` (structural,
+                 decidable, exactly SPEC.md's "equal lengths and equal
+                 elements at every index"), and `prop()`'s `==`/`!=` already
+                 fell through to term equality for any non-bool sort before
+                 this landed, so seq equality needed no new code at all,
+                 only `sort()` learning that `update`/`fill` denote `seq`
+                 (they fell to its `bool` default before, which would have
+                 misrouted a future `update(...) == s` through the Prop-iff
+                 branch built for `bool`).
+  lemmas         `List.length_set` and `List.length_replicate` are already
+                 in grind's own default simp set (plain `grind` proves both
+                 alone, measured). A READ after a set/replicate, once the
+                 index is the Int-cast-through-`.toNat` this file's `at`
+                 already uses, is not: grind finds `List.getElem?_set` /
+                 `getElem!_pos` / `getElem!_neg` as candidates (visible in
+                 its own diagnostics) but the search to fire them past the
+                 cast layer hits Lean's recursion-depth cap before deciding
+                 the index equality (measured on reverse's own
+                 loop-preservation goal: `grind` and even `grind
+                 [t_seq_update_get]` both hit the cap). Two lemmas proved
+                 by hand once per file (`getElem!_pos` totalizes `!` to
+                 plain `getElem`, then `List.getElem_set` / a `by_cases` on
+                 the index plus `omega` on the `.toNat` cast, exactly what
+                 grind was attempting) close it when handed to `grind only`
+                 instead of `grind`: `only` matters as much as the lemmas,
+                 since it stops grind from also re-exploring the same
+                 default set whose search was the actual depth source.
+                 Emitted (`emit_seq_helpers`) and used (`_gr`, the
+                 grind-call-site replacement; `_close`'s new branch) only
+                 when a task touches `update`/`fill` at all (`self.seq_mut`),
+                 so the fifteen pre-existing tasks are unaffected -- diffed
+                 byte-identical (abs, first_even, digit_sum) before and
+                 after.
+  to_expr bug    found by swap (a SIMPLE-shape body with two sequential
+                 assigns to the same seq-typed return, `r := s[i := s[j]];
+                 r := r[j := tmp];`): `to_expr`'s non-tail `assign`/`var`
+                 case dropped the reassigned name from `env` and let the
+                 Lean `let x := t; ...` it emits supply the value by
+                 lexical shadowing, which the COMPUTED TERM sees but the
+                 definedness OBLIGATIONS list does not, since `obs` is
+                 flattened into one top-level conjunction outside every
+                 `let`. A later obligation needing the reassigned value
+                 (here, `update`'s own `0 <= i < len(r)` on the SECOND
+                 assign to `r`) got a bare `r` with no binder in scope,
+                 `swap_t_wfbody` read MALFORMED. Fixed by substituting the
+                 term text into `env` instead of dropping it (matching
+                 sym()'s own convention for loop bodies), so every later
+                 reference is self-contained; the `let` is gone too, since
+                 nothing needs it once substitution supplies the value.
+                 Dead path for every pre-existing task (none has a
+                 multi-statement SIMPLE/RECURSIVE body: each is a single
+                 top-level `if` or a single `assign`), so this changes no
+                 committed output either.
+  undefined kind swap's own twin (OFF-BY-ONE) lands on an undefined-kind
+                 witness (index 1 outside [0,1) at s=[0]): computing the
+                 twin's TOTALIZED value and comparing to `ensures` (the
+                 first approach tried) is unsound to rely on, since Lean's
+                 chosen default for an out-of-range read (`getElem!_neg`'s
+                 `default = 0`) happens to equal s's own element at this
+                 particular witness, so the totalized twin computes a value
+                 that ACCIDENTALLY still satisfies `ensures` here even
+                 though the same twin is genuinely wrong elsewhere
+                 (`swap_t [10,20] 0 0` computes `[20, 20]`, not the `[10,
+                 20]` swapping index 0 with itself should give). The robust
+                 certificate instead states that the twin's OWN
+                 definedness obligation -- literally `to_expr`'s own `obs`,
+                 the same conjunction `{name}_t_wfbody` states -- is FALSE
+                 once instantiated at the witness's ground terms: that
+                 obligation is SPEC.md's definedness calculus itself, so
+                 the ground instance is false exactly when interp.py's
+                 exec_body would raise Undef there, and being a closed,
+                 fully computable proposition, `decide` alone closes its
+                 negation, no reliance on which value a partial operator
+                 happens to totalize to. `_cert_undefined` builds this;
+                 still returns None (the pre-existing abstain) for a
+                 loop-shaped body, since `to_expr` only renders the
+                 loop-free shape.
+  measured       swap and reverse both COUNT (`python3 lower_lean.py swap
+                 reverse`, and via harness.run_task): swap real VERIFIED,
+                 off-by-one twin REFUTED at s=[0], i=0, j=0 (real [0], twin
+                 undefined -- index 1 outside [0,1)); reverse real
+                 VERIFIED, invariant-drop#1 twin REFUTED at the loop-exit
+                 state s=[], i=0, r=[0]. All 15 pre-existing tasks still
+                 read exactly their AGREEMENT.md lean column (14
+                 verified/refuted, is_prime verified/refuted too -- its
+                 rocq column, not lean's, is the one that reads
+                 unproved/unproved), and three representative outputs
+                 (abs.lean, first_even.lean, digit_sum.lean) are
+                 byte-identical to before this landed.
 """
 from __future__ import annotations
 
@@ -185,6 +287,15 @@ class Lower:
         self.hyp_n = 0
         self.ga = ("" if not self.sfuns else
                    " [" + ", ".join(f"{f}_s" for f in self.sfuns) + "]")
+        # SPEC.md "Sequences as values" (2026-09-09): does this lowering
+        # (task spec, or the body actually being lowered, real or twin)
+        # touch `update`/`fill` anywhere. Gates the seq helper lemmas and
+        # the grind-only fallback below; False for every pre-existing
+        # task, so nothing about their output changes.
+        self.seq_mut = (self._has(task, "op", "update")
+                        or self._has(task, "op", "fill")
+                        or self._has(body, "op", "update")
+                        or self._has(body, "op", "fill"))
 
     # ---------- naming ----------
 
@@ -221,6 +332,8 @@ class Lower:
         op = e["op"]
         if op in ARITH_OPS or op in DIV_MOD or op in ("neg", "len", "at"):
             return "int"
+        if op in ("update", "fill"):
+            return "seq"
         return "bool"
 
     # ---------- expressions ----------
@@ -264,6 +377,15 @@ class Lower:
             s = self.term(e["args"][0], env, types, dep)
             i = self.term(e["args"][1], env, types, dep)
             return f"({s}[({i}).toNat]!)"
+        if op == "update":
+            s = self.term(e["args"][0], env, types, dep)
+            i = self.term(e["args"][1], env, types, dep)
+            v = self.term(e["args"][2], env, types, dep)
+            return f"({s}.set ({i}).toNat {v})"
+        if op == "fill":
+            n = self.term(e["args"][0], env, types, dep)
+            v = self.term(e["args"][1], env, types, dep)
+            return f"(List.replicate ({n}).toNat {v})"
         if op == "neg":
             return f"(-{self.term(e['args'][0], env, types, dep)})"
         if op in ARITH_OPS:
@@ -383,6 +505,20 @@ class Lower:
             return self._conj([
                 self.dcond(s, env, types), self.dcond(i, env, types),
                 f"(((0 : Int) ≤ {it}) ∧ ({it} < {ln}))"])
+        if op == "update":
+            s, i, v = e["args"]
+            it = self.term(i, env, types)
+            ln = f"((({self.term(s, env, types)}).length : Int))"
+            return self._conj([
+                self.dcond(s, env, types), self.dcond(i, env, types),
+                self.dcond(v, env, types),
+                f"(((0 : Int) ≤ {it}) ∧ ({it} < {ln}))"])
+        if op == "fill":
+            n, v = e["args"]
+            nt = self.term(n, env, types)
+            return self._conj([
+                self.dcond(n, env, types), self.dcond(v, env, types),
+                f"({nt} ≥ (0 : Int))"])
         if op in DIV_MOD:
             x, y = e["args"]
             yt = self.term(y, env, types)
@@ -565,19 +701,33 @@ class Lower:
                     raise NotImplementedError(
                         f"body path ends assigning {x!r}, not the return")
                 return self.term(e, env, types, dep=True), obs
+            # Substitute (not `let`-bind): a later statement's own
+            # definedness obligation may need x's VALUE (e.g. `at`/`update`
+            # needing len(x)), and obligations are combined into the wf
+            # theorem's statement flat, outside any `let` this expression
+            # nests -- a bare `let x := t; rest` would leave that later
+            # obligation's occurrence of `x` referring to nothing once
+            # flattened out of the let's scope. Substituting the term text
+            # directly keeps every obligation self-contained, exactly as
+            # sym() already does for loop bodies. (Dead path for the 15
+            # pre-existing tasks: none reassigns a name and then needs its
+            # value in a later obligation, so this changes no committed
+            # output; first exercised by SPEC.md "Sequences as values",
+            # 2026-09-09, e.g. swap's second `r := r[j := tmp]`.)
             t = self.term(e, env, types, dep=True)
-            env2 = {k: v for k, v in env.items() if k != x}
+            env2 = dict(env)
+            env2[x] = t
             re_, obs_r = self.to_expr(rest, env2, types)
-            return f"(let {x} := {t};\n  {re_})", obs + obs_r
+            return re_, obs + obs_r
         if "var" in s:
             d = s["var"]
             types[d["name"]] = d["type"]
             ob = self.dcond(d["init"], env, types)
             t = self.term(d["init"], env, types, dep=True)
-            env2 = {k: v for k, v in env.items() if k != d["name"]}
+            env2 = dict(env)
+            env2[d["name"]] = t
             re_, obs_r = self.to_expr(rest, env2, types)
-            return (f"(let {d['name']} := {t};\n  {re_})",
-                    ([ob] if ob else []) + obs_r)
+            return re_, ([ob] if ob else []) + obs_r
         raise NotImplementedError(
             "statements after a branch are not lowered for lean")
 
@@ -687,14 +837,88 @@ class Lower:
 
     def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
         """`base` tried first; a div/mod-priming + omega fallback added
-        only when `nodes` actually contains a div/mod application. A
-        no-op (returns `base` unchanged) for every task that doesn't touch
-        div/mod, so the eleven pre-existing tasks see byte-identical
-        tactic scripts."""
+        only when `nodes` actually contains a div/mod application, and the
+        seq-update/fill fallback (see `_seq_hints`/`_gr` below) added
+        whenever the task touches `update`/`fill` at all. A no-op (returns
+        `base` unchanged) for every task that touches neither, so the
+        fifteen pre-existing tasks see byte-identical tactic scripts."""
         pairs = self.divmod_pairs(nodes, env, types)
-        if not pairs:
+        branches = []
+        if pairs:
+            branches.append(f"({self.divmod_prelude(pairs)}; omega)")
+        if self.seq_mut:
+            branches.append(f"(grind only [{self._seq_hints()}])")
+        if not branches:
             return base
-        return f"first | ({base}) | ({self.divmod_prelude(pairs)}; omega)"
+        return "first | (" + base + ") | " + " | ".join(branches)
+
+    # ---------- seq (update/fill) helper lemmas ----------
+    # SPEC.md "Sequences as values" (2026-09-09): measured on lean 4.33.1,
+    # core only. `List.length_set` and `List.length_replicate` are already
+    # in grind's own default simp set (plain `grind` proves both alone),
+    # but a READ after an update or a fill, once the index is an Int cast
+    # through `.toNat` (this file's `at` convention), is not: grind finds
+    # `List.getElem?_set`/`getElem!_pos`/`getElem!_neg` as candidates
+    # (visible in its own diagnostics) but the search to actually fire
+    # them past the `.toNat` cast layer hits Lean's recursion-depth cap
+    # before it decides the index equality, measured on reverse's own
+    # loop-preservation obligation. Two lemmas, proved by hand once
+    # (`getElem!_pos` totalizes both sides to plain `getElem`, then
+    # `List.getElem_set` / `List.getElem_replicate` plus `omega` on the
+    # Nat/Int cast, exactly the reasoning grind was attempting), close it
+    # when handed to `grind only`: `only` matters as much as the lemmas --
+    # it stops grind from ALSO pulling in the same default simp set whose
+    # search was the actual source of the depth blowup (plain `grind
+    # [t_seq_update_get]` still hit the cap; `grind only [t_seq_update_get,
+    # ...]` does not). Emitted only when `self.seq_mut`, so the
+    # pre-existing tasks never see them.
+    def _seq_hints(self) -> str:
+        return ", ".join(
+            ["t_seq_update_get", "t_seq_fill_get",
+             "List.length_set", "List.length_replicate"]
+            + [f"{f}_s" for f in self.sfuns])
+
+    def _gr(self) -> str:
+        """`grind{self.ga}`, the plain call used everywhere in this file;
+        with the seq fallback appended (parenthesized, so it drops into
+        any `first | ... | ...` or `<;>` call site unchanged) whenever
+        `self.seq_mut`. Identical text to before otherwise."""
+        base = f"grind{self.ga}"
+        if not self.seq_mut:
+            return base
+        return f"(first | {base} | grind only [{self._seq_hints()}])"
+
+    def emit_seq_helpers(self) -> str:
+        if not self.seq_mut:
+            return ""
+        return (
+            "theorem t_seq_update_get (l : List Int) (i j : Int) (v : Int)\n"
+            "    (hi : (0 : Int) ≤ i) (hiu : i < ((l.length : Int)))\n"
+            "    (hj : (0 : Int) ≤ j) (hju : j < ((l.length : Int))) :\n"
+            "    (l.set (i).toNat v)[(j).toNat]! = "
+            "if j = i then v else l[(j).toNat]! := by\n"
+            "  have hbl : (j).toNat < (l.set (i).toNat v).length := by\n"
+            "    rw [List.length_set]; omega\n"
+            "  rw [getElem!_pos (l.set (i).toNat v) (j).toNat hbl, "
+            "List.getElem_set]\n"
+            "  split\n"
+            "  · next hh =>\n"
+            "    have heq : j = i := by omega\n"
+            "    rw [if_pos heq]\n"
+            "  · next hh =>\n"
+            "    have hne : ¬ j = i := by omega\n"
+            "    rw [if_neg hne]\n"
+            "    have hbr : (j).toNat < l.length := by omega\n"
+            "    exact (getElem!_pos l (j).toNat hbr).symm\n"
+            "\n"
+            "theorem t_seq_fill_get (n : Int) (v : Int) (j : Int)\n"
+            "    (hn : n ≥ (0 : Int)) (hj : (0 : Int) ≤ j) (hju : j < n) :\n"
+            "    (List.replicate (n).toNat v)[(j).toNat]! = v := by\n"
+            "  have hb : (j).toNat < (List.replicate (n).toNat v).length"
+            " := by\n"
+            "    rw [List.length_replicate]; omega\n"
+            "  rw [getElem!_pos (List.replicate (n).toNat v) (j).toNat hb,"
+            " List.getElem_replicate]\n")
 
     # ---------- spec_funs ----------
 
@@ -776,6 +1000,10 @@ class Lower:
     def lower(self) -> str:
         header = (f"-- t task {self.name!r} -> lean4, generated by "
                   f"lower_lean.py; every verdict is the kernel's.\n")
+        seq_src = self.emit_seq_helpers()
+        seq_thms = ([("t_seq_update_get", "seq update-read bridge"),
+                     ("t_seq_fill_get", "seq fill-read bridge")]
+                    if self.seq_mut else [])
         sf_src, sf_thms = self.emit_sfuns()
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
         body = self.body
@@ -798,8 +1026,10 @@ class Lower:
         src, thms = main
         prints = "\n".join(
             f"#print axioms {t}" for t, _ in
-            sf_thms + wf_thms + thms)
+            seq_thms + sf_thms + wf_thms + thms)
         parts = [header]
+        if seq_src.strip():
+            parts.append(seq_src)
         if sf_src.strip():
             parts.append(sf_src)
         if wf_src.strip():
@@ -1020,7 +1250,7 @@ class Lower:
                             else "")
             chain = "".join(f"{h} → " for h in hyps)
             out.append(f"theorem {self.name}_t_wf{wf_k} {binders} :\n"
-                       f"    {chain}{obg} := by\n  grind{self.ga}\n")
+                       f"    {chain}{obg} := by\n  {self._gr()}\n")
             thms.append((f"{self.name}_t_wf{wf_k}", why))
 
         # the helper lemma: invariants in, ensures-of-loop-value out.
@@ -1052,9 +1282,9 @@ class Lower:
         # the original single-tactic line, byte-identical.
         then_tac = (
             f"all_goals (first | (apply {self.name}_t_loop_spec <;> "
-            f"grind{self.ga}) | grind{self.ga})"
+            f"{self._gr()}) | {self._gr()})"
             if has_return else
-            f"all_goals (apply {self.name}_t_loop_spec <;> grind{self.ga})")
+            f"all_goals (apply {self.name}_t_loop_spec <;> {self._gr()})")
         out.append(
             f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs}"
             f"{hfrs} :\n"
@@ -1063,7 +1293,7 @@ class Lower:
             f"  split\n"
             f"  · repeat split\n"
             f"    {then_tac}\n"
-            f"  · grind{self.ga}\n"
+            f"  · {self._gr()}\n"
             f"termination_by ({dec}).toNat\n"
             f"decreasing_by all_goals (first | omega | grind)\n")
         thms.append((f"{self.name}_t_loop_spec",
@@ -1076,10 +1306,10 @@ class Lower:
         for iv in invs:
             if "exists" in iv:
                 lo0 = self.term(iv["exists"]["lo"], env0, types)
-                init_pfs.append(f"(by first | grind{self.ga} | "
-                                f"exact ⟨{lo0}, by grind{self.ga}⟩)")
+                init_pfs.append(f"(by first | {self._gr()} | "
+                                f"exact ⟨{lo0}, by {self._gr()}⟩)")
             else:
-                init_pfs.append(f"(by grind{self.ga})")
+                init_pfs.append(f"(by {self._gr()})")
         for _v in frame:
             init_pfs.append("rfl")   # hfr at the entry state: v0 = v0
         hpre_thm = f" (hpre : {self.pre_conj()})" if has_pre else ""
@@ -1374,8 +1604,10 @@ class Lower:
             build = self._cert_value
         elif kind in ("exit", "preservation"):
             build = self._cert_loop
+        elif kind == "undefined":
+            build = self._cert_undefined
         else:
-            return None      # undefined-kind: `at` is total in this lowering
+            return None
         try:
             parts = build(w, kind)
         except (NotImplementedError, KeyError, StopIteration,
@@ -1396,6 +1628,55 @@ class Lower:
             lines += [f"  · {tac}" for _, tac in parts]
         lines.append(f"\n#print axioms {CERT_NAME}")
         return "\n".join(lines) + "\n"
+
+    # ---------- undefined-kind witnesses (SPEC.md "Sequences as values",
+    # 2026-09-09) ----------
+    # An undefined-kind witness (interp.py's Undef: t's REAL semantics has
+    # no value for the twin at this input) was previously abstained on
+    # unconditionally: this lowering's `at`/`update`/`fill` are TOTAL, so
+    # naively re-running the twin under totalized semantics and comparing
+    # to `ensures` is unsound to rely on -- measured on swap's own
+    # off-by-one twin (index 1 outside [0,1) at s=[0]), Lean's chosen
+    # default (`getElem!_neg`'s `default = 0`) happens to equal s's own
+    # element there, so the totalized twin computes a value that
+    # ACCIDENTALLY still satisfies `ensures`, and no certificate exists at
+    # that reading even though the same twin is genuinely wrong at other
+    # inputs (`swap_t [10,20] 0 0` computes `[20,20]`, not the identity
+    # `[10,20]` swapping index 0 with itself should give). The robust
+    # certificate is not about a totalized VALUE at all: it is that the
+    # twin's OWN definedness obligation -- the same conjunction emitted as
+    # `{name}_t_wfbody`, from `to_expr`'s own `obs` -- is violated at the
+    # witness. That obligation is exactly SPEC.md's definedness calculus,
+    # so it is false at this ground point if and only if interp.py's
+    # exec_body would raise Undef there, which is exactly the condition
+    # `_kind == "undefined"` already recorded. Re-running `to_expr` with
+    # the params bound to the witness's GROUND terms (instead of their
+    # names) renders that same obligation already fully instantiated, so
+    # its negation is a closed, decidable proposition the kernel checks by
+    # `decide` alone: no case analysis, no reliance on which default value
+    # a partial operator happens to totalize to. LOOP-shaped bodies are
+    # not covered (returns None, the pre-existing abstain): `to_expr` only
+    # renders the loop-free shape.
+    def _cert_undefined(self, w: dict, _kind: str) -> list | None:
+        if any("while" in s for s in self.body):
+            return None
+        params = self.task["params"]
+        types = dict(self.types)
+        tenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
+                for p in params}
+        _, obs = self.to_expr(self.body, dict(tenv), types)
+        ob = self._conj(obs)
+        if ob is None:
+            return None      # nothing was undefined along this ground path
+        self.cert_funs = interp.funs_of(self.task, self.body)
+        fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
+        self.cert_fns = ", ".join(fns)
+        venv = {p["name"]: w[p["name"]] for p in params}
+        parts = [(self.prop(r, tenv, types),
+                  self._prove(r, tenv, venv, types))
+                 for r in self.task.get("requires", [])]
+        parts.append((f"(¬{ob})", self._closer()))
+        return parts
 
     def _cert_value(self, w: dict, _kind: str) -> list | None:
         if isinstance(w.get("_twin"), str):
