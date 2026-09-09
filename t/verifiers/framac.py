@@ -668,13 +668,21 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
             outcome = Outcome.TOOL_ERROR  # all-proved without a clean exit
             err = out[-400:]              # or without the controlled ban audit
         elif cert_marked:
-            # Certificate file, everything proved: the kernel accepted the
-            # ground proof that ensures fails at the witness. A file that
-            # merely CARRIES the name without an accepted certificate goal
-            # is only demoted: never VERIFIED, and never REFUTED either.
+            # Certificate file, everything proved. The coherence gate
+            # (2026-09-09, the rule the other adapters carry since
+            # 2026-09-07): here EVERY goal is proved, the twin's own
+            # contract included, so the kernel proved the twin AND accepted
+            # a ground proof that its ensures fails at the witness. Two
+            # accepted contradictions refute nothing: MALFORMED, never
+            # REFUTED. An honest refutation reaches the branch below, where
+            # the twin's own goals stay unproved and only the certificate's
+            # audit set is accepted. A file that merely CARRIES the name
+            # without an accepted certificate goal is only demoted.
             if accepted:
-                outcome = Outcome.REFUTED
-                err = "kernel-accepted refutation certificate in " + cert_note
+                outcome = Outcome.MALFORMED
+                err = ("certificate accepted on a file whose every goal "
+                       "proved: the kernel proved the twin, so the witness "
+                       "refutes nothing (" + cert_note + ")")
             else:
                 outcome = Outcome.UNPROVED
                 err = ("carries the certificate name without an accepted "

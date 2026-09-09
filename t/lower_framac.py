@@ -346,6 +346,95 @@ reads identical to AGREEMENT.md's framac column (6 verified/refuted:
 abs, factorial, fib, gcd, max, remainder; 9 verified/timeout: all_nonneg,
 contains, count_matches, digit_sum, first_even, is_prime, linear_search,
 seq_max, sum_upto), wall 125.4s for those 15, 139.6s for all 17.
+
+THE SEQ-RETURN GATE, REMOVED, 2026-09-09 (later the same night). It
+existed for exactly one reason, stated above: to keep that pass's own
+17-task regression reading byte-for-byte as AGREEMENT.md recorded it,
+while `update`/`fill` landed. `_undef_certificate` and
+`_exit_certificate` were never seq-specific mechanisms; the gate was a
+scoping decision for THAT pass, not a soundness boundary, and it was
+left in place only because re-measuring nine already-committed cells was
+out of scope for a pass about landing two new ones. This pass is that
+re-measurement, done on its own terms: `certificate()` now dispatches
+`undefined` and `exit` witnesses for ANY task, whatever its return type;
+the `task["returns"][0]["type"] != "seq"` check is gone.
+
+MEASURED. All 17 committed tasks' REAL programs are byte-identical to
+the gated lowering (diffed `out/*.c` for every non-twin file, before and
+after; zero differences) -- only twin files carrying a newly-certifiable
+witness changed, by construction: removing a gate can only ever add a
+certificate function to a twin, never touch the real program's C at all.
+Cells: all 9 previously-uncertified `verified / timeout` rows (all_nonneg,
+contains, count_matches, digit_sum, first_even, is_prime, linear_search,
+seq_max, sum_upto) move to `verified / refuted`, all by the `exit` kind
+(every one is an INVARIANT-DROP twin), matching the number measured and
+quoted above when this was first tried. The 17-task framac column now
+agrees with every other kernel's column in AGREEMENT.md: 17 of 17
+verified/refuted.
+
+The lifted-785 sweep (`out/lifted-tasks/*.json`, 198 tasks) moves the
+same way at scale, measured by running every task through
+`harness.run_task` (T_CELL_SERIAL=1, an outer 6-way task pool, so total
+kernel concurrency stays at 6, never the 36 that an ungated outer pool
+times `cell_pair`'s own 2*n=6 fan-out would reach). Framac column,
+COVERAGE-lifted-785.md before -> measured after: verified/refuted 87 ->
+136 (+49), verified/timeout 65 -> 14 (-51), timeout/timeout 16 -> 6
+(-10), timeout/refuted 4 -> 14 (+10, the other end of the same 10 moves),
+verified/unproved 2 -> 4 (+2: two `exit`-witness certificates the kernel
+DECLARED but did not ACCEPT, `_cert_status`'s own audit demoting the cell
+from an honest budget TIMEOUT to UNPROVED rather than minting a REFUTED
+it cannot back -- the certificate discipline working exactly as
+documented, not a regression in the counted metric, since neither
+outcome is agreement). Every other category (no-twin/no-twin 6, abstain/
+abstain 4, verified/vacuous 4, timeout/vacuous 3, verified/verified 5,
+vacuous/vacuous 1, malformed/malformed 1) is unchanged, cell-for-cell:
+none of those tasks reach `certificate()` with an `undefined` or `exit`
+witness at all, so the gate's removal cannot touch them. 61 cells moved
+in total (49 + 10 + 2); every move is verified/timeout or timeout/timeout
+tightening to a certified verdict, never the reverse.
+
+SOUNDNESS of every moved cell rests on the same audit `verifiers/
+framac.py` already runs for the seq-gated cells: `_cert_status` requires
+exactly one `t_refutation_certificate`-named goal, declared AND proved,
+plus every goal in its audit set (its enclosing function's own goals,
+smoke tests included, plus every function-less global goal) also proved,
+before minting REFUTED; a file merely carrying the certificate NAME can
+never mint VERIFIED regardless. What framac's adapter does NOT have,
+unlike dafny.py/verus.py/spark.py/lean.py/fstar.py's explicit "coherence
+gate, 2026-09-07" (a file whose own main goals ALL discharge alongside an
+accepted certificate reads MALFORMED there, since a proof of the
+contract and a certified counterexample to it cannot both be sound): this
+adapter's `_all_obligations_proved(m, smoke)` branch, when true, reads
+`cert_marked`+`accepted` straight to REFUTED with no contradiction check
+at all. Not exercised by any cell measured tonight (every moved cell's
+own twin `ensures` stays unproved -- Stepout under budget -- exactly as
+before, so `_all_obligations_proved` is false and the sound branch, "the
+certificate's audit set is accepted while the twin's own contract
+remains open," is the one taken), but it is a real gap relative to the
+other six adapters, named plainly rather than assumed closed: it is
+possible in principle for an inconsistent theory to discharge both the
+twin's contract and the certificate's negation of it, and this adapter
+would currently read that REFUTED rather than MALFORMED. Not fixed here
+(out of scope: this pass touches only the gate), left as a finding for
+whichever pass next touches `verifiers/framac.py`.
+
+SURPRISES. Four lifted tasks (mfirstCero, factorialOfLastDigit,
+invertArray, fcul_exercises_10/find) raise a bare `NotImplementedError`
+out of `lower()` when called on `task["body"]` directly through
+`harness.run_task` -- a pre-existing limit in the REAL body's own
+lowering (a conditionally-evaluated `at`/`div`/`mod` in a `while`
+condition, or a `spec_fun` call in executable position), completely
+unrelated to the certificate gate: the traceback bottoms out in
+`stmts()`/`code_ats()` before `certificate()` is ever reached, so it
+fires identically with the gate in place. COVERAGE-lifted-785.md already
+reads these four `abstain / abstain`, which is `run_par.py`'s own
+wrapper catching this same exception, not measured directly here since
+RULES scoped this pass away from `run_par.py`/`run_all.py`; counted as
+unchanged above. Six more lifted tasks that read `no-twin / no-twin` in
+COVERAGE-lifted-785.md print a REFUSED reason from `harness.run_task`
+instead (twin_cached found no operator, no input, or no witness) --
+the identical refusal, before `certificate()` runs at all, just a
+different label than the sweep driver's; also counted as unchanged.
 """
 from __future__ import annotations
 
@@ -2026,25 +2115,20 @@ def certificate(task: dict, twin_body: list, w: dict,
     Dispatches on `w["_kind"]`; see the section comment above for what
     each kind needs and does not (yet) cover.
 
-    `undefined` and `exit` are scoped to seq-RETURNING tasks only (MEASURED
-    2026-09-09: both mechanisms are GENERAL, not seq-specific -- an
-    `undefined` witness can come from a bare `at`/`div`/`mod`, an `exit`
-    witness from any INVARIANT-DROP twin -- and turning them on
-    unconditionally changed 9 of the 15 already-committed tasks' twin
-    cells, all nine from an uncertified TIMEOUT to a certified REFUTED
+    `undefined` and `exit` apply to ANY task, whatever its return type
+    (UNGATED 2026-09-09: the seq-return gate landed the same night as
+    `update`/`fill` purely to keep that night's 15-task regression reading
+    byte-for-byte as AGREEMENT.md recorded it, not because either
+    mechanism is seq-specific -- an `undefined` witness can come from a
+    bare `at`/`div`/`mod`, an `exit` witness from any INVARIANT-DROP twin,
+    on a scalar-returning task exactly as on a seq-returning one). Removing
+    the gate was measured, not assumed: over the 17 committed tasks it
+    turns 9 of the 9 `verified / timeout` cells into `verified / refuted`
     (all_nonneg, contains, count_matches, digit_sum, first_even, is_prime,
-    linear_search, seq_max, sum_upto: every framac `verified / timeout`
-    row in AGREEMENT.md except abs/factorial/fib/gcd/max/remainder, which
-    were already `verified / refuted`). That MAY be a sound improvement
-    over the committed baseline, since every other kernel already reads
-    `refuted` on most of those same cells, but RULES scoped this pass to
-    landing `update`/`fill` and reading the two NEW tasks, not to
-    re-measuring nine already-committed ones outside a dated note of
-    their own: the 15-task regression must read exactly as AGREEMENT.md
-    records. So both new kinds gate on the task actually returning a seq,
-    which uniquely picks out swap/reverse among all 17 committed tasks
-    today and leaves every pre-existing task's certificate path (and
-    therefore its outcome) untouched."""
+    linear_search, seq_max, sum_upto), every real program's C staying
+    byte-identical to the gated lowering (checked task-by-task; only the
+    twin file's certificate function changes). See the dated note below
+    `lower()` for the full measurement, including the lifted-785 sweep."""
     if w is None:
         return None
     if CERT_FN in used or CERT_GOAL in used:
@@ -2052,8 +2136,6 @@ def certificate(task: dict, twin_body: list, w: dict,
     kind = w.get("_kind")
     if kind == "value":
         return _value_certificate(task, twin_body, w, env, funs, used)
-    if task["returns"][0]["type"] != "seq":
-        return None                    # scope limit, see docstring
     if kind == "undefined":
         return _undef_certificate(task, twin_body, w, env, funs, used)
     if kind == "exit":

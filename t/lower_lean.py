@@ -190,6 +190,106 @@ lands it as a return and local type, plus `update` (`s[i := v]`) and
                  unproved/unproved), and three representative outputs
                  (abs.lean, first_even.lean, digit_sum.lean) are
                  byte-identical to before this landed.
+
+THE DECREASING-BY GAP (2026-09-09, second sweep). The lifted sweep
+(COVERAGE-lifted-785.md rows added 2026-09-09) measured most loops that
+update a seq reading lean unproved even though `update`/`fill` themselves
+were already handled above: clover_replace, clover_double_array_elements
+and absIt (reproduced first, `python3 -c "harness.run_task(...)"` against
+`out/lifted-tasks/`) all read real UNPROVED, invariant-drop twin REFUTED.
+Running `lean` by hand on the lowered file put the one error inside
+`_t_loop_spec`'s own `decreasing_by all_goals (first | omega | grind)`
+(clover_replace, line 76 of the generated file; the def `_t_loop`'s
+OWN decreasing_by, two lines earlier, was fine). The obligation there is
+the measure comparison for the theorem's self-application, e.g.
+`((arr_out.set i_v2.toNat (-1)).length - (i_v2+1)).toNat < (arr_out.length
+- i_v2).toNat`: `omega` alone cannot see through the `.set` at all (no
+`List.length_set` in its theory, confirmed by isolating exactly this goal
+in a scratch file and watching `omega` fail with the raw `List.set` term
+still opaque in its counterexample); plain `grind` finds `List.length_set`
+readily on the SMALL goal `_t_loop`'s own termination carries (no
+invariants in scope there) but, handed the SAME goal inside
+`_t_loop_spec` -- where the context also carries the loop's full
+invariant list, every one of them a `forall` over `getElem!` -- grind's
+E-matching explores that whole invariant set hunting for a path to
+`List.length_set` and hits Lean's `maxRecDepth` before it gets there
+(isolated and reproduced directly: `grind` alone, handed the same
+five-invariant context by hand in a scratch file, hits the identical
+"maximum recursion depth" issue that `_seq_hints`'s reads-after-`.set`
+fix above was written for, but this is a different goal -- a pure length
+fact, no element read in sight -- so widening the existing `grind only`
+hint list was not the fix). What the goal actually needed was never a new
+lemma, only skipping the search: `simp only [List.length_set,
+List.length_replicate]; omega` closes it in one step, since that simp set
+is exactly the fact `omega` was missing and nothing else.
+
+The fix is `_dec()`, a decreasing_by tactic-text helper parallel to
+`_gr()`, called at every `termination_by` site in the file in place of
+the old literal `"decreasing_by all_goals (first | omega | grind)"`
+string; it takes one extra `first`-alternative
+(`simp only [List.length_set, List.length_replicate]; omega`) ONLY when
+its caller passes `needed=True`. `lower_loop` computes that flag once,
+`_dec_needs_seq_bridge`: true iff the loop's own `decreases` expression
+names a state variable whose current symbolic value (from `sym()`) is
+itself an `update`/`fill` term (checked textually for `.set ` /
+`List.replicate ` in the value `sym()` already built, the same strings
+`to_expr`/`term` emit for those two ops). This is why swap and reverse,
+both already-committed seq tasks, do NOT regenerate byte-identical text
+by accident but by construction: reverse's `decreases` is `len(s) - i`
+and `s` is the read-only input, never assigned inside the loop (the
+mutated return is `r`), so `_dec_needs_seq_bridge` reads False and
+`_dec()` emits the exact old string; swap has no loop at all (SIMPLE
+shape), so `_dec()` is never called for it. `spec_funs` and the
+self-recursive (non-loop) shape keep calling `_dec()` with no argument
+(False), unchanged, since no task lowered so far self-recurses through an
+`update`/`fill`-carrying measure and there is nothing here to measure
+that against; a future one would abstain into the same recursion-depth
+wall this note describes, honestly, rather than silently.
+
+MEASURED. The three reproduction tasks (clover_replace__replace,
+clover_double_array_elements__double_array_elements,
+seng2011_tmp_tmpgk5jq85q_p2__absIt) all move from real UNPROVED to real
+VERIFIED (invariant-drop twin REFUTED on all three). abs.lean,
+first_even.lean, reverse.lean and swap.lean, regenerated from the fifteen
+committed tasks plus swap and reverse, diff byte-identical to before this
+landed. Over all 198 out/lifted-tasks/*.json tasks under the lean
+backend: before 97 verified/refuted, 33 unproved/refuted, 27
+unproved/unproved, 24 abstain, 10 verified/unproved, 6 no-twin, 1
+timeout/timeout; after 103 verified/refuted, 28 unproved/refuted, 26
+unproved/unproved, the other four cells unchanged. Six tasks moved, all
+upward, none downward: clover_double_array_elements__double_array_elements
+and clover_replace__replace (unproved/refuted -> verified/refuted),
+seng2011_tmp_tmpgk5jq85q_p2__absIt (unproved/refuted -> verified/refuted),
+dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes
+(unproved/refuted -> verified/refuted),
+final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray
+(unproved/refuted -> verified/refuted), and
+dafnyprograms_tmp_tmp74_f9k_c_invertarray__invertArray (unproved/unproved
+-> verified/refuted); all five shared the identical decreasing_by defect
+this note fixes. clover_rotate, dafny_synthesis_task_id_625__swapFirstAndLast,
+clover_linear_search1__linearSearch,
+dafny_tmp_tmpmvs2dmry_pancakesort_flip__flip and
+seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven (the timeout) are UNCHANGED --
+measured directly, none of their `decreases` expressions names a
+`.set`/`.replicate`-carrying state variable, so `_dec_needs_seq_bridge`
+correctly reads False for them and they fail elsewhere, honestly still
+unproved, not silently patched over. The 17 committed tasks/*.json still
+read exactly their AGREEMENT.md lean column (all verified/refuted), the
+whole sweep finishing in seconds, nowhere near the 180 s wall. The
+sequences-as-values fuzz family (fuzz_lower.py, family v1seqval, shapes
+fillcopy/clampneg/reverse/idwrite, n=200 seed=1, 10 tasks matching those
+four shapes in that corpus) reads IDENTICAL before and after this fix: 4
+verified, 4 unproved, 2 timeout, 0 no-twin, byte-for-byte the same
+per-task outcomes. Inspected directly (fz_v1seqval_002, fillcopy,
+unproved/unproved both before and after): its one lean error is a
+DIFFERENT goal, `_t_loop_spec`'s conclusion `fz_v1seqval_002_t_loop s r i
+= s`, a whole-list structural equality that has to be bridged from the
+pointwise invariant `forall k, r[k]! = s[k]!` -- no `.set`/`.replicate`
+term anywhere in its own `decreases` (`len(s) - i`, s read-only, exactly
+reverse's shape), so `_dec_needs_seq_bridge` correctly does not fire and
+this file is untouched by the fix in this note; the pointwise-to-
+structural list-equality bridge is a distinct, still-open gap, left
+honestly unproved rather than folded into this fix's scope.
 """
 from __future__ import annotations
 
@@ -888,6 +988,56 @@ class Lower:
             return base
         return f"(first | {base} | grind only [{self._seq_hints()}])"
 
+    def _dec(self, needed: bool = False) -> str:
+        """The `decreasing_by` line used at every termination proof site in
+        this file (SPEC.md "Sequences as values", 2026-09-09): a recursive
+        call whose state argument is `s[i := v]` or `seq(n, v)` needs
+        `List.length_set`/`List.length_replicate` before `omega` can see
+        that the measure (built from `.length`) actually decreased through
+        the `.set`/`.replicate`. Measured on clover_replace's
+        `_t_loop_spec` termination goal: plain `omega` cannot see through
+        the `.set` at all (fails outright, no `List.length_set` in its
+        theory); plain `grind` finds `List.length_set` fine in the SMALL
+        context of a bare `_t_loop` definition's own termination goal (no
+        invariants in scope there) but, once the goal also carries a
+        loop's full invariant list (as `_t_loop_spec`'s recursive call
+        does), the same E-matching search that read/update needed `grind
+        only` for above (`_seq_hints`) explores every invariant's
+        `getElem!` machinery here too and hits Lean's recursion-depth cap;
+        `simp only [List.length_set, List.length_replicate]; omega`
+        closes it directly, no search, since it is exactly the one fact
+        `omega` was missing. Added as one extra `first`-alternative, but
+        ONLY when the caller passes `needed=True`: `lower_loop` sets it
+        exactly when the loop's own `decreases` expression names a state
+        variable that the loop body itself rewrites via `update`/`fill`
+        (`self._dec_needs_seq_bridge`, below); every other call site
+        (`spec_funs`, `lower_rec`, and a loop whose measure does not
+        depend on the mutated variable, e.g. reverse's `len(s) - i`,
+        `s` untouched) passes nothing and keeps the exact prior text, so
+        the fifteen pre-existing tasks AND reverse and swap stay
+        byte-identical outside the seq-helper prelude (measured: reverse's
+        two `decreasing_by` lines are unaffected, since `s`, the variable
+        its `decreases` names, is read-only; the mutated return `r` never
+        appears in a decreases clause in any task lowered so far)."""
+        alt = (" | (simp only [List.length_set, List.length_replicate]; "
+              "omega)") if needed else ""
+        return f"decreasing_by all_goals (first | omega{alt} | grind)\n"
+
+    def _dec_needs_seq_bridge(self, dec_expr: dict, env: dict) -> bool:
+        """True iff `dec_expr` (a loop's `decreases`) names a state
+        variable whose CURRENT symbolic value (`env`, from `sym()`) is
+        itself an `update`/`fill` term -- textually, contains a Lean
+        `.set `/`List.replicate ` call -- so the auto-generated
+        termination goal for the recursive call needs the length bridge
+        `_dec(needed=True)` supplies. False whenever `not self.seq_mut`,
+        so it never fires for a pre-existing task."""
+        if not self.seq_mut:
+            return False
+        names: set = set()
+        _collect_names(dec_expr, names)
+        return any(".set " in env.get(v, "") or "List.replicate " in env.get(v, "")
+                  for v in names)
+
     def emit_seq_helpers(self) -> str:
         if not self.seq_mut:
             return ""
@@ -934,7 +1084,7 @@ class Lower:
             if rec:
                 dec = self.term(f["decreases"], {}, dict(ptypes))
                 out.append(f"termination_by ({dec}).toNat")
-                out.append("decreasing_by all_goals (first | omega | grind)")
+                out.append(self._dec().rstrip("\n"))
             out.append("")
             d = self.dcond(f["body"], {}, dict(ptypes))
             if d is not None:
@@ -1087,7 +1237,7 @@ class Lower:
         out = [f"def {self.name}_t {pb}{hpre_def} : "
                f"{self.lean_type(self.rett)} :=\n  {expr}\n"
                f"termination_by ({dec}).toNat\n"
-               f"decreasing_by all_goals (first | omega | grind)\n"]
+               + self._dec()]
         thms = []
         ob = self._conj(obs)
         if ob is not None:
@@ -1134,7 +1284,7 @@ class Lower:
             f"  repeat split\n"
             f"  all_goals grind{self.ga}\n"
             f"termination_by ({dec}).toNat\n"
-            f"decreasing_by all_goals (first | omega | grind)\n")
+            + self._dec())
         thms.append((f"{self.name}_t_spec", "the contract"))
         return "\n".join(out), thms
 
@@ -1180,6 +1330,13 @@ class Lower:
         rec_args = " ".join(env_b.get(v, v) for v in state)
         dec = self.term(w["decreases"], {}, types)
         dec_d = self.dcond(w["decreases"], {}, types)
+        # SPEC.md "Sequences as values" (2026-09-09): does the recursive
+        # call's own termination proof need the length-bridge alternative
+        # (`_dec_needs_seq_bridge`) -- true iff `decreases` names a state
+        # var the loop body rewrites via `update`/`fill`. Computed once,
+        # shared by `_t_loop`'s own decreasing_by and `_t_loop_spec`'s
+        # (same recursive-call state either way).
+        dec_needed = self._dec_needs_seq_bridge(w["decreases"], env_b)
         if suffix:
             env_s, obs_suf, _ = self.sym(suffix, {}, dict(types), state)
             result = env_s.get(self.ret, self.ret)
@@ -1203,7 +1360,7 @@ class Lower:
                    f"     else {self.name}_t_loop {pnames} {rec_args})\n"
                    f"  else {result}\n"
                    f"termination_by ({dec}).toNat\n"
-                   f"decreasing_by all_goals (first | omega | grind)\n"]
+                   + self._dec(dec_needed)]
         else:
             out = [f"def {self.name}_t_loop {pb} {sb} : "
                    f"{self.lean_type(self.rett)} :=\n"
@@ -1211,7 +1368,7 @@ class Lower:
                    f"    {self.name}_t_loop {pnames} {rec_args}\n"
                    f"  else {result}\n"
                    f"termination_by ({dec}).toNat\n"
-                   f"decreasing_by all_goals (first | omega | grind)\n"]
+                   + self._dec(dec_needed)]
         init_args = " ".join(env0[v] for v in state)
         out.append(f"def {self.name}_t {pb} : "
                    f"{self.lean_type(self.rett)} :=\n"
@@ -1295,7 +1452,7 @@ class Lower:
             f"    {then_tac}\n"
             f"  · {self._gr()}\n"
             f"termination_by ({dec}).toNat\n"
-            f"decreasing_by all_goals (first | omega | grind)\n")
+            + self._dec(dec_needed))
         thms.append((f"{self.name}_t_loop_spec",
                      "invariants -> ensures, by induction on the loop"))
 

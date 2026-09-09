@@ -1013,12 +1013,24 @@ elementAtIndexAfterRotation in six columns each, and framac's nine
 vacuous rows read (seven verified/refuted, two honest timeouts). The 18 new
 rows count in six columns seven times and in five columns five times,
 none in all seven: lean reads unproved on most loops over a seq, spark
-times out on four, the residuals of the two columns. Residuals: spark's seq
-equality; framac's exit and undefined certificates are gated to
-seq-returning tasks because ungated they also close 9 of framac's 15
-committed loop-twin timeouts, which is the next measured change, not a
-side effect to bank silently; rocq abstains on seq equality in
-computational position.
+times out on four, the residuals of the two columns. The same morning, two follow-ups measured and landed: framac's exit
+and undefined certificates ungated (they had been gated to seq-returning
+tasks), which turns all 9 committed framac loop-twin timeouts and 49
+sweep cells into verified/refuted (framac 87 to 125 counting, the residual
+10.7 named), and verifiers/framac.py given the coherence gate the other
+five adapters had since 2026-09-07, which the same run needed: 11
+seq-return sweep cells and the committed `reverse` cell had read REFUTED
+on a certificate accepted in a file whose every goal, the twin's contract
+included, was proved (the dropped length invariant is a pinned parameter
+in framac's buffer encoding), so they now read verified/malformed, the
+sixth sweep's framac column having overstated by 11; and lean bridging
+`List.length_set` into the loop theorem's termination proof, six seq-loop
+tasks from unproved to verified/refuted. The sweep now reads 42 of 198 in
+all seven (32) and 60 in six, MBPP-DFY 8 in all seven; AGREEMENT.md reads
+16 of 17 in all seven, `reverse` in six. Residuals: spark's seq equality;
+rocq abstains on seq equality in computational position; lean's remaining
+seq loops (rotate, swapFirstAndLast, linearSearch, pancakesort, getEven);
+framac's 14 loop-twin timeouts.
 
 ### 12.8 Standing items
 
