@@ -1032,6 +1032,55 @@ rocq abstains on seq equality in computational position; lean's remaining
 seq loops (rotate, swapFirstAndLast, linearSearch, pancakesort, getEven);
 framac's 14 loop-twin timeouts.
 
+**break LANDED 2026-09-09 as a lifter rule, not a language change; the
+measurement that decided it is the finding.** The census gate order on the
+MBPP-DFY family put `early-exit` (break, continue) first, 16 of 164 as
+their sole gap, 36 gradable programs in all; every one is a `break`, none a
+`continue` or a labelled break (measured on the 785). The obvious design,
+a `break` statement owing the invariant at the break with the kernel
+knowing `inv` and `broke or not cond` after the loop (Verus's plain
+`invariant` rule), was worked through on the 16 programs before a line was
+written and it makes every one of them unprovable: the idiom is a flag set
+and a `break` (`result := false; break;`), and the ensures needs the normal
+exit's `not cond` in the case the flag was not set, which is knowledge only
+the path to the break carries. Dafny's own `break` is a Boogie goto, so
+after the loop it knows the disjunction of the exits, and that is the
+semantics the programs are written against; a t `break` with that meaning
+would cost the four recursive loop encodings a Skolemised pre-state of the
+breaking iteration in their loop contracts. Measured instead with the
+lifter's own parser: in 23 of the 30 parseable programs the loop with the
+break is the last statement of the method (17 `for`, 4 `while`, 2 inside a
+tail `if`), 3 more have a straight-line statement after it, 2 are followed
+by another loop, 1 breaks inside a nested loop. A `break` whose loop is in
+tail position IS t's early exit: `return ret` at that point carries the
+break path's knowledge to the ensures exactly as the goto does, and the
+seven columns already prove it (spark 17 of 18 return-bearing reals since
+the Esc arm repair). So LIFTER-DECISIONS.md row 23 maps an unlabelled
+`break` whose innermost loop is the tail of the method body, allowing a
+loop-free, return-free continuation after the loop that is duplicated at
+the break point (`break-as-return`, `break-continuation-duplicated`), and
+refuses the rest with a named token (`continue`, `break-label`,
+`break-in-nested-loop`, `break-before-loop`, `break-not-tail`). No SPEC
+change, no lowering touched, no new twin operator: the twin ladder's
+condition mutations refute the flag-and-break shape as they refute
+`first_even`. The census detector split the same way, `early-exit` the
+gap (3 programs, 0 sole) and `break-as-return` the burden (36): DafnyBench
+in fragment 174 to 190 of 643, blocked by exactly one gap 140 to 131, and
+the MBPP-DFY greedy order now opens with `string-char` (9), `real` (9),
+`set` (6), the seq gates behind them. The lifter run over the 36: 6 of the 36 never reach a method (2 `no-method`, 3 `heap`, 1 `tuple`); 4 break-carrying methods lift and pass every check (KatzManna's NinetyOne, with its trailing statement duplicated; cmsc433's IsPrime; MBPP-DFY 3 IsNonPrime and 605 IsPrime), and re-lifting cmsc433's file under the current rows brought its ArraySum and Reverse along, so the staged sweep grows 198 to 204; 6 more lift and fail the checker for a pre-existing reason (414, 808, 809 on `L_inv_0`, the for-loop invariant lemma; 775 and 804 on `L_fun` for `IsOdd`/`IsEven`), confirmed by break-free programs failing the same lemmas in the same run; 20 are refused earlier for another construct.
+The gap between the census's 16 and the lifter's yield is the finding
+that sets the next lifter rows, each a count: 5 of the 16 are refused
+solely for `requires a != null` on a non-null `array<int>` (a Dafny 4
+tautology, row 24 landed the same afternoon: `x != null` on a non-null `array<int>` parameter or return, as a whole clause or a top-level conjunct, is dropped as `null-check-dropped`, every other `null` still `heap`; 40 of the 785 write it, 31 of them with `heap` as their first refusal; the five MBPP-DFY programs then stop one gap later, 284 and 433 on the checker's `L_ens` array-quantifier lemma, 733, 751 and 760 on the same two-binder quantifier shape as the seven above, so row 24 unblocks nothing on its own and is banked for the quantifier row); 7 for a quantifier the lifter reads as
+unbounded, every one a two-binder chain (`forall i, j :: 0 <= i < j <
+a.Length ==> ...`, `exists i, j :: 0 <= i < a.Length && 0 <= j < a.Length
+&& ...`) that t states as nested single-binder quantifiers with the inner
+bound depending on the outer, the next lifter row; 3 lift and fail the
+checker's `L_inv_0` lemma on a for-loop invariant (the pre-existing
+for-desugaring gap named on 2026-09-09 morning), 2 fail `L_fun` on
+`IsOdd`/`IsEven` predicates; the remaining 5 are string, cast, nested-seq,
+multi-return and slice gaps the census also names. Sweep: 204 tasks (198 plus the six), 6 jobs, 0 flaked cells, every one of the 2,544 lowered sources shared with the seventh sweep byte-identical and every shared row cell for cell as before; 42 of 204 in all seven (42 of 198) and 61 in six (60), MBPP-DFY 42 lifted and 8 in all seven; of the six new rows cmsc433's Reverse counts in six, and the two MBPP-DFY IsPrime shapes ABSTAIN in verus and framac on a `div` in the loop guard (`while i <= n / 2`), a definedness obligation neither lowers in guard position, the residual this wave names for those two columns, while dafny proves their invariant-drop twins (the harmless-drop class of 12.3) and lean and rocq refute them.
+
 ### 12.8 Standing items
 
 **The cell runs its six kernel calls at once (2026-09-09).** run_par and
@@ -1070,6 +1119,69 @@ to hand it back exactly as committed. Reprinting any of these is a decision
 to take on purpose.
 
 `forge/` and `locallm/` remain out of scope.
+
+**The training loop's first curve, at 1.5B (2026-09-09).** Treston set the
+direction the same day: t must take in almost all of the nl/ corpus so
+models can be trained on the bugs the kernels find, the errors flattening
+round over round with every failure naming its cause; forge and locallm
+are back in scope as the training end of that loop. The loop now exists
+end to end, measured once. Round 0 at 1.5B: `spec_experiment.py` on
+`qwen2.5-coder:1.5b` through ollama over the 368-problem pool (51
+well-formed, 23 pass their tests, 28 verify with a refuted twin in some
+column, 3 in all seven, 1 in all seven and passing its tests;
+`SPEC-EXPERIMENT-mbpp-1.5b.md`). The verdict dataset, `loop_dataset.py`:
+59 positives (31 of the 7B's round-0 tasks that verify with a refuted
+twin in at least four kernels and pass every test, 28 lifted MBPP-DFY
+tasks at the same kernel bar) and 189 preference pairs whose rejected
+side is a twin with a witness that falsifies the ensures (the primary
+twin first, then the ladder's other rungs, at most four per positive:
+off-by-one 101, wrong-var 45, collapse-if 15, negate-cond 13,
+compare-flip 7, boundary-swap 5, invariant-drop 3), every block
+round-tripping through `surface.parse`; 46 pool problems are touched by a
+positive, 322 are held out (`out/loop/heldout.json`, regenerated by the
+script). The trainer, `loop_train.py`: QLoRA DPO with trl on
+Qwen2.5-Coder-1.5B-Instruct in 4-bit, one SFT warm-up epoch on the
+positives, 72 DPO steps, 15 minutes and 3.7 GB on a shared card (the
+first attempt ran out of memory materialising full-vocabulary fp32 logits
+over the 2,048-token window; completion-only logits fixed it), reward
+margin between a verified answer and its twin 0.00 to 0.13 with the
+verified side preferred on every logged batch. The generator,
+`loop_generate.py`: transformers inference with the adapter, writing
+`cmd_generate`'s exact record layout so extract, tests, run_par and table
+run unchanged; ollama cannot serve an adapter and the box has no GGUF
+converter. Because round 0 went through ollama's Q4 weights and round 1
+through nf4, the bare base through the same transformers path is its own
+column, and the training effect is read against it. `loop_curve.py` writes
+`LOOP-CURVE.md`, one column per round, one row per stage, over the pool
+and over the 322 held out. On the held-out 322: well-formed 25 (ollama), 41
+(same-path control), 45 (round 1); tests pass 5, 7, 8. The kernel rows for the control and round 1 follow in the next commit, from the queued run. The
+inference path moved well-formedness more than one round of DPO on 189
+pairs did, which is the first fact of the curve and the reason the control
+column exists. Next hurdle on the curve: round 2's positives from round
+1's own verified answers (expert iteration), which needs the reward to
+carry the tests, 12.6's finding, since 35 of the 7B's 43 verified specs
+restated their bodies.
+
+**The nl/ census (2026-09-09).** `nl_census.py` and `COVERAGE-nl.md`, the
+DafnyBench census's instrument over the 24,748 nl/ problems: 4,239 are
+function-shaped and 449 of those are in t's fragment today; 20,509 are
+stdin-shaped, of which 361 would be in fragment once a signature is
+extracted from the input format, a construct in its own right for APPS and
+CodeContests. Top gaps by programs needing them: `string-char` 18,361
+(sole blocker for 347 function-shaped problems), `seq-literal` 8,599,
+`tuple` 7,906, `seq-append` 6,030, `nested-seq` 3,704, `real` 3,517
+(sole 180), `seq-slice` 3,305; the whole-corpus greedy order opens with
+`string-char`, `real`, `import`, `generator`, `nested-seq`, `seq-slice`,
+and on MBPP alone with `string-char` (116), `import`, `real`, `tuple`. A
+lexical and AST census of reference solutions, over-approximating what a t
+answer would need; nl/FIDELITY.md's gate on corpus numbers is untouched.
+The judgement recorded beside it: almost-all-of-nl/ as a literal target is
+the wrong size for a seven-kernel floor (each construct costs seven
+lowerings and the compounding of twin operators and certificates; the
+23,600 stdin problems are string and float programs whose bugs are not the
+invariant bugs a kernel catches; bug data scales with verified answers per
+problem, not with problems), so the working target is the function-shaped
+tier over ints, bools, sequences and strings, grown by this census's order.
 
 ## The road to 1.0 (opened 2026-09-05)
 

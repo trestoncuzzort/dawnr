@@ -1235,6 +1235,23 @@ def _rule_names(record) -> set:
     return {r.rule for r in record.rewrites}
 
 
+def _find_all(node, key: str) -> list:
+    """Every value under `key` reachable anywhere inside `node` (a task
+    body's nested dicts/lists), depth-first -- row 23's tests use this to
+    find the injected `"return"` a break becomes without hardcoding the
+    exact while/if nesting index it lands at."""
+    out = []
+    if isinstance(node, dict):
+        if key in node:
+            out.append(node[key])
+        for v in node.values():
+            out += _find_all(v, key)
+    elif isinstance(node, list):
+        for v in node:
+            out += _find_all(v, key)
+    return out
+
+
 def test_chain_desugared() -> None:
     src = """
 method Chained(x: int, y: int, z: int) returns (r: bool)
@@ -1605,13 +1622,17 @@ method Caller(x: int) returns (r: int)
 
 def test_null_refuses_heap() -> None:
     """A bare `null` literal (the shim, like lift_parse.py, has no
-    dedicated NullLit node -- it is a plain Ident named "null") is a heap
-    fact t has no word for: an array param compared to null (minArray,
-    FindMax) must refuse `heap`, not reach rewrite as an ordinary
-    identifier."""
+    dedicated NullLit node -- it is a plain Ident named "null") is
+    generally a heap fact t has no word for. Row 24 (2026-09-09) carves
+    out exactly one exception (`x != null` on a non-nullable array,
+    tested separately below); `x == null` on that same array is still a
+    CLOSED FACT (false, since the array can never be null) but is
+    refused `heap` as before -- row 24 only drops the tautological `!=`
+    positive position, never `==`, since a real Dafny program never
+    writes an always-false precondition."""
     src = """
 method UsesNull(a: array<int>) returns (r: int)
-  requires a != null && a.Length > 0
+  requires a == null && a.Length > 0
   ensures r == 0
 {
   r := 0;
@@ -1619,7 +1640,114 @@ method UsesNull(a: array<int>) returns (r: int)
 """
     v = _classify_one(src, "UsesNull")
     assert isinstance(v, C.Refusal) and v.reason == "heap", f"expected heap refusal, got {v}"
-    print("test_null_refuses_heap: `a != null` refuses heap")
+    print("test_null_refuses_heap: `a == null` still refuses heap (row 24 only drops `!=`)")
+
+
+def test_null_check_dropped_non_nullable_array() -> None:
+    """Row 24 (2026-09-09): `requires a != null` alone, `a` a non-nullable
+    `array<int>` parameter, is a tautology Dafny itself proves trivially
+    (Dafny 4: only `array?<int>` is nullable) -- the whole clause is
+    DROPPED, not refused, and the method lifts with no `requires` left
+    over from it."""
+    src = """
+method OnlyNullCheck(a: array<int>) returns (r: int)
+  requires a != null
+  ensures r == 0
+{
+  r := 0;
+}
+"""
+    task, rec = _lift_one(src, "OnlyNullCheck")
+    assert "null-check-dropped" in _rule_names(rec)
+    assert task["requires"] == [], f"expected no leftover requires, got {task['requires']}"
+    print("test_null_check_dropped_non_nullable_array: `requires a != null` alone is dropped, method lifts")
+
+
+def test_null_check_dropped_conjunct() -> None:
+    """Row 24: `requires a != null && a.Length > 0`, `a` non-nullable
+    `array<int>`, keeps only the `a.Length > 0` conjunct -- the `a !=
+    null` conjunct is stripped out of the top-level `&&`, matching
+    `_strip_fresh_conjuncts`'s "top-level conjunct" reading of decision
+    22."""
+    src = """
+method NullAndLength(a: array<int>) returns (r: int)
+  requires a != null && a.Length > 0
+  ensures r == 0
+{
+  r := 0;
+}
+"""
+    task, rec = _lift_one(src, "NullAndLength")
+    assert "null-check-dropped" in _rule_names(rec)
+    assert len(task["requires"]) == 1, f"expected exactly the length conjunct, got {task['requires']}"
+    only = task["requires"][0]
+    assert (only["op"] == ">" and only["args"][1] == {"int": 0}
+            and only["args"][0]["op"] == "len"), f"expected `len(a) > 0`, got {only}"
+    print("test_null_check_dropped_conjunct: `a != null && a.Length > 0` keeps only the length conjunct")
+
+
+def test_null_check_nullable_array_stays_refused() -> None:
+    """Row 24 is scoped to NON-nullable arrays only: `scan_null_checks`'s
+    `accepted_names` is built from `_is_array_of_int`, which already
+    excludes `nullable` types (lift_classify.py's own definition), so
+    `requires a != null` on `array?<int>` (Dafny's actual nullable
+    spelling) never matches row 24 at all. In practice the method never
+    even reaches that check: a nullable array PARAMETER already refuses
+    `array` unconditionally (section 4.2's param-type loop, decision 1's
+    read-only-array condition being scoped to non-nullable arrays only),
+    on the parameter declaration's own line, before the `requires`
+    line's `null` comparison is ever classified -- still refused,
+    exactly the pre-row-24 behavior, just not by the `heap` row this
+    time (a stricter, earlier reason wins, per `_first`'s
+    earliest-line rule)."""
+    src = """
+method NullableArray(a: array?<int>) returns (r: int)
+  requires a != null
+  ensures r == 0
+{
+  r := 0;
+}
+"""
+    v = _classify_one(src, "NullableArray")
+    assert isinstance(v, C.Refusal) and v.reason == "array", f"expected array refusal, got {v}"
+    print("test_null_check_nullable_array_stays_refused: `array?<int>` param stays refused "
+          "(array, before the null check is even reached)")
+
+
+def test_null_check_dropped_reversed() -> None:
+    """Row 24 matches either operand order: `null != a` (the source
+    Dafny may write it either way) is dropped exactly like `a != null`."""
+    src = """
+method ReversedNullCheck(a: array<int>) returns (r: int)
+  requires null != a
+  ensures r == 0
+{
+  r := 0;
+}
+"""
+    task, rec = _lift_one(src, "ReversedNullCheck")
+    assert "null-check-dropped" in _rule_names(rec)
+    assert task["requires"] == [], f"expected no leftover requires, got {task['requires']}"
+    print("test_null_check_dropped_reversed: `null != a` (reversed operand order) is dropped too")
+
+
+def test_null_check_in_or_stays_refused() -> None:
+    """Row 24 only drops the comparison from a whole clause or a
+    top-level `&&` conjunct -- the SAME comparison inside an `||` is not
+    a tautological position `scan_null_checks` ever matches (an `||`
+    with a false-when-array-not-null disjunct is not itself always
+    true), so it must still refuse `heap`."""
+    src = """
+method NullInOr(a: array<int>, b: bool) returns (r: int)
+  requires a != null || b
+  ensures r == 0
+{
+  r := 0;
+}
+"""
+    v = _classify_one(src, "NullInOr")
+    assert isinstance(v, C.Refusal) and v.reason == "heap", f"expected heap refusal, got {v}"
+    print("test_null_check_in_or_stays_refused: `a != null || b` still refuses heap (not a safe position)")
 
 
 def test_bodyless_method_refused() -> None:
@@ -1781,6 +1909,235 @@ method AllPos(s: seq<int>) returns (r: int)
          f"'k | k in s :: k > 0' -> at(s, {req['forall']['var']}) > 0")
 
 
+# ===========================================================================
+# Part 4b: row 23, `break` as t's early exit (LIFTER-DECISIONS.md,
+# 2026-09-09).
+# ===========================================================================
+
+def test_break_as_return_tail_while() -> None:
+    src = """
+method FindFirst(n: int) returns (r: int)
+  ensures true
+{
+  r := -1;
+  var i := 0;
+  while i < n
+    invariant 0 <= i
+    decreases n - i
+  {
+    if i == 5 {
+      r := i;
+      break;
+    }
+    i := i + 1;
+  }
+}
+"""
+    task, rec = _lift_one(src, "FindFirst")
+    assert "break-as-return" in _rule_names(rec)
+    assert "break-continuation-duplicated" not in _rule_names(rec)
+    rets = _find_all(task["body"], "return")
+    assert rets == [["r", {"var": "r"}]], f"expected one bare-return-shaped return, got {rets}"
+    print("test_break_as_return_tail_while: flag-and-break in a tail while -> return r inside the loop")
+
+
+def test_break_as_return_tail_for() -> None:
+    src = """
+method FindFirstFor(n: int) returns (r: int)
+  ensures true
+{
+  r := -1;
+  for i := 0 to n
+  {
+    if i == 5 {
+      r := i;
+      break;
+    }
+  }
+}
+"""
+    task, rec = _lift_one(src, "FindFirstFor")
+    assert "break-as-return" in _rule_names(rec)
+    rets = _find_all(task["body"], "return")
+    assert rets == [["r", {"var": "r"}]], f"expected one bare-return-shaped return, got {rets}"
+    print("test_break_as_return_tail_for: flag-and-break in a tail for-loop -> return r inside the desugared while")
+
+
+def test_break_continuation_duplicated() -> None:
+    src = """
+method FindAndBump(n: int) returns (r: int)
+  ensures true
+{
+  r := -1;
+  var i := 0;
+  while i < n
+    invariant 0 <= i
+    decreases n - i
+  {
+    if i == 5 {
+      break;
+    }
+    i := i + 1;
+  }
+  r := r + 1;
+}
+"""
+    task, rec = _lift_one(src, "FindAndBump")
+    assert "break-as-return" in _rule_names(rec)
+    assert "break-continuation-duplicated" in _rule_names(rec)
+    bump = {"assign": ["r", {"op": "+", "args": [{"var": "r"}, {"int": 1}]}]}
+    assert task["body"][-1] == bump, "the original trailing 'r := r + 1;' must stay in place"
+    assigns = _find_all(task["body"][2]["while"]["body"], "assign")
+    assert ["r", {"op": "+", "args": [{"var": "r"}, {"int": 1}]}] in assigns, (
+        "the continuation 'r := r + 1;' must ALSO be duplicated inside the loop, before the return")
+    rets = _find_all(task["body"][2]["while"]["body"], "return")
+    assert rets == [["r", {"var": "r"}]]
+    print("test_break_continuation_duplicated: loop followed by 'r := r + 1;' "
+          "duplicates the assignment before the injected return")
+
+
+def test_break_in_nested_loop_refused() -> None:
+    src = """
+method NestedBreak(n: int, m: int) returns (r: int)
+  ensures true
+{
+  r := 0;
+  var i := 0;
+  while i < n
+    invariant 0 <= i
+    decreases n - i
+  {
+    var j := 0;
+    while j < m
+      invariant 0 <= j
+      decreases m - j
+    {
+      if j == 2 {
+        break;
+      }
+      j := j + 1;
+    }
+    i := i + 1;
+  }
+}
+"""
+    v = _classify_one(src, "NestedBreak")
+    assert isinstance(v, C.Refusal) and v.reason == "early-exit" and v.token == "break-in-nested-loop", (
+        f"expected early-exit/break-in-nested-loop, got {v}")
+    print("test_break_in_nested_loop_refused: break in the inner of two nested loops -> break-in-nested-loop")
+
+
+def test_break_before_loop_refused() -> None:
+    src = """
+method BreakBeforeLoop(n: int, m: int) returns (r: int)
+  ensures true
+{
+  r := 0;
+  var i := 0;
+  while i < n
+    invariant 0 <= i
+    decreases n - i
+  {
+    if i == 2 {
+      break;
+    }
+    i := i + 1;
+  }
+  var j := 0;
+  while j < m
+    invariant 0 <= j
+    decreases m - j
+  {
+    j := j + 1;
+  }
+}
+"""
+    v = _classify_one(src, "BreakBeforeLoop")
+    assert isinstance(v, C.Refusal) and v.reason == "early-exit" and v.token == "break-before-loop", (
+        f"expected early-exit/break-before-loop, got {v}")
+    print("test_break_before_loop_refused: break's loop is followed by another loop -> break-before-loop")
+
+
+def test_continue_refused() -> None:
+    src = """
+method HasContinue(n: int) returns (r: int)
+  ensures true
+{
+  r := 0;
+  var i := 0;
+  while i < n
+    invariant 0 <= i
+    decreases n - i
+  {
+    if i == 2 {
+      continue;
+    }
+    r := r + 1;
+    i := i + 1;
+  }
+}
+"""
+    v = _classify_one(src, "HasContinue")
+    assert isinstance(v, C.Refusal) and v.reason == "early-exit" and v.token == "continue", (
+        f"expected early-exit/continue, got {v}")
+    print("test_continue_refused: 'continue;' -> early-exit/continue")
+
+
+def test_break_label_refused() -> None:
+    src = """
+method HasLabeledBreak(n: int) returns (r: int)
+  ensures true
+{
+  r := 0;
+  var i := 0;
+  label L:
+  while i < n
+    invariant 0 <= i
+    decreases n - i
+  {
+    if i == 2 {
+      break L;
+    }
+    i := i + 1;
+  }
+}
+"""
+    v = _classify_one(src, "HasLabeledBreak")
+    assert isinstance(v, C.Refusal) and v.reason == "early-exit" and v.token == "break-label", (
+        f"expected early-exit/break-label, got {v}")
+    print("test_break_label_refused: 'break L;' -> early-exit/break-label")
+
+
+def test_break_in_tail_if_branch_accepted() -> None:
+    src = """
+method BreakInIfBranch(n: int, flag: bool) returns (r: int)
+  ensures true
+{
+  r := -1;
+  if flag {
+    var i := 0;
+    while i < n
+      invariant 0 <= i
+      decreases n - i
+    {
+      if i == 5 {
+        r := i;
+        break;
+      }
+      i := i + 1;
+    }
+  } else {
+    r := 0;
+  }
+}
+"""
+    task, rec = _lift_one(src, "BreakInIfBranch")
+    assert "break-as-return" in _rule_names(rec)
+    rets = _find_all(task["body"], "return")
+    assert rets == [["r", {"var": "r"}]], f"expected one bare-return-shaped return, got {rets}"
+    print("test_break_in_tail_if_branch_accepted: while loop last in a tail if-branch -> break-as-return")
+
+
 UNIT_TESTS = [
     test_chain_desugared, test_iff_to_eq, test_nat_return_ensures,
     test_nat_invariant_added_and_dedup, test_spec_fun_totalised,
@@ -1793,6 +2150,13 @@ UNIT_TESTS = [
     test_method_level_decreases_neither_projects_nor_sums,
     test_predicate_result_is_bool,
     test_seq_nat_param_refused, test_quantifier_membership_binder_substitution,
+    test_break_as_return_tail_while, test_break_as_return_tail_for,
+    test_break_continuation_duplicated, test_break_in_nested_loop_refused,
+    test_break_before_loop_refused, test_continue_refused,
+    test_break_label_refused, test_break_in_tail_if_branch_accepted,
+    test_null_check_dropped_non_nullable_array, test_null_check_dropped_conjunct,
+    test_null_check_nullable_array_stays_refused, test_null_check_dropped_reversed,
+    test_null_check_in_or_stays_refused,
 ]
 
 

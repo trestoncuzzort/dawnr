@@ -42,23 +42,25 @@ so it can be written straight to a `.json` file and passed unchanged to
 
 from __future__ import annotations
 
+import copy
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from lift_ast import (
-    Assign, Binary, BlockStmt, BoolLit, Call, Chain, ClauseAdded,
-    ClauseDropped, Decl, DecreasesClause, EnsuresClause, Expr, ForStmt,
-    Fresh, FunctionDecl, Ident, IfExpr, IfStmt, Iff, Implies, Index,
-    IntLit, InvariantClause, LabelStmt, LemmaDecl, LiftRecord, Lhs,
-    MethodDecl, Module, NaryBool, NewRhs, Old, Param, Quantifier,
-    ReadsClause, Rename, RequiresClause, Rewrite, Slice, Stmt, Type,
-    Unary, VarDeclStmt, WhileStmt,
+    Assign, Binary, BlockStmt, BoolLit, BreakStmt, Call, Chain, ClauseAdded,
+    ClauseDropped, ContinueStmt, Decl, DecreasesClause, EnsuresClause,
+    Expr, ForStmt, Fresh, FunctionDecl, Ident, IfExpr, IfStmt, Iff,
+    Implies, Index, IntLit, InvariantClause, LabelStmt, LemmaDecl,
+    LiftRecord, Lhs, MethodDecl, Module, NaryBool, NewRhs, Old, Param,
+    Quantifier, ReadsClause, Rename, RequiresClause, ReturnStmt, Rewrite,
+    Slice, Stmt, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
     ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier,
-    find_array_mutation, walk, unchanged_at_every_call,
+    find_array_mutation, scan_breaks, scan_null_checks, walk,
+    unchanged_at_every_call,
 )
 
 
@@ -177,6 +179,56 @@ def _strip_fresh_conjuncts(e: Expr, ret_name: Optional[str],
     return e
 
 
+def _strip_null_checks(e: Expr, drop_ids: frozenset,
+                        record: LiftRecord, line: int) -> Optional[Expr]:
+    """Row 24 (2026-09-09): the same `!= null` comparisons
+    `lift_classify.scan_null_checks` accepted for this method (each
+    one's `null` Ident's `id()` is in `drop_ids`, computed once in
+    `rewrite()` -- the SAME shared computation `classify` used to
+    exempt them from the `heap` refusal, per `scan_breaks`'s pattern of
+    never letting the two stages disagree) are DROPPED here rather than
+    lifted: a `requires`/`ensures`/loop `invariant` clause that IS the
+    comparison vanishes entirely; a TOP-LEVEL `&&` conjunct is removed
+    from the conjunction, exactly `_strip_fresh_conjuncts`'s reading of
+    "top level". The same comparison anywhere else (inside an `||`, an
+    `==>`, or a body expression) was never placed in `drop_ids` to begin
+    with -- `scan_null_checks` only ever matches a clause's own top
+    level -- so it is untouched here and would reach `_lift_expr`'s own
+    fallback; in practice this never happens, since `classify` refuses
+    `heap` for that shape before `rewrite` is ever called. Returns
+    `None` when the whole clause was the comparison alone (the caller
+    drops the clause entirely, exactly `_strip_fresh_conjuncts`'s
+    contract)."""
+    if not drop_ids:
+        return e
+
+    def _is_dropped(a: Expr) -> bool:
+        # A single relop always parses as a length-1 `Chain`, never a
+        # `Binary` (`Binary` is `+ - * / %` only; see `_null_compare`'s
+        # docstring in lift_classify.py).
+        return (isinstance(a, Chain) and len(a.ops) == 1 and a.ops[0] == "!="
+                and (id(a.operands[0]) in drop_ids or id(a.operands[1]) in drop_ids))
+
+    if _is_dropped(e):
+        record.clauses_dropped.append(ClauseDropped(rule="null-check-dropped", count=1))
+        record.rewrites.append(Rewrite(rule="null-check-dropped", line=line))
+        return None
+    if isinstance(e, NaryBool) and e.op == "&&":
+        kept = [a for a in e.args if not _is_dropped(a)]
+        dropped_n = len(e.args) - len(kept)
+        if dropped_n == 0:
+            return e
+        for _ in range(dropped_n):
+            record.clauses_dropped.append(ClauseDropped(rule="null-check-dropped", count=1))
+            record.rewrites.append(Rewrite(rule="null-check-dropped", line=line))
+        if not kept:
+            return None
+        if len(kept) == 1:
+            return kept[0]
+        return NaryBool(e.line, "&&", tuple(kept))
+    return e
+
+
 # ---------------------------------------------------------------------------
 # Scope: the live rename/type/nat-tracking environment threaded through the
 # body lift. Copied (not shared) whenever two branches must not leak
@@ -199,10 +251,19 @@ class Scope:
     # overwritten it -- these two fields carry it alongside.
     old_array_name: Optional[str] = None           # dafny name of the mutated array, or None
     old_array_param_tname: Optional[str] = None     # its own t-name (pre-mutation)
+    # Row 24 (2026-09-09): `id()`s of the `null` Ident nodes
+    # `lift_classify.scan_null_checks` accepted for THIS method (a
+    # `!= null` on a non-nullable array param/return, in a whole-clause
+    # or top-level `&&`-conjunct position) -- carried on `Scope` (rather
+    # than threaded as its own parameter through every `_lift_stmt`
+    # call) since a loop's `InvariantClause` is only reachable from
+    # there and `Scope` already flows to every clause-lifting site via
+    # `.copy()`. Set once in `rewrite()`; never mutated afterward.
+    null_drop_ids: frozenset = frozenset()
 
     def copy(self) -> "Scope":
         return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
-                     self.old_array_name, self.old_array_param_tname)
+                     self.old_array_name, self.old_array_param_tname, self.null_drop_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -687,6 +748,73 @@ def _desugar_returns(stmts: tuple, tail: bool, ret_name: str, record: LiftRecord
     return tuple(out)
 
 
+def _desugar_breaks(stmts: tuple, ret_name: str, record: LiftRecord) -> tuple:
+    """LIFTER-DECISIONS.md row 23 (2026-09-09): run right after
+    `_desugar_returns`, on the body it already produced. `lift_classify.
+    scan_breaks` -- the SAME function `classify` used, on the raw AST, to
+    decide this method is liftable in the first place -- is recomputed
+    here on the desugared body so the two never disagree; every break it
+    accepts is replaced by a deep copy of its loop's continuation
+    followed by a bare `return;`, which `_lift_stmt`'s own ReturnStmt
+    branch turns into t's early exit `{"return": [ret, {"var": ret}]}`.
+    The out-parameter's definite assignment on this path is Dafny's own
+    guarantee (section 4.7's check already ran, on the RAW body, in
+    classify -- a break landing on a still-unassigned path is refused
+    before rewrite ever sees it, so nothing further to check here).
+    `ret_name` is unused -- kept for signature symmetry with
+    `_desugar_returns`; the injected ReturnStmt is always bare, and
+    `_lift_stmt` derives the return's t-name itself from
+    `scope.ret_name`. Because `_desugar_returns` already ran, the only
+    ReturnStmt `scan_breaks` can find here is a genuine non-tail one
+    (`_continuation_issue`'s trailing-ReturnStmt exemption is simply
+    never exercised on this call -- the tail return it exempts already
+    vanished or became an Assign)."""
+    _issues, accepted = scan_breaks(stmts)
+    replace: dict[int, tuple] = {}
+    for node, _loop, cont in accepted:
+        dup = tuple(copy.deepcopy(c) for c in cont)
+        replace[id(node)] = dup + (ReturnStmt(node.line, ()),)
+        record.rewrites.append(Rewrite(rule="break-as-return", line=node.line))
+        if cont:
+            record.rewrites.append(Rewrite(rule="break-continuation-duplicated", line=node.line))
+    return _apply_break_rewrites(stmts, replace)
+
+
+def _apply_break_rewrites(stmts: tuple, replace: dict) -> tuple:
+    """Rebuilds `stmts`, splicing `replace[id(break_node)]` in place of
+    every BreakStmt `_desugar_breaks` accepted (a break can expand to
+    several statements -- its duplicated continuation plus a return --
+    so this is a splice, not a 1-for-1 substitution); mirrors
+    `_desugar_returns`'s own recursion shape exactly, since every other
+    statement kind is left untouched."""
+    out = []
+    for s in stmts:
+        if isinstance(s, BreakStmt) and id(s) in replace:
+            out.extend(replace[id(s)])
+        elif isinstance(s, IfStmt):
+            then2 = _apply_break_rewrites(s.then, replace)
+            if isinstance(s.else_, tuple):
+                else2 = _apply_break_rewrites(s.else_, replace)
+            elif isinstance(s.else_, IfStmt):
+                else2 = _apply_break_rewrites((s.else_,), replace)[0]
+            else:
+                else2 = s.else_
+            out.append(IfStmt(s.line, s.cond, tuple(then2), else2 if s.else_ is None or isinstance(s.else_, IfStmt) else tuple(else2)))
+        elif isinstance(s, WhileStmt):
+            out.append(WhileStmt(s.line, s.cond, s.specs, tuple(_apply_break_rewrites(s.body, replace))))
+        elif isinstance(s, ForStmt):
+            out.append(ForStmt(s.line, s.var, s.var_type, s.lo, s.direction, s.hi, s.specs,
+                                tuple(_apply_break_rewrites(s.body, replace))))
+        elif isinstance(s, BlockStmt):
+            out.append(BlockStmt(s.line, tuple(_apply_break_rewrites(s.body, replace))))
+        elif isinstance(s, LabelStmt):
+            inner = _apply_break_rewrites((s.stmt,), replace)
+            out.append(inner[0] if inner else s.stmt)
+        else:
+            out.append(s)
+    return tuple(out)
+
+
 def _lhs_name(name: str, line: int):
     from lift_ast import Lhs
     return Lhs(line, kind="name", name=name)
@@ -827,8 +955,14 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
 
     if cls == "WhileStmt":
         cond_e = _lift_expr(s.cond, scope, fn_names, self_name, task_name, record, renamer)
-        invs = [_lift_expr(sp.expr, scope, fn_names, self_name, task_name, record, renamer)
-                for sp in s.specs if sp.__class__.__name__ == "InvariantClause"]
+        invs = []
+        for sp in s.specs:
+            if sp.__class__.__name__ != "InvariantClause":
+                continue
+            src_e = _strip_null_checks(sp.expr, scope.null_drop_ids, record, sp.line)
+            if src_e is None:
+                continue
+            invs.append(_lift_expr(src_e, scope, fn_names, self_name, task_name, record, renamer))
         assigned = _assigned_dafny_names(s.body)
         for dn in scope.nat:
             if dn in assigned:
@@ -855,8 +989,14 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
         out = []
         body_scope = scope.copy()
         body_scope.renames[s.var] = i_t
-        user_invs = [_lift_expr(sp.expr, body_scope, fn_names, self_name, task_name, record, renamer)
-                     for sp in s.specs if sp.__class__.__name__ == "InvariantClause"]
+        user_invs = []
+        for sp in s.specs:
+            if sp.__class__.__name__ != "InvariantClause":
+                continue
+            src_e = _strip_null_checks(sp.expr, scope.null_drop_ids, record, sp.line)
+            if src_e is None:
+                continue
+            user_invs.append(_lift_expr(src_e, body_scope, fn_names, self_name, task_name, record, renamer))
         if s.direction == "to":
             h_t = renamer.fresh("h", record, "local")
             scope.types[h_t] = "int"
@@ -1063,7 +1203,15 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
                     alloc_fill_size_expr = _parse_size_expr(parsed[1])
                 break
 
+    # Row 24 (2026-09-09): recompute the SAME `scan_null_checks` classify
+    # already ran on this exact `method` object to decide it was
+    # liftable, so the two stages never disagree (`_desugar_breaks`'s
+    # pattern for row 23); `Scope.null_drop_ids` carries it to every
+    # requires/ensures/invariant lifting site below.
+    null_drop_ids = frozenset(id(m) for _, _, m in scan_null_checks(method))
+
     scope = Scope()
+    scope.null_drop_ids = null_drop_ids
     params_out = []
     for p in method.params:
         tname = renamer.fresh(p.name, record, "param")
@@ -1173,7 +1321,10 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             record.rewrites.append(Rewrite(rule="nat-elements-requires", line=p.line))
     for spec in method.specs:
         if isinstance(spec, RequiresClause):
-            e = _lift_expr(spec.expr, scope, fn_names, method.name, task_name, record, renamer)
+            src_e = _strip_null_checks(spec.expr, scope.null_drop_ids, record, spec.line)
+            if src_e is None:
+                continue
+            e = _lift_expr(src_e, scope, fn_names, method.name, task_name, record, renamer)
             parts = _split_top_and(e)
             requires_out.extend(parts)
             if len(parts) > 1:
@@ -1217,6 +1368,9 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             src_e = _strip_fresh_conjuncts(spec.expr, fresh_ret_name, record, spec.line)
             if src_e is None:
                 continue
+            src_e = _strip_null_checks(src_e, scope.null_drop_ids, record, spec.line)
+            if src_e is None:
+                continue
             e = _lift_expr(src_e, scope, fn_names, method.name, task_name, record, renamer)
             parts = _split_top_and(e)
             ensures_out.extend(parts)
@@ -1225,6 +1379,7 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
 
     # -- body
     desugared = _desugar_returns(method.body, True, scope.ret_name, record)
+    desugared = _desugar_breaks(desugared, scope.ret_name, record)
     body_out = []
     body_scope = scope.copy()
     if mutated_param_name is not None:

@@ -709,7 +709,11 @@ def _returns(s: str) -> tuple[bool, bool]:
     dropping (already the `trailing-return` burden), and a non-tail
     return now lifts to t's `{"return": [ret, e]}` statement (the
     `early-return` burden below), so neither counts as an `early-exit`
-    gap any more -- that name now names break/continue alone."""
+    gap any more. As of 2026-09-09 (LIFTER-DECISIONS.md row 23) a break
+    whose loop is in tail position of the method body is in the same
+    position: it lifts to that same `return`, the `break-as-return`
+    burden (see `_break_continue` below), so `early-exit` now names only
+    a continue, a labeled break, or a break whose loop is not tail."""
     early = trailing = False
     for bstart, bend in _method_bodies(s):
         for m in re.finditer(r"\breturn\b", s[bstart:bend]):
@@ -720,14 +724,104 @@ def _returns(s: str) -> tuple[bool, bool]:
     return early, trailing
 
 
-def _break_continue(s: str) -> bool:
-    """A `break` or `continue` in a method body: still outside t's
-    fragment. SPEC.md's `return` statement (2026-09-08) covers only
-    `return`, so `early-exit` (the gap) now names this alone --
-    LIFTER-DECISIONS.md row 21."""
-    for bstart, bend in _method_bodies(s):
-        if re.search(r"\bbreak\b|\bcontinue\b", s[bstart:bend]):
+_LOOP_KW = re.compile(r"\bwhile\b|\bfor\b")
+
+
+def _loop_groups(s: str, bstart: int, bend: int) -> list[tuple[int, int]]:
+    """(open, close) of the body brace group of every `while`/`for` loop
+    header found in [bstart, bend): the first `{` after the header that is
+    not `{:` (an invariant or decreases clause may itself carry an
+    attribute), closed by `_brace_close`. Groups nest the way the source
+    nests, so the innermost group containing a position is the one with the
+    largest open index among those that contain it."""
+    groups = []
+    for m in _LOOP_KW.finditer(s, bstart, bend):
+        i = m.end()
+        while i < bend and s[i] != "{":
+            i += 1
+        if i >= bend:
+            continue
+        if s.startswith("{:", i):
+            # an attribute on the header itself (rare); skip past it and
+            # keep looking for the real body brace.
+            j = _brace_close(s, i)
+            while j < bend and s[j] != "{":
+                j += 1
+            if j >= bend:
+                continue
+            i = j
+        groups.append((i, _brace_close(s, i)))
+    return groups
+
+
+def _break_continuation_refused(cont: str) -> bool:
+    """True when the text after a break's innermost loop closes, up to (but
+    not including) the method body's own closing brace, rules out a
+    straight-line fall-through: another loop, a break or continue, or a
+    return that is not the body's last statement. Pragmatic on the return
+    check: a return is tail only when nothing but whitespace follows its
+    `;` to the end of `cont` (which itself stops right before the body's
+    closing brace)."""
+    if _LOOP_KW.search(cont):
+        return True
+    if re.search(r"\bbreak\b|\bcontinue\b", cont):
+        return True
+    for m in re.finditer(r"\breturn\b", cont):
+        semi = cont.find(";", m.end())
+        if semi < 0 or cont[semi + 1:].strip():
             return True
+    return False
+
+
+def _breaks(s: str, bstart: int, bend: int, loops: list[tuple[int, int]]):
+    """Yield (position, labeled, depth, continuation_refused) for every
+    `break` in the body span, `labeled` true for `break <ident>` (not the
+    bare `break;`). `depth` is the number of loop groups enclosing the
+    break (0 if none, which should not happen in well-formed source);
+    `continuation_refused` is only meaningful when depth == 1."""
+    for m in re.finditer(r"\bbreak\b", s[bstart:bend]):
+        p = bstart + m.start()
+        rest = s[bstart + m.end():bend]
+        labeled = re.match(r"\s*(" + IDENT + r")\b", rest) is not None
+        containing = [g for g in loops if g[0] <= p < g[1]]
+        depth = len(containing)
+        refused = True
+        if depth == 1:
+            close = containing[0][1]
+            refused = _break_continuation_refused(s[close:bend - 1])
+        yield p, labeled, depth, refused
+
+
+def _break_continue(s: str) -> bool:
+    """A `continue`, a labeled break, or a break whose loop is not the tail
+    of the method body (a break inside a nested loop, or followed by
+    another loop): still outside t's fragment. An unlabeled break whose
+    innermost loop IS the tail of the method body, with at most a
+    straight-line continuation after it, lifts instead to t's early-exit
+    `return` (the `break-as-return` burden below) -- LIFTER-DECISIONS.md
+    row 23, 2026-09-09. `early-exit` (the gap) now names only the refused
+    shapes."""
+    for bstart, bend in _method_bodies(s):
+        if re.search(r"\bcontinue\b", s[bstart:bend]):
+            return True
+        loops = _loop_groups(s, bstart, bend)
+        for _p, labeled, depth, refused in _breaks(s, bstart, bend, loops):
+            accepted = (not labeled) and depth == 1 and not refused
+            if not accepted:
+                return True
+    return False
+
+
+def _break_as_return(s: str) -> bool:
+    """An unlabeled break whose innermost loop is the tail of the method
+    body, with at most a straight-line continuation after it: lifts to t's
+    early-exit `return` of the method's own result (LIFTER-DECISIONS.md
+    row 23, 2026-09-09)."""
+    for bstart, bend in _method_bodies(s):
+        loops = _loop_groups(s, bstart, bend)
+        for _p, labeled, depth, refused in _breaks(s, bstart, bend, loops):
+            if not labeled and depth == 1 and not refused:
+                return True
     return False
 
 
@@ -1282,7 +1376,7 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "multi-method": ("gap", lambda s: _method_count(s) > 1, "more than one method (Main, and the method of function method, excluded)"),
     "multi-return": ("gap", _multi_return, "several return values"),
     "zero-returns": ("gap", _zero_returns, "a method with no return value (t returns exactly one)"),
-    "early-exit": ("gap", _break_continue, "a break or continue statement in a method body"),
+    "early-exit": ("gap", _break_continue, "a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop)"),
     "seq-return": ("gap", _seq_return, "sequence-valued return of a method or a function"),
     "seq-literal": ("gap", _seq_literal, "sequence literal [..] in an expression"),
     "seq-slice": ("gap", _has(r"\[[^\]]*\.\.[^\]]*\]"), "slicing s[a..b]"),
@@ -1320,6 +1414,7 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "frame-clause": ("burden", _has(r"\bmodifies\b|\breads\b"), "modifies / reads (array frames when no class is present)"),
     "trailing-return": ("burden", lambda s: _returns(s)[1], "a return as the last statement (assign the result instead)"),
     "early-return": ("burden", lambda s: _returns(s)[0], "a return that is not in tail position of a method body (lifts to t's early-exit `return` statement)"),
+    "break-as-return": ("burden", _break_as_return, "an unlabeled break whose innermost loop is the tail of the method body, with at most a straight-line continuation after it (lifts to t's early-exit `return` of the method's own result, LIFTER-DECISIONS.md row 23)"),
     "main-harness": ("burden", _has(r"\bmethod\s+Main\b"), "a Main test harness (stripped before tagging)"),
     "while-no-decreases": ("burden", lambda s: any(
         "decreases" not in s[m.end():m.end() + 400].split("{", 1)[0]

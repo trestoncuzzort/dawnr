@@ -77,7 +77,7 @@ from lift_ast import (
     ModifiesClause, Module, NaryBool, NewRhs, Node, Old, Param, PrintStmt,
     Quantifier, ReadsClause, Refusal, RequiresClause, RevealStmt,
     ReturnStmt, Rewrite, SeqDisplay, SeqUpdate, SetDisplay, SkippedDecl,
-    Slice, Star, Stmt, TupleExpr, Type, TypeTest, Unary, VarDeclStmt,
+    Slice, Spec, Star, Stmt, TupleExpr, Type, TypeTest, Unary, VarDeclStmt,
     WhileCaseStmt, WhileStmt, Comprehension,
 )
 
@@ -440,8 +440,9 @@ def bound_quantifier(q: Quantifier):
 # Tail/early-return scan (section 4.5's three `return` rows, plus SPEC.md
 # "Early exit (v1)", 2026-09-08). Returns (issues, rewrites) where issues
 # are refusal candidates still raised here (none, as of the early-exit
-# rule below -- `break`/`continue` are refused by `_scan_node_for_issues`'s
-# generic pass instead, not here) and rewrites are (line, kind) pairs,
+# rule below -- `break`/`continue` get their own dedicated scan,
+# `scan_breaks` below, not `_scan_node_for_issues`'s generic pass) and
+# rewrites are (line, kind) pairs,
 # kind one of "tail" (a return in tail position, desugared away by
 # `lift_rewrite._desugar_returns`) or "early" (any other return, mapped to
 # t's `{"return": [ret, e]}` statement -- LIFTER-DECISIONS.md row 21).
@@ -486,6 +487,223 @@ def scan_returns(stmts: tuple[Stmt, ...], tail: bool
             issues += i2
             rewrites += r2
     return issues, rewrites
+
+
+# ---------------------------------------------------------------------------
+# Break scan (LIFTER-DECISIONS.md row 23, 2026-09-09). An unlabeled `break`
+# lifts to t's early exit `return ret;` exactly when its innermost
+# enclosing loop L is reachable from the method body through nothing but
+# IfStmt then/else branches (BlockStmt and LabelStmt transparent, never
+# through another loop's own body) and the straight-line CONTINUATION C
+# that would run after L -- every statement physically after L in its own
+# block, then every statement after the enclosing if in ITS block, and so
+# on to the end of the method body -- contains no WhileStmt, ForStmt,
+# BreakStmt, ContinueStmt or ReturnStmt, except a single trailing
+# ReturnStmt (exactly the tail return `_desugar_returns` removes or turns
+# into an assignment, so transparent here too). `_find_tail_loops` and
+# `_continuation_issue` do this computation once; `scan_breaks` (called
+# from both `classify`, on the raw AST, and `lift_rewrite._desugar_breaks`,
+# on the AST `_desugar_returns` already ran over) is the one shared entry
+# point, so the two modules can never disagree about which break
+# qualifies. `ContinueStmt` and a labeled `BreakStmt` are refused outright
+# (`continue`, `break-label`); an unlabeled break whose innermost loop
+# sits inside another loop is `break-in-nested-loop`; one whose loop's
+# continuation holds a loop or break/continue is `break-before-loop`;
+# every other non-tail shape (e.g. the loop followed by a non-tail
+# return, or sitting in a non-tail if branch) is `break-not-tail`.
+# ---------------------------------------------------------------------------
+
+def _find_tail_loops(stmts: tuple[Stmt, ...], outer: tuple[Stmt, ...]
+                      ) -> dict[int, tuple[Stmt, ...]]:
+    """Every WhileStmt/ForStmt reachable from `stmts` through nothing but
+    IfStmt/BlockStmt/LabelStmt nesting, mapped by `id` to its full
+    continuation: the statements physically after it in its own block,
+    then physically after each enclosing if in ITS block, and so on,
+    finally reaching `outer` -- the continuation of `stmts` itself, handed
+    down by the caller (`()` at the method body's own top level, meaning
+    nothing follows and the method simply ends)."""
+    found: dict[int, tuple[Stmt, ...]] = {}
+    n = len(stmts)
+    for i, s in enumerate(stmts):
+        rest = stmts[i + 1:]
+        if isinstance(s, IfStmt):
+            branch_outer = rest + outer
+            found.update(_find_tail_loops(s.then, branch_outer))
+            if isinstance(s.else_, tuple):
+                found.update(_find_tail_loops(s.else_, branch_outer))
+            elif isinstance(s.else_, IfStmt):
+                found.update(_find_tail_loops((s.else_,), branch_outer))
+        elif isinstance(s, BlockStmt):
+            found.update(_find_tail_loops(s.body, rest + outer))
+        elif isinstance(s, LabelStmt):
+            found.update(_find_tail_loops((s.stmt,), rest + outer))
+        elif isinstance(s, (WhileStmt, ForStmt)):
+            found[id(s)] = rest + outer
+    return found
+
+
+def _continuation_issue(cont: tuple[Stmt, ...]) -> Optional[str]:
+    """None if `cont` (a loop's continuation, from `_find_tail_loops`) is
+    clean enough to duplicate at a break; else the refusal token. A
+    trailing ReturnStmt is exempt -- by construction `cont` always reaches
+    the method body's own end, so a ReturnStmt in that last slot is
+    exactly the tail return `_desugar_returns` removes or turns into an
+    assignment (row 21); any OTHER ReturnStmt, or a loop or break/continue
+    anywhere in `cont`, is not."""
+    if not cont:
+        return None
+    scan = cont[:-1] if isinstance(cont[-1], ReturnStmt) else cont
+    for s in scan:
+        for n in walk(s):
+            if isinstance(n, (WhileStmt, ForStmt, BreakStmt, ContinueStmt)):
+                return "break-before-loop"
+            if isinstance(n, ReturnStmt):
+                return "break-not-tail"
+    return None
+
+
+def _scan_breaks_continues(stmts: tuple[Stmt, ...], loop_stack: list
+                            ) -> list[tuple[str, Stmt, list]]:
+    """Every BreakStmt/ContinueStmt reachable from `stmts` by a full
+    descent (through IfStmt/WhileStmt/ForStmt/BlockStmt/LabelStmt --
+    break/continue never nest inside an expression), each tagged with the
+    stack of loops enclosing it (innermost last); mirrors `scan_returns`'s
+    own recursion shape."""
+    found: list[tuple[str, Stmt, list]] = []
+    for s in stmts:
+        if isinstance(s, BreakStmt):
+            found.append(("break", s, list(loop_stack)))
+        elif isinstance(s, ContinueStmt):
+            found.append(("continue", s, list(loop_stack)))
+        elif isinstance(s, IfStmt):
+            found += _scan_breaks_continues(s.then, loop_stack)
+            if isinstance(s.else_, tuple):
+                found += _scan_breaks_continues(s.else_, loop_stack)
+            elif isinstance(s.else_, IfStmt):
+                found += _scan_breaks_continues((s.else_,), loop_stack)
+        elif isinstance(s, (WhileStmt, ForStmt)):
+            found += _scan_breaks_continues(s.body, loop_stack + [s])
+        elif isinstance(s, BlockStmt):
+            found += _scan_breaks_continues(s.body, loop_stack)
+        elif isinstance(s, LabelStmt):
+            found += _scan_breaks_continues((s.stmt,), loop_stack)
+    return found
+
+
+def scan_breaks(body: tuple[Stmt, ...]
+                 ) -> tuple[list[tuple[int, str, str]],
+                            list[tuple[Stmt, Stmt, tuple[Stmt, ...]]]]:
+    """Returns (issues, accepted): issues are (line, "early-exit", token)
+    refusal candidates; accepted is (break_node, loop_node, continuation)
+    for every unlabeled break row 23 lifts. `lift_rewrite._desugar_breaks`
+    uses `id(break_node)` to find the exact node it must replace."""
+    issues: list[tuple[int, str, str]] = []
+    accepted: list[tuple[Stmt, Stmt, tuple[Stmt, ...]]] = []
+    tail_loops = _find_tail_loops(body, ())
+    for kind, node, loop_stack in _scan_breaks_continues(body, []):
+        if kind == "continue":
+            issues.append((node.line, "early-exit", "continue"))
+            continue
+        if node.label is not None:
+            issues.append((node.line, "early-exit", "break-label"))
+            continue
+        if not loop_stack:
+            issues.append((node.line, "early-exit", "break-not-tail"))
+            continue
+        if len(loop_stack) > 1:
+            issues.append((node.line, "early-exit", "break-in-nested-loop"))
+            continue
+        loop = loop_stack[0]
+        cont = tail_loops.get(id(loop))
+        if cont is None:
+            issues.append((node.line, "early-exit", "break-not-tail"))
+            continue
+        bad = _continuation_issue(cont)
+        if bad is not None:
+            issues.append((node.line, "early-exit", bad))
+            continue
+        accepted.append((node, loop, cont))
+    return issues, accepted
+
+
+# ---------------------------------------------------------------------------
+# `x != null` on a non-nullable array (row 24, 2026-09-09).
+# ---------------------------------------------------------------------------
+
+def _null_compare(e: Expr, accepted_names: frozenset[str]) -> Optional[Ident]:
+    """`e` is `x != null` or `null != x` where `x`'s Dafny name is in
+    `accepted_names` (a non-nullable `array<int|nat>` parameter or
+    return of the method being classified): returns the `null` Ident
+    node, the one `_scan_node_for_issues` would otherwise flag `heap`.
+    `None` for anything else, including `x == null` on the same `x`
+    (row 24: a closed fact (false) but never appears in verified code,
+    so it is refused `heap` as before, never dropped).
+
+    A single relational operator (`!=` included) always parses as a
+    length-1 `Chain` (`lift_ast.Chain`'s own docstring: "two operands
+    with one operator print as a plain Binary-shaped chain of length 1
+    BY CONVENTION" -- the AST node is still `Chain`, never `Binary`;
+    `Binary` is section 3's `Add`/`Mul` production, `+ - * / %` only),
+    so this matches `Chain(ops=("!=",), operands=(x, null))` (either
+    operand order), not a `Binary` node."""
+    if not (isinstance(e, Chain) and len(e.ops) == 1 and e.ops[0] == "!="):
+        return None
+    left, right = e.operands
+    if isinstance(left, Ident) and left.name == "null" \
+            and isinstance(right, Ident) and right.name in accepted_names:
+        return left
+    if isinstance(right, Ident) and right.name == "null" \
+            and isinstance(left, Ident) and left.name in accepted_names:
+        return right
+    return None
+
+
+def scan_null_checks(method: MethodDecl
+                      ) -> list[tuple[Spec, Expr, Ident]]:
+    """Row 24: `requires a != null` (or `a != null` as a top-level `&&`
+    conjunct) is a tautology when `a` is a parameter or return whose
+    DECLARED type is a non-nullable `array<int|nat>` (Dafny 4 proves it
+    trivially -- only `array?<int>` is nullable). Returns one entry per
+    such comparison this rule accepts: the `Spec` node it lives in
+    (`RequiresClause`/`EnsuresClause`/loop `InvariantClause`), the
+    comparison `Binary` itself, and the `null` Ident inside it, so both
+    `classify` (exempt it from the `heap` refusal, record
+    `null-check-dropped`) and `lift_rewrite._strip_null_checks` (the
+    SAME shared computation, per `scan_breaks`'s pattern) never disagree
+    about which comparisons are safe to drop.
+
+    Only a WHOLE clause or a TOP-LEVEL `&&` conjunct of one is matched
+    (mirrors `lift_rewrite._strip_fresh_conjuncts`'s "top-level `&&`
+    conjunct" reading of decision 22): `a != null` inside an `||`, an
+    `==>`, or a plain body expression never reaches this function (it is
+    not a clause's top-level expr or top-level `&&` conjunct), so
+    `_scan_node_for_issues` still refuses it `heap` as before -- only
+    the tautological POSITIVE positions section 4's ensures/requires/
+    invariant machinery ever proves are safe to drop."""
+    accepted_names = frozenset(
+        {p.name for p in method.params if _is_array_of_int(p.type)}
+        | {r.name for r in method.returns if _is_array_of_int(r.type)})
+    if not accepted_names:
+        return []
+    clauses: list[Spec] = [s for s in method.specs
+                            if isinstance(s, (RequiresClause, EnsuresClause))]
+    if method.body is not None:
+        for n in walk(method.body):
+            if isinstance(n, (WhileStmt, ForStmt)):
+                clauses += [sp for sp in n.specs if isinstance(sp, InvariantClause)]
+    out: list[tuple[Spec, Expr, Ident]] = []
+    for spec in clauses:
+        e = spec.expr
+        m = _null_compare(e, accepted_names)
+        if m is not None:
+            out.append((spec, e, m))
+            continue
+        if isinstance(e, NaryBool) and e.op == "&&":
+            for a in e.args:
+                m = _null_compare(a, accepted_names)
+                if m is not None:
+                    out.append((spec, a, m))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -904,7 +1122,9 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     # -- everything a single generic pass over every node can catch ------
     closure_names = {d.name for d in closure if d.name}
     method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
-    accepted_ids = _array_mutation_accepted_ids(method, array_mutation, ret_param)
+    null_checks = scan_null_checks(method)
+    accepted_ids = (_array_mutation_accepted_ids(method, array_mutation, ret_param)
+                     | frozenset(id(m) for _, _, m in null_checks))
     for root in scope_roots:
         for n in walk(root):
             _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids)
@@ -928,6 +1148,20 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
             rewrites.append(Rewrite(rule="tail-return", line=tail_lines[0]))
         if early_lines:
             rewrites.append(Rewrite(rule="early-exit-return", line=early_lines[0]))
+
+    # -- breaks (row 23, 2026-09-09) --------------------------------------
+    if method.body is not None:
+        bi, ba = scan_breaks(method.body)
+        issues += bi
+        if ba:
+            rewrites.append(Rewrite(rule="break-as-return", line=ba[0][0].line))
+            dup = next((node for node, _loop, cont in ba if cont), None)
+            if dup is not None:
+                rewrites.append(Rewrite(rule="break-continuation-duplicated", line=dup.line))
+
+    # -- null checks on a non-nullable array (row 24, 2026-09-09) --------
+    if null_checks:
+        rewrites.append(Rewrite(rule="null-check-dropped", line=null_checks[0][1].line))
 
     # -- quantifier boundedness -------------------------------------------
     for root in scope_roots:
@@ -979,9 +1213,11 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     (self-recursion shape, tail returns, quantifier bounds, decreases,
     the read-only-array condition, decision 22's array mutation) have
     their own dedicated scans; `accepted_ids` (from
-    `_array_mutation_accepted_ids`) is decision 22's way of exempting
-    the specific `Old`/`Fresh`/`Slice` nodes it maps rather than refuses,
-    by identity, since this scan otherwise has no context of its own.
+    `_array_mutation_accepted_ids`, unioned with `scan_null_checks`'s
+    row-24 matches) is decision 22's (and row 24's) way of exempting the
+    specific `Old`/`Fresh`/`Slice`/`null`-`Ident` nodes they map rather
+    than refuse, by identity, since this scan otherwise has no context
+    of its own.
 
     `Binary` nodes with op `/` or `%` are no longer refused here: SPEC.md
     "Division and modulo (v1)" (2026-09-08) gives t Euclidean `div`/`mod`,
@@ -1003,7 +1239,15 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         # node (section 3's shim keeps `null` a bare Ident), but it is a
         # heap fact t has no word for -- an array param compared to null
         # (minArray, FindMax) (LIFTER-DESIGN.md section 5's `heap` row).
-        issues.append((n.line, "heap", "null"))
+        # Row 24 (2026-09-09): `accepted_ids` also carries the `null`
+        # Ident of every `x != null` `scan_null_checks` accepted (`x` a
+        # non-nullable `array<int|nat>` param/return, in a whole-clause
+        # or top-level `&&`-conjunct position) -- a tautology Dafny
+        # proves trivially, dropped rather than refused. Everything
+        # else (a nullable `array?`, a class/object, `==`, or the same
+        # comparison anywhere but a safe clause position) still refuses.
+        if id(n) not in accepted_ids:
+            issues.append((n.line, "heap", "null"))
     elif isinstance(n, AssumeStmt):
         issues.append((n.line, "assume", "assume"))
     elif isinstance(n, AssignSuchThat):
@@ -1020,8 +1264,6 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         issues.append((n.line, "nondet", "*"))
     elif isinstance(n, Assign) and any(isinstance(v, Star) for v in n.values):
         issues.append((n.line, "nondet", "*"))
-    elif isinstance(n, (BreakStmt, ContinueStmt)):
-        issues.append((n.line, "early-exit", "break/continue"))
     elif isinstance(n, VarDeclStmt) and n.names and any(
             nm.type is not None and nm.type.kind == "array" for nm in n.names):
         issues.append((n.line, "array", "local array"))

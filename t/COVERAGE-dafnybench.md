@@ -1,4 +1,4 @@
-# t coverage census: DafnyBench (785 programs)
+# t coverage census: dafnybench (785 programs)
 
 What this corpus needs that t does not have, program by program, and
 which gate opens the most programs. Lexical census, no kernel run; the
@@ -8,8 +8,8 @@ seven kernels verify its t rendering. Method and detectors at the end.
 ## Headline
 
 - programs: 785; with a method carrying its own ensures (gradable): 643
-- in t's fragment today: **174** of 643 gradable (27.1%)
-- gradable programs blocked by exactly one gap: 140
+- in t's fragment today: **190** of 643 gradable (29.5%)
+- gradable programs blocked by exactly one gap: 131
 
 ## Gaps, by programs that need them
 
@@ -17,23 +17,22 @@ seven kernels verify its t rendering. Method and detectors at the end.
 |---|---|---|---|
 | zero-returns | 215 | 25 | a method with no return value (t returns exactly one) |
 | multi-method | 212 | 14 | more than one method (Main, and the method of function method, excluded) |
-| seq-slice | 164 | 17 | slicing s[a..b] |
+| seq-slice | 164 | 18 | slicing s[a..b] |
 | set | 130 | 3 | set, iset, multiset, set comprehension or set literal |
 | seq-literal | 113 | 1 | sequence literal [..] in an expression |
-| string-char | 94 | 7 | string or char type |
+| string-char | 94 | 11 | string or char type |
 | generics | 80 | 1 | type parameters |
 | array | 79 | 4 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
 | seq-return | 78 | 0 | sequence-valued return of a method or a function |
 | heap | 78 | 0 | classes, object allocation, this |
 | multi-return | 74 | 27 | several return values |
-| nested-seq | 74 | 4 | a nested seq or array, or a seq of non-int elements |
+| nested-seq | 74 | 6 | a nested seq or array, or a seq of non-int elements |
 | datatype | 69 | 1 | algebraic datatypes and match |
 | array-mutation | 49 | 0 | array mutation decision 22 does not map: more than one mutated array, multiset over a mutated array's slice, or a modifies clause naming anything but the one array |
 | unbounded-quantifier | 49 | 1 | quantifier without an int range |
 | module | 43 | 1 | modules and imports |
 | higher-order | 40 | 3 | lambdas or function types |
 | bodyless-function | 40 | 1 | an uninterpreted function or predicate: a declaration with no body, constrained only by axioms |
-| early-exit | 38 | 16 | a break or continue statement in a method body |
 | type-decl | 33 | 0 | newtype, type synonyms, subset types |
 | real | 32 | 9 | real numbers |
 | map | 31 | 0 | map, imap, map comprehension or map literal |
@@ -48,6 +47,7 @@ seven kernels verify its t rendering. Method and detectors at the end.
 | extreme-predicate | 5 | 0 | least / greatest predicate: an inductive or coinductive definition, not a well-founded recursion (least and greatest LEMMAS stay hints) |
 | mutual-recursion | 4 | 0 | spec functions that call each other (t allows self-calls and calls to earlier functions) |
 | seq-comprehension | 3 | 0 | seq(n, i => e) |
+| early-exit | 3 | 0 | a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop) |
 | char-arith | 3 | 0 | char arithmetic |
 | iterator | 2 | 0 | iterators |
 | function-method | 1 | 0 | compiled functions |
@@ -56,36 +56,36 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | multi-return | 27 | 201 | 31.3% |
-| 2 | zero-returns | 25 | 226 | 35.1% |
-| 3 | multi-method | 33 | 259 | 40.3% |
-| 4 | seq-slice | 25 | 284 | 44.2% |
-| 5 | early-exit | 19 | 303 | 47.1% |
-| 6 | string-char | 18 | 321 | 49.9% |
-| 7 | array | 28 | 349 | 54.3% |
-| 8 | real | 16 | 365 | 56.8% |
-| 9 | set | 15 | 380 | 59.1% |
-| 10 | array-mutation | 21 | 401 | 62.4% |
-| 11 | seq-literal | 13 | 414 | 64.4% |
-| 12 | seq-return | 35 | 449 | 69.8% |
-| 13 | nested-seq | 24 | 473 | 73.6% |
-| 14 | heap | 15 | 488 | 75.9% |
-| 15 | generics | 13 | 501 | 77.9% |
-| 16 | higher-order | 12 | 513 | 79.8% |
-| 17 | nondet | 11 | 524 | 81.5% |
-| 18 | bodyless-method | 11 | 535 | 83.2% |
-| 19 | unbounded-quantifier | 10 | 545 | 84.8% |
-| 20 | datatype | 12 | 557 | 86.6% |
-| 21 | io | 10 | 567 | 88.2% |
-| 22 | seq-update | 8 | 575 | 89.4% |
-| 23 | bodyless-function | 8 | 583 | 90.7% |
-| 24 | such-that-exec | 8 | 591 | 91.9% |
-| 25 | module | 9 | 600 | 93.3% |
-| 26 | map | 7 | 607 | 94.4% |
-| 27 | tuple | 10 | 617 | 96.0% |
-| 28 | type-decl | 12 | 629 | 97.8% |
-| 29 | decreases-star | 5 | 634 | 98.6% |
-| 30 | bitvector | 4 | 638 | 99.2% |
+| 1 | multi-return | 27 | 217 | 33.7% |
+| 2 | zero-returns | 25 | 242 | 37.6% |
+| 3 | multi-method | 34 | 276 | 42.9% |
+| 4 | seq-slice | 26 | 302 | 47.0% |
+| 5 | string-char | 17 | 319 | 49.6% |
+| 6 | array | 28 | 347 | 54.0% |
+| 7 | real | 16 | 363 | 56.5% |
+| 8 | set | 15 | 378 | 58.8% |
+| 9 | array-mutation | 21 | 399 | 62.1% |
+| 10 | seq-literal | 13 | 412 | 64.1% |
+| 11 | seq-return | 35 | 447 | 69.5% |
+| 12 | nested-seq | 24 | 471 | 73.3% |
+| 13 | heap | 15 | 486 | 75.6% |
+| 14 | generics | 13 | 499 | 77.6% |
+| 15 | higher-order | 12 | 511 | 79.5% |
+| 16 | nondet | 11 | 522 | 81.2% |
+| 17 | bodyless-method | 11 | 533 | 82.9% |
+| 18 | unbounded-quantifier | 10 | 543 | 84.4% |
+| 19 | datatype | 12 | 555 | 86.3% |
+| 20 | io | 10 | 565 | 87.9% |
+| 21 | seq-update | 8 | 573 | 89.1% |
+| 22 | bodyless-function | 8 | 581 | 90.4% |
+| 23 | such-that-exec | 8 | 589 | 91.6% |
+| 24 | module | 9 | 598 | 93.0% |
+| 25 | map | 7 | 605 | 94.1% |
+| 26 | type-decl | 10 | 615 | 95.6% |
+| 27 | tuple | 11 | 626 | 97.4% |
+| 28 | decreases-star | 5 | 631 | 98.1% |
+| 29 | bitvector | 4 | 635 | 98.8% |
+| 30 | early-exit | 3 | 638 | 99.2% |
 | 31 | char-arith | 3 | 641 | 99.7% |
 | 32 | seq-comprehension | 1 | 642 | 99.8% |
 | 33 | iterator | 1 | 643 | 100.0% |
@@ -95,20 +95,20 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | early-exit | 16 | 72 | 43.9% |
-| 2 | string-char | 10 | 82 | 50.0% |
-| 3 | real | 9 | 91 | 55.5% |
-| 4 | set | 6 | 97 | 59.1% |
-| 5 | nested-seq | 6 | 103 | 62.8% |
-| 6 | seq-literal | 4 | 107 | 65.2% |
-| 7 | seq-return | 23 | 130 | 79.3% |
-| 8 | seq-slice | 15 | 145 | 88.4% |
-| 9 | multi-return | 4 | 149 | 90.9% |
-| 10 | char-arith | 3 | 152 | 92.7% |
-| 11 | array | 2 | 154 | 93.9% |
-| 12 | zero-returns | 2 | 156 | 95.1% |
-| 13 | multi-method | 2 | 158 | 96.3% |
-| 14 | bitvector | 2 | 160 | 97.6% |
+| 1 | string-char | 9 | 81 | 49.4% |
+| 2 | real | 9 | 90 | 54.9% |
+| 3 | set | 6 | 96 | 58.5% |
+| 4 | nested-seq | 6 | 102 | 62.2% |
+| 5 | seq-literal | 4 | 106 | 64.6% |
+| 6 | seq-return | 23 | 129 | 78.7% |
+| 7 | seq-slice | 15 | 144 | 87.8% |
+| 8 | multi-return | 4 | 148 | 90.2% |
+| 9 | char-arith | 3 | 151 | 92.1% |
+| 10 | array | 2 | 153 | 93.3% |
+| 11 | zero-returns | 2 | 155 | 94.5% |
+| 12 | bitvector | 2 | 157 | 95.7% |
+| 13 | multi-method | 1 | 158 | 96.3% |
+| 14 | early-exit | 2 | 160 | 97.6% |
 | 15 | array-mutation | 1 | 161 | 98.2% |
 | 16 | unbounded-quantifier | 1 | 162 | 98.8% |
 | 17 | tuple | 1 | 163 | 99.4% |
@@ -123,7 +123,7 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 56 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 72 |
 | GitHub (Dafny) | 76 | 72 | 19 |
 | GitHub (Program-Verification-Dataset) | 65 | 48 | 4 |
 | Clover | 62 | 62 | 19 |
@@ -265,6 +265,7 @@ more than one gate.
 | for-loop | 100 | for loop (a while with a bound) |
 | parallel-assign | 88 | x, y := a, b (sequenced through a temporary) |
 | iff | 77 | <==> (== on bools) |
+| break-as-return | 36 | an unlabeled break whose innermost loop is the tail of the method body, with at most a straight-line continuation after it (lifts to t's early-exit `return` of the method's own result, LIFTER-DECISIONS.md row 23) |
 | as-cast | 15 | as int / as nat casts |
 
 ## Hints (proof scaffolding a kernel may need; t has none)
@@ -406,27 +407,35 @@ more than one gate.
 - dafny-synthesis_task_id_268.dfy
 - dafny-synthesis_task_id_279.dfy
 - dafny-synthesis_task_id_282.dfy
+- dafny-synthesis_task_id_284.dfy
 - dafny-synthesis_task_id_292.dfy
+- dafny-synthesis_task_id_3.dfy
 - dafny-synthesis_task_id_304.dfy
 - dafny-synthesis_task_id_309.dfy
 - dafny-synthesis_task_id_397.dfy
 - dafny-synthesis_task_id_404.dfy
 - dafny-synthesis_task_id_406.dfy
+- dafny-synthesis_task_id_414.dfy
 - dafny-synthesis_task_id_431.dfy
 - dafny-synthesis_task_id_432.dfy
+- dafny-synthesis_task_id_433.dfy
 - dafny-synthesis_task_id_435.dfy
 - dafny-synthesis_task_id_441.dfy
 - dafny-synthesis_task_id_447.dfy
 - dafny-synthesis_task_id_452.dfy
 - dafny-synthesis_task_id_458.dfy
 - dafny-synthesis_task_id_470.dfy
+- dafny-synthesis_task_id_472.dfy
 - dafny-synthesis_task_id_555.dfy
+- dafny-synthesis_task_id_567.dfy
 - dafny-synthesis_task_id_577.dfy
 - dafny-synthesis_task_id_58.dfy
 - dafny-synthesis_task_id_581.dfy
 - dafny-synthesis_task_id_59.dfy
+- dafny-synthesis_task_id_594.dfy
 - dafny-synthesis_task_id_598.dfy
 - dafny-synthesis_task_id_600.dfy
+- dafny-synthesis_task_id_605.dfy
 - dafny-synthesis_task_id_610.dfy
 - dafny-synthesis_task_id_616.dfy
 - dafny-synthesis_task_id_62.dfy
@@ -434,14 +443,22 @@ more than one gate.
 - dafny-synthesis_task_id_626.dfy
 - dafny-synthesis_task_id_637.dfy
 - dafny-synthesis_task_id_641.dfy
+- dafny-synthesis_task_id_733.dfy
+- dafny-synthesis_task_id_751.dfy
+- dafny-synthesis_task_id_760.dfy
 - dafny-synthesis_task_id_762.dfy
 - dafny-synthesis_task_id_77.dfy
 - dafny-synthesis_task_id_770.dfy
+- dafny-synthesis_task_id_775.dfy
+- dafny-synthesis_task_id_790.dfy
 - dafny-synthesis_task_id_793.dfy
 - dafny-synthesis_task_id_798.dfy
 - dafny-synthesis_task_id_8.dfy
 - dafny-synthesis_task_id_80.dfy
 - dafny-synthesis_task_id_801.dfy
+- dafny-synthesis_task_id_804.dfy
+- dafny-synthesis_task_id_808.dfy
+- dafny-synthesis_task_id_809.dfy
 - dafny-synthesis_task_id_86.dfy
 - dafny-synthesis_task_id_89.dfy
 - dafny-workout_tmp_tmp0abkw6f8_starter_ex01.dfy
