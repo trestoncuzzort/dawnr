@@ -46,7 +46,7 @@ import json
 from pathlib import Path
 
 import interp
-from verifiers import Outcome, flake_check
+from verifiers import Outcome, cell_pair
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
@@ -477,8 +477,7 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
     twin.write_text(lower(task, twin_body, witness=w), encoding="utf-8",
                     newline="\n")
 
-    r_real, agree_r = flake_check(backend.verify, real)
-    r_twin, agree_t = flake_check(backend.verify, twin)
+    (r_real, agree_r), (r_twin, agree_t) = cell_pair(backend.verify, real, twin)
     if not (agree_r and agree_t):
         print(f"  {name}: REFUSED, verdicts flaked across runs")
         return False

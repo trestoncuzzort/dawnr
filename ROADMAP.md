@@ -953,6 +953,25 @@ waits on the next model run.
 
 ### 12.8 Standing items
 
+**The cell runs its six kernel calls at once (2026-09-09).** run_par and
+the harness made three flake runs of the real and then three of the twin
+one after another, so a cell whose kernel runs to its budget cost six
+budgets, and the sweep's last ten minutes were two such cells while the
+other workers sat idle. `verifiers.flake_check` now runs its n calls
+concurrently and `verifiers.cell_pair` runs the real and the twin
+together (threads; every adapter runs in a scratch directory or writes
+nothing beside the source, framac with -wp-cache none). Measured on the
+same day, same sources, same box: the 15-task matrix 187 s at 16 jobs
+against 749 s serial at 48 jobs, all 15 rows identical; the 180-task
+sweep 942 s at 6 jobs against 1783 s serial at 32 jobs, all 1260 cells
+identical, 0 flaked both times. `--jobs` is cells in flight and kernel
+calls in flight are six times it; the same day's 96-prover run flaked 9
+spark and framac cells on their wall backstops, so sweeps that carry the
+spark column stay near 36 provers until those backstops are replaced by
+a load-independent limit. `T_CELL_SERIAL=1` restores the old form for
+measurement.
+
+
 Surface syntax landed 2026-09-04 (`t/surface.py`, round trip verified on
 1528 tasks both directions plus 100,000 random ASTs), wired into nothing
 on purpose; 14.1 is the decision.

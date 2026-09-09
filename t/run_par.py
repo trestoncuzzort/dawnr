@@ -14,6 +14,15 @@ slowest single cell (that rocq timeout, 3 x 180 s wall). Standing rule:
 divergence between the two tables is a finding about the suite, not a
 driver bug to paper over. Parallel is a second measurement, never a
 faster stand-in trusted by default.
+
+Inside a cell (2026-09-09): the six kernel calls (three flake runs for the
+real, three for the twin) run concurrently through verifiers.cell_pair, so
+a cell's wall is one budget, not six; measured before the change, the
+180-task sweep at 96 jobs spent its last ten minutes on two cells. --jobs
+is therefore cells in flight, and kernel-call concurrency is six times it:
+on the Dell's 120 threads, --jobs 16 is the 96-prover regime that flaked 9
+spark and framac cells on their wall backstops, --jobs 5 is the 30-prover
+regime that ran clean. T_CELL_SERIAL=1 restores the sequential cell.
 """
 from __future__ import annotations
 
@@ -30,7 +39,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                      # noqa: E402
-from verifiers import Outcome, flake_check, sha256_file, mp_context   # noqa: E402
+from verifiers import Outcome, cell_pair, sha256_file, mp_context   # noqa: E402
 
 BACKENDS = [
     ("dafny", "lower_dafny", "dfy"),
@@ -49,8 +58,7 @@ def _run_cell(bname: str, task_name: str, suffix: str, op: str):
     backend = importlib.import_module(f"verifiers.{bname}")
     real = harness.OUT / f"{task_name}.{suffix}"
     twin = harness.OUT / f"{task_name}_twin.{suffix}"
-    r_real, a1 = flake_check(backend.verify, real)
-    r_twin, a2 = flake_check(backend.verify, twin)
+    (r_real, a1), (r_twin, a2) = cell_pair(backend.verify, real, twin)
     return task_name, bname, op, (r_real.outcome, r_twin.outcome, a1 and a2)
 
 
@@ -64,7 +72,8 @@ def main() -> int:
     # exit 2, zero cells run). The lock already answers the question the
     # scan was asking, so the scan is gone.
     ap = argparse.ArgumentParser()
-    ap.add_argument("--jobs", type=int, default=None)
+    ap.add_argument("--jobs", type=int, default=None,
+                    help="cells in flight; each cell makes six concurrent kernel calls")
     # The three paths below default to the committed layout, so a bare run
     # is byte-identical to before; a sweep over another corpus (ROADMAP 12.5,
     # the lifted DafnyBench tasks, 2026-09-06) passes all three so it never
@@ -112,7 +121,7 @@ def main() -> int:
                 rows[name][bname] = ("no-twin", "no-twin", True)
                 all_ok = False
                 print(f"  {name} x {bname}: no twin, "
-                      f"{harness.REFUSALS[op]}  <-- FINDING")
+                      f"{harness.REFUSALS[op]}  <-- FINDING", flush=True)
                 continue
             try:
                 real_src = lower(task, task["body"])
@@ -120,12 +129,12 @@ def main() -> int:
             except NotImplementedError as e:
                 rows[name][bname] = ("abstain", "abstain", True)
                 all_ok = False
-                print(f"  {name} x {bname}: ABSTAIN: {e}")
+                print(f"  {name} x {bname}: ABSTAIN: {e}", flush=True)
                 continue
             except Exception as e:                          # noqa: BLE001
                 rows[name][bname] = ("lower-error", "lower-error", True)
                 all_ok = False
-                print(f"  {name} x {bname}: LOWER-ERROR {type(e).__name__}: {e}")
+                print(f"  {name} x {bname}: LOWER-ERROR {type(e).__name__}: {e}", flush=True)
                 continue
             # newline="\n": the lowering's bytes are the verdict basis, hashed
             # into AGREEMENT.md. Path.write_text defaults to os.linesep, so a
@@ -153,7 +162,7 @@ def main() -> int:
             all_ok &= good
             print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}"
                   + ("" if good else "  <-- FINDING")
-                  + f"   (twin witness: {harness.witness(wits.get(name))})")
+                  + f"   (twin witness: {harness.witness(wits.get(name))})", flush=True)
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
     MIN_KERNELS = int(os.environ.get("T_MIN_KERNELS", "2"))
     # Refuse BEFORE writing; see run_all.py for the measurement behind it.

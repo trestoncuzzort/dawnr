@@ -20,6 +20,8 @@ here is cheap, so the default is n=3 for everyone.
 from __future__ import annotations
 
 import hashlib
+import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -81,13 +83,46 @@ def sha256_file(p: Path) -> str:
     return h.hexdigest()
 
 
+def _serial() -> bool:
+    """T_CELL_SERIAL=1 restores the one-call-at-a-time form of flake_check
+    and cell_pair, for measuring what concurrency itself changes."""
+    return os.environ.get("T_CELL_SERIAL", "") not in ("", "0")
+
+
 def flake_check(verify_fn, path: Path, n: int = 3):
     """Run verify n times; return (Result, agreed). Disagreement returns the
-    LAST result with agreed=False, so the caller must refuse the witness, not
-    pick a favorite run."""
-    results = [verify_fn(path) for _ in range(n)]
+    LAST result (by submission order) with agreed=False, so the caller must
+    refuse the witness, not pick a favorite run.
+
+    The n runs are concurrent since 2026-09-09 (threads; each verify is a
+    subprocess in its own scratch directory, or writes nothing beside the
+    source: measured for all seven adapters, framac with -wp-cache none).
+    A verdict that depends on whether its siblings run beside it is exactly
+    the load-sensitivity this function exists to refuse, so concurrency
+    changes no verdict a serial run would have trusted; it changes the
+    cell's wall time from n budgets to one. T_CELL_SERIAL=1 is the old
+    form, kept for that measurement."""
+    if _serial() or n <= 1:
+        results = [verify_fn(path) for _ in range(n)]
+    else:
+        with ThreadPoolExecutor(max_workers=n) as ex:
+            results = list(ex.map(lambda _i: verify_fn(path), range(n)))
     outcomes = {r.outcome for r in results}
     return results[-1], len(outcomes) == 1
+
+
+def cell_pair(verify_fn, real: Path, twin: Path, n: int = 3):
+    """flake_check the real and the twin of one cell at the same time:
+    ((Result, agreed), (Result, agreed)). With flake_check's own
+    concurrency this is 2n kernel calls in flight per cell, so a driver's
+    job count is cells in flight and its kernel-call concurrency is 2n
+    times that (run_par.py documents the sizing)."""
+    if _serial():
+        return flake_check(verify_fn, real, n), flake_check(verify_fn, twin, n)
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        fr = ex.submit(flake_check, verify_fn, real, n)
+        ft = ex.submit(flake_check, verify_fn, twin, n)
+        return fr.result(), ft.result()
 
 
 def mp_context():
