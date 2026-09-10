@@ -692,6 +692,109 @@ verified/refuted: a pre-existing, general gap in the certificate
 emitter's own statement walk, not a nested-seq defect, and not touched
 here. fz_p_nest_empty is unaffected and untouched, as expected (no
 comparison, arithmetic, or loop for any twin operator to apply to).
+
+SOLE BLOCKERS, THE FIVE (2026-09-10, t/COVERAGE-lifted-785.md "Sole
+blockers": the five lifted tasks verus alone kept out of the seven-column
+bar). Measured first, not guessed: four read malformed/refuted (real
+rejected before proof), one unproved/refuted (real rejected by the
+prover). All five now COUNT.
+
+THE FOUR MALFORMED (mfirstMaximum, mmaximum1, the two findMax tasks) are
+ONE shape, named exactly by running each through `verus` directly before
+touching any code: an "argmax" ensures, naming the CHAMPION INDEX rather
+than the champion value, `forall k| ... ==> (a[FIXED] >= a[k])` where
+FIXED is the loop's own running-best index (a tuple projection,
+`t_res.0`/`t_res.1`, since the loop state is `(i, j)`) -- Verus's error is
+"Could not automatically infer triggers for this quantifier", the same
+message is_prime's own `n mod d` residual (2026-09-08 entry above) hit,
+but a NEW cause: this file's existing `_has_indexable` already sees the
+quantifier's `at(v, k)` term and so never even TRIES an explicit trigger
+for it (its whole job is "does auto-inference have anything to grab"),
+and Verus's auto-inference DOES have `v[k]` to grab -- it just fails
+outright anyway, confirmed on a four-line probe (probe5.rs/probe6.rs/
+probe7.rs) built before writing any fix: `v[p.0] >= v[k]` alone, no loop,
+no proof body, still refused, and true whether the fixed index is a tuple
+projection, a plain variable, or an arithmetic expression (`i0+1`), so
+the trigger inference is confused by the SECOND, differently-indexed read
+of the same seq, not by projections specifically. seq_max's own committed
+`r >= s[j]` never hit this: its champion `r` is a VALUE, never an index
+back into `s`, so there is no second read to interfere. Fixed generally:
+`_has_fixed_at(body, v)` (a new function, walking the same shapes
+`_at_roots_by_var` already does) is true when the quantifier body indexes
+a seq at an expression that does not mention v at all (`_mentions_var`,
+also new -- NOT a bare AST `!=` against `{"var": v}`, which an earlier
+version of this fix used and which wrongly caught reverse's and tail's
+own committed `s[len(s)-1-k]` / `s[k+1]`, indices that mention k without
+being the bare variable, see REGRESSION below); when it fires alongside
+at least one bound-var-indexed root (`_at_roots_by_var`, already built
+for the "Nested sequences" trigger residual), `expr()`'s forall/exists
+case now emits one explicit `#![trigger ...]` per root, the identical
+mechanism and identical soundness argument (never removes a candidate
+Verus's own inference would try, only adds the ones ambiguity hides) the
+chained-read case already uses. Measured (`out/agent-verus-argmax/`):
+all four now read real VERIFIED; three (mfirstMaximum, mmaximum1,
+dafny_experiences' findMax) certify invariant-drop#2 REFUTED on the twin,
+one (dafny_workout's findMax) the same, all COUNT.
+
+THE FIFTH (hoareTripleReqEns) read unproved/refuted: `k_p == (k+2*i)+1`
+with `requires k == i*i`, `ensures k_p == (i+1)*(i+1)` -- a straight-line
+body, no loop at all, so none of the existing nonlinear machinery
+(LOOPS' own invariant bridge, div/mod's `_div_mod_law`) is in the path:
+Verus's error is a bare "postcondition not satisfied", its default
+solver profile again having nonlinear arithmetic off (module docstring,
+LOOPS) for a task-level `ensures`, not a loop invariant. Measured before
+writing the fix (pht1.rs..pht4.rs): a bare assert with no hint fails, an
+`assert(...) by (nonlinear_arith)` with no `requires` fails even with the
+exact fact already assigned two lines above in the SAME proof fn (Verus's
+nonlinear_arith solver sees only what its OWN `requires` list states, not
+ambient context -- the identical two-step shape `_div_mod_law`'s own
+docstring already documents: the requires clause is CHECKED against
+ambient context by the default solver, then handed to the isolated
+nonlinear solver as a premise), and substituting the return's own VALUE
+expression for the return name in the ensures goal (so the goal never
+mentions the return-name local at all) succeeds with just the task's own
+`requires` as premises, no restatement of the return's value needed as an
+extra one. Fixed generally, not by naming the task: `_nonlinear_ensures_
+bridge` (new `_V1` method) emits this assert for every top-level `ensures`
+clause `_has_nonlinear` flags, called from the two places a task-level
+return happens -- `stmts`'s "return" case (the returned expression itself
+is the value to substitute) and `emit`'s trailing `{rname}` for a body
+with no explicit `return` (`_sym`'s own closed-form value over the whole
+body, already built for LOOPS' invariant bridge; None, skipped, for a
+body containing a `return` or `while`, so the two call sites never both
+fire for one task). Guarded to skip entirely when the returned value
+itself contains a `div`/`mod` (`_div_mod_pairs`), see REGRESSION: without
+that guard this fires redundantly wherever `_div_mod_law` already
+supplies the identity. Measured (`out/agent-verus-argmax/`): real
+VERIFIED, off-by-one twin REFUTED (witness i=1, k=1 -> real 4, twin 5),
+COUNTS.
+
+REGRESSION. Both fixes' first versions were NOT this narrow, caught the
+same way this file always catches it: comparing every committed task's
+OWN `out/<name>.rs`, not by reasoning alone. An unguarded `_has_fixed_at`
+(bare `!=` on the index AST instead of `_mentions_var`) added an
+unneeded explicit trigger to reverse's and tail's own committed foralls
+(`s[len(s)-1-k]`, `s[k+1]`, indices that mention k without being the bare
+variable); an unguarded `_nonlinear_ensures_bridge` (no `_div_mod_pairs`
+check) added a second, redundant nonlinear_arith assert to remainder's
+and divmod_pair's own committed returns, both of which already verify
+via `_div_mod_law` alone. Narrowing both (the mentions-check; the
+div/mod-pairs guard) restored byte-identity. Regenerated
+(`lower_verus.lower(task, task["body"])`, compared against the baseline
+lowering) all 23 committed verus tasks -- abs, all_nonneg, contains,
+count_matches, digit_sum, divmod_pair, factorial, fib, filter_pos,
+first_even, gcd, is_prime, linear_search, max, min_max, remainder,
+reverse, row_max_len, seq_max, sum_upto, swap, swap_rows, tail -- all
+byte-identical. Seven of those (reverse, remainder, divmod_pair,
+swap_rows, row_max_len, tail, is_prime -- spanning every prior
+seq/pair/nested-seq/div-mod/loop shape) additionally re-run through
+`harness.run_task` into `out/agent-verus-spotcheck/`: all seven COUNT
+with the identical witnesses already on record.
+
+t/COVERAGE-lifted-785.md's "Sole blockers" table is now stale for verus:
+all five tasks it named read verus verified/refuted, none malformed or
+unproved; regenerating that table is a coverage-script action, not a
+lowering one, so left for the sweep that next regenerates it.
 """
 from __future__ import annotations
 
@@ -869,6 +972,72 @@ def _at_roots_by_var(e: dict, v: str, out: dict) -> None:
             _at_roots_by_var(q[k], v, out)
 
 
+def _mentions_var(e, v: str) -> bool:
+    """True iff the bound variable v occurs anywhere in e -- a fully
+    generic walk (dict values / list elements), since a t Expr JSON has no
+    binding site besides forall/exists's own "var" key and t's bound
+    names are never reused for an outer name in any construct this file
+    handles (no shadowing worth tracking for this narrow a check, the same
+    posture `_has_chained_at` already takes with its own generic walk).
+    Used by `_has_fixed_at` to tell a genuinely FIXED index (`t_res.0`,
+    unrelated to k) from one that merely isn't the BARE bound variable but
+    still varies with it (`k + 1`, `len(s) - 1 - k`) -- reverse's and
+    tail's own committed quantifiers index by exactly this second shape
+    and must NOT be treated as fixed (see `_has_fixed_at`'s own
+    docstring, REGRESSION below)."""
+    if isinstance(e, dict):
+        if e.get("var") == v:
+            return True
+        return any(_mentions_var(x, v) for x in e.values())
+    if isinstance(e, list):
+        return any(_mentions_var(x, v) for x in e)
+    return False
+
+
+def _has_fixed_at(e: dict, v: str) -> bool:
+    """True iff e contains a Seq index `at(X, idx)` whose index does NOT
+    mention the bound variable v AT ALL (`_mentions_var`) -- the shape
+    measured (2026-09-10, the four "argmax" tasks named in the module
+    docstring's dated note below) to confuse Verus's own single-candidate
+    trigger inference when the SAME quantifier body ALSO indexes a seq
+    directly by v: `forall k| ... ==> (a[FIXED] OP a[k])`, an ensures
+    naming a champion INDEX rather than a champion VALUE. Measured
+    directly (probe1.rs/probe5.rs/probe6.rs/probe7.rs): Verus refuses
+    "Could not automatically infer triggers" outright, not merely a
+    low-confidence pick (contrast the "Nested sequences" residual above,
+    where auto-inference DOES pick something, just the wrong root) --
+    true whether FIXED is a tuple projection (`t_res.0`), a plain
+    variable, or an arithmetic expression (`i0 + 1`; probe7.rs), and true
+    even when the fixed and bound reads index the SAME seq object, which
+    is the only shape measured so far (SPEC.md v1 has no second seq for
+    one to name here). seq_max's own `r >= s[j]` has no such second read
+    (`r` is a VALUE, never an index into `s`), so this is false there;
+    reverse's and tail's own `s[len(s)-1-k]` / `s[k+1]` index by an
+    expression that MENTIONS k (not the bare variable, but not fixed
+    either), so `_mentions_var` -- not a bare `!=` on the AST, which an
+    earlier version of this function used and which changed both tasks'
+    committed `out/*.rs` (an explicit trigger neither one needed, caught
+    by the byte-identity regression check below) -- is what keeps this
+    false for them. Walks the same shapes `_at_roots_by_var` does (args,
+    ite, call, forall/exists lo/hi only, never a shadowing inner body)
+    since a fixed-index read only matters as interference within the SAME
+    scope v is bound in."""
+    if "op" in e:
+        op, args = e["op"], e.get("args", [])
+        if op == "at" and len(args) == 2 and not _mentions_var(args[1], v):
+            return True
+        return any(_has_fixed_at(a, v) for a in args)
+    if "ite" in e:
+        c = e["ite"]
+        return any(_has_fixed_at(c[k], v) for k in ("cond", "then", "else"))
+    if "call" in e:
+        return any(_has_fixed_at(a, v) for a in e["call"]["args"])
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        return any(_has_fixed_at(q[k], v) for k in ("lo", "hi"))
+    return False
+
+
 def _has_chained_at(e) -> bool:
     """True iff e contains a CHAINED read, `at(at(x, i), j)` (`x[i][j]`
     once rendered) -- a genuine nested-seq ELEMENT read, one nesting level
@@ -980,6 +1149,21 @@ def expr(e: dict, vty: str | None = None) -> str:
             # breaking the byte-identity regression check below; gating on
             # the chained shape that actually distinguishes fz_v1nested_069
             # from swap/swap_rows restores it.
+            trig = "".join(f" #![trigger {expr(t)}]" for t in roots.values())
+        elif roots and _has_fixed_at(q["body"], v):
+            # ARGMAX QUANTIFIER (2026-09-10, module docstring's dated note
+            # below): a forall/exists body that indexes a seq BOTH by the
+            # bound variable (>=1 root here) AND by something else fixed
+            # in this scope (`_has_fixed_at`) -- "the champion so far
+            # beats every k", `a[FIXED] OP a[k]` -- gets Verus's outright
+            # "Could not automatically infer triggers" refusal, not merely
+            # a poor pick, so the same explicit-trigger-per-root fix the
+            # chained-read case above already applies closes it too: sound
+            # for the identical reason (never removes a candidate Verus's
+            # own inference would have tried), and additive, since no
+            # previously committed quantifier has a second, fixed-index
+            # read of a seq alongside its bound-variable one (seq_max's
+            # champion is a VALUE, never re-indexed).
             trig = "".join(f" #![trigger {expr(t)}]" for t in roots.values())
         elif not _has_indexable(q["body"]):
             t = _mod_div_trigger(q["body"])
@@ -1716,6 +1900,68 @@ class _V1:
             seen.add((sa, sb))
             lines.append(f"{ind}assert(({sa} == {sb}) == ({sa} =~= {sb}));")
 
+    def _nonlinear_ensures_bridge(self, ret_val: dict, ind: str) -> list[str]:
+        """TOP-LEVEL NONLINEAR ENSURES (2026-09-10, module docstring's dated
+        note below, hoareTripleReqEns: `k_p == (i+1)*(i+1)` given
+        `k == i*i`). LOOPS already bridges a nonlinear INVARIANT past
+        Verus's default solver profile (nonlinear arithmetic off, module
+        docstring "LOOPS") via `assert(...) by (nonlinear_arith) requires
+        ...`; a nonlinear top-level `ensures` at the task's own return
+        needs the identical escape hatch, just with no loop or symbolic
+        post-state involved. Measured (pht2.rs/pht3.rs/pht4.rs): a bare
+        `assert(goal)` (no hint) and `assert(goal) by (nonlinear_arith)`
+        with NO requires clause, or with only the task's own `requires`
+        restated but not the return's OWN value, all fail; substituting the
+        return name in the ensures clause by its VALUE expression (this
+        function's `ret_val`, so the goal reads e.g. `((k+2*i)+1) ==
+        (i+1)*(i+1)` with no `k_p` left in it at all) and giving the
+        task's own `requires` as the block's premises together suffice
+        (pht4.rs, 0 errors) -- restating the return's own value as an
+        EXTRA premise instead (pht1.rs) also works but is unnecessary, so
+        this takes the simpler form. Called from the two places a
+        task-level return happens: `stmts`'s "return" case (`wrap is
+        None`, `ret_val` = the returned expression itself, exactly what
+        Verus's own ensures check substitutes there too) and `emit`'s
+        trailing `{rname}` (`ret_val` = `_sym`'s closed form for the
+        return name over the whole body -- None, skipped there, when the
+        body contains a `return` or `while`, per `_sym`'s own docstring;
+        a body with an explicit `return` is covered at that return
+        instead, never both). Only fires per ensures clause that
+        `_has_nonlinear` flags, so every previously committed task (none
+        of whose ensures multiplies two non-literal factors) emits none of
+        this and is unaffected.
+
+        Skipped ENTIRELY (`_div_mod_pairs(ret_val)` nonempty) when the
+        returned value itself contains a `div`/`mod` application: measured
+        on remainder and divmod_pair, both committed BEFORE this task and
+        both with a nonlinear top-level ensures restating the Euclidean
+        identity (`x == (x/y)*y + r`) that `_div_mod_law` already bridges
+        from the SAME statement's own `_assert_defined` call -- an earlier,
+        unguarded version of this function added a SECOND, redundant
+        nonlinear_arith assert there, changing both tasks' committed
+        `out/*.rs` with no proof gained (caught by the byte-identity
+        regression check below, both already verified without it); this
+        guard leaves that existing mechanism as the only bridge for a
+        div/mod-shaped identity and reserves this one for a PURE
+        multiplication ensures like hoareTripleReqEns's, which has no
+        div/mod anywhere in its body."""
+        if _div_mod_pairs(ret_val):
+            return []
+        lines = []
+        reqs = self.task.get("requires", [])
+        rname = self.task["returns"][0]["name"]
+        for en in self.task["ensures"]:
+            if not _has_nonlinear(en):
+                continue
+            goal = expr(subst(en, {rname: ret_val}))
+            req_s = ""
+            if reqs:
+                req_s = (f"{ind}    requires\n{ind}        "
+                         + f",\n{ind}        ".join(expr(r) for r in reqs)
+                         + ",\n")
+            lines.append(f"{ind}assert({goal}) by (nonlinear_arith)\n{req_s}{ind};")
+        return lines
+
     def stmts(self, body: list, scope: dict, ind: str,
               wrap: str | None = None) -> list[str]:
         """scope: ordered {name: (verus_type, mutable)}. Returns lines.
@@ -1746,6 +1992,7 @@ class _V1:
                 self._assert_nested_eq(e, scope, lines, ind)
                 rvty = _vty(self.task["returns"][0]["type"])
                 if wrap is None:
+                    lines += self._nonlinear_ensures_bridge(e, ind)
                     lines.append(f"{ind}return {expr(e, rvty)};")
                 else:
                     lines.append(f"{ind}return (true, {expr(e, rvty)}, {wrap});")
@@ -2006,6 +2253,22 @@ class _V1:
         scope = {n: (t, False) for n, t in params}
         scope[rname] = (rtype, True)
         main_lines = self.stmts(body, scope, "    ")
+
+        # TOP-LEVEL NONLINEAR ENSURES (2026-09-10, see
+        # `_nonlinear_ensures_bridge`'s own docstring), the implicit-return
+        # site: a body with no `return` statement ends via the trailing
+        # `{rname}` expression below, so the bridge (already built into the
+        # explicit "return" case in `stmts`) belongs here instead, using
+        # `_sym`'s closed form for rname's final value -- None (skipped,
+        # left to whichever `return` statement the body DOES have) when the
+        # body contains one, or a `while` (per `_sym`'s own docstring); a
+        # committed task with no nonlinear ensures never calls `_sym` here
+        # at all (the `any(...)` guard), so this costs nothing additive.
+        if any(_has_nonlinear(en) for en in enss):
+            final_env = _sym(body, {})
+            if final_env is not None and rname in final_env:
+                main_lines += self._nonlinear_ensures_bridge(
+                    final_env[rname], "    ")
 
         ps = ", ".join(f"{n}: {t}" for n, t in params)
         req = ""

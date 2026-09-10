@@ -995,6 +995,193 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   three named certificate gaps just above (`_value_cert`'s param-less
   and nested-return abstains, `_undef_cert`'s loop-free-only abstain) --
   none of which this date's fix was scoped to close.
+
+  THE NINE SOLE-BLOCKERS (2026-09-10, COVERAGE-lifted-785.md's tenth
+  sweep, "Sole blockers": rocq alone keeps 9 of the 72 six-of-seven
+  lifted tasks out of all seven). MEASURED (coqc 9.2.0, this box,
+  harness.run_task, flake 3, one task at a time, load average 17-52
+  across the session): six of nine now read COUNTS; three stay open,
+  named below. Four gaps, all found by reading the failing .v directly
+  (`Show`/`idtac` probes on scratch copies, never guessed at) rather
+  than by pattern-matching the error text against a prior note.
+
+  (1) FOUR read verified/unproved (real proves, the twin's own
+  `_loop_cert` certificate does not): `clover_min_array__minArray`,
+  `dafny_tmp_tmpv_d3qi10_2_min__minArray` (the same minArray shape
+  twice, isomorphic up to renaming), `mieic...calcR`, `program_
+  verification_dataset...sumto_sol__sumUpTo`. Two separate causes, both
+  in `_loop_cert`, both now COUNTS:
+
+    (a) minArray's own invariant ladder keeps `exists x_v, 0 <= x_v <
+    i_v2 /\\ r = a[x_v]` when the twin drops the FORALL invariant next to
+    it; that exists is an ANTECEDENT of the certificate's `t_H` (part of
+    `inv_arrows`), and `specialize`/`_glit` bakes every param and
+    loop-state value into a Z LITERAL the same way is_prime's own
+    2026-09-09 fix found for a forall in the certificate's GOAL --
+    `t_go`'s built-in existential arm ("try 0, else any bound `x : Z`
+    already in context") had no non-zero candidate to try, so `t_feed`'s
+    `assert (D : A) by t_dis` silently failed to strip that one arrow,
+    leaving `t_H` un-stripped and the closing `t_dis` unprovable (MEASURED:
+    a `t_base; Show` probe on a scratch copy showed exactly this, `t_H`
+    still an implication chain after `t_feed`). FIX: `_loop_cert` gets a
+    new `elif kind == "exit":` branch (has_return's own `if` above is
+    untouched) that scans `_forall_hints` over BOTH `concl_asts` and the
+    invariants (has_return's scan only widens to invariants for `kind ==
+    "preservation"`, where they ARE the goal, not an antecedent) and
+    `pose`s the witnesses BEFORE `t_feed t_H`, not after: they have to be
+    visible to `t_feed`'s OWN internal `t_dis` calls, not only to the
+    final closing tactic. MEASURED that plain `t_go` (via plain `t_dis`)
+    already closes it once the candidate exists -- a witness VALUE was
+    missing, not a forall-hypothesis PAIRING -- so `closer` stays `t_dis`,
+    never escalated to `t_go_ext`'s more expensive search.
+
+    (b) calcR/sumUpTo both keep a spec_fun invariant, `r == ghost_fn(i)`
+    (`r_v`/`sum_up_to`), through their own twin ladder; `_call_asserts`
+    (the certificate's own ground-and-rewrite pass) scanned only
+    `concl_asts` (`task["ensures"]`, which mentions the spec_fun applied
+    to the PARAM `n`, never the loop-state var `i`), so the surviving
+    invariant's own `sf_r_v i`/`sf_sum i` was left un-grounded: `t_feed`
+    tried to prove `r = (sf_r_v i)` from the witness's own literal `r`
+    with no ground fact to rewrite it to and no fuel-unfolding path a
+    depth-6 `t_go` takes through an opaque Fixpoint application (MEASURED:
+    `coqc` alone, "unsolved t verification condition" right there). FIX:
+    widen the scanned asts to `concl_asts + w.get("invariants", [])`;
+    `env_py` already carries the state var's own witness value by that
+    point (the per-svar loop just above in `_loop_cert`), so the SAME
+    ground-and-rewrite machinery the conclusion already had now reaches
+    the invariant too. Costs nothing when neither mentions a spec_fun call
+    (every committed task's own invariant, `sum_upto`'s closed-form `2*r
+    == i*(i+1)` included, has none).
+
+  (2) THREE read unproved/refuted (the real does not prove; found by
+  reading each failing .v's own error directly): `dafny_verify...
+  upWhileLess`, `software_building...aula2__m3` now read verified/
+  refuted; `...aula2__mystery1` stays open, below.
+
+    upWhileLess (`i := 0; while i < n: i := i + 1; ensures i == n`) is
+    the FIRST committed-or-lifted loop task with exactly ONE loop state
+    variable, and it exposed two latent `gen_loop` bugs at once, both
+    invisible until now because every prior loop task's state was a 2+
+    tuple (a genuine Coq pair, one constructor):
+
+      - the induction lemma's non-recursing branch script is `intro Heq;
+        inversion Heq; subst; clear Heq; t_dis`. For a BARE Z (or bool)
+        equation (no tuple to inject), `inversion Heq` duplicates it into
+        a fresh hypothesis and `subst` then consumes and auto-clears the
+        ORIGINAL `Heq` itself (MEASURED, a 6-line standalone probe: `Heq,
+        H : i = i'` after `inversion`, then only `H : i' = i'` survives
+        `subst`, `Heq` already gone) -- so the scripted `clear Heq`
+        errored "No such hypothesis", caught by `first` as that whole
+        branch's failure, falling through to `fail`, discarding a goal
+        `t_dis` could otherwise have closed outright. FIX: `try clear
+        Heq`, both here and in the early-exit sibling script (untested by
+        any committed/lifted task yet, fixed defensively, same reasoning,
+        `try` costs a passing task nothing).
+
+      - the theorem's own `destruct ({name}_loop ...) as {pat_p} eqn:Heq`
+        needs a full DISJUNCTIVE pattern whenever the destructed value's
+        type has more than one constructor; `pat_p` is a bracket pattern
+        `[a' b']` for 2+ state vars (a genuine product, ONE constructor,
+        exactly right), but for exactly one var it is a BARE name, and
+        `destruct` on a bare Z (3 ctors) or bool (2 ctors) value with a
+        flat, non-disjunctive pattern is a Coq syntax error --
+        "Disjunctive/conjunctive introduction pattern expected", MEASURED
+        directly (a 9-line standalone probe reproduces it on a bare `Z`
+        AND, separately, on a single-var PAIR-typed value too, so the fix
+        is keyed on the STATE-VAR COUNT, not the type). This error had
+        been fully MASKED until the `try clear Heq` fix above landed: the
+        loop_spec Lemma failed first, so coqc never reached this theorem
+        at all. FIX: `remember ... as {pat_p} eqn:Heq; symmetry in Heq`
+        (never case-splits, so it is correct regardless of constructor
+        count) in place of `destruct`, gated on exactly one state var; a
+        2+-var task's own destruct text is untouched, byte for byte.
+
+    m3 (`z := (x == y); ensures z -> x == y`) failed for an unrelated
+    THIRD reason, in `gen_plain` rather than `gen_loop`: its own script
+    is `intros. unfold {name}_t. t_dis.`. `unfold` (bare, no `in *`)
+    rewrites the GOAL only, and since `intros` ran first, the return
+    variable's own truth, used as the ANTECEDENT of ensures' top-level
+    `implies` (`(m3_t x y = true) -> x = y`), became a HYPOTHESIS that
+    still held the opaque, un-unfolded `m3_t x y` name -- MEASURED with a
+    `t_base; Show` probe: `H : m3_t x y = true` sitting stuck, nothing
+    left for the search engine to open. FIX: swap the order to `unfold
+    {name}_t. intros. ...` in all three `gen_plain` template branches
+    (plain, seq-return, nested-seq-return); `unfold` needs nothing
+    introduced first (it rewrites under any remaining foralls/arrows
+    exactly the same), so this is a pure reordering, never wrong for a
+    task whose ensures has no such leading implication (every gen_plain
+    task in the committed matrix, confirmed by the regression below).
+
+  (3) COMPUTESUM (`m2...computeSum`), read unproved/unproved originally,
+  now reads verified/refuted TWIN, real still unproved: fix (1)(b) above
+  (the `_call_asserts` widening) applies here too (its own invariant is
+  `s == sum(i)`), so the twin side is now COUNTS-shaped; the REAL side's
+  own induction step needs `s + i + 1 = sum(i + 1)` from `s = sum i`
+  (the invariant, kept in context) and `sum`'s defining equation
+  (`sf_sum_eq`, already in PRELUDE, already tried via `t_side`'s own
+  `t_eqs` fallback) -- but rewriting `sf_sum_eq` at `sum(i+1)` leaves
+  `sum (i + 1 - 1)` in the goal, syntactically DIFFERENT from `sum i` in
+  the invariant hypothesis (lia atomizes an opaque application whole and
+  never simplifies ARGUMENT arithmetic inside one), and `t_sat1`'s own
+  merge rule ("merge var-headed application args that lia proves equal")
+  requires `is_var` on the head symbol, which a global spec_fun constant
+  like `sf_sum` never is. Left UNPROVED, named: reconciling this needs
+  extending the merge machinery to global spec_fun symbols with
+  arithmetic-normalized arguments, a proof-engine change with its own
+  regression surface across every spec_fun task, out of this session's
+  scope.
+
+  (4) MYSTERY1 (`software_building...aula2__mystery1`, self-recursive,
+  `res := m` at `n = 0`, else `res := 1 + mystery1(n - 1, m)`, ensures
+  `res >= 0 /\\ n + m == res`, no spec_fun anywhere) stays unproved/
+  refuted, UNCHANGED. `gen_rec`'s induction step closes with `apply IH;
+  repeat t_dm1; lia`, which only unifies when the caller's own recursive
+  shape mirrors a companion spec_fun's defining equation exactly
+  (factorial/fib/gcd's own `eq_lines`, `try rewrite sf_X_eq`, makes `r`'s
+  own recursive structure match `apply IH`'s target); mystery1 has no
+  spec_fun at all, and wraps the self-call's result in an extra `1 + `,
+  so `apply IH`'s conclusion (a bare `(fuel_fn fu n' m >= 0) /\\ (n' + m =
+  fuel_fn fu n' m)`) never unifies with a goal shaped `(1 + fuel_fn fu
+  (n-1) m >= 0) /\\ (n + m = 1 + fuel_fn fu (n-1) m)` (CONFIRMED by
+  isolating the base/step goals with bullets on a scratch copy: the base
+  case closes by bare `t_dis`, the step case's `apply IH; t_side` leaves
+  the goal exactly as printed). A real fix needs `gen_rec` to track each
+  self-call SITE's own concrete arguments (the way `_call_asserts`
+  already tracks spec_fun call sites) and `pose proof (IH <args>)` +
+  `t_feed`-style antecedent discharge there, rather than a bare `apply`;
+  not attempted this session (a new argument-tracking pass through
+  `exec_straight`'s self-call substitution, non-trivial regression
+  surface against factorial/fib/gcd's own working `apply IH` path).
+
+  (5) MAX (`seng2011...flex_ex2__max`), read timeout/refuted originally,
+  UNCHANGED, re-measured alone (no other coqc on the box at the time):
+  real TIMEOUT again at the 180 s wall (3-way flake, ~3 min total), twin
+  still REFUTED. Structurally the SAME shape the min_max load-sensitivity
+  finding (2026-09-10, PAIRS (v1), above) already established: a forall
+  PLUS an exists invariant over an array, four-plus quantified
+  conjuncts near the search budget's edge. Left AS TIMEOUT, unresolved,
+  per this session's own "only if cheap" instruction: no lowering gap
+  was found, and shrinking `t_go`/`t_base`'s own search cost is out of
+  this residual's scope, the same call min_max's own note already made.
+
+  REGRESSION (`t/tasks/*.json`, all 23, flake 3, one cell at a time,
+  `run_par.lower_and_dispatch`, jobs=1): 22 of 23 read verified/refuted,
+  matching AGREEMENT.md's rocq column exactly, byte for byte in outcome;
+  `min_max` reads timeout/refuted again, the SAME load-sensitive reading
+  AGREEMENT.md already records, not a regression. No committed task's
+  own witness or timing class changed. `factorial`/`fib`/`gcd` (the three
+  existing `gen_rec` tasks) confirm mystery1's own gap above is
+  scope-limited to the no-companion-spec_fun shape, not a break in the
+  working `apply IH` path itself.
+
+  WHAT STAYS OPEN, BY NAME: `m2...computeSum` (real unproved -- the
+  spec_fun-argument-normalization gap in (3) above; its TWIN now reads
+  refuted, an improvement banked); `...aula2__mystery1` (real unproved --
+  the no-companion-spec_fun self-recursion gap in (4)); `seng2011...
+  flex_ex2__max` (real timeout -- the load-sensitive/proof-cost reading
+  in (5), min_max's own precedent repeated). Six of the nine sole-blocker
+  tasks now read COUNTS; these three do not, each for a distinct, named
+  reason, none of them a lowering crash or a masked error.
 """
 from __future__ import annotations
 
@@ -3951,9 +4138,9 @@ Definition {name}_t_len {pb} : Z := {len_expr}.
 Theorem {name}_t_spec :
   {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
+  unfold {name}_t, {name}_t_len.
   intros.
-{pdestr}  unfold {name}_t, {name}_t_len.
-{pair_line}  t_dis.
+{pdestr}{pair_line}  t_dis.
 Qed.
 """
 
@@ -3981,9 +4168,9 @@ Definition {name}_t_len {pb} : Z := {len_expr}.
 Theorem {name}_t_spec :
   {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
+  unfold {name}_t, {name}_t_len.
   intros.
-{pdestr}  unfold {name}_t, {name}_t_len.
-  t_dis.
+{pdestr}  t_dis.
 Qed.
 """
 
@@ -4019,9 +4206,9 @@ Definition {name}_t {pb} : {rty(ret_t)} := {expr}.
 Theorem {name}_t_spec :
   {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
+  unfold {name}_t.
   intros.
-{pdestr}  unfold {name}_t.
-{pair_line}  t_dis.
+{pdestr}{pair_line}  t_dis.
 Qed.
 """
 
@@ -4298,6 +4485,37 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
                 f"{init_terms}\n  in {result_term}.\n")
             unfold_line = f"unfold {name}_t."
 
+        # 2026-09-10, upWhileLess: `destruct t as <bare name> eqn:Heq`
+        # needs a full DISJUNCTIVE pattern (one sub-pattern per
+        # constructor) whenever the destructed type has more than one
+        # constructor -- MEASURED, a standalone probe on a bare `Z`
+        # result: "Error: Disjunctive/conjunctive introduction pattern
+        # expected." `pat_p` is a bracket pattern `[a' b']` (2+ state
+        # vars, a genuine pair/product with exactly ONE constructor, so a
+        # flat list of sub-names is exactly right) in every task built so
+        # far, since every prior loop task has 2+ state vars; upWhileLess
+        # is the first with exactly one (`i`), where `pat_p` is a BARE
+        # name and the destructed value's own type (Z here, same story
+        # for bool) has 3 (or 2) constructors, not 1 -- confirmed the
+        # same break for a single-var PAIR-typed state too (probed
+        # separately), so the fix is keyed on the STATE-VAR COUNT, not
+        # the type. `remember` never case-splits (it only names the term
+        # and records the equation), so it is correct regardless of how
+        # many constructors the type has; its own equation direction is
+        # backwards from `destruct ... eqn:`'s convention (`i' = t`, not
+        # `t = i'`), fixed by one `symmetry in Heq` right after so every
+        # downstream use of `Heq` (the `pose_args` forwarding it into
+        # `{name}_loop_spec`, the final `clear`) is unchanged. A 2+-var
+        # task's own destruct text is untouched, byte for byte.
+        if len(svars_x) == 1:
+            destruct1_txt = (
+                f"  remember ({name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                f"{init_terms})\n    as {pat_p} eqn:Heq.\n  symmetry in Heq.\n")
+        else:
+            destruct1_txt = (
+                f"  destruct ({name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                f"{init_terms})\n    as {pat_p} eqn:Heq.\n")
+
         return f"""{def_txt}
 {fixpoint_txt}
 {def_lines}
@@ -4310,9 +4528,22 @@ Proof.
   induction fuel as [|fu IH];
   intros {param_names} {state_names} {primed_names} {' '.join(hyp_names)};
   cbn [{name}_loop];{bool_destruct} t_sweep;
+  (* `try clear Heq`, not a bare `clear Heq` (2026-09-10, upWhileLess: a
+     ONE-Z-variable loop state, the only committed/lifted shape so far
+     small enough to expose this): when the non-recursing branch's own
+     equation is between two bare Z variables (no tuple/pair to inject),
+     `inversion Heq` duplicates it into a fresh `H` and `subst` then
+     consumes and auto-clears the ORIGINAL `Heq` itself (MEASURED,
+     standalone probe), so the following bare `clear Heq` errored "No
+     such hypothesis", caught by `first` as this branch's own failure and
+     silently falling through to the final `fail`, discarding a goal
+     `t_dis` could otherwise close outright. A 2+-variable state tuple's
+     `Heq` is a genuine constructor-vs-constructor equation `inversion`
+     does not eat this way, which is why every task built before this one
+     never exposed it. *)
   first [ solve [ apply IH; t_side ]
         | (let Heq := fresh "Heq" in
-           intro Heq; inversion Heq; subst; clear Heq; t_dis)
+           intro Heq; inversion Heq; subst; try clear Heq; t_dis)
         | fail 1 "unsolved t verification condition" ].
 Qed.
 
@@ -4322,9 +4553,7 @@ Theorem {name}_t_spec :
 Proof.
   intros {param_names} {lens_intro} {reqs_intro}.
 {pdestr}  {unfold_line}
-  destruct ({name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms})
-    as {pat_p} eqn:Heq.
-  cbn beta iota.
+{destruct1_txt}  cbn beta iota.
 {pair_line}  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
 {ini_asserts}  pose proof ({name}_loop_spec {pose_args}) as Hout.
   clear Hfb Heq {ini_intro}.
@@ -4397,9 +4626,14 @@ Proof.
   induction fuel as [|fu IH];
   intros {param_names} {state_names} {primed_names} {rfp} {' '.join(hyp_names)};
   cbn [{name}_loop];{bool_destruct} t_sweep;
+  (* `try clear Heq`: the same fix as the non-return `gen_loop` branch
+     above, applied here defensively (this shape's own equation is always
+     a genuine pair `(state, bool)`, never a bare Z=Z, so no committed or
+     lifted task has exercised the failure here yet; `try` costs a
+     passing task nothing either way). *)
   first [ solve [ apply IH; t_side_ext ]
         | (let Heq := fresh "Heq" in
-           intro Heq; inversion Heq; subst; clear Heq; t_dis_ext)
+           intro Heq; inversion Heq; subst; try clear Heq; t_dis_ext)
         | fail 1 "unsolved t verification condition" ].
 Qed.
 
@@ -5135,8 +5369,26 @@ def _loop_cert(cx, task, prefix, w, suffix, witness):
             spec_args.append(env_g[v])
     lines = []
     if kind == "exit" and not suffix:
-        # ground the spec_fun applications of the instantiated conclusion
-        lines = _call_asserts(cx, task, task["body"], concl_asts,
+        # ground the spec_fun applications of the instantiated conclusion,
+        # AND of any surviving invariant (2026-09-10, calcR/sum_up_to
+        # shape): an invariant like `r == sum_up_to(i)` is an ANTECEDENT
+        # of t_H (inv_arrows, above), not the conclusion, so `_call_asserts`
+        # scanning `concl_asts` alone (task["ensures"], which only ever
+        # mentions the PARAM `n`, never the loop-state var `i`) never
+        # reaches it: `t_feed`'s own `assert (D : A) by t_dis` was left to
+        # prove `r = (sf_r_v i)` from a bare `t_dis`, with no ground fact
+        # to rewrite it to and no fuel-unfolding path a depth-6 t_go search
+        # takes on an opaque Fixpoint application, MEASURED unproved on
+        # both mieic...calcR and sumto_sol...SumUpTo. `env_py` already
+        # carries the state var's own witness value here (the per-svar
+        # loop just above this one), so widening the scanned asts to
+        # `concl_asts + invariants` costs nothing when neither mentions a
+        # spec_fun call (every committed task's own invariant, sum_upto's
+        # own closed-form `2*r == i*(i+1)` included, has none), and gives
+        # the surviving invariant the identical ground-and-rewrite
+        # treatment the conclusion already had.
+        lines = _call_asserts(cx, task, task["body"],
+                              concl_asts + w.get("invariants", []),
                               env_py, dict(env_g), in_hyp="t_H")
     # Early exit, twin side (2026-09-09): a return-bearing loop's ensures
     # can carry a forall/exists over a non-seq predicate (is_prime's
@@ -5162,6 +5414,7 @@ def _loop_cert(cx, task, prefix, w, suffix, witness):
     # twin is untouched byte-for-byte.
     wit_lines = ""
     closer = "t_dis"
+    wit_before_feed = ""
     if has_return(w["body"]):
         funs = interp.funs_of(task, task["body"])
         hints: list = []
@@ -5178,6 +5431,52 @@ def _loop_cert(cx, task, prefix, w, suffix, witness):
             wit_lines += f"  pose (t_wit{k} := ({_zlit(v)})%Z).\n"
         if wit_lines:
             closer = "t_dis_ext"
+    elif kind == "exit":
+        # 2026-09-10, minArray shape: an "exit" witness's own SURVIVING
+        # invariant can be an existential t_feed must discharge as an
+        # ANTECEDENT (minArray's invariant #3, `exists x_v, 0 <= x_v <
+        # i_v2 /\ r = a[x_v]`, kept when invariant #2, the forall, is the
+        # one the twin ladder drops): the exact same "no candidate Z
+        # variable" gap has_return's own note above names for a forall in
+        # the GOAL, here for an exists in an ANTECEDENT instead --
+        # `specialize`/`_glit` bakes every param and loop-state value into
+        # a Z LITERAL, so t_go's built-in existential arm ("try 0, else
+        # any bound `x : Z` already in context") has no non-zero
+        # candidate to try and the antecedent goes unproved, MEASURED:
+        # `t_feed`'s own `assert (D : A) by t_dis` swallows the failure
+        # silently (`repeat lazymatch ... | ?A -> ?B => ...`  simply
+        # never fires for that arrow), leaving t_H an un-stripped
+        # implication and the closing `t_dis` call unprovable -- the same
+        # symptom ("unsolved t verification condition") the calcR/
+        # sum_up_to fix above closes for a different reason. `pose`ing
+        # each `_forall_hints` witness, scanned over BOTH concl_asts and
+        # the invariants (the antecedents here, unlike has_return's own
+        # scan, which only widens to invariants for kind == "preservation"
+        # where they ARE the goal), gives `t_go`'s exists-arm the missing
+        # candidate; MEASURED that plain `t_go` (not `t_go_ext`) already
+        # closes it once the candidate exists (a witness *value*, not a
+        # forall-hypothesis *pairing*, is what was missing), so `closer`
+        # stays `t_dis`, unescalated. The poses must land BEFORE
+        # `t_feed t_H`, not after (has_return's own placement): they are
+        # needed by `t_feed`'s OWN internal `t_dis` calls that prove each
+        # antecedent, not only by the closing tactic after feeding is
+        # done. Scoped to `kind == "exit"` and `not has_return` (the `if`
+        # above already owns every `has_return` task, whatever its kind),
+        # so a `preservation`-kind or return-bearing task's generated
+        # proof text is completely unchanged, byte for byte.
+        funs = interp.funs_of(task, task["body"])
+        hints: list = []
+        for e in concl_asts:
+            _forall_hints(e, dict(env_py), funs, hints)
+        for e in w.get("invariants", []):
+            _forall_hints(e, dict(env_py), funs, hints)
+        seen_h: set = set()
+        for k, v in enumerate(hints):
+            if v in seen_h:
+                continue
+            seen_h.add(v)
+            wit_lines += f"  pose (t_wit{k} := ({_zlit(v)})%Z).\n"
+        wit_before_feed, wit_lines = wit_lines, ""
     return ("".join(seq_defs) + "\n" + def_text + "\n"
             f"(* The surviving loop annotations do not carry the spec: a "
             f"kernel-checked countermodel at the measured state, "
@@ -5191,7 +5490,8 @@ def _loop_cert(cx, task, prefix, w, suffix, witness):
             + "".join(ptw) +
             "  intro t_H.\n"
             f"  specialize (t_H {' '.join(spec_args)}).\n"
-            + "".join(lines) + "".join(sets) +
+            + "".join(lines) + "".join(sets)
+            + wit_before_feed +
             "  t_feed t_H.\n"
             + wit_lines
             + f"  {closer}.\n"

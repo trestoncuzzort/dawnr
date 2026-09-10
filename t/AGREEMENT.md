@@ -1,4 +1,4 @@
-# t cross-kernel agreement — 2026-09-10 06:58Z
+# t cross-kernel agreement — 2026-09-10 07:31Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column.
 
@@ -20,7 +20,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | min_max | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
 | remainder | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| reverse | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
+| reverse | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | row_max_len | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | seq_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | sum_upto | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |

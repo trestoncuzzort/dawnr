@@ -1096,6 +1096,122 @@ distinct, still-uninspected gap this note did not have time to isolate.
 Left honestly unproved rather than forced, matching this file's standing
 rule: a recorded absence, never a faked proof.
 
+THE DOMAIN HYPOTHESIS, closing nine of the ten above (2026-09-10, later
+the same day). THE WORK the residual's own "too wide a blast radius"
+paragraph declined: `_t_loop` now takes the loop's own `requires`
+(`hpre`) and invariants (`hinv1..N`) as explicit parameters, exactly the
+context SPEC.md grants the `decreases` clause, so its own `decreasing_by`
+can finally use them; `_t`, `_t_loop_spec`'s applied term and
+`_cert_loop`'s certificate construction all updated to supply the extra
+arguments consistently. GATED, not unconditional: `_loop_needs_domain_hyp`
+(new) reads the guard/decreases SHAPE alone (body-blind, cheap) and skips
+the whole mechanism whenever the guard already bounds the measure's
+direction by itself (an order comparison, at top level or inside a
+top-level `and`, whose two operands are EXACTLY `decreases`'s own two
+subtraction operands, in the guard's own direction -- every one of
+reverse/tail/filter_pos/min_max/seq_max/row_max_len/all_nonneg/contains/
+count_matches/first_even/sum_upto/is_prime/digit_sum's own committed
+shape). MEASURED AS A REGRESSION, not assumed safe: the first version
+threaded the hypothesis onto EVERY loop task unconditionally, and it
+broke three already-passing committed invariant-drop twins (reverse,
+min_max, linear_search) -- their own guard already sufficed, so `_t_loop`
+never previously needed a REAL preservation proof of its own, and forcing
+one demanded a fact the twin's OWN dropped invariant carried (reverse:
+`len(r) = len(s)`, needed to bridge a `.set` read after the drop,
+genuinely absent from the surviving two invariants -- a live ground
+counterexample, `r = []` against `s = [x]`, satisfies every remaining
+hypothesis and refutes the goal, not a tactic gap) -- `_t_loop`'s own
+definition failed to elaborate, and its `sorryAx` poisoned the
+certificate that unfolds `_t_loop` at the witness (`t_refutation_
+certificate` itself audited `[sorryAx]`, UNPROVED not REFUTED, silently,
+since a file can still exit 0 with other theorems sorry'd). The gate
+restricts the mechanism to loop tasks whose OWN termination proof
+actually needs it, so every other task keeps its exact prior `_t_loop`/
+`_t` text, byte-identical, structurally immune to this failure mode (a
+dropped invariant never threaded into `_t_loop` at all cannot be missed
+there).
+
+THREE LEAN SURPRISES on the way to a working `have`-based preservation
+proof inside `_t_loop`'s own recursive self-call, each measured on a
+scratch probe before trusting the fix generically, all now recorded in
+`lower_loop`'s own inline comments at the site each one fixes: (1) a
+`;`-chained one-line `by {split_tac}; {gr}` parses as `by ({split_tac};
+{gr})`, not `by ({split_tac}); {gr}` -- `repeat split` fails outright
+with nothing to split (an ordinary arithmetic invariant), so the whole
+compound fails at its first step and `gr` never runs; (2) an existential
+invariant's own preservation (minimum's `∃ i, ... ∧ m = a[i]`, a running-
+extremum witness) needs its OLD witness `obtain`ed into a concrete local
+BEFORE `grind` can chain it through a merged if-update -- grind cannot
+invent an existential witness through the update itself; (3) `repeat
+split` on a merged if-update leaves two goals and a bare tactic after it
+only closes the first, needing `all_goals`. None of the three is a
+recursion-position quirk as first suspected (measured: each one
+reproduces identically in a non-recursive `def` and even inside a plain
+`theorem`'s own tactic block) -- all three are ordinary Lean parsing/
+tactic-scoping facts that happened to matter here because this is the
+first place in this file writing a multi-step tactic INLINE inside a
+recursive function's own term-mode argument position.
+
+MEASURED, the ten named tasks, before -> after, flake 3 (`harness.
+run_task` against `out/lifted-tasks.r14/`), wall seconds: clover_cal_sum
+__sum 0.6s -> 0.6s (COUNTS, was unproved/unproved); clover_linear_
+search1__linearSearch 0.8s -> 1.0s (COUNTS, was unproved/unproved);
+dafny_tmp_tmpmvs2dmry_slowmax__slow_max 1.2s -> 1.4s (COUNTS, was
+unproved/unproved); dafny_verify_..._minimum 1.4s -> 1.4s (COUNTS, was
+unproved/unproved); m2_..._carre 0.5s -> 0.6s (COUNTS, was unproved/
+unproved); ..._foo 0.5s -> 0.5s (COUNTS, was unproved/unproved);
+..._gcdI (ex_05_Hoangkim) 13.7s -> 13.5s (COUNTS, was unproved/unproved);
+..._gcdI (ex_06_hoangkim) 10.2s -> 10.8s (COUNTS, was unproved/
+unproved); ..._gcdI (ex06-solution) 1.4s -> 1.5s (COUNTS, was unproved/
+unproved); tfg_..._div_ent_it 1.0s -> 1.0s (COUNTS, was unproved/
+unproved -- the note's own prior reading named it unproved/refuted on
+its TWIN alone, both cells now verified/refuted). NINE OF TEN MOVED to
+verified/refuted (COUNTS); cube (both ai_agent_validation_examples and
+ai_agent_verify_examples rows, 1.0s and 1.0s, unchanged from before) is
+the sole holdout, and NOT a termination-direction gap: its own
+`_t_loop`'s decreasing_by now succeeds (the fix reaches it), but a
+DIFFERENT, LOOP-INVARIANT-PRESERVATION obligation the fix newly requires
+`_t_loop`'s own definition to discharge for real -- `c >= 0` preserved
+across `c := c + k` where `c + k = (i+1)^3` -- needs `x >= 1 -> x^3 >= 0`,
+plain nonlinear sign reasoning `grind`'s linear cutsat core cannot do and
+this file has no Mathlib `nlinarith`/`mul_nonneg`-style bridge for
+(confirmed by ground counterexample search: `grind`'s own cutsat reports
+a satisfying assignment with `c := -1`, i.e. it is not under-searching, it
+genuinely lacks the theory). `Int.mul_nonneg` exists in core Lean
+(measured, a three-line scratch probe) and could close it, but wiring a
+generic nonlinear-nonneg bridge is a distinct, unstarted piece of work,
+outside THIS wave's own scope (the termination-direction class, not
+nonlinear arithmetic), left honestly open by name rather than forced or
+silently folded in.
+
+REGRESSION, the full committed matrix. All 23 `tasks/*.json`, real and
+twin, through `harness.run_task` against the lean backend directly
+(matching this file's own measurement discipline, not `run_par.py`'s
+multi-kernel table): 23 of 23 COUNT, identically to the committed
+AGREEMENT.md row for every one (no cell moved down). Wall seconds
+(current run; the 13 loop tasks' source text is NOT byte-identical any
+more for the digit_sum case alone -- see `_loop_needs_domain_hyp`'s own
+note on why digit_sum, despite committed and passing before, reads
+"needs the hyp" under the cheap body-blind rule -- every other loop
+task's source is byte-identical, `needs_hyp` reading False for all of
+them): abs 0.3s, all_nonneg 0.6s, contains 0.8s, count_matches 0.5s,
+digit_sum 0.9s, divmod_pair 0.4s, factorial 0.4s, fib 1.3s, filter_pos
+1.3s, first_even 0.9s, gcd 0.7s, is_prime 0.8s, linear_search 0.8s
+(REGRESSED to unproved/unproved in the FIRST, ungated version of this
+fix, RESTORED here), max 0.3s, min_max 5.0s (also regressed/restored,
+mirroring reverse below), remainder 0.4s, reverse 1.5s (regressed/
+restored, the `len(r) = len(s)` counterexample above IS reverse's own
+twin), row_max_len 1.3s, seq_max 1.2s, sum_upto 0.4s, swap 0.9s,
+swap_rows 0.9s, tail 0.9s. No absolute prior-session per-task wall times
+were captured for these 23 (the standing note only timed the ten loop-
+residual tasks), so this reading is the "after" half only; the verdict
+match against AGREEMENT.md is the load-bearing regression check, not the
+timing.
+
+STAYS OPEN, by name: the two `..._cube` tasks (nonlinear cube-nonneg
+preservation, above); `elementAtIndexAfterRotation`'s own unrelated
+div/mod-bridge gap ("STAYS OPEN" above, untouched this wave).
+
 BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10, "sole blockers" wave).
 COVERAGE-lifted-785.md named 13 lifted tasks and three v1nested
 fuzz-family members (fz_v1nested_026, fz_p_nest_eq, fz_p_nest_lit) as
@@ -1216,6 +1332,129 @@ genuinely out of this wave's scope. `implies` in computational position
 is also still unfixed (no measured task needs it, and SPEC.md's own list
 never names it), left an honest NotImplementedError like every other
 genuinely unlowered shape.
+
+THE DEAD-BRANCH RESIDUAL (2026-09-10, "sole blockers" wave, closing the
+two control-flow abstains the "BOOLEANS" note above measured and left
+open). Both named reasons trace to `to_expr`, the SIMPLE/RECURSIVE
+expression builder: it turns a loop-free statement list into ONE
+expression for the return value, and had no way to express a branch
+that contributes nothing to that expression, or a statement that
+follows a branch whose own arms merely continue.
+
+MEASURED FIRST, the seven tasks COVERAGE-lifted-785.md names as lean's
+sole remaining blockers (harness-shaped: lower + cell_pair, flake 3,
+directly against out/lifted-tasks.r14/, before touching anything): all
+seven read ABSTAIN, matching the two reasons named above --
+clover_is_even__computeIsEven, cs245_verification_tmp_tmp0h_nxhqp_a8_q2__
+a8Q1 and dafny_learn_tmp_tmpn94ir40q_r01_assertions__max on "a path that
+assigns nothing"; dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_
+maxsum__maxSum, dafny_synthesis_task_id_801__countEqualNumbers,
+dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod and dafny_verify_
+tmp_tmphq7j0row_test_cases_index__maxSum on "statements after a branch".
+Read directly (task JSON, not just the reason string): every one is an
+honest gap, not a disguised harder shape -- clover_is_even is `is_even
+:= false; if x % 2 == 0 { is_even := true }` (no `else` at all, lifted
+as an explicit empty `else: []`); countEqualNumbers is three sequential
+`if cond { count := count + 1 }` statements, each with an empty else,
+chained one after another (both reasons in the same body); the four
+"statements after" tasks are each one if (both arms present, neither
+ever returning) followed by a further assign (`myMethod`'s `y := a +
+b`, the two `maxSum` tasks' `r := (s, m)`).
+
+THE FIX, two small additions to `to_expr`, both keeping its existing
+recursive shape:
+  empty branch    `to_expr([], env, types)` no longer raises
+                  unconditionally: SPEC.md's plain fall-through means a
+                  branch with nothing of its own to contribute leaves
+                  the return variable exactly as it was before the
+                  branch, and `env[self.ret]` IS that prior value --
+                  every earlier assign/var-init on this path already
+                  substituted it in (`to_expr`'s own "assign"/"var"
+                  cases, unchanged). Falls back to the pre-existing
+                  raise only when self.ret was never assigned at all
+                  before this empty branch, a genuine gap this note
+                  does not touch.
+  statements after a branch where neither arm always-returns: a new
+                  third case alongside the two existing then_ret/
+                  else_ret one-sided splits, firing only when both are
+                  False. Rather than inventing a second merge
+                  algorithm, it reuses `sym()` -- the forward symbolic
+                  executor `lower_loop` already trusts for a LOOP body's
+                  own nested ifs -- unchanged, on each branch, then
+                  joins the two resulting envs the same way `sym()`'s
+                  own "if" case already joins them (`if cp then t else
+                  f` per variable, obligations guarded by cp/¬cp) before
+                  recursing `to_expr` into the rest of the statement
+                  list from that merged env. `sym()`'s `returned`
+                  tracking is strictly more general than `to_expr`'s own
+                  then_ret/else_ret split (a branch can itself contain
+                  an if where one arm returns and the other doesn't,
+                  without the OUTER branch always-returning), so this
+                  also covers shapes the two pre-existing one-sided
+                  cases do not, not just the four measured here.
+Neither change touches RECURSIVE bodies' self-call mechanics
+(`fresh_hyp`'s dependent-if hypothesis binders, used so a branch's own
+requires-discharge tactic sees that branch's condition as a named
+hypothesis): no task lowered so far self-recurses AND hits either of
+these two shapes, so this stays unexercised there, honestly -- a future
+one would need the merged env's `if cp then .. else ..` terms to carry
+their own case-split inside the self-call's `by omega/grind` proof
+rather than a literal `h : cp` in context, a real question this note
+did not have to answer.
+
+MEASURED, before -> after, flake 3 (`cell_pair`, matching harness.
+run_task's own call shape), wall seconds per task -- before is instant
+(0.0s: an ABSTAIN never reaches a kernel call), so this is really zero
+kernel calls -> one real "first | unfold; grind | grind [f]" run plus a
+refutation certificate, times three for flake, times two (real, twin):
+  clover_is_even__computeIsEven: 0.0s -> 0.4s, witness x=1, real False,
+    off-by-one twin True;
+  cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1: 0.0s -> 0.4s, witness
+    x=1, y=0, z=1, real 0, collapse-if twin 1;
+  dafny_learn_tmp_tmpn94ir40q_r01_assertions__max: 0.0s -> 0.3s, witness
+    a=1, b=0, real 1, collapse-if twin 0;
+  dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum:
+    0.0s -> 0.4s, witness x=0, y=1, real [1, 1], collapse-if twin [1, 0];
+  dafny_synthesis_task_id_801__countEqualNumbers: 0.0s -> 0.4s, witness
+    a=0, b=1, c=0, real 2, collapse-if twin 3;
+  dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod: 0.0s -> 0.3s,
+    witness x=20, real 39, wrong-var twin 19;
+  dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum: 0.0s -> 0.4s,
+    witness x=0, y=1, real [1, 1], collapse-if twin [1, 0].
+All seven: real VERIFIED, twin REFUTED, no flake disagreement, `grind
+[f]` alone (the existing base tactic every spec/wfbody theorem already
+tries first) closing every one, no new lemma needed -- the fix only
+widens what `to_expr` can express, it adds nothing to the proof
+automation.
+
+REGRESSION. All 23 tasks/*.json, real and twin, regenerated (matching
+harness.run_task's own call shape) and diffed byte-for-byte against a
+snapshot of this file from immediately before this note's two edits
+(the two hunks isolated and reverted into a scratch copy, this worktree
+never touched): 0 of 23 differ, in either the real or the twin source --
+every committed body's own if-chains already always-return or always-
+assign on both arms in the shapes that reach `to_expr` today, so neither
+new code path fires for any of them. The full committed matrix was also
+re-run through the kernel (flake 3, not just diffed): all 23 still read
+real VERIFIED / twin REFUTED, matching AGREEMENT.md's lean column
+exactly, cell for cell; per-task wall seconds, all close to their
+pre-existing range and none near the harness's wall backstop: abs 0.4s,
+all_nonneg 0.7s, contains 0.7s, count_matches 0.5s, digit_sum 0.5s,
+divmod_pair 0.4s, factorial 0.4s, fib 0.5s, filter_pos 1.2s, first_even
+0.8s, gcd 0.7s, is_prime 0.6s, linear_search 0.8s, max 0.4s, min_max
+4.7s, remainder 0.4s, reverse 1.3s, row_max_len 1.3s, seq_max 1.2s,
+sum_upto 0.5s, swap 1.0s, swap_rows 1.0s, tail 0.9s.
+
+STAYS OPEN. Nothing named by this wave's own target list remains open:
+all seven of COVERAGE-lifted-785.md's lean sole-blockers now count. The
+two residuals this file already carries stay exactly as measured before
+tonight and are untouched here: THE 14 LOOP-TASK RESIDUAL's nine
+direction-class loop tasks (`_t_loop`'s bare decreasing_by needing an
+invariant the guard alone does not give) and dafny_synthesis_task_id_
+304__elementAtIndexAfterRotation's own div/mod-bridge gap. `implies` in
+computational position and a self-recursive body hitting either shape
+fixed tonight are also still open, both genuinely unexercised by any
+measured task, named honestly above rather than guessed at.
 """
 from __future__ import annotations
 
@@ -1937,8 +2176,26 @@ class Lower:
         tail `assign` to the return name); as the *other* branch of a
         non-tail `if`, that branch's value is the task's result on that
         path and the statements after the `if` are on the surviving
-        branch only (handled by the two one-sided cases below)."""
+        branch only (handled by the two one-sided cases below).
+
+        THE DEAD-BRANCH RESIDUAL (2026-09-10, "sole blockers" wave): a
+        branch that assigns nothing keeps the return variable's value
+        from BEFORE the branch (plain fall-through, e.g. Dafny's `if b {
+        c := x }` with no `else` at all, lifted as an explicit empty
+        `else: []`), and statements after an if whose branches both
+        merely continue (neither ends in `return`) pick up from the
+        MERGED state, not from a fork this function refuses. Both are
+        handled below rather than raised."""
         if not stmts:
+            # `env[self.ret]` is exactly that prior value: every earlier
+            # assign/var-init on this path already substituted it in (the
+            # "assign"/"var" cases below), so a branch with nothing of
+            # its own to add just reads it back, no new term, no new
+            # obligation. Only a path where self.ret was NEVER assigned
+            # at all before this empty branch has nothing to fall back
+            # to -- a genuine gap, and stays the honest abstain.
+            if self.ret in env:
+                return env[self.ret], []
             raise NotImplementedError(
                 "a path that assigns nothing is not lowered for lean")
         s, rest = stmts[0], stmts[1:]
@@ -1960,17 +2217,47 @@ class Lower:
             if then_ret and not else_ret:
                 te, obs_t = self.to_expr(c["then"], env, types)
                 fe, obs_e = self.to_expr(list(c["else"]) + rest, env, types)
-            elif else_ret and not then_ret:
+                obs = ([ob0] if ob0 else []) \
+                    + [f"({cp} → {o})" for o in obs_t] \
+                    + [f"(¬{cp} → {o})" for o in obs_e]
+                return (
+                    f"(if {self.fresh_hyp()} : {cp} then {te} else {fe})",
+                    obs)
+            if else_ret and not then_ret:
                 te, obs_t = self.to_expr(list(c["then"]) + rest, env, types)
                 fe, obs_e = self.to_expr(c["else"], env, types)
-            else:
-                raise NotImplementedError(
-                    "statements after a branch are not lowered for lean")
-            obs = ([ob0] if ob0 else []) \
-                + [f"({cp} → {o})" for o in obs_t] \
-                + [f"(¬{cp} → {o})" for o in obs_e]
-            return (f"(if {self.fresh_hyp()} : {cp} then {te} else {fe})",
+                obs = ([ob0] if ob0 else []) \
+                    + [f"({cp} → {o})" for o in obs_t] \
+                    + [f"(¬{cp} → {o})" for o in obs_e]
+                return (
+                    f"(if {self.fresh_hyp()} : {cp} then {te} else {fe})",
                     obs)
+            if not then_ret and not else_ret:
+                # THE DEAD-BRANCH RESIDUAL (2026-09-10): neither branch
+                # returns, so both continue into `rest` from the MERGED
+                # state. `sym()` already builds exactly this join (per-
+                # variable `if cp then .. else ..`, obligations guarded by
+                # cp/¬cp) for a loop body's own nested ifs; reused as-is
+                # here for a loop-free one. Its `returned` tracking is
+                # strictly more general than this function's own
+                # then_ret/else_ret split (a branch CAN contain a nested
+                # if where one arm returns and the other doesn't, without
+                # the OUTER branch itself always-returning), so this also
+                # covers cases the two one-sided branches above do not.
+                env_t, obs_t, _ = self.sym(c["then"], env, types, [])
+                env_e, obs_e, _ = self.sym(c["else"], env, types, [])
+                merged = dict(env)
+                for k in set(env_t) | set(env_e):
+                    t, f = env_t.get(k, k), env_e.get(k, k)
+                    merged[k] = t if t == f else \
+                        f"(if {cp} then {t} else {f})"
+                obs = ([ob0] if ob0 else []) \
+                    + [f"({cp} → {o})" for o in obs_t] \
+                    + [f"(¬{cp} → {o})" for o in obs_e]
+                re_, obs_r = self.to_expr(rest, merged, types)
+                return re_, obs + obs_r
+            raise NotImplementedError(
+                "statements after a branch are not lowered for lean")
         if "return" in s:
             x, e = s["return"]
             if x != self.ret:
@@ -3030,6 +3317,53 @@ class Lower:
             return None
         return {"int": "(0 : Int)", "bool": "false"}.get(t)
 
+    def _loop_needs_domain_hyp(self, w: dict) -> bool:
+        """True iff `_t_loop`'s own bare `decreasing_by` cannot be trusted
+        on the guard hypothesis (`_hg`) alone -- this file's own dated
+        note below, "THE 14 LOOP-TASK RESIDUAL". SAFE (False, the
+        pre-existing lowering, untouched) iff the guard has an order
+        conjunct (`<`/`<=`/`>`/`>=`, at top level or inside a top-level
+        `and`) whose two operands are EXACTLY `decreases`'s own two
+        subtraction operands, in the guard's own direction (`i < len(s)`
+        paired with `len(s) - i`, every one of reverse/tail/filter_pos/
+        min_max/seq_max/row_max_len/all_nonneg/contains/count_matches/
+        first_even/sum_upto/is_prime's own committed shape) -- the ONLY
+        pattern measured to make the guard alone already bound the
+        measure's direction. Every other shape -- an `ite` (cal_sum,
+        linear_search1, minimum, cube), a bare `-` not matching the
+        guard's own operands (carre, foo: guard uses `!=`, not an
+        order), a sum of two loop variables (slow_max, gcdI), or a bare
+        loop variable whose OWN update depends on a second variable the
+        guard says nothing about (div_ent_it: `r_v -= b`, decreases
+        `r_v`, guard `r_v >= b` bounds `r_v` but never `b`'s sign, so
+        `r_v - b < r_v` genuinely needs `b > 0` from the invariant, not
+        the guard) -- answers True. digit_sum's own bare `m` (guard `m >
+        0`, body `m := m / 10`) is a MEASURED near-miss deliberately NOT
+        special-cased here: it happens to need no invariant fact (`m >
+        0` alone gives `m / 10 < m`), but nothing in this guard/decreases
+        SHAPE alone distinguishes it from div_ent_it's -- the two read
+        identically (a bare decreases variable, directly guard-bounded)
+        until the BODY's own update is inspected, so the cheap, body-
+        blind rule below answers True for both, uniformly, matching
+        digit_sum into the same (fully general, safe) domain-hyp path
+        div_ent_it needs rather than trying to tell them apart."""
+        guard, dec = w["cond"], w["decreases"]
+        conjuncts = (guard["args"]
+                    if isinstance(guard, dict) and guard.get("op") == "and"
+                    else [guard])
+        for g in conjuncts:
+            if not (isinstance(g, dict) and g.get("op") in CMP_OPS):
+                continue
+            ga, gb = g["args"]
+            if not (isinstance(dec, dict) and dec.get("op") == "-"):
+                continue
+            a, b = dec["args"]
+            if g["op"] in ("<", "<=") and (a, b) == (gb, ga):
+                return False
+            if g["op"] in (">", ">=") and (a, b) == (ga, gb):
+                return False
+        return True
+
     # LOOP: one top-level while; invariants become the hypotheses of a
     # recursive helper theorem (the induction hypothesis, literally).
     def lower_loop(self, wf_k: int) -> tuple[str, list]:
@@ -3063,12 +3397,165 @@ class Lower:
         pb = self.binders(params_nt)
 
         invs = w.get("invariants", [])
+        # THE DOMAIN HYPOTHESIS (2026-09-10, "THE 14 LOOP-TASK RESIDUAL",
+        # this file's own dated note below): `_t_loop`'s bare recursive
+        # definition previously carried only the guard (`_hg`) into its own
+        # `decreasing_by` -- never `requires` or the loop's own invariants
+        # -- so a `decreases` idiom whose well-foundedness genuinely needs
+        # an invariant fact (not just the guard) was a FALSE termination
+        # goal as lowered, not an under-searched one. Fixed by threading
+        # `hpre`/`hinv1..N` through as explicit parameters of `_t_loop`
+        # itself (and, since establishing them at entry needs `hpre`, of
+        # `_t` too), mirroring the RECURSIVE shape's own existing
+        # convention (`lower_rec`'s `hpre_def`): the same two proof
+        # obligations `_t_loop_spec`/`_t_spec` already discharge (entry
+        # establishment, preservation across one step), reused verbatim.
+        # GATED (2026-09-10, MEASURED as a regression, not a hunch):
+        # threading this unconditionally onto EVERY loop task broke
+        # three already-passing committed invariant-drop twins (reverse,
+        # min_max, linear_search) -- their own guard already bounds the
+        # measure (`_loop_needs_domain_hyp` reads False), so `_t_loop`
+        # never needed a real preservation proof of its own before,
+        # and forcing one made it demand a fact the twin's OWN dropped
+        # invariant carried (reverse: `len(r) = len(s)`, needed to
+        # bridge a `.set` read after the drop, genuinely absent from the
+        # surviving invariants -- a live, ground counterexample `r = []`,
+        # `s = [x]` satisfies every remaining hypothesis and refutes the
+        # goal, not a tactic gap), so `_t_loop`'s own definition failed
+        # to elaborate and its `sorryAx` poisoned the certificate that
+        # unfolds it (`t_refutation_certificate` itself audited
+        # `[sorryAx]`, UNPROVED not REFUTED). `needs_hyp` restricts this
+        # wave's whole mechanism to loop tasks whose OWN termination
+        # proof actually needs it, so every task the guard alone already
+        # covers keeps its exact prior `_t_loop`/`_t` text, byte-
+        # identical, immune to this failure mode by construction (a
+        # dropped invariant not threaded into `_t_loop` at all cannot
+        # be missed there).
+        needs_hyp = self._loop_needs_domain_hyp(w)
+        pre_hyps = self.pre_props()
+        has_pre = bool(pre_hyps) and needs_hyp
+        inv_props = [self.prop(iv, {}, types) for iv in invs]
+        hpre_p = f" (hpre : {self.pre_conj()})" if has_pre else ""
+        hinv_p = ("".join(f" (hinv{i + 1} : {p})"
+                          for i, p in enumerate(inv_props))
+                  if needs_hyp else "")
+        hpre_a = " hpre" if has_pre else ""
+        # SPEC.md "Pairs" (2026-09-10)'s own `n_top_ifs`/`split_tac`
+        # (below, at `_t_loop_spec`) computed early too: the recursive
+        # call's own per-invariant preservation proof (inside `_t_loop`'s
+        # definition, below) can hit the identical merged-if-updates shape
+        # `_t_loop_spec`'s own preservation step needed `repeat (all_goals
+        # split)` for (min_max's two top-level ifs) -- `rec_args`
+        # substituted into an invariant's own Prop can carry the same
+        # Lean `if`s a merged if-update produces, so the same guard
+        # applies here, not just at the theorem.
+        n_top_ifs = sum(1 for s in w["body"] if "if" in s)
+        split_tac = ("repeat (all_goals split)" if n_top_ifs >= 2
+                    else "repeat split")
+        # the entry-establishment proof, one per invariant, the same
+        # existential-witness fallback `_t_spec`'s own `init_pfs` below
+        # needs (measured on seq_max's own `∃ j ∈ [0,1)`, "Existential-
+        # invariant establishment" above): shared verbatim by `_t`'s own
+        # definition (below) and `_t_spec`'s proof term (`init_pfs`,
+        # further down), so both prove the identical goal the identical
+        # way, not two independently-written tactics that could drift.
+        init_hinv_pfs = []
+        for iv in invs:
+            if "exists" in iv:
+                lo0 = self.term(iv["exists"]["lo"], env0, types)
+                init_hinv_pfs.append(f"(by first | {self._gr()} | "
+                                     f"exact ⟨{lo0}, by {self._gr()}⟩)")
+            else:
+                init_hinv_pfs.append(f"(by {self._gr()})")
+        hinv_init_a = "".join(f" {p}" for p in init_hinv_pfs)
         guard_p = self.prop(w["cond"], {}, types)
         guard_d = self.dcond(w["cond"], {}, types)
         env_b, obs_body, ret_cond = self.sym(w["body"], {}, dict(types),
                                              state)
         has_return = ret_cond != "False"
         rec_args = " ".join(env_b.get(v, v) for v in state)
+        # THE HAVE-BINDING WORKAROUND (2026-09-10). Two DISTINCT Lean
+        # surprises, both measured directly on scratch probes before
+        # trusting either fix generically:
+        #
+        # (1) the natural rendering of the preservation proof -- one
+        # `(by tac)` term per invariant, tacked directly onto `_t_loop`'s
+        # own recursive self-call as extra arguments -- TYPECHECKS (a
+        # `def`'s recursive-call argument position accepts a `by` term
+        # like any other) but LEAVES THE GOAL UNSOLVED for a tactic that
+        # provably closes the IDENTICAL goal (same hypotheses, same
+        # conclusion) posed as a plain `example`/`theorem`. Isolated to a
+        # parser precedence bug, not the recursive position itself
+        # (measured: the same failure reproduces in a NON-recursive
+        # `def`, and in a `theorem`'s own tactic block): `by {split_tac};
+        # {gr}` on one line parses as `by ({split_tac}; {gr})`, not `by
+        # ({split_tac}); {gr}`, and `{split_tac}` (`repeat split`) has
+        # nothing to split for a plain arithmetic/div invariant goal, so
+        # it FAILS outright on its first attempt -- the compound `split;
+        # grind` then fails at that very first step, and `repeat` stops
+        # having run `grind` not even once, leaving the goal exactly as
+        # unsolved as it started. Fixed two ways together: binding each
+        # invariant's preservation proof as a `have` in the guard-true
+        # branch BEFORE the recursive call (`_hinv{i}'`), passing the
+        # bound NAMES rather than raw `by` terms as the call's own
+        # trailing arguments (mirrors `_t_loop_spec`'s own working `apply
+        # ... <;> gr` shape, generalized to term mode); and
+        # parenthesizing `{split_tac}` at every one-line `by` site.
+        #
+        # (2) an EXISTENTIAL invariant's own preservation (minimum's own
+        # `∃ i, ... ∧ m = a[i]`, a running-extremum witness) still fails
+        # after (1)'s fix, split or not: `grind` cannot find the new
+        # witness itself when the invariant's value expression is a
+        # merged if-update (`if a[n] < m then a[n] else m`) -- measured
+        # directly (a scratch probe matching minimum's own goal
+        # verbatim): plain `grind`, `split; grind`, and `split; all_goals
+        # grind` on the RAW (still-existential) hypothesis all fail the
+        # same way, but `obtain`-ing the witness out of the OLD
+        # existential invariant FIRST (so its value is a concrete local
+        # rather than a bound `∃`) then splitting then grinding succeeds
+        # -- grind can chain a concrete witness (`n` on the update
+        # branch, the just-`obtain`ed old one on the skip branch) through
+        # E-matching once it is a plain local, not when it still has to
+        # invent one from an opaque `∃`. Every existential invariant's
+        # own grammar (`term()`'s "exists" case above) is exactly
+        # `∃ b, lo ≤ b ∧ b < hi ∧ body`, three conjuncts always, so the
+        # destructuring pattern is fixed shape (`⟨_, _, _, _⟩`, names
+        # discarded since `grind` reads the local context regardless of
+        # accessibility) -- applied to every invariant hypothesis that is
+        # itself existential, prepended to EVERY per-invariant `have`
+        # (harmless, not just the existential one's own: an unrelated
+        # `obtain` on a true hypothesis costs nothing and several
+        # invariants can legitimately need each other's witnesses).
+        # (3), found chasing (2)'s own fix: `{split_tac}` (`repeat
+        # split`) on minimum's merged if-update leaves TWO goals
+        # (isTrue, isFalse), and a bare `{gr}` after it only closes the
+        # FIRST -- the second reads unsolved, not because the tactic is
+        # too weak for it (the SAME `grind` closes it fine on its own,
+        # measured directly) but because nothing was ever asked to run
+        # on it. `all_goals {gr}` fixes it at either call shape (a
+        # `;`-chained one-liner or newline-sequenced); newline-sequenced
+        # is used here regardless, matching the multi-line tactic style
+        # the rest of this file already uses for anything past one step
+        # (`_t_loop_spec`'s own proof, just below).
+        if needs_hyp:
+            hinv_names = [f"_hinv{i + 1}'" for i in range(len(inv_props))]
+            obtain_lines = [f"obtain ⟨_, _, _, _⟩ := hinv{i + 1}"
+                            for i, iv in enumerate(invs) if "exists" in iv]
+            hinv_haves = "".join(
+                f"have {hinv_names[i]} : {self.prop(iv, env_b, types)} "
+                f":= by\n"
+                + "".join(f"      {ln}\n" for ln in obtain_lines)
+                + f"      {split_tac}\n"
+                f"      all_goals {self._gr()}\n    "
+                for i, iv in enumerate(invs))
+            hinv_call = "".join(f" {n}" for n in hinv_names)
+            rec_call = (f"{hinv_haves}{self.name}_t_loop {pnames} "
+                       f"{rec_args}{hpre_a}{hinv_call}")
+        else:
+            # the pre-existing, untouched shape: no domain hypothesis,
+            # so no preservation proof for `_t_loop`'s OWN definition to
+            # carry at all -- see `needs_hyp`'s own note above.
+            rec_call = f"{self.name}_t_loop {pnames} {rec_args}"
         dec = self.term(w["decreases"], {}, types)
         # LOOP TERMINATION MEASURE, +1 (2026-09-10): `_t_loop`'s bare
         # decreasing_by carries only the guard hypothesis (`_hg`), never
@@ -3120,26 +3607,28 @@ class Lower:
         # byte-identical to the pre-return lowering.
         if has_return:
             retval = env_b.get(self.ret, self.ret)
-            out = [f"def {self.name}_t_loop {pb} {sb} : "
+            out = [f"def {self.name}_t_loop {pb} {sb}{hpre_p}{hinv_p} : "
                    f"{self.lean_type(self.rett)} :=\n"
                    f"  if _hg : {guard_p} then\n"
                    f"    (if _hr : {ret_cond} then {retval}\n"
-                   f"     else {self.name}_t_loop {pnames} {rec_args})\n"
+                   f"     else\n"
+                   f"    {rec_call})\n"
                    f"  else {result}\n"
                    f"termination_by ({dec1}).toNat\n"
                    + self._dec(dec_needed)]
         else:
-            out = [f"def {self.name}_t_loop {pb} {sb} : "
+            out = [f"def {self.name}_t_loop {pb} {sb}{hpre_p}{hinv_p} : "
                    f"{self.lean_type(self.rett)} :=\n"
                    f"  if _hg : {guard_p} then\n"
-                   f"    {self.name}_t_loop {pnames} {rec_args}\n"
+                   f"    {rec_call}\n"
                    f"  else {result}\n"
                    f"termination_by ({dec1}).toNat\n"
                    + self._dec(dec_needed)]
         init_args = " ".join(env0[v] for v in state)
-        out.append(f"def {self.name}_t {pb} : "
+        out.append(f"def {self.name}_t {pb}{hpre_p} : "
                    f"{self.lean_type(self.rett)} :=\n"
-                   f"  {self.name}_t_loop {pnames} {init_args}\n")
+                   f"  {self.name}_t_loop {pnames} {init_args}"
+                   f"{hpre_a}{hinv_init_a if needs_hyp else ''}\n")
         thms = []
 
         # program-point definedness: (context) -> obligations
@@ -3209,7 +3698,10 @@ class Lower:
                         for i, p in enumerate(inv_props))
         hfrs = "".join(f"\n    (hfr{k + 1} : {v} = {env0[v]})"
                        for k, v in enumerate(frame))
-        applied_loop = f"({self.name}_t_loop {pnames} {snames})"
+        hinv_thm_a = ("".join(f" hinv{i + 1}" for i in range(len(inv_props)))
+                     if needs_hyp else "")
+        applied_loop = (f"({self.name}_t_loop {pnames} {snames}"
+                       f"{hpre_a}{hinv_thm_a})")
         # guard-true step: with a `return` (SPEC.md "Early exit",
         # 2026-09-08), `repeat split` also splits the new `_hr` dependent
         # if, giving one goal per outcome -- the continue case still
@@ -3261,21 +3753,15 @@ class Lower:
         thms.append((f"{self.name}_t_loop_spec",
                      "invariants -> ensures, by induction on the loop"))
 
-        # the contract: initial state satisfies the invariants
-        init_pfs = []
-        if has_pre:
-            init_pfs.append("hpre")
-        for iv in invs:
-            if "exists" in iv:
-                lo0 = self.term(iv["exists"]["lo"], env0, types)
-                init_pfs.append(f"(by first | {self._gr()} | "
-                                f"exact ⟨{lo0}, by {self._gr()}⟩)")
-            else:
-                init_pfs.append(f"(by {self._gr()})")
+        # the contract: initial state satisfies the invariants. Reuses
+        # `init_hinv_pfs` (computed once, above): the SAME per-invariant
+        # entry proof `_t`'s own definition already needed to build its
+        # own call to `_t_loop`, not re-derived here.
+        init_pfs = (["hpre"] if has_pre else []) + init_hinv_pfs
         for _v in frame:
             init_pfs.append("rfl")   # hfr at the entry state: v0 = v0
         hpre_thm = f" (hpre : {self.pre_conj()})" if has_pre else ""
-        applied = f"({self.name}_t {pnames})"
+        applied = f"({self.name}_t {pnames}{hpre_a})"
         out.append(
             f"theorem {self.name}_t_spec {pb}{hpre_thm} :\n"
             f"    {self.post_conj(applied)} := by\n"
@@ -3724,7 +4210,21 @@ class Lower:
         venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
                 for p in params}
         args = " ".join(tenv[p["name"]] for p in params)
-        if self._self_calls(self.body) and self.task.get("requires"):
+        # THE DOMAIN HYPOTHESIS (2026-09-10, `lower_loop`'s own dated
+        # note): `_t` now also takes `hpre` for a LOOP-shaped body with
+        # `requires`, but ONLY when `_loop_needs_domain_hyp` says the
+        # loop's own termination genuinely needs it (previously only the
+        # RECURSIVE shape's self-call case ever added an `hpre` param at
+        # all) -- so a loop task's own "value"-kind witness (a
+        # collapse-if/etc. twin whose loop still runs to a normal exit,
+        # min_max's own committed twin) needs the same ground `hpre`
+        # proof argument threaded here too, exactly when `_t`'s own
+        # definition carries the parameter to fill.
+        loop_w = next((s["while"] for s in self.body if "while" in s), None)
+        loop_needs = loop_w is not None and self._loop_needs_domain_hyp(loop_w)
+        if self.task.get("requires") and (
+                self._self_calls(self.body)
+                or (any("while" in s for s in self.body) and loop_needs)):
             applied = f"({self.name}_t {args} (by {self._closer()}))"
         else:
             applied = f"({self.name}_t {args})"
@@ -3783,8 +4283,24 @@ class Lower:
         if kind == "exit":
             parts.append((f"(¬{self.prop(guard, tenv, types)})",
                           self._refute(guard, tenv, venv, types)))
+            # THE DOMAIN HYPOTHESIS (2026-09-10, `lower_loop`'s own dated
+            # note): `_t_loop` takes `hpre`/`hinv1..N` as explicit
+            # parameters ONLY when `_loop_needs_domain_hyp` says so --
+            # ground proofs of exactly the requires/invariant clauses
+            # `parts` above already proves at this witness (an
+            # INVARIANT-DROP twin's exit state genuinely satisfies the
+            # SURVIVING invariants, or there would be no witness at
+            # all), reused verbatim as the extra arguments, when
+            # `_t_loop`'s own definition carries the parameters to fill.
+            needs_c = self._loop_needs_domain_hyp(wh)
+            hpre_c = (f" (by {self._closer()})"
+                     if needs_c and self.task.get("requires") else "")
+            hinv_c = ("".join(f" (by {self._prove(iv, tenv, venv, types)})"
+                              for iv in wh.get("invariants", []))
+                      if needs_c else "")
             applied = (f"({self.name}_t_loop "
-                       + " ".join(tenv[n] for n in params + state) + ")")
+                       + " ".join(tenv[n] for n in params + state)
+                       + hpre_c + hinv_c + ")")
             venv_post = dict(venv)
             if suffix:
                 interp.exec_body(suffix, venv_post, self.cert_funs,

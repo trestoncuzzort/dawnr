@@ -1008,6 +1008,116 @@ of these six tasks has a seq<seq>-typed name anywhere, so `typ()`'s
 new `at` branch, `seq_var`'s widened check, and every new rendering
 case above are reached by none of them, and the file's existing
 behaviour for a plain seq, a pair, or neither is unaffected.
+
+THE BUFFER-LENGTH GATE and THE INT-LITERAL GATE, both 2026-09-10, the
+tenth sweep's own residual (COVERAGE-lifted-785.md, "Sole blockers"):
+framac was the only column keeping 11 lifted-785 tasks out of the
+seven-kernel bar, six `verified / malformed`, two `verified / unproved`,
+one `verified / timeout`, two `abstain / abstain`. Measured against each
+task's own twin file before touching anything, not assumed from the
+category label.
+
+THE BUFFER-LENGTH GATE fixes the six malformed tasks (double_array_
+elements, replace, cmsc433's reverse, cubes, incrementArray, absIt), all
+a fill/self-update seq return (EXACT mode, `_seq_len_track` resolves
+`{ret}_n` to a closed form over params) whose `exit`-kind twin witness
+(`interp.invariant_witness` dropping the task's own `len(ret)==len(...)`
+invariant) sets the return's length to something other than the C
+encoding's own `requires`-pinned value (double_array_elements: `s=[0]`
+but witness `s_out=[]`, i.e. length 0 against `requires s_out_n ==
+s_n == 1`). MEASURED (frama-c's own `-wp-report-json`, not inferred):
+all six read `39/39`-shaped goal counts, certificate declared AND
+accepted, MALFORMED via `verifiers/framac.py`'s coherence gate -- because
+`{ret}_n` is fixed once at call entry in this encoding, never loop
+state, `ensures {ret}_n == <len-expr>` is provable from `requires` alone
+regardless of which loop invariant the twin dropped, so the WHOLE twin
+verifies alongside the certificate: two accepted contradictions, refuting
+nothing. Forcing the certificate's declared length to match `requires`
+instead of the witness (tried first) does not produce REFUTED either: it
+makes the certificate's own final assert unprovable (the surviving
+content invariants plus `requires` already entail `ensures` at every
+length-consistent exit, on every task measured), moving the cell to
+`verified / unproved`, not `verified / refuted` -- REFUTED is genuinely
+unreachable here, the mutation is a C-level no-op, same shape as the
+`preservation` witness kind's own already-documented gap. `_exit_
+certificate` (new: `_cert_ground_len`, re-deriving the witness's pinned
+length the SAME way `lower()` does via `_seq_len_track`) now DECLINES
+the certificate the moment the witness disagrees with that pinned
+length, rather than emit one this adapter can only read as MALFORMED.
+MEASURED after the fix, same six files, frama-c re-run: all six now read
+`verified / verified` (real and twin C are, and remain, byte-identical
+to before this fix -- diffed -- only the twin's certificate function
+is now absent). Not the hoped `verified / refuted` -- honestly
+unreachable, as measured above -- but out of MALFORMED and no longer
+carrying a certificate this adapter cannot back soundly. CAPACITY mode
+(filter_pos's own shape, length IS real loop state there) is untouched
+by construction: the gate only fires when `_seq_len_track` resolves an
+EXACT-mode length for the return at all, confirmed by relowering
+filter_pos itself, byte-identical, still `verified / refuted`.
+
+THE INT-LITERAL GATE fixes the two unproved tasks (both named `main_v`,
+one dataset_C, one Generated_Code, byte-identical bodies): an `exit`
+witness with `k = 2147483647` (INT_MAX) and `j = k + 1 = 2147483648`,
+declared verbatim as `int j = 2147483648;` in the certificate. MEASURED
+(a two-line probe, `int j = 2147483648; /*@ ensures \result ==
+2147483648 */`): frama-c's C front-end types a decimal literal that
+overflows `int` as the next type that fits (`long`), and initializing
+`int j` from it is a narrowing conversion WP's own normalization does
+NOT treat as the identity -- `[Stepout]` on a goal named `typed_nat_
+..._ensures`, the exact shape that read both certificates' own
+`typed_nat_t_certificate_assert` UNPROVED. This is a C LITERAL typing
+fact, unrelated to THE SEMANTIC LINE's own -wp-rte/Typed+nat arithmetic
+point above: an EXPRESSION built from two in-range literals carries no
+such restriction (MEASURED, same probe: `int j = 2147483647 + 1;` scores
+`4/4`, Qed, `\result == 2147483648` proved outright). Fixed by `_int_lit`
+(new), which renders any ground int as a plain decimal when it fits
+`int`'s 32-bit range and as a recursive `(INT_MAX + (...))` /
+`(INT_MIN - (...))` sum otherwise, applied at all four sites this file
+declares a ground int from a witness (`_value_certificate`'s param and
+local loops, `_undef_certificate`'s param and replay-local loops,
+`_exit_certificate`'s plain-int case). MEASURED: both tasks now read
+`verified / refuted`, kernel-accepted certificate, `t_certificate`. The
+other three certificate builders' own literal declarations were not
+separately exercised by any measured witness (none in the 23-task
+committed regression or the eight lifted tasks above hits an out-of-
+range ground int through them), so this is a general robustness fix
+applied uniformly rather than four separately-measured ones; in-range
+values (everything previously measured) render byte-identically
+(`_int_lit` is `str(n)` unchanged whenever `n` fits `int`), confirmed by
+the regression below.
+
+MEASURED, the regression bar (RULES): all 23 committed tasks (t/tasks/
+*.json), framac column, relowered (real and twin) via `harness.run_task`
+and diffed/re-verified against the pre-fix lowering. 20 read `verified /
+refuted` before and after, byte-identical real AND twin C (abs,
+all_nonneg, contains, count_matches, digit_sum, divmod_pair, factorial,
+fib, filter_pos, first_even, gcd, is_prime, linear_search, max, min_max,
+remainder, row_max_len, seq_max, sum_upto, swap, tail); swap_rows reads
+its own already-documented ABSTAIN unchanged (a seq<seq> RETURN, a
+different construct's named refusal, untouched by either gate). `reverse`
+moves `verified / malformed` -> `verified / verified`: the SAME buffer-
+length mismatch as the six lifted tasks above (`invariant-drop#1` twin,
+witness `a=[], r=[0]`), previously accepted into the committed matrix as
+a documented MALFORMED cell (the seq-value wave's own dated note),
+correctly caught by the same gate -- same root cause, same fix, one cell
+better, zero cells worse.
+
+MEASURED, the eight targeted lifted-785 tasks: six MALFORMED -> VERIFIED
+(honest `verified / verified`, THE BUFFER-LENGTH GATE); two UNPROVED ->
+`verified / refuted`, COUNTING (THE INT-LITERAL GATE). Real programs
+byte-identical to before both fixes on all eight, diffed. The remaining
+three of the eleven "Sole blockers" were left alone, as scoped: the two
+`abstain / abstain` tasks (factorialOfLastDigit, ghost/Triple) both
+refuse on "spec_fun call in executable position" -- a real, substantial
+feature gap (a recursive ACSL logic function has no C counterpart to
+call from executable code; would need its own real C function mirroring
+the spec_fun, not a small gap), unrelated to either gate here and left
+untouched; the one `verified / timeout` (PVS/ex07_Hoangkim's swap)
+carries an `undefined`-kind (off-by-one) twin, not `exit`, so neither
+gate's own code path is ever reached for it (confirmed: relowered,
+byte-identical to before, still timeout, budget exhausted on the real
+function's own `typed_nat_..._8`/`..._9` goals -- a different, harder
+cause this pass did not touch, per RULES).
 """
 from __future__ import annotations
 
@@ -3391,8 +3501,7 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                              f"(struct {psname}){{{a0}, {b0}}};")
                 st[p["name"]] = v
             else:
-                decls.append(f"  int {p['name']} = "
-                             f"{int(v) if isinstance(v, bool) else v};")
+                decls.append(f"  int {p['name']} = {_int_lit(int(v))};")
                 st[p["name"]] = v
         _, dec = assigned_names(twin_body)
         names = [ret] + [d for d in dec if d != ret]
@@ -3544,8 +3653,7 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                 decls.append(f"  int *{p['name']} = {arr};")
                 decls.append(f"  int {p['name']}_n = {len(vals)};")
             else:
-                decls.append(f"  int {p['name']} = "
-                             f"{int(v) if isinstance(v, bool) else v};")
+                decls.append(f"  int {p['name']} = {_int_lit(int(v))};")
         ifuns = interp.funs_of(task, twin_body)
         st = interp.St()
         found = None
@@ -3567,8 +3675,7 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
             if "var" in s:
                 ctx = ctx.bind(nm, ty)
             env_py[nm] = val
-            decls.append(f"  int {nm} = "
-                         f"{int(val) if isinstance(val, bool) else val};")
+            decls.append(f"  int {nm} = {_int_lit(int(val))};")
         if found is None:
             return None
     except (interp.Undef, interp.Budget, RecursionError, KeyError,
@@ -3623,6 +3730,63 @@ def _loop_suffix(body: list, loop: dict) -> list | None:
     return None
 
 
+_INT32_MIN, _INT32_MAX = -2147483648, 2147483647
+
+
+def _int_lit(n: int) -> str:
+    """A C integer-constant EXPRESSION guaranteed to evaluate (under
+    WP's mathematical, non-`-wp-rte` arithmetic, THE SEMANTIC LINE above)
+    to exactly `n`, for `n` a plain Python int of any size. Added
+    2026-09-10 (THE INT-LITERAL GATE, below). A bare `str(n)` is correct
+    and unchanged for `n` in `int`'s own 32-bit range; outside it, a raw
+    decimal token is unsafe REGARDLESS of WP's math model, because a
+    literal that does not fit `int` is a C FRONT-END typing fact (the
+    literal is typed as the next integer type that fits, `long` here,
+    before WP ever sees an expression to reason about mathematically),
+    and initializing an `int` from it goes through an implicit narrowing
+    conversion Frama-C's own normalization does not treat as the identity
+    (MEASURED, probe2.c: `int j = 2147483648;` with `ensures \\result ==
+    2147483648` scores `[Stepout]` on the goal `typed_nat_..._ensures`,
+    the exact shape that read the two lifted `main_v` tasks' certificates
+    UNPROVED, `typed_nat_t_certificate_assert`). The fix decomposes `n`
+    into a sum/difference of in-range literals instead: `2147483647 + 1`
+    for `n = 2147483648`, MEASURED (same probe, same `ensures`) to score
+    `4 / 4`, Qed -- an ordinary C `+` expression carries no such front-end
+    typing restriction, and WP's own arithmetic on it is exactly the
+    mathematical rule THE SEMANTIC LINE already documents. Recursive so
+    no single step's magnitude ever needs to exceed `INT32_MAX`."""
+    if _INT32_MIN <= n <= _INT32_MAX:
+        return str(n)
+    if n > _INT32_MAX:
+        return f"({_INT32_MAX} + ({_int_lit(n - _INT32_MAX)}))"
+    return f"({_INT32_MIN} - ({_int_lit(_INT32_MIN - n)}))"
+
+
+def _cert_ground_len(e: dict, w: dict):
+    """Ground-evaluate a length Expr in the shape `_expr_seq_len`/
+    `_seq_len_track` produce (`len(var)`, an `int` literal, or `+`/`-` of
+    such) against a witness dict, or None when a leaf name is not in `w`
+    (or not a list there). Used only by THE BUFFER-LENGTH GATE below to
+    check a witness against the C encoding's own pinned length, never to
+    render anything."""
+    if "int" in e:
+        return e["int"]
+    op = e.get("op")
+    if op == "len":
+        v = e["args"][0]
+        if "var" in v:
+            val = w.get(v["var"])
+            return len(val) if isinstance(val, list) else None
+        return None
+    if op in ("+", "-") and "args" in e:
+        a = _cert_ground_len(e["args"][0], w)
+        b = _cert_ground_len(e["args"][1], w)
+        if a is None or b is None:
+            return None
+        return a + b if op == "+" else a - b
+    return None
+
+
 def _exit_certificate(task: dict, twin_body: list, w: dict,
                       env: dict, funs: dict, used: set) -> str | None:
     """The certificate for an `exit`-kind witness (`interp.invariant_
@@ -3636,7 +3800,63 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
     declare-a-ground-array-or-int shape `_value_certificate` already uses
     for params -- and `_cert_stmts` (unmodified) replays only the twin's
     mutated loop onward. See `_loop_suffix` for the one scope limit
-    (top-level loops only)."""
+    (top-level loops only).
+
+    THE BUFFER-LENGTH GATE, added 2026-09-10. A seq RETURN's length is not
+    loop state in this C encoding (THE ENCODING, above `assigned_names`):
+    EXACT mode pins `requires {ret}_n == <len-expr over params>` ONCE, at
+    call entry, so `{ret}_n` cannot vary across the function body at all,
+    let alone across one loop's iterations. `interp.invariant_witness`
+    does not know this -- it works over t's own AST, where `len(ret)` is
+    an ordinary piece of loop state exactly as droppable as any other
+    invariant conjunct -- so when the dropped invariant is (or implies) a
+    length-equality fact, the ladder can return an `exit` witness whose
+    seq-return length disagrees with the params' own pinned length (
+    MEASURED on six lifted tasks, all fill/self-update seq returns, e.g.
+    double_array_elements: `s=[0]` but the witness's `s_out=[]`, i.e.
+    `s_out_n=0` against the encoding's own `requires s_out_n == s_n == 1`).
+    Declaring that witness as ground C locals (the plain path below) is
+    not merely imprecise, it is UNSOUND: the resulting `s_out_n` never
+    varies with the loop's own guard in the real function AT ALL, so
+    `ensures {ret}_n == <len-expr>` is provable from `requires` alone,
+    independent of whatever loop invariant was dropped -- the WHOLE
+    twin's own contract then verifies in full alongside the certificate,
+    and `verifiers/framac.py`'s coherence gate correctly refuses to mint
+    REFUTED from two accepted contradictions, reading the file MALFORMED
+    instead (measured: all six read `39/39` goals proved, certificate
+    accepted, MALFORMED). This is not this backend's bug to paper over by
+    forcing `{ret}_n` to match the pinned length instead: doing so was
+    tried, and it makes the certificate's own final assert UNPROVABLE
+    (once length is forced consistent, the surviving content invariants
+    plus `requires` already entail `ensures` at every admissible exit,
+    for every task measured), moving the cell to `verified / unproved`,
+    not `verified / refuted` -- because REFUTED is genuinely, structurally
+    unreachable here: a mutation that only the LENGTH invariant's C
+    rendering can express, and that rendering is a `requires`-time
+    constant, is a NO-OP mutation at the C level, same shape as the
+    `preservation` witness kind's own already-documented gap (see the
+    section note above). So this gate does the honest thing instead:
+    check the witness's seq-RETURN length against the SAME `_seq_len_
+    track` computation `lower()` uses to pin `requires {ret}_n == ...`,
+    and DECLINE (return None, the same signal every other unbuildable
+    certificate in this file already uses) the moment they disagree,
+    rather than emit a certificate `verifiers/framac.py` can only read as
+    MALFORMED. A decline here means no certificate function is added at
+    all, and the twin file the caller already had before this gate
+    (identical real/twin C, one dropped loop-invariant line) is exactly
+    what MEASURED as fully VERIFIED on all six tasks: the honest reading
+    becomes `verified / verified` ("the twin is broken on this witness
+    and the kernel accepted it anyway" is not even true here -- the
+    kernel is RIGHT that the twin verifies, because at the C level it
+    really does compute what the real function computes; the twin's own
+    weakness is invisible to this encoding), moving the cell out of
+    MALFORMED without pretending to a REFUTED this gate cannot honestly
+    back. CAPACITY mode (`ret` absent from `_seq_len_track`'s own `lens`,
+    filter_pos's own shape) is untouched: its length IS real loop state
+    (a fresh local, `ctx.seq_len`), so an `exit` witness disagreeing with
+    it is exactly the kind of thing this gate exists to let through, and
+    filter_pos's own committed `verified / refuted` cell (byte-identical
+    C, diffed) confirms this branch never fires for it."""
     if w.get("_kind") != "exit":
         return None
     if CERT_FN in used or CERT_GOAL in used:
@@ -3648,6 +3868,17 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
     if suffix is None:
         return None
     names = {k: v for k, v in w.items() if not k.startswith("_")}
+    ret0 = task["returns"][0]
+    if ret0["type"] == "seq" and ret0["name"] in names \
+            and isinstance(names[ret0["name"]], list):
+        lens = {p["name"]: {"op": "len", "args": [{"var": p["name"]}]}
+                for p in task["params"] if p["type"] == "seq"}
+        _seq_len_track(twin_body, lens)
+        pinned = lens.get(ret0["name"])
+        if pinned is not None:
+            want = _cert_ground_len(pinned, names)
+            if want is not None and want != len(names[ret0["name"]]):
+                return None            # THE BUFFER-LENGTH GATE, see above
     ctx_env = dict(env)
     decls, st = [], {}
     for n, v in names.items():
@@ -3704,7 +3935,7 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
             ctx_env[n] = "bool"
             st[n] = v
         else:
-            decls.append(f"  int {n} = {v};")
+            decls.append(f"  int {n} = {_int_lit(v)};")
             ctx_env[n] = "int"
             st[n] = v
     ctx = Ctx(ctx_env, funs, ret=None, label="Here")
