@@ -40,6 +40,7 @@ if str(HERE) not in sys.path:
 
 import harness                      # noqa: E402
 from verifiers import Outcome, cell_pair, sha256_file, mp_context   # noqa: E402
+import blockers                     # noqa: E402  (the sole-blocker section, ROADMAP WS-19 move 4)
 
 BACKENDS = [
     ("dafny", "lower_dafny", "dfy"),
@@ -191,6 +192,8 @@ def format_table(cols, rows, tasks, out_dir: Path) -> str:
              ""]
     header = "| task | " + " | ".join(b for b, _ in cols) + " |"
     lines += [header, "|" + "---|" * (len(cols) + 1)]
+    col_names = [b for b, _ in cols]
+    cell_rows: dict[str, dict[str, str]] = {}   # the same cell text, for blockers.render_section below
     for tname, cells in rows.items():
         row = [tname]
         for bname, _ in cols:
@@ -198,6 +201,7 @@ def format_table(cols, rows, tasks, out_dir: Path) -> str:
             row.append("—" if c is None else
                        f"{c[0]} / {c[1]}" + ("" if c[2] else " (FLAKED)"))
         lines.append("| " + " | ".join(row) + " |")
+        cell_rows[tname] = dict(zip(col_names, row[1:]))
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
     lines += ["", f"Kernels present: {len(present_names)} of {len(cols)} "
               f"({', '.join(present_names) if present_names else 'NONE'})"]
@@ -213,6 +217,9 @@ def format_table(cols, rows, tasks, out_dir: Path) -> str:
                   f"`{exn}.rs` {sha256_file(out_dir / f'{exn}.rs')[:16]}…"]
     else:
         lines += ["", "Verdict basis: every source file hashed."]
+    # ROADMAP WS-19 move 4: the sole-blocker count, over the cell text just
+    # built above, no second parse of the table this function is writing.
+    lines += ["", blockers.render_section(col_names, cell_rows).rstrip("\n")]
     return "\n".join(lines) + "\n"
 
 

@@ -363,3 +363,41 @@ zero-obligation shape F* discharges by definitional equality that its
 verifier reads as malformed (20 rows, a counting rule, not a lowering
 gap); and the per-column sole-blocker count WS-19 move 4 adds to this
 table next.
+
+## Sole blockers
+
+| kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
+|---|---|---|---|
+| lean | 27 | 74 | clover_cal_sum__sum, clover_is_even__computeIsEven, clover_linear_search1__linearSearch, cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1, dafny_learn_tmp_tmpn94ir40q_r01_assertions__max, dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum, dafny_synthesis_task_id_304__elementAtIndexAfterRotation, dafny_synthesis_task_id_396__startAndEndWithSameChar, dafny_synthesis_task_id_406__isOdd, dafny_synthesis_task_id_600__isEven, dafny_synthesis_task_id_637__isBreakEven, dafny_synthesis_task_id_77__isDivisibleBy11, dafny_synthesis_task_id_79__isLengthOdd, dafny_synthesis_task_id_801__countEqualNumbers, dafny_tmp_tmpmvs2dmry_slowmax__slow_max, dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__cube, dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_cube__cube, dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum, dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod, dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum, m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre, program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI, se2011_tmp_tmp71eb82zt_ass1_ex4__eval, tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it |
+| fstar | 19 | 43 | clover_avg__computeAvg, clover_return_seven__m, dafny_synthesis_task_id_127__multiply, dafny_synthesis_task_id_135__nthHexagonalNumber, dafny_synthesis_task_id_14__triangularPrismVolume, dafny_synthesis_task_id_171__pentagonPerimeter, dafny_synthesis_task_id_17__squarePerimeter, dafny_synthesis_task_id_264__dogYears, dafny_synthesis_task_id_266__lateralSurfaceArea, dafny_synthesis_task_id_268__starNumber, dafny_synthesis_task_id_279__nthDecagonalNumber, dafny_synthesis_task_id_432__medianLength, dafny_synthesis_task_id_441__cubeSurfaceArea, dafny_synthesis_task_id_458__rectangleArea, dafny_synthesis_task_id_581__squarePyramidSurfaceArea, dafny_synthesis_task_id_59__nthOctagonalNumber, dafny_synthesis_task_id_641__nthNonagonalNumber, dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions, program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one |
+| framac | 11 | 65 | clover_double_array_elements__double_array_elements, clover_replace__replace, cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse, dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes, dafny_synthesis_task_id_577__factorialOfLastDigit, dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v, dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v, dafny_verify_tmp_tmphq7j0row_test_cases_ghost__triple, final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap, seng2011_tmp_tmpgk5jq85q_p2__absIt |
+| rocq | 9 | 76 | clover_min_array__minArray, dafny_tmp_tmpv_d3qi10_2_min__minArray, dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess, m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum, mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR, program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo, seng2011_tmp_tmpgk5jq85q_flex_ex2__max, software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m3, software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__mystery1 |
+| verus | 5 | 68 | dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mfirstMaximum, dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1, dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax, dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax, formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns |
+| spark | 1 | 65 | programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss |
+| dafny | 0 | 11 | (none) |
+
+Of the 72 tasks in six, 27 are lean alone, 19 are fstar alone, 11 are framac alone, 9 are rocq alone, 5 are verus alone, 1 is spark alone.
+
+## Reading of the blockers (2026-09-10)
+
+Lean keeps the most tasks out of all seven alone: 27 of the 72 tasks that
+count in six, more than a third of the bucket, ahead of fstar's 19,
+framac's 11, rocq's 9, verus's 5 and spark's 1; dafny sole-blocks none.
+That is the order the sole-blocker count gives the coming kernel work:
+lean first, then fstar, then framac, then rocq, then verus, then spark,
+with dafny already clear of the six-of-seven bucket. Beside the ninth
+sweep's skeptic count on its 61 six-of-seven tasks (lean 21, fstar 19,
+framac 9, rocq 7, verus 5, spark 0), the tenth sweep's 72 read lean 27,
+fstar 19, framac 11, rocq 9, verus 5, spark 1: the same rank order,
+every count flat or up, fstar the one kernel unchanged, and spark's first
+entry into the bucket. Counted from the cells, lean's 101 blocking cells
+across the whole table split almost evenly between 32 unproved/unproved
+and 32 unproved/refuted, with 27 abstain/abstain close behind; fstar's 62
+split 22 unproved/refuted, 20 malformed/refuted and 11 abstain/abstain.
+The two kernels' largest classes differ in kind: lean's biggest blocks
+are the real side left unproved, matched either by a refuted twin or by
+an equally unproved one, plus the standing abstain/abstain pairs (the
+computational-boolean and bounded-quantifier gaps already named above);
+fstar's biggest single class, malformed/refuted, is the zero-obligation
+shape its own verifier reads as malformed, a counting rule and not a
+lowering gap, also already named above.

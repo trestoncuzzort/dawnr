@@ -1425,7 +1425,7 @@ Runs when move 2 has a model worth training toward, not before.
 own count from the ninth sweep: of the 61 six-of-seven tasks lean alone
 blocks 21, fstar 19, framac 9, rocq 7, verus 5, spark 0. A column in
 run_par's table and a per-column count in the Reading; the order of kernel
-work is lean, fstar, framac. First hurdle: none.
+work is lean, fstar, framac. First hurdle: none. DONE the same night: `t/blockers.py` reads any table in the committed format and computes, from the cells alone, each kernel's sole-blocker and co-blocker counts and the tasks it alone keeps out of all seven; run_par's format_table appends the block to every table (the grader inherits it), and the two committed tables carry it. The tenth sweep's numbers, beside the ninth's: of the 72 tasks in six, lean alone blocks 27 (21 of 61), fstar 19 (19), framac 11 (9), rocq 9 (7), verus 5 (5), spark 1 (0), dafny 0; lean's blocking cells are 32 unproved/unproved, 32 unproved/refuted and 27 abstains, fstar's 22 unproved/refuted, 20 malformed/refuted and 11 abstains. The order of kernel work stands: lean, fstar, framac.
 
 **5. The construct line, unchanged (survey moves 4, 5, 11; 12.7's own
 order).** Pairs landed the same day this was reordered (12.7), strings

@@ -38,3 +38,17 @@ Backends:
 - fstar: F* 2026.08.30 / platform=Linux_x86_64 / system=Unix / compiler=OCaml 5.3.0 / date=2026-08-30 16:26:18 +0000 / commit=2b82aefeff37f78509c876844954b07fcb8813ff
 
 Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `abs.rs` 750a8322fb7abf25…
+
+## Sole blockers
+
+| kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
+|---|---|---|---|
+| framac | 1 | 0 | reverse |
+| dafny | 0 | 0 | (none) |
+| verus | 0 | 0 | (none) |
+| spark | 0 | 1 | (none) |
+| lean | 0 | 0 | (none) |
+| rocq | 0 | 1 | (none) |
+| fstar | 0 | 0 | (none) |
+
+Of the 1 tasks in six, 1 is framac alone.
