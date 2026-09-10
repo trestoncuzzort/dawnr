@@ -11,8 +11,8 @@ fed back for several rounds) at the center of nearly every large gain measured t
 year, while spec-fidelity work shows the opposite: even the best autoformalizers
 solve full spec-equivalence proving under 2% of the time, and the newest calibrated
 fidelity probe still misses roughly a tenth of drifted specs it is asked to catch.
-t has one number nobody else in this search reports at all, forty-two DafnyBench-lifted
-tasks verified with a certified refutation of a mutant twin simultaneously in all
+t has one number nobody else in this search reports at all, 60 of 277 DafnyBench-lifted
+tasks (t/COVERAGE-lifted-785.md) verified with a certified refutation of a mutant twin simultaneously in all
 seven independent proof kernels, which is a structurally stronger anti-vacuity test
 than any softer signal (LLM judge, test-suite completeness score, semantic filter)
 the frontier uses in its place. t is two to five orders of magnitude behind the
@@ -250,10 +250,10 @@ already means something stricter than most of the frontier's "verified."
 
 **3. Corpus scale.** This is where t is furthest behind, by two to five
 orders of magnitude on every comparable published corpus. t's lifter has run
-204 to 209 DafnyBench methods (of a 785-program census, COVERAGE-lifted-785.md),
-with 42 verified-with-refuted-twin in all seven kernels and 61 in six. Its
-nl/ census covers 24,748 problems but only 511 of 4,239 function-shaped ones
-are in t's fragment today (12.1%, COVERAGE-nl.md), and only 698 of 20,509
+277 DafnyBench methods (of a 785-program census, COVERAGE-lifted-785.md),
+with 60 verified-with-refuted-twin in all seven kernels and 72 in six. Its
+nl/ census covers 24,748 problems but only 599 of 4,239 function-shaped ones
+are in t's fragment today (14.1%, COVERAGE-nl.md), and only 1,022 of 20,509
 stdin-shaped problems would enter once a signature is extracted. Against
 that: VeruSyn's Rust corpus is 6.9M verified programs; Vericoding is 12,504
 fidelity-checked tasks across three kernels; Formal Disco reports over 100,000
@@ -265,10 +265,10 @@ gap is real and large, and t names it as its own next hurdle (12.7's construct
 waves, the nl/ census's function-shaped tier) rather than disputing it.
 
 **4. Multi-verifier.** This is t's clearest lead, and the number nobody else
-reports: 42 of 204-209 lifted tasks verified with a refuted twin
+reports: 60 of 277 lifted tasks verified with a refuted twin
 simultaneously in all seven independent kernels (Dafny, Verus, SPARK, Frama-C
 WP, Lean 4, Rocq, F*), with a full per-kernel breakdown of every non-agreeing
-cell (AGREEMENT.md's 19-task fixture, at 18 of 19 in all seven; COVERAGE-lifted-785.md's
+cell (AGREEMENT.md's 23-task fixture, at 20 of 23 in all seven; COVERAGE-lifted-785.md's
 larger sweep). The frontier's widest comparable efforts are narrower:
 Vericoding spans three kernels with no requirement that the same task pass
 all three; VerifyThisBench targets seven backends (Dafny, Why3, VeriFast,
@@ -338,7 +338,7 @@ ROADMAP.md names IDE/editor support as a stated 1.0-bar goal, not yet built
 (surface syntax landed 2026-09-04 but is "wired into nothing on purpose").
 
 **Summary.** t leads on one axis nobody else has measured at all (seven-way
-joint kernel agreement with certified refutation, 42/204-209), and its twin
+joint kernel agreement with certified refutation, 60/277), and its twin
 mechanism is a structurally stronger anti-vacuity check than most of the
 frontier's LLM-judge or test-suite alternatives. It is behind on corpus
 scale, training-loop sophistication, and especially agentic repair, where
@@ -430,7 +430,7 @@ open-ended). What remains open: LIFTER-DECISIONS.md row 28 (mapping Dafny's
 carrying the new forms, and the nl/ census's next-largest gap after
 string-as-seq, `string-lib` (the Python string library itself: split, join,
 count, strip, format), which blocks 13,266 nl/ problems and is the sole
-blocker for 225 function-shaped ones (COVERAGE-nl.md). Evidence: t's own two
+blocker for 298 function-shaped ones (COVERAGE-nl.md). Evidence: t's own two
 censuses (DafnyBench and nl/) both ranked the string construct top before it
 landed; DafnyComp and AlgoVeri both show construct gaps compound
 superlinearly once composition is at stake, so closing this wave's loose
@@ -450,7 +450,7 @@ bypass of one, making this a candidate next wave rather than the roadmap's
 stated next step.
 
 **5. Extract a signature from stdin-shaped nl/ problems as a construct.**
-Build: 20,509 of 24,748 nl/ problems are stdin-shaped; 698 would enter
+Build: 20,509 of 24,748 nl/ problems are stdin-shaped; 1,022 would enter
 fragment today once a signature can be mechanically extracted from the
 input format (COVERAGE-nl.md), up from 361 before the sequence and string
 waves landed. This roughly doubles the addressable APPS/CodeContests slice
@@ -460,7 +460,7 @@ mostly unchanged once a signature exists. Evidence: FVAPPS
 mining existing test/IO structure into formal shape, not from hand-authoring;
 Vericoding's scale (12,504 tasks) came from exactly this kind of mechanical
 repurposing of existing corpora. Effect on t: nl/ fragment potentially grows
-past its current 511 function-shaped count without a single new value
+past its current 599 function-shaped count without a single new value
 construct. First hurdle: "signature from stdin" has to be defined as its
 own construct with a semantics and a census gate, per 12.7's discipline;
 today it is explicitly named as unmeasured.
@@ -505,9 +505,9 @@ residuals, not open-ended ones). Evidence: KVerus (arxiv.org/abs/2605.03822)
 shows a retrieval/lemma-bank approach specifically helps a verifier's
 weakest constructs; rocq's own `t_upd`/`t_fill` opaque-lemma pattern is
 already t's working template for exactly this kind of gap. Effect on t:
-spark is currently at 129 of 209 in the latest sweep (COVERAGE-lifted-785.md),
-behind dafny's 172; closing seq-equality alone should move a meaningful
-share of the 61 six-of-seven tasks that spark blocks into seven-of-seven.
+spark is currently at 172 of 277 in the latest sweep (COVERAGE-lifted-785.md),
+behind dafny's 231; closing seq-equality alone should move a meaningful
+share of the 72 six-of-seven tasks that spark blocks into seven-of-seven.
 First hurdle: spark's generic sequence type has no visible `=` without a
 `use` clause that changes every seq-parameter task's signature, a real
 language-design tradeoff that needs a decision recorded in SPEC.md before
@@ -571,7 +571,7 @@ against the paper, the effect is consistent with t's measured 42/209
 all-seven count, and the first hurdle is accurate and unresolved.
 
 **11. Finish MBPP-DFY to half (ROADMAP 16.2), t's own nearest-term benchmark
-hurdle.** Build: currently 42 of 164 lifted, 8 in all seven kernels (per the
+hurdle.** Build: currently 59 of 164 lifted, 9 in all seven kernels (per the
 latest sweep, up from 26 lifted/5 in all seven measured 2026-09-06); the
 DONE WHEN bar is 82 of 164 lifted and verified with a refuted twin in all
 seven. Evidence: Misu et al. (arxiv.org/abs/2402.00247), the paper this
@@ -587,9 +587,9 @@ the `L_inv_0`/`L_ens` checker lemma gaps on for-loop invariants and array
 quantifiers, string/cast/slice gaps).
 Verification: corrected: Misu et al.'s verify@5 64.04% and about-58%
 strong-postcondition figures are confirmed exactly, but the lifted count is
-stale (45 of 164, not 42, after the seq-ops wave landed; the all-seven
-count is still 8), and "fastest concrete win" overstates it: the all-seven
-bar has crawled (5 to 8 across five construct waves) against real named
+stale (59 of 164, not 42, after the seq-ops wave landed; the all-seven
+count is now 9), and "fastest concrete win" overstates it: the all-seven
+bar has crawled (5 to 9 across construct waves) against real named
 blockers, including an undesigned quantifier semantics and unclosed
 per-kernel limits, so expect easy lifted-count progress but a slow grind
 toward the all-seven bar.
@@ -814,7 +814,9 @@ own text.
 Counts: raw candidates 191, distinct titles 150, read in the first pass 60,
 kept after the critic's extra round and a second independent fetch-and-check
 pass on nearly every claim 80, dropped by the skeptics' verification (wrong
-paper, unconfirmed figure, or genuinely not found) about 20.
+paper, unconfirmed figure, or genuinely not found) about 20 (unwitnessed:
+these pipeline counts appear only in this prose; no external log or table
+records them).
 
 The extra round answered all eight of the critic's coverage gaps directly:
 SPARK and Frama-C automation is covered by seven dedicated 2026 reads (The

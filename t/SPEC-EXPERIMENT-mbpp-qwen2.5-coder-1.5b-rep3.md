@@ -40,7 +40,7 @@ Refusals, by named reason:
 - 2 x `wf: unbound var True`
 - 2 x `wf: unbound var nil`
 - 2 x `parse: line N: expected 'id', found 'seq'`
-- 1 x `parse: line N: expected ':=', found 'N'`
+- 1 x `parse: line N: expected ':=', found '10'`
 - 1 x `wf: call of unknown fun sum_divisors`
 - 1 x `parse: line N: expected ':=', found '='`
 - 1 x `parse: line N: expected ':=', found '['`

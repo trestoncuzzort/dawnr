@@ -41,7 +41,8 @@ reasoning are in this file's history.
 ## WS-7: The verifier gauntlet: multi-language verified pairs
 
 **BUILT 2026-08-31.** Seven kernels, 77 of 77 cells `verified / refuted`,
-zero flakes (`t/AGREEMENT.md`): Dafny 4.11.0, Verus 0.2026.08.30, GNATprove
+zero flakes (`t/AGREEMENT.md`, at the time; the table now carries 23 tasks,
+20 in all seven, 2026-09-10 05:52Z): Dafny 4.11.0, Verus 0.2026.08.30, GNATprove
 FSF 16.1.0, Frama-C 33.0 with alt-ergo 2.4.3-free, F* 2026.08.30, Lean
 4.33.1, Rocq 9.2.0, all installed without sudo from pinned hashed artifacts
 and witnessed in `t/WITNESS-2026-08-31-dell.md`. `t/run_par.py` runs the
@@ -80,9 +81,9 @@ the matrix below is post-correction.
 
 | Language | Toolchain (pin) | Tier | Verdict taxonomy | Determinism | Corpus (shippable core) | One-line risk |
 |---|---|---|---|---|---|---|
-| SPARK 2014 | GNATprove FSF 16.1.0 tarball (bundles Why3 1.8.2, Z3 4.15.4, cvc5, Alt-Ergo — no COLIBRI); `--prover=z3 --steps=N` | A | Five-way measured (13-probe matrix, independently re-run); exit codes ambiguous — classify from phase errors + per-unit `.spark` JSON; `.spark` distinguishes countermodel from gave-up | `--steps` deterministic; fully self-contained tarball with published per-platform sha256 — best pinning story of the nine | SPARKNaCl (BSD-3), SPARKlib (Apache-2.0), spark_unbound (MIT); 4,422-test GPL suite local-only | Permissive corpus is an order of magnitude smaller than DafnyBench |
-| Rust (Verus) | Verus release 0.2026.08.30.b432e82 (bundled Z3 4.16.0, Rust stable 1.97.1 via rustup) | A | Five-way measured via `--output-json` + rustc-JSON stderr; exit 0/1 only; rlimit-exhaustion hides inside the errors count — split by message text | `--rlimit` budget; `VERUS_Z3_PATH` + on-by-default solver-version check; every JSON run self-reports version/commit/toolchain | All-MIT: vstd, human-eval-verus (167 tasks; exclude `tasks/gpt/`), AutoVerus benchmarks, anvil, verified-storage | `assume`/`admit`/`external_body` verify anything at exit 0 — lexical ban on both halves, counted not dropped |
-| F* | Official binary v2026.08.30 pinned per corpus; bundled Z3 4.13.3 via `--smt` + `--z3version`; `--report_assumes error` WITHOUT `--cache_off` (composed combination measured to fail every file — Prims' own axioms trip it) | A | Five-way measured incl. an end-to-end pair demo (7 flips + 1 survivor from one ulib file); both failure classes exit 1 — parse JSON diagnostics (19=refuted, 168/resolution=malformed, 335=vacuity); timeout shares error 19, split by message text | Same Z3 rlimit mechanism as Dafny (`--z3rlimit`×500k units), `--z3seed`, native `--quake` flake checker; three bundled Z3s make pinning mandatory | ulib+examples, HACL*, EverParse, steel, everquic (all Apache-2.0); FStarDataSet-V2 (CDLA-P-2.0, 54.4k definitions) | Frequent releases break corpora (FStar.Mul removed ~2026-04, not August) — F* version pinned per corpus, cross-version pairs never mixed |
+| SPARK 2014 | GNATprove FSF 16.1.0 tarball (bundles Why3 1.8.2, Z3 4.15.4, cvc5, Alt-Ergo — no COLIBRI); `--prover=z3 --steps=N` | A | Five-way measured (13-probe matrix, independently re-run; unwitnessed beyond this table and its introducing commit, no separate results file states the probe count); exit codes ambiguous — classify from phase errors + per-unit `.spark` JSON; `.spark` distinguishes countermodel from gave-up | `--steps` deterministic; fully self-contained tarball with published per-platform sha256 — best pinning story of the nine | SPARKNaCl (BSD-3), SPARKlib (Apache-2.0), spark_unbound (MIT); 4,422-test GPL suite local-only (unwitnessed count, no separate file states it) | Permissive corpus is an order of magnitude smaller than DafnyBench |
+| Rust (Verus) | Verus release 0.2026.08.30.b432e82 (bundled Z3 4.16.0, Rust stable 1.97.1 via rustup) | A | Five-way measured via `--output-json` + rustc-JSON stderr; exit 0/1 only; rlimit-exhaustion hides inside the errors count — split by message text | `--rlimit` budget; `VERUS_Z3_PATH` + on-by-default solver-version check; every JSON run self-reports version/commit/toolchain | All-MIT: vstd, human-eval-verus (167 tasks, unwitnessed corpus-size figure beyond this table; exclude `tasks/gpt/`), AutoVerus benchmarks, anvil, verified-storage | `assume`/`admit`/`external_body` verify anything at exit 0 — lexical ban on both halves, counted not dropped |
+| F* | Official binary v2026.08.30 pinned per corpus; bundled Z3 4.13.3 via `--smt` + `--z3version`; `--report_assumes error` WITHOUT `--cache_off` (composed combination measured to fail every file — Prims' own axioms trip it) | A | Five-way measured incl. an end-to-end pair demo (7 flips + 1 survivor from one ulib file, unwitnessed beyond this table); both failure classes exit 1 — parse JSON diagnostics (19=refuted, 168/resolution=malformed, 335=vacuity); timeout shares error 19, split by message text | Same Z3 rlimit mechanism as Dafny (`--z3rlimit`×500k units), `--z3seed`, native `--quake` flake checker; three bundled Z3s make pinning mandatory | ulib+examples, HACL*, EverParse, steel, everquic (all Apache-2.0); FStarDataSet-V2 (CDLA-P-2.0, 54.4k definitions, unwitnessed beyond this table and the HuggingFace listing's own size) | Frequent releases break corpora (FStar.Mul removed ~2026-04, not August) — F* version pinned per corpus, cross-version pairs never mixed |
 | C (ACSL/Frama-C WP) | Frama-C 33.0 + Why3 1.8.2; Z3 (MIT) primary with alt-ergo-free 2.4.3 secondary — NOT opam `alt-ergo` 2.6.3, which is OCamlPro non-commercial; frozen why3.conf, `-wp-no-why3-detect` | A | Documented-measured, not yet executed: verdict lives only in `-wp-report-json` (exit 0 with unproved goals); `failed`=prover error→TOOL_ERROR, `invalid`=model-backed refutation, `unknown`=REFUTED, `stepout` distinct | `-wp-steps` is an explicitly machine-independent budget with its own verdict; pin `-wp-timeout` AND `-wp-smoke-timeout` (both default 2s wall) | ACSL by Example (MIT, maintained, targets 33.0); x509-parser BSD arm and Contiki-NG modules need porting | Three default-flag traps + the most fragile no-sudo install (opam `--disable-sandboxing`, source-built GMP, pre-existing gcc required) |
 | Lean 4 | elan-pinned 4.33.1 (post-soundness-fix) + mathlib olean cache; leanprover-community/repl for throughput (Kimina server is stale and pins pre-fix v4.26.0 — do not adopt as-is) | A | Five-way measured + INCOMPLETE for holes; exit 0 ≠ verified (`hasSorry` gate, `#print axioms` allowlist); parse errors carry kind `[anonymous]` — text-match with parse-precedence, never kind-only | No SMT — architectural; `-DmaxHeartbeats` deterministic budget, but in-file `set_option` overrides the CLI (measured) — denylist required in v1 | mathlib4 (286k theorems), Compfiles, Lean Workbook, Batteries — all Apache-2.0 | Per-variant cost 10–100× Dafny without a resident-environment REPL; monthly toolchain churn invalidates receipts |
 | Rocq (Coq) | opam `rocq-core.9.2.0` + `rocq-stdlib.9.2.0` (`rocq-prover.9.2.0` does not exist) + `rocq-mathcomp-boot.2.6.0` | A | Three-pass measured: `-vos` fail→MALFORMED, full compile fail→REFUTED, `rocqchk` axiom scan→VACUOUS vs VERIFIED (parse `* Axioms: <none>` — the section is always printed; rocqchk exits 0 even with axioms) | Architectural — no solver, 5/5 identical verdicts; only wall backstop is nondeterministic | MathComp core/fourcolor/odd-order (CeCILL-B), Iris/std++ (BSD-3); **analysis is CeCILL-C — local-only**; stdlib LGPL local-only | Ubuntu opam route hard-requires gcc (unconfirmed on the Dell) + `--disable-sandboxing`; per-corpus loadpath engineering |
@@ -528,8 +529,8 @@ subset of DafnyBench, 82 of its 164 programs, lifts into t and is VERIFIED
 by all seven kernels with its twin REFUTED, published beside AGREEMENT.md
 and reproduced from clean scratch by an adversarial reader per 10.4.
 Deliberately the measured coverage, not the lexical one, which is why 12.1
-came before everything else; the lexical count for that subset today is 25
-of 164 (COVERAGE-dafnybench.md, family table). USABILITY, added 2026-09-05
+came before everything else; the lexical count for that subset today is 131
+of 164 (COVERAGE-mbpp-dfy.md, family table). USABILITY, added 2026-09-05
 when Treston set the bar at "fully usable in an IDE", with people coding in
 Visual Studio and in VS Code: a person with a fresh checkout opens a `.t`
 file in VS Code on Linux and on Windows, and in Visual Studio on Windows,
@@ -586,9 +587,11 @@ would hit fstar's uppercase-initial refusal.
 
 ### 12.3 The twins that verified: PARTIAL 2026-09-05, the decision is 13.3
 
-`fuzz_lower` reports real-VERIFIED cells whose twin came back VERIFIED (16
-lean, 16 rocq, 14 dafny, 14 spark, 13 verus, 9 fstar, 6 framac when
-opened), each either a witness that does not witness or a vacuity probe
+`fuzz_lower` reports real-VERIFIED cells whose twin came back VERIFIED (88
+cells in aggregate, commit 05b67b7; the seven-way per-kernel breakdown of
+16 lean, 16 rocq, 14 dafny, 14 spark, 13 verus, 9 fstar, 6 framac quoted
+here is unwitnessed, no committed table or run output states it
+separately from this prose), each either a witness that does not witness or a vacuity probe
 that missed, and the only open item touching a claim already published in
 AGREEMENT.md. One defect fixed: the ladder accepted a twin on a witness
 showing only that real and twin compute different VALUES, which does not
@@ -680,7 +683,9 @@ factored out for this) and discharged by `assert_norm`, and the adapter
 mints REFUTED only when a targeted `--admit_except` run accepts that one
 lemma. Measured: all 11 committed twins refute through it, the 77-cell
 matrix is IDENTICAL to the committed one (zero cells changed, so the door
-closed at no cost in flips), and all four decoys behave (a real carrying a
+closed at no cost in flips; unwitnessed as a separate regression check,
+no commit or table states this specific 11-twins/77-cell result apart
+from this prose), and all four decoys behave (a real carrying a
 true certificate reads MALFORMED, a twin carrying a false one reads
 UNPROVED). Re-run below.
 
@@ -836,10 +841,11 @@ proved lemmas in rocq; spark's obvious `X mod abs(Y)` form and framac's
 exact-division form both timed out on the law and were replaced by a
 sign-corrected form that proves). Two committed tasks carry the flip
 table: `remainder` (the law as its ensures) reads verified/refuted in all
-seven; `digit_sum` in six with framac's loop-twin timeout; the eleven old
+seven; `digit_sum` in six with framac's loop-twin timeout (now verified /
+refuted in all seven, `t/AGREEMENT.md`, 2026-09-10 05:52Z); the eleven old
 rows of AGREEMENT.md are byte-identical. Ground truth: `truth_fuzz.py` 407
 tasks, REFUTES-TRUE 0; fuzz family `v1divmod` 0 disagreements, 0 against
-truth; four probes as read in `t/COVERAGE-lifted-785.md`. Lifter: 28
+truth; four probes (`t/COVERAGE-lifted-785.md` never mentions a probe count; the four div-mod probes are real but the committed witness for them is unattributed, no table names it). Lifter: 28
 programs whose only gap was div-mod, 20 lift and check, 3 fail the
 invariant lemma on nonlinear invariants; the sweep over 179 tasks reads 32
 in all seven (30 of 159 before), MBPP-DFY 38 lifted and 7 in all seven
@@ -861,7 +867,9 @@ construct's weight is the Python side, the top gap of MBPP's reference
 solutions (62 of 974). Core: interp's `exec_body` returns a flag the nested
 `if` and `while` propagate; `check_wf` types the expression, pins the name
 and refuses the unreachable statement; the notation parses and prints it,
-round trip 1582 of 1582 (1604 seen, 22 rejected); the twin walker mutates
+round trip 1582 of 1582 (1604 seen, 22 rejected; unwitnessed, no
+preserved log states this run's own numbers -- tonight's `t/reproduce.sh
+--tests` reads 1742 of 1742); the twin walker mutates
 the returned expression. Seven lowerings, three native and four by
 encoding, each file carrying a dated note with its measurements: dafny
 emits `r := Expr; return;` (Dafny checks the ensures at every return and
@@ -896,13 +904,14 @@ return-path obligation is `false = true <-> forall d, 2 <= d < n -> n mod d
 <> 0`, closed only by instantiating the forall at the loop's own `d`, which
 `t_go_ext` does not reach: the honest cell). So spark proves neither real
 at 20000 steps: its substitution encoding is the column's residual and its
-next hurdle. Ground truth: `truth_fuzz.py` 407 tasks, 2842 cells,
+next hurdle. Ground truth: `truth_fuzz.py` 407 tasks, 2849 cells,
 REFUTES-TRUE 0, the one unsound cell framac's spec-fun-body definedness
 gap as in both earlier audits, and cell for cell as the div-mod audit
 except four spark cells that moved from timeout to verified (that
 night's load against the wall backstop), no cell lost; fuzz family `v1exit` (search loops: first index, exists, divisor,
 integer square root; 400 generated instances, 0 check_wf errors, all
-verified under ground truth), 22 drawn tasks plus the 4 probes, 175
+verified under ground truth -- unwitnessed, no log states these
+numbers separately from this prose), 22 drawn tasks plus the 4 probes, 175
 cells at flake 3: 0 disagreements, 0 against ground truth; reals
 verified in dafny 24 of 25, fstar 24, verus 23, lean 23, framac 22, rocq
 21, spark 1 (24 timeouts: the residual above, at scale); the
@@ -933,9 +942,9 @@ unassigned on that path (leetcode 0069 sqrt), 1 fails its spec-fun lemma
 detector split the same way: `early-exit` now names break and continue
 alone (38 of 785, 6 sole), a non-tail return is the `early-return` burden;
 both census tables regenerated with the current detectors, DafnyBench in
-fragment 77 to 105 of 643 gradable, MBPP-DFY 41 of 164 lexically in
-fragment, the gate order now array, early-exit (break/continue),
-string-char, real. Sweep: `t/COVERAGE-lifted-785.md` at 180 tasks (32 jobs alone, 1783 s,
+fragment 77 to 105 of 643 gradable, MBPP-DFY 25 to 41 of 164 lexically in
+fragment, the gate order now array, string-char, early-exit
+(break/continue), real. Sweep: `t/COVERAGE-lifted-785.md` at 180 tasks (32 jobs alone, 1783 s,
 0 flaked cells) reads 32 in all seven, as before; the new task counts in
 dafny only; eleven lean abstains became readings, one of them counting, and
 no cell was lost; MBPP-DFY 38 lifted and 7 in all seven, unchanged. The same
@@ -956,7 +965,9 @@ adversarial reproduction is the open clause, and the design is one for
 Treston to ratify, since it was taken overnight.** Measured first on the
 785: 315 programs use an array, 157 assign an element, 130 only read one
 (the lifter already carried those as `seq`), 72 mutate a parameter in
-place under `modifies`, 85 allocate and fill. Every shape is a value
+place under `modifies`, 85 allocate and fill (unwitnessed, no committed
+census artifact or log states this five-way breakdown independently of
+this prose; the detector version behind it has since changed). Every shape is a value
 computation once the array is a sequence, so SPEC.md "Sequences as values
 (v1)" takes arrays that way and nothing else: `{"op": "update", "args":
 [s, i, v]}` written `s[i := v]` (defined iff `0 <= i < len(s)`), `{"op":
@@ -994,16 +1005,17 @@ refused. swap's twin is refuted by an UNDEFINED witness (the mutant reads
 emitted: every column now certifies the twin's own definedness violation
 at the witness (lean's builder states the obligation false rather than
 comparing a totalised value, which happened to coincide on this witness).
-The flip table, AGREEMENT.md at 17 tasks, 176 s at 8 jobs, 0 flaked:
+The flip table, AGREEMENT.md at 17 tasks, 176 s (unwitnessed: the job
+count was not recorded), 0 flaked:
 `swap` and `reverse` read verified/refuted in all seven columns, the 13
 original rows cell for cell as before, and the two early-exit rows moved
 where the same night's residual fixes landed (spark's Esc arm now carries
 the ensures, so `first_even` and `is_prime` read verified/refuted there;
 rocq's witness instantiation closes `is_prime`; framac emits no trailing
 return after a body whose every path returns and a branch-free t_div, so
-nine of its ten vacuous lifted rows now read). Ground truth: `truth_fuzz.py` 407 tasks, 2842 cells, REFUTES-TRUE 0, the one unsound cell framac's spec-fun-body definedness gap as in every audit, and three lean cells moved from malformed to verified, no cell lost.
+nine of its ten vacuous lifted rows now read). Ground truth: `truth_fuzz.py` 407 tasks, 2849 cells, REFUTES-TRUE 0, the one unsound cell framac's spec-fun-body definedness gap as in every audit, and three lean cells moved from malformed to verified, no cell lost.
 Fuzz family `v1seqval` (six shapes, 17 instances plus 6 probes, 161 cells at flake 3): 0 disagreements, 0 against ground truth; reals verified 19 of 20 in dafny, verus, rocq and fstar, framac 19 with one timeout, spark 14 (the six `r == s` shapes read MALFORMED, the banked equality gap), lean 12 (six unproved and two timeouts on the loop shapes, its residual); the family's first draft put the value invariant before the length and range invariants and read unproved in six columns on every loop shape, which is now a stated rule in SPEC.md ("Invariants are checked in order"); framac's twins verify on 12 of those cells because its output buffer's length is a caller-pinned parameter, so the dropped length invariant is a fact it never needed, the re-derivation class the coherence gate exists for;
-the early-exit and div-mod families re-run on the changed lowerings read 0 disagreements and 0 against truth, with spark now verifying 17 of 18 early-exit reals (1 of 25 before the Esc-arm repair) and every div-mod real in every column. Lifter: LIFTER-DECISIONS.md row 22 maps `a[i] := e` to an update (parallel index swaps included), `new int[n]` to `seq(n, 0)`, a method that `modifies` one array and returns nothing to a seq parameter plus a fresh seq return primed with `<ret> := a` (`old(a[k])` reads the parameter, everything else the return), and a returned allocation to a seq return with `fresh(b)` dropped on both sides of the fidelity lemma; refused with a reason: two-dimensional and non-int arrays, more than one mutated array, `multiset` over a mutated slice, a `modifies` naming anything else, a mutated array also passed to a call, and a method with its own return plus `modifies` (three programs, BubbleSort among them). A seq's length is not a free fact the way an array's is, so the lifter states `len(<ret>) == <length>` as the task's first ensures and the first invariant of every loop that touches it. Of 105 candidate programs 29 lift and pass every check, the rest refused for heap 21, unbounded quantifier 15, function contract 11, array 9, no method 6, lift-check 6 (two a pre-existing for-loop desugaring gap in the checker lemma), old 3, array-mutation 3; 18 net new tasks staged, 198 in all, and the 180 old tasks re-lift byte-identical (one program's spec_funs order varies run to run, a pre-existing hash-order flake in the lifter's closure walk, named not fixed). Both census tables regenerated: in fragment 105 to 174 of 643 gradable, the `array` gap 308 to 79 programs (sole blocker 55 to 4), `array-mutation` 152 to 49 (sole 21 to 0), a new burden `array-as-seq` on 249, MBPP-DFY lexically in fragment 41 to 56 of 164. Sweep: `t/COVERAGE-lifted-785.md` at 198 tasks (6 jobs, 1232 s, 0 flaked)
+the early-exit and div-mod families re-run on the changed lowerings read 0 disagreements and 0 against truth, with spark now verifying 17 of 18 early-exit reals (1 of 25 before the Esc-arm repair) and every div-mod real in every column. Lifter: LIFTER-DECISIONS.md row 22 maps `a[i] := e` to an update (parallel index swaps included), `new int[n]` to `seq(n, 0)`, a method that `modifies` one array and returns nothing to a seq parameter plus a fresh seq return primed with `<ret> := a` (`old(a[k])` reads the parameter, everything else the return), and a returned allocation to a seq return with `fresh(b)` dropped on both sides of the fidelity lemma; refused with a reason: two-dimensional and non-int arrays, more than one mutated array, `multiset` over a mutated slice, a `modifies` naming anything else, a mutated array also passed to a call, and a method with its own return plus `modifies` (three programs, BubbleSort among them). A seq's length is not a free fact the way an array's is, so the lifter states `len(<ret>) == <length>` as the task's first ensures and the first invariant of every loop that touches it. Of 105 candidate programs 29 lift and pass every check (commit 5119e26's own headline); the rest refused for heap 21, unbounded quantifier 15, function contract 11, array 9, no method 6, lift-check 6 (two a pre-existing for-loop desugaring gap in the checker lemma), old 3, array-mutation 3 is a per-reason breakdown that is unwitnessed beyond this prose (no committed table or log states it, and its own terms sum to 103, two short of 105); 18 net new tasks staged, 198 in all, and the 180 old tasks re-lift byte-identical (one program's spec_funs order varies run to run, a pre-existing hash-order flake in the lifter's closure walk, named not fixed). Both census tables regenerated: in fragment 105 to 174 of 643 gradable, the `array` gap 308 to 79 programs (sole blocker 55 to 4), `array-mutation` 152 to 49 (sole blocker 0 throughout), a new burden `array-as-seq` on 249, MBPP-DFY lexically in fragment 41 to 56 of 164. Sweep: `t/COVERAGE-lifted-785.md` at 198 tasks (6 jobs, 1232 s, 0 flaked)
 reads 32 in all seven as before and 51 in six (39 before); per column
 dafny 147 to 166, spark 114 to 126, verus 108 to 121, fstar 103 to 120,
 rocq 95 to 110, lean 92 to 97, framac 69 to 87; MBPP-DFY 40 lifted (38) and
@@ -1077,18 +1089,28 @@ a.Length ==> ...`, `exists i, j :: 0 <= i < a.Length && 0 <= j < a.Length
 && ...`) that t states as nested single-binder quantifiers with the inner
 bound depending on the outer, the next lifter row; 3 lift and fail the
 checker's `L_inv_0` lemma on a for-loop invariant (the pre-existing
-for-desugaring gap named on 2026-09-09 morning), 2 fail `L_fun` on
-`IsOdd`/`IsEven` predicates; the remaining 5 are string, cast, nested-seq,
-multi-return and slice gaps the census also names. Sweep: 204 tasks (198 plus the six), 6 jobs, 0 flaked cells, every one of the 2,544 lowered sources shared with the seventh sweep byte-identical and every shared row cell for cell as before; 42 of 204 in all seven (42 of 198) and 61 in six (60), MBPP-DFY 42 lifted and 8 in all seven; of the six new rows cmsc433's Reverse counts in six, and the two MBPP-DFY IsPrime shapes ABSTAIN in verus and framac on a `div` in the loop guard (`while i <= n / 2`), a definedness obligation neither lowers in guard position, the residual this wave names for those two columns, while dafny proves their invariant-drop twins (the harmless-drop class of 12.3) and lean and rocq refute them.
+for-desugaring gap named on 2026-09-09 morning; the 3-and-2 split is
+self-corroborated earlier in this same file, 414/808/809 on `L_inv_0`
+and 775/804 on `L_fun`), 2 fail `L_fun` on
+`IsOdd`/`IsEven` predicates; the remaining 5 (string, cast, nested-seq,
+multi-return and slice gaps the census also names) are unwitnessed as a
+named-by-program breakdown, no table lists them individually. Sweep: 204 tasks (198 plus the six), 6 jobs, 0 flaked cells, every one of the 2,544 lowered sources shared with the seventh sweep byte-identical and every shared row cell for cell as before; 42 of 204 in all seven (42 of 198) and 61 in six (60), MBPP-DFY 42 lifted and 8 in all seven; of the six new rows cmsc433's Reverse counts in six, and the two MBPP-DFY IsPrime shapes ABSTAIN in verus and framac on a `div` in the loop guard (`while i <= n / 2`), a definedness obligation neither lowers in guard position, the residual this wave names for those two columns, while dafny proves their invariant-drop twins (the harmless-drop class of 12.3) and lean and rocq refute them.
 
 **sequence literals, concatenation and slices LANDED 2026-09-10 (the
 substrate for strings); the adversarial reproduction is the open clause.**
-Chosen by two censuses that agree: on the 785, 50 of the 643 gradable
+Chosen by two censuses that agree: on the 785, 51 of the 643 gradable
 programs are blocked by sequence operations alone (28 append a singleton
 `r := r + [x]`, 27 start from `[]`, 30 slice, 10 prepend, 6 concatenate
-slices; 30 of the 50 are MBPP-DFY), and on the 24,748 nl/ problems a
-literal is needed by 8,599, concatenation by 6,030, a slice by 3,305, while
-the top gap there, strings at 18,361, is a sequence of characters that
+slices; the day's first pass read 50, `t/LIFTER-DECISIONS.md` row 25's
+census.json re-check is the 51 of record; how many of the 51 are
+MBPP-DFY is unwitnessed, no table states that split), and on the 24,748
+nl/ problems a literal is needed by 8,599, concatenation by 6,030, a
+slice by 2,474 (further split since into seq-slice-negative 489 and
+seq-slice-step 852, `t/COVERAGE-nl.md`), while the top gap there, strings,
+splits the same way into string-lib at 13,266 (needing the actual string
+library) and string-as-seq at 13,339 (already covered by t's seq model),
+`t/COVERAGE-nl.md`, together standing in for the earlier 18,361 read
+before the split, and is a sequence of characters that
 needs exactly these three before a character type means anything. SPEC.md
 "Sequences: literals, concatenation, slices (v1)": `{"op": "seq", "args":
 [...]}` written `[a, b]` (`[]` empty, elements int), `+` on two seqs is
@@ -1099,13 +1121,15 @@ as parser sugar printed back in the three-argument form. Core: interp
 (tuple concatenation under the length cap, a slice outside its bounds
 undefined), check_wf (a variadic literal, the ternary slice, `+` typed on
 seqs), the notation (the `..` symbol, the literal in atom position, the
-slice in postfix position; round trip 1630 of 1630 and 3,000 random ASTs),
+slice in postfix position; round trip 1630 of 1630 and 3,000 random
+ASTs, unwitnessed at that measurement, no preserved log states these
+numbers -- tonight's `t/reproduce.sh --tests` reads 1742 of 1742),
 the twin walker (off-by-one now reaches both bounds of a slice). Two
 committed tasks: `tail` (loop-free, `r := s[1..]`, twin an off-by-one
 refuted at `s = [0]`) and `filter_pos` (a loop appending `r := r + [s[i]]`
 under `len(r) <= i` and a value invariant, the append idiom the census
 counts, twin an invariant drop). Seven lowerings, each with a dated note:
-dafny's own display, `+` and `s[a..b]`, the slice's definedness Dafny's well-formedness check (a probe with an unguarded bound rejects); verus `seq![..]`, `Seq::add` through the native `+`, `subrange(a, b)` with the obligation emitted by the lowering since vstd's `subrange` only recommends its bounds (an unguarded slice warns and never totalises, measured), and its `defined()` is the certificate formula F* shares, so one slice case served two columns; fstar `Seq.append` over `Seq.create 1 e` for a literal, `Seq.slice` whose refinement rejects an out-of-range slice at typing, every lemma firing on its SMT pattern with none named; lean the list literal, `++`, `(s.drop a.toNat).take (b - a).toNat` (measured against `List.extract`, no gain), two hand-proved read lemmas `t_seq_append_get` and `t_seq_slice_get`, the termination bridge extended with `length_append`, `length_take`, `length_drop`, and a latent defect fixed in the certificate emitter (a nested `have ... := by` that Lean's parser swallowed the rest of the tactic into, dead code until `filter_pos`'s value-invariant certificate reached it); rocq the literal as a chain of `t_upd` over `t_fill 0`, opaque `t_app` with a three-way case split and `t_slice` with an unconditional rewrite, joined into `t_inv1`, the prelude 73 lines longer in every file and identical elsewhere; spark a literal as `Seqs.Add` over `Seqs.Empty_Sequence`, `T_Concat` and `T_Slice` as recursive functions in the generic with `Post` contracts for length and elements and `Pre => 0 <= A <= B <= Length (S)`, a static type reader threaded through the compiler so a seq `+` is told from an int `+` (Ada has no `+` on the generic), 0 timeouts twice; framac a slice in read position as the sub-buffer `(s + a, b - a)` with no copy, a slice assigned to the output buffer as a copy loop, a literal as stores, and a CAPACITY mode for the append idiom: the output buffer's size is read off the task's first `len(r) <= E` or `== E` ensures, the logical length tracked in an `r_len` local with an implicit `0 <= r_len` invariant (the matching upper bound was tried and measured WRONG: it made the postcondition provable without the task's own `i <= len(s)` invariant, so the invariant-drop twin verified and the file read MALFORMED; only the lower bound belongs to the lowering, the upper bound is the author's), and named refusals for a slice into a capacity buffer, a fresh `s + t`, and a bare seq value in ACSL term position. Every column reads `tail` and `filter_pos` verified/refuted and `swap` and `reverse` byte-identical, measured by each agent in its own column before the matrix. The flip table, AGREEMENT.md at 19 tasks: `tail` and `filter_pos` verified/refuted in all seven columns, the 17 older rows cell for cell as before, 18 of 19 in all seven, `reverse` in six on framac's coherence gate as before (run at 16 jobs beside the loop's sampling job, 0 flaked). Fuzz
+dafny's own display, `+` and `s[a..b]`, the slice's definedness Dafny's well-formedness check (a probe with an unguarded bound rejects); verus `seq![..]`, `Seq::add` through the native `+`, `subrange(a, b)` with the obligation emitted by the lowering since vstd's `subrange` only recommends its bounds (an unguarded slice warns and never totalises, measured), and its `defined()` is the certificate formula F* shares, so one slice case served two columns; fstar `Seq.append` over `Seq.create 1 e` for a literal, `Seq.slice` whose refinement rejects an out-of-range slice at typing, every lemma firing on its SMT pattern with none named; lean the list literal, `++`, `(s.drop a.toNat).take (b - a).toNat` (measured against `List.extract`, no gain), two hand-proved read lemmas `t_seq_append_get` and `t_seq_slice_get`, the termination bridge extended with `length_append`, `length_take`, `length_drop`, and a latent defect fixed in the certificate emitter (a nested `have ... := by` that Lean's parser swallowed the rest of the tactic into, dead code until `filter_pos`'s value-invariant certificate reached it); rocq the literal as a chain of `t_upd` over `t_fill 0`, opaque `t_app` with a three-way case split and `t_slice` with an unconditional rewrite, joined into `t_inv1`, the prelude 73 lines longer in every file and identical elsewhere; spark a literal as `Seqs.Add` over `Seqs.Empty_Sequence`, `T_Concat` and `T_Slice` as recursive functions in the generic with `Post` contracts for length and elements and `Pre => 0 <= A <= B <= Length (S)`, a static type reader threaded through the compiler so a seq `+` is told from an int `+` (Ada has no `+` on the generic), 0 timeouts across the two measured runs (unwitnessed as a discrete count beyond this prose, no log or table states it separately); framac a slice in read position as the sub-buffer `(s + a, b - a)` with no copy, a slice assigned to the output buffer as a copy loop, a literal as stores, and a CAPACITY mode for the append idiom: the output buffer's size is read off the task's first `len(r) <= E` or `== E` ensures, the logical length tracked in an `r_len` local with an implicit `0 <= r_len` invariant (the matching upper bound was tried and measured WRONG: it made the postcondition provable without the task's own `i <= len(s)` invariant, so the invariant-drop twin verified and the file read MALFORMED; only the lower bound belongs to the lowering, the upper bound is the author's), and named refusals for a slice into a capacity buffer, a fresh `s + t`, and a bare seq value in ACSL term position. Every column reads `tail` and `filter_pos` verified/refuted and `swap` and `reverse` byte-identical, measured by each agent in its own column before the matrix. The flip table, AGREEMENT.md at 19 tasks (now 23 tasks, `t/AGREEMENT.md`, 2026-09-10 05:52Z): `tail` and `filter_pos` verified/refuted in all seven columns, the 17 older rows cell for cell as before, 18 of 19 in all seven, `reverse` in six on framac's coherence gate as before (run at 16 jobs beside the loop's sampling job, 0 flaked). Fuzz
 family `v1seqops` (tail and head slices, a parameter window, an append
 loop, a filter loop, concatenation of two parameters, a rotation, a
 prepend loop, and five probes): 17 instances plus the 5 probes at n=400 seed 1, 154 cells at flake 3, graded for the first time with the grounded twin ladder and its witness (the fuzz driver had used the body-only rule, which gave every loop-free shape no twin at all and every twin no certificate, so a first run read 78 no-flip cells and 10 no-twin tasks; `fuzz_lower.build_corpus` and the grading path now call `harness.twin_cached`, the same instrument `run_par` uses): 0 disagreements, 0 against ground truth, 0 twins surviving; verified/refuted in verus 19 of 19, dafny 18, spark 18, fstar 18, rocq 17, framac 14 (two abstains on a fresh `s + t` into the output buffer, the named refusal), lean 13 (six loop shapes unproved on the real, its residual); the three probes true by construction (`len([]) == 0`, the concatenation length, a literal index) have no falsifying twin and read no-twin, as they should. Ground truth: the first regression run, beside the loop's grading job, died in spark's scratch cleanup (`OSError: Directory not empty: 'gnatprove'`); the cause was not two runs sharing a directory but `subprocess.run`'s timeout killing gnatprove alone and leaving its prover writing into the scratch directory being removed, so the 14 timed kernel calls now go through `verifiers.run_tree` (own session, the whole process group killed on timeout; bee1624, the two seq tasks verified/refuted in all seven under it). Re-run on its own at 24 jobs: 458 generated tasks (284 true, 163 false, 11 ill-defined), 3,164 cells at flake 3 in 529 seconds, 0 REFUTES-TRUE, and the one UNSOUND cell every run since 2026-09-02 has read, framac proving `gt_def_specfun_bad` (a spec function whose `hd(s)` unfolds to `at(s, 0)`, undefined at `len(s) == 0`, the standing spec-function definedness residual), nothing new. Lifter:
@@ -1113,12 +1137,15 @@ LIFTER-DECISIONS.md rows 25 to 27 map a Dafny display to the literal, a
 `+` on two seqs to `+`, `s[a..b]` and its sugars to the slice, and the
 `seq<int>` return refusal that outlived the seq-return construct is gone;
 of the 51 programs the census blocks on sequence operations alone, 5 lift and pass every check (dafny-duck's max, the language server's Maximum, MBPP-DFY 257 Swap, 261 ElementWiseDivision, 586 SplitAndAppend), 13 lift and fail the checker (6 on `L_inv_0`, the for-loop invariant lemma named twice today, 2 on `L_req`, 1 on `L_fun`, 3 differential-run timeouts under the night's load, 1 a spec-function `decreases` typing gap), and 33 are refused earlier: 15 for a quantifier the lifter reads as unbounded (the two-binder shape again, now the largest single lifter residual), 7 for a function contract, 4 at parse on `let`, 4 for a bounded slice of a mutated array (row 22's own refusal), 3 others. Census: `seq-literal`, `seq-slice`, `seq-return` and `seq-update`
-are burdens now and `seq-concat` a new one; with two refinements the shape measurement earned the same night (a zero-return method whose effect is its one array is row 22's shape and a burden, `zero-returns-array` 43 programs; a file whose methods never call each other is a burden, `multi-method-independent` 86), DafnyBench in fragment 190 to 277 of 643 (43.1 percent), the greedy order now `multi-return` (32), `string-char` (17), `nested-seq` (17), `array` (16), `real` (15), `set` (15); MBPP-DFY 72 to 105 of 164 lexically in fragment, order `string-char` (13), `nested-seq` (13), `real` (9), `set` (6), `multi-return` (4); the lifter half 45 lifted. Sweep: 209 tasks (the 204 plus the five rows 25 to 27 lift), 6 jobs, 26 minutes, 0 flaked cells; 42 in all seven (42 of 204), 61 in six (61), 23 in five (19); the five new rows count in five, five, four, two and none (dafny-duck's max, 261 elementWiseDivision, 257 swap whose twin survives in dafny and rocq, 586 splitAndAppend on which framac abstains by the fresh-concatenation refusal, the language server's maximum); 2,218 shared lowered sources byte-identical, rocq's 372 all changed by the prelude with its 204 rows cell for cell as before, lean's 24 changed sources moving two surviving twins to refuted; the guard-obligation work turned verus's five abstains into two verified/refuted, one verified/unproved and the two IsPrime unproved/unproved cells the `decreases` limit predicts, and framac's three abstains into one verified/malformed and two timeouts (COVERAGE-lifted-785.md, the ninth Reading).
+are burdens now and `seq-concat` a new one; with two refinements the shape measurement earned the same night (a zero-return method whose effect is its one array is row 22's shape and a burden, `zero-returns-array` 43 programs; a file whose methods never call each other is a burden, `multi-method-independent` 86), DafnyBench in fragment 190 to 277 of 643 (43.1 percent, now 334 of 643, `t/COVERAGE-dafnybench.md`), the greedy order at that commit `multi-return` (32), `string-char` (17), `nested-seq` (17), `array` (16), `real` (15), `set` (15); MBPP-DFY 72 to 105 of 164 lexically in fragment (now 131 of 164, `t/COVERAGE-mbpp-dfy.md`), order `string-char` (13), `nested-seq` (13), `real` (9), `set` (6), `multi-return` (4); the lifter half 45 lifted. Sweep: 209 tasks (the 204 plus the five rows 25 to 27 lift), 6 jobs, 26 minutes, 0 flaked cells; 42 in all seven (42 of 204), 61 in six (61), 23 in five (19); the five new rows count in five, five, four, two and none (dafny-duck's max, 261 elementWiseDivision, 257 swap whose twin survives in dafny and rocq, 586 splitAndAppend on which framac abstains by the fresh-concatenation refusal, the language server's maximum); 2,218 shared lowered sources byte-identical, rocq's 372 all changed by the prelude with its 204 rows cell for cell as before, lean's 24 changed sources moving two surviving twins to refuted; the guard-obligation work turned verus's five abstains into two verified/refuted, one verified/unproved and the two IsPrime unproved/unproved cells the `decreases` limit predicts, and framac's three abstains into one verified/malformed and two timeouts (COVERAGE-lifted-785.md, the ninth Reading).
 The spec experiment's prompt grammar does not yet carry the forms on
 purpose: the loop's round 2 was sampling under the round-1 prompt while
 this landed, and the curve compares rounds under one prompt; the forms
 enter the prompt as its version 2 with the control column re-measured
-under it. Residuals: the two-binder quantifier the lifter reads as unbounded (15 refusals among the 51, 7 among the break programs, the largest lifter residual, next lifter row); the checker's `L_inv_0` and `L_ens` lemmas on for-loop invariants and array quantifiers (6 of the 13 check failures here, 13 rows on MBPP-DFY); verus cannot prove termination of a proof function whose `decreases` contains `div` or `mod` (both MBPP-DFY IsPrime tasks unproved after the guard obligation landed, a kernel limit with no hint that closes it); framac's IsPrime pair times out on the nonlinear divisor fact four other columns also fail, and its certificate builder has no preservation-witness kind; framac abstains on a fresh `s + t` into the output buffer; lean's six loop shapes in the family and five lifted seq loops; and two designs the shape measurement earned: a pair type for the 46 coupled `(int, int)` loop outputs among 73 multi-return methods with a sentinel rule for the 7 `(bool, int)` searches, and batching for the 6,291 multi-test-case stdin problems the signature instrument refuses. Next construct: the character type and
+under it. Residuals: the two-binder quantifier the lifter reads as unbounded (15 refusals among the 51; how many are among the break programs is unwitnessed, no table states that split, the largest lifter residual, next lifter row); the checker's `L_inv_0` and `L_ens` lemmas on for-loop invariants and array quantifiers (6 of the 13 check failures here; a separate 13-rows-on-MBPP-DFY figure is unwitnessed, no table states it); verus cannot prove termination of a proof function whose `decreases` contains `div` or `mod` (both MBPP-DFY IsPrime tasks unproved after the guard obligation landed, a kernel limit with no hint that closes it); framac's IsPrime pair times out on the nonlinear divisor fact four other columns also fail, and its certificate builder has no preservation-witness kind; framac abstains on a fresh `s + t` into the output buffer; lean's six loop shapes in the family and five lifted seq loops; and two designs the shape measurement earned: a pair type for the 46 `(int, int)` returns among 73 multi-return
+methods, 26 of them computed in one loop (unwitnessed sub-count, no
+independent census artifact states it apart from `t/SPEC.md`'s own
+prose), with a sentinel rule for the 3 `(bool, int)` searches, and batching for the 6,291 multi-test-case stdin problems the signature instrument refuses. Next construct: the character type and
 strings as sequences of characters.
 
 **strings as sequences of code points, notation LANDED 2026-09-10; the
@@ -1126,12 +1153,16 @@ lifter row and the pool are the open clauses.** SPEC.md "Strings as
 sequences of code points (v1)" adds no type and no operator: a character
 is its code point, a string a `seq` of them, and the notation's `'a'` and
 `"abc"` are sugar the parser expands to `{"int": 97}` and the seq literal,
-never printed (round trip 1668 of 1668, 9 of 9 written lines, 3 literal
-probes, 3,000 random ASTs). The nl/ census split its top gap on that
+never printed (round trip 1742 of 1742, 16 of 16 written lines, 3 of 3
+literal probes tonight, `t/reproduce.sh --tests`; the random-ASTs figure
+for this run is unwitnessed, no log states one). The nl/ census split its top gap on that
 line: `string-as-seq` is a burden on 13,339 problems, `string-lib` (the
 Python library: `split` 17,355 uses, `join`, `count`, `strip`, `format`)
-stays a gap on 13,266 (sole blocker for 225 function-shaped problems);
-function-shaped in fragment 449 to 511, stdin would-be 361 to 698. Beside
+stays a gap on 13,266 (sole blocker for 298 function-shaped problems,
+`t/COVERAGE-nl.md`, the sole-blocker count moved after the split);
+function-shaped in fragment moving 449 to 511, and stdin would-be 361 to
+698, are unwitnessed: no table in `t/COVERAGE-nl.md` or
+`t/COVERAGE-nl-stdin.md` states this pair. Beside
 it the stdin instrument `nl_stdin.py` (`COVERAGE-nl-stdin.md`): of 20,509
 stdin problems 3,058 take a typed signature that fits every sample (`n`
 then a sequence 948, one int 615, two ints 543) and 203 are in the pool
@@ -1148,8 +1179,8 @@ form serves both corpora and the multi-return method lifts to it. The
 type `{"pair": [T1, T2]}` over int, bool and seq, written `(int, int)`;
 `(a, b)`, `p.0`, `p.1` in the notation, `pair`, `fst`, `snd` in the AST;
 `==` componentwise, no order; no pair of pairs, no seq of pairs, no
-triple. Tasks `divmod_pair` (loop-free, twin the components swapped, refuted at x = 1, y = 1) and `min_max` (both bounds in one loop, twin the first guard collapsed, refuted at s = [0, 1]; no invariant drop is witnessable by bounded execution there, measured at fifteen times the state cap). Core LANDED 2026-09-10: interp (a frozen `Pair` distinct from the tuple a seq is, projections, componentwise `==`, a bounded domain for pair-typed values in shell order with cap 24), check_wf (`_valid_type` refusing a pair of pairs or of three, `pair` typed from its operands, `fst`/`snd` on a pair only), the notation (`(int, int)` types, `(a, b)` literals, `p.0`/`p.1`; round trip 1670 of 1670 and 100,000 random ASTs over five seeds), the twin walker (`wrong-var` swaps the components or the projection), SYNTAX.md and TUTORIAL.md; the ground-truth generator unchanged (460 tasks, identical before and after).
-Seven lowerings, each with a dated note, each measured by its agent on divmod_pair and min_max in its own column with the older tasks byte-identical: dafny the tuple `(T1, T2)` with `.0`/`.1`, both tasks verified/refuted, the certificate emitter made type-directed because a pair witness prints as a two-element list that only its declared type tells from a seq (a first params-only version regressed reverse and filter_pos on the byte check and was widened to every name in scope); verus the Rust tuple through `_vty` with native tuple equality even on a Seq component (measured, no `=~=` needed), `defined()` unchanged, all 19 older tasks byte-identical, no refusal; fstar `T1 & T2` with native `fst`/`snd`, pair equality rendered componentwise so a seq component stays `Seq.equal`, a `px` renderer that refuses any pair position that is not a variable or a literal, by name; lean `T1 × T2` with `.1`/`.2` and core `Prod`'s decidable equality (measured with a List Int component), two Lean defects fixed on the way (a projection `unfold` would not reduce, closed by one `dsimp only`; `repeat split` never revisiting a sibling branch, closed by `repeat (all_goals split)` gated on two top-level ifs), a loop-state placeholder crash fixed, no refusal; rocq `(T1 * T2)%type` as one Coq slot with `fst`/`snd`, a generic `t_pair_eqb` with its `_spec` and `_case` joined into `t_inv1` (prelude 115 lines longer, pure insertions), `fst`, `snd` and `pair` reserved as identifiers, a seq component refused by name, and a cost finding: the `fst (a, b)` reduction placed inside `t_inv1`'s hot match sent min_max past 200 s, so it is one explicit `cbn [fst snd]` line per task that has a pair, and min_max in this column is load-sensitive on the shared box (verified with the twin unproved, or the real timing out at load 63), the matrix at flake 3 the reading of record; spark one record type per pair type with fields `A`/`B` and a qualified aggregate (an unqualified one is unresolvable in an if-merge; `(p).A` is not an Ada name, measured), a named componentwise equality function per pair type routed through `T_Eq` for a seq field, the loop's unassigned-variable guard generalised because min_max reaches its loop with the pair return unassigned and no early exit, divmod_pair verified/refuted and min_max verified with the twin unproved (the first value-kind certificate through a loop in this column, timing out at ten times the step budget, the column's known cost, not rewritten around F's own axiom), counterexample instances and the certificate refused by name for a pair-typed parameter; framac a struct returned by value (`struct t_pair_int_int`, `\result.a`), proved outright by WP on the typed model so the out-parameter encoding was never built, pair equality componentwise in ACSL, both tasks verified/refuted, a pair with a seq component, a pair-typed parameter or local and a recursive call to a pair-returning task refused by name. Fuzz family `v1pairs` (a loop-free pair of expressions, the divmod shape, a pair parameter projected and recombined, a swap, the flag-and-value sentinel from a search loop, the two-bound loop, a pair with a seq component from a slice and a length, componentwise equality of two pair parameters, and five probes): 26 instances plus the 5 probes at n=400 seed 1, 31 tasks, 217 cells at flake 3, graded through the grounded ladder: 0 disagreements, 0 against ground truth, 0 twins surviving where the real verified and the twin was refuted elsewhere, every task with a twin (800 grounded twins in the driver's own stress run, 0 no-twin, unlike the seq family's 19 of 1,000); three latent crashes in the fuzz driver's own interpreter clone fixed on the way (no pair case in its `ev`, no pair-typed parameter in its input sampler, a pair-typed loop name handed an int). Per column, verified/refuted: verus 31 of 31, dafny 30 (the seq-component probe's twin is an undefined-kind witness through a projection, the emitter's named refusal, unproved), lean 22 (7 abstains: `fst` in spec position is not lowered there, plus the two pre-existing computational-bool gaps), fstar 21 (7 abstains on the sentinel shape's local named `val`, an F* keyword, the lowering's standing identifier rule; 3 malformed reals), rocq 19 (9 reals unproved on pair-parameter shapes, 1 timeout, 1 seq-component refusal by name, 1 crash in the seq renderer on `fst`), framac 13 (9 malformed on pair-typed parameters, which the lowering meant to refuse by name and did not, 7 crashes on `fst` in predicate position, 2 named abstains), spark 12 (16 twins unproved and 1 timed out on the value-kind pair certificate, the same cost min_max showed, 1 abstain where t's `a` and `b` collide with the record's own `A` and `B` under Ada's case folding, 1 malformed). Ground truth, run in the same job: 466 generated tasks (289 true, 165 false, 12 ill-defined, the eight pair shapes among them), 3,215 cells in 549 seconds, 0 REFUTES-TRUE, the one standing framac spec-function cell UNSOUND as in every run since 2026-09-02, nothing new. Lifter: LIFTER-DECISIONS.md row 29 maps a Dafny method with two returns to one pair return, the two outs becoming locals, every exit `return (a, b)`, `a` and `b` in `ensures` becoming `r.0` and `r.1` (and staying the locals inside loop invariants, the dominant bug of the first pass: the ensures-level mapping leaked into invariants that read an out-parameter directly, 12 of 13 first-pass check failures), `nat` components carrying their non-negativity into the ensures; refusals `multi-return-arity` (three or more) and `multi-return-nested` (a component the rows do not lift). Over the 74 DafnyBench files with the shape, 73 gradable methods, the shape measurement's own count: 7 refused for arity, 6 for a component (two arrays, a bitvector, a real, a char, a destructuring self-call), and of the 60 left 30 lift and pass every check, 1 fails the checker's `L_fun` on a spec predicate (row 28's finding), 29 are refused earlier for gaps the census also names (7 unbounded quantifiers, 5 bodyless methods, 3 function contracts, 3 nondeterminism, 2 well-formedness, 2 returns not assigned on every path, 2 array mutation, 5 others). Census: `multi-return-pair` is a burden, `multi-return-arity` the gap; DafnyBench in fragment 292 to 321 of 643 (49.9 percent), MBPP-DFY 118 to 120 of 164. Three defects fixed on the way: the driver crashed writing a pair value into its outcome JSON, the checker's Dafny printer had no tuple forms, and the census's kind environment read only the first return. Sweep: the tenth, 276 run-ready tasks after the full re-lift under rows 28 and 29 (209 before, 67 new, none dropped), 6 jobs, run twice because an F* abstain added that afternoon had cost 11 lifted tasks their column (removed, the committed sources byte-identical), 37 minutes, 0 flaked cells: 60 in all seven (42), 72 in six (61); the 67 new rows count 18 in all seven; among the 209 shared rows 9 cells moved, all upward (spark's loop guard generalised for pairs freed 8 abstained loop tasks, lean's rotate closed); MBPP-DFY 58 lifted, 9 in all seven, the 1.0 bar 82 of 164 (COVERAGE-lifted-785.md, the tenth Reading). Residuals after the residual pass, each a count of the 31-task family: fstar 21 (7 twins unproved because the certificate renders a ground pair literal in a proposition position F* refuses, `fst (true, 0) <==> ...`, the next fstar fix; 3 reals F* discharges with zero obligations, which its verifier reads as malformed, a counting rule); framac 21 (7 abstains on a conditionally evaluated index in a short-circuit conjunct, the lowering's standing conservative rule, 2 on a seq component); spark 22 (8 value certificates through a loop unproved, min_max's cost; 1 abstain on a pair built and projected inline with no declared pair type); lean 28 (2 computational-bool gaps, 1 twin at 29 seconds); rocq 28 (2 seq-component refusals by name, 1 proof-cost timeout on the two-bound loop measured alone at 500 seconds); dafny 30 (an undefined-kind witness through a projection, refused by name); verus 31. Two costs the matrix shows on min_max itself: spark's twin unproved and rocq's real timing out near its wall clock under load. Open designs the wave earned: a pair with a seq component in framac and rocq (named refusals, no committed task needs one yet), the inline pair in spark, and the sole-blocker column on the sweep (WS-19 move 4).
+triple. Tasks `divmod_pair` (loop-free, twin the components swapped, refuted at x = 1, y = 1) and `min_max` (both bounds in one loop, twin the first guard collapsed, refuted at s = [0, 1]; no invariant drop is witnessable by bounded execution there, measured at fifteen times the state cap). Core LANDED 2026-09-10: interp (a frozen `Pair` distinct from the tuple a seq is, projections, componentwise `==`, a bounded domain for pair-typed values in shell order with cap 24), check_wf (`_valid_type` refusing a pair of pairs or of three, `pair` typed from its operands, `fst`/`snd` on a pair only), the notation (`(int, int)` types, `(a, b)` literals, `p.0`/`p.1`; round trip 1670 of 1670 and 100,000 random ASTs over five seeds), the twin walker (`wrong-var` swaps the components or the projection), SYNTAX.md and TUTORIAL.md; the claim that the ground-truth generator was unchanged (460 tasks, identical before and after) is unwitnessed, no separate run log or results.json states it (`t-truth-fuzz-pairs/results.json`, a later checkpoint with the pair fuzz family enabled, reads 466 rows, not the same measurement).
+Seven lowerings, each with a dated note, each measured by its agent on divmod_pair and min_max in its own column with the older tasks byte-identical: dafny the tuple `(T1, T2)` with `.0`/`.1`, both tasks verified/refuted, the certificate emitter made type-directed because a pair witness prints as a two-element list that only its declared type tells from a seq (a first params-only version regressed reverse and filter_pos on the byte check and was widened to every name in scope); verus the Rust tuple through `_vty` with native tuple equality even on a Seq component (measured, no `=~=` needed), `defined()` unchanged, all 19 older tasks byte-identical, no refusal; fstar `T1 & T2` with native `fst`/`snd`, pair equality rendered componentwise so a seq component stays `Seq.equal`, a `px` renderer that refuses any pair position that is not a variable or a literal, by name; lean `T1 × T2` with `.1`/`.2` and core `Prod`'s decidable equality (measured with a List Int component), two Lean defects fixed on the way (a projection `unfold` would not reduce, closed by one `dsimp only`; `repeat split` never revisiting a sibling branch, closed by `repeat (all_goals split)` gated on two top-level ifs), a loop-state placeholder crash fixed, no refusal; rocq `(T1 * T2)%type` as one Coq slot with `fst`/`snd`, a generic `t_pair_eqb` with its `_spec` and `_case` joined into `t_inv1` (prelude 115 lines longer, pure insertions -- unwitnessed as a prelude-only figure, `git show 578a473 -- t/lower_rocq.py` gives 929 insertions for the whole file, lowering logic and prelude together, not isolated), `fst`, `snd` and `pair` reserved as identifiers, a seq component refused by name, and a cost finding: the `fst (a, b)` reduction placed inside `t_inv1`'s hot match sent min_max past 200 s, so it is one explicit `cbn [fst snd]` line per task that has a pair, and min_max in this column is load-sensitive on the shared box (verified with the twin unproved, or the real timing out at load 63), the matrix at flake 3 the reading of record; spark one record type per pair type with fields `A`/`B` and a qualified aggregate (an unqualified one is unresolvable in an if-merge; `(p).A` is not an Ada name, measured), a named componentwise equality function per pair type routed through `T_Eq` for a seq field, the loop's unassigned-variable guard generalised because min_max reaches its loop with the pair return unassigned and no early exit, divmod_pair verified/refuted and min_max verified with the twin unproved (the first value-kind certificate through a loop in this column, timing out at ten times the step budget, the column's known cost, not rewritten around F's own axiom), counterexample instances and the certificate refused by name for a pair-typed parameter; framac a struct returned by value (`struct t_pair_int_int`, `\result.a`), proved outright by WP on the typed model so the out-parameter encoding was never built, pair equality componentwise in ACSL, both tasks verified/refuted, a pair with a seq component, a pair-typed parameter or local and a recursive call to a pair-returning task refused by name. Fuzz family `v1pairs` (a loop-free pair of expressions, the divmod shape, a pair parameter projected and recombined, a swap, the flag-and-value sentinel from a search loop, the two-bound loop, a pair with a seq component from a slice and a length, componentwise equality of two pair parameters, and five probes): 26 instances plus the 5 probes at n=400 seed 1, 31 tasks, 217 cells at flake 3, graded through the grounded ladder: 0 disagreements, 0 against ground truth, 0 twins surviving where the real verified and the twin was refuted elsewhere, every task with a twin (unlike the seq family's 19 of 1,000; a further stress-run count of grounded twins is quoted in this paragraph's earlier drafts but is unwitnessed, no log states it, see `pairs-final.log` for the 0/0/0 figures that are witnessed); three latent crashes in the fuzz driver's own interpreter clone fixed on the way (no pair case in its `ev`, no pair-typed parameter in its input sampler, a pair-typed loop name handed an int). Per column, verified/refuted: verus 31 of 31, dafny 30 (the seq-component probe's twin is an undefined-kind witness through a projection, the emitter's named refusal, unproved), lean 22 (7 abstains: `fst` in spec position is not lowered there, plus the two pre-existing computational-bool gaps), fstar 21 (7 abstains on the sentinel shape's local named `val`, an F* keyword, the lowering's standing identifier rule; 3 malformed reals), rocq 19 (9 reals unproved on pair-parameter shapes, 1 timeout, 1 seq-component refusal by name, 1 crash in the seq renderer on `fst`), framac 13 (9 malformed on pair-typed parameters, which the lowering meant to refuse by name and did not, 7 crashes on `fst` in predicate position, 2 named abstains), spark 12 (16 twins unproved and 1 timed out on the value-kind pair certificate, the same cost min_max showed, 1 abstain where t's `a` and `b` collide with the record's own `A` and `B` under Ada's case folding, 1 malformed). Ground truth, run in the same job: 466 generated tasks (289 true, 165 false, 12 ill-defined, the eight pair shapes among them), 3,215 cells in 549 seconds, 0 REFUTES-TRUE, the one standing framac spec-function cell UNSOUND as in every run since 2026-09-02, nothing new. Lifter: LIFTER-DECISIONS.md row 29 maps a Dafny method with two returns to one pair return, the two outs becoming locals, every exit `return (a, b)`, `a` and `b` in `ensures` becoming `r.0` and `r.1` (and staying the locals inside loop invariants, the dominant bug of the first pass: the ensures-level mapping leaked into invariants that read an out-parameter directly, 12 of 13 first-pass check failures), `nat` components carrying their non-negativity into the ensures; refusals `multi-return-arity` (three or more) and `multi-return-nested` (a component the rows do not lift). Over the 74 DafnyBench files with the shape, 73 gradable methods, the shape measurement's own count: 7 refused for arity, 6 for a component (two arrays, a bitvector, a real, a char, a destructuring self-call), and of the 60 left 30 lift and pass every check, 1 fails the checker's `L_fun` on a spec predicate (row 28's finding), 29 are refused earlier for gaps the census also names (7 unbounded quantifiers, 5 bodyless methods, 3 function contracts, 3 nondeterminism, 2 well-formedness, 2 returns not assigned on every path, 2 array mutation, 5 others). Census: `multi-return-pair` is a burden, `multi-return-arity` the gap; DafnyBench in fragment 292 to 321 of 643 (49.9 percent), MBPP-DFY 118 to 120 of 164. Three defects fixed on the way: the driver crashed writing a pair value into its outcome JSON, the checker's Dafny printer had no tuple forms, and the census's kind environment read only the first return. Sweep: the tenth, 276 run-ready tasks after the full re-lift under rows 28 and 29 (209 before, 67 new, none dropped), 6 jobs, run twice because an F* abstain added that afternoon had cost 11 lifted tasks their column (removed, the committed sources byte-identical), 37 minutes, 0 flaked cells: 60 in all seven (42), 72 in six (61); the 67 new rows count 18 in all seven; among the 209 shared rows 9 cells moved, all upward (spark's loop guard generalised for pairs freed 8 abstained loop tasks, lean's rotate closed); MBPP-DFY 58 lifted, 9 in all seven, the 1.0 bar 82 of 164 (COVERAGE-lifted-785.md, the tenth Reading). Residuals after the residual pass, each a count of the 31-task family: fstar 21 (7 twins unproved because the certificate renders a ground pair literal in a proposition position F* refuses, `fst (true, 0) <==> ...`, the next fstar fix; 3 reals F* discharges with zero obligations, which its verifier reads as malformed, a counting rule); framac 21 (7 abstains on a conditionally evaluated index in a short-circuit conjunct, the lowering's standing conservative rule, 2 on a seq component); spark 22 (8 value certificates through a loop unproved, min_max's cost; 1 abstain on a pair built and projected inline with no declared pair type); lean 28 (2 computational-bool gaps, 1 twin at 29 seconds); rocq 28 (2 seq-component refusals by name, 1 proof-cost timeout on the two-bound loop measured alone at 500 seconds); dafny 30 (an undefined-kind witness through a projection, refused by name); verus 31. Two costs the matrix shows on min_max itself: spark's twin unproved and rocq's real timing out near its wall clock under load. Open designs the wave earned: a pair with a seq component in framac and rocq (named refusals, no committed task needs one yet), the inline pair in spark, and the sole-blocker column on the sweep (WS-19 move 4).
 
 **Next construct after pairs, decided 2026-09-10 by both censuses: nested
 sequences, then the string library over them.** The nl/ census re-read
@@ -1229,23 +1260,28 @@ sweep 942 s at 6 jobs against 1783 s serial at 32 jobs, all 1260 cells
 identical, 0 flaked both times. `--jobs` is cells in flight and kernel
 calls in flight are six times it; the same day's 96-prover run flaked 9
 spark and framac cells on their wall backstops, so sweeps that carry the
-spark column stay near 36 provers until those backstops are replaced by
-a load-independent limit. `T_CELL_SERIAL=1` restores the old form for
+spark column stay near 6 jobs (36 concurrent kernel calls at six per
+job, `t/run_par.py`'s own docstring: --jobs 5 the 30-prover regime that
+ran clean, --jobs 16 the 96-prover regime that flaked) until those
+backstops are replaced by a load-independent limit. `T_CELL_SERIAL=1` restores the old form for
 measurement.
 
 
 Surface syntax landed 2026-09-04 (`t/surface.py`, round trip verified on
-1528 tasks both directions plus 100,000 random ASTs), wired into nothing
+1628 tasks both directions plus 100,000 random ASTs), wired into nothing
 on purpose; 14.1 is the decision.
 
 Em-dash debt: **PAID 2026-09-06**, 757 to 21 across `t/` and `tup/`, every
 sentence repaired rather than the character deleted. The 21 that remain are
-deliberate and of four kinds: table and receipt TITLES whose bytes land in a
-committed receipt (5); the EMPTY-CELL marker, a data glyph saying "no reading
-here" (5); `test_lift_report.py`'s own `assert "—" not in md_text` (1); and
-seven that sit inside heredocs writing `/etc/fstab`, `/etc/resolv.conf` and
-`grub.cfg` INTO the image, where editing prose would change every inventory
-hash and silently invalidate the boot witness. `tup/receipts/*.md` were left
+deliberate and of four named kinds, whose own counts sum to 18, not 21 (a
+python count over the tree tonight confirms the shortfall; where the other
+3 belong is unwitnessed, no artifact names them): table and receipt TITLES
+whose bytes land in a committed receipt (5); the EMPTY-CELL marker, a data
+glyph saying "no reading here" (5); `test_lift_report.py`'s own `assert
+"—" not in md_text` (1); and seven that sit inside heredocs writing
+`/etc/fstab`, `/etc/resolv.conf` and `grub.cfg` INTO the image, where
+editing prose would change every inventory hash and silently invalidate
+the boot witness. `tup/receipts/*.md` were left
 untouched for the same reason: a receipt is evidence, and .gitattributes says
 to hand it back exactly as committed. Reprinting any of these is a decision
 to take on purpose.
@@ -1258,22 +1294,31 @@ stays superseded.
 
 **The nl/ census (2026-09-09).** `nl_census.py` and `COVERAGE-nl.md`, the
 DafnyBench census's instrument over the 24,748 nl/ problems: 4,239 are
-function-shaped and 449 of those are in t's fragment today; 20,509 are
-stdin-shaped, of which 361 would be in fragment once a signature is
+function-shaped and 599 of those are in t's fragment today; 20,509 are
+stdin-shaped, of which 1,022 would be in fragment once a signature is
 extracted from the input format, a construct in its own right for APPS and
-CodeContests. Top gaps by programs needing them: `string-char` 18,361
-(sole blocker for 347 function-shaped problems), `seq-literal` 8,599,
-`tuple` 7,906, `seq-append` 6,030, `nested-seq` 3,704, `real` 3,517
-(sole 180), `seq-slice` 3,305; the whole-corpus greedy order opens with
-`string-char`, `real`, `import`, `generator`, `nested-seq`, `seq-slice`,
-and on MBPP alone with `string-char` (116), `import`, `real`, `tuple`. A
+CodeContests. Top gaps by programs needing them, current table:
+`string-lib` 13,266 (sole blocker for 298 function-shaped problems, the
+Python string library itself, split from the old combined `string-char`
+18,361; the seq-of-code-points half is now the burden `string-as-seq` on
+13,339, already covered), `unbounded-loop` 4,403, `import` 3,932, `tuple`
+3,872 (sole 56; `seq-literal`, `tuple`'s own two-element case as
+`tuple-pair`, `seq-append` and `seq-slice` have all since landed as
+burdens rather than gaps: 8,599, 7,747, 6,030 and 2,474 respectively),
+`nested-seq` 3,606, `real` 3,517 (sole 226); the whole-corpus greedy order
+opens with `string-lib`, `real`, `class`, `import`, `generator`,
+`nested-seq`, and on MBPP alone with `real` (206), `import`, `tuple`,
+`string-lib` (59) -- the earlier reading of '`string-char` (116)' atop
+MBPP is unwitnessed, no table in `t/COVERAGE-nl.md` states a 116 anywhere
+and the current MBPP order's own top gap is `real`. A
 lexical and AST census of reference solutions, over-approximating what a t
 answer would need; nl/FIDELITY.md's gate on corpus numbers is untouched.
 The judgement recorded beside it: almost-all-of-nl/ as a literal target is
 the wrong size for a seven-kernel floor (each construct costs seven
 lowerings and the compounding of twin operators and certificates; the
-23,600 stdin problems are string and float programs whose bugs are not the
-invariant bugs a kernel catches; bug data scales with verified answers per
+claim that 23,600 stdin problems are string and float programs is
+unwitnessed, no table in `t/COVERAGE-nl.md` or `t/COVERAGE-nl-stdin.md`
+states that figure; bug data scales with verified answers per
 problem, not with problems), so the working target is the function-shaped
 tier over ints, bools, sequences and strings, grown by this census's order.
 
@@ -1317,8 +1362,9 @@ Qwen2.5-Coder-1.5B-Instruct in 4-bit, one SFT warm-up epoch on the
 positives, 72 DPO steps, 15 minutes and 3.7 GB on a shared card (the
 first attempt ran out of memory materialising full-vocabulary fp32 logits
 over the 2,048-token window; completion-only logits fixed it), reward
-margin between a verified answer and its twin 0.00 to 0.13 with the
-verified side preferred on every logged batch. The generator,
+margin between a verified answer and its twin -0.0018 to 0.1545 with the
+verified side preferred on nearly every logged batch (`train-r1b.log`'s
+`rewards/margins` field). The generator,
 `loop_generate.py`: transformers inference with the adapter, writing
 `cmd_generate`'s exact record layout so extract, tests, run_par and table
 run unchanged; ollama cannot serve an adapter and the box has no GGUF
@@ -1326,14 +1372,17 @@ converter. Because round 0 went through ollama's Q4 weights and round 1
 through nf4, the bare base through the same transformers path is its own
 column, and the training effect is read against it. `loop_curve.py` writes
 `LOOP-CURVE.md`, one column per round, one row per stage, over the pool
-and over the 322 held out. On the held-out 322: well-formed 25 (ollama), 41
-(same-path control), 45 (round 1); tests pass 5, 7, 8. Through the kernels, on the same 322: verified with a refuted twin in some column 6 (ollama), 16 (control), 18 (round 1); in all seven 2, 1, 1; some column and passing tests 3, 4, 4; all seven and passing tests 0, 0, 0. The
+and over the 161 held out. On the held-out 161 (`t/LOOP-CURVE.md`,
+'Held out' table): well-formed 14 (ollama), 24
+(same-path control), 24 (round 1); tests pass 3, 5, 5. Through the kernels, on the same 161: verified with a refuted twin in some column 4 (ollama), 9 (control), 9 (round 1); in all seven 1, 1, 1; some column and passing tests 2, 2, 2; all seven and passing tests 0, 0, 0. The
 inference path moved well-formedness more than one round of DPO on 189
 pairs did, which is the first fact of the curve and the reason the control
 column exists. Next hurdle on the curve: round 2's positives from round
 1's own verified answers (expert iteration), which needs the reward to
-carry the tests, 12.6's finding, since 35 of the 7B's 43 verified specs
-restated their bodies.
+carry the tests, 12.6's finding, since 34 of the 7B's 43 verified specs
+restated their bodies (35 of the 64 well-formed tasks carry a
+body-verbatim spec in total, `t/SPEC-EXPERIMENT-mbpp.md` lines 499 and
+513).
 
 **Round 2, the expert-iteration round (DONE 2026-09-10, the curve's second fact below).**
 The split is fixed for every later round: 161 eval problems never trained
@@ -1368,7 +1417,7 @@ in six or seven columns, the spec-restates-the-body class again. The
 dataset: 384 pairs after merging (89 lifted, 100 from the 7B's round 0,
 195 from the samples), 82 SFT positives; the sample negatives are 54
 malformed blocks, 25 answers that fail the tests (15 of them verified
-somewhere), and 140 twins with a witness (off-by-one 70, wrong-var 40,
+somewhere), and 120 twins with a witness (off-by-one 70, wrong-var 40,
 collapse-if 7, negate-cond 3). Training: 3 epochs, 144 DPO steps, 28
 minutes on a shared card, reward accuracy 1.0 on nearly every logged
 batch. The eval column, greedy on the 161 never-trained problems
@@ -1495,7 +1544,8 @@ finished with rows 28 and 29, `string-lib` a candidate wave that needs its
 own SPEC.md semantics decision, the stdin signature measured (203 of
 20,509 validated, about 40 percent over the 511 function-shaped problems)
 with the multi-test-case wrapper as its SPEC decision, MBPP-DFY at 120 of
-164 lifted and 8 in all seven, a grind. The line keeps running because
+164 lexically in fragment (`t/COVERAGE-mbpp-dfy.md`) but only 59 actually
+lifted and 9 in all seven (`t/COVERAGE-lifted-785.md`), a grind. The line keeps running because
 every use of the grader, external or ours, depends on what it accepts.
 
 **6. The ladder as a completeness measurement (survey move 2, demoted).**
@@ -1525,7 +1575,25 @@ four that exist: parse refusals 110 and 107 one-shot, 109 and 109 with
 repair; well-formed 24 and 23, then 28 and 25; tests pass 5 and 3, then 5
 and 3; verified with a refuted twin in some column 9 and 15, then 12 and
 16; in all seven 1 and 3, then 2 and 4; some column and passing tests 2
-in every column. The retry trails say why: retries needed is bimodal, 5 of 161 (control) and 3 of 161 (adapter) passed all three checks on the first attempt and every other problem used all three retries and was never rescued, not one problem in either column repaired on an actual retry; of the exhausted, 135 of 156 and 136 of 158 repeated the reply verbatim on every retry after being shown the exact parser, check_wf or assertion message, and among the few that changed, 3 improved a stage and 3 regressed a stage per column (a reply that only failed check_wf came back unparseable), the parse-to-parse population 106 of 106 in both; the five leak shapes are flat before and after (`&` 10 to 10, `^` 9 to 9, a `for` comprehension 9 to 14, `.` 20 to 19, `/` 9 to 11 on the control; 12, 10, 17, 13, 7 unchanged on the adapter). The control's fresh first attempt drifted from the archived column by three problems on the same greedy settings (run-to-run noise on a shared card); the adapter's reproduced its archived column exactly. The reading: at this size the model cannot act
+in every column. The retry trails say why (this whole retry-trail account is unwitnessed:
+`t/LOOP-CURVE.md` carries no control/adapter repair columns, and no
+preserved job log records a K=3 repair run's retry trail; the figures
+below appear nowhere but this prose): retries needed is said to be
+bimodal, 5 of 161 (control) and 3 of 161 (adapter) passed all three
+checks on the first attempt and every other problem used all three
+retries and was never rescued, not one problem in either column repaired
+on an actual retry; of the exhausted, 135 of 156 and 136 of 158 are said
+to have repeated the reply verbatim on every retry after being shown the
+exact parser, check_wf or assertion message, and among the few that
+changed, 3 improved a stage and 3 regressed a stage per column (a reply
+that only failed check_wf came back unparseable), the parse-to-parse
+population said to be 106 of 106 in both; the five leak shapes are said
+to be flat before and after (`&` 10 to 10, `^` 9 to 9, a `for`
+comprehension 9 to 14, `.` 20 to 19, `/` 9 to 11 on the control; 12, 10,
+17, 13, 7 unchanged on the adapter). The control's fresh first attempt is
+said to have drifted from the archived column by three problems on the
+same greedy settings (run-to-run noise on a shared card); the adapter's
+is said to have reproduced its archived column exactly. The reading: at this size the model cannot act
 on a parser message; two thirds of its replies die at the parser with or
 without the adapter and with or without three chances to read why, the
 kernel rows creep, the tests row does not move, and the frontier's
@@ -1557,8 +1625,9 @@ stands; a mapping pass over the repo refines it in a later commit, and any
 number below that is not yet measured says so.
 
 **Where the tool stands.** The notation exists: `t/surface.py` parses the
-written form to the JSON AST and prints it back, round trip verified on 1528
-tasks both directions and 100000 random ASTs. It is wired into nothing:
+written form to the JSON AST and prints it back, round trip verified on 1628
+tasks both directions and 100000 random ASTs (now 1742 of 1742,
+`t/reproduce.sh --tests` tonight). It is wired into nothing:
 `run_all.py` reads only `t/tasks/*.json` (`run_par.py` took
 `--tasks`, `--out` and `--table` on 2026-09-06 for 12.5), a parse error
 carries no line or column (the tokens do, the error does not), the
@@ -1579,7 +1648,8 @@ arm64 (`RUN-ON-MACOS.md`, `WITNESS-2026-09-06-macos.md`), where the
 census order. The coverage half needs whatever the 164 MBPP-DFY programs
 need. The CENSUS side of that profile is measured and always was:
 `coverage_census.py` runs its greedy curve on the MBPP-DFY family alone and
-`COVERAGE-dafnybench.md` carries the twenty steps, div-mod first, 25 of the
+`COVERAGE-mbpp-dfy.md` carries the curve, now sixteen steps, `real`
+first (div-mod has long since landed and dropped out of it), 131 of the
 164 in fragment today. What is unmeasured is the same question asked of the
 instrument that replaced the census: `LIFTER-785.md` carries no family
 breakdown, and `lift_census.py` drops the `family` field on the way in.

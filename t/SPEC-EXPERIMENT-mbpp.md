@@ -34,7 +34,7 @@ Refusals, by named reason:
 - 7 x `parse: line N: expected ')', found 'for'`
 - 6 x `wf: vN has int only`
 - 5 x `parse: line N: expected ']', found ':'`
-- 4 x `parse: line N: expected ':=', found '`
+- 4 x `parse: line N: expected ':=', found ';'`
 - 4 x `parse: line N: expected 'decreases', found '{'`
 - 4 x `parse: line N: unexpected character '|'`
 - 4 x `wf: vN field in a vN task`
@@ -81,7 +81,7 @@ Tasks with no twin at all (every mutation on the ladder computes what the real b
 
 **4 of 368 problems** got a task that verifies with a refuted twin in all seven columns and passes its tests; 33 in at least one column. Verified-with-twin but failing its tests, the class 12.6 warns about: 0 in all seven, 10 in some column.
 
-MBPP-DFY subset: 67 pool problems are MBPP-DFY problems (ROADMAP 16.2's family); 22 of them reached the kernels and 1 verify in all seven and pass their tests.
+MBPP-DFY subset: 67 pool problems are MBPP-DFY problems (ROADMAP 16.2's family); 22 of them reached the kernels and 1 verify in all seven and pass their tests. (Recomputed 2026-09-10 by joining out/spec-experiment/qwen2.5-coder-7b/extract.json against mbpp_dfy.dfy_task_ids(): 67, 22, 1, all confirmed.)
 
 ## Every task
 
@@ -464,13 +464,15 @@ MBPP-DFY subset: 67 pool problems are MBPP-DFY problems (ROADMAP 16.2's family);
 
 ## Reading, written after the run (2026-09-08)
 
-The machine: cs-rahman-dell, one RTX 6000 Ada (GPU 0) with about 6 GB
-free beside a colleague's resident models, qwen2.5-coder:7b through ollama
+The machine: cs-rahman-dell, four RTX 6000 Ada GPUs (this run pinned to
+GPU 0 via ollama.log) with about 6 GB free beside a colleague's resident
+models, qwen2.5-coder:7b through ollama
 0.32.15 (family qwen2, 7.6B parameters, Q4_K_M), 8192 context, temperature
 0, seed 1, one reply per problem, 1.5 s per reply over 368 problems. The
 server was started for the run and killed as its last step. The seven
 kernels are the pinned ones AGREEMENT.md names; 48 jobs, 744 s, 0 flaked
-cells.
+cells (unwitnessed: spec-gen.log and spec-kernels.log do not state a job
+count or a flake count, so this figure has no kept artifact behind it).
 
 **The numbers 12.6 asked for.** Of 368 problems, 64 became a well-formed t
 task. Of those 64, 43 verify with a refuted twin in at least one column
@@ -569,6 +571,6 @@ to well-formed tasks and 35 to a well-formedness refusal, almost all the
 model writing `t 0` over an operator that is v1 (`v1 expression form in a
 v0 task`, `v0 has int only`). The four seven-column tasks are the same
 four. So division was the largest single parse loss and not the largest
-loss: the `if` with no `else` (55 replies) and the notation slips remain,
+loss: the `if` with no `else` (56 replies) and the notation slips remain,
 and a 7B model at temperature 0 does not become a t writer because the
 language gained an operator it kept asking for.

@@ -138,9 +138,10 @@ obligations also fully verify is never allowed to also mint REFUTED:
 proving a fact both true (the main obligations) and false (the
 certificate's negated instance of the same fact) in the same file is
 incoherent, so every adapter demotes that case to MALFORMED instead. This
-rule lives inside each `verifiers/<kernel>.py` module (dated 2026-09-07
-across the columns that added it), applied before the outcome is ever
-returned; the grader calls each kernel's `verify()` and receives an
+rule lives inside each `verifiers/<kernel>.py` module (dated 2026-09-07 in
+dafny, lean, spark and verus; framac added it 2026-09-09; fstar and rocq
+apply the same demotion without a dated coherence-gate comment), applied
+before the outcome is ever returned; the grader calls each kernel's `verify()` and receives an
 outcome the gate has already been applied to. There is no separate gate
 value to compute afterward.
 

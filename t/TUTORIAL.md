@@ -21,7 +21,7 @@ called the *body*. The promise is called the *contract*.
 What makes t different from every language you'd meet in a first course:
 **the promise is checked by a machine, before the program ever runs.** Not
 tested on a few examples but *proved*, for every possible input, by an outside
-program called a proof kernel. t hands your task to six different kernels,
+program called a proof kernel. t hands your task to seven different kernels,
 and they must all agree.
 
 So writing t is a conversation: you state what your program promises, you
@@ -127,7 +127,7 @@ number is on purpose:
   are the examples.
 
 There is no text type, no decimal-point type. Not yet, on purpose: every
-piece of t exists only once six independent proof kernels agree on exactly
+piece of t exists only once seven independent proof kernels agree on exactly
 what it means.
 
 ---
@@ -514,7 +514,7 @@ tried to break it and failed.
 | `ensures` that only bounds the answer (`r >= 0`) | a constant body might satisfy it | add the connecting clause (`r == x or r == -x`, or an `exists`) |
 | reusing a name as a quantifier variable | task refused, shadowing is banned | pick a fresh name (`j` when `i` is taken) |
 | expecting `s[i]` to crash "at run time" | nothing in t happens at run time; the proof already covered it | internalize: errors are ruled out before running, or the task is refused |
-| divide, remainder, strings, floats | not in the language | see SPEC.md; features arrive only when six kernels agree on their meaning |
+| divide, remainder, strings, floats | not in the language | see SPEC.md; features arrive only when seven kernels agree on their meaning |
 
 Where to go next: read [`tasks/`](tasks/) in this order: `abs`, `max`,
 `all_nonneg`, `seq_max`, `sum_upto`, `factorial`, `gcd`. Each one uses
