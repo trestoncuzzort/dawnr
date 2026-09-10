@@ -716,6 +716,107 @@ fuzz-nested-residual-fstar.txt. Four causes, three fixed here:
   (swap_rows: off-by-one, m=[[]], i=0, j=0; row_max_len: invariant-drop,
   m=[[], [0]], i=2, r=0).
 
+ZERO-OBLIGATION MALFORMED, THE CONTRACT-LEMMA FIX (2026-09-10). The tenth
+sweep's lifted census (COVERAGE-lifted-785.md, "Sole blockers") named 19
+lifted tasks fstar alone kept out of the seven-column bar: the real is
+accepted by F* at exit 0, "All verification conditions discharged
+successfully", with ZERO entries in `queries-*.smt2`, because every one of
+the 19 has the identical shape `_reflexive_ensures` already names above (a
+single `ensures r == E`, body `= E`, `E` rendering byte-identical both
+places) -- F*'s elaborator closes the gap between the `Pure` annotation and
+the body by definitional equality alone, never reaching Z3, and
+`verifiers/fstar.py`'s own zero-obligations rule (discharged == 0 -> stays
+MALFORMED, not gameable) then reads a file the kernel fully accepted as
+unproven. That rule is not touched here (its own docstring: file-accepted is
+not proof-discharged); the fix is in THIS file, so the solver is actually
+asked.
+
+THE FIX. `_contract_lemma` (above `_reflexive_ensures`) emits one more
+top-level declaration after EVERY task's own function/loop definition, real
+and twin alike, named exactly `t_contract_obligation`:
+`let t_contract_obligation (params) : Lemma (requires <requires>) (ensures
+<ensures, with the return name substituted by a call to the function just
+defined>) = ()`. `cx.prop`'s existing `env` parameter does the substitution
+(the SAME mechanism `exec_flow`'s if-merge already uses to thread a rendered
+term in place of a bare variable), so no new rendering code was needed
+beyond the one new function: `cx.prop(e, {ret: f"({name} {args})"}, {})` per
+ensures conjunct, `_conj`'d exactly as `task_spec`'s own `ens` already is.
+
+WHY IT WORKS, MEASURED (P1.fst, this pass, F* 2026.08.30, `--log_queries`):
+a `Lemma`'s postcondition is a DIFFERENT obligation than a `Pure` body's own
+annotation check. `let f (x:int) : Pure int (ensures fun r -> r == 7) = 7`
+discharges with zero solver calls (the shape above, unfixed); appending
+`let t_contract_obligation (x:int) : Lemma (requires True) (ensures (f x)
+== 7) = ()` produces exactly one `queries-*.smt2` entry, `STATUS: unsat`,
+"used rlimit 0.000" -- genuinely fast (`f x`'s own already-established
+refinement type hands Z3 the goal as its own hypothesis) but a REAL query,
+not a normalization shortcut: F* does not delta-reduce a plain `let`
+function to answer a Lemma's VC the way it collapses a `Pure` body against
+its own annotation. Reproduced on the harder shapes too (arithmetic with
+`*`, `/`, multi-clause `requires`): every one of the 19 lifted reals logs
+1-4 `STATUS: unsat` lines post-fix, never zero, and the query always
+succeeds (the fact restated is true) -- no admit, no assume, no option
+pragma, nothing faked toward a query the file does not honestly need.
+
+MEASURED, THE 19 (harness.run_task, each task's own JSON from
+lifted-tasks.r14, `out/` a scratch dir, not the committed one): all 19 flip
+from `REFUSED (real malformed, ... twin refuted)` to `COUNTS (real
+VERIFIED, ... twin REFUTED)`, identical twin operators and witnesses to
+what the pre-fix lowering already found (off-by-one on 17, wrong-var on 2:
+multiply, rectangleArea), confirming the fix changed only the REAL's
+reading, never the twin's already-correct one. `solver_unsat` on the real
+is 1 (clover_return_seven, triple_conditions, multiply -- pure constant or
+single-op bodies) up to 4 (triangularPrismVolume, three chained ops); wall
+time per real rose from ~130-142ms (pre-fix, MALFORMED, no Z3 call at all)
+to ~150-220ms (post-fix, one cheap Z3 round-trip added) -- an honest ~15-70ms
+tax for turning an unproven accept into a proven one, never a regression in
+verdict.
+
+REGRESSION, THE 23 COMMITTED (`tasks/*.json`, `python3 lower_fstar.py`,
+full sweep): all 23 still COUNT, byte-for-byte the same twin operator and
+witness on every task as the pre-fix run (abs collapse-if, all_nonneg
+invariant-drop, ..., tail off-by-one -- diffed against this run's own
+pre-fix baseline, not merely against AGREEMENT.md's prose, since every
+committed task's SOURCE changes: `t_contract_obligation` is new text in
+every `out/<name>.fst` and `out/<name>_twin.fst`, exactly as expected --
+this file's brief was "every cell reads the same or better", not "no byte
+changes", and the byte changes here are additive, one lemma appended, never
+a rewrite of the function/loop text above it). Total measured wall time
+across the 23 tasks' 46 files (real+twin, `verifiers.fstar.verify` called
+directly, no flake retries): 28.25s pre-fix -> 30.32s post-fix, +7.3%, the
+same one-extra-cheap-query tax the 19 lifted tasks pay, paid here even by
+tasks whose own body already forced a real query for an unrelated reason
+(div/mod definedness, a seq/pair operator, a loop invariant) -- the
+contract lemma is unconditional, not gated by `_reflexive_ensures` or any
+zero-obligation detection, because a redundant genuine query costs time,
+never correctness, and gating it would have reintroduced exactly the kind
+of "trust a shape check instead of measuring" mistake the PAIRS RESIDUAL
+note above already corrected once (`bx`'s nested `==`/`!=` case, measured
+too broad a refusal). `--admit_except`'s targeted certificate run is
+unaffected: every OTHER declaration in a `--admit_except '<Module>.
+t_refutation_certificate'` run, `t_contract_obligation` included, is
+admitted, not required to verify, so a twin whose own buggy body fails its
+restated contract (measured directly: `Clover_return_seven__m`'s twin,
+`8 == 7`, Error 19 "Subtyping check failed" already on the FUNCTION's own
+`Pure` annotation, before the contract lemma is even reached) costs nothing
+extra there either.
+
+LEFT, BY NAME. Not independently re-measured this pass, though the fix is
+unconditional and should reach them the same way: the fuzz family v1pairs'
+own 3 `_reflexive_ensures`-shaped tasks (fz_v1pairs_119/235/294,
+"PAIRS RESIDUAL" above), which that note already measured reading
+`malformed / refuted` at this file's HEAD going into this pass (the exact
+same zero-obligation shape, one level of `fst`/`snd` deeper) -- this file's
+own `_contract_lemma` is shape-agnostic (built from `task["ensures"]` and
+`param_binders`, not from any reflexive-specific code path), so there is no
+structural reason it would not fix them the same way it fixed the 19, but
+the fuzz corpus itself is not checked out in this worktree and re-running
+`fuzz_lower.py` against it was out of this pass's scope (lifted tasks and
+the committed matrix only). A paramless task's own contract lemma (`(_u:
+unit)`, "Nested sequences" residual's own fix) is exercised by no committed
+or lifted task either, same as `param_binders`'s own empty-params branch
+before it -- built and left for whichever task needs it next.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -2176,6 +2277,54 @@ def task_spec(cx: Ctx, task: dict) -> tuple[str, str]:
     return _conj(reqs), f"(fun {ret} -> {_conj(ens)})"
 
 
+def _contract_lemma(cx: Ctx, task: dict) -> str:
+    """`t_contract_obligation` (2026-09-10, the MALFORMED/zero-obligation
+    fix; see the module docstring's own dated note for the full
+    measurement). Emitted after EVERY task's own function/loop
+    definition, real and twin alike: a lemma over the task's own params
+    restating its contract as `Lemma (requires <requires>) (ensures
+    <ensures with the return name substituted by a call to the function
+    just defined>)`, proved by `()`.
+
+    WHY THIS FORCES A QUERY. `name`'s own `Pure` type already carries
+    `ensures` as the refinement on its result -- that is exactly what let
+    the body `= E` discharge with ZERO solver queries when `E` and the
+    stated `r == E` render to the identical string (F*'s definitional
+    equality closes the gap during elaboration, never reaching Z3). A
+    Lemma's postcondition is a SEPARATE obligation: MEASURED (this file's
+    own 2026-09-10 pass, P1.fst) that `(f x) == 7` as a Lemma `ensures`,
+    `f` a plain non-recursive `let` returning the literal `7`, still
+    produces one `queries-*.smt2` entry with `STATUS: unsat` -- F* does
+    NOT inline/delta-reduce `f` to answer the Lemma's VC by normalization
+    alone (unlike the `Pure` body-vs-annotation check, which is exactly
+    that kind of definitional-equality shortcut); instead it encodes `f
+    x`'s already-established refinement type as a hypothesis and asks Z3
+    to match it against the (identical) goal, a genuine, honest, trivially
+    -fast query (`used rlimit 0.000` in the probe) rather than a lie about
+    what got proved. The same mechanism holds regardless of whether the
+    function's own body already forced a real query for an unrelated
+    reason (div/mod definedness, a seq/pair operator, a loop invariant):
+    calling `f`'s already-verified contract here costs one more cheap,
+    genuine unsat and never a failure, so this needed no gating by
+    `_reflexive_ensures` or any other shape check -- see the module
+    docstring's dated note for the regression measurement across all 23
+    committed tasks and the 19 previously-MALFORMED lifted ones.
+
+    A renamed task (`_rename_reserved`) is handled for free: `cx`/`task`
+    here are always the SAME (renamed) pair `gen_fun`/`gen_loop` just used
+    to emit `name`'s own definition, so the call `(name args)` below names
+    exactly the identifier the file just declared."""
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    pb, args = param_binders(task)
+    req = _conj([cx.prop(e, {}, {}) for e in task.get("requires", [])])
+    call = f"({name} {args})"
+    ens = _conj([cx.prop(e, {ret: call}, {}) for e in task["ensures"]])
+    return (f"\nlet t_contract_obligation {pb}\n"
+            f"  : Lemma (requires {req}) (ensures {ens})\n"
+            f"= ()\n")
+
+
 def _reflexive_ensures(cx: Ctx, task: dict, ret: str, ret_t, expr: str) -> bool:
     """True when the task's SOLE ensures clause is exactly `ret == E` (or
     `E == ret`) and `E` renders, by the same dispatch `expr` itself went
@@ -2510,6 +2659,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts.append(gen_loop(cx, r_task, prefix, w, suffix))
     else:
         parts.append(gen_fun(cx, r_task, r_body))
+    # t_contract_obligation (2026-09-10): forces the postcondition through
+    # an actual solver query, real and twin alike -- see `_contract_lemma`'s
+    # own docstring and the module docstring's dated note.
+    parts.append(_contract_lemma(cx, r_task))
     # Twin call sites pass the measured witness; real ones pass None, so a
     # real program never carries the name and can never be demoted by it.
     if witness is not None:

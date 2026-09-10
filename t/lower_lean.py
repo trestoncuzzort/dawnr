@@ -989,6 +989,233 @@ into the same directory and diffed (`cmp`) against the committed
 full diff of the OTHER 15 pre-existing tasks' regenerated output against
 their own committed `out/*.lean` also finds zero differences -- this
 construct changes nothing about a task that doesn't use it.
+
+THE 14 LOOP-TASK RESIDUAL (2026-09-10, COVERAGE-lifted-785.md "Sole
+blockers"): the fourteen lifted loop tasks lean alone still keeps off the
+seven-column bar (clover_cal_sum__sum, clover_linear_search1__linearSearch,
+dafny_synthesis_task_id_304__elementAtIndexAfterRotation,
+dafny_tmp_tmpmvs2dmry_slowmax__slow_max, the two
+dafny_verify_tmp_tmphq7j0row_..._cube tasks,
+dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum,
+m2_..._exo9_carre__carre,
+program_verification_dataset_..._simplemultiplication__foo, the three
+programmverifikation-und-synthese ..._gcdI tasks,
+tfg_..._div_ent_it__div_ent_it) plus one already-verified task whose twin
+certificate failed (se2011_tmp_tmp71eb82zt_ass1_ex4__eval), all measured
+directly (`harness.run_task` against `out/lifted-tasks.r14/`, flake 3)
+before touching anything.
+
+MEASURED, the actual gap: NOT the nonlinear-arithmetic/gcd/existential
+shapes this residual's own name predicted. Isolating each failing lean
+file (plain `lean file.lean`, no adapter) put EVERY ONE of the twelve
+still-open tasks' first error at the SAME site: `_t_loop`'s OWN bare
+`decreasing_by` (e.g. cal_sum, line 12; cube, line 8; minimum, line 16),
+identical in shape to "NOT CLOSED"'s flip/linear_search finding above,
+now generalized: `_t_loop` carries only the guard hypothesis (`_hg`),
+never the loop's invariants, and every one of these twelve tasks lifts a
+Dafny `decreases` idiom (an if-then-else absolute distance, e.g. `if i <=
+n then n - i else i - n`, or a bare loop variable added to another, e.g.
+gcdI's `x + g`) whose well-foundedness genuinely DEPENDS on a fact the
+guard alone never gives (`0 <= i <= n`, `x >= 0 ∧ g >= 0` -- the loop
+invariant, not the guard). Confirmed by ground counterexample, not
+assumed: cal_sum's `_t_loop`, called directly at n=-1, i=0 (i never
+reaches n, the guard `i != n` never turns false, `omega`'s own cutsat
+diagnostics name exactly this assignment as satisfying the negated
+goal) -- the raw recursive function, as lowered, genuinely does not
+terminate on such inputs, so no tactic closes it: the goal is false, not
+under-searched. carre and foo (a bare `n - i` decreases, not an
+if-then-else) hit the identical class: `.toNat` clamps a negative
+difference to 0, so once `i > n` the measure cannot be shown to decrease
+either, for the same reason.
+
+FIXED, a narrower, distinct class, one task: se2011_..._eval's own twin
+(a compare-flip mutation, guard `y >= 0` where the real program's guard
+is `y > 0`) failed for a DIFFERENT reason -- not direction, a `.toNat`
+FLOOR artifact. Its decreases is the bare loop variable `y` itself;
+`_hg` alone (`y >= 0`) DOES fix the direction (`y - 1 < y` always), but
+at the last guard-true step (`y = 0` to `y = -1`) `y.toNat` and
+`(y-1).toNat` are BOTH 0 -- a real, provable strict decrease (`0 >
+-1`), lost because `.toNat` floors every value `<= 0` to the same 0,
+not a false goal this time. `(decreases + 1).toNat` fixes exactly this
+at zero cost elsewhere: algebraically `a < b -> a + 1 < b + 1` for any
+Int a, b, so every decreasing_by goal already closed by `omega`/`grind`
+from `dec`'s own strict decrease closes identically from `dec + 1`'s
+(same hypotheses, same tactics, one more trivial `+1` on both sides).
+Landed as `dec1` in `lower_loop`, used at `_t_loop`'s and
+`_t_loop_spec`'s own `termination_by`/`decreasing_by` sites in place of
+the bare `dec` (three call sites; `dec` itself is untouched everywhere
+else -- `dec_d`'s definedness obligation, `_dec_needs_seq_bridge`'s AST
+check -- so nothing but the measure's own well-foundedness proof
+changed). Regression: all 23 `tasks/*.json` lean cells COUNT identically
+before and after (measured, `harness.run_task` per task); text is NOT
+byte-identical any more (every loop task's `termination_by` line now
+reads `(dec + 1).toNat`), an intentional, explained departure from this
+file's usual byte-identical bar, since the shift is provably harmless to
+every already-working case and the alternative (gating it behind a
+per-task flag) would have needed the same "does the guard alone already
+suffice" judgment call this note's own measurement shows is only
+answerable by literally trying it.
+
+MEASURED, before -> after, flake 3, wall seconds (all fifteen; none
+close to the harness's wall backstop in either run): clover_cal_sum__sum
+0.6s -> 0.6s, clover_linear_search1__linearSearch 0.7s -> 0.8s,
+elementAtIndexAfterRotation 0.5s -> 0.6s, slow_max 1.0s -> 1.2s, cube
+(ai_agent_validation_examples) 0.5s -> 0.6s, cube
+(ai_agent_verify_examples_cube) 0.5s -> 0.6s, minimum 1.3s -> 1.4s,
+carre 0.6s -> 0.5s, foo 0.5s -> 0.5s, gcdI (ex_05_Hoangkim) 14.0s ->
+13.7s, gcdI (ex06-solution) 1.3s -> 1.4s, gcdI (ex_06_hoangkim) 10.3s ->
+10.2s, div_ent_it 0.9s -> 1.0s, eval 0.5s -> 0.5s. ONE cell moved:
+se2011_tmp_tmp71eb82zt_ass1_ex4__eval, verified/unproved ->
+verified/refuted (COUNTS, witness x=1 -> real 1, compare-flip twin 2).
+The other fourteen are byte-for-byte the same verdict pair as measured
+before this note (thirteen unproved/unproved or unproved/refuted,
+unchanged; div_ent_it's twin ALSO still fails its own `_t_loop`
+decreasing_by, a second instance of the direction class, `r_v -> r_v -
+b` needing `b > 0` from the invariant, not the guard `r_v >= b` alone).
+
+STAYS OPEN, by name, and why: clover_cal_sum__sum,
+clover_linear_search1__linearSearch, the two ..._cube tasks,
+dafny_verify_..._minimum, m2_..._carre, ..._foo, all three ..._gcdI
+tasks, and tfg_..._div_ent_it -- all nine (eleven counting both cube
+rows and all three gcdI rows) share the single direction-class gap above:
+`_t_loop`'s bare decreasing_by needs a fact only the loop's OWN
+invariants carry, and threading them through would mean `_t_loop` taking
+a domain-restricting hypothesis argument that `_t` (which has no
+hypothesis to supply, called on every Int including out-of-precondition
+ones) cannot construct without either becoming partial itself or a
+fuel-bounded redefinition of `_t_loop`, `_t`, `_t_loop_spec`'s applied
+terms and `_cert_loop`'s certificate construction together -- the same
+"too wide a blast radius" scope "NOT CLOSED" flagged for flip and
+linear_search 2026-09-09, now measured to be the dominant shape across
+this residual too, not a corner case. dafny_synthesis_task_id_304__
+elementAtIndexAfterRotation is a different shape entirely (no top-level
+loop -- a SIMPLE-shape single `at` with a `mod`-of-a-difference index,
+`(index - n + len) % len`): its own `_wf1`/`_wfbody` theorems fail
+inside the existing div/mod bridge (`_close`'s `divmod_prelude`), a
+distinct, still-uninspected gap this note did not have time to isolate.
+Left honestly unproved rather than forced, matching this file's standing
+rule: a recorded absence, never a faked proof.
+
+BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10, "sole blockers" wave).
+COVERAGE-lifted-785.md named 13 lifted tasks and three v1nested
+fuzz-family members (fz_v1nested_026, fz_p_nest_eq, fz_p_nest_lit) as
+lean's own residual, all under one stated reason: "boolean operator '==' /
+'and' in computational position is not lowered for lean" -- term()'s own
+final raise, since prop() already had a Prop-producing case for
+==/!=/CMP_OPS/and/or/not but term() had no Bool-producing parallel, the
+exact gap the "Pairs" note above already named as SPEC.md's next
+construct.
+
+MEASURED FIRST, before fixing anything: of the 13, only 6 actually hit
+this reason (both real and twin bodies, lowered in isolation to confirm):
+dafny_synthesis_task_id_396__startAndEndWithSameChar, _406__isOdd,
+_600__isEven, _637__isBreakEven, _77__isDivisibleBy11,
+_79__isLengthOdd -- every one a SIMPLE-shape, single-assign body
+computing `result := (a == b)` over ints (four direct/mod comparisons,
+one via two `at` reads standing in for a character compare). The other 7
+abstain for two genuinely different, pre-existing SIMPLE-shape
+restrictions, read and confirmed, not touched by this note:
+clover_is_even__computeIsEven, cs245_verification_tmp_tmp0h_nxhqp_a8_q2__
+a8Q1 and dafny_learn_tmp_tmpn94ir40q_r01_assertions__max all read "a path
+that assigns nothing is not lowered for lean"; dafny_learning_experience_
+tmp_tmpuxvcet_u_week1_7_maxsum__maxSum, dafny_synthesis_task_id_801__
+countEqualNumbers and both dafny_verify_tmp_tmphq7j0row_test_cases_
+{ghost__myMethod,index__maxSum} read "statements after a branch are not
+lowered for lean".
+
+THE FIX. term() grew one new case, parallel to prop()'s existing one, for
+the identical operator set (==, !=, <, <=, >, >=, and, or, not):
+`decide (self.prop(e, env, types))`, reusing prop()'s own formula text
+unchanged and bridging Prop -> Bool with `decide`, sound because every
+sort v1 has here (Int, Bool, seq, nested seq) carries a computable
+`Decidable` instance for every one of these operators in core Lean (Int's
+linear order and DecidableEq, List/List (List Int)'s structural
+DecidableEq, Bool's own DecidableEq): one line, no per-sort code. dcond()
+needed no new case: and/or/not/comparisons/==/!= already fell through its
+generic per-argument case or its dedicated and/or short-circuit branch
+regardless of position, so definedness was already position-agnostic.
+
+MEASURED: all six SIMPLE int-comparison tasks above COUNT (real VERIFIED,
+twin REFUTED) at flake 3 on the first try, `grind [f]` alone (the
+EXISTING base tactic every spec/wfbody theorem already tries first)
+closing every one with no new lemma -- `decide_eq_true_eq` is already in
+grind's own default simp set:
+  dafny_synthesis_task_id_396__startAndEndWithSameChar: witness s=[0],
+    real True, off-by-one twin index 1 outside [0,1);
+  dafny_synthesis_task_id_406__isOdd: witness n=-1, real True, twin False;
+  dafny_synthesis_task_id_600__isEven: witness n=2, real True, twin False;
+  dafny_synthesis_task_id_637__isBreakEven: witness costPrice=0,
+    sellingPrice=1, real False, wrong-var twin True;
+  dafny_synthesis_task_id_77__isDivisibleBy11: witness n=11, real True,
+    twin False;
+  dafny_synthesis_task_id_79__isLengthOdd: witness s=[0, 0, 0], real
+    True, twin False.
+A scratch probe (lean 4.33.1, core only, not a committed/fuzzed task)
+confirms the same holds with no new lemma for Bool `and`/`or`/`not` and
+Int `<`/`<=`/`>`/`>=` too: `grind [f]` alone closes each.
+
+THE SEQ-EQUALITY RESIDUAL, closed too. fz_p_nest_lit (computational
+`and`) COUNTED immediately with the fix above alone, but fz_v1nested_026
+and fz_p_nest_eq (computational `==` on nested seqs, `r := (m == n)`)
+only moved from abstain to UNPROVED/refuted: `decide (m = n)` lowers to
+Lean's native STRUCTURAL list equality, but this file's own ensures
+clauses state seq equality ELEMENTWISE (SPEC.md's "equal lengths and
+equal elements at every index"), so `decide_eq_true_eq` alone gets the
+goal down to `m = n`, one step short of the length-plus-pointwise Prop
+the spec theorem actually carries. One more lemma, `t_seq_ext`, list
+extensionality via `List.ext_getElem` plus the same `getElem!_pos`
+totalization the read bridges already use, proved once, generic in the
+element type (`{alpha : Type} [Inhabited alpha]`: `List.ext_getElem`
+needs no DecidableEq, so unlike the read bridges this needs no `_row`
+duplicate, one lemma covers flat and nested alike). Gated by a new
+`self.seq_eq_comp` flag (`_stmts_have_seq_eq_comp`/`_term_bool_has_seq_
+eq`), a walk restricted to genuinely computational-position expressions:
+assign/return/var-init, both `if` arms, a while body, descending through
+`ite`/`call`/`and`/`or`/`not` exactly as term() itself does, so a seq
+`==` sitting in an if-COND or a spec clause (already handled by prop()
+with plain `=`, needing no `decide` at all) never sets it. Named in
+`_seq_hints()`'s `grind only` list and emitted by `emit_seq_helpers()`
+only when it fires, so a task that never computes a seq equality never
+sees it. MEASURED (`fuzz_lower.py --only lean --tasks fz_v1nested_026,
+fz_p_nest_eq,fz_p_nest_lit --n 400 --seed 1 --flake 3 --jobs 3`, matching
+this note's own reproduction command): before this wave all three read
+abstain (the boolean-operator reason), 0 of 3 counted; after, all 3 of 3
+count (fz_v1nested_026 and fz_p_nest_eq: real VERIFIED, twin REFUTED;
+fz_p_nest_lit: real VERIFIED, twin REFUTED, unaffected by `t_seq_ext`
+since it was already counting before that lemma was added).
+
+BONUS, outside this wave's own scope but measured in passing: the
+"Pairs" note above named fz_v1pairs_053 and fz_p_pair_eq as this same
+computational-bool gap and left both unfixed. fz_p_pair_eq now COUNTS
+too (real VERIFIED, twin REFUTED), the identical `decide` fix, no pair-
+specific code involved; fz_v1pairs_053 did not land in this run's own
+--seed 1 sample, so it is unmeasured here, not regressed.
+
+REGRESSION. All 23 committed tasks/*.json, real and twin, regenerated
+(`harness.load` + `lower_lean.lower`, matching `harness.run_task`'s own
+call shape) and diffed against a byte-identical snapshot of this file
+from immediately before this wave (`git diff` captured and reverted with
+`patch -R` into a scratch copy, the running worktree never touched): 0 of
+23 differ, in either the real or the twin source. This matches the
+exhaustive-raise argument exactly: every one of these six operators, in
+any position, previously raised NotImplementedError from term() with no
+other call site catching it, so a task that lowers successfully today
+necessarily never reached the new code, before or after. The 7
+non-boolean-gap tasks among the 13 (named above) also read byte-identical
+abstain reasons before and after.
+
+STILL OPEN, named. The 7 lifted tasks abstaining for the two other
+SIMPLE-shape reasons are untouched: clover_is_even__computeIsEven,
+cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1, dafny_learn_tmp_
+tmpn94ir40q_r01_assertions__max, dafny_learning_experience_tmp_
+tmpuxvcet_u_week1_7_maxsum__maxSum, dafny_synthesis_task_id_801__
+countEqualNumbers, dafny_verify_tmp_tmphq7j0row_test_cases_ghost__
+myMethod, dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum -- real
+gaps in this SIMPLE-shape lowering's control-flow coverage, not booleans,
+genuinely out of this wave's scope. `implies` in computational position
+is also still unfixed (no measured task needs it, and SPEC.md's own list
+never names it), left an honest NotImplementedError like every other
+genuinely unlowered shape.
 """
 from __future__ import annotations
 
@@ -1118,6 +1345,17 @@ class Lower:
         # that predates this construct, so nothing about their output
         # changes.
         self.nested = self._has_nested_type(task) or self._has_nested_type(body)
+        # BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10): does THIS body
+        # compute a seq-sorted `==`/`!=` anywhere in computational
+        # position (`_stmts_have_seq_eq_comp` above) -- gates emitting
+        # `t_seq_ext` (list extensionality, the one bridge a seq equality
+        # rendered as `decide (s = t)` needs that plain
+        # `decide_eq_true_eq` does not, measured on fz_v1nested_026/
+        # fz_p_nest_eq) and naming it in the grind-only fallback. False
+        # for every task that predates this construct (none reaches
+        # term()'s new ==/!=/CMP_OPS/and/or/not case at all, since that
+        # case did not exist), so nothing about their output changes.
+        self.seq_eq_comp = self._stmts_have_seq_eq_comp(body, self.types)
 
     # ---------- naming ----------
 
@@ -1226,6 +1464,72 @@ class Lower:
         never mistaken for a seq by this check."""
         return s == "seq" or (isinstance(s, dict) and "seq" in s)
 
+    # BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10): does `e`, reached
+    # exactly the way term()'s new unified ==/!=/CMP_OPS/and/or/not case
+    # reaches it, contain a seq-sorted `==`/`!=` anywhere in its boolean
+    # structure -- the one shape (measured on fz_v1nested_026/fz_p_nest_eq)
+    # needing a bridge lemma beyond plain grind, since Lean's native `=`
+    # decides seq equality STRUCTURALLY while this file's own ensures
+    # clauses (SPEC.md's "equal lengths and equal elements at every
+    # index") state it ELEMENTWISE: `decide (s = t) = true` needs list
+    # EXTENSIONALITY, not just the `decide_eq_true_eq` unwrap every other
+    # operator here closes with. Descends exactly term()'s own boolean
+    # control flow (`ite` branches, `call` args, and/or/not, stopping at
+    # CMP_OPS/arithmetic/`at`/etc., which cannot contain a further
+    # boolean subtree here) so a seq `==` sitting in an `if`-COND or a
+    # spec clause (prop()-rendered, plain `=`, no `decide`, needing no
+    # extensionality bridge at all) is never mistaken for one in term
+    # position.
+    def _term_bool_has_seq_eq(self, e: dict, types: dict) -> bool:
+        if "ite" in e:
+            c = e["ite"]
+            return (self._term_bool_has_seq_eq(c["then"], types)
+                    or self._term_bool_has_seq_eq(c["else"], types))
+        if "call" in e:
+            return any(self._term_bool_has_seq_eq(a, types)
+                       for a in e["call"]["args"])
+        if "op" not in e:
+            return False
+        op = e["op"]
+        if op in ("and", "or"):
+            return any(self._term_bool_has_seq_eq(a, types)
+                       for a in e["args"])
+        if op == "not":
+            return self._term_bool_has_seq_eq(e["args"][0], types)
+        if op in ("==", "!="):
+            return self._is_seqsort(self.sort(e["args"][0], types))
+        return False
+
+    def _stmts_have_seq_eq_comp(self, stmts: list, types: dict) -> bool:
+        """Walks `stmts` the way sym()/to_expr do, checking every genuinely
+        computational-position expression (assign/return/var-init, both
+        arms of every if, a while body) via `_term_bool_has_seq_eq` above;
+        an if/while's own COND is never visited (prop-position, needs no
+        bridge). types tracks local `var` declarations only enough for
+        sort() to answer correctly, mirroring sym()'s own bookkeeping."""
+        types = dict(types)
+        for s in stmts:
+            if "assign" in s:
+                if self._term_bool_has_seq_eq(s["assign"][1], types):
+                    return True
+            elif "return" in s:
+                if self._term_bool_has_seq_eq(s["return"][1], types):
+                    return True
+            elif "var" in s:
+                d = s["var"]
+                types[d["name"]] = d["type"]
+                if self._term_bool_has_seq_eq(d["init"], types):
+                    return True
+            elif "if" in s:
+                c = s["if"]
+                if (self._stmts_have_seq_eq_comp(c["then"], types)
+                        or self._stmts_have_seq_eq_comp(c["else"], types)):
+                    return True
+            elif "while" in s:
+                if self._stmts_have_seq_eq_comp(s["while"]["body"], types):
+                    return True
+        return False
+
     # ---------- expressions ----------
 
     def term(self, e: dict, env: dict, types: dict, dep: bool = False) -> str:
@@ -1333,6 +1637,20 @@ class Lower:
         if op in DIV_MOD:
             a, b = (self.term(x, env, types, dep) for x in e["args"])
             return f"({a} {DIV_MOD[op]} {b})"
+        if op in ("==", "!=") or op in CMP_OPS or op in ("and", "or", "not"):
+            # BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10): a
+            # comparison/equality/logical op reaching term() (as opposed
+            # to prop(), which already renders every one of these as a
+            # Prop) means the AST needs a Lean Bool VALUE here, not a
+            # formula -- an assign/return/call-arg whose source is `a ==
+            # b`, `a < b`, `p and q`, etc. `prop()` already renders the
+            # identical node as a decidable Prop for every sort this
+            # reaches (int, bool, seq, nested seq all carry computable
+            # `Decidable` instances in core Lean: Int's linear order and
+            # DecidableEq, List/List (List Int)'s structural DecidableEq,
+            # Bool's own DecidableEq), so `decide` bridges Prop -> Bool
+            # uniformly, one line for every operator, no per-sort code.
+            return f"(decide {self.prop(e, env, types)})"
         raise NotImplementedError(
             f"boolean operator {op!r} in computational position "
             "is not lowered for lean")
@@ -2008,7 +2326,7 @@ class Lower:
         so the fifteen pre-existing tasks see byte-identical tactic
         scripts."""
         branches = self._divmod_branches(nodes, env, types)
-        if self.seq_mut or self.seq_new:
+        if self.seq_mut or self.seq_new or self.seq_eq_comp:
             branches.append(f"(grind only [{self._seq_hints()}])")
         if not branches:
             return base
@@ -2090,6 +2408,8 @@ class Lower:
                 # duplicate; only the two READ bridges, monomorphic in
                 # element type by construction, need one.
                 names += ["t_seq_append_get_row", "t_seq_slice_get_row"]
+        if self.seq_eq_comp:
+            names.append("t_seq_ext")
         return ", ".join(names + [f"{f}_s" for f in self.sfuns])
 
     def _gr(self, nodes: list | None = None, env: dict | None = None,
@@ -2110,7 +2430,7 @@ class Lower:
         if nodes is not None:
             branches += self._divmod_branches(nodes, env or {},
                                               types or self.types)
-        if self.seq_mut or self.seq_new:
+        if self.seq_mut or self.seq_new or self.seq_eq_comp:
             branches.append(f"grind only [{self._seq_hints()}]")
         if not branches:
             return base
@@ -2211,9 +2531,45 @@ class Lower:
     # its own, so it would only add an extra unfold with nothing to show
     # for it.
     def emit_seq_helpers(self) -> str:
-        if not (self.seq_mut or self.seq_new):
+        if not (self.seq_mut or self.seq_new or self.seq_eq_comp):
             return ""
         parts = []
+        if self.seq_eq_comp:
+            # BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10): a
+            # computational seq `==`/`!=` lowers (term()'s new unified
+            # case) to `decide (s = t)`; `decide_eq_true_eq` alone gets a
+            # goal to Lean's native, STRUCTURAL `s = t`, but this file's
+            # own ensures clauses state seq equality ELEMENTWISE (SPEC.md
+            # "equal lengths and equal elements at every index"), so the
+            # spec theorem still needs list EXTENSIONALITY to bridge the
+            # two. One lemma, proved once, generic in the element type
+            # (`{α : Type} [Inhabited α]` -- `List.ext_getElem` needs no
+            # DecidableEq, and `getElem!_pos`'s totalization is already
+            # polymorphic, so this needs no `_row` duplicate the way the
+            # read bridges above do): length equality (as Int, matching
+            # this file's own `len()` convention) plus a pointwise
+            # `getElem!` equality (the same `.toNat`-cast shape `at`
+            # already emits) give `List.ext_getElem` exactly its two
+            # obligations once the Int cast is `omega`'d to a Nat length
+            # equality and the `getElem!` hypothesis is totalized via
+            # `getElem!_pos` on each side. Measured (lean 4.33.1, core
+            # only, a five-theorem scratch probe): closes `grind only
+            # [t_seq_ext]` on both fz_v1nested_026's and fz_p_nest_eq's
+            # own spec theorem (`List (List Int)`, using the SAME lemma,
+            # no row-typed twin) with no other change.
+            parts.append(
+            "theorem t_seq_ext {α : Type} [Inhabited α] {l1 l2 : List α}\n"
+            "    (hlen : ((l1.length : Int)) = ((l2.length : Int)))\n"
+            "    (hget : ∀ (k : Int), (0 : Int) ≤ k → k < ((l1.length : Int))"
+            " →\n"
+            "      l1[(k).toNat]! = l2[(k).toNat]!) :\n"
+            "    l1 = l2 := by\n"
+            "  apply List.ext_getElem\n"
+            "  · omega\n"
+            "  · intro i h1 h2\n"
+            "    have hk := hget (i : Int) (by omega) (by omega)\n"
+            "    simp only [Int.toNat_natCast] at hk\n"
+            "    rwa [getElem!_pos l1 i h1, getElem!_pos l2 i h2] at hk\n")
         if self.seq_mut:
             parts.append(
             "theorem t_seq_update_get (l : List Int) (i j : Int) (v : Int)\n"
@@ -2479,6 +2835,9 @@ class Lower:
                              "nested seq append-read bridge"),
                             ("t_seq_slice_get_row",
                              "nested seq slice-read bridge")]
+        if self.seq_eq_comp:
+            seq_thms.append(("t_seq_ext", "seq equality extensionality "
+                             "bridge (booleans as computational values)"))
         sf_src, sf_thms = self.emit_sfuns()
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
         body = self.body
@@ -2711,6 +3070,32 @@ class Lower:
         has_return = ret_cond != "False"
         rec_args = " ".join(env_b.get(v, v) for v in state)
         dec = self.term(w["decreases"], {}, types)
+        # LOOP TERMINATION MEASURE, +1 (2026-09-10): `_t_loop`'s bare
+        # decreasing_by carries only the guard hypothesis (`_hg`), never
+        # the invariants -- see "THE DECREASING-BY GAP" and the "NOT
+        # CLOSED" note above for the (still-open) class where the guard
+        # alone cannot bound the measure's DIRECTION. A distinct, narrower
+        # class measured today, first on the twin of
+        # se2011_tmp_tmp71eb82zt_ass1_ex4__eval (a compare-flip mutation,
+        # guard `y >= 0` where the real program's guard is `y > 0`): the
+        # measure's own DIRECTION is fine (`_hg` alone proves the new
+        # value is smaller), but `(dec).toNat` clamps every value <= 0 to
+        # 0, so the LAST guard-true step (old `y = 0`, new `y = -1`) has
+        # old.toNat = new.toNat = 0 -- not a false decrease, a `.toNat`
+        # floor artifact losing a real, provable strict decrease.
+        # `(dec + 1).toNat` fixes exactly this at zero cost elsewhere:
+        # algebraically, `a < b -> a + 1 < b + 1` for any Int a, b, so
+        # every decreasing_by goal already closed by `omega`/`grind` from
+        # `dec`'s own strict decrease closes identically from `dec + 1`'s
+        # (same hypotheses, same tactics, one more trivial `+1` on both
+        # sides) -- confirmed on the regression below, all 13 tasks/*.json
+        # loop tasks unchanged. It does NOT touch the direction class
+        # above (cal_sum, linear_search, cube, minimum, carre, foo,
+        # slow_max, the three gcdI tasks): there the measure itself can
+        # INCREASE outside the invariant-held domain, and shifting by a
+        # constant shifts an increase too, closing nothing -- measured
+        # directly, still open, named in this file's dated note below.
+        dec1 = f"(({dec}) + 1)"
         dec_d = self.dcond(w["decreases"], {}, types)
         # SPEC.md "Sequences as values" (2026-09-09): does the recursive
         # call's own termination proof need the length-bridge alternative
@@ -2741,7 +3126,7 @@ class Lower:
                    f"    (if _hr : {ret_cond} then {retval}\n"
                    f"     else {self.name}_t_loop {pnames} {rec_args})\n"
                    f"  else {result}\n"
-                   f"termination_by ({dec}).toNat\n"
+                   f"termination_by ({dec1}).toNat\n"
                    + self._dec(dec_needed)]
         else:
             out = [f"def {self.name}_t_loop {pb} {sb} : "
@@ -2749,7 +3134,7 @@ class Lower:
                    f"  if _hg : {guard_p} then\n"
                    f"    {self.name}_t_loop {pnames} {rec_args}\n"
                    f"  else {result}\n"
-                   f"termination_by ({dec}).toNat\n"
+                   f"termination_by ({dec1}).toNat\n"
                    + self._dec(dec_needed)]
         init_args = " ".join(env0[v] for v in state)
         out.append(f"def {self.name}_t {pb} : "
@@ -2871,7 +3256,7 @@ class Lower:
             f"  · {split_tac}\n"
             f"    {then_tac}\n"
             f"  · {self._gr()}\n"
-            f"termination_by ({dec}).toNat\n"
+            f"termination_by ({dec1}).toNat\n"
             + self._dec(dec_needed))
         thms.append((f"{self.name}_t_loop_spec",
                      "invariants -> ensures, by induction on the loop"))
