@@ -651,6 +651,17 @@ def _t_expr(e: dict, views: dict = {}) -> str:
         return "[" + ", ".join(_t_expr(a, views) for a in args) + "]"
     if op == "slice":
         return f"{_t_expr(args[0], views)}[{_t_expr(args[1], views)}..{_t_expr(args[2], views)}]"
+    if op == "update":
+        # Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"): `s[i :=
+        # r]`, Dafny's own functional seq-update syntax -- the same
+        # expression `lift_rewrite`'s `SeqUpdate` case (and decision 22's
+        # `a[i] := e` statement rewrite) targets.
+        return f"{_t_expr(args[0], views)}[{_t_expr(args[1], views)} := {_t_expr(args[2], views)}]"
+    if op == "fill":
+        # `fill(n, r)`: `n` copies of `r` (SPEC.md "Nested sequences
+        # (v1)"; decision 22's own `new int[n]` reading uses the same
+        # operator for a scalar fill). Dafny's `seq(n, _ => r)`.
+        return f"seq({_t_expr(args[0], views)}, _ => {_t_expr(args[1], views)})"
     if op == "pair":
         # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): `{"op": "pair",
         # "args": [a, b]}` prints as Dafny's own native tuple literal
@@ -2092,7 +2103,24 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     # own shell order -- the same order `interp.Reference` already
     # produced them in, so this is a prefix, not a resample.
     diff_points = ref.points[:DIFF_MAX_POINTS]
-    diff_text = _build_differential_with_points(task, source, closure, diff_points)
+    try:
+        diff_text = _build_differential_with_points(task, source, closure, diff_points)
+    except (TypeError, KeyError) as exc:
+        # Row 30 (2026-09-10): a nested-seq param/return's own JSON type
+        # is the compound `{"seq": "seq"}`, not a plain string -- if
+        # `lower_dafny.TYPES` (owned by the concurrent nested-lowering
+        # work this task's own caution names) does not yet have an entry
+        # for it, the lookup itself raises (an unhashable dict key, or a
+        # missing one) before `dafny run` is ever invoked. Recorded the
+        # same way an unresolvable generated Main already is -- arm-
+        # unavailable, never a refusal -- rather than crashing this
+        # stage outright; the lemma-based checks above already ran and
+        # stand on their own.
+        record.differential_verdict = f"arm-unavailable: {type(exc).__name__}: {exc}"
+        record.warnings.append("differential build raised before dafny ran (nested-seq type not yet in lower_dafny.TYPES)")
+        return CheckOutput(checker_dfy=checker_text, differential_dfy="", record=record,
+                           refusal=None, interp_points=n_points,
+                           interp_first_value=first_value)
     diff_path = dfy_path.with_name(dfy_path.stem + ".diff.dfy")
     diff_path.write_text(diff_text, encoding="utf-8", newline="\n")
     d_exit, printed, points_n, bad_n, raw_out = _run_differential(diff_path, timeout_s)

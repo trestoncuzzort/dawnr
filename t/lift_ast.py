@@ -292,7 +292,9 @@ class Slice(Expr):
 @dataclass
 class SeqUpdate(Expr):
     """`Primary "[" Expr ":=" Expr "]"`: functional sequence update.
-    Always `seq-update` (refused): t's `seq` has no update operator."""
+    Lifts to t's `update` operator when the base types `seq` (row 30,
+    2026-09-10, SPEC.md "Nested sequences (v1)"); else refused
+    `seq-update` (an unresolvable base)."""
     base: Expr
     index: Expr
     value: Expr

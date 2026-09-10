@@ -8,15 +8,14 @@ seven kernels verify its t rendering. Method and detectors at the end.
 ## Headline
 
 - programs: 164; with a method carrying its own ensures (gradable): 164
-- in t's fragment today: **121** of 164 gradable (73.8%)
-- gradable programs blocked by exactly one gap: 37
+- in t's fragment today: **131** of 164 gradable (79.9%)
+- gradable programs blocked by exactly one gap: 27
 
 ## Gaps, by programs that need them
 
 | gap | programs | sole blocker for (gradable) | meaning |
 |---|---|---|---|
 | real | 10 | 9 | real numbers |
-| nested-seq | 10 | 10 | seq<seq<int>>/seq<seq<nat>> (array\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- SPEC.md 'Nested sequences (v1)', LIFTER-DECISIONS.md row 30 |
 | set | 7 | 6 | set, iset, multiset, set comprehension or set literal |
 | char-arith | 3 | 3 | char arithmetic |
 | array | 2 | 1 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
@@ -38,48 +37,46 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | nested-seq | 10 | 131 | 79.9% |
-| 2 | real | 9 | 140 | 85.4% |
-| 3 | set | 6 | 146 | 89.0% |
-| 4 | char-arith | 3 | 149 | 90.9% |
-| 5 | multi-return-arity | 2 | 151 | 92.1% |
-| 6 | nested-seq-string | 2 | 153 | 93.3% |
-| 7 | array | 1 | 154 | 93.9% |
-| 8 | zero-returns | 1 | 155 | 94.5% |
-| 9 | early-exit | 1 | 156 | 95.1% |
-| 10 | multi-method | 1 | 157 | 95.7% |
-| 11 | array-mutation | 1 | 158 | 96.3% |
-| 12 | seq-of-bool | 1 | 159 | 97.0% |
-| 13 | unbounded-quantifier | 1 | 160 | 97.6% |
-| 14 | bitvector | 1 | 161 | 98.2% |
-| 15 | nested-seq-other | 1 | 162 | 98.8% |
-| 16 | tuple | 1 | 163 | 99.4% |
-| 17 | higher-order | 0 | 163 | 99.4% |
-| 18 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | real | 9 | 140 | 85.4% |
+| 2 | set | 6 | 146 | 89.0% |
+| 3 | char-arith | 3 | 149 | 90.9% |
+| 4 | multi-return-arity | 2 | 151 | 92.1% |
+| 5 | nested-seq-string | 2 | 153 | 93.3% |
+| 6 | array | 1 | 154 | 93.9% |
+| 7 | zero-returns | 1 | 155 | 94.5% |
+| 8 | early-exit | 1 | 156 | 95.1% |
+| 9 | multi-method | 1 | 157 | 95.7% |
+| 10 | array-mutation | 1 | 158 | 96.3% |
+| 11 | seq-of-bool | 1 | 159 | 97.0% |
+| 12 | unbounded-quantifier | 1 | 160 | 97.6% |
+| 13 | bitvector | 1 | 161 | 98.2% |
+| 14 | nested-seq-other | 1 | 162 | 98.8% |
+| 15 | tuple | 1 | 163 | 99.4% |
+| 16 | higher-order | 0 | 163 | 99.4% |
+| 17 | seq-comprehension | 1 | 164 | 100.0% |
 
 
 ### The same order on the MBPP-DFY family alone (164 gradable, the LLM-shaped subset)
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | nested-seq | 10 | 131 | 79.9% |
-| 2 | real | 9 | 140 | 85.4% |
-| 3 | set | 6 | 146 | 89.0% |
-| 4 | char-arith | 3 | 149 | 90.9% |
-| 5 | multi-return-arity | 2 | 151 | 92.1% |
-| 6 | nested-seq-string | 2 | 153 | 93.3% |
-| 7 | array | 1 | 154 | 93.9% |
-| 8 | zero-returns | 1 | 155 | 94.5% |
-| 9 | early-exit | 1 | 156 | 95.1% |
-| 10 | multi-method | 1 | 157 | 95.7% |
-| 11 | array-mutation | 1 | 158 | 96.3% |
-| 12 | seq-of-bool | 1 | 159 | 97.0% |
-| 13 | unbounded-quantifier | 1 | 160 | 97.6% |
-| 14 | bitvector | 1 | 161 | 98.2% |
-| 15 | nested-seq-other | 1 | 162 | 98.8% |
-| 16 | tuple | 1 | 163 | 99.4% |
-| 17 | higher-order | 0 | 163 | 99.4% |
-| 18 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | real | 9 | 140 | 85.4% |
+| 2 | set | 6 | 146 | 89.0% |
+| 3 | char-arith | 3 | 149 | 90.9% |
+| 4 | multi-return-arity | 2 | 151 | 92.1% |
+| 5 | nested-seq-string | 2 | 153 | 93.3% |
+| 6 | array | 1 | 154 | 93.9% |
+| 7 | zero-returns | 1 | 155 | 94.5% |
+| 8 | early-exit | 1 | 156 | 95.1% |
+| 9 | multi-method | 1 | 157 | 95.7% |
+| 10 | array-mutation | 1 | 158 | 96.3% |
+| 11 | seq-of-bool | 1 | 159 | 97.0% |
+| 12 | unbounded-quantifier | 1 | 160 | 97.6% |
+| 13 | bitvector | 1 | 161 | 98.2% |
+| 14 | nested-seq-other | 1 | 162 | 98.8% |
+| 15 | tuple | 1 | 163 | 99.4% |
+| 16 | higher-order | 0 | 163 | 99.4% |
+| 17 | seq-comprehension | 1 | 164 | 100.0% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
@@ -89,7 +86,7 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 121 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 131 |
 
 ## Burdens (expressible at a translation cost)
 
@@ -113,6 +110,7 @@ more than one gate.
 | seq-slice | 18 | slicing s[a..b], s[a..], s[..b] -- lifts to t's slice, sugars expanded (LIFTER-DECISIONS.md row 27) |
 | frame-clause | 12 | modifies / reads (array frames when no class is present) |
 | trailing-return | 12 | a return as the last statement (assign the result instead) |
+| nested-seq | 10 | seq<seq<int>>/seq<seq<nat>> (array\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- lifts to t's {'seq': 'seq'} (LIFTER-DECISIONS.md row 30) |
 | as-cast | 8 | as int / as nat casts |
 | early-return | 6 | a return that is not in tail position of a method body (lifts to t's early-exit `return` statement) |
 | multi-return-pair | 3 | exactly two return values, both int/nat/bool/seq<int|nat|char>/string -- lifts to one pair-typed return (LIFTER-DECISIONS.md row 29) |
@@ -143,6 +141,7 @@ more than one gate.
 - dafny-synthesis_task_id_133.dfy
 - dafny-synthesis_task_id_135.dfy
 - dafny-synthesis_task_id_14.dfy
+- dafny-synthesis_task_id_143.dfy
 - dafny-synthesis_task_id_145.dfy
 - dafny-synthesis_task_id_161.dfy
 - dafny-synthesis_task_id_17.dfy
@@ -169,6 +168,7 @@ more than one gate.
 - dafny-synthesis_task_id_279.dfy
 - dafny-synthesis_task_id_282.dfy
 - dafny-synthesis_task_id_284.dfy
+- dafny-synthesis_task_id_290.dfy
 - dafny-synthesis_task_id_292.dfy
 - dafny-synthesis_task_id_3.dfy
 - dafny-synthesis_task_id_304.dfy
@@ -176,6 +176,7 @@ more than one gate.
 - dafny-synthesis_task_id_309.dfy
 - dafny-synthesis_task_id_396.dfy
 - dafny-synthesis_task_id_397.dfy
+- dafny-synthesis_task_id_401.dfy
 - dafny-synthesis_task_id_404.dfy
 - dafny-synthesis_task_id_406.dfy
 - dafny-synthesis_task_id_412.dfy
@@ -191,7 +192,9 @@ more than one gate.
 - dafny-synthesis_task_id_447.dfy
 - dafny-synthesis_task_id_452.dfy
 - dafny-synthesis_task_id_454.dfy
+- dafny-synthesis_task_id_457.dfy
 - dafny-synthesis_task_id_458.dfy
+- dafny-synthesis_task_id_460.dfy
 - dafny-synthesis_task_id_470.dfy
 - dafny-synthesis_task_id_472.dfy
 - dafny-synthesis_task_id_474.dfy
@@ -229,6 +232,8 @@ more than one gate.
 - dafny-synthesis_task_id_629.dfy
 - dafny-synthesis_task_id_637.dfy
 - dafny-synthesis_task_id_641.dfy
+- dafny-synthesis_task_id_69.dfy
+- dafny-synthesis_task_id_70.dfy
 - dafny-synthesis_task_id_728.dfy
 - dafny-synthesis_task_id_732.dfy
 - dafny-synthesis_task_id_733.dfy
@@ -245,6 +250,7 @@ more than one gate.
 - dafny-synthesis_task_id_775.dfy
 - dafny-synthesis_task_id_79.dfy
 - dafny-synthesis_task_id_790.dfy
+- dafny-synthesis_task_id_792.dfy
 - dafny-synthesis_task_id_793.dfy
 - dafny-synthesis_task_id_798.dfy
 - dafny-synthesis_task_id_8.dfy
@@ -256,6 +262,8 @@ more than one gate.
 - dafny-synthesis_task_id_809.dfy
 - dafny-synthesis_task_id_86.dfy
 - dafny-synthesis_task_id_89.dfy
+- dafny-synthesis_task_id_94.dfy
+- dafny-synthesis_task_id_95.dfy
 
 ## Method
 

@@ -167,6 +167,21 @@ def _is_seq_of_char(t: Optional[Type]) -> bool:
             and _is_char(t.args[0]))
 
 
+def _is_nested_seq_of_int(t: Optional[Type]) -> bool:
+    # Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"): `seq<seq<int>>`,
+    # one level of nesting, int rows -- t's `{"seq": "seq"}`.
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and t.args[0].kind == "seq" and len(t.args[0].args) == 1
+            and t.args[0].args[0].kind == "int")
+
+
+def _is_nested_seq_of_nat(t: Optional[Type]) -> bool:
+    # Row 30: `seq<seq<nat>>`, the same one level of nesting, nat rows.
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and t.args[0].kind == "seq" and len(t.args[0].args) == 1
+            and t.args[0].args[0].kind == "nat")
+
+
 def _is_array_of_int(t: Optional[Type]) -> bool:
     return (t is not None and t.kind == "array" and not t.nullable
             and len(t.args) == 1 and _is_int_like(t.args[0]))
@@ -198,11 +213,54 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             # "Strings as sequences of code points (v1)"), so it carries
             # here exactly as `seq<int>` already does.
             return None
-        return "nested-seq"
+        # Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"): one level
+        # of seq-of-seq nesting, int/nat rows, is t's own `{"seq": "seq"}`.
+        # A `seq<seq<nat>>` row gets the same non-negativity gap a bare
+        # `seq<nat>` param/local already has above (no per-row guard this
+        # lifter can add), refused `nat-seq-elements` the same way; a
+        # RETURN's own weaker-theorem exemption for that gap lives in
+        # `classify`'s return-handling branch, not here, mirroring how a
+        # flat `seq<nat>` return is already exempted there. Refused by
+        # name otherwise: `seq-of-bool` (`seq<bool>`, one level), `nested-
+        # seq-string` (`seq<string>`, `seq<seq<char>>`), `nested-seq-deep`
+        # (three levels or more), `array` (`seq<array<..>>`, row 22's own
+        # territory, not a seq-nesting question), `nested-seq-other`
+        # (anything else: `seq<seq<bool>>`, `seq<seq<real>>`, ...).
+        row = t.args[0] if len(t.args) == 1 else None
+        if row is not None and row.kind == "seq" and len(row.args) == 1:
+            leaf = row.args[0]
+            if leaf.kind == "nat":
+                return "nat-seq-elements"
+            if leaf.kind == "int":
+                return None
+            if leaf.kind == "char":
+                return "nested-seq-string"
+            if leaf.kind == "seq":
+                return "nested-seq-deep"
+            return "nested-seq-other"
+        if row is not None and row.kind == "bool":
+            return "seq-of-bool"
+        if row is not None and row.kind == "string":
+            return "nested-seq-string"
+        if row is not None and row.kind == "array":
+            # `seq<array<int>>`: row 22's array-as-seq-value machinery is
+            # built around exactly one top-level array per method (a
+            # `modifies`-param mutation or an alloc-fill return); an array
+            # nested inside another seq value is a second, aliasing-prone
+            # array position that same machinery never reaches, so this
+            # is the array's own refusal, not a seq-nesting one.
+            return "array"
+        if row is not None and row.kind == "seq":
+            return "nested-seq-deep"  # a bare `seq<seq>`, no element given
+        return "nested-seq-other"
     if t.kind == "array":
         return "array"
     if t.kind in ("array2", "array3"):
-        return "array"
+        # Row 30 (2026-09-10): a matrix with its own indexing, a
+        # different Dafny type from `seq<seq<int>>`, named `array2`
+        # regardless of rank (used to fold into the plain `array`
+        # refusal here; row 30's own census split wants it distinct).
+        return "array2"
     if t.kind == "real":
         return "real"
     if t.kind in ("char", "string"):
@@ -229,6 +287,14 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     if t.kind == "func":
         return "higher-order"
     if t.kind == "id":
+        # Row 30 (2026-09-10): `array2<int>`/`array3<int>` parse as an
+        # ordinary generic "id" type (this grammar has no dedicated
+        # array2/array3 keyword), so without this check they would read
+        # as the unrelated `generics` gap; a multi-dimensional array is
+        # its own matrix-shaped construct with its own indexing, not a
+        # nested seq, so it is named `array2` here regardless of rank.
+        if t.name in ("array2", "array3"):
+            return "array2"
         return "generics" if t.args else "datatype"
     return "type-decl"
 
@@ -299,6 +365,12 @@ def _declared_kind(t: Optional[Type]) -> Optional[str]:
         # below, needed only where the distinction actually matters).
         return "int"
     if t.kind == "seq" and len(t.args) == 1 and (_is_int_like(t.args[0]) or _is_char(t.args[0])):
+        return "seq"
+    if t.kind == "seq" and len(t.args) == 1 and t.args[0].kind == "seq":
+        # Row 30 (2026-09-10): a nested seq is still "seq" in this row's
+        # own int/bool/seq vocabulary -- `+`/slice (rows 26-27) work the
+        # same way at any nesting depth, this row only needs to know
+        # "is it seq-typed", never how deep.
         return "seq"
     if t.kind == "string":
         return "seq"  # row 28: string is seq<int> by another name
@@ -445,22 +517,36 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str, 
 def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
     """Row 25: `None` when every element of the Dafny sequence display
     `n` is int-typed (so it lifts to t's literal, `[]` -- no elements at
-    all -- included); else the section-5 reason the FIRST offending
-    element names -- `nested-seq` for a nested display (or anything else
-    this row cannot type as `int`, the same bucket `_type_issue` already
-    uses for "seq of anything but int/nat"). Row 28 (2026-09-09): a char
-    literal element (`['a', 'b']`) is no longer refused here at all --
-    `expr_kind` now types a `CharLit` `int` (its own code point), so it
-    falls straight through to the ordinary "every element int" reading,
-    unlike a `StringLit` element (`["ab", "cd"]`, a display of DISPLAYS
-    in effect, `expr_kind` typing it `seq`), which still lands on
-    `nested-seq` below -- "string of anything nested is not [in the
-    fragment]", the task's own words for row 28's own refusal list."""
+    all -- included). Row 30 (2026-09-10, SPEC.md "Nested sequences
+    (v1)"): `None` too when `n` is itself a NESTED display, `[[1, 2],
+    [3]]`, every element a seq expression -- a literal inner `SeqDisplay`
+    whose OWN elements are all int-typed (one level down only; a further
+    nested inner display, or a string-literal row, refuses by name
+    below), or any other seq-typed element (an `Ident`, a slice, a call
+    -- this best-effort scan cannot see whether that row is itself flat
+    or would recurse a level too deep, the same "accept what it cannot
+    disprove" reading `_type_issue`'s own DECLARED-type check settles
+    precisely wherever the literal sits in a typed position). Anything
+    else refuses by name: `nested-seq-string` (a string-literal row, or a
+    display of chars nested another level), `nested-seq-deep` (a display
+    nested two levels down), `nested-seq-other` (a bool or unresolvable
+    element)."""
     for el in n.elems:
+        if isinstance(el, StringLit):
+            return "nested-seq-string"
         if isinstance(el, SeqDisplay):
-            return "nested-seq"
-        if expr_kind(el, env.get) != "int":
-            return "nested-seq"
+            for inner in el.elems:
+                if isinstance(inner, StringLit):
+                    return "nested-seq-string"
+                if isinstance(inner, SeqDisplay):
+                    return "nested-seq-deep"
+                if expr_kind(inner, env.get) != "int":
+                    return "nested-seq-deep"
+            continue
+        k = expr_kind(el, env.get)
+        if k in ("int", "seq"):
+            continue
+        return "nested-seq-other"
     return None
 
 
@@ -1573,9 +1659,14 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
             # same gap decision 14 names for a `seq<nat>` LOCAL/PARAM,
             # deliberately accepted here as the weaker theorem). Row 28
             # (2026-09-09): `seq<char>` (`string` written that way) reads
-            # the same as `seq<int>` too. Any other seq shape (nested,
-            # bool) stays refused.
-            if not (_is_seq_of_int(rt) or _is_seq_of_nat(rt) or _is_seq_of_char(rt)):
+            # the same as `seq<int>` too. Row 30 (2026-09-10): a nested
+            # `seq<seq<int>>`/`seq<seq<nat>>` return is accepted the same
+            # way, nat rows included -- the return-side weaker theorem
+            # (no per-row `>= 0` guarantee) is the same one a flat
+            # `seq<nat>` return already has, just applied per row. Any
+            # other seq shape (bool, string, three deep) stays refused.
+            if not (_is_seq_of_int(rt) or _is_seq_of_nat(rt) or _is_seq_of_char(rt)
+                    or _is_nested_seq_of_int(rt) or _is_nested_seq_of_nat(rt)):
                 issues.append((ret_param.line, "seq-return", ret_param.name))
         elif (rt is not None and rt.kind == "array" and not rt.nullable
                 and _is_array_of_int(rt) and array_mutation is not None
@@ -1681,6 +1772,17 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
                     pass  # ordinary arithmetic, unaffected by rows 25-27
                 else:
                     issues.append((n.line, "seq-typing", "+"))
+            elif isinstance(n, SeqUpdate):
+                # Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"):
+                # the functional update EXPRESSION `s[i := r]` lifts to
+                # t's own `update` operator (already real, decision 22's
+                # array-mutation STATEMENT rewrite target) whenever its
+                # base types `seq`, flat or nested alike; anything else
+                # (an unresolvable base) stays refused `seq-update`.
+                if expr_kind(n.base, kind_env.get) == "seq":
+                    rewrites.append(Rewrite(rule="seq-update-lifted", line=n.line))
+                else:
+                    issues.append((n.line, "seq-update", ":="))
             elif isinstance(n, Chain) and len(n.ops) == 1 and n.ops[0] in ("<", "<=", ">", ">="):
                 # Row 28: an ORDER comparison on a seq-typed operand --
                 # measured on dafny 4.11.0 to be "proper prefix"/"prefix"
@@ -1837,10 +1939,10 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     code point) before it can tell an accepted char cast from every
     other cast this lifter still refuses `as-cast` (`as nat`, `as real`,
     ...), so ALL `Cast` handling, accepted and refused alike, moved to
-    that same dedicated pass."""
-    if isinstance(n, SeqUpdate):
-        issues.append((n.line, "seq-update", ":="))
-    elif isinstance(n, (Old, Fresh)):
+    that same dedicated pass. Row 30 (2026-09-10): `SeqUpdate` moved out
+    the same way, its refusal now conditional on whether its base types
+    `seq` (`expr_kind`, the dedicated pass below), not unconditional."""
+    if isinstance(n, (Old, Fresh)):
         if id(n) not in accepted_ids:
             issues.append((n.line, "old", "old"))
     elif isinstance(n, Ident) and n.name == "null":

@@ -2164,17 +2164,21 @@ method EmptyLit() returns (r: seq<int>)
     assert "seq-literal-lifted" in _rule_names(empty_rec)
     assert empty_task["body"][0]["assign"] == ["r", {"op": "seq", "args": []}]
 
-    nested_src = """
-method BadNestedLit() returns (r: int)
+    # Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"): a nested
+    # display, one level, now LIFTS (it used to refuse `nested-seq`
+    # here before row 30; that reading moved to `test_nested_seq_*`
+    # below). Only a THIRD level still refuses, by name `nested-seq-deep`.
+    deep_src = """
+method BadDeepLit() returns (r: int)
   ensures r == 0
 {
-  var x := [[1], [2]];
+  var x := [[[1]], [[2]]];
   r := 0;
 }
 """
-    v = _classify_one(nested_src, "BadNestedLit")
-    assert isinstance(v, C.Refusal) and v.reason == "nested-seq", (
-        f"expected nested-seq refusal, got {v}")
+    v = _classify_one(deep_src, "BadDeepLit")
+    assert isinstance(v, C.Refusal) and v.reason == "nested-seq-deep", (
+        f"expected nested-seq-deep refusal, got {v}")
 
     # Row 28 (2026-09-09): a char-literal ELEMENT of a seq display no
     # longer refuses `string-char` -- `'a'`/`'b'` are their own code
@@ -2193,11 +2197,12 @@ method CharSeqLit() returns (r: seq<int>)
     assert char_task["body"][0]["assign"] == ["r", {"op": "seq", "args": [
         {"int": 97}, {"int": 98}]}]
 
-    # A display of STRING elements, though, is a display of DISPLAYS in
-    # effect (`expr_kind` types a `StringLit` `seq`, not `int`) -- "string
-    # of anything nested is not [in the fragment]", row 28's own words --
-    # so this still refuses `nested-seq`, the same bucket a literal
-    # nested int display already used above.
+    # A display of STRING elements is a display of DISPLAYS in effect
+    # (`expr_kind` types a `StringLit` `seq`, not `int`) -- "string of
+    # anything nested is not [in the fragment]", row 28's own words --
+    # so this refuses by name `nested-seq-string` (row 30, 2026-09-10:
+    # split out of the old unconditional `nested-seq` the same day a
+    # genuine int-row nested display, tested above, started lifting).
     nested_string_src = """
 method BadNestedStringLit() returns (r: int)
   ensures r == 0
@@ -2207,11 +2212,12 @@ method BadNestedStringLit() returns (r: int)
 }
 """
     v2 = _classify_one(nested_string_src, "BadNestedStringLit")
-    assert isinstance(v2, C.Refusal) and v2.reason == "nested-seq", (
-        f"expected nested-seq refusal, got {v2}")
-    print("test_seq_literal_lifted: '[1,2,3]'/'[]' -> op:seq; nested display "
-          "still refused; a char-literal element (row 28) lifts, a nested "
-          "string element still refuses nested-seq")
+    assert isinstance(v2, C.Refusal) and v2.reason == "nested-seq-string", (
+        f"expected nested-seq-string refusal, got {v2}")
+    print("test_seq_literal_lifted: '[1,2,3]'/'[]' -> op:seq; a nested int "
+          "display now lifts too (row 30), three levels deep still "
+          "refuses nested-seq-deep; a char-literal element (row 28) "
+          "lifts, a nested string element refuses nested-seq-string")
 
 
 def test_seq_append_in_loop_and_prepend() -> None:
@@ -2605,8 +2611,10 @@ method BadCmp(s: string, t: string) returns (r: bool)
         f"expected string-lib refusal, got {v3}")
 
     # "string of anything nested is not [in the fragment]" (row 28's own
-    # words): a `seq<string>` parameter is a nested seq, same bucket a
-    # nested int display or a nested string LITERAL already use.
+    # words): a `seq<string>` parameter is a row 30 (2026-09-10) refusal
+    # by its own name, `nested-seq-string` -- split out of the old
+    # unconditional `nested-seq` bucket the same day `seq<seq<int>>`
+    # itself stopped refusing at all.
     nested_string_src = """
 method BadNestedString(s: seq<string>) returns (r: int)
   ensures true
@@ -2615,8 +2623,8 @@ method BadNestedString(s: seq<string>) returns (r: int)
 }
 """
     v4 = _classify_one(nested_string_src, "BadNestedString")
-    assert isinstance(v4, C.Refusal) and v4.reason == "nested-seq", (
-        f"expected nested-seq refusal, got {v4}")
+    assert isinstance(v4, C.Refusal) and v4.reason == "nested-seq-string", (
+        f"expected nested-seq-string refusal, got {v4}")
 
     # `s in t` (a substring test): measured directly (t7.dfy, task's own
     # scratch notes) NOT to type-check in Dafny at all when both are
@@ -2829,6 +2837,158 @@ method ClampPair(x: int, y: int) returns (a: int, b: int)
           "in the middle of the body -> explicit {'return': ['r', pair(y, x)]}")
 
 
+def test_nested_seq_param_row_forall() -> None:
+    """Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"): a
+    `seq<seq<int>>` parameter lifts to `{"seq": "seq"}`, read row by row
+    under a single-binder `forall i` with a `|m[i]|` fact -- SPEC's own
+    dominant measured shape."""
+    src = """
+method SumLens(m: seq<seq<int>>) returns (r: int)
+  requires forall i :: 0 <= i < |m| ==> |m[i]| >= 0
+  ensures true
+{
+  r := 0;
+  var i := 0;
+  while i < |m|
+    invariant 0 <= i <= |m|
+    decreases |m| - i
+  {
+    r := r + |m[i]|;
+    i := i + 1;
+  }
+}
+"""
+    task, rec = _lift_one(src, "SumLens")
+    assert task["params"][0]["type"] == {"seq": "seq"}, task["params"][0]
+    req = task["requires"][0]
+    assert "forall" in req
+    q = req["forall"]
+    assert q["hi"] == {"op": "len", "args": [{"var": "m"}]}, q  # range bound: 0 <= i < |m|
+    assert q["body"] == {"op": ">=", "args": [
+        {"op": "len", "args": [{"op": "at", "args": [{"var": "m"}, {"var": "i"}]}]},
+        {"int": 0}]}, q["body"]
+
+    # A genuine TWO-binder quantifier (`forall i, j`, not the nested
+    # single-binder `forall i :: forall j :: ...` form) stays refused
+    # `unbounded-quantifier`, the standing refusal, unchanged by row 30.
+    two_binder_src = """
+method BadTwoBinder(m: seq<seq<int>>) returns (r: int)
+  requires forall i, j :: 0 <= i < |m| && 0 <= j < |m[i]| ==> m[i][j] >= 0
+  ensures true
+{
+  r := 0;
+}
+"""
+    v2 = _classify_one(two_binder_src, "BadTwoBinder")
+    assert isinstance(v2, C.Refusal) and v2.reason == "unbounded-quantifier", (
+        f"expected unbounded-quantifier refusal, got {v2}")
+    print("test_nested_seq_param_row_forall: seq<seq<int>> param -> "
+          "{'seq': 'seq'}, |m[i]| under a single-binder forall lifts; "
+          "a genuine forall i, j stays refused unbounded-quantifier")
+
+
+def test_nested_seq_cell_read_both_bounds() -> None:
+    """Row 30: `s[i][j]` (chained `at(at(s, i), j)`), guarded by both
+    `0 <= i < |m|` and `0 <= j < |m[i]|`, needs no new Expr form -- the
+    existing `Index` rewrite already chains."""
+    src = """
+method CellSum(m: seq<seq<int>>, i: int, j: int) returns (r: int)
+  requires 0 <= i < |m| && 0 <= j < |m[i]|
+  ensures true
+{
+  r := m[i][j];
+}
+"""
+    task, rec = _lift_one(src, "CellSum")
+    assert task["params"][0]["type"] == {"seq": "seq"}, task["params"][0]
+    assert task["body"][0]["assign"] == ["r", {"op": "at", "args": [
+        {"op": "at", "args": [{"var": "m"}, {"var": "i"}]}, {"var": "j"}]}]
+    # `&&` at the top of a requires clause is split into separate clauses
+    # (split-conjuncts, pre-existing); the second holds `0 <= j < |m[i]|`.
+    j_guard = task["requires"][1]
+    assert j_guard["args"][1] == {"op": "<", "args": [{"var": "j"}, {"op": "len", "args": [
+        {"op": "at", "args": [{"var": "m"}, {"var": "i"}]}]}]}, j_guard
+    print("test_nested_seq_cell_read_both_bounds: m[i][j] -> "
+          "at(at(m, i), j), both index guards preserved")
+
+
+def test_nested_seq_display_literal() -> None:
+    """Row 30: a nested display, `[[1, 2], [3]]`, lifts to the nested
+    literal -- `SeqDisplay`'s existing rewrite already recurses, so
+    every element (itself a `SeqDisplay`) becomes its own `op: seq`."""
+    src = """
+method NestedLit() returns (r: seq<seq<int>>)
+  ensures r == [[1, 2], [3]]
+{
+  r := [[1, 2], [3]];
+}
+"""
+    task, rec = _lift_one(src, "NestedLit")
+    assert task["returns"][0]["type"] == {"seq": "seq"}, task["returns"][0]
+    expected = {"op": "seq", "args": [
+        {"op": "seq", "args": [{"int": 1}, {"int": 2}]},
+        {"op": "seq", "args": [{"int": 3}]}]}
+    assert task["body"][0]["assign"] == ["r", expected]
+    assert task["ensures"][0] == {"op": "==", "args": [{"var": "r"}, expected]}
+    print("test_nested_seq_display_literal: [[1, 2], [3]] -> nested op:seq")
+
+
+def test_nested_seq_row_update() -> None:
+    """Row 30: a row update, `m[i := row]` (Dafny's functional seq-update
+    expression), lifts to t's `update` operator unchanged in the JSON,
+    the same operator decision 22's array-mutation statement rewrite
+    already targets."""
+    src = """
+method UpdateRow(m: seq<seq<int>>, i: int, row: seq<int>) returns (r: seq<seq<int>>)
+  requires 0 <= i < |m|
+  ensures true
+{
+  r := m[i := row];
+}
+"""
+    task, rec = _lift_one(src, "UpdateRow")
+    assert "seq-update-lifted" in _rule_names(rec)
+    assert task["body"][0]["assign"] == ["r", {"op": "update", "args": [
+        {"var": "m"}, {"var": "i"}, {"var": "row"}]}]
+    print("test_nested_seq_row_update: m[i := row] -> op:update, unchanged")
+
+
+def test_nested_seq_string_refused() -> None:
+    """Row 30: `seq<string>` (a row that is itself string-shaped) refuses
+    by its own name, `nested-seq-string`, distinct from the accepted
+    `seq<seq<int>>`/`seq<seq<nat>>` shape."""
+    src = """
+method BadSeqOfString(s: seq<string>) returns (r: int)
+  ensures true
+{
+  r := 0;
+}
+"""
+    v = _classify_one(src, "BadSeqOfString")
+    assert isinstance(v, C.Refusal) and v.reason == "nested-seq-string", (
+        f"expected nested-seq-string refusal, got {v}")
+    print("test_nested_seq_string_refused: seq<string> param -> nested-seq-string")
+
+
+def test_array2_refused() -> None:
+    """Row 30: `array2<int>`, a matrix with its own indexing, is a
+    different Dafny type from `seq<seq<int>>` and stays refused, by its
+    own name `array2` (this grammar has no dedicated array2 keyword --
+    `array2<int>` parses as a generic "id" type, which would otherwise
+    read as the unrelated `generics` gap)."""
+    src = """
+method MatrixSum(m: array2<int>) returns (r: int)
+  ensures true
+{
+  r := 0;
+}
+"""
+    v = _classify_one(src, "MatrixSum")
+    assert isinstance(v, C.Refusal) and v.reason == "array2", (
+        f"expected array2 refusal, got {v}")
+    print("test_array2_refused: array2<int> param -> array2")
+
+
 def test_multi_return_refusals() -> None:
     arity3_src = """
 method ThreeReturns(x: int) returns (a: int, b: int, c: int)
@@ -2924,6 +3084,9 @@ UNIT_TESTS = [
     test_multi_return_pair_seq_component,
     test_multi_return_pair_mid_body_return,
     test_multi_return_refusals,
+    test_nested_seq_param_row_forall, test_nested_seq_cell_read_both_bounds,
+    test_nested_seq_display_literal, test_nested_seq_row_update,
+    test_nested_seq_string_refused, test_array2_refused,
 ]
 
 

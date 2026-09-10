@@ -55,12 +55,13 @@ from lift_ast import (
     Iff, Implies, Index, IntLit, InvariantClause, LabelStmt, LemmaDecl,
     LiftRecord, Lhs, MethodDecl, Module, NaryBool, NewRhs, Old, Param,
     Quantifier, ReadsClause, Rename, RequiresClause, ReturnStmt, Rewrite,
-    SeqDisplay, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
+    SeqDisplay, SeqUpdate, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
     ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier,
     decode_char_literal, decode_string_literal, expr_kind, find_array_mutation,
     scan_breaks, scan_null_checks, walk, unchanged_at_every_call, _is_seq_of_char,
+    _is_nested_seq_of_int, _is_nested_seq_of_nat,
 )
 
 
@@ -123,9 +124,31 @@ def _t_type_of(t: Optional[Type]) -> str:
     if t.kind in ("seq", "array", "string"):
         # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code
         # points (v1)"): `string` is the same t `seq` a Dafny
-        # `seq<int>`/`array<int>` already lifts to.
+        # `seq<int>`/`array<int>` already lifts to. Row 30 (2026-09-10):
+        # a NESTED seq is still flat "seq" here too -- this function
+        # answers `scope.types`'s own int/bool/seq bookkeeping question
+        # (rows 26-27's `+`/slice typing, the `ty == "seq"` empty-default
+        # check just below), which never needs to know nesting depth;
+        # the actual emitted JSON `type` field (possibly the compound
+        # `{"seq": "seq"}`) is `_t_json_type`'s own, separate question,
+        # consulted only at the sites that build a param/return/local's
+        # `"type"` entry.
         return "seq"
     return "int"  # int, nat, char (row 28: char is its own code point)
+
+
+def _t_json_type(t: Optional[Type]) -> object:
+    """Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"): the actual
+    JSON `"type"` entry a param/return/typed-local gets -- `_t_type_of`'s
+    own flat string for everything else, but t's own compound `{"seq":
+    "seq"}` for a one-level `seq<seq<int>>`/`seq<seq<nat>>` (`classify`
+    has already confirmed the shape and, for a nat row, that this is a
+    RETURN -- the only position a nat row's non-negativity gap allows
+    through; a param/local nat row is refused before `rewrite` ever
+    runs)."""
+    if _is_nested_seq_of_int(t) or _is_nested_seq_of_nat(t):
+        return {"seq": "seq"}
+    return _t_type_of(t)
 
 
 def _rw_seq_kind(e: Expr, scope: "Scope") -> Optional[str]:
@@ -143,6 +166,17 @@ def _rw_seq_kind(e: Expr, scope: "Scope") -> Optional[str]:
         tname = scope.renames.get(name)
         return scope.types.get(tname) if tname is not None else None
     return expr_kind(e, lookup)
+
+
+def _rw_looks_nested(e: Expr, scope: "Scope") -> bool:
+    """Row 30 (2026-09-10): best-effort nested-seq guess for an UNTYPED
+    local's own initialiser, true only for a nested display literal
+    (`[[1, 2], [3]]`, an element that is itself a `SeqDisplay`) -- a bare
+    read of another name's own nestedness is not attempted (SPEC's own
+    measured shapes always give the accumulator an explicit declared
+    type; an untyped `var r := m;` for a nested `m` is this row's own
+    known residual, falling back to the flat JSON type instead)."""
+    return isinstance(e, SeqDisplay) and any(isinstance(el, SeqDisplay) for el in e.elems)
 
 
 def _ge0(t_name: str) -> dict:
@@ -599,6 +633,16 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
                  for el in e.elems]
         record.rewrites.append(Rewrite(rule="seq-literal-lifted", line=e.line))
         return {"op": "seq", "args": elems}
+    if isinstance(e, SeqUpdate):
+        # Row 30 (2026-09-10): `s[i := r]` -- `classify` has already
+        # confirmed the base types `seq` -- is t's own `update` operator,
+        # the same one decision 22's `a[i] := e` statement rewrite
+        # already targets; unchanged in the JSON at any nesting depth.
+        base_e = _lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)
+        idx_e = _lift_expr(e.index, scope, fn_names, self_name, task_name, record, renamer)
+        val_e = _lift_expr(e.value, scope, fn_names, self_name, task_name, record, renamer)
+        record.rewrites.append(Rewrite(rule="seq-update-lifted", line=e.line))
+        return {"op": "update", "args": [base_e, idx_e, val_e]}
     if isinstance(e, Cast):
         # Row 28: `classify` has already confirmed this is one of the
         # two safe shapes (`char as int`, always; `int as char`, only
@@ -1082,12 +1126,14 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 # `var r: seq;` with no initialiser needs a seq-shaped
                 # default (rows 25-27, 2026-09-09), not the int/bool
                 # default below -- an empty literal, `{"op": "seq",
-                # "args": []}`, since `[]` is t's own empty seq value.
+                # "args": []}`, since `[]` is t's own empty seq value
+                # (row 30: the same empty literal for a nested-typed
+                # local too, the declared type disambiguating).
                 if ty == "seq":
                     default = {"op": "seq", "args": []}
                 else:
                     default = {"bool": False} if ty == "bool" else {"int": 0}
-                out.append({"var": {"name": tname, "type": ty, "init": default}})
+                out.append({"var": {"name": tname, "type": _t_json_type(nm.type), "init": default}})
                 record.rewrites.append(Rewrite(rule="default-init", line=s.line))
                 record.clauses_added.append(ClauseAdded(rule="default-init", text=f"{tname} := {default}"))
         else:
@@ -1103,8 +1149,10 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                     ty = "seq"
                 else:
                     rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
+                    json_ty = None
                     if nm.type is not None:
                         ty = _t_type_of(nm.type)
+                        json_ty = _t_json_type(nm.type)
                     else:
                         # Rows 25-27: an UNTYPED local (`var r := [];`,
                         # `var r := r + [x];`) is exactly as common a
@@ -1117,12 +1165,22 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                         # before ever reaching here.
                         inferred = _rw_seq_kind(rhs, scope)
                         ty = inferred if inferred in ("int", "bool", "seq") else "int"
+                        # Row 30: an untyped local's nested-seq-ness (a
+                        # rare style -- SPEC's own measured shapes all
+                        # give the accumulator an explicit declared type)
+                        # is a best-effort guess from the initialiser's
+                        # own shape alone: a nested literal, or a bare
+                        # read of an already-nested name.
+                        if ty == "seq" and _rw_looks_nested(rhs, scope):
+                            json_ty = {"seq": "seq"}
                 tname = renamer.fresh(nm.name, record, "local")
                 scope.renames[nm.name] = tname
                 scope.types[tname] = ty
                 if nm.type is not None and nm.type.kind == "nat":
                     scope.nat.append(nm.name)
-                out.append({"var": {"name": tname, "type": ty, "init": rhs_e}})
+                if json_ty is None:
+                    json_ty = ty
+                out.append({"var": {"name": tname, "type": json_ty, "init": rhs_e}})
         return out
 
     if cls == "IfStmt":
@@ -1311,7 +1369,7 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
         else:
             ty = "int"
         scope.types[tname] = ty
-        params_out.append({"name": tname, "type": ty})
+        params_out.append({"name": tname, "type": _t_json_type(p.type)})
         if p.type is not None and p.type.kind == "nat":
             guard_parts.append(_ge0(tname))
             record.rewrites.append(Rewrite(rule="spec-fun-totalised", line=p.line))
@@ -1425,16 +1483,18 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     for p in method.params:
         tname = renamer.fresh(p.name, record, "param")
         scope.renames[p.name] = tname
+        json_ty = None
         if p.type is not None and p.type.kind == "array":
             ty = "seq"
             if p.name != mutated_param_name:
                 record.rewrites.append(Rewrite(rule="array-readonly-as-seq", line=p.line))
         else:
             ty = _t_type_of(p.type)
+            json_ty = _t_json_type(p.type)
         scope.types[tname] = ty
         if p.type is not None and p.type.kind == "nat":
             scope.nat.append(p.name)
-        params_out.append({"name": tname, "type": ty})
+        params_out.append({"name": tname, "type": ty if json_ty is None else json_ty})
 
     if mutated_param_name is not None:
         # Decision 22 "modifies-param" (SPEC.md "Sequences as values
@@ -1514,12 +1574,14 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             # (2026-09-09): `string` joins `array`/`seq` here for the
             # same reason.
             ret_ty = "seq"
+            ret_json_ty = _t_json_type(ret.type)  # row 30: nested when ret.type is
         else:
             ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
+            ret_json_ty = ret_ty
         scope.types[t_ret] = ret_ty
         if ret_is_nat:
             scope.nat.append(ret.name)
-        returns_out = [{"name": t_ret, "type": ret_ty}]
+        returns_out = [{"name": t_ret, "type": ret_json_ty}]
 
     # -- spec_funs: names first (so requires/ensures/body can all reference
     #    any closure function regardless of textual order), bodies next.

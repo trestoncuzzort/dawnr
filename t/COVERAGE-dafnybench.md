@@ -8,8 +8,8 @@ seven kernels verify its t rendering. Method and detectors at the end.
 ## Headline
 
 - programs: 785; with a method carrying its own ensures (gradable): 643
-- in t's fragment today: **324** of 643 gradable (50.4%)
-- gradable programs blocked by exactly one gap: 108
+- in t's fragment today: **334** of 643 gradable (51.9%)
+- gradable programs blocked by exactly one gap: 98
 
 ## Gaps, by programs that need them
 
@@ -37,7 +37,6 @@ seven kernels verify its t rendering. Method and detectors at the end.
 | such-that-exec | 21 | 0 | assign-such-that :| in executable code (nondeterministic choice) |
 | tuple | 19 | 2 | tuples |
 | multi-return-arity | 17 | 5 | a method with more than one return value that t cannot map to one pair return -- three or more return values, or exactly two whose component types this lifter does not carry (array, bitvector, real, map, multiset, a nested Dafny tuple, a bare char) -- see the burden multi-return-pair |
-| nested-seq | 12 | 10 | seq<seq<int>>/seq<seq<nat>> (array\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- SPEC.md 'Nested sequences (v1)', LIFTER-DECISIONS.md row 30 |
 | seq-of-bool | 9 | 2 | seq<bool>, one level, bool element -- its own gap, split out of the old nested-seq row 2026-09-09 |
 | bitvector | 6 | 1 | bit vectors or bitwise operators |
 | decreases-star | 6 | 0 | decreases * (a loop or call allowed not to terminate) |
@@ -55,62 +54,60 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | array | 15 | 339 | 52.7% |
-| 2 | set | 12 | 351 | 54.6% |
-| 3 | multi-method | 14 | 365 | 56.8% |
-| 4 | zero-returns | 44 | 409 | 63.6% |
-| 5 | array-mutation | 22 | 431 | 67.0% |
-| 6 | real | 14 | 445 | 69.2% |
-| 7 | heap | 12 | 457 | 71.1% |
-| 8 | nested-seq | 11 | 468 | 72.8% |
-| 9 | nondet | 10 | 478 | 74.3% |
-| 10 | bodyless-method | 10 | 488 | 75.9% |
-| 11 | multi-return-arity | 7 | 495 | 77.0% |
-| 12 | nested-seq-other | 7 | 502 | 78.1% |
-| 13 | generics | 15 | 517 | 80.4% |
-| 14 | higher-order | 11 | 528 | 82.1% |
-| 15 | unbounded-quantifier | 10 | 538 | 83.7% |
-| 16 | datatype | 13 | 551 | 85.7% |
-| 17 | io | 10 | 561 | 87.2% |
-| 18 | bodyless-function | 8 | 569 | 88.5% |
-| 19 | seq-of-bool | 7 | 576 | 89.6% |
-| 20 | type-decl | 6 | 582 | 90.5% |
-| 21 | map | 6 | 588 | 91.4% |
-| 22 | module | 9 | 597 | 92.8% |
-| 23 | such-that-exec | 11 | 608 | 94.6% |
-| 24 | tuple | 10 | 618 | 96.1% |
-| 25 | string-lib | 6 | 624 | 97.0% |
-| 26 | decreases-star | 5 | 629 | 97.8% |
-| 27 | bitvector | 4 | 633 | 98.4% |
-| 28 | early-exit | 3 | 636 | 98.9% |
-| 29 | char-arith | 3 | 639 | 99.4% |
-| 30 | nested-seq-string | 2 | 641 | 99.7% |
-| 31 | seq-comprehension | 1 | 642 | 99.8% |
-| 32 | iterator | 1 | 643 | 100.0% |
+| 1 | array | 15 | 349 | 54.3% |
+| 2 | set | 12 | 361 | 56.1% |
+| 3 | multi-method | 14 | 375 | 58.3% |
+| 4 | zero-returns | 44 | 419 | 65.2% |
+| 5 | array-mutation | 23 | 442 | 68.7% |
+| 6 | real | 14 | 456 | 70.9% |
+| 7 | heap | 12 | 468 | 72.8% |
+| 8 | nondet | 10 | 478 | 74.3% |
+| 9 | bodyless-method | 10 | 488 | 75.9% |
+| 10 | multi-return-arity | 7 | 495 | 77.0% |
+| 11 | nested-seq-other | 7 | 502 | 78.1% |
+| 12 | generics | 15 | 517 | 80.4% |
+| 13 | higher-order | 11 | 528 | 82.1% |
+| 14 | unbounded-quantifier | 10 | 538 | 83.7% |
+| 15 | datatype | 13 | 551 | 85.7% |
+| 16 | io | 10 | 561 | 87.2% |
+| 17 | bodyless-function | 8 | 569 | 88.5% |
+| 18 | seq-of-bool | 7 | 576 | 89.6% |
+| 19 | type-decl | 6 | 582 | 90.5% |
+| 20 | map | 6 | 588 | 91.4% |
+| 21 | module | 9 | 597 | 92.8% |
+| 22 | such-that-exec | 11 | 608 | 94.6% |
+| 23 | tuple | 10 | 618 | 96.1% |
+| 24 | string-lib | 6 | 624 | 97.0% |
+| 25 | decreases-star | 5 | 629 | 97.8% |
+| 26 | bitvector | 4 | 633 | 98.4% |
+| 27 | early-exit | 3 | 636 | 98.9% |
+| 28 | char-arith | 3 | 639 | 99.4% |
+| 29 | nested-seq-string | 2 | 641 | 99.7% |
+| 30 | seq-comprehension | 1 | 642 | 99.8% |
+| 31 | iterator | 1 | 643 | 100.0% |
 
 
 ### The same order on the MBPP-DFY family alone (164 gradable, the LLM-shaped subset)
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | nested-seq | 10 | 131 | 79.9% |
-| 2 | real | 9 | 140 | 85.4% |
-| 3 | set | 6 | 146 | 89.0% |
-| 4 | char-arith | 3 | 149 | 90.9% |
-| 5 | multi-return-arity | 2 | 151 | 92.1% |
-| 6 | nested-seq-string | 2 | 153 | 93.3% |
-| 7 | array | 1 | 154 | 93.9% |
-| 8 | zero-returns | 1 | 155 | 94.5% |
-| 9 | early-exit | 1 | 156 | 95.1% |
-| 10 | multi-method | 1 | 157 | 95.7% |
-| 11 | array-mutation | 1 | 158 | 96.3% |
-| 12 | seq-of-bool | 1 | 159 | 97.0% |
-| 13 | unbounded-quantifier | 1 | 160 | 97.6% |
-| 14 | bitvector | 1 | 161 | 98.2% |
-| 15 | nested-seq-other | 1 | 162 | 98.8% |
-| 16 | tuple | 1 | 163 | 99.4% |
-| 17 | higher-order | 0 | 163 | 99.4% |
-| 18 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | real | 9 | 140 | 85.4% |
+| 2 | set | 6 | 146 | 89.0% |
+| 3 | char-arith | 3 | 149 | 90.9% |
+| 4 | multi-return-arity | 2 | 151 | 92.1% |
+| 5 | nested-seq-string | 2 | 153 | 93.3% |
+| 6 | array | 1 | 154 | 93.9% |
+| 7 | zero-returns | 1 | 155 | 94.5% |
+| 8 | early-exit | 1 | 156 | 95.1% |
+| 9 | multi-method | 1 | 157 | 95.7% |
+| 10 | array-mutation | 1 | 158 | 96.3% |
+| 11 | seq-of-bool | 1 | 159 | 97.0% |
+| 12 | unbounded-quantifier | 1 | 160 | 97.6% |
+| 13 | bitvector | 1 | 161 | 98.2% |
+| 14 | nested-seq-other | 1 | 162 | 98.8% |
+| 15 | tuple | 1 | 163 | 99.4% |
+| 16 | higher-order | 0 | 163 | 99.4% |
+| 17 | seq-comprehension | 1 | 164 | 100.0% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
@@ -120,7 +117,7 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 121 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 131 |
 | GitHub (Dafny) | 76 | 72 | 33 |
 | GitHub (Program-Verification-Dataset) | 65 | 48 | 8 |
 | Clover | 62 | 62 | 41 |
@@ -273,6 +270,7 @@ more than one gate.
 | break-as-return | 36 | an unlabeled break whose innermost loop is the tail of the method body, with at most a straight-line continuation after it (lifts to t's early-exit `return` of the method's own result, LIFTER-DECISIONS.md row 23) |
 | as-cast | 15 | as int / as nat casts |
 | seq-update | 15 | functional update s[i := v] -- lifts to t's update (LIFTER-DECISIONS.md decision 22/row 22, landed 2026-09-09 morning) |
+| nested-seq | 12 | seq<seq<int>>/seq<seq<nat>> (array\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- lifts to t's {'seq': 'seq'} (LIFTER-DECISIONS.md row 30) |
 
 ## Hints (proof scaffolding a kernel may need; t has none)
 
@@ -482,6 +480,7 @@ more than one gate.
 - dafny-synthesis_task_id_133.dfy
 - dafny-synthesis_task_id_135.dfy
 - dafny-synthesis_task_id_14.dfy
+- dafny-synthesis_task_id_143.dfy
 - dafny-synthesis_task_id_145.dfy
 - dafny-synthesis_task_id_161.dfy
 - dafny-synthesis_task_id_17.dfy
@@ -508,6 +507,7 @@ more than one gate.
 - dafny-synthesis_task_id_279.dfy
 - dafny-synthesis_task_id_282.dfy
 - dafny-synthesis_task_id_284.dfy
+- dafny-synthesis_task_id_290.dfy
 - dafny-synthesis_task_id_292.dfy
 - dafny-synthesis_task_id_3.dfy
 - dafny-synthesis_task_id_304.dfy
@@ -515,6 +515,7 @@ more than one gate.
 - dafny-synthesis_task_id_309.dfy
 - dafny-synthesis_task_id_396.dfy
 - dafny-synthesis_task_id_397.dfy
+- dafny-synthesis_task_id_401.dfy
 - dafny-synthesis_task_id_404.dfy
 - dafny-synthesis_task_id_406.dfy
 - dafny-synthesis_task_id_412.dfy
@@ -530,7 +531,9 @@ more than one gate.
 - dafny-synthesis_task_id_447.dfy
 - dafny-synthesis_task_id_452.dfy
 - dafny-synthesis_task_id_454.dfy
+- dafny-synthesis_task_id_457.dfy
 - dafny-synthesis_task_id_458.dfy
+- dafny-synthesis_task_id_460.dfy
 - dafny-synthesis_task_id_470.dfy
 - dafny-synthesis_task_id_472.dfy
 - dafny-synthesis_task_id_474.dfy
@@ -568,6 +571,8 @@ more than one gate.
 - dafny-synthesis_task_id_629.dfy
 - dafny-synthesis_task_id_637.dfy
 - dafny-synthesis_task_id_641.dfy
+- dafny-synthesis_task_id_69.dfy
+- dafny-synthesis_task_id_70.dfy
 - dafny-synthesis_task_id_728.dfy
 - dafny-synthesis_task_id_732.dfy
 - dafny-synthesis_task_id_733.dfy
@@ -584,6 +589,7 @@ more than one gate.
 - dafny-synthesis_task_id_775.dfy
 - dafny-synthesis_task_id_79.dfy
 - dafny-synthesis_task_id_790.dfy
+- dafny-synthesis_task_id_792.dfy
 - dafny-synthesis_task_id_793.dfy
 - dafny-synthesis_task_id_798.dfy
 - dafny-synthesis_task_id_8.dfy
@@ -595,6 +601,8 @@ more than one gate.
 - dafny-synthesis_task_id_809.dfy
 - dafny-synthesis_task_id_86.dfy
 - dafny-synthesis_task_id_89.dfy
+- dafny-synthesis_task_id_94.dfy
+- dafny-synthesis_task_id_95.dfy
 - dafny-workout_tmp_tmp0abkw6f8_starter_ex01.dfy
 - dafny-workout_tmp_tmp0abkw6f8_starter_ex02.dfy
 - dafny-workout_tmp_tmp0abkw6f8_starter_ex09.dfy

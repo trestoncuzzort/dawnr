@@ -1546,8 +1546,9 @@ def _string_lib(s: str) -> bool:
 # `int`/`nat`, so besides genuine nesting (`seq<seq<int>>`) it also caught
 # `seq<char>` (already the burden `string-as-seq` since row 28), `seq<bool>`
 # (a distinct, never-named gap), `seq<real>`, and `seq<SomeDatatype>`, and
-# folded all of these into one row of the gap table. Split five ways here,
-# all still gaps (the `seq<seq>` construct SPEC.md designs is not landed):
+# folded all of these into one row of the gap table. Split five ways here;
+# `nested-seq` itself reclassifies gap -> burden the same day the lifter
+# lands it (LIFTER-DECISIONS.md row 30), the other four staying gaps:
 # `nested-seq` (a genuine `seq<seq<int>>`/`seq<seq<nat>>`, or the same shape
 # spelled `array\d*<seq<..>>`/`seq<array\d*<..>>`, one level of nesting,
 # int/nat innermost -- or a nested seq literal DISPLAY with no type
@@ -1698,7 +1699,6 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "zero-returns": ("gap", lambda s: _zero_return_shapes(s)[1], "a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array"),
     "early-exit": ("gap", _break_continue, "a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop)"),
     "seq-comprehension": ("gap", _has(r"\bseq\s*\("), "seq(n, i => e) -- t's fill is constant-valued, this is not (v1 gap, unlike rows 25-27)"),
-    "nested-seq": ("gap", lambda s: _nested_seq_shapes(s)[0], "seq<seq<int>>/seq<seq<nat>> (array\\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- SPEC.md 'Nested sequences (v1)', LIFTER-DECISIONS.md row 30"),
     "seq-of-bool": ("gap", lambda s: _nested_seq_shapes(s)[1], "seq<bool>, one level, bool element -- its own gap, split out of the old nested-seq row 2026-09-09"),
     "nested-seq-string": ("gap", lambda s: _nested_seq_shapes(s)[2], "seq<string>, or seq<seq<char>> -- a row that is itself string-shaped, since a Dafny string is a seq of chars; a bare seq<char> is not this gap, it is the burden string-as-seq"),
     "nested-seq-deep": ("gap", lambda s: _nested_seq_shapes(s)[3], "three or more levels of seq/array nesting, any innermost type"),
@@ -1733,6 +1733,18 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "zero-returns-array": ("burden", lambda s: _zero_return_shapes(s)[0], "a method with no return whose effect is its one array, lifted as a seq return by row 22 (LIFTER-DECISIONS.md row 22's modifies-param shape)"),
     "multi-method-independent": ("burden", lambda s: _multi_method_shapes(s)[0], "more than one graded method, none calling another by name -- decision 9 lifts one task per method, so no packaging decision is needed"),
     "multi-return-pair": ("burden", lambda s: _multi_return_shapes(s)[0], "exactly two return values, both int/nat/bool/seq<int|nat|char>/string -- lifts to one pair-typed return (LIFTER-DECISIONS.md row 29)"),
+    # Row 30 (2026-09-10, SPEC.md "Nested sequences (v1)"): `seq<seq<int>>`/
+    # `seq<seq<nat>>`, one level of nesting, int/nat innermost, now lifts
+    # to t's own `{"seq": "seq"}` -- LIFTER-DECISIONS.md row 30 -- so this
+    # key reclassifies gap -> burden the same way rows 25-27 and row 28
+    # did; the four ways this SAME detector used to lump in (a bool row, a
+    # string row, three or more levels, an array<seq<..>>/seq<array<..>>
+    # combination row 22's own single-array machinery does not reach)
+    # stay gaps under their own names above (`seq-of-bool`, `nested-seq-
+    # string`, `nested-seq-deep`, `nested-seq-other`); `array2`/`array3`
+    # (a matrix with its own indexing, a different Dafny type) stays the
+    # plain `array` gap, unaffected by this row.
+    "nested-seq": ("burden", lambda s: _nested_seq_shapes(s)[0], "seq<seq<int>>/seq<seq<nat>> (array\\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- lifts to t's {'seq': 'seq'} (LIFTER-DECISIONS.md row 30)"),
     # Rows 25-27 (2026-09-09, SPEC.md "Sequences: literals, concatenation,
     # slices (v1)"): a sequence literal, a slice and its two sugars, and a
     # seq-typed return all lift now (LIFTER-DECISIONS.md rows 25-27); a
