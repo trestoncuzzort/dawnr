@@ -1182,6 +1182,223 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   in (5), min_max's own precedent repeated). Six of the nine sole-blocker
   tasks now read COUNTS; these three do not, each for a distinct, named
   reason, none of them a lowering crash or a masked error.
+
+  THE EIGHT SOLE-BLOCKERS, SECOND PASS (2026-09-10, COVERAGE-lifted-785.md's
+  TWELFTH sweep, sweep-785-r16, "Sole blockers": rocq alone now keeps 8 of
+  the 72 six-of-seven lifted tasks out of all seven -- the set shifted from
+  the tenth sweep's nine above: upWhileLess, m3, minArray x2, calcR,
+  sumUpTo left the list (fixed above), tetrahedralNumber/f1a__f/ghost__m/
+  is_even/max_nit entered it, newly lifted or newly counting in six).
+  MEASURED (coqc 9.2.0, this box, harness.run_task, flake 3, one task at a
+  time, load average 7-52 across the session): two are now COUNTS by a
+  certificate fix, one is now COUNTS by a proof-engine fix, one is a
+  correct abstain (not a bug), two stay unproved (their exact stuck goal
+  quoted, not guessed at, below), one stays timeout (unchanged, per this
+  session's own "only if cheap" instruction, and unaffected by either fix:
+  neither task has a spec_fun, a pair, a nested seq, or a bool-typed loop
+  state var reassigned in its body, so no code path either fix touches is
+  ever reached for it).
+
+  (1) THE PARAMETERLESS CERTIFICATE GAP, closed for BOTH tasks it named:
+  `dafny_tmp_tmp0wu8wmfr_tests_f1a__f` (`r := 0; ensures r <= 0`) and
+  `dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m` (`r := 29; ensures
+  r == 29`) both read verified/unproved: `_value_cert`'s own first line,
+  `if not task["params"]: return None`, refused to even ATTEMPT a
+  certificate for a param-less task, so the twin (whose off-by-one mutant
+  changes the literal, `f`'s `0` to `1`, `m`'s `29` to `30`, MEASURED by
+  reading `out/..._twin.v`'s own `Definition ..._t  : Z := 1.` against the
+  real's `:= 0.`) fell through to the ordinary proof script, which cannot
+  prove a FALSE spec and correctly reads UNPROVED rather than REFUTED.
+  Nothing downstream needed a param: `_witness_env`'s own `for p in
+  task["params"]` loop is a no-op on an empty list (env_py/env_txt/etc.
+  come back empty, exactly what a param-less task needs), `_plain_def`
+  already rendered a correct nullary `Definition {name}_t  : Z := ...`
+  for this exact shape (unchanged, confirmed by the twin `.v` already on
+  disk before this fix), and the `gargs` loop building the certificate's
+  own witness-substituted call is empty for an empty params list, giving
+  `applied = "(name_t )"` -- a bare identifier in one extra pair of
+  parens, valid Coq syntax, MEASURED to compile clean. FIX: delete the
+  guard; the seq-return abstain immediately below it (unrelated, a named
+  gap of its own) is untouched. MEASURED: both tasks now read COUNTS
+  (`harness.run_task`, off-by-one twin, `f`: witness -> real 0, twin 1;
+  `m`: witness -> real 29, twin 30). No committed task in t/tasks/*.json
+  has an empty `params` list (checked directly), so this is a pure
+  addition: every committed task's own witness-certificate code path is
+  unreached by this change, confirmed by the regression below reproducing
+  every committed task's own witness verbatim.
+
+  (2) THE SPEC_FUN ARGUMENT-ARITHMETIC GAP, closed for `m2...computeSum`,
+  read AND STILL closed for its twin (the 2026-09-09/-10 first-pass note
+  above, (3), already banked the twin side via `_call_asserts`'s widening;
+  this pass closes the REAL side that note left open, named as a proof-
+  engine change out of scope for that session). Read directly (coqc on
+  `out/m2..._computeSum.v`, the unpatched loop_spec Lemma): the induction
+  step's `apply IH; t_side` arm needs `s + i + 1 = sf_sum (i + 1)` from
+  the invariant `s = sf_sum i`; `t_eqs`'s bare `rewrite sf_sum_eq` turns
+  the goal's `sf_sum (i + 1)` into `... + sf_sum (i + 1 - 1)`, NOT `...  +
+  sf_sum i` -- lia proves `i + 1 - 1 = i`, but `t_sat1`'s only merge rule
+  for two occurrences of the SAME head applied to lia-equal arguments
+  requires `is_var f` on that head, and `sf_sum` is a global Definition,
+  never a variable, so the two `sf_sum` applications never unify and the
+  goal is left exactly as printed (CONFIRMED with a standalone `t_base;
+  Show` probe on a scratch copy of the generated `.v`, isolating this one
+  goal with bullets: the base case closes by plain `t_dis`, the step
+  case's `apply IH; t_side` alone leaves `s + i + 1 = sf_sum (i + 1 - 1
+  + 1) `-shaped -- read literally off the probe, not paraphrased). FIX:
+  `emit_spec_funs` (the generator, not a hand-written PRELUDE tactic) now
+  appends one `repeat match goal with |- context [sf_{f} ?x] => progress
+  ring_simplify x end;` per spec_fun to `t_eqs`'s own chain (goal
+  position) and the hypothesis-targeted twin (`ring_simplify x in H`) to
+  `t_eqs_h`'s, right after the existing `try rewrite sf_{f}_eq;` for that
+  spec_fun. `ring_simplify` normalizes a Z-ring argument wherever it sits
+  (turning `i + 1 - 1` into literally `i`, matching the invariant's own
+  term byte for byte, after which `t_sat1`'s existing machinery -- or in
+  computeSum's case bare `lia`/`congruence` on the now-matching equation
+  -- closes the rest); `progress` makes a no-op harmless (a task whose own
+  recursion needs no normalization, or whose argument is already a bare
+  variable, loses nothing and gains nothing textually different from
+  before this fix, MEASURED against factorial/fib/gcd/digit_sum/
+  count_matches below). GUARDED, not universal: only a spec_fun with
+  EXACTLY ONE "int"-typed param gets this treatment (`sf["params"]` a
+  singleton `"int"`), checked directly against the spec_fun's own JSON
+  shape at generation time, never a bare string check -- a spec_fun with a
+  seq param (count_matches' `count`, whose first bound variable under the
+  naive one-wildcard pattern `sf_count ?x` would be the seq's own `Z -> Z`
+  FUNCTION, not a ring element, and `ring_simplify` on a function term is
+  not merely a no-op but an outright error, unguarded by `try`) or two-
+  plus int params (gcd's `gcds`, where a single wildcard would bind only
+  the first of two arguments arbitrarily) is left exactly as before,
+  bare-rewrite-only, confirmed byte-identical by the regression below.
+  MEASURED (`harness.run_task`, flake 3): computeSum now reads COUNTS in
+  full (real VERIFIED, invariant-drop twin REFUTED, witness exit at n=0,
+  i=1, s=1) where the first pass left it unproved/refuted.
+
+  (3) TWO STAY UNPROVED, BOTH READ DIRECTLY, BOTH TRACED TO A GAP THIS
+  FIX DOES NOT CLOSE, NOT ATTEMPTED FURTHER ONCE THE ATTEMPT MEASURED
+  UNSAFE:
+
+    `dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_
+    success_1__is_even` (`i := 0; r := true; while i < n: r := !r; i :=
+    i + 1; ensures r == even(n)`, `even` a spec_fun with exactly one int
+    param -- eligible for fix (2) above, and it fires: `t_eqs` DOES
+    normalize `sf_even (i + 1 - 1)` to `sf_even i` (CONFIRMED with the
+    same standalone-probe technique as computeSum). What remains after
+    normalization is a DIFFERENT gap: the goal is `sf_even (i + 1) = true`
+    where the usable fact is `Hinv2 : false = true <-> sf_even i = true`
+    (i.e. `sf_even i = false`) -- a BOOL equality, not a Z one. Closing it
+    needs `sf_even i`, an OPAQUE bool-valued application, case-split into
+    its two constructors (`destruct (sf_even i)` or equivalent), which
+    nothing in `t_inv1`/`t_sat1` does for an arbitrary bool-headed
+    application (only a decidable Z-comparison notation or a NAMED
+    function like `t_upd`/`Bool.eqb` gets a case-split arm; a bare spec_fun
+    boolean is neither, the same gap the 2026-09-10 PAIRS/v1pairs residual
+    already named for a bool STATE VAR reassigned in a loop body,
+    `_bool_state_assigned`, extended here to a bool spec_fun RESULT rather
+    than a state var). ATTEMPTED: a new `t_sat1` arm, `H : ?X = true |-
+    context [?X] => rewrite H` (symmetric for `= false`), meant to
+    propagate a ground bool fact into any matching goal occurrence
+    regardless of head shape. MEASURED UNSAFE before it was tried on
+    is_even itself: on max_nit (below), the SAME rule, reached through
+    `t_base`'s own `repeat`, landed the search on a goal of `false = true`
+    -- a FALSE residual, meaning the rule (or its interaction with
+    `t_split1`'s own case-splitting, which backtracks over `a = b \\/ a <>
+    b` and can pick either branch) fired on the WRONG occurrence somewhere
+    in the loop and corrupted the proof state rather than helping it,
+    confirmed by `match goal with |- ?G => idtac G end` printing the
+    nonsensical goal directly. This is exactly the "regression surface
+    across every spec_fun task" the first pass's computeSum note already
+    warned a proof-engine change of this shape would have; NOT landed,
+    reverted (never applied to this file, only tried in scratch copies
+    under /tmp), left open. is_even's real side is UNPROVED; its twin
+    still reads REFUTED (invariant-drop, unaffected, unchanged from the
+    first pass).
+
+    `nitwit_tmp_tmplm098gxz_nit__max_nit` (`nmax := b - 1`; ensures
+    `nmax >= 0 /\\ nitness(b, nmax) /\\ is_max_nit(b, nmax)`, three
+    spec_funs, `is_max_nit`/`nitness` two int params each -- INELIGIBLE for
+    fix (2), correctly untouched by it). Read directly: `nmax >= 0` and
+    `is_max_nit(b, nmax) = true` both close by the UNCHANGED engine (`t_dis`
+    alone); `nitness(b, nmax) = true` does not. `nitness`'s own body is
+    `if (b_v3>=0 /\\ n>=0 /\\ valid_base(b_v3)) then (0<=n /\\ n<b_v3)
+    else
+    false`; after `t_eqs` unfolds it, the goal contains a bare, still-
+    opaque `sf_valid_base b`, and the hypothesis `sf_valid_base b = true`
+    (the task's own `requires valid_base(b)`) states EXACTLY that value,
+    for the EXACT same argument, no arithmetic offset at all -- yet nothing
+    substitutes it in, the identical `is_var`-guard gap fix (2) closes for
+    an ARGUMENT mismatch, here blocking a bare GROUND-FACT substitution
+    instead. A manual, bulleted proof (`rewrite sf_nitness_eq.` then
+    exactly the `H : sf_valid_base b = true |- context [sf_valid_base b]
+    => rewrite H` step, then `t_dis`) DOES close it, confirmed directly;
+    automating that same step hit the identical unsafe-generalization wall
+    documented just above (the same attempted `t_sat1` rule, tried here
+    FIRST, is what produced the `false = true` residual that then ruled it
+    out for is_even too). Left open, real UNPROVED; twin still REFUTED
+    (off-by-one, unaffected, unchanged from the first pass).
+
+  (4) THE ABSTAIN, READ, NOT A BUG: `dafny_synthesis_task_id_80__
+  tetrahedralNumber` (`t_v := n*(n+1)*(n+2) / 6`, ensures the identical
+  expression back -- otherwise a trivial reflexivity-shaped task). Lowering
+  raises `NotImplementedError: rocq lowering: identifier 't_v' collides
+  with the lowering's namespace`, from `_ck` (the RESERVED/`_len`/`sf_`/
+  `t_`-prefix check every param and return name passes through in `Ctx.
+  __init__`): the task's OWN return variable is named `t_v`, colliding with
+  `t_` (the file's own certificate/tactic namespace prefix, `t_w_*`, `t_H`,
+  `t_dis`, ...). This is the SAME named, intentional refusal every other
+  RESERVED-collision case in this file already takes (`fst`/`snd`/`pair`'s
+  own 2026-09-10 note, above, gives the identical reasoning: silently
+  parsing and shadowing a load-bearing name would be worse than a clean,
+  immediate abstain). Not attempted: relaxing the reservation would need
+  either a hygienic per-identifier rename scheme (a wider, unmeasured
+  change touching every binder site in this file) or narrowing `t_` to
+  the SPECIFIC names actually used (`t_w_`, `t_H`, `t_dis`, ... rather than
+  the whole prefix), neither of which this session's scope covers for one
+  task; correctly abstain, unchanged.
+
+  (5) THE TIMEOUT, UNCHANGED, NOT RE-MEASURED THIS PASS BECAUSE NOTHING
+  IN EITHER FIX CAN REACH IT: `seng2011_tmp_tmpgk5jq85q_flex_ex2__max`
+  (no spec_funs, no pair, no nested seq, no bool loop state reassigned --
+  confirmed directly from its own JSON) is the SAME load-sensitive/
+  proof-cost reading the first pass's own (5) already established (a
+  forall-plus-exists ensures over a seq, near the 180 s budget's edge,
+  min_max's own precedent). Re-running it costs three-plus minutes of
+  wall clock on a shared box for a task neither of this pass's fixes
+  could possibly change; left exactly as read, per this session's own
+  "leave unless the cause is cheap" instruction.
+
+  REGRESSION (`t/tasks/*.json`, all 23, flake 3, one cell at a time,
+  `run_par.lower_and_dispatch`, jobs=1, present={"rocq"}), run TWICE: once
+  against fix (1) alone (baseline, confirming the parameterless-certificate
+  change touches nothing else), once against both fixes together. Both
+  runs: 22 of 23 read verified/refuted, matching AGREEMENT.md's rocq
+  column exactly, byte for byte in outcome and witness (e.g. divmod_pair's
+  wrong-var twin at x=1, y=1, swap's undefined witness at s=[0], i=0, j=0,
+  tail's slice-bounds witness); `min_max` reads timeout/refuted both times,
+  the SAME load-sensitive reading AGREEMENT.md already records, not a
+  regression. `digit_sum` (uses `t_eqs_h`, the hypothesis-position half of
+  fix (2), single int param `dsum`), `factorial`/`fib` (single int param
+  each), `gcd` (two int params, INELIGIBLE, confirmed untouched), and
+  `count_matches` (a seq param, INELIGIBLE, confirmed untouched) all read
+  their own prior witness unchanged. No committed task's own witness or
+  timing class changed by either fix.
+
+  WHAT STAYS OPEN, BY NAME, SECOND PASS: `dafny_verify_tmp_tmphq7j0row_
+  dataset_error_data_real_error_iseven_success_1__is_even` (real unproved
+  -- a bool-headed spec_fun result needs a case split nothing here
+  provides, (3) above; an attempted general fix measured UNSAFE and was
+  not landed); `nitwit_tmp_tmplm098gxz_nit__max_nit` (real unproved -- a
+  ground spec_fun fact needs propagating past an `is_var` guard, the SAME
+  family of gap, same unsafe attempt, (3) above); `m2...computeSum`'s twin
+  and self-recursion sibling `...aula2__mystery1` (real unproved, THE
+  no-companion-spec_fun self-recursion gap the first pass's own (4) named,
+  untouched by anything in this pass: no spec_fun exists for `apply IH`'s
+  merge machinery to reach in the first place); `seng2011...flex_ex2__max`
+  (real timeout, unchanged, (5) above). Of the eight sole-blocker tasks
+  named at the top of this note, THREE now read COUNTS in full (f1a__f,
+  ghost__m, computeSum) and one is a correct, unchanged abstain
+  (tetrahedralNumber, not a defect); four stay open, each traced to its
+  own directly-read stuck goal, none of them a lowering crash or a masked
+  error.
 """
 from __future__ import annotations
 
@@ -3954,8 +4171,45 @@ Qed.
         # weight, never harm, on the other, since `first` restores the
         # goal between alternatives (measured on digit_sum, 2026-09-08).
         eq_tac_h = " ".join(f"try rewrite {e} in * |-;" for e in eqs)
-        chunks.append(f"Ltac t_eqs := {eq_tac} idtac.\n")
-        chunks.append(f"Ltac t_eqs_h := {eq_tac_h} idtac.\n")
+        # 2026-09-10 (COVERAGE-lifted-785.md's twelfth sweep, computeSum):
+        # a bare `rewrite sf_X_eq` leaves the recursive step's own
+        # argument ARITHMETIC unnormalized (`sf_sum (i + 1)` rewrites to
+        # `i + sf_sum (i + 1 - 1)`, not `i + sf_sum i`), syntactically
+        # different from the invariant's own `sf_sum i` even though lia
+        # proves the two arguments equal; `t_sat1`'s merge rule never
+        # reaches it (its `is_var f` guard is for a var-headed seq
+        # application, and a global spec_fun constant is never one, the
+        # same gap this file's own docstring already named for computeSum
+        # and is_even). `ring_simplify` on the argument closes exactly
+        # this gap: Z is the only ring a spec_fun's own argument ranges
+        # over, `progress` makes it a no-op (never an error) wherever the
+        # argument is already ring-normal (a bare variable included), and
+        # it is confined to a single-int-param spec_fun (`sf["params"]`
+        # is exactly one `"int"`) so it never fires `ring_simplify` on a
+        # seq's own (function, length) pair (count_matches' `s`) or picks
+        # one of two int arguments arbitrarily (gcd's `gcds`) -- both stay
+        # bare-rewrite-only, byte-identical to before. MEASURED: closes
+        # computeSum's real side (`s = sf_sum i` invariant, argument
+        # arithmetic only, no further gap); does NOT close is_even's real
+        # side alone (`r = true <-> sf_even i = true`, an opaque BOOL
+        # spec_fun result needs a case split no saturation step here
+        # makes, a different, unresolved gap, left open by name in this
+        # date's note). One `repeat match` per single-int-param spec_fun,
+        # chained after the existing rewrite; goal position joins t_eqs,
+        # hypothesis position (`ring_simplify ... in H`) joins t_eqs_h,
+        # the same goal/hypothesis split this file already keeps
+        # (digit_sum's own note, above).
+        norm_names = [f"sf_{sf['name']}" for sf in task.get("spec_funs", [])
+                      if len(sf["params"]) == 1
+                      and sf["params"][0]["type"] == "int"]
+        norm = " ".join(
+            f"repeat match goal with |- context [{n} ?x] => "
+            f"progress ring_simplify x end;" for n in norm_names)
+        norm_h = " ".join(
+            f"repeat match goal with H : context [{n} ?x] |- _ => "
+            f"progress ring_simplify x in H end;" for n in norm_names)
+        chunks.append(f"Ltac t_eqs := {eq_tac} {norm} idtac.\n")
+        chunks.append(f"Ltac t_eqs_h := {eq_tac_h} {norm_h} idtac.\n")
     else:
         chunks.append("Ltac t_eqs := idtac.\n")
         chunks.append("Ltac t_eqs_h := idtac.\n")
@@ -5221,12 +5475,25 @@ def _loop_def(cx, task, prefix, w, suffix):
 
 
 def _value_cert(cx, task, body, witness, def_text):
-    """Certificate chunk for a whole-program value witness, or None."""
+    """Certificate chunk for a whole-program value witness, or None.
+
+    2026-09-10 (COVERAGE-lifted-785.md's twelfth sweep, the two
+    parameterless sole blockers, f1a__f and ghost__m): a param-less task
+    was refused outright by the guard this replaces. Nothing downstream
+    actually needs a param: `_witness_env` already returns empty
+    env_py/env_txt/etc. for an empty `task["params"]` (its `for p in
+    task["params"]` loop just does not run), `_plain_def` already renders
+    a correct nullary `Definition {name}_t  : Z := ...` for exactly this
+    shape (matched byte for byte by the twin `.v` already on disk before
+    this fix, e.g. `f1a__f`'s own `Definition ..._f_t  : Z := 1.`), and
+    the `gargs` loop just below is empty for an empty params list, giving
+    `applied = "(name_t )"`, a bare identifier in extra parens, valid
+    Coq syntax. The one thing that WAS missing is exactly this function's
+    own refusal to try; every task with at least one param is unaffected
+    (this guard never fired for one)."""
     name = task["name"]
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
-    if not task["params"]:
-        return None
     if ret_t == "seq" or (isinstance(ret_t, dict) and "seq" in ret_t):
         # A "value" witness kind's `_twin` is a single Python value
         # (`_glit`'s int/bool contract); a seq twin value is a tuple, which

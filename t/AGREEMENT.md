@@ -1,4 +1,4 @@
-# t cross-kernel agreement — 2026-09-10 07:31Z
+# t cross-kernel agreement — 2026-09-10 09:12Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column.
 
@@ -20,7 +20,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | min_max | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
 | remainder | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| reverse | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
+| reverse | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | row_max_len | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | seq_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | sum_upto | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -45,7 +45,7 @@ Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `ab
 
 | kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
 |---|---|---|---|
-| framac | 2 | 0 | reverse, swap_rows |
+| framac | 1 | 0 | swap_rows |
 | dafny | 0 | 0 | (none) |
 | verus | 0 | 0 | (none) |
 | spark | 0 | 1 | (none) |
@@ -53,4 +53,4 @@ Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `ab
 | rocq | 0 | 1 | (none) |
 | fstar | 0 | 0 | (none) |
 
-Of the 2 tasks in six, 2 are framac alone.
+Of the 1 tasks in six, 1 is framac alone.

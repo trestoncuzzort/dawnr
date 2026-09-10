@@ -1455,6 +1455,209 @@ invariant the guard alone does not give) and dafny_synthesis_task_id_
 computational position and a self-recursive body hitting either shape
 fixed tonight are also still open, both genuinely unexercised by any
 measured task, named honestly above rather than guessed at.
+
+SECOND PASS (2026-09-10, night), THE TARGET's own four named items,
+measured before touching anything (`harness.run_task`-shaped, flake 3,
+against out/lifted-tasks/ directly): prog_fun_solutions_tmp_tmp7_gmnz5f_
+extra_mod__mod read verified/UNPROVED (regressed from verified/refuted in
+the eleventh sweep); both ..._cube tasks read unproved/unproved; dafny_
+synthesis_task_id_304__elementAtIndexAfterRotation read unproved/refuted;
+dafny_verify_..._downWhileNotEqual read verified/unproved; se2011_..._eval
+already read verified/refuted (THE DOMAIN HYPOTHESIS's own `dec1` fix,
+above, already closed it earlier the same day -- re-measured, not
+touched again here).
+
+THE PRESERVATION-HAVE COLLISION, extra_mod's own root cause, diagnosed
+first since it explains a class, not just one task: `_loop_needs_domain_
+hyp` (THE DOMAIN HYPOTHESIS, above) reads True for extra_mod's own shape
+(bare decreases `k`, no subtraction node, the fallback True the cheap
+rule always gives), threading `hinv1..5` into `_t_loop`'s own definition;
+its `collapse-if` twin drops the loop body's `if k % 2 == 0 { x := x + y
+}` to an UNCONDITIONAL `x := x + y`, which genuinely breaks `hinv1`'s own
+preservation (`f_s n = x + y * f_s k`) whenever k is odd -- a live,
+ground counterexample (k=0, satisfying every OTHER hypothesis), not a
+tactic gap, so the `have` proving it inside `_t_loop`'s own def cannot be
+closed by any tactic, full stop. Lean auto-inserts `sorryAx` for the
+failed `have` and keeps elaborating, so the FILE still exits 0 -- but
+that `sorryAx` poisons `_t_loop` itself, and through it every theorem
+built on it, including `t_refutation_certificate` (which literally
+unfolds `_t_loop` at the witness): audited `[sorryAx, ...]`, so verifiers/
+lean.py correctly mints UNPROVED, never REFUTED, silently (no error
+surfaces in the adapter's own output, only in `#print axioms`). This is
+NOT specific to extra_mod: ANY twin whose mutation breaks true invariant
+preservation, on a loop task where `needs_hyp` reads True, hits the
+identical wall -- the domain-hypothesis mechanism cannot represent a
+genuinely-false preservation step, by construction (`_t_loop` is a total
+Lean function; its own recursive-call argument for that invariant must
+be an actual proof term for EVERY state satisfying the parameter types,
+not just the ones a real execution reaches).
+
+FIXED, extra_mod's own instance, narrowly and measured, not architecture-
+wide: `_loop_needs_domain_hyp`'s own docstring (above) had ALREADY
+diagnosed the fix and declined it, for digit_sum's identical shape --
+"nothing in this guard/decreases SHAPE alone distinguishes it from
+div_ent_it's... until the BODY's own update is inspected". Doing that
+inspection (new: `_var_writes`, `_loop_needs_domain_hyp`'s own "SELF-
+DIVISION SAFE CASE" branch) answers False -- skips the whole domain-hyp
+mechanism, back to the pre-existing bare-`_hg`-only `decreasing_by` this
+file used before THE DOMAIN HYPOTHESIS wave -- whenever `dec` is a bare
+state variable `v`, the guard bounds `v` directly against a LITERAL
+(`v > c` / `v >= c`), and the loop body's ONLY write to `v` anywhere in
+it (top level or nested -- `_var_writes` walks the whole body, so a
+second, conditional write cannot hide from the single-write check) is
+`v := v - lit` or `v := v div lit` for a positive int literal: both make
+v's new value strictly smaller than its old one UNCONDITIONALLY (`x -
+lit < x` for any x once `lit >= 1`; `x div lit < x` once `x > 0` and
+`lit >= 2`, and the matched guard supplies exactly that `x > 0`), so
+`_hg` alone was always enough and the extra machinery was pure
+liability. Correctly answers False for extra_mod's own `k := k div 2`
+(guard `k > 0`) AND for digit_sum's `m := m div 10` (guard `m > 0`,
+verbatim the shape the standing docstring named), while correctly still
+answering True for div_ent_it's near-identical one (`r_v -= b`, guard
+`r_v >= b`): `b` is a variable operand there, not a literal, so the new
+check's own literal-match test does not fire, `needs_hyp` stays True,
+unchanged.
+
+MEASURED (`out/lifted-tasks/` directly, flake 3): extra_mod COUNTS again
+(real VERIFIED, collapse-if twin REFUTED, witness n=1 -> real 2, twin 3).
+digit_sum (one of the 23 committed tasks) also now takes the pre-existing
+path (`needs_hyp` reads False instead of the accidentally-True it read
+after THE DOMAIN HYPOTHESIS wave) and still COUNTS, identically to its
+committed AGREEMENT.md cell (real VERIFIED, invariant-drop#1 twin
+REFUTED). The ten loop tasks THE DOMAIN HYPOTHESIS wave closed (clover_
+cal_sum__sum, clover_linear_search1__linearSearch, dafny_tmp_tmpmvs2dmry_
+slowmax__slow_max, dafny_verify_..._minimum, m2_..._carre, ..._foo, all
+three ..._gcdI tasks, tfg_..._div_ent_it) are UNTOUCHED by this check
+(none share extra_mod's/digit_sum's exact shape -- div_ent_it's own guard
+compares against a VARIABLE, the six others' decreases is `ite`, `+`, or
+a plain `-` not matching a bare-variable decrease at all) and all ten
+still COUNT, re-measured directly, real VERIFIED / <mutation> twin
+REFUTED, cell for cell identical to THE DOMAIN HYPOTHESIS's own reading.
+All 23 tasks/*.json, real and twin, re-run through the lean backend
+directly (`harness.run_all`, matching AGREEMENT.md's own call shape): 23
+of 23 COUNT, cell for cell identical to the committed lean column.
+
+THE CUBE NONLINEARITY, THE TARGET's own headline item, both `..._cube`
+tasks (ai_agent_validation_examples and ai_agent_verify_examples, the
+same body): THE DOMAIN HYPOTHESIS's own note already isolated this
+exactly -- `c >= 0` (c tracking i^3) preservation across `c := c + k`
+needs `i >= 0 -> (i+1)^3 >= 0`, ground-counterexample-confirmed nonlinear
+(`grind`'s cutsat reports a real satisfying assignment, c := -1, i.e. it
+is not under-searching) with `Int.mul_nonneg : 0 <= a -> 0 <= b -> 0 <=
+a * b` measured to exist in CORE Lean (a three-line scratch probe, no
+Mathlib import, clean) and close it by hand once the right product is
+named. `_nonneg_bridge_lines` (new): for every INT-typed loop state
+variable, both its OLD name and its `env_b`-substituted NEW term (the
+exact text each invariant's own preservation goal already carries for
+that variable, so the atom built here is syntactically the SAME one
+grind needs to recognize -- `(i + 1) * (i + 1) * (i + 1)` matching
+`_hinv2'`'s own RHS verbatim, not a re-derived equivalent form) -- `0 <=
+x`, `0 <= x*x`, `0 <= x*x*x`, each via `Int.mul_nonneg` chained over a
+SELF-CONTAINED `by omega` (never a shared named hypothesis, so one
+candidate not actually provable nonneg -- `c` itself, signed in general
+-- just fails that one `have`, wrapped in `try`, costing nothing else in
+the block). Appended as one more `first`-alternative on EVERY loop
+invariant-preservation `have`, UNCONDITIONALLY -- not gated behind a new
+capability flag, matching THE DOMAIN HYPOTHESIS's own "LOOP TERMINATION
+MEASURE +1" precedent: an alternative never reached because an earlier
+one already succeeded costs nothing at every task that does not need it.
+
+MEASURED: both cube tasks COUNT (real VERIFIED, invariant-drop#1 twin
+REFUTED, witness exit at n=0, i=0, k=1, m=6, c=1), each kernel call under
+a second (0.7s, `lean` run directly on the generated file, no adapter
+overhead). Regression: the ten domain-hyp loop tasks above (all carry
+INT-typed state, so the bridge is generated for each, unconditionally)
+re-measured AFTER this fix landed too, still all ten COUNT, identical
+witnesses to the reading above -- the base `split_tac; all_goals gr`
+alternative still closes first for every one of them, the nonneg bridge
+never reached, matching the "costs nothing when unused" claim directly
+rather than assuming it. All 23 tasks/*.json re-run: 23 of 23 COUNT,
+identical to AGREEMENT.md, digit_sum included.
+
+ELEMENTATINDEXAFTERROTATION, THE TARGET's third item: a SIMPLE-shape
+single `at` with index `(index - n + len(l)) % len(l)`, `_wf1`'s own `_h1
+: len(l) != 0` proved by `by first | assumption | decide | omega |
+grind` against a goal that STILL reads `n >= 0 -> 0 <= index -> index <
+len(l) -> (...)`, un-intro'd: the outer `first | grind | (have _h1 :=
+...)` tries each alternative from the SAME starting state (`first`
+discards partial progress on a failing branch before trying the next),
+so the `have`-based fallback's own proof of `_h1` runs with NONE of the
+three premises in scope, and none of `assumption`/`decide`/`omega`/
+`grind` can derive `len(l) != 0` from nothing. `_divmod_branches` (THE
+DECREASING-BY GAP wave, 2026-09-09 third sweep, above) had ALREADY built
+exactly the fix -- `intro`-guessed CHAINED repeats, 0..MAX_LEAD candidate
+lead lengths, tried as further `first`-alternatives -- but gated it
+behind `self.seq_mut or self.seq_new` (clover_rotate, the only task that
+had measured needing it, is a seq task), so a non-seq SIMPLE-shape task
+whose divisor is `len(l)` (a seq-length term, but the task touches no
+`update`/`fill`/literal/concat/slice op, so `seq_mut`/`seq_new` both read
+False) never reached the chained alternatives at all. UNGATED the same
+way the QUANTIFIED variant just above it already was (2026-09-09's own
+"leaving the REPLACEMENT ungated finishes the fix instead of
+reintroducing the old broken text under a new gate"): a wrong `nlead`
+guess just leaves a `have` that cannot typecheck (or `intro` runs out of
+binders), so `first` falls through, never masking failure as a proof --
+every task whose bridge already worked at `nlead=0` (digit_sum,
+remainder, swap, tail, filter_pos) still succeeds on the very first
+candidate, unchanged verdict, changed only in trailing never-reached
+alternative text.
+
+MEASURED: elementAtIndexAfterRotation COUNTS (real VERIFIED, off-by-one
+twin REFUTED, witness l=[0], n=0, index=0 -> real 0, twin at index 1
+outside [0,1)). All 23 tasks/*.json re-run again after this second change
+landed on top of the first two: 23 of 23 COUNT, identical to AGREEMENT.md.
+
+DOWNWHILENOTEQUAL, DIAGNOSED, LEFT OPEN -- not a narrow bridge gap like
+the three above, a genuine architecture limit of THE PRESERVATION-HAVE
+COLLISION's own class, read directly (not guessed): its own guard is
+`i != 0` (an off-by-one twin flips it to `i != 1`), decreases bare `i`,
+body `i := i - 1`, invariant `0 <= i <= n` -- `needs_hyp` correctly reads
+True (a `!=` guard bounds nothing by itself; termination genuinely needs
+`0 <= i` from the invariant even for the REAL program, confirmed by
+hand: without SOME lower bound, `i` could start arbitrarily negative and
+`(i - 1 + 1).toNat < (i + 1).toNat` is false at e.g. i = -5), so THE
+SELF-DIVISION SAFE CASE above correctly does not fire for it (its guard
+op is `!=`, never `>`/`>=`). The twin's own off-by-one guard lets the
+loop step from i=0 (0 != 1 is true) to i=-1, genuinely breaking `0 <= i`
+-- THE PRESERVATION-HAVE COLLISION exactly, on a task where domain hyp is
+NOT an avoidable accident (unlike extra_mod/digit_sum) but load-bearing
+for the REAL program's own termination proof too, so the narrow "skip
+the mechanism" fix above cannot apply here even in principle: skipping it
+would break the REAL program's own termination. A real fix needs `_t_
+loop`'s own recursive step to become a decide-and-fall-back conditional
+(`if hok : <preservation holds> then <continue, using hok> else <a
+total, unreachable-along-any-real-execution placeholder>`) rather than an
+unconditional `have`, so a genuinely-false preservation instance no
+longer has to be PROVEN, only ruled DECIDABLE -- sound because interp.py
+computes witnesses by literally executing the mutated body (never
+consulting the invariant list at all), so the "then" branch is the one
+every measured witness actually walks and the "else" branch, reachable
+only for hypothetically-typed states no real execution produces, can
+return anything total without corrupting any certificate. This is a
+change to `_t_loop`'s own recursive-call generation AND `_t_loop_spec`'s
+matching proof (which currently reuses the poisoned term via `apply`'s
+own proof-irrelevant unification, unmeasured before now -- confirmed by
+hand: cube's own file, before its fix, errored ONLY once, at `_t_loop`'s
+`have`, with `_t_loop_spec`'s theorem itself merely inheriting a "uses
+sorry" warning, never a fresh grind failure of its own), a substantially
+larger, riskier piece of work than the three fixes above and NOT landed
+this pass -- diagnosed and left open by name, matching this file's own
+standing rule, rather than forced or guessed at under time pressure.
+se2011_..._eval is UNAFFECTED (already fixed earlier the same day, by
+`dec1`, a different gap entirely -- a `.toNat` floor artifact, not a
+preservation collision) and re-measured here unchanged: verified/
+REFUTED.
+
+STAYS OPEN, by name, after this pass: dafny_verify_tmp_tmphq7j0row_test_
+cases_loopinvariant__downWhileNotEqual (THE PRESERVATION-HAVE COLLISION,
+above, needs `_t_loop`'s own decide-and-fall-back redesign, not landed
+this pass). THE 14 LOOP-TASK RESIDUAL's own nine direction-class tasks
+are NOT open any more (THE DOMAIN HYPOTHESIS, earlier the same day,
+closed all nine; re-measured, still COUNT, above) -- named here only so
+a reader of that still-standing note knows not to go looking for them.
+`implies` in computational position and a self-recursive body hitting
+either the BOOLEANS or DEAD-BRANCH shapes are still genuinely
+unexercised by any measured task, unchanged.
 """
 from __future__ import annotations
 
@@ -1530,6 +1733,31 @@ def loop_assigned(body: list) -> set:
             out |= loop_assigned(s["if"]["else"])
         elif "while" in s:
             out |= loop_assigned(s["while"]["body"])
+    return out
+
+
+def _var_writes(body: list, v: str) -> list:
+    """Every RHS expression assigned to `v` anywhere in `body`, top-level or
+    nested inside an `if`/`while` (walked the same shape as `loop_assigned`
+    above, but collecting values rather than a name set): used by
+    `_loop_needs_domain_hyp`'s own "SELF-DIVISION SAFE CASE" to see the
+    WHOLE update picture for `v`, not just a top-level one, so a second,
+    conditional write hiding inside an `if` cannot slip past the single-
+    write check that safe case relies on. A `return` naming `v` counts as
+    a write too (SPEC.md "Early exit"), with no RHS expression of the
+    `x op lit` shape this is looking for, so it can only ever make the
+    caller's `len(writes) == 1` check fail, never wrongly pass."""
+    out: list = []
+    for s in body:
+        if "assign" in s and s["assign"][0] == v:
+            out.append(s["assign"][1])
+        elif "return" in s and s["return"][0] == v:
+            out.append(None)
+        elif "if" in s:
+            out += _var_writes(s["if"]["then"], v)
+            out += _var_writes(s["if"]["else"], v)
+        elif "while" in s:
+            out += _var_writes(s["while"]["body"], v)
     return out
 
 
@@ -2593,9 +2821,32 @@ class Lower:
         quants = []
         for n in nodes:
             quants += self._quant_pairs(n, env, types)
+        # UNGATED (2026-09-10, second pass, elementAtIndexAfterRotation):
+        # was `if pairs and nlead and (self.seq_mut or self.seq_new)`,
+        # matching `_seq_hints`'s own gate -- but the CHAINED case this
+        # loop exists for ("a WF theorem's goal is H1 -> ... -> G, the
+        # divisor's own b != 0 side condition unreachable until that
+        # chain is introduced", this method's own docstring above) is not
+        # a seq-specific shape at all: elementAtIndexAfterRotation's own
+        # divisor is `len(l)`, a SIMPLE-shape `at` index with no seq
+        # literal/slice/concat/update/fill anywhere in the task, so
+        # `self.seq_mut`/`self.seq_new` both read False and the gate
+        # skipped exactly the fallback this task needs, unmeasured until
+        # now (`_wf1`'s own `_h1 : len(l) != 0` proved by `by first |
+        # assumption | decide | omega | grind` against a goal that still
+        # reads `H1 -> H2 -> H3 -> ...` un-intro'd -- omega alone cannot
+        # reach `index < len(l)` to derive `len(l) >= 1` from a premise
+        # it has not been given). Same reasoning the QUANTIFIED variant's
+        # own ungating above already used: a wrong `nlead` guess just
+        # leaves a `have` that cannot typecheck (or `intro` runs out of
+        # binders), so `first` falls through, never masking failure as a
+        # proof; every task whose bridge already worked at `nlead=0`
+        # (digit_sum, remainder, swap, tail, filter_pos) succeeds on the
+        # very first candidate exactly as before, unchanged verdict,
+        # changed only in the never-reached trailing alternative text.
         for nlead in range(self.MAX_LEAD + 1):
             lead = f"intro{' _' * nlead}; " if nlead else ""
-            if pairs and nlead and (self.seq_mut or self.seq_new):
+            if pairs and nlead:
                 branches.append(f"({lead}{self.divmod_prelude(pairs)}; "
                                f"omega)")
             for zn, zlo, zhi, qpairs in quants:
@@ -3338,15 +3589,36 @@ class Lower:
         `r_v`, guard `r_v >= b` bounds `r_v` but never `b`'s sign, so
         `r_v - b < r_v` genuinely needs `b > 0` from the invariant, not
         the guard) -- answers True. digit_sum's own bare `m` (guard `m >
-        0`, body `m := m / 10`) is a MEASURED near-miss deliberately NOT
-        special-cased here: it happens to need no invariant fact (`m >
-        0` alone gives `m / 10 < m`), but nothing in this guard/decreases
-        SHAPE alone distinguishes it from div_ent_it's -- the two read
-        identically (a bare decreases variable, directly guard-bounded)
-        until the BODY's own update is inspected, so the cheap, body-
-        blind rule below answers True for both, uniformly, matching
-        digit_sum into the same (fully general, safe) domain-hyp path
-        div_ent_it needs rather than trying to tell them apart."""
+        0`, body `m := m / 10`) was a MEASURED near-miss, ORIGINALLY (THE
+        DOMAIN HYPOTHESIS, 2026-09-10) deliberately NOT special-cased:
+        needing no invariant fact (`m > 0` alone gives `m / 10 < m`), but
+        nothing in the guard/decreases SHAPE ALONE (body-blind) told it
+        apart from div_ent_it's identically-shaped one (a bare decreases
+        variable, directly guard-bounded) without inspecting the BODY's
+        own update -- so the cheap rule answered True for both, uniformly,
+        deliberately paying the (harmless, since digit_sum's own twin
+        happened to still preserve every invariant) cost of threading
+        domain hyp where it added nothing.
+
+        THE SELF-DIVISION SAFE CASE below (2026-09-10, second pass) does
+        the body inspection this note originally declined: extra_mod/mod's
+        own twin (a `collapse-if` mutation INSIDE the loop body) measured
+        that "harmless" assumption false -- threading domain hyp forces
+        `_t_loop`'s own recursive definition to prove each invariant's
+        preservation for ALL states satisfying the (possibly-mutated)
+        hypothesis set, and a twin whose mutation genuinely breaks one
+        (which is the entire point of many mutation classes) makes that
+        proof obligation FALSE, not just hard: `_t_loop`'s own def then
+        fails to elaborate (`sorryAx`), poisoning everything built on it
+        (measured: extra_mod's twin read verified/UNPROVED, not REFUTED,
+        the certificate itself audited `[sorryAx]`). Checking the body's
+        actual update to the decreases variable (below) costs nothing
+        extra measured (`_var_writes`, a plain walk) and correctly still
+        answers True for div_ent_it (`r_v -= b`, a VARIABLE operand, not a
+        literal) while answering False for digit_sum AND extra_mod alike
+        (`m / 10`, `k / 2`, both `v op literal`), skipping the domain-hyp
+        machinery for both -- restoring extra_mod without narrowing
+        div_ent_it's own genuine need at all."""
         guard, dec = w["cond"], w["decreases"]
         conjuncts = (guard["args"]
                     if isinstance(guard, dict) and guard.get("op") == "and"
@@ -3362,7 +3634,106 @@ class Lower:
                 return False
             if g["op"] in (">", ">=") and (a, b) == (ga, gb):
                 return False
+        # SELF-DIVISION SAFE CASE (2026-09-10, second pass, "THE
+        # PRESERVATION-HAVE COLLISION" below): the body-inspection this
+        # docstring's own comment above declined to do, done narrowly.
+        # `dec` a bare variable v, the guard bounding v against a LITERAL
+        # (v > c / v >= c, top level or in a top-level `and` -- exactly
+        # digit_sum's and extra_mod/mod's own shape), and the loop body's
+        # ONLY write to v anywhere in it (top level or nested, checked
+        # below so a conditional second write cannot hide from this) is
+        # `v := v - lit` or `v := v div lit` for a literal `lit` (>= 1 for
+        # `-`, >= 2 for `div`): both make v's own new value strictly
+        # smaller than its old one for ANY v, no invariant fact needed
+        # (`x - lit < x` unconditionally once lit >= 1; `x div lit < x`
+        # once `x > 0` and `lit >= 2`, and `_hg` already supplies that
+        # `x > 0`, or something at least as strong, whenever the guard
+        # matched above). This is exactly what tells div_ent_it's own
+        # near-identical shape (bare `r_v`, guard `r_v >= b`) apart: `b`
+        # is a variable there, not a literal, so the guard-match below
+        # answers False for it and this safe case does not fire, leaving
+        # `needs_hyp` True, unchanged.
+        if isinstance(dec, dict) and "var" in dec and "op" not in dec:
+            dv = dec["var"]
+            bounded = any(
+                isinstance(g, dict) and g.get("op") in (">", ">=")
+                and isinstance(g["args"][0], dict)
+                and g["args"][0].get("var") == dv
+                and isinstance(g["args"][1], dict) and "int" in g["args"][1]
+                for g in conjuncts)
+            if bounded:
+                writes = _var_writes(w["body"], dv)
+                if len(writes) == 1:
+                    val = writes[0]
+                    if (isinstance(val, dict) and val.get("op") in ("-", "div")
+                            and isinstance(val.get("args"), list)
+                            and len(val["args"]) == 2
+                            and isinstance(val["args"][0], dict)
+                            and val["args"][0].get("var") == dv
+                            and isinstance(val["args"][1], dict)
+                            and "int" in val["args"][1]):
+                        lit = val["args"][1]["int"]
+                        if ((val["op"] == "-" and lit >= 1)
+                                or (val["op"] == "div" and lit >= 2)):
+                            return False
         return True
+
+    # THE CUBE NONLINEARITY (2026-09-10, second pass, "THE 14 LOOP-TASK
+    # RESIDUAL"'s own sole holdout above): cube's own `c >= 0` (c tracking
+    # i^3) preservation across `c := c + k` needs `i >= 1 -> i^3 >= 0`
+    # (concretely, given the loop's own OTHER preserved invariant `c + k =
+    # (i+1)*(i+1)*(i+1)`, `(i+1) >= 0 -> (i+1)^3 >= 0`), plain nonlinear
+    # sign reasoning `grind`'s linear cutsat core cannot do (measured:
+    # cutsat reports a real counterexample, c := -1, i.e. it is not
+    # under-searching, it genuinely lacks the theory) and this file has no
+    # Mathlib `nlinarith`-style bridge for. `Int.mul_nonneg : 0 <= a -> 0
+    # <= b -> 0 <= a * b` IS in core Lean (measured, a three-line scratch
+    # probe: `example (a b : Int) (ha : 0 <= a) (hb : 0 <= b) : 0 <= a * b
+    # := Int.mul_nonneg ha hb` compiles clean, no Mathlib import) and
+    # closes it by hand once the right product is named.
+    #
+    # GENERIC, not cube-specific: built over every INT-typed loop state
+    # variable, both its OLD value and its symbolically-updated NEW one
+    # (`env_b`'s own substitution -- the exact term text each invariant's
+    # own preservation goal already carries for that variable, so the
+    # atom this builds is syntactically the SAME one grind needs to
+    # recognize, e.g. `(i + 1) * (i + 1) * (i + 1)` matching `_hinv2'`'s
+    # own RHS verbatim). For each candidate term `x`: `0 <= x`, `0 <= x *
+    # x` and `0 <= x * x * x`, each proved by `Int.mul_nonneg` chained
+    # over a SELF-CONTAINED `by omega` (never a shared named hypothesis),
+    # each wrapped in `try`: one candidate `x` not actually provable
+    # nonneg from context (most of them, for most tasks -- `c` itself
+    # here, signed in general) just fails that one `have` and moves on,
+    # costing nothing else in the block.
+    #
+    # Appended as one more `first`-alternative on every loop invariant-
+    # preservation proof, UNCONDITIONALLY -- not gated behind a new
+    # capability flag, matching the "LOOP TERMINATION MEASURE +1"
+    # precedent above: a `first`-alternative never reached because an
+    # earlier one already succeeded costs nothing at every task that does
+    # not need it (measured on the regression below: every already-
+    # passing loop task's invariant-preservation proof still closes on
+    # its FIRST alternative, unchanged).
+    def _nonneg_bridge_lines(self, state: list, env_b: dict,
+                             types: dict) -> list[str]:
+        seen: set = set()
+        terms: list[str] = []
+        for v in state:
+            if types.get(v) != "int":
+                continue
+            for t in (v, env_b.get(v, v)):
+                if t not in seen:
+                    seen.add(t)
+                    terms.append(t)
+        lines = []
+        for i, t in enumerate(terms):
+            lines.append(f"try have _nnb{i}a : (0:Int) ≤ ({t}) := by omega")
+            lines.append(f"try have _nnb{i}b : (0:Int) ≤ ({t}) * ({t}) := "
+                         f"Int.mul_nonneg (by omega) (by omega)")
+            lines.append(f"try have _nnb{i}c : (0:Int) ≤ ({t}) * ({t}) * ({t}) "
+                         f":= Int.mul_nonneg (Int.mul_nonneg (by omega) "
+                         f"(by omega)) (by omega)")
+        return lines
 
     # LOOP: one top-level while; invariants become the hypotheses of a
     # recursive helper theorem (the induction hypothesis, literally).
@@ -3541,12 +3912,31 @@ class Lower:
             hinv_names = [f"_hinv{i + 1}'" for i in range(len(inv_props))]
             obtain_lines = [f"obtain ⟨_, _, _, _⟩ := hinv{i + 1}"
                             for i, iv in enumerate(invs) if "exists" in iv]
+            # THE CUBE NONLINEARITY (2026-09-10, second pass): the base
+            # `split_tac; all_goals gr` step, tried FIRST unchanged (so
+            # every already-passing task closes exactly as before, on
+            # this same alternative); `_nonneg_bridge_lines` (above) only
+            # when non-empty (an INT-typed piece of loop state present at
+            # all), as a second `first`-alternative, reached only when
+            # the base one fails.
+            nonneg_lines = self._nonneg_bridge_lines(state, env_b, types)
+            obtain_block = "".join(f"      {ln}\n" for ln in obtain_lines)
+            if nonneg_lines:
+                have_body = (
+                    obtain_block
+                    + "      first\n"
+                    f"      | {split_tac}\n"
+                    f"        all_goals {self._gr()}\n"
+                    "      | " + "\n        ".join(nonneg_lines) + "\n"
+                    f"        {split_tac}\n"
+                    f"        all_goals {self._gr()}\n")
+            else:
+                have_body = (obtain_block
+                            + f"      {split_tac}\n"
+                            f"      all_goals {self._gr()}\n")
             hinv_haves = "".join(
                 f"have {hinv_names[i]} : {self.prop(iv, env_b, types)} "
-                f":= by\n"
-                + "".join(f"      {ln}\n" for ln in obtain_lines)
-                + f"      {split_tac}\n"
-                f"      all_goals {self._gr()}\n    "
+                f":= by\n" + have_body + "    "
                 for i, iv in enumerate(invs))
             hinv_call = "".join(f" {n}" for n in hinv_names)
             rec_call = (f"{hinv_haves}{self.name}_t_loop {pnames} "

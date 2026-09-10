@@ -1118,6 +1118,185 @@ gate's own code path is ever reached for it (confirmed: relowered,
 byte-identical to before, still timeout, budget exhausted on the real
 function's own `typed_nat_..._8`/`..._9` goals -- a different, harder
 cause this pass did not touch, per RULES).
+
+THE TRACKED-LENGTH ENCODING, 2026-09-10, second pass: the design question
+THE BUFFER-LENGTH GATE left open, on the seven `verified / verified`
+lifted tasks (double_array_elements, replace, cmsc433's reverse,
+incrementArray x2, cubes, absIt), all the identical fill/self-update
+shape (a whole-buffer copy, then a self-update loop, the task's own
+FIRST loop invariant a length equality). MEASURED FIRST BY HAND, per
+RULES, before any lowering code changed: two raw C+ACSL probes mirroring
+double_array_elements, real and an invariant-dropped twin, frama-c run
+directly. Plain EXACT-mode rendering (`{ret}_n` bare, WP's frame rule
+auto-preserving an unlisted local across a loop that never assigns it)
+reproduced the gate's own vacuity exactly (twin 33/33, fully verified).
+Routing `len(ret)` through a fresh loop-tracked local AND forcing that
+local into the self-update loop's OWN `loop assigns` (nothing else)
+flipped it: real still 35/35, twin's `ensures` plus two invariant-
+preservation goals read an honest `[Stepout]`, the dropped invariant now
+load-bearing. Implemented as `_ret_written_in_loop` (new) gating a
+TRACKED-EXACT sub-case of the existing CAPACITY mode (same `ctx.seq_len`
+threading, `\result` post-state, `int`-returning C function the append
+idiom's own CAPACITY use already has; the one difference is the tracked
+local STARTS at the closed form EXACT mode already computed, `ret_decl`'s
+new initialized-declaration branch, rather than growing from 0) --
+`lower()`'s own existing `assigned_names(w["body"], ctx.seq_len)`
+piggyback (an assign TARGET that is also a `ctx.seq_len` KEY pulls its
+length local into the frame too) already does the loop-assigns forcing
+with no new code at all, confirmed by the hand probe's own negative
+control (the same twin WITHOUT that forcing verified in full, 33/33,
+reproducing the vacuity). `_exit_certificate`'s own BUFFER-LENGTH GATE
+decline (THE BUFFER-LENGTH GATE, above) is skipped for exactly this
+shape (`_ret_written_in_loop` on the twin body, mirroring `lower()`'s own
+test): the coherence conflict that decline existed to avoid (the twin's
+OWN `ensures` provable from `requires` alone, contradicting an accepted
+certificate) cannot arise once `ensures` no longer references the
+`requires`-pinned constant at all.
+
+MEASURED, all seven, real and twin, `harness.run_task` into a scratch
+OUT: all seven move `verified / verified` -> `verified / refuted`,
+COUNTING, 7-13s each (baseline plain-EXACT wall was ~9-10s each, so no
+material cost). The REALS did not lose -- the fallback RULES asked for
+("if the reals lose... keep the pinned mode and record verified/verified
+... with the measurement") was not needed, this landed clean on the
+first lowering-code attempt, the hand probe having already de-risked the
+mechanism. All seven now clear all seven kernels: this MOVES THE
+COLUMN'S OWN TARGET, framac keeping 16 lifted tasks out of the bar, down
+by seven to 9 (the remaining nine named individually elsewhere in this
+note).
+
+Applies to any seq return with this shape, not only the seven named:
+scanning every lifted-785 task for `ret_written_in_loop` (the same test
+`lower()` now runs) found 21 total. Of the other 14, MEASURED
+(`harness.run_task`, not merely inspected): `pancakesort_flip__flip`
+(already `verified / refuted` under plain EXACT mode, a DIFFERENT twin
+shape than the length-drop this fix targets) stays `verified / refuted`
+unchanged -- the regression bar this fix owes even outside the 23
+committed tasks; `Clover_array_product__arrayProduct` (also
+`verified / verified` before, same shape as the seven) moves to
+`verified / refuted` too, a bonus not required by RULES but consistent
+with the mechanism being general rather than the seven's own special
+case. The remaining twelve (mostly more `verified / verified` instances
+of the identical shape, two `timeout / timeout`, one `malformed /
+malformed`) were not individually re-run this pass -- time-boxed, per
+RULES' two-hour aim -- and are left for the next sweep or a future pass
+to confirm; nothing measured here suggests any of them would move
+adversely, since the mechanism only ever ADDS a real obligation
+(`loop assigns` widened to a local nothing writes) to a REAL program that
+already verified under the strictly weaker plain-EXACT rendering, never
+removes one.
+
+REGRESSION, the bar (RULES): all 23 committed tasks (`t/tasks/*.json`),
+framac column, relowered (real and twin) via `harness.run_task` into a
+scratch OUT. 20 read `verified / refuted` before and after, unaffected
+(none has a seq return written inside a loop with a matching EXACT-mode
+length, `abs` through `tail`, `swap`/`swap_rows` included -- `swap`'s own
+seq return is loop-free, `_ret_written_in_loop` false, so plain EXACT
+rendering is exactly as before, confirmed by the unchanged witness/
+outcome). `swap_rows` reads its own already-documented ABSTAIN unchanged
+(a seq<seq> return, a different construct's refusal, untouched).
+`reverse` moves `verified / verified` -> `verified / refuted`: the exact
+seven-task mechanism above, one committed cell better, zero worse.
+
+BRANCH-FREE AND/OR (`_cert_cexpr`, `_has_partial_op`, both new), the same
+pass: the two `verified / unproved` lifted tasks (hasOppositeSign,
+isMonthWith30Days) were READ first, per RULES ("read the twin's
+certificate; read the log"), not assumed. Both are loop-free, spec_fun-
+free, a single ground `&&`/`||` of plain comparisons (`a=0` decides
+`a<=0` outright). `-wp-report-json`, not inferred: the certificate's OWN
+smoke goals (`typed_nat_t_certificate_wp_smoke_dead_code_s34/35/36` on
+hasOppositeSign) read `Failed`/`Doomed` -- the SAME shape the PAIRS
+RESIDUAL section's own `fz_p_pair_eq` finding already named as a general
+`verifiers/framac.py` gap ("`_cert_status` has no matching exemption for
+a doomed smoke goal inside the certificate function itself... nothing
+pairs-specific about it, and this file may only be edited here"), here
+hitting an ordinary `and`/`or` with no pairs and no div/mod involved at
+all. That earlier note also names the ONE fix shape this file itself can
+make: rewrite the ground-replayed operator branch-free so WP has no
+short-circuit arm to find dead, exactly as `cexpr()`'s own pair `==`
+case already does. Extended here, narrowly: `_cert_cexpr` now renders
+`and`/`or` as bitwise `&`/`|` on its two (already 0/1) operands
+WHENEVER NEITHER OPERAND CONTAINS A PARTIAL OPERATOR (`_has_partial_op`:
+`at`/`div`/`mod`/`update`/`fill`/a call) -- the same safety condition the
+pairs fix already relied on ("both fst/snd are unconditionally defined"),
+generalized and named rather than re-derived per construct. Gated,
+deliberately: the general `and`/`or` case, where a later operand's
+definedness genuinely depends on an earlier one's truth
+(`i < len(s) and at(s, i) > 0`), keeps its real C `&&`/`||` in EVERY
+OTHER path (`cexpr()` itself, used for the real/twin function bodies,
+is untouched; only the certificate's OWN ground replay, where every name
+is already concrete and nothing can be out of bounds by the time
+`_cert_cexpr` is asked to render it at all for an operand that clears
+this check, gets the rewrite). MEASURED: both tasks move
+`verified / unproved` -> `verified / refuted`, COUNTING. Regression: the
+same 23-task run above (already re-verified after both fixes together)
+shows no task whose certificate has an `and`/`or` with a partial operator
+anywhere in either arm (`divmod_pair`, the only committed task with both
+div/mod and a pair, has no `and`/`or` in its certificate replay at all)
+taking the new path; all 23 read identical to the tracked-length note's
+own regression above.
+
+VACUOUS-3, read and diagnosed, not fixed (RULES: "decide whether the
+lowering or the twin is at fault; fix only the lowering side, name the
+rest"). The three `verified / vacuous` lifted tasks (both `main_v`
+tasks, `countToAndReturnN`) share one shape: a scalar/pair loop, COMPARE-
+FLIP on the guard (`i < x` -> `i <= x`), and the TASK's OWN loop
+invariant `0 <= i <= x` (never touched by the twin operator, carried
+over verbatim) becomes FALSE at the loop's actual exit under the
+flipped guard (it now runs one iteration past `i == x`). `-wp-report-
+json`, not inferred: the post-loop statement is scored `(Doomed)`,
+`property` field `..._wp_smoke_dead_code_s13` (correctly classed
+UNREACHABLE, not hypothesis vacuity, by `_UNREACHABLE_SMOKE`'s own
+pattern) -- but `verifiers/framac.py`'s `_vacuity_smoke` extracts the
+doomed goal's NAME from the console text via `_DOOMED_GOAL`
+(`typed_nat_..._6`, a bare numeral, no smoke-class substring at all: the
+class lives ONLY in the JSON `property` field, never in the printed goal
+id), so `_UNREACHABLE_SMOKE.search` on that text finds nothing and the
+file is misread VACUOUS. Separately, and correctly, one genuine
+invariant-preservation goal (`..._8_preserved`) reads an honest
+`[Stepout]` -- the twin really is broken, exactly as intended -- and the
+certificate's OWN goals (checked directly, `t_certificate_assert*` all
+`valid`) would mint REFUTED cleanly were the file not misclassified
+first. This is NOT this lowering's defect: the task's own invariant is
+rendered faithfully, the mutation is unmodified by construction (RULES:
+"the twin never touches requires, ensures, spec_funs, or decreases" --
+and the invariant list is body, not spec, but IS carried verbatim by
+every twin operator here, COMPARE-FLIP included), and no C this file
+could emit changes which console substring frama-c prints for a doomed
+goal's bare id. Named for whichever pass next touches
+`verifiers/framac.py`: teach `_vacuity_smoke`/`_DOOMED_GOAL` to read the
+JSON report's `property` field (already parsed elsewhere in this same
+adapter for other purposes) instead of, or alongside, the console text's
+goal id. Left alone here, per RULES' file scope.
+
+ABSTAIN-3, measured against the mandate ("if it does not land within an
+hour, leave the abstain and name it") and NOT landed, left unchanged.
+First correction to the prompt's own labeling, read directly rather than
+assumed: of the three named, only TWO (factorialOfLastDigit, ghost/
+Triple) actually abstain on "spec_fun call in executable position";
+`mfirstCero` has NO spec_funs at all (confirmed: `task["spec_funs"] ==
+[]`) and abstains on a DIFFERENT, unrelated gap ("conditionally evaluated
+`at` in executable position: definedness not dischargeable by a plain
+assert", `code_ats`'s own pre-existing short-circuit restriction, the
+same class the pairs-residual note's `fz_v1pairs` finding already
+names) -- out of this measurement's scope, left exactly as before, not
+touched. For the other two: implementing a real C function per spec_fun
+(a plain `int`/`bool` function mirroring the logic function's own `ite`
+body via a C ternary, `requires`/`ensures \result == f(...)` bridging it
+to the ACSL logic definition already emitted, and for the recursive case
+(`factorial`) a `decreases` clause on the C function whose WP variant
+obligation IS the termination proof, mirroring how a real recursive t
+function already works per this file's own `recursion` mapping in the
+module's opening section) needs at minimum: `cexpr()`/`_cert_cexpr`
+support for `ite` in EXECUTABLE position (today only a spec-position
+`term()` case exists), a new emission site in `lower()` alongside
+`spec_fun_acsl`, and a new dispatch in `stmts()`'s/`cexpr()`'s `call`
+case for a spec_fun name specifically (today an unconditional
+NotImplementedError). Scoped out this pass: implementing AND regression-
+testing that safely (every spec_fun-bearing task, committed and lifted,
+non-recursive and recursive) does not fit the remaining budget honestly,
+so nothing was written for it -- the abstain stays exactly as before,
+named here rather than attempted partially and left inconsistent.
 """
 from __future__ import annotations
 
@@ -1172,6 +1351,28 @@ def _has_divmod(x) -> bool:
         return any(_has_divmod(v) for v in x.values())
     if isinstance(x, list):
         return any(_has_divmod(v) for v in x)
+    return False
+
+
+_PARTIAL_OPS = {"at", "div", "mod", "update", "fill", "call"}
+
+
+def _has_partial_op(x) -> bool:
+    """Whether `at`/`div`/`mod`/`update`/`fill`/a call occurs anywhere in an
+    expression -- the same over-inclusive walk as `_has_divmod`, used by
+    `_cert_cexpr`'s "and"/"or" case (2026-09-10, second pass) to decide
+    whether a short-circuit is load-bearing for THIS operand: an operand
+    built purely from comparisons/arithmetic/vars/bools/pair projections
+    has no partial operator whose definedness the other operand's truth
+    could protect, so evaluating it unconditionally is safe; one that
+    contains any of these might not be (`i < len(s) and at(s, i) > 0`,
+    where the `at` is defined only because the guard passed)."""
+    if isinstance(x, dict):
+        if x.get("op") in _PARTIAL_OPS:
+            return True
+        return any(_has_partial_op(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_has_partial_op(v) for v in x)
     return False
 
 
@@ -2654,6 +2855,29 @@ def assigned_names(body: list, seq_caps: dict | None = None
     return hit, dec
 
 
+def _ret_written_in_loop(body: list, ret: str) -> bool:
+    """True iff `ret` is an assignment target somewhere inside a `while`
+    loop of `body` (nested inside an `if` is fine: `assigned_names`
+    already recurses through those, and so does the `if`-branch above).
+    THE TRACKED-LENGTH ENCODING (2026-09-10, second pass) uses this to
+    pick out the fill/self-update shape the design question named: a seq
+    return whose EXACT-mode length (`ret in lens`, `_seq_len_track`) is a
+    closed form over params, but which a loop actually mutates in place,
+    as opposed to a loop-free EXACT shape like `tail`'s slice (no while
+    loop touches the return at all, so this is False there and the
+    ORIGINAL plain-EXACT rendering, `{ret}_n` bare, is unaffected)."""
+    for s in body:
+        if "while" in s:
+            hit, _ = assigned_names(s["while"]["body"])
+            if ret in hit or _ret_written_in_loop(s["while"]["body"], ret):
+                return True
+        elif "if" in s:
+            if (_ret_written_in_loop(s["if"]["then"], ret)
+                    or _ret_written_in_loop(s["if"]["else"], ret)):
+                return True
+    return False
+
+
 def _assigns_target(n: str, ctx: Ctx) -> str:
     """One name's own `loop assigns`/entry, a bare name for int/bool, the
     whole element range for a seq (its POINTER never changes, only what it
@@ -3195,7 +3419,37 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
     section docstring's branch discipline, now extended to div/mod). The
     fix mirrors how `if`/`while` are unrolled: resolve the ternary at the
     ground state, assert the resolved condition (a real, Qed-checked goal,
-    not an assumption), and emit only the taken arm."""
+    not an assumption), and emit only the taken arm.
+
+    BRANCH-FREE AND/OR, added 2026-09-10 (second pass), the SAME doomed-
+    smoke shape as div/mod's own case above, found on two lifted tasks
+    (hasOppositeSign, isMonthWith30Days, both a straight-line ground `&&`/
+    `||` of plain comparisons, no loop, no div/mod at all): once every
+    name is ground, one operand can decide the whole expression outright
+    (`a=0` makes `a <= 0` Qed-true, so `&&`'s right operand's evaluation
+    reads DOOMED by -wp-smoke-tests exactly as a live div/mod ternary arm
+    did), and `_cert_status`'s audit has no exemption for a doomed smoke
+    goal inside the certificate function itself (the SAME
+    verifiers/framac.py gap the PAIRS section's own `fz_p_pair_eq` note
+    names as general, not this file's alone to close, and which THAT
+    construct's own componentwise `==` rewrite already worked around the
+    same way here: bitwise `&`/`|` on two already-0/1 values gives WP no
+    branch to find dead). Gated by `_has_partial_op`, not applied
+    unconditionally: the general `and`/`or` case (`code_ats`'s own
+    conditionally-evaluated-`at`/`div` discipline, the WHILE-GUARD
+    DEFINEDNESS and pairs-residual notes elsewhere in this file) is
+    load-bearing precisely when a later operand's definedness depends on
+    an earlier one's truth (`i < len(s) and at(s, i) > 0`), so this only
+    fires when NEITHER operand contains an `at`/`div`/`mod`/`update`/
+    `fill`/call -- both hasOppositeSign and isMonthWith30Days qualify
+    (pure comparisons over ground ints), and no committed or previously-
+    measured lifted task loses its short-circuit here, since one
+    containing a partial operator anywhere falls through to the ordinary
+    path below unchanged."""
+    if e.get("op") in ("and", "or") and not _has_partial_op(e):
+        a_c = _cert_cexpr(e["args"][0], ctx, st, funs, name, asserts, ind)
+        b_c = _cert_cexpr(e["args"][1], ctx, st, funs, name, asserts, ind)
+        return f"(({a_c}) {'&' if e['op'] == 'and' else '|'} ({b_c}))"
     if not _has_divmod(e):
         return cexpr(e, ctx.env, funs, name)
     if "ite" in e:
@@ -3869,8 +4123,25 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
         return None
     names = {k: v for k, v in w.items() if not k.startswith("_")}
     ret0 = task["returns"][0]
+    # THE TRACKED-LENGTH ENCODING (2026-09-10, second pass, see the note
+    # in `lower()` above `assigned_names`): the gate below exists because
+    # in PLAIN EXACT mode `{ret}_n` is a `requires`-pinned constant, so a
+    # witness whose seq-return length disagrees with it cannot be
+    # declared as ground C without contradicting the twin's OWN
+    # `requires`-derivable `ensures {ret}_n == ...`, which is exactly the
+    # coherence conflict THE BUFFER-LENGTH GATE was written to avoid.
+    # TRACKED-EXACT mode removes the conflict at its root: `lower()`
+    # routes `len(ret)` through a loop-tracked local (`ctx.seq_len`) for
+    # precisely this shape, so the twin's own `ensures` is no longer
+    # `requires`-derivable at all (MEASURED, the hand probe cited in
+    # `lower()`'s own note: the twin's `ensures` and two invariant-
+    # preservation goals read [Stepout]) -- there is no longer a second,
+    # contradictory proof of the twin's contract for a certificate to
+    # collide with, so the decline below is skipped for exactly this
+    # shape, `_ret_written_in_loop` mirroring `lower()`'s own test.
     if ret0["type"] == "seq" and ret0["name"] in names \
-            and isinstance(names[ret0["name"]], list):
+            and isinstance(names[ret0["name"]], list) \
+            and not _ret_written_in_loop(twin_body, ret0["name"]):
         lens = {p["name"]: {"op": "len", "args": [{"var": p["name"]}]}
                 for p in task["params"] if p["type"] == "seq"}
         _seq_len_track(twin_body, lens)
@@ -4164,14 +4435,59 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # (`ret in lens`, `tail`'s own shape, unchanged from before this
     # construct) leaves `ctx.seq_len` empty everywhere, `{ret}_n` meaning
     # exactly what it always has.
+    # THE TRACKED-LENGTH ENCODING, added 2026-09-10 (second pass), THE
+    # BUFFER-LENGTH GATE's own design question. EXACT mode's plain
+    # rendering (`ret in lens`, `{ret}_n` bare everywhere) is correct but
+    # makes any TASK-declared length-equality loop invariant
+    # (`len(ret)==len(s)`, the shape all six lifted-785 tasks the first
+    # pass's gate covered, plus `reverse`, all share) `requires`-derivable
+    # and therefore vacuous to drop: an INVARIANT-DROP twin that removes
+    # exactly that conjunct is a NO-OP at the C level (measured, THE
+    # BUFFER-LENGTH GATE's own note above `_exit_certificate`), so
+    # REFUTED is structurally unreachable there and the gate's honest
+    # answer was `verified / verified`. `ret_written_in_loop` picks out
+    # the shape the design question names (a loop that FILLS or
+    # SELF-UPDATES the return in place, `_ret_written_in_loop`, as
+    # opposed to a loop-free EXACT shape like `tail`'s slice, where there
+    # is no loop invariant to make real in the first place): for exactly
+    # that shape, this now reuses CAPACITY mode's own machinery
+    # (`ctx.seq_len` threading, `\result` in post-state, an `int`-
+    # returning C function) with the SAME closed-form bound EXACT mode
+    # already computed (`ret_len_expr`, still pinning the buffer's own
+    # `requires {ret}_n == ...`, needed for `\valid` regardless of
+    # anything below) -- the one difference from the append idiom's own
+    # CAPACITY use is that the tracked local starts at that closed form
+    # (`ret_decl` below), not at an accumulating 0, because nothing here
+    # grows it; the loop merely needs the TASK's own length invariant
+    # threaded through `ctx.seq_len` to become a real preservation
+    # obligation instead of a `requires`-derivable one. MEASURED first by
+    # hand (frama-c directly on a two-loop probe mirroring this exact
+    # shape, real and an invariant-dropped twin, before this code was
+    # written, RULES' own order): the real program still verifies in
+    # full (35/35 goals) with the tracked local forced into the
+    # self-update loop's own `loop assigns` (see `assigned_names`'s
+    # `seq_caps` piggyback below, already doing exactly this for any
+    # assignment TARGET that is also a `ctx.seq_len` key, unchanged code)
+    # -- WITHOUT that forcing, the same probe's twin verified in full too
+    # (33/33, the identical vacuity this whole gate exists to fix: WP's
+    # frame rule auto-preserves an unlisted local's value across a loop
+    # it does not otherwise assign, so the dropped invariant stayed
+    # unneeded) -- WITH it, the twin's own `ensures` and two invariant-
+    # preservation goals read an honest [Stepout] (4 goals), the real
+    # program unaffected. See the dated note below `assigned_names` for
+    # the seven-task measurement this enabled.
     ret_len_expr = None
     capacity_mode = False
+    tracked_exact = False
     LEN = f"{ret}_len"
     if rett == "seq":
         lens = {s: {"op": "len", "args": [{"var": s}]} for s in seqs}
         _seq_len_track(body, lens)
         if ret in lens:
             ret_len_expr = lens[ret]
+            if _ret_written_in_loop(body, ret):
+                capacity_mode = True
+                tracked_exact = True
         else:
             capacity_mode = True
             ret_len_expr = _ret_capacity(task, ret)
@@ -4183,11 +4499,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                     f"of the shape `len({ret}) <= E` or `== E` gives a "
                     f"CAPACITY bound either; see the seq value machinery "
                     f"section above `assigned_names` and `_ret_capacity`")
-            if LEN in used:
-                raise NotImplementedError(
-                    f"name {LEN} collides with the synthetic length-"
-                    f"tracking local this lowering needs for the "
-                    f"CAPACITY-tracked return {ret}")
+        if capacity_mode and LEN in used:
+            raise NotImplementedError(
+                f"name {LEN} collides with the synthetic length-"
+                f"tracking local this lowering needs for the "
+                f"CAPACITY-tracked return {ret}")
 
     body_seq_len = {ret: LEN} if capacity_mode else {}
     spec_ctx = Ctx(env, funs, ret=None, label="Here")
@@ -4362,7 +4678,16 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # above (never `int`); `pair_ty`/`struct_name` are None for every
     # other task, so both branches below are no-ops there and every
     # non-pair task's C is unaffected byte-for-byte.
+    # TRACKED-EXACT (see above): the local starts AT the closed form
+    # EXACT mode already computed (`ret_len_expr`, over params only, so
+    # this is well-defined at function entry regardless of what the body
+    # does afterward), not at 0 -- unlike the append idiom's own
+    # CAPACITY use, nothing here grows it; the point is only to make the
+    # TASK's own length invariant a real preservation obligation instead
+    # of a `requires`-derivable one.
     ret_decl = (f"  struct {struct_name} {ret};\n" if pair_ty is not None else
+               f"  int {LEN} = {cexpr(ret_len_expr, env, funs, name)};\n"
+               if tracked_exact else
                f"  int {LEN};\n" if capacity_mode else
                ("" if rett == "seq" else f"  int {ret};\n"))
     cfun_ret_ty = (f"struct {struct_name}" if pair_ty is not None else
