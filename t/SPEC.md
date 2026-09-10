@@ -520,6 +520,87 @@ certificate. The lifter's mapping (LIFTER-DECISIONS.md row 29): a method
 become locals, every exit returns `(a, b)`, and `a`, `b` in `ensures`
 become `r.0`, `r.1`; three or more returns stay refused, by name.
 
+### Nested sequences (v1)
+
+Stated 2026-09-10 (ROADMAP 12.7, the wave after pairs). Measured first,
+twice, and the second measurement corrected the first: the censuses' tag
+`nested-seq` fires on any `seq` whose element is not an int, so of the 17
+DafnyBench programs it names as blocked by nesting alone, 12 hold a
+sequence of sequences of ints, 2 hold `seq<char>` (a string, in the
+fragment since row 28), 2 hold `seq<bool>` (its own gap), and 1 fails to
+parse for an unrelated reason; of the 74 programs it tags, 16 nest at all,
+12 with int rows, 2 with string rows, none with pair rows, none three
+deep. On the 24,748 nl/ problems the tag names 3,948 (821 function-shaped,
+3,127 stdin): 1,470 confirmed int or bool rows, 150 string rows, 5 pair
+rows, 10 three or more deep, 2,313 unreadable by static reading (grid and
+matrix problems whose row type a static pass cannot fix). The shapes that
+dominate: a local matrix built and indexed in a loop (3,008 locals,
+12,321 row indexes, 9,416 element indexes), a parameter consumed row by
+row under a single-binder `forall` with a `len(s[i])` fact (19 parameter
+sites, 26 row-length uses, 10 such foralls on DafnyBench), and a nested
+literal (3 and 299). Rows are ragged by default: no DafnyBench program
+states a cross-row length equality, and 157 of the 3,948 carry any
+rectangular signal. Beside it, the string library, nl/'s top gap: 8,784
+of its 13,266 problems call `split` or `join` and nothing else in the
+library, and both return a sequence of sequences, so this construct is
+the library's substrate as the sequence trio was the string's.
+
+New type: `{"seq": "seq"}`, a finite sequence whose elements are seqs of
+ints, written `seq<seq>`; the elementary `"seq"` is unchanged and still
+means a seq of ints. A parameter, return or local type. Not in v1: three
+levels, a seq of strings as a distinct type (a string row is a seq of
+ints already, so a `seq<seq>` holds one; the lifter's row for
+`seq<string>` and `seq<seq<char>>` is the wave after), a seq of pairs, a
+seq of bools.
+
+No new Expr forms. The existing operators are polymorphic by the static
+type of their operands, exactly as `+` and `==` already are: `seq` (the
+literal, `[[1, 2], [3]]`, every element a seq expression, `[]` the empty
+nested seq where the declared type says so), `len(s)` (the number of
+rows), `at(s, i)` written `s[i]` (a row, a seq value, DEFINED IFF
+`0 <= i < len(s)`), `s[i][j]` (the notation's chained postfix, `at(at(s,
+i), j)`, defined iff both indices are in range), `len(s[i])`, `s + t` on
+two nested seqs (concatenation of rows; appending one row is `s + [r]`),
+`s[a..b]` (a slice of rows), `update(s, i, r)` (row `i` replaced by the
+seq `r`), `fill(n, r)` (`n` copies of the row `r`), and `==`/`!=`
+(extensional and recursive: two nested seqs are equal iff same length
+and equal rows). A `+`, `update`, `fill` or literal whose element is an
+int where a row is expected, or a row where an int is expected, is
+ill-typed. Definedness composes: a literal is defined iff every row is,
+`s[i][j]` iff `0 <= i < len(s)` and `0 <= j < len(s[i])`. Quantifiers are
+unchanged: a bound variable is an int, and a quantifier over the
+elements of a row is the nested single-binder form `forall i in [0,
+len(s)) :: forall j in [0, len(s[i])) :: ...`, the inner bound depending
+on the outer, which the checker and every column already take. The loop
+frame rule havocs a nested seq by name; the interpreter's length cap
+bounds the outer length and each row.
+
+Two committed tasks carry the construct: `swap_rows` (loop-free: `r :=
+update(update(m, i, m[j]), j, m[i])` under `requires 0 <= i < len(m)`
+and `0 <= j < len(m)`, ensures `len(r) == len(m)`, `r[i] == m[j]`,
+`r[j] == m[i]`, every other row unchanged; twin `wrong-var`, refuted at a
+two-row matrix) and `row_max_len` (a loop over the rows keeping the
+longest length, `requires len(m) > 0`, ensures every row's length at
+most `r` and some row's length equal to it, the min_max shape over rows;
+twin the first guard collapsed). The twin ladder needs no new move:
+`off-by-one` reaches an outer or an inner index, `wrong-var` swaps two
+seq-typed names, `collapse-if` and the invariant drops as before. The
+fuzz family `v1nested` measures which twins refute, per column.
+
+Each lowering uses its kernel's own nested sequence and records it in a
+dated note: dafny `seq<seq<int>>`, verus `Seq<Seq<int>>`, lean `List
+(List Int)`, fstar `Seq.seq (Seq.seq int)`, rocq its own seq encoding
+nested one level (or a named refusal where the fn-and-length form does
+not compose), spark the generic sequence package instantiated over the
+sequence type, framac a named refusal or a flat buffer with an offsets
+array, measured first. The lifter's mapping (LIFTER-DECISIONS.md row 30):
+Dafny `seq<seq<int>>` and `seq<seq<nat>>` in a parameter, return or
+local are `seq<seq>`; `array2<int>` (a matrix with its own indexing) and
+`seq<string>` stay refused, by name. The census's `nested-seq` detector
+is split the same day: `seq<seq<int>>` one level deep a burden, `seq<bool>`,
+`seq<string>` in a row, and depth three or more gaps under their own
+names, so the 17 reads 12.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
@@ -590,9 +671,11 @@ No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an
 array with mutation is a `seq` updated functionally ("Sequences as
 values"). No overflow semantics (mathematical integers; bounded backends
 owe explicit range obligations). One return value. No mutual recursion,
-no higher-order functions, no nested seqs, no string library
+no higher-order functions, no string library
 (sequence literals, concatenation and slices landed 2026-09-09; a string
 is a seq of code points, same night). A pair is one value ("Pairs",
-stated 2026-09-10): no pair of pairs, no seq of pairs, no triple.
+stated 2026-09-10): no pair of pairs, no seq of pairs, no triple. A nested seq is one
+level deep ("Nested sequences", stated 2026-09-10): no third level, no seq
+of bools, no seq of pairs.
 These are gates to open with measurements, not omissions to apologize
 for.
