@@ -795,6 +795,110 @@ t/COVERAGE-lifted-785.md's "Sole blockers" table is now stale for verus:
 all five tasks it named read verus verified/refuted, none malformed or
 unproved; regenerating that table is a coverage-script action, not a
 lowering one, so left for the sweep that next regenerates it.
+
+THE v1def FAMILY, THE UNDEF-WALK GAP, AND A TRIGGER GAP (2026-09-10,
+reading /home/tmcuzzort/tup/t/out/reproduce-families/, the morning's
+full-family fuzz reproduction). THE TARGET was v1def, 8 tasks (033, 049,
+070, 103, 143, 209, 268, 295); 070 and 103 already counted. The prior
+diagnosis for 033/049/143 (verified/unproved) named a single suspect,
+"`_undef_obligation` does not walk while or if bodies" (this file's own
+"LEFT, BY NAME" entry above) -- CONFIRMED for the "if" half by reading the
+three twins' committed `.rs`: all three are COLLAPSE-IF twins, and
+collapsing the `if (0<=x && x<len(s)) {...}` that used to guard `s[x]`
+leaves the twin's new TOP-LEVEL statement an `if` whose own COND is
+`s[x] >= 0`, undefined outside `[0, len(s))` -- never an assign/var
+`_undef_obligation`'s old walk even looked at. `_undef_obligation` now
+recurses into both `if` and `while`: an `if`'s cond is checked with
+`defined()` before the concrete guard value (from the SAME `interp.ev`
+replay the top-level walk already trusted) picks which branch to descend
+into, and a `while`'s cond is checked the same way at the top of every
+concrete iteration -- guard, body, guard, body, ... -- capped at
+`interp.MAX_LOOP` like every other run in this codebase, so a body
+statement several iterations in is checked against the CONCRETE state
+that iteration actually reaches. This is the same gap
+fz_v1nested_069's and fz_v1nested_150's own boundary-widening twins hit
+(the undefined access one iteration inside the loop's own body,
+this file's "LEFT, BY NAME" entry), so one walk fix closes both: measured
+(`fuzz_lower.py --only verus --tasks ..., --n 400 --seed 1 --flake 3
+--jobs 2/3`), all 8 v1def tasks and both named probes now read verus
+verified/refuted, and the whole v1nested family (13 tasks, the 11 already
+counting alongside these 2) is unaffected and all 13 count. A `return`
+inside a loop is still not walked (`_GiveUp`, new): SPEC.md's early exit
+is a separate residual, unexercised by any task this fix touches.
+
+209/268/295 read malformed, not unproved -- a SEPARATE bug, measured with
+its own quote before assuming the same cause: Verus's error is "Could not
+automatically infer triggers for this quantifier", on the STATEMENT-level
+`assert` `_assert_defined` emits for the `if`/`return` whose cond is a
+`defined()`-rewritten forall, never on the `t_wf_..._ens0` copy of the
+same obligation (`_prenex` already hoists THAT one's own binder into a
+fresh lemma parameter, so it carries no forall at all -- checked directly,
+all three tasks' wf lemmas compile clean before this fix). The body has
+neither an indexable (`at`/`call`) nor a `div`/`mod` term for
+`_has_indexable`/`_mod_div_trigger` to find, because `defined()`'s own
+"at" case REPLACES the index expression with its bare bound check
+(`0<=i && i<len(s)`), which is exactly the term automatic inference would
+have grabbed. Measured before picking a fix (probe_trig1/2/3.rs, isolated
+to 209's own obligation shape): `#![trigger i]` (the bound variable alone)
+and `#![trigger (0 <= i)]` (a comparison) both get the identical "trigger
+must be a function call, a field access, or arithmetic operator" refusal;
+`#![trigger (i + 0)]` verifies with 0 errors. `expr()`'s forall/exists
+case now falls back to `v + 0` (an AST node run through the same `expr()`
+every other trigger term already goes through, so `_SUFFIX_INT` is
+respected in both contexts) whenever neither existing trigger source
+finds anything: always a legal arithmetic term, always mentions the bound
+variable, and an additive identity that changes nothing the quantifier
+proves. Measured: 209, 268 and 295 all go malformed -> verified (rows.json,
+`['verified', 'refuted', True, ...]` on all three); every task with an
+indexable or div/mod quantifier (every previously committed seq task,
+is_prime) is untouched, since both existing branches fire before this new
+`else` and neither reaches it.
+
+REGRESSION, both fixes together: the full committed matrix (`grade.py
+--tasks tasks/ --kernels verus --flake 3`, all 23 tasks in t/tasks/*.json)
+reads verus verified/refuted on every task, matching t/AGREEMENT.md
+exactly, neither better nor worse for any row. Both changes are additive
+by construction -- the walk extension only fires where the old code
+already gave up (None, "unproved"), so it can only turn an ABSTAIN into a
+found obligation, never disturb a certificate the old top-level-only walk
+already built; the trigger fallback only fires when Verus's own automatic
+inference and this file's two existing explicit-trigger sources all find
+nothing, which was previously a hard compile-time refusal on every task
+that reached it, so there is no prior "unproved" or "refuted" verdict for
+it to change into something worse.
+
+LEFT, BY NAME (updated). `_undef_obligation` still does not walk a
+`return`: any twin whose undefined access sits inside a loop or if body
+that also returns before reaching it reads UNPROVED rather than REFUTED,
+unexercised by anything measured today. `_undef_obligation`'s own
+"Pairs" residual (a pair-typed LOCAL's type not tracked past entry) is
+unchanged and unexercised by any task this note covers.
+
+fstar AND framac, RE-MEASURED (same 10 tasks, `fuzz_lower.py --only
+fstar,framac`), since the task description that named this residual
+called the certificate "shared". Only fstar actually shares it
+(`lower_fstar.py` imports and calls `lower_verus.certificate_formula`
+directly, confirmed by reading its own import line): 033, 049, 070, 103,
+143 and fz_v1nested_069 all move from real-verified/twin-UNPROVED to
+real-verified/twin-REFUTED in fstar too, the identical improvement verus
+got, from the identical fix, no fstar-side change needed. fz_v1nested_150
+stays real-UNPROVED in fstar (a pre-existing fstar gap on this task's own
+real body, unrelated to the twin certificate); 209/268/295 stay ABSTAIN
+in fstar ("a quantifier in computational position has no decidable
+lowering here", fstar's own REAL-side limitation on this shape, nothing
+to do with `defined()`'s trigger-losing rewrite, which is a Verus-syntax
+problem this fstar message is not). framac does NOT share this
+certificate: `lower_framac.py` has its OWN separate `_undef_certificate`
+(a parallel, independently-written function, not a call into this file,
+confirmed by reading its own import list and by measurement) -- so
+033/049/143's own framac cells are UNCHANGED, still real-verified/twin-
+TIMEOUT exactly as before this fix, and 209/268/295/069/150 still ABSTAIN
+on framac's own pre-existing, separate gaps (a quantifier in ACSL term
+position; nested-seq RETURN; a non-variable seq position). Fixing
+framac's own `_undef_certificate` the same way is out of this task's
+scope (t/lower_verus.py and, only if the gap were there, t/harness.py;
+it is in neither) and is named here as a residual for whoever next
+touches lower_framac.py, not attempted.
 """
 from __future__ import annotations
 
@@ -1168,6 +1272,43 @@ def expr(e: dict, vty: str | None = None) -> str:
         elif not _has_indexable(q["body"]):
             t = _mod_div_trigger(q["body"])
             if t is not None:
+                trig = f" #![trigger {expr(t)}]"
+            else:
+                # BOUND-CHECK-ONLY QUANTIFIER (2026-09-10, the v1def fuzz
+                # family's 209/268/295, malformed on the real: Verus's own
+                # "Could not automatically infer triggers", quoted, at the
+                # STATEMENT-level definedness
+                # assert `_assert_defined` emits for an `if`/`return`
+                # whose cond is a forall, never at the `_wf_lemma` copy of
+                # the same obligation -- `_prenex` already hoists THAT
+                # one's binder into a fresh lemma parameter, so its
+                # emitted body carries no forall at all (measured: the
+                # three tasks' `t_wf_..._ens0` lemmas compile clean before
+                # this fix; only the inline assert, which `_prenex` never
+                # touches, was malformed). This case's body has neither an
+                # indexable NOR a div/mod term because `defined()`'s own
+                # "at"/"update"/"slice" cases REPLACE the indexing
+                # expression with its bare bound check (`0<=i && i<len`),
+                # which is exactly what strips the term automatic
+                # inference would have grabbed -- so this file must supply
+                # SOME trigger itself. Measured directly on 209's own
+                # obligation shape (probe_trig1.rs, `#![trigger i]`:
+                # "trigger must be a function call, a field access, or
+                # arithmetic operator", the bound variable alone does not
+                # qualify; probe_trig3.rs, `#![trigger (0 <= i)]`: same
+                # error, a comparison does not qualify either;
+                # probe_trig2.rs, `#![trigger (i + 0)]`: 0 errors) --
+                # `v + 0` is always a legal arithmetic term, always
+                # mentions the bound variable, and changes nothing the
+                # quantifier proves (an additive identity), so it is a
+                # sound fallback for ANY forall/exists this branch reaches,
+                # not just these three tasks' own shape. Regenerated
+                # 209/268/295: all three go malformed -> verified; the
+                # `_mod_div_trigger` branch above (is_prime) and every
+                # `_has_indexable` branch (every committed seq/nested-seq
+                # quantifier) are untouched, since both fire before this
+                # `else` and neither task in this fuzz family reaches it.
+                t = {"op": "+", "args": [{"var": v}, {"int": 0}]}
                 trig = f" #![trigger {expr(t)}]"
         if kind == "forall":
             return f"(forall|{v}: int|{trig} {rng} ==> {body})"
@@ -2565,28 +2706,64 @@ def _to_py(v, ty=None):
     return v
 
 
+class _GiveUp(Exception):
+    """Internal signal only (2026-09-10): `_undef_obligation`'s walk met a
+    `return` (or any statement it does not know), so replay cannot say
+    what runs next -- caught by the same handler as `interp.Undef`/
+    `interp.Budget`/`RecursionError`, all four meaning the identical
+    thing to the caller: refuse, do not guess."""
+
+
 def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict,
                        tmap: dict | None = None) -> dict | None:
     """The negated definedness obligation of the twin body's first
     statement that has none, ground-substituted at the witness (SPEC.md
     "Sequences as values", 2026-09-09; see the "undefined" entry in the
     section comment above). Re-walks `twin_body` with interp.ev, in the
-    SAME left-to-right statement order interp.py's own exec_body used to
-    raise the Undef that minted this witness in the first place, so the
-    statement this finds is the same one interp.py found; `defined()` is
-    the identical function this lowering already trusts for every honest
-    assert it emits, so there is no second, independent reading of what
-    "defined" means. `m` (var name -> t literal) and `env_py` (var name ->
-    Python value, the tuples-for-seqs form interp.ev itself uses) both grow
-    as the walk proceeds, so a later statement's own obligation (`swap`'s
-    off-by-one twin fails on its very first statement, so no committed task
-    yet exercises this, but the mechanism is not special-cased to the
-    first) sees the concrete values of every name the twin already bound.
-    None on an `if`, `while`, or `return` before the failing statement
-    (their own definedness is not walked here, matching every other "not
-    emitted" case in this file); None if the walk exhausts the body
-    without a false obligation, refusing rather than certifying a formula
-    that would disagree with the witness that triggered it.
+    SAME left-to-right, iteration-by-iteration order interp.py's own
+    exec_body used to raise the Undef that minted this witness in the
+    first place, so the statement this finds is the same one interp.py
+    found; `defined()` is the identical function this lowering already
+    trusts for every honest assert it emits, so there is no second,
+    independent reading of what "defined" means. `m` (var name -> t
+    literal) and `env_py` (var name -> Python value, the tuples-for-seqs
+    form interp.ev itself uses) both grow as the walk proceeds, so a later
+    statement's own obligation (`swap`'s off-by-one twin fails on its very
+    first statement, so no committed task yet exercises this, but the
+    mechanism is not special-cased to the first) sees the concrete values
+    of every name the twin already bound.
+
+    LOOP AND IF BODIES (2026-09-10, t/COVERAGE-lifted-785.md's own
+    residual, this file's "LEFT, BY NAME" module-docstring entry above,
+    and the v1def fuzz family's 033/049/143): this walk used to give up
+    (return None) the moment it met an `if` or `while` BEFORE the failing
+    statement, which read fz_v1nested_069's and fz_v1nested_150's
+    boundary-widening twins (the bad access one iteration inside the
+    loop's own body) and fz_v1def_033/049/143's collapse-if twins (the
+    bad access is the COND of the `if` collapse-if left behind, once the
+    guard that used to protect it is gone) as "verus unproved" rather than
+    "REFUTED". Confirmed before fixing, not assumed: reading the three
+    v1def twins' committed `.rs` showed COLLAPSE-IF replacing the outer
+    `if (0<=x && x<len(s)) {...}` with its own then-branch UNWRAPPED, so
+    the twin body's new top level is a single `if` whose OWN cond is
+    `s[x] >= 0` -- undefined outside `[0,len(s))` -- never an assign or
+    var this walk used to look for at all. So `walk` now recurses: an
+    `if`'s cond is checked exactly like any other expression (`check`
+    below) before the concrete guard value picks a branch to descend into;
+    a `while`'s cond is checked the same way at the top of every
+    iteration, in the SAME loop `interp.exec_body` itself runs (guard,
+    body, guard, body, ..., capped at `interp.MAX_LOOP` like every other
+    concrete run in this codebase), so a body statement three iterations
+    in is checked with the CONCRETE state that iteration actually reaches,
+    not the entry state -- this is what SPEC.md means by a loop-body
+    obligation living "under the loop's invariants and guard": the
+    invariants and guard are exactly what makes that later state REACHABLE
+    at all, and a concrete replay reaches it by literally running the
+    twin, the same authority every other obligation in this function
+    already has, no separate invariant-tracking needed. A `return` still
+    ends the walk with nothing found (`_GiveUp`, above) -- SPEC.md's early
+    exit is not part of this residual, and no committed or targeted task
+    exercises a return inside a loop whose twin is this "undefined" kind.
 
     `tmap` (SPEC.md "Pairs", 2026-09-10), when given, is the declared type
     of every PARAM (and the return) -- `_cert_formula` builds it and passes
@@ -2604,23 +2781,60 @@ def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict,
     m = dict(m)
     funs = interp.funs_of(task, twin_body)
     st = interp.St()
-    try:
-        for s in twin_body:
+
+    def check(e: dict) -> dict | None:
+        ob = defined(e)
+        if ob != TRUE and not interp.ev(ob, env_py, funs, st):
+            return {"op": "not", "args": [subst(ob, m)]}
+        return None
+
+    def walk(body: list) -> dict | None:
+        for s in body:
             if "var" in s:
                 name, e = s["var"]["name"], s["var"]["init"]
             elif "assign" in s:
                 name, e = s["assign"]
+            elif "if" in s:
+                c = s["if"]
+                found = check(c["cond"])
+                if found is not None:
+                    return found
+                branch = (c["then"] if interp.ev(c["cond"], env_py, funs, st)
+                          else (c.get("else") or []))
+                found = walk(branch)
+                if found is not None:
+                    return found
+                continue
+            elif "while" in s:
+                w = s["while"]
+                it = 0
+                while True:
+                    found = check(w["cond"])
+                    if found is not None:
+                        return found
+                    if not interp.ev(w["cond"], env_py, funs, st):
+                        break
+                    found = walk(w["body"])
+                    if found is not None:
+                        return found
+                    it += 1
+                    if it > interp.MAX_LOOP:
+                        raise interp.Budget("loop cap")
+                continue
             else:
-                return None
-            ob = defined(e)
-            if ob != TRUE and not interp.ev(ob, env_py, funs, st):
-                return {"op": "not", "args": [subst(ob, m)]}
+                raise _GiveUp()
+            found = check(e)
+            if found is not None:
+                return found
             val = interp.ev(e, env_py, funs, st)
             env_py[name] = val
             m[name] = _tlit(val)
-    except (interp.Undef, interp.Budget, RecursionError):
         return None
-    return None
+
+    try:
+        return walk(twin_body)
+    except (interp.Undef, interp.Budget, RecursionError, _GiveUp):
+        return None
 
 
 def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:

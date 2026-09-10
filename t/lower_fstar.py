@@ -496,22 +496,30 @@ assign, so the final environment entry for the return name IS the function
 body, and a value computed under a branch stays under that branch's guard.
 
 ABSTAINS (NotImplementedError, recorded and never faked): a quantifier in
-computational position; more than one loop, nested loops, a loop under a
-conditional, or a loop plus self-recursion in one body; a pair position
-(`px`) holding anything but a variable or a `{"op": "pair", ...}` node --
-no `ite`, no `call`, no seq/fst/snd op builds a pair (SPEC.md "Pairs",
-2026-09-10), and this is also what keeps a still-uncovered shape of the
-shared refutation certificate (see that section's note) a costed flip
-rather than a wrong render; an ensures that is a pure syntactic
-restatement of the returned expression (`_reflexive_ensures`, this file's
-2026-09-10 residual-closing note below) -- F* discharges it with NO
-solver query, which the fstar backend's own zero-obligations rule reads
-as MALFORMED, a real limit of that counting rule and not a rendering gap.
-Generated helper names are made fresh against the task's own strings, so a
-task name is never refused for its spelling. An identifier that collides
-with an F* keyword or carries an uppercase initial is no longer an abstain
-at all: `_rename_reserved` (2026-09-10) renames it, consistently, before
-any of this runs -- see that function's own module-level note.
+computational position whose bounds are not both bare integer literals in
+the task's own source (`_lit_int`; a literal-bounded one unrolls instead,
+see the DEFINEDNESS FAMILY V1DEF REPRODUCTION note below); more than one
+loop, nested loops, a loop under a conditional, or a loop plus self-
+recursion in one body; a pair position (`px`) holding anything but a
+variable or a `{"op": "pair", ...}` node -- no `ite`, no `call`, no seq/
+fst/snd op builds a pair (SPEC.md "Pairs", 2026-09-10), and this is also
+what keeps a still-uncovered shape of the shared refutation certificate
+(see that section's note) a costed flip rather than a wrong render; an
+ensures that is a pure syntactic restatement of the returned expression
+(`_reflexive_ensures`, this file's 2026-09-10 residual-closing note
+below) -- F* discharges it with NO solver query, which the fstar
+backend's own zero-obligations rule reads as MALFORMED, a real limit of
+that counting rule and not a rendering gap; an ensures that is the bare
+literal `true` (`_vacuous_ensures`, this file's own 2026-09-10
+REPRODUCTION note below) -- the SAME zero-obligation rule, but a shape
+the contract lemma cannot fix (there is no query to force: `true` costs
+the Lemma nothing either), so this abstains by name rather than let the
+verifier's own rule call it MALFORMED, which implies a defect. Generated
+helper names are made fresh against the task's own strings, so a task
+name is never refused for its spelling. An identifier that collides with
+an F* keyword or carries an uppercase initial is no longer an abstain at
+all: `_rename_reserved` (2026-09-10) renames it, consistently, before any
+of this runs -- see that function's own module-level note.
 
 NESTED SEQUENCES (v1, SPEC.md "Nested sequences", 2026-09-10, the wave
 after Pairs). New type `{"seq": "seq"}`, a seq<seq>, a seq of seqs of
@@ -816,6 +824,123 @@ the committed matrix only). A paramless task's own contract lemma (`(_u:
 unit)`, "Nested sequences" residual's own fix) is exercised by no committed
 or lifted task either, same as `param_binders`'s own empty-params branch
 before it -- built and left for whichever task needs it next.
+
+DEFINEDNESS FAMILY V1DEF REPRODUCTION (2026-09-10). This morning's first
+`reproduce.sh --families` run (`out/reproduce-families/`, read-only, F*
+2026.08.30) named the v1def family's 8 tasks plus `fz_p_vac_post` as the
+target. Re-measured directly (`fuzz_lower.py --tasks <the 9> --only fstar
+--n 400 --seed 1 --flake 3 --jobs 2`, reproducing the same 3 no-flip cells
+and the same malformed/malformed cell before touching anything), then
+fixed what this file could fix and named what it could not:
+
+    FIXED. fz_v1def_295 (ABSTAIN -> verified/refuted, COUNTS). Both of its
+  two quantifiers -- `forall i in [0, 0)` and `exists i in [5, 2)` -- have
+  BARE INTEGER LITERAL bounds in the task's own source, never a variable
+  or `len(s)`, so the range is knowable at LOWERING time with no kernel
+  decidability needed at all: `_lit_int`/`bx`'s new unroll case
+  (see that helper's own docstring) instantiates the body at every
+  integer in the range (zero instances for both here, since both ranges
+  are empty) and glues them with `&&`/`||`, exactly `lower_verus._unroll`'s
+  own technique for a ground certificate, one level up (a t Expr tree,
+  not a post-substitution string). MEASURED (`out/agent-fstar-v1def/`,
+  same command as above): fz_v1def_295 COUNTS, witness s=[] -> real 1,
+  twin 0 (`negate-cond`), the emitted real body literally `(if (true &&
+  (not false)) then 1 else 0)` -- both quantifier bodies (`at(s, i)`,
+  unguarded) never render at all, since zero unrolled instances means
+  `bx` never reaches them, the same "never evaluated, never typechecked"
+  posture this file already has for every other unreached branch.
+    fz_p_vac_post (malformed/malformed -> abstain). `ensures` is the bare
+  literal `true` (SPEC.md's own "content-free postcondition" adversarial
+  probe): MEASURED directly (P1.fst, `--log_queries`) that appending
+  `_contract_lemma`'s own restatement, `Lemma (requires True) (ensures
+  True)`, produces ZERO `queries-*.smt2` entries, the identical zero-
+  obligation shape the contract lemma fixed for the 19 lifted tasks and
+  the 3 v1pairs ones, but NOT fixed the same way here: `True` costs a
+  `Lemma`'s own postcondition nothing either (unlike `(f x) == 7`, which
+  needed a genuine Z3 round-trip against `f x`'s established refinement).
+  There is no genuine obligation anywhere in this task for the solver to
+  answer, so `verifiers/fstar.py`'s own zero-obligation rule is not
+  WRONG, but MALFORMED reads as a lowering defect, and this shape is not
+  one -- every other column reads this task `verified` (dafny, verus,
+  framac, rocq) or `vacuous` (spark, whose gnatprove has a channel this
+  backend does not: a VC reported trivially true rather than counted as
+  a genuine proof). `verifiers/fstar.py` is out of this pass's scope
+  (this worktree's own brief is `lower_fstar.py` alone), so there is no
+  way to mint this file's own `vacuous` reading from here, only to stop
+  minting a MALFORMED one that names a defect that is not there:
+  `_vacuous_ensures` (`task["ensures"] == [{"bool": True}]`, deliberately
+  narrower than any other abstain check in this file -- checked against
+  every committed and lifted task, none of them states a bare `true`)
+  gates `gen_fun` to abstain by name instead. MEASURED: fz_p_vac_post now
+  reads abstain/abstain (both real and twin calls share the same `task`,
+  so both hit the identical check), no `.fst` emitted either side.
+
+    NAMED, LEFT (shared machinery, out of this file's scope --
+  `lower_fstar.py` alone was this pass's brief, and both gaps below live
+  in `lower_verus.py`, imported here, not written here). fz_v1def_033/
+  049/143 (verified/unproved, unchanged). All three are loop-free tasks
+  whose twin (`collapse-if` on the OUTER of two nested `if`s) makes the
+  twin body's ONLY top-level statement an `if` whose own COND reads
+  `at(s, x)` with no length guard (the guard the collapsed-away outer
+  `if` used to supply) -- MEASURED directly (calling `interp.Reference.
+  witness` and `lower_verus.certificate_formula` on all three in
+  isolation): each mints a `_kind: "undefined"` witness exactly as
+  expected, but `certificate_formula` returns None for all three, not an
+  exception, so `_certificate` here correctly (and unavoidably, from
+  this file alone) returns None too -- there is no certificate for this
+  file's `cx.prop` to render because the shared formula-builder never
+  produces one. Root cause, read directly in `lower_verus._undef_
+  obligation`: its walk visits only TOP-LEVEL `var`/`assign` statements
+  of the twin body (`for s in twin_body: if "var" in s: ... elif
+  "assign" in s: ... else: return None`) and its own docstring names an
+  `if` before the failing statement as one of the shapes it deliberately
+  does not walk into -- documented there for a loop-prefix case, but the
+  same `else: return None` fires just as fast when the VERY FIRST
+  statement is an `if`, which is exactly this shape (no var/assign
+  precedes it at all). This is the shared undef-obligation walker not
+  descending into an `if`'s own condition/branches, the same class of
+  gap the task brief named for a loop body, one level shallower; dafny,
+  lean and rocq all read `refuted` here (none of them route through this
+  particular certificate machinery), while verus, spark, framac and
+  fstar -- every column measured to share `lower_verus.certificate_
+  formula`'s reasoning here -- all read `unproved`/`timeout` alike,
+  confirming this is the ONE shared root cause, not a per-column gap.
+  `lower_verus.py`/`harness.py` are owned by a different pass this
+  round; named here, not touched.
+    fz_v1def_209/268 (abstain, unchanged). Both quantifiers are bounded
+  by `len(s)` (209: `hi = len(s) + 3`; 268: `lo = -3, hi = len(s)`),
+  never a bare literal, so `_lit_int` returns None on the non-literal
+  bound and the unroll fix above does not reach them -- the fallthrough
+  abstain fires exactly as it did before this pass, unchanged reasoning:
+  a decidable F* lowering for a VARIABLE-length bounded quantifier in
+  computational position needs a hand-built recursive checker (its own
+  termination measure, its own threading of the body's definedness
+  hypotheses down through an opaque `int -> bool` callback), genuine
+  reencoding this file's own established posture avoids elsewhere unless
+  measured cheap -- and `rocq`/`framac` name the identical limit in the
+  identical words for these two tasks (`rows.json`, this morning's
+  reproduction), while `dafny`/`spark` verify/refute because THEIR OWN
+  languages compile a bounded quantifier expression to a decidable check
+  natively, a feature neither F* nor Rocq nor Frama-C's ACSL term
+  language has. Left named, not built, inside this pass's ~2-hour
+  budget.
+
+REGRESSION (this pass). All 23 committed tasks (`tasks/*.json`, `python3
+lower_fstar.py`): all 23 still COUNT, and every one of the 46 emitted
+`out/*.fst` files (real + twin) is byte-identical to the committed copy
+at HEAD 199305d (`_lit_int`'s new unroll branch and `_vacuous_ensures`'s
+new gate are both dormant on every committed task -- none has a
+quantifier at all in computational position with literal bounds, and
+none states a bare `true` ensures). The full 9-task v1def-plus-probe set
+(`fuzz_lower.py --tasks fz_v1def_033,fz_v1def_049,fz_v1def_070,
+fz_v1def_103,fz_v1def_143,fz_v1def_209,fz_v1def_268,fz_v1def_295,
+fz_p_vac_post --only fstar --n 400 --seed 1 --flake 3 --jobs 2`) moves
+from 2 COUNTS/3 abstain/3 no-flip/1 malformed to 3 COUNTS/2 abstain/3
+no-flip/1 abstain -- the AGREEMENT.md target's own 8 v1def cells plus the
+probe, every one the same or strictly better (070/103 unchanged COUNTS;
+295 ABSTAIN -> COUNTS; 209/268 unchanged honest ABSTAIN; 033/049/143
+unchanged verified/unproved, the named shared-machinery gap; fz_p_vac_post
+malformed/malformed -> abstain/abstain, no longer misnaming a defect).
 
 Stdlib only, same reason as dataset_gate.py.
 """
@@ -1684,6 +1809,56 @@ class Ctx:
         if "call" in e:
             return self.call(e, env, local)
         if "forall" in e or "exists" in e:
+            # LITERAL-BOUND UNROLL (2026-09-10, closes part of the v1def
+            # fuzz family's residual -- see the module docstring's own
+            # dated note). A quantifier in COMPUTATIONAL position (an
+            # `if`'s own condition, never `ensures`, which `prop` below
+            # already renders as a logical `forall`/`exists`) has, in
+            # general, no decidable F* lowering: `prop`'s own `Type0`
+            # quantifier is not a `bool`, F* has no native "compile a
+            # bounded quantifier to a decidable check" feature the way
+            # Dafny/SPARK do, and building one by hand (a recursive
+            # helper threading termination and the body's own definedness
+            # hypotheses) is real reencoding, not attempted here. But when
+            # BOTH `lo` and `hi` are bare integer LITERALS in the task's
+            # own source (`_lit_int`, never a witness substitution or any
+            # other evaluation -- `len(s)` and every other non-literal
+            # bound still falls through to the abstain below unchanged),
+            # the range is finite and known at LOWERING time, with no
+            # kernel decidability needed at all: instantiate the body at
+            # every integer in `[lo, hi)` (`lower_verus.subst`, the same
+            # substitution `_unroll` already uses for a ground
+            # certificate) and glue the instances with `&&`/`||`, exactly
+            # `_unroll`'s own technique one level up (a t Expr tree, not a
+            # string), capped the same defensive way (`_unroll`'s own
+            # `_UNROLL_CAP`) against an accidentally huge literal range.
+            # An empty range (`hi <= lo`, SPEC.md's own vacuous-truth
+            # rule) renders as the bare literal `true`/`false` with no
+            # instances at all, so a quantifier whose body would not even
+            # TYPECHECK if it ever ran (fz_v1def_295's own `exists i in
+            # [5, 2). at(s, i) == 9`, `at` with no length guard at all)
+            # costs nothing: zero instances means `bx` never renders that
+            # body, the same "never evaluated, never typechecked" posture
+            # every other unreached branch in this file already has.
+            # MEASURED (out/agent-fstar-v1def/, F* 2026.08.30):
+            # fz_v1def_295 (both quantifiers literal-bounded, one empty
+            # each way) flips ABSTAIN -> verified/refuted (COUNTS, twin
+            # negate-cond, witness s=[] -> real 1, twin 0). fz_v1def_209/
+            # 268 (both quantifiers bounded by `len(s)`, never a literal)
+            # are UNCHANGED, still the honest abstain: `_lit_int` returns
+            # None on `len(s)`, so the fallthrough below fires exactly as
+            # before, byte-identical reasoning to the pre-fix abstain.
+            kind = "forall" if "forall" in e else "exists"
+            q = e[kind]
+            lo, hi = _lit_int(q["lo"]), _lit_int(q["hi"])
+            if lo is not None and hi is not None and hi - lo <= _BX_QUANT_UNROLL_CAP:
+                insts = [lower_verus.subst(q["body"], {q["var"]: {"int": k}})
+                         for k in range(lo, hi)]
+                if not insts:
+                    return "true" if kind == "forall" else "false"
+                glue = " && " if kind == "forall" else " || "
+                return "(" + glue.join(self.bx(i, env, local)
+                                       for i in insts) + ")"
             raise NotImplementedError(
                 "fstar lowering: a quantifier in computational position has "
                 "no decidable lowering here")
@@ -1966,6 +2141,24 @@ def _decls(stmts: list) -> set[str]:
         elif "if" in s:
             out |= _decls(s["if"]["then"]) | _decls(s["if"]["else"])
     return out
+
+
+_BX_QUANT_UNROLL_CAP = 64
+
+
+def _lit_int(e: dict) -> int | None:
+    """`e` is a bare `{"int": n}` leaf, or None. Used only to decide
+    whether a quantifier's OWN bound is a syntactic literal in the task
+    source (never evaluated against a witness or any other substitution)
+    -- deliberately narrower than `lower_verus._gint`, which also folds
+    `len`/`+`/`-`/`*` etc. over a GROUND-SUBSTITUTED certificate formula.
+    Here there is no substitution to lean on: `bx` renders the task's own
+    REAL body, over symbolic params, so a bound built from `len(s)` (or
+    any other non-literal expression) is genuinely unknown at lowering
+    time, not merely un-simplified."""
+    if isinstance(e, dict) and set(e) == {"int"}:
+        return e["int"]
+    return None
 
 
 def _proj_pair(op: str, arg: dict) -> dict | None:
@@ -2367,6 +2560,58 @@ def _reflexive_ensures(cx: Ctx, task: dict, ret: str, ret_t, expr: str) -> bool:
     return rendered == expr
 
 
+def _vacuous_ensures(task: dict) -> bool:
+    """True when the task's SOLE ensures clause is the bare literal `true`
+    (`fz_p_vac_post`, the probe family's adversarial "content-free
+    postcondition" case, 2026-09-10 reproduction). A DIFFERENT shape than
+    `_reflexive_ensures` above, and not fixed by the same move: that
+    residual's own contract lemma (`_contract_lemma`) restates `ensures`
+    as a Lemma postcondition specifically BECAUSE a `Lemma`'s obligation
+    is a separate query from a `Pure` body's definitional-equality check
+    (MEASURED there, P1.fst) -- but `Lemma (requires ..) (ensures True)`
+    is not a separate query either: MEASURED directly here (P1.fst, this
+    pass, F* 2026.08.30, `--log_queries`), appending exactly that lemma
+    after `fz_p_vac_post`'s own definition produces ZERO
+    `queries-*.smt2` entries, same as the bare function alone -- `True`
+    unfolds to `Prims.l_True`, closed by the typechecker's own
+    normalisation with no SMT round-trip at any query size, unlike
+    `(f x) == 7`, which needed Z3 to match `f x`'s established refinement
+    against the goal. So the contract lemma cannot turn this shape's
+    MALFORMED into VERIFIED the way it did the 19 lifted tasks and the 3
+    v1pairs ones: there is no genuine obligation anywhere to ask the
+    solver for, because the task states none (`ensures true` is, by
+    construction, a claim about nothing).
+
+    `verifiers/fstar.py`'s zero-obligation rule is not wrong here --
+    zero solver calls really did happen, on a file this lowering
+    genuinely could not give more to prove -- but MALFORMED reads as a
+    LOWERING defect, and this is not one: every OTHER column reads this
+    exact task `verified` (dafny, verus, framac, rocq: a content-free
+    postcondition costs nothing to discharge, so their own real vs. twin
+    readings both trivially succeed too) or `vacuous` (spark's gnatprove
+    reports a VC as trivially true rather than counting it as a genuine
+    proof, a distinction this file's own backend has no channel to make;
+    see the module docstring's dated note). Naming the abstain is the
+    honest move available from this file alone: `verifiers/fstar.py`
+    itself is out of this pass's scope (this worktree's brief is
+    `lower_fstar.py`), so there is no way to mint this file's own
+    `vacuous`-shaped reading from here, only to stop minting the
+    MALFORMED one, which implies a defect this shape does not have.
+
+    Deliberately narrow (`task["ensures"] == [{"bool": True}]`, nothing
+    looser): checked against every committed and lifted task
+    (`tasks/*.json`, `lifted-tasks.r14`), none of them states a bare
+    `true` ensures, so this can only ever fire on a task built exactly
+    to probe it, never demote a task that has a real obligation
+    elsewhere in its `requires`/body that would already force a genuine
+    query (a task combining `ensures true` with, say, an `at` needing a
+    definedness proof is NOT this shape's problem, since the function's
+    own `Pure` annotation would already cost >=1 solver call from that
+    obligation alone -- reads VERIFIED already, untouched by this
+    check)."""
+    return task["ensures"] == [{"bool": True}]
+
+
 def gen_fun(cx: Ctx, task: dict, body: list) -> str:
     """Straight-line/if body, possibly self-recursive (F* checks the
     decreases measure and applies the contract modularly at self-calls).
@@ -2397,6 +2642,23 @@ def gen_fun(cx: Ctx, task: dict, body: list) -> str:
     # isEven, hasOppositeSign, kthElement, quotient and six more), so the
     # column's honest reading of the zero-obligation shape stays the
     # verifier's own MALFORMED, a documented residual, not an abstain here.
+    #
+    # `_vacuous_ensures` (this file's own note, 2026-09-10 reproduction) is
+    # a DIFFERENT shape and DOES gate: `ensures true` costs the contract
+    # lemma nothing (MEASURED, that function's own docstring), so nothing
+    # downstream of this file can turn its MALFORMED into a query-backed
+    # VERIFIED, and emitting it anyway hands the verifier's own zero-
+    # obligation rule a file that reads as a lowering defect when it is
+    # not one.
+    if _vacuous_ensures(task):
+        raise NotImplementedError(
+            "fstar lowering: ensures is the content-free literal true, no "
+            "obligation exists for this backend's zero-obligation rule to "
+            "certify (verified elsewhere: dafny/verus/framac/rocq read "
+            "verified, spark reads vacuous; this column has no channel to "
+            "mint either honestly, so it abstains rather than read "
+            "malformed, which would name a defect this shape does not "
+            "have)")
     selfrec = has_self_call(body, name)
     dec = ""
     if selfrec:

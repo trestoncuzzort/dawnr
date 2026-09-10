@@ -1309,6 +1309,176 @@ testing that safely (every spec_fun-bearing task, committed and lifted,
 non-recursive and recursive) does not fit the remaining budget honestly,
 so nothing was written for it -- the abstain stays exactly as before,
 named here rather than attempted partially and left inconsistent.
+
+FILL DEFINEDNESS, fixed 2026-09-10, the morning fuzz reproduction's own
+ground-truth finding. `reproduce.sh --families`'s combined run
+(out/reproduce-families/) put one real gap on this column alone: the
+probe `fz_p_fill_neg` (`requires n <= 100; r := fill(n, 0); ensures
+len(r) == n`) is undefined at `n = -1` by SPEC.md ("fill ... DEFINED IFF
+n >= 0"; `requires n <= 100` admits it, an "Undefined requires
+(normative)" shape), every other kernel left it unproved (dafny, verus,
+spark, lean, fstar: real unproved; rocq: real AND twin unproved), and
+framac alone VERIFIED it, 14/14 goals.
+
+READ FIRST, not assumed: `defs()`'s own `fill` case (above `pred()`)
+already states the RULE, `n >= 0`, for a `fill` reached from a spec
+position, and `seq_assign_lines`'s `fill` case (below `assigned_names`)
+already emits `/*@ assert (n) >= 0; */` in EXECUTABLE position, the exact
+same shape `at`'s bound check and `div`/`mod`'s `y != 0` check already
+use. Both were present before this fix; the probe still verified anyway,
+so the obligation this file already emits was not the gap -- something
+downstream was making it FREE rather than PROVEN. MEASURED directly
+(`frama-c`/WP on the probe's own generated C, before touching this
+file): the seq-return clause block (`lower()`, just above `all_seqs.
+append(ret)`) stated `requires {ret}_n >= 0;` UNCONDITIONALLY, immediately
+before pinning `requires {ret}_n == <len-expr>;`. For `fill`'s own
+count read straight off a bare int param (`ret_len_expr` = `n`, no other
+`requires` constraining it), those two clauses TOGETHER are exactly
+`requires n >= 0;` restated through the buffer's own bookkeeping name --
+sound whenever `ret_len_expr` is independently nonnegative from some
+OTHER clause already in scope (every committed seq-return task: `len(s)`
+chains to `s`'s own `requires s_n >= 0;`, `tail`'s slice `b - a` chains
+to the task's own `0 <= a <= b`, CAPACITY's `E` chains to an existing
+seq length the same way), but for `fz_p_fill_neg` it silently ADDS `n >=
+0` to the function's ASSUMED preconditions instead of leaving it the
+proof obligation `defs()`/`seq_assign_lines` already meant to state:
+totalizing the negative count by widening the contract's own domain, not
+by giving the partial operator a fixed value. Two disjuncts SPEC.md's
+own gap-hunting rubric names ("emits no definedness obligation ... or
+its encoding totalizes"); measured to be the second one, the obligation
+WAS emitted, its proof was just handed to it for free by a clause this
+lowering added for an unrelated reason (sizing the buffer for `\valid`).
+
+FIXED: the unconditional `requires {ret}_n >= 0;` line is gone (see the
+comment left in its place, `lower()`, above `all_seqs.append(ret)`,
+for the full reasoning); `\valid({ret} + (0 .. {ret}_n - 1))` needs no
+companion sign assumption of its own, since ACSL's range `(0 ..
+{ret}_n - 1)` is simply empty, and `\valid` over an empty range
+vacuously true, whenever `{ret}_n <= 0` (measured on the same probe: the
+file still parses and every OTHER goal discharges identically with the
+line removed). MEASURED after the fix, `frama-c` on the probe directly:
+13/14 goals, the domain assert `/*@ assert (n) >= 0; */` itself reading
+an honest `[Timeout]` (Presburger-decidable but genuinely FALSE in
+general, `n = -1` a counterexample; Alt-Ergo has no way to report
+"provably invalid", only "not proved") -- the file is no longer
+VERIFIED, having lost exactly the free hypothesis that was granting it.
+
+MEASURED, `fuzz_lower.py --only framac --tasks fz_p_fill_neg --n 400
+--seed 1 --flake 3 --jobs 2` (both readings flake-stable, `agreed=True`):
+before, real `verified` / twin `timeout` (`vs-truth`: 1, `fz_p_fill_neg
+expected=refuted got={'framac': 'verified'}`); after, real `timeout` /
+twin `timeout` (`vs-truth`: 0). The probe now reads unproved (never
+verified), matching the RULES bar; not REFUTED (no certificate mechanism
+in this file targets a `requires`-only definedness gap of this shape,
+the twin here being the SAME body under the SAME broken contract, not a
+mutation), which is an honest, not a certified, non-agreement, exactly
+like `033`/`049`/`143` below already read on the definedness family.
+
+REGRESSION, MEASURED both ways, not assumed from the clause's own
+narrow scope: (a) the 23 committed tasks (`t/tasks/*.json`), framac
+column, `harness.run_task`: all 22 non-abstaining tasks (`swap_rows`
+unaffected, its own already-documented seq<seq>-return refusal fires
+before this clause block is ever reached) read `COUNTS` (verified real,
+refuted twin) before and after, identical operator and witness on every
+one -- byte-diffed the four SEQ-RETURN tasks specifically (`filter_pos`,
+`reverse`, `swap`, `tail`, real and twin, eight files): each one differs
+from the pre-fix lowering by EXACTLY the one dropped `requires {ret}_n >=
+0;` line and nothing else, confirming the fix touches no other clause,
+and frama-c's own verdict is unchanged on all eight because each of
+those four tasks' `ret_len_expr` was already independently pinned
+nonnegative by another `requires` in scope, exactly as reasoned above.
+`AGREEMENT.md`'s own committed matrix (2026-09-10 10:49Z) matches this
+run cell-for-cell. (b) the v1def fuzz family (8 tasks) plus the probe,
+`--flake 3`, before and after: `fz_v1def_070`/`103` (`verified /
+refuted`, unaffected -- both are `int`-returning tasks, never reaching
+the seq-return clause block this fix touches at all) and `fz_v1def_
+033`/`049`/`143` (`verified / timeout`, unaffected, see the DEFINEDNESS
+TWIN CERTIFICATE note below) read byte-for-byte the same before and
+after on every cell.
+
+DEFINEDNESS TWIN CERTIFICATE (033/049/143), READ AND DIAGNOSED, not
+fixed, per this pass's own scope. All three share one shape: `collapse-
+if` drops an outer bounds-checking `if`, leaving a BARE, un-nested `if
+(at(s, x) >= 0) ... else ...` as the twin body's own single top-level
+statement -- an honest `undefined`-kind witness (`interp.exec_body`
+raises `Undef` reaching `at(s, x)` with `x` now unconstrained). Read
+directly, not inferred: `fz_v1def_033_twin.c` (`out/reproduce-families/`)
+carries NO certificate function at all, only the plain twin lowering,
+and its own unconditional `/*@ assert 0 <= (x) && (x) < s_n; */` (this
+file's own `at`-bound obligation, correctly emitted) is genuinely
+undischargeable with no `requires` constraining `x` -- an honest
+`[Timeout]`, not a false VERIFIED, so this is NOT the FILL DEFINEDNESS
+bug's own shape (nothing here is granted for free); it is a MISSING
+certificate, the file scoring `verified / timeout` where a sound
+`verified / refuted` is available but not reached. `_undef_certificate`
+(above `_twin_loop`) is the reason: its own walk over `twin_body`
+recognizes only a top-level `"var"`/`"assign"` statement (`for s in
+twin_body: ... else: return None # if/while/return: not walked`,
+DOCUMENTED already, its own scope limit) and returns `None` -- no
+certificate -- the instant the twin's top-level statement is an `if`,
+exactly what `collapse-if` leaves behind here. `fz_v1def_070`/`103`
+count instead because THEIR `collapse-if` twins reduce the outer `if`
+away entirely (the surviving branch is a single bare `r = 1;`), so the
+walk's `"assign"` case fires directly -- a shallower shape the same
+walker already handles, not evidence the walker handles `if` bodies in
+general. This is the SAME NAMED gap `lower_verus.py`'s own
+`_undef_obligation` (a harness-adjacent, per-backend helper, not
+literally `harness.py` itself, but the identical shape, independently
+implemented in every backend that has one, per this construct's own
+section comment above `_undef_certificate`) already documents as "does
+not walk into a loop or if body" -- confirmed here to be the live cause
+for 3 of the 8 v1def cells, not merely a suspected one. Per RULES this
+pass: named, not fixed (extending a certificate walker to recurse into
+an `if`'s own branches is the class of change owned by whichever pass
+next touches that shared shape across backends, not a one-file
+definedness-fill fix); `033`/`049`/`143` stay `verified / timeout`,
+unchanged before and after, exactly as measured above.
+
+QUANTIFIER ABSTAIN (209/268/295), READ AND DIAGNOSED, not landed, same
+scope discipline. All three read `abstain`, reason `"quantifier in ACSL
+term position"` -- `term()`'s own `ite` case (above `_conj`) calls
+`term(i['cond'], ctx)` on the ite's guard, and when that guard is itself
+a `\forall`/`\exists` (all three tasks' bodies are `if (forall i;
+range; P(i)) then r=1 else r=0`, mirrored verbatim into their own
+`ensures`), `term()` raises `NotImplementedError("quantifier in ACSL
+term position")` by name rather than render one, since a quantifier
+produces an ACSL `\prop`, not a `term`, and `term()`'s "ite" case had
+never been asked to bridge the two. READ, not assumed: is this
+restriction honest (ACSL genuinely cannot express it) or merely
+unmeasured? A direct probe (`frama-c`, `\result == ((\forall integer i;
+0 <= i < n ==> s[i] >= 0) ? 1 : 0)`) PARSES and schedules goals cleanly
+-- ACSL's conditional operator IS polymorphic over a `\prop` condition,
+confirmed by running it, not by reading the manual -- so `term()`'s
+outright refusal is NOT a real ACSL limitation, only an unmeasured gap
+in this file, and `pred()`'s own "ite" case (above) already renders a
+COND through `pred()`, not `term()`, and already handles `\forall`/
+`\exists` correctly (its own "forall"/"exists" branch), so the fix
+shape is a one-line swap (route `term()`'s ite-cond through `pred()`
+instead of `term()` -- ite's cond is always bool-typed by the language's
+own type system, exactly the invariant `pred()`'s dispatch already
+assumes everywhere else it is called, so this is a strict
+generalization with no case it could newly mis-render).
+
+MEASURED before landing it (RULES: measure first) that this fix alone
+would not move any of the three: patched in isolation and run directly
+against `fz_v1def_209`'s own task, `lower()` proceeds past the ensures
+clause exactly as expected and then raises a SECOND, DIFFERENT
+NotImplementedError out of `stmts()`/`cexpr()`'s own body processing --
+`"bounded quantifier in executable position"` (`cexpr()`, above
+`_divmod_ternary_cexpr`) -- because these three tasks' BODY, not only
+their `ensures`, branches on the identical `\forall`/`\exists`
+(`if (forall ...) { r := 1; } else { r := 0; }`), and C has no
+executable quantifier: discharging THAT gap needs compiling a bounded
+quantifier into real, looping C (or an unrolled equivalent), a new
+construct on the scale of the seq-value or nested-sequence waves above,
+not a one-line rendering fix, and unmeasured. Landing the term-position
+half alone would only rename the abstain reason these three tasks read,
+never move a single verdict, so nothing was changed in this file for
+either gap: both are named here, term-position honest-but-insufficient,
+executable-position the real, substantially-sized blocker, left for
+whichever pass takes up quantifier compilation. `fz_v1def_209/268/295`
+read `abstain`, `"quantifier in ACSL term position"`, unchanged before
+and after, confirmed by both fuzz runs above.
 """
 from __future__ import annotations
 
@@ -4584,7 +4754,38 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # not `\valid_read`), and pinned to the length the body's own
         # writes will actually produce (`ret_len_expr`, rendered here in
         # PARAMS-only terms, exactly what ACSL's `requires` scope allows).
-        clauses.append(f"  requires {ret}_n >= 0;")
+        #
+        # FILL DEFINEDNESS, fixed 2026-09-10 (see this file's own dated
+        # note below `assigned_names`): this clause set used to also
+        # state `requires {ret}_n >= 0;` unconditionally, BEFORE the
+        # length-pinning line below it. That is sound whenever
+        # `ret_len_expr` is already provably nonnegative from some OTHER
+        # requires already in `clauses` (every committed task: `len(s)`
+        # chains to `s`'s own `{s}_n >= 0`, a slice's `b - a` chains to
+        # the task's own `0 <= a <= b`, CAPACITY's `E` chains to an
+        # existing seq length the same way) -- but when `ret_len_expr`
+        # is NOT so constrained (`fill`'s own count read straight off a
+        # bare int param, `fz_p_fill_neg`'s `r := fill(n, 0)` with only
+        # `requires n <= 100`), stating it here ANYWAY silently ADDS
+        # `n >= 0` to the function's assumed preconditions rather than
+        # leaving it a proof obligation: paired with `requires {ret}_n ==
+        # n` below, `{ret}_n >= 0` is exactly `n >= 0` restated, and SPEC.md
+        # says `fill` is undefined, not requires-excluded, at a negative
+        # count the task's own `requires` lets through. MEASURED
+        # (`frama-c`/WP directly, the probe before touching this file):
+        # with the line present, `fz_p_fill_neg_t` reads 14/14 goals
+        # proved, the FALSE theorem "well-defined at every n <= 100"
+        # VERIFIED; with it removed, the very same `/*@ assert (n) >= 0;
+        # */` this file already emits in `seq_assign_lines`'s own `fill`
+        # case (below `stmts()`) becomes a REAL, undischargeable goal
+        # (`[Timeout]`, 13/14), because nothing else in scope entails
+        # `n >= 0` -- the domain check finally has teeth instead of being
+        # granted by the very clause meant only to size a buffer.
+        # `\valid({ret} + (0 .. {ret}_n - 1))` needs no companion sign
+        # assumption of its own: ACSL's range `(0 .. {ret}_n - 1)` is
+        # simply empty, and `\valid` over an empty range vacuously true,
+        # whenever `{ret}_n <= 0`, measured on the same probe (parses and
+        # discharges the same way with or without the dropped line).
         clauses.append(f"  requires \\valid({ret} + (0 .. {ret}_n - 1));")
         clauses.append(f"  requires {ret}_n == "
                        f"{term(ret_len_expr, spec_ctx)};")
