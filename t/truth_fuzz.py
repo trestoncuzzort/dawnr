@@ -1826,6 +1826,139 @@ def fam_pairs():
     return out
 
 
+NEST_T = {"seq": "seq"}     # SPEC.md "Nested sequences (v1)": seq<seq>
+
+
+def fam_nested():
+    """SPEC.md "Nested sequences (v1)" (2026-09-10): `{"seq": "seq"}`, the
+    census's own DafnyBench and nl/ population (scratchpad
+    shapes-nested/run_output.txt). Hand-derived, `fam_pairs`'s style: one
+    shape per truth class this file already grades against. `denote`/
+    `mirror`/`ck` need no change to carry a nested read through their
+    generic op/args walk (interp.py's own `ev` clone already treats a row
+    as a Python tuple of ints, and the outer value as a tuple of those),
+    the same "no new machinery" property `fam_pairs` notes for `pair`.
+
+    TRUE: a row-length identity (`gt_nest_rowlen_id`, r := len(m[i]),
+    requires 0 <= i < len(m)) and a cell identity (`gt_nest_cell_id`, r :=
+    m[i][j], requires both bounds) -- both "r is assigned exactly the
+    ensures expression" reflexivity, `gt_pair_proj_param`'s own idiom, a
+    requires guard standing in for `fam_pairs`'s always-total pair ops
+    since `at`/`len` on a nested seq are partial (`swap_rows`/
+    `row_max_len`'s own convention).
+
+    FALSE: a swapped-rows ensures (`gt_nest_false_swap`) -- the body
+    computes `swap_rows`'s own real update (rows i and j exchanged), the
+    ensures claims the UNSWAPPED relationship instead, false whenever the
+    two rows differ -- and a wrong cell (`gt_nest_false_cell`) -- r is
+    m[i][j], the ensures claims r == m[i][j] + 1, false unconditionally
+    since no integer is its own successor, needing no witness search at
+    all (any admitted input refutes it).
+
+    ILLDEF: a cell read with no inner guard (`gt_nest_illdef_cell`) --
+    requires pins the OUTER index in range and never the inner one,
+    `fam_definedness`'s own idiom (a trivial, always-defined body; the
+    obligation lives entirely in ensures) read over a nested index
+    instead of a flat one; witness at a SHORT row, m = [[]], i = j = 0,
+    the one row m has is empty."""
+    out = []
+
+    t1 = {"name": "gt_nest_rowlen_id",
+         "params": [{"name": "m", "type": NEST_T}, {"name": "i", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [op("and", op("<=", I(0), V("i")),
+                        op("<", V("i"), op("len", V("m"))))],
+         "ensures": [op("==", V("r"), op("len", op("at", V("m"), V("i"))))],
+         "body": [{"assign": ["r", op("len", op("at", V("m"), V("i")))]}]}
+    finish(t1)
+    out.append(rec(t1, "TRUE", "construction",
+                   "r is assigned exactly the ensures expression, "
+                   "len(m[i]), so r == len(m[i]) by reflexivity; requires "
+                   "pins i in range, the census's own row-length idiom",
+                   "nested"))
+
+    t2 = {"name": "gt_nest_cell_id",
+         "params": [{"name": "m", "type": NEST_T}, {"name": "i", "type": "int"},
+                   {"name": "j", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [op("and", op("<=", I(0), V("i")),
+                        op("<", V("i"), op("len", V("m"))),
+                        op("<=", I(0), V("j")),
+                        op("<", V("j"), op("len", op("at", V("m"), V("i")))))],
+         "ensures": [op("==", V("r"),
+                       op("at", op("at", V("m"), V("i")), V("j")))],
+         "body": [{"assign": ["r", op("at", op("at", V("m"), V("i")), V("j"))]}]}
+    finish(t2)
+    out.append(rec(t2, "TRUE", "construction",
+                   "r is assigned exactly the ensures expression, "
+                   "at(at(m,i),j); requires pins both indices in range, "
+                   "SPEC.md's s[i][j] definedness obligation", "nested"))
+
+    f1 = {"name": "gt_nest_false_swap",
+         "params": [{"name": "m", "type": NEST_T}, {"name": "i", "type": "int"},
+                   {"name": "j", "type": "int"}],
+         "returns": [{"name": "r", "type": NEST_T}],
+         "requires": [op("and", op("<=", I(0), V("i")),
+                        op("<", V("i"), op("len", V("m")))),
+                     op("and", op("<=", I(0), V("j")),
+                        op("<", V("j"), op("len", V("m"))))],
+         "ensures": [op("==", op("at", V("r"), V("i")), op("at", V("m"), V("i"))),
+                    op("==", op("at", V("r"), V("j")), op("at", V("m"), V("j")))],
+         "body": [{"assign": ["r", op("update",
+                                     op("update", V("m"), V("i"),
+                                        op("at", V("m"), V("j"))),
+                                     V("j"), op("at", V("m"), V("i")))]}]}
+    finish(f1)
+    w1 = falsify(f1, cands=[{"m": ((0,), (1,)), "i": 0, "j": 1}])
+    if w1 and not w1.get("_disagreement"):
+        out.append(rec(f1, "FALSE", "witness",
+                       "the body computes swap_rows's own real update "
+                       "(rows i and j exchanged); the ensures claims the "
+                       "UNSWAPPED relationship (r[i] == m[i], r[j] == "
+                       "m[j]) instead, false whenever the two rows "
+                       "differ, agreed by interp.py and ck_ens",
+                       "nested_false", w1, "swap"))
+
+    f2 = {"name": "gt_nest_false_cell",
+         "params": [{"name": "m", "type": NEST_T}, {"name": "i", "type": "int"},
+                   {"name": "j", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [op("and", op("<=", I(0), V("i")),
+                        op("<", V("i"), op("len", V("m"))),
+                        op("<=", I(0), V("j")),
+                        op("<", V("j"), op("len", op("at", V("m"), V("i")))))],
+         "ensures": [op("==", V("r"),
+                       op("+", op("at", op("at", V("m"), V("i")), V("j")), I(1)))],
+         "body": [{"assign": ["r", op("at", op("at", V("m"), V("i")), V("j"))]}]}
+    finish(f2)
+    w2 = falsify(f2, cands=[{"m": ((5,),), "i": 0, "j": 0}])
+    if w2 and not w2.get("_disagreement"):
+        out.append(rec(f2, "FALSE", "witness",
+                       "r is m[i][j]; the ensures claims r == m[i][j] + 1, "
+                       "false unconditionally since no integer is its own "
+                       "successor, agreed by interp.py and ck_ens",
+                       "nested_false", w2, "cell"))
+
+    ill = {"name": "gt_nest_illdef_cell",
+          "params": [{"name": "m", "type": NEST_T}, {"name": "i", "type": "int"},
+                    {"name": "j", "type": "int"}],
+          "returns": [{"name": "r", "type": "int"}],
+          "requires": [op("and", op("<=", I(0), V("i")),
+                         op("<", V("i"), op("len", V("m"))))],
+          "ensures": [op("==", V("r"),
+                        op("at", op("at", V("m"), V("i")), V("j")))],
+          "body": [{"assign": ["r", I(0)]}]}
+    finish(ill)
+    wi = illdefined(ill, cands=[{"m": ((),), "i": 0, "j": 0}])
+    if wi and not wi.get("_disagreement"):
+        out.append(rec(ill, "ILLDEF", "witness",
+                       "the ensures reads m[i][j] with the OUTER index "
+                       "guarded and the inner one never pinned; undefined "
+                       "at a SHORT row (m = [[]], i = j = 0, the one row "
+                       "m has is empty)", "nested_illdef", wi))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Corpus.
 # ---------------------------------------------------------------------------
@@ -1857,6 +1990,11 @@ def build(seed: int, n_mirror: int):
     # anyway so a byte-diff of an old seed's task set against a new run
     # shows only gt_pair_* as additions.
     recs += fam_pairs()
+    # Appended LAST for the same reason fam_pairs is: fam_nested draws
+    # NOTHING from `rng` either (hand-derived, fam_pairs's own style), so
+    # its presence changes no other family's draws, and an old seed's task
+    # set byte-diffs against this one showing only gt_nest_* as additions.
+    recs += fam_nested()
     seen, out = set(), []
     for r in recs:
         nm = r["task"]["name"]

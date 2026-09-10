@@ -872,6 +872,167 @@ not the declaration-only scan it has today -- a real fix, not attempted
 here, carried for the next pass; a LOOP-carrying pair-with-a-seq-
 component task (fz_p_pair_seq's own shape is loop-free and already
 covered) is not yet measured by anything in this family.
+
+NESTED SEQUENCES (v1). {"seq": "seq"} (SPEC.md "Nested sequences (v1)",
+2026-09-10): a seq of seqs of ints, one level, written seq<seq>. No new
+Expr forms; every seq operator is polymorphic by its operands' static
+type, exactly as `+`/`==` already were before this pair. Built as a
+SECOND instantiation of the SAME generic, Element_Type => Seq
+(NESTED_SEQ_PREAMBLE: package Rows, subtype Seq2), rather than a new
+representation: "Ada functional containers can nest" (SPEC.md), measured
+true. Every other seq primitive at this level keeps its FLAT NAME,
+OVERLOADED rather than renamed -- Len, Elem, T_Update, T_Fill, T_Slice,
+T_Concat, T_Concat_Aux, T_Eq each gain a second declaration over Seq2 (or
+over Seq where the flat one takes Big_Integer), and Ada resolves the call
+by the argument's own static type, the same polymorphism t's own
+operators already have. Lower.expr's rendering for `len`/`at`/`update`/
+`fill`/`slice`/`+`/`==` therefore needed NO new text, only a flag split
+(needs_update2/needs_fill2/needs_slice2/needs_concat2/needs_eq2 on Lower,
+independent of the flat needs_update/needs_fill/needs_slice/needs_concat/
+needs_eq, each gating its own NESTED_*_PREAMBLE block) so the right
+preamble is emitted. The one exception is the seq LITERAL:
+Seqs.Add/Seqs.Empty_Sequence and Rows.Add/Rows.Empty_Sequence are
+different package-qualified names, not overloads of one identifier, so
+Lower.expr's `seq` case picks the package from the first element's own
+static type (Lower._ty). A row-typed postcondition (T_Fill/T_Slice/
+T_Concat's own elementwise fact at this level) goes through the FLAT
+T_Eq, never bare "=", for the identical reason EQ_PREAMBLE's own
+elementwise fact does at the flat level (Seq is the same private
+generic-instantiation type either way); needs_fill2/needs_slice2/
+needs_concat2/needs_eq2 each force needs_eq and needs_range on with
+them, exactly as needs_fill/needs_slice/needs_concat already force
+needs_range.
+
+Lower._ty gained the reading SPEC.md asked for: `at` returns "seq" (a
+row) when its operand is nested, "int" when flat, told apart by the
+OPERAND's own type rather than the op alone -- s[i][j] (at(at(s,i),j))
+resolves right by construction, the inner `at`'s own result feeding the
+outer one. `update`/`slice` return the SAME type as their first
+argument, row or outer. `fill(n, v)` is nested iff v is itself a row.
+The `seq` literal is nested iff its own first element is a row; the
+empty literal `[]` has no element to read this off of and SPEC.md's own
+"the declared type says so" is a top-down hint this bottom-up function
+does not carry, so it defaults to flat, unchanged from before this
+construct (NOT MEASURED, below). Every isinstance(ty, dict) call site
+that used to assume "pair" (ada_type, Lower.expr's `==` dispatch,
+_cert_lit_of_type, _pair_types.add, _dead_lit, _undef_obligation's
+_to_py) now checks "pair" in ty explicitly first (_is_nested_seq, new),
+since the nested type's own dict, {"seq": "seq"}, is also a dict and
+would otherwise be misread as a pair type -- MEASURED to matter, not
+theoretical: _pair_types.add's own bare isinstance(ty, dict) check, before
+this fix, collected BOTH committed tasks' own {"seq": "seq"} param/return
+types as if they were pair types, and _pair_ada_name({"seq": "seq"})
+raises KeyError on ty["pair"] the first time either task is lowered.
+
+THE INSTANTIATION. MEASURED (probe, gnatprove FSF 16.1.0): `package Rows
+is new SPARK.Containers.Functional.Infinite_Sequences (Element_Type =>
+Seq);`, the box-defaulted "=" alone, FAILS -- "instantiation error...
+no visible subprogram matches the specification for '='" at the
+generic's own `with function "=" (Left, Right : Element_Type) return
+Boolean is <>` formal, both committed tasks reading real/twin
+malformed/malformed. A harder failure than EQ_PREAMBLE's own "Seq's '='
+is not directly visible as an infix operator without `use Seqs;`" (that
+one is at least callable qualified; a box default apparently needs the
+identical visibility an ordinary infix reference would, not the wider
+"any primitive operation of the actual type" rule this file's design
+had assumed). FIXED, MEASURED: the actual is named explicitly, `"=" =>
+Seqs."="`, a qualified function name, which resolves with no `use`
+needed -- the same qualified-call spelling this file already uses for
+every OTHER Seqs operation. This turns on two benign warnings per
+instantiation ("precondition/postcondition is always False, ...
+Use_Logical_Equality", SPARKlib's own Logical_Eq ghost lemma, since
+Use_Logical_Equality defaults False regardless): MEASURED harmless,
+verifiers/spark.py's own MALFORMED gate matches `error`, never
+`warning`, and the FLAT single instantiation already carries the
+identical warning (out/tail.ads, gnatprove FSF 16.1.0: the same two
+lines, at the flat instantiation), unnoticed until a second
+instantiation's own diagnostic put it beside a real error. No committed
+task's own audit outcome moves.
+
+MEASURED (2026-09-10, gnatprove FSF 16.1.0, Why3 1.8.2+git, --steps
+20000, harness.run_task, out/agent-spark-nested, uncontended):
+
+  * swap_rows COUNTS: real VERIFIED (44.1s), twin (off-by-one: the second
+    `update`'s own row index shifted by one, `update(update(m, i, m[j]),
+    j + 1, m[i])`) REFUTED (35.9s), witness m=[[]], i=0, j=0 (real
+    [[]]) -- an "undefined"-kind certificate, exactly the shape the flat
+    "swap" task's own off-by-one twin already reads: the shifted index
+    runs the second `update` off the single row (`update index 1 outside
+    [0,1)`), _undef_obligation's own replay (fixed for this pair: _to_py
+    gained a `_is_nested_seq(ty)` branch rebuilding the JSON list-of-lists
+    as a tuple-of-tuples, interp.ev's own nested representation, no
+    interp.Pair-style reconstruction needed since a nested seq witness is
+    never ambiguous with anything else v1 has) finding the same failing
+    obligation gnatprove does, restated and negated.
+  * row_max_len COUNTS: real VERIFIED (51.1s), twin (invariant-drop: the
+    loop invariant's own upper bound conjunct dropped) REFUTED (39.9s),
+    witness exit at m=[[], [0]], i=2, r=0 -- an "exit"-kind certificate,
+    interp.exit_env's own state run through the loop's exit entailment.
+    `_cert_lit_of_type` gained the matching branch: a seq<seq>-typed
+    PARAMETER's witness value (a list of row-lists) becomes a Rows.Add
+    chain over each row's own Seqs.Add chain, unconditionally correct
+    since `ty` is the task's own declared type here, never guessed (the
+    same declared-type discipline PAIRS RESIDUAL's own `_cert_lit_of_type`
+    established); `r` itself is an int, so the return-side rendering is
+    unaffected by any of this pair's own machinery.
+
+Regression (out/agent-spark-nested, real and twin, diffed byte-for-byte
+against out/*.ads and out/*_twin.ads): abs, swap, tail, filter_pos,
+divmod_pair, min_max all byte-identical, both files, both before and
+after this pair; none of the six declares a nested type, so Rows/Seq2
+never appear in their output and none of the new flags ever turns on for
+them. Their own verdicts are unchanged: five COUNT, min_max still reads
+REFUSED (real verified, collapse-if twin unproved), the SAME loop-plus-
+pair cost PAIRS' own note already measured, untouched by this pass.
+
+NOT MEASURED, by name:
+
+  * The empty nested literal `[]` where "the declared type says so" is
+    the only way to tell it apart from a flat empty seq (Lower._ty's own
+    note, above). Neither committed task contains a `seq` literal node at
+    all (grepped: zero occurrences in both), so neither the non-empty
+    inference nor the empty-literal default is exercised by anything
+    committed. A task that builds an empty seq<seq> literal directly
+    (rather than through a parameter, `at`, or `update`) would silently
+    lower it as a flat empty Seq today -- a wrong type, not a crash,
+    since Ada would then reject the resulting text as a type
+    mismatch at its first real use, an honest compile failure rather
+    than a silently wrong proof. Fixing this properly needs a top-down
+    expected-type hint threaded through Lower._ty/Lower.expr the way
+    check_wf's own reading already carries one (interp.py, "Nested
+    sequences" note), not attempted here.
+  * fill()/slice()/`+`/`==` at the outer level (NESTED_FILL_PREAMBLE,
+    NESTED_SLICE_PREAMBLE, NESTED_CONCAT_PREAMBLE, NESTED_EQ_PREAMBLE):
+    fully designed and each independently gated, but neither committed
+    task calls any of them at this level (swap_rows uses only outer `at`/
+    `update`; row_max_len uses only outer `at`, then flat `len` on the
+    row), so none of the four preamble blocks is exercised by anything
+    committed -- unneeded, like update()/fill() already were for a
+    pre-pair task that never called them, not a known gap.
+  * A nested seq built and projected within a single expression with no
+    declared param/return/local anywhere (the seq<seq> analogue of
+    fz_p_pair_proj, PAIRS RESIDUAL's own malformed case): `lower()` has no
+    `_has_nested_seq_op`-style guard for this shape, so such a task would
+    emit Ada text naming Rows/Seq2 without NESTED_SEQ_PREAMBLE ever having
+    been requested -- a genuine, undiagnosed Ada error, the identical risk
+    fz_p_pair_proj measured for pairs before `_has_pair_op` closed it.
+    Not yet guarded against; carried for the next pass.
+  * `_undef_obligation`'s own shape-based type guess for a LOCAL var this
+    walk binds mid-replay (types[name] = "seq" if isinstance(val, tuple)
+    else ...) still reads a tuple-of-tuples as flat "seq", never nested --
+    the identical "NOT MEASURED" gap PAIRS RESIDUAL's own docstring left
+    for a local bound to a raw Pair. swap_rows's own "undefined" witness
+    never reaches it: its twin body is the one `assign` statement, and the
+    failing obligation trips on that FIRST statement, before this
+    fallback is ever consulted. Carried for the next task that binds a
+    nested-seq local inside an "undefined" twin body.
+  * `_cert_lit`'s own shape-based nested case (isinstance(v, (list,
+    tuple)) and v and isinstance(v[0], (list, tuple))) defaults an EMPTY
+    outer list to the flat branch, the identical bottom-up ambiguity as
+    the `seq` literal and for the same reason; unreached by either
+    committed task, since both certificates read their own seq<seq>-typed
+    parameter through `_cert_lit_of_type` (declared-type, unambiguous),
+    never through this shape-based function.
 """
 from __future__ import annotations
 
@@ -901,7 +1062,12 @@ RESERVED = frozenset((
     "F", "Seq", "Seqs", "Len", "Elem", "T_Range", "R_First", "R_Has",
     "R_Next", "Big_Integer", "Boolean", "T_Refutation_Certificate",
     "T_Div", "T_Mod", "T_Update", "T_Fill", "T_Slice", "T_Concat",
-    "T_Concat_Aux", "T_Eq"))
+    "T_Concat_Aux", "T_Eq",
+    # SPEC.md "Nested sequences" (2026-09-10): the outer instantiation and
+    # its own subtype, reserved unconditionally the same way Seq/Seqs
+    # already are (a task with no nested seq pays nothing extra: these two
+    # names simply never appear in its output).
+    "Rows", "Seq2"))
 
 # The counterexample instance (header). The window is above 2^31 so that a
 # lowering which had silently kept a 32-bit model would be caught by the
@@ -1072,6 +1238,72 @@ SEQ_PREAMBLE = """\
    with Pre => I >= Big_Integer'(0) and then I < Len (S);
 """
 
+# {"seq": "seq"} (SPEC.md "Nested sequences (v1)", 2026-09-10): a seq of
+# seqs of ints, one level, written seq<seq>. "Ada functional containers can
+# nest" (SPEC.md): a second instantiation of the SAME generic, Element_Type
+# => Seq this time. MEASURED (probe, gnatprove FSF 16.1.0): the box-
+# defaulted "=" (the generic's own `with function "=" (Left, Right :
+# Element_Type) return Boolean is <>` formal) does NOT resolve against
+# Seq's own predefined equality with no `use Seqs;` at the instantiation --
+# "instantiation error... no visible subprogram matches the specification
+# for '='" at the generic's own formal, a harder failure than EQ_PREAMBLE's
+# own "not directly visible as an infix operator" (that one is at least
+# callable qualified; a box default apparently still needs the SAME
+# visibility an ordinary infix reference would). FIXED, MEASURED: the
+# actual is named explicitly, `"=" => Seqs."="`, a qualified function name
+# rather than an infix reference, which resolves with no `use` needed (the
+# same qualified-call spelling this file already uses for every OTHER
+# Seqs operation, T_Eq's own EQ_PREAMBLE note). This does turn on two
+# benign warnings per instantiation ("precondition/postcondition is always
+# False, ... Use_Logical_Equality", from SPARKlib's own Logical_Eq ghost
+# lemma, since Use_Logical_Equality defaults False either way) -- MEASURED
+# harmless: verifiers/spark.py's own MALFORMED gate matches only `error`,
+# never `warning`, and the flat single instantiation carries the identical
+# warning already (unnoticed until a second instantiation's own diagnostic
+# put it beside a real error and made it worth reading), so no committed
+# task's own audit outcome moves.
+#
+# Every other seq primitive at this level is the SAME Ada name as its flat
+# counterpart, OVERLOADED rather than renamed: Len/Elem/T_Update/T_Fill/
+# T_Slice/T_Concat/T_Concat_Aux/T_Eq each gain a second declaration whose
+# parameter is Seq2 (or whose seq-typed parameter is Seq, a row, where the
+# flat one takes Big_Integer), and Ada resolves the call by the STATIC type
+# of the argument, exactly as t's own operators are already polymorphic
+# (SPEC.md: "exactly as + and == already are"). This is why Lower.expr's
+# text for `len`/`at`/`update`/`fill`/`slice`/`+`/`==` needs NO new
+# rendering at all -- every one of those cases already emits "Len (...)",
+# "Elem (...)", "T_Update (...)" and so on, and the compiler, not this
+# file, picks the overload. The one exception is the seq LITERAL
+# (`[[1,2],[3]]`): Seqs.Add and Rows.Add are different package-qualified
+# names, not overloads of one identifier, so Lower.expr's `seq` case still
+# has to choose the package by the static type of its own first element
+# (Lower._ty), the one place this construct needed new dispatch logic
+# rather than new Ada text (see Lower._ty and Lower.expr, below).
+#
+# A row-typed postcondition (T_Fill/T_Slice/T_Concat at this level) cannot
+# lean on Ada's own "=" any more than the flat EQ_PREAMBLE's own elementwise
+# fact could (Seq is the same private generic-instantiation type either
+# way): every such Post compares rows through T_Eq (the FLAT one, on two
+# Seq values), never bare "=", the reason needs_fill2/needs_slice2/
+# needs_concat2/needs_eq2 (Lower, below) each force needs_eq (and
+# needs_range, for T_Range) on with them, exactly as needs_fill/
+# needs_slice/needs_concat already force needs_range.
+NESTED_SEQ_PREAMBLE = """\
+   package Rows is new SPARK.Containers.Functional.Infinite_Sequences
+     (Element_Type => Seq, "=" => Seqs."=");
+   subtype Seq2 is Rows.Sequence;
+
+   --  len(m) on a seq<seq>: Big_Natural, the same one assumption Len
+   --  already gives at the flat level.
+   function Len (S : Seq2) return Big_Integer is (Rows.Length (S));
+
+   --  m[i] on a seq<seq>: a row (a Seq value), DEFINED IFF 0 <= i < len(m),
+   --  the same side condition as the flat `at`'s.
+   function Elem (S : Seq2; I : Big_Integer) return Seq is
+     (Rows.Get (S, I + Big_Integer'(1)))
+   with Pre => I >= Big_Integer'(0) and then I < Len (S);
+"""
+
 # t's `==`/`!=` on two whole seqs is extensional (SPEC.md, SEQUENCES AS
 # VALUES's own note: banked 2026-09-09, IMPLEMENTED the same night). Ada's
 # own "=" resolves t's `==` at Big_Integer and Boolean with no help (CMP,
@@ -1129,6 +1361,22 @@ EQ_PREAMBLE = """\
       and then (for all K in T_Range'(0, Len (S)) => Elem (S, K) = Elem (T, K)));
 """
 
+# Two seq<seq>s (SPEC.md "Nested sequences (v1)", 2026-09-10): "extensional
+# and recursive: two nested seqs are equal iff same length and equal rows".
+# The outer overload of T_Eq, calling the FLAT T_Eq just above on each pair
+# of rows (Elem (S, K) and Elem (T, K) are both Seq values here, never
+# compared by bare "=" for the same reason EQ_PREAMBLE's own elementwise
+# fact is not): "T_Eq on rows for the inner", the design this file was
+# handed. Gated on needs_eq2, which forces needs_eq and needs_range on with
+# it (NESTED_SEQ_PREAMBLE's own note), so this always has both Len/Elem for
+# Seq2 and the flat T_Eq it calls already in scope above it.
+NESTED_EQ_PREAMBLE = """\
+   function T_Eq (S, T : Seq2) return Boolean is
+     (Len (S) = Len (T)
+      and then (for all K in T_Range'(0, Len (S)) =>
+                  T_Eq (Elem (S, K), Elem (T, K))));
+"""
+
 # s[i := v] (SPEC.md "Sequences as values", 2026-09-09), DEFINED IFF
 # 0 <= i < len(s), the same side condition as `at`. Kept OUT of
 # SEQ_PREAMBLE and gated on needs_update (expr(), below) rather than
@@ -1149,6 +1397,19 @@ EQ_PREAMBLE = """\
 UPDATE_PREAMBLE = """\
    function T_Update (S : Seq; I : Big_Integer; V : Big_Integer) return Seq is
      (Seqs.Set (S, I + Big_Integer'(1), V))
+   with Pre => I >= Big_Integer'(0) and then I < Len (S);
+"""
+
+# m[i := r] (SPEC.md "Nested sequences (v1)", 2026-09-10): row i replaced by
+# the seq r, the outer overload of T_Update (NESTED_SEQ_PREAMBLE's own
+# note). Rows.Set's own Post (Equal_Except, Inline_For_Proof) already gives
+# length preservation and "every other row unchanged" exactly as Seqs.Set's
+# does for the flat T_Update (UPDATE_PREAMBLE's own note), so nothing more
+# is restated here either; swap_rows's own `update(update(m, i, m[j]), j,
+# m[i])` is this overload called twice, nested.
+NESTED_UPDATE_PREAMBLE = """\
+   function T_Update (S : Seq2; I : Big_Integer; V : Seq) return Seq2 is
+     (Rows.Set (S, I + Big_Integer'(1), V))
    with Pre => I >= Big_Integer'(0) and then I < Len (S);
 """
 
@@ -1219,12 +1480,26 @@ def _pair_ada_name(ty: dict) -> str:
     return f"T_Pair_{t1.capitalize()}_{t2.capitalize()}"
 
 
+def _is_nested_seq(ty) -> bool:
+    """{"seq": "seq"} (SPEC.md "Nested sequences (v1)", 2026-09-10), v1's
+    one nested type, told apart from a pair type ({"pair": [T1, T2]}) by
+    its own key rather than by isinstance(ty, dict) alone -- both are
+    dicts, so every call site downstream that used to branch on
+    isinstance(ty, dict) and assume "pair" (ada_type, Lower._ty's `==`
+    dispatch, _cert_lit_of_type, _pair_types.add, _dead_lit, _undef_
+    obligation's _to_py) now checks this first."""
+    return isinstance(ty, dict) and "seq" in ty
+
+
 def ada_type(ty) -> str:
     """The Ada type a t type maps to. TYPE[...] on its own only ever saw a
     base type; every call site that might now see a pair type ({"pair":
-    [T1, T2]}, SPEC.md "Pairs", 2026-09-10) goes through this instead, so
-    pair support needed no second TYPE-shaped table, only this one extra
-    dispatch on isinstance(ty, dict)."""
+    [T1, T2]}, SPEC.md "Pairs", 2026-09-10) or the nested seq type
+    ({"seq": "seq"}, SPEC.md "Nested sequences (v1)", 2026-09-10) goes
+    through this instead, so neither needed a second TYPE-shaped table,
+    only this one extra dispatch on isinstance(ty, dict), split by key."""
+    if _is_nested_seq(ty):
+        return "Seq2"
     if isinstance(ty, dict):
         return _pair_ada_name(ty)
     return TYPE[ty]
@@ -1246,7 +1521,11 @@ def _pair_types(task: dict, body: list) -> list:
     out: list = []
 
     def add(ty):
-        if isinstance(ty, dict) and ty not in out:
+        # "pair" in ty, not bare isinstance(ty, dict): the nested seq type
+        # ({"seq": "seq"}, SPEC.md "Nested sequences (v1)", 2026-09-10) is
+        # also a dict and needs no record declaration of its own here, only
+        # NESTED_SEQ_PREAMBLE's fixed Rows/Seq2 (_is_nested_seq).
+        if isinstance(ty, dict) and "pair" in ty and ty not in out:
             out.append(ty)
 
     for p in task["params"]:
@@ -1377,6 +1656,25 @@ FILL_PREAMBLE = """\
       else Seqs.Add (T_Fill (N - Big_Integer'(1), V), V));
 """
 
+# seq(n, r) where r is a row (SPEC.md "Nested sequences (v1)"): n copies of
+# the row r, the outer overload of T_Fill. The elementwise fact compares
+# ROWS, so it goes through the flat T_Eq rather than "=" (NESTED_SEQ_
+# PREAMBLE's own note); needs_fill2 forces needs_eq and needs_range on with
+# it. NOT MEASURED: neither committed task calls fill() at this level.
+NESTED_FILL_PREAMBLE = """\
+   function T_Fill (N : Big_Integer; V : Seq) return Seq2
+   with
+     Pre  => N >= Big_Integer'(0),
+     Post => Len (T_Fill'Result) = N
+       and then (for all K in T_Range'(0, N) =>
+                   T_Eq (Elem (T_Fill'Result, K), V)),
+     Subprogram_Variant => (Decreases => N);
+
+   function T_Fill (N : Big_Integer; V : Seq) return Seq2 is
+     (if N = Big_Integer'(0) then Rows.Empty_Sequence
+      else Rows.Add (T_Fill (N - Big_Integer'(1), V), V));
+"""
+
 # s[a..b] (SPEC.md "Sequences: literals, concatenation, slices", 2026-09-09):
 # DEFINED IFF 0 <= a <= b <= len(s), the same shape of side condition as
 # `at`'s and `update`'s, checked by the kernel at T_Slice's own Pre. No
@@ -1405,6 +1703,26 @@ SLICE_PREAMBLE = """\
    function T_Slice (S : Seq; A : Big_Integer; B : Big_Integer) return Seq is
      (if A = B then Seqs.Empty_Sequence
       else Seqs.Add (T_Slice (S, A, B - Big_Integer'(1)),
+                     Elem (S, B - Big_Integer'(1))));
+"""
+
+# m[a..b] on a seq<seq> (SPEC.md "Nested sequences (v1)"): a slice of rows,
+# the outer overload of T_Slice, same shape as the flat one, elementwise
+# fact through the flat T_Eq for the same reason NESTED_FILL_PREAMBLE's
+# does. needs_slice2 forces needs_eq and needs_range on with it. NOT
+# MEASURED: neither committed task slices at this level.
+NESTED_SLICE_PREAMBLE = """\
+   function T_Slice (S : Seq2; A : Big_Integer; B : Big_Integer) return Seq2
+   with
+     Pre  => A >= Big_Integer'(0) and then A <= B and then B <= Len (S),
+     Post => Len (T_Slice'Result) = B - A
+       and then (for all K in T_Range'(0, B - A) =>
+                   T_Eq (Elem (T_Slice'Result, K), Elem (S, A + K))),
+     Subprogram_Variant => (Decreases => B - A);
+
+   function T_Slice (S : Seq2; A : Big_Integer; B : Big_Integer) return Seq2 is
+     (if A = B then Rows.Empty_Sequence
+      else Rows.Add (T_Slice (S, A, B - Big_Integer'(1)),
                      Elem (S, B - Big_Integer'(1))));
 """
 
@@ -1449,6 +1767,38 @@ CONCAT_PREAMBLE = """\
                    Elem (T_Concat'Result, K) = Elem (S, K))
        and then (for all K in T_Range'(0, Len (T)) =>
                    Elem (T_Concat'Result, Len (S) + K) = Elem (T, K));
+"""
+
+# m + n on two seq<seq>s (SPEC.md "Nested sequences (v1)"): row-wise
+# concatenation, the outer overload of T_Concat_Aux/T_Concat, same shape as
+# the flat pair, elementwise facts through the flat T_Eq for the same
+# reason NESTED_FILL_PREAMBLE's does. needs_concat2 forces needs_eq and
+# needs_range on with it. NOT MEASURED: neither committed task concatenates
+# at this level.
+NESTED_CONCAT_PREAMBLE = """\
+   function T_Concat_Aux (S, T : Seq2; N : Big_Integer) return Seq2
+   with
+     Pre  => N >= Big_Integer'(0) and then N <= Len (T),
+     Post => Len (T_Concat_Aux'Result) = Len (S) + N
+       and then (for all K in T_Range'(0, Len (S)) =>
+                   T_Eq (Elem (T_Concat_Aux'Result, K), Elem (S, K)))
+       and then (for all K in T_Range'(0, N) =>
+                   T_Eq (Elem (T_Concat_Aux'Result, Len (S) + K), Elem (T, K))),
+     Subprogram_Variant => (Decreases => N);
+
+   function T_Concat_Aux (S, T : Seq2; N : Big_Integer) return Seq2 is
+     (if N = Big_Integer'(0) then S
+      else Rows.Add (T_Concat_Aux (S, T, N - Big_Integer'(1)),
+                     Elem (T, N - Big_Integer'(1))));
+
+   function T_Concat (S, T : Seq2) return Seq2 is
+     (T_Concat_Aux (S, T, Len (T)))
+   with
+     Post => Len (T_Concat'Result) = Len (S) + Len (T)
+       and then (for all K in T_Range'(0, Len (S)) =>
+                   T_Eq (Elem (T_Concat'Result, K), Elem (S, K)))
+       and then (for all K in T_Range'(0, Len (T)) =>
+                   T_Eq (Elem (T_Concat'Result, Len (S) + K), Elem (T, K)));
 """
 
 
@@ -1523,6 +1873,8 @@ def _dead_lit(t) -> str:
     value; only its type has to line up. A pair type (SPEC.md "Pairs",
     2026-09-10) recurses componentwise, qualified the same way expr()'s own
     `pair` case is; v1 has no pair of pairs, so this never recurses twice."""
+    if _is_nested_seq(t):
+        return "Rows.Empty_Sequence"
     if isinstance(t, dict):
         t1, t2 = t["pair"]
         return (f"{_pair_ada_name(t)}'(P_A => {_dead_lit(t1)}, "
@@ -1544,6 +1896,23 @@ def locals_seq(body: list) -> bool:
                           or locals_seq(s["if"]["else"])):
             return True
         if "while" in s and locals_seq(s["while"]["body"]):
+            return True
+    return False
+
+
+def locals_nested_seq(body: list) -> bool:
+    """locals_seq's own mirror for the nested type (SPEC.md "Nested
+    sequences (v1)", 2026-09-10): whether `body` declares a seq<seq>-typed
+    local anywhere. locals_seq's own `== "seq"` string compare never
+    matches a dict type, so this needed its own scan rather than a
+    one-line widening of that one."""
+    for s in body:
+        if "var" in s and _is_nested_seq(s["var"]["type"]):
+            return True
+        if "if" in s and (locals_nested_seq(s["if"]["then"])
+                          or locals_nested_seq(s["if"]["else"])):
+            return True
+        if "while" in s and locals_nested_seq(s["while"]["body"]):
             return True
     return False
 
@@ -1580,6 +1949,16 @@ class Lower:
         self.needs_eq = False          # set by the first lowered seq ==/!=
         self.needs_pair_eq: set = set()  # (T1, T2) keys with a pair ==/!=
                                          # (SPEC.md "Pairs", 2026-09-10)
+        # SPEC.md "Nested sequences (v1)" (2026-09-10): the outer overload
+        # of each op is gated separately from its flat counterpart, since
+        # each pulls in a DIFFERENT preamble block (NESTED_UPDATE_PREAMBLE
+        # and friends) even though the rendered Ada text (T_Update(...) and
+        # so on) is identical either way (NESTED_SEQ_PREAMBLE's own note).
+        self.needs_update2 = False     # set by the first lowered m[i := r]
+        self.needs_fill2 = False       # set by the first lowered seq(n, r)
+        self.needs_slice2 = False      # set by the first lowered m[a..b]
+        self.needs_concat2 = False     # set by the first lowered seq<seq> +
+        self.needs_eq2 = False         # set by the first lowered seq<seq> ==
         self.spec_fun_names = {sf["name"] for sf in task.get("spec_funs", [])}
         # The counterexample instance walks the SAME tree with the SAME
         # operator table; only the numeric type of a literal differs, so a
@@ -1634,10 +2013,41 @@ class Lower:
         if "forall" in e or "exists" in e:
             return "bool"
         op = e["op"]
-        if op in ("len", "at"):
+        if op == "len":
             return "int"
-        if op in ("update", "fill", "seq", "slice"):
-            return "seq"
+        if op == "at":
+            # SPEC.md "Nested sequences (v1)" (2026-09-10): s[i] is a row
+            # (type "seq") when s is itself a seq<seq>, an int when s is a
+            # flat seq, told apart by the OPERAND's own type -- s[i][j]
+            # (the notation's chained postfix, at(at(s,i),j)) resolves
+            # right by construction: the inner `at`'s own result feeds the
+            # outer `at` as its operand.
+            return "seq" if _is_nested_seq(self._ty(e["args"][0], types)) \
+                else "int"
+        if op in ("update", "slice"):
+            # m[i := r] / m[a..b]: the result is the SAME type as the seq
+            # being updated/sliced, row or outer (SPEC.md "Nested
+            # sequences (v1)").
+            return self._ty(e["args"][0], types)
+        if op == "fill":
+            # seq(n, v): nested iff v itself is a row (a "seq" value)
+            # rather than an int (SPEC.md "Nested sequences (v1)").
+            return ({"seq": "seq"}
+                    if self._ty(e["args"][1], types) == "seq" else "seq")
+        if op == "seq":
+            # [e1, ..., en] (SPEC.md "Nested sequences (v1)"): nested iff
+            # its own first element is itself a row. The empty literal `[]`
+            # has no element to read this off of; SPEC.md says "the
+            # declared type says so", a top-down hint this bottom-up
+            # reading does not carry, so it defaults to flat here, same as
+            # before this construct existed. NOT MEASURED: no committed
+            # task's requires/ensures/body/spec_funs contains a `seq`
+            # literal node at all (grepped), so neither the inference nor
+            # the empty-literal default is exercised by anything committed
+            # (dated note, below).
+            args = e.get("args") or []
+            return ({"seq": "seq"}
+                    if args and self._ty(args[0], types) == "seq" else "seq")
         if op == "pair":
             # SPEC.md "Pairs" (2026-09-10): a `pair` node has no declared
             # type of its own to look up the way a `var` does, so it is
@@ -1711,18 +2121,32 @@ class Lower:
             # s[i := v] (SPEC.md "Sequences as values", 2026-09-09):
             # T_Update's own Pre is `at`'s definedness side condition,
             # discharged by the kernel at this call site exactly as Elem's
-            # is (UPDATE_PREAMBLE).
-            self.needs_update = True
+            # is (UPDATE_PREAMBLE). SPEC.md "Nested sequences (v1)",
+            # 2026-09-10: the SAME rendered text, "T_Update (...)", serves
+            # m[i := r] on a seq<seq> too (NESTED_UPDATE_PREAMBLE's own
+            # overload, resolved by Ada from S's own static type), so only
+            # the FLAG differs by whether S is nested.
             s, i, v = args
+            if _is_nested_seq(self._ty(e["args"][0], types)):
+                self.needs_update2 = True
+            else:
+                self.needs_update = True
             return f"T_Update ({s}, {i}, {v})"
         if op == "fill":
             # seq(n, v) (SPEC.md "Sequences as values", 2026-09-09).
             # T_Fill's own elementwise Post quantifies over T_Range, so a
             # task that only ever calls fill() still needs the range
             # preamble (FILL_PREAMBLE's own note).
-            self.needs_fill = True
+            # SPEC.md "Nested sequences (v1)", 2026-09-10: seq(n, r) with a
+            # row r is the outer overload (NESTED_FILL_PREAMBLE), same
+            # rendered text, told apart by v's own type.
             self.needs_range = True
             n, v = args
+            if self._ty(e["args"][1], types) == "seq":
+                self.needs_fill2 = True
+                self.needs_eq = True
+            else:
+                self.needs_fill = True
             return f"T_Fill ({n}, {v})"
         if op == "seq":
             # [e1, ..., en] (SPEC.md "Sequences: literals, concatenation,
@@ -1733,19 +2157,39 @@ class Lower:
             # recursive helper or Post is needed because Add's OWN Post
             # (SEQ_PREAMBLE's neighbour in the SPARKlib spec) already gives
             # gnatprove Length and Get at each step, statically unrolled.
-            out = "Seqs.Empty_Sequence"
+            # SPEC.md "Nested sequences (v1)", 2026-09-10: [[1,2],[3]], a
+            # nested literal, chains Rows.Add over ROW values instead --
+            # Seqs.Add and Rows.Add are different package-qualified names,
+            # not overloads of one identifier the way Len/Elem/T_Update and
+            # friends are, so this is the one Expr form that needed the
+            # package chosen by static type rather than left to Ada's own
+            # resolution (NESTED_SEQ_PREAMBLE's own note). Told apart by
+            # the first element's own type; the empty literal has no
+            # element to read this off and defaults to flat (Lower._ty's
+            # own note on this same ambiguity).
+            eargs = e.get("args") or []
+            nested = bool(eargs) and self._ty(eargs[0], types) == "seq"
+            pkg = "Rows" if nested else "Seqs"
+            out = f"{pkg}.Empty_Sequence"
             for a in args:
-                out = f"Seqs.Add ({out}, {a})"
+                out = f"{pkg}.Add ({out}, {a})"
             return out
         if op == "slice":
             # s[a..b] (SPEC.md "Sequences: literals, concatenation,
             # slices", 2026-09-09): T_Slice's own Pre is the definedness
             # side condition (0 <= a <= b <= len(s)), checked by the kernel
             # at this call site exactly as Elem's/T_Update's Pre are
-            # (SLICE_PREAMBLE).
-            self.needs_slice = True
+            # (SLICE_PREAMBLE). SPEC.md "Nested sequences (v1)",
+            # 2026-09-10: m[a..b] on a seq<seq> is the outer overload
+            # (NESTED_SLICE_PREAMBLE), same rendered text, told apart by
+            # S's own type.
             self.needs_range = True
             s, a, b = args
+            if _is_nested_seq(self._ty(e["args"][0], types)):
+                self.needs_slice2 = True
+                self.needs_eq = True
+            else:
+                self.needs_slice = True
             return f"T_Slice ({s}, {a}, {b})"
         if op == "pair":
             # (a, b) (SPEC.md "Pairs", 2026-09-10): a record aggregate,
@@ -1788,15 +2232,24 @@ class Lower:
             # projects one of those, and this is not guarded against, only
             # left unexercised.
             return f"{args[0]}.{'P_A' if op == 'fst' else 'P_B'}"
-        if op == "+" and self._ty(e["args"][0], types) == "seq":
-            # s + t on two seqs is concatenation (SPEC.md "Sequences:
-            # literals, concatenation, slices", 2026-09-09), told apart
-            # from int `+` by Lower._ty, above, since Ada's `+` is not
-            # polymorphic the way t's is (CONCAT_PREAMBLE).
-            self.needs_concat = True
-            self.needs_range = True
-            s, t = args
-            return f"T_Concat ({s}, {t})"
+        if op == "+":
+            ty0 = self._ty(e["args"][0], types)
+            if ty0 == "seq" or _is_nested_seq(ty0):
+                # s + t on two seqs is concatenation (SPEC.md "Sequences:
+                # literals, concatenation, slices", 2026-09-09), told apart
+                # from int `+` by Lower._ty, above, since Ada's `+` is not
+                # polymorphic the way t's is (CONCAT_PREAMBLE). SPEC.md
+                # "Nested sequences (v1)", 2026-09-10: m + n on two
+                # seq<seq>s is the outer overload (NESTED_CONCAT_PREAMBLE),
+                # same rendered text, told apart by ty0.
+                self.needs_range = True
+                s, t = args
+                if _is_nested_seq(ty0):
+                    self.needs_concat2 = True
+                    self.needs_eq = True
+                else:
+                    self.needs_concat = True
+                return f"T_Concat ({s}, {t})"
         if op == "neg":
             return f"(-{args[0]})"
         if op == "not":
@@ -1805,27 +2258,37 @@ class Lower:
             return f"(if {args[0]} then {args[1]} else True)"
         if op in NARY:
             return "(" + f" {NARY[op]} ".join(args) + ")"
-        if op in ("==", "!=") and self._ty(e["args"][0], types) == "seq":
-            # Whole-seq `==`/`!=` is extensional (SPEC.md "Sequences as
-            # values"), told apart from int/bool `==` the same way seq `+`
-            # is (Lower._ty, CONCAT_PREAMBLE's own note): Ada's own "=" is
-            # polymorphic enough to resolve t's `==` at Big_Integer and
-            # Boolean without help, but not at Seq, a private type inside a
-            # generic instantiation (EQ_PREAMBLE).
-            self.needs_eq = True
-            self.needs_range = True
-            eq = f"T_Eq ({args[0]}, {args[1]})"
-            return eq if op == "==" else f"(not {eq})"
+        if op in ("==", "!="):
+            ty0 = self._ty(e["args"][0], types)
+            if ty0 == "seq" or _is_nested_seq(ty0):
+                # Whole-seq `==`/`!=` is extensional (SPEC.md "Sequences as
+                # values"), told apart from int/bool `==` the same way seq
+                # `+` is (Lower._ty, CONCAT_PREAMBLE's own note): Ada's own
+                # "=" is polymorphic enough to resolve t's `==` at
+                # Big_Integer and Boolean without help, but not at Seq, a
+                # private type inside a generic instantiation (EQ_PREAMBLE).
+                # SPEC.md "Nested sequences (v1)", 2026-09-10: two seq<seq>s
+                # is the outer overload of T_Eq (NESTED_EQ_PREAMBLE), same
+                # rendered text, told apart by ty0.
+                self.needs_range = True
+                self.needs_eq = True
+                if _is_nested_seq(ty0):
+                    self.needs_eq2 = True
+                eq = f"T_Eq ({args[0]}, {args[1]})"
+                return eq if op == "==" else f"(not {eq})"
         if op in ("==", "!=") and isinstance(self._ty(e["args"][0], types),
-                                             dict):
+                                             dict) \
+                and "pair" in self._ty(e["args"][0], types):
             # Two pairs (SPEC.md "Pairs", 2026-09-10: "the polymorphic `==`
             # again, two ints, two bools, two seqs, two pairs"), told apart
             # from every other `==`/`!=` the same way seq `==` is
-            # (Lower._ty, just above). Always a NAMED call (_pair_preamble's
-            # own note): whether the pair's record type has a bare
-            # predefined "=" gnatprove can see or not, this file does not
-            # need to know which, per pair type, to pick between two
-            # renderings here.
+            # (Lower._ty, just above; "pair" in the dict rather than bare
+            # isinstance, so the nested seq type's own dict, {"seq": "seq"},
+            # is not mistaken for a pair, SPEC.md "Nested sequences (v1)").
+            # Always a NAMED call (_pair_preamble's own note): whether the
+            # pair's record type has a bare predefined "=" gnatprove can see
+            # or not, this file does not need to know which, per pair type,
+            # to pick between two renderings here.
             pty = self._ty(e["args"][0], types)
             t1, t2 = pty["pair"]
             self.needs_pair_eq.add((t1, t2))
@@ -2203,6 +2666,23 @@ def _cert_lit(v) -> str:
                     "seq" if isinstance(x, (list, tuple)) else "int")
         name = _pair_ada_name({"pair": [_kind(v.a), _kind(v.b)]})
         return f"{name}'(P_A => {_cert_lit(v.a)}, P_B => {_cert_lit(v.b)})"
+    if isinstance(v, (list, tuple)) and v and isinstance(v[0], (list, tuple)):
+        # SPEC.md "Nested sequences (v1)" (2026-09-10): a list of lists (or
+        # tuples), a ground nested witness, built as nested Rows.Add chains
+        # over each row's own flat Seqs.Add chain, the shape-based reading
+        # that pairs an isinstance check with a shape rather than a
+        # declared type (interp.exit_env's own raw return value can be one
+        # of these, the same reasoning as the list/tuple case just below).
+        # An EMPTY outer list falls through to the flat case below instead
+        # (the same bottom-up ambiguity Lower._ty's own note on the empty
+        # `seq` literal names): unreachable for either committed task,
+        # since both certificates read m's own value through
+        # _cert_lit_of_type (declared-type, unambiguous), never through
+        # this shape-based function.
+        out = "Rows.Empty_Sequence"
+        for row in v:
+            out = f"Rows.Add ({out}, {_cert_lit(list(row))})"
+        return out
     if isinstance(v, (list, tuple)):
         out = "Seqs.Empty_Sequence"
         for x in v:
@@ -2229,6 +2709,19 @@ def _cert_lit_of_type(v, ty) -> str:
     second time; a seq component recurses into the same literal `_cert_lit`
     itself builds, since a seq witness value is unambiguous once `ty` says
     "seq" rather than "pair"."""
+    if _is_nested_seq(ty):
+        # SPEC.md "Nested sequences (v1)" (2026-09-10): a seq<seq>-typed
+        # parameter's witness value, a list of row-lists, rendered as a
+        # Rows.Add chain, each row recursing into the SAME flat literal
+        # this function's own "seq" branch below builds (v1 has exactly
+        # one level, so this recurses at most once). Unlike a pair, `ty`
+        # already disambiguates unconditionally: no shape-based guess is
+        # needed here (contrast _cert_lit's own empty-list ambiguity, which
+        # this declared-type path never hits).
+        out = "Rows.Empty_Sequence"
+        for row in v:
+            out = f"Rows.Add ({out}, {_cert_lit_of_type(row, ty['seq'])})"
+        return out
     if isinstance(ty, dict):
         t1, t2 = ty["pair"]
         a, b = v
@@ -2412,6 +2905,15 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
         """`v` (JSON-shown) rebuilt as the Python shape interp.ev expects,
         told `ty` instead of guessing from `v`'s own shape -- the same
         tie-break _cert_lit_of_type makes on the Ada-text side."""
+        if _is_nested_seq(ty):
+            # SPEC.md "Nested sequences (v1)" (2026-09-10): a JSON list of
+            # row-lists rebuilt as a tuple of tuples, exactly the shape
+            # interp.ev already produces for a nested seq value (interp.py:
+            # `at`/`update`/`len` nest for free over plain tuples, no new
+            # Expr forms), so env_py holds the same value real execution
+            # would build here, unlike a pair (which needs an actual
+            # interp.Pair, distinct from a same-shaped tuple).
+            return tuple(_to_py(row, ty["seq"]) for row in v)
         if isinstance(ty, dict):
             t1, t2 = ty["pair"]
             a, b = v
@@ -2675,8 +3177,21 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # it exactly as a seq parameter always did. A pair with a seq
     # component (SPEC.md "Pairs", 2026-09-10) needs it too: the record's
     # own field is typed Seq (_pair_preamble).
+    # SPEC.md "Nested sequences (v1)" (2026-09-10): the same shape of scan
+    # needs_seq's own does, but for {"seq": "seq"}; needs_nested_seq widens
+    # needs_seq too (Rows is built OVER Seq, NESTED_SEQ_PREAMBLE's own
+    # note), the same way a pair with a seq component already widens it.
+    needs_nested_seq = (
+        any(_is_nested_seq(p["type"]) for p in task["params"])
+        or _is_nested_seq(ret["type"])
+        or any(_is_nested_seq(p["type"])
+              for sf in task.get("spec_funs", []) for p in sf["params"])
+        or any(_is_nested_seq(sf["result"])
+              for sf in task.get("spec_funs", []))
+        or locals_nested_seq(body))
     needs_seq = (
-        any(p["type"] == "seq" for p in task["params"])
+        needs_nested_seq
+        or any(p["type"] == "seq" for p in task["params"])
         or ret["type"] == "seq"
         or any(p["type"] == "seq"
               for sf in task.get("spec_funs", []) for p in sf["params"])
@@ -2784,18 +3299,30 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     parts += [f"package {pkg} with SPARK_Mode is", ""]
     if needs_seq:
         parts += [SEQ_PREAMBLE]
+    if needs_nested_seq:
+        parts += [NESTED_SEQ_PREAMBLE]
     if L.needs_update:
         parts += [UPDATE_PREAMBLE]
+    if L.needs_update2:
+        parts += [NESTED_UPDATE_PREAMBLE]
     if L.needs_range:
         parts += [RANGE_PREAMBLE]
     if L.needs_eq:
         parts += [EQ_PREAMBLE]
+    if L.needs_eq2:
+        parts += [NESTED_EQ_PREAMBLE]
     if L.needs_fill:
         parts += [FILL_PREAMBLE]
+    if L.needs_fill2:
+        parts += [NESTED_FILL_PREAMBLE]
     if L.needs_slice:
         parts += [SLICE_PREAMBLE]
+    if L.needs_slice2:
+        parts += [NESTED_SLICE_PREAMBLE]
     if L.needs_concat:
         parts += [CONCAT_PREAMBLE]
+    if L.needs_concat2:
+        parts += [NESTED_CONCAT_PREAMBLE]
     if L.needs_divmod:
         parts += [DIVMOD_PREAMBLE]
     if pair_types_used:

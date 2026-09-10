@@ -2343,6 +2343,297 @@ def f_v1pairs(rng, idx):
             "_shape": "eq_params"}
 
 
+NEST_T = {"seq": "seq"}     # SPEC.md "Nested sequences (v1)": seq<seq>
+
+
+def f_v1nested(rng, idx):
+    """SPEC.md "Nested sequences (v1)" (2026-09-10): `{"seq": "seq"}`, one
+    level, every seq operator polymorphic by static type already (no new
+    Expr forms -- `_valid_type`/`_ty` above, `ev`, `_sample_value` and
+    `invariant_load_bearing`'s `draw` all took this construct when the core
+    landed, 2026-09-10, commit 6c8061d). Ten shapes, over the census's own
+    population (scratchpad shapes-nested/run_output.txt, DafnyBench and
+    nl/): a bare `at`/`len`/`update`/`slice`/`+`/`==` composed one level
+    deeper is already well-typed, so this family's job is coverage of the
+    shapes that dominate, not new machinery.
+
+      param_rowlen   the DafnyBench shape (10 methods, Item 5): a nested
+                     PARAMETER read row by row under a single-binder
+                     `forall`, each iteration checking a `len(s[i])` fact
+                     against a parameter (AllSequencesEqualLength's own
+                     shape) -- INVARIANT-DROP twin.
+      build_matrix   the nl/ shape (3,008 locals, Item 1): a local matrix
+                     built by APPENDING ROWS in a loop (Item 2's "append
+                     row (s + [row])", `s + [row]` over `seq<seq>` rather
+                     than `f_v1seqops`'s own plain-seq append) -- also
+                     INVARIANT-DROP.
+      nested_lit     a nested literal with generation-time-fixed rows and
+                     elements, indexed directly (no parameter, no loop),
+                     `fz_p_nest_lit`'s own shape generalized over random
+                     shapes -- COLLAPSE-IF has nothing to collapse here (no
+                     `if`), so this shape is one of the "no-twin" instances
+                     `build_corpus` already refuses by design (measured on
+                     `f_v1seqops`'s loop-free shapes the same way).
+      cell_read      `s[i][j]` (`at(at(s,i),j)`) guarded by an `if` testing
+                     BOTH bounds (`fz_p_pair_seq`'s own idiom, read over a
+                     nested seq instead of a `(seq, int)` pair) --
+                     COLLAPSE-IF (the ladder's first rung, tried before
+                     DROP-GUARD ever is) already witnesses this shape: the
+                     unconditional `then` branch reads `at(m[i], j)` with
+                     no guard at all, undefined whenever the outer bound
+                     alone would have let a caller through, measured
+                     rather than assumed.
+      extreme_row    `row_max_len`'s own shape, generalized to `rng.choice`
+                     of max or min length over the rows -- INVARIANT-DROP.
+      row_swap_update `swap_rows`'s own shape, generalized: `rng.choice`
+                     of the committed swap or a single-row `update(m, i,
+                     u)` against a fresh row parameter `u` -- the twin
+                     ladder's `off-by-one` on the index, or `wrong-var` on
+                     `i`/`j`, is what a loop-free shape like this earns.
+      concat_nested  `m + n` on two nested PARAMETERS, `f_v1seqops`'s own
+                     `concat_params` one level deeper -- `off-by-one`/
+                     `wrong-var` on the split point.
+      slice_rows     `m[a..b]`, `f_v1seqops`'s own `window` one level
+                     deeper -- `off-by-one` on `a`/`b`.
+      eq_nested      `m == n` on two nested PARAMETERS as a bool return,
+                     the ensures restating SPEC.md's own componentwise rule
+                     (same length, equal rows) rather than the polymorphic
+                     `==` the body already computes, `f_v1pairs`'s own
+                     `eq_params` one level deeper -- `wrong-var` swapping
+                     `m` for `n` in one conjunct.
+      row_sum        a sum over ONE row's elements, `m[ri]` selected by a
+                     parameter: the body accumulates it with a real
+                     `while` loop (an int local, never a nested-seq loop
+                     variable), and the ensures states the exact total via
+                     a RECURSIVE spec_fun over the row (`f_v1rec`'s own
+                     gate-3 idiom, the only way v1 states an aggregate with
+                     no closed form, since summation is not one of the
+                     polymorphic ops SPEC.md lists) -- INVARIANT-DROP.
+                     Where SPEC.md was silent on how a sum composes with
+                     "the nested single-binder quantifier form" it names
+                     for a row (`forall i :: forall j :: ...`): that form
+                     states a BOUND or a WITNESS over a row (`extreme_row`
+                     and `param_rowlen` both use exactly it, one binder
+                     each, nested by the outer index), not an exact
+                     arithmetic total, so `row_sum` is the one shape that
+                     needs the recursion idiom instead and is not claimed
+                     to be an instance of the quantifier form itself.
+
+    Twins go through the GROUNDED ladder (harness.make_twin/twin_cached),
+    same as every other family; `_c_off_by_one`'s `at`/`update`/`slice`
+    arms and `_c_drop_guard`'s `and`-conjunct arm already generalize to a
+    nested read with no change (they match on the operator tag, not on
+    the operand's type), which is the same "no new machinery" property
+    the core landing gave `_ty`/`ev`."""
+    me = f"fz_v1nested_{idx:03d}"
+    shape = rng.choice(["param_rowlen", "build_matrix", "nested_lit",
+                        "cell_read", "extreme_row", "row_swap_update",
+                        "concat_nested", "slice_rows", "eq_nested",
+                        "row_sum"])
+
+    if shape == "param_rowlen":
+        body = [LOC("ok", "bool", BL(True)), LOC("i", "int", I(0)),
+               WH_DF(OP("<", V("i"), LEN("m")),
+                  [OP("==", V("ok"),
+                      FA("k", I(0), V("i"),
+                         OP("==", OP("len", AT("m", V("k"))), V("L")))),
+                   AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("m")))],
+                  OP("-", LEN("m"), V("i")),
+                  [IFS(OP("!=", OP("len", AT("m", V("i"))), V("L")),
+                       [ASG("ok", BL(False))], []),
+                   ASG("i", OP("+", V("i"), I(1)))]),
+               ASG("r", V("ok"))]
+        ens = [OP("==", V("r"),
+                  FA("i", I(0), LEN("m"),
+                     OP("==", OP("len", AT("m", V("i"))), V("L"))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "m", "type": NEST_T},
+                          {"name": "L", "type": "int"}],
+                "returns": [{"name": "r", "type": "bool"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "build_matrix":
+        body = [LOC("m", NEST_T, SEQ()), LOC("i", "int", I(0)),
+               WH_DF(OP("<", V("i"), LEN("s")),
+                  [OP("==", LEN("m"), V("i")),
+                   AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+                   FA("k", I(0), V("i"),
+                      AND(OP("==", OP("len", AT("m", V("k"))), I(1)),
+                         OP("==", OP("at", AT("m", V("k")), I(0)),
+                            AT("s", V("k")))))],
+                  OP("-", LEN("s"), V("i")),
+                  [ASG("m", CAT(V("m"), SEQ(SEQ(AT("s", V("i")))))),
+                   ASG("i", OP("+", V("i"), I(1)))]),
+               ASG("r", V("m"))]
+        ens = [OP("==", LEN("r"), LEN("s")),
+              FA("k", I(0), LEN("s"),
+                 AND(OP("==", OP("len", AT("r", V("k"))), I(1)),
+                    OP("==", OP("at", AT("r", V("k")), I(0)), AT("s", V("k")))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": NEST_T}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "nested_lit":
+        n_rows = rng.choice([0, 1, 1, 2, 2, 3])
+        rows = [[rng.choice(SMALL) for _ in range(rng.choice([0, 1, 2, 3]))]
+                for _ in range(n_rows)]
+        body = [ASG("r", SEQ(*[SEQ(*[I(v) for v in row]) for row in rows]))]
+        ens = [OP("==", LEN("r"), I(n_rows))]
+        for ri, row in enumerate(rows):
+            ens.append(OP("==", OP("len", AT("r", I(ri))), I(len(row))))
+            for ci, v in enumerate(row):
+                ens.append(OP("==", OP("at", AT("r", I(ri)), I(ci)), I(v)))
+        return {"t": 1, "name": me,
+                "params": [], "returns": [{"name": "r", "type": NEST_T}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "cell_read":
+        guard = AND(OP("<=", I(0), V("i")), OP("<", V("i"), LEN("m")),
+                   OP("<=", I(0), V("j")),
+                   OP("<", V("j"), OP("len", AT("m", V("i")))))
+        body = [IFS(guard, [ASG("r", OP("at", AT("m", V("i")), V("j")))],
+                   [ASG("r", I(0))])]
+        ens = [OP("implies", guard,
+                  OP("==", V("r"), OP("at", AT("m", V("i")), V("j")))),
+              OP("implies", OP("not", guard), OP("==", V("r"), I(0)))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "m", "type": NEST_T},
+                          {"name": "i", "type": "int"},
+                          {"name": "j", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "extreme_row":
+        kind = rng.choice(["max", "min"])
+        wide, narrow = (">", "<=") if kind == "max" else ("<", ">=")
+        body = [ASG("r", OP("len", AT("m", I(0)))), LOC("i", "int", I(1)),
+               WH_DF(OP("<", V("i"), LEN("m")),
+                  [FA("j", I(0), V("i"),
+                      OP(narrow, OP("len", AT("m", V("j"))), V("r"))),
+                   EX("j", I(0), V("i"),
+                      OP("==", OP("len", AT("m", V("j"))), V("r"))),
+                   AND(OP(">=", V("i"), I(1)), OP("<=", V("i"), LEN("m")))],
+                  OP("-", LEN("m"), V("i")),
+                  [IFS(OP(wide, OP("len", AT("m", V("i"))), V("r")),
+                       [ASG("r", OP("len", AT("m", V("i"))))], []),
+                   ASG("i", OP("+", V("i"), I(1)))])]
+        ens = [FA("k", I(0), LEN("m"),
+                  OP(narrow, OP("len", AT("m", V("k"))), V("r"))),
+              EX("k", I(0), LEN("m"),
+                 OP("==", OP("len", AT("m", V("k"))), V("r")))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "m", "type": NEST_T}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [OP(">", LEN("m"), I(0))],
+                "ensures": ens, "body": body, "_shape": f"extreme_row_{kind}"}
+
+    if shape == "row_swap_update":
+        op_kind = rng.choice(["swap", "update"])
+        if op_kind == "swap":
+            body = [ASG("r", OP("update",
+                               OP("update", V("m"), V("i"), AT("m", V("j"))),
+                               V("j"), AT("m", V("i"))))]
+            ens = [OP("==", LEN("r"), LEN("m")),
+                  OP("==", AT("r", V("i")), AT("m", V("j"))),
+                  OP("==", AT("r", V("j")), AT("m", V("i"))),
+                  FA("k", I(0), LEN("m"),
+                     OP("implies",
+                        AND(OP("!=", V("k"), V("i")), OP("!=", V("k"), V("j"))),
+                        OP("==", AT("r", V("k")), AT("m", V("k")))))]
+            req = [AND(OP("<=", I(0), V("i")), OP("<", V("i"), LEN("m"))),
+                  AND(OP("<=", I(0), V("j")), OP("<", V("j"), LEN("m")))]
+            return {"t": 1, "name": me, "gate": "quantifiers",
+                    "params": [{"name": "m", "type": NEST_T},
+                              {"name": "i", "type": "int"},
+                              {"name": "j", "type": "int"}],
+                    "returns": [{"name": "r", "type": NEST_T}],
+                    "requires": req, "ensures": ens, "body": body,
+                    "_shape": "row_swap"}
+        body = [ASG("r", OP("update", V("m"), V("i"), V("u")))]
+        ens = [OP("==", LEN("r"), LEN("m")),
+              OP("==", AT("r", V("i")), V("u")),
+              FA("k", I(0), LEN("m"),
+                 OP("implies", OP("!=", V("k"), V("i")),
+                    OP("==", AT("r", V("k")), AT("m", V("k")))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "m", "type": NEST_T},
+                          {"name": "i", "type": "int"},
+                          {"name": "u", "type": "seq"}],
+                "returns": [{"name": "r", "type": NEST_T}],
+                "requires": [AND(OP("<=", I(0), V("i")), OP("<", V("i"), LEN("m")))],
+                "ensures": ens, "body": body, "_shape": "row_update"}
+
+    if shape == "concat_nested":
+        body = [ASG("r", CAT(V("m"), V("n")))]
+        ens = [OP("==", LEN("r"), OP("+", LEN("m"), LEN("n"))),
+              FA("k", I(0), LEN("m"), OP("==", AT("r", V("k")), AT("m", V("k")))),
+              FA("k", I(0), LEN("n"),
+                 OP("==", AT("r", OP("+", V("k"), LEN("m"))), AT("n", V("k"))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "m", "type": NEST_T},
+                          {"name": "n", "type": NEST_T}],
+                "returns": [{"name": "r", "type": NEST_T}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "slice_rows":
+        body = [ASG("r", SLICE("m", V("a"), V("b")))]
+        ens = [OP("==", LEN("r"), OP("-", V("b"), V("a"))),
+              FA("k", I(0), LEN("r"),
+                 OP("==", AT("r", V("k")), AT("m", OP("+", V("a"), V("k")))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "m", "type": NEST_T},
+                          {"name": "a", "type": "int"},
+                          {"name": "b", "type": "int"}],
+                "returns": [{"name": "r", "type": NEST_T}],
+                "requires": [AND(OP("<=", I(0), V("a")),
+                                OP("<=", V("a"), V("b")),
+                                OP("<=", V("b"), LEN("m")))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "eq_nested":
+        body = [ASG("r", OP("==", V("m"), V("n")))]
+        ens = [OP("==", V("r"),
+                  AND(OP("==", LEN("m"), LEN("n")),
+                     FA("k", I(0), LEN("m"),
+                        OP("==", AT("m", V("k")), AT("n", V("k"))))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "m", "type": NEST_T},
+                          {"name": "n", "type": NEST_T}],
+                "returns": [{"name": "r", "type": "bool"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    # row_sum: r == the sum of row m[ri]'s elements, ri a parameter. The
+    # body accumulates it with a real loop; the ensures states the exact
+    # value through a recursive GHOST spec_fun (never called from the
+    # body -- f_v1rec's own body/spec_fun split, since not every lowering
+    # treats a spec_fun as executable).
+    sf = {"name": "rowsum",
+         "params": [{"name": "row", "type": "seq"}, {"name": "k", "type": "int"}],
+         "result": "int", "decreases": V("k"),
+         "body": ITE(OP("<=", V("k"), I(0)), I(0),
+                     OP("+", CALL("rowsum", V("row"), OP("-", V("k"), I(1))),
+                        AT("row", OP("-", V("k"), I(1)))))}
+    body = [LOC("row", "seq", AT("m", V("ri"))),
+           LOC("total", "int", I(0)), LOC("k", "int", I(0)),
+           WH_DF(OP("<", V("k"), LEN("row")),
+              [OP("==", V("total"), CALL("rowsum", V("row"), V("k"))),
+               AND(OP(">=", V("k"), I(0)), OP("<=", V("k"), LEN("row")))],
+              OP("-", LEN("row"), V("k")),
+              [ASG("total", OP("+", V("total"), AT("row", V("k")))),
+               ASG("k", OP("+", V("k"), I(1)))]),
+           ASG("r", V("total"))]
+    ens = [OP("==", V("r"),
+              CALL("rowsum", AT("m", V("ri")), OP("len", AT("m", V("ri")))))]
+    return {"t": 1, "name": me, "gate": "recursion",
+            "params": [{"name": "m", "type": NEST_T},
+                      {"name": "ri", "type": "int"}],
+            "returns": [{"name": "r", "type": "int"}],
+            "requires": [AND(OP("<=", I(0), V("ri")), OP("<", V("ri"), LEN("m")))],
+            "ensures": ens, "spec_funs": [sf], "body": body,
+            "_shape": "row_sum"}
+
+
 def f_wrong(rng, idx):
     """Category B: correct-by-construction, then ONE clause perturbed so the
     task is FALSE on a witness the interpreter finds. Every kernel must
@@ -2384,6 +2675,7 @@ FAMILIES = [
     ("v1seqval", f_v1seqval, 4),
     ("v1seqops", f_v1seqops, 4),
     ("v1pairs", f_v1pairs, 4),
+    ("v1nested", f_v1nested, 4),
     ("wrong", f_wrong, 3),
 ]
 
@@ -3072,6 +3364,107 @@ def probes() -> list[dict]:
         "definedness obligation, so the body has a value at every "
         "admitted input despite the projection reaching an operator that "
         "is undefined at zero")
+
+    # --- SPEC.md "Nested sequences (v1)" (2026-09-10): `s[i][j]` is
+    # `at(at(s,i),j)`, defined iff BOTH indices are in range; the if/ensures
+    # case split matches exactly, `fz_p_pair_seq`'s own idiom read over a
+    # nested seq instead of a `(seq, int)` pair. Measured, not assumed:
+    # COLLAPSE-IF (the ladder's first rung) already witnesses this shape
+    # before DROP-GUARD is ever tried -- the unconditional `then` branch
+    # reads at(m[i], j) with no guard at all, undefined whenever the guard
+    # was actually false (e.g. m = [], i = j = 0, where the real body's
+    # else branch is the one SPEC.md's semantics take).
+    _ncg = AND(OP("<=", I(0), V("i")), OP("<", V("i"), LEN("m")),
+              OP("<=", I(0), V("j")),
+              OP("<", V("j"), OP("len", AT("m", V("i")))))
+    add({"t": 1, "name": "fz_p_nest_cell", "gate": "quantifiers",
+         "params": [{"name": "m", "type": {"seq": "seq"}},
+                   {"name": "i", "type": "int"}, {"name": "j", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("implies", _ncg,
+                        OP("==", V("r"), OP("at", AT("m", V("i")), V("j")))),
+                     OP("implies", OP("not", _ncg), OP("==", V("r"), I(0)))],
+         "body": [IFS(_ncg, [ASG("r", OP("at", AT("m", V("i")), V("j")))],
+                      [ASG("r", I(0))])]},
+        "verified",
+        "the if/ensures case split matches exactly; COLLAPSE-IF (the "
+        "ladder's first rung) takes the unconditional then-branch, "
+        "undefined at m = [], i = j = 0, where the real body's guard is "
+        "false, expected refuted (ground_truth's undefined-body kind)")
+
+    # --- `len(s[i])` under a row-length fact: SPEC.md's census idiom (Item
+    # 5, DafnyBench: "a parameter consumed row by row under a single-binder
+    # forall with a len(s[i]) fact"), here as a direct requires/ensures
+    # restatement rather than a loop.
+    add({"t": 1, "name": "fz_p_nest_rowlen", "gate": "quantifiers",
+         "params": [{"name": "m", "type": {"seq": "seq"}},
+                   {"name": "i", "type": "int"}, {"name": "L", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [AND(OP("<=", I(0), V("i")), OP("<", V("i"), LEN("m"))),
+                     OP("==", OP("len", AT("m", V("i"))), V("L"))],
+         "ensures": [OP("==", V("r"), V("L"))],
+         "body": [ASG("r", OP("len", AT("m", V("i"))))]},
+        "verified",
+        "the body's own expression is len(m[i]); the requires' row-length "
+        "fact pins it to L directly, so r == L holds by substitution, no "
+        "loop needed")
+
+    # --- The nested literal, indexed directly: `len([[1, 2], [3]]) == 2`
+    # (SPEC.md's literal rule, one argument per row) and
+    # `len([[1, 2], [3]][1]) == 1` (row 1 is [3]), both true by
+    # construction, no parameter and no loop to obscure either.
+    add({"t": 1, "name": "fz_p_nest_lit",
+         "params": [], "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), BL(True))],
+         "body": [ASG("r", AND(
+             OP("==", OP("len", SEQ(SEQ(I(1), I(2)), SEQ(I(3)))), I(2)),
+             OP("==", OP("len", OP("at", SEQ(SEQ(I(1), I(2)), SEQ(I(3))),
+                                   I(1))), I(1))))]},
+        "verified",
+        "[[1, 2], [3]] has 2 rows and its row at index 1 is [3], length "
+        "1; both hold with no parameter and no loop, true by "
+        "construction")
+
+    # --- Extensional equality of two nested PARAMETERS (SPEC.md "Nested
+    # sequences": "two nested seqs are equal iff same length and equal
+    # rows"), the ensures restating that rule componentwise rather than the
+    # raw polymorphic `==` the body already computes; a twin flipping ONE
+    # cell (wrong-var substituting m for n in one occurrence) is the
+    # ladder's own candidate here, `f_v1pairs`'s `fz_p_pair_eq` one level
+    # deeper.
+    add({"t": 1, "name": "fz_p_nest_eq", "gate": "quantifiers",
+         "params": [{"name": "m", "type": {"seq": "seq"}},
+                   {"name": "n", "type": {"seq": "seq"}}],
+         "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"),
+                        AND(OP("==", LEN("m"), LEN("n")),
+                           FA("k", I(0), LEN("m"),
+                              OP("==", AT("m", V("k")), AT("n", V("k"))))))],
+         "body": [ASG("r", OP("==", V("m"), V("n")))]},
+        "verified",
+        "r is the body's own polymorphic == on two nested seqs; the "
+        "ensures restates SPEC.md's rule that two nested seqs are equal "
+        "iff same length and equal rows, one conjunct per row rather "
+        "than the raw m == n the body already computes")
+
+    # --- The empty nested literal at a declared slot: `[]` is ambiguous
+    # between a plain seq and a seq<seq> with no rows (SPEC.md "Nested
+    # sequences"), resolved by the `expect` hint at the assignment/return
+    # site; r's declared type is seq<seq>, so `len([]) == 0` holds of the
+    # empty NESTED seq specifically, not the plain one.
+    add({"t": 1, "name": "fz_p_nest_empty",
+         "params": [], "returns": [{"name": "r", "type": {"seq": "seq"}}],
+         "requires": [],
+         "ensures": [OP("==", LEN("r"), I(0))],
+         "body": [ASG("r", SEQ())]},
+        "verified",
+        "SPEC.md 'Nested sequences': [] is ambiguous between a plain seq "
+        "and a seq<seq> with no rows, resolved by the declared type at "
+        "the assignment; r's declared type is seq<seq>, so the `expect` "
+        "hint types [] as the empty nested seq, len 0")
     return P
 
 

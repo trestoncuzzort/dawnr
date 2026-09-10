@@ -883,6 +883,131 @@ relowered (real and twin) via `harness.run_task` into a scratch
 against the committed `out/*.c`. All fourteen files byte-identical;
 every reading matches AGREEMENT.md's own framac column unchanged,
 `reverse`'s own already-documented `verified / malformed` included.
+
+NESTED SEQUENCES (v1), added 2026-09-10 (SPEC.md "Nested sequences
+(v1)", ROADMAP 12.7, the wave after pairs). New type `{"seq": "seq"}`,
+written `seq<seq>`: a seq whose elements are seqs of ints, one level.
+No new Expr forms: every seq operator (the literal, `len`, `at`, `+`,
+`slice`, `update`, `fill`, `==`) is polymorphic by its operands' own
+static type, exactly as `+`'s int/seq split and pairs' `==` already
+are; `s[i]` is a row, itself a seq value, and `s[i][j]` is the
+notation's own chained `at(at(s, i), j)`.
+
+C has no nested sequence value any more than it has a plain one, so
+this is a further MEASURED encoding choice (the construct brief's own
+two named candidates for this column: "a named refusal or a flat
+encoding"), measured first on `row_max_len`, a nested seq PARAMETER
+read only through `len`/`at`, never built, before `swap_rows`, this
+construct's one BUILDING task, was attempted at all: read before
+build, RULES' own order.
+
+THE ENCODING: a flat buffer of ints plus an offsets array, `int
+*m_data, int *m_off, int m_n` for a seq<seq> parameter `m`. Row `i` is
+`m_data[m_off[i] .. m_off[i+1])`; `m_n` is the ROW COUNT, deliberately
+reusing this backend's existing `{name}_n` convention (a plain seq's
+`_n` is its element count) instead of a fresh name, because that is
+what lets `at_asserts`'s existing "at" tag, `defs()`'s existing "at"
+case, and `_seq_len_render`'s existing bare-variable fallback all
+handle `m`'s OUTER dimension (`len(m)`, `at(m, i)`'s own `0 <= i <
+m_n` bound) with no change at all, confirmed by running both committed
+tasks, not merely hoped. `seq_var()` was widened once, to recognize a
+seq<seq>-typed variable alongside a plain seq one (see its own
+docstring), and that single change is what lets all three of those
+pre-existing code paths pick up the nested case for free. Three
+implicit `requires` this lowering adds that no committed task's own
+`requires` states: `m_n >= 0`, `\valid_read(m_off + (0 .. m_n))`
+(`m_off` carries `m_n + 1` entries), `m_off[0] >= 0`, a
+monotone-offsets `\forall integer __t; 0 <= __t < m_n ==> m_off[__t]
+<= m_off[__t + 1]`, and `\valid_read(m_data + (0 .. m_off[m_n] - 1))`.
+Unlike the seq-trio's own CAPACITY mode, whose implicit lower bound is
+a LOOP INVARIANT because it is a fact about a LOCAL a loop body
+writes, these are all `requires`-time facts about the CALLER's own
+array with no loop in the way, so none of them needs an invariant of
+its own. Collision checks mirror the plain seq's own `{s}_n` check,
+extended to all three synthesized names, `{m}_data`/`{m}_off`/`{m}_n`.
+
+The only NEW rendering this construct adds is a ROW's LENGTH: `len(
+m[i])` renders as `(m_off[(i) + 1] - m_off[(i)])`, both in ACSL
+(`_seq_len_render`'s new "at" case) and in executable C (`cexpr()`'s
+and `_cert_cexpr()`'s matching "len" cases), a formula substitution
+over the offsets array, never a copy, the identical move
+`_seq_len_render`'s own pre-existing "slice" case already makes for
+`len(s[a..b])`. A bare ROW VALUE (`m[i]` reaching `at`'s own base, the
+chained `m[i][j]`, or `m[i]` reaching ACSL term position or executable
+position directly, never wrapped in `len`) has no rendering at all:
+`_seq_at_render`, `cexpr()`'s "at" case, and `_cert_cexpr()`'s "at"
+case each check the base's own type and raise NotImplementedError by
+name, rather than let `seq_var`'s pre-existing "non-variable" refusal
+fire on the wrong operand, or worse, silently reference a bare `m`
+this encoding never declares as a C name. Not exercised by either
+committed task (`row_max_len` only ever wraps `at(m, i)` in `len`),
+written for the same completeness reason `_cev`'s "update"/"fill"
+cases already are.
+
+MEASURED on `row_max_len` (`harness.run_task`, `out/agent-framac-
+nested`): real VERIFIED, 23/23 goals (Qed 12, Alt-Ergo 9, Terminating
+1, Unreachable 1, Smoke Tests 5/5). Twin `invariant-drop` (the dropped
+upper-bound invariant, "every row's length is at most `r`") REFUTED
+via `_exit_certificate`, witness `m=[[], [0]], i=2, r=0`, SPEC.md's own
+predicted witness matched exactly: 25/26 goals, the twin's own
+`ensures` an honest Stepout (genuinely false in general, untouched by
+the twin mutation rule), the certificate's own goal
+`t_refutation_certificate` proved alongside every other goal in its
+audit set, 5/5 smoke tests.
+
+`_exit_certificate` grew one nested-seq case: declaring a witness's
+nested value as a ground DATA array plus a ground OFFSETS array, built
+directly from the witness's own rows, the same flattening THE ENCODING
+above describes for a real parameter. That is the ONLY change the
+certificate machinery needed. `_cev`'s own "at"/"len" cases needed
+none, found by inspection rather than assumed: Python's `len()`/
+indexing already compose correctly over a nested list with no
+seq-specific code at all, so `_cev`'s generic `at`/`len` ground
+semantics already computed a row's length correctly before this
+construct existed; only the DECLARATION of a nested ground value into
+C needed new code.
+
+NAMED REFUSAL: `swap_rows`, this construct's one BUILDING task (`r :=
+update(update(m, i, m[j]), j, m[i])`), refuses wholesale at its own
+RETURN, before any C is emitted for it at all (`lower()`'s own check,
+immediately after reading the return type). A seq<seq> RETURN needs to
+BUILD a fresh row set, and this backend's flat data+offsets encoding
+has nothing to build one into: the seq VALUE machinery's own CAPACITY
+mode sizes ONE buffer's element count against ONE `ensures`-stated
+bound (`_ret_capacity`), and a built seq<seq> return would need a
+SECOND, independent bound for the offsets array's own row count
+(data-dependent the moment a row is appended rather than merely
+replaced), plus a data-dependent SUM of row lengths for the data
+array's own size; neither composes over the existing single-buffer
+machinery, and neither is stated by any committed task's `ensures`.
+Exactly the outcome SPEC.md's own "Nested sequences" section predicted
+for this column, "a named refusal or a flat encoding ... measured
+first": the flat encoding measures out for READING, not for BUILDING.
+
+Also named, by construction rather than measured against a real task
+(neither committed task needs any of these): a seq<seq>-typed LOCAL
+(`stmts()`'s "var" case, mirroring the plain seq-typed local's own
+pre-existing refusal); a seq<seq>-typed ASSIGN target (`stmts()`'s
+"assign" case, guarding the one remaining way a built nested value
+could reach C, reassigning a parameter in place); a row VALUE reaching
+`at`'s own base or ACSL/executable term position directly rather than
+through `len` (the chained `m[i][j]`, or a row passed onward), which
+falls through to `seq_var`'s pre-existing "non-variable" restriction
+the moment it is not a bare variable, and is refused by name at each
+of the three rendering points above when it IS one.
+
+REGRESSION, measured by diff, not by re-running frama-c (the same
+discipline the PAIRS note above uses for its own five-task check: the
+C text is byte-identical, and frama-c is deterministic on identical
+input): `abs`, `swap`, `tail`, `filter_pos`, `divmod_pair`, `min_max`,
+one task from each pre-nested-sequences construct wave, relowered
+(real and twin, twelve files) into a scratch
+`out/agent-framac-nested-regress` (never `out/` itself) and diffed
+against the committed `out/*.c`. All twelve files byte-identical: none
+of these six tasks has a seq<seq>-typed name anywhere, so `typ()`'s
+new `at` branch, `seq_var`'s widened check, and every new rendering
+case above are reached by none of them, and the file's existing
+behaviour for a plain seq, a pair, or neither is unaffected.
 """
 from __future__ import annotations
 
@@ -990,9 +1115,25 @@ def typ(e: dict, env: dict, funs: dict):
     if op in ("fst", "snd"):
         pt = typ(e["args"][0], env, funs)
         return pt["pair"][0 if op == "fst" else 1]
-    if op in ("len", "at", "neg") or op in ARITH or op in DIVMOD:
+    if op == "at":
+        # SPEC.md "Nested sequences" (2026-09-10): `at` is polymorphic by
+        # its BASE's own type, exactly as `+`/`==` already are by their
+        # operands': `at(m, i)` on a seq<seq> `m` is a ROW, itself a
+        # "seq" value (`m[i][j]` is the chained `at(at(m, i), j)`, an int
+        # again); `at` on a plain "seq" stays "int", unchanged.
+        bt = typ(e["args"][0], env, funs)
+        return "seq" if is_nested_seq_type(bt) else "int"
+    if op in ("len", "neg") or op in ARITH or op in DIVMOD:
         return "int"
     return "bool"                                # cmp, and, or, not, implies
+
+
+def is_nested_seq_type(t) -> bool:
+    """SPEC.md "Nested sequences" (2026-09-10): the type `{"seq": "seq"}`,
+    a seq whose elements are seqs of ints, one level. A plain dict check
+    (mirrors how a pair's type, `{"pair": [T1, T2]}`, is already told
+    apart from a bare "int"/"bool"/"seq" string)."""
+    return isinstance(t, dict) and t.get("seq") == "seq"
 
 
 def seq_var(e: dict, env: dict) -> str:
@@ -1002,9 +1143,19 @@ def seq_var(e: dict, env: dict) -> str:
     a nested `update`/`fill`/`at`; `stmts()`'s seq-assignment codegen is
     where `update`/`fill` themselves are consumed, always as the WHOLE
     right-hand side of an assignment to a seq-typed name, never nested
-    inside another expression)."""
-    if "var" in e and env.get(e["var"]) == "seq":
-        return e["var"]
+    inside another expression).
+
+    Extended 2026-09-10 (SPEC.md "Nested sequences") to also accept a
+    seq<seq>-typed variable: `m` in `len(m)`/`at(m, i)`/the loop guard's
+    `i < len(m)` is a bare variable exactly like a plain seq's own `s`,
+    only its C encoding differs (the flat data+offsets pair, THE ENCODING
+    note below `assigned_names`), which every caller of `seq_var` renders
+    by checking the variable's OWN type, not by this function returning
+    anything different."""
+    if "var" in e:
+        t = env.get(e["var"])
+        if t == "seq" or is_nested_seq_type(t):
+            return e["var"]
     raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
 
@@ -1021,6 +1172,27 @@ def _seq_len_render(e: dict, ctx) -> str:
     if e.get("op") == "slice":
         _, lo, hi = e["args"]
         return f"(({term(hi, ctx)}) - ({term(lo, ctx)}))"
+    if e.get("op") == "at":
+        # `len(m[i])` (SPEC.md "Nested sequences", 2026-09-10): `m[i]` is
+        # a ROW, itself a seq value, and this backend has no C VALUE for
+        # a bare row (THE ENCODING note below `assigned_names`), so its
+        # length is rendered directly as a formula over `m`'s own
+        # offsets array, never by materializing the row first: row `i`
+        # is `m_data[m_off[i] .. m_off[i+1])`, so its length is exactly
+        # `m_off[i+1] - m_off[i]`, the same "formula substitution, not a
+        # copy" move `slice`'s own case above already makes. Guarded to
+        # only the nested-base shape: `at` on a PLAIN seq is int-typed
+        # (`typ()`'s own polymorphism), and `len` of an int can never
+        # arise from a well-typed task, so reaching here with a
+        # non-nested base would be a caller bug, not a task this
+        # lowering must accept.
+        base, idx = e["args"]
+        if not is_nested_seq_type(typ(base, ctx.env, ctx.funs)):
+            raise NotImplementedError(
+                "`len(at(...))` with a non-nested-seq base: `at` on a "
+                "plain seq is int-typed and has no length")
+        m, i = seq_var(base, ctx.env), term(idx, ctx)
+        return f"({m}_off[({i}) + 1] - {m}_off[({i})])"
     v = seq_var(e, ctx.env)
     return ctx.seq_len.get(v, f"{v}_n")
 
@@ -1029,10 +1201,30 @@ def _seq_at_render(e: dict, k_render: str, ctx) -> str:
     """ACSL rendering of `at(e, k)`, `e` a READ-position SeqExpr and
     `k_render` the already-rendered index term. A slice's element `k` is
     the base's element `a + k` (`s[a..b][k] == s[a+k]`, SPEC.md's own
-    definition), again a formula rewrite, not a copy."""
+    definition), again a formula rewrite, not a copy.
+
+    NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested sequences"): `e`
+    itself a seq<seq> means this call is being asked to render a ROW
+    VALUE (`m[i]` reaching `at`/a further `at` as ITS OWN base, i.e. the
+    chained element read `m[i][j]`, or `m[i]` reaching ACSL term position
+    on its own). Neither committed task needs this (`row_max_len` only
+    ever wraps `at(m, i)` in `len`, `_seq_len_render`'s own new case
+    above; `swap_rows`, which would, is refused wholesale at its RETURN,
+    see `lower()`), and the flat data+offsets encoding has no backing
+    memory for a bare row value the way a plain seq's row already is one
+    (an `int *`/length pair) -- only the row's LENGTH has a formula here,
+    never the row itself. Falls through to `seq_var`'s own generic
+    refusal below when `e` is not even a bare variable (the pre-existing
+    behaviour for a chained `at`, unchanged)."""
     if e.get("op") == "slice":
         s, lo, _ = e["args"]
         return f"{seq_var(s, ctx.env)}[({term(lo, ctx)}) + ({k_render})]"
+    if is_nested_seq_type(typ(e, ctx.env, ctx.funs)):
+        raise NotImplementedError(
+            "nested seq (seq<seq>): a ROW reaching `at`'s own base, or "
+            "ACSL term position directly, has no rendering in the flat "
+            "data+offsets encoding; only `len(m[i])` (a row's LENGTH) is "
+            "supported, via `_seq_len_render`'s own `at` case")
     return f"{seq_var(e, ctx.env)}[{k_render}]"
 
 
@@ -1670,9 +1862,36 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         return f"{task_name}_t({', '.join(parts)})"
     op, args = e["op"], e.get("args", [])
     if op == "len":
-        return f"{seq_var(args[0], env)}_n"
+        a0 = args[0]
+        if a0.get("op") == "at":
+            # `len(m[i])` in EXECUTABLE position (SPEC.md "Nested
+            # sequences", 2026-09-10: `row_max_len`'s own body, `r = len(
+            # at(m, 0))` and `if len(at(m, i)) > r`). Same formula
+            # `_seq_len_render`'s matching ACSL-side case renders, over
+            # the offsets array, since a row has no C value to
+            # materialize first.
+            base, idx = a0["args"]
+            m = seq_var(base, env)
+            i = cexpr(idx, env, funs, task_name, _div_style)
+            return f"({m}_off[({i}) + 1] - {m}_off[({i})])"
+        return f"{seq_var(a0, env)}_n"
     if op == "at":
-        return (f"{seq_var(args[0], env)}"
+        # NAMED REFUSAL, added 2026-09-10: a nested seq's ROW reaching
+        # `at` in executable position directly (not `len`'s own operand,
+        # handled above) has no C representation (THE ENCODING note
+        # below `assigned_names`) -- rendering it as `m[i]` would be a
+        # SILENT WRONG lowering (`m` is never declared as a bare `int *`
+        # in this encoding, only `m_data`/`m_off`/`m_n` are), so this
+        # checks the base's own type rather than let a malformed C
+        # reference through.
+        base = args[0]
+        if is_nested_seq_type(typ(base, env, funs)):
+            raise NotImplementedError(
+                "nested seq (seq<seq>) `at` reaching executable position "
+                "directly (not wrapped in `len`): a row VALUE has no C "
+                "representation in the flat data+offsets encoding, only "
+                "its LENGTH does, via `len(m[i])`")
+        return (f"{seq_var(base, env)}"
                 f"[{cexpr(args[1], env, funs, task_name, _div_style)}]")
     if op == "pair":
         # (a, b) (SPEC.md "Pairs", 2026-09-10): a C99 compound literal for
@@ -2340,6 +2559,27 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
         if "assign" in s:
             name, e = s["assign"]
             assert name in ctx.env, f"assign to undeclared {name}"
+            if is_nested_seq_type(ctx.env[name]):
+                # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested
+                # sequences"): the only seq<seq>-typed names `ctx.env` can
+                # ever hold are the task's own PARAMETERS (a seq<seq>
+                # RETURN is refused wholesale in `lower()`, and a
+                # seq<seq>-typed `var` local is refused just below, in
+                # this same function), so this guards the one remaining
+                # way a BUILT nested value could reach C: reassigning a
+                # parameter in place. Same gap as the RETURN case, same
+                # reason (no CAPACITY-style machinery for a second,
+                # row-shaped dimension), stated here rather than left to
+                # fall into the plain `else` below, which would try to
+                # `cexpr()` an `update`/`fill`/`seq` node this backend has
+                # no executable rendering for at all and fail with a
+                # generic "no operator" `ValueError` instead of a named
+                # reason.
+                raise NotImplementedError(
+                    "nested seq (seq<seq>) assignment target: building a "
+                    "row set has no encoding in this lowering (see the "
+                    "seq<seq> RETURN refusal in `lower()`); only a "
+                    "seq<seq> PARAMETER, read via `len`/`at`, is supported")
             if ctx.env[name] == "seq":
                 out += seq_assign_lines(name, e, ctx, indent, ctx.funs,
                                         task_name)
@@ -2401,6 +2641,19 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
                     "seq-typed local variables are not supported by this "
                     "lowering (no requires-time bound to size a backing "
                     "buffer from); only a seq RETURN is implemented")
+            if is_nested_seq_type(v["type"]):
+                # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested
+                # sequences"): a seq<seq>-typed LOCAL is the identical gap
+                # as a plain seq-typed local just above, for the same
+                # reason (no requires-time bound to size a backing
+                # buffer from), and would in any case need to BUILD a
+                # fresh row set to initialize it, the same shape the
+                # seq<seq> RETURN refusal in `lower()` already names.
+                # Not exercised by either committed task.
+                raise NotImplementedError(
+                    "nested seq (seq<seq>) local variables are not "
+                    "supported by this lowering; only a seq<seq> "
+                    "PARAMETER, read via `len`/`at`, is supported")
             out += at_asserts(v["init"], ctx, indent, ctx.funs, task_name)
             ctx = ctx.bind(v["name"], v["type"])
             if isinstance(v["type"], dict) and "pair" in v["type"]:
@@ -2871,9 +3124,28 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
                        f"{'>' if ysign_pos else '<'} 0; */")
         return f"({quo} - ({'1' if ysign_pos else '-1'}))"
     if op == "len":
-        return f"{seq_var(args[0], ctx.env)}_n"
+        a0 = args[0]
+        if a0.get("op") == "at":
+            # `len(m[i])` inside a certificate replay (`row_max_len`'s
+            # own exit-witness twin, see `_exit_certificate`'s nested-seq
+            # declarations below): the same offsets-array formula
+            # `cexpr()`'s matching case renders, threaded through
+            # `_cert_cexpr` so a `div`/`mod` nested inside the row index
+            # still resolves branch-free at every level (mirrors why
+            # `_div_style` itself threads recursively, PAIRS section
+            # above).
+            base, idx = a0["args"]
+            m = seq_var(base, ctx.env)
+            i = _cert_cexpr(idx, ctx, st, funs, name, asserts, ind)
+            return f"({m}_off[({i}) + 1] - {m}_off[({i})])"
+        return f"{seq_var(a0, ctx.env)}_n"
     if op == "at":
-        return (f"{seq_var(args[0], ctx.env)}"
+        base = args[0]
+        if is_nested_seq_type(typ(base, ctx.env, funs)):
+            raise _CertSkip(
+                "nested seq (seq<seq>) `at` reaching certificate replay "
+                "directly (not wrapped in `len`)")
+        return (f"{seq_var(base, ctx.env)}"
                 f"[{_cert_cexpr(args[1], ctx, st, funs, name, asserts, ind)}]")
     if op == "pair":
         # divmod_pair's own case: `pair(div(x, y), mod(x, y))` has a
@@ -3381,7 +3653,44 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
     for n, v in names.items():
         if f"t_cert_{n}" in used:
             return None
-        if isinstance(v, list):
+        if is_nested_seq_type(env.get(n)):
+            # NESTED SEQ WITNESS, added 2026-09-10 (SPEC.md "Nested
+            # sequences"): `row_max_len`'s own invariant-drop twin (exit
+            # entailment at `m = [[], [0]]`). The witness's nested value
+            # is a ground Python list of lists (`interp._j`'s rendering,
+            # the same shape `_cev`'s own "at"/"len" cases already handle
+            # generically -- no `_cev` change was needed for this
+            # construct, only its DECLARATION here); this declares it the
+            # SAME WAY the real/twin C bodies see a seq<seq> parameter
+            # (THE ENCODING note in `lower()`'s `nested_seqs` requires
+            # loop): a ground DATA array (every row's elements
+            # concatenated in order) and a ground OFFSETS array (`n + 1`
+            # entries, `off[i]` the start of row `i`), built directly
+            # from the witness's own rows rather than reusing any
+            # runtime flattening helper (there is none; this is the one
+            # place a nested witness value is ever turned into C).
+            if not (isinstance(v, list) and all(isinstance(r, list)
+                                               for r in v)):
+                return None                # not a ground nested-seq witness
+            if f"t_cert_{n}_data" in used or f"t_cert_{n}_off" in used:
+                return None
+            data: list = []
+            off = [0]
+            for row in v:
+                data.extend(int(x) for x in row)
+                off.append(len(data))
+            data_arr, off_arr = f"t_cert_{n}_data", f"t_cert_{n}_off"
+            data_init = ", ".join(str(x) for x in data) or "0"
+            off_init = ", ".join(str(x) for x in off)
+            decls.append(f"  int {data_arr}[{max(len(data), 1)}] = "
+                         f"{{{data_init}}};")
+            decls.append(f"  int {off_arr}[{len(off)}] = {{{off_init}}};")
+            decls.append(f"  int *{n}_data = {data_arr};")
+            decls.append(f"  int *{n}_off = {off_arr};")
+            decls.append(f"  int {n}_n = {len(v)};")
+            ctx_env[n] = {"seq": "seq"}
+            st[n] = [list(row) for row in v]
+        elif isinstance(v, list):
             arr = f"t_cert_{n}"
             vals = [int(x) for x in v]
             init = ", ".join(str(x) for x in vals) or "0"
@@ -3483,6 +3792,39 @@ def _always_returns(body: list) -> bool:
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     name, ret = task["name"], task["returns"][0]["name"]
     rett = task["returns"][0]["type"]
+    if is_nested_seq_type(rett):
+        # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested sequences").
+        # Measured against `row_max_len` (a nested seq PARAMETER, read
+        # only) first, per RULES, before this construct's own committed
+        # BUILDING task, `swap_rows`, was even attempted: a seq<seq>
+        # RETURN needs to BUILD a fresh row set (`update`'s own two
+        # nested calls, `swap_rows`'s body), and this backend's flat
+        # data+offsets encoding (THE ENCODING note below
+        # `assigned_names`) has nothing to build one INTO. The offsets
+        # array itself is a second, row-shaped dimension the seq VALUE
+        # machinery's own CAPACITY mode (a length-tracking LOCAL threaded
+        # through `Ctx.seq_len`, sized against a single `ensures`-stated
+        # bound) does not compose over: CAPACITY mode sizes ONE buffer's
+        # element count against ONE bound; a built seq<seq> return would
+        # need the OFFSETS array's own count (the number of rows, itself
+        # data-dependent when a row is appended rather than merely
+        # replaced) sized against a second, independent bound no
+        # committed task's `ensures` states, and the DATA array's total
+        # size sized against a data-dependent SUM of row lengths, not a
+        # single scalar. Refused by name, exactly as SPEC.md's own
+        # "Nested sequences" section predicted for this column ("a named
+        # refusal or a flat encoding ... measured first"): swap_rows,
+        # this construct's one building task, hits this refusal at the
+        # earliest possible point, before any C is emitted for it at
+        # all. A seq<seq> PARAMETER, read only through `len`/`at`
+        # (`row_max_len`'s own shape), is supported below.
+        raise NotImplementedError(
+            "nested seq (seq<seq>) RETURN: building a fresh row set has "
+            "no encoding in this lowering (the flat data+offsets "
+            "encoding's CAPACITY machinery sizes one buffer against one "
+            "bound, not a row-shaped offsets array against a second, "
+            "data-dependent one); a seq<seq> PARAMETER, read via "
+            "`len`/`at`, is supported")
     env = {p["name"]: p["type"] for p in task["params"]}
     env[ret] = rett
 
@@ -3496,6 +3838,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                   "labeled": False, "is_task": True}
 
     seqs = [p["name"] for p in task["params"] if p["type"] == "seq"]
+    nested_seqs = [p["name"] for p in task["params"]
+                  if is_nested_seq_type(p["type"])]
     used = set()
 
     def names_in(x):
@@ -3514,6 +3858,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             raise NotImplementedError(
                 f"name {s}_n collides with the fresh length parameter "
                 f"for seq {s}")
+    for m in nested_seqs:
+        for suffix in ("_data", "_off", "_n"):
+            if f"{m}{suffix}" in used:
+                raise NotImplementedError(
+                    f"name {m}{suffix} collides with a fresh parameter "
+                    f"this lowering synthesizes for nested seq {m}")
 
     # PAIRS (SPEC.md "Pairs", 2026-09-10): a pair-typed RETURN's struct
     # type must be declared before anything in the file uses it (the
@@ -3618,6 +3968,58 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     for s in seqs:
         clauses.append(f"  requires {s}_n >= 0;")
         clauses.append(f"  requires \\valid_read({s} + (0 .. {s}_n - 1));")
+    for m in nested_seqs:
+        # THE ENCODING (SPEC.md "Nested sequences", 2026-09-10, measured
+        # first on `row_max_len`, a nested seq PARAMETER read only,
+        # before `swap_rows`'s BUILDING shape was even attempted, per
+        # RULES): a seq<seq> parameter is a flat buffer of ints plus an
+        # offsets array, `const int *m_data, const int *m_off, int m_n`
+        # (`const` dropped here since this backend already renders every
+        # seq param's own element type as plain, non-const `int *`, the
+        # `\valid_read` requires below being what actually keeps it
+        # read-only to WP, not the C qualifier). `m_n` is the ROW COUNT,
+        # reusing this backend's existing `{name}_n` convention (a plain
+        # seq's `_n` is its element count; a nested seq's `_n` is its row
+        # count) rather than inventing a second name -- this is what lets
+        # `at_asserts`'s existing "at" tag, `defs()`'s existing "at" case
+        # and `_seq_len_render`'s existing bare-var fallback ALL handle
+        # `m`'s OUTER dimension (`len(m)`, `at(m, i)`'s own bound) with
+        # NO changes at all, verified by inspection, not merely hoped:
+        # every one of those already renders `0 <= i < {v}_n` /
+        # `ctx.seq_len.get(v, f"{v}_n")` off of `seq_var`'s own return,
+        # and `seq_var` now recognizes a seq<seq> variable exactly as it
+        # already recognized a plain seq one (see `seq_var`'s own
+        # docstring). Row `i` is `m_data[m_off[i] .. m_off[i+1])`, so
+        # `m_off` has `m_n + 1` entries (index `m_n` is the total data
+        # length, `off[0]` the first row's own start, not assumed 0);
+        # `\valid_read` and the MONOTONE-OFFSETS requires below are
+        # exactly what the construct brief asked this lowering to add
+        # IMPLICITLY (a task's own `requires` never states either, and
+        # neither committed task's `requires`/`ensures` mentions `m_off`
+        # at all): without monotonicity a row's own length,
+        # `m_off[i+1] - m_off[i]` (`_seq_len_render`'s new "at" case,
+        # ACSL side; `cexpr()`'s matching case, executable side), could
+        # be NEGATIVE, which is not a memory-safety hole (ACSL's logic is
+        # total, `defs()`'s own docstring) but would be a wrong theorem
+        # about `len(m[i])` on a task whose real `requires` never
+        # constrains the encoding's own housekeeping array. `m_off[0] >=
+        # 0` anchors the first row's start (monotonicity alone would let
+        # every offset be pinned by an arbitrarily negative first entry);
+        # both are requires-time facts about the CALLER's own array,
+        # never proof obligations the body's own code must discharge, so
+        # neither needs an invariant, unlike CAPACITY mode's implicit
+        # LOWER bound on a length LOCAL a loop body actually writes (the
+        # seq-trio note's own CAPACITY discussion, above `assigned_names`
+        # / in `stmts()`'s `while` case) -- there is no loop here to
+        # requires-time facts to survive, they are simply given.
+        clauses.append(f"  requires {m}_n >= 0;")
+        clauses.append(f"  requires \\valid_read({m}_off + (0 .. {m}_n));")
+        clauses.append(f"  requires {m}_off[0] >= 0;")
+        clauses.append(
+            f"  requires \\forall integer __t; 0 <= __t < {m}_n "
+            f"==> {m}_off[__t] <= {m}_off[__t + 1];")
+        clauses.append(f"  requires \\valid_read({m}_data + "
+                       f"(0 .. {m}_off[{m}_n] - 1));")
     if rett == "seq":
         # The return's own buffer: caller-provided, WRITABLE (`\valid`,
         # not `\valid_read`), and pinned to the length the body's own
@@ -3660,6 +4062,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     for p in task["params"]:
         if p["type"] == "seq":
             cparams += [f"int *{p['name']}", f"int {p['name']}_n"]
+        elif is_nested_seq_type(p["type"]):
+            # THE ENCODING (2026-09-10): the flat data+offsets triple, see
+            # the `nested_seqs` requires loop above for the full measured
+            # rationale.
+            cparams += [f"int *{p['name']}_data", f"int *{p['name']}_off",
+                       f"int {p['name']}_n"]
         elif isinstance(p["type"], dict) and "pair" in p["type"]:
             # FIXED 2026-09-10 (see the section comment above
             # `_pair_field_c`): before this branch existed, a pair-typed

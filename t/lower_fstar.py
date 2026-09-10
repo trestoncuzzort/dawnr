@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""lower_fstar.py: lower t tasks (v0 and v1) to F*; the seventh kernel.
+r"""lower_fstar.py: lower t tasks (v0 and v1) to F*; the seventh kernel.
 
 F*'s type system does most of t's work natively; this file records exactly
 what is delegated to the kernel and what is refused:
@@ -513,6 +513,103 @@ with an F* keyword or carries an uppercase initial is no longer an abstain
 at all: `_rename_reserved` (2026-09-10) renames it, consistently, before
 any of this runs -- see that function's own module-level note.
 
+NESTED SEQUENCES (v1, SPEC.md "Nested sequences", 2026-09-10, the wave
+after Pairs). New type `{"seq": "seq"}`, a seq<seq>, a seq of seqs of
+ints, one level; no new Expr form, every existing seq operator polymorphic
+by its operands' static type exactly as `+`/`==` already were. Built as
+`Seq.seq (Seq.seq int)` (`_tystr`'s new dict branch, checked before the
+pair branch since both are dicts): `at`, `update`, `fill`, `seq` (the
+literal), `slice` and `+` all read their RESULT type off an OPERAND's type
+now (`Ctx.ty`, rewritten this note: `at`'s base decides int-vs-row,
+`update`/`slice` pass their container's type through unchanged, `fill`
+passes its fill-value's type up one level, a literal's first element
+decides row-vs-nested, the one SPEC.md-named gap being the empty literal
+`[]`, which keeps the v0 default with no declared-type context to
+disambiguate it -- neither committed task writes one). Rendering gained
+one method, `nx` (`sx`'s exact counterpart one level up, `px`'s own
+"trust the caller's ty()" posture rather than sx's older self-checking
+one), and one existing method gained a new case: `sx`'s own `at`, for a
+ROW extracted out of a nested base (`m[i]`), which chains into `zx`'s
+already-existing `at` (`m[i][j]`) with no changes needed there. `zx`'s
+`len` case, previously always `Seq.length (sx arg)`, now checks the
+argument's own type and calls `nx` instead when it is nested (`len(m)`,
+swap_rows' own `requires`) -- the one call site this construct's own
+first attempt got wrong (missed on the first pass, caught by
+swap_rows/row_max_len's own `requires`/`invariants` raising
+NotImplementedError on `{"var": "m"}` reaching `sx`, fixed before any
+task ran clean). `_literal` (the row literal's own `Seq.append (Seq.create
+1 e) ...` builder) gained two parameters, `elem`/`empty`, rather than a
+second copy: a plain literal's elements are ints (`elem=self.zx`
+default), a nested literal's or the certificate's own ground
+`_nested_seq` witness node's elements are ROWS (`nx` passes
+`elem=self.sx`, `empty="(Seq.createL #(Seq.seq int) [])"`), and
+`Seq.append`/`Seq.create 1` themselves need no new lemma either way,
+generic over any `Seq.seq 'a` (measured directly, this section's probes
+below). `Seq.upd`/`Seq.create`/`Seq.slice` are the same story: `nx`'s
+`update`/`fill`/`slice` cases call the identical F* function `sx`'s own
+row-level cases already call, one type argument higher, with a row
+argument (`sx`) where the row-level case has a scalar (`zx`).
+
+`==`/`!=` (SPEC.md: "extensional and recursive: two nested seqs are equal
+iff same length and equal rows") could NOT reuse a bare outer `Seq.equal`
+the way the row-level case does: MEASURED (nested_eq_probe2.fst, scratch
+probe, F* 2026.08.30) that `Seq.equal m0 m0alt` on two nested seqs whose
+rows are pointwise-equal but built by different combinator chains
+(`Seq.append`/`Seq.create 1` vs two `Seq.upd` on a `Seq.create`) is Error
+19, "could not prove" -- `Seq.equal`'s own definition unfolds to `length
+s1 = length s2 /\ forall i. index s1 i == index s2 i`, and at the outer
+level that inner `==` compares two ROWS with F*'s bare, non-extensional
+equality, never triggering `Seq.equal`'s own SMTPat'd lemmas on the rows
+themselves (those need the literal term `Seq.equal <row> <row>` to appear
+in the query, exactly the row-level case's own established rule one type
+down). The fix, in `prop` only, writes that term explicitly, one row at a
+time: `Seq.length a = Seq.length b /\ (forall (k:nat{k < Seq.length a}).
+Seq.equal (Seq.index a k) (Seq.index b k))`, `k` a fresh name
+(`self.fresh()`) so a nested `==` under an outer quantifier can never
+capture it; MEASURED to verify with no assist on the identical two-rows
+case the bare outer form failed on (nested_eq_probe2.fst, second half).
+`bx` (computational position) is a NAMED REFUSAL instead, not a further
+rendering: MEASURED that `Seq.eq` (the decidable bool form) DOES
+typecheck one level up (nested_bool_probe.fst, a reflexive instance
+discharges with no assist), but its postcondition `r <==> Seq.equal a b`
+is only as good as `Seq.equal` itself is at this level, which the
+paragraph above just measured false in general -- so a `Seq.eq` here
+would carry a postcondition this file cannot discharge without the same
+row-wise formula `prop` builds by hand, and a hand-built formula with a
+`forall` in it is not itself a decidable bool (`bx`'s own quantifier
+ABSTAIN, unchanged, would refuse the honest version of the same thing
+anyway). Neither committed task needs this: swap_rows/row_max_len's own
+equalities are all ROW-level (`r[i] == m[j]`, `at`'s new base-decides-the-
+type rule routing them to the pre-existing `t == "seq"` case) or int
+(lengths); built and measured ahead of SPEC.md's polymorphism claim and
+the fuzz family `v1nested`, which may need it.
+
+`update`/`Seq.upd`, `fill`/`Seq.create`, `+`/`Seq.append`, `slice`/
+`Seq.slice`, chained `Seq.index`, and the empty `Seq.createL #(Seq.seq
+int) []` dummy/literal spelling were all confirmed generic at the nested
+level with NO new lemma and no assist beyond what the row level already
+needed (nested_probe.fst, F* 2026.08.30, `Verified module` on every
+construct in one file: an empty nested seq, a two-row literal built by
+the append/create1 chain, chained `m[i][j]` indexing, `Seq.upd`/
+`Seq.append`/`Seq.slice`/`Seq.create` at the outer level, and a reflexive
+instance of the hand-built row-wise equality formula above). Measured on
+both committed tasks (out/agent-fstar-nested/, F* 2026.08.30): swap_rows
+COUNTS (off-by-one, witness m=[[]], i=0, j=0, the shifted `at`/`update`
+index running off the single-row outer seq, real `[[]]`, twin's own
+`Seq.upd` index 1 outside [0,1)) and row_max_len COUNTS (invariant-drop,
+witness exit at m=[[], [0]], i=2, r=0, the dropped upper-bound invariant
+letting the loop exit with the wrong `r`) -- the identical twins and
+witnesses SPEC.md's own committed-task paragraph names, needing no new
+twin-ladder move for either. Regression: abs/swap/tail/filter_pos's real
+and twin fst bytes are unchanged (byte-identical to the pre-existing
+out/<name>.fst); divmod_pair_twin.fst/min_max_twin.fst's CERTIFICATE lines
+differ from the committed out/ copies by a ground `fst`/`snd` projection
+this file's own PRE-EXISTING `_proj_pair` ("ground-pair certificate fix",
+this file's own 2026-09-10 note, untouched by this construct) already
+reduces on the current file -- a staleness in those two committed
+reference copies from before that fix's own last regeneration, not
+something this construct's own code touches or changes.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -549,8 +646,25 @@ def _tystr(t) -> str:
     a CALLER decides whether the resulting string needs parenthesizing for
     ITS OWN embedding context (a bare `Pure` position; a hand-built `&`-
     join of several state variables, where an inner pair's own `&` would
-    otherwise be indistinguishable from the join's)."""
+    otherwise be indistinguishable from the join's).
+
+    A second dict shape, `{"seq": "seq"}` (SPEC.md "Nested sequences",
+    2026-09-10), is the OTHER new type since pairs: a finite seq whose
+    elements are seqs of ints, one level, written `seq<seq>`. Built as
+    `Seq.seq ({_tystr(inner)})`, which for the only inner value v1 allows
+    (the bare string "seq") reduces to exactly `Seq.seq (Seq.seq int)`,
+    the spelling SPEC.md's "Each lowering uses its kernel's own nested
+    sequence" line commits this column to. The recursive call is
+    PARENTHESIZED here, unlike `_tystr`'s own pair branch, because F*
+    type APPLICATION (`Seq.seq <arg>`) needs its argument atomic when that
+    argument is itself more than one token (`Seq.seq Seq.seq int` would
+    parse `Seq.seq` applied to `Seq.seq`, then that whole application to
+    `int`, not `Seq.seq` applied to `(Seq.seq int)`) -- the exact opposite
+    of the pair branch's own reasoning right above, where application
+    binding tighter than infix `&` was what let it skip the parens."""
     if isinstance(t, dict):
+        if "seq" in t:
+            return f"Seq.seq ({_tystr(t['seq'])})"
         t1, t2 = t["pair"]
         return f"{_tystr(t1)} & {_tystr(t2)}"
     return TY[t]
@@ -594,9 +708,20 @@ def _statecomp(t) -> str:
     from a pair sitting beside a third value), so it alone needs its own
     parens here. No committed task threads a pair-typed variable through a
     multi-var loop state yet; this exists so one could without silently
-    misgrouping the tuple."""
+    misgrouping the tuple.
+
+    A nested-seq component (SPEC.md "Nested sequences", 2026-09-10,
+    `{"seq": "seq"}`) is the SAME unambiguous shape `Seq.seq int` already
+    is, one application deeper: `Seq.seq (Seq.seq int)` has no top-level
+    `&` of its own to be confused with the join's, so it is excluded from
+    the parenthesized branch below exactly like a bare seq is, and only a
+    pair component keeps the parens `isinstance(t, dict)` alone used to
+    trigger. No committed task threads a nested-seq-typed variable through
+    a multi-var loop state either; this is the same forward-compatible
+    posture as the pair note above, not a change either committed task's
+    own generated bytes can see."""
     s = _tystr(t)
-    return f"({s})" if isinstance(t, dict) else s
+    return f"({s})" if isinstance(t, dict) and "pair" in t else s
 
 
 RESERVED = {
@@ -924,6 +1049,13 @@ class Ctx:
             return "bool"
         if "_seq" in e:
             return "seq"
+        if "_nested_seq" in e:
+            # SPEC.md "Nested sequences" (2026-09-10): the certificate's
+            # own ground witness node for a nested-seq value, `_seq`'s
+            # exact counterpart one level up (lower_verus.py's `_tlit`,
+            # shared across every kernel; this file only ever renders
+            # what it produces, never builds one).
+            return {"seq": "seq"}
         if "var" in e:
             return local.get(e["var"]) or self.tys[e["var"]]
         if "forall" in e or "exists" in e:
@@ -944,15 +1076,56 @@ class Ctx:
         if op in ("fst", "snd"):
             pt = self.ty(e["args"][0], local)
             return pt["pair"][0 if op == "fst" else 1]
-        if op in ("update", "fill", "seq", "slice"):
+        if op == "at":
+            # SPEC.md "Nested sequences" (2026-09-10): `at`'s result is
+            # now polymorphic by the BASE's type, exactly like every other
+            # seq op here -- `s[i]` is an int when `s` is a plain seq (the
+            # v0 reading, unchanged) and a ROW (a plain seq value) when
+            # `s` is a `seq<seq>`, so `s[i][j]`'s outer `at` sees an inner
+            # `at` whose own type is now "seq" rather than falling through
+            # to the ARITH/at-is-always-int bucket below.
+            t0 = self.ty(e["args"][0], local)
+            return "seq" if isinstance(t0, dict) and "seq" in t0 else "int"
+        if op == "seq":
+            # A literal's own type is "seq" (a row of ints) unless its
+            # first element is itself seq-typed, in which case every
+            # element is a row and the literal is a `seq<seq>` (SPEC.md
+            # "Nested sequences": "the literal, every element a seq
+            # expression"). The empty literal `[]` has no element to read
+            # a type off and keeps the v0 default (a row), the one gap
+            # SPEC.md itself names ("the empty nested seq where the
+            # declared type says so") and neither committed task needs:
+            # swap_rows/row_max_len never write an empty nested literal.
+            args = e["args"]
+            if args and self.ty(args[0], local) == "seq":
+                return {"seq": "seq"}
             return "seq"
-        if op == "+" and self.ty(e["args"][0], local) == "seq":
+        if op == "update":
+            # `update(s, i, r)`'s result is `s`'s own type, row or nested
+            # alike (replacing one element never changes the container's
+            # type), so this reads it off the container rather than
+            # hardcoding "seq" the way v0 did before nesting existed.
+            return self.ty(e["args"][0], local)
+        if op == "fill":
+            # `fill(n, r)` is `n` copies of `r`: a row of ints when `r` is
+            # an int (v0's only case) and a `seq<seq>` of rows when `r` is
+            # itself a row, read off `r`'s own type rather than assumed.
+            return {"seq": "seq"} if self.ty(e["args"][1], local) == "seq" \
+                else "seq"
+        if op == "slice":
+            # `s[a..b]`'s result is `s`'s own type, exactly like `update`.
+            return self.ty(e["args"][0], local)
+        if op == "+":
             # SPEC.md "Sequences: literals, concatenation, slices": `+` is
             # polymorphic by operand type exactly as `==` already is, so
             # the ARITH table below (which only ever means int `+`) is
-            # consulted only once a seq-typed left operand is ruled out.
-            return "seq"
-        if op in ARITH or op in ("neg", "len", "at"):
+            # consulted only once a seq- or nested-seq-typed left operand
+            # is ruled out (SPEC.md "Nested sequences": "`s + t` ...
+            # concatenation of rows").
+            t0 = self.ty(e["args"][0], local)
+            if t0 == "seq" or (isinstance(t0, dict) and "seq" in t0):
+                return t0
+        if op in ARITH or op in ("neg", "len"):
             return "int"
         return "bool"
 
@@ -984,6 +1157,19 @@ class Ctx:
             items = "; ".join(str(int(v)) for v in e["_seq"])
             return f"(Seq.createL #int [{items}])"
         op = e.get("op")
+        if op == "at":
+            # SPEC.md "Nested sequences" (2026-09-10): a seq position
+            # reached through `at` is a ROW, `m[i]`, defined the same
+            # `0 <= i < len(m)` way a plain `at` always was; the base `m`
+            # is therefore nested-typed (a row-typed base's `at` is an
+            # int, `zx`'s own `at` case, never reaches here). `Seq.index`
+            # applied to a `Seq.seq (Seq.seq int)` is the SAME F* function
+            # `zx`'s `at` case already calls, one type argument higher --
+            # measured directly (this file's dated note below): no second
+            # spelling is needed for the outer level.
+            s, i = e["args"]
+            return f"(Seq.index {self.nx(s, env, local)} " \
+                   f"{self.zx(i, env, local)})"
         if op == "update":
             s, i, v = e["args"]
             return (f"(Seq.upd {self.sx(s, env, local)} "
@@ -1068,7 +1254,61 @@ class Ctx:
                    f"{_render(self, b, tb, env, local)})"
         raise NotImplementedError(f"pair position holds non-variable {e!r}")
 
-    def _literal(self, args: list, env: dict, local: dict) -> str:
+    def nx(self, e: dict, env: dict, local: dict) -> str:
+        """Nested-seq-valued term, `Seq.seq (Seq.seq int)` (SPEC.md "Nested
+        sequences", 2026-09-10): `sx`'s exact structural counterpart one
+        level up, the way `px` is `sx`'s at the pair type. A nested-seq
+        position is a variable, looked up through `env` on the same trust
+        `px`'s own "var" case already extends -- the caller's `ty()`-
+        computed dispatch (`_render`, below) is what decided this position
+        is nested at all, so this method does not re-check the type the
+        way `sx`'s own "var" case still does (that check predates `px`,
+        the older of the two conventions in this file); a ground
+        `_nested_seq` witness node (only the refutation certificate
+        produces one: a list of `_seq` row nodes, `sx` already renders
+        each, so `_literal` is reused rather than copied); or `update`/
+        `fill`/`seq`/`+`/`slice` themselves, each the identical F*
+        combinator `sx`'s own row-level case already calls (`Seq.upd`/
+        `Seq.create`/`Seq.append`/`Seq.slice` are generic over any element
+        type in FStar.Seq.Base, `Seq.seq 'a`, measured directly at the
+        nested level too, this file's dated note below) with a ROW
+        argument -- rendered by `sx`, not `zx` -- wherever the row-level
+        case renders a scalar. `at` has no case here: `m[i]` is a row (an
+        `sx` position, that method's own new "at" case), never itself
+        nested again (SPEC.md "New type": one level only, no third level
+        in v1), so a nested-seq expression is never itself the result of
+        indexing. Anything else is an honest ABSTAIN, exactly `sx`'s and
+        `px`'s own posture for the parallel gap."""
+        if "var" in e:
+            return env.get(e["var"], e["var"])
+        if "_nested_seq" in e:
+            return self._literal(e["_nested_seq"], env, local, self.sx,
+                                  "(Seq.createL #(Seq.seq int) [])")
+        op = e.get("op")
+        if op == "update":
+            s, i, v = e["args"]
+            return (f"(Seq.upd {self.nx(s, env, local)} "
+                    f"{self.zx(i, env, local)} {self.sx(v, env, local)})")
+        if op == "fill":
+            n, v = e["args"]
+            return f"(Seq.create {self.zx(n, env, local)} " \
+                   f"{self.sx(v, env, local)})"
+        if op == "seq":
+            return self._literal(e["args"], env, local, self.sx,
+                                  "(Seq.createL #(Seq.seq int) [])")
+        if op == "+":
+            s, t = e["args"]
+            return (f"(Seq.append {self.nx(s, env, local)} "
+                    f"{self.nx(t, env, local)})")
+        if op == "slice":
+            s, a, b = e["args"]
+            return (f"(Seq.slice {self.nx(s, env, local)} "
+                    f"{self.zx(a, env, local)} {self.zx(b, env, local)})")
+        raise NotImplementedError(
+            f"nested seq position holds non-variable {e!r}")
+
+    def _literal(self, args: list, env: dict, local: dict, elem=None,
+                 empty: str = "(Seq.createL #int [])") -> str:
         """`[e1, ..., en]` (SPEC.md "Sequences: literals, concatenation,
         slices"), n >= 0. Rendered as nested `Seq.append (Seq.create 1 ei)
         ...`, bottoming out at a bare `Seq.create 1 en` for the last
@@ -1095,24 +1335,49 @@ class Ctx:
         no measured benefit. The empty literal `[]` keeps the existing
         `Seq.createL #int []` spelling (the ground `_seq` literal's own,
         established 2026-09-06/09), since `Seq.append`/`Seq.create` has no
-        zero-argument form of its own to fall back on."""
+        zero-argument form of its own to fall back on.
+
+        `elem`/`empty` (SPEC.md "Nested sequences", 2026-09-10) generalise
+        this one level: a plain row literal's elements are ints (`elem`
+        defaults to `self.zx`, `empty` to the row's own `Seq.createL #int
+        []`), a `seq<seq>` literal's elements are ROWS instead (`nx` calls
+        this with `elem=self.sx`, `empty="(Seq.createL #(Seq.seq int)
+        [])"`), and the certificate's ground `_nested_seq` witness node
+        (`nx`'s own case) is the SAME shape one more time, a list of `_seq`
+        row nodes `sx` already renders, so it reuses this exact function
+        rather than a second copy of the append/create1 recursion. Nothing
+        about the recursion itself changes: `Seq.append`/`Seq.create 1` is
+        generic over any element type in FStar.Seq.Base (`Seq.seq 'a`),
+        measured directly at the nested level too (this file's dated note
+        below), so the SAME lemma set the row-level docstring above names
+        covers a row-of-rows literal with no new lemma and no new pattern."""
+        if elem is None:
+            elem = self.zx
         if not args:
-            return "(Seq.createL #int [])"
+            return empty
         head, *rest = args
-        h = self.zx(head, env, local)
+        h = elem(head, env, local)
         if not rest:
             return f"(Seq.create 1 {h})"
-        return f"(Seq.append (Seq.create 1 {h}) {self._literal(rest, env, local)})"
+        return f"(Seq.append (Seq.create 1 {h}) " \
+               f"{self._literal(rest, env, local, elem, empty)})"
 
     def call(self, e: dict, env: dict, local: dict) -> str:
         c = e["call"]
         info = self.funs[c["fun"]]
         parts = [c["fun"]]
         for formal, a in zip(info["params"], c["args"], strict=True):
-            if formal["type"] == "seq":
+            ft = formal["type"]
+            if ft == "seq":
                 parts.append(self.sx(a, env, local))
-            elif formal["type"] == "bool":
+            elif ft == "bool":
                 parts.append(self.bx(a, env, local))
+            elif isinstance(ft, dict) and "seq" in ft:
+                # SPEC.md "Nested sequences" (2026-09-10): a seq<seq>
+                # formal, threaded through exactly like a plain seq one,
+                # `nx` in place of `sx`. No committed task calls a
+                # spec_fun or itself with a nested-seq argument yet.
+                parts.append(self.nx(a, env, local))
             else:
                 parts.append(self.zx(a, env, local))
         return "(" + " ".join(parts) + ")"
@@ -1134,7 +1399,19 @@ class Ctx:
             return self.call(e, env, local)
         op = e.get("op")
         if op == "len":
-            return f"(Seq.length {self.sx(e['args'][0], env, local)})"
+            # SPEC.md "Nested sequences" (2026-09-10): `len` on the OUTER
+            # nested seq (`len(m)`, swap_rows' own `requires`) needs `nx`
+            # here, not `sx` -- the row case (`len(m[i])`, row_max_len's)
+            # is unchanged, since `self.ty` on a row-typed argument is
+            # still the bare string "seq". `Seq.length` itself is generic
+            # over any `Seq.seq 'a` either way, so only the ARGUMENT'S own
+            # rendering needs to pick the right one of the two, not the
+            # combinator.
+            arg = e["args"][0]
+            t = self.ty(arg, local)
+            base = (self.nx(arg, env, local) if isinstance(t, dict) and
+                    "seq" in t else self.sx(arg, env, local))
+            return f"(Seq.length {base})"
         if op == "at":
             return (f"(Seq.index {self.sx(e['args'][0], env, local)} "
                     f"{self.zx(e['args'][1], env, local)})")
@@ -1206,6 +1483,30 @@ class Ctx:
                 a, b = (self.sx(x, env, local) for x in e["args"])
                 core = f"(Seq.eq {a} {b})"
                 return core if op == "==" else f"(not {core})"
+            if isinstance(t, dict) and "seq" in t:
+                # SPEC.md "Nested sequences" (2026-09-10): named refusal,
+                # not a measured F* limit -- `Seq.eq` DOES typecheck one
+                # level up (probed directly, nested_bool_probe.fst, F*
+                # 2026.08.30: `Seq.eq` on two `Seq.seq (Seq.seq int)`
+                # values typechecks and a reflexive instance discharges),
+                # but its postcondition `r <==> Seq.equal a b` is only as
+                # good as `Seq.equal` itself is at THIS level, and the
+                # prop case below measures that bare outer `Seq.equal`
+                # fails (Error 19) the moment two extensionally-but-not-
+                # referentially-equal rows are compared -- so a `Seq.eq`
+                # here would carry a postcondition this file cannot
+                # discharge without the SAME row-wise formula the prop
+                # case builds by hand, and a hand-built formula is not
+                # itself a decidable bool. No committed task needs a
+                # nested `==`/`!=` in computational position (both of
+                # swap_rows/row_max_len's equalities are ROW-level, the
+                # `t == "seq"` case just above, or int); refused by name
+                # rather than emitting a `Seq.eq` this file cannot back.
+                raise NotImplementedError(
+                    "fstar lowering: nested-seq equality has no decidable "
+                    "computational rendering here (SPEC.md \"Nested "
+                    "sequences\"); write it in a requires/ensures/"
+                    "invariant instead")
             if isinstance(t, dict):
                 # SPEC.md "Pairs": componentwise, the polymorphic `==`
                 # again. Rendered component-by-component rather than as
@@ -1334,6 +1635,46 @@ class Ctx:
                 a, b = (self.sx(x, env, local) for x in e["args"])
                 core = f"(Seq.equal {a} {b})"
                 return core if op == "==" else f"(~ {core})"
+            elif isinstance(t0, dict) and "seq" in t0:
+                # SPEC.md "Nested sequences" (2026-09-10): "two nested
+                # seqs are equal iff same length and equal rows" --
+                # rendered as a hand-built formula, never a bare outer
+                # `Seq.equal`. MEASURED (nested_eq_probe2.fst, scratch
+                # probe, F* 2026.08.30): with two rows that are pointwise-
+                # equal but built by different combinator chains
+                # (`Seq.append`/`Seq.create 1` vs two `Seq.upd` on a
+                # `Seq.create`), a bare `Seq.equal m0 m0alt` at the OUTER
+                # level alone is Error 19, "could not prove" -- the exact
+                # gap the row-level note just above already measured one
+                # type down (a bare F* `==` between two such seqs, not
+                # `Seq.equal` itself) recurring one level up, because
+                # `Seq.equal`'s own definition is `length s1 = length s2
+                # /\\ forall i. index s1 i == index s2 i`, and at the outer
+                # level that inner `==` compares two ROWS with F*'s bare,
+                # non-extensional equality, never invoking `Seq.equal`'s
+                # own SMTPat'd lemmas on the rows themselves (those fire
+                # only when the literal term `Seq.equal <row> <row>`
+                # appears in the query, exactly the `sx`-case note's own
+                # rule one level down). The fix writes that term
+                # explicitly, one per row, so its own pattern fires: `same
+                # length /\\ forall k. Seq.equal (index a k) (index b k)`,
+                # MEASURED to verify on the identical two-rows case the
+                # bare outer form failed on, no further assist. `k` is a
+                # fresh name (`self.fresh()`), not the bound `k` swap_rows'
+                # own forall happens to use, so a nested `==` inside an
+                # outer quantifier can never capture it. No committed task
+                # exercises this (swap_rows/row_max_len compare only ROWS,
+                # the `t0 == "seq"` case above, never two nested seqs
+                # directly); built and measured for SPEC.md's polymorphism
+                # claim and the fuzz family `v1nested`'s own twins, which
+                # may.
+                a, b = (self.nx(x, env, local) for x in e["args"])
+                k = self.fresh()
+                core = (f"((Seq.length {a} = Seq.length {b}) /\\ "
+                        f"(forall ({k}:nat{{{k} < Seq.length {a}}}). "
+                        f"Seq.equal (Seq.index {a} {k}) "
+                        f"(Seq.index {b} {k})))")
+                return core if op == "==" else f"(~ {core})"
             elif isinstance(t0, dict):
                 # SPEC.md "Pairs": componentwise, the polymorphic `==`
                 # again (two ints, two bools, two seqs, two pairs).
@@ -1436,12 +1777,20 @@ def _render(cx: "Ctx", e: dict, t, env: dict, local: dict) -> str:
     same way -- this is the one call site both `exec_flow` (assign/var-init/
     return) and `Ctx.px` itself (a pair's own two components) share, so a
     pair-typed loop local or a pair nested one level inside `pair(a, b)`'s
-    own arguments both resolve to the identical rule."""
+    own arguments both resolve to the identical rule. `t` a dict with a
+    `"seq"` key (SPEC.md "Nested sequences", 2026-09-10: `{"seq": "seq"}`)
+    dispatches to `nx` instead, checked first since it is also a dict: a
+    seq<seq>-typed slot (swap_rows's own return `r`) is threaded through
+    `env` the identical way, and `nx`'s own `update`/`fill`/`+`/`slice`
+    cases (a nested local or return reassigned across an if-merge or a
+    loop iteration) share this one call site too."""
     if t == "bool":
         return cx.bx(e, env, local)
     if t == "seq":
         return cx.sx(e, env, local)
     if isinstance(t, dict):
+        if "seq" in t:
+            return cx.nx(e, env, local)
         return cx.px(e, env, local)
     return cx.zx(e, env, local)
 
@@ -1454,12 +1803,19 @@ def _dummy(t) -> str:
     `_seq: []`, rather than a second spelling of the same empty sequence.
     A pair type (SPEC.md "Pairs", 2026-09-10) recurses one level into its
     two components' own dummies -- T1/T2 are always base types, no pair of
-    pairs, so this bottoms out immediately."""
+    pairs, so this bottoms out immediately. A nested-seq type (SPEC.md
+    "Nested sequences", 2026-09-10, checked first since it is also a dict)
+    is the empty ROW-of-rows literal `nx`'s own `_nested_seq: []` case
+    renders, `Seq.createL #(Seq.seq int) []` -- the empty spelling one
+    type argument up from the plain-seq case right above, not a second
+    encoding of it."""
     if t == "bool":
         return "false"
     if t == "seq":
         return "(Seq.createL #int [])"
     if isinstance(t, dict):
+        if "seq" in t:
+            return "(Seq.createL #(Seq.seq int) [])"
         t1, t2 = t["pair"]
         return f"({_dummy(t1)}, {_dummy(t2)})"
     return "0"

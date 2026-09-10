@@ -274,6 +274,109 @@ v1 mapping, gate by gate (SPEC.md):
     `out/reverse.dfy`, `out/reverse_twin.dfy`, `out/tail.dfy`,
     `out/tail_twin.dfy`, `out/filter_pos.dfy`, `out/filter_pos_twin.dfy`.
 
+  nested sequences (added 2026-09-10, SPEC.md "Nested sequences (v1)"):
+    Dafny's own `seq<seq<int>>`, no new Expr forms, same as SPEC.md states
+    and the same shape as the seqops wave: `{"seq": "seq"}` is `seq<{TYPES
+    ["seq"]}>` (`dafny_type()`, one more branch alongside the pair one,
+    gated on which key the type dict carries rather than unpacking
+    `t["pair"]` unconditionally); the literal, `len`, `at`, `+`, `slice`,
+    `update`, `fill` and `==`/`!=` needed NOT ONE new codegen case, because
+    `expr()` already lowers every one of them generically off Dafny's own
+    overload resolution (measured directly: `at(at(m, i), j)` was already
+    lowering to `m[i][j]`, the chained postfix SPEC.md asks for, before
+    this wave touched the file, since `at`'s codegen is `f"{args[0]}
+    [{args[1]}]"` and a nested `at` is just another `args[0]`). `dafny_type
+    ()` is the only change the MAIN lowering (params, returns, `var`
+    locals) needed.
+      What DID need work, same shape as the pairs wave one level down: the
+    certificate path, for the SAME reason pairs needed `_tlit(v, ty)`
+    type-directed rather than shape-guessed. An empty nested seq (zero
+    rows) and an empty flat seq are both the Python value `[]`; swap_rows's
+    own witness carries `m = [[]]` (ONE empty row, not zero rows), so `_tlit`
+    gained a `ty`-directed branch, gated on the type dict's key (`"pair"`
+    vs the nested `"seq"`) rather than assuming pair, tagging a nested
+    value `_seq2` (a tuple of tuples) rather than reusing `_seq` (a flat
+    tuple), so a same-shaped flat and nested empty seq are never conflated
+    by `_name_seqs`. `_name_seqs` and the naming step in `_certificate`
+    (`seq_names`) each gained a SECOND table (`nseq_names`, keyed by
+    tuple-of-tuples) rather than sharing one, for the identical reason: one
+    dict keyed only by value would let a flat witness's name answer for a
+    nested literal of the same shape. `_seq_lit` gained a sibling,
+    `_nseq_lit`, one row-print per element (`_seq_lit` again) rather than
+    `str(x)` on each element directly. Measured, and NOT assumed: `_ev`'s
+    operator dispatch (`at`/`update`/`fill`/`slice`/`+`/`==`), `_ev_undef`/
+    `_DefViol`'s mirror of it, and `_scope_types` needed NO changes at all,
+    the first two because Python's own list operations are already
+    agnostic to whether an element is an int or a row (an out-of-range
+    `at`/`update` on `m` raises the same two-part index guard regardless of
+    what `m`'s elements are, and a CHAINED `at(at(m,i),j)` failing on the
+    inner index already builds its guard from the ROW's own length, no
+    seq-typed literal in the guard at all, so an inner-row definedness
+    violation was never a gap to begin with), the third because it already
+    stored each name's raw JSON type dict verbatim, seq or otherwise,
+    unlike `_scope_types` itself, which the pairs wave had to ADD.
+      One real bug surfaced, not introduced by nesting itself but only
+    reachable through it: `subst()`'s leaf check, `"int" in e or "bool" in
+    e or "_seq" in e: return e`, had no case for the new `_seq2` tag, so
+    the first substitution of a nested-seq witness into `loop["cond"]`/
+    `invariants` (row_max_len's exit-kind path, which calls `subst`
+    directly, unlike the value-kind path this file's `_unroll` also
+    reaches) fell through to `subst`'s final line, `{"op": e["op"], ...}`,
+    and raised `KeyError: 'op'` on a tag dict with no `"op"` key. Measured
+    before the fix: row_max_len read REFUSED, "real verified, invariant-
+    drop twin unproved" (the KeyError caught by `_certificate`'s broad
+    except, same as any other refusal). Fixed by adding `_seq2` to the
+    same leaf line; `_unroll`'s own tree-walk needed nothing, its default
+    (`return e` when no `forall`/`exists`/`ite`/`call`/`op` key is present)
+    already passed an unrecognized tag through unchanged, which is how the
+    existing `_seq` tag survived it too. swap_rows's own certificate never
+    reached `subst` with a nested tag before `_unroll` (its witness is
+    "undefined"-kind, substituted once via `m` alone, no invariant list),
+    so the bug was invisible until the second task exercised the exit-kind
+    path, exactly the order (swap_rows first, row_max_len second) this
+    file measured them in, not designed to expose it.
+      Two named refusals, neither exercised by either committed task, both
+    verified directly rather than guessed: (1) a pair with a nested-seq
+    component, or a nested seq three deep, both illegal in SPEC.md's own
+    grammar (a pair's T1/T2 are `"int"`/`"bool"`/`"seq"` only; a nested
+    seq's row is always the elementary `"seq"`), fail immediately and
+    loudly in `dafny_type()`: `TYPES[t]` on a dict key raises `TypeError:
+    unhashable type: 'dict'` at the type-declaration site, before any
+    certificate work, measured directly on both shapes. (2) a spec_fun
+    called with a nested-seq argument would cost the certificate: `_key()`
+    tags every list `("seq", tuple(v))` regardless of depth, and `tuple(v)`
+    over a nested value is a tuple of LISTS, unhashable, so `_ev`'s "call"
+    case raises `TypeError` building the `facts` dict key, caught by
+    `_certificate`'s existing broad except, a refusal, not a crash and not
+    a wrong lowering; measured directly (`_key([[1],[2]])` composed into a
+    dict key raises `TypeError: unhashable type: 'list'`). Neither
+    committed task has a spec_fun, so this path is not reached by either.
+      Measured, own column, on tasks/swap_rows.json and
+    tasks/row_max_len.json (`harness.run_task`, this file's `lower`, the
+    real dafny kernel, into `out/agent-dafny-nested/`): `swap_rows` COUNTS,
+    real VERIFIED, off-by-one twin REFUTED, witness m=[[]], i=0, j=0 (real
+    r=[[]], the twin's second `update` shifted to index `j+1=1`, outside
+    `[0,1)` for `|m|=1`, "the shifted index running off the single row"
+    SPEC.md names); the accepted certificate states `!((0<=1)&&(1<1))`,
+    ground, no seq-typed operand at all, the same shape swap's own
+    off-by-one certificate has one level down. `row_max_len` COUNTS, real
+    VERIFIED, invariant-drop twin REFUTED, witness exit at m=[[], [0]],
+    i=2, r=0 (the dropped upper-bound invariant lets the loop exit at i=2
+    with r stuck at 0, violating `|m[1]| <= r`); the accepted certificate
+    is the exit-entailment conjunction over the let-bound `m: seq<seq<int>>
+    := [[], [0]];`, the same `_twin_loop`/`interp.exit_env` path
+    filter_pos's own invariant-drop certificate already uses, needing no
+    new machinery of its own once `_tlit`/`_name_seqs`/`subst` could carry
+    a nested value. Regression, six pre-existing tasks sampled directly
+    (`abs`, `swap`, `tail`, `filter_pos`, `divmod_pair`, `min_max`, one
+    from each earlier wave this file has a certificate path for): all six
+    still COUNT, and their lowered output, real and twin, is byte-
+    identical (`cmp`) to the committed `out/abs.dfy`, `out/abs_twin.dfy`,
+    `out/swap.dfy`, `out/swap_twin.dfy`, `out/tail.dfy`,
+    `out/tail_twin.dfy`, `out/filter_pos.dfy`, `out/filter_pos_twin.dfy`,
+    `out/divmod_pair.dfy`, `out/divmod_pair_twin.dfy`, `out/min_max.dfy`,
+    `out/min_max_twin.dfy`.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -302,13 +405,18 @@ TYPES = {"int": "int", "bool": "bool", "seq": "seq<int>"}
 
 def dafny_type(t) -> str:
     """The declared-type string for a param, return or local: TYPES[t] for
-    the three base types, and Dafny's own built-in tuple type `(T1, T2)` for
-    a pair type `{"pair": [T1, T2]}` (SPEC.md "Pairs", 2026-09-10). T1/T2 are
-    always base types (no pair of pairs, SPEC.md), so this never recurses
-    past one level."""
+    the three base types, Dafny's own built-in tuple type `(T1, T2)` for a
+    pair type `{"pair": [T1, T2]}` (SPEC.md "Pairs", 2026-09-10), and
+    Dafny's own `seq<seq<int>>` for the nested-seq type `{"seq": "seq"}`
+    (SPEC.md "Nested sequences", 2026-09-10). T1/T2 are always base types
+    (no pair of pairs, SPEC.md) and a nested seq's row is always the
+    elementary "seq" (no three levels, SPEC.md), so neither branch ever
+    recurses past one level."""
     if isinstance(t, dict):
-        t1, t2 = t["pair"]
-        return f"({TYPES[t1]}, {TYPES[t2]})"
+        if "pair" in t:
+            t1, t2 = t["pair"]
+            return f"({TYPES[t1]}, {TYPES[t2]})"
+        return f"seq<{TYPES[t['seq']]}>"
     return TYPES[t]
 
 
@@ -645,19 +753,28 @@ def _tlit(v, ty=None):
     """A measured witness value as a t literal expression. Negative ints
     become neg nodes so they emit parenthesized, `(-1)`, and never fuse
     with a preceding operator. `ty` is the value's own t type when the
-    caller knows it (a task's param or return type); it matters only for a
+    caller knows it (a task's param or return type); it matters for a
     pair (SPEC.md "Pairs", 2026-09-10): interp._j renders a Pair as a plain
     2-list, indistinguishable BY SHAPE from a same-length seq of ints (a
     divmod_pair witness's `r` and a 2-element seq witness both arrive here
     as `[a, b]` with a and b plain ints), so a pair-typed value MUST be
     built from `ty`, never guessed from the Python shape, on pain of
     silently naming it a seq (see `_certificate`'s seq_names guard, same
-    fix). Every other case is still inferred from shape alone, unchanged,
-    because int/bool/seq values never lie about their shape the way a
-    (int, int) pair does."""
+    fix); and for a nested seq (SPEC.md "Nested sequences", 2026-09-10), a
+    problem one level down from the same shape ambiguity: an EMPTY nested
+    seq (zero rows) and an EMPTY flat seq are both the Python value `[]`,
+    so swap_rows's own witness m=[[]] (ONE empty row, not zero rows) needs
+    `ty` to be told apart from a same-shaped flat seq, and is tagged
+    `_seq2` rather than `_seq` so `_name_seqs`/`_certificate` never
+    conflate the two kinds of seq name. Every other case is still inferred
+    from shape alone, unchanged, because int/bool/flat-seq values never
+    lie about their shape the way a pair or a nested seq's row count
+    does."""
     if isinstance(ty, dict):
-        t1, t2 = ty["pair"]
-        return {"op": "pair", "args": [_tlit(v[0], t1), _tlit(v[1], t2)]}
+        if "pair" in ty:
+            t1, t2 = ty["pair"]
+            return {"op": "pair", "args": [_tlit(v[0], t1), _tlit(v[1], t2)]}
+        return {"_seq2": tuple(tuple(row) for row in v)}
     if isinstance(v, bool):
         return {"bool": v}
     if isinstance(v, int):
@@ -677,7 +794,7 @@ def subst(e: dict, m: dict) -> dict:
     if "var" in e:
         v = m.get(e["var"])
         return e if v is None else v
-    if "int" in e or "bool" in e or "_seq" in e:
+    if "int" in e or "bool" in e or "_seq" in e or "_seq2" in e:
         return e
     if "ite" in e:
         c = e["ite"]
@@ -767,6 +884,8 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         return e, e["bool"]
     if "_seq" in e:
         return e, list(e["_seq"])
+    if "_seq2" in e:
+        return e, [list(row) for row in e["_seq2"]]
     if "var" in e:
         if e["var"] not in env:
             raise interp.Undef(f"unbound {e['var']}")
@@ -923,33 +1042,51 @@ def _unroll(e: dict, funs: dict, st, budget: list, bounds: list) -> dict:
     return e
 
 
-def _name_seqs(e: dict, names: dict, used: dict) -> dict:
+def _name_seqs(e: dict, names: dict, used: dict,
+               nnames: dict, nused: dict) -> dict:
     """Replace every seq literal by the witness name bound to that value
-    (see the certificate section: `[]` needs a typed binding). A value
-    with no name refuses the certificate (KeyError)."""
+    (see the certificate section: `[]` needs a typed binding). `_seq`
+    (flat) and `_seq2` (nested, SPEC.md "Nested sequences", 2026-09-10)
+    are looked up in separate name tables (`names`/`nnames`): a flat and a
+    nested witness can both be empty, the same `()` key, so keeping them
+    in one table would let a flat name answer for a nested literal or vice
+    versa, the exact conflation `_tlit`'s own two tags exist to prevent. A
+    value with no name in its own table refuses the certificate
+    (KeyError)."""
     if "_seq" in e:
         key = tuple(e["_seq"])
         used[key] = names[key]
         return {"var": names[key]}
+    if "_seq2" in e:
+        key = e["_seq2"]
+        nused[key] = nnames[key]
+        return {"var": nnames[key]}
     if "ite" in e:
         c = e["ite"]
-        return {"ite": {"cond": _name_seqs(c["cond"], names, used),
-                        "then": _name_seqs(c["then"], names, used),
-                        "else": _name_seqs(c["else"], names, used)}}
+        return {"ite": {"cond": _name_seqs(c["cond"], names, used, nnames, nused),
+                        "then": _name_seqs(c["then"], names, used, nnames, nused),
+                        "else": _name_seqs(c["else"], names, used, nnames, nused)}}
     if "call" in e:
         c = e["call"]
         return {"call": {"fun": c["fun"],
-                         "args": [_name_seqs(a, names, used)
+                         "args": [_name_seqs(a, names, used, nnames, nused)
                                   for a in c["args"]]}}
     if "op" in e:
         return {"op": e["op"],
-                "args": [_name_seqs(a, names, used)
+                "args": [_name_seqs(a, names, used, nnames, nused)
                          for a in e.get("args", [])]}
     return e
 
 
 def _seq_lit(v: tuple) -> str:
     return "[" + ", ".join(str(x) for x in v) + "]"
+
+
+def _nseq_lit(v: tuple) -> str:
+    """A nested-seq witness's own literal: `_seq_lit` one level up, since
+    each row is itself a flat int tuple that `_seq_lit` already renders,
+    so `((), (0,))` prints `[[], [0]]`, not `[(), (0,)]`."""
+    return "[" + ", ".join(_seq_lit(row) for row in v) + "]"
 
 
 # ------------------------------------------------- "undefined"-kind witness
@@ -1234,6 +1371,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             seen.setdefault(json.dumps(h, sort_keys=True), h)
         formula = _conj(list(seen.values()))
         seq_names: dict = {}
+        nseq_names: dict = {}
         for n, v in names.items():
             # scope_types-gated (SPEC.md "Pairs", 2026-09-10): a pair-typed
             # name whose two components are both plain ints renders the same
@@ -1243,11 +1381,20 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             # lowering, not a refusal. Only an actual seq-typed name is
             # named here (params, the return, or a body local, all covered
             # by `_scope_types`); a pair-typed name is left for `_tlit`/
-            # `expr` to render as a tuple literal wherever it occurs.
-            if scope_types.get(n) == "seq" and isinstance(v, list):
+            # `expr` to render as a tuple literal wherever it occurs. A
+            # nested-seq-typed name (SPEC.md "Nested sequences",
+            # 2026-09-10) is named into its OWN table, `nseq_names`, keyed
+            # by a tuple-of-tuples rather than `seq_names`'s tuple-of-ints,
+            # so an empty flat seq and an empty nested seq (both `()`
+            # shape-wise, one level apart) never collide in one dict.
+            t = scope_types.get(n)
+            if t == "seq" and isinstance(v, list):
                 seq_names.setdefault(tuple(v), n)
+            elif t == {"seq": "seq"} and isinstance(v, list):
+                nseq_names.setdefault(tuple(tuple(row) for row in v), n)
         used: dict = {}
-        formula = _name_seqs(formula, seq_names, used)
+        nused: dict = {}
+        formula = _name_seqs(formula, seq_names, used, nseq_names, nused)
         ladder: list[str] = []
         ladder_seqs: dict = {}
         if len(facts) <= _LADDER_CAP:
@@ -1272,6 +1419,8 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         return None
     lets = "".join(f"var {n}: seq<int> := {_seq_lit(v)}; "
                    for v, n in used.items())
+    lets += "".join(f"var {n}: seq<seq<int>> := {_nseq_lit(v)}; "
+                    for v, n in nused.items())
     lines = [f"lemma {CERT_NAME}()", f"  ensures {lets}{body}", "{"]
     lines += [f"  var {n}: seq<int> := {_seq_lit(v)};"
               for v, n in ladder_seqs.items()]

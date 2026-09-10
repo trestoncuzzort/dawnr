@@ -800,6 +800,195 @@ seven committed pair-adjacent tasks (`divmod_pair`, `min_max`, `abs`,
 all fourteen files byte-identical, and all seven still COUNT exactly as
 in AGREEMENT.md; this fix touches nothing about a task that doesn't put
 a bool-sorted `fst`/`snd` directly into spec position.
+
+NESTED SEQUENCES (2026-09-10, SPEC.md "Nested sequences (v1)", ROADMAP
+12.7): `{"seq": "seq"}`, a seq of seqs of ints, one level, written
+`seq<seq>` -- no new Expr form, every existing seq operator (literal,
+`len`, `at`, `+`, `slice`, `update`, `fill`, `==`) polymorphic by its
+operands' STATIC TYPE, exactly as `+`/`==` already were before this.
+Two committed tasks: `swap_rows` (loop-free, twin `off-by-one`) and
+`row_max_len` (a loop over row lengths, twin an invariant drop, the
+`seq_max` shape lifted one level).
+
+ENCODING. `{"seq": "seq"}` -> `List (List Int)` (`lean_type` gained one
+branch, guarded by `"pair" in t` first so a pair's own dict is not
+mistaken for a nested seq's, both being plain dicts now). Every operator
+that used to be told apart only by AST op (`update`/`fill`/`seq`/`slice`
+all unconditionally returned the string "seq") now recurses through
+`sort()` to tell a nested container from a flat one, mirroring how `+`
+already distinguished int-`+` from seq-`+` by its first operand's sort:
+  `at`      `s[i]` is a row ("seq") when `s` is nested, an int when `s`
+            is flat -- `sort()`'s own new branch. `s[i][j]` (the
+            notation's chained postfix) needed NO new Expr form: it is
+            `at(at(s, i), j)`, the outer `at`'s operand being the inner
+            `at`'s "seq"-sorted result, so the outer call's own sort
+            comes back "int" for free, and `term()` needed no change at
+            all -- `s[i.toNat]!` already produces a `List Int` element
+            when `s : List (List Int)`, the identical Lean syntax either
+            way, since `List.getElem!` is generic in the element type to
+            begin with.
+  `update`/ return the SAME container type as their first argument
+  `slice`   (a row replaced by a row is still a matrix; a slice of rows
+            is still a matrix) -- one `sort()` branch, shared, since both
+            already relayed their first argument's type once written
+            this way. `term()` needed no change: `.set`/`.drop`/`.take`
+            are all generic in the element type already.
+  `fill`    `n` copies of the SECOND argument: nested iff the copied
+            value is itself a seq, symmetric with the literal case next.
+  `seq`     the literal `[e1, ..., en]`: nested iff its own elements are.
+            An empty literal `[]` has no element to inspect -- SPEC.md's
+            own "the declared type says so" needs a context this
+            bottom-up `sort()`/`term()` do not carry, so an empty literal
+            defaults to flat `List Int`, exactly the pre-nested
+            behaviour and observationally unchanged for every task that
+            predates this construct; neither committed nested task uses
+            this op at all, empty or not, so the default is unexercised
+            by them. `term()`'s ascription now reads the same nested-or-
+            not decision off `sort()` (`List (List Int)` vs `List Int`).
+  `+`       already polymorphic (SEQUENCES: LITERALS... above); the
+            check that used to compare `== "seq"` now uses a new helper,
+            `_is_seqsort` (`s == "seq" or (isinstance(s, dict) and "seq"
+            in s)`), so a nested-seq sort (a dict) is recognized as
+            seq-like too instead of falling into the int branch. `++`
+            needed no term-level change: `List.append` is generic.
+  `==`/`!=` needed ZERO new code, the same free ride pairs got: a nested
+            seq's sort is a dict that is never "bool", so `prop()`'s
+            existing non-bool branch already sends it to Lean's own `=`/
+            `≠`, and `List`'s `DecidableEq` derives from its element's
+            (also `List`'s own, recursively) with nothing to write by
+            hand. Measured (lean 4.33.1, core only, no Mathlib, a two-
+            theorem scratch probe): `decide` alone proves
+            `([[1,2],[3]] : List (List Int)) = [[1,2],[3]]` and
+            `[[1,2]] ≠ [[1,2,3]]`.
+
+TWO GUARDED BRANCHES, both pre-existing code that assumed `isinstance(t,
+dict)` meant "pair" (true until this construct, since a nested seq's
+type is ALSO a plain dict, unhashable the same way): left unguarded,
+either would have reopened the exact crash-vs-refusal defect the pairs
+wave fixed for `_loop_zero`'s old `.get` lookup, one level up.
+  `_gterm`/`_unshow`   both had a bare `t1, t2 = ty["pair"]` as their
+                       only dict case; a witness or a state var typed
+                       `{"seq": "seq"}` reaching either would have raised
+                       a raw KeyError rather than lowering. `_gterm`
+                       gained a second dict branch (checked after `"pair"
+                       in ty`) building the ground nested-seq term
+                       `([row1, ..., rown] : List (List Int))`
+                       recursively, each row lowered through the
+                       existing flat "seq" case; `_unshow` needed no
+                       second branch at all, only the guard `"pair" in
+                       ty` on the existing one, since a nested seq's
+                       witness rendering (interp.py's `_j`, recursing
+                       into a tuple-of-tuples the same way it recurses
+                       into a pair) is ALREADY just nested Python lists,
+                       behaving like interp.py's own nested tuple for
+                       every op a certificate evaluates, exactly the
+                       reasoning the flat-seq case was built on.
+  `_loop_zero`         the loop-state placeholder built for `min_max`'s
+                       pair return had the same bare `t["pair"]`. Fixed
+                       the same way: guarded, and a bare nested-seq state
+                       var still gets no placeholder (None), same as the
+                       flat "seq" string case below it -- an honest
+                       `NotImplementedError` from the caller if ever hit,
+                       not a crash. Dead in both committed nested tasks
+                       (`swap_rows` has no loop at all; `row_max_len`'s
+                       nested param `m` is read-only, never loop state).
+
+THE ROW-TYPED READ BRIDGE, measured, not assumed needed. SPEC.md's own
+build note asked whether a row-typed `get`/`update` needs one more
+lemma, since `t_seq_update_get`/`t_seq_fill_get`/`t_seq_append_get`/
+`t_seq_slice_get` (SEQUENCES AS VALUES / SEQUENCES: LITERALS... above)
+are each a fixed, monomorphic `theorem` over element type `Int`, not a
+polymorphic one -- an outer-level read after `update`/`fill`/`++`/slice
+on a `List (List Int)` cannot use them at all, element type mismatch.
+Measured directly (`harness.run_task`, `swap_rows`, the one committed
+task that touches the outer container at all, via `update`): its goals
+are small enough (a SIMPLE-shape body, no loop, no big invariant list in
+scope) that plain `grind`, `_close`/`_gr`'s own FIRST alternative, closes
+every one outright -- the `grind only [...]` fallback naming the flat
+lemmas is present in the generated file (`self.seq_mut` is true) but
+never fires, confirmed by the proof succeeding before `first` ever tries
+it. So the two committed tasks need no new lemma. Built anyway, gated by
+a new `self.nested` flag (true iff `{"seq": "seq"}` appears anywhere in
+the task's types, detected by dict shape alone, since no AST op node
+ever uses "seq" as a dict key): `t_seq_update_get_row`, `t_seq_fill_get_
+row`, `t_seq_append_get_row`, `t_seq_slice_get_row`, the IDENTICAL proof
+scripts as their flat twins with only the element type changed (`Int` ->
+`List Int` for the payload, the index type staying `Int` throughout) --
+measured by a four-theorem scratch probe, lean 4.33.1, core only: all
+four compile clean, depending on {propext, Quot.sound} like every other
+bridge lemma in this file, confirming the tactic text never actually
+inspects the element type (`omega` closes the `.toNat` casts;
+`getElem!_pos`/`List.getElem_set`/`List.getElem_replicate`/`List.
+getElem_append`/`List.getElem_take`/`List.getElem_drop` are all already
+polymorphic in the element type). Emitted by `emit_seq_helpers` and
+named in `_seq_hints`'s `grind only` list only when `self.nested` AND
+the corresponding flat flag (`self.seq_mut`/`self.seq_new`) is also set,
+so a flat-only task's output is unchanged (`self.nested` is false) and a
+nested task that never mutates the outer container (`row_max_len`) gets
+none of this either (`self.seq_mut`/`self.seq_new` both false for it: it
+only reads `m` via `at`/`len`, never `update`s/`fill`s/slices it).
+Wired the same way `_unshow`'s pair-component handling was for a shape
+neither measured pairs task exercised: unmeasured against a real failing
+goal, ready for the nested task whose goal IS big enough to hit the
+recursion-depth wall the flat bridge was built for.
+
+THE TERMINATION BRIDGE NEEDED NO CHANGE, confirmed rather than assumed.
+`_dec`'s `simp only [List.length_set, List.length_replicate,
+List.length_append, List.length_take, List.length_drop]` fallback
+(SEQUENCES AS VALUES / THE DECREASING-BY GAP above) names five lemmas
+that are ALREADY polymorphic in the list's element type in core Lean
+(each states a fact about `List α` for an implicit `α`, never mentioning
+`Int`) -- unlike the four READ bridges above, which are fixed,
+monomorphic theorems this file hand-proves per element type. So
+`List.length_append`/`List.length_take`/`List.length_drop` apply at the
+outer level (`List (List Int)`) and the row level (`List Int`)
+unchanged, needing no row-typed duplicate; `_dec`/`_dec_needs_seq_bridge`
+are untouched by this construct. Neither committed nested task exercises
+this path regardless: `swap_rows` has no loop, and `row_max_len`'s
+`decreases` (`len(m) - i`) never names a mutated state var (`m` is a
+read-only parameter, never loop state; `r`/`i` are plain ints) --
+`_dec_needs_seq_bridge` correctly reads False.
+
+`isinstance(self.rett, dict)` (the `dsimp only` fix, PAIRS note above)
+ALSO now fires for a nested-seq return, that check's name (`pair_ret`)
+predating this construct -- harmless there too, measured directly (a
+synthetic probe returning `fill(n, [1,2]) + [[9]]`, verified clean): the
+extra `dsimp only` is a no-op on a goal with no bare projection to
+reduce, so this changes no task's verdict either way, only sometimes
+does one unnecessary (but harmless) reduction step.
+
+NO NEW NAMED REFUSAL beyond what SPEC.md itself draws (v1 has no third
+level, no seq of pairs, no seq of bools as a distinct nested element --
+enforced upstream by fuzz_lower.check_wf, not by anything added here).
+Lean's own `List (List Int)` has no restriction this construct needs to
+work around.
+
+MEASURED (`tasks/swap_rows.json`, `tasks/row_max_len.json`, via
+`harness.run_task` against the lean backend, `harness.OUT` redirected to
+`out/agent-lean-nested/`, matching this note's own reproduction
+commands): swap_rows COUNTS (real VERIFIED, `off-by-one` twin REFUTED,
+witness m=[[]], i=0, j=0 -> real [[]], the shifted index running off the
+single empty row, the update's own `0 <= i < len` obligation false at
+the ground witness -- `_cert_undefined`'s kind, the same certificate
+shape swap's own off-by-one witness used one level down). row_max_len
+COUNTS (real VERIFIED, invariant-drop twin REFUTED, witness exit at
+m=[[], [0]], i=2, r=0 -- the dropped upper-bound invariant let the loop
+exit with `r` still at its initial 0, `_cert_loop`'s "exit" kind) --
+both exactly the witnesses SPEC.md's own text names. Two extra sanity
+probes (not committed tasks, scratch JSON, discarded after running):
+chained `m[i][j]` (a `requires`/`ensures` pair over `at(at(m,i),j)`)
+lowers to `m[i.toNat]![j.toNat]!` and VERIFIES; a combined literal/
+`fill`/`+`/`==` probe (`r == fill(n, [1,2]) + [[9]]`) lowers and
+VERIFIES too, exercising every operator this note claims is polymorphic
+at least once beyond the two committed tasks. A wider sweep of all 23
+committed `tasks/*.json` COUNTS uniformly (no REFUSED, no flake). Six
+pre-existing tasks named in this construct's own build note (`abs`,
+`swap`, `tail`, `filter_pos`, `divmod_pair`, `min_max`) were regenerated
+into the same directory and diffed (`cmp`) against the committed
+`out/*.lean`: all twelve files (real and twin) BYTE-IDENTICAL, and a
+full diff of the OTHER 15 pre-existing tasks' regenerated output against
+their own committed `out/*.lean` also finds zero differences -- this
+construct changes nothing about a task that doesn't use it.
 """
 from __future__ import annotations
 
@@ -919,6 +1108,16 @@ class Lower:
                         or self._has(body, "op", "slice")
                         or self._has_seq_plus(task, dict(self.types))
                         or self._has_seq_plus(body, dict(self.types)))
+        # SPEC.md "Nested sequences (v1)" (2026-09-10): does this task
+        # declare `{"seq": "seq"}` anywhere (a param, return, local, or
+        # spec_fun type). No new Expr form marks the construct -- every
+        # operator is polymorphic by its operands' STATIC TYPE, unlike
+        # seq_mut/seq_new above, which key off an AST op -- so detection
+        # here is by type shape, not by op. Gates the row-typed bridge
+        # lemmas below (`t_seq_update_get_row` etc.); False for every task
+        # that predates this construct, so nothing about their output
+        # changes.
+        self.nested = self._has_nested_type(task) or self._has_nested_type(body)
 
     # ---------- naming ----------
 
@@ -957,11 +1156,51 @@ class Lower:
             # SPEC.md "Sequences: literals, concatenation, slices (v1)":
             # `+` is polymorphic by operand type exactly as `==` already
             # is (two ints, two bools, two seqs) -- told apart by the
-            # first operand's own sort.
-            return "seq" if self.sort(e["args"][0], types) == "seq" else "int"
-        if op in ARITH_OPS or op in DIV_MOD or op in ("neg", "len", "at"):
+            # first operand's own sort. SPEC.md "Nested sequences (v1)"
+            # extends this one more level: two nested seqs concatenate to
+            # a nested seq, so the operand's own sort (int, "seq", or the
+            # nested {"seq": "seq"} dict) is returned as-is rather than
+            # collapsed to the bare string "seq".
+            s0 = self.sort(e["args"][0], types)
+            return s0 if self._is_seqsort(s0) else "int"
+        if op in ARITH_OPS or op in DIV_MOD or op == "neg":
             return "int"
-        if op in ("update", "fill", "seq", "slice"):
+        if op == "len":
+            return "int"
+        if op == "at":
+            # SPEC.md "Nested sequences (v1)": `s[i]` is a row (itself a
+            # "seq") when `s` is nested, an int when `s` is flat -- `at`
+            # is polymorphic by ITS OWN operand's static type, exactly as
+            # `+`/`==` already are. No new Expr form for `s[i][j]`: it is
+            # `at(at(s, i), j)`, the outer `at`'s operand being the inner
+            # `at`'s "seq"-sorted result, so the outer call's own sort
+            # comes back "int" for free.
+            s0 = self.sort(e["args"][0], types)
+            return "seq" if isinstance(s0, dict) and "seq" in s0 else "int"
+        if op in ("update", "slice"):
+            # SPEC.md "Nested sequences (v1)": `update`/`slice` return the
+            # SAME container type as their first argument, nested or flat
+            # (a row replaced by a row is still a matrix; a slice of rows
+            # is still a matrix), exactly as `+` above.
+            return self.sort(e["args"][0], types)
+        if op == "fill":
+            # `fill(n, r)`: n copies of the SECOND argument, so the result
+            # is nested iff the copied value is itself a seq (a row) --
+            # symmetric with the "seq" literal case just below.
+            v0 = self.sort(e["args"][1], types)
+            return {"seq": "seq"} if self._is_seqsort(v0) else "seq"
+        if op == "seq":
+            # The literal `[e1, ..., en]`: nested iff its own elements are
+            # seqs. An empty literal `[]` has no element to inspect --
+            # SPEC.md's "the declared type says so" needs a context this
+            # bottom-up function does not carry, so this defaults to flat,
+            # exactly the pre-nested behaviour: observationally unchanged
+            # for every task that predates this construct, and neither
+            # committed nested task (`swap_rows`, `row_max_len`) uses this
+            # op at all, so the default is never exercised by them either.
+            args = e.get("args", [])
+            if args and self._is_seqsort(self.sort(args[0], types)):
+                return {"seq": "seq"}
             return "seq"
         if op == "pair":
             # SPEC.md "Pairs" (2026-09-10): the sort of `(e1, e2)` is the
@@ -977,6 +1216,15 @@ class Lower:
             t = self.sort(e["args"][0], types)
             return t["pair"][0 if op == "fst" else 1]
         return "bool"
+
+    @staticmethod
+    def _is_seqsort(s) -> bool:
+        """True iff `s` (a sort() result) denotes some seq -- the flat
+        string "seq" or the nested {"seq": "seq"} dict (SPEC.md "Nested
+        sequences (v1)"). Distinguishes a seq-shaped sort from a pair's
+        {"pair": [...]} dict, which carries no "seq" key, so a pair is
+        never mistaken for a seq by this check."""
+        return s == "seq" or (isinstance(s, dict) and "seq" in s)
 
     # ---------- expressions ----------
 
@@ -1032,9 +1280,17 @@ class Lower:
             # SPEC.md "Sequences: literals, concatenation, slices (v1)":
             # `[e1, ..., en]`, n >= 0, `[]` the empty seq; a plain Lean
             # list literal, total type ascription so `[]` elaborates.
-            elems = ", ".join(self.term(a, env, types, dep)
-                              for a in e.get("args", []))
-            return f"([{elems}] : List Int)"
+            # SPEC.md "Nested sequences (v1)": ascribe `List (List Int)`
+            # when the literal's own elements are seqs -- sort() decides
+            # this the same way, bottom-up from the first element; an
+            # empty literal keeps the pre-nested `List Int` ascription,
+            # matching sort()'s own default there.
+            args = e.get("args", [])
+            elems = ", ".join(self.term(a, env, types, dep) for a in args)
+            nested = bool(args) and self._is_seqsort(
+                self.sort(args[0], types))
+            ty = "List (List Int)" if nested else "List Int"
+            return f"([{elems}] : {ty})"
         if op == "slice":
             # `s[a..b]`: `List.take`/`List.drop` composed, per SPEC.md's
             # own suggested encoding (measured over `List.extract`: the
@@ -1063,9 +1319,12 @@ class Lower:
             return f"({p}.{'1' if op == 'fst' else '2'})"
         if op == "neg":
             return f"(-{self.term(e['args'][0], env, types, dep)})"
-        if op == "+" and self.sort(e["args"][0], types) == "seq":
-            # `+` on two seqs: concatenation, always defined, polymorphic
-            # by operand type exactly as `==` already is.
+        if op == "+" and self._is_seqsort(self.sort(e["args"][0], types)):
+            # `+` on two seqs (flat or nested, SPEC.md "Nested sequences
+            # (v1)"): concatenation, always defined, polymorphic by
+            # operand type exactly as `==` already is; `++` needs no
+            # nested-specific text, since Lean's own `List.append` is
+            # already generic in the element type.
             a, b = (self.term(x, env, types, dep) for x in e["args"])
             return f"({a} ++ {b})"
         if op in ARITH_OPS:
@@ -1445,13 +1704,22 @@ class Lower:
 
     def lean_type(self, t) -> str:
         if isinstance(t, dict):
-            # SPEC.md "Pairs" (2026-09-10): `{"pair": [T1, T2]}` over
-            # Int/Bool/List Int, as the Lean product `T1 × T2` (SPEC.md's
-            # own choice of encoding, "lean `Int × Int`"); each of T1, T2
-            # is always a base type here (no pair of pairs, SPEC.md v1),
-            # so this does not recurse past one level.
-            t1, t2 = t["pair"]
-            return f"({self.lean_type(t1)} × {self.lean_type(t2)})"
+            if "pair" in t:
+                # SPEC.md "Pairs" (2026-09-10): `{"pair": [T1, T2]}` over
+                # Int/Bool/List Int, as the Lean product `T1 × T2`
+                # (SPEC.md's own choice of encoding, "lean `Int × Int`");
+                # each of T1, T2 is always a base type here (no pair of
+                # pairs, SPEC.md v1), so this does not recurse past one
+                # level.
+                t1, t2 = t["pair"]
+                return f"({self.lean_type(t1)} × {self.lean_type(t2)})"
+            # SPEC.md "Nested sequences (v1)": `{"seq": "seq"}`, a seq of
+            # seqs of ints, one level (`t["seq"]` is always the literal
+            # string "seq", v1 has no third level), as `List (List Int)`
+            # -- SPEC.md's own choice of encoding for lean; this does not
+            # recurse past one level either, exactly like the pair branch
+            # above.
+            return "List (List Int)"
         return {"int": "Int", "bool": "Bool", "seq": "List Int"}[t]
 
     def binders(self, names_types: list[tuple[str, str]]) -> str:
@@ -1492,6 +1760,23 @@ class Lower:
             return any(self._has_seq_plus(v, types) for v in x.values())
         if isinstance(x, list):
             return any(self._has_seq_plus(v, types) for v in x)
+        return False
+
+    @staticmethod
+    def _has_nested_type(x) -> bool:
+        """True iff `{"seq": "seq"}` (SPEC.md "Nested sequences (v1)")
+        appears anywhere in `x` as a TYPE (a param, return, local `var`,
+        or spec_fun type). Safe to check the dict shape alone: no AST
+        node in this file's JSON ever uses "seq" as a dict KEY -- the
+        literal/at/len/etc. Expr nodes are `{"op": "seq", ...}`, a
+        different shape entirely, so this can never mistake an operator
+        node for a type."""
+        if isinstance(x, dict):
+            if x.get("seq") == "seq":
+                return True
+            return any(Lower._has_nested_type(v) for v in x.values())
+        if isinstance(x, list):
+            return any(Lower._has_nested_type(v) for v in x)
         return False
 
     def _self_calls(self, x) -> bool:
@@ -1754,6 +2039,29 @@ class Lower:
         if self.seq_mut:
             names += ["t_seq_update_get", "t_seq_fill_get",
                       "List.length_set", "List.length_replicate"]
+            if self.nested:
+                # SPEC.md "Nested sequences (v1)": `t_seq_update_get`/
+                # `t_seq_fill_get` above are stated for element type Int
+                # only (a fixed monomorphic `theorem`, not a polymorphic
+                # one); an outer-level read after `update`/`fill` on a
+                # `List (List Int)` needs the SAME bridge specialized to
+                # element type `List Int` instead, named distinctly so a
+                # task mixing flat and nested update/fill (none committed
+                # does) still gets both. Measured (a four-theorem scratch
+                # probe, lean 4.33.1, core only): the identical proof
+                # script, only `Int` changed to `List Int` in `l`'s/`v`'s
+                # own type, compiles clean, depending on {propext,
+                # Quot.sound} like every other bridge lemma here. Neither
+                # committed nested task (`swap_rows`, `row_max_len`)
+                # actually needs this: `swap_rows`'s own SIMPLE-shape
+                # goals are small enough for plain `grind` (the `_gr`/
+                # `_close` base case) to close outright, measured directly
+                # (`harness.run_task` COUNTS with these two names never
+                # having fired); wired the same way `_unshow`'s pair
+                # component handling was for an unexercised shape, for the
+                # nested task whose goal IS big enough to hit the same
+                # recursion-depth wall the flat bridge was built for.
+                names += ["t_seq_update_get_row", "t_seq_fill_get_row"]
         if self.seq_new:
             # SPEC.md "Sequences: literals, concatenation, slices (v1)"
             # (2026-09-09): the same recursion-depth wall the update/fill
@@ -1771,6 +2079,17 @@ class Lower:
             names += ["t_seq_append_get", "t_seq_slice_get",
                       "List.length_append", "List.length_take",
                       "List.length_drop"]
+            if self.nested:
+                # Same reasoning as the seq_mut branch above, for the
+                # append/slice bridge: `List.length_append`/`_take`/
+                # `_drop` themselves are already POLYMORPHIC core Lean
+                # facts about list length (measured: their statements
+                # quantify over an arbitrary `{α}`, not `Int` -- no
+                # element type in sight), so they apply at the outer
+                # level and the row level UNCHANGED, needing no row-typed
+                # duplicate; only the two READ bridges, monomorphic in
+                # element type by construction, need one.
+                names += ["t_seq_append_get_row", "t_seq_slice_get_row"]
         return ", ".join(names + [f"{f}_s" for f in self.sfuns])
 
     def _gr(self, nodes: list | None = None, env: dict | None = None,
@@ -1924,6 +2243,47 @@ class Lower:
             "    rw [List.length_replicate]; omega\n"
             "  rw [getElem!_pos (List.replicate (n).toNat v) (j).toNat hb,"
             " List.getElem_replicate]\n")
+            if self.nested:
+                # SPEC.md "Nested sequences (v1)": the row-typed twins of
+                # the two lemmas just above, element type `List Int`
+                # instead of `Int` -- the IDENTICAL proof script, measured
+                # by scratch probe (lean 4.33.1, core only): the tactic
+                # text never inspects the element type at all (`omega`
+                # closes the `.toNat` casts, `getElem!_pos`/`List.
+                # getElem_set`/`List.getElem_replicate` are polymorphic
+                # in `α`), only the two `theorem` signatures change.
+                parts.append(
+                "theorem t_seq_update_get_row "
+                "(l : List (List Int)) (i j : Int) (v : List Int)\n"
+                "    (hi : (0 : Int) ≤ i) (hiu : i < ((l.length : Int)))\n"
+                "    (hj : (0 : Int) ≤ j) (hju : j < ((l.length : Int))) :\n"
+                "    (l.set (i).toNat v)[(j).toNat]! = "
+                "if j = i then v else l[(j).toNat]! := by\n"
+                "  have hbl : (j).toNat < (l.set (i).toNat v).length := by\n"
+                "    rw [List.length_set]; omega\n"
+                "  rw [getElem!_pos (l.set (i).toNat v) (j).toNat hbl, "
+                "List.getElem_set]\n"
+                "  split\n"
+                "  · next hh =>\n"
+                "    have heq : j = i := by omega\n"
+                "    rw [if_pos heq]\n"
+                "  · next hh =>\n"
+                "    have hne : ¬ j = i := by omega\n"
+                "    rw [if_neg hne]\n"
+                "    have hbr : (j).toNat < l.length := by omega\n"
+                "    exact (getElem!_pos l (j).toNat hbr).symm\n"
+                "\n"
+                "theorem t_seq_fill_get_row "
+                "(n : Int) (v : List Int) (j : Int)\n"
+                "    (hn : n ≥ (0 : Int)) (hj : (0 : Int) ≤ j) "
+                "(hju : j < n) :\n"
+                "    (List.replicate (n).toNat v)[(j).toNat]! = v := by\n"
+                "  have hb : (j).toNat < "
+                "(List.replicate (n).toNat v).length := by\n"
+                "    rw [List.length_replicate]; omega\n"
+                "  rw [getElem!_pos (List.replicate (n).toNat v) "
+                "(j).toNat hb,"
+                " List.getElem_replicate]\n")
         if self.seq_new:
             parts.append(
             "theorem t_seq_append_get (l1 l2 : List Int) (j : Int)\n"
@@ -1967,6 +2327,58 @@ class Lower:
             "  have hb2 : (a.toNat + j.toNat) < s.length := by omega\n"
             "  have heq : a.toNat + j.toNat = (a + j).toNat := by omega\n"
             "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n")
+            if self.nested:
+                # SPEC.md "Nested sequences (v1)": the row-typed twins of
+                # `t_seq_append_get`/`t_seq_slice_get`, element type
+                # `List (List Int)` / row type `List Int` instead of
+                # `List Int` / `Int` -- measured the same way as the
+                # update/fill pair above, the identical proof script.
+                parts.append(
+                "theorem t_seq_append_get_row "
+                "(l1 l2 : List (List Int)) (j : Int)\n"
+                "    (hj : (0 : Int) ≤ j) "
+                "(hju : j < (((l1 ++ l2).length : Int))) :\n"
+                "    (l1 ++ l2)[(j).toNat]! =\n"
+                "      if j < ((l1.length : Int)) then l1[(j).toNat]! "
+                "else l2[(j - (l1.length : Int)).toNat]! := by\n"
+                "  have hlen : (l1 ++ l2).length = l1.length + l2.length :=\n"
+                "    List.length_append\n"
+                "  have hbl : (j).toNat < (l1 ++ l2).length := by omega\n"
+                "  rw [getElem!_pos (l1 ++ l2) (j).toNat hbl, "
+                "List.getElem_append]\n"
+                "  split\n"
+                "  · next hh =>\n"
+                "    rw [if_pos (by omega : j < ((l1.length : Int)))]\n"
+                "    have hbl1 : (j).toNat < l1.length := hh\n"
+                "    exact (getElem!_pos l1 (j).toNat hbl1).symm\n"
+                "  · next hh =>\n"
+                "    rw [if_neg (by omega : ¬ j < ((l1.length : Int)))]\n"
+                "    have hbl2 : (j).toNat - l1.length < l2.length "
+                ":= by omega\n"
+                "    have heq : (j).toNat - l1.length "
+                "= (j - (l1.length : Int)).toNat := by omega\n"
+                "    exact (getElem!_pos l2 ((j).toNat - l1.length) "
+                "hbl2).symm."
+                "trans\n"
+                "      (congrArg (l2[·]!) heq)\n"
+                "\n"
+                "theorem t_seq_slice_get_row "
+                "(s : List (List Int)) (a b j : Int)\n"
+                "    (ha : (0 : Int) ≤ a) (hab : a ≤ b) "
+                "(hbl : b ≤ ((s.length : Int)))\n"
+                "    (hj : (0 : Int) ≤ j) (hju : j < b - a) :\n"
+                "    ((s.drop a.toNat).take (b - a).toNat)[(j).toNat]! "
+                "= s[(a + j).toNat]! := by\n"
+                "  have hb1 : (j).toNat "
+                "< ((s.drop a.toNat).take (b - a).toNat).length := by\n"
+                "    rw [List.length_take, List.length_drop]\n"
+                "    omega\n"
+                "  rw [getElem!_pos ((s.drop a.toNat).take (b - a).toNat) "
+                "(j).toNat hb1,\n"
+                "      List.getElem_take, List.getElem_drop]\n"
+                "  have hb2 : (a.toNat + j.toNat) < s.length := by omega\n"
+                "  have heq : a.toNat + j.toNat = (a + j).toNat := by omega\n"
+                "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n")
         return "\n".join(parts)
 
     # ---------- spec_funs ----------
@@ -2050,12 +2462,23 @@ class Lower:
         header = (f"-- t task {self.name!r} -> lean4, generated by "
                   f"lower_lean.py; every verdict is the kernel's.\n")
         seq_src = self.emit_seq_helpers()
-        seq_thms = (([("t_seq_update_get", "seq update-read bridge"),
-                     ("t_seq_fill_get", "seq fill-read bridge")]
-                    if self.seq_mut else [])
-                    + ([("t_seq_append_get", "seq append-read bridge"),
+        seq_thms = []
+        if self.seq_mut:
+            seq_thms += [("t_seq_update_get", "seq update-read bridge"),
+                        ("t_seq_fill_get", "seq fill-read bridge")]
+            if self.nested:
+                seq_thms += [("t_seq_update_get_row",
+                             "nested seq update-read bridge"),
+                            ("t_seq_fill_get_row",
+                             "nested seq fill-read bridge")]
+        if self.seq_new:
+            seq_thms += [("t_seq_append_get", "seq append-read bridge"),
                         ("t_seq_slice_get", "seq slice-read bridge")]
-                       if self.seq_new else []))
+            if self.nested:
+                seq_thms += [("t_seq_append_get_row",
+                             "nested seq append-read bridge"),
+                            ("t_seq_slice_get_row",
+                             "nested seq slice-read bridge")]
         sf_src, sf_thms = self.emit_sfuns()
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
         body = self.body
@@ -2124,7 +2547,13 @@ class Lower:
         # reduction `unfold` itself does not perform). `dsimp only` is
         # the one-line fix, ADDED ONLY when the return is a pair (every
         # other return type has no such projection to reduce, so this
-        # changes no other task's tactic text).
+        # changes no other task's tactic text). SPEC.md "Nested sequences
+        # (v1)": `{"seq": "seq"}` is ALSO a dict, so this same check now
+        # also fires for a nested-seq return (`pair_ret`'s name predates
+        # that construct) -- harmless there too, measured directly (a
+        # scratch probe returning a literal/fill/`+` nested value): the
+        # extra `dsimp only` is a no-op on a goal with no projection to
+        # reduce, so this changes no task's verdict either way.
         pair_ret = isinstance(self.rett, dict)
         dsimp = "\n     dsimp only" if pair_ret else ""
         out.append(
@@ -2223,9 +2652,23 @@ class Lower:
         `filter_pos` both assign `r` in their own prefix), so it is left
         exactly as it read before, an honest refusal if ever hit."""
         if isinstance(t, dict):
-            t1, t2 = t["pair"]
-            z1, z2 = self._loop_zero(t1), self._loop_zero(t2)
-            return None if z1 is None or z2 is None else f"({z1}, {z2})"
+            if "pair" in t:
+                t1, t2 = t["pair"]
+                z1, z2 = self._loop_zero(t1), self._loop_zero(t2)
+                return None if z1 is None or z2 is None else f"({z1}, {z2})"
+            # SPEC.md "Nested sequences (v1)": `{"seq": "seq"}` is ALSO a
+            # dict (unhashable the same way a pair's is), so this branch
+            # needs the same guard the pair one got, or an uninitialized
+            # nested-seq state var would hit `t["pair"]` and raise a raw
+            # KeyError -- the exact crash-vs-refusal defect the pairs
+            # wave fixed for `.get`, reopened one level up if left
+            # unguarded here. No placeholder for a bare nested seq
+            # either, same as the flat "seq" string case below: an
+            # honest `NotImplementedError` from the caller if ever hit.
+            # Dead in both committed nested tasks (`swap_rows` has no
+            # loop at all; `row_max_len`'s nested param `m` is read-only,
+            # never loop state).
+            return None
         return {"int": "(0 : Int)", "bool": "false"}.get(t)
 
     # LOOP: one top-level while; invariants become the hypotheses of a
@@ -2737,7 +3180,7 @@ class Lower:
         return g
 
     def _gterm(self, v, ty) -> str:
-        if isinstance(ty, dict):
+        if isinstance(ty, dict) and "pair" in ty:
             # SPEC.md "Pairs" (2026-09-10): a ground pair value, from a
             # witness (interp.py's `_j` renders it `[a, b]`, exactly `v`
             # here) or from `_unshow`'s own inverse -- either way a
@@ -2745,6 +3188,15 @@ class Lower:
             # into the Lean pair literal `term()`'s own "pair" case uses.
             t1, t2 = ty["pair"]
             return f"({self._gterm(v[0], t1)}, {self._gterm(v[1], t2)})"
+        if isinstance(ty, dict):
+            # SPEC.md "Nested sequences (v1)": `{"seq": "seq"}` -- `v` is
+            # a plain Python list of rows (interp.py's `_j` recurses into
+            # a nested tuple the same way it does a pair, no dataclass
+            # involved, so a nested seq's witness rendering is already
+            # just nested lists), lowered row by row through the flat
+            # "seq" case below, then wrapped in the nested ascription.
+            rows = ", ".join(self._gterm(r, "seq") for r in v)
+            return f"([{rows}] : List (List Int))"
         if ty == "bool":
             return "true" if v else "false"
         if ty == "seq":
@@ -2769,8 +3221,16 @@ class Lower:
         behaves exactly like interp.py's tuple for every op a certificate
         evaluates (`at`, `len`, `==`), so it is passed through unchanged;
         recursing into a pair's own two components repairs a seq
-        component of a pair the same way, for free."""
-        if isinstance(ty, dict):
+        component of a pair the same way, for free. SPEC.md "Nested
+        sequences (v1)": a nested seq's witness rendering is ALSO just a
+        plain (nested) list, interp.py never wrapping it in anything a
+        dataclass-shaped type would need unwrapped, so the `isinstance
+        (ty, dict) and "pair" in ty` guard below falls through to the
+        same unchanged `return v` for `{"seq": "seq"}` as for flat "seq"
+        -- no new branch needed, only guarding the existing one so it
+        does not mistake a nested-seq type dict for a pair's and crash on
+        the missing "pair" key."""
+        if isinstance(ty, dict) and "pair" in ty:
             t1, t2 = ty["pair"]
             return interp.Pair(self._unshow(v[0], t1),
                                self._unshow(v[1], t2))

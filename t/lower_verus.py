@@ -424,6 +424,140 @@ additive and untaken by anything committed before this task. No Verus
 construct was refused: every SPEC.md "Pairs" form (the type, `pair`,
 `fst`, `snd`, `==`/`!=`, a pair through the loop frame rule, and a
 pair-valued witness through the certificate) lowers.
+
+NESTED SEQUENCES (2026-09-10, SPEC.md "Nested sequences (v1)", ROADMAP
+12.7). New type `{"seq": "seq"}`, a finite seq whose elements are seqs of
+ints, `seq<seq>`; the elementary `"seq"` is unchanged. NO new Expr forms
+(SPEC.md is explicit about this): every existing seq operator is
+polymorphic by the static type of its operands, exactly as `+` and `==`
+already are, and Verus's OWN `Seq<T>` is generic over its element type in
+both exec and spec/proof code, so `Seq<Seq<int>>` needed no declaration
+of its own here, the same free ride a pair type got. The one real
+construction cost is `_vty(ty)`, which used to assume any dict-shaped
+type was a pair (`ty["pair"]`, an unguarded KeyError on {"seq": "seq"} --
+measured directly, the first swap_rows attempt crashed there before this
+fix) and now checks the key first: `"seq" in ty` recurses one level and
+wraps in `Seq<...>`, `"pair" in ty` is the existing case. `_dummy` had
+the identical bug and got the identical fix (an unexercised nested-seq
+case, since neither committed task has a `return` inside a loop -- see
+below -- named by construction, the same posture this function already
+took for a pair of pairs). Every OTHER site a t type reaches Verus
+through (`scope`'s (type, mutable) entries, a loop's read-only and
+assigned params, a spec_fun's own params/result) already goes through
+`_vty`, so nothing else needed touching: the loop frame rule havocs a
+nested-seq local, param, or return by NAME exactly like an `int` or
+`Seq<int>` one, no code path caring which, confirmed by row_max_len's own
+`m` riding read-only through `t_lp_row_max_len_0`'s parameter list
+unmodified.
+
+OPERATORS. `expr()`'s existing cases render every one with NO new
+branches: `seq` (the literal) recurses into `seq![seq![..], ...]`
+naturally since each row is itself rendered by the SAME "seq" case;
+`len(s)` is `.len()` regardless of element type; `at(s, i)` (`s[i]`) and
+the chained `s[i][j]` are the SAME `at`-of-`at` AST shape `expr()`'s "at"
+case already renders as plain bracket indexing, `s[i][j]`, needing no
+chain-aware code since Rust's own `[]` composes; `s + t`, `s[a..b]`
+(`.subrange`), `update(s, i, r)` (`.update`), and `fill(n, r)`
+(`Seq::new(n as nat, |_t_fill_i: int| r)`, `r` now row-typed rather than
+int) are all the identical calls "Sequences as values" and "Sequences:
+literals, concatenation, slices" already built, generic over Verus's own
+generic `Seq<T>`. Measured directly before touching either committed
+task (probe_nested_ops.rs, one proof fn exercising all eight forms plus
+the empty-nested-literal spelling): 0 errors, verified 2. `defined()`
+needed NO new case either: its existing "at"/"update"/"slice"/"fill"
+cases already compute the chained obligation by ordinary recursive
+composition -- `defined(at(at(m,i),j))` walks to
+`defined(m) && defined(i) && 0<=i<len(m) && defined(j) && 0<=j<len(m[i])`,
+which IS SPEC.md's stated rule for `s[i][j]` ("iff 0<=i<len(s) and
+0<=j<len(s[i])") with no case written for it, exactly as the generic
+composition already gave `at`'s single-index bound for free before this
+task.
+
+EQUALITY. SPEC.md flags this explicitly ("extensional and recursive: two
+nested seqs are equal iff same length and equal rows") and this file's
+own build note asked for `=~~=` (Verus's DEEP extensional-equality macro
+for nested collections) to be measured rather than assumed. Measured
+(probe_nested_eq.rs, five proof fns): bare `==` between two
+`Seq<Seq<int>>` values already IS the SPEC.md recursive equality at the Z3
+level with NO help needed -- two differently-built-but-equal nested
+literals (`assert(a == b)`), `==` used as a hypothesis to derive a
+per-row fact (`a == b |- a[k] == b[k]`), and the hard direction with no
+given index fact at all (`a.len()==b.len() && forall k. a[k]==b[k] |- a
+== b`) all verify with 0 errors, bare, and `=~~=` changes nothing
+(probe fns 4 and 5 in the same file, one with plain `==`/`==` throughout
+and one rewritten with `=~=`/`=~~=` throughout, both verify identically).
+So nested seq `==` is exactly as free as flat seq `==` was ("EXTENSIONAL
+EQUALITY" above): `BIN_OPS` needed no seq-of-seq-specific entry, and
+`=~~=` is banked as measured-unnecessary rather than built, the same
+outcome the flat case reached with `=~=`.
+
+THE CERTIFICATE EMITTER needed real work, unlike the operators: a nested
+seq's witness value collides with nothing at the Pair/seq level (SPEC.md
+restricts v1 to no seq of pairs), but introduces its OWN ambiguity one
+type up, discovered the same way Pairs' was -- by trying to certify the
+first measured witness and watching it fail. interp.py already represents
+a nested seq's runtime value as a tuple of tuples (`_j`'s own docstring:
+"a row is itself a tuple ... a bare list(v) here would print a nested seq
+as a list of TUPLES"), and a NONEMPTY one needs no type hint: its first
+element is itself a tuple/list, unmistakable from a flat seq's own
+elements (always ints). Only the EMPTY case collides -- `()` or `[]` is
+indistinguishable, by shape alone, from an empty FLAT seq -- exactly the
+Pair/seq shape one level down, so `_tlit` and `_to_py` both grew a
+`"seq" in ty` branch alongside their existing `"pair" in ty` one (which
+had to stop assuming any dict `ty` was a pair, the same unguarded-`ty
+["pair"]` bug `_vty` had, since `_cert_formula`'s `tmap` now hands both
+functions a `{"seq": "seq"}` type as often as a pair one): a new
+nonempty case builds `{"_nested_seq": [row, ...]}` (each row a `{"_seq":
+...}` node, so an empty ROW inside a nonempty outer literal -- swap_rows'
+own witness, `m = [[]]` -- renders correctly for free through the
+existing "_seq" case) and the empty case asks `ty` exactly once, `_tlit`
+choosing `{"_nested_seq": []}` for `Seq::<Seq<int>>::empty()` where a
+flat empty seq would have chosen `{"_seq": []}` for `Seq::<int>::empty()`.
+`_to_py`'s matching rebuild recurses into `_to_py(row, "seq")` per row
+before `interp.ev` replays the twin body, since a row LEFT as a JSON list
+rather than converted to a tuple would silently fail every tuple-shaped
+comparison `interp.ev` does on it -- unexercised by measurement on
+divmod_pair/min_max (neither has a seq param at all) but load-bearing
+here, since swap_rows' witness IS the "undefined" kind that walks
+`_undef_obligation`'s `interp.ev` replay. `expr()` gained one ground node,
+`"_nested_seq"`, rendering `seq![<row>, ...]` (or `Seq::<Seq<int>>::empty()`
+when empty) by calling itself on each row -- the SAME recursive call that
+already renders `"_seq"`, so no row-spelling logic is duplicated. `subst`
+needed `"_nested_seq"` added to its ground-node passthrough (the same one
+line `"_seq"` already had) or it would have tried `e["op"]` on a dict with
+no such key. `_gint` needed one more case, `len` of a `"_nested_seq"`
+node, alongside its existing `len`-of-`"_seq"`: row_max_len's own ensures
+quantifies `forall k in [0, len(m))` and `_unroll` cannot iterate an
+unground bound, so once `m` is substituted by its witness the outer row
+count has to resolve the same way a flat seq's length already did. A
+loop-LOCAL's own type is still not tracked past `_cert_formula`'s `tmap`
+(neither this task's construct nor Pairs' own residual closes that gap),
+named again for the same reason: not exercised by either committed
+nested-seq task (swap_rows has no loop; row_max_len's only nested-seq
+name is its read-only PARAM `m`, never reassigned).
+
+MEASURED (out/agent-verus-nested/, PATH including ~/.cargo/bin so rustup
+resolves and ~/.local/verus/verus-x86-linux so verus does): swap_rows
+COUNTS on first measurement after the fixes above (real VERIFIED,
+off-by-one twin REFUTED, witness m=[[]], i=0, j=0 -- the shifted index
+`j+1` running off the single row, `at`'s own out-of-bound "undefined"
+witness kind swap's own off-by-one twin already established, one level
+up); row_max_len COUNTS on first measurement (real VERIFIED,
+invariant-drop twin REFUTED, witness exit at m=[[], [0]], i=2, r=0 -- the
+dropped upper-bound invariant letting the loop exit at i==len(m) with r
+left at its initial row-0 length, 0, instead of the max row length, 1).
+Regression (`cmp`, real and twin, every file): abs, swap, tail,
+filter_pos, divmod_pair and min_max -- one v0, and five v1 tasks spanning
+every prior seq/pair construct and loop shape -- all still COUNT with the
+identical witnesses already on record, and their `out/<name>.rs` and
+`out/<name>_twin.rs` are byte-identical to the committed ones, so the
+`_vty`/`_dummy`/`_tlit`/`_to_py`/`_gint`/`expr`/`subst` changes above are
+additive and untaken by anything committed before this task. No Verus
+construct was refused: every SPEC.md "Nested sequences" form (the type,
+the literal, `len`, `at`, the chained `s[i][j]`, `+`, the slice, `update`,
+`fill`, `==`/`!=`, a nested seq through the loop frame rule, and a
+nested-seq-valued witness through the certificate, undefined and exit
+kinds alike) lowers.
 """
 from __future__ import annotations
 
@@ -487,8 +621,19 @@ def _vty(ty) -> str:
     `ensures`, 0 errors), so a pair type declares NO new Verus type the
     way SPARK needs a per-pair-type record or Lean needs `Int x Int`. T1
     and T2 are always base types (SPEC.md: no pair of pairs), so this
-    recurses at most one level."""
+    recurses at most one level; or (SPEC.md "Nested sequences",
+    2026-09-10) `Seq<Seq<int>>` for {"seq": "seq"} -- Verus's Seq is
+    generic over its element type in both exec and spec/proof code, so a
+    nested-seq type likewise declares nothing new, just one more `Seq<>`
+    wrapped around the elementary one (measured, probe_nested_ops.rs: a
+    proof fn over Seq<Seq<int>> params/locals, 0 errors). Two dict shapes
+    reach here now, so the key decides which recursion applies rather
+    than assuming "pair" the way this function used to (an unguarded
+    `ty["pair"]` on {"seq": "seq"} raised a bare KeyError, measured
+    2026-09-10 on the first swap_rows attempt, before this fix)."""
     if isinstance(ty, dict):
+        if "seq" in ty:
+            return f"Seq<{_vty(ty['seq'])}>"
         t1, t2 = ty["pair"]
         return f"({_vty(t1)}, {_vty(t2)})"
     return TYPES[ty]
@@ -563,6 +708,18 @@ def expr(e: dict) -> str:
         if not e["_seq"]:
             return "Seq::<int>::empty()"
         return "seq![" + ", ".join(f"({v}int)" for v in e["_seq"]) + "]"
+    if "_nested_seq" in e:
+        # SPEC.md "Nested sequences" (2026-09-10): the "_seq" node one
+        # level up, a concrete Seq<Seq<int>> witness value with each row
+        # itself a (possibly empty) "_seq" node, so this renders as
+        # `seq![<row>, <row>, ...]` with every row already correctly
+        # spelled -- `Seq::<int>::empty()` for an empty row, `seq![...]`
+        # otherwise -- by the SAME recursive expr() call that already
+        # handles "_seq", no new row-rendering logic needed. The empty
+        # outer case mirrors "_seq"'s own empty spelling one type up.
+        if not e["_nested_seq"]:
+            return "Seq::<Seq<int>>::empty()"
+        return "seq![" + ", ".join(expr(r) for r in e["_nested_seq"]) + "]"
     if "int" in e:
         return f"({e['int']}int)" if _SUFFIX_INT else str(e["int"])
     if "var" in e:
@@ -790,7 +947,7 @@ def subst(e: dict, m: dict) -> dict:
         if v is None:
             return e
         return {"var": v} if isinstance(v, str) else v
-    if "int" in e or "bool" in e or "_seq" in e:
+    if "int" in e or "bool" in e or "_seq" in e or "_nested_seq" in e:
         return e
     if "ite" in e:
         c = e["ite"]
@@ -1066,8 +1223,16 @@ def _dummy(ty) -> str:
     pair of pairs) and renders `(dummy1, dummy2)`, the same tuple literal
     `expr()`'s "pair" case emits. Built via `expr()` for the base cases so
     it picks up the same `_SUFFIX_INT` literal form (`0int`) v1 already
-    emits everywhere else."""
+    emits everywhere else. (SPEC.md "Nested sequences", 2026-09-10):
+    {"seq": "seq"} renders the empty nested seq, `expr()`'s own "_nested_seq"
+    ground node with no rows -- the same choice `ty == "seq"` already makes
+    one level down. Unexercised by either committed nested-seq task (neither
+    carries a `return` inside a loop, the only slot this fills), named here
+    by construction rather than left silent, same posture as this
+    function's own pair-of-pair note before it."""
     if isinstance(ty, dict):
+        if "seq" in ty:
+            return expr({"_nested_seq": []})
         t1, t2 = ty["pair"]
         return f"({_dummy(t1)}, {_dummy(t2)})"
     if ty == "int":
@@ -1501,15 +1666,42 @@ def _tlit(v, ty=None):
     passes the value's declared t type (a param's or the return's, the
     only ones it tracks) whenever it has one, and only the untyped
     fallback below (an int list defaults to a seq, correct for every
-    call site that predates pairs) is a guess."""
+    call site that predates pairs) is a guess.
+
+    (SPEC.md "Nested sequences", 2026-09-10) adds a THIRD ambiguity, one
+    level up from the Pair/seq one: a nested seq's runtime value is a
+    tuple of tuples (interp.py), and a NONEMPTY one is unambiguous by its
+    own shape alone -- its first element is itself a tuple/list, which a
+    plain flat seq's never is -- so it needs no `ty` either, same posture
+    as interp.Pair and a flat tuple above. Only the EMPTY case collides:
+    `()` (or `[]`, JSON-decoded) is indistinguishable, by shape, from an
+    empty flat seq, exactly the shape of the Pair/seq collision one type
+    down, so THAT one case alone asks `ty`. swap_rows' own measured
+    witness is exactly this shape (`m = [[]]`, an outer seq of one row,
+    that row empty) -- the outer literal is nonempty (one row) so is read
+    off its own shape, and the inner empty row is the flat-seq empty case,
+    already handled below with no `ty` needed since a row's own type
+    ("seq", never a dict) never reaches this ambiguity."""
     if isinstance(v, interp.Pair):
-        t1, t2 = ty["pair"] if isinstance(ty, dict) else (None, None)
+        t1, t2 = (ty["pair"] if isinstance(ty, dict) and "pair" in ty
+                  else (None, None))
         return {"op": "pair", "args": [_tlit(v.a, t1), _tlit(v.b, t2)]}
     if isinstance(v, tuple):
+        nested_ty = isinstance(ty, dict) and "seq" in ty
+        if not v:
+            return {"_nested_seq": []} if nested_ty else {"_seq": []}
+        if isinstance(v[0], tuple):
+            rows = []
+            for row in v:
+                if not all(isinstance(x, int) and not isinstance(x, bool)
+                           for x in row):
+                    raise ValueError(f"witness value {v!r} has no t literal")
+                rows.append({"_seq": list(row)})
+            return {"_nested_seq": rows}
         if not all(isinstance(x, int) and not isinstance(x, bool) for x in v):
             raise ValueError(f"witness value {v!r} has no t literal")
         return {"_seq": list(v)}
-    if isinstance(ty, dict):
+    if isinstance(ty, dict) and "pair" in ty:
         t1, t2 = ty["pair"]
         a, b = v
         return {"op": "pair", "args": [_tlit(a, t1), _tlit(b, t2)]}
@@ -1517,9 +1709,20 @@ def _tlit(v, ty=None):
         return {"bool": v}
     if isinstance(v, int):
         return {"int": v}
-    if isinstance(v, list) and all(
-            isinstance(x, int) and not isinstance(x, bool) for x in v):
-        return {"_seq": list(v)}
+    if isinstance(v, list):
+        nested_ty = isinstance(ty, dict) and "seq" in ty
+        if not v:
+            return {"_nested_seq": []} if nested_ty else {"_seq": []}
+        if all(isinstance(x, list) for x in v):
+            rows = []
+            for row in v:
+                if not all(isinstance(x, int) and not isinstance(x, bool)
+                           for x in row):
+                    raise ValueError(f"witness value {v!r} has no t literal")
+                rows.append({"_seq": list(row)})
+            return {"_nested_seq": rows}
+        if all(isinstance(x, int) and not isinstance(x, bool) for x in v):
+            return {"_seq": list(v)}
     raise ValueError(f"witness value {v!r} has no t literal")
 
 
@@ -1533,6 +1736,14 @@ def _gint(e) -> int:
     args = e.get("args", []) if isinstance(e, dict) else []
     if op == "len" and len(args) == 1 and "_seq" in args[0]:
         return len(args[0]["_seq"])
+    if op == "len" and len(args) == 1 and "_nested_seq" in args[0]:
+        # SPEC.md "Nested sequences" (2026-09-10): the outer row count,
+        # needed to unroll a `forall k in [0, len(m))` bound once `m` has
+        # been substituted by its ground witness (row_max_len's own
+        # ensures, both quantifiers). One row's own `len` (a "_seq" node
+        # by then, from the row's own ground rendering) is already covered
+        # by the case above.
+        return len(args[0]["_nested_seq"])
     if op == "neg" and len(args) == 1:
         return -_gint(args[0])
     if op in ("+", "-", "*") and len(args) == 2:
@@ -1630,11 +1841,21 @@ def _to_py(v, ty=None):
     from interp.py's `_j`, collides with a length-2 seq's). Without `ty`
     (a local's type is not tracked past this point, see `_undef_obligation`)
     a list defaults to a seq, the untyped guess every pre-Pairs caller of
-    this shape already relied on."""
-    if isinstance(ty, dict):
+    this shape already relied on.
+
+    (SPEC.md "Nested sequences", 2026-09-10): {"seq": "seq"} rebuilds each
+    row through this same function at the row's own type ("seq", a plain
+    string), which hits the plain `list` fallback below and so becomes a
+    tuple, not left as a list -- interp.ev's own nested-seq representation
+    is a tuple of TUPLES (interp.py, `_j`'s docstring), and a tuple of
+    lists is a different Python value that would silently fail every
+    tuple-identity/equality check interp.ev does on it."""
+    if isinstance(ty, dict) and "pair" in ty:
         t1, t2 = ty["pair"]
         a, b = v
         return interp.Pair(_to_py(a, t1), _to_py(b, t2))
+    if isinstance(ty, dict) and "seq" in ty:
+        return tuple(_to_py(row, "seq") for row in v)
     if isinstance(v, list):
         return tuple(v)
     return v
