@@ -377,6 +377,68 @@ v1 mapping, gate by gate (SPEC.md):
     `out/divmod_pair.dfy`, `out/divmod_pair_twin.dfy`, `out/min_max.dfy`,
     `out/min_max_twin.dfy`.
 
+  nested sequences, fuzz residual (added 2026-09-10): the v1nested fuzz
+    family (18 generated tasks, scratchpad fuzz-nested/corpus.json) read
+    dafny verified/refuted on 12 of 18. Two causes accounted for all four
+    verified/unproved misses, neither task-specific, both in the
+    certificate path only, never in the main lowering:
+      (1) fz_v1nested_069 (build_matrix, compare-flip) and
+    fz_v1nested_150 (row_sum, compare-flip) are "undefined"-kind witnesses
+    whose definedness violation (an out-of-range row/element read the
+    compare-flip twin's shifted loop bound reaches) sits INSIDE the twin's
+    own `while`, and `_exec_undef`'s old scope refused any witness that
+    reached a `while` at all (see the section comment above `_DefViol`,
+    now updated). The witness is fully ground, so a `while` is exactly as
+    replayable as `interp.exec_body`'s own: fixed by having `_exec_undef`
+    step the loop itself (`_ev_undef` on the condition, `_exec_undef` on
+    the body, repeat), capped at `interp.MAX_LOOP` the same way
+    `interp.exec_body` caps it (`interp.Budget`, an existing member of
+    `_certificate`'s catch), and by having both `_exec_undef`'s `if` and
+    its new `while` propagate a `return`'s early exit (the bool it now
+    returns, mirroring `interp.exec_body`'s own flag) so a violation past
+    an early return is never replayed. (2) fz_v1nested_078/fz_v1nested_606
+    (nested_lit, off-by-one) and fz_v1nested_115 (concat_nested, wrong-var)
+    are "value"-kind witnesses whose RETURN type is seq or nested-seq: the
+    twin's own computed return value is substituted straight into the
+    certificate formula as a `_seq`/`_seq2` literal, but `_name_seqs`
+    requires every such literal to already own a name in `seq_names`/
+    `nseq_names`, and those tables were built only from the witness's
+    PARAM values (`interp.Reference.witness` never carries the return
+    itself for a "value"-kind witness, `_scope_types`'s own docstring
+    says so), so the return's literal had no name to bind to and
+    `_name_seqs` raised KeyError, a refusal rather than a wrong lowering.
+    Fixed by also naming the substituted return value, under the return's
+    own name, whenever that name is not already a witness name (true of
+    every "value"-kind witness; false of every "exit"-kind one, since
+    `_invariant_candidates` always puts the return in scope there, so this
+    leaves the exit-kind path, and every task using it, untouched and
+    unmeasured-for-regression by construction, not by luck).
+      fz_v1nested_150's REAL cell stayed unproved/unproved, not a lowering
+    bug: dafny's own error is `index out of range` inside the generated
+    spec_fun's body, `rowsum(row, k) := if k <= 0 then 0 else rowsum(row,
+    k-1) + row[k-1]`, which is genuinely partial (well-defined only for
+    `0 <= k <= |row|`) where a Dafny `function` must be total over its
+    whole declared domain (unconstrained `k: int`); for `k > |row|` the
+    recursion walks `row[k-1]` out of bounds on the way down to the base
+    case. This is a fuzz-corpus generation defect in `f_v1nested`'s
+    row_sum shape (fuzz_lower.py, a file this task does not own), not
+    something `lower_dafny.py`'s emitter can fix without inventing a
+    bound this task's JSON never states; refused by name, left as is.
+    fz_p_nest_empty stayed no-twin/no-twin, expected by the corpus's own
+    `_why`: its body (`r := []`) has no `if`, comparison, second variable
+    or int literal for any ladder rung to perturb, so no twin exists to
+    miss.
+      Measured, own column, after the fix (fuzz_lower.py --seed 1 --n 400
+    --flake 3 --only dafny, on exactly these six tasks): fz_v1nested_069,
+    fz_v1nested_078, fz_v1nested_115 and fz_v1nested_606 now COUNT,
+    verified/refuted (previously verified/unproved); fz_v1nested_150 is
+    unchanged, unproved/unproved; fz_p_nest_empty is unchanged, no-twin/
+    no-twin. Regression, all 23 committed tasks (not a sample this time):
+    every one re-lowered via `lower(task, task["body"])` for the real body
+    and `lower(task, twin_body, witness=w)` (`harness.twin_cached`'s twin
+    and witness) for the twin is byte-identical (Python `==`, not `cmp`)
+    to the committed `out/<name>.dfy` and `out/<name>_twin.dfy`.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -1111,13 +1173,21 @@ def _nseq_lit(v: tuple) -> str:
 # well-formedness violation, not incompleteness, and a ground point makes
 # that provable instead of merely observed.
 #
-# Scope, deliberately narrow: only straight-line bodies (`var`, `assign`,
-# `return`, `if`) are replayed; a `while` reached before the violation
-# aborts the walk (ValueError, caught below), leaving the cell honestly
-# UNPROVED exactly as "preservation, undefined: not emitted" already leaves
-# a loop-carried undefined witness. A spec_fun call or quantifier inside the
-# body aborts the same way: nothing here claims those, only what interp.ev
-# already agrees is a plain arithmetic/seq operator.
+# Scope (widened 2026-09-10, nested-sequences residual fz_v1nested_069/150:
+# see the dated note below): `var`, `assign`, `return`, `if` AND `while` are
+# all replayed. A `while` is exactly as replayable as `interp.exec_body`'s:
+# the witness is fully ground (every name in `env` is already a concrete
+# value, no symbolic state anywhere), so stepping the condition and body
+# with `_ev_undef`/`_exec_undef` themselves, capped at `interp.MAX_LOOP`
+# the same way `interp.exec_body` caps it (`interp.Budget`, caught by
+# `_certificate`'s outer except same as any other refusal), replays a loop
+# no differently than a straight-line run of the same length would. `if`
+# and `while` both propagate a `return`'s early exit (the bool
+# `_exec_undef` returns, mirroring `interp.exec_body`'s flag) so a
+# definedness violation after an early `return` is never replayed past it.
+# A spec_fun call or quantifier inside the body still aborts (ValueError,
+# caught below): nothing here claims those, only what interp.ev already
+# agrees is a plain arithmetic/seq operator or a `while`/`if`/`return`.
 
 class _DefViol(Exception):
     """The definedness obligation that failed during `_exec_undef`'s replay
@@ -1235,12 +1305,15 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
     raise ValueError(f"t has no operator {op!r}")
 
 
-def _exec_undef(body: list, env: dict, funs: dict, st) -> None:
-    """Mirror of interp.exec_body, straight-line subset only: replays
-    var/assign/return/if under the witness's concrete values, mutating
-    `env` exactly as an actual run would, until `_ev_undef` raises
-    _DefViol. A `while` reached before that point abstains (ValueError):
-    see the section comment above."""
+def _exec_undef(body: list, env: dict, funs: dict, st) -> bool:
+    """Mirror of interp.exec_body: replays var/assign/return/if/while under
+    the witness's concrete values, mutating `env` exactly as an actual run
+    would, until `_ev_undef` raises _DefViol. Returns True when a `return`
+    ended the run (mirrors interp.exec_body's own flag), so an `if` or a
+    `while` that reaches a `return` stops the replay there rather than
+    falling through to statements a real execution never runs; see the
+    section comment above for what is still out of scope (a spec_fun call
+    or a quantifier)."""
     for s in body:
         st.tick()
         if "assign" in s:
@@ -1249,18 +1322,27 @@ def _exec_undef(body: list, env: dict, funs: dict, st) -> None:
         elif "return" in s:
             name, e = s["return"]
             env[name] = _ev_undef(e, env, funs, st)
-            return
+            return True
         elif "var" in s:
             d = s["var"]
             env[d["name"]] = _ev_undef(d["init"], env, funs, st)
         elif "if" in s:
             c = s["if"]
             cv = _ev_undef(c["cond"], env, funs, st)
-            _exec_undef(c["then"] if cv else c["else"], env, funs, st)
+            if _exec_undef(c["then"] if cv else c["else"], env, funs, st):
+                return True
         elif "while" in s:
-            raise ValueError("undefined-kind certificate: while in body")
+            w = s["while"]
+            it = 0
+            while _ev_undef(w["cond"], env, funs, st):
+                if _exec_undef(w["body"], env, funs, st):
+                    return True
+                it += 1
+                if it > interp.MAX_LOOP:
+                    raise interp.Budget("loop cap")
         else:
             raise ValueError(f"t has no statement {s!r}")
+    return False
 
 
 def _scope_types(task: dict) -> dict:
@@ -1300,6 +1382,23 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     scope_types = _scope_types(task)
     ret_type = task["returns"][0]["type"]
     st = interp.St()
+    # A value/exit-kind witness's own RETURN value (SPEC.md "Nested
+    # sequences", 2026-09-10, residual fz_v1nested_078/115/606: see the
+    # dated note below), gated the same way `ret_extra` names ANY seq or
+    # nested-seq value in scope: `interp.Reference.witness` records only
+    # PARAMS in `names` (a "value"-kind witness never carries the return,
+    # by construction, per `_scope_types`'s own docstring), so a task whose
+    # return is seq/nested-seq-typed and whose ensures is falsified by the
+    # twin's computed value (nested_lit, concat_nested) had that value
+    # substituted straight into the certificate formula with no witness
+    # name to bind it to: `_name_seqs` raised KeyError on its own `_seq`/
+    # `_seq2` tag (a refusal, not a wrong lowering, but a needless one).
+    # Populated only when the return's name is not ALREADY a witness name
+    # (true for every "value"-kind witness, and for "exit"-kind always
+    # false since `_invariant_candidates` always includes the return in
+    # `names`), so this never touches the exit-kind path at all: no risk of
+    # binding the SAME Dafny name to two different values in one lemma.
+    ret_extra: tuple[str, object] | None = None
     try:
         # scope_types.get(n) is the value's own t type (SPEC.md "Pairs",
         # 2026-09-10): needed so a pair-typed witness value is built as a
@@ -1311,8 +1410,11 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             tw = w.get("_twin")
             if isinstance(tw, str) or not isinstance(tw, (bool, int, list)):
                 return None
+            ret_name = task["returns"][0]["name"]
             m2 = dict(m)
-            m2[task["returns"][0]["name"]] = _tlit(tw, ret_type)
+            m2[ret_name] = _tlit(tw, ret_type)
+            if ret_name not in names:
+                ret_extra = (ret_name, tw)
             parts = [subst(rq, m2) for rq in task.get("requires", [])]
             parts.append(_not(_conj([subst(en, m2)
                                      for en in task["ensures"]])))
@@ -1342,8 +1444,9 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             # section comment above `_DefViol`): the FIRST definedness
             # obligation it hits unconditionally, as a ground guard. No
             # violation on replay (our mirror disagreeing with interp.py's,
-            # or a `while`/quantifier/call the mirror abstains on) refuses
-            # the certificate rather than guessing.
+            # a loop that exceeds interp.MAX_LOOP, or a quantifier/call the
+            # mirror still abstains on) refuses the certificate rather than
+            # guessing.
             env = dict(names)
             st2 = interp.St()
             try:
@@ -1372,7 +1475,8 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         formula = _conj(list(seen.values()))
         seq_names: dict = {}
         nseq_names: dict = {}
-        for n, v in names.items():
+        for n, v in (list(names.items())
+                     + ([ret_extra] if ret_extra is not None else [])):
             # scope_types-gated (SPEC.md "Pairs", 2026-09-10): a pair-typed
             # name whose two components are both plain ints renders the same
             # 2-list shape as a length-2 seq (interp._j), so

@@ -808,6 +808,193 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   them) -- the same conclusion the (now unavailable) diff would have
   shown, reached by reading the code that ran rather than the file it
   would have produced.
+
+  THE v1nested RESIDUAL (2026-09-10). The fuzz family `v1nested` (18
+  tasks) read rocq verified/refuted on 6 of 18; the 12 misses split, by
+  ROOT CAUSE rather than by symptom, into six fixes.
+
+  (1) FOUR CRASHES, all `t["pair"]`'s own bare KeyError/AssertionError,
+  never `pair_ty`-gated the way every other pair-type site already is.
+  `fz_v1nested_026`/`fz_p_nest_eq` (`eq_nested`, `r := m == n` on two
+  WHOLE nested seqs): `bx()`/`prop()`'s own `==`/`!=` dispatch read
+  `isinstance(t, dict)` as "this is a pair" unconditionally, so a nested
+  seq's `{"seq": "seq"}` dict crashed `t["pair"]` with `KeyError: 'pair'`
+  before ever reaching `t == "seq"`'s own extensional branch just below.
+  FIX: both dispatches gate the pair branch on `"pair" in t` (the exact
+  guard `_check_pair_types`'s own `check()` already uses for the
+  identical reason) and gain a NEW nested branch (below, (3)). `fz_v1-
+  nested_054` (`slice_rows`, `r := slice(m, a, b)`, `m` nested): `defs()`'s
+  own "slice" case computed the definedness bound's length with a bare
+  `self.seq_fn(s, ...)`, never `outer_fn` -- the SAME dispatch `at`'s and
+  `update`'s own defs() cases already route through `outer_fn`, `slice`'s
+  was simply missed when nested seqs were built -- so a nested `s` hit
+  `seq_fn`'s own "is not a seq" assert. FIX: one word, `seq_fn` ->
+  `outer_fn`. `fz_p_nest_lit` (`nested_lit`, an INLINE `len(seq(seq(1,
+  2), seq(3)))`, no declared nested type anywhere): `Ctx.ty`'s own "seq"/
+  "slice"/"fill" arm returned the bare string "seq" unconditionally,
+  never inspecting whether the literal's own rows are themselves seq-
+  valued, so `outer_fn` misrouted a nested literal to `seq_fn`, which
+  has no case for a "seq"-valued ARGUMENT and raised `ValueError: not an
+  int expression: 'seq'`. FIX: `ty()`'s "seq" case now inspects its
+  first argument's own type (nested iff it is itself seq-valued; an
+  EMPTY literal stays ambiguous, resolved by the caller's declared-type
+  dispatch exactly as SPEC.md says, never by this method); `ty()`'s
+  "slice" case now propagates its container's own nesting the same
+  half-step `at`/`+` already have.
+
+  (2) ONE MALFORMED, `fz_v1nested_007` (`param_rowlen`, a loop, `m`
+  nested): coqc's own error, read directly (`coqc` was reachable via
+  `~/.opam/default/bin`, not on this session's default PATH), was "The
+  term 'true' has type 'bool' while it is expected to have type 'Z ->
+  bool'": `_value_cert`'s own `gargs` loop (the witness-substituted CALL
+  to `{name}_t` inside the refutation certificate) checked `p["type"] ==
+  "seq"` to decide a two-slot (fn, len) expansion, the same bare-string
+  check (1) already found and fixed twice over; a nested param's own
+  `_len` argument was silently DROPPED, one argument short of `{name}_
+  t`'s real signature. FIX: the same `isinstance(dict) and "seq" in t`
+  OR-guard as everywhere else.
+
+  (3) WHOLE-NESTED `==`/`!=` IN COMPUTATIONAL POSITION, the gap the
+  original NESTED SEQUENCES (v1) note (above) named and left unbuilt
+  ("neither committed task's ensures ever compares two WHOLE nested
+  seqs") -- this family's `eq_nested` shape does, in the BODY (`r := m
+  == n`, a bool), not only the ensures. `t_nseq_eqb` (PRELUDE, dated
+  note near `t_napp`, below) is `t_seq_eqb`'s own outer analogue: the
+  same bounded Fixpoint, but each "leaf" is a ROW comparison (length
+  ANDed with `t_seq_eqb` over the row's own elements) rather than
+  `Z.eqb`, reusing `t_seq_eqb` rather than a second hand-written
+  recursion. `bx()`/`prop()` each gained one new dict-typed branch
+  (`t.get("seq") == "seq"`), `prop()`'s the same forall-of-forall shape
+  `fz_p_nest_eq`'s own ensures already states by hand (one conjunct per
+  row) SPEC.md's rule restated at two levels instead of one.
+
+  (4) THE NAMED REFUSALS THIS FAMILY USES: `+` (`concat_nested`, `r :=
+  m + n`), `slice` (`slice_rows`), and the outer LITERAL (`nested_lit`,
+  `fz_p_nest_lit`, `fz_p_nest_empty`) -- three of the four operators
+  `Ctx.nested_fn`'s own dated note (above) named as unexercised
+  refusals. Built the same way `update` already was: `t_napp`/
+  `t_nslice` are `t_app`/`t_slice` at the row-pair codomain, monomorphic,
+  Ltac copied verbatim (PRELUDE, dated note near `t_napp`); the LITERAL
+  is `t_nupd` chained over a base row never read at any assigned index,
+  needing no new opaque Definition, the exact reasoning `seq_fn`'s own
+  literal already uses for `t_fill 0`. Neither `t_napp_case` nor
+  `t_nslice_get` exposes a bare literal pair (their branches are still-
+  symbolic applications or a reindex, never a `(rf, rl)` literal), so
+  both join `t_inv1`'s match as a PLAIN case-split arm -- no delta step
+  added to `t_inv1`'s hot match; the literal's own delta step is
+  `t_nupd_case`'s existing `cbn [fst snd] in *`, unchanged. `fill`
+  stays the one refusal actually left: no task in this family builds an
+  outer `fill`, so `t_nfill` stays unwritten, the same "unmeasured
+  surface" reasoning the original note gave for all three.
+
+  `fill` was the FOURTH name on this task's own list ("outer fill, +,
+  slice, literal, whole-nested =="); a `grep` of every task's own AST
+  confirms zero uses of an outer `fill` anywhere in the 18-task family,
+  so it is left exactly where (4)'s own note leaves it.
+
+  (5) TWO LATENT BUGS THIS RESIDUAL EXPOSED, NEITHER SPECIFIC TO
+  NESTING. `emit_def_lemmas` (and its `emit_spec_funs` twin) rendered
+  `forall {allb},` unconditionally; a param-less task with a ground
+  obligation (no bound `binders` either -- `fz_p_nest_lit`'s own `at` on
+  a literal index) makes `allb` empty, so `forall ,` is a bare keyword
+  with no binder, a Coq syntax error, MALFORMED. `gen_plain`'s three
+  `Theorem {name}_t_spec : forall {pb},` sites have the identical shape
+  for a param-less task's own top-level correctness theorem. FIX (both):
+  omit the whole `forall ..., ` line when there is nothing to bind;
+  every task with a param or a bound variable renders byte-identical to
+  before. Neither of these was reachable before this residual: every
+  prior committed/fuzzed task had at least one param.
+
+  (6) `gen_loop` HAD ONLY HALF OF NESTED RETURNS. `gen_plain` already
+  special-cased a nested return's own placeholder env0 and its two-
+  Definition (fn, len) split; `gen_loop` had the placeholder (added
+  here, MEASURED first as `fz_v1nested_069`'s own abstain,
+  "default_term has no single-slot default for a nested seq") but not
+  the SECOND half: its own `ens`/`def_lines` construction still checked
+  bare `ret_t == "seq"`, so a nested RETURN threaded through a LOOP
+  (`build_matrix`'s own `m`, assigned to `r` only in the suffix) left
+  `r_len` unsubstituted in the rendered ensures -- a bare, unbound name,
+  "The reference r_len was not found in the current environment",
+  MALFORMED. FIX: both a nested env0 branch and a nested `ens`/
+  `def_lines` branch, each the SAME two-Definition split `gen_plain`
+  already has.
+
+  MEASURED, before/after (`fuzz_lower.py --tasks <these 12> --only rocq
+  --n 400 --seed 1 --flake 3`, coqc 9.2.0, this box, reached via
+  `~/.opam/default/bin`, not this session's default PATH). Before: 4
+  lower-error crashes (`fz_v1nested_026`/`054`, `fz_p_nest_lit`/`eq`), 4
+  abstains (`fz_v1nested_069`/`078`/`115`/`606`), 1 verified/malformed
+  (`fz_v1nested_007`), 1 unproved/unproved (`fz_v1nested_150`), 1
+  verified/unproved (`fz_v1nested_182`), 1 no-twin/no-twin (`fz_p_nest_
+  empty`). After: FOUR now read verified/refuted in full --
+  `fz_v1nested_007`/`026`/`054` and `fz_p_nest_eq`, every one of them a
+  crash or MALFORMED before. FIVE more now read verified/unproved,
+  upgraded from a crash, an abstain, or MALFORMED to a correct REAL
+  program whose TWIN is not (yet) certified false: `fz_v1nested_069`/
+  `078`/`115`/`606` and `fz_p_nest_lit`. THREE are unchanged, out of
+  scope for this residual (none uses `+`/`slice`/the literal/whole-
+  nested `==`): `fz_v1nested_150` (unproved/unproved, a `rowsum` spec_fun
+  call composed with a nested `at` -- a proof-strength gap, not a
+  lowering crash), `fz_v1nested_182` (verified/unproved, 41.2 s real --
+  the SAME load-sensitive/proof-cost reading the v1pairs residual (above)
+  already measured for `min_max`, not a regression), and `fz_p_nest_
+  empty` (no-twin/no-twin -- `harness.twin_cached` finds no mutation for
+  a body with nothing but one literal assign, a corpus/harness limit no
+  lowering fix can reach, unconditionally the same for every backend).
+
+  WHY the five verified/unproved cells are not verified/refuted, NAMED
+  rather than guessed at (each traced to its own witness `_kind` and the
+  specific certificate function that declines it): `fz_v1nested_078`/
+  `606`/`fz_p_nest_lit` have a "value"-kind witness but ZERO params
+  (`nested_lit`'s own shape, a return-only task), and `_value_cert`'s
+  own first line is `if not task["params"]: return None` -- built for a
+  witness that substitutes PARAMS, with no hook yet for a body-only
+  mutation; `fz_v1nested_115`'s witness is ALSO "value"-kind, but its
+  RETURN is nested, and `_value_cert` already had a NAMED abstain for
+  exactly that shape before this date ("a seq twin value is a tuple...
+  this abstains rather than guessing, the SAME reason extended to a
+  nested return"), simply never exercised until `concat_nested`;
+  `fz_v1nested_069`'s witness is "undefined"-kind, but `_undef_cert`'s
+  own second line is `if w is not None: return None  # not needed by
+  any committed task yet` -- built for a loop-free body, and `build_
+  matrix` is this family's first loop task with an undefined-kind twin.
+  None of these three gaps is a nested-SEQ bug specifically (a plain-seq
+  param-less/nested-return/loop-undefined task would hit the identical
+  wall); none is touched by this date's fix, which built the FOUR named
+  operators the family uses, not a new certificate shape.
+
+  PRELUDE DELTA: MEASURED by regenerating swap_rows/row_max_len/swap/
+  tail/filter_pos/divmod_pair/min_max into `out/agent-rocq-nested2/` via
+  `harness.run_task` and diffing against `out/<name>.v`: 151 inserted
+  lines on all seven (zero deletions, three diff hunks each -- 145 lines
+  for the `t_napp`/`t_nslice`/`t_nseq_eqb` block and its dated comment,
+  3 + 3 for `t_inv1`'s new match-arm pairs, goal and hypothesis
+  position), byte-identical otherwise; `abs` (a v0 task, `lower_v0`,
+  untouched by any fix here) is byte-identical outright. The same pure-
+  insertion shape every PRELUDE growth here has had.
+
+  REGRESSION. All eight reads exactly reproduce their own prior dated
+  note's witness, unchanged: `swap_rows`/`row_max_len` (COUNTS, this
+  note's own MEASURED paragraph above, byte for byte) and `abs`/`swap`/
+  `tail`/`filter_pos`/`divmod_pair` (COUNTS, each one's own witness
+  verbatim, e.g. `divmod_pair`'s wrong-var twin at x=1, y=1)/`min_max`
+  (REFUSED, real TIMEOUT again, the same load-sensitive reading already
+  established, not a regression). The diff against `out/<name>.v`
+  (PRELUDE DELTA, above) is the controlled comparison this time (unlike
+  the v1nested wave's own note, where a concurrent process had
+  overwritten the baseline): all seven v1 tasks differ from `out/
+  <name>.v` by EXACTLY the 151-line PRELUDE insertion and nothing else;
+  `abs` (v0) is byte-identical outright.
+
+  WHAT STAYS AN ABSTAIN OR UNCHANGED, BY NAME: `fill` at the nested
+  outer level (`t_nfill`, unbuilt, unexercised by this family, (4)
+  above); `fz_v1nested_150` (`rowsum` spec_fun composed with a nested
+  `at`, a proof-strength gap); `fz_v1nested_182` (load-sensitive proof
+  cost, the v1pairs residual's own `min_max` finding again); `fz_p_
+  nest_empty` (harness `no-twin`, no lowering fix reaches it); and the
+  three named certificate gaps just above (`_value_cert`'s param-less
+  and nested-return abstains, `_undef_cert`'s loop-free-only abstain) --
+  none of which this date's fix was scoped to close.
 """
 from __future__ import annotations
 
@@ -1431,6 +1618,151 @@ Ltac t_nupd_case f i v k :=
         destruct (Z.eqb_spec k i); [congruence|reflexivity]) ]
   ].
 
+(* t_napp / t_nslice / t_nseq_eqb (2026-09-10, the v1nested RESIDUAL):
+   the three named refusals `Ctx.nested_fn`'s own dated note above lists
+   as unexercised (`fill`, `+`, `slice`) turn out NOT all unexercised --
+   the fuzz family built to grade this construct DOES use `+`
+   (`concat_nested`) and `slice` (`slice_rows`) at the outer level, and
+   also compares two WHOLE nested seqs with `==` in COMPUTATIONAL
+   position (`eq_nested`, the gap the note near `t_seq_eqb`'s own
+   "Neither committed task's ensures..." paragraph named but left
+   unbuilt). `fill` alone stays unexercised (no task in the family builds
+   an outer `fill`) and stays a named abstain, `t_nfill` never written.
+
+   `t_napp`/`t_nslice` are `t_app`/`t_slice` at the row-pair codomain,
+   monomorphic exactly as `t_nupd` is at `t_upd`'s: the Ltac steps never
+   inspect the codomain, so `t_napp_case`/`t_nslice_get` are `t_app_case`/
+   `t_slice_get` copied verbatim at the new type. Neither one's own
+   case-split arm produces a bare literal pair the way `t_nupd_case`'s
+   "in range" branch does (`t_napp_case`'s two branches are `f k`/
+   `g (k - n)`, still-symbolic applications, not a `(rf, rl)` literal;
+   `t_nslice_get` is a bare reindex, same shape), so neither needs its
+   own `cbn [fst snd]` delta step: they slot into `t_inv1`'s match as a
+   plain case-split arm, the same tier `t_app_case`/`t_slice_get`
+   already sit in, keeping delta steps entirely OUT of `t_inv1`'s hot
+   match (the outer LITERAL still gets its fix from `t_nupd_case`'s own
+   existing `cbn [fst snd] in *`, since a literal is a `t_nupd` chain).
+
+   `t_nseq_eqb` is `t_seq_eqb`'s own outer analogue: the SAME bounded
+   Fixpoint over `Z.to_nat n`, but its "leaf" comparison at each outer
+   index is no longer `Z.eqb` -- it is the row's own LENGTH (`Z.eqb`)
+   ANDed with the row's own ELEMENTS, decided by `t_seq_eqb` itself (a
+   row IS an ordinary seq value), reusing the existing Fixpoint rather
+   than writing a second recursion. `t_nseq_eqb_spec` states the read-
+   back fact ALREADY PROJECTED (`snd (f k) = snd (g k) /\ (forall j, ...
+   fst (f k) j = fst (g k) j)`), never the raw pair `f k = g k` --
+   `_nested_witness_pieces`'s own dated finding, applied here before any
+   proof was measured wrong, rather than after: a raw-pair fact would
+   need a further `cbn [fst snd]` step no single placement gets right
+   either before or after `t_dis`'s own rewrite (that finding's own
+   reasoning, unchanged). `t_nseq_eqb_case` mirrors `t_seq_eqb_case`'s
+   unconditional two-way split (no "try by lia" shortcut: whether two
+   nested seqs agree is no more lia-decidable than whether two flat seqs
+   do) and joins `t_inv1`'s match immediately after `t_seq_eqb_case`'s
+   own two entries, goal and hypothesis position, ending in `t_bred_all`
+   like every other boolean case-split tactic here -- one new match arm,
+   not a delta step, so `t_inv1`'s own per-branch cost is unchanged for
+   every task that never builds a nested `==`. *)
+Definition t_napp (f g : Z -> ((Z -> Z) * Z)) (n : Z)
+  : Z -> ((Z -> Z) * Z) :=
+  fun k => if k <? n then f k else g (k - n).
+
+Definition t_nslice (f : Z -> ((Z -> Z) * Z)) (a : Z)
+  : Z -> ((Z -> Z) * Z) :=
+  fun k => f (a + k).
+
+Lemma t_nslice_get : forall (f : Z -> ((Z -> Z) * Z)) (a k : Z),
+  t_nslice f a k = f (a + k).
+Proof. reflexivity. Qed.
+
+Ltac t_napp_case f g n k :=
+  first
+  [ replace (t_napp f g n k) with (f k) in * by (unfold t_napp;
+      replace (k <? n) with true by (symmetry; apply Z.ltb_lt; lia);
+      reflexivity)
+  | replace (t_napp f g n k) with (g (k - n)) in * by (unfold t_napp;
+      replace (k <? n) with false by (symmetry; apply Z.ltb_ge; lia);
+      reflexivity)
+  | let E := fresh "Eb" in
+    assert (E : k < n \/ n <= k) by lia; destruct E as [E|E];
+    [ replace (t_napp f g n k) with (f k) in * by (unfold t_napp;
+        replace (k <? n) with true by (symmetry; apply Z.ltb_lt; exact E);
+        reflexivity)
+    | replace (t_napp f g n k) with (g (k - n)) in * by (unfold t_napp;
+        replace (k <? n) with false by (symmetry; apply Z.ltb_ge; exact E);
+        reflexivity) ]
+  ].
+
+Fixpoint t_nseq_eqb_nat (m : nat) (f g : Z -> ((Z -> Z) * Z)) : bool :=
+  match m with
+  | O => true
+  | S m' =>
+      let k := Z.of_nat m' in
+      andb (andb (Z.eqb (snd (f k)) (snd (g k)))
+                 (t_seq_eqb (snd (f k)) (fst (f k)) (fst (g k))))
+           (t_nseq_eqb_nat m' f g)
+  end.
+
+Definition t_nseq_eqb (n : Z) (f g : Z -> ((Z -> Z) * Z)) : bool :=
+  t_nseq_eqb_nat (Z.to_nat n) f g.
+
+Lemma t_nseq_eqb_nat_spec : forall (m : nat) (f g : Z -> ((Z -> Z) * Z)),
+  t_nseq_eqb_nat m f g = true <->
+  (forall k : Z, 0 <= k < Z.of_nat m ->
+     snd (f k) = snd (g k) /\
+     (forall j : Z, 0 <= j < snd (f k) -> fst (f k) j = fst (g k) j)).
+Proof.
+  induction m as [| m' IH]; intros f g; cbn [t_nseq_eqb_nat].
+  - split; [ intros _ k Hk; exfalso; lia | intros _; reflexivity ].
+  - rewrite Bool.andb_true_iff, Bool.andb_true_iff, Z.eqb_eq.
+    split.
+    + intros [[Hlen Hrow] Hrec] k Hk.
+      destruct (Z.eq_dec k (Z.of_nat m')) as [->|Hne].
+      * split.
+        -- exact Hlen.
+        -- apply (proj1 (t_seq_eqb_spec _ _ _)). exact Hrow.
+      * apply (proj1 (IH f g) Hrec). lia.
+    + intros H. split.
+      * split.
+        -- destruct (H (Z.of_nat m') ltac:(lia)) as [Hlen _]. exact Hlen.
+        -- apply (proj2 (t_seq_eqb_spec (snd (f (Z.of_nat m')))
+                     (fst (f (Z.of_nat m'))) (fst (g (Z.of_nat m'))))).
+           destruct (H (Z.of_nat m') ltac:(lia)) as [_ Hrow]. exact Hrow.
+      * apply (proj2 (IH f g)). intros k Hk. apply H. lia.
+Qed.
+
+Lemma t_nseq_eqb_spec : forall (n : Z) (f g : Z -> ((Z -> Z) * Z)),
+  t_nseq_eqb n f g = true <-> (forall k : Z, 0 <= k < n ->
+     snd (f k) = snd (g k) /\
+     (forall j : Z, 0 <= j < snd (f k) -> fst (f k) j = fst (g k) j)).
+Proof.
+  intros n f g. unfold t_nseq_eqb. rewrite t_nseq_eqb_nat_spec.
+  destruct (Z.le_gt_cases 0 n) as [Hn | Hn].
+  - replace (Z.of_nat (Z.to_nat n)) with n by lia. reflexivity.
+  - assert (Hz : Z.to_nat n = 0%nat).
+    { destruct n as [| p | p].
+      - exfalso; lia.
+      - exfalso; lia.
+      - reflexivity. }
+    rewrite Hz. split; intros _ k Hk; exfalso; lia.
+Qed.
+
+Ltac t_nseq_eqb_case n f g :=
+  let E := fresh "Es" in
+  destruct (Sumbool.sumbool_of_bool (t_nseq_eqb n f g)) as [E|E];
+  [ let F := fresh "Ef" in
+    pose proof (proj1 (t_nseq_eqb_spec n f g) E) as F;
+    replace (t_nseq_eqb n f g) with true in * by (symmetry; exact E)
+  | let F := fresh "Ef" in
+    assert (F : ~ (forall k : Z, 0 <= k < n ->
+                     snd (f k) = snd (g k) /\
+                     (forall j : Z, 0 <= j < snd (f k) ->
+                        fst (f k) j = fst (g k) j)))
+      by (intros Hc; apply (proj2 (t_nseq_eqb_spec n f g)) in Hc;
+          congruence);
+    replace (t_nseq_eqb n f g) with false in * by (symmetry; exact E)
+  ]; t_bred_all.
+
 (* invertible structural steps *)
 Ltac t_inv1 :=
   match goal with
@@ -1455,6 +1787,9 @@ Ltac t_inv1 :=
   | |- context [t_seq_eqb ?n ?f ?g] => t_seq_eqb_case n f g
   | |- context [t_pair_eqb ?eqA ?eqB ?p ?q] => t_pair_eqb_case eqA eqB p q
   | |- context [t_nupd ?f ?i ?v ?k] => t_nupd_case f i v k
+  | |- context [t_napp ?f ?g ?n ?k] => t_napp_case f g n k
+  | |- context [t_nslice ?f ?a ?k] => rewrite (t_nslice_get f a k)
+  | |- context [t_nseq_eqb ?n ?f ?g] => t_nseq_eqb_case n f g
   | |- context [orb _ _] => progress t_bred
   | |- context [andb _ _] => progress t_bred
   | |- context [negb _] => progress t_bred
@@ -1477,6 +1812,9 @@ Ltac t_inv1 :=
   | H : context [t_seq_eqb ?n ?f ?g] |- _ => t_seq_eqb_case n f g
   | H : context [t_pair_eqb ?eqA ?eqB ?p ?q] |- _ => t_pair_eqb_case eqA eqB p q
   | H : context [t_nupd ?f ?i ?v ?k] |- _ => t_nupd_case f i v k
+  | H : context [t_napp ?f ?g ?n ?k] |- _ => t_napp_case f g n k
+  | H : context [t_nslice ?f ?a ?k] |- _ => rewrite (t_nslice_get f a k) in H
+  | H : context [t_nseq_eqb ?n ?f ?g] |- _ => t_nseq_eqb_case n f g
   end.
 
 (* deterministic saturation steps *)
@@ -1863,8 +2201,16 @@ class Ctx:
             # `+` is polymorphic by operand type exactly as `==` already
             # is (two ints, two seqs); a `+` whose left operand is a seq
             # is concatenation, the same rule `bx`/`prop`'s own `==`
-            # dispatch already uses.
-            return "seq" if self.ty(e["args"][0], local) == "seq" else "int"
+            # dispatch already uses. Nested sequences (v1) residual
+            # (2026-09-10): a nested left operand (`concat_nested`'s own
+            # `r := m + n`) is nested too, the same half-step `at` already
+            # took just below, not the bare "seq" string equality check
+            # this arm had before, which read a nested `+` as "int" and
+            # crashed downstream.
+            t0 = self.ty(e["args"][0], local)
+            if isinstance(t0, dict) and "seq" in t0:
+                return t0
+            return "seq" if t0 == "seq" else "int"
         if op == "at":
             # SPEC.md "Nested sequences (v1)": `at` on a NESTED container
             # (`m[i]`) is a ROW, itself a seq value, not an int; `ty()` on
@@ -1884,7 +2230,33 @@ class Ctx:
             # a generalization, not a behavior change, for every existing
             # (plain) `update` node.
             return self.ty(e["args"][0], local)
-        if op in ("fill", "seq", "slice"):
+        if op == "seq":
+            # Nested sequences (v1) residual (2026-09-10): a LITERAL's own
+            # row arguments are themselves seq-valued when it is a nested
+            # literal (`nested_lit`'s `[[..], ..]` shape); an EMPTY
+            # literal (`[]`) stays ambiguous here exactly as SPEC.md says
+            # ("resolved by the declared type at the assignment"), never
+            # by this method: `fz_p_nest_empty`'s `r := seq()` reaches
+            # `nested_fn` through `r`'s own declared type at the assign
+            # site (exec_straight), not through this arm.
+            args = e.get("args", [])
+            if args:
+                t0 = self.ty(args[0], local)
+                if t0 == "seq" or (isinstance(t0, dict) and "seq" in t0):
+                    return {"seq": "seq"}
+            return "seq"
+        if op == "slice":
+            # Nested sequences (v1) residual (2026-09-10): a slice of a
+            # nested container (`slice_rows`' own `r := slice(m, a, b)`)
+            # is nested too, the same container-decides-the-result rule
+            # `at`/`+` already have.
+            ct = self.ty(e["args"][0], local)
+            return ct if (isinstance(ct, dict) and "seq" in ct) else "seq"
+        if op == "fill":
+            # `fill`'s own element is always an int component (SPEC.md);
+            # a nested fill is the named refusal `Ctx.nested_fn` still
+            # raises for, unexercised by this family (below), so this
+            # stays plain.
             return "seq"
         if op == "pair":
             # SPEC.md "Pairs (v1)": `{"op": "pair", "args": [a, b]}` has no
@@ -2033,10 +2405,46 @@ class Ctx:
             idx = self.zx(i, env, local)
             row_fn, row_len = self.seq_fn(r, env, local)
             return f"(t_nupd {fn_s} {idx} ({row_fn}, {row_len}))", ln_s
+        if op == "seq":
+            # Nested sequences (v1) residual (2026-09-10): the outer
+            # LITERAL, `[[..], ..]` (`nested_lit`'s own shape). Each
+            # argument is itself a plain-seq row (`seq_fn`), so this is
+            # `seq_fn`'s own literal-building chain one level up: a chain
+            # of `t_nupd` (already PRELUDE) over a base outer function
+            # that is never read at any index the chain actually assigns,
+            # the SAME reasoning `seq_fn`'s own "seq" case already gives
+            # for `t_fill 0` as ITS base -- no new opaque Definition
+            # needed for the base either.
+            fn = "(fun _ : Z => ((fun _ : Z => 0), 0))"
+            for k, row_e in enumerate(e["args"]):
+                row_fn, row_len = self.seq_fn(row_e, env, local)
+                fn = f"(t_nupd {fn} {k} ({row_fn}, {row_len}))"
+            return fn, str(len(e["args"]))
+        if op == "+":
+            # Nested sequences (v1) residual (2026-09-10): concatenation
+            # of two nested seqs (`concat_nested`'s own `r := m + n`),
+            # `t_napp`'s own outer-codomain twin of `seq_fn`'s `t_app`
+            # (PRELUDE).
+            s, t = e["args"]
+            fn_s, ln_s = self.nested_fn(s, env, local)
+            fn_t, ln_t = self.nested_fn(t, env, local)
+            return f"(t_napp {fn_s} {fn_t} {ln_s})", f"({ln_s} + {ln_t})"
+        if op == "slice":
+            # Nested sequences (v1) residual (2026-09-10): a row-slice of
+            # a nested seq (`slice_rows`' own `r := slice(m, a, b)`),
+            # `t_nslice`'s own outer-codomain twin of `seq_fn`'s
+            # `t_slice` (PRELUDE).
+            s, a, b = e["args"]
+            fn_s, _ = self.nested_fn(s, env, local)
+            av = self.zx(a, env, local)
+            bv = self.zx(b, env, local)
+            return f"(t_nslice {fn_s} {av})", f"({bv} - {av})"
         raise NotImplementedError(
             f"rocq lowering: nested seq op {op!r} is refused (only var/"
-            f"ite/update are built at the outer level; see Nested "
-            f"sequences (v1)'s dated note near t_nupd)")
+            f"ite/update/seq/+/slice are built at the outer level; "
+            f"`fill` is the sole refusal left here, unexercised by this "
+            f"family; see Nested sequences (v1)'s dated note near "
+            f"t_nupd)")
 
     def outer_fn(self, e: dict, env: dict, local: dict | None = None
                  ) -> tuple[str, str]:
@@ -2186,7 +2594,7 @@ class Ctx:
             return f"({b} {'<?' if op == '>' else '<=?'} {a})"
         if op in ("==", "!="):
             t = self.ty(e["args"][0], local)
-            if isinstance(t, dict):
+            if isinstance(t, dict) and "pair" in t:
                 # SPEC.md "Pairs (v1)": `==`/`!=` on two pairs is
                 # componentwise, "the polymorphic == again"; in
                 # COMPUTATIONAL position this needs a decidable bool,
@@ -2199,6 +2607,22 @@ class Ctx:
                 pb = self.px(e["args"][1], env, local)
                 eqA, eqB = pair_comp_eq_fn(t1), pair_comp_eq_fn(t2)
                 core = f"(t_pair_eqb {eqA} {eqB} {pa} {pb})"
+                return core if op == "==" else f"(negb {core})"
+            if isinstance(t, dict) and t.get("seq") == "seq":
+                # Nested sequences (v1) residual (2026-09-10): `==`/`!=`
+                # on two WHOLE nested seqs in COMPUTATIONAL position
+                # (`eq_nested`'s own `r := m == n`; the crash this closes
+                # was `t["pair"]`'s own KeyError on this dict, reached
+                # before the `"pair" in t` guard above existed).
+                # PRELUDE's `t_nseq_eqb` decides it: outer length equality
+                # first, then a bounded Fixpoint comparing row lengths
+                # AND each row's own elements via `t_seq_eqb` (a row IS
+                # an ordinary seq value), the outer analogue of
+                # `t_seq_eqb` itself.
+                rows_a, ln_a = self.nested_fn(e["args"][0], env, local)
+                rows_b, ln_b = self.nested_fn(e["args"][1], env, local)
+                core = (f"(({ln_a} =? {ln_b}) && "
+                        f"t_nseq_eqb {ln_a} {rows_a} {rows_b})")
                 return core if op == "==" else f"(negb {core})"
             if t == "seq":
                 # The residual (2026-09-09): seq `==`/`!=` in COMPUTATIONAL
@@ -2295,7 +2719,7 @@ class Ctx:
                 a, b = (self.prop(x, env, local) for x in e["args"])
                 return (f"({a} <-> {b})" if op == "=="
                         else f"(~ ({a} <-> {b}))")
-            if isinstance(t, dict):
+            if isinstance(t, dict) and "pair" in t:
                 # SPEC.md "Pairs (v1)": == on two pairs is componentwise,
                 # "the polymorphic == again"; a Prop admits an unbounded
                 # per-component equality directly (Z `=` for an int
@@ -2314,6 +2738,25 @@ class Ctx:
 
                 core = (f"({ceq(t1, f'(fst {pa})', f'(fst {pb})')} /\\ "
                         f"{ceq(t2, f'(snd {pa})', f'(snd {pb})')})")
+                return core if op == "==" else f"(~ {core})"
+            if isinstance(t, dict) and t.get("seq") == "seq":
+                # Nested sequences (v1) residual (2026-09-10): two nested
+                # seqs are equal iff same outer length and every row equal
+                # (`fz_p_nest_eq`'s own ensures states exactly this shape,
+                # one conjunct per row rather than the raw `m == n` the
+                # body computes). Same forall-of-forall as the plain-seq
+                # rule just below, one level deeper: the outer forall's
+                # body is the row's own length equation conjoined with an
+                # inner forall over the row's own elements (a row IS an
+                # ordinary seq value, `nested_fn`'s "rows" function).
+                rows_a, ln_a = self.nested_fn(e["args"][0], env, local)
+                rows_b, ln_b = self.nested_fn(e["args"][1], env, local)
+                core = (
+                    f"({ln_a} = {ln_b} /\\ "
+                    f"(forall t_k : Z, 0 <= t_k < {ln_a} -> "
+                    f"snd ({rows_a} t_k) = snd ({rows_b} t_k) /\\ "
+                    f"(forall t_j : Z, 0 <= t_j < snd ({rows_a} t_k) -> "
+                    f"fst ({rows_a} t_k) t_j = fst ({rows_b} t_k) t_j)))")
                 return core if op == "==" else f"(~ {core})"
             if t == "seq":
                 # SPEC.md "Sequences as values (v1)": "==" and "!=" apply
@@ -2420,7 +2863,14 @@ class Ctx:
             self.defs(s, ctx, binders, acc, env, local)
             self.defs(a, ctx, binders, acc, env, local)
             self.defs(b, ctx, binders, acc, env, local)
-            _, ln = self.seq_fn(s, env, local)
+            # Nested sequences (v1) residual (2026-09-10): `s`'s own
+            # length lookup must route through `nested_fn` when `s` is
+            # nested (`outer_fn`'s dispatch, the same fix `update`'s own
+            # case above already has); the un-dispatched `seq_fn` here
+            # crashed with `seq_fn`'s own "is not a seq" assert on a
+            # nested `s` (MEASURED, `slice_rows`' own `r := slice(m, a,
+            # b)`, `m` nested).
+            _, ln = self.outer_fn(s, env, local)
             av = self.zx(a, env, local)
             bv = self.zx(b, env, local)
             acc.append((list(binders), list(ctx),
@@ -2960,19 +3410,60 @@ def _has_pair(task: dict) -> bool:
     return walk(task["body"])
 
 
+def _expr_has_nested(e) -> bool:
+    """True iff an inline nested-seq LITERAL appears anywhere inside
+    expression `e` (SPEC.md "Nested sequences (v1)" residual, 2026-09-10):
+    a `{"op": "seq", "args": [...]}` node whose own arguments are
+    THEMSELVES seq literals. `_has_nested`'s own TYPE walk (a dict type
+    on a param/return/local) MISSED a nested literal built and used
+    entirely inline, tied to no declared nested type anywhere:
+    `fz_p_nest_lit` (the fuzz corpus's own nested-literal probe) has no
+    param and a plain BOOL return, so the old `_has_nested` read False,
+    `gen_plain` emitted no `cbn [fst snd].`, and the literal's own
+    `t_nupd`-chain read-back (`t_nupd_case`'s "in range" branch) left a
+    bare `fst`/`snd` of a literal pair stuck in front of `t_dis`'s
+    search -- the exact gap `_expr_has_pair` closed for an inline pair,
+    mirrored here for an inline nested literal. Syntactic, not a full
+    type walk (no `local` in scope here): sufficient for every nested
+    literal this family builds (each row is itself an inline `seq`
+    literal), not for a literal whose rows are seq-typed VARIABLES
+    instead -- that shape is still caught by `_has_nested`'s own type
+    walk, since a seq/nested-typed name reaching such a literal must
+    itself be declared somewhere."""
+    if not isinstance(e, dict):
+        return False
+    if e.get("op") == "seq" and any(
+            isinstance(a, dict) and a.get("op") == "seq"
+            for a in e.get("args", [])):
+        return True
+    if any(_expr_has_nested(a) for a in e.get("args", [])):
+        return True
+    if "ite" in e:
+        c = e["ite"]
+        return (_expr_has_nested(c["cond"]) or _expr_has_nested(c["then"])
+                or _expr_has_nested(c["else"]))
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        return (_expr_has_nested(q["lo"]) or _expr_has_nested(q["hi"])
+                or _expr_has_nested(q["body"]))
+    if "call" in e:
+        return any(_expr_has_nested(a) for a in e["call"]["args"])
+    return False
+
+
 def _has_nested(task: dict) -> bool:
     """True iff `task` declares a NESTED seq type ({"seq": "seq"},
     SPEC.md "Nested sequences (v1)") anywhere: a param, a return, or a
-    `var` local. Unlike `_has_pair`, this is a TYPE walk only: SPEC.md
-    adds NO new Expr forms for nesting, so there is no inline-literal
-    case analogous to `_expr_has_pair`'s own fix to miss (a nested value
-    can only ever appear tied to a declared nested type somewhere, never
-    built free-floating the way `{"op": "pair", ...}` can be). Joins
-    `_has_pair` at gen_plain/gen_loop/_value_cert's shared `pair_line`
-    gate (both features need the identical `cbn [fst snd]` line, PAIRS
-    (v1)'s own cost finding already having proved it must live there and
-    not in `t_inv1`); a task with neither construct still emits byte-
-    identical proof text to before either existed."""
+    `var` local, OR builds one as an inline literal (`_expr_has_nested`,
+    2026-09-10 residual addition: SPEC.md adds no new Expr FORM for
+    nesting, but the existing `seq` literal form can still be used
+    free-floating, tied to no declared nested type, the same gap
+    `_expr_has_pair` closed for pairs; see `_expr_has_nested`'s own
+    note). Joins `_has_pair` at gen_plain/gen_loop/_value_cert's shared
+    `pair_line` gate (both features need the identical `cbn [fst snd]`
+    line, PAIRS (v1)'s own cost finding already having proved it must
+    live there and not in `t_inv1`); a task with neither construct still
+    emits byte-identical proof text to before either existed."""
     def has(t) -> bool:
         return isinstance(t, dict) and "seq" in t
 
@@ -2980,17 +3471,33 @@ def _has_nested(task: dict) -> bool:
         return True
     if any(has(r["type"]) for r in task["returns"]):
         return True
+    if any(_expr_has_nested(e) for e in task.get("requires", [])):
+        return True
+    if any(_expr_has_nested(e) for e in task.get("ensures", [])):
+        return True
 
     def walk(stmts: list) -> bool:
         for s in stmts:
-            if "var" in s and has(s["var"]["type"]):
+            if "var" in s and (has(s["var"]["type"])
+                                or _expr_has_nested(s["var"]["init"])):
+                return True
+            if "assign" in s and _expr_has_nested(s["assign"][1]):
+                return True
+            if "return" in s and _expr_has_nested(s["return"][1]):
                 return True
             if "if" in s:
                 c = s["if"]
-                if walk(c["then"]) or walk(c["else"]):
+                if (_expr_has_nested(c["cond"]) or walk(c["then"])
+                        or walk(c["else"])):
                     return True
-            if "while" in s and walk(s["while"]["body"]):
-                return True
+            if "while" in s:
+                w = s["while"]
+                if (_expr_has_nested(w["cond"])
+                        or _expr_has_nested(w["decreases"])
+                        or any(_expr_has_nested(e)
+                               for e in w.get("invariants", []))
+                        or walk(w["body"])):
+                    return True
         return False
 
     return walk(task["body"])
@@ -3139,8 +3646,16 @@ def emit_def_lemmas(cx: Ctx, name: str, obls: list, extra_binders: str = "",
         allb = " ".join(x for x in [pb, extra_binders, " ".join(binders)] if x)
         hs = len_hyps(cx) + hyps
         hyp_txt = "".join(f"  {h} ->\n" for h in hs)
+        # Nested sequences (v1) residual (2026-09-10): a param-less task
+        # with a ground obligation (no bound `binders` either,
+        # `fz_p_nest_lit`'s own `at` on a constant index) makes `allb`
+        # empty; `forall {allb},` then renders as "forall ," -- a Coq
+        # syntax error, MALFORMED (MEASURED). Every task with at least
+        # one param or bound variable is unaffected (`allb` non-empty,
+        # byte-identical to before).
+        fa = f"forall {allb},\n" if allb else ""
         out.append(
-            f"Lemma {name}_def_{k} : forall {allb},\n{hyp_txt}"
+            f"Lemma {name}_def_{k} : {fa}{hyp_txt}"
             f"  {concl}.\n"
             f"Proof. intros. t_dis. Qed.\n")
     return "\n".join(out)
@@ -3269,8 +3784,14 @@ def emit_sf_def_lemmas(cx: Ctx, counter: list) -> str:
         allb = " ".join(x for x in [btxt, " ".join(binders)] if x)
         hs = sf_lens + hyps
         hyp_txt = "".join(f"  {h} ->\n" for h in hs)
+        # Same "forall ," fix as emit_def_lemmas' own (2026-09-10): a
+        # param-less spec_fun with a ground obligation would otherwise
+        # render an empty binder list; unexercised by this family's own
+        # `rowsum` (which has params), fixed here for the identical
+        # reason regardless.
+        fa = f"forall {allb},\n" if allb else ""
         out.append(
-            f"Lemma {cx.task['name']}_def_{k} : forall {allb},\n{hyp_txt}"
+            f"Lemma {cx.task['name']}_def_{k} : {fa}{hyp_txt}"
             f"  {concl}.\n"
             f"Proof. intros. t_dis. Qed.\n")
     return "\n".join(out)
@@ -3416,13 +3937,19 @@ def gen_plain(cx: Ctx, body: list, counter: list) -> str:
         # `_has_pair` at this gate (both want the identical line).
         pair_line = ("  cbn [fst snd].\n"
                     if _has_pair(task) or _has_nested(task) else "")
+        # Nested sequences (v1) residual (2026-09-10): `forall {pb},` with
+        # an EMPTY `pb` (a param-less task, `nested_lit`'s own shape) is
+        # "forall ," -- a Coq syntax error, MALFORMED (MEASURED, this
+        # branch is unreached by any param-less task, but the identical
+        # pattern just below IS, `fz_p_nest_lit`; fixed uniformly here
+        # too rather than leaving one of three identical branches wrong).
+        fa = f"forall {pb},\n" if pb else ""
         return f"""{def_txt}
 Definition {name}_t {pb} : {rty(ret_t)} := {fn_expr}.
 Definition {name}_t_len {pb} : Z := {len_expr}.
 
 Theorem {name}_t_spec :
-  forall {pb},
-{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
+  {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros.
 {pdestr}  unfold {name}_t, {name}_t_len.
@@ -3446,13 +3973,13 @@ Qed.
         # note, 2026-09-10: an opaque param's `fst`/`snd` never reduces on
         # its own). Empty for every task without one, byte-identical.
         pdestr = _pair_param_destruct(task)
+        fa = f"forall {pb},\n" if pb else ""
         return f"""{def_txt}
 Definition {name}_t {pb} : Z -> Z := {fn_expr}.
 Definition {name}_t_len {pb} : Z := {len_expr}.
 
 Theorem {name}_t_spec :
-  forall {pb},
-{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
+  {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros.
 {pdestr}  unfold {name}_t, {name}_t_len.
@@ -3477,12 +4004,20 @@ Qed.
     # on its own, so the EXISTING `cbn [fst snd]` above is a no-op on it
     # without this). Empty for every task without a pair param.
     pdestr = _pair_param_destruct(task)
+    # Nested sequences (v1) residual (2026-09-10): a param-less task
+    # (`fz_p_nest_lit`, the fuzz corpus's own nested-literal probe, zero
+    # params) makes `pb` empty; `forall {pb},` then renders as the bare
+    # keyword with no binder, "forall ," -- a Coq syntax error, the
+    # harness's own MALFORMED reading (MEASURED). Omitting the whole
+    # `forall ... ,` line when there is nothing to bind keeps every task
+    # WITH a param byte-identical (`fa` is `forall {pb},\n` exactly as
+    # before whenever `pb` is non-empty).
+    fa = f"forall {pb},\n" if pb else ""
     return f"""{def_txt}
 Definition {name}_t {pb} : {rty(ret_t)} := {expr}.
 
 Theorem {name}_t_spec :
-  forall {pb},
-{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
+  {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros.
 {pdestr}  unfold {name}_t.
@@ -3518,6 +4053,16 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     obls: list = []
     if ret_t == "seq":
         env0 = {ret: "(fun _ : Z => 0)", ret + "_len": "0"}
+    elif isinstance(ret_t, dict) and "seq" in ret_t:
+        # Nested sequences (v1) residual (2026-09-10): `gen_plain` already
+        # special-cases a nested return's env0 this way (an outer function
+        # returning an empty row at every index, outer length 0);
+        # `gen_loop` was missing the same branch, so a LOOP with a nested
+        # RETURN (`build_matrix`'s own `m`, threaded to `r` only in the
+        # suffix) fell to `default_term`, which names this exact gap and
+        # abstains rather than guessing (MEASURED, `fz_v1nested_069`).
+        env0 = {ret: "(fun _ : Z => ((fun _ : Z => 0), 0))",
+               ret + "_len": "0"}
     else:
         env0 = {ret: default_term(ret_t)}
     env_pre = exec_straight(cx, prefix, env0, local, list(reqs), [], obls)
@@ -3664,7 +4209,16 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     # loop tasks, min_max included, have none).
     pdestr = _pair_param_destruct(task)
 
-    if ret_t == "seq":
+    if ret_t == "seq" or (isinstance(ret_t, dict) and "seq" in ret_t):
+        # Nested sequences (v1) residual (2026-09-10): a nested RETURN
+        # from a LOOP (`build_matrix`'s own `m`, threaded to `r` only in
+        # the suffix) is the SAME two-Definition split a plain seq return
+        # already gets here; the plain `== "seq"` check missed it (a dict
+        # never equals the string "seq"), so `ret_t`'s own `_len` half
+        # was never substituted into `ens` at all, leaving a bare, unbound
+        # `r_len` in the rendered Theorem -- "The reference r_len was not
+        # found in the current environment", the harness's own MALFORMED
+        # reading (MEASURED, `fz_v1nested_069`).
         ens = ensures_text(cx, {ret: f"({name}_t {pargs})",
                                 ret + "_len": f"({name}_t_len {pargs})"})
     else:
@@ -3717,6 +4271,20 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
             # together (measured, 2026-09-09).
             def_lines = (
                 f"Definition {name}_t {pb} : Z -> Z :=\n"
+                f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                f"{init_terms}\n  in {env_post[ret]}.\n\n"
+                f"Definition {name}_t_len {pb} : Z :=\n"
+                f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                f"{init_terms}\n  in {env_post[ret + '_len']}.\n")
+            unfold_line = f"unfold {name}_t, {name}_t_len."
+        elif isinstance(ret_t, dict) and "seq" in ret_t:
+            # Nested sequences (v1) residual (2026-09-10): the SAME two-
+            # Definition split just above, only at `rty(ret_t)`'s nested
+            # codomain rather than the plain seq's "Z -> Z" (`gen_plain`'s
+            # own nested branch already does this; `gen_loop` was missing
+            # it, `fz_v1nested_069`'s own MALFORMED reading above).
+            def_lines = (
+                f"Definition {name}_t {pb} : {rty(ret_t)} :=\n"
                 f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
                 f"{init_terms}\n  in {env_post[ret]}.\n\n"
                 f"Definition {name}_t_len {pb} : Z :=\n"
@@ -4465,7 +5033,17 @@ def _value_cert(cx, task, body, witness, def_text):
         return None
     gargs = []
     for p in task["params"]:
-        if p["type"] == "seq":
+        if p["type"] == "seq" or (isinstance(p["type"], dict)
+                                   and "seq" in p["type"]):
+            # Nested sequences (v1) residual (2026-09-10): a nested param
+            # is the SAME two-slot (fn, len) split a plain seq already
+            # gets here; the plain `== "seq"` string check missed it
+            # (a dict never equals the string "seq"), so a nested param's
+            # own `_len` arg was silently DROPPED from this call, one
+            # argument short of `{name}_t`'s own signature -- a Coq type
+            # error ("has type bool while it is expected to have type
+            # Z -> bool"), the harness's own MALFORMED reading (MEASURED,
+            # `fz_v1nested_007`).
             gargs += [env_txt[p["name"]], env_txt[p["name"] + "_len"]]
         else:
             gargs.append(env_txt[p["name"]])

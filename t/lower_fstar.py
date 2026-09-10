@@ -610,6 +610,112 @@ reduces on the current file -- a staleness in those two committed
 reference copies from before that fix's own last regeneration, not
 something this construct's own code touches or changes.
 
+NESTED SEQUENCES RESIDUAL (2026-09-10). The fuzz family v1nested (18 tasks)
+read fstar verified/refuted on 8 of 18; the other 10 are named in
+fuzz-nested-residual-fstar.txt. Four causes, three fixed here:
+    UN-RENAMED CERTIFICATE Ctx (fz_v1nested_007/fz_p_nest_rowlen, both
+  probe's own `L` param, an F* keyword-adjacent uppercase-initial name
+  exactly like the PAIRS RESIDUAL note's `val`). Both ABSTAINED, "identifier
+  'L' is an F* keyword or lacks the lowercase initial F* requires for term
+  names", even though `_rename_reserved` already renames `L` -> `t_L` and
+  the REAL body lowers clean: MEASURED directly (calling `lower()` on the
+  real body alone) that the abstain came only from the TWIN call, which
+  alone reaches `_certificate`'s `cert_cx = Ctx(task)` (the ORIGINAL,
+  un-renamed task, kept that way on purpose per the keyword-rename note
+  above, since the witness `w`'s keys are param names computed against the
+  pristine task). `Ctx.__init__` ran every param/return/spec_fun/task name
+  through `_ck` unconditionally, so building this SECOND, deliberately
+  un-renamed Ctx over a task with a real keyword-adjacent PARAM crashed
+  before `_certificate` ever got to render its ground, fully-substituted
+  formula (which never needs `L` as a rendered identifier at all -- every
+  param in a ground certificate is a concrete witness value). THE FIX:
+  `Ctx.__init__` takes `check: bool = True`; `check=False` keys `self.tys`/
+  `self.funs` by the raw name instead of `_ck`-validating it, and `lower()`
+  now builds `cert_cx = Ctx(task, check=False)`. Costs nothing on every
+  other call site (`check=True` default, unchanged) and nothing on the
+  formula side (build and lookup both use the same raw key when unrenamed).
+    NAMED REFUSAL TOO BROAD (fz_v1nested_026/fz_p_nest_eq, both `r := (m ==
+  n)` on two nested-seq PARAMETERS, computational position). `bx`'s nested
+  `==`/`!=` case ABSTAINED by design, reasoning that `Seq.eq`'s
+  postcondition `r <==> Seq.equal a b` "is only as good as Seq.equal itself
+  is at this level", and the prop case's own note measures a BARE
+  `Seq.equal m0 m0alt` failing (Error 19) for two CONCRETE, differently-
+  combinator-built rows -- but that reasoning was never itself measured for
+  the actual `Seq.eq`-in-bx shape and proved too broad. MEASURED (F*
+  2026.08.30): nested_bx_probe1.fst, a function returning `Seq.eq m n` for
+  two OPAQUE `Seq.seq (Seq.seq int)` parameters with `ensures fun r -> r
+  <==> (len m = len n /\ forall k. Seq.equal (index m k) (index n k))` (the
+  exact row-wise formula the prop case builds by hand) verifies with NO
+  assist; nested_bx_probe2.fst, `Seq.eq m0 m0alt` on two CONCRETE nested
+  seqs built via different append/create-vs-upd chains, against a ground
+  `true`, verifies too -- the concrete-construction gap this refusal
+  guarded against does not reproduce through `Seq.eq`'s own postcondition
+  either way. THE FIX: `bx`'s nested `==`/`!=` case now renders `(Seq.eq a
+  b)` (`nx` in place of `sx` for the operands), exactly mirroring the row-
+  level case just above it, per the instructions' own rule: build what
+  SPEC's operators require, refuse by name only what F* actually cannot
+  take, not what a neighboring, differently-shaped probe once measured
+  false.
+    PARAMLESS TASK (fz_v1nested_078/fz_v1nested_606/fz_p_nest_lit, each a
+  literal-returning task with an EMPTY params list -- the first such tasks
+  in this file's history; every previously-committed and every other
+  fuzzed task has at least one param). Both read malformed/malformed:
+  `gen_fun` emitted `let name \n  : Pure t (requires ...) (ensures ...) =
+  e` with no binder at all between the name and the `:`. MEASURED (F*
+  2026.08.30): Error 187, "Effect Pure used at an unexpected position" --
+  `Pure`, like every F* computation type, may only stand as an arrow's
+  result, and a binder-less `let` types the whole thing as a plain value.
+  THE FIX: `param_binders` returns `("(_u:unit)", "()")` when
+  `task["params"]` is empty, the standard F* idiom for a provably-pure
+  "constant" that still carries a requires/ensures pair; unchanged for
+  every task with at least one param (every previously-committed task,
+  identical output, confirmed below).
+    BEFORE/AFTER, the 10 (fuzz_lower.py --tasks <the 10> --only fstar, --n
+  400 --seed 1 --jobs 8 --flake 3): fz_v1nested_007/fz_p_nest_rowlen abstain
+  -> verified/refuted (2); fz_v1nested_026/fz_p_nest_eq abstain ->
+  verified/refuted (2); fz_v1nested_078/fz_v1nested_606/fz_p_nest_lit
+  malformed/malformed -> verified/refuted (3). The family's fstar
+  verified/refuted count goes from 8/18 to 15/18 (the 7 newly-fixed reals;
+  the previously-passing 8 unaffected, confirmed identical readings).
+    LEFT, BY NAME: fz_v1nested_069 (verified/unproved, both before and
+  after -- `_certificate` renders no certificate at all here because
+  `lower_verus.certificate_formula` itself returns None for this witness,
+  an "undefined inside the loop body" shape `lower_verus.py`'s own
+  `_undef_obligation` does not support yet; MEASURED directly, calling
+  `certificate_formula` on this task/twin/witness in isolation returns
+  None with no exception for `_certificate`'s except-clause to catch, so
+  there is nothing for this file's own `prop`/`Ctx` rendering to fix -- the
+  gap is upstream, in a file this construct does not own or touch). The
+  ground-pair lesson (`_proj_pair`) DOES transfer cleanly to ground rows
+  with no new code needed: every probe above indexes into a ground,
+  literal-built nested seq (`Seq.index (Seq.index (Seq.create 1 (Seq.create
+  1 ...)) 0) 0`) and F* reduces it with no assist, unlike `fst`/`snd` on a
+  bare ground pair tuple, which needed the explicit projection identity --
+  so "verified/unproved" here is the honest, final reading, not a gap this
+  file's own code leaves open. fz_v1nested_150 (unproved/unproved, both
+  before and after) is a genuine proof difficulty, not a lowering defect:
+  a self-recursive `rowsum` spec_fun plus a loop accumulator needs an
+  inductive fact SMT does not find unassisted, the same honest kind of gap
+  the family's other off-by-one/invariant-drop witnesses already read.
+  fz_p_nest_empty (no-twin/no-twin, both before and after) has `_twin_op:
+  null` in the corpus -- `harness.twin_cached` returns no twin for this
+  probe at all, a fuzz-harness-level property this file's own `lower()`
+  never even reaches (fuzz_lower.py's own `run()` skips lowering entirely
+  when `twin_body is None`), consistent with this note's own "the empty
+  literal []" paragraph above: the real DOES lower and verify (confirmed
+  by direct construction) when actually asked to.
+    REGRESSION: all 23 committed tasks (`tasks/*.json`) re-lowered through
+  `lower_fstar.lower(task, task["body"])` and diffed against the committed
+  `out/<name>.fst`: byte-identical on all 23, `param_binders`'s new empty-
+  params branch and `Ctx`'s new `check` parameter both dormant on every one
+  (every committed task has at least one param, and every committed
+  `_certificate` call already used `check=True`'s prior behavior when no
+  rename happened, `cert_cx is cx`). swap_rows and row_max_len re-run
+  through `harness.run_task` into `out/agent-fstar-nested2/`: both COUNT,
+  identical witnesses to this file's own NESTED SEQUENCES note above
+  (swap_rows: off-by-one, m=[[]], i=0, j=0; row_max_len: invariant-drop,
+  m=[[], [0]], i=2, r=0).
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -1005,20 +1111,44 @@ def _rename_reserved(task: dict, body: list) -> tuple[dict, list]:
 
 class Ctx:
     """Per-task rendering context: name->t-type for everything in scope,
-    the spec_fun/task call table, and a fresh-name supply."""
+    the spec_fun/task call table, and a fresh-name supply.
 
-    def __init__(self, task: dict):
+    `check=False` (2026-09-10, NESTED SEQUENCES RESIDUAL fix below) skips
+    every `_ck` call here, keying `self.tys`/`self.funs` by the RAW names
+    instead. `lower()`'s certificate path is the one caller that needs
+    this: it deliberately builds a SECOND `Ctx` over the ORIGINAL,
+    un-renamed task (the keyword-rename note above `_rename_reserved`
+    explains why: `w`'s keys are param names the harness computed against
+    the pristine task) whenever a rename actually happened, and this
+    constructor used to run `_ck` on that unrenamed task's names anyway --
+    so a task whose OWN param needs a rename (not just a body-local like
+    `val`) crashed building the very Ctx meant to render it un-renamed,
+    exactly backwards from the rename mechanism's purpose. MEASURED
+    (fz_v1nested_007/fz_p_nest_rowlen, param `L`): the real body lowers
+    fine (`t_L`, via `_rename_reserved`), but the twin -- the only body
+    `_certificate` ever runs on -- raised the same `_ck` NotImplementedError
+    from `Ctx(task)` before `_certificate` could even render the ground,
+    fully-substituted formula that never needs `L` typed as an identifier
+    at all (every param in a ground certificate is a concrete witness
+    value, never a rendered F* name). `check=False` costs nothing on the
+    common path (`check=True` default, identical to before) and nothing on
+    the formula side either: build and lookup both use the same raw key
+    when unrenamed, so a `{"var": ...}` node the formula does leave
+    unsubstituted still resolves correctly."""
+
+    def __init__(self, task: dict, check: bool = True):
         self.task = task
+        ck = _ck if check else (lambda n: n)
         self.tys: dict[str, str] = {}
         for p in task["params"]:
-            self.tys[_ck(p["name"])] = p["type"]
+            self.tys[ck(p["name"])] = p["type"]
         for r in task["returns"]:
-            self.tys[_ck(r["name"])] = r["type"]
+            self.tys[ck(r["name"])] = r["type"]
         self.funs: dict[str, dict] = {}
         for sf in task.get("spec_funs", []):
-            self.funs[_ck(sf["name"])] = {"params": sf["params"],
+            self.funs[ck(sf["name"])] = {"params": sf["params"],
                                           "result": sf["result"]}
-        self.funs[_ck(task["name"])] = {"params": task["params"],
+        self.funs[ck(task["name"])] = {"params": task["params"],
                                         "result": task["returns"][0]["type"]}
         self._used = _collect_names(task)
         self._n = 0
@@ -1484,29 +1614,40 @@ class Ctx:
                 core = f"(Seq.eq {a} {b})"
                 return core if op == "==" else f"(not {core})"
             if isinstance(t, dict) and "seq" in t:
-                # SPEC.md "Nested sequences" (2026-09-10): named refusal,
-                # not a measured F* limit -- `Seq.eq` DOES typecheck one
-                # level up (probed directly, nested_bool_probe.fst, F*
-                # 2026.08.30: `Seq.eq` on two `Seq.seq (Seq.seq int)`
-                # values typechecks and a reflexive instance discharges),
-                # but its postcondition `r <==> Seq.equal a b` is only as
-                # good as `Seq.equal` itself is at THIS level, and the
-                # prop case below measures that bare outer `Seq.equal`
-                # fails (Error 19) the moment two extensionally-but-not-
-                # referentially-equal rows are compared -- so a `Seq.eq`
-                # here would carry a postcondition this file cannot
-                # discharge without the SAME row-wise formula the prop
-                # case builds by hand, and a hand-built formula is not
-                # itself a decidable bool. No committed task needs a
-                # nested `==`/`!=` in computational position (both of
-                # swap_rows/row_max_len's equalities are ROW-level, the
-                # `t == "seq"` case just above, or int); refused by name
-                # rather than emitting a `Seq.eq` this file cannot back.
-                raise NotImplementedError(
-                    "fstar lowering: nested-seq equality has no decidable "
-                    "computational rendering here (SPEC.md \"Nested "
-                    "sequences\"); write it in a requires/ensures/"
-                    "invariant instead")
+                # SPEC.md "Nested sequences" NESTED RESIDUAL fix (2026-09-10,
+                # fuzz family v1nested, fz_v1nested_026/fz_p_nest_eq: a bare
+                # `r := (m == n)` on two nested-seq PARAMETERS). This used to
+                # ABSTAIN here, by name, reasoning that `Seq.eq`'s
+                # postcondition `r <==> Seq.equal a b` "is only as good as
+                # Seq.equal itself is at this level", and the prop case
+                # below measures a BARE `Seq.equal m0 m0alt` failing (Error
+                # 19) for two CONCRETE, differently-combinator-built rows.
+                # That reasoning was never itself measured for this exact
+                # shape and turned out too broad: MEASURED directly
+                # (nested_bx_probe1.fst, F* 2026.08.30) that a function
+                # returning `Seq.eq m n` for two OPAQUE `Seq.seq (Seq.seq
+                # int)` parameters, with `ensures fun r -> r <==> (len m =
+                # len n /\ forall k. Seq.equal (index m k) (index n k))` --
+                # the exact row-wise formula the prop case below builds by
+                # hand -- verifies with NO assist: `Seq.eq`'s own `r <==>
+                # Seq.equal m n` postcondition connects to that formula
+                # through `Seq.equal`'s own SMTPat'd lemmas alone, no
+                # concrete construction chain in sight to trip the
+                # extensionality gap the prop case's own note describes.
+                # A second probe (nested_bx_probe2.fst) with two CONCRETE
+                # nested seqs built via different append/create-vs-upd
+                # chains, comparing `Seq.eq m0 m0alt` against a ground
+                # `true`, verified too -- so the concrete-construction
+                # case this refusal was guarding against does not
+                # reproduce here either; the honest position is to build
+                # what SPEC's operators require and refuse by name only
+                # what F* actually cannot take, not what a neighboring,
+                # differently-shaped probe once measured false. Rendered
+                # exactly like the row-level case just above, `nx` in
+                # place of `sx` for the nested-typed operands.
+                a, b = (self.nx(x, env, local) for x in e["args"])
+                core = f"(Seq.eq {a} {b})"
+                return core if op == "==" else f"(not {core})"
             if isinstance(t, dict):
                 # SPEC.md "Pairs": componentwise, the polymorphic `==`
                 # again. Rendered component-by-component rather than as
@@ -2003,6 +2144,25 @@ def param_binders(task: dict) -> tuple[str, str]:
     # pair (SPEC.md "Pairs", 2026-09-10, "A parameter, return or local
     # type"), and `_tystr("int"/"bool"/"seq")` reduces to exactly `TY[...]`
     # (byte-identical for every task with no pair param).
+    if not task["params"]:
+        # PARAMLESS TASK RESIDUAL FIX (2026-09-10, fuzz family v1nested:
+        # fz_v1nested_078/fz_v1nested_606/fz_p_nest_lit, each a literal-
+        # returning task with an empty params list). `gen_fun` used to emit
+        # `let name \n  : Pure t (requires ...) (ensures ...) = e` with NO
+        # binder at all between `name` and the `:` -- MEASURED (F*
+        # 2026.08.30) Error 187, "Effect Pure used at an unexpected
+        # position": `Pure`, like every F* computation type, may only
+        # stand as an ARROW's result, and a binder-less `let` types the
+        # whole thing as a plain value, not an arrow, so the annotation has
+        # nowhere valid to attach. Every previously-committed and every
+        # other fuzzed task has at least one param, so this never fired
+        # before. Fix: one dummy `(_u:unit)` binder, the standard F* idiom
+        # for a provably-pure "constant" that still carries a requires/
+        # ensures pair -- `args` becomes the matching `()` actual for the
+        # (rare, currently unexercised) self-recursive-call or spec_fun-
+        # call site that would otherwise pass zero arguments to a function
+        # now declared with one.
+        return "(_u:unit)", "()"
     bs = " ".join(f"({p['name']}:{_tystr(p['type'])})" for p in task["params"])
     args = " ".join(p["name"] for p in task["params"])
     return bs, args
@@ -2360,7 +2520,13 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # turn any mismatch into a safe flip, never a fake one, but a
         # rename would only ever cost that flip for no reason when the
         # un-renamed Ctx it needs is one cheap extra construction away.
-        cert_cx = cx if r_task is task else Ctx(task)
+        # `check=False` (Ctx's own 2026-09-10 residual-fix docstring):
+        # this Ctx is built over the UN-renamed task on purpose, so its
+        # param/return/spec_fun names must not be run through `_ck` here
+        # -- a task whose own param needs a rename (fz_v1nested_007's `L`)
+        # would otherwise raise building this Ctx before `_certificate`
+        # ever got to render its ground, fully-substituted formula.
+        cert_cx = cx if r_task is task else Ctx(task, check=False)
         cert = _certificate(cert_cx, task, body, witness)
         if cert is not None:
             parts.append(cert)

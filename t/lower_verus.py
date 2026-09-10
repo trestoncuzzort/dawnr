@@ -558,6 +558,140 @@ the literal, `len`, `at`, the chained `s[i][j]`, `+`, the slice, `update`,
 `fill`, `==`/`!=`, a nested seq through the loop frame rule, and a
 nested-seq-valued witness through the certificate, undefined and exit
 kinds alike) lowers.
+
+NESTED SEQUENCES RESIDUAL (2026-09-10, fuzz family v1nested, 18 tasks: 13/18
+read verus verified/refuted on the first measurement; this addition closes
+the other 5, named in fuzz-nested-residual-verus.txt: fz_v1nested_026,
+fz_v1nested_069, fz_v1nested_150, fz_p_nest_eq, fz_p_nest_empty).
+
+fz_p_nest_empty: no-twin/no-twin, unaffected by anything below and left
+exactly as measured -- SPEC.md's own empty-literal task, no twin operator
+applies to a body with no comparison/arithmetic/loop for any mutator to
+touch, expected and untouched.
+
+fz_v1nested_069: BEFORE malformed/malformed (real and twin alike). Verus's
+own error: `let mut m: Seq<Seq<int>> = Seq::<int>::empty();`, a bare type
+mismatch (E0308) -- `expr()`'s "seq" op rendered EVERY empty literal
+`Seq::<int>::empty()` unconditionally, with no way to know `m`'s own
+declared type was `Seq<Seq<int>>`. Fixed by threading an optional `vty`
+(the VERUS type string, not a t type) through `expr()`, used only by the
+"seq" op's empty-args case, supplied at the three statement-level sites an
+expression's own type is actually known: `stmts()`'s "assign" (from
+`scope[name]`), "var" (from the declaration's own `_vty(v["type"])`), and
+"return" (from `_vty(task["returns"][0]["type"])`). Fixing the mismatch
+uncovered a SECOND, previously-masked issue once the file actually
+compiled: "postcondition not satisfied", Verus itself reporting "low
+confidence" in its own auto-chosen trigger for `forall k| ... m[k].len()
+==1 && m[k][0]==s[k]` -- it picked the bare `s[k]` alone, which never
+reconnects to `m` across the loop's own append (`m + seq![seq![s[i]]]`),
+so the carried invariant could not be shown to survive one more
+iteration. Fixed generally: `_at_roots_by_var` collects every DISTINCT
+base sequence a forall/exists body indexes directly by its own bound
+variable; when there are two or more AND the body also contains a
+genuine chained read (`_has_chained_at`, `X[i][j]`, one nesting level
+deep -- gating on this rather than on "two roots" alone matters, see
+REGRESSION below), `expr()` now emits one INDEPENDENT `#![trigger ...]`
+per distinct root instead of trusting Verus's own single-candidate pick.
+AFTER: verified/unproved. The real body verifies outright. The twin
+(`i < s.len()` weakened to `i <= s.len()`, running the loop one
+iteration past the end) does NOT get certified REFUTED: harness.py's own
+`_undef_obligation` walks a twin body's TOP-LEVEL statements only and
+gives up (returns None) the first time it meets an "if", "while", or
+"return" before the failing one, by its own docstring's admission ("not
+special-cased to the first" statement, but never implemented for the
+INSIDE of a loop either) -- fz_v1nested_069's own undefined access
+(`s[i]` at `i==len(s)`) happens inside the while loop's body, the first
+task, committed or measured, to land there, so no certificate is built
+and the harness reports "unproved" rather than "REFUSED". Pre-existing
+and general (loop bodies, not nested seqs, are what `_undef_obligation`
+does not walk), and outside this file's own certificate-authoring
+surface (`_undef_obligation` is a `harness.py` function, not one of
+this file's) -- left named rather than patched, since fixing it means
+teaching `_undef_obligation` to replay a WHILE loop's own iterations, a
+materially larger change than this residual's own three lowering bugs.
+
+fz_v1nested_026 and fz_p_nest_eq (identical shape, `_shape: eq_nested`):
+BEFORE unproved/refuted. Verus's error: "postcondition not satisfied" on
+`r == (len(m)==len(n) && forall k. m[k]==n[k])` where the body computes
+`r = (m == n)` for `m, n: Seq<Seq<int>>`. The "EQUALITY" measurement on
+record above showed bare `==` on `Seq<Seq<int>>` is already full
+recursive equality at the Z3 level in the direction a proof GOAL needs;
+this residual measured the OTHER direction: `m == n` in scope does NOT,
+by itself, let Z3 conclude `forall k. m[k]==n[k]`, nor its negation
+`m.len()!=n.len() || exists k. m[k]!=n[k]` (probe2.rs isolated the
+failure to exactly the disequality half; probe4.rs showed
+`assert(!(m =~= n));` fixes that half alone). probe6.rs found the
+single, unconditional fix: `assert((m == n) == (m =~= n));`, which
+resolves BOTH directions at once with no branch on which value `==`
+took. Fixed generally: `_nested_eq_bridges` walks an expression for
+every `==`/`!=` node whose both operands are nested-seq-typed
+(`_nested_seq_operand_ty`, a var lookup or a same-type pass-through
+through `+`/`slice`/`update`), and `_V1._assert_nested_eq` emits one such
+bridge assert per distinct occurrence, called from the same three
+statement sites `vty` is threaded from (assign, var-init, return).
+AFTER: verified/refuted on both tasks, matching `_expect: verified` and
+the row already on record for dafny/spark (also verified/refuted).
+
+fz_v1nested_150: BEFORE unproved/unproved (every kernel in the row
+struggled, not verus alone). Verus's error: "assertion failed" inside
+`t_wf_fz_v1nested_150_fn_rowsum`, the spec_fun definedness lemma for
+`rowsum(row, k) = if k<=0 {0} else {rowsum(row,k-1) + row[k-1]}`, checked
+with NO hypothesis at all (`emit()`'s spec_fun loop passed `context=[]`
+to `_wf_lemma` unconditionally) -- unlike count_matches' own
+`count(s,x,n)`, whose ite condition self-guards BOTH ends in one clause
+(`(n<=0) || (n>len(s))`), rowsum's `k<=0` guards only the base case, so
+the lemma was asking Verus to prove `k>0 ==> k<=row.len()` for
+COMPLETELY UNCONSTRAINED row and k -- false in general (row=Seq::empty(),
+k=5 a trivial countermodel), even though the ONLY calls this task ever
+makes (the loop invariant, the top-level ensures) stay within
+0<=k<=len(row). Fixed generally, not by naming rowsum: `_spec_fn_domain_
+context` walks a spec_fun's own body for `at`/`update` nodes indexing a
+seq-typed PARAM at the decreases variable (`_walk_at_seq_params`), and
+for each such param whose length its OWN `ite` conditions never already
+mention anywhere (`_mentions_len` over every `_ite_conds` in the body --
+count_matches' cond mentions `len(s)` directly, so nothing is added
+there), adds `decreases <= len(param)` as the wf lemma's hypothesis
+(probe150b.rs: this bound ALONE suffices -- the base case already gives
+the lower bound `k>0` for free from the ite's own negated cond, so `0 <=
+decreases` is never added standalone). AFTER: verified/unproved. The
+real body verifies outright, closing the "every kernel struggled" row
+for verus specifically. The twin (the same `<` -> `<=` boundary widening
+as fz_v1nested_069, one loop iteration past the end) hits the IDENTICAL
+`_undef_obligation` loop-walking gap named above, for the identical
+reason (the undefined `row[k]` access is inside the while loop's own
+body) -- named once here, not twice.
+
+REGRESSION. The first version of both new fixes was NOT this narrow: an
+unconditional `0 <= decreases` plus a length bound for every seq param a
+body indexes (regardless of self-guarding) changed count_matches' and
+digit_sum's own committed `t_wf_..._fn_...` lemmas (an extra `requires`
+neither needed), and firing the multi-trigger on any two-distinct-root
+forall (regardless of a chained read) changed swap's and swap_rows' own
+committed foralls (an explicit trigger neither needed) -- caught by the
+SAME regression method this file already uses throughout, comparing
+every committed task's OWN `out/<name>.rs`, not by reasoning alone.
+Narrowing both (the self-guard check via `_mentions_len`/`_ite_conds`;
+the chained-read gate via `_has_chained_at`) restored byte-identity.
+Regenerated (`lower_verus.lower(task, task["body"])`, compared against
+the committed file) all 23 committed verus tasks -- abs, all_nonneg,
+contains, count_matches, digit_sum, divmod_pair, factorial, fib,
+filter_pos, first_even, gcd, is_prime, linear_search, max, min_max,
+remainder, reverse, row_max_len, seq_max, sum_upto, swap, swap_rows,
+tail -- all byte-identical to `out/<name>.rs`. swap_rows and row_max_len
+additionally re-run through `harness.run_task` into
+`out/agent-verus-nested2/`: both COUNT with the identical witnesses
+already on record (swap_rows: m=[[]], i=0, j=0; row_max_len: exit at
+m=[[], [0]], i=2, r=0), and all four files (`<name>.rs`/`<name>_twin.rs`
+for both) are byte-identical to the committed ones.
+
+LEFT, BY NAME. `_undef_obligation` (harness.py) does not walk into a
+`while` (or `if`) body, so fz_v1nested_069's and fz_v1nested_150's twins
+(both off-by-one loop-boundary widenings whose undefined access is
+inside the loop) read verus verified/unproved rather than
+verified/refuted: a pre-existing, general gap in the certificate
+emitter's own statement walk, not a nested-seq defect, and not touched
+here. fz_p_nest_empty is unaffected and untouched, as expected (no
+comparison, arithmetic, or loop for any twin operator to apply to).
 """
 from __future__ import annotations
 
@@ -701,7 +835,81 @@ def _mod_div_trigger(e: dict) -> dict | None:
     return None
 
 
-def expr(e: dict) -> str:
+def _at_roots_by_var(e: dict, v: str, out: dict) -> None:
+    """Collects, into `out` (base seq name -> its `at(name, v)` node, one
+    per distinct name, first occurrence kept), every DIRECT `at(X, v)`
+    sub-term of e where X is a plain variable and the index is EXACTLY the
+    bound variable v -- used by `expr()`'s forall/exists case below to
+    decide whether Verus's own single-trigger auto-inference has more
+    than one candidate to pick between. A chained read like `m[k][0]`
+    does NOT add an entry for the outer `at` (its own "s" operand is
+    itself an `at` node, not a plain var) but DOES add one for the inner
+    `at(m, k)` via the recursive walk, exactly the root this file wants:
+    the base sequence, not one of its elements. A nested forall/exists
+    shadowing v starts a fresh binder, so only its own lo/hi (evaluated
+    in the OUTER scope) can still mention the outer v; its body cannot."""
+    if "op" in e:
+        op, args = e["op"], e.get("args", [])
+        if op == "at" and len(args) == 2:
+            s, i = args
+            if isinstance(s, dict) and "var" in s and i == {"var": v}:
+                out.setdefault(s["var"], e)
+        for a in args:
+            _at_roots_by_var(a, v, out)
+    elif "ite" in e:
+        c = e["ite"]
+        for k in ("cond", "then", "else"):
+            _at_roots_by_var(c[k], v, out)
+    elif "call" in e:
+        for a in e["call"]["args"]:
+            _at_roots_by_var(a, v, out)
+    elif "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        for k in ("lo", "hi"):
+            _at_roots_by_var(q[k], v, out)
+
+
+def _has_chained_at(e) -> bool:
+    """True iff e contains a CHAINED read, `at(at(x, i), j)` (`x[i][j]`
+    once rendered) -- a genuine nested-seq ELEMENT read, one nesting level
+    deep, as opposed to two SEPARATE flat reads of two different
+    sequences. Used to gate `expr()`'s forall/exists multi-trigger case
+    (see its own comment) to the shape that actually needs it: a
+    forall/exists body with two co-indexed roots but no chained read
+    (swap's `r[k]==s[k]`, swap_rows' `r[k]==m[k]`) already verifies fine
+    under Verus's own auto-inference, measured directly (both were
+    committed and verified before this task touched anything)."""
+    if isinstance(e, dict):
+        if e.get("op") == "at":
+            s = e["args"][0]
+            if isinstance(s, dict) and s.get("op") == "at":
+                return True
+        return any(_has_chained_at(v) for v in e.values())
+    if isinstance(e, list):
+        return any(_has_chained_at(x) for x in e)
+    return False
+
+
+def expr(e: dict, vty: str | None = None) -> str:
+    """`vty`, when given, is the VERUS type string (as `_vty` renders it,
+    e.g. "Seq<Seq<int>>") that `e` is KNOWN to have from its own use site --
+    threaded only to resolve the one ambiguity SPEC.md "Nested sequences"
+    (2026-09-10) names ("[] is ambiguous between a plain seq and a seq<seq>
+    with no rows, resolved by the declared type at the assignment"): the
+    "seq" op's empty-args case below. Every other call site passes nothing
+    (None), unaffected, since every other Expr form either has no such
+    ambiguity or (the "_seq"/"_nested_seq" ground nodes the certificate
+    emitter builds) already carries its own kind unambiguously. Found by
+    construction, not by measurement first: the first swap_rows-family
+    fuzz task with a `var` init of `seq()` typed Seq<Seq<int>> (this
+    function's OLD unconditional "Seq::<int>::empty()") produced `let mut
+    m: Seq<Seq<int>> = Seq::<int>::empty();`, a bare type mismatch (E0308)
+    -- Verus's own error, not a proof failure -- confirmed on
+    fz_v1nested_069 (`out/agent-verus-nested2/`), one of the two committed
+    nested-seq tasks' OWN empty-literal call (row_max_len's `m` is a
+    parameter, never locally re-initialized to `[]`; swap_rows' witness
+    literal goes through `_tlit`'s already-typed path, not this one) so
+    the mismatch was unexercised until this residual fuzz measurement."""
     if "_seq" in e:
         # Private ground node, emitted only by the refutation certificate
         # builder below: a concrete Seq<int> literal from a measured witness.
@@ -728,8 +936,8 @@ def expr(e: dict) -> str:
         return "true" if e["bool"] else "false"
     if "ite" in e:
         c = e["ite"]
-        return (f"(if {expr(c['cond'])} {{ {expr(c['then'])} }}"
-                f" else {{ {expr(c['else'])} }})")
+        return (f"(if {expr(c['cond'])} {{ {expr(c['then'], vty)} }}"
+                f" else {{ {expr(c['else'], vty)} }})")
     if "call" in e:
         c = e["call"]
         return f"{c['fun']}(" + ", ".join(expr(a) for a in c["args"]) + ")"
@@ -739,7 +947,41 @@ def expr(e: dict) -> str:
         v, lo, hi, body = q["var"], expr(q["lo"]), expr(q["hi"]), expr(q["body"])
         rng = f"({lo} <= {v} && {v} < {hi})"
         trig = ""
-        if not _has_indexable(q["body"]):
+        roots: dict = {}
+        _at_roots_by_var(q["body"], v, roots)
+        if len(roots) >= 2 and _has_chained_at(q["body"]):
+            # SPEC.md "Nested sequences" (2026-09-10) residual
+            # (fz_v1nested_069): two or more DISTINCT base sequences
+            # indexed by the same bound variable give Verus's own
+            # single-candidate auto-inference more than one term to pick
+            # between, and it can pick the one that does NOT connect back
+            # to whichever sequence a surrounding proof actually needs
+            # re-derived (measured: `forall k| ... m[k].len()==1 &&
+            # m[k][0]==s[k]`, auto-chose the bare `s[k]` alone, "low
+            # confidence" per Verus's own diagnostic, and the loop's
+            # invariant then failed to carry across the append that grows
+            # m -- an explicit trigger on `m[k]` alone fixed it, but so did
+            # supplying BOTH `m[k]` and `s[k]` as independent trigger
+            # groups, measured identically, 4/4 verified either way -- so
+            # this emits one INDEPENDENT `#![trigger ...]` per distinct
+            # root rather than guessing which one the proof needs, sound
+            # for any number/type of co-indexed sequences since it never
+            # removes a term Verus's own inference would have tried, only
+            # adds the ones ambiguity was hiding). Gated on
+            # `_has_chained_at` (a genuine CHAINED read, `X[k][j]`, one
+            # nesting level deep) rather than firing on every 2-distinct-
+            # roots body: swap's and swap_rows' own committed foralls
+            # (`r[k]==s[k]`, `r[k]==m[k]`) ALSO have two distinct roots but
+            # only ever single-level reads, and Verus's own auto-inference
+            # already handles those fine (they were committed, verified,
+            # before this task touched anything) -- an earlier,
+            # ungated version of this check changed their committed
+            # `out/*.rs` (an explicit trigger neither one needed),
+            # breaking the byte-identity regression check below; gating on
+            # the chained shape that actually distinguishes fz_v1nested_069
+            # from swap/swap_rows restores it.
+            trig = "".join(f" #![trigger {expr(t)}]" for t in roots.values())
+        elif not _has_indexable(q["body"]):
             t = _mod_div_trigger(q["body"])
             if t is not None:
                 trig = f" #![trigger {expr(t)}]"
@@ -769,7 +1011,16 @@ def expr(e: dict) -> str:
         # rendered by `expr()` like any other operand, so a non-literal
         # element (filter_pos's `seq![s[i]]`) picks up the same suffixing
         # and indexing this file already emits everywhere else.
+        #
+        # The empty case is ambiguous one type up (SPEC.md "Nested
+        # sequences", 2026-09-10): `[]` typed Seq<Seq<int>> at its own use
+        # site must spell "Seq::<Seq<int>>::empty()", not the flat default
+        # -- `vty` (see `expr`'s own docstring) carries exactly that,
+        # threaded from the one statement-level site an empty literal's
+        # type is actually known (`stmts`'s "var"/"assign"/"return").
         if not args:
+            if vty == "Seq<Seq<int>>":
+                return "Seq::<Seq<int>>::empty()"
             return "Seq::<int>::empty()"
         return "seq![" + ", ".join(args) + "]"
     if op == "slice":
@@ -937,6 +1188,171 @@ def defined(e: dict) -> dict:
     # formula computes for a single-argument op. Neither needed its own
     # case.
     return _conj([defined(a) for a in args])
+
+
+def _nested_seq_operand_ty(e: dict, scope: dict) -> str | None:
+    """Best-effort VERUS type of e, precise enough ONLY to tell whether e
+    is nested-seq-typed (`"Seq<Seq<int>>"`) -- the one fact
+    `_nested_eq_bridges` below needs to decide whether a `==`/`!=` needs
+    the extensionality bridge. `None` when undeterminable; never WRONG
+    when it does answer, since every case here is either a direct `scope`
+    lookup (a param or local's own declared type) or an operator whose
+    result type is syntactically identical to one of its own operands'
+    (`+`, `slice`, `update` all return the same seq type they operate on;
+    `at` does not -- it strips one level of nesting -- so it is
+    deliberately absent here rather than wrongly answering "nested" one
+    level too high)."""
+    if "var" in e:
+        ent = scope.get(e["var"])
+        return ent[0] if ent else None
+    if "op" in e:
+        op, args = e["op"], e.get("args", [])
+        if op in ("+", "slice", "update") and args:
+            return _nested_seq_operand_ty(args[0], scope)
+    return None
+
+
+def _nested_eq_bridges(e: dict, scope: dict, out: list) -> None:
+    """SPEC.md "Nested sequences" (2026-09-10) residual: collects every
+    `==`/`!=` node in e whose BOTH operands are nested-seq-typed, walking
+    the same Expr shapes `_has_indexable` already walks. The one missing
+    lemma this fuzz measurement found (fz_v1nested_026, fz_p_nest_eq,
+    `_shape: eq_nested`): Verus's bare `==` on Seq<Seq<int>> already IS
+    full recursive equality at the Z3 level in the direction a proof GOAL
+    needs (measured, "EQUALITY" above), but NOT in the direction a
+    HYPOTHESIS needs -- `m == n` in scope does not, by itself, let Z3
+    conclude `forall k. m[k] == n[k]` or its negation `!(m=~=n) ==>
+    m.len()!=n.len() || exists k. m[k]!=n[k]`, the two halves an `ensures`
+    unfolding a nested-seq `==` into `len && forall` actually needs
+    (measured: fz_v1nested_026.rs failed "postcondition not satisfied"
+    with NO hint at all; probe2.rs isolated it to exactly the disequality
+    half, probe4.rs confirmed `assert((m == n) == (m =~= n));` unlocks
+    BOTH halves at once, unconditionally, no branch on which value `==`
+    took). `stmts()` calls this at every assign/var-init/return whose
+    value expression contains such a node, each occurrence bridged once."""
+    if "op" in e:
+        op, args = e["op"], e.get("args", [])
+        if op in ("==", "!=") and len(args) == 2:
+            a, b = args
+            if (_nested_seq_operand_ty(a, scope) == "Seq<Seq<int>>"
+                    and _nested_seq_operand_ty(b, scope) == "Seq<Seq<int>>"):
+                out.append((a, b))
+        for a in args:
+            _nested_eq_bridges(a, scope, out)
+    elif "ite" in e:
+        c = e["ite"]
+        for k in ("cond", "then", "else"):
+            _nested_eq_bridges(c[k], scope, out)
+    elif "call" in e:
+        for a in e["call"]["args"]:
+            _nested_eq_bridges(a, scope, out)
+    elif "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        for k in ("lo", "hi", "body"):
+            _nested_eq_bridges(q[k], scope, out)
+
+
+def _walk_at_seq_params(e, seq_params: set, seen: set) -> None:
+    """Collects, into `seen`, every name in `seq_params` that appears as
+    the SEQ operand of an `at`/`update` node ANYWHERE inside e -- used by
+    `_spec_fn_domain_context` below to find which of a spec_fun's OWN seq
+    params its decreases variable indexes into. A plain untyped recursive
+    walk (matching e's own dict/list shape rather than each Expr form by
+    name, unlike `_has_indexable`/`_nested_eq_bridges` above) since the
+    thing being hunted, `{"op": "at"/"update", "args": [{"var": name}, ..
+    .]}`, can be nested arbitrarily deep under `ite`, `call`, `forall`, or
+    a further `at`/`update`, and none of those wrapper shapes need their
+    own case to find it."""
+    if isinstance(e, dict):
+        if e.get("op") in ("at", "update") and e.get("args"):
+            s = e["args"][0]
+            if isinstance(s, dict) and "var" in s and s["var"] in seq_params:
+                seen.add(s["var"])
+        for v in e.values():
+            _walk_at_seq_params(v, seq_params, seen)
+    elif isinstance(e, list):
+        for x in e:
+            _walk_at_seq_params(x, seq_params, seen)
+
+
+def _ite_conds(e, out: list) -> None:
+    """Collects, into `out`, the `cond` of every `ite` node in e (any
+    depth), used by `_spec_fn_domain_context` to decide whether a
+    recursive spec_fun already self-guards a given seq param's length
+    somewhere in its own branching, before ever reaching Verus."""
+    if isinstance(e, dict):
+        if "ite" in e:
+            c = e["ite"]
+            out.append(c["cond"])
+            _ite_conds(c["then"], out)
+            _ite_conds(c["else"], out)
+        else:
+            for v in e.values():
+                _ite_conds(v, out)
+    elif isinstance(e, list):
+        for x in e:
+            _ite_conds(x, out)
+
+
+def _mentions_len(e, pname: str) -> bool:
+    """True iff `len(pname)` appears anywhere inside e."""
+    if isinstance(e, dict):
+        if e.get("op") == "len" and e.get("args") == [{"var": pname}]:
+            return True
+        return any(_mentions_len(v, pname) for v in e.values())
+    if isinstance(e, list):
+        return any(_mentions_len(x, pname) for x in e)
+    return False
+
+
+def _spec_fn_domain_context(f: dict) -> list[dict]:
+    """SPEC.md gate 3 (2026-09-10 residual, fz_v1nested_150): a
+    self-recursive spec_fun's own body-definedness lemma previously
+    carried NO hypothesis at all (`context=[]` at its one call site in
+    `emit()`), sound only when every `at`/`update` the body performs is
+    ALREADY self-guarded on BOTH ends by its own `ite` condition --
+    count_matches' own `count(s, x, n)` is (`(n<=0) || (n>len(s))` as ONE
+    guard covers both the base case AND the out-of-range case at once, its
+    OWN cond mentioning `len(s)` directly, so `defined(body)` reduces to
+    TRUE unconditionally, no hypothesis needed) but rowsum(row, k)
+    (`decreases k`, guarding only `k<=0`, its cond never mentioning
+    `len(row)` at all) is not, measured directly:
+    `t_wf_fz_v1nested_150_fn_rowsum`, an assert over UNCONSTRAINED row/k,
+    failed ("assertion failed", row=Seq::empty(), k=5 a trivial
+    countermodel) even though the REAL body, called only ever at
+    0<=k<=len(row) (fz_v1nested_150's own loop invariant and its
+    top-level ensures both establish exactly that, never anything wider),
+    is perfectly well-defined in practice. The missing hint is exactly
+    that relationship, derived from the spec_fun's OWN shape rather than
+    any task's param names: for every seq-typed param the body actually
+    reads/writes at an offset of `decreases` (`_walk_at_seq_params`)
+    whose length its OWN `ite` conditions never already mention
+    (`_mentions_len` false everywhere in `_ite_conds`), assume that
+    param's length bounds `decreases` above -- narrowed to exactly the
+    NOT-already-self-guarded case (rather than added unconditionally) so
+    it stays a no-op, not merely a harmless one, wherever a spec_fun's own
+    guard already covers it: measured directly, an EARLIER, unconditional
+    version of this function changed count_matches' and digit_sum's
+    committed `out/*.rs` (an extra `requires` neither needed), breaking
+    the byte-identity regression check below; this narrower version adds
+    nothing to either, restoring it. `0 <= decreases` alone is never
+    added standalone either (probe150b.rs measured `k <= row.len()` by
+    itself already sufficient -- the base-case ite arm already gives
+    `k>0` for free in the recursive branch, so only the UPPER bound was
+    ever missing)."""
+    dec = f["decreases"]
+    ctx = []
+    seq_params = {p["name"] for p in f["params"] if p["type"] == "seq"}
+    seen: set = set()
+    _walk_at_seq_params(f["body"], seq_params, seen)
+    conds: list = []
+    _ite_conds(f["body"], conds)
+    for pname in sorted(seen):
+        if any(_mentions_len(c, pname) for c in conds):
+            continue
+        ctx.append({"op": "<=",
+                     "args": [dec, {"op": "len", "args": [{"var": pname}]}]})
+    return ctx
 
 
 def subst(e: dict, m: dict) -> dict:
@@ -1279,6 +1695,27 @@ class _V1:
         for x, y in _div_mod_pairs(e):
             lines.append(_div_mod_law(x, y, ind))
 
+    def _assert_nested_eq(self, e: dict, scope: dict, lines: list[str],
+                           ind: str) -> None:
+        """SPEC.md "Nested sequences" (2026-09-10) residual, see
+        `_nested_eq_bridges`'s own docstring for the measurement: one
+        `assert` per DISTINCT nested-seq `==`/`!=` this statement's value
+        expression contains, each unlocking BOTH directions of the
+        Seq<Seq<int>> extensionality Z3 needs and neither `_assert_defined`
+        nor `defined()` otherwise supplies (this is not a definedness
+        obligation -- `==` on two well-typed seqs is always defined -- it
+        is a PROOF hint, so it lives beside `_assert_defined` rather than
+        inside it)."""
+        pairs: list = []
+        _nested_eq_bridges(e, scope, pairs)
+        seen: set = set()
+        for a, b in pairs:
+            sa, sb = expr(a), expr(b)
+            if (sa, sb) in seen:
+                continue
+            seen.add((sa, sb))
+            lines.append(f"{ind}assert(({sa} == {sb}) == ({sa} =~= {sb}));")
+
     def stmts(self, body: list, scope: dict, ind: str,
               wrap: str | None = None) -> list[str]:
         """scope: ordered {name: (verus_type, mutable)}. Returns lines.
@@ -1299,23 +1736,27 @@ class _V1:
                 assert name in scope and scope[name][1], \
                     f"assign to {name}, not a mutable name in scope"
                 self._assert_defined(e, lines, ind)
-                lines.append(f"{ind}{name} = {expr(e)};")
+                self._assert_nested_eq(e, scope, lines, ind)
+                lines.append(f"{ind}{name} = {expr(e, scope[name][0])};")
             elif "return" in s:
                 rname, e = s["return"]
                 assert rname == self.task["returns"][0]["name"], \
                     f"return names {rname}, expected {self.task['returns'][0]['name']}"
                 self._assert_defined(e, lines, ind)
+                self._assert_nested_eq(e, scope, lines, ind)
+                rvty = _vty(self.task["returns"][0]["type"])
                 if wrap is None:
-                    lines.append(f"{ind}return {expr(e)};")
+                    lines.append(f"{ind}return {expr(e, rvty)};")
                 else:
-                    lines.append(f"{ind}return (true, {expr(e)}, {wrap});")
+                    lines.append(f"{ind}return (true, {expr(e, rvty)}, {wrap});")
             elif "var" in s:
                 v = s["var"]
                 self._assert_defined(v["init"], lines, ind)
+                self._assert_nested_eq(v["init"], scope, lines, ind)
                 vt = _vty(v["type"])
                 scope[v["name"]] = (vt, True)
                 lines.append(f"{ind}let mut {v['name']}: {vt}"
-                             f" = {expr(v['init'])};")
+                             f" = {expr(v['init'], vt)};")
             elif "if" in s:
                 c = s["if"]
                 self._assert_defined(c["cond"], lines, ind)
@@ -1538,7 +1979,7 @@ class _V1:
             self._wf_lemma(f"t_wf_{self.name}_fn_{f['name']}",
                            [(p["name"], _vty(p["type"]))
                             for p in f["params"]],
-                           [], defined(f["body"]))
+                           _spec_fn_domain_context(f), defined(f["body"]))
 
         # requires clause k assumes clauses 1..k-1; ensures clause k assumes
         # all requires and ensures 1..k-1 (SPEC.md definedness)

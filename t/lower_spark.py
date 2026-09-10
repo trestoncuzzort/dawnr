@@ -1033,6 +1033,130 @@ NOT MEASURED, by name:
     committed task, since both certificates read their own seq<seq>-typed
     parameter through `_cert_lit_of_type` (declared-type, unambiguous),
     never through this shape-based function.
+
+NESTED SEQUENCES RESIDUAL (2026-09-10). fuzz_lower.py's own v1nested
+family (18 tasks, --seed 1) read spark verified/refuted on 13 of 18: 5
+residual, named in three shapes -- 2 MALFORMED/MALFORMED, 1
+VERIFIED/UNPROVED, 1 UNPROVED/TIMEOUT, 1 NO-TWIN (a probe with no twin
+op, expected and ungraded either side of this pass) -- diagnosed here.
+Both malformed cases are exactly the two gaps this note's own "NOT
+MEASURED" paragraphs, above, already named.
+
+* THE EMPTY NESTED LITERAL, defaulting to flat. fz_v1nested_069
+  (build_matrix, gate "loops", compare-flip) declares `var m : {"seq":
+  "seq"} := []` (Lower._ty's own note, above), builds it up through
+  T_Concat inside the loop, and returns it as Seq2. `[]`'s own render
+  (Lower.expr's `seq` case) had no way to see m's declared type, so it
+  emitted Seqs.Empty_Sequence (flat) regardless of context -- MEASURED,
+  malformed/malformed, gnatprove rejecting the resulting `W_1 (S, ...,
+  Seqs.Empty_Sequence, ...)` call, whose own M parameter is Seq2, not
+  Seq. FIXED: Lower.expr gained an `expect` parameter (its own new
+  docstring, above), the same "the declared type says so" hint
+  fuzz_lower.py's own `_ty(..., expect=...)` already threads for
+  check_wf (that function's own docstring, "Nested sequences"
+  (2026-09-10)) -- narrower than that function's full site list: only
+  var init, assign, and return (compile()/compile_r(), both updated)
+  thread a real value in, the three sites MEASURED to matter here; an
+  `ite` branch or a call argument is left at expect=None, unchanged,
+  carried below, since nothing committed or in this residual exercises
+  either.
+
+* A NESTED LITERAL, built and projected inline with no declared type
+  anywhere. fz_p_nest_lit (a probe, no params, bool return) computes
+  `len([[1, 2], [3]]) = 2 and then len([[1, 2], [3]][1]) = 1` entirely
+  inside one expression, with no param, return, or `var` of the nested
+  type anywhere for `needs_nested_seq`'s own declaration-only scan to
+  see -- the seq<seq> analogue of fz_p_pair_proj, and the exact gap this
+  note's own "NOT MEASURED" paragraph, above, named by asking for
+  `_has_nested_seq_op`. MEASURED, malformed/malformed, gnatprove
+  rejecting Rows/Seqs/Len/Elem: neither SEQ_PREAMBLE nor
+  NESTED_SEQ_PREAMBLE was ever emitted, since `needs_nested_seq` found no
+  declared type to trigger on. FIXED, by refusal rather than by
+  inference: `_has_nested_seq_op` (new), a generic, type-blind recursive
+  descent mirroring `_has_pair_op`'s own, detects a literal nested-seq
+  node (a `seq` literal whose own first argument is itself a `seq`
+  literal, i.e. a row) anywhere in requires/ensures/spec_funs/body;
+  `lower()` refuses by name whenever this is True and `needs_nested_seq`
+  came back False, the identical posture `_has_pair_op`'s own refusal
+  already takes toward a transient pair.
+
+MEASURED (fuzz_lower.py, the family's own 5-task residual, --n 400
+--seed 1 --jobs 8 --flake 3 --only spark, gnatprove FSF 16.1.0, Why3
+1.8.2+git, --steps 20000, uncontended):
+
+  * fz_v1nested_069: malformed/malformed -> VERIFIED/TIMEOUT (97.4s). The
+    fix above makes the real body compile and VERIFY; the compare-flip
+    twin (its own loop bound flipped `I < Len (S)` to `I <= Len (S)`, an
+    off-by-one that should make the exit reach an out-of-range `Elem`
+    call) now TIMES OUT rather than being refuted, a NEW cost this pass
+    surfaces rather than fixes: the recursive W_1 helper has to be
+    symbolically unfolded over concrete literals to resolve it, the
+    identical "value"-certificate cost min_max's own paragraph and PAIRS
+    RESIDUAL's own 8 loop-carrying tasks already name, at 97.4s against
+    the same 20000-step budget -- read as the column's known cost at this
+    construct, not a defect in either fix.
+  * fz_v1nested_007: unchanged, VERIFIED/UNPROVED (78.9s vs 90.5s before
+    this pass, within run-to-run noise). param_rowlen's own collapse-if
+    twin still carries the WHILE LOOP after its own inner `if` is
+    collapsed, the same "value"-certificate cost fz_v1nested_069 above
+    and min_max's own paragraph name; this pass touches neither the
+    twin's own shape nor `_ty`/`expr`'s empty-literal handling for it
+    (its body has no `seq` literal node at all), so nothing here moves
+    it.
+  * fz_v1nested_150: unchanged, UNPROVED/TIMEOUT (87.2s vs 97.3s before
+    this pass, within run-to-run noise). row_sum's own gate is
+    "recursion": the real body's own postcondition already needs
+    `rowsum`'s recursive spec_fun unfolded through the loop's own
+    invariant at every `k`, too costly for the real side alone at the
+    20000-step budget; this pass's two fixes touch neither the empty
+    literal nor the undeclared-type gap, and this task exercises neither.
+  * fz_p_nest_lit: malformed/malformed -> ABSTAIN/ABSTAIN, an honest
+    refusal by name (the NotImplementedError message above), not a flip
+    -- the same posture PAIRS RESIDUAL's own fz_p_pair_proj already
+    takes.
+  * fz_p_nest_empty: unchanged, NO-TWIN/NO-TWIN (0ms both times): a probe
+    with `_twin_op: null`, never graded by this family's own harness
+    either before or after this pass.
+
+Regression (all 23 committed tasks, lower_spark.lower(task, task["body"])
+diffed byte-for-byte against their own out/<name>.ads): byte-identical,
+all 23, both before and after this pass. `_has_nested_seq_op`'s guard
+only fires when `needs_nested_seq` is False, never true for swap_rows or
+row_max_len (each declares a nested param or return). Lower.expr's new
+`expect` parameter DOES reach a committed task's own code, not only the
+residual's: filter_pos's own body assigns an empty FLAT literal `[]` to
+a local through the same `assign` site this pass threads `expect`
+through (grepped: the only other `seq` literal node among all 23
+committed tasks' own requires/ensures/spec_funs/bodies), but that
+local's own declared type is plain "seq", not nested, so
+`_is_nested_seq(expect)` reads False exactly as `bool(eargs)` alone
+already did, and filter_pos's own Seqs.Add chain is unaffected,
+byte-for-byte.
+
+LEFT, by name: fz_v1nested_069's own twin certificate cost (TIMEOUT,
+above), the loop-carrying "value"-certificate cost this pass surfaces
+but does not attempt to fix, for the same reason a slow sound
+certificate is preferred over a fast unsound one (PAIRS RESIDUAL's own
+LEFT paragraph gives the identical reason); fz_v1nested_007's and
+fz_v1nested_150's own unchanged costs (a collapse-if "value" certificate
+and a recursion-through-a-loop real body, respectively), neither touched
+by anything in this pass; fz_p_nest_lit, an honest abstain rather than a
+fix, since discharging it properly would need `_has_nested_seq_op` (or
+`Lower._ty`) to read a nested literal's type off an incrementally-grown
+`types` env the way Lower.compile()'s own env does, not the shape-only
+scan it has today -- carried for the next pass, the same posture PAIRS
+RESIDUAL's own fz_p_pair_proj paragraph already takes toward
+`_pair_types`; Lower.expr's own `expect` hint not threaded through an
+`ite` branch or a call argument, since neither is exercised by anything
+committed or in this residual (NOT MEASURED, narrower than
+fuzz_lower.py's own wider site list for the identical reason); `_ty()`'s
+own bottom-up `seq`-literal case (read for OPERATOR dispatch, never for
+rendering) still takes no `expect` and still defaults an ambiguous empty
+literal to flat, unreached by anything this pass measured since no
+committed or residual task ever calls `_ty` directly on a bare
+empty-literal node; `_cert_lit`'s own shape-based nested case and
+`_undef_obligation`'s own shape-based local-var guess, both already
+named NOT MEASURED above, remain untouched.
 """
 from __future__ import annotations
 
@@ -1579,6 +1703,42 @@ def _has_pair_op(node) -> bool:
     return False
 
 
+def _has_nested_seq_op(node) -> bool:
+    """NESTED SEQUENCES RESIDUAL (2026-09-10): True iff a literal nested
+    seq node -- `{"op": "seq", "args": [...]}` whose own first argument is
+    ITSELF a `{"op": "seq", ...}` node, i.e. a row -- sits ANYWHERE inside
+    `node`, mirroring `_has_pair_op`'s own generic, type-blind recursive
+    descent (requires, ensures, spec_funs, or a body) and its same
+    narrower scope: this recognises the LITERAL constructor shape only
+    (the seq<seq> analogue of a literal `pair` node), not every expression
+    that could produce a nested value with no declared type anywhere (an
+    outer `fill`/`update`/`slice` fed a row with no nested param, return,
+    or `var` for `needs_nested_seq`'s own scan to see is a narrower gap
+    left unexercised here, the same posture `_has_pair_op`'s own docstring
+    already takes toward a second, transient pair type). Needed because a
+    nested literal can be built and projected in the SAME expression
+    (`len([[1, 2], [3]])`, NESTED SEQUENCES (v1)'s own docstring, "NOT
+    MEASURED") with no param, return, or `var` of the nested type anywhere
+    for `needs_nested_seq`'s own declaration-only scan to see, yet
+    Lower.expr's own `seq` case still emits Ada text naming Rows/Seqs and
+    Len/Elem, none of which NESTED_SEQ_PREAMBLE/SEQ_PREAMBLE declared:
+    MEASURED, fz_p_nest_lit, malformed/malformed, gnatprove rejecting
+    every one of those names as undeclared. `lower()` refuses by name
+    (below) rather than risk it, whenever this is True and
+    `needs_nested_seq` came back False -- every committed nested-seq task
+    (swap_rows, row_max_len) declares a nested param or return, so this
+    never fires on them."""
+    if isinstance(node, dict):
+        if (node.get("op") == "seq" and node.get("args")
+                and isinstance(node["args"][0], dict)
+                and node["args"][0].get("op") == "seq"):
+            return True
+        return any(_has_nested_seq_op(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_nested_seq_op(v) for v in node)
+    return False
+
+
 # {"pair": [T1, T2]} (SPEC.md "Pairs", 2026-09-10): a record over the two
 # component's own Ada types, named fields P_A and P_B (PAIRS RESIDUAL,
 # 2026-09-10: renamed from the original A/B, which folded-case collided
@@ -2068,7 +2228,23 @@ class Lower:
             return "bool"
         raise ValueError(f"t has no operator {op!r}")
 
-    def expr(self, e: dict, sub: dict, types: dict) -> str:
+    def expr(self, e: dict, sub: dict, types: dict, expect=None) -> str:
+        """`expect`, added for NESTED SEQUENCES RESIDUAL (2026-09-10): the
+        empty seq literal `[]` has no element for the `seq` case below to
+        read nested-ness off of (the exact ambiguity Lower._ty's own `seq`
+        case already documents), so it needs the declared type from the
+        CALLER when there is one -- the same "the declared type says so"
+        hint fuzz_lower.py's own `_ty(..., expect=...)` already threads for
+        check_wf (its own docstring, "Nested sequences" (2026-09-10)).
+        Mirrors that function's site list, not its full generality: only
+        var init, assign, and return (compile()/compile_r(), below) thread
+        a real value in, since those are the sites MEASURED to matter
+        (fz_v1nested_069: `var m : seq<seq> := []`, below); an `ite` branch
+        or a call argument can carry the same ambiguity in principle but
+        neither is exercised by anything committed or in this residual, so
+        neither threads it here (NOT MEASURED, carried below). Everywhere
+        else `expect` stays None and rendering is unchanged from before
+        this parameter existed."""
         if "int" in e:
             # Qualified: a bare literal fails resolution where both operands
             # of an operator are literal-bearing (measured: "expected type
@@ -2165,10 +2341,18 @@ class Lower:
             # package chosen by static type rather than left to Ada's own
             # resolution (NESTED_SEQ_PREAMBLE's own note). Told apart by
             # the first element's own type; the empty literal has no
-            # element to read this off and defaults to flat (Lower._ty's
-            # own note on this same ambiguity).
+            # element to read this off (Lower._ty's own note on this same
+            # ambiguity) and falls back to `expect`, the declared-type hint
+            # this method's own docstring names -- MEASURED,
+            # fz_v1nested_069: `var m : {"seq": "seq"} := []` rendered
+            # `Seqs.Empty_Sequence` (flat) before this hint existed, while
+            # `m`'s every later use (T_Concat, the W_1 call) is Seq2
+            # (nested), a type mismatch gnatprove read as malformed. With
+            # no `expect` at all (every call site this parameter does not
+            # yet reach) this defaults to flat exactly as before.
             eargs = e.get("args") or []
-            nested = bool(eargs) and self._ty(eargs[0], types) == "seq"
+            nested = (self._ty(eargs[0], types) == "seq" if eargs
+                      else _is_nested_seq(expect))
             pkg = "Rows" if nested else "Seqs"
             out = f"{pkg}.Empty_Sequence"
             for a in args:
@@ -2325,10 +2509,15 @@ class Lower:
                 v, e = s["assign"]
                 if v not in env:
                     raise ValueError(f"assign to undeclared {v!r}")
-                env[v] = self.expr(e, {**psub, **env}, types)
+                # `types.get(v)`: NESTED SEQUENCES RESIDUAL (2026-09-10),
+                # `v`'s own declared type, threaded as expr()'s `expect`
+                # so an empty `[]` assigned into a nested-typed name
+                # renders Rows, not Seqs (expr()'s own docstring).
+                env[v] = self.expr(e, {**psub, **env}, types, types.get(v))
             elif "var" in s:
                 d = s["var"]
-                env[d["name"]] = self.expr(d["init"], {**psub, **env}, types)
+                env[d["name"]] = self.expr(
+                    d["init"], {**psub, **env}, types, d["type"])
                 types[d["name"]] = d["type"]
             elif "if" in s:
                 c = s["if"]
@@ -2411,15 +2600,20 @@ class Lower:
                 v, e = s["assign"]
                 if v not in env:
                     raise ValueError(f"assign to undeclared {v!r}")
-                env[v] = self.expr(e, {**psub, **env}, types)
+                # `types.get(v)`: NESTED SEQUENCES RESIDUAL (2026-09-10),
+                # mirroring compile()'s own identical hint (expr()'s
+                # docstring).
+                env[v] = self.expr(e, {**psub, **env}, types, types.get(v))
             elif "return" in s:
                 name, e = s["return"]
-                new_val = self.expr(e, {**psub, **env}, types)
+                new_val = self.expr(
+                    e, {**psub, **env}, types, types.get(name))
                 env[name] = new_val
                 combine("True", new_val)
             elif "var" in s:
                 d = s["var"]
-                env[d["name"]] = self.expr(d["init"], {**psub, **env}, types)
+                env[d["name"]] = self.expr(
+                    d["init"], {**psub, **env}, types, d["type"])
                 types[d["name"]] = d["type"]
             elif "if" in s:
                 c = s["if"]
@@ -3198,6 +3392,25 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         or any(sf["result"] == "seq" for sf in task.get("spec_funs", []))
         or locals_seq(body)
         or any("seq" in pt["pair"] for pt in pair_types_used))
+    # NESTED SEQUENCES RESIDUAL (2026-09-10): a task that builds a nested
+    # seq LITERAL transiently (constructed and projected within one
+    # expression, no param, return, or `var` of the nested type anywhere
+    # for `needs_nested_seq` to have found) would otherwise emit Ada text
+    # naming Rows/Seqs/Len/Elem with neither preamble ever requested --
+    # MEASURED, fz_p_nest_lit, malformed/malformed. Refused by name here,
+    # the same posture the pair check just above takes toward
+    # `_has_pair_op`: `needs_nested_seq` coming back False is the exact,
+    # decidable signal (every committed nested-seq task has a declared
+    # param or return of the type, so this never fires on them).
+    if not needs_nested_seq and (
+            _has_nested_seq_op(body)
+            or _has_nested_seq_op(task.get("requires", []))
+            or _has_nested_seq_op(task.get("ensures", []))
+            or _has_nested_seq_op(task.get("spec_funs", []))):
+        raise NotImplementedError(
+            "spark: a nested seq is built and used within one expression, "
+            "with no parameter, return, or local of the nested seq type "
+            "anywhere for this task's own preamble to cover")
 
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,
