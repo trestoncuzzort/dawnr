@@ -555,6 +555,323 @@ Regression: swap, reverse, tail, filter_pos (none states a whole-seq
 and after the switch from the qualified-call candidate to the
 Len/Elem/T_Range one; none of the 19 tasks committed before this pair
 moves.
+
+PAIRS (SPEC.md, 2026-09-10). New type `{"pair": [T1, T2]}`, T1/T2 one of
+"int"/"bool"/"seq" (v1 has no pair of pairs), a parameter, return or local
+type; new Expr forms `pair`/`fst`/`snd`. Each pair type this task's package
+spec needs becomes ONE record type, over the two components' own Ada
+types, declared once per distinct pair type (`_pair_types`, first-
+appearance order, deduplicated) with fields named A and B:
+
+    type T_Pair_Int_Int is record
+       A : Big_Integer;
+       B : Big_Integer;
+    end record;
+
+(`ada_type`/`_pair_ada_name`: every TYPE[...] call site in this file now
+goes through `ada_type`, which dispatches to `_pair_ada_name` for a dict
+type and TYPE[...] unchanged otherwise, so pair support needed no second
+TYPE-shaped table). `pair(a, b)` is a QUALIFIED record aggregate,
+`T_Pair_Int_Int'(A => a, B => b)`: MEASURED (gnatprove FSF 16.1.0) that an
+unqualified `(A => a, B => b)` sitting in one arm of compile()'s own
+`if`-merge leaves the aggregate's type unresolved the same way a bare
+integer literal does (DEFINEDNESS, header), so it is always qualified,
+not only where an `if`-merge would need it. `fst`/`snd` are plain field
+access, `.A`/`.B`, UNPARENTHESIZED: the first attempt wrote
+`(p).A`/`(p).B` and MEASURED gnatprove reject it, "prefix for selection
+is not a name", on `(F'Result).A` specifically -- Ada's selected_component
+needs its prefix to BE a name (RM 4.1), and wrapping one in parens turns
+it into a plain expression, no longer a name, even though the name
+underneath (an attribute reference, a variable, a function call) would
+have worked directly and unparenthesized is exactly how this file's own
+W_k state access already spells it (`{name}'Result.{cap(v)}`). Fixed by
+dropping the parens; not yet handled (and not guarded against, only left
+unexercised by both committed tasks) is `fst`/`snd` applied straight to
+something that is NOT a name -- an `if`-merge of two pairs, or a
+projection of a freshly-built `pair(...)` aggregate -- which by the same
+grammar rule would not parse either; that shape would surface as
+MALFORMED (a real Ada syntax error, never a false VERIFIED), not a
+silently wrong lowering, but this file does not yet route around it.
+`==`/`!=` on two pairs is componentwise (SPEC.md), which Ada's own
+predefined "=" on a plain record already computes for a Big_Integer/
+Boolean-only pair -- MEASURED (probe p_pair1.ads, --steps 20000, z3): a
+postcondition stating `P = Q <-> (P.A = Q.A and then P.B = Q.B)` for
+T_Pair_Int_Int VERIFIES directly -- but a pair with a Seq component
+cannot lean on that (Seq's own "=" needs `use Seqs;`, EQ_PREAMBLE's own
+note, a `use` this file will not add unconditionally). Rather than pick
+between two renderings per pair type, every pair type gets a NAMED
+equality function regardless of its components ("a named form either
+way"), `T_Pair_Int_Int_Eq`, comparing componentwise with native "=" for
+an int/bool field and T_Eq for a seq field (`_pair_preamble`), gated on
+Lower.needs_pair_eq (a set of (T1, T2) keys, set only when Lower.expr
+actually renders a pair `==`/`!=`) so a task that never compares two
+pairs emits no wrapper, the same discipline UPDATE_PREAMBLE/EQ_PREAMBLE/
+FILL_PREAMBLE already keep. Lower._ty (SEQUENCES: LITERALS,
+CONCATENATION, SLICES's own static type reader) gained `pair`/`fst`/`snd`
+cases, needed to tell a pair `==` from every other `==` the same way it
+already tells seq `+` from int `+`; `defined()` needed NO new case at all,
+its existing fallthrough conjunction over `e["args"]` already states
+exactly SPEC.md's own rule for both (`pair` defined iff both components
+are; `fst`/`snd` "always defined on a pair", the same one-argument
+fallthrough `at`'s bound-carrying case does NOT use).
+
+THE LOOP FRAME RULE, widened. min_max reaches its while loop with its
+pair-typed return `r` unassigned -- and, unlike first_even/is_prime, with
+NO `return` statement anywhere (`r` is filled in by a plain `r :=
+pair(lo, hi)` after the loop) -- which lower_while's own unassigned-var
+check refused outright (`spark: loop reached with 'r' unassigned`) before
+this pair, since its only exemption was "the return target under an early
+exit" (EARLY EXIT, header). The check is now `(body_has_return and v ==
+ret_name) or v not in hav`: `hav` (loop_assigned) is computed before the
+check instead of after, and any var the loop's OWN body never assigns is
+exempted, not only the early-exit return target -- the same justification
+the original exemption already gave ("no invariant or Pre/Post above ever
+mentions it here... nothing upstream could have constrained a name
+nothing has touched yet") holds for exactly the same reason regardless of
+WHY a var is untouched. Purely additive: every task where the check used
+to pass still does (env[v] is not None, or the original exemption still
+applies), so this could only ever add a task to what compiles, never
+remove one; confirmed by the regression sweep below.
+
+CE_INSTANCE / THE COUNTEREXAMPLE INSTANCE. A pair type is a dict, not a
+hashable CE_TYPE key: `ret["type"] not in CE_TYPE` on a pair-typed return
+would raise TypeError (unhashable type) rather than cleanly abstain, so
+ce_instance's own top guard now checks `isinstance(..., dict)` FIRST,
+short-circuiting before that lookup ever runs. A pair value has no
+machine mirror regardless (the header's own reasoning for a seq), so
+`_ce_bound` gained an explicit `"pair"`/`"fst"`/`"snd"` case raising
+`_NoCe`, stated for the same reason the seq-operator case just above it
+is stated explicitly rather than left to the generic numeric fallthrough
+(which would reach the same abstention for a `pair` node eventually, but
+not explain fst/snd, and neither committed task's real cell needs the
+instance regardless -- both return a pair, outside CE_TYPE from the top
+guard alone).
+
+THE REFUTATION CERTIFICATE. `_cert_lit` gained an `isinstance(v,
+interp.Pair)` case (checked before the list/tuple case), rendering a raw
+Pair value the same qualified record aggregate expr()'s own `pair` case
+emits, its own two components' types read off THEIR shape (bool before
+seq before int) since a certificate has no declared-type context the way
+expr()'s `types` dict is. This exists for interp.exit_env's RAW (never
+`_j`-shown) return value, which can be an actual Pair object when a
+twin's continuation recomputes the return after its loop -- exactly
+min_max's own shape -- though min_max's own measured twin turned out to
+be a "value"-kind witness (below), so this path went unexercised by
+either committed task and is carried for the next pair task that reaches
+it. The list/tuple check was widened from list-only to `(list, tuple)`
+for the same reason one level down: a pair's own seq-typed COMPONENT can
+arrive as either, by the identical argument. Both certificate() and
+_undef_obligation() now refuse outright (return ""/None) when any task
+PARAMETER is pair-typed: a witness's `vals` is JSON-shown (interp._j),
+which renders a pair the SAME plain list a same-shaped seq would be
+(SPEC.md: "the runtime value of a pair must be DISTINCT from a seq", the
+very confusion `_j`'s own docstring exists to rule out at runtime, lost
+again once a witness is serialized), and neither function has a
+declared-type context to tell the two apart the way expr()'s `types`
+does (only the task's RETURN gets that treatment, threaded in from
+`task["returns"][0]["type"]` directly). NEITHER committed pair task has
+a pair-typed parameter (divmod_pair: two ints; min_max: one seq), so
+this refusal is not exercised by either measurement below; it exists so
+a future pair-parameter task gets an honest missing certificate rather
+than one that silently misreads its own witness.
+
+MEASURED (2026-09-10, gnatprove FSF 16.1.0, Why3 1.8.2, --prover=z3,
+--steps 20000, harness.run_task, out/agent-spark-pairs, uncontended):
+
+  * divmod_pair COUNTS: real VERIFIED, twin (wrong-var: the two
+    components of the `pair` swapped) REFUTED, witness x=1, y=1 (real
+    r=(1,0), twin r=(0,1)), a "value"-kind witness ({"_ens": true}), the
+    certificate calling the twin's own F(1, 1) and negating `ensures`
+    with `r` substituted by that call -- exactly the shape 9 committed
+    tasks before this pair already used, unaffected by F now returning a
+    record instead of Big_Integer/Boolean/Seq.
+  * min_max REFUSED: real VERIFIED, twin (collapse-if: the loop's first
+    guard, `if s[i] < lo then lo := s[i]`, collapsed to its then-branch
+    unconditionally) UNPROVED, witness s=[0, 1] (real r=(0,1), twin
+    r=(1,1)), also a "value"-kind witness -- the twin ladder's own
+    invariant-drop rung found no witness first (SPEC.md's own note: "no
+    invariant drop of this task is witnessable by bounded execution,
+    measured at fifteen times the state cap"), falling through to
+    collapse-if, which does. The certificate this pair emits is
+    syntactically and semantically the right one (F(s) called on the
+    twin, `ensures[r := F(s)]` negated, requires `len(s) > 0` conjoined),
+    but gnatprove does not discharge it: the audit names TWO separate
+    unproved checks, VC_PRECONDITION at the twin's own recursive W_1 call
+    site (severity medium, status "gave_up" -- Z3 answered Unknown, not
+    out of steps, which is the expected reading once the invariant is
+    genuinely broken: proving or disproving a fact over an abstract
+    Big_Integer-indexed Seq is not decidable-by-construction the way a
+    machine-int probe would be) and T_Refutation_Certificate's OWN
+    VC_POSTCONDITION (severity medium, status "limit"). RE-MEASURED at
+    10x budget (--steps 200000, uncontended, 80.8s wall): identical
+    verdict, same two checks, same statuses -- not a near-miss of the
+    default budget, a certificate that has to symbolically unfold a
+    RECURSIVE loop helper (with its own quantified contract) over
+    concrete literals, the first time a "value"-kind witness (built by
+    calling F(input) symbolically, THE REFUTATION CERTIFICATE's own
+    design, unchanged here) has landed on a task that also has a loop --
+    every "value"-kind certificate before this pair (abs, max, and
+    others) was loop-free, where F unfolds to one line. This is read as
+    the column's known cost (spark timeouts), not a defect in this
+    lowering: the certificate states the right goal, correctly grounded
+    in the twin's own F, and the kernel's own budget is what falls short,
+    exactly the INCOMPLETENESS this file's own doctrine (header, THE
+    COUNTEREXAMPLE INSTANCE) says must never be forced into a false
+    REFUTED. No attempt was made to rewrite the certificate to substitute
+    the witness's own measured value in place of calling F: that would
+    sever the certificate from F's OWN defining axiom (the very thing
+    that makes "value" certificates sound, THE REFUTATION CERTIFICATE's
+    own docstring), trading a slow, sound certificate for a fast, unsound
+    one, which this file will not do.
+
+Regression (out/agent-spark-pairs, real and twin, diffed against out/
+*.ads): abs, swap, reverse, tail, filter_pos byte-identical, both files,
+both before and after this pair; the other 14 previously committed tasks
+(all_nonneg, contains, count_matches, digit_sum, factorial, fib,
+first_even, gcd, is_prime, linear_search, max, remainder, seq_max,
+sum_upto) checked the same way, also byte-identical, real and twin. None
+of the 21 tasks committed before this pair moves.
+
+NOT MEASURED: a pair with a seq component (`{"pair": ["seq", "int"]}`
+and similar) is fully designed for -- the record's Seq field, needs_seq
+widened to see a pair's own component, the named equality function's
+T_Eq branch -- but neither committed task uses one, so this machinery is
+unexercised, not merely unneeded like update()/fill() are for a task that
+never calls them.
+
+PAIRS RESIDUAL (2026-09-10). fuzz_lower.py's own v1pairs family (31
+tasks, --seed 1) read spark verified/refuted on 12 of 31: 19 residual,
+named in three shapes -- 16 UNPROVED and 1 TIMEOUT on reals that
+VERIFIED, 1 ABSTAIN, 1 MALFORMED/MALFORMED -- diagnosed and fixed here.
+
+* THE CERTIFICATE, refused for a pair-typed PARAMETER. certificate()'s
+  own guard (`any(isinstance(p["type"], dict) for p in task["params"]):
+  return ""`) refused a certificate outright on ANY task with a
+  pair-typed parameter, and _undef_obligation carried the identical
+  guard. eq_params, swap_param, proj_param, sentinel, minmax,
+  seq_len_pair, and both fz_p_pair_* tasks whose parameter (not only
+  return) is a pair all have this shape, so most of the 19 residual
+  tasks went uncertificated. DIAGNOSED (fz_v1pairs_053, eq_params,
+  wrong-var, gnatprove FSF 16.1.0, Why3 1.8.2, --prover=z3, --steps
+  20000, uncontended): with no certificate emitted, the twin's own
+  Post -- the only goal left in the file -- is what gnatprove tries and
+  gives up on: VC_POSTCONDITION, severity medium, status gave_up, at the
+  twin's own `with Post =>` line. Not the certificate's own postcondition
+  or a symbolic call's precondition (min_max's own two named failure
+  checks, above) -- there is no certificate goal in this file at all, and
+  Big_Integer's own lack of a countermodel (spark.py's "REFUTED IS NOT
+  UNPROVED") can never refute a bare Post with evidence. Cause:
+  certificate()'s `sub`/`types`, built from the witness's JSON-shown
+  `vals` (interp._j), read a pair-typed parameter's witness value (a
+  2-list) by SHAPE alone, indistinguishable from a same-shaped seq's
+  (SPEC.md "Pairs": "the runtime value of a pair must be DISTINCT from a
+  seq", the very confusion _j's own docstring rules out at runtime, lost
+  again once the witness is serialized) -- so both functions refused
+  outright rather than risk misreading it. FIXED: `param_types` (the
+  task's own declared parameter types, always known statically, never
+  guessed) breaks the tie. `_cert_lit_of_type(v, ty)` (new, beside
+  _cert_lit) renders a witness value as the DECLARED type says rather
+  than as its own JSON shape guesses, so a pair-typed parameter's value
+  becomes the qualified record aggregate F's own signature expects
+  (`T_Pair_Int_Int'(P_A => ..., P_B => ...)`), never a Seq literal;
+  `types` (for Lower._ty, so a pair `==`/`fst`/`snd` on that name still
+  routes correctly) reads the same `param_types` entry directly instead
+  of guessing "seq" off the list shape. `_undef_obligation` got the
+  matching fix (`_to_py`, rebuilding a real interp.Pair for interp.ev's
+  own `fst`/`snd`/`pair` cases, which need one, never a same-shaped
+  tuple), exercised by the one committed "undefined" witness with a pair
+  parameter, fz_p_pair_seq. Both blanket guards are gone: the type is now
+  known, not guessed. MEASURED, the same eq_params twin, same steps: the
+  certificate's own goal (`not (F(P, Q) = ...)`, F's defining axiom still
+  doing the work, never bypassed) is now a GROUND evaluation over
+  qualified record aggregates -- no loop, no quantifier, no recursive
+  call -- and gnatprove discharges it directly: VERIFIED, REFUTED.
+
+* THE ABSTAIN, a name collision. fz_v1pairs_064 (seq_len_pair,
+  off-by-one, params s/a/b) abstained: "t name(s) ['a', 'b'] collide with
+  the emitted package's own names (['A', 'B', ...])" -- Ada folds case,
+  and every pair record's own fields were named A and B, so t's own
+  lowercase `a`/`b` (an ordinary pair of parameter names, not a
+  contrived one) collided with the record's own fields the first time a
+  real task actually chose them. FIXED: renamed to P_A/P_B everywhere
+  they are emitted (_pair_preamble's record and equality-wrapper bodies,
+  expr()'s `pair`/`fst`/`snd` cases, _dead_lit, _cert_lit,
+  _cert_lit_of_type), still reserved under the new names for the same
+  reason as before (a t identifier `p_a`/`p_b` is not impossible, only
+  far less likely than `a`/`b`). MEASURED: fz_v1pairs_064 now lowers
+  cleanly and reads verified/refuted.
+
+* THE MALFORMED, an undeclared record. fz_p_pair_proj (`fst(pair(a, b))
+  == a`, two int params, int return, NO pair-typed param, return, or
+  local anywhere) read malformed/malformed: `_pair_types`, which only
+  scans param/return/spec_fun/`var`-DECLARED types for what record to
+  emit, never sees a pair built and projected within a single
+  expression, so expr()'s own `pair`/`fst` cases still emitted Ada text
+  naming a T_Pair_Int_Int record this task's preamble never declared --
+  a genuine Ada syntax error (an unknown type name), not a wrong
+  lowering. Refused by name rather than risked with a deeper fix:
+  `_has_pair_op` (new) detects a literal `pair` node anywhere in the
+  task's requires/ensures/spec_funs/body by a generic recursive descent,
+  AST-shape-blind on purpose (it only needs to know the word is there);
+  `lower()` raises NotImplementedError when that is True and
+  `_pair_types` came back with NO declared pair type at all -- the
+  exact, decidable shape this task has. Every other committed pair task
+  has at least one declared pair type via a param or return, so this
+  never fires on them (confirmed against the whole 31-task family,
+  above). A task with ONE declared pair type that ALSO builds a second,
+  different transient one inline is not yet guarded against, only left
+  unexercised, the same posture fst/snd's own non-name-projection gap
+  already takes. MEASURED: fz_p_pair_proj now abstains by name, both
+  real and twin, instead of the earlier malformed/malformed.
+
+MEASURED (fuzz_lower.py, the family's own 19-task residual, --n 400
+--seed 1 --jobs 8 --flake 3 --only spark, gnatprove FSF 16.1.0, --steps
+20000, uncontended): 10 of 19 now COUNT (verified/refuted) that were
+UNPROVED, TIMEOUT, or ABSTAIN before -- fz_v1pairs_053, fz_v1pairs_064,
+fz_v1pairs_093, fz_v1pairs_119, fz_v1pairs_235, fz_v1pairs_294,
+fz_p_pair_swap, fz_p_pair_eq, fz_p_pair_seq, fz_p_pair_div (4.2s-56.4s
+each). 1 (fz_p_pair_proj) is an honest abstain by name, not a flip. 8
+remain UNPROVED, unchanged: fz_v1pairs_060/142/160/357/425/433/768/773,
+every one "sentinel"/"minmax"-shaped, whose twin body still carries the
+WHILE LOOP after its own inner `if` is collapsed (COLLAPSE-IF removes
+the `if`, not the loop it sits in) -- the SAME cost min_max's own
+MEASURED paragraph above names, at 69-103s wall each (vs 4-56s for the
+ten that flip): the certificate's "value"-kind goal has to symbolically
+unfold a RECURSIVE loop helper (its own quantified contract) over
+concrete literals, gnatprove reporting the identical two unproved checks
+min_max's own paragraph names (VC_PRECONDITION at the twin's own
+recursive W_k call site, severity medium, status gave_up;
+T_Refutation_Certificate's OWN VC_POSTCONDITION, severity medium, status
+limit) -- read as the column's known cost, not a defect in this
+lowering, for the identical reason min_max's own paragraph gives.
+
+Regression (out/agent-spark-pairs2, real and twin, diffed against
+out/*.ads): abs, swap, reverse, tail, filter_pos byte-identical, both
+files, both before and after this residual pass (none touches a pair
+type, so P_A/P_B never appears in their output); their own verdicts
+unchanged (all five still COUNT). divmod_pair and min_max are NOT
+byte-identical, and are not expected to be: both now declare
+T_Pair_Int_Int with fields P_A/P_B rather than A/B, the intended effect
+of the field rename above, confirmed to be the ONLY diff (diagnostic
+diff, both files, both tasks). Their own verdicts are unchanged:
+divmod_pair still COUNTS, min_max's own twin still reads
+verified/unproved, exactly the loop-carrying cost this note's own
+paragraph measures -- neither certificate fix touches min_max's own
+already-diagnosed cost, since min_max's witness was already
+"value"-kind before this pass (its own MEASURED paragraph, above).
+
+LEFT, by name: the 8 loop-carrying tasks above
+(fz_v1pairs_060/142/160/357/425/433/768/773), unchanged, the column's
+known loop-plus-pair cost, not attempted here for the same reason
+min_max's own paragraph gives (a slow, sound certificate is preferred
+over a fast, unsound one); fz_p_pair_proj, an honest abstain rather than
+a fix, since discharging it properly needs `_pair_types` to read a
+`pair` node's static type off an incrementally-grown `types` env across
+requires/ensures/spec_funs/body the way Lower.compile()'s own env does,
+not the declaration-only scan it has today -- a real fix, not attempted
+here, carried for the next pass; a LOOP-carrying pair-with-a-seq-
+component task (fz_p_pair_seq's own shape is loop-free and already
+covered) is not yet measured by anything in this family.
 """
 from __future__ import annotations
 
@@ -666,6 +983,19 @@ def _ce_bound(e: dict, env: dict):
         # named on this line (or an unbound `var`, already _NoCe below),
         # so the walk always raises before returning a bound for it.
         raise _NoCe("seq operator")
+    if op in ("pair", "fst", "snd"):
+        # SPEC.md "Pairs" (2026-09-10): no machine mirror either, the same
+        # fail-closed treatment as a seq operator, just above. ce_instance's
+        # own top guard already keeps a pair-typed PARAMETER or RETURN out
+        # of the instance before this function is ever called; this covers
+        # a pair value built only as a LOCAL, which that guard does not
+        # see. Stated explicitly rather than left to the generic
+        # fallthrough below, which would reach the same _NoCe for a `pair`
+        # node eventually (both its arguments bound fine as plain ints,
+        # then no numeric operator below matches "pair") but only after
+        # walking them, and would not on its own explain why `fst`/`snd`
+        # are refused too.
+        raise _NoCe("pair operator: no machine mirror")
     if op in ("div", "mod"):
         # No machine mirror (header, DIV/MOD): T_Div/T_Mod are Big_Integer
         # expression functions, so F_Ce (Ce_Num inputs) could not call them
@@ -875,6 +1205,150 @@ DIVMOD_PREAMBLE = """\
    with Pre => Y /= Big_Integer'(0);
 """
 
+
+def _pair_ada_name(ty: dict) -> str:
+    """SPEC.md "Pairs" (2026-09-10): the Ada name for a pair type's own
+    record, one per distinct {"pair": [T1, T2]} a task's package spec needs
+    (ada_type, below, and _pair_types, which enumerates them
+    deterministically). T1 and T2 are always base types ("int", "bool" or
+    "seq"; v1 has no pair of pairs), so plain str.capitalize() names each
+    component exactly the way TYPE's own values are spelled (Big_Integer,
+    Boolean, Seq all start capitalized), giving T_Pair_Int_Int,
+    T_Pair_Bool_Seq, and so on."""
+    t1, t2 = ty["pair"]
+    return f"T_Pair_{t1.capitalize()}_{t2.capitalize()}"
+
+
+def ada_type(ty) -> str:
+    """The Ada type a t type maps to. TYPE[...] on its own only ever saw a
+    base type; every call site that might now see a pair type ({"pair":
+    [T1, T2]}, SPEC.md "Pairs", 2026-09-10) goes through this instead, so
+    pair support needed no second TYPE-shaped table, only this one extra
+    dispatch on isinstance(ty, dict)."""
+    if isinstance(ty, dict):
+        return _pair_ada_name(ty)
+    return TYPE[ty]
+
+
+def _pair_types(task: dict, body: list) -> list:
+    """Every distinct pair type this task's package spec needs a record
+    declaration for (SPEC.md "Pairs", 2026-09-10: "a record type declared
+    per pair type"), first-appearance order (params, then the return, then
+    each spec_fun's params and result, then a `var` declared pair-typed
+    anywhere in the body, mirroring locals_seq's own recursive shape),
+    deduplicated so the SAME pair type used twice (e.g. two params of type
+    {"pair": ["int", "int"]}) still emits one declaration, and two tasks
+    that need the same pair type emit the same text. lower() reads this
+    both to decide what the preamble needs (_pair_preamble) and to widen
+    `reserved` before the name-capture check, so this order also fixes the
+    order in which two colliding pair types would surface, deterministic
+    for the same reason cap()'s own collision report is."""
+    out: list = []
+
+    def add(ty):
+        if isinstance(ty, dict) and ty not in out:
+            out.append(ty)
+
+    for p in task["params"]:
+        add(p["type"])
+    add(task["returns"][0]["type"])
+    for sf in task.get("spec_funs", []):
+        for p in sf["params"]:
+            add(p["type"])
+        add(sf["result"])
+
+    def walk(stmts):
+        for s in stmts:
+            if "var" in s:
+                add(s["var"]["type"])
+            if "if" in s:
+                walk(s["if"]["then"])
+                walk(s["if"]["else"])
+            if "while" in s:
+                walk(s["while"]["body"])
+
+    walk(body)
+    return out
+
+
+def _has_pair_op(node) -> bool:
+    """PAIRS RESIDUAL (2026-09-10): True iff a literal `{"op": "pair", ...}`
+    node sits ANYWHERE inside `node` (a generic recursive descent over
+    whatever dict/list shape a t task's own JSON is -- requires, ensures,
+    spec_funs, or a body -- not an AST-shape-aware walk, since all this
+    needs to know is whether the word is there at all). Needed because a
+    pair can be built and projected in the SAME expression (`fst(pair(a,
+    b))`, SPEC.md "Pairs") with no param, return, or `var` of that type
+    anywhere for `_pair_types`'s own declaration-only scan to see, yet
+    Lower.expr's own `pair` case still emits Ada text naming that type's
+    record: MEASURED, fz_p_pair_proj, malformed/malformed, gnatprove
+    rejecting the reference to a record this task's preamble never
+    declared. `lower()` refuses by name (below) rather than risk it
+    whenever this is True and `_pair_types` came back with NO declared
+    pair type at all -- a task with at least one declared pair type (every
+    other committed pair task) is not refused here even if it ALSO builds
+    a second, different transient pair type inline nothing has measured
+    yet; that narrower gap is left unexercised, the same "not yet guarded"
+    posture fst/snd's own docstring already takes toward a non-name
+    projection target."""
+    if isinstance(node, dict):
+        if node.get("op") == "pair":
+            return True
+        return any(_has_pair_op(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_pair_op(v) for v in node)
+    return False
+
+
+# {"pair": [T1, T2]} (SPEC.md "Pairs", 2026-09-10): a record over the two
+# component's own Ada types, named fields P_A and P_B (PAIRS RESIDUAL,
+# 2026-09-10: renamed from the original A/B, which folded-case collided
+# with a lowercase t identifier `a`/`b` -- see the dated note at the end of
+# the PAIRS docstring, above) (fst/snd's own `.P_A`/`.P_B`, Lower.expr
+# below), one declaration per distinct pair type the task uses
+# (_pair_types), emitted in that deterministic order.
+#
+# `==`/`!=` on two pairs is componentwise (SPEC.md), and Ada's own
+# predefined "=" on a plain (untagged, non-private) record already IS that,
+# componentwise over each field's own "=": MEASURED (probe p_pair1.ads,
+# gnatprove FSF 16.1.0, --steps 20000, z3) a postcondition stating
+# `P = Q <-> (P.P_A = Q.P_A and then P.P_B = Q.P_B)` for a T_Pair_Int_Int
+# VERIFIES directly, so a pair with no seq component needs no restatement
+# beyond the record's own derived equality: both Big_Integer and Boolean
+# have a predefined "=" visible without any `use` clause (CMP's plain infix
+# already leans on the same fact for a bare int/bool `==`). A pair with a
+# SEQ component cannot lean on that alone: Seq's own "=" needs `use Seqs;`
+# (EQ_PREAMBLE's own note, WHOLE-SEQ `==`/`!=`), a `use` this file will not
+# add unconditionally, so the same failure would just move one level up.
+# Every pair type therefore gets a NAMED equality function regardless of
+# its components ("a named form either way", not only where the bare form
+# would fail): a non-seq field's comparison is still exactly the record's
+# own "=", spelled per-field so one function shape covers a seq field too,
+# and a seq field goes through T_Eq (EQ_PREAMBLE) instead, gated on
+# needs_eq turning needs_range on with it exactly as WHOLE-SEQ `==`/`!=`
+# already does. Gated on Lower.needs_pair_eq (a set of (T1, T2) keys, one
+# per pair type an `==`/`!=` was actually rendered against, Lower.expr
+# below), so a task that never compares two pairs gets no wrapper at all,
+# the same discipline UPDATE_PREAMBLE/EQ_PREAMBLE/FILL_PREAMBLE keep.
+def _pair_preamble(pair_types: list, needs_eq_for: set) -> str:
+    parts = []
+    for ty in pair_types:
+        t1, t2 = ty["pair"]
+        name = _pair_ada_name(ty)
+        parts.append(
+            f"   type {name} is record\n"
+            f"      P_A : {ada_type(t1)};\n"
+            f"      P_B : {ada_type(t2)};\n"
+            f"   end record;\n")
+        if (t1, t2) in needs_eq_for:
+            cmp_a = "T_Eq (P.P_A, Q.P_A)" if t1 == "seq" else "P.P_A = Q.P_A"
+            cmp_b = "T_Eq (P.P_B, Q.P_B)" if t2 == "seq" else "P.P_B = Q.P_B"
+            parts.append(
+                f"   function {name}_Eq (P, Q : {name}) return Boolean is\n"
+                f"     ({cmp_a} and then {cmp_b});\n")
+    return "\n".join(parts)
+
+
 # fill(n, v) = seq(n, v) (SPEC.md "Sequences as values", 2026-09-09):
 # DEFINED IFF n >= 0. There is no library constructor for "n copies of v"
 # in SPARK.Containers.Functional.Infinite_Sequences (SEQ_PREAMBLE's own
@@ -1042,11 +1516,17 @@ def loop_assigned(body: list) -> set:
     return out
 
 
-def _dead_lit(t: str) -> str:
+def _dead_lit(t) -> str:
     """A well-typed placeholder Ada literal for a state var this file lets
     into a loop's call site unassigned (SPEC.md "Early exit": the return
     target, when nothing before the loop ever set it). Never read for its
-    value; only its type has to line up."""
+    value; only its type has to line up. A pair type (SPEC.md "Pairs",
+    2026-09-10) recurses componentwise, qualified the same way expr()'s own
+    `pair` case is; v1 has no pair of pairs, so this never recurses twice."""
+    if isinstance(t, dict):
+        t1, t2 = t["pair"]
+        return (f"{_pair_ada_name(t)}'(P_A => {_dead_lit(t1)}, "
+               f"P_B => {_dead_lit(t2)})")
     return {"int": "Big_Integer'(0)", "bool": "False",
            "seq": "Seqs.Empty_Sequence"}[t]
 
@@ -1098,6 +1578,8 @@ class Lower:
         self.needs_slice = False       # set by the first lowered slice()
         self.needs_concat = False      # set by the first lowered seq `+`
         self.needs_eq = False          # set by the first lowered seq ==/!=
+        self.needs_pair_eq: set = set()  # (T1, T2) keys with a pair ==/!=
+                                         # (SPEC.md "Pairs", 2026-09-10)
         self.spec_fun_names = {sf["name"] for sf in task.get("spec_funs", [])}
         # The counterexample instance walks the SAME tree with the SAME
         # operator table; only the numeric type of a literal differs, so a
@@ -1107,26 +1589,29 @@ class Lower:
 
     # --- expressions -------------------------------------------------------
 
-    def _ty(self, e: dict, types: dict) -> str:
-        """A static reading of `e`'s t type ("int"/"bool"/"seq"), needed
-        only to tell a seq `+` (concatenation) from an int `+` (addition)
-        BEFORE any Ada text is emitted (SPEC.md "Sequences: literals,
-        concatenation, slices", 2026-09-09). t's `==` needed no such
+    def _ty(self, e: dict, types: dict):
+        """A static reading of `e`'s t type ("int"/"bool"/"seq", or a pair
+        type {"pair": [T1, T2]}, SPEC.md "Pairs", 2026-09-10), needed only
+        to tell a seq `+` (concatenation) from an int `+` (addition) and a
+        pair `==`/`!=` from an int/bool/seq one BEFORE any Ada text is
+        emitted (SPEC.md "Sequences: literals, concatenation, slices",
+        2026-09-09; "Pairs", 2026-09-10). t's plain `==` needed no such
         reading: Ada's own polymorphic "=" already resolves it at every
-        type this file maps (Big_Integer, Boolean, Seq). `+` has no such
-        resolution -- grepped against this SPARKlib install, Sequence
-        carries no "+" and no "&" -- so the choice between native `+` and
-        T_Concat has to be made here, statically, mirroring the same
-        isinstance(a[0], tuple) check interp.ev makes at runtime (SPEC.md's
-        own rule: a `+` whose operands disagree in type is ill-typed, so
-        only args[0] is consulted, never both). `types` is whatever dict
-        the caller already threads for `var` types: compile()/compile_r()/
-        lower_while() thread task params + return + locals throughout
-        (lower()'s initial call now seeds params in, SPEC.md "Sequences as
-        values" already seeded return + locals); lower_spec_fun() builds
-        one from the spec_fun's own params; certificate()/_undef_obligation
-        read it off the witness's own ground values instead, since there is
-        no AST-level `types` dict at a witness."""
+        base type this file maps (Big_Integer, Boolean, Seq). `+` has no
+        such resolution -- grepped against this SPARKlib install, Sequence
+        carries no "+" and no "&" -- and a pair's own "=" is a named call
+        (_pair_preamble), never bare infix, so the choice has to be made
+        here, statically, mirroring the same isinstance(a[0], tuple) check
+        interp.ev makes at runtime (SPEC.md's own rule: an operator whose
+        operands disagree in type is ill-typed, so only args[0] is
+        consulted, never both). `types` is whatever dict the caller already
+        threads for `var` types: compile()/compile_r()/lower_while() thread
+        task params + return + locals throughout (lower()'s initial call
+        now seeds params in, SPEC.md "Sequences as values" already seeded
+        return + locals); lower_spec_fun() builds one from the spec_fun's
+        own params; certificate()/_undef_obligation read it off the
+        witness's own ground values instead, since there is no AST-level
+        `types` dict at a witness."""
         if "int" in e:
             return "int"
         if "bool" in e:
@@ -1153,6 +1638,18 @@ class Lower:
             return "int"
         if op in ("update", "fill", "seq", "slice"):
             return "seq"
+        if op == "pair":
+            # SPEC.md "Pairs" (2026-09-10): a `pair` node has no declared
+            # type of its own to look up the way a `var` does, so it is
+            # read off its own two arguments, recursively -- the same
+            # static reading `+`/`==` already lean on this function for.
+            return {"pair": [self._ty(e["args"][0], types),
+                             self._ty(e["args"][1], types)]}
+        if op in ("fst", "snd"):
+            pty = self._ty(e["args"][0], types)
+            if not (isinstance(pty, dict) and "pair" in pty):
+                raise ValueError(f"{op} of a non-pair expression")
+            return pty["pair"][0 if op == "fst" else 1]
         if op in ("neg", "-", "*", "div", "mod"):
             return "int"
         if op == "+":
@@ -1250,6 +1747,47 @@ class Lower:
             self.needs_range = True
             s, a, b = args
             return f"T_Slice ({s}, {a}, {b})"
+        if op == "pair":
+            # (a, b) (SPEC.md "Pairs", 2026-09-10): a record aggregate,
+            # qualified with the pair's own Ada type name -- the same
+            # qualification a bare integer literal already needs (`int` in
+            # e, above: "a bare literal fails resolution... where both
+            # operands... are literal-bearing"), and for the same reason:
+            # an UNQUALIFIED `(P_A => a, P_B => b)` sitting in compile()'s
+            # own `if`-merge (`(if cond then <then> else <else>)`, both
+            # arms a bare aggregate) gives gnatprove nothing to resolve the
+            # aggregate's type from. Qualifying it always, not only where
+            # an `if`-merge would need it, keeps every call site the same.
+            # Field names P_A/P_B (PAIRS RESIDUAL, 2026-09-10; the dated
+            # note at the end of the PAIRS docstring, above): renamed from
+            # the original A/B, which folded-case collided with a
+            # lowercase t identifier `a`/`b`.
+            t1 = self._ty(e["args"][0], types)
+            t2 = self._ty(e["args"][1], types)
+            name = _pair_ada_name({"pair": [t1, t2]})
+            return f"{name}'(P_A => {args[0]}, P_B => {args[1]})"
+        if op in ("fst", "snd"):
+            # p.0 / p.1 (SPEC.md "Pairs", 2026-09-10): "always defined on a
+            # pair", so this is plain field access, no Pre and no wrapper
+            # function -- unlike `at`'s Elem, a pair's two fields are
+            # always populated at construction (the `pair` case just
+            # above), so there is no partiality to state a precondition
+            # about. UNPARENTHESIZED: MEASURED (gnatprove FSF 16.1.0)
+            # `(F'Result).P_A` is rejected, "prefix for selection is not a
+            # name" -- Ada's selected_component needs a NAME for its
+            # prefix (RM 4.1), and wrapping one in parens turns it into a
+            # plain expression, no longer a name, even though the name
+            # underneath (an attribute reference, a variable, a function
+            # call) would have worked directly; `F'Result.P_A` and
+            # `F (Args).P_A`, both already how this file spells a W_k state
+            # field access (lower_while's own `{name}'Result.{cap(v)}`),
+            # are exactly right with no parens at all. This does not yet
+            # cover a pair value that is itself not a name (an `if`-merge
+            # of two pairs, or `fst`/`snd` applied straight to a fresh
+            # `pair(...)` aggregate): neither committed pair task ever
+            # projects one of those, and this is not guarded against, only
+            # left unexercised.
+            return f"{args[0]}.{'P_A' if op == 'fst' else 'P_B'}"
         if op == "+" and self._ty(e["args"][0], types) == "seq":
             # s + t on two seqs is concatenation (SPEC.md "Sequences:
             # literals, concatenation, slices", 2026-09-09), told apart
@@ -1277,6 +1815,24 @@ class Lower:
             self.needs_eq = True
             self.needs_range = True
             eq = f"T_Eq ({args[0]}, {args[1]})"
+            return eq if op == "==" else f"(not {eq})"
+        if op in ("==", "!=") and isinstance(self._ty(e["args"][0], types),
+                                             dict):
+            # Two pairs (SPEC.md "Pairs", 2026-09-10: "the polymorphic `==`
+            # again, two ints, two bools, two seqs, two pairs"), told apart
+            # from every other `==`/`!=` the same way seq `==` is
+            # (Lower._ty, just above). Always a NAMED call (_pair_preamble's
+            # own note): whether the pair's record type has a bare
+            # predefined "=" gnatprove can see or not, this file does not
+            # need to know which, per pair type, to pick between two
+            # renderings here.
+            pty = self._ty(e["args"][0], types)
+            t1, t2 = pty["pair"]
+            self.needs_pair_eq.add((t1, t2))
+            if t1 == "seq" or t2 == "seq":
+                self.needs_eq = True
+                self.needs_range = True
+            eq = f"{_pair_ada_name(pty)}_Eq ({args[0]}, {args[1]})"
             return eq if op == "==" else f"(not {eq})"
         if op in CMP:
             return f"({args[0]} {CMP[op]} {args[1]})"
@@ -1452,22 +2008,6 @@ class Lower:
         name, tname = f"W_{self.wcount}", f"W_{self.wcount}_State"
         state = list(env.keys())
         body_has_return = ret_name is not None and has_return(w["body"])
-        for v in state:
-            if env[v] is None:
-                if body_has_return and v == ret_name:
-                    # The return target may be genuinely unassigned before
-                    # the loop (SPEC.md "Early exit": first_even, is_prime
-                    # both reach their while with `r` never yet assigned).
-                    # No invariant or Pre/Post above ever mentions it here
-                    # (a loop's own contract is stated over the state it
-                    # HAVOCS, and nothing upstream could have constrained a
-                    # name nothing has touched yet), so entry has no fact to
-                    # lose by treating it as a normal (if unconstrained)
-                    # state field instead of refusing the loop outright.
-                    continue
-                raise NotImplementedError(
-                    f"spark: loop reached with {v!r} unassigned; the state "
-                    f"record has no value for it")
         # SPEC.md frame rule: the loop havocs exactly the syntactic assigned
         # set of its body. Only those variables become record fields of the
         # helper's result; every other in-scope name stays a plain parameter
@@ -1478,16 +2018,45 @@ class Lower:
         # TIMEOUT here while Dafny, Verus and Frama-C proved them.) A
         # `return`'s target counts as assigned here too (loop_assigned,
         # 2026-09-08), so it becomes a state field exactly when the body can
-        # actually set it.
+        # actually set it. Computed before the unassigned-var check just
+        # below (moved up from after it, SPEC.md "Pairs", 2026-09-10): that
+        # check's own exemption needs to know `hav` too, now.
         hav = loop_assigned(w["body"])
+        for v in state:
+            if env[v] is None:
+                if (body_has_return and v == ret_name) or v not in hav:
+                    # The return target may be genuinely unassigned before
+                    # the loop (SPEC.md "Early exit": first_even, is_prime
+                    # both reach their while with `r` never yet assigned).
+                    # No invariant or Pre/Post above ever mentions it here
+                    # (a loop's own contract is stated over the state it
+                    # HAVOCS, and nothing upstream could have constrained a
+                    # name nothing has touched yet), so entry has no fact to
+                    # lose by treating it as a normal (if unconstrained)
+                    # state field instead of refusing the loop outright.
+                    # SPEC.md "Pairs" (2026-09-10) widens this from "the
+                    # return target under an early exit" to "any var the
+                    # loop's OWN body never assigns" (`v not in hav`):
+                    # min_max reaches its loop with the pair-typed return
+                    # `r` unassigned and NO return statement anywhere (so
+                    # the first disjunct alone would not have covered it),
+                    # but `r` is not in `hav` either, since the loop body
+                    # never touches it -- it is filled in by the plain
+                    # `r := pair(lo, hi)` AFTER the loop -- so the same
+                    # "nothing upstream could reference it" argument holds
+                    # for exactly the same reason, pair-typed or not.
+                    continue
+                raise NotImplementedError(
+                    f"spark: loop reached with {v!r} unassigned; the state "
+                    f"record has no value for it")
         mut = [v for v in state if v in hav]
         if not mut:
             raise NotImplementedError(
                 "spark: loop body assigns nothing in scope; an empty state "
                 "record is not lowerable")
         tparams = self.task["params"]
-        plist = [f"{cap(p['name'])} : {TYPE[p['type']]}" for p in tparams] \
-            + [f"{cap(v)} : {TYPE[types[v]]}" for v in state]
+        plist = [f"{cap(p['name'])} : {ada_type(p['type'])}" for p in tparams] \
+            + [f"{cap(v)} : {ada_type(types[v])}" for v in state]
         entry = {**psub, **{v: cap(v) for v in state}}
         result = {**psub,
                   **{v: (f"{name}'Result.{cap(v)}" if v in mut else cap(v))
@@ -1535,9 +2104,9 @@ class Lower:
         else:
             aspects.append(f"Post => {post}")
         aspects.append(f"Subprogram_Variant => (Decreases => {variant})")
-        ret_type = TYPE[self.task["returns"][0]["type"]]
+        ret_type = ada_type(self.task["returns"][0]["type"])
         if body_has_return:
-            fields = "\n".join(f"      {cap(v)} : {TYPE[types[v]]};"
+            fields = "\n".join(f"      {cap(v)} : {ada_type(types[v])};"
                                for v in mut)
             fields += f"\n      Esc : Boolean;\n      Ret : {ret_type};"
             esc_fields = ", ".join(f"{cap(v)} => {benv[v]}" for v in mut)
@@ -1552,7 +2121,7 @@ class Lower:
                         f"        then {recurse_or_escape}\n"
                         f"        else {base_case})")
         else:
-            fields = "\n".join(f"      {cap(v)} : {TYPE[types[v]]};"
+            fields = "\n".join(f"      {cap(v)} : {ada_type(types[v])};"
                                for v in mut)
             body_expr = (f"(if {cond}\n"
                         f"        then {name} ({', '.join(rec_args)})\n"
@@ -1588,10 +2157,10 @@ class Lower:
         sub = {p["name"]: cap(p["name"]) for p in sf["params"]}
         types = {p["name"]: p["type"] for p in sf["params"]}
         d = self.expr(sf["decreases"], sub, types)
-        plist = "; ".join(f"{cap(p['name'])} : {TYPE[p['type']]}"
+        plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
                           for p in sf["params"])
         sig = f"function {cap(sf['name'])} ({plist}) return " \
-              f"{TYPE[sf['result']]}"
+              f"{ada_type(sf['result'])}"
         return (f"   {sig}\n"
                 f"   with Subprogram_Variant => "
                 f"(Decreases => (if {d} >= 0 then {d} else 0));\n"
@@ -1604,16 +2173,71 @@ CERT_NAME = "T_Refutation_Certificate"
 
 
 def _cert_lit(v) -> str:
-    """One witness value as ground Ada text. Types are read off the JSON
-    value itself (bool before int: a Python bool is an int), so the literal
-    cannot disagree with what interp.py measured."""
+    """One witness value as ground Ada text. Types are read off the shape
+    of `v` itself (bool before int: a Python bool is an int; a list or
+    tuple is a seq; an interp.Pair, checked before either, is a pair, the
+    SPEC.md "Pairs" (2026-09-10) distinction from a same-shaped seq that
+    isinstance(v, interp.Pair) preserves the way JSON alone (a witness's
+    `_j`-shown form) cannot), so the literal cannot disagree with what
+    interp.py measured. A pair's own two components recurse (v1 has no
+    pair of pairs, so this never recurses twice), rendered as the SAME
+    qualified record aggregate expr()'s own `pair` case emits, the Ada
+    type name read off the components' OWN shape since a certificate has
+    no declared-type context here the way expr() has `types` -- this is
+    needed for interp.exit_env's raw (never `_j`-shown) return value,
+    which can be an actual Pair object where the twin body's continuation
+    recomputes the return after its loop (SPEC.md "Pairs"'s min_max is
+    exactly this shape: `r := pair(lo, hi)` runs after the loop, so the
+    exit witness's own certificate calls _cert_lit on a live Pair, not a
+    JSON-shown list). The list/tuple check widened to accept either for
+    the same reason: exit_env's raw values are Python tuples for a seq
+    (SPEC.md "Sequences as values"), where a value that never left
+    `vals` (untouched by the twin's continuation) is still the JSON-shown
+    list a witness carries; a pair's own seq-typed COMPONENT can be
+    either, by the same argument one level down."""
     if isinstance(v, bool):
         return "True" if v else "False"
-    if isinstance(v, list):
+    if isinstance(v, interp.Pair):
+        def _kind(x):
+            return ("bool" if isinstance(x, bool) else
+                    "seq" if isinstance(x, (list, tuple)) else "int")
+        name = _pair_ada_name({"pair": [_kind(v.a), _kind(v.b)]})
+        return f"{name}'(P_A => {_cert_lit(v.a)}, P_B => {_cert_lit(v.b)})"
+    if isinstance(v, (list, tuple)):
         out = "Seqs.Empty_Sequence"
         for x in v:
             out = f"Seqs.Add ({out}, Big_Integer'({x}))"
         return out
+    return f"Big_Integer'({v})"
+
+
+def _cert_lit_of_type(v, ty) -> str:
+    """PAIRS RESIDUAL (2026-09-09): `_cert_lit`, but TOLD `v`'s declared t
+    type `ty` instead of reading it off `v`'s own Python/JSON shape. Needed
+    for a task PARAMETER: a witness's `vals` is JSON-shown (interp._j), and
+    `_j` renders a pair the SAME 2-list a same-shaped seq would (SPEC.md
+    "Pairs": "the runtime value of a pair must be DISTINCT from a seq",
+    exactly the confusion `_j`'s own docstring rules out at runtime, lost
+    again once the witness is serialized) -- `_cert_lit` alone therefore
+    cannot tell `p = [0, 1]` (a pair witness) from `s = [0, 1]` (a seq
+    witness) apart. `ty`, read off the task's own declared parameter type
+    (certificate()'s/`_undef_obligation`'s `param_types`), breaks the tie
+    the same way expr()'s `types` dict already does at lowering time,
+    instead of guessing from the JSON list's own shape. v1 has no pair of
+    pairs, so a pair's own two components (t1, t2 below) are always a base
+    type ("int"/"bool"/"seq"), never recursed through the dict branch a
+    second time; a seq component recurses into the same literal `_cert_lit`
+    itself builds, since a seq witness value is unambiguous once `ty` says
+    "seq" rather than "pair"."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        a, b = v
+        return (f"{_pair_ada_name(ty)}'(P_A => {_cert_lit_of_type(a, t1)}, "
+                f"P_B => {_cert_lit_of_type(b, t2)})")
+    if ty == "seq":
+        return _cert_lit(list(v))
+    if ty == "bool":
+        return "True" if v else "False"
     return f"Big_Integer'({v})"
 
 
@@ -1726,7 +2350,14 @@ def defined(e: dict) -> dict:
     # (SPEC.md "Sequences: literals, concatenation, slices", 2026-09-09:
     # "a literal is defined iff all its elements are; a concatenation is
     # defined iff both arguments are"), exactly the generic conjunction
-    # this fallthrough already builds.
+    # this fallthrough already builds. `pair`, `fst` and `snd` (SPEC.md
+    # "Pairs", 2026-09-10) fall through here too and need no case of their
+    # own: `pair` is defined iff both its args are (SPEC.md: "a pair value
+    # defined iff both components are"), exactly this fallthrough's own
+    # two-argument conjunction; `fst`/`snd` take one argument, and "always
+    # defined on a pair" (SPEC.md) is exactly the same fallthrough's
+    # one-argument conjunction, defined(p) alone, with no extra bound
+    # added the way `at`'s index gets one.
     return _t_conj([defined(a) for a in args])
 
 
@@ -1755,17 +2386,54 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
     definedness is not walked here, the same "not emitted" posture as
     every other case in certificate()), or if the walk disagrees with the
     witness and finds nothing false: an honest UNPROVED, never a wrong
-    certificate."""
-    env_py = {n: (tuple(v) if isinstance(v, list) else v)
-              for n, v in vals.items()}
+    certificate.
+
+    PAIRS RESIDUAL (2026-09-09): a pair-typed PARAMETER is no longer
+    refused here by name. `param_types` (the task's own declared
+    parameter types, read the same way certificate()'s own paragraph
+    above does) breaks the `vals`-is-JSON-shown ambiguity: `_to_py`
+    rebuilds a real interp.Pair for `env_py` (interp.ev's `fst`/`snd`/
+    `pair` cases need one, never a same-shaped tuple, SPEC.md "Pairs":
+    "the runtime value of a pair must be DISTINCT from a seq"), and
+    `types` reads the SAME declared type for a parameter name, so a `+`/
+    `==` on it still routes through Lower._ty exactly as real lowering
+    would. fz_p_pair_seq (SPEC.md "Pairs"'s own pair-with-a-seq-component
+    task, a pair-typed PARAMETER, the fuzz family v1pairs's one committed
+    "undefined" witness) is MEASURED unchanged by this fix: its twin
+    body's own failing statement sits inside an `if` (DROP-GUARD, not a
+    bare `var`/`assign`), which the walk below still returns None on
+    before ever consulting a type -- an honest UNPROVED, never a wrong
+    certificate, exactly the walk's own pre-existing "if/while/return"
+    limit (above), not the parameter-shape ambiguity this paragraph
+    removes."""
+    param_types = {p["name"]: p["type"] for p in task["params"]}
+
+    def _to_py(v, ty):
+        """`v` (JSON-shown) rebuilt as the Python shape interp.ev expects,
+        told `ty` instead of guessing from `v`'s own shape -- the same
+        tie-break _cert_lit_of_type makes on the Ada-text side."""
+        if isinstance(ty, dict):
+            t1, t2 = ty["pair"]
+            a, b = v
+            return interp.Pair(_to_py(a, t1), _to_py(b, t2))
+        if ty == "seq":
+            return tuple(v)
+        return v
+
+    env_py = {n: (_to_py(v, param_types[n]) if n in param_types else
+                 (tuple(v) if isinstance(v, list) else v))
+             for n, v in vals.items()}
     # A static `types` dict for Lower._ty (SPEC.md "Sequences: literals,
     # concatenation, slices", 2026-09-09: needed to render a seq `+` inside
-    # `ob` as T_Concat rather than native `+`), read off the SAME grown
-    # values `env_py` already carries -- there is no AST-level types dict at
-    # a witness, only the ground values interp.ev itself computed, so the
-    # Python shape (bool before int, a tuple for a seq) stands in for it.
-    types = {n: ("seq" if isinstance(v, tuple) else
-                "bool" if isinstance(v, bool) else "int")
+    # `ob` as T_Concat rather than native `+`; SPEC.md "Pairs", to route a
+    # pair `==`/`fst`/`snd` correctly). A PARAMETER name reads its declared
+    # type off `param_types` directly, exactly like certificate()'s own
+    # `types`; anything else (a local this walk has since bound) reads its
+    # type off the Python shape `env_py` already carries -- there is no
+    # AST-level types dict at a witness for a local.
+    types = {n: (param_types[n] if n in param_types else
+                ("seq" if isinstance(v, tuple) else
+                 "bool" if isinstance(v, bool) else "int"))
             for n, v in env_py.items()}
     sub = dict(sub)
     funs = interp.funs_of(task, twin_body)
@@ -1783,8 +2451,19 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                 return f"(not {L.expr(ob, sub, types)})"
             val = interp.ev(e, env_py, funs, st)
             env_py[name] = val
-            types[name] = ("seq" if isinstance(val, tuple) else
-                           "bool" if isinstance(val, bool) else "int")
+            # NOT MEASURED: a local var this walk binds to a Pair value
+            # (v1's only committed "undefined" task, fz_p_pair_seq, never
+            # reaches a `var`/`assign` at all -- see the docstring above)
+            # -- carried for the next task the same way certificate()'s
+            # own "exit"-witness pair-local fallback is.
+            if isinstance(val, interp.Pair):
+                def _kind(x):
+                    return ("bool" if isinstance(x, bool) else
+                            "seq" if isinstance(x, (list, tuple)) else "int")
+                types[name] = {"pair": [_kind(val.a), _kind(val.b)]}
+            else:
+                types[name] = ("seq" if isinstance(val, tuple) else
+                               "bool" if isinstance(val, bool) else "int")
             sub[name] = _cert_lit(list(val) if isinstance(val, tuple)
                                   else val)
     except (interp.Undef, interp.Budget, RecursionError):
@@ -1847,20 +2526,49 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
 
     Any lowering failure (a name the witness does not value, an operator
     outside t) emits no certificate rather than a wrong one.
+
+    PAIRS RESIDUAL (2026-09-09): a task with a pair-typed PARAMETER now
+    gets a certificate like any other -- the fuzz family v1pairs (SPEC.md
+    "Pairs", 2026-09-10) MEASURED 16 of 19 pair-family cells read
+    verified/unproved rather than verified/refuted, and the cause was
+    exactly the gap this paragraph used to describe: `vals` below is
+    JSON-shown (interp._j), so a pair-typed parameter's witness value
+    (a 2-list) was indistinguishable from a same-shaped seq's, and the old
+    `sub`/`types` here read types off THAT shape alone. The fix is
+    `param_types`, the task's own declared parameter types (always known
+    statically, never guessed): `_cert_lit_of_type` uses it to render a
+    pair parameter as the qualified record aggregate F's own signature
+    expects instead of a Seq literal, and `types` now carries the SAME
+    declared type `_ty` needs to route a pair `==`/`fst`/`snd` correctly,
+    rather than the string "seq" a shape-only reading would have produced.
+    A name NOT in `param_types` (a loop-local var reaching an "exit"
+    witness) still falls back to the old shape-based reading, unaffected --
+    v1's loop-carrying pair tasks (SPEC.md "Pairs"'s own min_max included)
+    reach this certificate through a "value" witness, never "exit", so no
+    committed task exercises that fallback on an actual pair value; it
+    is carried for the next one, exactly like _cert_lit's own Pair case
+    before it.
     """
     if not w:
         return ""
     kind = w.get("_kind")
     vals = {k: v for k, v in w.items() if not k.startswith("_")}
-    sub = {k: _cert_lit(v) for k, v in vals.items()}
+    param_types = {p["name"]: p["type"] for p in task["params"]}
+    sub = {k: (_cert_lit_of_type(v, param_types[k]) if k in param_types
+              else _cert_lit(v))
+          for k, v in vals.items()}
     ret = task["returns"][0]["name"]
     # A static `types` dict for Lower._ty (SPEC.md "Sequences: literals,
-    # concatenation, slices", 2026-09-09), read off the witness's own
-    # ground values exactly as _undef_obligation's does, plus the task's
-    # own declared return type: the return is never itself a witness input,
-    # so it would otherwise be missing from a `vals`-derived reading.
-    types = {k: ("seq" if isinstance(v, list) else
-                "bool" if isinstance(v, bool) else "int")
+    # concatenation, slices", 2026-09-09), plus the task's own declared
+    # return type: the return is never itself a witness input, so it would
+    # otherwise be missing from a `vals`-derived reading. A PARAMETER name
+    # reads its declared type directly off `param_types` (PAIRS RESIDUAL,
+    # above); anything else (an "exit" witness's loop-local var) still
+    # falls back to a shape-based guess, the only reading available for a
+    # name with no AST-level declaration here.
+    types = {k: (param_types[k] if k in param_types else
+                ("seq" if isinstance(v, list) else
+                 "bool" if isinstance(v, bool) else "int"))
             for k, v in vals.items()}
     types[ret] = task["returns"][0]["type"]
     ens = None
@@ -1934,18 +2642,47 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # an unbound name here.
     base_types = {**{p["name"]: p["type"] for p in task["params"]},
                  ret["name"]: ret["type"]}
+    # SPEC.md "Pairs" (2026-09-10): every distinct pair type this task
+    # uses, first-appearance order (_pair_types) -- read here, before
+    # anything downstream, both to widen needs_seq (a pair with a seq
+    # component needs Seq declared before its own record can name it,
+    # below) and to widen `reserved` (below) before the name-capture check
+    # runs.
+    pair_types_used = _pair_types(task, body)
+    # PAIRS RESIDUAL (2026-09-10): a task that builds a pair transiently
+    # (constructed and projected within one expression, no param, return,
+    # or `var` of a pair type anywhere for `_pair_types` to have declared a
+    # record for) would otherwise emit Ada text naming an undeclared
+    # record -- MEASURED, fz_p_pair_proj, malformed/malformed. Refused by
+    # name here, honestly, rather than risked: `_pair_types` coming back
+    # empty is the exact, decidable signal (every other committed pair
+    # task has at least one declared pair type, so this never fires on
+    # them), and this task's own `body` (the twin's body at the twin call,
+    # the real body otherwise) plus `requires`/`ensures`/`spec_funs` is
+    # everywhere `pair` can appear.
+    if not pair_types_used and (
+            _has_pair_op(body) or _has_pair_op(task.get("requires", []))
+            or _has_pair_op(task.get("ensures", []))
+            or _has_pair_op(task.get("spec_funs", []))):
+        raise NotImplementedError(
+            "spark: a pair is built and used within one expression, with "
+            "no parameter, return, or local of a pair type anywhere for "
+            "this task's own record declarations to cover")
     # SPEC.md "Sequences as values" (2026-09-09): seq is now a return and
     # local type too, not just a parameter type, so the preamble condition
     # widens to match: the task's own return, a spec_fun's result, or a
     # `var` declared seq anywhere in the body (locals_seq, below) all need
-    # it exactly as a seq parameter always did.
+    # it exactly as a seq parameter always did. A pair with a seq
+    # component (SPEC.md "Pairs", 2026-09-10) needs it too: the record's
+    # own field is typed Seq (_pair_preamble).
     needs_seq = (
         any(p["type"] == "seq" for p in task["params"])
         or ret["type"] == "seq"
         or any(p["type"] == "seq"
               for sf in task.get("spec_funs", []) for p in sf["params"])
         or any(sf["result"] == "seq" for sf in task.get("spec_funs", []))
-        or locals_seq(body))
+        or locals_seq(body)
+        or any("seq" in pt["pair"] for pt in pair_types_used))
 
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,
@@ -1955,6 +2692,30 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # task has_return finds a `return` in; the other 13 committed tasks'
     # RESERVED set, and therefore their output, is untouched.
     reserved = RESERVED | ({"Esc", "Ret"} if has_return(body) else set())
+    # SPEC.md "Pairs" (2026-09-10): each pair type's own record name, its
+    # equality wrapper's name (_pair_preamble; reserved whether or not this
+    # task ever compares two pairs -- there is no cheap structural
+    # predicate for "will Lower.expr render a pair `==`" the way
+    # has_return() is one for `return`, so this is more cautious than
+    # Esc/Ret above need to be), and the field names P_A/P_B every pair
+    # record declares, all only reserved for a task that uses a pair type
+    # at all; a task with none keeps its previous RESERVED set exactly.
+    # PAIRS RESIDUAL (2026-09-10): the field names were originally A/B,
+    # MEASURED (fuzz family v1pairs) to fold-case collide with the
+    # lowercase t identifiers `a`/`b` a real task chose for its own two
+    # parameters (fz_v1pairs_064: a seq-slice-pair task named exactly
+    # `a`/`b`) -- an abstain this reservation caught honestly, but on a
+    # pair of names common enough in practice to be worth not colliding
+    # with at all. Renamed to P_A/P_B, still reserved here the same way
+    # (a t identifier `p_a`/`p_b` is not impossible, only far less likely
+    # than `a`/`b`), so the fix is the new field name everywhere it is
+    # EMITTED (_pair_preamble, expr()'s `pair`/`fst`/`snd` cases,
+    # _dead_lit, _cert_lit, _cert_lit_of_type), not a change to this
+    # collision-detection mechanism itself.
+    if pair_types_used:
+        pair_ada_names = {_pair_ada_name(pt) for pt in pair_types_used}
+        reserved |= (pair_ada_names | {"P_A", "P_B"}
+                    | {f"{n}_Eq" for n in pair_ada_names})
     reserved_lc = {r.lower() for r in reserved}
     clash = sorted(n for n in bound_names(task, body)
                    if n.lower() in reserved_lc)
@@ -2008,10 +2769,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
 
     cert = certificate(task, body, witness, L)
 
-    plist = "; ".join(f"{cap(p['name'])} : {TYPE[p['type']]}"
+    plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
                       for p in task["params"])
-    fsig = f"function F ({plist}) return {TYPE[ret['type']]}" if plist \
-        else f"function F return {TYPE[ret['type']]}"
+    fsig = f"function F ({plist}) return {ada_type(ret['type'])}" if plist \
+        else f"function F return {ada_type(ret['type'])}"
     pkg = f"T_{cap(task['name'])}"
     parts = [
         "pragma Ada_2022;",
@@ -2037,6 +2798,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [CONCAT_PREAMBLE]
     if L.needs_divmod:
         parts += [DIVMOD_PREAMBLE]
+    if pair_types_used:
+        parts += [_pair_preamble(pair_types_used, L.needs_pair_eq)]
     for sf in spec_funs:
         parts += [sf]
     for h in L.helpers:
@@ -2069,7 +2832,17 @@ def ce_instance(task: dict, body: list) -> str:
     presents `_`.
     """
     ret = task["returns"][0]
-    if ret["type"] not in CE_TYPE \
+    # SPEC.md "Pairs" (2026-09-10): a pair type is a dict, not a hashable
+    # CE_TYPE key, so `ret["type"] not in CE_TYPE` below would raise
+    # TypeError: unhashable type on a pair-typed return before ever
+    # reaching the ordinary "outside the fragment" reading; checked first,
+    # short-circuiting the `or` before that lookup ever runs. A pair value
+    # has no machine mirror regardless (the header's own reasoning for
+    # seq), so this is the same fail-closed treatment, stated first only
+    # because it also has to be stated safely.
+    if isinstance(ret["type"], dict) \
+            or any(isinstance(p["type"], dict) for p in task["params"]) \
+            or ret["type"] not in CE_TYPE \
             or any(p["type"] not in CE_TYPE for p in task["params"]) \
             or task.get("spec_funs") or "decreases" in task:
         return ""

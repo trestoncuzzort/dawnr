@@ -592,6 +592,214 @@ the five residual tasks that moved cells, unproved/refuted ->
 verified/refuted; the other four's cells are unchanged from
 COVERAGE-lifted-785.md (unproved/unproved for linear_search and flip,
 unproved/refuted for swapFirstAndLast, timeout/timeout for getEven).
+
+PAIRS (2026-09-10, SPEC.md "Pairs (v1)", ROADMAP 12.7): a pair `{"pair":
+[T1, T2]}`, T1/T2 each `int`/`bool`/`seq`, lands as a value over Int, Bool
+and List Int, the whole of v1 (no pair of pairs, no seq of pairs, no pair
+of three -- fuzz_lower.check_wf refuses those before this file ever sees
+a task, so nothing about the shape below needs to police them itself).
+Two committed tasks: `divmod_pair` (loop-free, twin `wrong-var`, the
+components swapped) and `min_max` (a loop keeping `lo`/`hi` as two plain
+ints and assembling `(lo, hi)` only in the suffix, twin `collapse-if`).
+
+ENCODING. `{"pair": [T1, T2]}` -> Lean's own product `T1 × T2`
+(`lean_type` gained one branch, recursing once since T1/T2 are always
+base types); `pair` -> `(a, b)`, Lean's own pair constructor; `fst`/`snd`
+-> `.1`/`.2`, Prod.fst/Prod.snd (`sort`/`term` each gained the three new
+op cases, mirroring `sort`'s/`term`'s existing `seq`/`slice` additions).
+`==`/`!=` on two pairs needed ZERO new code: `prop`'s existing non-bool
+branch already lowers any `==`/`!=` whose operands aren't `bool`-sorted
+to Lean's own `=`/`≠` term equality, and a pair's `sort` (the new
+`{"pair": [...]}` dict) is simply never `"bool"`, so it falls straight
+through unchanged, exactly as seq equality did (SPEC.md "Sequences as
+values"). Measured (lean 4.33.1, core only, no Mathlib, a six-theorem
+scratch probe): `decide` alone proves `Int × Int` equality and
+disequality, `Int × List Int` equality and disequality (the List Int
+component case SPEC.md names explicitly), `Bool × Int` equality, and
+`(a, b).1 = a ∧ (a, b).2 = b` by `rfl` -- core Lean's `Prod` already
+derives `DecidableEq` from its two components', so nothing needed
+supplying by hand. `dcond` ALSO needed zero new code: `pair`'s only
+definedness obligation is that both components are defined, and
+`dcond`'s existing generic per-argument fallback (the one strict-op
+catch-all at the bottom, already used by `not`/`neg`/arithmetic/`==`)
+computes exactly that by conjoining `dcond` of the two operands; `fst`/
+`snd` are "always defined on a pair" per SPEC.md, which is exactly what
+the SAME fallback gives by conjoining `dcond` of their one operand (the
+pair expression), recursing into ITS OWN generic conjunction -- no
+special-casing needed for the projections either. `_loop_zero` (loop
+state placeholder, below) and the certificate's `_gterm`/`_unshow`
+(ground-value forms, below) are the only genuinely new logic this
+construct needed.
+
+THE LOOP STATE PLACEHOLDER. `min_max`'s `r` is never assigned before its
+loop (only `lo`/`hi`/`i` are; `r := (lo, hi)` happens in the suffix), so
+`lower_loop`'s existing "unassigned state var" path needs a placeholder
+value to seed the recursion (SPEC.md "Early exit", 2026-09-08, is where
+this path was built; nothing depends on the placeholder's actual value,
+per that section's own note, and this measurement confirms it: `r`'s
+frame hypothesis `hfr1 : r = placeholder` is carried but never read by
+anything the loop's own definition computes). The old code picked the
+placeholder with `{"int": ..., "bool": ...}.get(self.rett)`; `self.rett`
+being the pair's OWN dict (`{"pair": [...]}, unhashable) would have
+raised `TypeError` on that `.get`, a hard crash, the first time any task
+gave a loop's return a pair type. Replaced with `_loop_zero`, a small
+recursive helper: a pair placeholder is built one component at a time
+(`((0 : Int), (0 : Int))` for `min_max`); a bare `seq` return still has
+no placeholder (unchanged from before this construct: dead in every
+committed task, `reverse` and `filter_pos` both assign `r` in their own
+prefix) and stays an honest `NotImplementedError` if ever hit.
+
+TWO GENUINE LEAN DEFECTS, both found by actually running `min_max`/
+`divmod_pair` and both fixed generically (derived from body/return
+shape, never tuned per task), neither one a "pairs" defect at bottom:
+
+  `unfold` vs. a raw projection. `divmod_pair_t_spec`'s proof was
+  `unfold divmod_pair_t; <the div/mod bridge>; omega`: `unfold` performs
+  only delta-reduction of `divmod_pair_t` itself, leaving `(x / y, x %
+  y).fst` in the goal as a projection `omega` treats as an OPAQUE atom
+  distinct from `x / y` (measured directly: a four-line scratch probe,
+  `unfold` alone leaves `omega` citing exactly that atom split as its
+  counterexample; `unfold ...; dsimp only` or `simp only [name]` both
+  close it, either one performing the iota-reduction `unfold` itself
+  does not). Fixed by adding one `dsimp only` line after `unfold
+  {name}_t` in the SIMPLE shape's spec theorem, ADDED ONLY when the
+  return type is a pair (`isinstance(self.rett, dict)`): no other return
+  type has a bare projection to reduce, so no other task's tactic text
+  changes.
+
+  `repeat split` never revisits a sibling branch. `min_max`'s loop body
+  has TWO top-level `if`s (the `lo` update and the `hi` update, the
+  coupled-bounds shape SPEC.md's own measurement calls out); `repeat
+  split` on the resulting goal chases the FIRST `if`'s TRUE branch all
+  the way down (splitting the SECOND `if` there too) but never comes
+  back to split the second `if` inside the first `if`'s FALSE branch --
+  `repeat tac` iterates one tactic on the CURRENT main goal only, so once
+  `split` opens two goals it keeps re-splitting the newer one and drops
+  the other with an `if` still unresolved inside it. Reproduced in
+  isolation (a four-line scratch probe, a 3-conjunct goal fed by two
+  sequential `if`s: `repeat split` yields 3 cases, one of them still
+  carrying a bare `if`; `repeat (all_goals split)` yields the correct 4).
+  Fixed by using `repeat (all_goals split)` in the loop's own
+  `_loop_spec` theorem ONLY when its loop body has two or more top-level
+  `if`s (a body-shape rule, not a pairs-specific one: swept every
+  committed task, `min_max` is the only one with two); every task with
+  zero or one keeps the exact prior `repeat split` text, byte-identical.
+  Neither fix added a `have ... := by` nested inside a parenthesized
+  tactic sequence (the 2026-09-09 "LATENT PARSER BUG" above), so neither
+  reopens that defect.
+
+THE CERTIFICATE. A twin's witness carries a pair value two ways:
+`interp.py`'s `_j` shows a `Pair` as the plain list `[a, b]` (JSON has no
+pair type), which reaches this file as `w["_twin"]` (`_cert_value`, the
+kind `min_max`'s and `divmod_pair`'s own twins both measure) or as a
+named state entry (`_cert_loop`, unexercised by either measured twin but
+wired the same way). Two new small methods, used together everywhere a
+witness value crosses into the certificate: `_gterm` gained a pair
+branch building the ground LEAN TERM `(a, b)` recursively (the same
+shape `term`'s own `"pair"` case uses); `_unshow` inverts `_j`'s
+rendering back into a real `interp.Pair` for every venv entry the
+certificate feeds to `interp.ev` (`_cev`/`_prove`/`_refute`) -- WITHOUT
+it, a raw `[a, b]` list surviving into a venv crashes the first `fst`/
+`snd` `interp.ev` reaches on it (`Pair.a`/`Pair.b` are attributes, not
+list indices; a frozen dataclass on purpose, interp.py's own note, kept
+OUT of Python's tuple so a pair can never be mistaken for a same-shaped
+seq), an uncaught `AttributeError` neither `_cev` nor `certificate`'s
+`except` list catches -- a hard crash, not an abstain. `_unshow` is
+applied to every params/state venv in `_cert_undefined`, `_cert_value`
+and `_cert_loop`, so a pair PARAMETER or a pair LOOP LOCAL is handled the
+same way as the pair RETURN, though neither is exercised by either
+measured task (both pairs here are return-only): built for the shape
+SPEC.md describes, honestly unmeasured beyond that.
+
+NO NEW NAMED REFUSAL. Lean's own product type has no restriction this
+construct needs to work around (a pair of pairs would lower fine if one
+ever reached this file); the v1 boundary (no pair of pairs, no seq of
+pairs, no pair of three) is enforced upstream by fuzz_lower.check_wf, not
+by anything added here.
+
+MEASURED (`tasks/divmod_pair.json`, `tasks/min_max.json`, via
+`harness.run_task` against the lean backend, `harness.OUT` redirected to
+`out/agent-lean-pairs/`, matching this note's own reproduction commands):
+divmod_pair COUNTS (real VERIFIED, `wrong-var` twin REFUTED, witness
+x=1, y=1 -> real [1, 0], twin [0, 1], breaking `r.1 < y`). min_max COUNTS
+(real VERIFIED, `collapse-if` twin REFUTED, witness s=[0, 1] -> real
+[0, 1], twin [1, 1], breaking `r.0 <= s[k]` at k=0) -- both exactly the
+witnesses SPEC.md's own text names. abs/swap/reverse/tail/filter_pos
+(the five tasks the sequence-trio/bridge-lemma waves above measured)
+were regenerated into the same directory and diffed (`cmp`) against the
+committed `out/<name>.lean`: all ten files (real and twin) BYTE-
+IDENTICAL, so this construct changes nothing about a task that doesn't
+use it. A wider sweep of all 21 committed `tasks/*.json` also still
+COUNTS uniformly; two of them (`first_even`, `is_prime`) reproduce the
+already-documented `out/*.lean` staleness this file's own "REGRESSION"
+note above named (a pre-2026-09-10 dead-branch-fix text difference,
+verdicts unchanged) -- pre-existing, unrelated to pairs, confirmed by
+inspection: `first_even.lean`/`is_prime.lean`'s wf-theorem `have`s in the
+COMMITTED copies still cite the un-renamed quantifier bound variable
+`_quant_pairs` was written to fix.
+
+PAIRS, SPEC POSITION (2026-09-10): the PAIRS note above measured only
+return-position and computational-position pair use (divmod_pair,
+min_max); the fuzz family `v1pairs` (31 tasks: 26 instances plus 5
+probes) found the gap that measurement missed: `prop()`, the spec (Prop-
+level) lowering used for `requires`/`ensures`/invariants, had a `term()`
+case for `fst`/`snd` (the ENCODING section above) but no `prop()` case,
+so a BOOL-sorted pair component reaching `prop()` directly, either as a
+whole ensures/requires/invariant clause or as an operand of `==`/`!=`/
+`implies`/`and`/`or`/`ite` whose `sort()` came back "bool", fell through
+to the bottom `raise NotImplementedError` with "operator 'fst' in spec
+position is not lowered for lean": 7 of the 9 `v1pairs` residual tasks
+(fz_v1pairs_060/142/357/425/433/768/773), each a "does an element with
+property P exist, and if so what's its value" loop returning
+`{"pair": ["bool", "int"]}`, whose `fst` names the found-flag checked
+directly against a bounded `exists` in `ensures`.
+
+FIX: one new case in `prop()`, `op in ("fst", "snd")`, mirroring the
+`call`/`var` cases just above it: a bool-sorted `fst`/`snd` names a
+computed value, not a formula, so it gets the same generic `(term =
+true)` bridge, calling the EXISTING `term()` case (no new term-level
+code). Guarded by an assertion that the projection's own `sort()` is
+actually "bool" (the same shape the `var` case's assertion already
+checks), so a non-bool `fst`/`snd` reaching `prop()` some other way
+still fails loudly rather than emitting nonsense. `pair` itself needs no
+matching case: `pair`'s own sort is always the `{"pair": [...]}` dict,
+never the string "bool" (T1/T2 are base types, SPEC.md v1), so a raw
+`pair` node can never be the direct subject of a Prop; it only ever
+reaches `prop()` as an operand of `==`/`!=`, already routed through
+`term()` before this function is asked to render it as a formula
+(unchanged by this fix).
+
+MEASURED (`python3 fuzz_lower.py --only lean` restricted to the 9
+`v1pairs` residual task names, `--n 400 --seed 1 --jobs 8 --flake 3`):
+6 of the 7 `fst`-in-spec-position abstains now read real VERIFIED / twin
+REFUTED (fz_v1pairs_060, 142, 357, 425, 433, 768). One,
+fz_v1pairs_773, no longer abstains but the twin proof times out (real
+VERIFIED, twin timeout, flake-checked 3x, consistently ~29s): the fix
+lowers it, the kernel just doesn't close it fast enough; a separate,
+newly-exposed residual (proof-search cost, not a lowering gap), left
+unfixed as out of scope for this pass. The remaining 2 of 9
+(fz_v1pairs_053, fz_p_pair_eq) are the pre-existing computational-bool
+gaps ("boolean operator '==' / 'and' in computational position is not
+lowered for lean": `term()` never grew Bool-term cases for `==`/`!=`/
+CMP_OPS/`not`/`and`/`or`/`implies`, only Prop-term cases in `prop()`,
+because assigning a bool EXPRESSION to a bool VARIABLE in the body needs
+a decidable-Prop-to-Bool bridge, e.g. `decide (a = b) : Bool`, for every
+one of those operators, not one line, and unrelated to pairs: both
+tasks hit it on plain int/pair equality assigned to a bool local,
+nothing pair-specific about the gap itself); left exactly as they were,
+confirmed by reading `term()` that no one-line fix exists (it would mean
+adding a parallel Bool-producing rendering path alongside `prop()`'s
+Prop-producing one, for every boolean operator, which is the "Booleans
+as computational values" construct SPEC.md doesn't have yet). Net over
+the 9: 0 of 9 counted before this fix, 6 of 9 count after; over the
+full `v1pairs` family: 22 of 31 before, 28 of 31 after. Regenerated the
+seven committed pair-adjacent tasks (`divmod_pair`, `min_max`, `abs`,
+`swap`, `reverse`, `tail`, `filter_pos`) through `harness.run_task`
+(`harness.OUT` redirected to `out/agent-lean-pairs2/`) and diffed
+(`cmp`) both real and twin `.lean` against the committed `out/*.lean`:
+all fourteen files byte-identical, and all seven still COUNT exactly as
+in AGREEMENT.md; this fix touches nothing about a task that doesn't put
+a bool-sorted `fst`/`snd` directly into spec position.
 """
 from __future__ import annotations
 
@@ -755,6 +963,19 @@ class Lower:
             return "int"
         if op in ("update", "fill", "seq", "slice"):
             return "seq"
+        if op == "pair":
+            # SPEC.md "Pairs" (2026-09-10): the sort of `(e1, e2)` is the
+            # pair type built from its own operands' sorts, in the same
+            # `{"pair": [T1, T2]}` shape every task/local type already
+            # carries, so a pair-typed `var` (types[name] is this same
+            # dict) and a freshly-built `pair` node compare equal.
+            return {"pair": [self.sort(e["args"][0], types),
+                             self.sort(e["args"][1], types)]}
+        if op in ("fst", "snd"):
+            # p.0 / p.1: project the pair sort built above (or carried by
+            # a pair-typed var/return/local) back down to one component.
+            t = self.sort(e["args"][0], types)
+            return t["pair"][0 if op == "fst" else 1]
         return "bool"
 
     # ---------- expressions ----------
@@ -826,6 +1047,20 @@ class Lower:
             a = self.term(e["args"][1], env, types, dep)
             b = self.term(e["args"][2], env, types, dep)
             return f"(({s}.drop ({a}).toNat).take (({b} - {a}).toNat))"
+        if op == "pair":
+            # SPEC.md "Pairs" (2026-09-10): `(a, b)`, Lean's own pair
+            # constructor over the product `T1 × T2` (`lean_type` below
+            # builds `×` for exactly this pair type); always defined once
+            # both components are (dcond's generic per-argument fallback
+            # already gives this, no new dcond case needed).
+            a, b = (self.term(x, env, types, dep) for x in e["args"])
+            return f"({a}, {b})"
+        if op in ("fst", "snd"):
+            # p.0 / p.1: Prod.fst/Prod.snd, spelled `.1`/`.2` on the
+            # pair term (SPEC.md "Pairs": "lean `Int × Int` with `.1`
+            # and `.2`"); always defined on a pair, so no obligation.
+            p = self.term(e["args"][0], env, types, dep)
+            return f"({p}.{'1' if op == 'fst' else '2'})"
         if op == "neg":
             return f"(-{self.term(e['args'][0], env, types, dep)})"
         if op == "+" and self.sort(e["args"][0], types) == "seq":
@@ -899,6 +1134,21 @@ class Lower:
             j = " ∧ " if op == "and" else " ∨ "
             return "(" + j.join(self.prop(x, env, types)
                                 for x in e["args"]) + ")"
+        if op in ("fst", "snd"):
+            # SPEC.md "Pairs" (2026-09-10), spec-position addendum
+            # (2026-09-09): a BOOL-sorted pair component reaching this
+            # function directly -- a whole ensures/requires/invariant
+            # clause that IS `p.fst`/`p.snd`, or one operand of an
+            # `==`/`!=`/`implies`/`and`/`or`/`ite` above whose sort()
+            # came back "bool" -- has no logical CONNECTIVE of its own
+            # to recurse into: like `call` just above (and `var`
+            # earlier), it names a computed bool VALUE, not a formula,
+            # so the same generic `(term = true)` bridge closes it.
+            # `term()` already lowers `fst`/`snd` to `.1`/`.2` (the
+            # 2026-09-10 note's ENCODING section), so no new term-level
+            # code is needed here, only this one spec-position case.
+            assert self.sort(e, types) == "bool", f"non-bool {op} as Prop"
+            return f"({self.term(e, env, types)} = true)"
         raise NotImplementedError(f"operator {op!r} in spec position "
                                   "is not lowered for lean")
 
@@ -1193,7 +1443,15 @@ class Lower:
 
     # ---------- shared pieces ----------
 
-    def lean_type(self, t: str) -> str:
+    def lean_type(self, t) -> str:
+        if isinstance(t, dict):
+            # SPEC.md "Pairs" (2026-09-10): `{"pair": [T1, T2]}` over
+            # Int/Bool/List Int, as the Lean product `T1 × T2` (SPEC.md's
+            # own choice of encoding, "lean `Int × Int`"); each of T1, T2
+            # is always a base type here (no pair of pairs, SPEC.md v1),
+            # so this does not recurse past one level.
+            t1, t2 = t["pair"]
+            return f"({self.lean_type(t1)} × {self.lean_type(t2)})"
         return {"int": "Int", "bool": "Bool", "seq": "List Int"}[t]
 
     def binders(self, names_types: list[tuple[str, str]]) -> str:
@@ -1854,11 +2112,26 @@ class Lower:
                 if self.task.get("requires") else "")
         spec_tac = self._close([self.task["ensures"], self.body], {},
                                self.types, f"grind{self.ga}")
+        # SPEC.md "Pairs" (2026-09-10), found on divmod_pair's own spec
+        # theorem: `unfold {name}_t` alone (delta only) leaves a `.1`/`.2`
+        # projection ON the unfolded pair literal syntactically un-reduced
+        # (`(x / y, x % y).fst`, not `x / y`), which `omega` then treats
+        # as an OPAQUE atom distinct from `x / y` itself -- measured
+        # directly (a four-line scratch probe: `unfold` alone leaves
+        # `omega` unable to prove the goal at all, citing exactly that
+        # atom split; `unfold ...; dsimp only` or `simp only [{name}_t]`
+        # both close it, since either reduces the projection, iota-
+        # reduction `unfold` itself does not perform). `dsimp only` is
+        # the one-line fix, ADDED ONLY when the return is a pair (every
+        # other return type has no such projection to reduce, so this
+        # changes no other task's tactic text).
+        pair_ret = isinstance(self.rett, dict)
+        dsimp = "\n     dsimp only" if pair_ret else ""
         out.append(
             f"theorem {self.name}_t_spec {pb}{hpre} :\n"
             f"    {self.post_conj(applied)} := by\n"
             f"  first\n"
-            f"  | (unfold {self.name}_t\n"
+            f"  | (unfold {self.name}_t{dsimp}\n"
             f"     {spec_tac})\n"
             f"  | grind [{self.name}_t"
             + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
@@ -1932,6 +2205,29 @@ class Lower:
         thms.append((f"{self.name}_t_spec", "the contract"))
         return "\n".join(out), thms
 
+    def _loop_zero(self, t):
+        """A placeholder value for a state var not yet set when the loop
+        is entered (SPEC.md "Early exit", 2026-09-08): the case
+        `min_max`'s own pair return hits, since `r` is built only in the
+        SUFFIX (`r := (lo, hi)`, after the loop, from the loop's own
+        final `lo`/`hi`), never assigned in the prefix. Recurses one
+        level for a pair (SPEC.md "Pairs", 2026-09-10; v1 has no pair of
+        pairs, so one level is all this ever needs), one component at a
+        time, so a pair state var gets a well-typed placeholder pair
+        instead of crashing the old `dict.get` lookup (a `{"pair": [...]
+        }` type is unhashable, so the pre-Pairs `{"int": ..., "bool":
+        ...}.get(self.rett)` would raise TypeError, not return None, the
+        first time a task gave `self.rett` a dict). A bare `seq` return
+        still has no placeholder here, unchanged from before this
+        construct: dead in every committed task (`reverse` and
+        `filter_pos` both assign `r` in their own prefix), so it is left
+        exactly as it read before, an honest refusal if ever hit."""
+        if isinstance(t, dict):
+            t1, t2 = t["pair"]
+            z1, z2 = self._loop_zero(t1), self._loop_zero(t2)
+            return None if z1 is None or z2 is None else f"({z1}, {z2})"
+        return {"int": "(0 : Int)", "bool": "false"}.get(t)
+
     # LOOP: one top-level while; invariants become the hypotheses of a
     # recursive helper theorem (the induction hypothesis, literally).
     def lower_loop(self, wf_k: int) -> tuple[str, list]:
@@ -1954,8 +2250,7 @@ class Lower:
                 # provably overwritten on every path before it is read
                 # (loop_assigned already excludes it from the frame set
                 # in that case, so nothing depends on this placeholder).
-                zero = {"int": "(0 : Int)", "bool": "false"}.get(
-                    self.rett) if v == self.ret else None
+                zero = self._loop_zero(self.rett) if v == self.ret else None
                 if zero is None:
                     raise NotImplementedError(
                         f"state var {v!r} uninitialized before the loop")
@@ -2103,13 +2398,34 @@ class Lower:
             f"{self._gr()}) | {self._gr()})"
             if has_return else
             f"all_goals (apply {self.name}_t_loop_spec <;> {self._gr()})")
+        # SPEC.md "Pairs" (2026-09-10), found on min_max's own two merged
+        # if-updates (lo's and hi's, the loop's own state each pass): a
+        # bare `repeat split` only chases the FIRST split's TRUE branch
+        # down to the end, never coming BACK to split a later `if` inside
+        # an EARLIER split's FALSE branch (`repeat tac` iterates the one
+        # tactic on the current main goal only, so once `split` opens two
+        # goals it keeps re-splitting the first one and never revisits the
+        # second) -- reproduced in isolation (a four-line scratch probe:
+        # two sequential ifs feeding a 3-conjunct goal, `repeat split`
+        # leaves exactly the false-branch's own second `if` unsplit,
+        # `repeat (all_goals split)` splits all four combinations).
+        # `min_max` is the only committed task with two top-level `if`s
+        # in one loop body (measured: `tasks/*.json` swept, zero others),
+        # so the stronger form is used ONLY when the loop body itself has
+        # two or more (a body-shape rule, not a pairs-specific one -- a
+        # coupled two-scalar loop can trigger it with no pair in sight);
+        # every task with zero or one keeps the exact prior `repeat
+        # split` text, byte-identical.
+        n_top_ifs = sum(1 for s in w["body"] if "if" in s)
+        split_tac = ("repeat (all_goals split)" if n_top_ifs >= 2
+                    else "repeat split")
         out.append(
             f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs}"
             f"{hfrs} :\n"
             f"    {self.post_conj(applied_loop)} := by\n"
             f"  rw [{self.name}_t_loop.eq_def]\n"
             f"  split\n"
-            f"  · repeat split\n"
+            f"  · {split_tac}\n"
             f"    {then_tac}\n"
             f"  · {self._gr()}\n"
             f"termination_by ({dec}).toNat\n"
@@ -2420,13 +2736,45 @@ class Lower:
             return f"(intro {h}; exact {h} (by {pi}))"
         return g
 
-    def _gterm(self, v, ty: str) -> str:
+    def _gterm(self, v, ty) -> str:
+        if isinstance(ty, dict):
+            # SPEC.md "Pairs" (2026-09-10): a ground pair value, from a
+            # witness (interp.py's `_j` renders it `[a, b]`, exactly `v`
+            # here) or from `_unshow`'s own inverse -- either way a
+            # 2-element sequence, unpacked and lowered component-wise
+            # into the Lean pair literal `term()`'s own "pair" case uses.
+            t1, t2 = ty["pair"]
+            return f"({self._gterm(v[0], t1)}, {self._gterm(v[1], t2)})"
         if ty == "bool":
             return "true" if v else "false"
         if ty == "seq":
             return "([" + ", ".join(str(int(x)) for x in v) + "] : List Int)"
         n = int(v)
         return f"({n} : Int)" if n >= 0 else f"(({n}) : Int)"
+
+    def _unshow(self, v, ty):
+        """Invert interp.py's `_j` witness rendering for a value about to
+        become a `venv` entry (fed to `interp.ev` by `_cev`/`_prove`/
+        `_refute`). SPEC.md "Pairs" (2026-09-10): `_j` shows a `Pair` as
+        the plain list `[a, b]` (deliberately: JSON has no pair type),
+        but `interp.ev`'s `fst`/`snd` read a REAL `Pair`'s `.a`/`.b`
+        fields, not list indices (`interp.Pair` is a frozen dataclass,
+        kept OUT of Python's tuple exactly so a pair value can never be
+        mistaken for a same-shaped seq, interp.py's own "Pairs" note) --
+        so a raw `[a, b]` surviving into a venv would crash the first
+        `fst`/`snd` `interp.ev` reaches on it (an uncaught AttributeError,
+        not one of the `Undef`/`Budget`/`RecursionError` `_cev`/
+        `certificate` already catch) rather than certificate honestly.
+        A seq value's own witness rendering (also a plain list) already
+        behaves exactly like interp.py's tuple for every op a certificate
+        evaluates (`at`, `len`, `==`), so it is passed through unchanged;
+        recursing into a pair's own two components repairs a seq
+        component of a pair the same way, for free."""
+        if isinstance(ty, dict):
+            t1, t2 = ty["pair"]
+            return interp.Pair(self._unshow(v[0], t1),
+                               self._unshow(v[1], t2))
+        return v
 
     def _ens_conj(self) -> dict:
         ens = self.task["ensures"]
@@ -2508,7 +2856,8 @@ class Lower:
         self.cert_funs = interp.funs_of(self.task, self.body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
         self.cert_fns = ", ".join(fns)
-        venv = {p["name"]: w[p["name"]] for p in params}
+        venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
+                for p in params}
         parts = [(self.prop(r, tenv, types),
                   self._prove(r, tenv, venv, types))
                  for r in self.task.get("requires", [])]
@@ -2527,7 +2876,8 @@ class Lower:
         types = dict(self.types)
         tenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
                 for p in params}
-        venv = {p["name"]: w[p["name"]] for p in params}
+        venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
+                for p in params}
         args = " ".join(tenv[p["name"]] for p in params)
         if self._self_calls(self.body) and self.task.get("requires"):
             applied = f"({self.name}_t {args} (by {self._closer()}))"
@@ -2537,7 +2887,14 @@ class Lower:
                   self._prove(r, tenv, venv, types))
                  for r in self.task.get("requires", [])]
         post = self._ens_conj()
-        tv = w["_twin"]
+        # SPEC.md "Pairs" (2026-09-10): `w["_twin"]` is interp.py's `_j`
+        # rendering of the twin's returned value -- a plain `[a, b]` when
+        # the return is a pair (min_max's own collapse-if witness), which
+        # `_unshow` turns back into a real `interp.Pair` before it can
+        # reach `_cev`'s `interp.ev` (see `_unshow`'s own note); `_gterm`
+        # (used for `tenv`/`applied` above, the LEAN TERM side) already
+        # handles the same shape as ground syntax, unchanged.
+        tv = self._unshow(w["_twin"], self.rett)
         tenv_post = {**tenv, self.ret: applied}
         venv_post = {**venv, self.ret: tv}
         parts.append((f"(¬{self.prop(post, tenv_post, types)})",
@@ -2563,7 +2920,14 @@ class Lower:
         if any(n not in w for n in names):
             return None
         tenv = {n: self._gterm(w[n], types[n]) for n in names}
-        venv = {n: w[n] for n in names}
+        # SPEC.md "Pairs" (2026-09-10): a pair-typed state var (a loop
+        # local, or the return before its `loop_zero` placeholder is
+        # overwritten) has the same `_unshow` need as `_cert_value`'s own
+        # `_twin` above -- unexercised by min_max's own measured twin
+        # (collapse-if reads a "value"-kind witness, `_cert_value`'s
+        # path, not this one) but wired the same way for any task whose
+        # invariant-drop twin does land here with a pair in `state`.
+        venv = {n: self._unshow(w[n], types[n]) for n in names}
         parts = [(self.prop(r, tenv, types),
                   self._prove(r, tenv, venv, types))
                  for r in self.task.get("requires", [])]

@@ -207,7 +207,8 @@ def mirror(task: dict, body: list | None = None) -> dict:
 # different lowering path than the committed corpus does.
 # ---------------------------------------------------------------------------
 
-V1_OPS = {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
+V1_OPS = {"len", "at", "div", "mod", "update", "fill", "seq", "slice",
+          "pair", "fst", "snd"}
 
 
 def _uses_v1(node) -> bool:
@@ -383,6 +384,18 @@ def ck(e, env, funs, fuel):
             return UNDEF
         r = x % abs(y)
         return r if o == "mod" else (x - r) // y
+    if o == "pair":
+        # SPEC.md "Pairs" (2026-09-10): (a, b), defined iff both components
+        # are (any UNDEF arg was already caught above). interp.Pair, not a
+        # bare tuple, for the same reason interp.py itself uses it: a tuple
+        # here would be indistinguishable from a seq of the same length, and
+        # this checker's env already carries interp.Pair values straight
+        # through from _envs/falsify/illdefined without reshaping them.
+        return interp.Pair(vs[0], vs[1])
+    if o == "fst":
+        return vs[0].a
+    if o == "snd":
+        return vs[0].b
     if o in _TAB:
         # `+` is here too: on two seqs (Python tuples) `+` is already
         # concatenation, the same overload SPEC.md's `+` gives it, so no
@@ -1693,6 +1706,126 @@ def fam_seqpin():
     return out
 
 
+def fam_pairs():
+    """SPEC.md "Pairs" (2026-09-10): `{"pair": [T1, T2]}`, `fst`/`snd`
+    projecting, always defined on a pair; `pair` itself defined iff both
+    components are. Hand-derived, `fam_algebra`'s style, one shape per truth
+    class this file already grades against, not a mirror-driven family:
+    denote()/mirror() need no change to carry a `pair` node through their
+    generic op/args walk, but the two identities here are stated directly
+    from SPEC.md's own text rather than earned by re-deriving what SPEC.md
+    already asserts.
+
+    TRUE: the projection identity itself (`gt_pair_id`), the same identity
+    with the construction actually swapped so body and ensures agree
+    (`gt_pair_swap_id`), the identity again over the two other component
+    types v1 allows -- bool (`gt_pair_bool_id`) and seq (`gt_pair_seq_id`,
+    whose `==` on the seq component is SPEC.md's own extensional one, so it
+    needs no length guard) -- and a pair PARAMETER projected and recombined
+    (`gt_pair_proj_param`), the census shape fuzz_lower.py's f_v1pairs also
+    measures, here as a construction proof rather than a fuzz instance.
+
+    FALSE: a body that pairs (x, y) unswapped against an ensures that
+    claims the swapped relationship (`gt_pair_false_swap`), and the same
+    mismatch over a pair parameter's own two projections
+    (`gt_pair_false_proj_param`), both false whenever the two components
+    differ, both settled by an exhibited witness.
+
+    ILLDEF: `fst(r) div snd(r)` in the ensures with no requires ever
+    pinning `y` away from 0 (`gt_pair_illdef_div`) -- fam_definedness's own
+    idiom (a trivial, always-defined body; the obligation lives entirely in
+    ensures) read over a pair projection instead of a seq index."""
+    out = []
+    x, y = V("x"), V("y")
+    PXY = [{"name": "x", "type": "int"}, {"name": "y", "type": "int"}]
+    PT = {"pair": ["int", "int"]}
+
+    def T(name, params, ret_type, ens, body, why):
+        t = {"name": name, "params": params,
+             "returns": [{"name": "r", "type": ret_type}],
+             "requires": [], "ensures": ens, "body": body}
+        finish(t)
+        out.append(rec(t, "TRUE", "construction", why, "pairs"))
+
+    T("gt_pair_id", PXY, PT,
+      [op("==", op("fst", V("r")), x), op("==", op("snd", V("r")), y)],
+      [{"assign": ["r", op("pair", x, y)]}],
+      "SPEC.md 'Pairs': fst((a,b)) == a and snd((a,b)) == b, so this holds "
+      "at every input by construction")
+
+    T("gt_pair_swap_id", PXY, PT,
+      [op("==", op("fst", V("r")), y), op("==", op("snd", V("r")), x)],
+      [{"assign": ["r", op("pair", y, x)]}],
+      "the body pairs (y, x), so fst(r) == y and snd(r) == x by the same "
+      "projection identity as gt_pair_id")
+
+    T("gt_pair_bool_id",
+      [{"name": "b", "type": "bool"}, {"name": "n", "type": "int"}],
+      {"pair": ["bool", "int"]},
+      [op("==", op("fst", V("r")), V("b")),
+       op("==", op("snd", V("r")), V("n"))],
+      [{"assign": ["r", op("pair", V("b"), V("n"))]}],
+      "the projection identity holds over any of the three base component "
+      "types SPEC.md 'Pairs' allows, bool included")
+
+    T("gt_pair_seq_id",
+      [{"name": "s", "type": "seq"}, {"name": "n", "type": "int"}],
+      {"pair": ["seq", "int"]},
+      [op("==", op("fst", V("r")), V("s")),
+       op("==", op("snd", V("r")), V("n"))],
+      [{"assign": ["r", op("pair", V("s"), V("n"))]}],
+      "the projection identity again, with a seq component compared by "
+      "SPEC.md's own extensional `==` on two seqs, always defined")
+
+    T("gt_pair_proj_param", [{"name": "p", "type": PT}], "int",
+      [op("==", V("r"), op("+", op("fst", V("p")), op("snd", V("p"))))],
+      [{"assign": ["r", op("+", op("fst", V("p")), op("snd", V("p")))]}],
+      "r is assigned exactly the ensures expression, so r == fst(p) + "
+      "snd(p) by reflexivity; a pair PARAMETER projected and recombined, "
+      "the census shape SPEC.md 'Pairs' names")
+
+    f = {"name": "gt_pair_false_swap", "params": PXY,
+         "returns": [{"name": "r", "type": PT}], "requires": [],
+         "ensures": [op("==", op("fst", V("r")), y),
+                     op("==", op("snd", V("r")), x)],
+         "body": [{"assign": ["r", op("pair", x, y)]}]}
+    finish(f)
+    w = falsify(f, cands=[{"x": 0, "y": 1}])
+    if w and not w.get("_disagreement"):
+        out.append(rec(f, "FALSE", "witness",
+                       "the body pairs (x, y) unswapped; the ensures claims "
+                       "the swapped (y, x) relationship instead, false "
+                       "whenever x != y, agreed by interp.py and ck_ens",
+                       "pairs_false", w, "swap"))
+
+    f2 = {"name": "gt_pair_false_proj_param",
+          "params": [{"name": "p", "type": PT}],
+          "returns": [{"name": "r", "type": "int"}], "requires": [],
+          "ensures": [op("==", V("r"), op("snd", V("p")))],
+          "body": [{"assign": ["r", op("fst", V("p"))]}]}
+    finish(f2)
+    w2 = falsify(f2, cands=[{"p": interp.Pair(0, 1)}])
+    if w2 and not w2.get("_disagreement"):
+        out.append(rec(f2, "FALSE", "witness",
+                       "r is fst(p); the ensures claims r == snd(p), false "
+                       "whenever the pair's two components differ, agreed "
+                       "by interp.py and ck_ens", "pairs_false", w2, "proj"))
+
+    ill = {"name": "gt_pair_illdef_div", "params": PXY,
+           "returns": [{"name": "r", "type": PT}], "requires": [],
+           "ensures": [op("==", op("fst", V("r")),
+                          op("div", op("fst", V("r")), op("snd", V("r"))))],
+           "body": [{"assign": ["r", op("pair", x, y)]}]}
+    finish(ill)
+    wi = illdefined(ill, cands=[{"x": 0, "y": 0}, {"x": 5, "y": 0}])
+    if wi and not wi.get("_disagreement"):
+        out.append(rec(ill, "ILLDEF", "witness",
+                       "fst(r) div snd(r) is undefined at snd(r) == 0, and "
+                       "no requires ever excludes y == 0", "pairs_illdef",
+                       wi))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Corpus.
 # ---------------------------------------------------------------------------
@@ -1718,6 +1851,12 @@ def build(seed: int, n_mirror: int):
     # truth label, everything) is byte-identical to what it was before this
     # family existed. Only the seqops_* names are new.
     recs += fam_seqops_mirror(rng, max(4, n_mirror // 4))
+    # Appended LAST for the same reason: fam_pairs draws NOTHING from `rng`
+    # (every task is hand-derived, fam_algebra's style), so its presence or
+    # absence changes no other family's draws either way; it is placed here
+    # anyway so a byte-diff of an old seed's task set against a new run
+    # shows only gt_pair_* as additions.
+    recs += fam_pairs()
     seen, out = set(), []
     for r in recs:
         nm = r["task"]["name"]

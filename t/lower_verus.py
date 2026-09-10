@@ -313,6 +313,117 @@ decreases clause alone does, independent of every other clause on the
 loop). Measured (`cmp`, real and twin): `is_prime`, `first_even` and
 `tail` are unaffected by either finding, byte-identical to their
 committed `out/*.rs`.
+
+PAIRS (2026-09-10, SPEC.md "Pairs (v1)"). New type `{"pair": [T1, T2]}`
+(T1, T2 one of "int"/"bool"/"seq") and three new Expr forms: `pair`
+(construction), `fst`/`snd` (projection). Verus's own product type is the
+kernel-native match, measured before writing any of this
+(probe_pair_basic.rs): a `proof fn` taking and returning `(int, int)`,
+with `.0`/`.1` projections in its own `ensures`, 0 errors -- so a pair
+type needs NO declaration of its own here, unlike SPARK's per-pair-type
+record or Lean's `Int x Int`, and it stays inside this file's one
+existing semantic decision (module docstring, top): everything still
+lowers to `proof fn` over mathematical `int`, a pair of two of those
+included, no exec/machine-int arm. `_vty(ty)` replaces the flat
+`TYPES[ty]` lookup at every site a t type resolves to a Verus one (a
+param, a return, a local, and a spec_fun's own params/result, which
+SPEC.md restricts to int/seq/bool so `_vty` there only ever falls
+through to `TYPES` unchanged): a dict `{"pair": [T1, T2]}` renders `(V1,
+V2)`, recursing at most one level since SPEC.md forbids a pair of pairs.
+`expr()`'s three new cases are exactly the notation: `pair` is `(a, b)`,
+`fst`/`snd` are `.0`/`.1`. `defined()` needed NO new case for any of the
+three: SPEC.md's own words, "pair ... defined iff both components are"
+and "fst/snd ... always defined on a pair" (given a well-typed operand,
+check_wf's job and not this function's), are exactly the formula the
+existing total-operator catch-all already computes for every op with no
+case of its own, `_conj([defined(a) for a in args])` -- one argument for
+`fst`/`snd`, two for `pair`.
+
+EQUALITY (the one thing SPEC.md flags to measure: "`=~=` or a
+componentwise form may be needed"). `BIN_OPS` already routes `==`/`!=`
+through Rust's own operator on any two operands of the same emitted
+type, so a pair needed no new entry there either, IF Verus's native
+tuple `==` already means what SPEC.md wants. Measured directly:
+`(a, b) == (c, d)` for two `int` components (probe_pair_eq_int.rs) and,
+the harder case, for one `Seq<int>` component under a BARE `b == d`
+hypothesis rather than an elementwise one (probe_pair_eq_seq_bare.rs, no
+per-index fact given at all) both verify with 0 errors. So Verus's tuple
+`==` is native structural equality composed from each field's OWN `==`
+-- already extensional for `Seq<int>` at the Z3 level, the "EXTENSIONAL
+EQUALITY" finding above -- and a pair costs NOTHING extra: no `=~=`, no
+componentwise rewrite, the same free ride v1's seq `==` already gets.
+
+LOOP FRAME RULE. A pair-typed local, return, or read-only parameter
+needed no change to `loop()`: `scope` was already generic over Verus
+type STRINGS (`(type, mutable)` per name), so a `(int, int)`-typed slot
+frames by name exactly like an `int` or `Seq<int>` one, whether assigned
+or carried read-only through the recursive helper's own parameter list,
+with no code path caring which. min_max's own `r` (pair-typed, assigned
+only after the loop, never inside it) exercises exactly the read-only
+half of this for the first time: it rides through `t_lp_min_max_0`'s
+parameters unmodified, present at all only because
+`_invariant_candidates` always appends the return to a loop's in-scope
+names.
+
+EARLY EXIT. `_dummy(ty)` (the throwaway value a wrapped loop helper's
+unused return/state slot needs, SPEC.md "Early exit") took a Verus type
+STRING before this task; it now takes the t-level type instead (a base
+name, or a pair dict) so it can recurse into a pair's own two components
+the same way `_vty` does, rendering `(dummy1, dummy2)`. No committed
+pair task carries a `return` inside a loop, so this path is unexercised
+by measurement, only by construction; named here rather than left
+silent.
+
+THE CERTIFICATE EMITTER surfaced the one real ambiguity the construct
+creates, on the FIRST measurement of either committed task: interp.py's
+own witness encoding (`_j`) deliberately prints a Pair as a plain 2-list
+("so a seq component ... prints as a list too rather than as a raw
+tuple", interp.py's own docstring), so a pair of two ints is
+INDISTINGUISHABLE, as JSON, from a length-2 seq of ints -- and BOTH
+committed pair tasks' measured witnesses are exactly this shape:
+divmod_pair's wrong-var twin, witness x=1, y=1, `_real` [1, 0], `_twin`
+[0, 1]; min_max's collapse-if twin, witness s=[0, 1], `_real` [0, 1],
+`_twin` [1, 1]. `_tlit`, which turns a witness value into a t literal for
+the certificate formula, had no way to tell these apart from a seq
+before this task (there was no pair for a seq to be ambiguous with); it
+now takes an optional declared TYPE alongside the value -- `_cert_formula`
+threads every param's and the return's own type through (`tmap`), the
+two kinds it tracks -- and checks the UNAMBIGUOUS Python shapes first (an
+interp.Pair or a runtime tuple, which only interp.exit_env's post-state
+and `_undef_obligation`'s own interp.ev results ever carry, since neither
+is ever JSON-round-tripped and so neither can collide) before falling
+back to the type-directed decode of a plain list; `_to_py` is the
+matching fix on `_undef_obligation`'s own input side, rebuilding a
+witnessed PARAM back into an interp.Pair before replaying the twin body
+through interp.ev. A loop-LOCAL's own type is not threaded either way
+(neither function reconstructs the loop's scope), so a pair-typed local
+in an "exit"/"undefined" witness still falls back to the untyped guess;
+named here as a residual gap because neither committed pair task
+exercises it (divmod_pair has no loop; min_max's only pair is its
+return, assigned once after the loop, never a loop-local, and its landed
+twin is "value"-kind, not "exit", exactly because -- per SPEC.md's own
+text -- INVARIANT-DROP found no witness for it at fifteen times the
+state cap).
+
+MEASURED (out/agent-verus-pairs/, PATH including
+~/.local/verus/verus-x86-linux so `verus` resolves and ~/.cargo/bin so
+rustup does): divmod_pair COUNTS (real VERIFIED, wrong-var twin REFUTED,
+witness x=1, y=1 -> real [1, 0], twin [0, 1], matching SPEC.md's own
+committed witness exactly); min_max COUNTS (real VERIFIED, collapse-if
+twin REFUTED, witness s=[0, 1] -> real [0, 1], twin [1, 1], also matching
+SPEC.md, and confirming its own note that INVARIANT-DROP fell through
+for this task with no witness). Regression (`cmp`, real and twin, every
+file): all 19 previously committed tasks still COUNT and their
+`out/<name>.rs` and `out/<name>_twin.rs` are byte-identical to before
+this change -- the five this task named (abs, swap, reverse, tail,
+filter_pos) and, beyond that, every other committed task (all_nonneg,
+contains, count_matches, digit_sum, factorial, fib, first_even, gcd,
+is_prime, linear_search, max, remainder, seq_max, sum_upto) -- so the
+`TYPES[ty]` -> `_vty(ty)` refactor and `_tlit`'s new signature are
+additive and untaken by anything committed before this task. No Verus
+construct was refused: every SPEC.md "Pairs" form (the type, `pair`,
+`fst`, `snd`, `==`/`!=`, a pair through the loop frame rule, and a
+pair-valued witness through the certificate) lowers.
 """
 from __future__ import annotations
 
@@ -365,6 +476,22 @@ BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
            "div": "/", "mod": "%"}
 NARY_OPS = {"and": "&&", "or": "||"}
 TYPES = {"int": "int", "bool": "bool", "seq": "Seq<int>"}
+
+
+def _vty(ty) -> str:
+    """The Verus type for a t type: TYPES[ty] for a base type name, or
+    (SPEC.md "Pairs", 2026-09-10) the Rust tuple `(V1, V2)` for
+    {"pair": [T1, T2]} -- Verus tuples are ordinary Rust tuples in both
+    exec and spec/proof code (measured, probe_pair_basic.rs: a proof fn
+    taking and returning `(int, int)`, `.0`/`.1` projections in its own
+    `ensures`, 0 errors), so a pair type declares NO new Verus type the
+    way SPARK needs a per-pair-type record or Lean needs `Int x Int`. T1
+    and T2 are always base types (SPEC.md: no pair of pairs), so this
+    recurses at most one level."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        return f"({_vty(t1)}, {_vty(t2)})"
+    return TYPES[ty]
 
 
 _SUFFIX_INT = False   # v1 only: literals as `(7int)` so ite branches infer
@@ -500,6 +627,19 @@ def expr(e: dict) -> str:
         # as SPEC.md requires ("a definedness obligation ... exactly as
         # `at`").
         return f"{args[0]}.subrange({args[1]}, {args[2]})"
+    if op == "pair":
+        # SPEC.md "Pairs" (2026-09-10): (a, b), a Rust tuple, Verus's own
+        # product type in exec and spec/proof code alike (measured,
+        # probe_pair_basic.rs); no per-pair-type declaration is needed the
+        # way SPARK or Lean need one.
+        return f"({args[0]}, {args[1]})"
+    if op == "fst":
+        # p.0: always defined on a pair (`defined()`'s existing catch-all
+        # already computes exactly SPEC.md's formula for this op, see its
+        # comment below, so no new case was needed there).
+        return f"{args[0]}.0"
+    if op == "snd":
+        return f"{args[0]}.1"
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
@@ -632,7 +772,13 @@ def defined(e: dict) -> dict:
     if op == "implies":
         p, q = args
         return _conj([defined(p), _guard(p, defined(q))])
-    # total operators: not neg len + - * == != < <= > >=
+    # total operators: not neg len + - * == != < <= > >=, and (SPEC.md
+    # "Pairs", 2026-09-10) pair, fst, snd: "pair" is defined iff both
+    # components are, exactly the formula below; "fst"/"snd" are "always
+    # defined on a pair", which given a well-typed operand (check_wf's job,
+    # not this function's) is exactly defined(operand) alone, what the same
+    # formula computes for a single-argument op. Neither needed its own
+    # case.
     return _conj([defined(a) for a in args])
 
 
@@ -908,19 +1054,27 @@ def _div_mod_law(x: dict, y: dict, ind: str) -> str:
             f"{ind};")
 
 
-def _dummy(ty: str) -> str:
-    """A throwaway literal of Verus type `ty`, for the slot a wrapped loop
-    helper's result (SPEC.md "Early exit", 2026-09-08) leaves unused: the
-    return value when the call did not return, or the state tuple when it
-    did. Its VALUE is never read (the ensures conditions each slot on the
-    same flag that decided which one is meaningful); it only has to
-    type-check. Built via `expr()` so it picks up the same `_SUFFIX_INT`
-    literal form (`0int`) v1 already emits everywhere else."""
+def _dummy(ty) -> str:
+    """A throwaway literal of t type `ty` (a base type name, or SPEC.md
+    "Pairs" {"pair": [T1, T2]}), for the slot a wrapped loop helper's
+    result (SPEC.md "Early exit", 2026-09-08) leaves unused: the return
+    value when the call did not return, or the state tuple when it did.
+    Its VALUE is never read (the ensures conditions each slot on the same
+    flag that decided which one is meaningful); it only has to type-check.
+    Takes the t-level type, not the resolved Verus string `_vty` produces,
+    so a pair recurses into its own two components (always base types, no
+    pair of pairs) and renders `(dummy1, dummy2)`, the same tuple literal
+    `expr()`'s "pair" case emits. Built via `expr()` for the base cases so
+    it picks up the same `_SUFFIX_INT` literal form (`0int`) v1 already
+    emits everywhere else."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        return f"({_dummy(t1)}, {_dummy(t2)})"
     if ty == "int":
         return expr({"int": 0})
     if ty == "bool":
         return expr({"bool": False})
-    if ty == "Seq<int>":
+    if ty == "seq":
         return expr({"_seq": []})
     raise ValueError(f"verus: no dummy literal for type {ty!r}")
 
@@ -993,8 +1147,9 @@ class _V1:
             elif "var" in s:
                 v = s["var"]
                 self._assert_defined(v["init"], lines, ind)
-                scope[v["name"]] = (TYPES[v["type"]], True)
-                lines.append(f"{ind}let mut {v['name']}: {TYPES[v['type']]}"
+                vt = _vty(v["type"])
+                scope[v["name"]] = (vt, True)
+                lines.append(f"{ind}let mut {v['name']}: {vt}"
                              f" = {expr(v['init'])};")
             elif "if" in s:
                 c = s["if"]
@@ -1095,14 +1250,15 @@ class _V1:
 
         if may_ret:
             rname = self.task["returns"][0]["name"]
-            rtype = TYPES[self.task["returns"][0]["type"]]
+            rtty = self.task["returns"][0]["type"]
+            rtype = _vty(rtty)
             res_ty = f"(bool, {rtype}, {state_ty})"
             m_ret = {rname: "t_res.1"}
             ens = ([f"t_res.0 ==> {expr(subst(en, m_ret))}"
                     for en in self.task["ensures"]]
                    + [f"(!t_res.0) ==> {expr(subst(iv, m))}" for iv in invs]
                    + [f"(!t_res.0) ==> (!{expr(subst(cond, m))})"])
-            base_val = f"(false, {_dummy(rtype)}, {res_val})"
+            base_val = f"(false, {_dummy(rtty)}, {res_val})"
             # The return branch owes the task's OWN `ensures`, which may
             # read the task's `requires` (e.g. a bound on a parameter), so
             # those go into the helper's own requires alongside the
@@ -1190,29 +1346,32 @@ class _V1:
     # -- whole task ------------------------------------------------------
     def emit(self, body: list) -> str:
         task = self.task
-        params = [(p["name"], TYPES[p["type"]]) for p in task["params"]]
+        params = [(p["name"], _vty(p["type"])) for p in task["params"]]
         rname = task["returns"][0]["name"]
-        rtype = TYPES[task["returns"][0]["type"]]
+        rtype = _vty(task["returns"][0]["type"])
         reqs = task.get("requires", [])
         enss = task["ensures"]
 
-        # spec fns and their (universal) definedness lemmas
+        # spec fns and their (universal) definedness lemmas. SPEC.md gate 3
+        # restricts a spec_fun's own params/result to "int"|"seq"/"int"|
+        # "bool" (never a pair), so `_vty` here only ever resolves a base
+        # type name; it is used anyway for one lookup path instead of two.
         spec_blocks = []
         for f in task.get("spec_funs", []):
-            fps = ", ".join(f"{p['name']}: {TYPES[p['type']]}"
+            fps = ", ".join(f"{p['name']}: {_vty(p['type'])}"
                             for p in f["params"])
             if defined(f["decreases"]) != TRUE:
                 raise NotImplementedError(
                     "verus: definedness obligation on spec_fun decreases "
                     "not implemented")
             spec_blocks.append(
-                f"spec fn {f['name']}({fps}) -> {TYPES[f['result']]}\n"
+                f"spec fn {f['name']}({fps}) -> {_vty(f['result'])}\n"
                 f"    decreases {expr(f['decreases'])},\n"
                 "{\n"
                 f"    {expr(f['body'])}\n"
                 "}\n")
             self._wf_lemma(f"t_wf_{self.name}_fn_{f['name']}",
-                           [(p["name"], TYPES[p["type"]])
+                           [(p["name"], _vty(p["type"]))
                             for p in f["params"]],
                            [], defined(f["body"]))
 
@@ -1323,8 +1482,37 @@ CERT_NAME = "t_refutation_certificate"
 _UNROLL_CAP = 64
 
 
-def _tlit(v):
-    """A measured witness value as a t literal expression."""
+def _tlit(v, ty=None):
+    """A measured witness value as a t literal expression.
+
+    Two call shapes reach this, and only one of them is ambiguous. Raw
+    interp.py runtime values (interp.exit_env's post-state,
+    _undef_obligation's interp.ev results) carry their own t type in the
+    Python type itself: an interp.Pair is unmistakably a pair, a tuple is
+    unmistakably a seq, so those two cases below need no `ty` and are
+    handled first regardless of it. A witness dict's own values (built by
+    interp._j for JSON) have already lost that distinction on purpose --
+    SPEC.md "Pairs" (2026-09-10)/interp.py's `_j`: a Pair prints AS a
+    2-list, "so a seq component ... prints as a list too rather than as a
+    raw tuple" -- so a pair of two ints is INDISTINGUISHABLE, as plain
+    JSON, from a length-2 seq of ints. Both divmod_pair's and min_max's own
+    measured witnesses hit exactly this shape (`_real`/`_twin`: `[1, 0]`,
+    `[0, 1]`, `[1, 1]`), so this is not a hypothetical: `_cert_formula`
+    passes the value's declared t type (a param's or the return's, the
+    only ones it tracks) whenever it has one, and only the untyped
+    fallback below (an int list defaults to a seq, correct for every
+    call site that predates pairs) is a guess."""
+    if isinstance(v, interp.Pair):
+        t1, t2 = ty["pair"] if isinstance(ty, dict) else (None, None)
+        return {"op": "pair", "args": [_tlit(v.a, t1), _tlit(v.b, t2)]}
+    if isinstance(v, tuple):
+        if not all(isinstance(x, int) and not isinstance(x, bool) for x in v):
+            raise ValueError(f"witness value {v!r} has no t literal")
+        return {"_seq": list(v)}
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        a, b = v
+        return {"op": "pair", "args": [_tlit(a, t1), _tlit(b, t2)]}
     if isinstance(v, bool):
         return {"bool": v}
     if isinstance(v, int):
@@ -1433,8 +1621,27 @@ def certificate_formula(task: dict, twin_body: list, w: dict) -> dict | None:
     return _cert_formula(task, twin_body, w)
 
 
-def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict
-                       ) -> dict | None:
+def _to_py(v, ty=None):
+    """The inverse of interp.py's `_j`: a witness value already JSON-decoded
+    (an int, a bool, or a plain list) rebuilt into the runtime shape
+    interp.ev expects (a tuple for a seq, an interp.Pair for a pair), using
+    the same declared-type disambiguation `_tlit` needs and for exactly the
+    same reason (SPEC.md "Pairs", 2026-09-10: a pair's own 2-list shape,
+    from interp.py's `_j`, collides with a length-2 seq's). Without `ty`
+    (a local's type is not tracked past this point, see `_undef_obligation`)
+    a list defaults to a seq, the untyped guess every pre-Pairs caller of
+    this shape already relied on."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        a, b = v
+        return interp.Pair(_to_py(a, t1), _to_py(b, t2))
+    if isinstance(v, list):
+        return tuple(v)
+    return v
+
+
+def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict,
+                       tmap: dict | None = None) -> dict | None:
     """The negated definedness obligation of the twin body's first
     statement that has none, ground-substituted at the witness (SPEC.md
     "Sequences as values", 2026-09-09; see the "undefined" entry in the
@@ -1454,9 +1661,21 @@ def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict
     (their own definedness is not walked here, matching every other "not
     emitted" case in this file); None if the walk exhausts the body
     without a false obligation, refusing rather than certifying a formula
-    that would disagree with the witness that triggered it."""
-    env_py = {n: (tuple(v) if isinstance(v, list) else v)
-              for n, v in names.items()}
+    that would disagree with the witness that triggered it.
+
+    `tmap` (SPEC.md "Pairs", 2026-09-10), when given, is the declared type
+    of every PARAM (and the return) -- `_cert_formula` builds it and passes
+    it here -- so a pair-shaped param starts life in `env_py` as a real
+    interp.Pair rather than the untyped guess (`_to_py`, `_tlit`: a bare
+    list defaults to a seq). A local's own type is not tracked past this
+    point, so a pair-typed LOCAL a later statement introduces still falls
+    back to the guess; not exercised by any committed task (divmod_pair
+    has no loop and no pair param, min_max's only pair is its return,
+    assigned once after the loop, and neither task's measured twin is this
+    "undefined" kind in the first place -- see the module docstring's
+    "Pairs" entry)."""
+    tmap = tmap or {}
+    env_py = {n: _to_py(v, tmap.get(n)) for n, v in names.items()}
     m = dict(m)
     funs = interp.funs_of(task, twin_body)
     st = interp.St()
@@ -1473,7 +1692,7 @@ def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict
                 return {"op": "not", "args": [subst(ob, m)]}
             val = interp.ev(e, env_py, funs, st)
             env_py[name] = val
-            m[name] = _tlit(list(val) if isinstance(val, tuple) else val)
+            m[name] = _tlit(val)
     except (interp.Undef, interp.Budget, RecursionError):
         return None
     return None
@@ -1482,8 +1701,20 @@ def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict
 def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
     kind = w.get("_kind")
     names = {k: v for k, v in w.items() if not k.startswith("_")}
+    # SPEC.md "Pairs" (2026-09-10): every PARAM's and the RETURN's own
+    # declared type, so `_tlit` can tell a pair's 2-list shape (interp.py's
+    # `_j`) apart from a length-2 seq's -- both divmod_pair's and
+    # min_max's own measured witnesses are exactly this shape (`_real`/
+    # `_twin`: `[1, 0]`, `[0, 1]`, `[1, 1]`). A loop LOCAL's type is not
+    # tracked here (this function does not reconstruct the loop's scope),
+    # so a pair-typed local in an "exit"/"preservation"/"undefined"
+    # witness still falls back to the untyped guess; not exercised by
+    # either committed pair task (see `_tlit` and `_undef_obligation`).
+    tmap = {p["name"]: p["type"] for p in task["params"]}
+    ret_type = task["returns"][0]["type"]
+    tmap[task["returns"][0]["name"]] = ret_type
     try:
-        m = {n: _tlit(v) for n, v in names.items()}
+        m = {n: _tlit(v, tmap.get(n)) for n, v in names.items()}
         parts = [subst(rq, m) for rq in task.get("requires", [])]
         if kind == "value":
             if w.get("_ens") is not True:
@@ -1492,7 +1723,7 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
             if not isinstance(tw, (bool, int, list)):
                 return None
             m2 = dict(m)
-            m2[task["returns"][0]["name"]] = _tlit(tw)
+            m2[task["returns"][0]["name"]] = _tlit(tw, ret_type)
             parts = [subst(rq, m2) for rq in task.get("requires", [])]
             parts.append({"op": "not", "args": [
                 _conj([subst(en, m2) for en in task["ensures"]])]})
@@ -1512,13 +1743,13 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
             if post is None:
                 return None
             m2 = dict(m)
-            m2[ret] = _tlit(post[ret])
+            m2[ret] = _tlit(post[ret], ret_type)
             parts += [subst(iv, m) for iv in loop.get("invariants", [])]
             parts.append({"op": "not", "args": [subst(loop["cond"], m)]})
             parts.append({"op": "not", "args": [
                 _conj([subst(en, m2) for en in task["ensures"]])]})
         elif kind == "undefined":
-            ob = _undef_obligation(task, twin_body, m, names)
+            ob = _undef_obligation(task, twin_body, m, names, tmap)
             if ob is None:
                 return None
             parts.append(ob)

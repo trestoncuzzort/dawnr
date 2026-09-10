@@ -188,6 +188,92 @@ v1 mapping, gate by gate (SPEC.md):
     `out/swap.dfy`, `out/swap_twin.dfy`, `out/reverse.dfy`,
     `out/reverse_twin.dfy`.
 
+  pairs (added 2026-09-10, SPEC.md "Pairs (v1)"): Dafny's own product, no
+    totalizing needed, same as every other v1 wave. A pair type
+    {"pair": [T1, T2]} is Dafny's built-in tuple type (T1, T2), written
+    exactly that way for a param, a `returns (r: ...)`, or a `var` local
+    (`dafny_type()`, a small wrapper around TYPES that recurses one level
+    for a pair and replaces every direct TYPES[p['type']]/TYPES[d['type']]
+    lookup at the three declaration sites; spec_fun params/result are left
+    on bare TYPES[...], since SPEC.md never allows a pair there). The `pair`
+    op is Dafny's own tuple display (a, b); `fst`/`snd` are `.0`/`.1`.
+    `==`/`!=` needed no new case at all: Dafny's tuple equality is already
+    componentwise/structural (measured: a lemma stating (1, 2) == (1, 2)
+    and (1, 2) != (1, 3) both verify), and BIN_OPS's `==`/`!=` already emit
+    Dafny's own operator, exactly the seqops precedent ("the kernel's own
+    overload resolution IS the type dispatch"). The loop frame rule needed
+    no code either: a pair local or return is havocked by name like any
+    other variable, and nothing in `stmts` singles out a type when deciding
+    what a loop threads.
+      What DID need work is the certificate path, for a reason with no seq
+    analogue: interp._j renders a Pair as a plain 2-list ([a, b]), which for
+    a pair of two ints is byte-for-byte the same shape _j gives a length-2
+    seq of ints. `_tlit`, which had built every witness literal by guessing
+    its t type from the Python value's shape, could not tell divmod_pair's
+    twin value [0, 1] (a pair) from a 2-element seq, and would have named it
+    seq<int> in the emitted lemma: a silently WRONG certificate, not a
+    refusal (the ambiguity the task brief named explicitly). Fixed by making
+    `_tlit(v, ty)` type-directed: given a pair type it recurses
+    component-wise into {"op": "pair", "args": [...]}; every other type is
+    still inferred from shape, unchanged, so every existing call site
+    (`_gint`, `_unroll`'s bound literals, `_ev_undef`'s ground guards) that
+    never passes `ty` keeps its old behavior exactly. The type has to come
+    from somewhere, though, and the first attempt (a params-only map)
+    REGRESSED `reverse` and `filter_pos`: both narrowly lost their working
+    invariant-drop certificate (`harness.run_task` read UNPROVED where it
+    had read REFUTED, caught immediately by this file's own
+    byte-identity/COUNT check against out/) because an "exit"-kind witness
+    ranges over "everything in scope at the loop, plus the return"
+    (harness.py's `_invariant_candidates`), not params, and both tasks'
+    loop-carried `r` IS the return, a seq the params-only map could not see
+    was a seq. `_scope_types(task)` replaces it: params, the return, and
+    every body local, so every name a witness of either kind can carry has
+    a known type. The same ambiguity, and the same fix, applies to
+    `_certificate`'s seq-naming step (`seq_names`): gated on
+    `scope_types.get(n) == "seq"` now, not `isinstance(v, list)`, so a
+    pair-typed name whose value happens to look like a seq is never
+    let-bound as one. `_ev`, which evaluates the ground certificate formula
+    itself, gained `pair`/`fst`/`snd` cases (interp.Pair(vs[0], vs[1]),
+    vs[0].a, vs[0].b); `_unroll` and `_name_seqs` needed nothing, their
+    generic "op"-recursion already walks into a pair's args.
+      Two named refusals, neither exercised by either committed task, both
+    left as honest gaps rather than guessed at: (1) an "undefined"-kind
+    witness reached through a `pair`/`fst`/`snd` node would refuse the
+    certificate (`_ev_undef`/`_exec_undef` have no case for them, so the
+    replay raises ValueError, caught by `_certificate`'s existing broad
+    except); both committed twins are "value"-kind, so this never fires
+    here, and closing it is the same shape of work `_DefViol` already did
+    for `at`/`update`/`fill`/`div`/`mod`, not attempted now. (2) a pair with
+    a SEQ component appearing in a witness value would also refuse: only a
+    top-level seq-typed name gets let-bound (`seq_names`/`used`), a seq
+    nested inside a pair's component has no name to bind to and
+    `_name_seqs` raises KeyError on it. SPEC.md's own text anticipates
+    exactly this ("dafny ... or a named refusal where ... a seq component
+    costs the certificate"); neither divmod_pair (int, int) nor min_max
+    (int, int; the seq is the plain param `s`, not a pair component) reaches
+    it, so it is recorded here, not fixed blind.
+      Measured, own column, on tasks/divmod_pair.json and tasks/min_max.json
+    (`harness.run_task`, this file's `lower`, the real dafny kernel,
+    flake-checked twice): `divmod_pair` COUNTS, real VERIFIED, wrong-var
+    twin REFUTED, witness x=1, y=1 -> real [1, 0], twin [0, 1] (the
+    certificate states !(((0*1)+1==1) && (0<=1) && (1<1)), ground and
+    dafny-accepted). `min_max` COUNTS, real VERIFIED, collapse-if twin
+    REFUTED, witness s=[0, 1] -> real [0, 1], twin [1, 1] (the twin's first
+    `if` collapsed makes `lo := s[i]` unconditional; the accepted
+    certificate states the twin's r.0 = 1 violates r.0 <= s[0] = 1 <= 0 at
+    the let-bound s := [0, 1]); harness never reached invariant-drop for
+    either task (COLLAPSE-IF and WRONG-VAR both had witnesses first in
+    pre-order). Regression, all 15 pre-existing tasks: `abs`, `swap`,
+    `reverse`, `tail`, `filter_pos` were re-lowered and re-verified as a
+    directly measured sample (the other ten were not re-run, having no path
+    through any changed code: no pair type, no witness naming a return or a
+    body local) and all five still COUNT, unchanged from AGREEMENT.md's
+    dafny column, with lowered output (`lower()`'s return value, real and
+    twin) byte-identical (`cmp`) to the committed `out/abs.dfy`,
+    `out/abs_twin.dfy`, `out/swap.dfy`, `out/swap_twin.dfy`,
+    `out/reverse.dfy`, `out/reverse_twin.dfy`, `out/tail.dfy`,
+    `out/tail_twin.dfy`, `out/filter_pos.dfy`, `out/filter_pos_twin.dfy`.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -212,6 +298,18 @@ BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
            "implies": "==>"}
 NARY_OPS = {"and": "&&", "or": "||"}
 TYPES = {"int": "int", "bool": "bool", "seq": "seq<int>"}
+
+
+def dafny_type(t) -> str:
+    """The declared-type string for a param, return or local: TYPES[t] for
+    the three base types, and Dafny's own built-in tuple type `(T1, T2)` for
+    a pair type `{"pair": [T1, T2]}` (SPEC.md "Pairs", 2026-09-10). T1/T2 are
+    always base types (no pair of pairs, SPEC.md), so this never recurses
+    past one level."""
+    if isinstance(t, dict):
+        t1, t2 = t["pair"]
+        return f"({TYPES[t1]}, {TYPES[t2]})"
+    return TYPES[t]
 
 
 def expr(e: dict, self_name: str | None = None) -> str:
@@ -268,6 +366,12 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return "[" + ", ".join(args) + "]"
     if op == "slice":
         return f"{args[0]}[{args[1]}..{args[2]}]"
+    if op == "pair":
+        return f"({args[0]}, {args[1]})"
+    if op == "fst":
+        return f"{args[0]}.0"
+    if op == "snd":
+        return f"{args[0]}.1"
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
@@ -374,6 +478,12 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
             return "[" + ", ".join(args) + "]"
         if op == "slice":
             return f"{args[0]}[{args[1]}..{args[2]}]"
+        if op == "pair":
+            return f"({args[0]}, {args[1]})"
+        if op == "fst":
+            return f"{args[0]}.0"
+        if op == "snd":
+            return f"{args[0]}.1"
         if op in BIN_OPS:
             return f"({args[0]} {BIN_OPS[op]} {args[1]})"
         raise ValueError(f"t has no operator {op!r}")
@@ -395,7 +505,7 @@ def stmts(body: list, indent: str, ctx: _Ctx) -> str:
             pre = []
             rhs = body_expr(d["init"], ctx, pre)
             out.extend(indent + p for p in pre)
-            out.append(f"{indent}var {d['name']}: {TYPES[d['type']]} "
+            out.append(f"{indent}var {d['name']}: {dafny_type(d['type'])} "
                        f":= {rhs};")
         elif "return" in s:
             # Early exit (v1, SPEC.md, added 2026-09-08): `return Expr;`
@@ -531,10 +641,23 @@ def _not(e: dict) -> dict:
     return {"op": "not", "args": [e]}
 
 
-def _tlit(v):
+def _tlit(v, ty=None):
     """A measured witness value as a t literal expression. Negative ints
     become neg nodes so they emit parenthesized, `(-1)`, and never fuse
-    with a preceding operator."""
+    with a preceding operator. `ty` is the value's own t type when the
+    caller knows it (a task's param or return type); it matters only for a
+    pair (SPEC.md "Pairs", 2026-09-10): interp._j renders a Pair as a plain
+    2-list, indistinguishable BY SHAPE from a same-length seq of ints (a
+    divmod_pair witness's `r` and a 2-element seq witness both arrive here
+    as `[a, b]` with a and b plain ints), so a pair-typed value MUST be
+    built from `ty`, never guessed from the Python shape, on pain of
+    silently naming it a seq (see `_certificate`'s seq_names guard, same
+    fix). Every other case is still inferred from shape alone, unchanged,
+    because int/bool/seq values never lie about their shape the way a
+    (int, int) pair does."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        return {"op": "pair", "args": [_tlit(v[0], t1), _tlit(v[1], t2)]}
     if isinstance(v, bool):
         return {"bool": v}
     if isinstance(v, int):
@@ -727,6 +850,14 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         if not (0 <= i < len(s)):
             raise interp.Undef(f"at index {i} outside [0,{len(s)})")
         return out, s[i]
+    if op == "pair":
+        # SPEC.md "Pairs" (2026-09-10): defined iff both components are,
+        # already true here since vs[0]/vs[1] are already-evaluated values.
+        return out, interp.Pair(vs[0], vs[1])
+    if op == "fst":
+        return out, vs[0].a
+    if op == "snd":
+        return out, vs[0].b
     if op in ("div", "mod"):
         # Same Euclidean law as interp.ev and SPEC.md "Division and modulo":
         # q = x div y, r = x mod y are the unique pair with x == q*y + r and
@@ -995,6 +1126,33 @@ def _exec_undef(body: list, env: dict, funs: dict, st) -> None:
             raise ValueError(f"t has no statement {s!r}")
 
 
+def _scope_types(task: dict) -> dict:
+    """Every name a witness dict can carry, mapped to its declared t type:
+    params, the return, and every local `var` anywhere in the body. A
+    "value"-kind witness only ever carries params (interp.Reference ranges
+    over `_names(task)`, params only), but an "exit"/"preservation" witness
+    ranges over "everything in scope at the loop, plus the return"
+    (harness.py's `_invariant_candidates`), so `reverse` and `filter_pos`
+    (SPEC.md "Sequences as values"), whose loop-carried `r` is the return,
+    not a param, need the return's type here too, not params alone. Needed
+    so `_tlit` can tell a pair-typed value from a same-shaped seq (SPEC.md
+    "Pairs", 2026-09-10) no matter which witness kind names it."""
+    out = {p["name"]: p["type"] for p in task["params"]}
+    out[task["returns"][0]["name"]] = task["returns"][0]["type"]
+
+    def walk(body: list) -> None:
+        for s in body:
+            if "var" in s:
+                out[s["var"]["name"]] = s["var"]["type"]
+            elif "if" in s:
+                walk(s["if"]["then"])
+                walk(s["if"].get("else") or [])
+            elif "while" in s:
+                walk(s["while"]["body"])
+    walk(task["body"])
+    return out
+
+
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
     witness, or None when the witness is not expressible as a ground
@@ -1002,9 +1160,14 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     kind = w.get("_kind")
     names = {k: v for k, v in w.items() if not k.startswith("_")}
     funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    scope_types = _scope_types(task)
+    ret_type = task["returns"][0]["type"]
     st = interp.St()
     try:
-        m = {n: _tlit(v) for n, v in names.items()}
+        # scope_types.get(n) is the value's own t type (SPEC.md "Pairs",
+        # 2026-09-10): needed so a pair-typed witness value is built as a
+        # pair literal rather than guessed as a same-shaped seq (_tlit).
+        m = {n: _tlit(v, scope_types.get(n)) for n, v in names.items()}
         if kind == "value":
             if w.get("_ens") is not True:
                 return None      # a drift a sound kernel may still accept
@@ -1012,7 +1175,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             if isinstance(tw, str) or not isinstance(tw, (bool, int, list)):
                 return None
             m2 = dict(m)
-            m2[task["returns"][0]["name"]] = _tlit(tw)
+            m2[task["returns"][0]["name"]] = _tlit(tw, ret_type)
             parts = [subst(rq, m2) for rq in task.get("requires", [])]
             parts.append(_not(_conj([subst(en, m2)
                                      for en in task["ensures"]])))
@@ -1031,7 +1194,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             if post is None:
                 return None
             m2 = dict(m)
-            m2[ret] = _tlit(post[ret])
+            m2[ret] = _tlit(post[ret], ret_type)
             parts = [subst(rq, m) for rq in task.get("requires", [])]
             parts += [subst(iv, m) for iv in loop.get("invariants", [])]
             parts.append(_not(subst(loop["cond"], m)))
@@ -1072,7 +1235,16 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         formula = _conj(list(seen.values()))
         seq_names: dict = {}
         for n, v in names.items():
-            if isinstance(v, list):
+            # scope_types-gated (SPEC.md "Pairs", 2026-09-10): a pair-typed
+            # name whose two components are both plain ints renders the same
+            # 2-list shape as a length-2 seq (interp._j), so
+            # "isinstance(v, list)" alone would misname its value as a seq
+            # witness and bind it `seq<int>` in the emitted lemma, a wrong
+            # lowering, not a refusal. Only an actual seq-typed name is
+            # named here (params, the return, or a body local, all covered
+            # by `_scope_types`); a pair-typed name is left for `_tlit`/
+            # `expr` to render as a tuple literal wherever it occurs.
+            if scope_types.get(n) == "seq" and isinstance(v, list):
                 seq_names.setdefault(tuple(v), n)
         used: dict = {}
         formula = _name_seqs(formula, seq_names, used)
@@ -1129,11 +1301,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         lines.append("}")
         lines.append("")
 
-    ps = ", ".join(f"{p['name']}: {TYPES[p['type']]}"
+    ps = ", ".join(f"{p['name']}: {dafny_type(p['type'])}"
                    for p in task["params"])
     ret = task["returns"][0]
     lines.append(f"method {method}({ps}) "
-                 f"returns ({ret['name']}: {TYPES[ret['type']]})")
+                 f"returns ({ret['name']}: {dafny_type(ret['type'])})")
     for e in task.get("requires", []):
         lines.append(f"  requires {expr(e, self_name)}")
     for e in task["ensures"]:

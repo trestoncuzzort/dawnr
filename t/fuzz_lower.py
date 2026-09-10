@@ -71,6 +71,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                        # noqa: E402
+import interp                                         # noqa: E402
 from verifiers import Outcome, flake_check, mp_context            # noqa: E402
 
 BACKENDS = [
@@ -264,6 +265,19 @@ def ev(e: dict, env: dict, funs: dict, st: St):
             raise Undef(f"{op} by zero")
         r = x % abs(y)
         return r if op == "mod" else (x - r) // y
+    if op == "pair":
+        # SPEC.md "Pairs" (2026-09-10): (a, b), a value defined iff both
+        # components are (every argument above is already evaluated). A
+        # CLONE of interp.ev's own pair arm, using interp.Pair rather than a
+        # bare tuple for the same reason interp.py does: a tuple here would
+        # be indistinguishable from a seq of the same length, and this
+        # file's `==`/`!=` below (Python's own operators) rely on that
+        # distinction the same way interp.py's `_tv` does.
+        return interp.Pair(args[0], args[1])
+    if op == "fst":
+        return args[0].a
+    if op == "snd":
+        return args[0].b
     if op == "==":
         return args[0] == args[1]
     if op == "!=":
@@ -671,30 +685,41 @@ SMALL = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 7]
 BIG = [2 ** 31, -2 ** 31 - 1, 2 ** 40, 10 ** 12, -10 ** 12, 2 ** 63]
 
 
+def _sample_value(ty, rng):
+    """One value of type `ty` ("int"/"bool"/"seq" or a pair `{"pair": [T1,
+    T2]}`, SPEC.md "Pairs", 2026-09-10). Pulled out of sample_inputs so a
+    pair's own two components are drawn from exactly the same two pools
+    (BIG/SMALL) their base type would use as a bare parameter, recursively:
+    T1/T2 are always base types (no pair of pairs), so this never nests
+    past one level."""
+    if ty == "seq":
+        n = rng.choice([0, 0, 1, 2, 3, 3, 4, 5, 6])
+        # SPEC.md gate 1: a seq's ELEMENTS are mathematical integers, same
+        # as an int parameter, so they are drawn from the same two pools.
+        # Drawing them from SMALL alone made every element-width claim
+        # unfalsifiable BY SAMPLING: the 2026-09-01 framac finding (`int *s`
+        # typed every element is_sint32) had to be hand-written as
+        # fz_p_elemwidth because no generated task could reach a
+        # counterexample. 12% here rather than the 8% used for a scalar: a
+        # counterexample needs only ONE big element, and a seq has several
+        # draws.
+        return tuple((rng.choice(BIG) if rng.random() < 0.12
+                     else rng.choice(SMALL)) for _ in range(n))
+    if ty == "bool":
+        return rng.choice([True, False])
+    if isinstance(ty, dict):
+        # SPEC.md "Pairs": a pair value, interp.Pair rather than a bare
+        # tuple (see this file's `ev` "pair" arm on why).
+        t1, t2 = ty["pair"]
+        return interp.Pair(_sample_value(t1, rng), _sample_value(t2, rng))
+    return rng.choice(BIG) if rng.random() < 0.08 else rng.choice(SMALL)
+
+
 def sample_inputs(task, rng, k):
     out = []
     for _ in range(k):
-        env = {}
-        for p in task["params"]:
-            if p["type"] == "seq":
-                n = rng.choice([0, 0, 1, 2, 3, 3, 4, 5, 6])
-                # SPEC.md gate 1: a seq's ELEMENTS are mathematical integers,
-                # same as an int parameter, so they are drawn from the same
-                # two pools. Drawing them from SMALL alone made every
-                # element-width claim unfalsifiable BY SAMPLING: the
-                # 2026-09-01 framac finding (`int *s` typed every element
-                # is_sint32) had to be hand-written as fz_p_elemwidth because
-                # no generated task could reach a counterexample. 12% here
-                # rather than the 8% used for a scalar: a counterexample needs
-                # only ONE big element, and a seq has several draws.
-                env[p["name"]] = tuple(
-                    (rng.choice(BIG) if rng.random() < 0.12
-                     else rng.choice(SMALL)) for _ in range(n))
-            elif p["type"] == "bool":
-                env[p["name"]] = rng.choice([True, False])
-            else:
-                env[p["name"]] = (rng.choice(BIG) if rng.random() < 0.08
-                                  else rng.choice(SMALL))
+        env = {p["name"]: _sample_value(p["type"], rng)
+               for p in task["params"]}
         out.append(env)
     return out
 
@@ -762,6 +787,12 @@ def ground_truth(task, body, rng, k=260, check_ann=True):
 
 
 def _j(v):
+    if isinstance(v, interp.Pair):
+        # SPEC.md "Pairs": shown as a 2-list, recursing so a seq component
+        # (itself a tuple) prints as a list too rather than a raw tuple. A
+        # CLONE of interp.py's own `_j`, checked BEFORE the tuple case below
+        # since interp.Pair is deliberately not a tuple.
+        return [_j(v.a), _j(v.b)]
     return list(v) if isinstance(v, tuple) else v
 
 
@@ -831,17 +862,28 @@ def invariant_load_bearing(task, rng, k=4000):
     for s in task["body"]:                 # locals declared before the loop
         if "var" in s:
             names.append((s["var"]["name"], s["var"]["type"]))
+    def draw(ty):
+        if ty == "seq":
+            ln = rng.choice([0, 1, 2, 3, 4])
+            return tuple(rng.choice(SMALL) for _ in range(ln))
+        if ty == "bool":
+            return rng.choice([True, False])
+        if isinstance(ty, dict):
+            # SPEC.md "Pairs": a pair-typed name in scope at the loop (the
+            # task's own return, most often, per f_v1pairs's loop shapes --
+            # min_max's two-int loop and the sentinel idiom both assemble
+            # their pair AFTER the loop, but `ret` is still in `names`
+            # unconditionally, so ensures that reads it via `fst`/`snd`
+            # under the exit-entailment check below needs a real
+            # interp.Pair here, not the int this branch used to fall
+            # through to and hand `.a` an AttributeError on).
+            t1, t2 = ty["pair"]
+            return interp.Pair(draw(t1), draw(t2))
+        return rng.choice(SMALL)
+
     exit_w, pres_w = None, None
     for _ in range(k):
-        env = {}
-        for n, ty in names:
-            if ty == "seq":
-                ln = rng.choice([0, 1, 2, 3, 4])
-                env[n] = tuple(rng.choice(SMALL) for _ in range(ln))
-            elif ty == "bool":
-                env[n] = rng.choice([True, False])
-            else:
-                env[n] = rng.choice(SMALL)
+        env = {n: draw(ty) for n, ty in names}
         st = St()
         try:
             if not all(ev(c, env, funs, st) for c in task.get("requires", [])):
@@ -913,6 +955,18 @@ def SLICE(s, a, b):
 
 def CAT(a, b):
     return OP("+", a, b)
+
+
+def PAIR(a, b):
+    return OP("pair", a, b)
+
+
+def FST(p):
+    return OP("fst", p)
+
+
+def SND(p):
+    return OP("snd", p)
 
 
 def FA(v, lo, hi, b):
@@ -1984,6 +2038,216 @@ def f_v1seqops(rng, idx):
             "_shape": "prepend_loop"}
 
 
+def f_v1pairs(rng, idx):
+    """SPEC.md "Pairs" (2026-09-10): `{"pair": [T1, T2]}`, `fst`/`snd`
+    projecting a pair value, always defined on one; `pair` itself defined
+    iff both components are. The census that motivated the construct (785
+    DafnyBench programs, `multi-return`; 24,748 nl/ problems, `tuple`)
+    settled on eight shapes, one per instance here:
+
+      expr_pair    loop-free: r := (e1, e2), two small linear expressions
+                   over the int params, never a bare param echo.
+      divmod_pair  the committed task's own shape, generalized: r := (x
+                   div y, x mod y) under `requires y > 0`.
+      proj_param   a pair PARAMETER projected and recombined: r := fst(p)
+                   op snd(p) for op in {+, -, *}.
+      swap_param   the swap the twin ladder names by name (SPEC.md "the
+                   twin ladder gains one move"): r := (snd(p), fst(p)).
+      sentinel     the flag-and-value idiom: a search loop over a seq
+                   threads a bool `found` and an int `val` as two SEPARATE
+                   locals (never a pair-typed loop variable -- SPEC.md's
+                   frame rule havocs a pair by name, but nothing here needs
+                   that, since the pair is assembled only after the loop
+                   exits), paired up at the end.
+      minmax       min_max's own shape: a loop keeping two ints (lo, hi)
+                   in one pass, paired at the end.
+      seq_len_pair a (seq, int) pair built from a slice and a length, the
+                   window shape f_v1seqops's own "window" instance uses,
+                   now wrapped in a pair with the seq's own length as the
+                   second component.
+      eq_params    equality of two pair PARAMETERS as a bool return: r :=
+                   (p == q), and the ensures restates SPEC.md's own rule
+                   that `==` on two pairs is componentwise, rather than
+                   just echoing the assign.
+
+    Twins go through the same GROUNDED ladder as every other family
+    (harness.make_twin / harness.twin_cached in build_corpus/run): a
+    loop-free shape gets whatever the EXTENSIONAL ladder's witness search
+    finds (often wrong-var's pair-swap or fst/snd-swap move, SPEC.md
+    "Pairs"), a loop-carrying shape (sentinel, minmax) gets
+    INVARIANT-DROP first, same precedence as every other loop family
+    here."""
+    me = f"fz_v1pairs_{idx:03d}"
+    shape = rng.choice(["expr_pair", "divmod_pair", "proj_param",
+                        "swap_param", "sentinel", "minmax", "seq_len_pair",
+                        "eq_params"])
+    PT_II = {"pair": ["int", "int"]}
+
+    if shape == "expr_pair":
+        e1 = _lin(rng, ["x", "y"])
+        e2 = _lin(rng, ["x", "y"])
+        body = [ASG("r", PAIR(e1, e2))]
+        ens = [OP("==", FST(V("r")), e1), OP("==", SND(V("r")), e2)]
+        return {"t": 1, "name": me,
+                "params": [{"name": "x", "type": "int"},
+                          {"name": "y", "type": "int"}],
+                "returns": [{"name": "r", "type": PT_II}],
+                "requires": [], "ensures": ens, "body": body,
+                "_shape": shape}
+
+    if shape == "divmod_pair":
+        # t/tasks/divmod_pair.json's own shape, generalized over the
+        # family's random-seed loop: r := (x div y, x mod y), requires
+        # y > 0 for the SAME reason the committed task states it (SPEC.md
+        # "Division and modulo": Euclidean, undefined at y == 0, and the
+        # ensures below pins 0 <= r.1 < y, which needs y positive rather
+        # than merely nonzero).
+        body = [ASG("r", PAIR(OP("div", V("x"), V("y")),
+                             OP("mod", V("x"), V("y"))))]
+        ens = [OP("==", OP("+", OP("*", FST(V("r")), V("y")), SND(V("r"))),
+                  V("x")),
+              OP("<=", I(0), SND(V("r"))),
+              OP("<", SND(V("r")), V("y"))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "x", "type": "int"},
+                          {"name": "y", "type": "int"}],
+                "returns": [{"name": "r", "type": PT_II}],
+                "requires": [OP(">", V("y"), I(0))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "proj_param":
+        o = rng.choice(["+", "-", "*"])
+        e = OP(o, FST(V("p")), SND(V("p")))
+        body = [ASG("r", e)]
+        ens = [OP("==", V("r"), e)]
+        return {"t": 1, "name": me,
+                "params": [{"name": "p", "type": PT_II}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "swap_param":
+        # SPEC.md "the twin ladder gains one move: wrong-var swaps the two
+        # components of a pair and swaps fst for snd in a projection" --
+        # this shape is exactly what that move targets: the swap is the
+        # real body, so wrong-var's un-swap is the twin.
+        body = [ASG("r", PAIR(SND(V("p")), FST(V("p"))))]
+        ens = [OP("==", FST(V("r")), SND(V("p"))),
+              OP("==", SND(V("r")), FST(V("p")))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "p", "type": PT_II}],
+                "returns": [{"name": "r", "type": PT_II}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "sentinel":
+        # The flag-and-value idiom (SPEC.md "Pairs": "3 the (bool, int)
+        # flag-and-value idiom"): `found`/`val` are two SEPARATE scalar
+        # locals threaded through the loop (never a pair-typed loop
+        # variable), paired up only after the loop exits. The loop runs
+        # the WHOLE range rather than stopping at the first hit (unlike
+        # f_v1exit's early return, which this shape deliberately avoids:
+        # a pair-typed RETURN cannot be assigned piecemeal by an early
+        # `return` under SPEC.md's "one return value" rule the way a
+        # scalar can), so `found`/`val` are only ever written the first
+        # time the predicate holds.
+        p_i, op, rhs = _pred(rng, AT("s", V("i")), [])
+        p_j = OP(op, AT("s", V("j")), rhs)
+        body = [LOC("found", "bool", BL(False)), LOC("val", "int", I(0)),
+               LOC("i", "int", I(0)),
+               WH_DF(OP("<", V("i"), LEN("s")),
+                  [AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s"))),
+                   OP("implies", OP("not", V("found")),
+                      FA("j", I(0), V("i"), _negate(p_j))),
+                   OP("implies", V("found"),
+                      EX("j", I(0), V("i"),
+                         AND(p_j, OP("==", V("val"), AT("s", V("j"))))))],
+                  OP("-", LEN("s"), V("i")),
+                  [IFS(AND(OP("not", V("found")), p_i),
+                       [ASG("found", BL(True)), ASG("val", AT("s", V("i")))],
+                       []),
+                   ASG("i", OP("+", V("i"), I(1)))]),
+               ASG("r", PAIR(V("found"), V("val")))]
+        # p_i was built from elem=at(s, i), so the ensures quantifiers below
+        # reuse "i" as their own bound name too (fresh in each quantifier's
+        # scope, exactly f_v1exit's own convention): a DIFFERENT bound name
+        # here would leave p_i's "i" unbound outside the loop that declared
+        # it.
+        ens = [OP("==", FST(V("r")), EX("i", I(0), LEN("s"), p_i)),
+              OP("implies", FST(V("r")),
+                 EX("i", I(0), LEN("s"),
+                    AND(p_i, OP("==", SND(V("r")), AT("s", V("i"))))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": {"pair": ["bool", "int"]}}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "minmax":
+        # t/tasks/min_max.json's own shape: a loop keeping two ints (lo,
+        # hi) in one pass, non-empty s required so the seed at index 0 is
+        # in range, paired up only after the loop.
+        body = [LOC("lo", "int", AT("s", I(0))), LOC("hi", "int", AT("s", I(0))),
+               LOC("i", "int", I(1)),
+               WH_DF(OP("<", V("i"), LEN("s")),
+                  [AND(OP("<=", I(1), V("i")), OP("<=", V("i"), LEN("s"))),
+                   FA("k", I(0), V("i"), OP("<=", V("lo"), AT("s", V("k")))),
+                   FA("k", I(0), V("i"), OP("<=", AT("s", V("k")), V("hi"))),
+                   EX("k", I(0), V("i"), OP("==", V("lo"), AT("s", V("k")))),
+                   EX("k", I(0), V("i"), OP("==", V("hi"), AT("s", V("k"))))],
+                  OP("-", LEN("s"), V("i")),
+                  [IFS(OP("<", AT("s", V("i")), V("lo")),
+                       [ASG("lo", AT("s", V("i")))], []),
+                   IFS(OP(">", AT("s", V("i")), V("hi")),
+                       [ASG("hi", AT("s", V("i")))], []),
+                   ASG("i", OP("+", V("i"), I(1)))]),
+               ASG("r", PAIR(V("lo"), V("hi")))]
+        ens = [FA("k", I(0), LEN("s"), OP("<=", FST(V("r")), AT("s", V("k")))),
+              FA("k", I(0), LEN("s"), OP("<=", AT("s", V("k")), SND(V("r")))),
+              EX("k", I(0), LEN("s"), OP("==", FST(V("r")), AT("s", V("k")))),
+              EX("k", I(0), LEN("s"), OP("==", SND(V("r")), AT("s", V("k"))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": PT_II}],
+                "requires": [OP(">", LEN("s"), I(0))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "seq_len_pair":
+        # A (seq, int) pair built from a slice and the seq's own length,
+        # f_v1seqops's own "window" instance wrapped in a pair: the SAME
+        # definedness obligation SPEC.md states for `slice`, 0 <= a <= b <=
+        # len(s), stated as a requires exactly as that family states it.
+        body = [ASG("r", PAIR(SLICE("s", V("a"), V("b")), LEN("s")))]
+        ens = [OP("==", OP("len", FST(V("r"))), OP("-", V("b"), V("a"))),
+              FA("k", I(0), OP("len", FST(V("r"))),
+                 OP("==", OP("at", FST(V("r")), V("k")),
+                    AT("s", OP("+", V("a"), V("k"))))),
+              OP("==", SND(V("r")), LEN("s"))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "a", "type": "int"},
+                          {"name": "b", "type": "int"}],
+                "returns": [{"name": "r", "type": {"pair": ["seq", "int"]}}],
+                "requires": [AND(OP("<=", I(0), V("a")),
+                                OP("<=", V("a"), V("b")),
+                                OP("<=", V("b"), LEN("s")))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    # eq_params: equality of two pair PARAMETERS as a bool return. SPEC.md
+    # "Pairs": "`==` ... on two pairs of one type are componentwise ...
+    # the polymorphic `==` again"; the ensures restates that rule rather
+    # than echoing the assign, so a kernel that merely re-checks r against
+    # `p == q` (the body's own expression) proves nothing this task did
+    # not already say by construction.
+    body = [ASG("r", OP("==", V("p"), V("q")))]
+    ens = [OP("==", V("r"),
+              AND(OP("==", FST(V("p")), FST(V("q"))),
+                 OP("==", SND(V("p")), SND(V("q")))))]
+    return {"t": 1, "name": me,
+            "params": [{"name": "p", "type": PT_II},
+                      {"name": "q", "type": PT_II}],
+            "returns": [{"name": "r", "type": "bool"}],
+            "requires": [], "ensures": ens, "body": body,
+            "_shape": "eq_params"}
+
+
 def f_wrong(rng, idx):
     """Category B: correct-by-construction, then ONE clause perturbed so the
     task is FALSE on a witness the interpreter finds. Every kernel must
@@ -2024,6 +2288,7 @@ FAMILIES = [
     ("v1exit", f_v1exit, 3),
     ("v1seqval", f_v1seqval, 4),
     ("v1seqops", f_v1seqops, 4),
+    ("v1pairs", f_v1pairs, 4),
     ("wrong", f_wrong, 3),
 ]
 
@@ -2605,6 +2870,113 @@ def probes() -> list[dict]:
         "verified",
         "[3, 5, 7][1] == 5 by SPEC.md's literal rule, the k-th argument "
         "at index k, with no parameter and no loop to obscure it")
+
+    # --- SPEC.md "Pairs" (2026-09-10): `fst`/`snd` project, "fst((a, b))
+    # == a and snd((a, b)) == b", quoted directly. No `if`, no loop, no int
+    # literal and no other var of type int in scope for wrong-var to reach
+    # BESIDES `a` and `b` themselves, so the only candidates the grounded
+    # ladder can raise here are wrong-var's own two pair-specific moves
+    # (swap the `pair` node's two args, or swap `fst` for `snd`) and the
+    # ordinary var-for-var substitution of `a` for `b` (or the reverse);
+    # measured, not assumed, whether any of those four actually witnesses a
+    # difference the interpreter can find.
+    add({"t": 1, "name": "fz_p_pair_proj",
+         "params": [{"name": "a", "type": "int"}, {"name": "b", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), V("a"))],
+         "body": [ASG("r", FST(PAIR(V("a"), V("b"))))]},
+        "verified",
+        "fst((a, b)) == a by SPEC.md's projection identity, quoted "
+        "directly; expected no-twin, since every candidate the ladder can "
+        "raise on this body is one of wrong-var's own moves",
+        adversarial=False)
+
+    # --- The swap the twin ladder names by name: "wrong-var swaps the two
+    # components of a pair and swaps fst for snd in a projection". The
+    # body here IS the swap (correct by construction, SPEC.md's own
+    # identity read component-by-component); the un-swap wrong-var can
+    # reach from it is the twin, refuted whenever the two components of p
+    # differ.
+    add({"t": 1, "name": "fz_p_pair_swap",
+         "params": [{"name": "p", "type": {"pair": ["int", "int"]}}],
+         "returns": [{"name": "r", "type": {"pair": ["int", "int"]}}],
+         "requires": [],
+         "ensures": [OP("==", FST(V("r")), SND(V("p"))),
+                     OP("==", SND(V("r")), FST(V("p")))],
+         "body": [ASG("r", PAIR(SND(V("p")), FST(V("p"))))]},
+        "verified",
+        "the body pairs (snd(p), fst(p)); the ensures restates exactly "
+        "that, so this holds by construction, and wrong-var's un-swap "
+        "move is expected to be REFUTED, false whenever the pair's two "
+        "components differ")
+
+    # --- Componentwise equality, stated explicitly rather than through
+    # SPEC.md's own polymorphic `==` on two pairs (fam_pairs's `eq_params`
+    # shape uses the polymorphic form; this probe spells out both
+    # conjuncts so a single wrong-var substitution can flip ONE of them
+    # without touching the other, "a twin that flips one component").
+    add({"t": 1, "name": "fz_p_pair_eq",
+         "params": [{"name": "p", "type": {"pair": ["int", "int"]}},
+                   {"name": "q", "type": {"pair": ["int", "int"]}}],
+         "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("==", V("p"), V("q")))],
+         "body": [ASG("r", AND(OP("==", FST(V("p")), FST(V("q"))),
+                              OP("==", SND(V("p")), SND(V("q")))))]},
+        "verified",
+        "r is the AND of the two componentwise equalities, which is "
+        "exactly SPEC.md's rule for `==` on two pairs of one type; "
+        "wrong-var substituting p for q (or q for p) in ONE conjunct "
+        "flips that component's check to a tautology, expected refuted "
+        "whenever the pairs agree in the other component but disagree in "
+        "the flipped one")
+
+    # --- A seq component projected and indexed UNDER ITS OWN BOUND: the
+    # bound is len(fst(p)), read off the very pair being indexed, not an
+    # external parameter. The `if` guard is both conjuncts SPEC.md's `at`
+    # needs (0 <= snd(p) and snd(p) < len(fst(p))); DROP-GUARD (SPEC.md
+    # "The twins", rung 8) drops one of them, letting an out-of-range
+    # index through to `at`, undefined there.
+    _pg_guard = AND(OP("<=", I(0), SND(V("p"))),
+                    OP("<", SND(V("p")), OP("len", FST(V("p")))))
+    add({"t": 1, "name": "fz_p_pair_seq", "gate": "quantifiers",
+         "params": [{"name": "p", "type": {"pair": ["seq", "int"]}}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("implies", _pg_guard,
+                        OP("==", V("r"), OP("at", FST(V("p")), SND(V("p"))))),
+                     OP("implies", OP("not", _pg_guard),
+                        OP("==", V("r"), I(0)))],
+         "body": [IFS(_pg_guard,
+                      [ASG("r", OP("at", FST(V("p")), SND(V("p"))))],
+                      [ASG("r", I(0))])]},
+        "verified",
+        "the if/ensures case split matches exactly, so this holds by "
+        "construction for every p; DROP-GUARD on either conjunct of the "
+        "if condition lets an out-of-range snd(p) reach `at(fst(p), "
+        "snd(p))`, undefined there, expected refuted (ground_truth's "
+        "undefined-body kind)")
+
+    # --- A projection of a pair whose component divides by a PARAMETER
+    # (not the pair's own other component): fst(p) div y, undefined at
+    # y == 0 exactly as SPEC.md "Division and modulo" states, guarded by a
+    # real requires rather than left adversarially unguarded (contrast
+    # gt_pair_illdef_div in truth_fuzz.py, the same shape WITHOUT the
+    # guard, built to be ILLDEF on purpose).
+    add({"t": 1, "name": "fz_p_pair_div",
+         "params": [{"name": "p", "type": {"pair": ["int", "int"]}},
+                   {"name": "y", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [OP("!=", V("y"), I(0))],
+         "ensures": [OP("==", V("r"), OP("div", FST(V("p")), V("y")))],
+         "body": [ASG("r", OP("div", FST(V("p")), V("y")))]},
+        "verified",
+        "r is the body's own expression, so r == fst(p) div y by "
+        "reflexivity; requires y != 0 is exactly SPEC.md's `div` "
+        "definedness obligation, so the body has a value at every "
+        "admitted input despite the projection reaching an operator that "
+        "is undefined at zero")
     return P
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""lower_framac.py: lower t v0+v1 tasks to ACSL-annotated C; the sixth kernel.
+r"""lower_framac.py: lower t v0+v1 tasks to ACSL-annotated C; the sixth kernel.
 
 THE SEMANTIC LINE, corrected 2026-09-01. The old one was WRONG, and the
 error was a false theorem, not a wording slip. It read: "C's int is a machine
@@ -624,6 +624,265 @@ harness.run_task with OUT pointed at out/agent-framac-guard):
   reports the honest cells rather than the hoped ones: `timeout /
   timeout` for both, up from `abstain / abstain`, the ABSTAIN itself
   eliminated as designed.
+
+PAIRS, added 2026-09-10 (SPEC.md "Pairs", ROADMAP 12.7, the wave after the
+sequence trio). New type `{"pair": [T1, T2]}`, T1/T2 one of "int"/"bool"/
+"seq"; new Expr forms `pair`/`fst`/`snd`. C has no product value either
+(the seq value machinery section's own opening line), so this is a
+second MEASURED encoding choice, decided by hand with frama-c/WP BEFORE
+`_pair_field_c`/`_pair_struct_name`/the "pair"/"fst"/"snd" cases below
+were written (RULES: measure first), against exactly the construct
+brief's two named candidates:
+
+  (a) a struct returned BY VALUE, `struct t_pair_T1_T2 { int a; int b; };`
+      (this backend's own `int`, the C type it already picks for every
+      mathematical-integer value under the pinned Typed+nat model, not a
+      `long`; a bool component costs nothing extra, since bool is already
+      C int 0/1 here), the contract stated on `\result.a`/`\result.b`.
+  (b) two `long *ra, long *rb` out-parameters with `assigns *ra, *rb` and
+      `\valid` requires, the contract on `*ra`/`*rb`.
+
+Candidate (a) was tried first, by hand, on divmod_pair: a probe with
+exactly the shape `lower()` now emits (the struct declared before the
+ACSL block, the contract's three `ensures` on `\result.a`/`\result.b`,
+the body one compound-literal assignment `r = (struct t_pair_int_int){
+<div-expr>, <mod-expr> };` with the same branch-free div/mod rendering
+and bridging asserts every other task already gets) scored the REAL
+function 10/10 goals proved outright (`Qed 3, Alt-Ergo 5, Terminating 1,
+Unreachable 1`), and a hand-written refutation certificate for the
+`wrong-var` twin (ground state `x=1, y=1`, exactly SPEC.md's own witness)
+scored its named goal `t_refutation_certificate` VALID, every other goal
+in the certificate's own audit set proved alongside it, with the twin's
+own three `ensures` left honestly STEPOUT (genuinely false in general,
+never touched by the twin mutation rule). Candidate (a) worked outright,
+so candidate (b) was never built: there was nothing left for two
+out-parameters to fix. Kept for that reason alone, not for any
+architectural preference between the two.
+
+MEASURED after `lower()`/`_value_certificate`/`cexpr`/`_cert_cexpr`/
+`_cev`/`term`/`pred`/`typ` grew their pair cases, via `harness.run_task`
+into a scratch OUT (never the committed `out/` tree, RULES): both
+committed tasks COUNT on the first run, no debugging needed after the
+hand probe.
+
+  `divmod_pair` (loop-free): real VERIFIED (10/10 goals, identical tally
+  to the hand probe, byte-identical body). Twin `wrong-var` (the pair's
+  two components swapped, `harness.py`'s own new twin-ladder move for
+  this construct, SPEC.md "The twins") REFUTED via `_value_certificate`
+  (a `value`-kind witness -- divmod_pair has no loop, so the whole
+  function is one straight-line replay, exactly like every scalar-
+  returning value-witness task already in AGREEMENT.md): witness `x=1,
+  y=1 -> real [1, 0], twin [0, 1]`, the exact point and pair values
+  SPEC.md's own committed-task paragraph names. 15/18 goals proved (the
+  twin's own three `ensures` stepout, honestly; the certificate's own six
+  goals -- four branch-decision asserts, one `assigns`, the named
+  refutation assert -- all valid).
+
+  `min_max` (a loop keeping both bounds): real VERIFIED (29/29 goals),
+  the `\result.a`/`\result.b` projections reaching cleanly through all
+  four quantified `ensures` and through the loop's own invariants (which
+  never mention the pair at all -- `r` is assigned once, after the loop,
+  so the loop frame rule needs no pair-typed case and none was written;
+  found by inspection of both committed tasks, not measured as a gap).
+  Twin `collapse-if` (the first guard collapsed, an ordinary value-
+  changing mutation, not INVARIANT-DROP: SPEC.md's own note that no
+  invariant drop of this task is witnessable by bounded execution is a
+  fact about THIS task, not about pairs) REFUTED via the SAME
+  `_value_certificate` path as divmod_pair, this time replaying a real
+  (unrolled) loop at the witness: `s=[0, 1] -> real [0, 1], twin [1, 1]`.
+  45/46 goals proved (one loop-invariant preservation goal the collapsed
+  guard genuinely breaks, stepout; the certificate's own seventeen goals
+  -- eight branch/loop-exit asserts, seven split `assigns` goals, the
+  named refutation assert -- all valid).
+
+THE ENCODING, mechanically: `pair(a, b)` is a C99 compound literal,
+`(struct t_pair_T1_T2){a, b}` (`cexpr`'s and `_cert_cexpr`'s new "pair"
+cases; `_cert_cexpr`'s is the one actually exercised by divmod_pair,
+since its pair has a `div`/`mod` nested inside it and so never takes
+`_cert_cexpr`'s `_has_divmod`-false shortcut to plain `cexpr`). `fst`/
+`snd` are plain field reads, `.a`/`.b`, identical in ACSL (`term()`'s new
+"fst"/"snd" case, reached by BOTH tasks' `ensures`, never by an
+executable body since neither committed task projects a pair outside its
+spec) and in C (`cexpr`'s and `_cert_cexpr`'s matching cases, unexercised
+by either committed BODY but written for the same completeness reason
+`_cev`'s "update"/"fill" cases already are). `pair(...)` itself has no
+ACSL term rendering (`term()` raises NotImplementedError by name,
+mirroring `update`/`fill`'s identical restriction): it is consumed
+exclusively as the whole right-hand side of a body assignment to a
+pair-typed name, exactly like a seq value, and neither committed task's
+spec constructs one directly. `==`/`!=` on two pairs is COMPONENTWISE
+(`pred()`'s new branch): ACSL has no struct equality this backend would
+trust (a struct's bitwise/representation equality, even if WP accepted
+one, is not the value equality SPEC.md means), so this rewrites `p == q`
+to `fst(p)==fst(q) && snd(p)==snd(q)` as fresh Exprs and recurses through
+`pred()` itself -- one equality rule used twice rather than duplicated,
+and correct for a seq or bool component for free, since the recursive
+call already knows how to render THOSE equalities extensionally/`<==>`.
+The loop frame rule needed no change: neither committed task assigns a
+pair-typed name inside a loop (`r` is written once, after `min_max`'s
+loop), so `assigned_names`/`_assigns_target` never see one; a task that
+DID would need a pair-typed case in `_assigns_target` this file does not
+have, a real gap left for whichever task needs it, not silently claimed
+covered.
+
+`_value_certificate`'s ground-replay machinery (`_cev`, `_tty`) grew a
+"pair" case each: `_cev` represents a pair value as a plain 2-element
+Python list (the SAME shape `interp.py`'s own `_j` gives a witness's pair
+value, so a replayed `st[ret]` compares straight against `w["_twin"]`
+with no conversion step, mirroring how `_cev`'s pre-existing "update"/
+"fill" cases already represent a seq value as a plain list); `_tty` tags
+any `list` "pair" (safe: a seq-returning task is excluded from
+`_value_certificate` before either side of a `_tty` comparison is built,
+unchanged by this construct, so no seq value ever reaches this tagging
+alongside a pair one). The certificate's own declaration loop (`decls`)
+now declares the RETURN name with the struct type when the task returns
+a pair, `int` for everything else (params, other locals) exactly as
+before.
+
+NAMED REFUSAL: a pair with a seq component. `_pair_field_c` raises
+NotImplementedError the moment a component is "seq", named plainly in
+the exception text rather than guessed past: a struct field returned BY
+VALUE has no memory to back a fresh buffer's storage, and CAPACITY
+mode's own machinery (a length-tracking local threaded through
+`Ctx.seq_len`) has nothing to attach itself to inside a struct field
+either -- exactly the SPEC.md section's own prediction ("very likely a
+NAMED refusal in this column"), confirmed by construction rather than by
+running anything (no committed task has one to run). NOT implemented,
+also found by construction and also refused by name rather than silently
+wrong: a pair-typed PARAMETER or LOCAL (both committed tasks use a pair
+only as a RETURN; `stmts()`'s `var` case has no pair branch and
+`lower()`'s `cparams` loop has no pair-typed-param branch, so either
+would need its own measured probe, not attempted here); a recursive call
+to a pair-returning task (mirrors the existing seq-return recursion
+refusal, `cexpr`'s "call" case, unextended); a pair of pairs (SPEC.md
+itself excludes this) and a pair-valued spec_fun result (SPEC.md's own
+SpecFun grammar restricts `result` to "int"/"bool", so this can never
+arise from a well-formed task).
+
+REGRESSION, measured by diff, not by re-running frama-c (the C text is
+byte-identical, and frama-c is deterministic on identical input; this is
+the same discipline `_always_returns`'s note above uses for abs.c/
+sum_upto.c): `abs`, `swap`, `reverse`, `tail`, `filter_pos` -- one task
+from each pre-pair construct wave -- lowered again (real and twin, ten
+files) into a scratch OUT and `cmp`-diffed against the committed `out/
+*.c` this pass did not otherwise touch. All ten are byte-identical to
+before this construct; every new "pair"/"fst"/"snd" case added above is
+reached only when `typ()` actually returns a pair-shaped dict somewhere
+in the task, which none of these five ever produce.
+
+PAIRS RESIDUAL, framac, fixed and measured 2026-09-10. The fuzz family
+`v1pairs` (31 tasks) read framac verified/refuted on 13 of 31 the day
+this construct landed; 18 did not (named in the residual list, corpus
+and readings in `fuzz-pairs/corpus.json`/`rows.json`). Two defects, one
+already found by construction above (`_pair_field_c`'s own section
+comment, before this note) and fixed here:
+
+1. A pair-typed PARAMETER or LOCAL used to fall through `lower()`'s
+   `cparams` loop and `stmts()`'s `var` case into the plain `int` branch
+   -- a SILENT WRONG lowering (a struct-shaped value declared as a bare
+   `int`), read by frama-c as MALFORMED the moment a field was read off
+   it, on 9 of the 18. Fixed: both are now the struct BY VALUE, exactly
+   the RETURN's own encoding (`_pair_types_needed`, new, finds every
+   pair shape a task's C needs a struct for -- params, return, locals,
+   and a `pair(...)` built and projected without ever being bound to a
+   name, `fz_p_pair_proj`'s own shape -- so `lower()`'s header declares
+   all of them, not only the return's). MEASURED, not assumed: a struct
+   parameter works in WP's Typed model the same way the struct return
+   already did. Fixing the parameter case exposed a SECOND malformed
+   cause on the same task family, invisible until the first was fixed:
+   `p == q` on two pair-typed PARAMETERS in executable position
+   (`fz_v1pairs_053`'s `eq_params` shape) used to fall through `cexpr`'s
+   generic `==`/`CMP` dispatch to a bare C `==` on two now-`struct`
+   operands, not legal C for an aggregate type. Fixed the same way
+   `pred()`'s own componentwise branch already handles pair equality in
+   ACSL, mirrored into executable C.
+
+2. `fst`/`snd` in PREDICATE position when the projection's own type is
+   bool (`ensures r.0 == (\exists ...)`, the found/val idiom) crashed
+   `pred()` outright, `ValueError: no predicate form for operator
+   'fst'`, on the other 7 of the 18 (read framac `lower-error`, an
+   unhandled crash, not an honest refusal). Fixed: `pred()` gained the
+   same `!= 0` bool convention its own `var` case already applies to a
+   bare bool-typed C name, applied to the field read instead.
+
+MEASURED after both fixes (`fuzz_lower.py --only framac` on the 18,
+never re-predicted): 8 of the 9 malformed tasks now COUNT (verified /
+refuted); the ninth, `fz_p_pair_eq`, and one more discovery below stay
+short of counting, for reasons that are not this construct's own defect
+to fix. All 7 `lower-error` tasks, despite the crash itself being fixed,
+still read ABSTAIN, not counted -- their `if (!found && s[i] <= -1)`
+guard trips `code_ats`'s conservative, pre-existing, entirely
+pairs-unrelated refusal of a conditionally-evaluated `at` inside a
+short-circuit `and`'s second conjunct (the same guard the WHILE-GUARD
+DEFINEDNESS note above fixed for a WHILE condition, never for an IF
+condition's later conjunct). That `i` is in bounds here regardless of
+`found` is true of THIS idiom, not something `code_ats`'s
+statement-local, no-invariant-lookup rule can see in general, and
+loosening it generically risks exactly the unsound totalization the
+rule exists to prevent for a genuinely guard-dependent `at`/`div`. Left
+a named abstain, not attempted: a real fix needs the invariant in scope
+at the point `code_ats` decides, a bigger change than this residual
+measurement's mandate, and this file's own crash-to-abstain fix (item 2
+above) already turned a bug into an honest refusal, which is the
+improvement that was this task's to make.
+
+The two ALREADY-named abstains (a pair with a seq component, `_pair_
+field_c`'s own refusal; a seq position holding `fst(p)`, `seq_var`'s
+own refusal) are unchanged and confirmed still correct by this
+measurement (`fz_v1pairs_064`, `fz_p_pair_seq`): neither fix above
+touches either path, and no small fix presents itself for either (a
+struct field still cannot back a fresh buffer; a seq operand still
+cannot be a non-variable projection without a rule change to
+`seq_var`'s own domain, `at`/`update`'s own restriction, not a pairs
+one).
+
+One further, ALSO not-this-file's-to-fix discovery, on `fz_p_pair_eq`
+(`fst(p)==fst(q) and snd(p)==snd(q)`, an ordinary int-typed `and` from
+the TASK's own source, nothing pair-specific about the `and` node
+itself): its wrong-var twin's certificate REPLAYS that `and` with
+LITERAL struct components substituted, and one conjunct becomes
+Qed-decidably false outright, making the `&&`'s "second conjunct
+evaluated" arm provably dead -- correctly DOOMED, the harmless finding
+`_all_obligations_proved` already exempts on the ordinary VERIFIED path
+everywhere in this file, but `verifiers/framac.py`'s own certificate
+audit (`_cert_status`) has no matching exemption for a doomed smoke goal
+inside the certificate function itself, so the certificate was rejected
+(UNPROVED, not REFUTED) for a reason that has nothing to do with
+whether the refutation holds. MEASURED directly against the kernel's
+own `-wp-report-json` (not inferred): `t_certificate`'s own smoke goals
+`passed: false, verdict: valid` -- confirmed doomed, confirmed
+harmless, confirmed still rejected by `_cert_status`'s `ok()` check.
+This is a `verifiers/framac.py` gap, general to any certificate whose
+ground literals happen to decide one operand of ANY `and`/`or`
+(nothing pairs-specific about it, and this file may only be edited
+here), so it is named and left, not patched around. The SAME shape DID
+get fixed where it was this file's own new code causing it:
+`fz_v1pairs_053`'s certificate hit the identical doomed-smoke rejection
+via THIS construct's own new componentwise pair-equality rewrite (`p ==
+q` mutated by wrong-var to the reflexive `q == q`), and there a
+branch-free rewrite was this file's to make (see the BRANCH-FREE
+comment on `cexpr`'s pair `==`/`!=` case, above `_pair_struct_name`'s
+call sites): a plain bitwise `&` on the two already-0/1 componentwise
+comparisons, safe because both `fst`/`snd` are unconditionally defined
+on a pair (unlike the general `and`/`or` case, where `code_ats`'s
+short-circuit really is load-bearing), giving WP no branch to find
+dead. That fix, and only that one, is why `fz_v1pairs_053` counts and
+`fz_p_pair_eq` does not.
+
+Net measured, framac column: 13/31 before this pass, 21/31 after (8 of
+the 18-residual now verified/refuted); 7 abstain on the conditionally-
+evaluated-`at` gap above, 2 abstain unchanged (seq component), 1 stays
+verified/unproved (the certificate smoke gap above, not this file's
+alone to close).
+
+REGRESSION, this pass, same discipline as above: `divmod_pair`,
+`min_max`, `abs`, `swap`, `reverse`, `tail`, `filter_pos` -- the two
+committed pair tasks plus one from each earlier construct wave --
+relowered (real and twin) via `harness.run_task` into a scratch
+`out/agent-framac-pairs2` (never `out/` itself) and `diff`-checked
+against the committed `out/*.c`. All fourteen files byte-identical;
+every reading matches AGREEMENT.md's own framac column unchanged,
+`reverse`'s own already-documented `verified / malformed` included.
 """
 from __future__ import annotations
 
@@ -686,8 +945,18 @@ def _has_divmod(x) -> bool:
 SEQOPS = ("update", "fill")
 
 
-def typ(e: dict, env: dict, funs: dict) -> str:
-    """Type of an expression: 'int' | 'bool' | 'seq'."""
+def typ(e: dict, env: dict, funs: dict):
+    """Type of an expression: 'int' | 'bool' | 'seq' | {'pair': [T1, T2]}.
+
+    SPEC.md "Pairs" (2026-09-10) is the one construct whose type is not a
+    bare string: a pair's own type carries its two component types, so a
+    `var` of pair type already returns the dict `env` holds for it (no
+    special case needed, `env[e["var"]]` is whatever the task declared),
+    `{"op": "pair", ...}` builds a fresh `{"pair": [T1, T2]}` from its two
+    operands' own types, and `fst`/`snd` project one component back out
+    (`typ`'s only two callers that must now expect a dict back are
+    `pred()`'s `==`/`!=` dispatch, which gains a pair branch below it, and
+    this function's own recursion)."""
     if "int" in e:
         return "int"
     if "bool" in e:
@@ -715,6 +984,12 @@ def typ(e: dict, env: dict, funs: dict) -> str:
         # not this lowering's job to reject; t's own well-formedness check
         # is).
         return "seq" if typ(e["args"][0], env, funs) == "seq" else "int"
+    if op == "pair":
+        return {"pair": [typ(e["args"][0], env, funs),
+                         typ(e["args"][1], env, funs)]}
+    if op in ("fst", "snd"):
+        pt = typ(e["args"][0], env, funs)
+        return pt["pair"][0 if op == "fst" else 1]
     if op in ("len", "at", "neg") or op in ARITH or op in DIVMOD:
         return "int"
     return "bool"                                # cmp, and, or, not, implies
@@ -840,6 +1115,34 @@ def term(e: dict, ctx: Ctx) -> str:
         return _seq_len_render(args[0], ctx)
     if op == "at":
         return _seq_at_render(args[0], term(args[1], ctx), ctx)
+    if op in ("fst", "snd"):
+        # p.0 / p.1 (SPEC.md "Pairs", 2026-09-10): this backend's pair
+        # value IS a C struct (see the pair value machinery section,
+        # `_pair_struct_name`), so the projection is a plain ACSL field
+        # access on whatever `term(args[0], ctx)` already renders for the
+        # pair-typed operand -- a bare name (a var, `\result` included via
+        # the `var` case above) in both committed tasks, but the
+        # rendering is generic over any pair-typed term this backend can
+        # otherwise express (never `pair(...)` itself, see below).
+        field = "a" if op == "fst" else "b"
+        return f"({term(args[0], ctx)}).{field}"
+    if op == "pair":
+        # A `pair(...)` node has no ACSL TERM rendering, the same gap
+        # `update`/`fill`/a seq literal already have and for the same
+        # reason: this backend's pair value is a C struct construction
+        # (`(struct t_pair_T1_T2){a, b}`, a C99 compound literal), which
+        # is executable-C syntax, not ACSL logic syntax, and is consumed
+        # exclusively as the whole right-hand side of a body assignment
+        # to a pair-typed name (`stmts()`'s ordinary, non-seq assign
+        # case, via `cexpr()`). Neither committed task constructs a pair
+        # directly inside `requires`/`ensures`/an invariant (both only
+        # ever project `fst`/`snd` of the RETURN there), so this is a
+        # stated scope limit, not a silently wrong lowering.
+        raise NotImplementedError(
+            "`pair` has no ACSL term rendering (this backend's pair value "
+            "is a C struct construction, executable-C syntax, not ACSL "
+            "logic); pair values may only be produced as the right-hand "
+            "side of a body assignment to a pair-typed name")
     if op == "neg":
         return f"(-{_gap(term(args[0], ctx))})"
     if op == "not":
@@ -1061,10 +1364,11 @@ def pred(e: dict, ctx: Ctx) -> str:
         glue = " && " if op == "and" else " || "
         return "(" + glue.join(pred(a, ctx) for a in args) + ")"
     if op in ("==", "!="):
-        if typ(args[0], ctx.env, ctx.funs) == "bool":
+        t0 = typ(args[0], ctx.env, ctx.funs)
+        if t0 == "bool":
             eq = f"({pred(args[0], ctx)} <==> {pred(args[1], ctx)})"
             return eq if op == "==" else f"(!{eq})"
-        if typ(args[0], ctx.env, ctx.funs) == "seq":
+        if t0 == "seq":
             # `==`/`!=` on two seqs is EXTENSIONAL (SPEC.md "Sequences as
             # values", 2026-09-09): equal lengths and equal elements at
             # every index. Both operands must be bare seq variables (the
@@ -1078,13 +1382,239 @@ def pred(e: dict, ctx: Ctx) -> str:
                  f"(\\forall integer __k; 0 <= __k && __k < {an} "
                  f"==> {a}[__k] == {b}[__k]))")
             return eq if op == "==" else f"(!{eq})"
+        if isinstance(t0, dict) and "pair" in t0:
+            # `==`/`!=` on two pairs is COMPONENTWISE (SPEC.md "Pairs",
+            # 2026-09-10: "the polymorphic `==` again, two ints, two
+            # bools, two seqs, two pairs"). ACSL has no struct equality
+            # worth relying on here (this backend's struct is a plain C
+            # aggregate with no logic-level `==`, and even if WP accepted
+            # one it would be bitwise/representation equality, not the
+            # componentwise value equality SPEC.md means), so this
+            # rewrites to a conjunction of the two projections' own
+            # equality and recurses through `pred()` again: `fst`/`snd`
+            # are ordinary Exprs, so if a component is itself a seq or a
+            # bool the recursive call picks up EXTENSIONAL or `<==>`
+            # equality exactly as it would for a bare seq/bool variable,
+            # one rule for `==` used twice rather than two.
+            a, b = args
+            fst_eq = {"op": "==", "args": [{"op": "fst", "args": [a]},
+                                           {"op": "fst", "args": [b]}]}
+            snd_eq = {"op": "==", "args": [{"op": "snd", "args": [a]},
+                                           {"op": "snd", "args": [b]}]}
+            eq = pred({"op": "and", "args": [fst_eq, snd_eq]}, ctx)
+            return eq if op == "==" else f"(!{eq})"
         return f"({term(args[0], ctx)} {CMP[op]} {term(args[1], ctx)})"
     if op in CMP:
         return f"({term(args[0], ctx)} {CMP[op]} {term(args[1], ctx)})"
+    if op in ("fst", "snd"):
+        # PAIRS, extended 2026-09-10 (fuzz family v1pairs, the found/val
+        # idiom: `ensures r.0 == (\exists ...)`, a `(bool, int)` return's
+        # bool component projected directly into predicate position, not
+        # nested under a comparison `pred()` already dispatches on `t0`
+        # for). Before this case, `pred()` had no "fst"/"snd" branch at
+        # all and fell through to the bottom `raise`, a lowering CRASH
+        # (measured: `ValueError: no predicate form for operator 'fst'`
+        # on 7 of the 18-task framac residual, every one this exact
+        # shape) rather than a proof result. `term()`'s own "fst"/"snd"
+        # case already renders the projection as a plain ACSL field
+        # read, `(p).a`/`(p).b` (int-valued: this backend's field is
+        # always C `int`, the bool-as-0/1 convention that already lets a
+        # bool component cost nothing extra); reaching this branch at
+        # all means the projection's OWN type is bool (an int-typed
+        # projection is only ever consumed inside a comparison, which
+        # `pred()`'s `==`/`CMP` cases above already route through
+        # `term()`, never here), so this applies the SAME `!= 0` bool
+        # convention the `var` case above already applies to a bare
+        # bool-typed C name, to the field read instead of the name.
+        field = "a" if op == "fst" else "b"
+        return f"(({term(args[0], ctx)}).{field} != 0)"
     raise ValueError(f"no predicate form for operator {op!r}")
 
 
 # ------------------------------------------------------------- C (code) -----
+#
+# PAIRS (SPEC.md "Pairs", 2026-09-10, ROADMAP 12.7). C has no product value
+# either, so this is a second MEASURED encoding choice next to seq's own
+# (the seq value machinery section, above): a struct returned/held BY
+# VALUE, `struct t_pair_T1_T2 { int a; int b; };`, one field per component,
+# both fields plain C `int` (this backend's own bool-as-int-0/1 convention
+# already applies before a pair's own encoding does anything, so a bool
+# component costs nothing extra: `_pair_field_c` below is the identity on
+# both "int" and "bool"). MEASURED by hand (frama-c/WP) on divmod_pair
+# BEFORE this code was written (RULES: measure first): a hand-written
+# probe in exactly this shape (the contract stated on `\result.a`/
+# `\result.b`, the body a plain compound-literal assignment) scored the
+# real function 10/10 goals proved and a hand-written refutation
+# certificate (the shape `_value_certificate` below now emits generally)
+# scored its own named goal VALID under the pinned budget -- candidate (a)
+# of the two the construct brief named, kept because it worked outright;
+# candidate (b) (two `long *ra, long *rb` out-parameters) was never built,
+# since there was nothing left for it to fix. `pair(a, b)` is a C99
+# compound literal, `(struct t_pair_T1_T2){a, b}`; `fst`/`snd` are plain
+# field reads, `.a`/`.b`, on both the C and the ACSL side (`\result.a` is
+# exactly SPEC's own suggested rendering); `==`/`!=` on two pairs is
+# componentwise (`pred()`'s own new branch, above), since ACSL has no
+# struct equality this backend would trust (a bitwise/representation
+# equality on a struct is not the value equality SPEC.md means, and this
+# backend never asks WP for one).
+#
+# T1/T2 are restricted to "int"/"bool" by this backend, not by SPEC.md
+# (which also allows "seq"): a pair with a seq component has no clean
+# value semantics in a struct returned BY VALUE, since a seq is itself a
+# caller-provided buffer PLUS a length (the seq value machinery section),
+# and a struct field can hold neither a fresh buffer's storage nor a
+# second, independent `\valid`/`\separated` obligation the caller could
+# size in advance the way a bare seq return's own `{ret}_n` already is.
+# CAPACITY mode's own machinery (a length-tracking local threaded through
+# `Ctx.seq_len`) has nothing to attach itself to inside a struct field
+# either. So `_pair_field_c` raises NotImplementedError BY NAME the
+# moment a "seq" component is seen, never guessing a struct layout for it;
+# neither committed task has one (`divmod_pair`, `min_max`: both
+# `(int, int)`).
+#
+# FIXED 2026-09-10 (the framac fuzz family v1pairs's own 18-task residual,
+# measured on the fuzz corpus, not on a committed task): a pair-typed
+# PARAMETER or LOCAL. Both committed tasks use a pair only as a RETURN,
+# and until this fix neither `stmts()`'s `var` case nor `lower()`'s
+# `cparams` loop had a pair-typed branch to reach -- not a named
+# NotImplementedError either, the thing this section's own discipline
+# promises, but a silent WRONG lowering: `cparams` fell through its
+# `else` and declared the struct-typed parameter as plain `int`, and
+# `stmts()`'s `var` case did the identical wrong thing for a local, so
+# every `.a`/`.b` field read or `fst`/`snd` projection on that name
+# compiled to a C error on a plain `int` ("request for member ... in
+# something not a structure"), read by frama-c as MALFORMED (9 of the 18)
+# rather than refused by this file's own naming discipline. Both are now
+# a struct passed/declared BY VALUE, exactly the RETURN's own encoding
+# (`_pair_types_needed` below finds every distinct pair shape the task's
+# C needs a struct for -- params, return, locals, and a `pair(...)`
+# built and projected inline without ever being bound to a name,
+# `fz_p_pair_proj`'s own shape -- so `lower()`'s header declares all of
+# them, not only the return's). MEASURED (`fuzz_lower.py --only framac`
+# on the residual): a struct parameter works in WP's Typed model the
+# same way the struct return already did, no separate probe needed.
+# Fixing the parameter case also exposed a second, previously
+# unreachable defect on the SAME task family: `p == q` on two pair-typed
+# PARAMETERS in EXECUTABLE position (`fz_v1pairs_053`'s `eq_params`
+# shape) used to fall through `cexpr()`'s generic CMP dispatch to a bare
+# C `==` on two `int`s (silently wrong, the params being mis-declared
+# already hid it); once declared as structs, that same fallthrough would
+# emit `p == q` on two STRUCTS, which is not legal C for an aggregate
+# type -- `cexpr()` now has a componentwise `==`/`!=` case mirroring
+# `pred()`'s own (below), so this is fixed rather than traded for a
+# different malformed cause.
+#
+# Still NOT implemented, found by construction, kept as a named refusal
+# because nothing in the framac residual needs it measured: a pair
+# inside another pair's component (SPEC.md itself excludes this, "no
+# pair of pairs"); a pair-valued spec_fun result (SPEC.md's own SpecFun
+# grammar restricts `result` to "int"/"bool", so this never arises); a
+# recursive call to a pair-returning task (SPEC.md "Gate 3" self-calls
+# are unmeasured for pairs, mirroring the seq-return recursion refusal
+# above). The loop frame rule needed NO change for a pair-typed name
+# assigned inside a loop, on inspection rather than by construction:
+# SPEC.md says plainly "the loop frame rule havocs a pair variable by
+# name," and `_assigns_target`'s existing fallback (a bare name, for
+# anything not seq-typed) already IS that: a pair is always assigned as
+# one whole struct value by this lowering, never field-by-field, so the
+# same `assigns p;` that already covers an int or bool local covers a
+# pair one too. Nothing to fix, and nothing left silently unclaimed.
+
+
+def _pair_field_c(t) -> str:
+    """The C field type a pair component of t-type `t` gets: `int` for
+    both "int" and "bool" (this backend's existing bool-as-int-0/1
+    convention). Raises NotImplementedError by name for "seq" (see the
+    section comment above) and for anything else unexpected (a nested
+    pair; SPEC.md already excludes it, so reaching this is a bug, not a
+    task this lowering merely declines)."""
+    if t in ("int", "bool"):
+        return "int"
+    if t == "seq":
+        raise NotImplementedError(
+            "a pair with a seq component is refused by this lowering: a "
+            "struct field returned BY VALUE has no clean ACSL value "
+            "semantics for a buffer pointer plus a length (see the PAIRS "
+            "section comment above `_pair_field_c`)")
+    raise NotImplementedError(f"pair component type {t!r} not supported")
+
+
+def _pair_struct_name(t1, t2) -> str:
+    """`t_pair_{T1}_{T2}`, the struct type name for a `{"pair": [T1, T2]}`
+    t-type. Validates both components via `_pair_field_c` first (raising
+    its NotImplementedError, never silently naming a struct this lowering
+    could not actually declare a sound field for)."""
+    _pair_field_c(t1)
+    _pair_field_c(t2)
+    return f"t_pair_{t1}_{t2}"
+
+
+def _pair_local_types(body: list) -> dict:
+    """name -> declared type for every LOCAL `var` statement in `body`,
+    walked recursively into `if`/`while` branches -- the same statement
+    shape `assigned_names` already walks for its own (name-only) purpose,
+    kept here as a separate small function since this one needs the
+    declared TYPE, not just the name."""
+    out = {}
+    for s in body:
+        if "var" in s:
+            out[s["var"]["name"]] = s["var"]["type"]
+        elif "if" in s:
+            out.update(_pair_local_types(s["if"]["then"]))
+            out.update(_pair_local_types(s["if"]["else"]))
+        elif "while" in s:
+            out.update(_pair_local_types(s["while"]["body"]))
+    return out
+
+
+def _pair_types_needed(task: dict, body: list, env: dict, funs: dict
+                       ) -> list:
+    """Every distinct `(T1, T2)` this task's C needs a `struct
+    t_pair_T1_T2` declared for, added 2026-09-10 alongside the
+    parameter/local fix above `_pair_field_c`: a pair-typed RETURN alone
+    (`lower()`'s previous check) is not enough once a pair can also be a
+    PARAMETER, a LOCAL, or built and immediately projected without ever
+    being bound to a name at all (`fz_p_pair_proj`'s `fst((a, b))`, a
+    plain int-typed task with no pair-typed name anywhere in its
+    signature). So this gathers from every source a pair type can come
+    from: every pair-typed parameter, the return if it is one, every
+    pair-typed local (`_pair_local_types` above), and every `pair(...)`
+    construction node found anywhere in the body, its own component
+    types read off via `typ()` against a FULL env (params, return, and
+    every local `_pair_local_types` found, regardless of where in the
+    body a name is declared relative to where it is used -- a name's
+    TYPE does not depend on statement order the way its VALUE does, and
+    `typ()` only ever needs the former). Order is first-occurrence,
+    duplicates dropped (a `dict` used as an ordered set, no value read
+    back out of it); `lower()`'s header declares one `struct` line per
+    entry, before anything in the file can use it."""
+    full_env = dict(env)
+    full_env.update(_pair_local_types(body))
+    seen: dict = {}
+    for p in task["params"]:
+        if isinstance(p["type"], dict) and "pair" in p["type"]:
+            seen[tuple(p["type"]["pair"])] = True
+    rett = task["returns"][0]["type"]
+    if isinstance(rett, dict) and "pair" in rett:
+        seen[tuple(rett["pair"])] = True
+    for t in full_env.values():
+        if isinstance(t, dict) and "pair" in t:
+            seen[tuple(t["pair"])] = True
+
+    def scan(x):
+        if isinstance(x, dict):
+            if x.get("op") == "pair":
+                t1 = typ(x["args"][0], full_env, funs)
+                t2 = typ(x["args"][1], full_env, funs)
+                seen[(t1, t2)] = True
+            for v in x.values():
+                scan(v)
+        elif isinstance(x, list):
+            for v in x:
+                scan(v)
+    scan(body)
+    return list(seen.keys())
+
 
 def cexpr(e: dict, env: dict, funs: dict, task_name: str,
          _div_style: str = "bf") -> str:
@@ -1144,6 +1674,25 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
     if op == "at":
         return (f"{seq_var(args[0], env)}"
                 f"[{cexpr(args[1], env, funs, task_name, _div_style)}]")
+    if op == "pair":
+        # (a, b) (SPEC.md "Pairs", 2026-09-10): a C99 compound literal for
+        # this backend's struct-by-value encoding (see the section
+        # comment above `_pair_field_c`). `typ()` gives the two
+        # component t-types (never re-derived from `e` itself, since a
+        # pair's own declared type is not carried on the AST node, only
+        # inferable from its arguments, exactly as `+`'s seq/int dispatch
+        # already infers from its first operand).
+        t1 = typ(args[0], env, funs)
+        t2 = typ(args[1], env, funs)
+        sname = _pair_struct_name(t1, t2)
+        a_c = cexpr(args[0], env, funs, task_name, _div_style)
+        b_c = cexpr(args[1], env, funs, task_name, _div_style)
+        return f"(struct {sname}){{{a_c}, {b_c}}}"
+    if op in ("fst", "snd"):
+        # p.0 / p.1: a plain field read on whatever `cexpr` already
+        # renders for the pair-typed operand.
+        field = "a" if op == "fst" else "b"
+        return f"({cexpr(args[0], env, funs, task_name, _div_style)}).{field}"
     if op == "neg":
         return f"(-{_gap(cexpr(args[0], env, funs, task_name, _div_style))})"
     if op == "not":
@@ -1188,6 +1737,63 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         y_pos = f"(({yc}) > 0)"       # 0 or 1
         sign_y = f"({y_pos} - {y_neg})"          # 1 or -1 (y != 0)
         return f"({quo} - {neg} * {sign_y})"
+    if op in ("==", "!="):
+        t0 = typ(args[0], env, funs)
+        if isinstance(t0, dict) and "pair" in t0:
+            # PAIRS, extended 2026-09-10: `p == q` in EXECUTABLE position
+            # (SPEC.md's polymorphic `==`, `fz_v1pairs_053`'s own
+            # `eq_params` shape, one of the 9 tasks that used to read
+            # framac malformed/malformed). C has no struct `==` this
+            # lowering trusts here any more than `pred()`'s own
+            # componentwise ACSL branch above does (a plain C struct
+            # comparison is not even legal syntax for an aggregate
+            # type, so left unhandled this would have kept emitting
+            # `(p == q)` on two `struct` operands once the cparams fix
+            # below gave them a real struct type -- a SECOND malformed
+            # cause on the same task, only visible once the first one
+            # was fixed). Componentwise, the same rule `pred()`'s own
+            # branch above uses.
+            #
+            # BRANCH-FREE, not `cexpr()`'s ordinary "and" (`&&`):
+            # MEASURED on `fz_v1pairs_053`'s own wrong-var twin (`p == q`
+            # mutated to `q == q`, a certificate whose replay substitutes
+            # LITERAL struct values for `p`/`q`): a plain `&&` gives WP's
+            # smoke-test instrumentation a real CFG branch (the "first
+            # conjunct false, second never evaluated" arm), and once the
+            # first conjunct is a REFLEXIVE or otherwise Qed-decidable
+            # comparison on ground literals, that arm is provably dead --
+            # correctly DOOMED, the harmless finding `_all_obligations_
+            # proved` already exempts everywhere else, but the
+            # certificate's own audit (`_cert_status`, `verifiers/
+            # framac.py`) has no matching exemption for a doomed smoke
+            # goal INSIDE the certificate function itself, so the
+            # refutation certificate was rejected (UNPROVED, not
+            # REFUTED) for a reason that has nothing to do with whether
+            # the refutation itself holds. Both `fst`/`snd` projections
+            # are ALWAYS DEFINED on a pair (SPEC.md's own words), with no
+            # side effect either, so unlike the general `and`/`or` case
+            # (`code_ats`'s conservative refusal exists because a SECOND
+            # conjunct's safety can genuinely depend on the first, `at`/
+            # `div` being the reason `&&` must short-circuit there) there
+            # is nothing here for short-circuiting to protect: `&`
+            # (bitwise, on two already-0/1 C ints) gives the identical
+            # boolean VALUE with no implicit branch for a smoke test to
+            # find dead, the same branch-free-over-a-real-C-operator
+            # move the DIVMOD section above already made for the
+            # identical reason (see its own "BRANCH-FREE, corrected
+            # 2026-09-09" comment). Scope: this rewrite only, not
+            # `cexpr()`'s general "and"/"or" case, which stays `&&`/`||`
+            # everywhere else in this file, short-circuiting exactly
+            # where that is load-bearing for safety.
+            a, b = args
+            fst_eq = {"op": "==", "args": [{"op": "fst", "args": [a]},
+                                           {"op": "fst", "args": [b]}]}
+            snd_eq = {"op": "==", "args": [{"op": "snd", "args": [a]},
+                                           {"op": "snd", "args": [b]}]}
+            fc = cexpr(fst_eq, env, funs, task_name, _div_style)
+            sc = cexpr(snd_eq, env, funs, task_name, _div_style)
+            eq = f"({fc} & {sc})"
+            return eq if op == "==" else f"(!{eq})"
     if op in ARITH or op in CMP:
         o = ARITH.get(op) or CMP[op]
         return (f"({cexpr(args[0], env, funs, task_name, _div_style)} {o} "
@@ -1797,8 +2403,27 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
                     "buffer from); only a seq RETURN is implemented")
             out += at_asserts(v["init"], ctx, indent, ctx.funs, task_name)
             ctx = ctx.bind(v["name"], v["type"])
-            out.append(f"{indent}int {v['name']} = "
-                       f"{cexpr(v['init'], ctx.env, ctx.funs, task_name)};")
+            if isinstance(v["type"], dict) and "pair" in v["type"]:
+                # PAIRS, extended 2026-09-10: a pair-typed LOCAL (`var p:
+                # (int, int) := ...;`), one of the two gaps the section
+                # comment above `_pair_field_c` named by construction
+                # ("stmts()'s `var` case has no pair-typed branch"). No
+                # committed or fuzzed task declares one yet (found by
+                # scanning the whole v1pairs corpus, not measured on a
+                # real cell), so this is written for the same reason
+                # `_cev`'s "update"/"fill" cases are: a complete rule, not
+                # a rule stopped at the first task that happens to need
+                # it. Declared as the struct type, by-value, exactly like
+                # a pair-typed RETURN or PARAMETER; `_pair_struct_name`
+                # still raises BY NAME for a seq component, so this
+                # inherits that same named refusal rather than widening
+                # it.
+                sname = _pair_struct_name(*v["type"]["pair"])
+                out.append(f"{indent}struct {sname} {v['name']} = "
+                           f"{cexpr(v['init'], ctx.env, ctx.funs, task_name)};")
+            else:
+                out.append(f"{indent}int {v['name']} = "
+                           f"{cexpr(v['init'], ctx.env, ctx.funs, task_name)};")
         elif "if" in s:
             c = s["if"]
             out += at_asserts(c["cond"], ctx, indent, ctx.funs, task_name)
@@ -2144,6 +2769,21 @@ def _cev(e: dict, st: dict):
         if n < 0:
             raise _CertSkip("undefined fill in replay")
         return [v] * n
+    if op == "pair":
+        # SPEC.md "Pairs" (2026-09-10): a pair value, defined iff both
+        # components are (both already evaluated above by the time this
+        # line runs). Represented as a plain 2-element Python list, the
+        # SAME shape `interp.py`'s own `_j` gives a witness's pair value
+        # (`[a, b]`, never `interp.Pair`, so `_tty` below can compare a
+        # replayed pair straight against `w["_twin"]` with no conversion
+        # step) -- distinct in practice from a seq value only because the
+        # two are never compared against each other here (a task's
+        # RETURN type, fixed before any replay starts, already says which
+        # one `st[ret]` must be).
+        return [_cev(args[0], st), _cev(args[1], st)]
+    if op in ("fst", "snd"):
+        p = _cev(args[0], st)
+        return p[0 if op == "fst" else 1]
     if op in DIVMOD:
         # SPEC.md Euclidean div/mod, same ground formula as interp.py: the
         # Python `%` with an absolute-value modulus already returns the
@@ -2235,6 +2875,22 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
     if op == "at":
         return (f"{seq_var(args[0], ctx.env)}"
                 f"[{_cert_cexpr(args[1], ctx, st, funs, name, asserts, ind)}]")
+    if op == "pair":
+        # divmod_pair's own case: `pair(div(x, y), mod(x, y))` has a
+        # `div`/`mod` node nested inside it, so this branch (not
+        # `cexpr()`'s, taken only when `_has_divmod(e)` is false) is what
+        # actually renders it during certificate replay; same struct
+        # compound literal `cexpr()`'s own "pair" case builds, ground-
+        # decided component text threaded through instead.
+        t1 = typ(args[0], ctx.env, funs)
+        t2 = typ(args[1], ctx.env, funs)
+        sname = _pair_struct_name(t1, t2)
+        a_c = _cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)
+        b_c = _cert_cexpr(args[1], ctx, st, funs, name, asserts, ind)
+        return f"(struct {sname}){{{a_c}, {b_c}}}"
+    if op in ("fst", "snd"):
+        field = "a" if op == "fst" else "b"
+        return f"({_cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)}).{field}"
     if op == "neg":
         sub = _cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)
         return f"(-{_gap(sub)})"
@@ -2355,8 +3011,20 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
 
 def _tty(v):
     """Value tagged with its t type (bool is not int; interp._tv precedent,
-    restated locally so this file keeps importing nothing of interp's)."""
-    return ("bool", v) if isinstance(v, bool) else ("int", v)
+    restated locally so this file keeps importing nothing of interp's).
+
+    "pair", added 2026-09-10 (SPEC.md "Pairs"): `_cev`'s own "pair" case
+    (above) and a witness's `_twin`/`_real` (`interp._j`'s rendering) both
+    give a pair value as a plain 2-element list, so tagging any `list`
+    this way is enough to compare them -- no seq value ever reaches this
+    function alongside one (a seq-returning task is excluded from
+    `_value_certificate` before either side of the comparison is built,
+    unchanged by this construct)."""
+    if isinstance(v, bool):
+        return ("bool", v)
+    if isinstance(v, list):
+        return ("pair", v)
+    return ("int", v)
 
 
 def _value_certificate(task: dict, twin_body: list, w: dict,
@@ -2364,21 +3032,45 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
     """The VALUE-kind certificate function's source text, or None with the
     reason left to the caller's honesty: only a certifiable witness earns
     one. Unchanged by the 2026-09-09 seq construct: neither committed task
-    reaches this branch (swap's witness is `undefined`, reverse's is
-    `exit`), and a seq-typed RETURN refuses here rather than emit the
-    plain `int {n};` this function's OWN decls would give it (wrong for a
-    pointer+length pair) -- a documented gap, not a silent one, matching
-    RULES ("measure before designing"): fixing it needs its own measured
-    probe this construct wave did not need."""
+    of that wave reaches this branch (swap's witness is `undefined`,
+    reverse's is `exit`), and a seq-typed RETURN still refuses here rather
+    than emit the plain `int {n};` this function's OWN decls would give it
+    (wrong for a pointer+length pair) -- a documented gap, not a silent
+    one, matching RULES ("measure before designing"): fixing it needs its
+    own measured probe this construct wave did not need.
+
+    PAIRS, extended 2026-09-10: `divmod_pair`'s own `wrong-var` twin IS a
+    value witness (loop-free, so the whole function is one straight-line
+    replay) and IS how that task counts (framac has no other route to
+    REFUTED here; the twin's own contract just times out otherwise, the
+    same shape every other value-changing twin in AGREEMENT.md has). A
+    pair-typed return's witness value is a 2-element list (`interp._j`'s
+    rendering, restated as `_tty`'s new "pair" tag above), never a bare
+    bool/int, so the ground-replay gate below now accepts EITHER shape
+    and the return-and-locals declaration loop declares the struct type
+    for `ret` specifically (every other declared name -- params, other
+    locals -- is still a plain `int`, unaffected)."""
     if w.get("_kind") != "value" or w.get("_ens") is not True:
         return None                    # loop-state or non-falsifying witness
-    if not isinstance(w.get("_twin"), (bool, int)):
+    ret, rett = task["returns"][0]["name"], task["returns"][0]["type"]
+    is_pair = isinstance(rett, dict) and "pair" in rett
+    twin_val = w.get("_twin")
+    if is_pair:
+        if not (isinstance(twin_val, list) and len(twin_val) == 2
+               and all(isinstance(x, (bool, int)) for x in twin_val)):
+            return None                # e.g. a pair with a seq component
+    elif not isinstance(twin_val, (bool, int)):
         return None                    # no-value twins have no ground replay
     if CERT_FN in used or CERT_GOAL in used:
         return None                    # a task name would collide or forge
-    ret, rett = task["returns"][0]["name"], task["returns"][0]["type"]
     if rett == "seq":
         return None                    # see the docstring above
+    struct_name = None
+    if is_pair:
+        try:
+            struct_name = _pair_struct_name(*rett["pair"])
+        except NotImplementedError:
+            return None                # a pair-of-seq return, refused
     st, decls = {}, []
     try:
         for p in task["params"]:
@@ -2401,6 +3093,31 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                 decls.append(f"  int *{p['name']} = {arr};")
                 decls.append(f"  int {p['name']}_n = {len(vals)};")
                 st[p["name"]] = vals
+            elif isinstance(p["type"], dict) and "pair" in p["type"]:
+                # PAIRS, extended 2026-09-10 (the parameter fix above
+                # `_pair_field_c`): a pair-typed PARAMETER's witness
+                # value is a 2-element list, the exact shape a pair-typed
+                # RETURN's own witness already has (`_tty`'s "pair" tag
+                # above; `interp._j`'s rendering for either). Declared as
+                # a ground struct-by-value local via a compound literal,
+                # the same construction `cexpr()`'s own "pair" case
+                # builds for the REAL/twin bodies. Before this branch, a
+                # pair-typed param fell into the plain `else` below and
+                # tried to format a 2-element LIST as a C `int`
+                # initializer -- never reached by `divmod_pair`/`min_max`
+                # (neither has a pair-typed param), so this is a gap this
+                # fix closes rather than a regression it introduces.
+                if not (isinstance(v, list) and len(v) == 2):
+                    return None            # not a ground pair witness
+                try:
+                    psname = _pair_struct_name(*p["type"]["pair"])
+                except NotImplementedError:
+                    return None            # a pair-of-seq param, refused
+                a0 = int(v[0]) if isinstance(v[0], bool) else v[0]
+                b0 = int(v[1]) if isinstance(v[1], bool) else v[1]
+                decls.append(f"  struct {psname} {p['name']} = "
+                             f"(struct {psname}){{{a0}, {b0}}};")
+                st[p["name"]] = v
             else:
                 decls.append(f"  int {p['name']} = "
                              f"{int(v) if isinstance(v, bool) else v};")
@@ -2409,7 +3126,8 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
         names = [ret] + [d for d in dec if d != ret]
         if len(set(dec)) != len(dec) or set(dec) & set(st):
             return None                # flattening scopes would collide
-        decls += [f"  int {n};" for n in names]
+        decls += [f"  {'struct ' + struct_name if is_pair and n == ret else 'int'}"
+                 f" {n};" for n in names]
         body_out: list = []
         _cert_stmts(twin_body, Ctx(env, funs, ret=None, label="Here"),
                     st, task["name"], body_out, [0])
@@ -2797,7 +3515,38 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                 f"name {s}_n collides with the fresh length parameter "
                 f"for seq {s}")
 
+    # PAIRS (SPEC.md "Pairs", 2026-09-10): a pair-typed RETURN's struct
+    # type must be declared before anything in the file uses it (the
+    # contract's `\result.a`/`\result.b`, the function's own C prototype,
+    # and, when this task's twin is certifiable, the appended certificate
+    # function's own local of the same type) -- see the section comment
+    # above `_pair_field_c`. `pair_ty`/`struct_name` stay RETURN-specific
+    # (both committed tasks build their pair only as the return's own
+    # final value, and `ret_decl`/`cfun_ret_ty`/the certificate below all
+    # still key off exactly this), kept byte-identical for both.
+    pair_ty = rett if isinstance(rett, dict) and "pair" in rett else None
+    struct_name = (_pair_struct_name(*pair_ty["pair"])
+                  if pair_ty is not None else None)
+
+    # FIXED 2026-09-10, alongside the parameter/local fix above
+    # `_pair_field_c`: a pair can also arrive as a PARAMETER, a LOCAL, or
+    # a `pair(...)` built and immediately projected without ever being
+    # bound to a name (`fz_p_pair_proj`), none of which the RETURN-only
+    # check above ever saw. `_pair_types_needed` finds every distinct
+    # shape actually used; only the ones NOT already covered by the
+    # return's own struct (declared above, unchanged) get a second
+    # declaration line, so a non-pair task or a pair-RETURN-only task
+    # (every task this backend already had before today) emits the exact
+    # same header as before, byte for byte.
+    declared_pairs = {tuple(pair_ty["pair"])} if pair_ty is not None else set()
+    extra_pair_types = [pt for pt in _pair_types_needed(task, body, env, funs)
+                        if pt not in declared_pairs]
+
     header = []
+    if pair_ty is not None:
+        header.append(f"struct {struct_name} {{ int a; int b; }};")
+    for pt in extra_pair_types:
+        header.append(f"struct {_pair_struct_name(*pt)} {{ int a; int b; }};")
     if _has_divmod(task) or _has_divmod(body):
         header.append(T_DIVMOD_ACSL.rstrip("\n"))
     for f in task.get("spec_funs", []):
@@ -2911,6 +3660,23 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     for p in task["params"]:
         if p["type"] == "seq":
             cparams += [f"int *{p['name']}", f"int {p['name']}_n"]
+        elif isinstance(p["type"], dict) and "pair" in p["type"]:
+            # FIXED 2026-09-10 (see the section comment above
+            # `_pair_field_c`): before this branch existed, a pair-typed
+            # PARAMETER fell into the plain `else` below and was declared
+            # `int`, a silent wrong lowering (a struct-shaped value
+            # handed to the function as a bare `int`), read by frama-c as
+            # MALFORMED the moment the body or contract read a field off
+            # it. Passed BY VALUE, exactly the RETURN's own encoding
+            # (candidate (a) from the section comment above
+            # `_pair_field_c`'s pair value machinery, measured to work
+            # for a return; MEASURED again here for a parameter,
+            # `fuzz_lower.py --only framac` on the residual, since WP's
+            # Typed model treating a value parameter and a value return
+            # alike is not something this file assumes without running
+            # it).
+            sname = _pair_struct_name(*p["type"]["pair"])
+            cparams.append(f"struct {sname} {p['name']}")
         else:
             cparams.append(f"int {p['name']}")
     if rett == "seq":
@@ -2952,9 +3718,16 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         tail = "" if _always_returns(body) else f"  return {LEN};\n"
     else:
         tail = "" if _always_returns(body) else f"  return {ret};\n"
-    ret_decl = (f"  int {LEN};\n" if capacity_mode else
+    # PAIRS (2026-09-10): a pair-typed RETURN's local and the function's
+    # own C prototype are both the struct type declared in `header`
+    # above (never `int`); `pair_ty`/`struct_name` are None for every
+    # other task, so both branches below are no-ops there and every
+    # non-pair task's C is unaffected byte-for-byte.
+    ret_decl = (f"  struct {struct_name} {ret};\n" if pair_ty is not None else
+               f"  int {LEN};\n" if capacity_mode else
                ("" if rett == "seq" else f"  int {ret};\n"))
-    cfun_ret_ty = ("void" if rett == "seq" and not capacity_mode
+    cfun_ret_ty = (f"struct {struct_name}" if pair_ty is not None else
+                  "void" if rett == "seq" and not capacity_mode
                   else "int")
     return ("\n".join(header) + ("\n" if header else "")
             + "/*@\n" + "\n".join(clauses) + "\n*/\n"

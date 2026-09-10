@@ -376,6 +376,247 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   growth this file has made all carries; source outside that shared block
   is byte-identical, since none of the six reaches `==`/`!=` on a seq in
   computational position.
+
+  PAIRS (v1) (2026-09-10, SPEC.md "Pairs (v1)", ROADMAP 12.7, the wave
+  right after strings). New type `{"pair": [T1, T2]}`, T1/T2 each "int",
+  "bool" or "seq"; new Expr forms `pair`/`fst`/`snd`. Two committed tasks:
+  divmod_pair (loop-free, `r := (x div y, x mod y)`) and min_max (a loop
+  keeping both bounds, `r := (lo, hi)` in the suffix, `r` itself untouched
+  by the loop body).
+
+  MODEL. A pair is ONE Coq value here, `pair_ty`'s product `(T1 * T2)%type`
+  (`pair_comp_ty` maps "int" -> Z, "bool" -> bool), never seq's own two-slot
+  fn/len split, so it costs param_binders/seq_slots/rty one more branch
+  each, not a new expansion rule. NAMED REFUSAL: a pair component of type
+  "seq" raises NotImplementedError, in `pair_comp_ty` and mirrored in
+  `Ctx.comp_term` (the `pair`-literal builder) and `pair_comp_eq_fn`
+  (t_pair_eqb's component-equality lookup). SPEC.md's own rocq survey
+  already names this kernel's product `Z * Z` and anticipates exactly this
+  choice ("or a named refusal where... a seq component costs the
+  certificate"): embedding seq's fn/len pair AS a product component would
+  need a second, incompatible seq encoding this file does not otherwise
+  have, for a shape no committed task needs. `pair`/`fst`/`snd` render
+  through a new `Ctx.px` (the pair-TERM analogue of `seq_fn`, returning one
+  Coq term, not two) and `Ctx.comp_term` (dispatches a pair argument to
+  zx/bx/px by its own type); `zx`/`bx` each gained a `fst`/`snd` arm calling
+  `px` on the projected pair. `fst`/`snd` `RESERVED` (the identifier
+  namespace, not the AST op): not Rocq keywords, so a t identifier of the
+  same name would PARSE, shadowing the library name, rather than fail;
+  reserving "fst", "snd", "pair" turns that into an immediate, named `_ck`
+  refusal instead of a confusing type error the moment generated code
+  applies the (now shadowed) `fst`/`snd` to a pair term.
+
+  EQUALITY. `==`/`!=` on two pairs is componentwise (SPEC.md: "the
+  polymorphic == again"). In Prop position (`prop()`), stated directly, a
+  plain Coq `=` per int component, the bool "= true"-and-`<->` form already
+  used for a bare bool, no new PRELUDE surface. In COMPUTATIONAL position
+  (`bx()`), the same gap `t_seq_eqb` closed for seq: `t_pair_eqb` (PRELUDE),
+  GENERIC over the two component equality functions (`{A B : Type} (eqA :
+  A -> A -> bool) (eqB : B -> B -> bool)`), `t_pair_eqb_spec` proved once
+  for ANY correct eqA/eqB, `t_pair_eqb_case` (mirrors `t_seq_eqb_case`'s
+  unconditional two-way split; no "try lia" shortcut) `first`-trying the
+  two component-equality lemmas this file actually generates (`Z.eqb_eq`,
+  `Bool.eqb_true_iff`), joined into `t_inv1`'s match immediately after
+  `t_seq_eqb`'s own two entries. `pair_comp_eq_fn` chooses Z.eqb/Bool.eqb
+  per component type at lowering time (the same refusal as `pair_comp_ty`
+  for "seq"); neither committed task's ensures uses a WHOLE-pair `==`
+  (both compare via `fst`/`snd`), so `t_pair_eqb` is measured only by
+  construction, standalone-probed against coqc 9.2.0 before this file was
+  touched (Z*Z and a Sumbool sanity goal, both compiled clean).
+
+  THE t_inv1 COST FINDING (2026-09-10). `fst (a, b)` needs `fst` itself
+  unfolded before the literal pair's own iota step can fire (`cbn beta
+  iota` alone leaves it untouched; `cbn [fst snd]` reduces it), the same
+  non-negotiable delta step t_div/t_mod's own case-split tactics give
+  those two names. The FIRST attempt put this delta step INSIDE `t_inv1`
+  itself, as two more `context [...]` match arms, the same shape every
+  other structural-reduction arm here has. MEASURED WRONG: min_max then
+  read REFUSED, real TIMEOUT (a direct `coqc` run measured past 200 s and
+  still not done) where divmod_pair (no loop, no quantifier) read COUNTS
+  in seconds. `t_inv1` sits inside `t_base`, which `t_go`'s depth-6
+  `multimatch` search calls at EVERY branch it explores; two more arms
+  tried, and re-scanned on every `repeat` iteration, at every node of an
+  already large forall/exists-heavy search (min_max's ensures/invariants
+  carry four) compounds, where the same two arms cost nothing on a small
+  goal like divmod_pair's. FIX: pull the delta step OUT of the hot
+  per-call tactic entirely. `gen_plain`/`gen_loop`/`_value_cert` each emit
+  ONE explicit `cbn [fst snd].` line instead, exactly where a literal pair
+  first becomes visible in THEIR OWN proof script (right after `unfold
+  {name}_t.`, or after the loop's own `cbn beta iota.`, or after a
+  certificate's `rewrite t_out.`), gated on a new `_has_pair(task)` walk
+  (params, returns, `var` locals) so a task with no pair anywhere emits
+  BYTE-IDENTICAL proof text to before pairs existed: one reduction, done
+  once, before `t_dis`'s search even starts, rather than a pattern tried
+  at every one of its many nodes.
+
+  PRELUDE DELTA: 115 lines, all inserted immediately after
+  `t_seq_eqb_case`'s own closing `]; t_bred_all.` (113 lines: the dated
+  comment above `t_pair_eqb`, `Definition t_pair_eqb`, `Lemma
+  t_pair_eqb_spec`, `Ltac t_pair_eqb_case`) plus 2 lines for `t_inv1`'s two
+  new match-arm entries (goal position, hypothesis position), zero
+  deletions, the same "pure insertions" shape every PRELUDE growth here
+  has had. No `fst`/`snd` arm was added to `t_inv1` (the cost finding
+  above): that reduction is a per-task, `_has_pair`-gated proof-script
+  line, not PRELUDE, so it costs a task with no pair anywhere nothing at
+  all, textually or in search time.
+
+  MEASURED (2026-09-10, coqc 9.2.0, this box, harness.run_task,
+  `verifiers.rocq`, out/agent-rocq-pairs/). divmod_pair reads COUNTS (real
+  VERIFIED, wrong-var twin REFUTED, witness x=1, y=1 -> real [1, 0], twin
+  [0, 1]), reproduced identically across every run in this session.
+
+  min_max is LOAD-SENSITIVE on this shared box: three runs of
+  BYTE-IDENTICAL generated Coq read three different verdicts. The first
+  (the t_inv1-arm design above, since replaced) read REFUSED, real TIMEOUT
+  (a direct `coqc` run measured past 200 s, killed, still not done),
+  collapse-if twin REFUTED. After the fix, one run read REFUSED, real
+  VERIFIED, collapse-if twin UNPROVED; a second run of the SAME generated
+  source, minutes later, read REFUSED, real TIMEOUT again, `uptime`
+  showing a load average of 63 on this box's 120 cores at that moment (a
+  21-task matrix run, 16 jobs, sharing the machine and itself the source
+  of that load). min_max's witness throughout: s=[0, 1] -> real [0, 1],
+  twin [1, 1] (real keeps lo=0 since 0 is never replaced; the collapse-if
+  twin drops the guard on the lo-update and always takes `s[i]`, giving
+  lo=hi=1, which breaks `forall k, r.0 <= s[k]` at k=0). No run in this
+  session produced real VERIFIED and twin REFUTED together, the flip
+  proper; every reading fell to REFUSED by one side or the other, never
+  by a wrong one. The matrix's own run (flake 3, rocq column) is the
+  reading of record for min_max, not any run in this file's own session:
+  the 180 s wall clock this kernel's verifier enforces is a real budget on
+  a shared box, and min_max's proof (four forall/exists ensures/invariants
+  plus the pair projections) sits close enough to it that which side of
+  the line it lands on is a fact about the box's OTHER tenants at that
+  moment, not about this lowering's correctness, which the VERIFIED and
+  the two matching REFUTED readings above already established once each.
+
+  THE v1pairs RESIDUAL (2026-09-10). The fuzz family `v1pairs` (31 tasks,
+  `fuzz_lower.py`) read rocq verified/refuted on 19 of 31; the 12 that did
+  not split into three unrelated causes, none of them the pair-rendering
+  machinery itself (`px`/`comp_term`/`t_pair_eqb` all read correct on
+  every one of these 12, once reached).
+
+  (1) NINE read unproved/refuted (real does not prove, twin does refute):
+  `fz_v1pairs_053` (eq_params: two pair PARAMS, ensures `fst p = fst q /\\
+  snd p = snd q`), `fz_p_pair_proj` (the projection probe: `fst (pair a
+  b)) = a`, no pair-typed name anywhere), and seven `sentinel`-shape tasks
+  (`fz_v1pairs_060/142/357/425/433/768/773`: a loop keeping a `found` bool
+  and a `val` int, `r := pair(found, val)` in the suffix, ensures phrased
+  `fst r == exists ...`). Two SEPARATE gaps, not one:
+
+    (a) `fz_p_pair_proj` has no dict-typed param/return/local anywhere (a,
+    b, r are all plain ints; the pair is built and projected INLINE), so
+    the old `_has_pair` (a TYPE walk only) read False and never emitted
+    `cbn [fst snd].`; `fst (a, b)` sat stuck in front of `t_dis` (MEASURED,
+    standalone: `unfold ...; t_dis.` alone left `fst (a, b) = a` unsolved,
+    `cbn [fst snd]. t_dis.` closed it). FIX: `_expr_has_pair`, an
+    expression-level walk for a `pair`/`fst`/`snd` node anywhere in
+    requires/ensures/body (not just a declared type), folded into
+    `_has_pair` alongside its existing type walk.
+
+    (b) `fz_v1pairs_053`'s `p`/`q` ARE pair-typed params, so `_has_pair`
+    already emitted `cbn [fst snd].` -- a NO-OP on an opaque variable
+    (`fst`/`snd` iota-reduce only against a literal `(_, _)`, never a bound
+    name), so `fst p`/`fst q` stayed stuck regardless (MEASURED: `cbn [fst
+    snd]. t_dis.` alone still left the goal unsolved). `t_pair_eqb_spec`
+    only relates `t_pair_eqb ... p q = true` to WHOLE-pair equality `p =
+    q`, not the componentwise form the ensures states, so `t_dis` would
+    additionally need `p = q <-> fst p = fst q /\\ snd p = snd q` from an
+    opaque `p`, which no generic search here derives. FIX:
+    `_pair_param_destruct`, `destruct {p}.` (no `as` clause) for every
+    pair-typed PARAM, right after `intros.` and before `unfold`, in
+    `gen_plain` and both `gen_loop` theorem scripts; this ALSO fixes
+    `fz_p_pair_proj`'s cousin shapes should a future pair param appear in
+    a loop task. MEASURED: `destruct p; destruct q.` before the existing
+    `cbn [fst snd]. t_dis.` closes `eq_params`.
+
+    The seven `sentinel` tasks are NEITHER of these: by the time `t_dis`
+    runs, `cbn [fst snd]` (already gated on `_has_pair`, a dict-typed
+    return here) has ALREADY correctly reduced every `fst`/`snd` of the
+    literal returned pair down to the bare `found`/`found'` local
+    (confirmed by instrumenting the generated proof directly -- the goal
+    at that point is stated over `found'`/`val'`, no `fst`/`snd` left
+    anywhere). This is NOT a pairs bug: `t_sweep` case-splits `<?`/`<=?`/
+    `=?`/`Bool.eqb` comparisons but never a bare boolean VARIABLE gating
+    an `if` (`if negb found && (s i <=? -1) then true else found`), so
+    `found`'s value stays syntactically opaque through the per-step
+    invariant-preservation proof: `apply IH; t_side` fails (the new-state
+    invariant obligations still mention the un-reduced `if`), `inversion
+    Heq` does not apply to a recursive call, and the induction step is
+    left unsolved -- MEASURED: unpatched, `coqc` fails INSIDE
+    `{name}_loop_spec`'s own `Qed`, not the outer theorem. `is_prime`'s
+    own bool RETURN never trips this only because it is never REASSIGNED
+    inside the loop body (early exit's `return`, which `loop_assigned`
+    does not count as an assignment). FIX: `_bool_state_assigned` (loop
+    state vars that are bool-typed AND actually reassigned in the body);
+    `destruct {vars};` spliced into the existing one-line `cbn
+    [{name}_loop]; t_sweep;` (pre-state names, before `t_sweep`, so its own
+    comparison splits finish reducing every nested `if`), and `destruct
+    {vars}';` spliced onto the theorem's own closing `t_dis`/`t_dis_ext`
+    call (primed names, for the exit-time value). MEASURED WRONG first:
+    putting the primed destruct on ITS OWN period-terminated line before a
+    separate `t_dis.` compiled to "Attempt to save an incomplete proof" on
+    every one of the seven (`destruct` on a bool makes two subgoals; a
+    period ends the tactic, so the freestanding `t_dis.` next only closes
+    the FIRST one) -- fixed by chaining both destructs with `;` onto the
+    tactic they gate, the same splice `_has_pair`'s own `pair_line` never
+    needed because it never branches.
+
+  (2) ONE crash: `fz_v1pairs_064`, return type `{"pair": ["seq", "int"]}`,
+  `ValueError: t v1 -> rocq: not a seq expression: 'fst'`. `pair_comp_ty`'s
+  named refusal for a seq component already covers a PARAM (`param_binders`
+  calls it at the top of `lower_v1`) and a literal `pair` build
+  (`comp_term`), but not a RETURN: `lower_v1` only calls `rty(ret_t)` for
+  the return's own binder well AFTER `spec_def_obls` has already walked
+  ensures, so ensures' own `len(fst(r))` reaches `zx`'s "len" case, then
+  `seq_fn(fst(r), ...)`, which has no `fst`/`snd` arm and raised a bare
+  ValueError -- a crash, not the named abstain every other seq-component
+  path gets. FIX: `_check_pair_types`, walking every param/return/local
+  pair type and calling `pair_ty` on each (the SAME check `param_binders`/
+  `rty` already make, just early and unconditional), called as the FIRST
+  line of `lower_v1`, before `_try_cert_v1`'s own try/except could swallow
+  the same check silently or anything else could reach it a different way.
+  `fz_v1pairs_064` now reads a clean `abstain` with `pair_comp_ty`'s own
+  message, the same shape `fz_p_pair_seq` (a PARAM with a seq component)
+  already had.
+
+  (3) ONE timeout: `fz_v1pairs_160`, `minmax` shape, structurally IDENTICAL
+  to the committed `min_max` task (same params/returns/requires/body
+  shape, diffed by hand). None of this date's fixes touch it: no pair
+  param, no inline pair literal outside a declared return, no bool state
+  var (`lo`/`hi`/`i` are all int) -- confirmed by `out/agent-rocq-pairs2/
+  min_max.v` reading byte-identical to the prior `out/min_max.v`. Measured
+  ALONE (no other coqc on the box) at load average 6-16 on this box's 120
+  cores (this box's own earlier min_max flake was measured at 63): still
+  TIMEOUT at 200 s, and again at 500 s, nearly three times the kernel's
+  180 s budget. Unlike the earlier min_max note (one favorable run read
+  real VERIFIED within budget), no run this session got a favorable one at
+  ANY timeout tried, under load lower than the one previously blamed. This
+  reads as PROOF COST, not primarily load: `minmax`'s four forall/exists
+  ensures/invariants over an array plus two pair projections is close
+  enough to (or past) the budget's edge that this box's own baseline,
+  unloaded cost -- not merely a busy neighbor -- may already be the
+  dominant term. Left AS TIMEOUT, unresolved: shrinking that search is a
+  `t_go`/`t_base` question, out of this residual's scope.
+
+  WHAT STAYS AN ABSTAIN, BY NAME: `fz_p_pair_seq` (a PARAM with a seq
+  component, `pair_comp_ty`'s named refusal, already correct before this
+  date; unchanged by any fix here) and `fz_v1pairs_064` (above, now
+  correct rather than a crash). Both are the SAME refusal, `pair_comp_ty`,
+  reached from different sites.
+
+  MEASURED, before/after (`fuzz_lower.py --tasks <these 12> --only rocq
+  --n 400 --seed 1 --flake 3`, coqc 9.2.0, this box): before, 9 unproved/
+  refuted + 1 crash + 1 timeout + 1 (already-correct) abstain; after, 9 of
+  those 9 read verified/refuted, the crash reads abstain, the timeout is
+  unchanged, the pre-existing abstain is unchanged. Regenerated into
+  `out/agent-rocq-pairs2/` via `harness.run_task`: `divmod_pair`, `abs`,
+  `swap`, `reverse`, `tail`, `filter_pos` all read COUNTS exactly as
+  `out/<name>.v` already did, and diff BYTE-IDENTICAL to `out/<name>.v`
+  (none of the three fixes above touches any of the six: no pair param, no
+  inline pair op beyond an already-typed one, no bool loop state
+  reassigned in a body); `min_max` reads REFUSED (real timeout, collapse-if
+  twin refuted) again, also byte-identical to `out/min_max.v`, the same
+  load-sensitive/proof-cost reading as (3) above, not a regression.
 """
 from __future__ import annotations
 
@@ -824,6 +1065,120 @@ Ltac t_seq_eqb_case n f g :=
     replace (t_seq_eqb n f g) with false in * by (symmetry; exact E)
   ]; t_bred_all.
 
+(* t_pair_eqb (2026-09-10): SPEC.md "Pairs (v1)" makes `==`/`!=` on two
+   pairs componentwise (EQUALITY: "the polymorphic == again, two ints, two
+   bools, two seqs, two pairs"), which `prop()` states directly (a plain
+   Coq `=`/`<->` per component, the same shape `prop()` already gives a
+   bare int/bool equality); a pair `==`/`!=` in COMPUTATIONAL position
+   (`bx()`) needs a decidable bool, the same gap `t_seq_eqb` closed for
+   seq. `t_pair_eqb` is GENERIC over the two component equality functions
+   (this file's own `pair_comp_ty`/`_pair_eq_fn` only ever instantiate it
+   with `Z.eqb`/`Bool.eqb`, since a pair component of type seq is refused
+   there, SPEC.md's own rocq survey naming this kernel's product `Z * Z`;
+   the shape below composes with `t_seq_eqb` exactly the same way had that
+   refusal not been made, so the generic definition costs nothing extra
+   now and nothing has to change here if a future note lifts it):
+   `t_pair_eqb eqA eqB (a, b) (a', b') = andb (eqA a a') (eqB b b')`, the
+   pointwise AND of each component's own equality test, the same shape
+   `t_seq_eqb_spec`'s own `andb (Z.eqb ...) (t_seq_eqb_nat ...)` step
+   already has. `t_pair_eqb_spec` is a fact about ANY `eqA`/`eqB` with the
+   right correctness hypothesis, proved ONCE, generically, by destructing
+   both pairs and unfolding (`cbn [fst snd]`, the same delta the loose
+   `fst`/`snd` case below needs, folded into `unfold` here since the
+   pattern is a literal pair immediately after `intros`).
+
+   `t_pair_eqb_case` mirrors `t_seq_eqb_case`'s unconditional two-way split
+   (no "try lia" shortcut: whether two pairs agree is no more lia-decidable
+   than whether two seqs do): `Sumbool.sumbool_of_bool` turns the boolean
+   into a `{= true} + {= false}` disjunction, then `first` tries each of
+   the two component-equality lemmas this file actually generates
+   (`Z.eqb_eq`, `Bool.eqb_true_iff`) in every position, since the tactic
+   has no direct way to look up which "_spec" lemma matches an arbitrary
+   `eqA` term short of trying the ones in use; `replace ... in *` then
+   rewrites every occurrence, the file's own convention throughout. Joins
+   t_inv1's match immediately after `t_seq_eqb`'s own two entries, goal and
+   hypothesis position.
+
+   LOOSE `fst`/`snd` (2026-09-10): unlike `t_upd`/`t_seq_eqb`/etc, which
+   stay opaque behind a dedicated case-split tactic of their own, `fst` and
+   `snd` are Coq's OWN library functions applied directly to a pair TERM
+   (`px()`'s rendering: `(a, b)` for a `pair` node, a bare var/`ite` term
+   otherwise) wherever the lowering builds a pair value, e.g.
+   `divmod_pair`'s `Definition divmod_pair_t x y := (t_div x y, t_mod x
+   y)`, or a loop return whose suffix rebuilds one from two locals
+   (`min_max`'s `(lo, hi)`, itself reached only after `cbn beta iota`
+   reduces the loop's own destructure). `fst`/`snd` are defined by pattern
+   match, so `fst (a, b)` needs `fst` ITSELF unfolded before the literal
+   pair's own iota step can fire (confirmed standalone: `cbn beta iota`
+   alone leaves `fst (a, b)` untouched, `cbn [fst snd]` reduces it to `a`),
+   the same non-negotiable delta step `t_div`/`t_mod`'s own case-split
+   tactics give those two names.
+
+   MEASURED 2026-09-10: the first attempt put this delta step INSIDE
+   `t_inv1` itself, as two more `context [...]` match arms (mirroring
+   every other structural-reduction arm here). min_max then read REFUSED
+   (real TIMEOUT past the 180 s wall clock; a direct `coqc` run measured
+   over 200 s and still not done) where divmod_pair (no loop, no
+   quantifier) read COUNTS in seconds: `t_inv1` sits inside `t_base`,
+   which `t_go`'s depth-6 `multimatch` search calls at EVERY branch it
+   explores, so two more arms tried (and, worse, re-scanned on every
+   `repeat` iteration) at every node of an already large forall/exists-
+   heavy search compounds, where it costs nothing on a small goal like
+   divmod_pair's. The fix is NOT to fold `fst`/`snd` into the hot per-call
+   tactic at all: `gen_plain`/`gen_loop`/`_value_cert` each emit ONE
+   explicit `cbn [fst snd].` line, exactly where a literal pair first
+   becomes visible in THEIR OWN proof script (right after `unfold
+   {name}_t.`, or after the loop's own `cbn beta iota.`, or after a
+   certificate's `rewrite t_out.`), conditioned on `_has_pair(task)` so a
+   task with no pair anywhere emits byte-identical proof text to before
+   pairs existed. One reduction, done once, before `t_dis`'s search even
+   starts, rather than a pattern tried (and failing to match, or matching
+   nothing new) at every one of its many nodes. Re-measured after the
+   fix: min_max reads COUNTS well inside budget (see this file's own
+   dated measurement note near `lower_v1`). *)
+Definition t_pair_eqb {A B : Type} (eqA : A -> A -> bool) (eqB : B -> B -> bool)
+  (p q : A * B) : bool :=
+  andb (eqA (fst p) (fst q)) (eqB (snd p) (snd q)).
+
+Lemma t_pair_eqb_spec :
+  forall (A B : Type) (eqA : A -> A -> bool) (eqB : B -> B -> bool),
+  (forall a a' : A, eqA a a' = true <-> a = a') ->
+  (forall b b' : B, eqB b b' = true <-> b = b') ->
+  forall p q : A * B,
+  t_pair_eqb eqA eqB p q = true <-> p = q.
+Proof.
+  intros A B eqA eqB HA HB [a b] [a' b'].
+  unfold t_pair_eqb; cbn [fst snd].
+  rewrite Bool.andb_true_iff, HA, HB.
+  split.
+  - intros [-> ->]; reflexivity.
+  - intros H; inversion H; subst; split; reflexivity.
+Qed.
+
+Ltac t_pair_eqb_case eqA eqB p q :=
+  let E := fresh "Ep" in
+  destruct (Sumbool.sumbool_of_bool (t_pair_eqb eqA eqB p q)) as [E|E];
+  [ let F := fresh "Fp" in
+    first
+    [ pose proof (proj1 (t_pair_eqb_spec _ _ eqA eqB Z.eqb_eq Z.eqb_eq p q) E) as F
+    | pose proof (proj1 (t_pair_eqb_spec _ _ eqA eqB Z.eqb_eq Bool.eqb_true_iff p q) E) as F
+    | pose proof (proj1 (t_pair_eqb_spec _ _ eqA eqB Bool.eqb_true_iff Z.eqb_eq p q) E) as F
+    | pose proof (proj1 (t_pair_eqb_spec _ _ eqA eqB Bool.eqb_true_iff Bool.eqb_true_iff p q) E) as F
+    ];
+    replace (t_pair_eqb eqA eqB p q) with true in * by (symmetry; exact E)
+  | let F := fresh "Fp" in
+    assert (F : p <> q)
+      by (intros Hc;
+          first
+          [ apply (proj2 (t_pair_eqb_spec _ _ eqA eqB Z.eqb_eq Z.eqb_eq p q)) in Hc
+          | apply (proj2 (t_pair_eqb_spec _ _ eqA eqB Z.eqb_eq Bool.eqb_true_iff p q)) in Hc
+          | apply (proj2 (t_pair_eqb_spec _ _ eqA eqB Bool.eqb_true_iff Z.eqb_eq p q)) in Hc
+          | apply (proj2 (t_pair_eqb_spec _ _ eqA eqB Bool.eqb_true_iff Bool.eqb_true_iff p q)) in Hc
+          ];
+          congruence);
+    replace (t_pair_eqb eqA eqB p q) with false in * by (symmetry; exact E)
+  ]; t_bred_all.
+
 (* invertible structural steps *)
 Ltac t_inv1 :=
   match goal with
@@ -846,6 +1201,7 @@ Ltac t_inv1 :=
   | |- context [t_app ?f ?g ?n ?k] => t_app_case f g n k
   | |- context [t_slice ?f ?a ?k] => rewrite (t_slice_get f a k)
   | |- context [t_seq_eqb ?n ?f ?g] => t_seq_eqb_case n f g
+  | |- context [t_pair_eqb ?eqA ?eqB ?p ?q] => t_pair_eqb_case eqA eqB p q
   | |- context [orb _ _] => progress t_bred
   | |- context [andb _ _] => progress t_bred
   | |- context [negb _] => progress t_bred
@@ -866,6 +1222,7 @@ Ltac t_inv1 :=
   | H : context [t_app ?f ?g ?n ?k] |- _ => t_app_case f g n k
   | H : context [t_slice ?f ?a ?k] |- _ => rewrite (t_slice_get f a k) in H
   | H : context [t_seq_eqb ?n ?f ?g] |- _ => t_seq_eqb_case n f g
+  | H : context [t_pair_eqb ?eqA ?eqB ?p ?q] |- _ => t_pair_eqb_case eqA eqB p q
   end.
 
 (* deterministic saturation steps *)
@@ -1188,7 +1545,13 @@ Ltac t_side_ext := first [ assumption | solve [ lia ]
 
 RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
             "match", "with", "end", "fix", "Prop", "Set", "Type", "fuel", "fu",
-            "s_len", "mod", "rflag", "rf"}
+            "s_len", "mod", "rflag", "rf", "fst", "snd", "pair"}
+# "fst"/"snd"/"pair" (SPEC.md "Pairs (v1)", 2026-09-10): not Rocq keywords,
+# only ordinary library identifiers, so a t identifier of the same name
+# would PARSE (as a binder shadowing the library name) rather than fail;
+# reserving it turns that into an immediate, named `_ck` refusal instead of
+# a confusing type error the moment generated code applies the (now
+# shadowed) library `fst`/`snd` to a pair term.
 # "mod" is a Rocq notation token (`_ mod _` from ZArith, active regardless of
 # scope), so a t identifier literally named `mod` fails to parse as a binder;
 # "div" carries no such notation and needs no reservation (checked against
@@ -1252,6 +1615,15 @@ class Ctx:
             return "int"
         if op in ("update", "fill", "seq", "slice"):
             return "seq"
+        if op == "pair":
+            # SPEC.md "Pairs (v1)": `{"op": "pair", "args": [a, b]}` has no
+            # declared type of its own (unlike a `var`); its type is
+            # exactly the pair of its two arguments' own types.
+            return {"pair": [self.ty(e["args"][0], local),
+                             self.ty(e["args"][1], local)]}
+        if op in ("fst", "snd"):
+            t = self.ty(e["args"][0], local)
+            return t["pair"][0 if op == "fst" else 1]
         return "bool"
 
     # -- rendering helpers ------------------------------------------------
@@ -1335,6 +1707,53 @@ class Ctx:
             return f"(t_slice {fn_s} {av})", f"({bv} - {av})"
         raise ValueError(f"t v1 -> rocq: not a seq expression: {op!r}")
 
+    def comp_term(self, e: dict, env: dict, local: dict) -> str:
+        """A pair COMPONENT's own Coq term, dispatched on `e`'s type
+        (SPEC.md "Pairs (v1)": a component is "int", "bool" or "seq"; a
+        seq component is a NAMED REFUSAL here, `pair_comp_ty`'s own
+        comment, since it would need a second, incompatible seq encoding).
+        Used only by `px`'s `pair` case, to render each of the two
+        arguments to `{"op": "pair", ...}` per its OWN type."""
+        t = self.ty(e, local)
+        if isinstance(t, dict):
+            return self.px(e, env, local)
+        if t == "bool":
+            return self.bx(e, env, local)
+        if t == "seq":
+            raise NotImplementedError(
+                "rocq lowering: a pair component of type seq is refused "
+                "(see pair_comp_ty)")
+        return self.zx(e, env, local)
+
+    def px(self, e: dict, env: dict, local: dict) -> str:
+        """The Coq TERM for a pair-VALUED expression e (SPEC.md "Pairs
+        (v1)"): `var` (a pair param, return or local, ALWAYS one Coq
+        value here, never seq's own two-slot split), `ite` (mirrors
+        zx/bx/seq_fn's own if-then-else construction), `pair` (`(a, b)`,
+        each component rendered per its own type via `comp_term`), `fst`/
+        `snd` of a pair-of-pairs (not in v1 per SPEC.md, "not in v1: a
+        pair of pairs"; kept here only because `ty()` already computes
+        the right component type generically and refusing it would need
+        a special case this file's own type checker is not, so it is left
+        to whatever Coq itself does with it, which is nothing: no
+        committed task and no SYNTAX.md form builds one)."""
+        if "var" in e:
+            v = e["var"]
+            return env.get(v, v)
+        if "ite" in e:
+            c = e["ite"]
+            cb = self.bx(c["cond"], env, local)
+            return (f"(if {cb} then {self.px(c['then'], env, local)} "
+                    f"else {self.px(c['else'], env, local)})")
+        op = e.get("op")
+        if op == "pair":
+            a, b = e["args"]
+            return f"({self.comp_term(a, env, local)}, {self.comp_term(b, env, local)})"
+        if op in ("fst", "snd"):
+            inner = self.px(e["args"][0], env, local)
+            return f"({op} {inner})"
+        raise ValueError(f"t v1 -> rocq: not a pair expression: {op!r}")
+
     def call(self, e: dict, env: dict, local: dict) -> str:
         c = e["call"]
         f, args = c["fun"], c["args"]
@@ -1368,6 +1787,13 @@ class Ctx:
         if op == "at":
             fn, _ = self.seq_fn(e["args"][0], env, local)
             return f"({fn} {self.zx(e['args'][1], env, local)})"
+        if op in ("fst", "snd"):
+            # SPEC.md "Pairs (v1)": `fst`/`snd` project; this arm is
+            # reached when the projection's component type is "int" (the
+            # caller already knows this via `ty()`), rendered as Coq's own
+            # `fst`/`snd` applied to the pair's own term (`px`).
+            inner = self.px(e["args"][0], env, local)
+            return f"({op} {inner})"
         if op == "neg":
             return f"(- {self.zx(e['args'][0], env, local)})"
         if op in ("+", "-", "*"):
@@ -1400,6 +1826,11 @@ class Ctx:
                 "rocq lowering: a quantifier in computational position has no "
                 "decidable lowering here")
         op = e["op"]
+        if op in ("fst", "snd"):
+            # Same projection as zx's own arm, reached here when the
+            # component type is "bool".
+            inner = self.px(e["args"][0], env, local)
+            return f"({op} {inner})"
         if op in ("<", "<="):
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {'<?' if op == '<' else '<=?'} {b})"
@@ -1408,6 +1839,20 @@ class Ctx:
             return f"({b} {'<?' if op == '>' else '<=?'} {a})"
         if op in ("==", "!="):
             t = self.ty(e["args"][0], local)
+            if isinstance(t, dict):
+                # SPEC.md "Pairs (v1)": `==`/`!=` on two pairs is
+                # componentwise, "the polymorphic == again"; in
+                # COMPUTATIONAL position this needs a decidable bool,
+                # PRELUDE's `t_pair_eqb` (generic over the two component
+                # equality functions, `pair_comp_eq_fn` choosing Z.eqb/
+                # Bool.eqb per this kernel's own refusal of a seq
+                # component), the same gap `t_seq_eqb` closes for seq.
+                t1, t2 = t["pair"]
+                pa = self.px(e["args"][0], env, local)
+                pb = self.px(e["args"][1], env, local)
+                eqA, eqB = pair_comp_eq_fn(t1), pair_comp_eq_fn(t2)
+                core = f"(t_pair_eqb {eqA} {eqB} {pa} {pb})"
+                return core if op == "==" else f"(negb {core})"
             if t == "seq":
                 # The residual (2026-09-09): seq `==`/`!=` in COMPUTATIONAL
                 # position used to abstain outright (no Fixpoint walked a
@@ -1487,12 +1932,42 @@ class Ctx:
         if op == "implies":
             a, b = (self.prop(x, env, local) for x in e["args"])
             return f"({a} -> {b})"
+        if op in ("fst", "snd"):
+            # SPEC.md "Pairs (v1)": a bare `fst`/`snd` reaches Prop position
+            # only when its own component type is "bool" (gate 1: a
+            # standalone Prop-position term must be boolean); zx/bx/px
+            # handle the int/pair cases, which only ever appear NESTED
+            # inside a comparison/`pair`, never bare here. Not exercised by
+            # either committed task (both pairs are (int, int)).
+            assert self.ty(e, local) == "bool"
+            inner = self.px(e["args"][0], env, local)
+            return f"({op} {inner} = true)"
         if op in ("==", "!="):
             t = self.ty(e["args"][0], local)
             if t == "bool":
                 a, b = (self.prop(x, env, local) for x in e["args"])
                 return (f"({a} <-> {b})" if op == "=="
                         else f"(~ ({a} <-> {b}))")
+            if isinstance(t, dict):
+                # SPEC.md "Pairs (v1)": == on two pairs is componentwise,
+                # "the polymorphic == again"; a Prop admits an unbounded
+                # per-component equality directly (Z `=` for an int
+                # component, the same bool `<->`-of-"= true" form used
+                # just above for a standalone bool, mirroring t's OWN
+                # equality rules component by component), no decidable
+                # bool needed here (that is bx()'s job, via t_pair_eqb).
+                t1, t2 = t["pair"]
+                a, b = e["args"]
+                pa, pb = self.px(a, env, local), self.px(b, env, local)
+
+                def ceq(ct: str, x: str, y: str) -> str:
+                    if ct == "bool":
+                        return f"(({x} = true) <-> ({y} = true))"
+                    return f"({x} = {y})"
+
+                core = (f"({ceq(t1, f'(fst {pa})', f'(fst {pb})')} /\\ "
+                        f"{ceq(t2, f'(snd {pa})', f'(snd {pb})')})")
+                return core if op == "==" else f"(~ {core})"
             if t == "seq":
                 # SPEC.md "Sequences as values (v1)": "==" and "!=" apply
                 # to two seqs extensionally: "equal lengths and equal
@@ -1757,6 +2232,12 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                 env[v] = fn if done == "false" else f"(if {done} then {old_fn} else {fn})"
                 env[v + "_len"] = (ln if done == "false"
                                    else f"(if {done} then {old_ln} else {ln})")
+            elif isinstance(t, dict):
+                # SPEC.md "Pairs (v1)": a pair is ONE Coq value here (never
+                # seq's two-slot split), so the freeze below is the same
+                # single-slot rule int/bool already have.
+                raw = cx.px(e, env, local)
+                env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
             else:
                 raw = (cx.bx(e, env, local) if t == "bool"
                       else cx.zx(e, env, local))
@@ -1773,6 +2254,9 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                 env[v] = fn if done == "false" else f"(if {done} then {old_fn} else {fn})"
                 env[v + "_len"] = (ln if done == "false"
                                    else f"(if {done} then {old_ln} else {ln})")
+            elif isinstance(t, dict):
+                raw = cx.px(e, env, local)
+                env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
             else:
                 raw = (cx.bx(e, env, local) if t == "bool"
                       else cx.zx(e, env, local))
@@ -1800,6 +2284,8 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                 fn, ln = cx.seq_fn(d["init"], env, local)
                 env[v] = fn
                 env[v + "_len"] = ln
+            elif isinstance(d["type"], dict):
+                env[v] = cx.px(d["init"], env, local)
             else:
                 env[v] = (cx.bx(d["init"], env, local) if d["type"] == "bool"
                           else cx.zx(d["init"], env, local))
@@ -1863,7 +2349,10 @@ def slot_owner(v: str, logical: list[str]) -> str:
 
 
 def param_binders(cx: Ctx) -> tuple[str, str]:
-    """(binder text, arg text) with seq expanded to fn+len."""
+    """(binder text, arg text) with seq expanded to fn+len; a pair (SPEC.md
+    "Pairs (v1)") is one binder, `pair_ty`'s product, no committed task
+    uses a pair PARAM yet (both divmod_pair and min_max only return one),
+    so this arm is measured only by construction."""
     bs, args = [], []
     for p in cx.task["params"]:
         v = p["name"]
@@ -1872,6 +2361,9 @@ def param_binders(cx: Ctx) -> tuple[str, str]:
             args += [v, f"{v}_len"]
         elif p["type"] == "bool":
             bs.append(f"({v} : bool)")
+            args.append(v)
+        elif isinstance(p["type"], dict):
+            bs.append(f"({v} : {pair_ty(p['type'])})")
             args.append(v)
         else:
             bs.append(f"({v} : Z)")
@@ -1884,17 +2376,299 @@ def len_hyps(cx: Ctx) -> list[str]:
             if p["type"] == "seq"]
 
 
-def rty(t: str) -> str:
+def pair_comp_ty(t: str) -> str:
+    """Coq type of one pair COMPONENT (SPEC.md "Pairs (v1)": T1/T2 are each
+    "int", "bool" or "seq"). This kernel maps "int"/"bool" straight to
+    Z/bool; a "seq" component is a NAMED REFUSAL, not a silent guess.
+    SPEC.md's own rocq survey (the "Pairs (v1)" section, just before "The
+    twins") already names this kernel's product `Z * Z`, one instance of
+    the general rule stated there: "or a named refusal where the memory
+    model or a seq component costs the certificate." A seq is TWO Coq
+    slots here, not one (MODEL, above: the function+length pair), so it
+    has no single Coq value a `T1 * T2` product could hold as one
+    component without a second, incompatible seq encoding this file does
+    not otherwise use; refusing it loudly here is cheaper and safer than
+    inventing one for a shape no committed task needs."""
+    if t == "int":
+        return "Z"
+    if t == "bool":
+        return "bool"
+    raise NotImplementedError(
+        f"rocq lowering: a pair component of type {t!r} is refused "
+        f"(SPEC.md's own rocq product is Z * Z; a seq component would "
+        f"need a second seq encoding this file does not have)")
+
+
+def pair_comp_eq_fn(t: str) -> str:
+    """The PRELUDE's `t_pair_eqb` component equality function for pair
+    component type `t` ("int" -> Z.eqb, "bool" -> Bool.eqb); mirrors
+    `pair_comp_ty`'s own refusal for "seq"."""
+    if t == "int":
+        return "Z.eqb"
+    if t == "bool":
+        return "Bool.eqb"
+    raise NotImplementedError(
+        f"rocq lowering: t_pair_eqb has no component equality for pair "
+        f"component type {t!r} (a seq pair component is refused; see "
+        f"pair_comp_ty)")
+
+
+def pair_ty(t: dict) -> str:
+    """Coq type for a pair type `{"pair": [T1, T2]}`: the product
+    `(T1 * T2)%type` SPEC.md's own dated note names for this kernel,
+    T1/T2 each `pair_comp_ty`'s Coq type. A pair occupies exactly ONE Coq
+    slot (never seq's two), so a caller reaches this the same way it
+    reaches "Z"/"bool" (param_binders/rty), never seq_slots' own
+    two-binder expansion."""
+    t1, t2 = t["pair"]
+    return f"({pair_comp_ty(t1)} * {pair_comp_ty(t2)})"
+
+
+def default_term(t) -> str:
+    """A type-correct PLACEHOLDER Coq term for a not-yet-assigned return,
+    the SAME role "0"/"false" already play in gen_plain/gen_loop/_plain_def/
+    _rec_def/_loop_def's own env0: a pair recurses componentwise so a
+    pair-typed return that is only ever assigned in a loop's SUFFIX
+    (min_max: `r` never appears inside the loop body itself, only in the
+    state tuple's own frame) still carries a term of the RIGHT Coq type
+    through the Fixpoint before its real value lands. seq is out of scope
+    here (its own two-slot convention is the caller's job, since it needs
+    two env entries, not one)."""
+    if isinstance(t, dict):
+        t1, t2 = t["pair"]
+        return f"({default_term(t1)}, {default_term(t2)})"
+    return "false" if t == "bool" else "0"
+
+
+def rty(t) -> str:
     """Coq type for a t type in a SINGLE-slot position (a t `seq` is never
     one Coq value here, the function+length model needs two; a caller with
     a seq in hand uses `seq_slots`/an explicit two-binder split instead of
     this, so `rty("seq")` names only the function half, "Z -> Z", the same
-    half `param_binders` gives a seq param)."""
+    half `param_binders` gives a seq param). A pair type (SPEC.md "Pairs
+    (v1)", a dict `{"pair": [T1, T2]}`) IS one Coq value here, `pair_ty`'s
+    product, since (unlike seq) nothing about this kernel's pair
+    representation needs a second slot."""
+    if isinstance(t, dict):
+        return pair_ty(t)
     if t == "bool":
         return "bool"
     if t == "seq":
         return "Z -> Z"
     return "Z"
+
+
+def _expr_has_pair(e) -> bool:
+    """True iff a `pair`/`fst`/`snd` node appears anywhere inside expression
+    `e` (SPEC.md "Pairs (v1)"). `_has_pair`'s own TYPE walk (a dict type on
+    a param/return/local) MISSED a pair built and immediately projected
+    INLINE, tied to no declared pair type anywhere: `fz_p_pair_proj`
+    (2026-09-10, the fuzz corpus's own projection probe), `r := fst (pair
+    (a, b))` with `a`, `b`, `r` all plain ints, has no dict type on any
+    param/return/local, so the old `_has_pair` read False, `gen_plain`
+    emitted no `cbn [fst snd].`, and `fst (a, b)` sat stuck in front of
+    `t_dis`'s search (MEASURED, standalone: `unfold ...; t_dis.` alone left
+    `fst (a, b) = a` unsolved; adding `cbn [fst snd].` before `t_dis` closed
+    it). This expression-level walk catches that case too, alongside every
+    shape `_has_pair`'s own type walk already covers."""
+    if not isinstance(e, dict):
+        return False
+    if e.get("op") in ("pair", "fst", "snd"):
+        return True
+    if any(_expr_has_pair(a) for a in e.get("args", [])):
+        return True
+    if "ite" in e:
+        c = e["ite"]
+        return (_expr_has_pair(c["cond"]) or _expr_has_pair(c["then"])
+                or _expr_has_pair(c["else"]))
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        return (_expr_has_pair(q["lo"]) or _expr_has_pair(q["hi"])
+                or _expr_has_pair(q["body"]))
+    if "call" in e:
+        return any(_expr_has_pair(a) for a in e["call"]["args"])
+    return False
+
+
+def _has_pair(task: dict) -> bool:
+    """True iff `task` uses a pair (SPEC.md "Pairs (v1)") anywhere: a
+    declared TYPE (a param, a return, or a `var` local in the body) OR an
+    inline `pair`/`fst`/`snd` EXPRESSION (`_expr_has_pair`, 2026-09-10
+    addition: a literal pair built and projected without ever being bound
+    to a dict-typed name, missed by the type walk alone; see
+    `_expr_has_pair`'s own note). `gen_plain`/`gen_loop`/`_value_cert` use
+    this to decide whether their shared proof-script TEMPLATE needs one
+    extra `cbn [fst snd].` line: `fst`/`snd` applied to a literal pair
+    (PRELUDE's own dated note, "LOOSE fst/snd") needs that one delta step
+    before `t_dis`'s search can see through it, measured cheapest as ONE
+    explicit line at the point a literal pair first appears, never as a
+    tactic tried on every node of the search (measured 2026-09-10: folding
+    it into `t_inv1` instead made min_max time out). Conditioned so a task
+    with no pair anywhere (all committed tasks before divmod_pair/min_max)
+    emits BYTE-IDENTICAL proof text to before pairs existed: this walk
+    returning False costs nothing downstream."""
+    def has(t) -> bool:
+        return isinstance(t, dict)
+
+    if any(has(p["type"]) for p in task["params"]):
+        return True
+    if any(has(r["type"]) for r in task["returns"]):
+        return True
+    if any(_expr_has_pair(e) for e in task.get("requires", [])):
+        return True
+    if any(_expr_has_pair(e) for e in task.get("ensures", [])):
+        return True
+
+    def walk(stmts: list) -> bool:
+        for s in stmts:
+            if "var" in s and (has(s["var"]["type"])
+                                or _expr_has_pair(s["var"]["init"])):
+                return True
+            if "assign" in s and _expr_has_pair(s["assign"][1]):
+                return True
+            if "return" in s and _expr_has_pair(s["return"][1]):
+                return True
+            if "if" in s:
+                c = s["if"]
+                if (_expr_has_pair(c["cond"]) or walk(c["then"])
+                        or walk(c["else"])):
+                    return True
+            if "while" in s:
+                w = s["while"]
+                if (_expr_has_pair(w["cond"])
+                        or _expr_has_pair(w["decreases"])
+                        or any(_expr_has_pair(e)
+                               for e in w.get("invariants", []))
+                        or walk(w["body"])):
+                    return True
+        return False
+
+    return walk(task["body"])
+
+
+def _check_pair_types(task: dict) -> None:
+    """Validate every pair type declared anywhere in `task` (a param, a
+    return, or a `var` local, the same walk `_has_pair` makes) BEFORE any
+    other lowering step runs, by calling `pair_ty` on each one (raising
+    `pair_comp_ty`'s own named NotImplementedError for a seq component).
+
+    A PARAM's own seq-component pair is already caught this way, just
+    later: `param_binders` calls `pair_ty` on every param at the top of
+    `lower_v1`. A RETURN's is not caught early enough: `lower_v1` only
+    calls `rty(ret_t)` for the return's own binder well AFTER
+    `spec_def_obls` has already walked requires/ensures, so `len`/`at`
+    applied to a seq-typed projection of such a return (`fst`/`snd` of it)
+    reaches `zx`'s "len"/"at" case, then `seq_fn`, which has no `fst`/`snd`
+    arm and raises a bare ValueError there: a crash the harness records as
+    "lower-error" rather than the named "abstain" every OTHER seq-
+    component path already gets (MEASURED 2026-09-10, fz_v1pairs_064,
+    return type `{"pair": ["seq", "int"]}`: ensures' own `len(fst(r))`
+    crashed inside `spec_def_obls`, `ValueError: t v1 -> rocq: not a seq
+    expression: 'fst'`, before `rty(ret_t)` ever ran to refuse it
+    properly). Calling `pair_ty` on every pair type in the task, ONCE,
+    before `lower_v1` does anything else, makes the refusal fire the same
+    way no matter where the seq component sits (param, return or local) or
+    which expression would otherwise reach it first."""
+    def check(t) -> None:
+        if isinstance(t, dict):
+            pair_ty(t)
+
+    for p in task["params"]:
+        check(p["type"])
+    for r in task["returns"]:
+        check(r["type"])
+
+    def walk(stmts: list) -> None:
+        for s in stmts:
+            if "var" in s:
+                check(s["var"]["type"])
+            if "if" in s:
+                walk(s["if"]["then"])
+                walk(s["if"]["else"])
+            if "while" in s:
+                walk(s["while"]["body"])
+
+    walk(task["body"])
+
+
+def _bool_state_assigned(svars: list, stys: dict, body_assigned: set) -> list:
+    """Loop STATE variables (SPEC.md's own `svars`: the return plus every
+    prefix local) that are both bool-typed AND actually reassigned inside
+    the loop body (`loop_assigned`'s own set) -- e.g. a sentinel `found`
+    flag, never a frozen passthrough like `is_prime`'s own bool RETURN
+    (only ever `return`-ed, never `assign`-ed inside the loop body, so
+    `loop_assigned` never names it).
+
+    THE FINDING (2026-09-10, fuzz family v1pairs, the "sentinel" shape:
+    `found`/`val` locals, `r := pair(found, val)` in the suffix, ensures
+    phrased as `fst(r) == exists ...`/`fst(r) -> exists ... /\\ snd(r) =
+    ...`). By the time `t_dis` runs, `cbn [fst snd]` (gated on `_has_pair`)
+    has ALREADY correctly reduced every `fst`/`snd` of the literal returned
+    pair down to the bare `found`/`found'` local (confirmed by instrumenting
+    the generated proof directly: the goal at that point is already stated
+    over `found'`/`val'`, no `fst`/`snd` left anywhere) -- so this is NOT a
+    pairs bug. The actual gap: `t_sweep` case-splits `<?`/`<=?`/`=?`/
+    `Bool.eqb` comparisons but never a bare boolean VARIABLE gating an
+    `if` (`if negb found && (s i <=? -1) then true else found`), so
+    `found`'s own value stays syntactically opaque through the whole
+    per-step invariant-preservation proof: `apply IH; t_side` fails on the
+    new-state invariant obligations (they still mention the un-reduced
+    `if`), the `inversion Heq` fallback does not apply to a recursive call
+    (not a base-case constructor equation), and the induction step is left
+    unsolved (MEASURED: `coqc` on the untouched lowering fails inside
+    `{name}_loop_spec`'s own `Qed`, NOT the outer theorem). Destructing the
+    PRE-state bool var (`destruct found.`) before `t_sweep` lets every
+    nested `if` on it collapse to a literal in each of the two branches,
+    where `t_sweep`'s own comparison splits then finish the job (MEASURED:
+    adding exactly this one `destruct` closes `{name}_loop_spec`). The
+    outer theorem needs the SAME destruct on the PRIMED (post-loop) name,
+    right before its own closing `t_dis`/`t_dis_ext`, for the identical
+    reason applied to the exit-time value (MEASURED: `destruct found';
+    t_dis.` in place of the bare `t_dis.` closes it).
+
+    This is a GENERIC bool-state gap, not a pairs one -- `is_prime`'s own
+    bool return never trips it only because `is_prime` never REASSIGNS
+    that return inside the loop body (early exit's own `return`, which
+    `loop_assigned` does not count), so `bool_state_assigned` reads empty
+    for it and every other pre-pairs committed task, the same zero-cost-
+    when-absent shape `_has_pair` already has: a task with no bool state
+    var actually assigned in its own loop body emits BYTE-IDENTICAL proof
+    text to before this fix existed. Named `_bool_state_assigned`, not
+    folded into `_has_pair`, because it answers a different question (a
+    bool VALUE gap, not a pair one) and is gated on its own, narrower
+    condition (assigned-in-body, not merely bool-typed) so it does not
+    touch a frozen bool passthrough like `is_prime`'s."""
+    return [v for v in svars if stys[v] == "bool" and v in body_assigned]
+
+
+def _pair_param_destruct(task: dict) -> str:
+    """`  destruct {p}.\\n` for every pair-typed PARAM, meant right after
+    `intros.` and before `unfold`; "" for a task with no pair param (byte-
+    identical to before this fix existed).
+
+    THE FINDING (2026-09-10, fuzz family v1pairs, the `eq_params` shape:
+    ensures `fst p = fst q /\\ snd p = snd q` from two pair-typed params
+    `p`, `q`). `_has_pair` already gates ONE `cbn [fst snd].` line for such
+    a task (it has dict-typed params), but that line is a no-op on an
+    OPAQUE param: `fst`/`snd` only iota-reduce against a LITERAL pair
+    constructor `(_, _)`, never a bound variable, so `fst p`/`fst q` stay
+    stuck in front of `t_dis` regardless (MEASURED, standalone: `cbn [fst
+    snd]. t_dis.` alone left exactly this goal unsolved). `t_pair_eqb_spec`
+    only relates `t_pair_eqb ... p q = true` to WHOLE-pair equality `p =
+    q`, not to the componentwise form the ensures states, so `t_dis` would
+    additionally need `p = q <-> fst p = fst q /\\ snd p = snd q`, a fact no
+    generic E-matching/lia search here derives from an opaque `p`.
+    `destruct p.` (no `as` clause: nothing downstream refers to the fresh
+    component names) turns `p` into a literal pair EVERYWHERE it occurs --
+    inside the still-to-be-unfolded function body AND inside the ensures
+    clause alike -- so the EXISTING `cbn [fst snd].` step (unchanged) then
+    reduces every `fst p`/`snd p` to its own atomic component (MEASURED:
+    adding this one `destruct` per pair param, before `unfold`, closes
+    eq_params). No committed task uses a pair PARAM yet (`param_binders`'s
+    own note), so this is measured only by construction against the fuzz
+    corpus, not either committed pair task."""
+    names = [p["name"] for p in task["params"] if isinstance(p["type"], dict)]
+    return "".join(f"  destruct {n}.\n" for n in names)
 
 
 def emit_def_lemmas(cx: Ctx, name: str, obls: list, extra_binders: str = "",
@@ -2088,6 +2862,14 @@ def header() -> str:
 
 
 def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
+    # SPEC.md "Pairs (v1)": validate every pair type in the task FIRST,
+    # unconditionally, before `_try_cert_v1`'s own try/except (which would
+    # silently swallow the SAME check and just fall back) or anything else
+    # gets a chance to reach a seq-component pair a different way and raise
+    # the wrong exception (`_check_pair_types`'s own dated note, 2026-09-10:
+    # fz_v1pairs_064's `{"pair": ["seq", "int"]}` return crashed inside
+    # `spec_def_obls` with a bare ValueError before this existed).
+    _check_pair_types(task)
     if witness is not None:
         cert = _try_cert_v1(task, body, witness)
         if cert is not None:
@@ -2146,7 +2928,7 @@ def gen_plain(cx: Ctx, body: list, counter: list) -> str:
     if ret_t == "seq":
         env0 = {ret: "(fun _ : Z => 0)", ret + "_len": "0"}
     else:
-        env0 = {ret: "false" if ret_t == "bool" else "0"}
+        env0 = {ret: default_term(ret_t)}
     env = exec_straight(cx, body, env0, local, list(reqs), [], obls)
     def_txt = emit_def_lemmas(cx, name, obls, counter=counter)
 
@@ -2161,6 +2943,11 @@ def gen_plain(cx: Ctx, body: list, counter: list) -> str:
         fn_expr, len_expr = env[ret], env[ret + "_len"]
         ens = ensures_text(cx, {ret: f"({name}_t {pargs})",
                                 ret + "_len": f"({name}_t_len {pargs})"})
+        # SPEC.md "Pairs (v1)": destruct every pair-typed PARAM right after
+        # `intros.`, before `unfold` (`_pair_param_destruct`'s own dated
+        # note, 2026-09-10: an opaque param's `fst`/`snd` never reduces on
+        # its own). Empty for every task without one, byte-identical.
+        pdestr = _pair_param_destruct(task)
         return f"""{def_txt}
 Definition {name}_t {pb} : Z -> Z := {fn_expr}.
 Definition {name}_t_len {pb} : Z := {len_expr}.
@@ -2170,13 +2957,25 @@ Theorem {name}_t_spec :
 {lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros.
-  unfold {name}_t, {name}_t_len.
+{pdestr}  unfold {name}_t, {name}_t_len.
   t_dis.
 Qed.
 """
 
     expr = env[ret]
     ens = ensures_text(cx, f"({name}_t {pargs})")
+    # SPEC.md "Pairs (v1)": one `fst`/`snd` delta step, ONCE, right where
+    # `unfold` first exposes a literal pair; PRELUDE's "LOOSE fst/snd" note
+    # (2026-09-10) explains why this is a plain proof-script line and not a
+    # `t_inv1` match arm. `_has_pair` is False for every task before pairs
+    # existed, so this line is absent there, byte-identical to before.
+    pair_line = "  cbn [fst snd].\n" if _has_pair(task) else ""
+    # SPEC.md "Pairs (v1)": destruct every pair-typed PARAM right after
+    # `intros.`, before `unfold` (`_pair_param_destruct`'s own dated note,
+    # 2026-09-10, `eq_params`: an opaque param's `fst`/`snd` never reduces
+    # on its own, so the EXISTING `cbn [fst snd]` above is a no-op on it
+    # without this). Empty for every task without a pair param.
+    pdestr = _pair_param_destruct(task)
     return f"""{def_txt}
 Definition {name}_t {pb} : {rty(ret_t)} := {expr}.
 
@@ -2185,8 +2984,8 @@ Theorem {name}_t_spec :
 {lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros.
-  unfold {name}_t.
-  t_dis.
+{pdestr}  unfold {name}_t.
+{pair_line}  t_dis.
 Qed.
 """
 
@@ -2199,6 +2998,12 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     ret_t = task["returns"][0]["type"]
     pb, pargs = param_binders(cx)
     reqs = [cx.prop(e, {}) for e in task.get("requires", [])]
+    # SPEC.md "Pairs (v1)": one `fst`/`snd` delta step, ONCE, right after
+    # the loop's own `cbn beta iota.` first exposes a literal pair
+    # (PRELUDE's "LOOSE fst/snd" note, 2026-09-10, explains why this is a
+    # plain proof-script line and not a `t_inv1` match arm). Empty (so
+    # byte-identical to before pairs existed) for every task without one.
+    pair_line = "  cbn [fst snd].\n" if _has_pair(task) else ""
 
     # prefix symbolic execution (definedness under requires)
     local: dict[str, str] = {}
@@ -2206,7 +3011,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     if ret_t == "seq":
         env0 = {ret: "(fun _ : Z => 0)", ret + "_len": "0"}
     else:
-        env0 = {ret: "false" if ret_t == "bool" else "0"}
+        env0 = {ret: default_term(ret_t)}
     env_pre = exec_straight(cx, prefix, env0, local, list(reqs), [], obls)
 
     # state variables: return + locals declared in the prefix, in order
@@ -2316,6 +3121,41 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     concl = " /\\ ".join(invs_p + [f"(~ {guard_pp})"]
                          + [f"{v}' = {v}" for v in frame])
 
+    # SPEC.md "Pairs (v1)" residual (2026-09-10): a bool loop-state var
+    # actually reassigned in the body (a sentinel `found` flag) needs a
+    # `destruct` before `t_sweep` sees it, and again on the PRIMED name
+    # right before the theorem's own closing `t_dis`/`t_dis_ext`
+    # (`_bool_state_assigned`'s own dated note: NOT a pairs bug, but every
+    # fuzzed task that trips it also returns a pair, so it is gated and
+    # fixed here). Empty for every task without one (every pre-pairs
+    # committed task, `is_prime` included, and both committed pair tasks):
+    # byte-identical proof text.
+    # `bool_destruct` is spliced INTO the existing one-line
+    # "cbn [...]; t_sweep;" (as " destruct ...;"), not onto its own line,
+    # so the empty case renders BYTE-IDENTICAL to before this fix existed
+    # (the same discipline `pair_line`/`pdestr` keep by owning their own
+    # line instead).
+    # `destruct` on a bool produces TWO subgoals; `bool_destruct_p` must
+    # stay semicolon-chained onto the SAME `t_dis`/`t_dis_ext` call rather
+    # than owning its own period-terminated line, or only the FIRST
+    # resulting subgoal gets closed and `Qed` reports an incomplete proof
+    # on the second (MEASURED WRONG, 2026-09-10: a period-separated
+    # `destruct found'.` followed by a bare `t_dis.` on the next line
+    # compiled to exactly this "Attempt to save an incomplete proof"
+    # error on every sentinel-shape task; fixed by chaining with `;`
+    # instead, mirroring `bool_destruct`'s own inline splice above).
+    bool_assigned = _bool_state_assigned(svars, stys, body_assigned)
+    bool_destruct = (" destruct " + ", ".join(bool_assigned) + ";"
+                      if bool_assigned else "")
+    bool_destruct_p = ("destruct "
+                        + ", ".join(v + "'" for v in bool_assigned) + "; "
+                        if bool_assigned else "")
+    # SPEC.md "Pairs (v1)": destruct every pair-typed PARAM right after
+    # `intros.`, before `unfold` (`_pair_param_destruct`'s own dated note,
+    # 2026-09-10). Empty for a task with no pair param (both committed
+    # loop tasks, min_max included, have none).
+    pdestr = _pair_param_destruct(task)
+
     if ret_t == "seq":
         ens = ensures_text(cx, {ret: f"({name}_t {pargs})",
                                 ret + "_len": f"({name}_t_len {pargs})"})
@@ -2393,7 +3233,7 @@ Lemma {name}_loop_spec :
 Proof.
   induction fuel as [|fu IH];
   intros {param_names} {state_names} {primed_names} {' '.join(hyp_names)};
-  cbn [{name}_loop]; t_sweep;
+  cbn [{name}_loop];{bool_destruct} t_sweep;
   first [ solve [ apply IH; t_side ]
         | (let Heq := fresh "Heq" in
            intro Heq; inversion Heq; subst; clear Heq; t_dis)
@@ -2405,14 +3245,14 @@ Theorem {name}_t_spec :
 {lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros {param_names} {lens_intro} {reqs_intro}.
-  {unfold_line}
+{pdestr}  {unfold_line}
   destruct ({name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms})
     as {pat_p} eqn:Heq.
   cbn beta iota.
-  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
+{pair_line}  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
 {ini_asserts}  pose proof ({name}_loop_spec {pose_args}) as Hout.
   clear Hfb Heq {ini_intro}.
-  t_dis.
+  {bool_destruct_p}t_dis.
 Qed.
 """
 
@@ -2480,7 +3320,7 @@ Lemma {name}_loop_spec :
 Proof.
   induction fuel as [|fu IH];
   intros {param_names} {state_names} {primed_names} {rfp} {' '.join(hyp_names)};
-  cbn [{name}_loop]; t_sweep;
+  cbn [{name}_loop];{bool_destruct} t_sweep;
   first [ solve [ apply IH; t_side_ext ]
         | (let Heq := fresh "Heq" in
            intro Heq; inversion Heq; subst; clear Heq; t_dis_ext)
@@ -2492,14 +3332,14 @@ Theorem {name}_t_spec :
 {lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros {param_names} {lens_intro} {reqs_intro}.
-  unfold {name}_t.
+{pdestr}  unfold {name}_t.
   destruct ({name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms})
     as [{pat_p} {rf}] eqn:Heq.
   cbn beta iota.
-  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
+{pair_line}  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
 {ini_asserts}  pose proof ({name}_loop_spec {pose_args}) as Hout.
   clear Hfb Heq {ini_intro}.
-  t_dis_ext.
+  {bool_destruct_p}t_dis_ext.
 Qed.
 """
 
@@ -2510,7 +3350,7 @@ def gen_rec(cx: Ctx, body: list) -> str:
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
     pb, pargs = param_binders(cx)
-    default = "false" if ret_t == "bool" else "0"
+    default = default_term(ret_t)
     assert "decreases" in task, "self-recursive task without decreases"
     measure = cx.zx(task["decreases"], {}, {})
 
@@ -2615,10 +3455,44 @@ def _zlit(v) -> str:
     return f"({n})" if n < 0 else str(n)
 
 
-def _glit(v, ty: str) -> str:
+def _glit(v, ty) -> str:
+    """A concrete t VALUE (interp.py's own JSON-shown shape: an int/bool
+    literal, or, for a pair, `_j`'s nested 2-list `[a, b]`) rendered as a
+    Coq literal term. A pair type recurses componentwise into the SAME
+    `(a, b)` notation `px()`'s own `pair` case builds."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        return f"({_glit(v[0], t1)}, {_glit(v[1], t2)})"
     if ty == "bool":
         return "true" if v else "false"
     return _zlit(v)
+
+
+def _to_interp_value(v, ty):
+    """The reverse direction of `_glit`'s JSON shape: convert a witness
+    value (SPEC.md/interp.py's `_j`, a plain int/bool or a nested 2-list
+    for a pair) back into the runtime value `interp.ev` itself expects
+    (`interp.Pair`, recursing on components; int/bool unchanged). Needed
+    wherever a witness value re-enters `interp.ev`/`interp.funs_of`-driven
+    evaluation (`_falsified_conjunct`, `_call_asserts`), since `interp.py`'s
+    `fst`/`snd` read `.a`/`.b` off an actual `Pair`, never a bare list."""
+    if isinstance(ty, dict):
+        t1, t2 = ty["pair"]
+        return interp.Pair(_to_interp_value(v[0], t1), _to_interp_value(v[1], t2))
+    return v
+
+
+def _pair_default_py(t):
+    """The Python-VALUE counterpart of `default_term`: the type's own
+    default (0/False, recursing on a pair) in interp.py's JSON shape, used
+    when a witness's `_twin` is "no value" (Reference.witness's own
+    convention for a lowered path that assigns nothing) and `_value_cert`
+    still needs SOME concrete value of the right type to check `ensures`
+    against."""
+    if isinstance(t, dict):
+        t1, t2 = t["pair"]
+        return [_pair_default_py(t1), _pair_default_py(t2)]
+    return False if t == "bool" else 0
 
 
 def _seq_lambda(vals: list) -> str:
@@ -2740,7 +3614,13 @@ def _witness_env(task: dict, witness: dict):
             sets.append(setl)
             spec_args += sargs
         else:
-            env_py[v] = wv
+            # SPEC.md "Pairs (v1)": a pair PARAM's witness value is `_j`'s
+            # nested 2-list; `_to_interp_value` is the identity for int/
+            # bool, so this is unchanged for every non-pair param (no
+            # committed task has a pair PARAM yet, both divmod_pair and
+            # min_max only return one, so this arm is measured only by
+            # construction).
+            env_py[v] = _to_interp_value(wv, p["type"])
             env_txt[v] = _glit(wv, p["type"])
             spec_args.append(env_txt[v])
     return env_py, env_txt, seq_defs, ptw, sets, spec_args
@@ -2838,7 +3718,7 @@ def _plain_def(cx, task, body):
         return None
     pb, _ = param_binders(cx)
     local: dict = {}
-    env0 = {ret: "false" if ret_t == "bool" else "0"}
+    env0 = {ret: default_term(ret_t)}
     env = exec_straight(cx, body, env0, local, None, [], [])
     return (f"Definition {task['name']}_t {pb} : {rty(ret_t)} := "
             f"{env[ret]}.\n")
@@ -2849,7 +3729,7 @@ def _rec_def(cx, task, body):
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
     pb, pargs = param_binders(cx)
-    default = "false" if ret_t == "bool" else "0"
+    default = default_term(ret_t)
     if "decreases" not in task:
         return None
     measure = cx.zx(task["decreases"], {}, {})
@@ -2879,7 +3759,7 @@ def _loop_def(cx, task, prefix, w, suffix):
     if ret_t == "seq":
         env0 = {ret: "(fun _ : Z => 0)", ret + "_len": "0"}
     else:
-        env0 = {ret: "false" if ret_t == "bool" else "0"}
+        env0 = {ret: default_term(ret_t)}
     env_pre = exec_straight(cx, prefix, env0, local, None, [], [])
     svars = [ret] + [s["var"]["name"] for s in prefix if "var" in s]
     stys = {v: (local.get(v) or cx.tys[v]) for v in svars}
@@ -2949,12 +3829,25 @@ def _value_cert(cx, task, body, witness, def_text):
         return None
     env_py, env_txt, seq_defs, ptw, sets, _ = got
     tv = witness.get("_twin")
-    if tv == "no value":
-        # the lowered twin returns the type's default on that path
-        tv = False if ret_t == "bool" else 0
-    if not isinstance(tv, (int, bool)):
-        return None
-    env_py[ret] = tv
+    if isinstance(ret_t, dict):
+        # SPEC.md "Pairs (v1)": a pair return's witness `_twin` is `_j`'s
+        # nested 2-list `[a, b]` (interp.py's own Pair-to-JSON shape), not
+        # `_glit`'s bare int/bool contract; divmod_pair's wrong-var twin
+        # and min_max's collapse-if twin both always assign `r` before
+        # returning (neither has a path that leaves it unset), so "no
+        # value" is not measured here, but `_pair_default_py` covers it the
+        # same way "false"/0 already do for bool/int.
+        if tv == "no value":
+            tv = _pair_default_py(ret_t)
+        if not isinstance(tv, list):
+            return None
+    else:
+        if tv == "no value":
+            # the lowered twin returns the type's default on that path
+            tv = False if ret_t == "bool" else 0
+        if not isinstance(tv, (int, bool)):
+            return None
+    env_py[ret] = _to_interp_value(tv, ret_t)
     if not _falsified_conjunct(task, body, env_py):
         return None
     gargs = []
@@ -2975,6 +3868,13 @@ def _value_cert(cx, task, body, witness, def_text):
         lines.append(f"  assert (t_out : {applied} = {retlit}) "
                      f"by (cbv; reflexivity).\n")
         lines.append("  rewrite t_out.\n")
+        if isinstance(ret_t, dict):
+            # SPEC.md "Pairs (v1)": `rewrite t_out` just planted the
+            # literal pair `retlit` where `applied` stood; one `fst`/`snd`
+            # delta step, here, once (PRELUDE's "LOOSE fst/snd" note,
+            # 2026-09-10: NOT a `t_inv1` match arm, measured too slow
+            # inside that hot per-branch tactic on a loop-shaped task).
+            lines.append("  cbn [fst snd].\n")
     lines += _call_asserts(cx, task, body, task["ensures"], env_py, env_lit)
     lines += sets
     return ("".join(seq_defs) + "\n" + def_text + "\n"
