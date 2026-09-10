@@ -449,8 +449,8 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   once, before `t_dis`'s search even starts, rather than a pattern tried
   at every one of its many nodes.
 
-  PRELUDE DELTA: 115 lines, all inserted immediately after
-  `t_seq_eqb_case`'s own closing `]; t_bred_all.` (113 lines: the dated
+  PRELUDE DELTA: 116 lines, all inserted immediately after
+  `t_seq_eqb_case`'s own closing `]; t_bred_all.` (114 lines: the dated
   comment above `t_pair_eqb`, `Definition t_pair_eqb`, `Lemma
   t_pair_eqb_spec`, `Ltac t_pair_eqb_case`) plus 2 lines for `t_inv1`'s two
   new match-arm entries (goal position, hypothesis position), zero
@@ -775,7 +775,7 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   running off the single row", row_max_len's "dropped upper bound
   letting the loop exit with r = 0").
 
-  PRELUDE DELTA: 64 lines, all inserted immediately after
+  PRELUDE DELTA: 61 lines, all inserted immediately after
   `t_pair_eqb_case`'s own closing `]; t_bred_all.` (the dated comment,
   `Definition t_nupd`, `Ltac t_nupd_case`) plus 2 lines for `t_inv1`'s
   two new match-arm entries (goal position, hypothesis position), zero
@@ -801,7 +801,7 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   sensitivity). What stands instead: `out/agent-rocq-nested/<name>.v`
   and the now-regenerated `out/<name>.v` agree byte for byte on all six
   (self-consistent, deterministic output), and a direct code-path trace
-  confirms the ONLY changes reaching any of these six are the 64-line
+  confirms the ONLY changes reaching any of these six are the 63-line
   PRELUDE growth and the `_has_pair`/`_has_nested` OR-gate at three
   `pair_line` sites, which is provably a no-op for all six (`_has_nested`
   is a pure type walk over `{"seq": "seq"}`, absent from every one of

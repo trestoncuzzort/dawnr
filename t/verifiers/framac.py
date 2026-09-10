@@ -77,7 +77,7 @@ THE AUDIT ARCHITECTURE (Wave-2/3, all points measured 2026-08-31):
   of budget failed to reach.
 * TOOL_ERROR is live: absent/dead kernel binary, empty kernel output,
   `[wp] User Error` / `Plug-in wp aborted` (measured with an unknown prover:
-  exit 0, no Proved line, so exit codes alone cannot be trusted), and a
+  exit 1, no Proved line, so exit codes alone cannot be trusted), and a
   `Failed:` prover status outside a smoke test. A prover failure is never
   REFUTED, because it is not evidence.
 

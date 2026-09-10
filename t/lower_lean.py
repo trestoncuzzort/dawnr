@@ -616,7 +616,9 @@ values"). Measured (lean 4.33.1, core only, no Mathlib, a six-theorem
 scratch probe): `decide` alone proves `Int × Int` equality and
 disequality, `Int × List Int` equality and disequality (the List Int
 component case SPEC.md names explicitly), `Bool × Int` equality, and
-`(a, b).1 = a ∧ (a, b).2 = b` by `rfl` -- core Lean's `Prod` already
+each projection separately (`(a, b).1 = a`, `(a, b).2 = b`) by `rfl`
+(the conjunction of the two needs `constructor <;> rfl`, not bare
+`rfl`) -- core Lean's `Prod` already
 derives `DecidableEq` from its two components', so nothing needed
 supplying by hand. `dcond` ALSO needed zero new code: `pair`'s only
 definedness obligation is that both components are defined, and
@@ -1076,7 +1078,7 @@ b` needing `b > 0` from the invariant, not the guard `r_v >= b` alone).
 STAYS OPEN, by name, and why: clover_cal_sum__sum,
 clover_linear_search1__linearSearch, the two ..._cube tasks,
 dafny_verify_..._minimum, m2_..._carre, ..._foo, all three ..._gcdI
-tasks, and tfg_..._div_ent_it -- all nine (eleven counting both cube
+tasks, and tfg_..._div_ent_it -- all eight (eleven counting both cube
 rows and all three gcdI rows) share the single direction-class gap above:
 `_t_loop`'s bare decreasing_by needs a fact only the loop's OWN
 invariants carry, and threading them through would mean `_t_loop` taking
@@ -1408,7 +1410,7 @@ run_task's own call shape), wall seconds per task -- before is instant
 kernel calls -> one real "first | unfold; grind | grind [f]" run plus a
 refutation certificate, times three for flake, times two (real, twin):
   clover_is_even__computeIsEven: 0.0s -> 0.4s, witness x=1, real False,
-    off-by-one twin True;
+    collapse-if twin True;
   cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1: 0.0s -> 0.4s, witness
     x=1, y=0, z=1, real 0, collapse-if twin 1;
   dafny_learn_tmp_tmpn94ir40q_r01_assertions__max: 0.0s -> 0.3s, witness

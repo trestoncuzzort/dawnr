@@ -151,7 +151,7 @@ interp.py's `Reference.witness` has always been able to produce (SPEC.md
 "The twins": "the twin is undefined where the real body has a value" is
 one of the two accepted value-changing witness shapes) but that this
 file's certificate builder had never had to certify, since none of the
-13 tasks committed before this one ever measured it (checked directly:
+15 tasks committed before this one ever measured it (checked directly:
 every one is "value" or "exit"). Declining to certify it would leave
 swap permanently UNPROVED on its twin cell, never REFUTED, so
 `_undef_obligation` closes it: re-walk the twin body with `interp.ev`,

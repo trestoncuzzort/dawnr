@@ -132,7 +132,10 @@ Measured traps this adapter owns:
     count exactly: abs 4, factorial 7, max 7, fib 11, gcd 16, sum_upto 33,
     count_matches 35, all_nonneg 45, contains 45, seq_max 81,
     linear_search 125, every real still VERIFIED and every twin REFUTED
-    under flake_check. Only exit 0 is read this way; failing twins do log
+    under flake_check. (Those eleven counts are the 2026-08-31 lowering's;
+    since the companion contract lemma of 2026-09-10, c4f03d6, every task
+    logs more, re-measured the same day: abs 6, factorial 9, linear_search
+    134, the ledger's second audit.) Only exit 0 is read this way; failing twins do log
     partial unsat statuses (measured: linear_search_twin 81 unsat plus 4
     unknown at exit 1), so "every status unsat" would be a wrong and
     needless extra rule that buys nothing at exit 0.
@@ -142,9 +145,13 @@ Measured traps this adapter owns:
     (\\bexpect_failure\\b never matched it).
   * Unicode: the scan runs over the raw decode AND its NFKC normalization,
     so fullwidth/compatibility spellings of a banned name are hit. Cross-
-    script homoglyphs (Cyrillic а in `аdmit`) survive NFKC, but F*'s ASCII
-    lexer rejects them, measured number 168 on both homoglyph probes, so
-    they end MALFORMED, never VERIFIED. Comment/string mentions of banned
+    script homoglyphs (Cyrillic а in `аdmit`) survive NFKC. Re-measured
+    2026-09-10, F* 2026.08.30: F* accepts the homoglyph outright as a
+    declaration name, no error at all, and as a call it fails name
+    resolution rather than the lexer, number 72, since the real primitive
+    is ASCII-only and no homoglyph spelling can reach it; a homoglyphed
+    KEYWORD (the `assume` in `assume val`) does trip the lexer, number 168.
+    Either way they end MALFORMED, never VERIFIED. Comment/string mentions of banned
     words DO fire the ban (measured on the overfire probes): scanning raw
     text is the conservative direction: a hidden live token can never
     slip through a comment-stripper this adapter does not have.

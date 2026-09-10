@@ -45,7 +45,7 @@ v1 mapping, gate by gate (SPEC.md):
     nonzero obligation is discharged the same way `at`'s range check is:
     Dafny's own well-formedness checking rejects `/` or `%` by a possibly-
     zero divisor unless guarded, nothing here totalizes it.
-  early exit (added 2026-09-08, SPEC.md "Early exit (v1)"): `return Expr;`
+  early exit (added 2026-09-09, SPEC.md "Early exit (v1)"): `return Expr;`
     lowers to `r := Expr; return;` (Dafny takes no expression on `return`
     once the method has an out-parameter). Dafny checks the method's
     `ensures` at every `return`, and does not ask for the loop's invariant

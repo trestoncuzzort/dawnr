@@ -729,10 +729,10 @@ the lens that found it. Sorted by the axis it speaks to.
 - DafnyBench: A Benchmark for Formal Software Verification, arXiv 2024. arxiv.org/abs/2406.08467. 68% best model (Claude 3 Opus) on 782 programs at launch; the field's own cited floor for the 68%-to-96% trend. Lens A, verified.
 - AlgoVeri: An Aligned Benchmark for Verified Code Generation on Classical Algorithms, ICML 2026. arxiv.org/abs/2602.09464. Dafny-Verus-Lean collapse (55.84/25.97/9.09% raw for Gemini-3 Flash); semantic filter costs about 28% relative on Dafny. Lens A and critic, both verified with corrections.
 - Goedel-Code-Prover: Hierarchical Proof Search for Open SOTA Code Verification, COLM 2026. arxiv.org/abs/2603.19329. 62.0% across Verina/Clever/AlgoVeri, 2.6x the strongest neural baseline. Lens A, verified.
-- Seed-Prover: Deep and Broad Reasoning for Automated Theorem Proving, arXiv 2025, ByteDance Seed. arxiv.org/abs/2507.23726. Saturates MiniF2F at 99.6%/99.9%; 331/657 PutnamBench vs. prior best 47/657 at matched tier. Lens A, verified with a correction on one geometry comparison.
+- Seed-Prover: Deep and Broad Reasoning for Automated Theorem Proving, arXiv 2025, ByteDance Seed. arxiv.org/abs/2507.23726. Saturates MiniF2F at 100.0%/99.6% (valid/test, medium tier); 331/657 PutnamBench vs. the paper's own cited prior SOTA of 86/657 (Goedel-Prover-V2), at medium tier. Lens A, verified with a correction on one geometry comparison.
 - Olympiad-level formal mathematical reasoning with reinforcement learning (AlphaProof), Nature 2025. doi.org/10.1038/s41586-025-09833-y. IMO 2024 silver (28/42); auto-formalizer scale and TPU-day figures confirmed directly from the paper. Lens A, verified with two corrections (fine-tuning-set size, unsourced gold-medal count).
 - BFS-Prover: Scalable Best-First Tree Search for LLM-based ATP, arXiv 2025. arxiv.org/abs/2502.03438. 72.95% cumulative MiniF2F pass rate; DPO adds 0.4-0.45 points over SFT at matched budget. Extra round.
-- Goedel-Prover-V2: Scaling Formal Theorem Proving with Scaffolded Data Synthesis, arXiv 2025. arxiv.org/abs/2508.03613. 8B model matches a 671B prior SOTA on MiniF2F (84.6% pass@32); PutnamBench 86/657 at Pass@192 vs. 47/657. Extra round.
+- Goedel-Prover-V2: Scaling Formal Theorem Proving with Scaffolded Data Synthesis, arXiv 2025. arxiv.org/abs/2508.03613. 8B model matches a 671B prior SOTA on MiniF2F (84.6% pass@32); PutnamBench 86/657 at pass@184 (self-correction) vs. DeepSeek-Prover-V2-671B's 47/657 at pass@1024. Extra round.
 - Verus-SpecGym: An Agentic Environment for Evaluating Specification Autoformalization, arXiv 2026. arxiv.org/abs/2605.26457. Best model 77.8% pass@1 on 581 tasks; LLM-judge misses 26% of failures an executable-spec oracle catches. Extra round.
 - MINIF2F-DAFNY: LLM-Guided Mathematical Theorem Proving via Auto-Active Verification, arXiv 2025-2026. arxiv.org/abs/2512.10187. Best model (Claude Opus 4.6) 62.7% pass@4 vs. a 38.9% empty-annotation baseline. Extra round.
 
@@ -754,7 +754,7 @@ the lens that found it. Sorted by the axis it speaks to.
 **Axis 5, training loops and reward hacking**
 
 - Automating Formal Verification with Reinforcement Learning and Recursive Inference (Tan's MIT thesis), arXiv 2026, MIT EECS (advisor Max Tegmark). arxiv.org/abs/2605.30914. Naive RLVR reward-hacks to 58.1%; filtered multi-turn repair reaches 31.1% held out. Lens A, verified, MIT affiliation confirmed.
-- When the Reward Suite Is Leaky: A Preregistered Causal Contrast, arXiv 2026. arxiv.org/abs/2607.11022. Leaky reward rewards wrong code on 45.9% of leak-prone rollouts; hardening the suite shows no detectable held-out gain at matched scale. Critic gap, extra round.
+- When the Reward Suite Is Leaky: A Preregistered Causal Contrast, arXiv 2026. arxiv.org/abs/2607.11022. Auditing every rewarded false positive finds genuinely wrong code in 47.57% of them (record-weighted; two replication families at 45.37% and 62.78%, "large" but not one number); hardening the suite shows no detectable held-out gain at matched scale. Critic gap, extra round.
 - Re:Form: Reducing Human Annotations in Scalable Formal Software Verification with RL in LLMs, TMLR 2026. arxiv.org/abs/2507.16331. GRPO on Dafny reaches 14.0% pass@1 on a compositional OOD benchmark vs. 2.7% zero-shot. Lens A, verified.
 - Propose, Solve, Verify: Self-Play Through Formal Verification, arXiv 2025-2026. arxiv.org/abs/2512.18160. Self-play on Verus, up to 9.6x pass@1 gain; removing verification costs a 51.5% relative decline. Lens A, verified with a correction.
 - Local Success Does Not Compose: Benchmarking LLMs for Compositional Formal Verification (DafnyComp), arXiv 2025. arxiv.org/abs/2509.23061. Chaining 2-5 verified functions collapses success from about 53% to 3.69%. Lens A, verified.
@@ -840,7 +840,7 @@ Marmaragan's 50.7% answers.
 The leaderboard-currency check was not run as a fresh, dated search; the
 survey instead cross-checked each headline number against every other
 paper in the corpus that cites the same benchmark (for example
-Seed-Prover's MiniF2F 99.6% is checked against Goedel-Prover-V2's 84.6%/32B
+Seed-Prover's MiniF2F 99.6% is checked against Goedel-Prover-V2's 84.6%/8B
 and BFS-Prover's 72.95%/7B, all internally consistent as of each paper's own
 publication date), which establishes relative standing within this corpus
 but does not confirm any single number is still state of the art as of

@@ -31,7 +31,8 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   idempotent and every task has one normal form in the notation.
 
   The 9 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
-  beside (two added 2026-09-09 for the char and string literals below). That
+  beside (two added 2026-09-09, one for the char and string literals below
+  and one for sequence literals, concatenation and slices). That
   is the check that this grammar is the documented notation and not a new
   one that resembles it.
 

@@ -12,7 +12,7 @@ integers are mathematical and unbounded, so the emitted obligation was a
 different, weaker theorem. MEASURED on the differential fuzzer: framac alone
 VERIFIED fz_p_intwidth and fz_p_seqlen while six other kernels REFUTED them,
 and an element-width probe (`ensures len(s) > 0 ==> s[0] <= 2^31-1`) proved
-7/7 goals.
+10/10 goals, twin refuted.
 
 The fix is not in this file, and cannot be: ACSL's unbounded `integer` is a
 LOGIC type, and Frama-C 33 rejects it for a ghost variable and for a ghost
@@ -369,8 +369,9 @@ contains, count_matches, digit_sum, first_even, is_prime, linear_search,
 seq_max, sum_upto) move to `verified / refuted`, all by the `exit` kind
 (every one is an INVARIANT-DROP twin), matching the number measured and
 quoted above when this was first tried. The 17-task framac column now
-agrees with every other kernel's column in AGREEMENT.md: 17 of 17
-verified/refuted.
+agrees with every other kernel's column in AGREEMENT.md: 16 of 17
+verified/refuted (reverse reads verified/malformed, the coherence gate's
+own doing, not this pass's).
 
 The lifted-785 sweep (`out/lifted-tasks/*.json`, 198 tasks) moves the
 same way at scale, measured by running every task through
@@ -378,7 +379,7 @@ same way at scale, measured by running every task through
 kernel concurrency stays at 6, never the 36 that an ungated outer pool
 times `cell_pair`'s own 2*n=6 fan-out would reach). Framac column,
 COVERAGE-lifted-785.md before -> measured after: verified/refuted 87 ->
-136 (+49), verified/timeout 65 -> 14 (-51), timeout/timeout 16 -> 6
+125 (+38), verified/timeout 65 -> 14 (-51), timeout/timeout 16 -> 6
 (-10), timeout/refuted 4 -> 14 (+10, the other end of the same 10 moves),
 verified/unproved 2 -> 4 (+2: two `exit`-witness certificates the kernel
 DECLARED but did not ACCEPT, `_cert_status`'s own audit demoting the cell
@@ -389,9 +390,14 @@ outcome is agreement). Every other category (no-twin/no-twin 6, abstain/
 abstain 4, verified/vacuous 4, timeout/vacuous 3, verified/verified 5,
 vacuous/vacuous 1, malformed/malformed 1) is unchanged, cell-for-cell:
 none of those tasks reach `certificate()` with an `undefined` or `exit`
-witness at all, so the gate's removal cannot touch them. 61 cells moved
-in total (49 + 10 + 2); every move is verified/timeout or timeout/timeout
-tightening to a certified verdict, never the reverse.
+witness at all, so the gate's removal cannot touch them; a new
+verified/malformed category (0 -> 11) also appears in this same commit,
+the coherence gate's own doing, not this pass's -- of the 51 cells that
+left verified/timeout, 38 landed on verified/refuted, 2 on
+verified/unproved, and 11 on verified/malformed. 61 cells moved in total
+(38 + 10 + 2 + 11); every move is verified/timeout or timeout/timeout
+tightening to a certified verdict, or the coherence gate's own
+verified/malformed, never the reverse.
 
 SOUNDNESS of every moved cell rests on the same audit `verifiers/
 framac.py` already runs for the seq-gated cells: `_cert_status` requires
@@ -399,24 +405,20 @@ exactly one `t_refutation_certificate`-named goal, declared AND proved,
 plus every goal in its audit set (its enclosing function's own goals,
 smoke tests included, plus every function-less global goal) also proved,
 before minting REFUTED; a file merely carrying the certificate NAME can
-never mint VERIFIED regardless. What framac's adapter does NOT have,
-unlike dafny.py/verus.py/spark.py/lean.py/fstar.py's explicit "coherence
-gate, 2026-09-07" (a file whose own main goals ALL discharge alongside an
-accepted certificate reads MALFORMED there, since a proof of the
-contract and a certified counterexample to it cannot both be sound): this
-adapter's `_all_obligations_proved(m, smoke)` branch, when true, reads
-`cert_marked`+`accepted` straight to REFUTED with no contradiction check
-at all. Not exercised by any cell measured tonight (every moved cell's
-own twin `ensures` stays unproved -- Stepout under budget -- exactly as
-before, so `_all_obligations_proved` is false and the sound branch, "the
-certificate's audit set is accepted while the twin's own contract
-remains open," is the one taken), but it is a real gap relative to the
-other six adapters, named plainly rather than assumed closed: it is
-possible in principle for an inconsistent theory to discharge both the
-twin's contract and the certificate's negation of it, and this adapter
-would currently read that REFUTED rather than MALFORMED. Not fixed here
-(out of scope: this pass touches only the gate), left as a finding for
-whichever pass next touches `verifiers/framac.py`.
+never mint VERIFIED regardless. Corrected in place: an earlier draft of
+this note claimed framac's adapter lacked dafny.py/verus.py/spark.py/
+lean.py/fstar.py's explicit "coherence gate, 2026-09-07" (a file whose
+own main goals ALL discharge alongside an accepted certificate reads
+MALFORMED there, since a proof of the contract and a certified
+counterexample to it cannot both be sound). That was wrong even as
+written: this same pass adds the matching gate to
+`verifiers/framac.py`'s `_all_obligations_proved(m, smoke)` branch --
+when true and `cert_marked`+`accepted`, it now reads MALFORMED, not
+REFUTED, exactly as the other six adapters do (see verifiers/framac.py's
+own "coherence gate" comment). Exercised by all 11 of tonight's newly
+verified/malformed cells above (see the SEQ-RETURN GATE accounting):
+every one is `_all_obligations_proved` true, cert_marked, accepted, and
+now MALFORMED.
 
 SURPRISES. Four lifted tasks (mfirstCero, factorialOfLastDigit,
 invertArray, fcul_exercises_10/find) raised a bare `NotImplementedError`
@@ -607,7 +609,7 @@ harness.run_task with OUT pointed at out/agent-framac-guard):
        solver work reported each try -- a wall/step ceiling never
        reached, not a close call). Consistent with the wider census:
        COVERAGE-lifted-785.md already reads this same real function
-       unproved or timeout on four of the other six kernels (verus,
+       unproved or timeout on five of the other six kernels (verus,
        spark, lean, rocq, fstar); only dafny's automation closes it.
     2. Independently, the invariant-drop twin's witness for both tasks
        is kind `"preservation"` (measured: `harness.twin_cached` on
@@ -648,8 +650,10 @@ ACSL block, the contract's three `ensures` on `\result.a`/`\result.b`,
 the body one compound-literal assignment `r = (struct t_pair_int_int){
 <div-expr>, <mod-expr> };` with the same branch-free div/mod rendering
 and bridging asserts every other task already gets) scored the REAL
-function 10/10 goals proved outright (`Qed 3, Alt-Ergo 5, Terminating 1,
-Unreachable 1`), and a hand-written refutation certificate for the
+function 11/11 goals proved outright (`Qed 3, Alt-Ergo 6, Terminating 1,
+Unreachable 1`; corrected in place, first recorded as 10/10, undercounted
+by one -- the committed lowering's own re-run below reads the same
+11/11), and a hand-written refutation certificate for the
 `wrong-var` twin (ground state `x=1, y=1`, exactly SPEC.md's own witness)
 scored its named goal `t_refutation_certificate` VALID, every other goal
 in the certificate's own audit set proved alongside it, with the twin's
@@ -665,35 +669,43 @@ into a scratch OUT (never the committed `out/` tree, RULES): both
 committed tasks COUNT on the first run, no debugging needed after the
 hand probe.
 
-  `divmod_pair` (loop-free): real VERIFIED (10/10 goals, identical tally
-  to the hand probe, byte-identical body). Twin `wrong-var` (the pair's
-  two components swapped, `harness.py`'s own new twin-ladder move for
-  this construct, SPEC.md "The twins") REFUTED via `_value_certificate`
-  (a `value`-kind witness -- divmod_pair has no loop, so the whole
-  function is one straight-line replay, exactly like every scalar-
-  returning value-witness task already in AGREEMENT.md): witness `x=1,
-  y=1 -> real [1, 0], twin [0, 1]`, the exact point and pair values
-  SPEC.md's own committed-task paragraph names. 15/18 goals proved (the
-  twin's own three `ensures` stepout, honestly; the certificate's own six
-  goals -- four branch-decision asserts, one `assigns`, the named
-  refutation assert -- all valid).
+  `divmod_pair` (loop-free): real VERIFIED. Corrected in place: this was
+  first recorded as 10/10 goals, identical to the hand probe; re-run
+  against the same code, it reads 11/11 (`Terminating 1, Unreachable 1,
+  Qed 3, Alt-Ergo 6`), the hand probe undercounted by one. Twin
+  `wrong-var` (the pair's two components swapped, `harness.py`'s own new
+  twin-ladder move for this construct, SPEC.md "The twins") REFUTED via
+  `_value_certificate` (a `value`-kind witness -- divmod_pair has no
+  loop, so the whole function is one straight-line replay, exactly like
+  every scalar-returning value-witness task already in AGREEMENT.md):
+  witness `x=1, y=1 -> real [1, 0], twin [0, 1]`, the exact point and
+  pair values SPEC.md's own committed-task paragraph names. Corrected in
+  place: first recorded as 15/18 goals; re-run reads 16/19 (`Terminating
+  2, Unreachable 2, Qed 9, Alt-Ergo 3, Timeout 3`) (the twin's own three
+  `ensures` stepout, honestly; the certificate's own six goals -- four
+  branch-decision asserts, one `assigns`, the named refutation assert --
+  all valid).
 
-  `min_max` (a loop keeping both bounds): real VERIFIED (29/29 goals),
-  the `\result.a`/`\result.b` projections reaching cleanly through all
-  four quantified `ensures` and through the loop's own invariants (which
-  never mention the pair at all -- `r` is assigned once, after the loop,
-  so the loop frame rule needs no pair-typed case and none was written;
-  found by inspection of both committed tasks, not measured as a gap).
-  Twin `collapse-if` (the first guard collapsed, an ordinary value-
-  changing mutation, not INVARIANT-DROP: SPEC.md's own note that no
-  invariant drop of this task is witnessable by bounded execution is a
-  fact about THIS task, not about pairs) REFUTED via the SAME
-  `_value_certificate` path as divmod_pair, this time replaying a real
-  (unrolled) loop at the witness: `s=[0, 1] -> real [0, 1], twin [1, 1]`.
-  45/46 goals proved (one loop-invariant preservation goal the collapsed
-  guard genuinely breaks, stepout; the certificate's own seventeen goals
-  -- eight branch/loop-exit asserts, seven split `assigns` goals, the
-  named refutation assert -- all valid).
+  `min_max` (a loop keeping both bounds): real VERIFIED. Corrected in
+  place: first recorded as 29/29 goals; re-run reads 35/35 (`Terminating
+  1, Unreachable 1, Qed 19, Alt-Ergo 14`), the `\result.a`/`\result.b`
+  projections reaching cleanly through all four quantified `ensures` and
+  through the loop's own invariants (which never mention the pair at all
+  -- `r` is assigned once, after the loop, so the loop frame rule needs
+  no pair-typed case and none was written; found by inspection of both
+  committed tasks, not measured as a gap). Twin `collapse-if` (the first
+  guard collapsed, an ordinary value-changing mutation, not
+  INVARIANT-DROP: SPEC.md's own note that no invariant drop of this task
+  is witnessable by bounded execution is a fact about THIS task, not
+  about pairs) REFUTED via the SAME `_value_certificate` path as
+  divmod_pair, this time replaying a real (unrolled) loop at the
+  witness: `s=[0, 1] -> real [0, 1], twin [1, 1]`. Corrected in place:
+  first recorded as 45/46 goals; re-run reads 51/52 (`Terminating 2,
+  Unreachable 2, Qed 33, Alt-Ergo 14, Timeout 1`) (one loop-invariant
+  preservation goal the collapsed guard genuinely breaks, stepout; the
+  certificate's own seventeen goals -- eight branch/loop-exit asserts,
+  seven split `assigns` goals, the named refutation assert -- all
+  valid).
 
 THE ENCODING, mechanically: `pair(a, b)` is a C99 compound literal,
 `(struct t_pair_T1_T2){a, b}` (`cexpr`'s and `_cert_cexpr`'s new "pair"

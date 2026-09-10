@@ -499,9 +499,9 @@ interesting number in the table, and it is a reason to measure pacman, not a
 reason to adopt it.
 
 Also measured and relevant: `/usr/lib/locale/locale-archive` is 226 MiB and
-kernel modules are 312 MB, against a 2.3 GB image — so "what does a component
-cost" is already a question with large answers on this disk, and the
-instrument to answer it exists.
+kernel modules are 312 MB (both per `INVENTORY-RELEASE-0.1.txt`), against a
+2.3 GB image — so "what does a component cost" is already a question with
+large answers on this disk, and the instrument to answer it exists.
 
 UNMEASURED, and the honest first task: build one `tup/layers/pkg-<name>/`
 following the `agent`-layer contract (MANIFEST with pinned sources and
