@@ -100,14 +100,25 @@ APPS_SPLITS = ("apps_raw_train.jsonl.gz", "apps_raw_test.jsonl.gz")
 CC_SPLITS = ("codecontests_train.jsonl.gz", "codecontests_valid.jsonl.gz",
              "codecontests_test.jsonl.gz")
 
-# The eight io-type gap names shared between the io-types channel (what the
-# tests need) and the solution-constructs channel (what the reference
+# The eleven io-type gap names shared between the io-types channel (what
+# the tests need) and the solution-constructs channel (what the reference
 # solution's AST needs); the remaining gap and burden names below belong to
 # the solution-constructs channel only. `string-as-seq` is also read off
 # io-types (a str-typed argument, return, or stdin sample token) but is a
 # BURDEN, not a gap (SPEC.md's "Strings as sequences of code points"), so
-# it is tracked apart from this tuple, not inside it.
-IO_GAP_NAMES = ("real", "nested-seq", "map", "set", "tuple",
+# it is tracked apart from this tuple, not inside it. `nested-seq` split
+# into four gaps the same day SPEC.md's "Nested sequences (v1)" landed
+# (2026-09-10): the three new names, `nested-seq-string`, `nested-seq-pair`
+# and `nested-seq-deep`, join `nested-seq` here because each is produced by
+# BOTH channels, exactly as undifferentiated `nested-seq` was -- the typed
+# signature reader (an io-types site) reaches all three (a `List[str]` row,
+# a `List[Tuple[..]]` row, a third `List[List[..]]` level), and the
+# solution-AST list-literal reader (a solution-constructs site) reaches all
+# three too; only the JSON sample-io reader (io-types) cannot produce
+# `nested-seq-pair`, since JSON has no tuple type, which does not disqualify
+# the name from this shared list, only from that one site.
+IO_GAP_NAMES = ("real", "nested-seq", "nested-seq-string", "nested-seq-pair",
+                "nested-seq-deep", "map", "set", "tuple",
                 "multi-return", "none-type", "any-type")
 
 # -------------------------------------------------------------- DETECTORS
@@ -126,8 +137,19 @@ DETECTORS: dict[str, tuple[str, str]] = {
                    "conversion of a string, or `sorted()` on a string"),
     "real": ("gap", "real numbers: a float literal, true division `/`, "
              "math.sqrt, float(), or a decimal-valued io token"),
-    "nested-seq": ("gap", "a seq of seq, or a subscript of a subscript: "
-                   "list of lists in the solution or in a sample io value"),
+    "nested-seq": ("gap", "a seq of seq whose row type could not be read "
+                   "as string or tuple (an int/bool row, or a subscript of "
+                   "a subscript, or a grid a static read genuinely cannot "
+                   "classify): SPEC.md's 'Nested sequences (v1)' burden "
+                   "`seq<seq<int>>` and the unreadable fallback both land "
+                   "here"),
+    "nested-seq-string": ("gap", "a seq of seq (or equivalent) whose row "
+                   "reads as a string: SPEC.md v1 has no seq<string> type"),
+    "nested-seq-pair": ("gap", "a seq of seq whose row reads as a tuple "
+                   "(a list of tuples, or a nested annotation through "
+                   "Tuple/tuple): SPEC.md v1 has no seq of pairs"),
+    "nested-seq-deep": ("gap", "three or more levels of seq nesting: "
+                   "SPEC.md v1's nested seq is exactly one level deep"),
     "map": ("gap", "dict literal, dict(), defaultdict, Counter, or a "
             "dict-typed io value"),
     "set": ("gap", "set literal, set(), frozenset(), a set/dict "
@@ -135,7 +157,8 @@ DETECTORS: dict[str, tuple[str, str]] = {
     "tuple": ("gap", "a tuple of three or more elements, a nested tuple, "
               "a tuple with a string component (until strings-as-seq's "
               "seq-of-code-points model covers a pair component too), or "
-              "a list of tuples (the nested-seq gap, tagged there): "
+              "a list of tuples (the separate gap `nested-seq-pair`, "
+              "tagged where a list literal's own elements are inspected): "
               "SPEC.md's 'Pairs (v1)' covers only the two-element case, "
               "the burden tuple-pair"),
     "multi-return": ("gap", "a function-shaped problem returning a tuple "
@@ -281,6 +304,30 @@ def _is_negative_slice_bound(node: ast.AST | None) -> bool:
     return isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub)
 
 
+def _classify_nested_list_child(node: ast.AST) -> str:
+    """(SPEC.md 'Nested sequences (v1)') One element of a list literal
+    that is itself a List or Tuple (a candidate row of a nested seq):
+    read the row's own element type as far as this AST node alone
+    supports. A Tuple row is the gap `nested-seq-pair` ('Pairs (v1)'
+    covers a single pair, not a seq of them). A List row whose own
+    elements are all non-empty string constants is `nested-seq-string`.
+    A List row that itself holds a List (a third level) is
+    `nested-seq-deep`, checked before the string read since a row
+    holding a further list is never "all string constants" anyway.
+    Anything else -- an int/bool row, an empty row, or a row this
+    shallow a read can't pin down -- is the conservative default
+    `nested-seq`, matching every other undecidable case in this file."""
+    if isinstance(node, ast.Tuple):
+        return "nested-seq-pair"
+    if isinstance(node, ast.List):
+        if any(isinstance(e, ast.List) for e in node.elts):
+            return "nested-seq-deep"
+        if node.elts and all(isinstance(e, ast.Constant) and isinstance(e.value, str)
+                              for e in node.elts):
+            return "nested-seq-string"
+    return "nested-seq"
+
+
 def _classify_tuple_literal_elts(elts: list[ast.AST]) -> str:
     """(SPEC.md 'Pairs (v1)') Exactly two elements, neither a nested tuple
     nor syntactically a string (`_looks_stringy`), reads as the burden
@@ -289,7 +336,7 @@ def _classify_tuple_literal_elts(elts: list[ast.AST]) -> str:
     assumed to fit one of those without further type inference, the same
     approximation direction this file takes elsewhere. Three or more
     elements, a nested tuple, or a string element reads as the gap
-    `tuple`; a LIST of tuples is a separate case, tagged `nested-seq`
+    `tuple`; a LIST of tuples is a separate case, tagged `nested-seq-pair`
     where a list literal's own elements are inspected, not here."""
     if len(elts) != 2:
         return "tuple"
@@ -379,11 +426,18 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
                 else:
                     tags["seq-slice"] = True
             if isinstance(node.value, ast.Subscript):
+                # A bare double-subscript (`grid[i][j]`) carries no
+                # recoverable row-element type from this node alone: this
+                # file builds no symbol table and tracks no variable's
+                # element type anywhere else, so there is no existing
+                # lexical signal to reuse here (confirmed by search, not
+                # assumed) and this stays the conservative default.
                 tags["nested-seq"] = True
         elif isinstance(node, ast.List):
             tags["seq-literal"] = True
-            if any(isinstance(e, (ast.List, ast.Tuple)) for e in node.elts):
-                tags["nested-seq"] = True
+            for _el in node.elts:
+                if isinstance(_el, (ast.List, ast.Tuple)):
+                    tags[_classify_nested_list_child(_el)] = True
         elif isinstance(node, ast.Tuple):
             if id(node) not in excluded_tuples:
                 tags[_classify_tuple_literal_elts(node.elts)] = True
@@ -495,6 +549,20 @@ def _mbpp_arg_kind_gap(why: str) -> str | None:
         rest = rest[len("negated-"):]
     if rest.startswith("seq-of-"):
         rest = rest[len("seq-of-"):]
+        # mbpp_dfy._literal only ever wraps "seq-of-" around a kind that
+        # its OWN recursive call returned successfully: "seq" (a clean
+        # inner list of ints, at any depth: a 3-level nest also reports
+        # "seq-of-seq", since the wrap happens once, at whichever level's
+        # elements first fail the int check) or "bool" (indistinguishable
+        # from a flat, non-nested list of bools, same reason). A string or
+        # tuple ROW fails before any wrap ever happens: `_literal` raises
+        # on the offending element (`str`/`tuple`) the instant it is
+        # reached, and that raw reason bubbles up through every list
+        # level unwrapped, so a nested list of string or tuple rows reads
+        # here as bare "str" or "tuple", exactly like a scalar argument of
+        # that type -- confirmed empirically, not assumed. So this site
+        # cannot tell string, pair, or 3-plus-deep rows apart from int
+        # rows or from an unnested case; it stays at the fallback default.
         if rest == "seq":
             return "nested-seq"
     mapping = {
@@ -600,7 +668,24 @@ def _annotation_kinds(ann: ast.AST | None) -> set[str]:
             args = slc.elts if isinstance(slc, ast.Tuple) else [slc]
             if base_name in ("List", "list", "Sequence", "Iterable", "Iterator"):
                 if depth >= 1:
-                    out.add("nested-seq")
+                    # Already one List layer past the outer nested-seq
+                    # (SPEC.md 'Nested sequences (v1)'); `args` here is
+                    # THIS layer's own type arg, i.e. the row's element
+                    # type -- read one hop further instead of collapsing
+                    # every depth into one bucket.
+                    row = args[0] if args else None
+                    row_base = None
+                    if isinstance(row, ast.Subscript):
+                        row_base = getattr(row.value, "id", None) \
+                            or getattr(row.value, "attr", None)
+                    if row_base in ("List", "list", "Sequence", "Iterable", "Iterator"):
+                        out.add("nested-seq-deep")
+                    elif row_base in ("Tuple", "tuple"):
+                        out.add("nested-seq-pair")
+                    elif isinstance(row, ast.Name) and row.id in TYPING_STR:
+                        out.add("nested-seq-string")
+                    else:
+                        out.add("nested-seq")
                 else:
                     for a in args:
                         walk(a, depth + 1)
@@ -699,6 +784,23 @@ def humaneval_io_tags(prompt: str, entry_point: str) -> tuple[set[str], set[str]
     return io_types, gaps, burdens
 
 
+def _json_row_kind(el: list) -> str:
+    """(SPEC.md 'Nested sequences (v1)') One row of a nested JSON list --
+    itself a decoded JSON list -- classified by its own elements. A row
+    holding a further list is a third level, `nested-seq-deep`. A
+    non-empty row of all JSON strings is `nested-seq-string`. JSON has no
+    tuple type, so `nested-seq-pair` cannot arise from decoded JSON at
+    all (confirmed: `json.loads` never produces a tuple) -- this reader
+    genuinely cannot signal it, not a gap left unimplemented. Anything
+    else (an empty, int/bool, or mixed row) is the conservative default
+    `nested-seq`."""
+    if any(isinstance(x, list) for x in el):
+        return "nested-seq-deep"
+    if el and all(isinstance(x, str) for x in el):
+        return "nested-seq-string"
+    return "nested-seq"
+
+
 def _json_value_kinds(v, depth: int = 0) -> set[str]:
     """One decoded JSON value (from APPS's typed `fn_name` io) -> io-type
     gap or burden names, or empty if it fits int/bool/seq<int> (a str value
@@ -719,7 +821,7 @@ def _json_value_kinds(v, depth: int = 0) -> set[str]:
         out: set[str] = set()
         for el in v:
             if isinstance(el, list):
-                out.add("nested-seq")
+                out.add(_json_row_kind(el))
             else:
                 out |= _json_value_kinds(el, depth + 1)
         return out
@@ -1179,8 +1281,8 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("  value of an unpacking assignment: exactly two elements, neither a")
     w("  nested tuple nor syntactically a string, is `tuple-pair`; three")
     w("  or more elements, a nested tuple, or a string element is `tuple`")
-    w("  (a list of tuples is the separate gap `nested-seq`, tagged where")
-    w("  a list literal's own elements are inspected); a parallel")
+    w("  (a list of tuples is the separate gap `nested-seq-pair`, tagged")
+    w("  where a list literal's own elements are inspected); a parallel")
     w("  assignment whose right-hand side is a tuple literal of the same")
     w("  length as its target (`a, b = b, a`, `a, b = 1, 2`) is excluded")
     w("  from both, the same exception the detector has always made,")

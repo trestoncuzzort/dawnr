@@ -1162,9 +1162,19 @@ fragment 511 to 599 of 4,239, stdin problems that would enter 698 to
 order opens with `string-lib` (13,266 problems, 298 sole blockers, 415
 newly unlocked), then `nested-seq` (3,948, 203 sole), `import` (3,932,
 160), `real` (3,517, 226), `tuple` (3,872, 56), `map` (2,463, 52). The
-DafnyBench census after rows 28 and 29 opens with `nested-seq` (17 sole),
-`array` (16), `set` (13), `multi-method` (14), `zero-returns` (44). The
-two agree once the string library is read for what it is: not a value
+DafnyBench census after rows 28 and 29 first read `nested-seq` (17 sole)
+at the head of its order; the shape measurement the same night found the
+tag firing on `seq<char>` and `seq<bool>` too, and the detector was split
+(`nested-seq` one level of int rows, `seq-of-bool`, `nested-seq-string`,
+`nested-seq-deep`, `nested-seq-other`): the honest count is 12 programs
+and 10 sole blockers, the order opens with `array` (15), `set` (12),
+`multi-method` (14), `zero-returns` (44), and three programs the old tag
+held back on a bare string entered the fragment (321 to 324 of 643); on
+nl/ the same split reads `nested-seq` 3,606 problems and 154 sole
+blockers, `nested-seq-pair` 566, `nested-seq-deep` 95, `nested-seq-string`
+119, in fragment unchanged at 599 and 1,022. So the case for nested
+sequences rests on nl/ and on the string library, not on DafnyBench, and
+the two corpora agree once the string library is read for what it is: not a value
 construct but a set of functions over sequences of code points, whose
 largest members (`split`, `join`, and every list-of-strings shape) return
 a sequence of sequences. So the next wave is a nested sequence as a value

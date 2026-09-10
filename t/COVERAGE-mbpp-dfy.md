@@ -8,23 +8,26 @@ seven kernels verify its t rendering. Method and detectors at the end.
 ## Headline
 
 - programs: 164; with a method carrying its own ensures (gradable): 164
-- in t's fragment today: **120** of 164 gradable (73.2%)
-- gradable programs blocked by exactly one gap: 39
+- in t's fragment today: **121** of 164 gradable (73.8%)
+- gradable programs blocked by exactly one gap: 37
 
 ## Gaps, by programs that need them
 
 | gap | programs | sole blocker for (gradable) | meaning |
 |---|---|---|---|
-| nested-seq | 14 | 13 | a nested seq or array, or a seq of non-int elements |
 | real | 10 | 9 | real numbers |
+| nested-seq | 10 | 10 | seq<seq<int>>/seq<seq<nat>> (array\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- SPEC.md 'Nested sequences (v1)', LIFTER-DECISIONS.md row 30 |
 | set | 7 | 6 | set, iset, multiset, set comprehension or set literal |
 | char-arith | 3 | 3 | char arithmetic |
-| array | 2 | 2 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
+| array | 2 | 1 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
+| nested-seq-string | 2 | 2 | seq<string>, or seq<seq<char>> -- a row that is itself string-shaped, since a Dafny string is a seq of chars; a bare seq<char> is not this gap, it is the burden string-as-seq |
 | bitvector | 2 | 1 | bit vectors or bitwise operators |
 | multi-return-arity | 2 | 1 | a method with more than one return value that t cannot map to one pair return -- three or more return values, or exactly two whose component types this lifter does not carry (array, bitvector, real, map, multiset, a nested Dafny tuple, a bare char) -- see the burden multi-return-pair |
 | early-exit | 2 | 1 | a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop) |
 | multi-method | 2 | 0 | more than one graded method (Main excluded) where some method's body calls ANOTHER declared method by name -- decision 9 lifts one task per method, so independent methods (no cross-call) are the burden multi-method-independent, not this gap |
 | zero-returns | 2 | 1 | a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array |
+| seq-of-bool | 1 | 0 | seq<bool>, one level, bool element -- its own gap, split out of the old nested-seq row 2026-09-09 |
+| nested-seq-other | 1 | 0 | a nested seq/array this file doesn't give its own name: seq<real>, seq<T> for a datatype or identifier, or a 2-level nesting whose innermost type is not int/nat/char |
 | higher-order | 1 | 0 | lambdas or function types |
 | seq-comprehension | 1 | 0 | seq(n, i => e) -- t's fill is constant-valued, this is not (v1 gap, unlike rows 25-27) |
 | array-mutation | 1 | 0 | array mutation decision 22 does not map: more than one mutated array, multiset over a mutated array's slice, or a modifies clause naming anything but the one array |
@@ -35,42 +38,48 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | nested-seq | 13 | 133 | 81.1% |
-| 2 | real | 9 | 142 | 86.6% |
-| 3 | set | 6 | 148 | 90.2% |
-| 4 | char-arith | 3 | 151 | 92.1% |
-| 5 | array | 2 | 153 | 93.3% |
-| 6 | multi-return-arity | 2 | 155 | 94.5% |
-| 7 | bitvector | 2 | 157 | 95.7% |
-| 8 | zero-returns | 1 | 158 | 96.3% |
-| 9 | early-exit | 1 | 159 | 97.0% |
-| 10 | multi-method | 1 | 160 | 97.6% |
-| 11 | array-mutation | 1 | 161 | 98.2% |
-| 12 | unbounded-quantifier | 1 | 162 | 98.8% |
-| 13 | tuple | 1 | 163 | 99.4% |
-| 14 | higher-order | 0 | 163 | 99.4% |
-| 15 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | nested-seq | 10 | 131 | 79.9% |
+| 2 | real | 9 | 140 | 85.4% |
+| 3 | set | 6 | 146 | 89.0% |
+| 4 | char-arith | 3 | 149 | 90.9% |
+| 5 | multi-return-arity | 2 | 151 | 92.1% |
+| 6 | nested-seq-string | 2 | 153 | 93.3% |
+| 7 | array | 1 | 154 | 93.9% |
+| 8 | zero-returns | 1 | 155 | 94.5% |
+| 9 | early-exit | 1 | 156 | 95.1% |
+| 10 | multi-method | 1 | 157 | 95.7% |
+| 11 | array-mutation | 1 | 158 | 96.3% |
+| 12 | seq-of-bool | 1 | 159 | 97.0% |
+| 13 | unbounded-quantifier | 1 | 160 | 97.6% |
+| 14 | bitvector | 1 | 161 | 98.2% |
+| 15 | nested-seq-other | 1 | 162 | 98.8% |
+| 16 | tuple | 1 | 163 | 99.4% |
+| 17 | higher-order | 0 | 163 | 99.4% |
+| 18 | seq-comprehension | 1 | 164 | 100.0% |
 
 
 ### The same order on the MBPP-DFY family alone (164 gradable, the LLM-shaped subset)
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | nested-seq | 13 | 133 | 81.1% |
-| 2 | real | 9 | 142 | 86.6% |
-| 3 | set | 6 | 148 | 90.2% |
-| 4 | char-arith | 3 | 151 | 92.1% |
-| 5 | array | 2 | 153 | 93.3% |
-| 6 | multi-return-arity | 2 | 155 | 94.5% |
-| 7 | bitvector | 2 | 157 | 95.7% |
-| 8 | zero-returns | 1 | 158 | 96.3% |
-| 9 | early-exit | 1 | 159 | 97.0% |
-| 10 | multi-method | 1 | 160 | 97.6% |
-| 11 | array-mutation | 1 | 161 | 98.2% |
-| 12 | unbounded-quantifier | 1 | 162 | 98.8% |
-| 13 | tuple | 1 | 163 | 99.4% |
-| 14 | higher-order | 0 | 163 | 99.4% |
-| 15 | seq-comprehension | 1 | 164 | 100.0% |
+| 1 | nested-seq | 10 | 131 | 79.9% |
+| 2 | real | 9 | 140 | 85.4% |
+| 3 | set | 6 | 146 | 89.0% |
+| 4 | char-arith | 3 | 149 | 90.9% |
+| 5 | multi-return-arity | 2 | 151 | 92.1% |
+| 6 | nested-seq-string | 2 | 153 | 93.3% |
+| 7 | array | 1 | 154 | 93.9% |
+| 8 | zero-returns | 1 | 155 | 94.5% |
+| 9 | early-exit | 1 | 156 | 95.1% |
+| 10 | multi-method | 1 | 157 | 95.7% |
+| 11 | array-mutation | 1 | 158 | 96.3% |
+| 12 | seq-of-bool | 1 | 159 | 97.0% |
+| 13 | unbounded-quantifier | 1 | 160 | 97.6% |
+| 14 | bitvector | 1 | 161 | 98.2% |
+| 15 | nested-seq-other | 1 | 162 | 98.8% |
+| 16 | tuple | 1 | 163 | 99.4% |
+| 17 | higher-order | 0 | 163 | 99.4% |
+| 18 | seq-comprehension | 1 | 164 | 100.0% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
@@ -80,7 +89,7 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 120 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 121 |
 
 ## Burdens (expressible at a translation cost)
 
@@ -189,6 +198,7 @@ more than one gate.
 - dafny-synthesis_task_id_476.dfy
 - dafny-synthesis_task_id_554.dfy
 - dafny-synthesis_task_id_555.dfy
+- dafny-synthesis_task_id_565.dfy
 - dafny-synthesis_task_id_567.dfy
 - dafny-synthesis_task_id_572.dfy
 - dafny-synthesis_task_id_576.dfy

@@ -1526,10 +1526,11 @@ def _tuple(s: str) -> bool:
 # directly (t7.dfy) NOT to type-check in Dafny at all when both sides are
 # string ("expecting element type to be assignable to char (got
 # string)"), so it cannot occur in a verified corpus program. A nested
-# string (`seq<string>`, `seq<seq<char>>`) is already the EXISTING
-# `nested-seq` gap's own territory (its regex already matches `seq<` not
-# followed by `int`/`nat`), unchanged by this row. `char-arith` (the
-# actual `c + 1`-shaped construct, decision-vocabulary's own name) is
+# string (`seq<string>`, `seq<seq<char>>`) is its own gap, `nested-seq-
+# string` (2026-09-09, LIFTER-DECISIONS.md row 30 splits the old single
+# `nested-seq` regex five ways; see the comment at the new DETECTORS
+# entries below), not this row's business. `char-arith` (the actual
+# `c + 1`-shaped construct, decision-vocabulary's own name) is
 # unaffected: its regex predates this row and is not part of this split.
 _STRING_ORDER_CMP = re.compile(r'"[^"]*"\s*(?:<=|>=|<|>)|(?:<=|>=|<|>)\s*"[^"]*"')
 _STRING_SET_KIND = re.compile(r"\b(?:multiset|set|iset)\s*<\s*char\s*>")
@@ -1537,6 +1538,121 @@ _STRING_SET_KIND = re.compile(r"\b(?:multiset|set|iset)\s*<\s*char\s*>")
 
 def _string_lib(s: str) -> bool:
     return bool(_STRING_ORDER_CMP.search(s)) or bool(_STRING_SET_KIND.search(s))
+
+
+# --------------------------------------------------------------- row 30
+# LIFTER-DECISIONS.md row 30 (2026-09-09, SPEC.md "Nested sequences (v1)"):
+# the old single `nested-seq` regex fired on any `seq<X>` where X was not
+# `int`/`nat`, so besides genuine nesting (`seq<seq<int>>`) it also caught
+# `seq<char>` (already the burden `string-as-seq` since row 28), `seq<bool>`
+# (a distinct, never-named gap), `seq<real>`, and `seq<SomeDatatype>`, and
+# folded all of these into one row of the gap table. Split five ways here,
+# all still gaps (the `seq<seq>` construct SPEC.md designs is not landed):
+# `nested-seq` (a genuine `seq<seq<int>>`/`seq<seq<nat>>`, or the same shape
+# spelled `array\d*<seq<..>>`/`seq<array\d*<..>>`, one level of nesting,
+# int/nat innermost -- or a nested seq literal DISPLAY with no type
+# annotation at all, `[[1, 2], [3]]`), `seq-of-bool` (`seq<bool>`, its own
+# gap), `nested-seq-string` (`seq<string>` or `seq<seq<char>>`, a row that
+# is itself string-shaped since a Dafny string is a seq of chars),
+# `nested-seq-deep` (three or more levels, any innermost type), and
+# `nested-seq-other` (everything else the old regex used to catch: `seq
+# <real>`, `seq<T>` for a datatype/identifier, a 2-level nesting whose
+# innermost type is not int/nat/char). A BARE `seq<char>` (one level, not
+# wrapped in another seq/array) triggers none of the five: it stays exactly
+# the existing burden `string-as-seq`, unchanged, handled by the row-28
+# literal-forcing logic in `tag()` below.
+_SEQ_ARRAY_OPEN = re.compile(r"\b(?:seq|array\d*)\s*<\s*")
+
+
+def _seq_array_chains(s: str):
+    """(start, depth, leaf) for every OUTERMOST run of `seq<`/`arrayN<`
+    opens in `s`: `depth` how many such opens chain directly into one
+    another (nothing between but whitespace), `leaf` the identifier read
+    right after the last one (int, nat, bool, char, string, or any other
+    name -- the element type). A chain with no identifier at all right
+    after its last open (a truncated or malformed match) is skipped. An
+    inner open already spent by an outer chain is not walked again, so
+    `seq<seq<bool>>` reads once as depth 2/leaf bool, not also as a
+    spurious depth 1/leaf bool starting at the inner `<`."""
+    consumed = -1
+    for m in _SEQ_ARRAY_OPEN.finditer(s):
+        if m.start() < consumed:
+            continue
+        depth, pos = 1, m.end()
+        while True:
+            nxt = _SEQ_ARRAY_OPEN.match(s, pos)
+            if not nxt:
+                break
+            depth, pos = depth + 1, nxt.end()
+        leaf = re.match(IDENT, s[pos:])
+        consumed = pos + (leaf.end() if leaf else 0)
+        if leaf:
+            yield m.start(), depth, leaf.group(0)
+
+
+def _nested_seq_literal(s: str) -> bool:
+    """A nested sequence literal DISPLAY, `[[1, 2], [3]]`: a `[` that
+    `_seq_literal`'s own check (above) reads as opening a display, not an
+    index, whose balanced content holds ANOTHER `[` that also opens a
+    display rather than an index. Lexical like `_seq_literal` itself, and
+    reuses its rule rather than re-deriving one: a `[` immediately preceded
+    by `[` or `,` (whitespace aside) is a display by that same rule, since
+    neither char is in `_seq_literal`'s index-receiver set (identifier,
+    `]`, `)`), so the inner bracket needs no separate index/display test."""
+    for m in re.finditer(r"\[", s):
+        head = s[:m.start()].rstrip()
+        if re.search(r"[A-Za-z0-9_'\]\)>]$", head):
+            word = re.search(IDENT + r"$", head)
+            if not (word and word.group(0) in SEQ_LIT_KEYWORDS):
+                continue
+        j = _delim_close(s, m.start(), "[", "]")
+        if j < 0:
+            continue
+        inner = s[m.start() + 1:j - 1]
+        for m2 in re.finditer(r"\[", inner):
+            head2 = inner[:m2.start()].rstrip()
+            if head2 and head2[-1] in "[,":
+                return True
+    return False
+
+
+def _nested_seq_shapes(s: str) -> tuple:
+    """(nested_seq, seq_of_bool, nested_seq_string, nested_seq_deep,
+    nested_seq_other): each `seq<`/`arrayN<` chain (`_seq_array_chains`)
+    classified by its depth and its leaf (element) type. Depth 1 with leaf
+    int/nat/char is a BARE seq, not nested at all (int/nat already in t's
+    fragment, char the existing burden `string-as-seq`) and tags none of
+    the five. Depth 1 with leaf bool is `seq-of-bool`; depth 1 with leaf
+    string, or depth 2 with leaf char, is `nested-seq-string` (a row that
+    is itself string-shaped); depth 2 with leaf int/nat is `nested-seq`;
+    depth 2 with any other leaf (bool, string, real, a datatype or
+    identifier) is `nested-seq-other`; depth 3 or deeper is
+    `nested-seq-deep` regardless of leaf. A nested seq literal DISPLAY
+    with no type annotation at all (`_nested_seq_literal`) folds into
+    `nested-seq` too, the literal-shaped twin of the type-shaped reading."""
+    nested_seq = seq_of_bool = nested_str = nested_deep = nested_other = False
+    for _start, depth, leaf in _seq_array_chains(s):
+        if depth == 1:
+            if leaf in ("int", "nat", "char"):
+                continue
+            elif leaf == "bool":
+                seq_of_bool = True
+            elif leaf == "string":
+                nested_str = True
+            else:
+                nested_other = True
+        elif depth == 2:
+            if leaf in ("int", "nat"):
+                nested_seq = True
+            elif leaf == "char":
+                nested_str = True
+            else:
+                nested_other = True
+        else:
+            nested_deep = True
+    if _nested_seq_literal(s):
+        nested_seq = True
+    return nested_seq, seq_of_bool, nested_str, nested_deep, nested_other
 
 
 DETECTORS: dict[str, tuple[str, object, str]] = {
@@ -1582,7 +1698,11 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "zero-returns": ("gap", lambda s: _zero_return_shapes(s)[1], "a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array"),
     "early-exit": ("gap", _break_continue, "a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop)"),
     "seq-comprehension": ("gap", _has(r"\bseq\s*\("), "seq(n, i => e) -- t's fill is constant-valued, this is not (v1 gap, unlike rows 25-27)"),
-    "nested-seq": ("gap", _has(r"\b(?:seq|array\d*)<\s*(?:seq|array\d*)<|\bseq<\s*(?!int\b|nat\b)" + IDENT), "a nested seq or array, or a seq of non-int elements"),
+    "nested-seq": ("gap", lambda s: _nested_seq_shapes(s)[0], "seq<seq<int>>/seq<seq<nat>> (array\\d* variants included: array<seq<..>>, seq<array<..>>), one level of nesting, int/nat innermost -- or a nested seq literal display with no type at all, [[1,2],[3]] -- SPEC.md 'Nested sequences (v1)', LIFTER-DECISIONS.md row 30"),
+    "seq-of-bool": ("gap", lambda s: _nested_seq_shapes(s)[1], "seq<bool>, one level, bool element -- its own gap, split out of the old nested-seq row 2026-09-09"),
+    "nested-seq-string": ("gap", lambda s: _nested_seq_shapes(s)[2], "seq<string>, or seq<seq<char>> -- a row that is itself string-shaped, since a Dafny string is a seq of chars; a bare seq<char> is not this gap, it is the burden string-as-seq"),
+    "nested-seq-deep": ("gap", lambda s: _nested_seq_shapes(s)[3], "three or more levels of seq/array nesting, any innermost type"),
+    "nested-seq-other": ("gap", lambda s: _nested_seq_shapes(s)[4], "a nested seq/array this file doesn't give its own name: seq<real>, seq<T> for a datatype or identifier, or a 2-level nesting whose innermost type is not int/nat/char"),
     "unbounded-quantifier": ("gap", _unbounded_quantifier, "quantifier without an int range"),
     "real": ("gap", _has(r"\breal\b|(?<![\w.])\d+\.\d+(?![\w.])"), "real numbers"),
     "bitvector": ("gap", _has(r"\bbv\d+\b|\bas\s+bv\d|(?<!&)&(?!&)|\^|<<"), "bit vectors or bitwise operators"),
