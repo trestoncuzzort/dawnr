@@ -78,8 +78,12 @@ regen_diff() {
     echo "DIFF-SKIP ($desc): no committed file at $committed to compare against"
     return
   fi
-  if diff -u "$committed" "$regen"; then
-    echo "MATCH ($desc): $regen == $committed"
+  # Volatile lines are not differences: a table's own timestamp header
+  # and a census's run-time line change on every run (2026-09-10, the
+  # first full run counted three tables as differing on those alone).
+  local volatile='^# t cross-kernel agreement|^Run time:|^- \*\*run time|run time: [0-9.]+s'
+  if diff -u <(grep -Ev "$volatile" "$committed") <(grep -Ev "$volatile" "$regen"); then
+    echo "MATCH ($desc): $regen == $committed (volatile lines ignored)"
   else
     echo "DIFFERS ($desc): $regen vs $committed (diff above)"
     DIFF_COUNT=$((DIFF_COUNT + 1))
@@ -187,13 +191,23 @@ run_families() {
   echo "fuzz_lower.py rc=$?"
   echo "--- rows.json tallied per family and kernel ---"
   python3 - "$out/rows.json" <<'PYEOF'
-import json, sys, collections
-rows = json.load(open(sys.argv[1]))
-tally = collections.Counter()
-for r in rows:
-    tally[(r.get("family"), r.get("backend"))] += 1
-for (fam, backend), n in sorted(tally.items()):
-    print(f"  {fam!s:20} {backend!s:10} {n}")
+import json, sys, re, collections
+rows = json.load(open(sys.argv[1]))          # task -> kernel -> [real, twin, agreed, ms]
+K = ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
+def family(name):
+    m = re.match(r"fz_(v\d[a-z]+|p|wrong)", name)
+    return m.group(1) if m else name
+n = collections.Counter(); ok = collections.defaultdict(collections.Counter)
+for t, r in rows.items():
+    f = family(t); n[f] += 1
+    for k in K:
+        c = r.get(k)
+        if c and c[0] == "verified" and c[1] == "refuted":
+            ok[f][k] += 1
+print("family     n   " + " ".join(k.ljust(6) for k in K) + "   (verified/refuted per column)")
+for f in sorted(n):
+    print(f.ljust(10), str(n[f]).ljust(3), " ".join(str(ok[f][k]).ljust(6) for k in K))
+print("total".ljust(10), str(sum(n.values())).ljust(3), " ".join(str(sum(ok[f][k] for f in n)).ljust(6) for k in K))
 PYEOF
   echo "NOTE: no single committed table covers a full all-families run at" \
        "n=400; the per-wave fuzz-*/rows.json witnesses in the claims batch" \

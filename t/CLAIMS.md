@@ -334,6 +334,63 @@ Every claim that was STALE or UNWITNESSED when the audit ran, grouped by source 
 | 130 | every piece of t exists only once six independent proof kernels agree on exactly what it means. | CORRECTED | t/AGREEMENT.md header (7 kernel columns); commit 5cd4985 'seven kernels, 77/77, F* lands' | Same stale six-vs-seven discrepancy as line 24; TUTORIAL.md:517 also repeats 'six kernels agree', all three instances predate fstar's addition and were never updated. Worked 2026-09-10: Changed 'six independent proof kernels' to 'seven independent proof kernels', matching AGREEMENT.md's seven-column header; also corrected the same six-vs-seven error at TUTORIAL.md:517 ('features arrive only when seven kernels agree') since it was the same stale claim noted in this row's ledger entry and lives in the same file. |
 
 
+## Reproduction, 2026-09-10 (reproduce.sh, every stage, in tmux session `reproduce`)
+
+The one-command reproduction was run end to end for the first time this
+morning, every stage, each table regenerated beside its committed copy
+and diffed. The verdicts:
+
+| stage | committed table | verdict | note |
+|---|---|---|---|
+| --tests | none | PASSED | test_*.py and the notation round trip, 1742 of 1742 tasks, 313 s (earlier the same night) |
+| --censuses | COVERAGE-dafnybench.md | REPRODUCED | identical |
+| --censuses | COVERAGE-mbpp-dfy.md | REPRODUCED | identical |
+| --censuses | COVERAGE-nl.md | REPRODUCED | identical but for its own run-time line (43.4 s against 44.0 s) |
+| --censuses | COVERAGE-nl-stdin.md | DIFFERED, then fixed | two defects: the census chose its five worked examples from an order-dependent set (nl_stdin.py made deterministic, two runs identical), and the committed table predated the nested-seq tag split its sibling table already carried (regenerated and committed, c6f6741; the pool 203 to 271 and 96 to 121) |
+| --censuses | LIFTER-785.md | DIFFERS, expected | a dated 2026-09-06 snapshot the ledger already marks DATED; the corpus has moved from 77 to 277 in fragment |
+| --matrix | AGREEMENT.md | REPRODUCED | 23 tasks cell for cell, 299 s at 16 jobs; only the timestamp header differs |
+| --families | none | CRASHED, then fixed | the first run of every family at once hit the adversarial bare-slash probe, which the reference interpreter refuses before any lowering sees it (fuzz_lower.py now lowers the real alone for such a task, c6f6741); the re-run of 2,999 cells in tmux session `families` is below |
+| --truth | none | REPRODUCED | 471 tasks, 0 refutes-true, the one standing framac spec-function cell, 607 s at 24 jobs |
+| --relift | out/lifted-tasks | REPRODUCED | the fresh re-lift of the 785 selects the same 277 run-ready tasks, file for file, 1,367 s at 12 jobs |
+| --sweep | COVERAGE-lifted-785.md | REPRODUCED | the same 277 tasks re-lifted and re-swept at 6 jobs on a box also running the family run: 136 in all seven, every per-kernel count identical (dafny 231, fstar 199, framac 191, lean 177, rocq 177, spark 172, verus 170), no row lost or gained; 2 of 1,939 cells read differently, both a proof near its budget under load (spark's isPrime twin refuted to timeout, rocq's isPrime real unproved to timeout), 2,616 s |
+
+**The family run, re-run after the fix** (tmux `families`, 4,353 s, 448
+tasks of 16 families, 2,999 cells at flake 3, 3 tasks with well-formedness
+errors, most of the wall clock a tail of proofs run to their timeout
+three times over): 0 disagreements between kernels on a real; 1 cell
+against ground truth; 6 twins surviving; 106 no-flip cells. The one cell
+against ground truth is a real gap: the probe fz_p_fill_neg, a `fill`
+whose count the requires lets go negative, is undefined at n = -1 and
+every column leaves it unproved except framac, which verifies it, so
+framac's lowering is missing fill's definedness obligation (SPEC.md "fill
+... DEFINED IFF n >= 0"); a fix follows this note. The six surviving
+twins are not gaps: four (fz_v1divmod_048 and three v0loose tasks) carry
+the driver's own `nonrefuting` tag, a mutation the reference interpreter
+found equivalent on the whole domain, so a kernel is right to verify it;
+fz_p_modsign_true's ensures speaks of `x mod y` and not of the return, so
+no mutation of the body can contradict it; fz_p_vac_post's ensures is
+`true`, the content-free postcondition probe, which every column but
+spark accepts as verified rather than flagging as vacuous, a known
+reading (spark's own vacuity rule flags it). Per family, verified/refuted
+cells of 7 columns: v0if 45 tasks all seven columns 43 to 45; v1bool 37
+all seven 37; v1loop 27 all 27; v1rec 52 all 52; v1scan 49 all 49; v1nest
+3 all 3; v1divmod 15 all 14; v1exit 33 (rocq 20, the rest 32 or 33);
+v1seqval 23 (framac, lean, rocq 15, the rest 23); v1seqops 16 (lean 10,
+framac 13, rocq 15, the rest 16); v1pairs 22 (spark and framac 16, rocq
+20, lean 21, the rest 22); v1nested 13 (framac 2, rocq 8, spark 10, the
+rest 11 or 12); v1def 8 (dafny 7, lean, rocq, spark 5, verus, framac,
+fstar 2, the definedness family's own residual, the next map for those
+three columns); v0loose 6 (2 each, the rest nonrefuting twins); the 48
+probes 10 to 17 by design; and the 51 `wrong` tasks 0 in every column,
+as they must. The full family run is the table the wave-by-wave family
+runs never were, and it goes on the next construct's ending checklist.
+
+Two things the run taught about the script itself: its diff counts a
+table as differing on its own run-time or timestamp line, so the exit
+code overstates; and a full-family run's tail is hours of per-cell
+latency, the proofs that run to their timeout three times over. Both
+are the script's next changes, not the tables'.
+
 ## Second audit: the action list, as worked
 
 Every claim from the second audit that came back STALE or UNWITNESSED, grouped by source file in the same order as the full-ledger sections below. STALE means the witness this audit found (a docstring MEASURED note, a committed table, a log) exists but no longer matches the number in the file as committed now; UNWITNESSED means no docstring, table, log, or commit stating the number could be found. The status column below is now the action taken, not the original finding; the note column keeps the original finding and appends what was done, prefixed "Worked 2026-09-10 (second audit)".

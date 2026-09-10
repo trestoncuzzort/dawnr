@@ -1842,6 +1842,8 @@ conditions are met.
 DONE WHEN: as stated there.
 UNBLOCKS: 16.2, 16.3.
 
+**Reproduced end to end, 2026-09-10.** `t/reproduce.sh`, written the night before beside the claims ledger, was run with every stage in one tmux session: the censuses, the 23-task matrix, every fuzz family at once, ground truth, a fresh re-lift of the 785, and the sweep, each table regenerated beside its committed copy and diffed. The matrix, ground truth, the re-lift (the same 277 run-ready tasks, file for file) and the sweep (136 in all seven, every per-kernel count identical, two cells moving between timeout and refuted on a loaded box) reproduce; the DafnyBench, MBPP-DFY and nl/ censuses reproduce; LIFTER-785.md differs as the dated snapshot it is. The run found three defects on the way, each fixed and committed the same morning: the stdin census chose its worked examples from an order-dependent set, its committed table predated the censuses' nested-seq split, and the first run of every fuzz family at once crashed on the driver's own bare-slash probe. The full family run then found one real gap, framac verifying a `fill` with a count the requires lets go negative (its definedness obligation missing), and six surviving twins that are all specs no mutation can contradict. The ledger's "Reproduction, 2026-09-10" section carries the verdict per table. The remaining standing item is the script's own tail: a full family run is hours of per-cell latency.
+
 #### 16.2 MBPP-DFY to half
 
 The coverage half of the bar: 82 of 164 lifted and VERIFIED by all seven
