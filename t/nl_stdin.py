@@ -427,7 +427,7 @@ def process_apps(limit: int | None = None):
             result = classify_problem(samples)
             if result["verdict"] == "accepted":
                 attach_solution(result, apps_first_solution(rec))
-                if result["in_pool"] and len(pool_examples) < 500:
+                if result["in_pool"]:
                     pool_examples.append({
                         "source": "APPS", "id": pid,
                         "sample_input": samples[0][0],
@@ -461,7 +461,7 @@ def process_codecontests(limit: int | None = None):
             result = classify_problem(samples)
             if result["verdict"] == "accepted":
                 attach_solution(result, cc_first_solution(rec))
-                if result["in_pool"] and len(pool_examples) < 500:
+                if result["in_pool"]:
                     pool_examples.append({
                         "source": "CodeContests", "id": pid,
                         "sample_input": samples[0][0],
@@ -574,7 +574,13 @@ def render(all_records: list[dict], pool_examples: list[dict],
     w("Chosen from the pool (accepted, gap-free), shortest sample input")
     w("first, so the input/signature/points line up legibly on the page.")
     w("")
-    examples = sorted(pool_examples, key=lambda e: len(e["sample_input"]))[:5]
+    # Deterministic (2026-09-10): every in-pool example is collected (the
+    # first 500 in encounter order made the five depend on that order, and
+    # the reproduce run diffed them), and the tie on length breaks by
+    # source and id.
+    examples = sorted(pool_examples,
+                      key=lambda e: (len(e["sample_input"]), e["source"],
+                                     str(e["id"])))[:5]
     for i, ex in enumerate(examples, 1):
         w(f"### {i}. {ex['source']} `{ex['id']}`")
         w("")

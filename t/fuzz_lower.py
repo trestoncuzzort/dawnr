@@ -3578,7 +3578,31 @@ def run(corpus, outdir: Path, jobs: int, n_flake: int, only=None):
             # twin read unproved instead of refuted (measured on the
             # v1seqops family: 78 no-flip cells, 10 of 22 tasks no-twin).
             clean = {k: v for k, v in task.items() if not k.startswith("_")}
-            twin_body, op, wit = harness.twin_cached(clean)
+            try:
+                twin_body, op, wit = harness.twin_cached(clean)
+            except Exception as e:                           # noqa: BLE001
+                # The reference interpreter refused the task outright (the
+                # adversarial probe fz_p_nodiv carries a bare `/`, which is
+                # not a t operator; found 2026-09-10 by the first full
+                # all-families run, every earlier run having used --tasks).
+                # The probe's whole point is the LOWERING's own rejection,
+                # so the real is lowered alone: a lowering that raises reads
+                # lower-error (the probe's expected class), one that
+                # abstains reads abstain, and one that ACCEPTS the token
+                # reads no-twin with the interpreter's reason, which the
+                # probe's expectation then flags.
+                try:
+                    lower(clean, task["body"])
+                except NotImplementedError as e2:
+                    rows[name][bname] = ("abstain", str(e2)[:120], True, 0)
+                    continue
+                except Exception as e2:                      # noqa: BLE001
+                    rows[name][bname] = ("lower-error",
+                                         f"{type(e2).__name__}: {e2}"[:120],
+                                         True, 0)
+                    continue
+                rows[name][bname] = ("no-twin", f"interp: {e}"[:120], True, 0)
+                continue
             if twin_body is None:
                 rows[name][bname] = ("no-twin", "no-twin", True, 0)
                 continue

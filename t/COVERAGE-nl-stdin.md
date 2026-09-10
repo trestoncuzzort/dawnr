@@ -18,7 +18,7 @@ edge cases.
 
 - stdin-shaped problems: 20509
 - accepted (a signature was extracted and every sample fit it): 3058 (14.9%)
-- **in the pool** (accepted AND the reference solution tags no gap): **203** (1.0%)
+- **in the pool** (accepted AND the reference solution tags no gap): **271** (1.3%)
 
 accepted signatures by grammar rule:
 
@@ -60,7 +60,7 @@ refusals by reason:
 
 - stdin-shaped problems: 6899
 - accepted (a signature was extracted and every sample fit it): 1268 (18.4%)
-- **in the pool** (accepted AND the reference solution tags no gap): **96** (1.4%)
+- **in the pool** (accepted AND the reference solution tags no gap): **121** (1.8%)
 
 accepted signatures by grammar rule:
 
@@ -99,7 +99,7 @@ refusals by reason:
 
 - stdin-shaped problems: 13610
 - accepted (a signature was extracted and every sample fit it): 1790 (13.2%)
-- **in the pool** (accepted AND the reference solution tags no gap): **107** (0.8%)
+- **in the pool** (accepted AND the reference solution tags no gap): **150** (1.1%)
 
 accepted signatures by grammar rule:
 
@@ -152,22 +152,7 @@ refusals by reason:
 Chosen from the pool (accepted, gap-free), shortest sample input
 first, so the input/signature/points line up legibly on the page.
 
-### 1. APPS `apps_raw_train:656`
-
-grammar rule: `a(k=1)`  
-signature: `(x1: int)`
-
-sample input:
-```
-5
-```
-sample output: `4`
-
-points:
-
-- `(5) == 4`
-
-### 2. APPS `apps_raw_train:1235`
+### 1. APPS `apps_raw_train:1235`
 
 grammar rule: `a(k=1)`  
 signature: `(x1: int)`
@@ -182,7 +167,7 @@ points:
 
 - `(2) == 25`
 
-### 3. APPS `apps_raw_train:1290`
+### 2. APPS `apps_raw_train:1290`
 
 grammar rule: `a(k=1)`  
 signature: `(x1: int)`
@@ -197,7 +182,7 @@ points:
 
 - `(9) == 1`
 
-### 4. APPS `apps_raw_train:2570`
+### 3. APPS `apps_raw_train:2570`
 
 grammar rule: `a(k=1)`  
 signature: `(x1: int)`
@@ -212,34 +197,39 @@ points:
 
 - `(3) == 123`
 
-### 5. CodeContests `codecontests_train:p02548 AtCoder Beginner Contest 179 - A x B + C`
+### 4. APPS `apps_raw_train:532`
 
 grammar rule: `a(k=1)`  
 signature: `(x1: int)`
 
 sample input:
 ```
-3
+4
 ```
-sample output: `3`
+sample output: `5`
 
 points:
 
-- `(3) == 3`
-- `(100) == 473`
-- `(1000000) == 13969985`
 - `(4) == 5`
-- `(101) == 482`
-- `(5) == 8`
-- `(1) == 0`
-- `(8) == 16`
-- `(6) == 10`
-- `(2) == 1`
-- ... 93 more sample(s)
+
+### 5. APPS `apps_raw_train:656`
+
+grammar rule: `a(k=1)`  
+signature: `(x1: int)`
+
+sample input:
+```
+5
+```
+sample output: `4`
+
+points:
+
+- `(5) == 4`
 
 ## Method
 
-Run time: 329.6s. Streams every APPS and CodeContests
+Run time: 182.0s. Streams every APPS and CodeContests
 .jsonl.gz split with nl_census._stream (gzip text mode, one JSON
 object per line; nothing is decompressed to disk). A problem is
 stdin-shaped under the same split nl_census.py uses: an APPS record
