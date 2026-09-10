@@ -118,7 +118,7 @@ number is on purpose:
   `tasks/divmod_pair.json` (no loop) and `tasks/min_max.json` (a loop
   that fills both components together) are the examples.
 - **A nested seq `seq<seq>`**: a seq whose elements are themselves seqs of
-  ints, like `[[1, 2], [3]]` — a matrix, one row per element. `m[i]` is a
+  ints, like `[[1, 2], [3]]`, a matrix, one row per element. `m[i]` is a
   whole row (a `seq`); `m[i][j]` reaches one int inside it, chaining the
   same `[...]` you already use on a plain seq. Rows do not have to be the
   same length: nothing about a nested seq forces that, so a task that
