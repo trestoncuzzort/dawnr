@@ -362,8 +362,12 @@ against ground truth; 6 twins surviving; 106 no-flip cells. The one cell
 against ground truth is a real gap: the probe fz_p_fill_neg, a `fill`
 whose count the requires lets go negative, is undefined at n = -1 and
 every column leaves it unproved except framac, which verifies it, so
-framac's lowering is missing fill's definedness obligation (SPEC.md "fill
-... DEFINED IFF n >= 0"); a fix follows this note. The six surviving
+framac's lowering was adding a `requires r_n >= 0` of its own on every
+seq return, a clause that excluded the very input the task admits; fixed
+the same day (78f97cd), the probe reads unproved and never verified, and
+the fifteenth sweep re-measured the lifted corpus under the fix (136 in
+all seven, unchanged; four lifted twins refuted through the shared
+certificate's new if walk). The six surviving
 twins are not gaps: four (fz_v1divmod_048 and three v0loose tasks) carry
 the driver's own `nonrefuting` tag, a mutation the reference interpreter
 found equivalent on the whole domain, so a kernel is right to verify it;
