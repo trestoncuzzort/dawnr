@@ -1319,6 +1319,11 @@ decoder or a repair pass on the five leak shapes, measured on the same
 learn from; no round is compared under the version-2 prompt until the
 control is re-measured under it (12.7's rule).
 
+**Paused 2026-09-10 (WS-19, reordered).** No further 1.5B training round
+runs until a model that reads an error is in the loop (WS-19 move 2);
+the loop's instruments, the split and the curve stay as they are and
+take that model's columns first.
+
 ## WS-19: the frontier moves (opened 2026-09-10)
 
 Treston, 2026-09-09: "the front tier survey is gonna be groundbreaking for
