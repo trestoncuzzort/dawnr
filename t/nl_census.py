@@ -132,8 +132,12 @@ DETECTORS: dict[str, tuple[str, str]] = {
             "dict-typed io value"),
     "set": ("gap", "set literal, set(), frozenset(), a set/dict "
             "comprehension's set form"),
-    "tuple": ("gap", "tuple unpacking beyond a same-length parallel "
-              "assignment, a tuple parameter, or a tuple-typed io value"),
+    "tuple": ("gap", "a tuple of three or more elements, a nested tuple, "
+              "a tuple with a string component (until strings-as-seq's "
+              "seq-of-code-points model covers a pair component too), or "
+              "a list of tuples (the nested-seq gap, tagged there): "
+              "SPEC.md's 'Pairs (v1)' covers only the two-element case, "
+              "the burden tuple-pair"),
     "multi-return": ("gap", "a function-shaped problem returning a tuple "
                       "(several return values; t returns exactly one)"),
     "none-type": ("gap", "Optional[..] or an explicit None return/argument"),
@@ -147,13 +151,13 @@ DETECTORS: dict[str, tuple[str, str]] = {
                         "while-true, no continue, and a break is only in "
                         "the fragment as a tail-position return, decision "
                         "23 -- not distinguished here, see Method)"),
-    "seq-append": ("gap", "sequence concatenation `+` or .append()/.extend() "
-                   "(the next wave after v1's functional update and "
-                   "seq(n, v); not yet in the fragment)"),
-    "seq-literal": ("gap", "a sequence literal [..] in an expression (the "
-                    "next wave; t builds sequences with seq(n, v) and "
-                    "functional update today)"),
-    "seq-slice": ("gap", "slicing s[a:b] (the next wave)"),
+    "seq-slice-negative": ("gap", "a slice bound that is a negative "
+                            "literal, s[-1:] or s[:-1]: t's slice is "
+                            "defined only for 0 <= a <= b <= len(s), so a "
+                            "negative index is measured apart from the "
+                            "burden seq-slice"),
+    "seq-slice-step": ("gap", "a slice with a step, s[a:b:c]: t's slice "
+                        "form takes two bounds only, no step"),
     "generator": ("gap", "a generator expression or a generator function "
                   "(yield): t has no lazy or deferred evaluation"),
     "global": ("gap", "global or nonlocal: mutable state outside the "
@@ -164,6 +168,25 @@ DETECTORS: dict[str, tuple[str, str]] = {
            "solution (for a stdin-shaped problem, I/O is the shape itself, "
            "not a separate gap)"),
     # burdens: t can say it another way, at a cost
+    "seq-literal": ("burden", "a sequence literal [..] in an expression: "
+                    "t's v1 already has seq (SPEC.md 'Sequences: literals, "
+                    "concatenation, slices'), landed 2026-09-09, so this "
+                    "is expressible directly, not a gap"),
+    "seq-append": ("burden", "sequence concatenation `+` or "
+                   ".append()/.extend()/.insert(): t's v1 already has + on "
+                   "seqs (SPEC.md 'Sequences: literals, concatenation, "
+                   "slices'), landed as r + [x] or r + s"),
+    "seq-slice": ("burden", "slicing s[a:b], s[a:], s[:b] with "
+                  "non-negative bounds and no step: t's v1 already has "
+                  "slice (SPEC.md 'Sequences: literals, concatenation, "
+                  "slices'); a negative bound or a step is measured "
+                  "separately as the gaps seq-slice-negative / "
+                  "seq-slice-step"),
+    "tuple-pair": ("burden", "a tuple of exactly two values, each an int, "
+                   "bool or seq of ints, built, returned, passed, "
+                   "compared, or unpacked from such a pair: t's v1 "
+                   "already has {\"pair\": [T1, T2]} (SPEC.md 'Pairs "
+                   "(v1)'), landed 2026-09-10"),
     "string-as-seq": ("burden", "a string used only the way t's `seq` of "
                        "code points already covers: a str literal, a "
                        "str-typed io value, indexing/len/slicing/"
@@ -247,6 +270,36 @@ def _looks_stringy(node: ast.AST) -> bool:
     return False
 
 
+def _is_negative_slice_bound(node: ast.AST | None) -> bool:
+    """A slice bound written as a negative literal, `-1` in `s[:-1]`:
+    Python's `ast` reads `-1` as `UnaryOp(USub, Constant(1))`, never a
+    `Constant` of a negative int, so this is the shape to check, not the
+    value. A negative bound behind a variable or an expression (`s[:n-1]`)
+    is not recognized this way and reads as a plain (non-negative)
+    `seq-slice`, the same undercounting direction every other syntactic
+    detector in this file accepts."""
+    return isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub)
+
+
+def _classify_tuple_literal_elts(elts: list[ast.AST]) -> str:
+    """(SPEC.md 'Pairs (v1)') Exactly two elements, neither a nested tuple
+    nor syntactically a string (`_looks_stringy`), reads as the burden
+    `tuple-pair`: t's v1 pair type takes a component that is an int, a
+    bool, or a seq of ints, and a bare non-string, non-tuple element is
+    assumed to fit one of those without further type inference, the same
+    approximation direction this file takes elsewhere. Three or more
+    elements, a nested tuple, or a string element reads as the gap
+    `tuple`; a LIST of tuples is a separate case, tagged `nested-seq`
+    where a list literal's own elements are inspected, not here."""
+    if len(elts) != 2:
+        return "tuple"
+    if any(isinstance(e, ast.Tuple) for e in elts):
+        return "tuple"
+    if any(_looks_stringy(e) for e in elts):
+        return "tuple"
+    return "tuple-pair"
+
+
 def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
     """Tag one reference solution's AST. `fn_name` is the entry point for a
     function-shaped problem (used to detect self-recursion and multi-return
@@ -285,6 +338,24 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
     if nested_defs:
         tags["closure"] = True
 
+    # A parallel assignment whose right-hand side is a tuple literal of
+    # the same length as its tuple target (`a, b = b, a`, `a, b = 1, 2`)
+    # is not a `tuple`/`tuple-pair` shape at all: t writes it as two
+    # assignments, no pair value ever built. Both the target and value
+    # Tuple nodes of such an assignment are recorded here so the generic
+    # `ast.Tuple` check below (which every OTHER tuple anywhere in the
+    # solution, built, returned, passed, compared, or unpacked, now
+    # reaches) skips exactly this shape, matching what the old
+    # assignment-only `tuple` detector already excluded.
+    excluded_tuples: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                and isinstance(node.targets[0], ast.Tuple):
+            tgt, val = node.targets[0], node.value
+            if isinstance(val, ast.Tuple) and len(val.elts) == len(tgt.elts):
+                excluded_tuples.add(id(tgt))
+                excluded_tuples.add(id(val))
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Constant):
             if isinstance(node.value, str) and node.value != "":
@@ -300,13 +371,22 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
                 tags["seq-append"] = True
         elif isinstance(node, ast.Subscript):
             if isinstance(node.slice, ast.Slice):
-                tags["seq-slice"] = True
+                sl = node.slice
+                if sl.step is not None:
+                    tags["seq-slice-step"] = True
+                elif _is_negative_slice_bound(sl.lower) or _is_negative_slice_bound(sl.upper):
+                    tags["seq-slice-negative"] = True
+                else:
+                    tags["seq-slice"] = True
             if isinstance(node.value, ast.Subscript):
                 tags["nested-seq"] = True
         elif isinstance(node, ast.List):
             tags["seq-literal"] = True
-            if any(isinstance(e, ast.List) for e in node.elts):
+            if any(isinstance(e, (ast.List, ast.Tuple)) for e in node.elts):
                 tags["nested-seq"] = True
+        elif isinstance(node, ast.Tuple):
+            if id(node) not in excluded_tuples:
+                tags[_classify_tuple_literal_elts(node.elts)] = True
         elif isinstance(node, (ast.Dict,)):
             tags["map"] = True
         elif isinstance(node, (ast.Set, ast.SetComp)):
@@ -374,13 +454,6 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             elif name == "input":
                 if function_shaped:
                     tags["io"] = True
-        elif isinstance(node, ast.Assign):
-            if isinstance(node.targets[0], ast.Tuple) and len(node.targets) == 1:
-                val = node.value
-                same_len_literal = isinstance(val, ast.Tuple) and \
-                    len(val.elts) == len(node.targets[0].elts)
-                if not same_len_literal:
-                    tags["tuple"] = True
 
     # recursion and multi-return, read off the entry point specifically for
     # a function-shaped problem; off any self-recursive def for stdin.
@@ -435,6 +508,38 @@ def _mbpp_arg_kind_gap(why: str) -> str | None:
     return "any-type"
 
 
+def _mbpp_assert_tuple_kind(a: str, prefix: str) -> str:
+    """Re-reads one MBPP assert line to classify a 'tuple' refusal by
+    arity and component shape. `mbpp_dfy._Unsupported` carries no arity,
+    its message is the bare word 'tuple' whatever length or shape tripped
+    it (mbpp_dfy.py is reused, not reimplemented, so it is not widened to
+    say more), so this file re-parses the SAME assert text independently
+    with its own `ast`, finds the literal tuple on the side `prefix`
+    ('arg' or 'expected') names, and applies `_classify_tuple_literal_elts`
+    to it. Falls back to the gap `tuple` whenever the assert does not have
+    the plain `f(...) == expected` shape this reads (or the tuple cannot
+    be found there), the same conservative default the io-types side
+    already takes elsewhere in this file."""
+    try:
+        tree = ast.parse(a.strip())
+    except SyntaxError:
+        return "tuple"
+    if len(tree.body) != 1 or not isinstance(tree.body[0], ast.Assert):
+        return "tuple"
+    test = tree.body[0].test
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1 or len(test.comparators) != 1:
+        return "tuple"
+    left, right = test.left, test.comparators[0]
+    call = left if isinstance(left, ast.Call) else (right if isinstance(right, ast.Call) else None)
+    expected = right if call is left else left
+    node = None
+    if prefix == "arg" and isinstance(call, ast.Call):
+        node = next((n for n in call.args if isinstance(n, ast.Tuple)), None)
+    elif prefix == "expected":
+        node = expected if isinstance(expected, ast.Tuple) else None
+    return _classify_tuple_literal_elts(node.elts) if node is not None else "tuple"
+
+
 def mbpp_io_tags(test_list: list[str]) -> tuple[set[str], set[str], set[str], list[str], bool, str | None]:
     """(io_types, gaps, burdens, raw_refusals, all_ok, fn_name) for one MBPP
     problem's test_list, using mbpp_dfy.parse_assertion on every assertion
@@ -460,6 +565,9 @@ def mbpp_io_tags(test_list: list[str]) -> tuple[set[str], set[str], set[str], li
             all_ok = False
             refusals.append(parsed["why"])
             g = _mbpp_arg_kind_gap(parsed["why"])
+            if g == "tuple":
+                prefix = parsed["why"].split(":", 1)[0]
+                g = _mbpp_assert_tuple_kind(a, prefix)
             if g:
                 (burdens if g in BURDENS else gaps).add(g)
     single_fn = len(fns) == 1
@@ -501,7 +609,17 @@ def _annotation_kinds(ann: ast.AST | None) -> set[str]:
             elif base_name in ("Set", "set", "FrozenSet"):
                 out.add("set")
             elif base_name in ("Tuple", "tuple"):
-                out.add("tuple")
+                # SPEC.md 'Pairs (v1)': exactly two components, each
+                # itself annotated as fitting int/bool/seq of ints (no
+                # gap or burden of its own from the recursive read) is
+                # the burden `tuple-pair`; anything else (arity != 2, a
+                # component that is itself a gap or burden such as a
+                # string, a nested seq, or another tuple) stays the gap
+                # `tuple`.
+                if len(args) == 2 and not any(_annotation_kinds(a) for a in args):
+                    out.add("tuple-pair")
+                else:
+                    out.add("tuple")
             elif base_name == "Optional":
                 out.add("none-type")
                 for a in args:
@@ -567,8 +685,14 @@ def humaneval_io_tags(prompt: str, entry_point: str) -> tuple[set[str], set[str]
         gaps |= {k for k in ks if k in GAPS}
         burdens |= {k for k in ks if k in BURDENS}
     ret_ks = _annotation_kinds(fn.returns)
-    if "tuple" in ret_ks:
+    if "tuple" in ret_ks or "tuple-pair" in ret_ks:
+        # a Tuple[..] RETURN type means several return values, not a
+        # tuple-shaped value in the data: that shape is the pre-existing
+        # gap `multi-return` (unchanged by the tuple/tuple-pair split),
+        # regardless of whether the tuple's own arity would otherwise
+        # have qualified as the pair burden.
         ret_ks.discard("tuple")
+        ret_ks.discard("tuple-pair")
         ret_ks.add("multi-return")
     gaps |= {k for k in ret_ks if k in GAPS}
     burdens |= {k for k in ret_ks if k in BURDENS}
@@ -1020,15 +1144,27 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("Solution-construct detection walks the parsed `ast` once per")
     w("solution; each DETECTORS entry below is either a node-type check")
     w("(a `try`/`raise` is `exception`, a `ClassDef` is `class`) or a")
-    w("narrower check on a `Call`, `Attribute` or `Assign` node. It is")
-    w("approximate in both directions, and the approximations are named")
-    w("rather than hidden:")
+    w("narrower check on a `Call`, `Attribute`, `Subscript` or `Tuple`")
+    w("node. It is approximate in both directions, and the approximations")
+    w("are named rather than hidden:")
     w("")
-    w("- `seq-append` only fires on `.append`/`.extend`/`.insert` or a `+`")
-    w("  where at least one operand is a literal list; a `+` between two")
-    w("  names typed as lists earlier in the function is not traced and is")
-    w("  undercounted here, the same undercounting coverage_census.py notes")
-    w("  for `+` on Dafny sequences;")
+    w("- `seq-append` (a burden since SPEC.md's 'Sequences: literals,")
+    w("  concatenation, slices' landed) only fires on")
+    w("  `.append`/`.extend`/`.insert` or a `+` where at least one operand")
+    w("  is a literal list; a `+` between two names typed as lists earlier")
+    w("  in the function is not traced and is undercounted here, the same")
+    w("  undercounting coverage_census.py notes for `+` on Dafny")
+    w("  sequences;")
+    w("- `seq-slice` (a burden, same landing) fires on `s[a:b]`, `s[a:]`,")
+    w("  `s[:b]` read off the AST `Slice` node's own shape, not a")
+    w("  computed value: a step present on the slice tags `seq-slice-step`")
+    w("  instead, and a bound written as a negative literal (`s[:-1]`,")
+    w("  `ast`'s own `UnaryOp(USub, ..)` shape for a negative number) tags")
+    w("  `seq-slice-negative` instead; a negative bound reached through a")
+    w("  variable or an expression (`s[:n-1]`) is not recognized this way")
+    w("  and reads as the plain (non-negative) burden, an undercount of")
+    w("  the two gaps in the same direction every other syntactic detector")
+    w("  here accepts;")
     w("- `unbounded-loop` fires on EVERY `break` and `continue`, not only")
     w("  the ones outside coverage_census.py's tail-position exception")
     w("  (LIFTER-DECISIONS.md row 23: a break whose loop is the tail of the")
@@ -1037,10 +1173,37 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("  coverage_census.py's `_break_as_return` scanner has, which this")
     w("  file does not build, so `unbounded-loop` OVER-counts relative to")
     w("  that finer rule;")
-    w("- `tuple` fires on a tuple-target assignment unless the right-hand")
-    w("  side is a tuple literal of the same length (`a, b = b, a` reads as")
-    w("  a parallel assignment, not a gap); a tuple unpacking a call's")
-    w("  return or an arbitrary iterable IS tagged;")
+    w("- `tuple` and `tuple-pair` (SPEC.md's 'Pairs (v1)' split, landed")
+    w("  2026-09-10) fire on EVERY `ast.Tuple` node found anywhere in the")
+    w("  solution, built, returned, passed, compared, or the target or")
+    w("  value of an unpacking assignment: exactly two elements, neither a")
+    w("  nested tuple nor syntactically a string, is `tuple-pair`; three")
+    w("  or more elements, a nested tuple, or a string element is `tuple`")
+    w("  (a list of tuples is the separate gap `nested-seq`, tagged where")
+    w("  a list literal's own elements are inspected); a parallel")
+    w("  assignment whose right-hand side is a tuple literal of the same")
+    w("  length as its target (`a, b = b, a`, `a, b = 1, 2`) is excluded")
+    w("  from both, the same exception the detector has always made,")
+    w("  since t writes it as two plain assignments, no pair value ever")
+    w("  built; neither check resolves a bare variable's element type, so")
+    w("  a tuple carrying a string held in a variable, not a literal, is")
+    w("  undercounted into `tuple-pair` here. MBPP's channel is different:")
+    w("  `mbpp_dfy.parse_assertion`'s own refusal for a tuple argument or")
+    w("  expected value names no arity (`_Unsupported(\"tuple\")` whatever")
+    w("  the tuple's shape), so this file re-parses that SAME assert line")
+    w("  a second time with its own `ast` (`_mbpp_assert_tuple_kind`,")
+    w("  mbpp_dfy.py untouched) to recover the literal tuple and apply the")
+    w("  same pair/arity rule; an assert whose shape that second parse")
+    w("  cannot read (not a plain `f(...) == expected`, or no literal")
+    w("  tuple on the named side) falls back to the gap `tuple`, not the")
+    w("  burden, the same conservative default the io-types side takes")
+    w("  elsewhere in this file. HumanEval's typed `Tuple[T1, T2]`")
+    w("  annotation takes the exact recursive read instead: two")
+    w("  components, each itself annotated with no gap or burden of its")
+    w("  own, is `tuple-pair`; anything else is `tuple`; a `Tuple[..]`")
+    w("  RETURN annotation is `multi-return` regardless, unchanged from")
+    w("  before the split, since a tuple-typed return means several")
+    w("  return values, not a tuple-shaped value in the data;")
     w("- `recursion` and `multi-return` are read off the entry-point")
     w("  function specifically for a function-shaped problem (matching it")
     w("  by name), and off any self-recursive top-level `def` for a")
