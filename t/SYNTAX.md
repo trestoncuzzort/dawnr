@@ -13,15 +13,15 @@ its proofs mean anything, because a parser and a printer that disagree prove
 things about a program nobody wrote. Measured by `python3 t/surface.py
 --check`:
 
-- `parse(print(t)) == t` on **1670 of 1670** tasks, compared as canonical
-  JSON. The corpus is the 21 committed tasks in `tasks/` plus
-  `fuzz_lower.build_corpus` over seeds 1 through 7, less the 17 that
-  `check_wf` rejects for carrying constructs t does not have, 1687 seen in
-  all. 1447 of the 1670 are distinct; the repeats are the hand-built probes,
+- `parse(print(t)) == t` on **1701 of 1701** tasks, compared as canonical
+  JSON. The corpus is the 23 committed tasks in `tasks/` plus
+  `fuzz_lower.build_corpus` over seeds 1 through 7, less the 21 that
+  `check_wf` rejects for carrying constructs t does not have, 1722 seen in
+  all. 1449 of the 1701 are distinct; the repeats are the hand-built probes,
   which recur once per seed.
-- `print(parse(text)) == text` on all 1670, so every task has exactly one
+- `print(parse(text)) == text` on all 1701, so every task has exactly one
   normal form in the notation.
-- The **13 examples on the `written:` lines of this page parse, unedited**,
+- The **16 examples on the `written:` lines of this page parse, unedited**,
   to the JSON they sit beside (some lines carry more than one, separated by
   `·`). That is what makes this grammar the documented notation rather than
   a new one that resembles it.
@@ -56,6 +56,7 @@ Task     ::= { "t": 0|1, "name": Id,
 
 Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09 *)
            | {"pair": [Type, Type]}             (* v1, since 2026-09-10; written (T1, T2); T1, T2 int/bool/seq, no pair of pairs *)
+           | {"seq": "seq"}                     (* v1, since 2026-09-10; written seq<seq>; one level only, rows are seqs of int *)
 
 Expr     ::= {"int": integer}                   (* mathematical integer *)
            | {"bool": true|false}                                        (* v1 *)
@@ -208,6 +209,42 @@ never a pair. Not in v1: a pair of pairs, a seq of pairs, a pair of three.
 WRONG-VAR rung gained one move for this construct: it also swaps a
 `pair`'s two components, and swaps `fst` for `snd` in a projection.
 
+### Nested sequences (v1)
+
+```json
+{"var": {"name": "m", "type": {"seq": "seq"},
+         "init": {"op": "seq", "args": [
+             {"op": "seq", "args": [{"int": 1}, {"int": 2}]},
+             {"op": "seq", "args": [{"int": 3}]}]}}}
+{"op": "at", "args": [{"op": "at", "args": [{"var": "s"}, {"var": "i"}]}, {"var": "j"}]}
+```
+written: `var m: seq<seq> := [[1, 2], [3]];` · `s[i][j]` · `var m: seq<seq> := [];`
+
+Since 2026-09-10 (SPEC.md "Nested sequences (v1)"), a nested seq is a
+value: `{"seq": "seq"}`, written `seq<seq>`, a finite seq whose elements
+are seqs of ints (the elementary `seq` is unchanged). One level only: not
+in v1 are three levels, a seq of pairs, or a seq of bools/strings as a
+distinct type (a string row is already a `seq`, so a `seq<seq>` holds one
+directly). No new Expr forms: every existing seq operator is polymorphic
+by the static type of its operands, exactly as `+` and `==` already are.
+`seq` (the literal, every element a seq expression; `[]` is the empty
+nested seq where the declared type says so), `len(s)` (the row count),
+`at(s, i)` written `s[i]` (a row), and the chained postfix `s[i][j]` (`at`
+of `at`, needing no new grammar: `Postfix` already loops over `[...]`),
+`s + t` (row concatenation), `s[a..b]` (a slice of rows), `update(s, i,
+r)` (row `i` replaced by the seq `r`), `fill(n, r)` (`n` copies of the row
+`r`), and `==`/`!=` (extensional and recursive: same length, equal rows)
+all carry over. A `+`, `update`, `fill` or literal whose element is an int
+where a row is expected, or the reverse, is ill-typed. Rows are ragged by
+default: t states no cross-row length equality on its own.
+`tasks/swap_rows.json` (loop-free: `r := update(update(m, i, m[j]), j,
+m[i])`, swapping two rows) and `tasks/row_max_len.json` (a loop keeping
+the longest row length seen) are the committed examples. The twin ladder
+needs no new move: OFF-BY-ONE already reaches an outer or an inner index,
+WRONG-VAR already swaps two seq-typed names (nested or not, since the
+comparison is on the declared type, dict equality included), and
+COLLAPSE-IF and an invariant drop apply as before.
+
 ### Locals and loops (gate 2)
 
 ```json
@@ -320,8 +357,9 @@ exercises all six.
 No unbounded quantifiers. No
 mutation of sequences in place (a seq is a value, updated functionally), no
 arrays, no heap, no aliasing. No mutual recursion, no higher-order
-functions, no nested seqs. A character and a string are sugar over `int`
-and `seq`, not their own types; a pair is one value, no pair of pairs, no
-seq of pairs, no triple. One return value. Gates open with measurements,
-not intentions; see `AGREEMENT.md` for what each kernel has actually
-verified.
+functions. A character and a string are sugar over `int` and `seq`, not
+their own types; a pair is one value, no pair of pairs, no seq of pairs,
+no triple; a nested seq is one level only, no seq of seq of seq, no seq
+of pairs, no seq of bools or strings as its own type. One return value.
+Gates open with measurements, not intentions; see `AGREEMENT.md` for what
+each kernel has actually verified.

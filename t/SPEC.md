@@ -578,11 +578,13 @@ bounds the outer length and each row.
 Two committed tasks carry the construct: `swap_rows` (loop-free: `r :=
 update(update(m, i, m[j]), j, m[i])` under `requires 0 <= i < len(m)`
 and `0 <= j < len(m)`, ensures `len(r) == len(m)`, `r[i] == m[j]`,
-`r[j] == m[i]`, every other row unchanged; twin `wrong-var`, refuted at a
-two-row matrix) and `row_max_len` (a loop over the rows keeping the
+`r[j] == m[i]`, every other row unchanged; twin `off-by-one`, refuted at
+`m = [[]], i = 0, j = 0`, the shifted index running off the single row,
+the ladder's first rung with a witness) and `row_max_len` (a loop over the rows keeping the
 longest length, `requires len(m) > 0`, ensures every row's length at
-most `r` and some row's length equal to it, the min_max shape over rows;
-twin the first guard collapsed). The twin ladder needs no new move:
+most `r` and some row's length equal to it, the seq_max shape over row lengths;
+twin an invariant drop, refuted by exit entailment at `m = [[], [0]]`,
+the dropped upper bound letting the loop exit with `r = 0`). The twin ladder needs no new move:
 `off-by-one` reaches an outer or an inner index, `wrong-var` swaps two
 seq-typed names, `collapse-if` and the invariant drops as before. The
 fuzz family `v1nested` measures which twins refute, per column.

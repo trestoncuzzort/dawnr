@@ -93,7 +93,8 @@ whiteboard:
 ## Lesson 2: values and types
 
 A **value** is a piece of data. A **type** says what kind of data. t has
-three base types, plus a pair of them, and the small number is on purpose:
+three base types, plus a pair of them and a nested seq, and the small
+number is on purpose:
 
 - **`int`**: a whole number: … -2, -1, 0, 1, 2 … Here is the surprise if
   you've programmed before: t's integers are *mathematical* integers. They
@@ -116,6 +117,14 @@ three base types, plus a pair of them, and the small number is on purpose:
   function that returns a tuple becomes one t value the same way.
   `tasks/divmod_pair.json` (no loop) and `tasks/min_max.json` (a loop
   that fills both components together) are the examples.
+- **A nested seq `seq<seq>`**: a seq whose elements are themselves seqs of
+  ints, like `[[1, 2], [3]]` — a matrix, one row per element. `m[i]` is a
+  whole row (a `seq`); `m[i][j]` reaches one int inside it, chaining the
+  same `[...]` you already use on a plain seq. Rows do not have to be the
+  same length: nothing about a nested seq forces that, so a task that
+  needs it says so itself. `tasks/swap_rows.json` (no loop, swaps two
+  rows) and `tasks/row_max_len.json` (a loop that tracks the longest row)
+  are the examples.
 
 There is no text type, no decimal-point type. Not yet, on purpose: every
 piece of t exists only once six independent proof kernels agree on exactly

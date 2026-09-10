@@ -388,21 +388,40 @@ BASE_TYPES = ("int", "bool", "seq")     # every T1, T2 a pair may hold
 
 
 def _valid_type(t) -> bool:
-    """A well-formed t TYPE: "int", "bool", "seq", or a pair
+    """A well-formed t TYPE: "int", "bool", "seq", a pair
     `{"pair": [T1, T2]}` with T1, T2 each one of int/bool/seq (SPEC.md
     "Pairs", 2026-09-10): no pair of pairs, no seq of pairs, no pair of
-    three. Anything else (an unknown string, a malformed dict, a pair whose
-    own component is itself a dict) is refused here rather than left for a
-    KeyError or a silent pass three checks later."""
+    three; or `{"seq": "seq"}` (SPEC.md "Nested sequences", 2026-09-10),
+    one level only -- the value under "seq" must be the literal string
+    "seq" and nothing else, so `{"seq": {"seq": "seq"}}` (three levels) and
+    `{"seq": {"pair": [...]}}` (a seq of pairs) are both refused here, by
+    name, exactly as the SPEC says v1 does not have them. Anything else (an
+    unknown string, a malformed dict, a pair whose own component is itself
+    a dict) is refused here rather than left for a KeyError or a silent
+    pass three checks later."""
     if t in BASE_TYPES:
         return True
-    return (isinstance(t, dict) and set(t) == {"pair"}
-            and isinstance(t["pair"], list) and len(t["pair"]) == 2
-            and all(c in BASE_TYPES for c in t["pair"]))
+    if isinstance(t, dict) and set(t) == {"pair"}:
+        return (isinstance(t["pair"], list) and len(t["pair"]) == 2
+                and all(c in BASE_TYPES for c in t["pair"]))
+    return isinstance(t, dict) and t == {"seq": "seq"}
 
 
-def _ty(e, env, funs, ver, errs, bound):
-    """Type of e in env, or None; appends to errs. env maps name -> type."""
+def _ty(e, env, funs, ver, errs, bound, expect=None):
+    """Type of e in env, or None; appends to errs. env maps name -> type.
+
+    `expect`, added for SPEC.md "Nested sequences" (2026-09-10): the
+    empty seq literal `[]` has no element to type from, so with zero
+    elements it is ambiguous between a plain `seq` and a `{"seq": "seq"}`
+    with no rows -- "SPEC.md: `[]` the empty nested seq where the
+    declared type says so". Every OTHER position an empty literal can
+    appear in already resolves correctly with no hint at all: a row
+    argument to `update`/`fill`/an outer literal wants a plain `seq`
+    regardless, which is exactly `[]`'s unhinted default below. Only a
+    var init, an assign, a return, an ite branch and a call argument
+    carry a declared type to check against, so only those five thread
+    `expect` down; everywhere else it stays None and behaviour is
+    unchanged from before this construct."""
     if "int" in e:
         return "int"
     if "bool" in e:
@@ -421,8 +440,8 @@ def _ty(e, env, funs, ver, errs, bound):
         c = e["ite"]
         if _ty(c["cond"], env, funs, ver, errs, bound) != "bool":
             errs.append("ite condition is not bool")
-        a = _ty(c["then"], env, funs, ver, errs, bound)
-        b = _ty(c["else"], env, funs, ver, errs, bound)
+        a = _ty(c["then"], env, funs, ver, errs, bound, expect)
+        b = _ty(c["else"], env, funs, ver, errs, bound, expect)
         if a != b:
             errs.append(f"ite branches differ: {a} vs {b}")
         return a
@@ -448,7 +467,7 @@ def _ty(e, env, funs, ver, errs, bound):
         if len(f["params"]) != len(c["args"]):
             errs.append(f"arity mismatch calling {c['fun']}")
         for p, a in zip(f["params"], c["args"]):
-            if _ty(a, env, funs, ver, errs, bound) != p["type"]:
+            if _ty(a, env, funs, ver, errs, bound, p["type"]) != p["type"]:
                 errs.append(f"argument type mismatch calling {c['fun']}")
         return f["result"]
     op = e["op"]
@@ -467,35 +486,70 @@ def _ty(e, env, funs, ver, errs, bound):
     if op in NARY and len(args) < 2:
         errs.append(f"{op} needs at least two arguments")
     ts = [_ty(a, env, funs, ver, errs, bound) for a in args]
+    NESTED = {"seq": "seq"}
     if op == "seq":
         # SPEC.md "Sequences: literals, concatenation, slices": [e1, ..., en]
-        # of ints, [] included.
-        if any(t != "int" for t in ts):
-            errs.append("seq literal wants int elements")
+        # of ints, [] included. SPEC.md "Nested sequences" (2026-09-10)
+        # makes this polymorphic: elements all int is a plain seq, elements
+        # all seq (rows) is a seq<seq>; [] has no element to type from, so
+        # it takes `expect` when the caller has one (a var/assign/return/
+        # ite/call context) and falls back to plain seq otherwise, exactly
+        # the pre-nested behaviour.
+        if not ts:
+            return expect if expect in ("seq", NESTED) else "seq"
+        if all(t == "int" for t in ts):
+            return "seq"
+        if all(t == "seq" for t in ts):
+            return NESTED
+        errs.append("seq literal elements must be all int or all seq "
+                    "(no mixing, no pair or nested-seq rows)")
         return "seq"
     if op == "slice":
-        if ts[0] != "seq" or ts[1] != "int" or ts[2] != "int":
-            errs.append("slice wants (seq, int, int)")
-        return "seq"
-    if op == "+" and len(ts) == 2 and ts == ["seq", "seq"]:
-        # s + t on two seqs is concatenation, the same polymorphism as ==.
-        return "seq"
+        if ts[0] not in ("seq", NESTED) or ts[1] != "int" or ts[2] != "int":
+            errs.append("slice wants (seq or seq<seq>, int, int)")
+            return "seq"
+        return ts[0]
+    if op == "+" and len(ts) == 2 and ts[0] == ts[1] and ts[0] in ("seq", NESTED):
+        # s + t on two seqs (or two nested seqs, SPEC.md "Nested sequences")
+        # is concatenation, the same polymorphism as ==.
+        return ts[0]
     if op == "len":
-        if ts[0] != "seq":
+        if ts[0] not in ("seq", NESTED):
             errs.append("len of a non-seq")
         return "int"
     if op == "at":
-        if ts[0] != "seq" or ts[1] != "int":
-            errs.append("at wants (seq, int)")
-        return "int"
+        # SPEC.md "Nested sequences": at(m, i) on a seq<seq> gives a row
+        # (a seq), where at(s, i) on a plain seq gives an int.
+        if ts[1] != "int" or ts[0] not in ("seq", NESTED):
+            errs.append("at wants (seq or seq<seq>, int)")
+            return None
+        return "int" if ts[0] == "seq" else "seq"
     if op == "update":
-        # SPEC.md "Sequences as values": s[i := v] is (seq, int, int) -> seq.
-        if ts[0] != "seq" or ts[1] != "int" or ts[2] != "int":
-            errs.append("update wants (seq, int, int)")
+        # SPEC.md "Sequences as values": s[i := v] is (seq, int, int) ->
+        # seq; SPEC.md "Nested sequences" (2026-09-10): m[i := r] on a
+        # seq<seq> takes a ROW (a seq) as the third argument, not an int.
+        if ts[1] != "int":
+            errs.append("update index must be int")
+        if ts[0] == "seq":
+            if ts[2] != "int":
+                errs.append("update wants (seq, int, int)")
+            return "seq"
+        if ts[0] == NESTED:
+            if ts[2] != "seq":
+                errs.append("update wants (seq<seq>, int, seq) for the row")
+            return NESTED
+        errs.append("update wants (seq or seq<seq>, int, element)")
         return "seq"
     if op == "fill":
-        if ts[0] != "int" or ts[1] != "int":
-            errs.append("fill wants (int, int)")
+        # seq(n, v): v: int gives a seq, v: seq (a row) gives a seq<seq>
+        # (SPEC.md "Nested sequences", 2026-09-10).
+        if ts[0] != "int":
+            errs.append("fill count must be int")
+        if ts[1] == "int":
+            return "seq"
+        if ts[1] == "seq":
+            return NESTED
+        errs.append("fill wants (int, int) or (int, seq) for the row")
         return "seq"
     if op == "pair":
         # SPEC.md "Pairs" (2026-09-10): (e1, e2), typed from its operands;
@@ -534,8 +588,20 @@ def _ty(e, env, funs, ver, errs, bound):
         # types (a pair of (int, int) against a pair of (bool, int)), same
         # as it refuses int against seq.
         if ts[0] != ts[1]:
-            errs.append(f"{op} wants two ints, two bools, two seqs or two "
-                       f"pairs of the same type")
+            # SPEC.md "Nested sequences" (2026-09-10): a bare `[]` with no
+            # hint types "seq" by default (the `op == "seq"` arm above);
+            # against a seq<seq>-typed other side that default is not a
+            # real type error, so an operand that IS the empty-literal AST
+            # node is let through as the empty nested seq it plainly is,
+            # rather than requiring a caller-supplied `expect` at every
+            # `==` site (`==` has no declared type of its own to hint with).
+            def _empty_lit(a, t):
+                return t == "seq" and a.get("op") == "seq" and not a.get("args")
+            zero, one = ts[0] == NESTED and _empty_lit(args[1], ts[1]), \
+                       ts[1] == NESTED and _empty_lit(args[0], ts[0])
+            if not (zero or one):
+                errs.append(f"{op} wants two ints, two bools, two seqs, "
+                           f"two nested seqs, or two pairs of the same type")
         return "bool"
     if any(t != "bool" for t in ts):
         errs.append(f"{op} over non-bool")
@@ -626,7 +692,7 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
             n, e = s["assign"]
             if n not in assignable:
                 errs.append(f"assign to {n}, not a return or local")
-            t = _ty(e, env, funs, ver, errs, set())
+            t = _ty(e, env, funs, ver, errs, set(), env.get(n))
             if t != env.get(n):
                 errs.append(f"assign {n}: {t} into {env.get(n)}")
         elif "var" in s:
@@ -638,7 +704,7 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
             if not _valid_type(d["type"]):
                 errs.append(f"local {d['name']} has an invalid type: "
                            f"{d['type']!r}")
-            if _ty(d["init"], env, funs, ver, errs, set()) != d["type"]:
+            if _ty(d["init"], env, funs, ver, errs, set(), d["type"]) != d["type"]:
                 errs.append(f"local {d['name']} init type mismatch")
             env[d["name"]] = d["type"]
             assignable.add(d["name"])
@@ -668,7 +734,7 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
             n, e = s["return"]
             if n not in assignable:
                 errs.append(f"return names {n}, not the task's return")
-            t = _ty(e, env, funs, ver, errs, set())
+            t = _ty(e, env, funs, ver, errs, set(), env.get(n))
             if t != env.get(n):
                 errs.append(f"return {n}: {t} into {env.get(n)}")
             if s is not body[-1]:
@@ -686,12 +752,14 @@ BIG = [2 ** 31, -2 ** 31 - 1, 2 ** 40, 10 ** 12, -10 ** 12, 2 ** 63]
 
 
 def _sample_value(ty, rng):
-    """One value of type `ty` ("int"/"bool"/"seq" or a pair `{"pair": [T1,
-    T2]}`, SPEC.md "Pairs", 2026-09-10). Pulled out of sample_inputs so a
-    pair's own two components are drawn from exactly the same two pools
-    (BIG/SMALL) their base type would use as a bare parameter, recursively:
-    T1/T2 are always base types (no pair of pairs), so this never nests
-    past one level."""
+    """One value of type `ty` ("int"/"bool"/"seq", a pair `{"pair": [T1,
+    T2]}` (SPEC.md "Pairs", 2026-09-10), or a nested seq `{"seq": "seq"}`
+    (SPEC.md "Nested sequences", 2026-09-10)). Pulled out of sample_inputs
+    so a pair's own two components, or a nested seq's own rows, are drawn
+    from exactly the same pool their base type would use standalone,
+    recursively: a pair's T1/T2 and a nested seq's rows are always base
+    types (no pair of pairs, no three levels), so this never nests past
+    one level."""
     if ty == "seq":
         n = rng.choice([0, 0, 1, 2, 3, 3, 4, 5, 6])
         # SPEC.md gate 1: a seq's ELEMENTS are mathematical integers, same
@@ -707,11 +775,20 @@ def _sample_value(ty, rng):
                      else rng.choice(SMALL)) for _ in range(n))
     if ty == "bool":
         return rng.choice([True, False])
-    if isinstance(ty, dict):
+    if isinstance(ty, dict) and "pair" in ty:
         # SPEC.md "Pairs": a pair value, interp.Pair rather than a bare
         # tuple (see this file's `ev` "pair" arm on why).
         t1, t2 = ty["pair"]
         return interp.Pair(_sample_value(t1, rng), _sample_value(t2, rng))
+    if isinstance(ty, dict):
+        # SPEC.md "Nested sequences" (2026-09-10): {"seq": "seq"}. Rows are
+        # drawn a little shorter and fewer than a bare seq's own elements
+        # (n up to 4 rows, each row up to 3 ints) so a nested-seq input
+        # stays small even though every row is itself a several-element
+        # draw; ragged by default (SPEC.md: "no cross-row length equality"
+        # measured), so rows are drawn INDEPENDENTLY and not forced equal.
+        n = rng.choice([0, 0, 1, 2, 2, 3, 4])
+        return tuple(_sample_value("seq", rng) for _ in range(n))
     return rng.choice(BIG) if rng.random() < 0.08 else rng.choice(SMALL)
 
 
@@ -793,7 +870,13 @@ def _j(v):
         # CLONE of interp.py's own `_j`, checked BEFORE the tuple case below
         # since interp.Pair is deliberately not a tuple.
         return [_j(v.a), _j(v.b)]
-    return list(v) if isinstance(v, tuple) else v
+    if isinstance(v, tuple):
+        # SPEC.md "Nested sequences" (2026-09-10): a row is itself a tuple,
+        # so recurse rather than stopping at `list(v)`, which would leave
+        # the rows as raw tuples one level down. A CLONE of interp.py's own
+        # `_j`, same fix, same reason.
+        return [_j(x) for x in v]
+    return v
 
 
 def twin_semantics(task, real_body, twin_body, rng, k=260):
@@ -868,7 +951,7 @@ def invariant_load_bearing(task, rng, k=4000):
             return tuple(rng.choice(SMALL) for _ in range(ln))
         if ty == "bool":
             return rng.choice([True, False])
-        if isinstance(ty, dict):
+        if isinstance(ty, dict) and "pair" in ty:
             # SPEC.md "Pairs": a pair-typed name in scope at the loop (the
             # task's own return, most often, per f_v1pairs's loop shapes --
             # min_max's two-int loop and the sentinel idiom both assemble
@@ -879,6 +962,18 @@ def invariant_load_bearing(task, rng, k=4000):
             # through to and hand `.a` an AttributeError on).
             t1, t2 = ty["pair"]
             return interp.Pair(draw(t1), draw(t2))
+        if isinstance(ty, dict):
+            # SPEC.md "Nested sequences" (2026-09-10): a seq<seq>-typed name
+            # in scope at the loop (row_max_len's own parameter `m`, read by
+            # every surviving invariant and by `ensures` through `at`/`len`
+            # under the exit-entailment and preservation checks below,
+            # exactly the role min_max's `ret` played for a pair) needs a
+            # real tuple-of-rows here, for the same reason the pair arm
+            # above needs a real interp.Pair: a plain int or an unnested seq
+            # would raise, not merely disagree, the first time `at(m, k)`
+            # is asked for a row.
+            ln = rng.choice([0, 1, 2, 3])
+            return tuple(draw("seq") for _ in range(ln))
         return rng.choice(SMALL)
 
     exit_w, pres_w = None, None

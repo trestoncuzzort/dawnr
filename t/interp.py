@@ -492,12 +492,35 @@ def _around(lits: list[int]) -> list[int]:
     return out
 
 
+NESTED_ROWS = 8          # row-alphabet size for the outer ladder, the seq
+                         # analogue of ALPHA: a nested seq's outer positions
+                         # draw from this many distinct small rows.
+
+
+def _nested_seq_ladder(rows: tuple) -> tuple:
+    """SPEC.md "Nested sequences" (2026-09-10): `{"seq": "seq"}`, a finite
+    seq whose elements are seqs of ints. Built by calling `_seq_ladder`
+    ITSELF with `rows` (already-enumerated small seqs) standing in for the
+    int alphabet it usually takes: that function's short-first, shell-
+    ordered construction does not care what its alphabet's elements ARE,
+    only that they are hashable and few, so it gives small outer lengths
+    over small rows for exactly the reason it gives small lengths over
+    small ints, with no new algorithm. `rows[:NESTED_ROWS]` caps the row
+    alphabet the same way `ALPHA` caps the int one, so the outer ladder's
+    own internal shell caps (24, 32, 16) stay meaningful rather than
+    building a product over dozens of rows most of which are redundant at
+    this domain's size."""
+    return _seq_ladder(rows[:NESTED_ROWS])
+
+
 def ladders(task: dict) -> dict:
     lits = literals(task)
     ints = tuple(_dedup([0, 1, -1] + _around(lits) + list(INTS)))
     alpha = tuple(_dedup([0, 1, -1] + _around(lits)
                          + [2, -2, 3, -3])[:ALPHA])
-    return {"int": ints, "seq": _seq_ladder(alpha), "bool": BOOLS}
+    seqs = _seq_ladder(alpha)
+    return {"int": ints, "seq": seqs, "bool": BOOLS,
+            "nested_seq": _nested_seq_ladder(seqs)}
 
 
 PAIR_SHELL = 24          # 2-argument shell cap, the same magnitude
@@ -511,11 +534,20 @@ def _ladder(lad: dict, ty) -> tuple:
     near corner (both components small) comes first, exactly as
     `_seq_ladder` orders sequences and for the same reason: the arity cap
     below trims the far corner of the product, not the near one. T1 and T2
-    are always base types (no pair of pairs), so this does not recurse."""
+    are always base types (no pair of pairs), so this does not recurse.
+
+    SPEC.md "Nested sequences" (2026-09-10) adds the other dict-shaped
+    type, `{"seq": "seq"}`: `lad["nested_seq"]` is precomputed once in
+    `ladders()` above rather than rebuilt per lookup, since (unlike a pair,
+    whose two component types vary task to task) there is exactly one
+    nested-seq type in v1, so one ladder serves every param, return and
+    local of it in a task."""
     if isinstance(ty, dict):
-        t1, t2 = ty["pair"]
-        return tuple(_dedup([Pair(a, b) for a, b in
-                             _shell([lad[t1], lad[t2]], PAIR_SHELL)]))
+        if "pair" in ty:
+            t1, t2 = ty["pair"]
+            return tuple(_dedup([Pair(a, b) for a, b in
+                                 _shell([lad[t1], lad[t2]], PAIR_SHELL)]))
+        return lad["nested_seq"]
     return lad[ty]
 
 
@@ -558,7 +590,15 @@ def _j(v):
         # SPEC.md "Pairs": shown as a 2-list, recursing so a seq component
         # (itself a tuple) prints as a list too rather than as a raw tuple.
         return [_j(v.a), _j(v.b)]
-    return list(v) if isinstance(v, tuple) else v
+    if isinstance(v, tuple):
+        # SPEC.md "Nested sequences" (2026-09-10): a row is itself a tuple,
+        # so a bare `list(v)` here would print a nested seq as a list of
+        # TUPLES, not the list of lists its own type is shown as elsewhere
+        # (a pair's seq component, just above). Recursing one call per
+        # element costs nothing extra for a plain (unnested) seq, since
+        # `_j` on an int or bool falls straight through to the line below.
+        return [_j(x) for x in v]
+    return v
 
 
 def _tv(v):

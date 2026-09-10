@@ -104,6 +104,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
     Clause   ::= "requires" Expr | "ensures" Expr | "decreases" Expr
     Params   ::= (Id ":" Type ("," Id ":" Type)*)?
     Type     ::= BaseType | "(" BaseType "," BaseType ")"  (* pair: v1, since 2026-09-10; no pair of pairs *)
+               | "seq" "<" "seq" ">"                       (* nested seq: v1, since 2026-09-10; one level only *)
     BaseType ::= "int" | "bool" | "seq"
     SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" ("int"|"bool")
                  "decreases" Expr "=" Expr
@@ -364,10 +365,16 @@ class Parser:
         return t.text
 
     def ptype(self):
-        """A t TYPE: int/bool/seq, or a pair `(T1, T2)` (SPEC.md "Pairs",
-        2026-09-10). T1 and T2 are read with `vtype()`, not `ptype()`
-        itself, because there is no pair of pairs to recurse into; this is
-        the one place the grammar's `Type` and `BaseType` differ."""
+        """A t TYPE: int/bool/seq, a pair `(T1, T2)` (SPEC.md "Pairs",
+        2026-09-10), or a nested seq `seq<seq>` (SPEC.md "Nested
+        sequences", 2026-09-10). T1 and T2 are read with `vtype()`, not
+        `ptype()` itself, because there is no pair of pairs to recurse
+        into; this is the one place the grammar's `Type` and `BaseType`
+        differ. `<` and `>` are already the comparison symbols the lexer
+        tokenises everywhere else, but a type position never holds an
+        expression, so reading `<` right after the keyword `seq` here is
+        unambiguous with no new token: nothing else can follow a type's
+        own `seq` keyword at this point in the grammar."""
         if self.at("sym", "("):
             self.eat("sym", "(")
             t1 = self.vtype()
@@ -375,7 +382,12 @@ class Parser:
             t2 = self.vtype()
             self.eat("sym", ")")
             return {"pair": [t1, t2]}
-        return self.vtype()
+        t = self.vtype()
+        if t == "seq" and self.opt("sym", "<"):
+            self.eat("kw", "seq")
+            self.eat("sym", ">")
+            return {"seq": "seq"}
+        return t
 
     # -- program -----------------------------------------------------------
 
@@ -879,13 +891,17 @@ def _ident(name) -> str:
 
 def _print_type(t) -> str:
     """int/bool/seq print as themselves; a pair `{"pair": [T1, T2]}`
-    (SPEC.md "Pairs", 2026-09-10) prints as `(T1, T2)`, the notation
-    `ptype()` parses back. Anything else is not a t type."""
+    (SPEC.md "Pairs", 2026-09-10) prints as `(T1, T2)`; a nested seq
+    `{"seq": "seq"}` (SPEC.md "Nested sequences", 2026-09-10) prints as
+    `seq<seq>`. Both are the notation `ptype()` parses back. Anything else
+    is not a t type."""
     if isinstance(t, dict):
         p = t.get("pair")
         if (set(t) == {"pair"} and isinstance(p, list) and len(p) == 2
                 and all(c in VAL_TYPES for c in p)):
             return "(%s, %s)" % (p[0], p[1])
+        if t == {"seq": "seq"}:
+            return "seq<seq>"
         raise SurfaceError("not a t type: %r" % (t,))
     if t not in VAL_TYPES:
         raise SurfaceError("not a t type: %r" % (t,))
@@ -1018,6 +1034,18 @@ WRITTEN = [
     ("stmt", "var r: (int, int) := (x, y);",
      {"var": {"name": "r", "type": {"pair": ["int", "int"]},
               "init": {"op": "pair", "args": [{"var": "x"}, {"var": "y"}]}}}),
+    # SPEC.md "Nested sequences (v1)", added 2026-09-10.
+    ("expr", "s[i][j]",
+     {"op": "at", "args": [{"op": "at", "args": [{"var": "s"}, {"var": "i"}]},
+                           {"var": "j"}]}),
+    ("stmt", "var m: seq<seq> := [[1, 2], [3]];",
+     {"var": {"name": "m", "type": {"seq": "seq"},
+              "init": {"op": "seq", "args": [
+                  {"op": "seq", "args": [{"int": 1}, {"int": 2}]},
+                  {"op": "seq", "args": [{"int": 3}]}]}}}),
+    ("stmt", "var m: seq<seq> := [];",
+     {"var": {"name": "m", "type": {"seq": "seq"},
+              "init": {"op": "seq", "args": []}}}),
 ]
 
 # Three more char/string probes (SPEC.md "Strings as sequences of code
@@ -1176,12 +1204,21 @@ def _rand_expr(rng, depth: int) -> dict:
 
 
 def _rand_type(rng):
-    """int/bool/seq, or a pair of two of them (SPEC.md "Pairs", 2026-09-10),
-    so the round trip exercises `(T1, T2)` in the same places it already
-    exercises the base types: params, returns, locals."""
-    if rng.random() < 0.25:
+    """int/bool/seq, a pair of two of them (SPEC.md "Pairs", 2026-09-10), or
+    a nested seq `seq<seq>` (SPEC.md "Nested sequences", 2026-09-10), so the
+    round trip exercises `(T1, T2)` and `seq<seq>` in the same places it
+    already exercises the base types: params, returns, locals. 0.25/0.1
+    rather than an even split across three shapes: a pair's own `(T1, T2)`
+    already carries two base-type draws so it needs the larger share to
+    come up often enough on its own two slots; `seq<seq>` has no slots to
+    fill, so one flat draw is enough to reach it as often as any one base
+    type on its own."""
+    r = rng.random()
+    if r < 0.25:
         return {"pair": [rng.choice(["int", "bool", "seq"]),
                          rng.choice(["int", "bool", "seq"])]}
+    if r < 0.35:
+        return {"seq": "seq"}
     return rng.choice(["int", "bool", "seq"])
 
 
