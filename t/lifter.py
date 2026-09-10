@@ -54,6 +54,7 @@ from typing import Optional
 from lift_ast import LiftRecord, Refusal
 
 import corpora
+import interp
 import lift_check
 import lift_classify
 import lift_parse
@@ -256,7 +257,18 @@ def _write_outcome(outcome: FileOutcome, out_dir: Path, stem: str) -> None:
             "refusal": _refusal_to_dict(mo.refusal),
             "checked": mo.checked,
             "interp_points": mo.interp_points,
-            "interp_first_value": mo.interp_first_value,
+            # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): a pair-typed
+            # task's first interp value is an `interp.Pair`, not JSON-
+            # serializable on its own (measured directly: `_write_outcome`
+            # crashed the whole `--list` run the first time a pair-
+            # returning task reached this line) -- `interp._j` is the
+            # SAME JSON-safety conversion `interp.Reference.witness`
+            # already applies to a Pair before it reaches ANY sidecar
+            # (a 2-list, recursing so a seq component prints as a list
+            # too); reused here rather than reinvented, on a plain int/
+            # bool/seq value it is the identity (seqs already print as
+            # lists, everything else passes through unchanged).
+            "interp_first_value": interp._j(mo.interp_first_value),
             "task_file": task_file,
             "record_file": record_file,
         })

@@ -233,6 +233,33 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     return "type-decl"
 
 
+def _pair_component_issue(t: Optional[Type]) -> Optional[str]:
+    """Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): is `t` one of the
+    component types t's v1 pair construct carries -- "each of T1, T2
+    one of int, bool, seq" (a `nat` is an `int` with decision 4's own
+    non-negativity ensures added; a `string`/`seq<char>` is a `seq` per
+    row 28)? `None` means yes; a bare `char` is deliberately NOT
+    accepted here (row 28 only ever folds it into `int` for a SINGLE
+    return's own `t_ret`, and doing the same for a pair component needs
+    a guard stated on the PROJECTION, `r.0`/`r.1`, not the return
+    itself -- narrowed out of this row's own scope, see
+    LIFTER-DECISIONS.md row 29's residual list), nor is an
+    `array<int>`/`array<nat>` component (row 22's alloc-fill/modifies-
+    param machinery is built around exactly ONE return; combining it
+    with a second, independent component is also narrowed out). Both
+    are refused `multi-return-nested` by the caller, the same token a
+    nested seq or a genuine Dafny tuple component gets."""
+    if t is None:
+        return "untyped-var"
+    if t.kind in ("int", "nat", "bool", "string"):
+        return None
+    if t.kind == "seq":
+        if _is_seq_of_int(t) or _is_seq_of_nat(t) or _is_seq_of_char(t):
+            return None
+        return "nested-seq"
+    return "unsupported"
+
+
 # ---------------------------------------------------------------------------
 # Rows 25-27 (2026-09-09, SPEC.md "Sequences: literals, concatenation,
 # slices (v1)"): a small, best-effort, non-flow-sensitive "int" | "bool" |
@@ -376,10 +403,16 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str, 
         k = _declared_kind(p.type)
         if k is not None:
             env[p.name] = k
-    if len(method.returns) == 1:
-        k = _declared_kind(method.returns[0].type)
+    for r in method.returns:
+        # Row 29 (2026-09-09): a pair method's TWO out-parameters need
+        # their own kind here exactly as a single return's own does --
+        # `a`/`b` appear as plain body-local reads/writes and as the
+        # `+`/slice operands rows 25-27 already resolve through this
+        # env, unrelated to that row's own `r.0`/`r.1` ensures
+        # projection, which is `lift_rewrite`'s concern, not this one's.
+        k = _declared_kind(r.type)
         if k is not None:
-            env[method.returns[0].name] = k
+            env[r.name] = k
     for d in closure:
         if isinstance(d, FunctionDecl):
             for p in d.params:
@@ -1416,6 +1449,15 @@ class Liftable:
     method: MethodDecl
     closure: tuple[Decl, ...]
     rewrites: list[Rewrite] = field(default_factory=list)
+    # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): the method's own two
+    # out-parameters, in source order, when `classify` accepted a
+    # `multi-return` shape as a pair (both component types supported);
+    # `None` for every other method, single-return included. Carried
+    # here rather than re-derived in `lift_rewrite.rewrite` from
+    # `method.returns` alone, since a bare arity-2 `returns` clause is
+    # not enough on its own -- classify already confirmed both
+    # component types AND every other row-29 condition below.
+    pair_returns: Optional[tuple[Param, Param]] = None
 
 
 def _first(issues: list[tuple[int, str, str]]) -> tuple[int, str, str]:
@@ -1466,11 +1508,43 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
         array_mutation = None
 
     # -- returns: zero/multi first (section 5) --------------------------
+    # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): a `multi-return` shape
+    # with EXACTLY two returns lifts to one pair-typed return, provided
+    # BOTH components are types this lifter already carries as a return
+    # (`_pair_component_issue`); three or more stays refused
+    # `multi-return-arity` (the SPEC's own name for it), and an arity-two
+    # method with an unsupported component (array, bitvector, real, map,
+    # multiset, a nested Dafny tuple, or a bare char -- see that
+    # function's own docstring) is `multi-return-nested`.
+    pair_returns: Optional[tuple[Param, Param]] = None
     if len(method.returns) == 0:
         if array_mutation is None or array_mutation.kind != "modifies-param":
             issues.append((method.line, "zero-returns", method.name or "?"))
+    elif len(method.returns) == 2:
+        ret_a, ret_b = method.returns
+        bad_a = _pair_component_issue(ret_a.type)
+        bad_b = _pair_component_issue(ret_b.type)
+        if bad_a is not None or bad_b is not None:
+            bad_name = ret_a.name if bad_a is not None else ret_b.name
+            issues.append((method.line, "multi-return-nested", bad_name))
+        elif method.body is not None and any(
+                isinstance(n, Assign) and len(n.targets) != len(n.values)
+                for n in walk(method.body)):
+            # A destructuring assign (`a, b := M(x);`, ONE value for TWO
+            # targets, Dafny's own multi-return call-assignment sugar)
+            # is not a shape `lift_rewrite._lift_stmt`'s general
+            # multi-target Assign handling maps (it `zip`s targets
+            # against values pairwise and would silently drop `b`'s
+            # assignment) -- refused rather than mis-lifted; the only
+            # way past every OTHER refusal (a call to a different
+            # method already refuses `multi-method`/`calls-other-
+            # method` elsewhere) is a SELF-recursive multi-return call,
+            # absent from the corpus population this row measured.
+            issues.append((method.line, "multi-return-nested", "destructuring-assign"))
+        else:
+            pair_returns = (ret_a, ret_b)
     elif len(method.returns) > 1:
-        issues.append((method.line, "multi-return", method.name or "?"))
+        issues.append((method.line, "multi-return-arity", method.name or "?"))
 
     ret_param = method.returns[0] if len(method.returns) == 1 else None
 
@@ -1651,6 +1725,17 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
         if not _assigns_ret_all_paths(method.body, ret_param.name):
             issues.append((method.line, "return-not-assigned-on-all-paths",
                             ret_param.name))
+    # Row 29: the SAME check, once per out-parameter -- `_assigns_ret_
+    # all_paths` already treats a `return e1, e2;` (any non-empty
+    # ReturnStmt.values) as assigning whichever single `ret_name` it is
+    # asked about, so calling it twice (once per component name) is
+    # correct with no change to the helper itself.
+    if pair_returns is not None and method.body is not None:
+        ret_a, ret_b = pair_returns
+        if not _assigns_ret_all_paths(method.body, ret_a.name):
+            issues.append((method.line, "return-not-assigned-on-all-paths", ret_a.name))
+        if not _assigns_ret_all_paths(method.body, ret_b.name):
+            issues.append((method.line, "return-not-assigned-on-all-paths", ret_b.name))
 
     # -- self-recursion shape (section 4.5's `r := M(args)` row) ---------
     issues += _self_call_positions(method)
@@ -1718,7 +1803,7 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     rewrites += _plan_rewrites(module, method, closure, ret_param, array_params,
                                 mutated_param_name, array_mutation)
 
-    return Liftable(method=method, closure=closure, rewrites=rewrites)
+    return Liftable(method=method, closure=closure, rewrites=rewrites, pair_returns=pair_returns)
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,

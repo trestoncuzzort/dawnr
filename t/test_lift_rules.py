@@ -2629,6 +2629,267 @@ method BadNestedString(s: seq<string>) returns (r: int)
           "seq<string> param -> nested-seq")
 
 
+# ===========================================================================
+# Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): a `returns (a: T1, b: T2)`
+# method lifts to one pair-typed return `r`; `a`/`b` become locals, every
+# exit combines them into `r`, and a `requires`/`ensures` (or a loop
+# invariant, deliberately -- see below) reference to `a`/`b` becomes
+# `r.0`/`r.1`. `_run_pair`/`_ensures_hold` run the LIFTED task directly
+# through `interp.py` (never `Reference`'s own domain sampling, which
+# would need this row's own literals/ladders to pick useful points) on a
+# hand-picked input, the same "does it actually compute the right thing"
+# check the seed-acceptance harness runs against a hand lift.
+# ===========================================================================
+
+def _run_pair(task: dict, **params):
+    """Execute `task`'s body on `params` directly (bypassing
+    `interp.Reference`'s own domain sampling), returning the return
+    variable's final value -- an `interp.Pair(a, b)` for every task this
+    row produces."""
+    env = dict(params)
+    ret_name = task["returns"][0]["name"]
+    env[ret_name] = None
+    funs = interp.funs_of(task, task["body"])
+    st = interp.St()
+    interp.exec_body(task["body"], env, funs, st)
+    return env[ret_name]
+
+
+def _ensures_hold(task: dict, env_with_ret: dict) -> bool:
+    funs = interp.funs_of(task, task["body"])
+    st = interp.St()
+    return all(interp.ev(c, env_with_ret, funs, st) for c in task["ensures"])
+
+
+def test_multi_return_pair_int_int_loop_free() -> None:
+    src = """
+method DivModOut(x: int, y: int) returns (a: int, b: int)
+  requires y > 0
+  ensures a * y + b == x
+  ensures 0 <= b
+  ensures b < y
+{
+  a := x / y;
+  b := x % y;
+}
+"""
+    task, rec = _lift_one(src, "DivModOut")
+    assert task["returns"] == [{"name": "r", "type": {"pair": ["int", "int"]}}], task["returns"]
+    rules = _rule_names(rec)
+    assert "multi-return-pair-lifted" in rules, rules
+    assert "multi-return-pair-combined" in rules, rules
+    assert "multi-return-pair-projected" in rules, rules
+    ens_text = json.dumps(task["ensures"])
+    assert '"fst"' in ens_text and '"snd"' in ens_text, ens_text
+    for x, y in ((7, 2), (-7, 2), (0, 5), (9, 9)):
+        v = _run_pair(task, x=x, y=y)
+        assert isinstance(v, interp.Pair), v
+        assert v.a == x // y and v.b == x % y, (x, y, v)
+        assert _ensures_hold(task, {"x": x, "y": y, "r": v}), (x, y, v)
+    print("test_multi_return_pair_int_int_loop_free: (int,int), loop-free -> "
+          "one pair return, ensures reads r.0/r.1, div/mod values check out")
+
+
+def test_multi_return_pair_loop_invariant_reads_locals() -> None:
+    src = """
+method MinMaxOut(s: seq<int>) returns (lo: int, hi: int)
+  requires |s| > 0
+  ensures forall k :: 0 <= k < |s| ==> lo <= s[k]
+  ensures forall k :: 0 <= k < |s| ==> s[k] <= hi
+{
+  lo := s[0];
+  hi := s[0];
+  var i := 1;
+  while i < |s|
+    invariant 1 <= i <= |s|
+    invariant forall k :: 0 <= k < i ==> lo <= s[k]
+    invariant forall k :: 0 <= k < i ==> s[k] <= hi
+    decreases |s| - i
+  {
+    if s[i] < lo {
+      lo := s[i];
+    }
+    if s[i] > hi {
+      hi := s[i];
+    }
+    i := i + 1;
+  }
+}
+"""
+    task, rec = _lift_one(src, "MinMaxOut")
+    whiles = _find_all(task["body"], "while")
+    assert len(whiles) == 1, whiles
+    inv_text = json.dumps(whiles[0]["invariants"])
+    # The loop invariant reads the CURRENT, mid-loop value of lo/hi -- `r`
+    # is not kept in sync until the method actually exits (min_max.json's
+    # own hand-written invariants read lo/hi directly, never r.0/r.1, the
+    # same reading this row follows) -- so the invariant must name the
+    # plain locals, never a projection of r.
+    assert '"lo"' in inv_text and '"hi"' in inv_text, inv_text
+    assert "fst" not in inv_text and "snd" not in inv_text, inv_text
+    ens_text = json.dumps(task["ensures"])
+    assert "fst" in ens_text and "snd" in ens_text, ens_text
+    v = _run_pair(task, s=(3, 1, 4, 1, 5, 9, 2, 6))
+    assert isinstance(v, interp.Pair) and v.a == 1 and v.b == 9, v
+    assert _ensures_hold(task, {"s": (3, 1, 4, 1, 5, 9, 2, 6), "r": v})
+    print("test_multi_return_pair_loop_invariant_reads_locals: (int,int) "
+          "computed in a loop -> invariant reads lo/hi, ensures reads r.0/r.1")
+
+
+def test_multi_return_pair_bool_int_early_return() -> None:
+    src = """
+method FindFirstNeg(a: seq<int>) returns (found: bool, idx: int)
+  ensures found ==> (0 <= idx && idx < |a| && a[idx] < 0)
+  ensures !found ==> idx == -1
+{
+  var i := 0;
+  while i < |a|
+    invariant 0 <= i <= |a|
+    decreases |a| - i
+  {
+    if a[i] < 0 {
+      found := true;
+      idx := i;
+      return;
+    }
+    i := i + 1;
+  }
+  found := false;
+  idx := -1;
+}
+"""
+    task, rec = _lift_one(src, "FindFirstNeg")
+    assert task["returns"] == [{"name": "r", "type": {"pair": ["bool", "int"]}}], task["returns"]
+    rets = _find_all(task["body"], "return")
+    assert len(rets) == 1, rets  # the bare `return;` inside the loop
+    assert rets[0][0] == "r", rets
+    assert rets[0][1]["op"] == "pair", rets
+    for a in ((3, -1, 2), (1, 2, 3), (-5,)):
+        v = _run_pair(task, a=a)
+        assert isinstance(v, interp.Pair), v
+        expect_idx = next((i for i, e in enumerate(a) if e < 0), -1)
+        assert v.a == (expect_idx != -1) and v.b == expect_idx, (a, v)
+        assert _ensures_hold(task, {"a": a, "r": v}), (a, v)
+    print("test_multi_return_pair_bool_int_early_return: (bool,int) flag-and-value "
+          "idiom, a bare early return; -> {'return': ['r', pair(found, idx)]}")
+
+
+def test_multi_return_pair_seq_component() -> None:
+    src = """
+method SplitEvens(s: seq<int>) returns (evens: seq<int>, count: int)
+  ensures count == |evens|
+{
+  evens := [];
+  count := 0;
+  var i := 0;
+  while i < |s|
+    invariant 0 <= i <= |s|
+    invariant count == |evens|
+    decreases |s| - i
+  {
+    if s[i] % 2 == 0 {
+      evens := evens + [s[i]];
+      count := count + 1;
+    }
+    i := i + 1;
+  }
+}
+"""
+    task, rec = _lift_one(src, "SplitEvens")
+    assert task["returns"] == [{"name": "r", "type": {"pair": ["seq", "int"]}}], task["returns"]
+    v = _run_pair(task, s=(1, 2, 3, 4, 5, 6))
+    assert isinstance(v, interp.Pair), v
+    assert v.a == (2, 4, 6) and v.b == 3, v
+    assert _ensures_hold(task, {"s": (1, 2, 3, 4, 5, 6), "r": v})
+    print("test_multi_return_pair_seq_component: (seq<int>, int) -> pair "
+          "return, seq-concat still works on the body's own local")
+
+
+def test_multi_return_pair_mid_body_return() -> None:
+    src = """
+method ClampPair(x: int, y: int) returns (a: int, b: int)
+  ensures a <= b
+{
+  if x > y {
+    return y, x;
+  }
+  a := x;
+  b := y;
+}
+"""
+    task, rec = _lift_one(src, "ClampPair")
+    rets = _find_all(task["body"], "return")
+    assert len(rets) == 1, rets
+    assert rets[0][1] == {"op": "pair", "args": [{"var": "y"}, {"var": "x"}]}, rets
+    for x, y in ((1, 2), (5, 3), (4, 4)):
+        v = _run_pair(task, x=x, y=y)
+        assert v.a == min(x, y) and v.b == max(x, y), (x, y, v)
+        assert _ensures_hold(task, {"x": x, "y": y, "r": v})
+    print("test_multi_return_pair_mid_body_return: a non-tail 'return y, x;' "
+          "in the middle of the body -> explicit {'return': ['r', pair(y, x)]}")
+
+
+def test_multi_return_refusals() -> None:
+    arity3_src = """
+method ThreeReturns(x: int) returns (a: int, b: int, c: int)
+  ensures true
+{
+  a := x;
+  b := x;
+  c := x;
+}
+"""
+    v1 = _classify_one(arity3_src, "ThreeReturns")
+    assert isinstance(v1, C.Refusal) and v1.reason == "multi-return-arity", (
+        f"expected multi-return-arity refusal, got {v1}")
+
+    arity4_src = """
+method FourReturns(x: int) returns (a: int, b: int, c: int, d: int)
+  ensures true
+{
+  a := x;
+  b := x;
+  c := x;
+  d := x;
+}
+"""
+    v2 = _classify_one(arity4_src, "FourReturns")
+    assert isinstance(v2, C.Refusal) and v2.reason == "multi-return-arity", (
+        f"expected multi-return-arity refusal, got {v2}")
+
+    # An arity-two method with an unsupported component (here, a nested
+    # seq -- t's v1 pair only ever holds int/bool/seq, SPEC.md, never a
+    # seq of seq) refuses multi-return-nested, not multi-return-arity.
+    nested_src = """
+method NestedComponent(x: int) returns (a: seq<seq<int>>, b: int)
+  ensures true
+{
+  a := [];
+  b := x;
+}
+"""
+    v3 = _classify_one(nested_src, "NestedComponent")
+    assert isinstance(v3, C.Refusal) and v3.reason == "multi-return-nested", (
+        f"expected multi-return-nested refusal, got {v3}")
+
+    # A bare `array<int>` component: row 22's array machinery is built
+    # around exactly one return, narrowed out of this row's own scope
+    # (LIFTER-DECISIONS.md row 29's residual list).
+    array_src = """
+method ArrayComponent(a: array<int>) returns (b: array<int>, c: bool)
+  ensures true
+{
+  b := a;
+  c := true;
+}
+"""
+    v4 = _classify_one(array_src, "ArrayComponent")
+    assert isinstance(v4, C.Refusal) and v4.reason == "multi-return-nested", (
+        f"expected multi-return-nested refusal, got {v4}")
+    print("test_multi_return_refusals: 3+ returns -> multi-return-arity; "
+          "a nested-seq or array component (arity two) -> multi-return-nested")
+
+
 UNIT_TESTS = [
     test_chain_desugared, test_iff_to_eq, test_nat_return_ensures,
     test_nat_invariant_added_and_dedup, test_spec_fun_totalised,
@@ -2657,6 +2918,12 @@ UNIT_TESTS = [
     test_string_ops_len_index_concat_slice_as_int,
     test_char_comparison_and_cast, test_char_and_string_range_guards,
     test_char_string_refusals,
+    test_multi_return_pair_int_int_loop_free,
+    test_multi_return_pair_loop_invariant_reads_locals,
+    test_multi_return_pair_bool_int_early_return,
+    test_multi_return_pair_seq_component,
+    test_multi_return_pair_mid_body_return,
+    test_multi_return_refusals,
 ]
 
 

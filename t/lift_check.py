@@ -651,6 +651,27 @@ def _t_expr(e: dict, views: dict = {}) -> str:
         return "[" + ", ".join(_t_expr(a, views) for a in args) + "]"
     if op == "slice":
         return f"{_t_expr(args[0], views)}[{_t_expr(args[1], views)}..{_t_expr(args[2], views)}]"
+    if op == "pair":
+        # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): `{"op": "pair",
+        # "args": [a, b]}` prints as Dafny's own native tuple literal
+        # `(a, b)`, valid on this dafny (4.11.0) with no declaration
+        # needed -- the ONE checker file this function's own output
+        # feeds (the source-vs-lifted equivalence lemmas, never the
+        # differential harness's own `lower_dafny.py`-produced program,
+        # a separate code path) only ever needs a Dafny expression the
+        # SMT solver can compare componentwise, and a native tuple gives
+        # that for free (`==` on two Dafny tuples is componentwise,
+        # matching SPEC.md's own `==`/`!=` on pairs). Independent of
+        # whatever per-kernel representation `lower_dafny.py` chooses
+        # for a FULL lowering (LIFTER-DECISIONS.md row 29's own
+        # residual note): this row never calls that module.
+        return f"({_t_expr(args[0], views)}, {_t_expr(args[1], views)})"
+    if op in ("fst", "snd"):
+        # `p.0`/`p.1`, Dafny's own native tuple projection (SPEC.md:
+        # "dafny and verus tuples with .0 and .1"); parenthesised since
+        # `p` is itself an arbitrary expression, not always a bare name.
+        idx = "0" if op == "fst" else "1"
+        return f"({_t_expr(args[0], views)}).{idx}"
     raise ValueError(f"lift_check._t_expr: unknown t operator {op!r}")
 
 
@@ -843,11 +864,31 @@ def _clause_rename(source: MethodDecl, task: dict, record: LiftRecord,
     (not a param) defaults to the identity mapping (the common case,
     unless `record.rename_map` says otherwise) since it has no positional
     counterpart in `task["params"]` to align against."""
+    task_ret_name = task["returns"][0]["name"]
+    is_pair = (len(source.returns) == 2
+               and isinstance(task["returns"][0].get("type"), dict)
+               and "pair" in task["returns"][0]["type"])
+    if is_pair:
+        # Row 29: NEITHER of the source's two out-parameters has a
+        # positional task-side counterpart of its own (`task["returns"]`
+        # has exactly one entry, the pair) -- both map onto the SAME
+        # lemma parameter's own PROJECTION instead, `r.0`/`r.1`, plain
+        # text substitution (`_print_expr`'s `Ident` case does exactly
+        # that, `rename.get(name, name)`, and `r.0`/`r.1` is already
+        # valid Dafny -- no AST restructuring needed, the same reading
+        # `_t_expr`'s new `fst`/`snd` cases print on the LIFTED side of
+        # the very same lemma parameter).
+        overlay = _param_overlay(
+            rename, record,
+            [p.name for p in source.params], [p["name"] for p in task["params"]])
+        overlay[source.returns[0].name] = f"{task_ret_name}.0"
+        overlay[source.returns[1].name] = f"{task_ret_name}.1"
+        return overlay
     return _param_overlay(
         rename, record,
         [p.name for p in source.params], [p["name"] for p in task["params"]],
         source.returns[0].name if source.returns else None,
-        task["returns"][0]["name"])
+        task_ret_name)
 
 
 def _split_array_post_state(e: Expr, array_name: str, post_ident: str) -> Expr:
@@ -1023,6 +1064,19 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     mutated_param = (next((p for p in source.params if p.name == array_mutation.name), None)
                      if array_mutation is not None and array_mutation.kind == "modifies-param"
                      else None)
+    # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): a `multi-return`
+    # source (`lift_rewrite.rewrite` already confirmed exactly two
+    # out-parameters, both component types this lifter carries) has
+    # NO single Dafny type of its own for a lemma parameter to declare
+    # -- synthesised here as a `lift_ast.Type(kind="tuple", ...)`,
+    # `_print_type`'s EXISTING tuple case (decision 11's own machinery,
+    # for a stated `decreases` tuple) already renders that as Dafny's
+    # own native `(T1, T2)`, the same notation `_t_expr`'s `pair`/`fst`/
+    # `snd` cases print on the LIFTED side (both sides read the SAME
+    # lemma parameter `r`, so they must agree on its printed type).
+    pair_src = (source.returns if (len(source.returns) == 2
+                and isinstance(task["returns"][0].get("type"), dict)
+                and "pair" in task["returns"][0]["type"]) else None)
     # `ret_type_src`: the DAFNY type the checker lemma's RETURN parameter
     # should carry. Ordinarily the source's own declared return type; for
     # a "modifies-param" mutation (no Dafny return at all -- the fresh
@@ -1030,7 +1084,10 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # declared type instead, so the lemma parameter reads `array<int>`,
     # matching what the task's `seq` return actually stands for.
     ret_type_src = (mutated_param.type if mutated_param is not None
-                    else (source.returns[0].type if source.returns else None))
+                    else (Type(line=source.line, kind="tuple",
+                               args=(pair_src[0].type, pair_src[1].type))
+                          if pair_src is not None
+                          else (source.returns[0].type if source.returns else None)))
     # `fresh_ret_name`: the source's OWN return name, when this is
     # decision 22's "alloc-fill" shape (`returns (b: array<int>) ensures
     # fresh(b) && ...`) -- the one shape `fresh(...)` is dropped for, on
@@ -1200,7 +1257,16 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     if post_ident is not None:
         ens_exprs = [_split_array_post_state(e, array_mutation.name, post_ident) for e in ens_exprs]
     src_ens_conj = _conj_text(ens_exprs, crename)
-    ret_type_clause = (f"{ret['name']} >= 0" if _is_nat_type(ret_type_src) else "true")
+    if pair_src is not None:
+        # Row 29's own analogue: a `nat` COMPONENT states its own
+        # non-negativity on its own projection, `r.0`/`r.1`, never on
+        # `r` itself (a pair has no order, SPEC.md) -- ANDed together
+        # when both happen to be `nat` (measured population: 6 of the
+        # 785 DafnyBench programs' `(nat, nat)` shape).
+        ret_type_clause = _and(
+            [f"{ret['name']}.{i} >= 0" for i, p in enumerate(pair_src) if _is_nat_type(p.type)])
+    else:
+        ret_type_clause = (f"{ret['name']} >= 0" if _is_nat_type(ret_type_src) else "true")
     lifted_ens = _t_conj(task.get("ensures", []), views)
     hint_lines = []
     for fd in fdecls:
@@ -1283,17 +1349,50 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # counterpart are still real lemma parameters (the invariant text
         # references them, e.g. `i_v2 <= h`): decision 15's desugaring
         # always types them `int`.
-        extra = len(true_local_names) - len(locals_in_scope)
-        extra_names = true_local_names[:extra] if extra > 0 else []
-        aligned_names = true_local_names[extra:] if extra > 0 else true_local_names
+        # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): a pair method's two
+        # out-parameters are never in `locals_in_scope` (`_walk_source_
+        # loops` seeds its scope from `source.params` alone, never
+        # `source.returns` -- deliberately unchanged here, touching that
+        # seed would also perturb the from-the-end `extra`/`aligned_names`
+        # alignment below for every OTHER row's already-measured
+        # programs), yet a loop that computes DIRECTLY into its own out-
+        # parameters (no separate `lo`/`hi`-style locals -- CalDiv's own
+        # shape: `x, y := 0, 191; while ... invariant 0 <= y && ...`)
+        # references them there by name. `rewrite()` unconditionally
+        # emits BOTH pair locals' own `var` declarations as the FIRST two
+        # statements of the lifted body (before any source statement is
+        # ever lifted), so `true_local_names[:2]` is guaranteed to be
+        # their own task names for every loop this walk reaches,
+        # regardless of nesting -- stripped off the front here so the
+        # existing end-alignment heuristic runs on the REMAINING locals
+        # exactly as it always has (identical to before this row for a
+        # single-return task, `pair_src is None`), and reattached
+        # explicitly, both to the lemma's own parameter list (`full_names`
+        # /`full_types`, so the name is actually declared) and to
+        # `loop_crename` (so the SOURCE clause text, which invariably
+        # names the out-parameter directly, prints that same name back --
+        # not `crename`'s own ensures-level `r.0`/`r.1` projection, wrong
+        # here since `r` is not kept in sync during the loop, only
+        # combined at the body's own exits, SPEC.md's "stays the local
+        # a/b inside the body").
+        pair_task_names = true_local_names[:2] if pair_src is not None else []
+        rest_local_names = true_local_names[2:] if pair_src is not None else true_local_names
+        extra = len(rest_local_names) - len(locals_in_scope)
+        extra_names = rest_local_names[:extra] if extra > 0 else []
+        aligned_names = rest_local_names[extra:] if extra > 0 else rest_local_names
         loop_crename = dict(crename)
         for p, true_name in zip(locals_in_scope, aligned_names):
             loop_crename[p.name] = true_name
+        if pair_src is not None and len(pair_task_names) == 2:
+            loop_crename[pair_src[0].name] = pair_task_names[0]
+            loop_crename[pair_src[1].name] = pair_task_names[1]
         full_names = ([tp["name"] for tp in task_params]
+                      + pair_task_names
                       + extra_names
                       + [loop_crename.get(p.name, p.name) for p in locals_in_scope]
                       + [ret["name"]])
         full_types = ([sp.type for sp in src_params]
+                      + ([pair_src[0].type, pair_src[1].type] if pair_src is not None else [])
                       + [Type(line=loop.line, kind="int", name=None) for _ in extra_names]
                       + [p.type for p in locals_in_scope] + [ret_type_src])
         ps_inv = ", ".join(f"{n}: {_lemma_param_type(t)}"

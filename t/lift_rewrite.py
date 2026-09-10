@@ -149,6 +149,15 @@ def _ge0(t_name: str) -> dict:
     return {"op": ">=", "args": [{"var": t_name}, {"int": 0}]}
 
 
+def _ge0_of(e: dict) -> dict:
+    """`_ge0`'s own inequality, over an arbitrary already-lifted
+    expression rather than a bare variable name -- row 29 needs it for a
+    `nat` pair COMPONENT, whose non-negativity ensures is stated on the
+    projection (`r.0 >= 0`), never on the pair return itself (SPEC.md:
+    "a pair has no order", so `r >= 0` is not even well-typed)."""
+    return {"op": ">=", "args": [e, {"int": 0}]}
+
+
 _CHAR_MAX = 1114111  # SPEC.md "an int in [0, 1114111]"; see lift_classify's
                       # own `_CHAR_MAX` comment for the measurement behind it
 
@@ -301,10 +310,34 @@ class Scope:
     # there and `Scope` already flows to every clause-lifting site via
     # `.copy()`. Set once in `rewrite()`; never mutated afterward.
     null_drop_ids: frozenset = frozenset()
+    # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): a `multi-return`
+    # method's two out-parameter names each read a DIFFERENT way in
+    # different positions -- `r.0`/`r.1` in requires/ensures (a
+    # postcondition names the FINAL value, which is exactly what the
+    # pair return holds by construction at every exit), but the plain
+    # LOCAL `a`/`b` everywhere in the body proper, loop invariants
+    # included (an invariant reads the CURRENT, mid-loop value, which
+    # `r` is not kept in sync with until the method actually exits --
+    # `min_max.json`'s own hand-written invariants read `lo`/`hi`
+    # directly, never `r.0`/`r.1`, the same reading this row follows).
+    # `pair_view` (dafny out-param name -> (pair t-name, "fst"|"snd"))
+    # is consulted by `_lift_expr`'s `Ident` case BEFORE `renames`, and
+    # is populated only on the `Scope` used to lift `requires`/`ensures`
+    # -- `rewrite()` clears it to `{}` on `body_scope` and points
+    # `renames` at the two locals instead, so it can never fire past
+    # that point even though `.copy()` (loop nesting) carries the
+    # (now-empty) dict forward like any other field. `pair_ret` (t-name
+    # of the pair return, dafny name of each out-parameter) is the
+    # opposite direction: `_lift_stmt`'s own `ReturnStmt` case reads it
+    # to build an early exit's `{"return": ["r", {"op": "pair", ...}]}`,
+    # so it is set ONLY on `body_scope`, never on the outer `scope`.
+    pair_view: dict = field(default_factory=dict)
+    pair_ret: Optional[tuple] = None                # (pair t-name, dafny a-name, dafny b-name)
 
     def copy(self) -> "Scope":
         return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
-                     self.old_array_name, self.old_array_param_tname, self.null_drop_ids)
+                     self.old_array_name, self.old_array_param_tname, self.null_drop_ids,
+                     dict(self.pair_view), self.pair_ret)
 
 
 # ---------------------------------------------------------------------------
@@ -446,6 +479,15 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         record.rewrites.append(Rewrite(rule="string-literal-lifted", line=e.line))
         return {"op": "seq", "args": [{"int": cp} for cp in cps]}
     if isinstance(e, Ident):
+        pv = scope.pair_view.get(e.name)
+        if pv is not None:
+            # Row 29: a requires/ensures (or a loop invariant reading an
+            # out-parameter through THIS scope, which never happens --
+            # `pair_view` is cleared on `body_scope`, see that field's
+            # own docstring) reference to `a`/`b` becomes `r.0`/`r.1`.
+            ret_t, proj = pv
+            record.rewrites.append(Rewrite(rule="multi-return-pair-projected", line=e.line))
+            return {"op": proj, "args": [{"var": ret_t}]}
         return {"var": scope.renames.get(e.name, e.name)}
     if isinstance(e, Unary):
         inner = _lift_expr(e.arg, scope, fn_names, self_name, task_name, record, renamer)
@@ -801,7 +843,8 @@ def _has_self_call(body: list, target: str) -> bool:
 # Statement lifting (section 4.5).
 # ---------------------------------------------------------------------------
 
-def _desugar_returns(stmts: tuple, tail: bool, ret_name: str, record: LiftRecord) -> tuple:
+def _desugar_returns(stmts: tuple, tail: bool, ret_name: str, record: LiftRecord,
+                      ret_names: Optional[tuple] = None) -> tuple:
     """Section 4.5's three `return` rows, applied before the generic
     statement lift ever sees a `ReturnStmt` in TAIL position: those three
     rows (bare `return;`, `return r;`, `return e;`, all in the body's own
@@ -812,7 +855,21 @@ def _desugar_returns(stmts: tuple, tail: bool, ret_name: str, record: LiftRecord
     (it falls through to the trailing `else: out.append(s)` below,
     unmatched by every `isinstance` check here); `_lift_stmt`'s own
     `ReturnStmt` branch turns it into t's `{"return": [ret, e]}`
-    statement instead."""
+    statement instead.
+
+    Row 29 (2026-09-09): `ret_names`, given only for a pair-return
+    method, is `(dafny a-name, dafny b-name)` -- a tail `return a, b;`
+    (both out-parameters named back exactly, Dafny's own no-op sugar for
+    "return with whatever they already hold") drops the same way a
+    single-return `return r;` does; any OTHER tail `return e1, e2;`
+    becomes ONE parallel `Assign` with both out-parameter names as
+    targets, which `_lift_stmt`'s existing multi-target `Assign` branch
+    (decision 22's own array-swap machinery) already lifts correctly
+    with no further change -- `rewrite()` appends the actual `r := (a,
+    b)` combine once, after every statement in the body has been lifted,
+    so this function's own job stays exactly what it already was for a
+    single return: normalise a tail return into an ordinary assignment,
+    or drop it when it says nothing new."""
     out = []
     n = len(stmts)
     for i, s in enumerate(stmts):
@@ -821,28 +878,37 @@ def _desugar_returns(stmts: tuple, tail: bool, ret_name: str, record: LiftRecord
             record.rewrites.append(Rewrite(rule="tail-return", line=s.line))
             if not s.values:
                 continue  # bare `return;` -- dropped
+            if ret_names is not None:
+                oa, ob = ret_names
+                v0, v1 = s.values[0], s.values[1]
+                if (isinstance(v0, Ident) and v0.name == oa
+                        and isinstance(v1, Ident) and v1.name == ob):
+                    continue  # `return a, b;` -- both already final, dropped
+                out.append(Assign(s.line, (_lhs_name(oa, s.line), _lhs_name(ob, s.line)),
+                                   (v0, v1)))
+                continue
             v = s.values[0]
             if isinstance(v, Ident) and v.name == ret_name:
                 continue  # `return r;` -- dropped
             out.append(Assign(s.line, (_lhs_name(ret_name, s.line),), (v,)))
         elif isinstance(s, IfStmt):
-            then2 = _desugar_returns(s.then, this_tail, ret_name, record)
+            then2 = _desugar_returns(s.then, this_tail, ret_name, record, ret_names)
             if isinstance(s.else_, tuple):
-                else2 = _desugar_returns(s.else_, this_tail, ret_name, record)
+                else2 = _desugar_returns(s.else_, this_tail, ret_name, record, ret_names)
             elif isinstance(s.else_, IfStmt):
-                else2 = _desugar_returns((s.else_,), this_tail, ret_name, record)[0]
+                else2 = _desugar_returns((s.else_,), this_tail, ret_name, record, ret_names)[0]
             else:
                 else2 = s.else_
             out.append(IfStmt(s.line, s.cond, tuple(then2), else2 if s.else_ is None or isinstance(s.else_, IfStmt) else tuple(else2)))
         elif isinstance(s, WhileStmt):
-            out.append(WhileStmt(s.line, s.cond, s.specs, tuple(_desugar_returns(s.body, False, ret_name, record))))
+            out.append(WhileStmt(s.line, s.cond, s.specs, tuple(_desugar_returns(s.body, False, ret_name, record, ret_names))))
         elif isinstance(s, ForStmt):
             out.append(ForStmt(s.line, s.var, s.var_type, s.lo, s.direction, s.hi, s.specs,
-                                tuple(_desugar_returns(s.body, False, ret_name, record))))
+                                tuple(_desugar_returns(s.body, False, ret_name, record, ret_names))))
         elif isinstance(s, BlockStmt):
-            out.append(BlockStmt(s.line, tuple(_desugar_returns(s.body, False, ret_name, record))))
+            out.append(BlockStmt(s.line, tuple(_desugar_returns(s.body, False, ret_name, record, ret_names))))
         elif isinstance(s, LabelStmt):
-            inner = _desugar_returns((s.stmt,), False, ret_name, record)
+            inner = _desugar_returns((s.stmt,), False, ret_name, record, ret_names)
             out.append(inner[0] if inner else s.stmt)
         else:
             out.append(s)
@@ -1176,6 +1242,21 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
         # `return;` means the out-parameter was assigned earlier on this
         # path (section 4.7's definite-assignment check confirmed it), so
         # it reads back as the return variable itself.
+        if scope.pair_ret is not None:
+            # Row 29: `a`/`b` still read as the plain BODY locals here
+            # (`scope` at this point IS `body_scope`, `pair_view`
+            # cleared -- see `Scope.pair_ret`'s own docstring), so
+            # `_lift_expr` needs no special casing; only the RESULT is
+            # pair-shaped, `{"return": ["r", {"op": "pair", ...}]}`.
+            t_ret, oa, ob = scope.pair_ret
+            if s.values:
+                e0 = _lift_expr(s.values[0], scope, fn_names, self_name, task_name, record, renamer)
+                e1 = _lift_expr(s.values[1], scope, fn_names, self_name, task_name, record, renamer)
+            else:
+                e0 = {"var": scope.renames[oa]}
+                e1 = {"var": scope.renames[ob]}
+            record.rewrites.append(Rewrite(rule="early-exit-return", line=s.line))
+            return [{"return": [t_ret, {"op": "pair", "args": [e0, e1]}]}]
         t_ret = scope.renames[scope.ret_name]
         if s.values:
             e = _lift_expr(s.values[0], scope, fn_names, self_name, task_name, record, renamer)
@@ -1302,6 +1383,13 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     array_mutation, _array_mutation_issue = find_array_mutation(method, closure)
     mutated_param_name = (array_mutation.name if array_mutation is not None
                            and array_mutation.kind == "modifies-param" else None)
+    # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): `classify` already
+    # confirmed both out-parameters' types are ones this lifter carries
+    # as a return and demoted anything array-mutation-shaped away from a
+    # SECOND return (`pair_returns` and `mutated_param_name` above are
+    # mutually exclusive by construction of `classify`'s own returns
+    # section).
+    pair_returns = plan.pair_returns
     # Decision 22 "alloc-fill": the SOURCE `new int[n]`'s size expression
     # `n`, re-derived (never re-decided -- `find_array_mutation` already
     # confirmed this exact allocation is the mapped one) here as a plain
@@ -1366,6 +1454,46 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         scope.types[t_ret] = ret_ty
         returns_out = [{"name": t_ret, "type": ret_ty}]
         record.rewrites.append(Rewrite(rule="array-mutation-fresh-return", line=method.line))
+    elif pair_returns is not None:
+        # Row 29: `r`'s own name is synthesised (there is no single
+        # Dafny identifier for the combined pair the way a single
+        # return's own out-parameter name already gives one) -- "r" is
+        # exactly what the two hand-written SPEC.md tasks
+        # (`divmod_pair`, `min_max`) already use, so `renamer.fresh`
+        # starts there and only falls back to `r2`/`r3`/... on a real
+        # collision. `a`/`b` (this function's own local names for
+        # readability; the actual dafny identifiers are `ret_a.name`/
+        # `ret_b.name`) become ORDINARY locals (`a_t`/`b_t`), never
+        # `scope.renames`d to `t_ret` the way a single return's own
+        # out-parameter is -- `requires`/`ensures` reach `r.0`/`r.1`
+        # through `scope.pair_view` instead, set below, and the two are
+        # combined into `r` only at the body's own exits (`_lift_stmt`'s
+        # `ReturnStmt` case for an early exit, and the trailing combine
+        # `rewrite()` appends after the body loop for every path that
+        # simply reaches the end).
+        ret_a, ret_b = pair_returns
+        t_ret = renamer.fresh("r", record, "return")
+        a_t = renamer.fresh(ret_a.name, record, "local")
+        b_t = renamer.fresh(ret_b.name, record, "local")
+
+        def _pair_component_ty(t: Optional[Type]) -> str:
+            if t is not None and t.kind in ("seq", "string"):
+                return "seq"
+            if t is not None and t.kind == "bool":
+                return "bool"
+            return "int"  # int, nat
+
+        a_ty = _pair_component_ty(ret_a.type)
+        b_ty = _pair_component_ty(ret_b.type)
+        a_is_nat = ret_a.type is not None and ret_a.type.kind == "nat"
+        b_is_nat = ret_b.type is not None and ret_b.type.kind == "nat"
+        scope.types[a_t] = a_ty
+        scope.types[b_t] = b_ty
+        ret_is_nat = False
+        ret_is_char = False
+        returns_out = [{"name": t_ret, "type": {"pair": [a_ty, b_ty]}}]
+        scope.pair_view = {ret_a.name: (t_ret, "fst"), ret_b.name: (t_ret, "snd")}
+        record.rewrites.append(Rewrite(rule="multi-return-pair-lifted", line=method.line))
     else:
         ret = method.returns[0]
         t_ret = renamer.fresh(ret.name, record, "return")
@@ -1536,6 +1664,22 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         record.clauses_added.append(ClauseAdded(rule="array-length-return-ensures",
                                                  text=f"len({t_ret}) == <the mutated array's own length>"))
         record.rewrites.append(Rewrite(rule="array-length-return-ensures", line=method.line))
+    if pair_returns is not None:
+        # Row 29's own analogue of `nat-return-ensures`, stated on the
+        # PROJECTION (`r.0`/`r.1`) rather than on `t_ret` itself: a pair
+        # has no order (SPEC.md), so `t_ret >= 0` is not even well-typed,
+        # but each component's own non-negativity is exactly the same
+        # fact decision 4 already states for a plain `nat` return.
+        if a_is_nat:
+            clause = _ge0_of({"op": "fst", "args": [{"var": t_ret}]})
+            ensures_out.append(clause)
+            record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret}.0 >= 0"))
+            record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
+        if b_is_nat:
+            clause = _ge0_of({"op": "snd", "args": [{"var": t_ret}]})
+            ensures_out.append(clause)
+            record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret}.1 >= 0"))
+            record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
     for spec in method.specs:
         if isinstance(spec, EnsuresClause):
             src_e = _strip_fresh_conjuncts(spec.expr, fresh_ret_name, record, spec.line)
@@ -1551,7 +1695,8 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
                 record.rewrites.append(Rewrite(rule="split-conjuncts", line=spec.line))
 
     # -- body
-    desugared = _desugar_returns(method.body, True, scope.ret_name, record)
+    pair_ret_names = (ret_a.name, ret_b.name) if pair_returns is not None else None
+    desugared = _desugar_returns(method.body, True, scope.ret_name, record, ret_names=pair_ret_names)
     desugared = _desugar_breaks(desugared, scope.ret_name, record)
     body_out = []
     body_scope = scope.copy()
@@ -1562,8 +1707,38 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         # already the target of every `a`-reference in `body_scope`
         # (inherited from `scope` above) from here on.
         body_out.append({"assign": [t_ret, {"var": param_tname}]})
+    elif pair_returns is not None:
+        # Row 29: from here on `a`/`b` are plain locals (`pair_view`
+        # cleared, `renames` pointed at them instead -- see
+        # `Scope.pair_view`'s own docstring); Dafny leaves an
+        # out-parameter uninitialised, so each gets decision 13's own
+        # `default-init` value (0/false/[]) -- every reachable exit
+        # already assigns both before it is read or the method returns
+        # (Dafny's own definite-assignment rule, re-checked by
+        # `classify`'s section-4.7 pass above, once per component), so
+        # this default is never actually observed.
+        body_scope.pair_view = {}
+        body_scope.renames[ret_a.name] = a_t
+        body_scope.renames[ret_b.name] = b_t
+        body_scope.pair_ret = (t_ret, ret_a.name, ret_b.name)
+        for nm, ty in ((a_t, a_ty), (b_t, b_ty)):
+            default = {"op": "seq", "args": []} if ty == "seq" else (
+                {"bool": False} if ty == "bool" else {"int": 0})
+            body_out.append({"var": {"name": nm, "type": ty, "init": default}})
+            record.rewrites.append(Rewrite(rule="default-init", line=method.line))
+            record.clauses_added.append(ClauseAdded(rule="default-init", text=f"{nm} := {default}"))
     for s in desugared:
         body_out.extend(_lift_stmt(s, body_scope, fn_names, method.name, task_name, renamer, record))
+
+    if pair_returns is not None:
+        # Every path that reaches the end of the method combines the two
+        # locals into the pair return (SPEC.md, LIFTER-DECISIONS.md row
+        # 29); an early exit already built its own `{"return": ["r",
+        # {"op": "pair", ...}]}` in `_lift_stmt`, so this fires exactly
+        # once, for the fall-through/tail path alone.
+        body_out.append({"assign": [t_ret, {"op": "pair",
+                                              "args": [{"var": a_t}, {"var": b_t}]}]})
+        record.rewrites.append(Rewrite(rule="multi-return-pair-combined", line=method.line))
 
     if array_mutation is not None and array_len_expr is not None:
         mutated_tname = body_scope.renames.get(array_mutation.name)

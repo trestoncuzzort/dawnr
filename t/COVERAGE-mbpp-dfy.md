@@ -8,8 +8,8 @@ seven kernels verify its t rendering. Method and detectors at the end.
 ## Headline
 
 - programs: 164; with a method carrying its own ensures (gradable): 164
-- in t's fragment today: **118** of 164 gradable (72.0%)
-- gradable programs blocked by exactly one gap: 41
+- in t's fragment today: **120** of 164 gradable (73.2%)
+- gradable programs blocked by exactly one gap: 39
 
 ## Gaps, by programs that need them
 
@@ -18,10 +18,10 @@ seven kernels verify its t rendering. Method and detectors at the end.
 | nested-seq | 14 | 13 | a nested seq or array, or a seq of non-int elements |
 | real | 10 | 9 | real numbers |
 | set | 7 | 6 | set, iset, multiset, set comprehension or set literal |
-| multi-return | 5 | 3 | several return values |
 | char-arith | 3 | 3 | char arithmetic |
 | array | 2 | 2 | array2/array3, array?<..> (nullable), or a non-int/non-nat element type |
 | bitvector | 2 | 1 | bit vectors or bitwise operators |
+| multi-return-arity | 2 | 1 | a method with more than one return value that t cannot map to one pair return -- three or more return values, or exactly two whose component types this lifter does not carry (array, bitvector, real, map, multiset, a nested Dafny tuple, a bare char) -- see the burden multi-return-pair |
 | early-exit | 2 | 1 | a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop) |
 | multi-method | 2 | 0 | more than one graded method (Main excluded) where some method's body calls ANOTHER declared method by name -- decision 9 lifts one task per method, so independent methods (no cross-call) are the burden multi-method-independent, not this gap |
 | zero-returns | 2 | 1 | a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array |
@@ -35,12 +35,12 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative in fragment | of gradable |
 |---|---|---|---|---|
-| 1 | nested-seq | 13 | 131 | 79.9% |
-| 2 | real | 9 | 140 | 85.4% |
-| 3 | set | 6 | 146 | 89.0% |
-| 4 | multi-return | 4 | 150 | 91.5% |
-| 5 | char-arith | 3 | 153 | 93.3% |
-| 6 | array | 2 | 155 | 94.5% |
+| 1 | nested-seq | 13 | 133 | 81.1% |
+| 2 | real | 9 | 142 | 86.6% |
+| 3 | set | 6 | 148 | 90.2% |
+| 4 | char-arith | 3 | 151 | 92.1% |
+| 5 | array | 2 | 153 | 93.3% |
+| 6 | multi-return-arity | 2 | 155 | 94.5% |
 | 7 | bitvector | 2 | 157 | 95.7% |
 | 8 | zero-returns | 1 | 158 | 96.3% |
 | 9 | early-exit | 1 | 159 | 97.0% |
@@ -56,12 +56,12 @@ seven kernels verify its t rendering. Method and detectors at the end.
 
 | step | gate | newly unlocked | cumulative | of gradable |
 |---|---|---|---|---|
-| 1 | nested-seq | 13 | 131 | 79.9% |
-| 2 | real | 9 | 140 | 85.4% |
-| 3 | set | 6 | 146 | 89.0% |
-| 4 | multi-return | 4 | 150 | 91.5% |
-| 5 | char-arith | 3 | 153 | 93.3% |
-| 6 | array | 2 | 155 | 94.5% |
+| 1 | nested-seq | 13 | 133 | 81.1% |
+| 2 | real | 9 | 142 | 86.6% |
+| 3 | set | 6 | 148 | 90.2% |
+| 4 | char-arith | 3 | 151 | 92.1% |
+| 5 | array | 2 | 153 | 93.3% |
+| 6 | multi-return-arity | 2 | 155 | 94.5% |
 | 7 | bitvector | 2 | 157 | 95.7% |
 | 8 | zero-returns | 1 | 158 | 96.3% |
 | 9 | early-exit | 1 | 159 | 97.0% |
@@ -80,7 +80,7 @@ more than one gate.
 
 | family | programs | gradable | in fragment |
 |---|---|---|---|
-| MBPP-DFY (dafny-synthesis) | 164 | 164 | 118 |
+| MBPP-DFY (dafny-synthesis) | 164 | 164 | 120 |
 
 ## Burdens (expressible at a translation cost)
 
@@ -106,6 +106,7 @@ more than one gate.
 | trailing-return | 12 | a return as the last statement (assign the result instead) |
 | as-cast | 8 | as int / as nat casts |
 | early-return | 6 | a return that is not in tail position of a method body (lifts to t's early-exit `return` statement) |
+| multi-return-pair | 3 | exactly two return values, both int/nat/bool/seq<int|nat|char>/string -- lifts to one pair-typed return (LIFTER-DECISIONS.md row 29) |
 | nat | 3 | nat, as int with a >= 0 clause |
 | zero-returns-array | 3 | a method with no return whose effect is its one array, lifted as a seq return by row 22 (LIFTER-DECISIONS.md row 22's modifies-param shape) |
 | multi-method-independent | 1 | more than one graded method, none calling another by name -- decision 9 lifts one task per method, so no packaging decision is needed |
@@ -149,6 +150,7 @@ more than one gate.
 - dafny-synthesis_task_id_249.dfy
 - dafny-synthesis_task_id_257.dfy
 - dafny-synthesis_task_id_261.dfy
+- dafny-synthesis_task_id_262.dfy
 - dafny-synthesis_task_id_264.dfy
 - dafny-synthesis_task_id_266.dfy
 - dafny-synthesis_task_id_267.dfy
@@ -239,6 +241,7 @@ more than one gate.
 - dafny-synthesis_task_id_80.dfy
 - dafny-synthesis_task_id_801.dfy
 - dafny-synthesis_task_id_804.dfy
+- dafny-synthesis_task_id_807.dfy
 - dafny-synthesis_task_id_808.dfy
 - dafny-synthesis_task_id_809.dfy
 - dafny-synthesis_task_id_86.dfy

@@ -970,12 +970,69 @@ def _multi_method_shapes(s: str) -> tuple:
     return (not calls_other), calls_other
 
 
-def _multi_return(s: str) -> bool:
-    """More than one return value: a comma at depth 0 of the parenthesised
-    list after `returns`. A comma inside a tuple type `(int, int)` or inside
-    type arguments `map<K, V>` separates parts of ONE type, not two return
-    values, so nested `(..)` and `<..>` groups are deleted to a fixed point
-    before the test."""
+def _split_top_level_commas(text: str) -> list:
+    """`text` split at its own top-level commas, `(..)`/`<..>` nesting
+    (a tuple type, a generic type argument list) tracked as one combined
+    depth so neither can end the other's group early -- unlike
+    `_multi_return`'s own fixed-point `(..)`/`<..>` STRIP (which answers
+    only "is there a top-level comma at all" and, doing so, also erases
+    everything a type argument list carries, `seq<int>` down to `seq`),
+    this keeps every character, so a caller can read each slot's own
+    type text back out whole."""
+    parts, depth, cur = [], 0, []
+    for ch in text:
+        if ch in "(<":
+            depth += 1
+        elif ch in ")>":
+            depth -= 1
+        if ch == "," and depth <= 0:
+            parts.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    parts.append("".join(cur))
+    return parts
+
+
+def _pair_component_supported(ty: str) -> bool:
+    """Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): the lexical read of
+    `lift_classify._pair_component_issue`'s accepted set -- int, nat,
+    bool, string, or seq<int|nat|char> -- read off the text after a
+    `returns(...)` slot's own LAST top-level ':' (`name: Type`; a slot's
+    own Type never itself contains a top-level ':', so this is exact,
+    not approximate, GIVEN the type text `_split_top_level_commas`
+    handed back is well-formed Dafny). A bare `char`, an `array<..>`, a
+    bitvector, `real`, `map`/`multiset`, a nested Dafny tuple, or an
+    unrecognised spelling (a generic type parameter, a type synonym) all
+    read as unsupported -- an UNDER-count of the burden in that last
+    case, the same direction `_zero_return_shapes`/`_array_shapes`
+    already accept elsewhere."""
+    ty = ty.strip()
+    if re.fullmatch(r"int|nat|bool|string", ty):
+        return True
+    if re.fullmatch(r"seq\s*<\s*(?:int|nat|char)\s*>", ty):
+        return True
+    return False
+
+
+def _multi_return_shapes(s: str) -> tuple:
+    """(any_pair_burden, any_arity_gap): LIFTER-DECISIONS.md row 29
+    (2026-09-09) lifts a method with EXACTLY two return values, both
+    components one of the types `_pair_component_supported` accepts, to
+    one pair-typed return -- the burden `multi-return-pair`. Three or
+    more return values, or a two-return method with an unsupported
+    component (array, bitvector, real, map, multiset, a nested Dafny
+    tuple, a bare char), stays the gap `multi-return-arity` (the same
+    token `lift_classify`'s own arity refusal uses; an unsupported
+    COMPONENT reads `multi-return-nested` there, but this census key
+    only ever draws the one line the row 29 task's own instructions
+    named: pair-of-two-supported is the burden, everything else about a
+    `multi-return` shape stays this one gap). Per `returns(...)`
+    occurrence in the file, `_multi_return`'s own scanning shape,
+    unaffected by which method it belongs to (approximate, per-file, the
+    same reading every OTHER detector here that does not re-derive
+    `_declarations` gives)."""
+    any_burden = any_gap = False
     for m in re.finditer(r"\breturns\s*\(", s):
         depth, j = 1, m.end()
         while j < len(s) and depth:
@@ -986,13 +1043,25 @@ def _multi_return(s: str) -> bool:
             j += 1
         if depth:
             continue
-        inner, prev = s[m.end():j - 1], None
-        while inner != prev:
-            prev = inner
-            inner = re.sub(r"\([^()]*\)|<[^<>]*>", "", inner)
-        if "," in inner:
-            return True
-    return False
+        inner = s[m.end():j - 1]
+        parts = [p for p in _split_top_level_commas(inner) if p.strip()]
+        if len(parts) <= 1:
+            continue
+        if len(parts) >= 3:
+            any_gap = True
+            continue
+        ok = True
+        for part in parts:
+            colon = part.rfind(":")
+            ty = part[colon + 1:] if colon >= 0 else ""
+            if not _pair_component_supported(ty):
+                ok = False
+                break
+        if ok:
+            any_burden = True
+        else:
+            any_gap = True
+    return any_burden, any_gap
 
 
 _SEQ_SYNONYM = re.compile(r"^[^\S\n]*type\s+(" + IDENT + r")\s*(?:<[^<>\n]*>)?\s*=\s*seq\s*<", re.M)
@@ -1498,7 +1567,18 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "datatype": ("gap", _has(r"\b(?:co)?datatype\b|\bmatch\b"), "algebraic datatypes and match"),
     "nondet": ("gap", lambda s: _NONDET.search(s) is not None, "nondeterministic choice: havoc x := *, if *, while *, guarded alternatives if { case }"),
     "multi-method": ("gap", lambda s: _multi_method_shapes(s)[1], "more than one graded method (Main excluded) where some method's body calls ANOTHER declared method by name -- decision 9 lifts one task per method, so independent methods (no cross-call) are the burden multi-method-independent, not this gap"),
-    "multi-return": ("gap", _multi_return, "several return values"),
+    # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): a `multi-return` shape
+    # of exactly two, both components int/nat/bool/seq<int|nat|char>/
+    # string, is now in-fragment -- LIFTER-DECISIONS.md row 29 lifts it
+    # to one pair-typed return -- so `multi-return` narrows to
+    # `multi-return-arity`, the SAME token that row's own classifier
+    # refusal uses for three or more returns (an unsupported COMPONENT
+    # at arity two also stays this gap here; the census draws only the
+    # one line row 29's own task named, see `_multi_return_shapes`'s
+    # docstring for the finer `multi-return-nested` reading the real
+    # lifter gives that case). Key renamed to match; see the burden
+    # `multi-return-pair`.
+    "multi-return-arity": ("gap", lambda s: _multi_return_shapes(s)[1], "a method with more than one return value that t cannot map to one pair return -- three or more return values, or exactly two whose component types this lifter does not carry (array, bitvector, real, map, multiset, a nested Dafny tuple, a bare char) -- see the burden multi-return-pair"),
     "zero-returns": ("gap", lambda s: _zero_return_shapes(s)[1], "a method with no return value (t returns exactly one) that is not row 22's own modifies-param shape -- see the burden zero-returns-array"),
     "early-exit": ("gap", _break_continue, "a continue, a labeled break, or a break whose loop is not the tail of the method body (a break inside a nested loop, or followed by another loop)"),
     "seq-comprehension": ("gap", _has(r"\bseq\s*\("), "seq(n, i => e) -- t's fill is constant-valued, this is not (v1 gap, unlike rows 25-27)"),
@@ -1532,6 +1612,7 @@ DETECTORS: dict[str, tuple[str, object, str]] = {
     "array-as-seq": ("burden", lambda s: _array_shapes(s)[0], "array<int>/array<nat> (one dimension): read-only, mutated in place under modifies, or allocated and filled -- lifts to seq (decision 1, decision 22)"),
     "zero-returns-array": ("burden", lambda s: _zero_return_shapes(s)[0], "a method with no return whose effect is its one array, lifted as a seq return by row 22 (LIFTER-DECISIONS.md row 22's modifies-param shape)"),
     "multi-method-independent": ("burden", lambda s: _multi_method_shapes(s)[0], "more than one graded method, none calling another by name -- decision 9 lifts one task per method, so no packaging decision is needed"),
+    "multi-return-pair": ("burden", lambda s: _multi_return_shapes(s)[0], "exactly two return values, both int/nat/bool/seq<int|nat|char>/string -- lifts to one pair-typed return (LIFTER-DECISIONS.md row 29)"),
     # Rows 25-27 (2026-09-09, SPEC.md "Sequences: literals, concatenation,
     # slices (v1)"): a sequence literal, a slice and its two sugars, and a
     # seq-typed return all lift now (LIFTER-DECISIONS.md rows 25-27); a
