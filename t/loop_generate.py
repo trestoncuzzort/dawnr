@@ -64,6 +64,28 @@ seed derived from (--seed, task_id, chunk) so the fallback path is also
 reproducible), printing a line when it happens. Per-sample eval_s and
 wall_s are the whole batched call's time divided by K (there is no
 per-sample timer inside one generate() call); options records this.
+
+Bounded repair loop (added 2026-09-09), WS-19 move 1: --repair K, default 0
+(off), only for the greedy K==1 path (refused together with --samples > 1,
+before the GPU is touched). After each reply, check_reply() runs the same
+three checks extract and tests would run, in the same order: (1) find the
+fenced block and parse it with surface.parse, (2) fuzz_lower.check_wf, (3)
+the problem's own test assertions through spec_experiment.run_point, graded
+exactly as cmd_tests grades them. On the first failing check, the reply and
+one short user turn carrying the exact message (the parser's line and
+token text, check_wf's text, or the failing assertion with the expected
+and actual values from the interpreter) are appended to the conversation
+and the model is asked again, greedy, up to K times. The FINAL reply is
+written into the record's "reply" field, in cmd_generate's exact record
+shape, so extract/tests/run_par/table run unchanged over it; the retry
+trail (attempts made, which check each failed attempt failed at, and the
+message shown) is recorded alongside it in a "repair" field. Every path
+with --repair 0 (the default) is byte-identical to before this flag
+existed.
+
+    ~/.venv-train/bin/python loop_generate.py --adapter none \\
+        --tag qwen2.5-coder-1.5b-rep3 --repair 3 \\
+        --only-heldout out/loop/split.json
 """
 from __future__ import annotations
 
@@ -267,6 +289,83 @@ def print_sample_followups(tag: str, K: int) -> None:
     print_followups(tags[0])
 
 
+# ----------------------------------------------------------------- repair --
+# WS-19 move 1: the same three checks cmd_extract/cmd_tests run, so a
+# repair turn can hand the model the parser's own message instead of a
+# generic "try again". se.find_block/se.surface/se.fuzz_lower/se.run_point
+# are spec_experiment's own functions/modules (imported there, not here) --
+# using them keeps this the SAME check extract and tests will run later,
+# not a reimplementation that could drift from it.
+
+REPAIR_ASK = ("Reply with the corrected t task as a single ```t fenced "
+              "block and nothing else.")
+
+
+def check_reply(reply: str, entry: dict) -> tuple[bool, str, str]:
+    """(ok, stage, message). stage is "" on ok; else "parse", "wf", or
+    "tests", the first of the three checks that failed. message is the
+    parser's line and token text, check_wf's text (errors joined with
+    "; ", the same join cmd_extract uses), or the failing assertion's
+    source text with the expected and actual values from the interpreter
+    (interp.run_point's own "got"/"expected", the same values cmd_tests
+    would report)."""
+    block = se.find_block(reply)
+    if block is None:
+        return (False, "parse",
+                "no ```t fenced block (or a line starting 't 0' / 't 1') found in the reply")
+    try:
+        task = se.surface.parse(block)
+    except se.surface.SurfaceError as e:
+        return False, "parse", str(e)
+    except Exception as e:                                     # noqa: BLE001
+        return False, "parse", f"{type(e).__name__}: {e}"
+
+    try:
+        errs = se.fuzz_lower.check_wf(task)
+    except Exception as e:                                     # noqa: BLE001
+        return False, "wf", f"check_wf raised {type(e).__name__}: {e}"
+    if errs:
+        return False, "wf", "; ".join(errs)
+
+    points = entry["points"]
+    tests_src = entry["rec"]["test_list"]
+    results = [se.run_point(task, p) for p in points]
+    verdicts = [r["verdict"] for r in results]
+    if all(v == "pass" for v in verdicts):
+        return True, "", ""
+    # same priority cmd_tests uses to pick one "overall" verdict for the
+    # problem: signature mismatch, then a failing value, then an excluded
+    # requires, else undefined (budget included, cmd_tests does not single
+    # it out either).
+    if any(v in ("arity", "type") for v in verdicts):
+        overall = "signature"
+    elif any(v == "fail" for v in verdicts):
+        overall = "fail"
+    elif any(v == "requires-excluded" for v in verdicts):
+        overall = "requires-excluded"
+    else:
+        overall = "undefined"
+    if overall == "signature":
+        idx = next(i for i, v in enumerate(verdicts) if v in ("arity", "type"))
+    elif overall == "fail":
+        idx = next(i for i, v in enumerate(verdicts) if v == "fail")
+    elif overall == "requires-excluded":
+        idx = next(i for i, v in enumerate(verdicts) if v == "requires-excluded")
+    else:
+        idx = next(i for i, v in enumerate(verdicts) if v != "pass")
+    src = tests_src[idx].strip() if idx < len(tests_src) else f"test point {idx}"
+    r = results[idx]
+    if overall == "fail":
+        msg = f"assertion `{src}` failed: expected {r['expected']!r}, got {r['got']!r}"
+    elif overall == "undefined":
+        msg = f"assertion `{src}` hit undefined behavior in the interpreter: {r.get('why', '')}"
+    elif overall == "requires-excluded":
+        msg = f"assertion `{src}` is excluded by the task's own requires clause"
+    else:
+        msg = f"assertion `{src}` does not match the task's signature: {r.get('why', '')}"
+    return False, "tests", msg
+
+
 # ------------------------------------------------------------------ main --
 
 def main() -> int:
@@ -299,6 +398,15 @@ def main() -> int:
                          "right before each problem's generate call, so a re-run reproduces the "
                          "same K samples")
     ap.add_argument("--min-free-mib", type=int, default=MIN_FREE_MIB)
+    ap.add_argument("--repair", type=int, default=0,
+                    help="bounded repair loop, K retries per problem (default 0: off, "
+                         "every existing path byte-identical). Only for the greedy "
+                         "--samples 1 path: after each reply, run the parse/check_wf/tests "
+                         "checks extract and tests would run and, on the first failure, "
+                         "send the reply back with the exact message and ask for a "
+                         "corrected block, up to K times. The final reply is recorded in "
+                         "the normal record shape; the retry trail is recorded beside it "
+                         "in a 'repair' field. Refused together with --samples > 1.")
     args = ap.parse_args()
 
     K = args.samples
@@ -309,6 +417,15 @@ def main() -> int:
         print(f"loop_generate: --samples {K} > 1 requires --temperature > 0 "
               f"(got {args.temperature}); sampling at temperature 0 is degenerate. Refusing "
               f"before touching the GPU.")
+        return 2
+    if args.repair < 0:
+        print(f"loop_generate: --repair must be >= 0, got {args.repair}")
+        return 2
+    if args.repair > 0 and K > 1:
+        print(f"loop_generate: --repair {args.repair} is not supported together with "
+              f"--samples {K} > 1; the repair loop is a single-reply, multi-turn "
+              f"conversation, not part of the sampling path. Refusing before touching "
+              f"the GPU.")
         return 2
 
     if K == 1:
@@ -430,7 +547,7 @@ def main() -> int:
             attention_mask = attention_mask.to(dev)
         prompt_tokens = int(input_ids.shape[-1])
 
-        if K == 1:
+        if K == 1 and args.repair <= 0:
             t_gen0 = time.monotonic()
             with torch.no_grad():
                 out = model.generate(
@@ -452,6 +569,64 @@ def main() -> int:
                       "prompt_tokens": prompt_tokens, "reply_tokens": reply_tokens,
                       "eval_s": round(eval_s, 3), "wall_s": round(wall, 3),
                       "done_reason": done_reason}
+            (tag_dirs[0] / "raw" / f"{tid}.json").write_text(
+                json.dumps(record, indent=1), encoding="utf-8")
+        elif K == 1:
+            # --repair loop: same greedy decoding as above, but after each
+            # reply, check_reply() runs the same checks extract/tests would
+            # and, on the first failure, one more greedy turn is asked for
+            # with the exact message appended to the conversation. Up to
+            # args.repair extra turns (attempt 0 is the original reply,
+            # attempts 1..args.repair are retries).
+            local_messages = list(messages)
+            cur_input_ids, cur_attention_mask, cur_prompt_tokens = (
+                input_ids, attention_mask, prompt_tokens)
+            trail: list[dict] = []
+            eval_s_total = 0.0
+            reply, reply_tokens, done_reason, ok = "", 0, "length", False
+            attempt = 0
+            for attempt in range(args.repair + 1):
+                if attempt > 0:
+                    enc_a = tokenizer.apply_chat_template(
+                        local_messages, add_generation_prompt=True,
+                        return_tensors="pt", return_dict=True)
+                    cur_input_ids = enc_a["input_ids"].to(dev)
+                    cur_attention_mask = enc_a.get("attention_mask")
+                    if cur_attention_mask is not None:
+                        cur_attention_mask = cur_attention_mask.to(dev)
+                    cur_prompt_tokens = int(cur_input_ids.shape[-1])
+                t_gen0 = time.monotonic()
+                with torch.no_grad():
+                    out_a = model.generate(
+                        cur_input_ids, attention_mask=cur_attention_mask,
+                        max_new_tokens=args.max_new, do_sample=False,
+                        pad_token_id=tokenizer.pad_token_id, eos_token_id=eos_id)
+                eval_s_total += time.monotonic() - t_gen0
+                new_tokens_a = out_a[0][cur_input_ids.shape[-1]:]
+                reply = tokenizer.decode(new_tokens_a, skip_special_tokens=True)
+                reply_tokens = int(new_tokens_a.shape[-1])
+                hit_eos_a = reply_tokens > 0 and int(new_tokens_a[-1].item()) in eos_set
+                done_reason = "stop" if hit_eos_a else "length"
+
+                ok, stage, msg = check_reply(reply, entry)
+                if ok:
+                    break
+                trail.append({"attempt": attempt, "stage": stage, "message": msg})
+                if attempt == args.repair:
+                    break
+                local_messages.append({"role": "assistant", "content": reply})
+                local_messages.append({"role": "user", "content": msg + "\n\n" + REPAIR_ASK})
+
+            wall = time.monotonic() - t_task0
+            options = {"temperature": 0, "seed": args.seed, "max_new_tokens": args.max_new,
+                       "note": "greedy transformers generate"}
+            record = {"task_id": tid, "fn": entry["fn"], "model": args.tag, "digest": digest,
+                      "options": options, "messages": local_messages, "reply": reply,
+                      "prompt_tokens": cur_prompt_tokens, "reply_tokens": reply_tokens,
+                      "eval_s": round(eval_s_total, 3), "wall_s": round(wall, 3),
+                      "done_reason": done_reason,
+                      "repair": {"k": args.repair, "attempts": attempt, "rescued": ok,
+                                 "trail": trail}}
             (tag_dirs[0] / "raw" / f"{tid}.json").write_text(
                 json.dumps(record, indent=1), encoding="utf-8")
         else:

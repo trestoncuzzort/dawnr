@@ -10,36 +10,36 @@ them touched.
 
 ## Whole pool (368 problems)
 
-| stage | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 |
-|---|---:|---:|---:|---:|
-| replies | 368 | 368 | 368 | 161 |
-| well-formed | 51 | 66 | 72 | 23 |
-| tests pass | 23 | 22 | 25 | 3 |
-| reached the kernels | 51 | 66 | 72 | 23 |
-| verified with a refuted twin, some column | 28 | 39 | 44 | 15 |
-| verified with a refuted twin, all seven | 3 | 3 | 2 | 3 |
-| some column and tests pass | 20 | 19 | 21 | 2 |
-| all seven and tests pass | 1 | 2 | 1 | 0 |
+| stage | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 | qwen2.5-coder-1.5b-rep3 | qwen2.5-coder-1.5b-r2-rep3 |
+|---|---:|---:|---:|---:|---:|---:|
+| replies | 368 | 368 | 368 | 161 | 161 | 161 |
+| well-formed | 51 | 66 | 72 | 23 | 28 | 25 |
+| tests pass | 23 | 22 | 25 | 3 | 5 | 3 |
+| reached the kernels | 51 | 66 | 72 | 23 | 28 | 25 |
+| verified with a refuted twin, some column | 28 | 39 | 44 | 15 | 12 | 16 |
+| verified with a refuted twin, all seven | 3 | 3 | 2 | 3 | 2 | 4 |
+| some column and tests pass | 20 | 19 | 21 | 2 | 2 | 2 |
+| all seven and tests pass | 1 | 2 | 1 | 0 | 0 | 0 |
 
 Refusals at extract, by cause:
 
-| cause | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 |
-|---|---:|---:|---:|---:|
-| parse | 227 | 229 | 227 | 107 |
-| wf | 90 | 73 | 69 | 31 |
-| no-block | 0 | 0 | 0 | 0 |
+| cause | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 | qwen2.5-coder-1.5b-rep3 | qwen2.5-coder-1.5b-r2-rep3 |
+|---|---:|---:|---:|---:|---:|---:|
+| parse | 227 | 229 | 227 | 107 | 109 | 109 |
+| wf | 90 | 73 | 69 | 31 | 24 | 27 |
+| no-block | 0 | 0 | 0 | 0 | 0 | 0 |
 
 Per kernel, verified with a refuted twin (over the well-formed tasks):
 
-| kernel | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 |
-|---|---:|---:|---:|---:|
-| dafny | 28 | 39 | 44 | 13 |
-| framac | 27 | 39 | 44 | 13 |
-| fstar | 9 | 11 | 9 | 7 |
-| lean | 23 | 36 | 40 | 14 |
-| rocq | 27 | 39 | 44 | 15 |
-| spark | 26 | 34 | 40 | 14 |
-| verus | 27 | 39 | 44 | 15 |
+| kernel | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 | qwen2.5-coder-1.5b-rep3 | qwen2.5-coder-1.5b-r2-rep3 |
+|---|---:|---:|---:|---:|---:|---:|
+| dafny | 28 | 39 | 44 | 13 | 10 | 14 |
+| framac | 27 | 39 | 44 | 13 | 10 | 14 |
+| fstar | 9 | 11 | 9 | 7 | 7 | 7 |
+| lean | 23 | 36 | 40 | 14 | 11 | 15 |
+| rocq | 27 | 39 | 44 | 15 | 12 | 16 |
+| spark | 26 | 34 | 40 | 14 | 10 | 15 |
+| verus | 27 | 39 | 44 | 15 | 12 | 16 |
 
 Most frequent refusal texts (line numbers folded):
 
@@ -47,46 +47,48 @@ Most frequent refusal texts (line numbers folded):
 - qwen2.5-coder-1.5b-r0hf: 25 x `line N: expected '{', found '.'`; 24 x `line N: unexpected character '^'`; 23 x `line N: unexpected character '&'`; 21 x `line N: '[' does not start an expression`; 17 x `line N: expected ')', found 'for'`
 - qwen2.5-coder-1.5b-r1: 28 x `line N: unexpected character '&'`; 26 x `line N: expected '{', found '.'`; 22 x `line N: unexpected character '^'`; 22 x `line N: '[' does not start an expression`; 16 x `line N: expected ')', found 'for'`
 - qwen2.5-coder-1.5b-r2: 12 x `line N: unexpected character '&'`; 12 x `line N: expected '{', found '.'`; 10 x `line N: unexpected character '^'`; 9 x `line N: expected ')', found 'for'`; 8 x `line N: expected ']', found 'for'`
+- qwen2.5-coder-1.5b-rep3: 16 x `line N: expected 'nat', found 'length'`; 10 x `line N: unexpected character '&'`; 9 x `line N: unexpected character '^'`; 9 x `line N: '/' does not start an expression`; 9 x `line N: expected ')', found 'for'`
+- qwen2.5-coder-1.5b-r2-rep3: 12 x `line N: unexpected character '&'`; 12 x `line N: expected 'nat', found 'length'`; 10 x `line N: unexpected character '^'`; 9 x `line N: expected ')', found 'for'`; 8 x `line N: expected ']', found 'for'`
 
 ## Held out (161 problems no positive came from)
 
-| stage | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 |
-|---|---:|---:|---:|---:|
-| replies | 161 | 161 | 161 | 161 |
-| well-formed | 14 | 24 | 24 | 23 |
-| tests pass | 3 | 5 | 5 | 3 |
-| reached the kernels | 14 | 24 | 24 | 23 |
-| verified with a refuted twin, some column | 4 | 9 | 9 | 15 |
-| verified with a refuted twin, all seven | 1 | 1 | 1 | 3 |
-| some column and tests pass | 2 | 2 | 2 | 2 |
-| all seven and tests pass | 0 | 0 | 0 | 0 |
+| stage | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 | qwen2.5-coder-1.5b-rep3 | qwen2.5-coder-1.5b-r2-rep3 |
+|---|---:|---:|---:|---:|---:|---:|
+| replies | 161 | 161 | 161 | 161 | 161 | 161 |
+| well-formed | 14 | 24 | 24 | 23 | 28 | 25 |
+| tests pass | 3 | 5 | 5 | 3 | 5 | 3 |
+| reached the kernels | 14 | 24 | 24 | 23 | 28 | 25 |
+| verified with a refuted twin, some column | 4 | 9 | 9 | 15 | 12 | 16 |
+| verified with a refuted twin, all seven | 1 | 1 | 1 | 3 | 2 | 4 |
+| some column and tests pass | 2 | 2 | 2 | 2 | 2 | 2 |
+| all seven and tests pass | 0 | 0 | 0 | 0 | 0 | 0 |
 
 Refusals at extract, by cause:
 
-| cause | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 |
-|---|---:|---:|---:|---:|
-| parse | 108 | 110 | 109 | 107 |
-| wf | 39 | 27 | 28 | 31 |
-| no-block | 0 | 0 | 0 | 0 |
+| cause | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 | qwen2.5-coder-1.5b-rep3 | qwen2.5-coder-1.5b-r2-rep3 |
+|---|---:|---:|---:|---:|---:|---:|
+| parse | 108 | 110 | 109 | 107 | 109 | 109 |
+| wf | 39 | 27 | 28 | 31 | 24 | 27 |
+| no-block | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ## Used in training (207 problems a positive came from)
 
-| stage | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 |
-|---|---:|---:|---:|---:|
-| replies | 207 | 207 | 207 | 0 |
-| well-formed | 37 | 42 | 48 | 0 |
-| tests pass | 20 | 17 | 20 | 0 |
-| reached the kernels | 37 | 42 | 48 | 0 |
-| verified with a refuted twin, some column | 24 | 30 | 35 | 0 |
-| verified with a refuted twin, all seven | 2 | 2 | 1 | 0 |
-| some column and tests pass | 18 | 17 | 19 | 0 |
-| all seven and tests pass | 1 | 2 | 1 | 0 |
+| stage | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 | qwen2.5-coder-1.5b-rep3 | qwen2.5-coder-1.5b-r2-rep3 |
+|---|---:|---:|---:|---:|---:|---:|
+| replies | 207 | 207 | 207 | 0 | 0 | 0 |
+| well-formed | 37 | 42 | 48 | 0 | 0 | 0 |
+| tests pass | 20 | 17 | 20 | 0 | 0 | 0 |
+| reached the kernels | 37 | 42 | 48 | 0 | 0 | 0 |
+| verified with a refuted twin, some column | 24 | 30 | 35 | 0 | 0 | 0 |
+| verified with a refuted twin, all seven | 2 | 2 | 1 | 0 | 0 | 0 |
+| some column and tests pass | 18 | 17 | 19 | 0 | 0 | 0 |
+| all seven and tests pass | 1 | 2 | 1 | 0 | 0 | 0 |
 
 Refusals at extract, by cause:
 
-| cause | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 |
-|---|---:|---:|---:|---:|
-| parse | 119 | 119 | 118 | 0 |
-| wf | 51 | 46 | 41 | 0 |
-| no-block | 0 | 0 | 0 | 0 |
+| cause | qwen2.5-coder-1.5b | qwen2.5-coder-1.5b-r0hf | qwen2.5-coder-1.5b-r1 | qwen2.5-coder-1.5b-r2 | qwen2.5-coder-1.5b-rep3 | qwen2.5-coder-1.5b-r2-rep3 |
+|---|---:|---:|---:|---:|---:|---:|
+| parse | 119 | 119 | 118 | 0 | 0 | 0 |
+| wf | 51 | 46 | 41 | 0 | 0 | 0 |
+| no-block | 0 | 0 | 0 | 0 | 0 | 0 |
 

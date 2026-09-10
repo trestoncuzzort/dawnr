@@ -1367,6 +1367,36 @@ training. First hurdle: no kernel has an error-to-prompt adapter; the
 first measurement needs none, since the parser, check_wf and interp
 messages exist today.
 
+**Move 1 measured at 1.5B (2026-09-10): feedback alone does not move the
+parse wall.** `loop_generate.py --repair K` feeds the model its own reply
+and one short user turn carrying the exact message of the first check
+that failed, the parser's (line and token), then check_wf's, then the
+interpreter's failing assertion with the expected and actual values, for
+up to K retries, greedy, prompt version 1, no kernel in the loop; the
+final reply lands in cmd_generate's record layout with the retry trail
+beside it, so extract, tests, run_par and the curve run unchanged.
+Measured on the 161 eval problems with K = 3 for the same-path control
+and for the round-2 adapter, two new columns of LOOP-CURVE.md beside the
+four that exist: parse refusals 110 and 107 one-shot, 109 and 109 with
+repair; well-formed 24 and 23, then 28 and 25; tests pass 5 and 3, then 5
+and 3; verified with a refuted twin in some column 9 and 15, then 12 and
+16; in all seven 1 and 3, then 2 and 4; some column and passing tests 2
+in every column. The retry trails say why: retries needed is bimodal, 5 of 161 (control) and 3 of 161 (adapter) passed all three checks on the first attempt and every other problem used all three retries and was never rescued, not one problem in either column repaired on an actual retry; of the exhausted, 135 of 156 and 136 of 158 repeated the reply verbatim on every retry after being shown the exact parser, check_wf or assertion message, and among the few that changed, 3 improved a stage and 3 regressed a stage per column (a reply that only failed check_wf came back unparseable), the parse-to-parse population 106 of 106 in both; the five leak shapes are flat before and after (`&` 10 to 10, `^` 9 to 9, a `for` comprehension 9 to 14, `.` 20 to 19, `/` 9 to 11 on the control; 12, 10, 17, 13, 7 unchanged on the adapter). The control's fresh first attempt drifted from the archived column by three problems on the same greedy settings (run-to-run noise on a shared card); the adapter's reproduced its archived column exactly. The reading: at this size the model cannot act
+on a parser message; two thirds of its replies die at the parser with or
+without the adapter and with or without three chances to read why, the
+kernel rows creep, the tests row does not move, and the frontier's
+repair-loop numbers (Tan, AutoVerus, the CLEVER autoprove loop) were all
+measured on models that read an error. So move 1 splits into the two
+alternatives the survey named, both now live: a grammar-constrained
+decoder at 1.5B (the parser's grammar is small and the five leak shapes
+are exactly what a constrained decoder cannot emit), and a model that can
+read an error, which is the Bedrock control column the moment the
+Anthropic model-access form on the AWS account is accepted
+(bedrock_generate.py is built, its four scripts written, the account's
+denial recorded). Next hurdle: that form, then the same 161 through
+Claude Sonnet one-shot and with K = 3, the first column of the curve
+produced by a model outside the box.
+
 **2. The data multiplier over the verified corpus (survey move 12).**
 Evidence: ATLAS, arXiv 2512.10173 (2,751 verified Dafny programs into
 19,385 training examples); SAFE, arXiv 2410.15756 (a debugging objective
