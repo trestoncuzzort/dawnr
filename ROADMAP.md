@@ -1384,7 +1384,7 @@ seven-kernel number becomes a claim outside this repo; the frontier
 control column (move 2) is its first user. First hurdle: the record
 layout is the spec experiment's today; the grader takes it and a plain
 "one t block per problem" file, and the two committed tables (AGREEMENT.md
-and the sweep) are produced by it unchanged.
+and the sweep) are produced by it unchanged. BUILT the same night: `t/grade.py` (one entry point, `--tasks DIR` or `--replies PATH`, the spec experiment's raw records or a plain JSONL; verdicts.json, table.md, summary.txt) over run_par's own cells, gate and flake rule (run_par refactored to expose them, its CLI unchanged), and `t/GRADER.md` (every outcome and what it never means, what counts, the twin and its certificate, the flake rule and the seven budgets with their version pins, the submission protocol, how to read the table, the non-claims). Measured: the 21 committed tasks through it reproduce AGREEMENT.md cell for cell in 314 seconds at 8 jobs; round 2's 161 replies reproduce its extract counts (107 parse, 31 wf, 23 tasks), its tests (3 pass, 19 fail, 1 undefined) and its kernel table cell for cell in 102 seconds. Left: the plain-JSONL input form is reviewed, not yet run end to end; the per-column certificate fields are derived from the outcome, not read from each kernel's own certificate object.
 
 **2. A model that reads an error, through the grader (survey moves 1 and
 10).** The repair loop's first measurement (below) is negative at 1.5B; the

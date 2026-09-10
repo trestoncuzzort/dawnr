@@ -52,50 +52,32 @@ BACKENDS = [
 ]
 
 
-def _run_cell(bname: str, task_name: str, suffix: str, op: str):
+def _run_cell(bname: str, task_name: str, suffix: str, op: str, flake_n: int = 3):
     # Re-imported per call: correct under spawn (fresh interpreter, no
     # inherited module object); a sys.modules hit under fork, used below.
+    # flake_n defaults to cell_pair's own default (3, everyone); grade.py's
+    # --flake is the only caller that ever passes another value, so a bare
+    # `python3 run_par.py` dispatch is unchanged.
     backend = importlib.import_module(f"verifiers.{bname}")
     real = harness.OUT / f"{task_name}.{suffix}"
     twin = harness.OUT / f"{task_name}_twin.{suffix}"
-    (r_real, a1), (r_twin, a2) = cell_pair(backend.verify, real, twin)
+    (r_real, a1), (r_twin, a2) = cell_pair(backend.verify, real, twin, flake_n)
     return task_name, bname, op, (r_real.outcome, r_twin.outcome, a1 and a2)
 
 
-def main() -> int:
-    # Mutual exclusion is the lock file taken in __main__ (verifiers.
-    # acquire_run_lock), on every platform. A /proc scan used to sit here
-    # as an extra Linux-only check, matching any process whose argv held
-    # "run_par.py"; it refused against its own launcher,
-    # `timeout 600 python3 run_par.py` and nohup and sh -c, because the argv
-    # carries the script name too (measured 2026-09-02 inside a tup guest,
-    # exit 2, zero cells run). The lock already answers the question the
-    # scan was asking, so the scan is gone.
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--jobs", type=int, default=None,
-                    help="cells in flight; each cell makes six concurrent kernel calls")
-    # The three paths below default to the committed layout, so a bare run
-    # is byte-identical to before; a sweep over another corpus (ROADMAP 12.5,
-    # the lifted DafnyBench tasks, 2026-09-06) passes all three so it never
-    # touches t/tasks, t/out or t/AGREEMENT.md.
-    ap.add_argument("--tasks", type=Path, default=HERE / "tasks",
-                    help="directory of task JSON files (default t/tasks)")
-    ap.add_argument("--out", type=Path, default=HERE / "out",
-                    help="directory for lowered sources and kernel logs (default t/out)")
-    ap.add_argument("--table", type=Path, default=HERE / "AGREEMENT.md",
-                    help="where the agreement table is written (default t/AGREEMENT.md)")
-    args = ap.parse_args()
-    jobs_arg = args.jobs
-    harness.OUT = args.out
-    harness.OUT.mkdir(parents=True, exist_ok=True)
-    tasks = sorted(args.tasks.glob("*.json"))
-    # Rows are keyed by the task's own name, which is what every cell and
-    # every output file uses; on the committed corpus the file stem is the
-    # same string, on a lifted corpus it is not (Clover_abs.Abs.json holds
-    # the task named clover_abs__abs, measured 2026-09-06).
-    cols, rows, all_ok = [], {harness.load(t)["name"]: {} for t in tasks}, True
-    present = []                        # (bname, lower_fn, suffix), probed backends only
+def probe_backends():
+    """Probe every entry of BACKENDS for its kernel binary, exactly once, in
+    the parent process, never inside a worker. Returns (cols, present):
+    cols is [(bname, version_or_"ABSENT: ..."), ...] in BACKENDS order,
+    covering every backend whether or not its kernel answered; present is
+    the same backends restricted to the ones that did, as
+    (bname, lower_fn, suffix), the shape lower_and_dispatch consumes.
 
+    Split out of main() 2026-09-10 (ROADMAP WS-19 move 1) so grade.py can
+    run the identical probe over the same seven kernels; the probing loop
+    itself, and its one call to backend.version() per kernel, are unchanged
+    from the form main() has run inline since this file was written."""
+    cols, present = [], []
     for bname, lmod, suffix in BACKENDS:
         try:
             backend = importlib.import_module(f"verifiers.{bname}")
@@ -105,6 +87,29 @@ def main() -> int:
             continue
         cols.append((bname, ver))
         present.append((bname, importlib.import_module(lmod).lower, suffix))
+    return cols, present
+
+
+def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
+    """Sequential lowering (real + twin, every (backend, task) pair from
+    `present`) followed by the parallel cell dispatch: the pipeline main()
+    has always run inline, between the backend probe and the table write.
+
+    Returns (rows, wits, all_ok): rows maps task name -> {backend:
+    (real_outcome, twin_outcome, agreed)}; wits maps task name -> its
+    measured twin witness (a task with no twin has no entry); all_ok is
+    False as soon as any (task, backend) pair has no twin, abstains, fails
+    to lower, or disagrees with the flip rule (real VERIFIED, twin
+    REFUTED, no flake disagreement).
+
+    Split out of main() 2026-09-10 (ROADMAP WS-19 move 1) so grade.py can
+    run the identical cell/gate/flake machinery over its own tasks and
+    replies. `flake_n` defaults to 3 (cell_pair's own default, SPEC.md's
+    "The twins" and verifiers/__init__.py's flake_check), so a bare
+    `python3 run_par.py` invocation, which never passes it, is byte-
+    identical to before; grade.py's --flake is the only caller that does."""
+    rows = {harness.load(t)["name"]: {} for t in tasks}
+    all_ok = True
     # Lowering + writes: sequential, entirely before any dispatch below, so
     # out/*.{suffix} has a single writer for the whole time it is produced.
     pending, wits = [], {}
@@ -154,7 +159,7 @@ def main() -> int:
     # Linux via T_MP_START=spawn against the full matrix.
     ctx = mp_context()
     with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx) as ex:
-        futs = {ex.submit(_run_cell, b, n, s, o): (b, n, o) for b, n, s, o in pending}
+        futs = {ex.submit(_run_cell, b, n, s, o, flake_n): (b, n, o) for b, n, s, o in pending}
         for fut in as_completed(futs):
             name, bname, op, cell = fut.result()
             rows[name][bname] = cell
@@ -163,6 +168,88 @@ def main() -> int:
             print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}"
                   + ("" if good else "  <-- FINDING")
                   + f"   (twin witness: {harness.witness(wits.get(name))})", flush=True)
+    return rows, wits, all_ok
+
+
+def format_table(cols, rows, tasks, out_dir: Path) -> str:
+    """The AGREEMENT.md text, exactly as main() has always built it: a UTC
+    timestamp header, the cell-grammar line, the `| task | ... |` header and
+    one row per task in `rows`'s iteration order, the kernels-present line,
+    the Backends block, and the verdict-basis hash line naming the first
+    task with both a .dfy and a .rs file under `out_dir`.
+
+    Split out of main() 2026-09-10 (ROADMAP WS-19 move 1); byte-identical to
+    the inline form it replaces (modulo the timestamp, which is
+    `datetime.now` at call time either way), so grade.py's table.md is in
+    AGREEMENT.md's exact format by construction, not by a second writer
+    kept in sync by hand."""
+    lines = [f"# t cross-kernel agreement — "
+             f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",
+             "",
+             "Cell = real outcome / twin outcome. Agreement means "
+             "`verified / refuted` in every present column.",
+             ""]
+    header = "| task | " + " | ".join(b for b, _ in cols) + " |"
+    lines += [header, "|" + "---|" * (len(cols) + 1)]
+    for tname, cells in rows.items():
+        row = [tname]
+        for bname, _ in cols:
+            c = cells.get(bname)
+            row.append("—" if c is None else
+                       f"{c[0]} / {c[1]}" + ("" if c[2] else " (FLAKED)"))
+        lines.append("| " + " | ".join(row) + " |")
+    present_names = [b for b, v in cols if not v.startswith("ABSENT")]
+    lines += ["", f"Kernels present: {len(present_names)} of {len(cols)} "
+              f"({', '.join(present_names) if present_names else 'NONE'})"]
+    lines += ["", "Backends:"] + [f"- {b}: {v}" for b, v in cols]
+    # The example hashes name the first task that has both files, which is
+    # abs on the committed corpus (so the default table is unchanged).
+    ex = next((t for t in tasks if (out_dir / f"{harness.load(t)['name']}.dfy").exists()
+               and (out_dir / f"{harness.load(t)['name']}.rs").exists()), None)
+    if ex is not None:
+        exn = harness.load(ex)["name"]
+        lines += ["", f"Verdict basis: every source file hashed; e.g. "
+                  f"`{exn}.dfy` {sha256_file(out_dir / f'{exn}.dfy')[:16]}…, "
+                  f"`{exn}.rs` {sha256_file(out_dir / f'{exn}.rs')[:16]}…"]
+    else:
+        lines += ["", "Verdict basis: every source file hashed."]
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    # Mutual exclusion is the lock file taken in __main__ (verifiers.
+    # acquire_run_lock), on every platform. A /proc scan used to sit here
+    # as an extra Linux-only check, matching any process whose argv held
+    # "run_par.py"; it refused against its own launcher,
+    # `timeout 600 python3 run_par.py` and nohup and sh -c, because the argv
+    # carries the script name too (measured 2026-09-02 inside a tup guest,
+    # exit 2, zero cells run). The lock already answers the question the
+    # scan was asking, so the scan is gone.
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--jobs", type=int, default=None,
+                    help="cells in flight; each cell makes six concurrent kernel calls")
+    # The three paths below default to the committed layout, so a bare run
+    # is byte-identical to before; a sweep over another corpus (ROADMAP 12.5,
+    # the lifted DafnyBench tasks, 2026-09-06) passes all three so it never
+    # touches t/tasks, t/out or t/AGREEMENT.md.
+    ap.add_argument("--tasks", type=Path, default=HERE / "tasks",
+                    help="directory of task JSON files (default t/tasks)")
+    ap.add_argument("--out", type=Path, default=HERE / "out",
+                    help="directory for lowered sources and kernel logs (default t/out)")
+    ap.add_argument("--table", type=Path, default=HERE / "AGREEMENT.md",
+                    help="where the agreement table is written (default t/AGREEMENT.md)")
+    args = ap.parse_args()
+    jobs_arg = args.jobs
+    harness.OUT = args.out
+    harness.OUT.mkdir(parents=True, exist_ok=True)
+    tasks = sorted(args.tasks.glob("*.json"))
+    # Rows are keyed by the task's own name, which is what every cell and
+    # every output file uses; on the committed corpus the file stem is the
+    # same string, on a lifted corpus it is not (Clover_abs.Abs.json holds
+    # the task named clover_abs__abs, measured 2026-09-06). lower_and_dispatch
+    # builds the rows skeleton itself, from the same `tasks` list.
+    cols, present = probe_backends()
+    rows, wits, all_ok = lower_and_dispatch(tasks, present, jobs_arg)
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
     MIN_KERNELS = int(os.environ.get("T_MIN_KERNELS", "2"))
     # Refuse BEFORE writing; see run_all.py for the measurement behind it.
@@ -180,36 +267,8 @@ def main() -> int:
               "AGREEMENT.md not written.")
         return 2
 
-    lines = [f"# t cross-kernel agreement — "
-             f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",
-             "",
-             "Cell = real outcome / twin outcome. Agreement means "
-             "`verified / refuted` in every present column.",
-             ""]
-    header = "| task | " + " | ".join(b for b, _ in cols) + " |"
-    lines += [header, "|" + "---|" * (len(cols) + 1)]
-    for tname, cells in rows.items():
-        row = [tname]
-        for bname, _ in cols:
-            c = cells.get(bname)
-            row.append("—" if c is None else
-                       f"{c[0]} / {c[1]}" + ("" if c[2] else " (FLAKED)"))
-        lines.append("| " + " | ".join(row) + " |")
-    lines += ["", f"Kernels present: {len(present_names)} of {len(cols)} "
-              f"({', '.join(present_names) if present_names else 'NONE'})"]
-    lines += ["", "Backends:"] + [f"- {b}: {v}" for b, v in cols]
-    # The example hashes name the first task that has both files, which is
-    # abs on the committed corpus (so the default table is unchanged).
-    ex = next((t for t in tasks if (harness.OUT / f"{harness.load(t)['name']}.dfy").exists()
-               and (harness.OUT / f"{harness.load(t)['name']}.rs").exists()), None)
-    if ex is not None:
-        exn = harness.load(ex)["name"]
-        lines += ["", f"Verdict basis: every source file hashed; e.g. "
-                  f"`{exn}.dfy` {sha256_file(harness.OUT / f'{exn}.dfy')[:16]}…, "
-                  f"`{exn}.rs` {sha256_file(harness.OUT / f'{exn}.rs')[:16]}…"]
-    else:
-        lines += ["", "Verdict basis: every source file hashed."]
-    args.table.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    text = format_table(cols, rows, tasks, harness.OUT)
+    args.table.write_text(text, encoding="utf-8", newline="\n")
     print(f"\n{len(present_names)} kernels, {len(tasks)} tasks: "
           f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, a finding, see ' + str(args.table)}")
     return 0 if all_ok else 1
