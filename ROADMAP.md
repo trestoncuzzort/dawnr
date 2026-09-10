@@ -1342,30 +1342,94 @@ measures (seven-kernel joint agreement with a certified refutation, 42 of
 no repair loop, which the field's 2026 numbers name as the lever that
 moves results most for the least engineering.
 
-The moves, in the order t takes them. The order is the survey's rank
-corrected by the skeptics and by what t already measured (the loop's
-second fact in WS-18, the nl/ stdin instrument, the trio's residual
-notes), cheapest measurable move first. Each carries its evidence, the
-number it is expected to move, and the first hurdle.
+The moves, in the order t takes them, REORDERED 2026-09-10 on Treston's
+call ("reorder WS-19 with the grader first and get us out of the
+tunnel"). The first order put the repair loop first and the grader last;
+the first measurement (below) and a plain reading of the survey's own
+last section reversed that: t's asset is the grader, the same task
+verified in seven independent kernels with a certified refutation of its
+mutant, which no other system has, and the loop's 1.5B rounds were the
+tunnel: a model that cannot parse its own output two thirds of the time
+does not become one by feedback at that size, and the field's gains this
+year came from frontier models in repair loops over corpora a thousand
+times ours. So the grader becomes the product other people's models are
+measured against, the frontier model becomes its first external user,
+and no 1.5B training round runs until a model that reads an error is in
+the loop. The survey's rank is corrected by the skeptics and by t's own
+numbers as before; each move carries its evidence, the number it moves,
+and the first hurdle.
 
-**1. The repair loop, starting at the parser (survey move 1).** Evidence:
-Tan, arXiv 2605.30914 (held-out verified pass rate 9.7 to 31.1 percent
-with multi-turn verifier feedback; the paper's own limitations call the
-pair confounded across several changes at once, so it is a direction, not
-a size); AutoVerus, arXiv 2409.13082 (91.3 percent with an error-driven
-repair bank; the per-phase count the survey first quoted is not in the
-paper). t's own fact comes first: two thirds of every column's replies on
-the 161 eval problems fail to PARSE (107 to 110 of 161, LOOP-CURVE.md) on
-five Python leak shapes (`&`, `^`, a `for` comprehension, a `.` method
-call, `/`) before any kernel is reached. So the loop begins with the
-parser's own message (surface.py names the token and the line), then
-check_wf's, then the interpreter's failing assertion, then each kernel's
-failure text, each a bounded retry. Expected effect: the parse row of the
-curve first, then the tests row, measured greedy on the same 161 with the
-same-path control and the round-2 adapter at k retries, before any
-training. First hurdle: no kernel has an error-to-prompt adapter; the
-first measurement needs none, since the parser, check_wf and interp
-messages exist today.
+**1. The grader as the artifact (survey move 8, moved to the top).**
+Evidence: Verus-SpecGym (arXiv 2605.26457, 581 tasks, one kernel), the
+Vericoding benchmark (arXiv 2509.22908, three kernels graded apart), the
+Lean Kernel Arena (many checkers, one logic): every one is a single-kernel
+or single-logic version of what t already runs, and people use them. The
+build: one entry point, `grade.py`, that takes t tasks (a directory, or a
+JSONL of model replies in the spec experiment's record layout) and
+returns, per task, the seven-column verdict, the twin and its witness, the
+certificate each kernel accepted, and the coherence gate, in one JSON and
+one table, with the verdict semantics written down once in GRADER.md
+(VERIFIED, REFUTED, UNPROVED, TIMEOUT, ABSTAIN, MALFORMED, no-twin, the
+gate, what counts and what does not, the flake rule, the budgets), so a
+reader who has never seen the repo can run a model against it and read
+the table. The escape-hatch audit is already built into every verifier
+(the survey's move 9, dropped for that reason), so the artifact is
+reporting and packaging, not new proof work. Expected effect: the
+seven-kernel number becomes a claim outside this repo; the frontier
+control column (move 2) is its first user. First hurdle: the record
+layout is the spec experiment's today; the grader takes it and a plain
+"one t block per problem" file, and the two committed tables (AGREEMENT.md
+and the sweep) are produced by it unchanged.
+
+**2. A model that reads an error, through the grader (survey moves 1 and
+10).** The repair loop's first measurement (below) is negative at 1.5B; the
+same 161 through a frontier model one-shot and with three repairs, graded
+by move 1's entry point, is the first external column of the curve. The
+Bedrock path is built (bedrock_generate.py, four scripts) and the AWS
+account is held at the account level (every model answers "Operation not
+allowed", the use-case call "not authorized", the GPU quota is zero); the
+Anthropic API is the same models without the hold; either runs the moment
+a key or the account clears. Expected effect: the parse row of the curve
+and the ceiling of the tests row. First hurdle: the key.
+
+**3. The data multiplier over the verified corpus (survey move 12).**
+Evidence: ATLAS, arXiv 2512.10173 (2,751 verified Dafny programs into
+19,385 training examples); SAFE, arXiv 2410.15756 (Accuracy at 2 from
+46.76 to 49.64 percent at matched budget from a debugging objective). Of
+the four variants three need no new plumbing (NL-to-spec, spec-to-body,
+invariant infilling) over the 42 all-seven and 61 six-of-seven lifted
+tasks, the 21 committed tasks and the fuzz families; spec-repair needs the
+(failed attempt, message, fix) trail. Expected effect: positives in the
+hundreds. First hurdle: the pair schema in loop_dataset.py has one shape.
+Runs when move 2 has a model worth training toward, not before.
+
+**4. The bottleneck column on the sweep (survey move 6).** The skeptic's
+own count from the ninth sweep: of the 61 six-of-seven tasks lean alone
+blocks 21, fstar 19, framac 9, rocq 7, verus 5, spark 0. A column in
+run_par's table and a per-column count in the Reading; the order of kernel
+work is lean, fstar, framac. First hurdle: none.
+
+**5. The construct line, unchanged (survey moves 4, 5, 11; 12.7's own
+order).** Pairs landed the same day this was reordered (12.7), strings
+finished with rows 28 and 29, `string-lib` a candidate wave that needs its
+own SPEC.md semantics decision, the stdin signature measured (203 of
+20,509 validated, about 40 percent over the 511 function-shaped problems)
+with the multi-test-case wrapper as its SPEC decision, MBPP-DFY at 120 of
+164 lifted and 8 in all seven, a grind. The line keeps running because
+every use of the grader, external or ours, depends on what it accepts.
+
+**6. The ladder as a completeness measurement (survey move 2, demoted).**
+34 of the 35 restate-the-body specs on the 7B's 64 are already refuted
+under the single-twin rule, so the fraction of rungs refuted is measured
+against the tests on those 64 and on round 2's 23 before it enters any
+reward. First hurdle: the measurement.
+
+**7. The preregistered reward ablation (survey move 14), and the rest.**
+Two arms, verify-in-one-kernel against seven-kernel verify-plus-refuted-
+twin, matched seeds, the margin declared before the run; the hurdle is
+the one-kernel reward path, not GPU time. Behind it: branching on partial
+diagnostics (move 3), the self-debugging objective (13), the AlgoVeri
+comparison (a construct census of its 77 tasks first).
 
 **Move 1 measured at 1.5B (2026-09-10): feedback alone does not move the
 parse wall.** `loop_generate.py --repair K` feeds the model its own reply
@@ -1397,74 +1461,11 @@ denial recorded). Next hurdle: that form, then the same 161 through
 Claude Sonnet one-shot and with K = 3, the first column of the curve
 produced by a model outside the box.
 
-**2. The data multiplier over the verified corpus (survey move 12).**
-Evidence: ATLAS, arXiv 2512.10173 (2,751 verified Dafny programs into
-19,385 training examples); SAFE, arXiv 2410.15756 (a debugging objective
-lifting Accuracy at 2 from 46.76 to 49.64 percent at matched budget). t's
-own fact: round 2 had 82 positives and learned the axis with 140 twin
-pairs, not the one with 25 test pairs (WS-18). Of the four variants, three
-need no new plumbing and can be emitted today from the 42 all-seven and
-61 six-of-seven lifted tasks, the 19 committed tasks and the fuzz families:
-NL-to-spec, spec-to-body, invariant infilling; only spec-repair needs the
-(failed attempt, message, fix) trail the harness does not keep yet, which
-move 1 builds. Expected effect: positives in the hundreds per round at no
-proof cost. First hurdle: the pair schema in loop_dataset.py has one shape
-(a positive and its twin); the three new shapes need their own.
-
-**3. The bottleneck column on the sweep (survey move 6).** Evidence: the
-Lean Kernel Arena's per-checker table (arena.lean-lang.org, accessed
-2026-09-09). The skeptic computed it from the ninth sweep: of the 61
-six-of-seven tasks, lean alone blocks 21, fstar 19, framac 9, rocq 7,
-verus 5, spark 0. Expected effect: "61 in six" becomes a list with owners,
-and the order of kernel work is lean, fstar, framac, not spark (survey
-move 7, closing spark's seq equality, was dropped for that reason: it was
-already closed and moves no count). First hurdle: none; a column in
-run_par's table and a per-column count in the Reading.
-
-**4. The ladder as a completeness measurement, before any score (survey
-move 2, demoted).** Evidence: SpecCoder, arXiv 2607.04232 (completeness
-0.1707 to 0.7820); MutDafny, arXiv 2511.15403. The skeptic's finding:
-34 of the 35 restate-the-body specs on the 7B's 64 are already refuted
-under the single-twin rule, so a score over the ladder will not separate a
-vacuous spec from a genuine one by itself. So: measure first. The grounded
-ladder refutes each rung through the interpreter at a witness, free of
-kernels, so the fraction of rungs refuted is measured against the tests
-on the 64 well-formed specs and on round 2's 23; only if it separates
-the two classes does it enter a reward. First hurdle: the measurement.
-
-**5. The construct line, unchanged (survey moves 4, 5, 11, 12.7's own
-order).** Pairs are stated (SPEC.md "Pairs (v1)"), the DafnyBench census's
-top gap, the survey's skeptic confirming multi-return leads the full 643
-and string-char only the MBPP-DFY family. Strings finish with lifter row 28
-and pool version 2 (in progress). `string-lib` (13,266 nl/ problems, 225
-sole) is a candidate wave that needs its own SPEC.md semantics decision
-(which of split, join, count, strip, format have one meaning in seven
-kernels), not a bypass of one. The stdin signature is measured
-(COVERAGE-nl-stdin.md: 203 validated of 20,509, about 40 percent over the
-511 function-shaped problems in fragment, not a doubling), and what
-remains is the multi-test-case wrapper as a SPEC decision. MBPP-DFY: 45 of
-164 lifted, 8 in all seven; the all-seven bar has moved 5 to 8 across five
-construct waves against named blockers, a grind, not a quick win.
-
-**6. The preregistered reward ablation (survey move 14).** Evidence: "When
-the Reward Suite Is Leaky", arXiv 2607.11022 (a 0.20-point gap against a
-preregistered 1.5-point margin). Two arms, verify-in-one-kernel against
-seven-kernel verify-plus-refuted-twin, matched seeds, the margin declared
-before the run. The skeptic's correction: GPU cost per round is tens of
-minutes, so the hurdle is the missing leaky-arm pipeline (a one-kernel
-reward path in loop_dataset.py), not the box.
-
-**7. Downstream of 1 and 2:** branching on partial diagnostics (survey
-move 3; the AlphaVerus number is a Llama-3.1-70B REBASE result over
-verifier scores and messages together), the self-debugging objective
-(move 13, SAFE's 2.88 points), the AlgoVeri comparison (move 10, kept as
-written: its 77 tasks need a construct census against t first), and the
-discipline as a field-facing artifact (move 8, sound, its headline
-numbers re-pulled once 13.3 is resolved).
-
-DONE WHEN: moves 1 to 4 each have a measured row in the curve or the
-sweep, in this order; 5 closes on 12.7's line; 6 has its two arms
-declared and run once.
+DONE WHEN: move 1 is a runnable grader with GRADER.md and both committed
+tables produced by it; move 2 is a column of the curve from a model
+outside the box; moves 3 and 4 each have a measured row; 5 closes on
+12.7's line; 7 has its two arms declared and run once. No 1.5B training
+round runs before move 2.
 
 ## The road to 1.0 (opened 2026-09-05)
 
