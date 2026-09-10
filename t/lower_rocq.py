@@ -1399,6 +1399,144 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   (tetrahedralNumber, not a defect); four stay open, each traced to its
   own directly-read stuck goal, none of them a lowering crash or a masked
   error.
+
+  THE SIX SOLE-BLOCKERS, THIRD PASS (2026-09-10, COVERAGE-lifted-785.md's
+  THIRTEENTH sweep: rocq alone keeps 6 of the 72 six-of-seven lifted tasks
+  out of all seven -- tetrahedralNumber, is_even, invertArray, max_nit,
+  max, mystery1). ONE now reads COUNTS; the other five stay exactly as
+  read, four of them unchanged from the second pass above and named there
+  already, one (invertArray) re-measured alone as instructed and found to
+  read the same.
+
+  MAX_NIT, CLOSED. Both gaps this session's own brief named --
+  `nitness`'s `sf_valid_base b` (a ground fact needing SUBSTITUTION) and
+  is_even's `sf_even i` (a bool-headed application needing a CASE SPLIT)
+  -- trace to the identical root cause: `t_sat1`'s merge/E-matching arms
+  all require `is_var` on the applied head, and a global spec_fun
+  Definition never is one, so nothing propagates a fact ABOUT a spec_fun
+  application, ground or derived, to another occurrence of the SAME
+  application. A prior session's attempt at a fully generic fix, `H : ?X
+  = true |- context [?X] => rewrite H`, is named in this file's own
+  second-pass note as MEASURED UNSAFE (an unguarded head can fire on a
+  state-variable equality at the wrong occurrence and corrupt an
+  unrelated goal). Built instead, the narrow version the brief asked for:
+  one match arm PER bool-result spec_fun, keyed on that spec_fun's own
+  Coq constant name (`sf_{f}`, never a variable, never any OTHER task's
+  spec_fun) --
+
+    | H : sf_valid_base ?a0 = true |- context [sf_valid_base ?a0] =>
+        rewrite H
+
+  (and the `= false` / hypothesis-position twins) -- generated per task
+  from `bool_sf`, the (name, Coq-arity) list `emit_spec_funs` now builds
+  alongside `norm_names` (fix (2)'s own `ring_simplify` list, the SAME
+  shape, one row earlier in the file). `?a0 .. ?a{k-1}` binds the
+  spec_fun's own Coq arguments (a seq param counts as two, matching
+  `atxt`); no arity or param-type guard is needed the way `ring_simplify`
+  needed one, since a plain `rewrite` is safe for any shape -- a
+  mismatched arity or type simply never unifies, and `repeat match ...
+  end` with zero firings is a no-op, never an error. Joined into `t_eqs`
+  (goal position, chained after the existing unfold/`ring_simplify`
+  steps, so it meets whatever THOSE already exposed) and `t_eqs_h`
+  (hypothesis position) the same way fix (2)'s own norm/norm_h pair is.
+  MEASURED alone this closed HALF of max_nit: `nitness`'s own conjunct,
+  once `sf_nitness_eq` unfolds it, exposes `sf_valid_base b` in the GOAL,
+  substituted to `true` by the new arm -- but the surviving goal (`0 <=?
+  b - 1` is not lia-decidable from `b >= 0` alone) still needed the
+  ARITHMETIC `valid_base` is opaque about (`b >= 2`), which only
+  unfolding `valid_base`'s own equation IN THE HYPOTHESIS (`t_eqs_h`)
+  exposes -- and `t_dis`/`t_side` had never tried `t_eqs` and `t_eqs_h`
+  TOGETHER on the same goal, only as mutually exclusive alternatives (the
+  digit_sum note explains why combining them at the SAME occurrence can
+  grow a rewrite without converging; here they target DISJOINT
+  occurrences of the same spec_fun, goal vs. hypothesis, so there is no
+  such chain). Added one more `solve [...]` alternative, tried LAST, to
+  both `t_dis` and `t_side`: `solve [ t_eqs; t_eqs_h; t_vc0 ]`. Together,
+  MEASURED (`harness.run_task`, flake 3, alone): max_nit now reads
+  VERIFIED/REFUTED (off-by-one twin, witness b=2, real 1 vs twin 0),
+  where the second pass left it unproved/refuted. Every task that already
+  closed via `t_vc0`, `t_eqs;t_vc0`, or `t_eqs_h;t_vc0` alone reaches
+  neither new alternative, unchanged.
+
+  IS_EVEN: ATTEMPTED FURTHER, MEASURED WORSE, REVERTED. The ground arms
+  above run ONCE, before `t_vc0`/`t_base` ever starts searching, so they
+  never see a fact `t_base`'s own saturation loop has not derived yet --
+  and is_even's own `sf_even i = true` is exactly such a fact, derived
+  MID-SEARCH by `t_sat1`'s PRE-EXISTING "resolve an implication whose
+  antecedent is leaf-provable" rule acting on the loop invariant once `r`
+  is a concrete literal (`true = true <-> sf_even i = true` poses `sf_even
+  i = true`). Tried: the identical ground arms, ALSO emitted as a new
+  `t_sf_ground`, dispatched from `t_base`'s own `repeat (first [...])`
+  via `Ltac t_base ::= ...` (Coq's redefinition form; MEASURED to work at
+  top level, a later definition's own callers picking up the LATEST bound
+  tactic even when they were themselves defined earlier -- confirmed with
+  a 6-line standalone probe before touching this file), guarded to fire
+  only when `bool_sf` is non-empty so every task without a bool spec_fun
+  keeps `t_base`'s PRELUDE-static definition, untouched. MEASURED: this
+  reached the derived fact and DID progress the goal one step further
+  (`negb (sf_even i) = true` rewrites to `negb true = true`, i.e. `false
+  = true`, a `congruence`-shaped contradiction) -- but it did not CLOSE
+  is_even, and it cost real time getting there: is_even's own real side
+  went from a clean UNPROVED to TIMEOUT, the widened `t_base` search
+  (one more alternative tried on every `first`, every `repeat` round, of
+  every goal in the file) spending the 180s wall without finishing. Not a
+  correctness regression (no committed or lifted task's VERDICT changed
+  for the worse, confirmed below), but a proof-cost one on the very task
+  it targeted, for zero proof gained -- reverted before landing; the diff
+  this session keeps has no `t_sf_ground`, no `Ltac t_base ::=`, and
+  `is_even` reads exactly what it read before this pass, UNPROVED/REFUTED
+  (re-confirmed after the revert, not assumed). Left open, same gap
+  named in the second pass above: a bool-headed spec_fun application
+  needs a genuine case split (`destruct (sf_even i)`-shaped), which
+  substitution alone -- narrow or general -- does not provide once the
+  needed fact is not literally sitting in a hypothesis the SAME shape
+  reaches.
+
+  INVERTARRAY, RE-MEASURED ALONE AS INSTRUCTED: still TIMEOUT/REFUTED,
+  the SAME reading COVERAGE-lifted-785.md already records, not a
+  regression. This task has no spec_fun at all (gate "loops", a plain
+  seq in/seq out reversal with three `forall` invariants and one `div`),
+  so nothing either change above could possibly touch it; read directly
+  (no probe needed, its own three-forall-plus-div shape and the box's own
+  load average 14-21 across this session's later measurements is the
+  same "near the search budget's edge" reading `max`/`min_max` already
+  established for a different task), no lowering gap found, left exactly
+  as read, per this session's own "leave unless the cause is cheap"
+  instruction.
+
+  MAX, MYSTERY1, TETRAHEDRALNUMBER: untouched, named, unchanged from the
+  second pass above (`max`: real timeout, load-sensitive proof cost;
+  `mystery1`: real unproved, the no-companion-spec_fun self-recursion gap
+  `apply IH` cannot bridge; `tetrahedralNumber`: a correct, intentional
+  `t_v`-collides-with-`t_`-namespace abstain, not a defect). None of this
+  pass's two changes (the ground-fact substitution fix, landed; the
+  `t_base`/`t_sf_ground` widening, attempted and reverted) reaches any of
+  the three: no spec_fun (max), no bool spec_fun (mystery1 has none at
+  all), or lowering never runs far enough to reach either tactic
+  (tetrahedralNumber's own `_ck` refusal fires before any proof script is
+  even generated).
+
+  REGRESSION (`t/tasks/*.json`, all 23, flake 3, `run_par.lower_and_
+  dispatch`, jobs=1, present={"rocq"}): 22 of 23 read verified/refuted,
+  matching AGREEMENT.md's rocq column exactly, byte for byte in outcome
+  and witness (divmod_pair's wrong-var twin at x=1,y=1; swap's undefined
+  witness at s=[0],i=0,j=0; tail's slice-bounds witness; every other task
+  the same); `min_max` reads timeout/refuted, the SAME load-sensitive
+  reading AGREEMENT.md already records, not a regression. Also re-run,
+  the other three lifted tasks with a bool-result spec_fun besides
+  max_nit/is_even (`nit_add`, `nit_increment`, the only other lifted
+  tasks `bool_sf` is ever non-empty for): both read unproved/refuted,
+  identical to COVERAGE-lifted-785.md's own row for each, unchanged. Spot-
+  checked two lifted tasks with an INT-only spec_fun (`bool_sf` empty,
+  the ground arms a no-op string) for a lowering crash or shape change:
+  neither errored, both lowered and dispatched normally (ComputeFact
+  unproved/refuted, sum verified/refuted), consistent with `bool_sf`
+  empty being a pure no-op as designed.
+
+  NET: rocq's sole-blocker count moves from 6 to 5 (max_nit leaves the
+  list); tetrahedralNumber, is_even, invertArray, max, mystery1 remain,
+  each for a distinct, already-named reason, none of them a lowering
+  crash, a masked error, or a regression against the committed matrix.
 """
 from __future__ import annotations
 
@@ -2502,12 +2640,34 @@ Ltac t_sweep :=
 
 # emitted after the spec_fun section, since t_eqs/t_eqs_h name their
 # equation lemmas
+# THE COMBINED t_eqs;t_eqs_h ALTERNATIVE (2026-09-10, max_nit, joining the
+# ground-fact substitution fix above): t_eqs and t_eqs_h were, until now,
+# mutually EXCLUSIVE alternatives (a goal-side unfold OR a hypothesis-side
+# unfold, never both in the same attempt, digit_sum's own note above
+# explains why combining them at the SAME occurrence can grow a rewrite
+# without converging). max_nit needs both at once, on DIFFERENT
+# occurrences of the SAME spec_fun (`valid_base`): nitness's own equation,
+# unfolded in the GOAL, exposes `sf_valid_base b` there, which the ground
+# fix above substitutes to `true` from the ambient `sf_valid_base b =
+# true` hypothesis (never consuming it); the remaining case split (the
+# goal's `0 <=? b - 1` is not lia-decidable from `b >= 0` alone) needs the
+# ARITHMETIC valid_base is opaque about (`b >= 2`), which only unfolding
+# valid_base's OWN equation IN THAT HYPOTHESIS (t_eqs_h's job) exposes.
+# Neither alone closes it; `t_eqs; t_eqs_h` in sequence does (MEASURED,
+# `harness.run_task`, below), since each targets a disjoint occurrence
+# (goal vs. hypothesis) and neither's rewrite output is the other's
+# input, so there is no growing chain to fail to converge. Added as ONE
+# MORE `solve [...]` alternative, tried last, so every task that already
+# closes via `t_vc0`, `t_eqs;t_vc0`, or `t_eqs_h;t_vc0` alone reaches this
+# new alternative never, unchanged byte for byte.
 POST_SF = r"""Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]
-                          | solve [ t_eqs_h; t_vc0 ] ]
+                          | solve [ t_eqs_h; t_vc0 ]
+                          | solve [ t_eqs; t_eqs_h; t_vc0 ] ]
               || fail "unsolved t verification condition".
 Ltac t_side := first [ assumption | solve [ lia ]
                      | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]
-                     | solve [ t_eqs_h; t_vc0 ] ].
+                     | solve [ t_eqs_h; t_vc0 ]
+                     | solve [ t_eqs; t_eqs_h; t_vc0 ] ].
 (* Early exit (2026-09-08): t_dis with t_go_ext's extra witness-instantiation
    arm, used ONLY in a `return`-bearing loop's step_done=true proof branch
    (see gen_loop / PRELUDE's t_go_ext). t_go_ext tries the cheap t_go path
@@ -4071,6 +4231,28 @@ def emit_spec_funs(cx: Ctx) -> str:
     task = cx.task
     chunks = []
     eqs = []
+    # THE GROUND-FACT SUBSTITUTION GAP (2026-09-10, COVERAGE-lifted-785.md's
+    # thirteenth sweep, max_nit): `nitness`'s own body, once unfolded by
+    # `t_eqs`, exposes a bare `sf_valid_base b` -- the SAME argument, no
+    # arithmetic offset, as the task's own `requires valid_base(b)`
+    # hypothesis (`sf_valid_base b = true` after `intros`) -- yet nothing
+    # substitutes it: `t_sat1`'s merge/E-matching arms all require `is_var`
+    # on the applied head, and a global spec_fun Definition never is one
+    # (the SAME gap fix (2)'s `ring_simplify`, above, closes for argument
+    # ARITHMETIC, not for a ground VALUE). A prior attempt at a fully
+    # generic rule, `H : ?X = true |- context [?X] => rewrite H`, is
+    # named in this file's own note as MEASURED UNSAFE: unguarded, it can
+    # fire on a state-variable equality (`r = true`) at the wrong
+    # occurrence and corrupt an unrelated goal into a false residual. This
+    # is the narrow version: one match arm PER bool-result spec_fun, keyed
+    # on that spec_fun's own Coq constant name (`sf_{f}`, never a
+    # variable), so it can only ever fire on a literal application of a
+    # global spec_fun Definition this task actually declares -- never on a
+    # state var, a loop-primed name, or any other head shape. `bool_sf`
+    # collects (name, arity) here, arity counted in Coq ARGUMENTS (a seq
+    # param is function+length, two), the same count `atxt` below builds
+    # from.
+    bool_sf: list[tuple[str, int]] = []
     counter = [0]
     for sf in task.get("spec_funs", []):
         f = sf["name"]
@@ -4089,6 +4271,8 @@ def emit_spec_funs(cx: Ctx) -> str:
                 bs.append(f"({v} : {rty(p['type'])})")
                 args.append(v)
         btxt, atxt = " ".join(bs), " ".join(args)
+        if sf["result"] == "bool":
+            bool_sf.append((f, len(args)))
 
         # body lowering: inside the fixpoint, self-calls use fuel `fu`
         saved_tys = dict(cx.tys)
@@ -4208,8 +4392,66 @@ Qed.
         norm_h = " ".join(
             f"repeat match goal with H : context [{n} ?x] |- _ => "
             f"progress ring_simplify x in H end;" for n in norm_names)
-        chunks.append(f"Ltac t_eqs := {eq_tac} {norm} idtac.\n")
-        chunks.append(f"Ltac t_eqs_h := {eq_tac_h} {norm_h} idtac.\n")
+        # THE GROUND-FACT SUBSTITUTION FIX itself (2026-09-10, above): one
+        # match arm per bool-result spec_fun, keyed on its own Coq constant
+        # name, propagating a literal `sf_{f} <args> = true` (or `= false`)
+        # hypothesis into any occurrence of the SAME application (same
+        # args, syntactically, after whatever unfolding `eq_tac`/`norm`
+        # already did) anywhere it appears. `?a0 .. ?a{k-1}` binds the
+        # spec_fun's own Coq-level arguments (a seq param counts as two,
+        # matching `atxt`'s own count above); `rewrite H` is a plain
+        # substitution, no arithmetic, so this needs no `ring_simplify`-
+        # style arity/type guard the way fix (2) did -- it is safe for
+        # every arity and every param type, including a seq param's
+        # function/length pair, since a mismatched shape simply never
+        # unifies and `repeat match ... end` with zero firings is a no-op,
+        # never an error. Goal position joins t_eqs (chained after `norm`,
+        # so an already-unfolded/normalized occurrence is what it meets);
+        # hypothesis position (`rewrite H in H2`) joins t_eqs_h the same
+        # way `ring_simplify ... in H` does above. A task with no
+        # bool-result spec_fun (`bool_sf` empty) gets the empty string
+        # here, byte-identical to before this fix.
+        def _ap(n: int) -> str:
+            return " ".join(f"?a{i}" for i in range(n))
+        ground_arms, ground_arms_h = [], []
+        for fname, arity in bool_sf:
+            term = f"sf_{fname} {_ap(arity)}".rstrip()
+            ground_arms.append(
+                f"| H : {term} = true |- context [{term}] => rewrite H ")
+            ground_arms.append(
+                f"| H : {term} = false |- context [{term}] => rewrite H ")
+            ground_arms_h.append(
+                f"| H : {term} = true, H2 : context [{term}] |- _ => "
+                f"rewrite H in H2 ")
+            ground_arms_h.append(
+                f"| H : {term} = false, H2 : context [{term}] |- _ => "
+                f"rewrite H in H2 ")
+        ground = ("repeat match goal with " + "".join(ground_arms) + "end;"
+                  if ground_arms else "")
+        ground_h = ("repeat match goal with " + "".join(ground_arms_h)
+                    + "end;" if ground_arms_h else "")
+        chunks.append(f"Ltac t_eqs := {eq_tac} {norm} {ground} idtac.\n")
+        chunks.append(f"Ltac t_eqs_h := {eq_tac_h} {norm_h} {ground_h} idtac.\n")
+        # ATTEMPTED AND REVERTED (2026-09-10, is_even): a second half of
+        # this fix tried putting the identical ground arms inside a new
+        # `t_sf_ground`, dispatched from `t_base`'s own `repeat (first
+        # [...])` via `Ltac t_base ::= ...` (Coq's redefinition form,
+        # confirmed to work at top level), so a fact `t_sat1`'s PRE-
+        # EXISTING "leaf-provable antecedent" rule derives MID-SEARCH
+        # (is_even's own `sf_even i = true`, from the loop invariant once
+        # `r` is a concrete literal) would be available to the SAME
+        # substitution, not only one asserted before `t_vc0` starts
+        # (max_nit's own shape). MEASURED: this did not close is_even --
+        # it turned a clean UNPROVED into TIMEOUT instead, the widened
+        # `t_base` search costing real wall time across every one of its
+        # `repeat` rounds for every goal in the file, on every bool-
+        # spec_fun task, for no proof gained. Reverted before landing (the
+        # diff below never touches this file): the ground fix stays
+        # exactly what MEASURED clean, `t_eqs`/`t_eqs_h`'s own one-shot
+        # arms plus the `t_eqs; t_eqs_h; t_vc0` alternative in `t_dis`/
+        # `t_side` below, which is what closes max_nit. is_even is left
+        # open, unchanged from before this session, named in this file's
+        # dated note below.
     else:
         chunks.append("Ltac t_eqs := idtac.\n")
         chunks.append("Ltac t_eqs_h := idtac.\n")

@@ -131,6 +131,89 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    rests on. Instrument 2 runs first and decides on kernel evidence; this
    only fails closed on definitions whose inconsistency alt-ergo did not
    find.
+
+4. VACUOUS-3, FIXED 2026-09-10 (third pass). lower_framac.py's own note
+   (same date, its "VACUOUS-3" section) diagnosed three lifted tasks
+   reading verified/vacuous (both `main_v` tasks and countToAndReturnN):
+   each twin's COMPARE-FLIP on a loop guard makes the task's OWN loop
+   invariant (carried verbatim, untouched by the twin operator) false at
+   the twin's actual exit, so WP correctly dooms the post-loop statement
+   as UNREACHABLE while ALSO correctly failing the genuine invariant-
+   preservation goal with an honest [Stepout]. CONFIRMED here, not taken
+   on faith: re-ran all three twins directly and read `-wp-report-json`
+   against the console text side by side. On countToAndReturnN's twin the
+   doomed goal's JSON entry is `{"goal":
+   "typed_nat_m2_tmp_..._exo4_6", "property": "..._wp_smoke_dead_code_s8",
+   "smoke": true, "passed": false}`, while the CONSOLE line naming that
+   same goal is `[wp] [Failed] (Doomed)
+   typed_nat_m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_6`:
+   a bare numeral, no smoke-class substring anywhere. WP truncates a
+   doomed goal's printed id to the enclosing function's name plus a bare
+   statement number once the full name would be long; MEASURED against a
+   short-named counter-probe in the same run, `requires 0 == 1;`, whose
+   goal prints in full as `typed_nat_f_wp_smoke_default_requires`. So
+   `_vacuity_smoke`'s old `_DOOMED_GOAL` regex, which reads only the
+   console id, found no class to match against `_UNREACHABLE_SMOKE` on
+   the long-named case, and misread an honest failed proof (the twin's
+   own invariant is not preserved, its exit unreachable relative to that
+   invariant, which the flip rule counts as UNPROVED or REFUTED) as
+   contract vacuity.
+
+   FIXED: `_vacuity_smoke` now takes the kernel's own JSON report and, for
+   every doomed smoke goal (`smoke: true, passed: false`), reads its class
+   from the `property` field instead of the console id, because `property`
+   is written from the goal's structured origin and is never subject to
+   the console's identifier-length truncation (confirmed on both the
+   truncated and the untruncated case above: the same `wp_smoke_dead_*`
+   and `wp_smoke_default_requires` classes are present in `property`
+   either way). The console-text path (`_DOOMED_GOAL` over the raw output)
+   is kept, byte-for-byte, as the fallback for when `_load_report` returns
+   None (an unparseable file, where VERIFIED and the certificate path are
+   already unreachable anyway). MEASURED: all three named rows move
+   verified/vacuous -> verified/refuted, COUNTING under the flip rule
+   (the certificate's own audit set was already fully accepted; only the
+   misclassification stood between it and REFUTED).
+
+   REGRESSION: the committed matrix, all 23 `t/tasks/*.json`, framac
+   column, relowered and reverified end to end via
+   `run_par.lower_and_dispatch` (present = [("framac", lower_framac.lower,
+   "c")], jobs=1): 22 rows read verified/refuted and swap_rows reads
+   abstain/abstain, BEFORE and AFTER this change, byte-identical to each
+   other and to the committed AGREEMENT.md; no cell moved. Two hand-
+   written probes exercise the direction this fix must NOT touch:
+   `requires 0 == 1;` and `requires x > 0 && x < 0;` (contradictory
+   through two conjuncts) both still read VACUOUS after the change --
+   each doomed goal's `property` is `f_wp_smoke_default_requires`, matched
+   by neither `_UNREACHABLE_SMOKE` alternative, so `is_vacuity` stays True
+   exactly as before.
+
+   WIDER THAN THE NAMED THREE, MEASURED not assumed: every lifted row in
+   COVERAGE-lifted-785.md whose framac column contains "vacuous" anywhere
+   (17 of the 277, not only the three lower_framac.py named) was re-run
+   directly, before and after, the same way. 16 of 17 changed. All three
+   named rows move to verified/refuted as above; five more (sum, pow,
+   sumIntsLoop, euclidianDiv, formal_verication.../allow42) share the
+   identical long-name-truncation shape and ALSO move verified/vacuous ->
+   verified/refuted, newly counting; six timeout-real rows (calcF, mod2,
+   computeFib, findPositionOfElement, fine_tune_examples_50_examples_41,
+   and intDivImpl on its real side) move their vacuous twin/real cell to
+   refuted/timeout, still not counting (the real side never reached
+   verified) but no longer a false vacuity claim either; findMax's twin
+   moves vacuous -> timeout (still not REFUTED at this budget, honestly
+   so); ninetyOne's real moves vacuous -> timeout. Every move is VACUOUS
+   to a DIFFERENT outcome, never the reverse, and no row moved out of a
+   verified/refuted or abstain/abstain cell -- a strict improvement under
+   the flip rule, never a demotion. The one row unchanged either side,
+   `prog_fun_solutions_.../mockexam2/problem5` (vacuous/vacuous both
+   times), is the control: its doomed goal's own `property` is a
+   hypothesis-position class this file has always refused, so the fix
+   correctly leaves it exactly where it was.
+
+   OPEN, untouched by this pass: the other four named sole-blocker tasks
+   in COVERAGE-lifted-785.md's framac row (mfirstCero's `spec_fun` calls
+   in executable position, factorialOfLastDigit similarly, ghost/triple's
+   conditionally-evaluated `at`, swap's timeout) are each a different
+   defect, left for whichever pass takes them next.
 """
 from __future__ import annotations
 
@@ -286,10 +369,37 @@ def _failed_outside_smoke(out: str, smoke) -> bool:
     return failed > 0
 
 
-def _vacuity_smoke(out: str) -> tuple[bool, list[str]]:
-    """(is it vacuity, the doomed goal names). Fails CLOSED: a doomed goal
-    whose class this does not recognise counts as vacuity, and so does a
-    smoke tally that fell short with no goal name visible to explain it."""
+def _vacuity_smoke(out: str, report) -> tuple[bool, list[str]]:
+    """(is it vacuity, the doomed goal names/classes). Fails CLOSED: a
+    doomed goal whose class this does not recognise counts as vacuity, and
+    so does a smoke tally that fell short with no class visible to explain
+    it.
+
+    2026-09-10 (third pass): reads the class from the JSON report's
+    `property` field when a report was written, because the CONSOLE text's
+    goal id does not reliably carry it. MEASURED on the VACUOUS-3 rows
+    (lower_framac.py's own note): WP truncates a doomed goal's printed id
+    to its enclosing function's name plus a bare statement numeral once the
+    full name would be long (`typed_nat_..._exo4_6` on
+    countToAndReturnN's twin, no smoke-class substring anywhere in the
+    console text), while the SAME class prints in full on a short-named
+    function (`typed_nat_f_wp_smoke_default_requires`, this file's own
+    reqfalse/reqconj probes below). The JSON `property` field carries the
+    class either way (confirmed on both: `..._wp_smoke_dead_code_s8` and
+    `..._wp_smoke_default_requires`), because it is written from the goal's
+    structured origin, not rendered through the same identifier-length
+    limit as the console id. Old behaviour is exactly preserved as the
+    fallback for when no report was written (`report is None`, e.g. the
+    raw-text path on an unparseable file)."""
+    if report is not None:
+        doomed = [e for e in report if e.get("smoke") and not e.get("passed")]
+        if not doomed:
+            return False, []
+        classes = [e.get("property") for e in doomed]
+        names = [c or e.get("goal", "?") for c, e in zip(classes, doomed)]
+        unreachable_only = all(c and _UNREACHABLE_SMOKE.search(c)
+                               for c in classes)
+        return (not unreachable_only), names
     names = _DOOMED_GOAL.findall(out)
     if not _DOOMED.search(out):
         return False, names
@@ -637,7 +747,7 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
     m = proved[-1] if proved else None
     statuses = _STATUS.findall(out)
     smoke = _SMOKE.search(out)
-    is_vacuity, doomed_names = _vacuity_smoke(out)
+    is_vacuity, doomed_names = _vacuity_smoke(out, report)
     unproved = _unproved_goals(report, out)
     declared, accepted, cert_note = _cert_status(report)
     # The demotion gate: a file carrying the certificate name anywhere in

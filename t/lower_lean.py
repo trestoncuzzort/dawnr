@@ -1658,6 +1658,149 @@ a reader of that still-standing note knows not to go looking for them.
 `implies` in computational position and a self-recursive body hitting
 either the BOOLEANS or DEAD-BRANCH shapes are still genuinely
 unexercised by any measured task, unchanged.
+
+THIRD PASS (2026-09-10, night), downWhileNotEqual: THE PRESERVATION-HAVE
+COLLISION's own redesign, landed narrowly. MEASURED first, before
+touching anything (`out/lifted-tasks/` directly, flake 3, matching
+`run_par.lower_and_dispatch(tasks, present={"lean"}, flake_n=3)`):
+downWhileNotEqual read verified/unproved exactly as the second pass left
+it; the ten domain-hyp loop tasks (cal_sum, linear_search1, slow_max,
+minimum, carre, foo, the three gcdI tasks, div_ent_it), mod, both cube
+tasks and all 23 tasks/*.json all read identically to their committed
+cells.
+
+THE FIX: `_t_loop`'s own recursive self-call, for a loop whose `needs_
+hyp` reads True, now DECIDES its own invariant-preservation obligation
+(`if hok : P then <recurse, using hok> else <a total placeholder,
+`_loop_zero(self.rett)`>`) rather than PROVING it as an unconditional
+`have`. `Decidable P` is automatic core-Lean typeclass search for P's
+only constructors here (Int order/equality, `∧`) -- no proof term is
+needed at the `dite` itself. The "then"/"else" split moves entirely into
+`_t_loop_spec`'s own proof (`then_tac`, the theorem that was ALREADY
+proving the real contract): the "then" case still closes on `apply
+..._t_loop_spec <;> grind` exactly as before (Prop-irrelevance means it
+does not care whether the argument in scope is `hok`'s own projection or
+a freshly-proved `have`); the "else" case (`hok : ¬P`, reachable only
+for hypothetically-typed states no real execution produces) is closed by
+`grind` finding the SAME contradiction the old `have`'s tactic would
+have needed to prove directly, now as its contrapositive -- `dite_else_
+tac`, sharing the identical `split_tac`/nonneg-bridge alternatives
+`have_body` already carried, so a genuinely-false preservation instance
+(a live counterexample under the twin's mutation) is no longer asked to
+be PROVEN, only ruled DECIDABLE, and the sorryAx that used to poison
+`_t_loop` (and everything unfolding it, including the certificate) never
+gets inserted.
+
+TWO BUGS FOUND CHASING IT, both measured on scratch probes before
+trusting either fix, both distinct from anything this file's standing
+notes already named:
+
+`Decidable` for a raw quantifier. A first cut gated the new mechanism on
+"no `∃` invariant" alone (mirroring THE HAVE-BINDING WORKAROUND's own
+existential-obtain gate). Regressed minimum (`invariant-drop#1`, which
+drops its OWN `∃` invariant but keeps its `∀` one) and linear_search1
+(a plain `∀` second invariant): `failed to synthesize instance of type
+class Decidable (... ∧ ∀ i, ...)` at `_t_loop`'s own `if hok :` line --
+`Decidable` for an unbounded-Int `∀` is exactly as unavailable in core
+Lean as it is for `∃` (no Fintype/Mathlib bridge here). Fixed by
+excluding BOTH quantifier shapes, not only the one named before.
+
+Conjoining loses compositionality. Even past the Decidable gate, cube
+(x2) and all three gcdI tasks regressed: `grind` (even with the nonneg
+bridge, even with `[gcd_s]`) could not prove OR refute the WHOLE
+multi-invariant conjunction as one goal, though the pre-existing `have`
+path proves each invariant SEPARATELY and each one alone is easy (a
+scratch probe of cube's own else-branch goal, verbatim, left `c + k =
+(i+1)*(i+1)*(i+1)` -- one conjunct among five -- unsolved even with
+`Int.mul_nonneg` facts already in context, the identical ring-expansion
+step that closes fine as an ISOLATED `have`-goal). Rather than rebuild
+per-invariant nested dites (sound in principle, real work, not this
+pass's budget), `can_dite` is gated to exactly ONE invariant: every
+multi-invariant needs_hyp task (cube, gcdI, minimum, linear_search1)
+falls back to the untouched `have`-based path, byte-identical to the
+second pass; every single-invariant one (downWhileNotEqual, cal_sum,
+slow_max, carre, foo, div_ent_it) uses the new dite path and still
+counts, measured below.
+
+A repeat of THE HAVE-BINDING WORKAROUND, unmeasured until now at a
+`first`-alternative site. Even single-invariant, downWhileNotEqual's own
+"else" goal (`⊢ 0 = 0`, a TRIVIAL equality once the placeholder
+substitutes) read unsolved with `dite_else_tac` written as `(repeat
+split; all_goals grind)` -- ONE parenthesized group, `;`-joined inside.
+A scratch probe isolating exactly this goal+context (`/tmp/scratch7.lean`
+style) confirmed it directly: `repeat X; Y` parses as `repeat (X; Y)`,
+not `(repeat X); Y`, so `split`'s own failure (nothing left to split, by
+this point) fails the WHOLE compound tactic on its first attempt, and
+`repeat` swallows that as "0 successful iterations" and moves on with
+the goal untouched -- silently, no error, since `repeat` never fails.
+This is the SAME trap the file's own standing docstring names for a
+`have`-body site, rediscovered at a `first`-alternative site instead.
+Fixed the same way: `({split_tac}); (all_goals {gr})`, TWO separately
+parenthesized groups joined by an outer `;`, everywhere `dite_else_tac`
+is built.
+
+MEASURED, after all three fixes landed together: downWhileNotEqual
+COUNTS (real VERIFIED, off-by-one twin REFUTED, witness n=1 -> real 0,
+twin 1; `#print axioms` clean on both theorems, no sorryAx). The ten
+domain-hyp loop tasks, mod, and both cube tasks all re-measured directly
+against `out/lifted-tasks/`, all still COUNT, cell for cell identical to
+the second pass's own readings (the multi-invariant ones via the
+untouched `have` path; the single-invariant ones via the new dite path).
+All 23 tasks/*.json re-run: 23 of 23 COUNT, identical to AGREEMENT.md.
+
+COMPUTEPOWER, READ, LEFT OPEN, a DIFFERENT gap than downWhileNotEqual's
+own, confirmed by reading its twin's log directly rather than guessed
+at: its own `invariant-drop` twin drops the ONE invariant node carrying
+BOTH the `0 <= i <= n` bound and `p = power(i)` (SPEC.md nests them into
+a single top-level `and`), so the surviving `hinv1` is just `p >= 0` --
+useless for termination. `_t_loop`'s own `decreasing_by` (an `ite`-
+shaped measure, `if i<=n then n-i else i-n`) needs the dropped bound to
+prove the measure's OWN direction and fails to elaborate, UNPROVED
+before `_t_loop_spec`'s proof (or this pass's own dite mechanism, which
+never fires here anyway: 2 invariants, excluded by the single-invariant
+gate) is ever reached. Architecturally adjacent to THE PRESERVATION-HAVE
+COLLISION (a dropped invariant breaking something load-bearing) but a
+DISTINCT failure site (`decreasing_by`'s termination obligation, not an
+invariant-preservation `have`/dite inside the recursive step) that
+tonight's fix does not reach and was not built to reach. Unaffected by
+every change in this pass (verified/unproved, unchanged, re-measured).
+
+BOTH GETEVENS, MEASURED, LEFT OPEN, honest proof cost above budget, not
+a tactic gap this pass can narrow: neither task's loop needs a domain
+hypothesis at all (`_loop_needs_domain_hyp` reads False for both --
+their guard, `i_v < len(s_out)`, already bounds the decreases measure
+directly, the pre-existing safe case), so this pass's own change touches
+NEITHER file, confirmed by inspection before re-measuring. Direct `lean`
+runs (`-DmaxHeartbeats=4000000`, ten times the harness's own 400,000
+budget) on the real program alone did not finish in 280 wall seconds for
+either task -- genuinely a search-cost ceiling, not a stuck/looping
+tactic (no error, no diagnostics dump, just still running). The likely
+expensive step, read from the generated source rather than guessed: `_t_
+loop_spec`'s own proof is a RECURSIVE induction over the array length,
+and at EVERY step it re-tries the full `_divmod_branches` quantifier-
+enumeration chain (built for the div/mod certificate machinery, eleven
+`first`-alternatives deep on `_t_wf5` and `_t_loop_spec` alike, each
+carrying its own `Int.emod_add_ediv_mul`/`omega` bridge) THEN the seq-
+update `grind only [t_seq_update_get, ...]` fallback, because `self.
+seq_mut` is true for this task and the WF/loop-spec theorems' own `_gr`
+calls receive the div/mod bridge nodes unconditionally once that flag is
+set -- the combination compounds per recursion level. Fixing this would
+mean narrowing when the div/mod bridge chain is offered to a seq-mutating
+loop's own per-step proof, a change to `_gr`'s/`lower_loop`'s calling
+convention orthogonal to tonight's own target and not attempted here.
+
+STAYS OPEN, by name, after this pass: computePower (the dropped-bound
+termination gap above, a `decreasing_by` problem, not a `have`/dite
+one), both getEven tasks (honest proof cost, measured above, not a
+tactic gap). The multi-invariant class THE FIX's own gate declines
+(cube, gcdI, minimum, linear_search1) is not "open" in the sense of
+failing anything measured -- all four still COUNT via the untouched
+`have` path -- but a GENERALIZED per-invariant dite (nested, one `hok`
+per invariant, rather than one conjunction) would be needed before this
+mechanism could reach them too; not built this pass, named so a future
+pass does not have to re-discover the conjoining trap above from
+scratch. Everything THE 14 LOOP-TASK RESIDUAL and the second pass's own
+notes already closed stays closed, re-measured, unchanged.
 """
 from __future__ import annotations
 
@@ -3568,6 +3711,21 @@ class Lower:
             return None
         return {"int": "(0 : Int)", "bool": "false"}.get(t)
 
+    @staticmethod
+    def _hok_components(n: int) -> list[str]:
+        """THE PRESERVATION-HAVE COLLISION's own fix (2026-09-10, third
+        pass, below): the `.1`/`.2` projection path into a right-nested
+        `hok : P1 ∧ (P2 ∧ (... ∧ Pn))` (Lean's own `∧` associativity,
+        exactly what `_conj`'s flat `" ∧ ".join` denotes) that recovers
+        each individual `Pi` as a separate named proof, matching what the
+        pre-existing per-invariant `hinv{i}` parameter list expects at
+        `_t_loop`'s own recursive self-call site. n=1 needs no
+        projection at all (`hok : P1` directly)."""
+        if n <= 1:
+            return ["hok"]
+        return ["hok" + ".2" * k + ("" if k == n - 1 else ".1")
+                for k in range(n)]
+
     def _loop_needs_domain_hyp(self, w: dict) -> bool:
         """True iff `_t_loop`'s own bare `decreasing_by` cannot be trusted
         on the guard hypothesis (`_hg`) alone -- this file's own dated
@@ -3939,13 +4097,159 @@ class Lower:
                 f":= by\n" + have_body + "    "
                 for i, iv in enumerate(invs))
             hinv_call = "".join(f" {n}" for n in hinv_names)
-            rec_call = (f"{hinv_haves}{self.name}_t_loop {pnames} "
-                       f"{rec_args}{hpre_a}{hinv_call}")
+            # THE PRESERVATION-HAVE COLLISION (2026-09-10, third pass,
+            # downWhileNotEqual, this file's own dated note below): the
+            # `have {hinv}' : P := by tac` shape above ASSERTS P as a
+            # theorem of `_t_loop`'s own recursive definition -- true for
+            # every REAL program (the invariant genuinely holds at every
+            # reachable state) but for a twin whose mutation breaks true
+            # preservation, P is a genuinely FALSE goal for some state
+            # satisfying the (possibly-mutated) parameter hypotheses, no
+            # tactic can close it, Lean auto-inserts `sorryAx`, and that
+            # poisons `_t_loop` itself (and everything built on it,
+            # including the refutation certificate) -- UNPROVED, never
+            # REFUTED, silently. Fixed by DECIDING P instead of PROVING
+            # it: `if hok : P then <recurse, using hok's own components>
+            # else <a total placeholder, self._loop_zero(self.rett)>`.
+            # `P`'s only constructors here are Int order/equality and
+            # `∧` (never a raw `∃`/`∀`, gated below), so `Decidable P` is
+            # automatic core-Lean typeclass search, no proof term needed
+            # at the `dite` itself -- the "then"/"else" split moves
+            # entirely into `_t_loop_spec`'s OWN proof (below,
+            # `then_tac`'s fallback branch): the "then" case still
+            # recurses exactly as `apply {self}_t_loop_spec <;> grind`
+            # already does (Prop-irrelevance means it does not care that
+            # the argument is `hok`'s own projection rather than a
+            # freshly-proved `have`), and the "else" case's goal is
+            # closed by `grind` finding the SAME contradiction the old
+            # `have`'s tactic would have needed to prove directly (`hok :
+            # ¬P` together with the theorem's own REAL `hinv{i}` and the
+            # guard `_hg` are jointly inconsistent whenever this branch
+            # is reached from a genuinely-true invariant, the only way
+            # `_t_loop_spec` is ever invoked) -- the identical
+            # implication, proved as its contrapositive instead of
+            # directly, equally within `grind`'s linear-arithmetic reach.
+            # Gated to exactly the shapes this is measured sound for:
+            # `_loop_zero` must produce a placeholder for `self.rett` at
+            # all (a bare `seq` return has none, `_loop_zero`'s own
+            # docstring above), and no invariant here is quantified at
+            # all -- MEASURED, not just the `∃` case originally named:
+            # a scratch probe of minimum's own twin (`invariant-drop#1`,
+            # which drops its `∃` invariant but keeps its `∀` one) hit
+            # `failed to synthesize instance of type class Decidable
+            # (... ∧ ∀ i, ...)` at `_t_loop`'s own `if hok :` line --
+            # `Decidable` for a raw unbounded-Int `∀` is exactly as
+            # unavailable in core Lean as it is for `∃` (no Fintype/
+            # Mathlib bridge here), so BOTH quantifier shapes are
+            # excluded, not only the one this file's earlier note named.
+            # linear_search1's own `∀`-shaped second invariant would hit
+            # the identical wall un-gated (measured the same way,
+            # re-running the regression below caught it). Left to the
+            # pre-existing `have`-based path unchanged either way --
+            # minimum's and linear_search1's own committed shapes are
+            # the two this excludes, untouched by this change.
+            # SECOND scope cut, also MEASURED not assumed: `dite_cond`
+            # conjoins every invariant into ONE goal, so `grind` must
+            # prove (or refute) the WHOLE conjunction at once -- losing
+            # the per-invariant compositionality the pre-existing `have`
+            # path relies on (five SEPARATE `have`s for cube, each its
+            # own easy goal). A scratch probe of cube's own else-branch
+            # goal, verbatim, with the identical nonneg bridge already
+            # injected, still left it unsolved: `c + k = (i+1)*(i+1)*
+            # (i+1)` needs ring EXPANSION grind finds fine as an ISOLATED
+            # equality goal (the old per-invariant `have`) but not as one
+            # conjunct among five in a single combined goal. gcdI's three
+            # tasks hit the analogous wall on `gcd_s` unfolding depth.
+            # Restricting `can_dite` to exactly ONE invariant sidesteps
+            # this whole class rather than half-fixing it: every measured
+            # multi-invariant needs_hyp task (cube x2, gcdI x3, plus
+            # minimum/linear_search1 already excluded above) falls back
+            # to the untouched `have`-based path; every measured single-
+            # invariant one (downWhileNotEqual, cal_sum, slow_max, carre,
+            # foo, div_ent_it) keeps using the new dite path, measured
+            # below to still count. A real fix for the multi-invariant
+            # case would decide-and-fall-back PER INVARIANT (nested
+            # dites, one per `hinv`) rather than on one conjunction --
+            # sound in principle, not built here: this pass's own budget
+            # went to landing THE TARGET's own downWhileNotEqual, not to
+            # re-deriving five more per-invariant proof shapes untested.
+            post_inv_props = [self.prop(iv, env_b, types) for iv in invs]
+            dite_cond = self._conj(post_inv_props)
+            placeholder = self._loop_zero(self.rett)
+            can_dite = (dite_cond is not None and placeholder is not None
+                       and len(inv_props) == 1
+                       and not any("exists" in iv or "forall" in iv
+                                  for iv in invs))
+            if can_dite:
+                hok_comps = self._hok_components(len(inv_props))
+                hok_call = "".join(f" {c}" for c in hok_comps)
+                rec_call = (f"if hok : {dite_cond} then\n"
+                           f"      {self.name}_t_loop {pnames} {rec_args}"
+                           f"{hpre_a}{hok_call}\n"
+                           f"    else\n"
+                           f"      {placeholder}")
+                # THE PRESERVATION-HAVE COLLISION's own else-branch closer
+                # (2026-09-10, third pass): `_t_loop_spec`'s proof (below,
+                # `then_tac`) must close the `hok : ¬P` goal too, and that
+                # needs the IDENTICAL tactic power `have_body` above already
+                # carries (`grind{self.ga}` alone, or the nonneg bridge as a
+                # second alternative) -- MEASURED, not assumed: a first cut
+                # using plain `grind{self.ga}` regressed both cube tasks
+                # (the nonlinear `c >= 0` contrapositive needs the same
+                # `Int.mul_nonneg` chain the forward direction did, `grind`s
+                # cutsat has no more nonlinear reach proving False than it
+                # had proving the original goal) AND gcdI's three tasks (a
+                # `gcd_s g x = gcd_s m n` contrapositive needs the SAME
+                # `[gcd_s]` unfold depth `have_body`'s own `grind [gcd_s]`
+                # already gets via `self._gr()`, which the bare fallback
+                # dropped by not sharing `have_body`'s own alternative).
+                # Built inline (`;`-joined, one line) rather than reusing
+                # `have_body`'s newline-indented text verbatim: `then_tac`
+                # is itself a single-line `first | ... | ...` (matching
+                # every existing call site in this file), and semicolon-
+                # sequencing every `try have`/`split`/`grind` step is
+                # exactly as valid Lean4 tactic syntax as the multi-line
+                # form, with no offside-rule risk from splicing a
+                # differently-indented block into a new context.
+                #
+                # `({split_tac}); (all_goals {gr})` -- TWO separately
+                # parenthesized groups, not one `({split_tac}; all_goals
+                # {gr})` -- is THE HAVE-BINDING WORKAROUND's own bug
+                # again, re-found here the hard way (a scratch probe on
+                # this exact downWhileNotEqual shape, `case isTrue.isFalse
+                # => (repeat split; all_goals grind)`, left a TRIVIAL `0 =
+                # 0` goal UNSOLVED; splitting the same text into two
+                # parenthesized groups joined by an outer `;` closed it
+                # instantly): `repeat X; Y` parses as `repeat (X; Y)`, not
+                # `(repeat X); Y`, so `split`'s own failure (nothing left
+                # to split once `repeat split` already ran once in the
+                # ENCLOSING tactic block, before `then_tac` even starts)
+                # fails the WHOLE compound on its first attempt, and
+                # `repeat` swallows that as "0 successful iterations" and
+                # moves on with the goal untouched -- the file's own
+                # standing docstring named the identical trap for a `have`
+                # site; this is the SAME trap at a `first`-alternative
+                # site instead, unmeasured there until this pass.
+                if nonneg_lines:
+                    nonneg_inline = "; ".join(nonneg_lines)
+                    dite_else_tac = (
+                        f"(first | (({split_tac}); (all_goals {self._gr()})) "
+                        f"| (({nonneg_inline}); ({split_tac}); "
+                        f"(all_goals {self._gr()})))")
+                else:
+                    dite_else_tac = (f"(({split_tac}); "
+                                     f"(all_goals {self._gr()}))")
+            else:
+                rec_call = (f"{hinv_haves}{self.name}_t_loop {pnames} "
+                           f"{rec_args}{hpre_a}{hinv_call}")
+                dite_else_tac = None
         else:
             # the pre-existing, untouched shape: no domain hypothesis,
             # so no preservation proof for `_t_loop`'s OWN definition to
             # carry at all -- see `needs_hyp`'s own note above.
             rec_call = f"{self.name}_t_loop {pnames} {rec_args}"
+            can_dite = False
+            dite_else_tac = None
         dec = self.term(w["decreases"], {}, types)
         # LOOP TERMINATION MEASURE, +1 (2026-09-10): `_t_loop`'s bare
         # decreasing_by carries only the guard hypothesis (`_hg`), never
@@ -4103,10 +4407,28 @@ class Lower:
         # so this also covers any already-resolved merge-if goal exactly
         # as the no-return lowering did. A body with no `return` keeps
         # the original single-tactic line, byte-identical.
+        #
+        # THE PRESERVATION-HAVE COLLISION's own dite (above, `can_dite`)
+        # needs the identical fallback shape for the SAME reason
+        # `has_return` already does: `split_tac` now also splits the new
+        # `if hok : ...` this file's own rec_call carries, and the
+        # resulting "else" goal (`hok : ¬P`, a real-but-vacuous branch)
+        # is not itself an application of `_t_loop_spec` for `apply` to
+        # unify against -- `first`'s fallback closes it instead, from the
+        # contradiction between `hok` and the theorem's own real
+        # `hinv{i}`/`_hg`, using `dite_else_tac` (above: the SAME tactic
+        # power `have_body` already carries, not a bare `grind` -- MEASURED
+        # necessary, both cube tasks and all three gcdI tasks regressed
+        # under a bare fallback, "THE PRESERVATION-HAVE COLLISION's own
+        # else-branch closer" above). The "then" case (the one every real
+        # state actually takes) still closes on the FIRST alternative
+        # exactly as before -- Prop-irrelevance means `apply ... <;> grind`
+        # does not care that the argument in scope is `hok`'s own
+        # projection rather than a freshly-proved `have`.
         then_tac = (
             f"all_goals (first | (apply {self.name}_t_loop_spec <;> "
-            f"{self._gr()}) | {self._gr()})"
-            if has_return else
+            f"{self._gr()}) | {dite_else_tac if can_dite else self._gr()})"
+            if has_return or can_dite else
             f"all_goals (apply {self.name}_t_loop_spec <;> {self._gr()})")
         # SPEC.md "Pairs" (2026-09-10), found on min_max's own two merged
         # if-updates (lo's and hi's, the loop's own state each pass): a
