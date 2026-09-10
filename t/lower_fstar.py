@@ -436,6 +436,59 @@ fuzz-pairs-residual-fstar.txt. Two distinct causes, both fixed here:
   pairing, not the certificate), and left exactly as measured: `no_flip`,
   7, `{'unproved': 7}` (fuzz_lower.py's own findings.json), never faked
   toward REFUTED.
+    CERTIFICATE FST/SND OF A GROUND PAIR (2026-09-10, closes this note's own
+  "LEFT, BY NAME" line above). MEASURED root cause, reproduced directly
+  (fz_v1pairs_060's twin, F* run kept in its own scratch dir, `--admit_except`
+  targeted at `t_refutation_certificate` alone): Error 54, "bool is not a
+  subtype of the expected type prop", the column landing on the `true` inside
+  the certificate's own `(fst (true, 0)) <==> (...)` term, exactly as measured
+  before. THE FIX: `_proj_pair(op, arg)` (a new module-level helper, placed
+  just above `_render`) recognizes when a `fst`/`snd` operand is itself a
+  `{"op": "pair", ...}` node -- the ONLY way `px`'s own contract lets that
+  happen today is the certificate's ground-witness substitution,
+  `lower_verus.py`'s `_tlit` -- and hands back the picked component directly:
+  `fst (a, b)` and `a` (`snd (a, b)` and `b`) denote the same value for ANY
+  `a`, `b`, an ordinary projection identity, not a certificate-only special
+  case, and it needs no type ascription because there is no tuple literal left
+  in the output to ascribe. All four fst/snd call sites (`sx`, `zx`, `bx`,
+  `prop`) call it before falling back to their prior tuple-wrapping render,
+  each recursing into ITS OWN method on the picked component (`prop` into
+  `prop`, not `bx`, so a bool leaf keeps `prop`'s own True/False spelling
+  rather than `bx`'s lowercase true/false, the exact distinction `prop`'s own
+  docstring already draws).
+    BEFORE/AFTER, the certificate line (fz_v1pairs_060_twin.fst): `(fst (true,
+  0)) <==> (... <= (-1))) /\\ ((fst (true, 0)) ==> (... /\\ ((snd (true, 0))
+  == ...)))`, Error 54, becomes `(True <==> (... <= (-1))) /\\ (True ==> (...
+  /\\ (0 == ...)))`, no ascription anywhere, F* accepts, and the targeted
+  `--admit_except` run discharges the certificate alone.
+    MEASURED (`fuzz_lower.py --tasks <the 7> --only fstar --n 400 --seed 1
+  --jobs 8 --flake 3`, F* 2026.08.30): fz_v1pairs_060/142/357/425/433/768/773
+  all now read fstar VERIFIED/REFUTED (COUNTS), zero disagreements, zero
+  twin-survived, zero no-flip -- the last gap this residual note named is
+  closed. The family's fstar tally is now 28/31 fully COUNTS (the 21
+  already-committed-shape tasks plus these 7), 3 honest `_reflexive_ensures`
+  abstains (fz_v1pairs_119/235/294, unrelated, already fixed above), 0
+  remaining ABSTAIN or malformed cells.
+    BYTE-IDENTITY, checked directly: every one of the 21 committed
+  `tasks/*.json`, run through `lower_fstar.lower(task, task["body"])` (the
+  REAL source, no witness), matches its committed `out/<name>.fst` on every
+  byte, confirming `_proj_pair` is reached ONLY through a certificate render
+  -- no committed task's own real source hits it, since ordinary generated
+  code only ever threads a pair-typed slot through `env` as a `"var"`, never
+  rebuilds a literal `{"op": "pair", ...}` node just to immediately project
+  it. `divmod_pair` and `min_max` (`harness.run_task` into
+  `out/agent-fstar-cert/`, never `out/` root) both still COUNT (real VERIFIED,
+  twin REFUTED, unchanged witnesses); their own twin CERTIFICATE TEXT changed
+  (simplified: divmod_pair's `(fst (0, 1))`/`(snd (0, 1))` became bare
+  `0`/`1`; min_max's `(fst (1, 1))`/`(snd (1, 1))` became bare `1`), since
+  their pre-existing ground-literal certificates hit the identical `px` path,
+  just never the bool-specific b2t failure (an int/seq-typed `fst`/`snd` of a
+  ground literal already typechecked fine, P1.fst's own 2026-09-10
+  measurement). The committed
+  `out/divmod_pair_twin.fst`/`out/min_max_twin.fst` are therefore now stale
+  relative to what this file emits; left unregenerated here, since this pass's
+  brief was `lower_fstar.py` alone and the byte-identity check above is
+  defined over real sources only, never the twin/certificate ones.
 
 Statement bodies lower by symbolic execution to one expression (per-var
 if-merge, the Rocq lowering's approach): every t body ends each path in an
@@ -971,7 +1024,15 @@ class Ctx:
             # they consume this sx term the same way any other seq term is
             # consumed). `fst`/`snd` are F*'s own tuple2 projections, named
             # identically to t's own op names, so no translation table is
-            # needed the way `ARITH`/`CMP` supply one.
+            # needed the way `ARITH`/`CMP` supply one. A literal pair
+            # operand short-circuits to its own component (`_proj_pair`,
+            # 2026-09-10 residual fix, this function's own module-level
+            # note): the certificate's ground-witness substitution is the
+            # only source of one, and this is what keeps a seq-typed
+            # ground component out of a bare, unascribed tuple literal too.
+            comp = _proj_pair(op, e["args"][0])
+            if comp is not None:
+                return self.sx(comp, env, local)
             return f"({op} {self.px(e['args'][0], env, local)})"
         raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
@@ -1086,7 +1147,14 @@ class Ctx:
             # here re-derives what F* already gives for free (P1.fst,
             # measured 2026-09-10: `fst (mk 3 4) == 3` discharges by
             # `assert_norm` with no assist, the same "no reencoding" note
-            # DIV/MOD and `at` already carry).
+            # DIV/MOD and `at` already carry). A literal pair operand
+            # short-circuits to its own component (`_proj_pair`, 2026-09-10
+            # residual fix, its own module-level note): only the
+            # certificate's ground-witness substitution ever hands `fst`/
+            # `snd` a `{"op": "pair", ...}` operand instead of a `"var"`.
+            comp = _proj_pair(op, e["args"][0])
+            if comp is not None:
+                return self.zx(comp, env, local)
             return f"({op} {self.px(e['args'][0], env, local)})"
         if op in ARITH:
             a, b = (self.zx(x, env, local) for x in e["args"])
@@ -1116,7 +1184,14 @@ class Ctx:
             # SPEC.md "Pairs": a bool-typed component reached through
             # `p.0`/`p.1` in computational position (an `if`/`and`/`or`
             # guard, never an ensures -- that path is `prop`'s own fst/snd
-            # case below).
+            # case below). A literal pair operand short-circuits to its
+            # own component (`_proj_pair`, 2026-09-10 residual fix, its own
+            # module-level note): only the certificate's ground-witness
+            # substitution ever hands `fst`/`snd` a `{"op": "pair", ...}`
+            # operand instead of a `"var"`.
+            comp = _proj_pair(op, e["args"][0])
+            if comp is not None:
+                return self.bx(comp, env, local)
             return f"({op} {self.px(e['args'][0], env, local)})"
         if op in CMP:
             a, b = (self.zx(x, env, local) for x in e["args"])
@@ -1200,7 +1275,22 @@ class Ctx:
             # proposition (`ensures r.0`, T1 == "bool"). No committed task
             # exercises this -- divmod_pair/min_max project only int
             # components -- but it costs nothing beyond the same b2t
-            # coercion the bare bool `"var"` case above already relies on.
+            # coercion the bare bool `"var"` case above already relies on,
+            # PROVIDED the operand is a type-ascribed binder rather than a
+            # bare ground tuple literal: a literal pair operand short-
+            # circuits to its own component instead (`_proj_pair`,
+            # 2026-09-10 residual fix, its own module-level note) -- this
+            # is the branch the "PAIRS RESIDUAL" note's measured Error 54
+            # came through (`(fst (true, 0)) <==> (...)`, the certificate's
+            # own ground-witness substitution, the only source of a
+            # `{"op": "pair", ...}` fst/snd operand today), and rendering
+            # the picked component through `prop` itself rather than `bx`
+            # keeps its own True/False spelling for a bool leaf instead of
+            # `bx`'s lowercase true/false, exactly the distinction this
+            # method's own docstring draws.
+            comp = _proj_pair(op, e["args"][0])
+            if comp is not None:
+                return self.prop(comp, env, local)
             return f"({op} {self.px(e['args'][0], env, local)})"
         if op == "not":
             return f"(~ {self.prop(e['args'][0], env, local)})"
@@ -1293,6 +1383,46 @@ def _decls(stmts: list) -> set[str]:
         elif "if" in s:
             out |= _decls(s["if"]["then"]) | _decls(s["if"]["else"])
     return out
+
+
+def _proj_pair(op: str, arg: dict) -> dict | None:
+    """fst/snd of a GROUND PAIR LITERAL (2026-09-10, closes the "PAIRS
+    RESIDUAL" note's `unproved`-on-all-7 gap below). `arg`, the operand of
+    a `fst`/`snd` node, is either a `"var"` or a `{"op": "pair", ...}`
+    node (`px`'s own contract, this file's docstring on `px`); when it is
+    the latter, `fst (a, b)` and `a` (`snd (a, b)` and `b`) denote the
+    SAME value for ANY `a`, `b` -- an ordinary projection identity, true
+    of every pair regardless of whether `a`/`b` are ground -- so the
+    picked component can be handed back directly, with no `fst`/`snd` and
+    no tuple left in the output at all. This is what the residual note's
+    measured Error 54 needed: F*'s b2t coercion for `fst r`/`snd r`
+    (`bx`'s and `prop`'s own fst/snd cases, both already documented there)
+    discharges fine when `r` is a TYPE-ASCRIBED BINDER (every committed
+    task's shape, `r : bool & int` from the task's own `Pure`), but not
+    when the operand is a bare, unascribed ground tuple LITERAL -- exactly
+    what the shared refutation certificate substitutes for a pair-typed
+    witness (`lower_verus.py`'s `_tlit`, a `{"op": "pair", ...}` node
+    built from ground `int`/`bool`/`_seq` leaves). MEASURED directly
+    (Fz_v1pairs_060's own certificate line before this fix, F* run kept in
+    a scratch dir, `--admit_except` targeted at the certificate lemma
+    alone): `(fst (true, 0)) <==> (...)`, Error 54, "bool is not a subtype
+    of the expected type prop", the column landing on the `true` inside
+    the tuple literal, not on `fst` itself. Ascribing the literal
+    (`((true, 0) <: bool & int)`) or `let`-binding it first would also
+    have worked (both typecheck) but both leave a tuple construction in
+    the output for the sole purpose of immediately taking it apart again;
+    returning the component itself needs no ascription because there is
+    no tuple literal left to ascribe. Nothing here inspects whether `a`/
+    `b` are ground, so this is not a certificate-only special case, only a
+    projection identity that happens to be the one place `px`'s own
+    contract ever lets a `fst`/`snd` operand BE a `{"op": "pair", ...}`
+    node in the first place: ordinary generated code threads a pair-typed
+    slot through `env` as a `"var"` (the loop/if-merge machinery's own
+    rule), so a literal pair immediately projected is a shape only the
+    certificate's ground-witness substitution produces today."""
+    if isinstance(arg, dict) and arg.get("op") == "pair":
+        return arg["args"][0 if op == "fst" else 1]
+    return None
 
 
 def _render(cx: "Ctx", e: dict, t, env: dict, local: dict) -> str:
