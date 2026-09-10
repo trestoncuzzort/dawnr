@@ -1,28 +1,28 @@
-# t cross-kernel agreement — 2026-09-10 06:52Z
+# t cross-kernel agreement — 2026-09-10 08:07Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column.
 
 | task | dafny | verus | spark | framac | lean | rocq | fstar |
 |---|---|---|---|---|---|---|---|
 | clover_abs__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| clover_array_product__arrayProduct | verified / refuted | unproved / refuted | timeout / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
-| clover_array_sum__arraySum | verified / refuted | unproved / refuted | timeout / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
-| clover_avg__computeAvg | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| clover_array_product__arrayProduct | verified / refuted | unproved / refuted | timeout / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
+| clover_array_sum__arraySum | verified / refuted | unproved / refuted | timeout / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
+| clover_avg__computeAvg | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | clover_cal_ans__calDiv | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / unproved | malformed / unproved | unproved / refuted |
-| clover_cal_sum__sum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| clover_double_array_elements__double_array_elements | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
+| clover_cal_sum__sum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| clover_double_array_elements__double_array_elements | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | clover_double_quadruple__doubleQuadruple | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | clover_find__find | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| clover_integer_square_root__squareRoot | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted | unproved / unproved | unproved / refuted | unproved / refuted |
-| clover_is_even__computeIsEven | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
-| clover_linear_search1__linearSearch | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| clover_min_array__minArray | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
+| clover_integer_square_root__squareRoot | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted | unproved / unproved | verified / refuted | unproved / refuted |
+| clover_is_even__computeIsEven | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| clover_linear_search1__linearSearch | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| clover_min_array__minArray | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | clover_min_of_two__min | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | clover_multi_return__multipleReturns | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| clover_quotient__quotient | verified / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / unproved | unproved / refuted | verified / refuted |
-| clover_replace__replace | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
-| clover_return_seven__m | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| clover_rotate__rotate | verified / refuted | verified / refuted | timeout / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted |
+| clover_quotient__quotient | verified / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
+| clover_replace__replace | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
+| clover_return_seven__m | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| clover_rotate__rotate | verified / refuted | verified / refuted | timeout / refuted | timeout / timeout | verified / refuted | verified / refuted | verified / refuted |
 | clover_swap__swap | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | clover_swap_arith__swapArithmetic | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | clover_swap_sim__swapSimultaneous | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -32,72 +32,72 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | clover_update_array__updateElements | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci1 | verified / refuted | unproved / refuted | abstain / abstain | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci2 | verified / refuted | unproved / refuted | abstain / abstain | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
-| dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci3 | verified / refuted | unproved / refuted | abstain / abstain | timeout / refuted | unproved / refuted | unproved / unproved | unproved / refuted |
-| dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot1 | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
-| dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot2 | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
+| dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci3 | verified / refuted | unproved / refuted | abstain / abstain | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot1 | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted |
+| dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot2 | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
 | dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot3 | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mfirstMaximum | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1 | verified / refuted | malformed / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | unproved / refuted | verified / refuted |
-| dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax | verified / refuted | malformed / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafnyexercises_tmp_tmpd6qyevja_part1_q1__addArrays | verified / refuted | unproved / refuted | timeout / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
-| dafnyprograms_tmp_tmp74_f9k_c_invertarray__invertArray | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | timeout / refuted | verified / refuted |
+| dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mfirstMaximum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
+| dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafnyexercises_tmp_tmpd6qyevja_part1_q1__addArrays | verified / refuted | unproved / refuted | timeout / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
+| dafnyprograms_tmp_tmp74_f9k_c_invertarray__invertArray | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | timeout / refuted | verified / refuted |
 | dafnyprojects_tmp_tmp2acw_s4s_longestprefix__longestPrefix | verified / unproved | unproved / refuted | unproved / refuted | abstain / abstain | unproved / refuted | unproved / timeout | unproved / refuted |
 | dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_a2_q1_trimmed_copy_______mult | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
-| dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_week5_computepower__calcPower | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_a3_search_findpositionofindex__findPositionOfElement | vacuous / refuted | unproved / refuted | unproved / refuted | timeout / vacuous | unproved / unproved | timeout / unproved | unproved / refuted |
 | dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_week9_lemma__assignmentsToMarkOne | timeout / refuted | unproved / refuted | verified / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | dafny_programs_tmp_tmp99966ew4_mymax__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__computePower | verified / unproved | verified / unproved | verified / timeout | verified / timeout | unproved / refuted | unproved / refuted | verified / unproved |
+| dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__computePower | verified / unproved | verified / unproved | verified / timeout | verified / timeout | verified / refuted | unproved / refuted | verified / unproved |
 | dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__cube | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_computepower__computePower | verified / unproved | verified / unproved | verified / timeout | verified / timeout | unproved / refuted | unproved / refuted | verified / unproved |
+| dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_computepower__computePower | verified / unproved | verified / unproved | verified / timeout | verified / timeout | verified / refuted | unproved / refuted | verified / unproved |
 | dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_cube__cube | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_fine_tune_examples_50_examples_41__main_v | verified / refuted | unproved / refuted | verified / refuted | timeout / vacuous | unproved / unproved | unproved / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v | verified / refuted | verified / refuted | verified / refuted | verified / vacuous | verified / unproved | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_generated_code_computepower__computePower | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_fine_tune_examples_50_examples_41__main_v | verified / refuted | unproved / refuted | verified / refuted | timeout / vacuous | unproved / refuted | unproved / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v | verified / refuted | verified / refuted | verified / refuted | verified / vacuous | verified / refuted | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_generated_code_computepower__computePower | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | unproved / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_generated_code_mult__mult | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_function__triple_p | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_ghost__doubleQuadruple | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | malformed / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_ghost__triple | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_index__index | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_index__min | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_index__reconstructFromMaxSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater | verified / malformed | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater | verified / malformed | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileNotEqual | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | dafny_verify_tmp_tmphq7j0row_test_cases_triple__tripleConditions | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v | verified / refuted | verified / refuted | verified / refuted | verified / vacuous | verified / unproved | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_min__min | verified / refuted | unproved / refuted | timeout / timeout | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v | verified / refuted | verified / refuted | verified / refuted | verified / vacuous | verified / refuted | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_min__min | verified / refuted | unproved / refuted | timeout / timeout | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_smallnum__add_small_numbers | verified / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_square__square | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_success_1__is_even | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | verified / refuted |
+| dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_success_1__is_even | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
 | dafny_tmp_tmp0wu8wmfr_heimaverkefni_1_linearsearch__searchRecursive | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
-| dafny_tmp_tmp0wu8wmfr_tests_f1a__f | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | malformed / refuted |
+| dafny_tmp_tmp0wu8wmfr_tests_f1a__f | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
 | dafny_tmp_tmp0wu8wmfr_tests_f1a__mid | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_tmp_tmp0wu8wmfr_tests_sumintsloop__sumIntsLoop | verified / refuted | verified / refuted | verified / timeout | verified / vacuous | unproved / unproved | verified / refuted | verified / refuted |
+| dafny_tmp_tmp0wu8wmfr_tests_sumintsloop__sumIntsLoop | verified / refuted | verified / refuted | verified / timeout | verified / vacuous | verified / unproved | verified / refuted | verified / refuted |
 | dafny_tmp_tmpj88zq5zt_2_kontrakte_max__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_tmp_tmpmvs2dmry_slowmax__slow_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
+| dafny_tmp_tmpmvs2dmry_slowmax__slow_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_examples1__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_examples1__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_examples1__multiReturn | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_examples2__product | verified / refuted | unproved / refuted | unproved / timeout | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafny_tmp_tmpmvs2dmry_examples2__add_by_inc | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_tmp_tmpmvs2dmry_examples2__gcdCalc | verified / refuted | verified / refuted | verified / unproved | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
+| dafny_tmp_tmpmvs2dmry_examples2__gcdCalc | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / unproved | unproved / refuted | verified / refuted |
 | dafny_tmp_tmpmvs2dmry_pancakesort_flip__flip | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | unproved / unproved | timeout / refuted | verified / refuted |
-| dafny_tmp_tmpv_d3qi10_2_min__minArray | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
+| dafny_tmp_tmpv_d3qi10_2_min__minArray | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_tmp_tmpv_d3qi10_2_min__minMethod | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
+| final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | final_project_dafny_tmp_tmpmcywuqox_attempts_exercise4_find_max__findMax | verified / refuted | verified / unproved | verified / unproved | verified / vacuous | unproved / unproved | timeout / unproved | verified / unproved |
-| final_project_dafny_tmp_tmpmcywuqox_attempts_insertion_sort_normal__lookForMin | verified / unproved | malformed / malformed | unproved / unproved | verified / timeout | verified / refuted | verified / refuted | verified / unproved |
+| final_project_dafny_tmp_tmpmcywuqox_attempts_insertion_sort_normal__lookForMin | verified / unproved | unproved / unproved | unproved / unproved | verified / timeout | verified / refuted | verified / refuted | verified / unproved |
 | final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | flexweek_tmp_tmpc_tfdj_3_ex3__max | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | malformed / refuted | timeout / refuted | abstain / abstain |
 | formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__computeFact | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
@@ -106,98 +106,98 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare2 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | formalmethods_tmp_tmpvda2r3_o_dafny_invariants_ex1__mult | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
 | formalmethods_tmp_tmpvda2r3_o_dafny_invariants_ex2__pot | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_countandreturn__countToAndReturnN | verified / refuted | verified / refuted | verified / refuted | verified / vacuous | verified / unproved | verified / refuted | verified / refuted |
-| m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted |
-| m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find | verified / refuted | verified / unproved | verified / unproved | abstain / abstain | verified / unproved | unproved / unproved | verified / unproved |
+| m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_countandreturn__countToAndReturnN | verified / refuted | verified / refuted | verified / refuted | verified / vacuous | verified / refuted | verified / refuted | verified / refuted |
+| m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
+| m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find | verified / refuted | verified / unproved | verified / unproved | abstain / abstain | verified / unproved | verified / unproved | verified / unproved |
 | mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_8_sum__sum | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
-| mfs_tmp_tmpmmnu354t_testes_anteriores_t2_ex5_2020_2__leq | verified / unproved | unproved / refuted | timeout / refuted | abstain / abstain | abstain / abstain | timeout / refuted | unproved / refuted |
-| mieic_mfes_tmp_tmpq3ho7nve_exams_appeal_20_p4__calcF | verified / refuted | unproved / refuted | abstain / abstain | timeout / vacuous | unproved / unproved | unproved / refuted | unproved / refuted |
-| mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
+| mfs_tmp_tmpmmnu354t_testes_anteriores_t2_ex5_2020_2__leq | verified / unproved | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | timeout / refuted | unproved / refuted |
+| mieic_mfes_tmp_tmpq3ho7nve_exams_appeal_20_p4__calcF | verified / refuted | unproved / refuted | abstain / abstain | timeout / vacuous | unproved / refuted | unproved / refuted | unproved / refuted |
+| mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | metodos_formais_tmp_tmpbez22nnn_aula_2_ex1__mult | verified / malformed | unproved / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
 | metodos_formais_tmp_tmpbez22nnn_aula_2_ex2__pot | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| metodos_formais_tmp_tmpbez22nnn_aula_4_ex3__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / unproved | unproved / refuted |
+| metodos_formais_tmp_tmpbez22nnn_aula_4_ex3__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | metodos_formais_tmp_tmpql2hwcsh_invariantes_fatorial2__fatorial | verified / unproved | unproved / unproved | abstain / abstain | verified / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
-| metodos_formais_tmp_tmpql2hwcsh_invariantes_fibonacci__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / unproved | unproved / refuted |
+| metodos_formais_tmp_tmpql2hwcsh_invariantes_fibonacci__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | metodos_formais_tmp_tmpql2hwcsh_invariantes_multiplicador__mult | verified / malformed | unproved / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
 | metodos_formais_tmp_tmpql2hwcsh_invariantes_potencia__pot | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_mod__mod | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
-| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_mod2__mod2 | timeout / refuted | unproved / refuted | timeout / refuted | timeout / vacuous | unproved / unproved | unproved / refuted | timeout / refuted |
-| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_pow__pow | verified / refuted | unproved / refuted | timeout / refuted | verified / vacuous | unproved / unproved | verified / refuted | verified / refuted |
-| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum | verified / refuted | unproved / refuted | timeout / refuted | verified / vacuous | verified / unproved | unproved / refuted | unproved / refuted |
+| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_mod__mod | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / unproved | unproved / refuted | verified / refuted |
+| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_mod2__mod2 | timeout / refuted | unproved / refuted | timeout / refuted | timeout / vacuous | unproved / refuted | unproved / refuted | timeout / refuted |
+| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_pow__pow | verified / refuted | unproved / refuted | timeout / refuted | verified / vacuous | unproved / refuted | verified / refuted | verified / refuted |
+| prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum | verified / refuted | unproved / refuted | timeout / refuted | verified / vacuous | unproved / refuted | unproved / refuted | unproved / refuted |
 | prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p2__problem2 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p3__problem3 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p5__problem5 | verified / refuted | unproved / refuted | abstain / abstain | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
-| program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
+| program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one__add_by_one | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_find_max__findMax | verified / refuted | malformed / refuted | unproved / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted |
+| program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_find_max__findMax | verified / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | program_verification_dataset_tmp_tmpgbdrlnu__dafny_from_dafny_main_repo_dafny2_classics__additiveFactorial | verified / unproved | unproved / unproved | timeout / timeout | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
 | program_verification_dataset_tmp_tmpgbdrlnu__dafny_variant_examples_katzmanna__ninetyOne | verified / unproved | unproved / unproved | unproved / unproved | vacuous / vacuous | unproved / refuted | timeout / refuted | unproved / unproved |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_04_hoangkim_ex_04_hoangkim__intDivImpl | unproved / refuted | unproved / refuted | unproved / refuted | vacuous / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_04_hoangkim_ex_04_hoangkim__sumOdds | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__factIter | verified / unproved | unproved / unproved | timeout / timeout | verified / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__fibIter | verified / unproved | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
-| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__findMin | verified / unproved | malformed / malformed | unproved / unproved | verified / timeout | verified / refuted | verified / refuted | verified / unproved |
+| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__findMin | verified / unproved | unproved / unproved | unproved / unproved | verified / timeout | verified / refuted | verified / refuted | verified / unproved |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_10_hoangkim_ex10_hoangkim__square0 | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_10_hoangkim_ex10_hoangkim__square1 | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__sumOdds | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
-| projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__euclidianDiv | verified / refuted | unproved / refuted | unproved / refuted | verified / vacuous | unproved / unproved | verified / refuted | unproved / refuted |
-| projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__peasantMult | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
-| seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven | verified / refuted | verified / refuted | verified / refuted | verified / malformed | timeout / timeout | verified / refuted | verified / refuted |
+| projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__euclidianDiv | verified / refuted | unproved / refuted | unproved / refuted | verified / vacuous | verified / unproved | verified / refuted | unproved / refuted |
+| projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__peasantMult | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / unproved | unproved / refuted | verified / refuted |
+| seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven | verified / refuted | verified / refuted | verified / refuted | verified / verified | timeout / timeout | verified / refuted | verified / refuted |
 | seng2011_tmp_tmpgk5jq85q_flex_ex2__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
-| seng2011_tmp_tmpgk5jq85q_p2__absIt | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
-| software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m3 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
-| software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m4 | verified / verified | verified / verified | vacuous / vacuous | verified / verified | verified / unproved | verified / verified | verified / malformed |
+| seng2011_tmp_tmpgk5jq85q_p2__absIt | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
+| software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m3 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m4 | verified / verified | verified / verified | vacuous / vacuous | verified / verified | verified / unproved | verified / verified | verified / verified |
 | software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__max | verified / verified | verified / verified | verified / verified | verified / verified | verified / unproved | verified / verified | verified / verified |
 | software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__mystery1 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
-| tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
+| tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | workshop_tmp_tmp0cu11bdq_lecture_answers_triangle_number__triangleNumber | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted |
 | bbfny_tmp_tmpw4m0jvl0_enjoying__abs | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | bbfny_tmp_tmpw4m0jvl0_enjoying__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | bbfny_tmp_tmpw4m0jvl0_enjoying__multipleReturns | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__arraySum | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__arraySum | verified / refuted | unproved / refuted | timeout / refuted | timeout / timeout | unproved / refuted | unproved / refuted | unproved / refuted |
 | cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__intDiv | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
-| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__isPrime | verified / refuted | unproved / refuted | timeout / timeout | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
+| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__isPrime | verified / refuted | unproved / refuted | timeout / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
 | cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
+| cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | cs245_verification_tmp_tmp0h_nxhqp_a8_q1__a8Q1 | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | cs245_verification_tmp_tmp0h_nxhqp_assignments_simple__simple | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | cs245_verification_tmp_tmp0h_nxhqp_power__compute_power | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | cs357_tmp_tmpn4fsvwzs_lab7_question2__two | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | cs357_tmp_tmpn4fsvwzs_lab7_question5__a1 | verified / refuted | verified / refuted | verified / timeout | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_fibonacci__computeFib | verified / refuted | unproved / refuted | abstain / abstain | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
-| dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__incrementArray | verified / refuted | verified / refuted | verified / refuted | verified / malformed | unproved / unproved | verified / refuted | verified / refuted |
+| dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__incrementArray | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__updateElements | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | dafny_duck_tmp_tmplawbgxjo_p3__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted |
-| dafny_exercise_tmp_tmpouftptir_appendarray__appendArray | verified / refuted | verified / refuted | verified / timeout | verified / malformed | abstain / abstain | abstain / abstain | abstain / abstain |
+| dafny_exercise_tmp_tmpouftptir_appendarray__appendArray | verified / refuted | verified / refuted | verified / timeout | verified / verified | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafny_exercise_tmp_tmpouftptir_maxarray__maxArray | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_exercise_tmp_tmpouftptir_prac3_ex2__getEven | verified / refuted | verified / refuted | verified / refuted | verified / malformed | timeout / timeout | verified / refuted | verified / refuted |
+| dafny_exercise_tmp_tmpouftptir_prac3_ex2__getEven | verified / refuted | verified / refuted | verified / refuted | verified / verified | timeout / timeout | verified / refuted | verified / refuted |
 | dafny_language_server_tmp_tmpkir0kenl_test_vscomp2010_problem1_summax__m | verified / refuted | unproved / refuted | timeout / unproved | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_language_server_tmp_tmpkir0kenl_test_vsi_benchmarks_b1__add | verified / refuted | verified / refuted | verified / timeout | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
-| dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes | verified / refuted | verified / refuted | verified / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
+| dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes | verified / refuted | verified / refuted | verified / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | dafny_language_server_tmp_tmpkir0kenl_test_dafny2_turingfactorial__computeFactorial | verified / unproved | unproved / unproved | unproved / timeout | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain |
 | dafny_language_server_tmp_tmpkir0kenl_test_tutorial_maximum__maximum | verified / unproved | unproved / refuted | unproved / refuted | abstain / abstain | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_learn_tmp_tmpn94ir40q_r01_assertions__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_learn_tmp_tmpn94ir40q_r01_assertions__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_learn_tmp_tmpn94ir40q_r01_assertions__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_learn_tmp_tmpn94ir40q_r01_functions__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_learn_tmp_tmpn94ir40q_r01_functions__testDouble | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | verified / refuted | unproved / refuted | verified / refuted |
 | dafny_programs_tmp_tmpcwodh6qh_src_expt__expt | verified / unproved | unproved / unproved | verified / timeout | verified / timeout | verified / refuted | unproved / refuted | verified / unproved |
 | dafny_programs_tmp_tmpcwodh6qh_src_factorial__factorial | verified / unproved | verified / unproved | verified / timeout | verified / timeout | unproved / refuted | verified / refuted | verified / unproved |
 | dafny_programs_tmp_tmpcwodh6qh_src_max__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_101__kthElement | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_127__multiply | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_135__nthHexagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_14__triangularPrismVolume | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_17__squarePerimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_171__pentagonPerimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_127__multiply | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_135__nthHexagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_14__triangularPrismVolume | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_17__squarePerimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_171__pentagonPerimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_227__minOfThree | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_234__cubeVolume | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | dafny_synthesis_task_id_238__countNonEmptySubstrings | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -206,75 +206,75 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | dafny_synthesis_task_id_257__swap | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / unproved | verified / refuted |
 | dafny_synthesis_task_id_261__elementWiseDivision | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_262__splitArray | verified / refuted | verified / refuted | timeout / refuted | abstain / abstain | unproved / refuted | abstain / abstain | verified / refuted |
-| dafny_synthesis_task_id_264__dogYears | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_266__lateralSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_268__starNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_264__dogYears | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_266__lateralSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_268__starNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_269__asciiValue | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | dafny_synthesis_task_id_273__subtractSequences | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_279__nthDecagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_282__elementWiseSubtraction | verified / refuted | unproved / refuted | timeout / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_279__nthDecagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_282__elementWiseSubtraction | verified / refuted | unproved / refuted | timeout / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_292__quotient | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_3__isNonPrime | verified / verified | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | timeout / refuted | unproved / unproved |
 | dafny_synthesis_task_id_304__elementAtIndexAfterRotation | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_309__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_396__startAndEndWithSameChar | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_396__startAndEndWithSameChar | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_397__medianOfThree | verified / verified | verified / verified | verified / verified | verified / verified | verified / unproved | verified / verified | verified / verified |
 | dafny_synthesis_task_id_404__min | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_406__isOdd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_432__medianLength | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_406__isOdd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_432__medianLength | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_435__lastDigit | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_441__cubeSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_441__cubeSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_445__multiplyElements | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_452__calculateLoss | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_458__rectangleArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_458__rectangleArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_470__pairwiseAddition | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | timeout / timeout | verified / timeout | verified / refuted |
 | dafny_synthesis_task_id_577__factorialOfLastDigit | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_58__hasOppositeSign | verified / refuted | verified / refuted | verified / refuted | verified / unproved | abstain / abstain | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_581__squarePyramidSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_58__hasOppositeSign | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_581__squarePyramidSurfaceArea | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_586__splitAndAppend | verified / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | unproved / refuted | verified / refuted |
-| dafny_synthesis_task_id_59__nthOctagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
+| dafny_synthesis_task_id_59__nthOctagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_591__swapFirstAndLast | verified / refuted | verified / refuted | verified / refuted | verified / timeout | unproved / refuted | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_598__isArmstrong | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | timeout / timeout | timeout / timeout |
-| dafny_synthesis_task_id_600__isEven | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_598__isArmstrong | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / timeout | timeout / timeout |
+| dafny_synthesis_task_id_600__isEven | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_605__isPrime | verified / verified | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
-| dafny_synthesis_task_id_610__removeElement | verified / refuted | unproved / refuted | timeout / timeout | verified / malformed | abstain / abstain | abstain / abstain | abstain / abstain |
-| dafny_synthesis_task_id_616__elementWiseModulo | verified / refuted | unproved / refuted | timeout / refuted | verified / malformed | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_610__removeElement | verified / refuted | unproved / refuted | timeout / timeout | verified / verified | abstain / abstain | abstain / abstain | abstain / abstain |
+| dafny_synthesis_task_id_616__elementWiseModulo | verified / refuted | unproved / refuted | timeout / refuted | verified / verified | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_625__swapFirstAndLast | verified / refuted | verified / refuted | verified / refuted | verified / timeout | unproved / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_626__areaOfLargestTriangleInSemicircle | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
-| dafny_synthesis_task_id_637__isBreakEven | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_641__nthNonagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | malformed / refuted |
-| dafny_synthesis_task_id_762__isMonthWith30Days | verified / refuted | verified / refuted | verified / refuted | verified / unproved | abstain / abstain | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_77__isDivisibleBy11 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
-| dafny_synthesis_task_id_79__isLengthOdd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_637__isBreakEven | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_641__nthNonagonalNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_762__isMonthWith30Days | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_77__isDivisibleBy11 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_79__isLengthOdd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_792__countLists | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
-| dafny_synthesis_task_id_80__tetrahedralNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | malformed / refuted |
-| dafny_synthesis_task_id_801__countEqualNumbers | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
+| dafny_synthesis_task_id_80__tetrahedralNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted |
+| dafny_synthesis_task_id_801__countEqualNumbers | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_synthesis_task_id_86__centeredHexagonalNumber | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | dafny_synthesis_task_id_89__closestSmaller | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_training_tmp_tmp_n2kixni_session1_training1__abs | verified / verified | verified / verified | vacuous / vacuous | verified / verified | verified / unproved | verified / verified | malformed / malformed |
 | dafny_training_tmp_tmp_n2kixni_session1_training1__find | verified / refuted | unproved / unproved | unproved / unproved | timeout / timeout | unproved / unproved | unproved / unproved | unproved / unproved |
-| dafny_training_tmp_tmp_n2kixni_session1_training1__max | verified / verified | verified / verified | vacuous / vacuous | verified / verified | abstain / abstain | verified / verified | malformed / malformed |
+| dafny_training_tmp_tmp_n2kixni_session1_training1__max | verified / verified | verified / verified | vacuous / vacuous | verified / verified | verified / unproved | verified / verified | malformed / malformed |
 | dafny_workout_tmp_tmp0abkw6f8_starter_ex01__max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | dafny_workout_tmp_tmp0abkw6f8_starter_ex02__abs | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | dafny_workout_tmp_tmp0abkw6f8_starter_ex03__abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_workout_tmp_tmp0abkw6f8_starter_ex09__computeFib | verified / refuted | unproved / refuted | abstain / abstain | timeout / refuted | unproved / refuted | unproved / unproved | abstain / abstain |
-| dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax | verified / refuted | malformed / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| dafny_examples_tmp_tmp8qotd4ez_leetcode_0070_climbing_stairs__climbStairs | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / unproved | unproved / refuted | unproved / refuted |
+| dafny_workout_tmp_tmp0abkw6f8_starter_ex09__computeFib | verified / refuted | unproved / refuted | abstain / abstain | timeout / refuted | unproved / refuted | unproved / refuted | abstain / abstain |
+| dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_examples_tmp_tmp8qotd4ez_leetcode_0070_climbing_stairs__climbStairs | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | dafny_misc_tmp_tmpg4vzlnm1_rosetta_code_factorial__iterativeFactorial | verified / unproved | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
-| dafny_projects_tmp_tmpjutqwjv4_tutorial_tutorial__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / vacuous | unproved / unproved | unproved / refuted | unproved / refuted |
-| formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__divMod1 | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted | unproved / unproved | verified / refuted | verified / refuted |
-| formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| dafny_projects_tmp_tmpjutqwjv4_tutorial_tutorial__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / vacuous | unproved / refuted | unproved / refuted | unproved / refuted |
+| formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__divMod1 | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__sqrSum1 | verified / unproved | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / refuted | unproved / unproved |
 | formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__allow42 | verified / refuted | verified / refuted | abstain / abstain | verified / vacuous | verified / refuted | unproved / refuted | verified / refuted |
 | formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__forbid42 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise12__findMax | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise9__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / unproved | unproved / refuted |
-| nitwit_tmp_tmplm098gxz_nit__max_nit | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | verified / refuted |
-| nitwit_tmp_tmplm098gxz_nit__nit_add | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | abstain / abstain | unproved / refuted | verified / refuted |
-| nitwit_tmp_tmplm098gxz_nit__nit_increment | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | verified / refuted |
+| laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise9__computeFib | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| nitwit_tmp_tmplm098gxz_nit__max_nit | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
+| nitwit_tmp_tmplm098gxz_nit__nit_add | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
+| nitwit_tmp_tmplm098gxz_nit__nit_increment | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | se2011_tmp_tmp71eb82zt_ass1_ex4__eval | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted |
 | se2011_tmp_tmp71eb82zt_ass1_ex6__ceiling7 | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| software_analysis_tmp_tmpmt6bo9sf_ss__find_min_index | verified / refuted | malformed / malformed | unproved / unproved | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| software_analysis_tmp_tmpmt6bo9sf_ss__find_min_index | verified / refuted | unproved / refuted | unproved / unproved | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | stunning_palm_tree_tmp_tmpr84c2iwh_ch1__min | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | stunning_palm_tree_tmp_tmpr84c2iwh_ch1__minUnderSpec | verified / unproved | verified / unproved | verified / refuted | verified / timeout | verified / unproved | verified / unproved | verified / unproved |
 | stunning_palm_tree_tmp_tmpr84c2iwh_ch1__reconstructFromMaxSum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -295,70 +295,81 @@ Backends:
 
 Verdict basis: every source file hashed; e.g. `clover_abs__abs.dfy` 33f1a307d5f4103c…, `clover_abs__abs.rs` 732e707fbd23a808…
 
-## Reading, written after the run (2026-09-10, nested sequences in all seven kernels, row 30; regenerating the table drops this section, re-append it)
+## Reading, written after the run (2026-09-10, the sole blockers worked in five columns; regenerating the table drops this section, re-append it)
 
-Eleventh sweep. 277 tasks: the tenth sweep's 276 plus 1 that the full
-re-lift of the 785 under LIFTER-DECISIONS.md row 30 (a Dafny
-`seq<seq<int>>` parameter, return or local as t's nested sequence) brings
-in, none dropped. 6 jobs, 37 minutes, 0 flaked cells. Among the 276 rows
-shared with the tenth sweep, 11 cells moved, 10 upward and 1 down: dafny
-refuted 4 twins it had left unproved (findMax, two finds, swap), the
-residual pass's certificate emitter now stepping a loop concretely and
-naming the substituted return in a value-kind witness; fstar took
-testDouble from abstain to verified/refuted and refuted the twins of
-ghost m, f1a f and calDiv, the certificate context built with the checker
-off; rocq took the two parameterless tasks (ghost m, f1a f) from
-malformed to verified with the twin unproved, the empty binder list it
-used to print; and spark's isPrime twin read timeout instead of refuted,
-the column's load sensitivity, its real already timing out. Every other
-shared cell is as it was.
+Twelfth sweep. The same 277 tasks as the eleventh, 6 jobs, 36 minutes,
+0 flaked cells, with five lowerings changed against the eleventh's own
+sole-blocker lists, each built in a worktree and re-measured
+independently before merging (fstar's companion contract lemma; lean's
+computational booleans, its two control-flow shapes and a domain
+hypothesis in the loop's termination proof; framac's buffer-length and
+int-literal certificate gates; rocq's certificate and proof-script
+fixes; verus's array-maximum shape). 129 cells moved: 76 to
+verified/refuted (lean 34, fstar 22, rocq 13, verus 5, framac 2), 1 the
+other way (prog_fun_solutions mod's lean twin, refuted to unproved, a
+row spark abstains on anyway), and 52 between non-counting classes:
+framac's 18 seq-return twins from malformed to verified, the honest
+reading of a dropped length invariant under an encoding that pins the
+length from the requires (the twin computes what the real computes at
+the C level); lean's 7 abstains and 11 unproved reals now verified with
+the twin unproved or unproved with the twin refuted, the loop hypothesis
+reaching them but one further obligation each; rocq's 6 twins refuted
+where the real stays unproved (four computeFibs, fibonacci3, computeSum);
+verus's 4 malformed reals now well-formed and unproved (lookForMin,
+findMin, findMax, find_min_index); two framac twins and one spark twin
+trading refuted and timeout under load.
 
 | kernel | counts of 277 | largest non-counting classes |
 |---|---:|---|
 | dafny | 231 | 20 verified/unproved, 11 no-twin, 7 verified/verified, 3 timeout/refuted, 3 verified/malformed |
-| fstar | 177 | 28 unproved/refuted, 22 malformed/refuted, 12 abstain, 11 no-twin, 11 verified/unproved |
-| spark | 172 | 32 timeout/refuted, 14 abstain, 13 unproved/refuted, 11 no-twin, 10 timeout/timeout |
-| verus | 165 | 68 unproved/refuted, 14 unproved/unproved, 11 no-twin, 6 verified/unproved, 5 verified/verified |
-| framac | 162 | 21 timeout/refuted, 18 verified/timeout, 17 verified/malformed, 11 no-twin, 10 timeout/timeout |
-| rocq | 153 | 63 unproved/refuted, 13 abstain, 11 no-twin, 9 verified/unproved, 9 unproved/unproved |
-| lean | 137 | 46 unproved/refuted, 36 unproved/unproved, 32 abstain, 11 no-twin, 11 verified/unproved |
+| fstar | 199 | 28 unproved/refuted, 12 abstain, 11 no-twin, 11 verified/unproved, 9 unproved/unproved |
+| spark | 172 | 33 timeout/refuted, 14 abstain, 13 unproved/refuted, 11 no-twin, 9 verified/timeout |
+| lean | 170 | 54 unproved/refuted, 15 verified/unproved, 13 unproved/unproved, 11 no-twin, 10 abstain |
+| verus | 170 | 69 unproved/refuted, 16 unproved/unproved, 11 no-twin, 6 verified/unproved, 5 verified/verified |
+| rocq | 166 | 61 unproved/refuted, 13 abstain, 11 no-twin, 8 timeout/refuted, 5 verified/unproved |
+| framac | 164 | 22 verified/verified, 19 timeout/refuted, 18 verified/timeout, 12 timeout/timeout, 11 no-twin |
 
 | columns counting | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 |---|---|---|---|---|---|---|---|---|
-| tasks | 60 | 72 | 35 | 20 | 11 | 14 | 29 | 36 |
+| tasks | 115 | 31 | 24 | 17 | 12 | 13 | 31 | 34 |
 
-60 of 277 meet the seven-column bar (60 of 276 in the tenth) and 72 count
-in six (72). Of the 59 lifted MBPP-DFY tasks (58), 9 count in all seven
-(9); the 1.0 bar is 82 of 164.
+115 of 277 meet the seven-column bar (60 in the eleventh), 55 rows newly
+counting and none lost; 31 count in six (72). Of the 59 lifted MBPP-DFY
+tasks, 31 count in all seven (9); the 1.0 bar is 82 of 164.
 
-**The one new row.** CountLists (dafny_synthesis_task_id_792), the one
-program of the 12 the census blocked on nesting alone that lifts and
-passes every check, reads no-twin in every column: the harness finds no
-mutation for it, the same limit the nested family's empty-literal probe
-showed, so the row counts in none and is the ladder's work, not a
-kernel's. The seven columns' nested encodings themselves are measured on
-the family and the matrix (SPEC.md "Nested sequences (v1)", ROADMAP 12.7),
-not here: no other lifted task in the 785 uses a nested sequence.
+**What moved the bar.** Every one of the 55 new rows was a task six
+columns already counted and one kept out: fstar's 19 zero-obligation
+reals (the solver was never asked; now it is, through the lemma), lean's
+27 (six computational booleans, seven control-flow shapes, ten loop
+terminations, and rows the same fixes reached beyond the list), rocq's
+6, verus's 5, framac's 2, and 4 rows two of those columns held between
+them. The order of kernel work the tenth Reading named (lean, fstar,
+framac) was the right one: lean's 27 sole blockers are 5, fstar's 19 are
+0.
 
-**The sole blockers, unchanged from the tenth**: lean 27, fstar 19,
-framac 11, rocq 9, verus 5, spark 1 (the block below). The night's
-worktrees against exactly these lists (fstar's 19 zero-obligation reals
-with a companion contract lemma, lean's computational booleans and its
-loop termination hypothesis, framac's seq-return certificates, rocq's and
-verus's lists) are the twelfth sweep's Reading, not this one's; this
-table is the row-30 re-lift measured with the lowerings as committed at
-20cdb2b.
+**The sole blockers now, the block below**: framac 16 (its 22
+verified/verified twins are the largest class; 13 of the 16 are that
+reading, the rest two spec_fun abstains and swap's timeout), rocq 8 (the
+two self-recursive shapes mystery1 and computeSum, the fibonacci and
+tetrahedral abstains, max's proof cost), lean 5 (the two cube tasks on a
+nonlinear sign fact, elementAtIndexAfterRotation's div-mod bridge,
+downWhileNotEqual, eval's twin), dafny 1 (downWhileGreater), spark 1
+(gauss), verus 0, fstar 0. The next order of kernel work is framac,
+rocq, lean, and framac's is a design question before a fix: whether a
+twin that only drops a length invariant should have an encoding that
+can see the drop, or whether verified/verified is the column's honest
+answer for that shape.
 
 ## Sole blockers
 
 | kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
 |---|---|---|---|
-| lean | 27 | 77 | clover_cal_sum__sum, clover_is_even__computeIsEven, clover_linear_search1__linearSearch, cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1, dafny_learn_tmp_tmpn94ir40q_r01_assertions__max, dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum, dafny_synthesis_task_id_304__elementAtIndexAfterRotation, dafny_synthesis_task_id_396__startAndEndWithSameChar, dafny_synthesis_task_id_406__isOdd, dafny_synthesis_task_id_600__isEven, dafny_synthesis_task_id_637__isBreakEven, dafny_synthesis_task_id_77__isDivisibleBy11, dafny_synthesis_task_id_79__isLengthOdd, dafny_synthesis_task_id_801__countEqualNumbers, dafny_tmp_tmpmvs2dmry_slowmax__slow_max, dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__cube, dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_cube__cube, dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum, dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod, dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum, m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre, program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI, se2011_tmp_tmp71eb82zt_ass1_ex4__eval, tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it |
-| fstar | 19 | 45 | clover_avg__computeAvg, clover_return_seven__m, dafny_synthesis_task_id_127__multiply, dafny_synthesis_task_id_135__nthHexagonalNumber, dafny_synthesis_task_id_14__triangularPrismVolume, dafny_synthesis_task_id_171__pentagonPerimeter, dafny_synthesis_task_id_17__squarePerimeter, dafny_synthesis_task_id_264__dogYears, dafny_synthesis_task_id_266__lateralSurfaceArea, dafny_synthesis_task_id_268__starNumber, dafny_synthesis_task_id_279__nthDecagonalNumber, dafny_synthesis_task_id_432__medianLength, dafny_synthesis_task_id_441__cubeSurfaceArea, dafny_synthesis_task_id_458__rectangleArea, dafny_synthesis_task_id_581__squarePyramidSurfaceArea, dafny_synthesis_task_id_59__nthOctagonalNumber, dafny_synthesis_task_id_641__nthNonagonalNumber, dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions, program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one |
-| framac | 11 | 68 | clover_double_array_elements__double_array_elements, clover_replace__replace, cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse, dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes, dafny_synthesis_task_id_577__factorialOfLastDigit, dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v, dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v, dafny_verify_tmp_tmphq7j0row_test_cases_ghost__triple, final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap, seng2011_tmp_tmpgk5jq85q_p2__absIt |
-| rocq | 9 | 79 | clover_min_array__minArray, dafny_tmp_tmpv_d3qi10_2_min__minArray, dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess, m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum, mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR, program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo, seng2011_tmp_tmpgk5jq85q_flex_ex2__max, software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m3, software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__mystery1 |
-| verus | 5 | 71 | dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mfirstMaximum, dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1, dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax, dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax, formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns |
-| spark | 1 | 68 | programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss |
-| dafny | 0 | 10 | (none) |
+| framac | 16 | 63 | clover_double_array_elements__double_array_elements, clover_replace__replace, cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse, dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__incrementArray, dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero, dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes, dafny_synthesis_task_id_577__factorialOfLastDigit, dafny_synthesis_task_id_58__hasOppositeSign, dafny_synthesis_task_id_762__isMonthWith30Days, dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v, dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v, dafny_verify_tmp_tmphq7j0row_test_cases_ghost__triple, final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray, m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_countandreturn__countToAndReturnN, programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap, seng2011_tmp_tmpgk5jq85q_p2__absIt |
+| rocq | 8 | 69 | dafny_synthesis_task_id_80__tetrahedralNumber, dafny_tmp_tmp0wu8wmfr_tests_f1a__f, dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_success_1__is_even, dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m, m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum, nitwit_tmp_tmplm098gxz_nit__max_nit, seng2011_tmp_tmpgk5jq85q_flex_ex2__max, software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__mystery1 |
+| lean | 5 | 68 | dafny_synthesis_task_id_304__elementAtIndexAfterRotation, dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__cube, dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_cube__cube, dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual, se2011_tmp_tmp71eb82zt_ass1_ex4__eval |
+| dafny | 1 | 11 | dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater |
+| spark | 1 | 70 | programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss |
+| verus | 0 | 73 | (none) |
+| fstar | 0 | 44 | (none) |
 
-Of the 72 tasks in six, 27 are lean alone, 19 are fstar alone, 11 are framac alone, 9 are rocq alone, 5 are verus alone, 1 is spark alone.
+Of the 31 tasks in six, 16 are framac alone, 8 are rocq alone, 5 are lean alone, 1 is dafny alone, 1 is spark alone.
