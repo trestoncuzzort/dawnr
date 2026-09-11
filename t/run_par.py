@@ -130,8 +130,17 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
                 print(f"  {name} x {bname}: no twin, "
                       f"{harness.REFUSALS[op]}  <-- FINDING", flush=True)
                 continue
+            # real_witness (harness.py, ROADMAP 15.5): lowered with the
+            # real's own measured witness when the bounded scan found one
+            # (real VERIFIED, but its own body violates `ensures` on some
+            # requires-admitted input, or is undefined there), so a sound
+            # kernel's REFUTED on the real reads the same certificate a
+            # twin's REFUTED does. None for every task the ladder's other
+            # side already trusts (harness.real_witness), so an unchanged
+            # committed task lowers byte-identically to before.
+            rw = harness.real_witness(task)
             try:
-                real_src = lower(task, task["body"])
+                real_src = lower(task, task["body"], witness=rw)
                 twin_src = lower(task, twin_body, witness=w)
             except NotImplementedError as e:
                 rows[name][bname] = ("abstain", "abstain", True)

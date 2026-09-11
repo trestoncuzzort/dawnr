@@ -536,6 +536,65 @@ REFUSALS = {
 }
 
 
+def real_witness(task: dict) -> dict | None:
+    """The interpreter's bounded search (interp.py's own machinery, the
+    same domain() enumeration and MAX_POINTS budget interp.Reference already
+    uses for twins) for an input on which the REAL body -- not a twin --
+    violates its own `ensures`, or is undefined (interp.Undef) at an input
+    `requires` admits. In exactly the shape lower(task, body, witness=w)
+    already accepts ("_kind", the input names, "_real", "_twin", "_ens"):
+    every lowering's certificate builder replays whatever body it is given
+    at the witness's concrete values (t/lower_dafny.py's `_certificate`,
+    `body is not task.get("body")` only decides whether to substitute a
+    twin body in for the renamed one, never whether the witness is legal),
+    so calling `lower(task, task["body"], witness=real_witness(task))`
+    produces the REAL's own refutation certificate, not a twin's.
+
+    Reuses interp.Reference (harness.twin_for's own search) for the "value"
+    case: its `.points` are exactly the (env0, real value) pairs a bounded
+    scan already computed, so the only new work here is asking whether the
+    REAL's own value at each point satisfies `ensures` (Reference itself
+    never asks this; it only compares real against a twin). Reference skips
+    a requires-satisfying point where the body itself raises Undef ("a path
+    that raises Undef ... continue"), which is the right call for a twin
+    comparison but IS the defect for the real body itself, so a second pass
+    over the same interp.domain() enumeration catches that case, using no
+    search primitive interp.py does not already provide.
+
+    None when the scan finds nothing: every committed task under t/tasks
+    (t/test_real_witness.py asserts this for all of them)."""
+    ref = interp.Reference(task)
+    for env0, got in ref.points:
+        if ref._breaks_ensures(env0, got) is True:
+            w = interp._shown(env0)
+            w.update(_kind="value", _real=interp._j(got),
+                    _twin=interp._j(got), _ens=True)
+            return w
+    names = interp._names(task)
+    funs = ref.funs
+    req = task.get("requires", [])
+    ret = task["returns"][0]["name"]
+    for env0 in interp.domain(task, names, interp.MAX_POINTS):
+        st = interp.St()
+        try:
+            if not all(interp.ev(c, env0, funs, st) for c in req):
+                continue
+        except (interp.Undef, interp.Budget, RecursionError):
+            continue
+        env = dict(env0)
+        env[ret] = None
+        try:
+            interp.exec_body(task["body"], env, funs, st)
+        except interp.Undef as u:
+            w = interp._shown(env0)
+            w.update(_kind="undefined", _real="no value", _twin=str(u),
+                    _ens=True)
+            return w
+        except (interp.Budget, RecursionError):
+            continue
+    return None
+
+
 def witness(w: dict | None) -> str:
     """One line naming the input (or loop state) that makes the twin a
     measurement, the thing a REFUTED verdict is a verdict ABOUT."""

@@ -151,7 +151,7 @@ The verdicts-view row: **verus: absent** -- no verdict word, no
 witness, exactly the rule ROADMAP 15.5 names ("an absent kernel shown
 as absent and never as a verdict").
 
-## 7. A task whose real is REFUTED -- measured, and what was actually found
+## 7. A task whose real is REFUTED -- measured 2026-09-11
 
 `t/editors/examples/wrong_abs.t` is `abs` with a false postcondition
 (`ensures r >= 1`, which fails at `x = 0`, `r = 0`). Graded once, exactly
@@ -159,48 +159,51 @@ the command this walk-through's task named:
 
 ```
 $ python3 t/cli.py verify t/editors/examples/wrong_abs.t --kernels dafny
-dafny: REFUSED, real is the solver gave up without exhausting its budget or finding a countermodel; collapse-if twin is refuted, the kernel found this wrong
+dafny: REFUSED, real is refuted, the kernel found this wrong; collapse-if twin is refuted, the kernel found this wrong
 ```
 
-(exit 1.) **This is `unproved`, not `refuted`, and that is a measured
-finding, not an oversight in this file.** `t/tlib.py`'s `_verify_one`
-lowers the REAL body plain (`lower_fn(task, task["body"])`, no `witness=`
-kwarg) and only the TWIN body with the refutation certificate
-(`lower_fn(task, tb, witness=w)`); `t/verifiers/dafny.py`'s own docstring
-names the certificate as "the only door to REFUTED" and says so of this
-exact case in its own words: "measured on the abs twin: `ensures 1 == 2`
-reads UNPROVED, never REFUTED." The same door is certificate-gated in
-`t/verifiers/fstar.py` ("a discharged t_refutation_certificate -> REFUTED
-(the only door)"). Structurally, under the current `tlib.verify`/
-`cli.py verify` pipeline, the REAL side of any task -- correct or
-deliberately wrong -- can read `verified`, `vacuous`, `malformed`,
-`timeout`, `unproved` or `tool_error`, but **never** `refuted`: there is
-no code path that lowers the real body with a certificate. The verdicts
-view renders whatever the server actually sends, so `wrong_abs`'s dafny
-row reads **dafny: unproved / refuted (collapse-if)**, not
-"REFUTED / ...". The t/verdicts payload measured for this file, same
-session as steps 5-6:
+(exit 1.) **This is `refuted`, the bar's own clause, measured through the
+full pipeline.** `t/harness.py` gained `real_witness(task)`: the same
+bounded interpreter search `twin_cached`/`interp.Reference` already run,
+turned on the REAL body itself instead of a real-vs-twin comparison --
+does the real body's own value violate its own `ensures` (or is the body
+undefined) at some `requires`-admitted input? For `wrong_abs`,
+`x = 0` gives `r = 0`, which fails `ensures r >= 1`. `t/tlib.py`'s
+`_verify_one` and `t/run_par.py`'s `lower_and_dispatch` now lower the
+REAL with that witness (`lower_fn(task, task["body"], witness=real_witness(task))`)
+exactly the way they already lower the twin, so a real that is genuinely
+wrong gets the same refutation certificate a wrong twin gets, and reads
+`refuted` with the certificate's own message
+(`t_refutation_certificate (correctness): Correct`, `dafny`'s own
+`verifiers.dafny.verify` extras). `real_witness` returns `None` for
+every one of the 34 committed tasks (`t/test_real_witness.py`), so no
+correct task's real verdict moves. The t/verdicts-shaped payload
+measured for this file, same session as steps 5-6 (via `tlib.verify`,
+which is what `t/lsp.py`'s worker calls):
 
 ```json
 "dafny": {
   "status": "ok", "provisional": false,
-  "real": "unproved", "twin": "refuted", "twin_op": "collapse-if",
+  "real": "refuted", "twin": "refuted", "twin_op": "collapse-if",
   "witness": "x=1 -> real 1, twin -1",
+  "real_witness": "x=0 -> real 0, twin 0",
   "kernel_version": "dafny 4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2"
 }
 ```
 
-This is named again in this repository's report as an open item of
-ROADMAP 15.5's DONE WHEN: the clause "a real task REFUTED with the
-kernel's message" describes a scenario `tlib.verify` cannot currently
-produce for any kernel gated the same way dafny and fstar are (their own
-module docstrings say REFUTED is certificate-only); fixing it is a
-`tlib.py`/lowering change, out of scope here (this item's instructions
-name `t/lsp.py`, `t/cli.py`, `t/harness.py`, `t/run_par.py` and every
-lowering as off limits). What this walk-through instead shows, honestly,
-is the verdicts view rendering `unproved` correctly, with the kernel's
-own sentence in the tooltip -- the rendering machinery works; the
-REFUTED-real scenario the bar names is not reachable to render.
+(`tlib.verify`'s entry dict gained `real_witness`, the same
+`harness.witness()`-rendered line the twin's `witness` field already was,
+one sentence naming the input that makes the REAL's own REFUTED a
+verdict about something measured, not asserted. `t/lsp.py`'s own
+`t/verdicts` JSON-RPC payload is unchanged by this -- it forwards a
+fixed field list from the entry dict and was not touched here -- so
+`t/LSP.md`'s documented notification shape needs no edit.) All seven
+kernels on this box (dafny, verus, lean, rocq, fstar, spark, framac)
+REFUTE `wrong_abs`'s real, measured the same session:
+`python3 t/cli.py verify t/editors/examples/wrong_abs.t --kernels dafny,verus,lean,rocq,fstar,spark,framac --json`
+prints `"real is refuted, the kernel found this wrong"` in all seven
+`message` fields. ROADMAP 15.5's DONE WHEN clause, "a real task REFUTED
+with the kernel's message", is measured, not merely rendered.
 
 ## 8. Comparing against AGREEMENT.md
 

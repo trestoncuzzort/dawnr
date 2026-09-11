@@ -124,6 +124,7 @@ def _side(backend, kernel: str, path: Path, key: str, version: str,
 def _verify_one(task: dict, kernel: str, flake: int, budget,
                 out_dir, cache_dir) -> dict:
     entry = {"real": None, "twin": None, "twin_op": None, "witness": "none",
+             "real_witness": "none",
              "provisional": False, "source_sha": None, "kernel_version": None,
              "cached": False}
     try:
@@ -142,13 +143,22 @@ def _verify_one(task: dict, kernel: str, flake: int, budget,
 
     lmod, suffix = _LOWER_MOD[kernel]
     lower_fn = importlib.import_module(lmod).lower
+    # real_witness (harness.py, ROADMAP 15.5): a real that violates its own
+    # `ensures` (or is undefined where `requires` admits the input) is
+    # lowered with that witness too, so a sound kernel refutes it with a
+    # certificate the same way it refutes a twin -- see harness.real_witness's
+    # docstring for why passing `body=task["body"]` here still produces the
+    # REAL's own certificate, not a twin's. None for every correct task
+    # (t/test_real_witness.py), so this changes nothing for them.
+    rw = harness.real_witness(task)
+    entry["real_witness"] = harness.witness(rw)
     # The same two outcomes run_par.lower_and_dispatch gives a lowering
     # that cannot express the task: a named NotImplementedError is
     # "abstain", anything else "lower-error"; neither runs a kernel
     # (2026-09-11, found by the independent check of 14.4: the single-file
     # verify raised where the table read abstain / abstain).
     try:
-        real_src = lower_fn(task, task["body"])
+        real_src = lower_fn(task, task["body"], witness=rw)
         twin_src = lower_fn(task, tb, witness=w)
     except NotImplementedError as e:
         entry["real"] = entry["twin"] = "abstain"

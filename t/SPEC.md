@@ -930,6 +930,20 @@ verified, never about an unmeasurable one (those are `no-witness`,
 `no-input`, `real-undefined` or `no-operator`, REFUSED before a kernel ever
 sees them).
 
+**2026-09-11 (ROADMAP 15.5): a REAL can be REFUTED too, and its witness is
+measured the same way a twin's is.** `harness.real_witness(task)` runs the
+same bounded interpreter search (`interp.Reference`, `interp.domain`) over
+the REAL body alone, asking whether ITS OWN value ever violates `ensures`
+at a `requires`-admitted input, or whether the body is undefined there;
+`None` when the scan finds nothing, which is every one of the committed
+tasks. When it is not `None`, `t/tlib.py` and `t/run_par.py` lower the
+real with that witness (`lower(task, task["body"], witness=real_witness(task))`),
+the exact form every lowering already accepts for a twin, so a genuinely
+wrong real gets the same refutation certificate a wrong twin gets and
+reads REFUTED with the kernel's own message, not merely UNPROVED. This is
+what makes "a real task REFUTED with the kernel's message" (this section's
+own bar) a measured outcome rather than an unreachable one.
+
 ## What v1 does not claim
 
 No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an
