@@ -1,6 +1,6 @@
-# t conformance suite (ROADMAP 13.4) — 2026-09-11 16:27Z
+# t conformance suite (ROADMAP 13.4) , 2026-09-11 16:54Z
 
-Cell = real outcome / twin outcome [PASS|FAIL|N/A]. PASS means the real outcome equals this row's `expected` column; N/A means the kernel's own binary is absent from this run (not counted toward exit code). Built from fuzz_lower.py's hand-built probes plus metamorphic.py's named TRANSFORMS applied to t/tasks/abs.json; see t/conformance.py's module docstring for the manifest.
+Cell = real outcome / twin outcome [PASS|FAIL|N/A]. PASS means the real outcome equals this row's `expected` column; N/A means the kernel's own binary is absent from this run (not counted toward exit code). Built from fuzz_lower.py's hand-built probes plus metamorphic.py's named TRANSFORMS applied to t/tasks/abs.t; see t/conformance.py's module docstring for the manifest.
 
 | task | expected | dafny | verus | spark | framac | lean | rocq | fstar |
 |---|---|---|---|---|---|---|---|---|
@@ -55,7 +55,7 @@ Cell = real outcome / twin outcome [PASS|FAIL|N/A]. PASS means the real outcome 
 | fz_p_str_splitempty | verified | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | abstain / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | unproved / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | unproved / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] |
 | fz_p_str_countempty | verified | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | abstain / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | unproved / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | unproved / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] |
 | fz_p_str_findempty | verified | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | verified / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [PASS] | abstain / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | unproved / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | unproved / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] | abstain / no-twin: no `if` and no invariant, nothing to mutate, so the twin is undefined [FAIL] |
-| fz_p_str_tab | verified | verified / refuted [PASS] | unproved / refuted [FAIL] | abstain / abstain [FAIL] | abstain / abstain [FAIL] | unproved / refuted [FAIL] | unproved / refuted [FAIL] | verified / refuted [PASS] |
+| fz_p_str_tab | verified | verified / refuted [PASS] | unproved / refuted [FAIL] | verified / refuted [PASS] | abstain / abstain [FAIL] | unproved / refuted [FAIL] | unproved / refuted [FAIL] | verified / refuted [PASS] |
 | fz_p_str_lowernonletter | verified | verified / refuted [PASS] | unproved / refuted [FAIL] | verified / refuted [PASS] | abstain / abstain [FAIL] | unproved / refuted [FAIL] | unproved / unproved [FAIL] | abstain / abstain [FAIL] |
 | mm_rename_abs | verified | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] |
 | mm_add_zero_abs | verified | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] | verified / refuted [PASS] |
@@ -82,8 +82,8 @@ Backends:
 - rocq: The Rocq Prover, version 9.2
 - fstar: F* 2026.08.30 / platform=Linux_x86_64 / system=Unix / compiler=OCaml 5.3.0 / date=2026-08-30 16:26:18 +0000 / commit=2b82aefeff37f78509c876844954b07fcb8813ff
 
-Probes: 53  Metamorphic: 13  Tripwire bugs: 0  FAIL cells: 202
+Probes: 53  Metamorphic: 13  Tripwire bugs: 0  FAIL cells: 201
 
-metamorphic.TRANSFORMS with no site in abs.json (not silently omitted, not graded): comm-add, de-morgan, let-copy, reassoc-add, reorder, req-or-false, self-assign
+metamorphic.TRANSFORMS with no site in abs.t (not silently omitted, not graded): comm-add, de-morgan, let-copy, reassoc-add, reorder, req-or-false, self-assign
 
 Verdict basis: every source file hashed; e.g. `fz_p_bigneg.dfy` fba6b337c2f8f2b6…, `fz_p_bigneg.rs` 0cb25b077fd57856…

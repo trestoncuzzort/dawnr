@@ -1806,7 +1806,7 @@ inside the outcome vocabulary, and the 20/13/7 TRANSFORMS partition.
 normal "some cell FAILed" signal, not a script bug); `test_conformance.py`
 is folded into `--tests`. The independent check found the stage's flag
 unwired and two em-dashes in the script's table header; both fixed at
-the merge, and the quiet re-run of the suite is the wave's gate.
+the merge, and the quiet re-run of the suite is the wave's gate. Quiet re-run (16:54Z, no other kernel work on the box): 261 of 462 PASS, 201 FAIL, one fewer than the loaded run, so the FAILs are kernel incompleteness against the probes' own expectations, not contention; by column dafny 24, verus 25, spark 24, framac 36, lean 33, rocq 31, fstar 28. The framac cell on `fz_p_divreq0` read VERIFIED both times: Frama-C accepts a task whose `requires` is undefined at every input (a division by zero inside the precondition), which WP reads as a false precondition and proves everything under; the verifier's vacuity smoke (verifiers/framac.py) does not fire on it. That is the one soundness-direction cell in the suite and the next framac verifier fix by name.
 
 ### WS-14: from a JSON tree to a language you type
 
@@ -1821,6 +1821,8 @@ DONE WHEN: every task in `t/tasks/` is a `.t` file, `run_all.py` and
 `run_par.py` read them, and AGREEMENT.md regenerated through the notation is
 identical row for row to the JSON run.
 UNBLOCKS: 14.2, 14.4, 15.2.
+
+**14.1 DONE 2026-09-11 (4bb1066).** t/tasks/ holds 34 `.t` files and no JSON; `t/tasks_io.py` reads them (`load_task`, `load_dir`, `find`; a `.json` path still loads for the spec experiment's generated task directories), and run_all.py, run_par.py, grade.py, harness.load, spec_experiment's few-shot loader, fidelity_domain.py and the tests read through it. Each file was printed from its former JSON by surface.print_task and parses back to the identical AST (34 of 34, both directions). The bar's measurement: the matrix regenerated through the notation on a quiet box (t/AGREEMENT.md, 16:50Z) reads the 26 older rows cell for cell as the JSON run banked at 5544a99, and the eight name probes verified/refuted in all seven; the builder's own run on a loaded box had two spark timeouts, the check confirmed both loaders produce byte-identical lowered source. Open: harness.run_all and run_task, used only when a lowering is run standalone, still spell `.json` paths.
 
 #### 14.2 Errors with a position
 
@@ -1869,6 +1871,8 @@ DONE WHEN: a doc test parses and checks every `.t` example in the four files
 and fails on a stale sentence about the notation.
 UNBLOCKS: 17.2.
 
+**14.5 DONE 2026-09-11 (4bb1066), with one half of its fact table still leaning on surface.py --check.** `t/doc_test.py` finds every notation block in TUTORIAL.md, README.md, SYNTAX.md and SPEC.md, parses each with surface.parse, runs check_wf on the well-formed ones, and asserts the exact error on blocks marked as deliberate examples; a table of facts the docs state about the notation (the keyword list, the string-library members, the arity table, what the notation refuses, that `.t` is the input, TUTORIAL lesson 0's claim about parsing) is checked against surface.py's own tables, so a drifted sentence fails the run; the independent check corrupted a SYNTAX.md written line and TUTORIAL's abs header and saw the test fail both times. Stale sentences found and fixed in TUTORIAL.md, SYNTAX.md and t/README.md. Open by name: the five aggregate counts SYNTAX.md's introduction states (tasks seen, distinct, written lines, the fuzz count) are cross-checked only by surface.py --check, which the test stage runs, not by doc_test itself.
+
 ### WS-15: the editors, Visual Studio and VS Code
 
 #### 15.1 The harness as a library, with a cache
@@ -1885,6 +1889,8 @@ verdicts, not wall times.
 DONE WHEN: cached re-verification of an unchanged task runs no kernel; an
 editor session and `run_par.py` run at once and AGREEMENT.md is unchanged.
 UNBLOCKS: 15.2, 15.5.
+
+**15.1 DONE 2026-09-11 (4bb1066).** `t/tlib.py`: verify(task, kernels, flake, budget) in-process, one dict per kernel (real, twin, operator, witness, provisional, source sha, kernel version, cached), plus twin, lower and explain; `t/cache.py` keys a verdict by the lowered source's sha256, the kernel's version (read once per process through each verifier's own version command) and the budget, under out/cache, written only by a completed n-of-3 run and read before any kernel runs; a flaked result stays provisional and is never cached (test_tlib's stub backend alternates verdicts). Measured: verify(abs) across all seven, first call 42 kernel launches in 15.9 s, second call 0 launches in 0.00 s in-process and 0.39 s from a second process, every entry cached and not provisional; an editor call ran while run_par produced a four-task table and the table matched AGREEMENT.md with out/ untouched (the library writes under out/lib, the table under its own out directory, so there is no shared lock to relax). The independent check exercised the absent-kernel path (a refusal, not a crash). Open: interactive budgets per kernel are still unmeasured; `budget` is passed through, not characterised.
 
 #### 15.2 The language server
 
