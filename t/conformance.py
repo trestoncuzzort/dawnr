@@ -237,6 +237,15 @@ def run_items(items: list[dict], present, outdir: Path, jobs, flake_n: int):
                 else:
                     rows[name][bname] = ("no-twin", f"interp: {e}"[:120], True)
             continue
+        # The real's own refutation witness, the route run_par.lower_and_dispatch
+        # and tlib.verify take since 2026-09-11 (harness.real_witness): a probe
+        # whose expectation is a REFUTED real gets its certificate here too.
+        try:
+            rw = harness.real_witness(clean)
+        except Exception:                                    # noqa: BLE001
+            rw = None
+        def lower_real(lower):
+            return lower(clean, clean["body"], witness=rw) if rw is not None else lower(clean, clean["body"])
         if twin_body is None:
             # No twin, not no real: the probe's expectation is about the
             # REAL program (harness.REFUSALS[op] is why no twin was found,
@@ -245,7 +254,7 @@ def run_items(items: list[dict], present, outdir: Path, jobs, flake_n: int):
             twin_label = f"no-twin: {harness.REFUSALS.get(op, op)}"
             for bname, lower, suffix in present:
                 try:
-                    real_src = lower(clean, clean["body"])
+                    real_src = lower_real(lower)
                 except NotImplementedError:
                     rows[name][bname] = ("abstain", twin_label, True)
                     continue
@@ -259,7 +268,7 @@ def run_items(items: list[dict], present, outdir: Path, jobs, flake_n: int):
             continue
         for bname, lower, suffix in present:
             try:
-                real_src = lower(clean, clean["body"])
+                real_src = lower_real(lower)
                 twin_src = lower(clean, twin_body, witness=w)
             except NotImplementedError:
                 rows[name][bname] = ("abstain", "abstain", True)
