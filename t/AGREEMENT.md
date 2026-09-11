@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-09-11 19:05Z
+# t cross-kernel agreement, 2026-09-11 20:00Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 
@@ -32,7 +32,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | reverse | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | row_max_len | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | seq_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| split_join | verified / refuted | verified / refuted | timeout / refuted | abstain / abstain | verified / refuted | verified / unproved | timeout / refuted |
+| split_join | verified / refuted | verified / refuted | timeout / refuted | abstain / abstain | verified / refuted | verified / unproved | unproved / refuted |
 | sum_upto | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | swap | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | swap_rows | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
