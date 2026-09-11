@@ -10,11 +10,14 @@ skipped, or never generated at all:
                                           file can produce both)
     wall backstop                     -> TIMEOUT
     no .spark audit                   -> TOOL_ERROR (never a pass)
-    otherwise the audit decides       -> _classify_audit below, and VERIFIED
-                                          additionally requires the havoc
-                                          oracle to show the postcondition has
-                                          teeth; zero checks generated is not
-                                          a pass.
+    otherwise the audit decides       -> _classify_audit below; zero checks
+                                          generated is not a pass. The havoc
+                                          oracle (below) still runs on every
+                                          VERIFIED and its reading is
+                                          recorded in extras, but (2026-09-11,
+                                          ROADMAP 13.4) it no longer demotes
+                                          the verdict -- see "SEMANTIC
+                                          VACUITY" below for why.
     clean audit but nonzero exit      -> TOOL_ERROR
 
 REFUTED IS NOT "UNPROVED": the Wave-4 repair, 2026-09-01. The adapter used to
@@ -115,25 +118,42 @@ SEMANTIC VACUITY: two kernel-native instruments, neither of them lexical.
     recorded in extras["proof_warnings"] as evidence and nothing more; the
     vacuous-implication class they would have caught is caught by (2).
 
-(2) The havoc oracle, for the class no warning reports: a postcondition that
-    is TRUE of every possible result (Post => True; Post => (if 1 = 2 then
-    ...)) is proved honestly by the kernel and looks exactly like a real
-    proof. _havoc_source replaces F's expression-function completion with a
-    call to an Import'd, contract-free function, so F'Result becomes an
-    arbitrary value of the return type, and asks the SAME kernel at the SAME
-    --steps budget whether F's postcondition still proves. If it does, the
-    contract says nothing about the computed result and the cell is VACUOUS.
-    MEASURED: F's VC_POSTCONDITION goes "info" -> "medium" on all 22 honest
-    files and stays "info" on all three Wave-2 holes, full separation. The
-    oracle runs ONLY when every other gate has already said VERIFIED, so
-    refuted twins never pay for it. F's postcondition is identified by
-    gnatprove's own entity table (entities[id].name ending in ".F"), not by
-    source position.
+(2) The havoc oracle, EVIDENCE ONLY since 2026-09-11 (ROADMAP 13.4, see the
+    dated note near the end of this docstring): a postcondition that is TRUE
+    of every possible result (Post => True; Post => (if 1 = 2 then ...)) is
+    proved honestly by the kernel and looks exactly like a real proof.
+    _havoc_source replaces F's expression-function completion with a call to
+    an Import'd, contract-free function, so F'Result becomes an arbitrary
+    value of the return type, and asks the SAME kernel at the SAME --steps
+    budget whether F's postcondition still proves. If it does, the contract
+    says nothing about the computed result. MEASURED: F's VC_POSTCONDITION
+    goes "info" -> "medium" on all 22 honest files and stays "info" on all
+    three Wave-2 holes, full separation. The oracle runs ONLY when every
+    other gate has already said VERIFIED, so refuted twins never pay for
+    it. F's postcondition is identified by gnatprove's own entity table
+    (entities[id].name ending in ".F"), not by source position.
 
-    The oracle is fail-closed: a source the completion scanner cannot
-    rewrite, a havoc run that emits "error:", or a havoc run with no
-    VC_POSTCONDITION for F is TOOL_ERROR, never VERIFIED: the adapter may
-    not certify what its own instrument could not examine.
+    A content-free postcondition is NOT what this file's own VACUOUS means:
+    every other instrument that mints VACUOUS here (the contradictory-Pre
+    warnings in (1) above, the ban scan, the accepted-without-discharging
+    checks) is a claim about ONE program in isolation, the same shape the
+    other six kernels' own vacuity smokes measure (SPEC.md's "vacuity
+    smoke" paragraph, ROADMAP 13.4: dafny, verus, framac and rocq's smokes
+    all ask only whether `requires` admits a model, never whether `ensures`
+    constrains the result). "This contract says nothing about the result"
+    is a claim about a PAIR of readings, real vs. its own weakened self,
+    exactly what SPEC.md's "The twins" paragraph and
+    `harness.decorative_kind` already exist to name ("decorative"), not a
+    per-kernel verdict. So gnatprove's own VERIFIED on F stands; the
+    havoc reading is still run and still recorded (extras["havoc"]) as
+    the SAME kind of non-ruling evidence the UNREACHABLE warnings above
+    already are, but it never rewrites `outcome` (see verify() below).
+
+    The oracle stays fail-closed in the sense that a source the completion
+    scanner cannot rewrite, a havoc run that emits "error:", or a havoc run
+    with no VC_POSTCONDITION for F records "inconclusive" rather than
+    fabricating a reading, but "inconclusive" is evidence too, not a
+    verdict: it can no longer cost the file its VERIFIED.
 
 THE CERTIFICATE CHANNEL (10.8, 2026-09-02): the flips the honest rule gave
 up are bought back from the lowering, exactly as the paragraph above
@@ -206,58 +226,56 @@ members' primary sloc is another file, never by name. A subprogram declared
 in the t artifact with no completion (the uninterpreted-function trick, the
 thing this rule exists to catch) has no such members and is still MALFORMED.
 
-CONFORMANCE, ROW fz_p_modsign_true (2026-09-11, ROADMAP WS-19-r7, spark
-column): NOT CLOSED, named honestly rather than papered over. MEASURED,
-this kernel: real=vacuous (fuzz_lower.py's own `_expect` reads "verified").
-The kernel's own message: "vacuous content-free contract: F's postcondition
-still proves when the body is replaced by an arbitrary (Import'd)
-T_Vacuity_Havoc result, so it constrains nothing the body computes". Cause,
-verified by hand: the probe's `ensures` is `mod(x, y) >= 0`, over the
-PARAMETERS x/y directly, never the return name `r` (lower_spark.py's
-post_sub only substitutes F'Result for `r` where `r` actually appears), so
-the compiled Post is a fact about X, Y alone and the havoc oracle above (2)
-correctly finds it holds under an arbitrary F'Result too -- by the SAME
-rule fz_p_vac_post (the shared vac family, not this builder's to touch)
-is DESIGNED to catch. A general fix in lower_spark.py -- always conjoining
-`F'Result = <the body's own computed expression>` to Post -- was
-considered and rejected: it is a no-op for every currently committed
-rendering (F's completion already equals that expression by construction)
-but would ALSO give vac_post's own `ensures => True` a hidden binding to
-F'Result, defeating the exact vacuity check that probe exists to measure
--- MEASURED by inspection of the havoc mechanism above, not applied. No
-narrower, principled rule (real fact about the params vs. deliberately
-content-free) was found that draws the line without deciding it by hand
-per probe, which is what an honest gap, not a fix, looks like. Left open.
+CONFORMANCE, ROWS fz_p_modsign_true and fz_p_vac_post (CLOSED 2026-09-11,
+ROADMAP 13.4, spark: its three open conformance cells item; a prior pass on
+2026-09-11/12 left both rows open, reasoning reproduced and superseded
+below). MEASURED before this fix, this kernel: fz_p_modsign_true
+real=vacuous (expected "verified"); fz_p_vac_post real=vacuous,
+twin=vacuous (expected "decorative", graded by
+`harness.decorative_kind(real, twin, w)`, which returns non-None only
+when BOTH outcomes are literally `Outcome.VERIFIED`). The prior pass's own
+diagnosis was correct on the mechanism (the havoc oracle (2) above,
+finding fz_p_modsign_true's `mod(x, y) >= 0` never binds `r` and
+fz_p_vac_post's `ensures => True` never binds anything, demotes both to
+VACUOUS) but wrong on the fix's reach: it treated the havoc oracle's
+VACUOUS as this kernel's OWN vacuity verdict, on a level with the
+contradictory-Pre warnings in (1), and so read "disable the havoc oracle"
+and "change conformance.py's grading rule" as the only two doors, both
+outside a single-probe fix.
 
-CONFORMANCE, ROW fz_p_vac_post (2026-09-12, spark: the four ensures-level
-probes item): NOT CLOSED, for a DIFFERENT reason than fz_p_modsign_true's
-same-family gap above, named separately rather than folded into it.
-MEASURED, this kernel: real=vacuous, twin=vacuous (fuzz_lower.py's
-`_expect` reads "decorative"). conformance.py's own grading rule for
-`_expect == "decorative"` (its `grade()`, 2026-09-11) is PASS iff
-`harness.decorative_kind(real_outcome, twin_outcome, w) == "decorative"`,
-and that function's own docstring requires BOTH outcomes to be literally
-`Outcome.VERIFIED` before it returns anything but None -- a VACUOUS/
-VACUOUS pair reads None, never "decorative", by construction. This
-kernel's own havoc oracle (2, above) is DESIGNED to demote exactly
-`ensures => True` from VERIFIED to VACUOUS -- fz_p_vac_post's postcondition
-is the canonical case that instrument exists to catch (this file's own
-"a postcondition that is TRUE of every possible result" line) -- so
-making this cell read VERIFIED/VERIFIED to satisfy decorative_kind would
-mean disabling the havoc oracle for exactly the file it is supposed to
-catch, the same trade fz_p_modsign_true's paragraph above declined for
-the same reason (the twin family shares one oracle; there is no
-per-probe switch). The other half of the rule, `harness.decorative_kind`
-and `grade()`'s "decorative" branch, is harness.py/conformance.py code,
-outside this file's own reach (spark: the four ensures-level probes'
-own file list is lower_spark.py and verifiers/spark.py only). So the
-honest cell IS vacuous/vacuous under this kernel's own taxonomy (a
-content-free contract, correctly caught) and the suite's PASS rule for
-"decorative" cannot read it as a pass without either (a) this kernel
-lying about the postcondition's content, or (b) a change to
-conformance.py's grading rule outside this pass's file scope. Left open,
-same posture as fz_p_modsign_true: named by the kernel's own message
-rather than bought with a weakened havoc oracle.
+The actual misalignment was in what the havoc oracle's finding MEANS, not
+in either of those two files. SPEC.md's "vacuity smoke" paragraph and the
+other six kernels' own smokes (dafny, verus, framac, rocq; see their
+verifiers/*.py headers) measure exactly one thing under the name
+"vacuous": a `requires` with no model, a fact about ONE program. "This
+`ensures` does not constrain the computed result" is a different claim,
+about a PAIR of readings (the real program vs. its own havoc'd self), and
+SPEC.md's "The twins" paragraph already has a name for exactly that claim,
+"decorative", read off a real/twin VERIFIED pair by
+`harness.decorative_kind`, never by a kernel. So the havoc oracle was
+answering a real question with the wrong OUTCOME name: gnatprove's own
+proof of F's postcondition is honest evidence (VERIFIED), and "but it
+would still prove against an arbitrary result" is evidence ABOUT that
+proof, not a refutation of it.
+
+The fix (see (2) above and verify() below): the havoc oracle still runs on
+every VERIFIED file, at the same budget, and its reading is still
+recorded, in extras["havoc"] now rather than as the file's own outcome.
+It no longer demotes `outcome`. fz_p_modsign_true's real now reads
+VERIFIED (gnatprove genuinely discharges F's postcondition; the havoc
+reading is recorded as "content-free" evidence and nothing more, same
+posture VC_UNREACHABLE_BRANCH already has above). fz_p_vac_post's real
+and twin both read VERIFIED, so `harness.decorative_kind` sees the pair
+it was built to see and reads "decorative", the honest name for a
+postcondition the spec cannot use to tell real and twin apart -- MEASURED
+after the change, both cells this file's own test run (see this file's
+CLI smoke and t/conformance.py --kernels spark). fz_p_vac_unsat and
+fz_p_vac_range are UNCHANGED (still VACUOUS): their `requires` is
+unsatisfiable, caught by instrument (1) before the havoc oracle ever
+runs (it only runs on a file every other gate already called VERIFIED),
+so removing the havoc oracle's veto touches neither cell -- confirmed by
+inspection of _classify_audit's contradictory-hypothesis branch, which
+returns before verify()'s havoc call is ever reached.
 """
 from __future__ import annotations
 
@@ -278,6 +296,36 @@ GNATPROVE = find("T_GNATPROVE", ['gnatprove'], [".local/gnatprove/**/bin/gnatpro
 _GNATPROVE_WHY = missing("spark", "T_GNATPROVE", ['gnatprove'], [".local/gnatprove/**/bin/gnatprove", ".alire/**/bin/gnatprove"])
 DEFAULT_STEPS = 20_000
 WALL_S = 180
+# CE_STEPS (2026-09-11, ROADMAP 13.4, fz_p_badrec2): --ce-steps was pinned to
+# the run's own --steps (20000) until this constant, "judged at exactly the
+# standard the real run was judged at" (the paragraph above's original
+# rationale). MEASURED to be unsafe on a genuinely non-terminating spec_fun:
+# fz_p_badrec2's twin declares a recursive G whose own Subprogram_Variant
+# check gnatprove correctly flags "medium: subprogram variant might fail"
+# in 10-20s with counterexamples OFF or at --ce-steps<=1000, but
+# --check-counterexamples=on's RAC tries to CONFIRM a counterexample by
+# actually EXECUTING G -- and G, on the witness the search picks, does not
+# terminate. MEASURED on this file directly (2026-09-11): --ce-steps=1000
+# finishes in 15-21s (3 repeats) with the identical "gave_up"/"limit"
+# verdict every time; --ce-steps=1500 and --ce-steps=2000 both exceed
+# WALL_S. The 11 committed corpus twins never reach the high+cntexmp
+# channel at all (this file's own "WHAT THE REPAIR COST" paragraph above:
+# "not one carries a counterexample"), and the one probe MEASURED to need
+# it (p4_false_int_abs.ads) was MEASURED identical at ce-steps
+# 100/1000/20000/100000 (that paragraph, unchanged) -- so 1000 costs
+# nothing the corpus uses and stops the RAC hang from becoming this
+# kernel's own non-deterministic wall-clock TIMEOUT on an otherwise
+# decisive medium/gave_up verdict. A step count, not a clock: still the
+# machine-independent bound ROADMAP 7.3 requires, just no longer pinned to
+# the unrelated proof-search budget.
+CE_STEPS = 1_000
+# ESCALATED_STEPS (2026-09-11, ROADMAP 13.4, fz_p_badrec2): see
+# _escalate_variant_timeout's own docstring below for the full measurement.
+# In short, a --steps budget high enough to let a genuinely non-terminating
+# recursive spec_fun's OTHER (unrelated) proof obligations reach their own
+# honest "gave up" rather than exhausting DEFAULT_STEPS first; MEASURED
+# sufficient at 50000 (15s, no counterexamples), given headroom here.
+ESCALATED_STEPS = 100_000
 
 # Pragma AND aspect forms of every accepted-without-proof mechanism (Wave-1:
 # pragma SPARK_Mode (Off) / pragma Import (C, ...) evaded the aspect-only
@@ -685,10 +733,20 @@ def _ce_flags(budget: int) -> list[str]:
     severity never reaches "high" and a genuinely false postcondition is
     byte-identical to a starved true one (header, probes p4/p1), so the adapter
     would have no evidence with which to refuse the old text rule.
-    --ce-steps is pinned to the run's own --steps: the switch it replaces is a
-    wall-clock timeout, and ROADMAP 7.3 requires a machine-independent bound."""
+    --ce-steps was pinned to the run's own --steps until CE_STEPS (see its
+    own comment above, 2026-09-11, ROADMAP 13.4/fz_p_badrec2): the switch it
+    replaces is a wall-clock timeout, and ROADMAP 7.3 requires a
+    machine-independent bound, but that bound need not be `budget` --
+    --check-counterexamples=on's RAC confirmation EXECUTES the program to
+    build the witness, and a --ce-steps as large as the full proof budget
+    was MEASURED to let that execution run long enough to exceed WALL_S on
+    a genuinely non-terminating spec_fun. `budget` (the caller's argument)
+    is accepted but unused here on purpose: the two bounds answer different
+    questions (how hard to search for a proof vs. how much to let RAC
+    replay), and coupling them is exactly what CE_STEPS's comment measured
+    unsafe."""
     return ["--counterexamples=on", "--check-counterexamples=on",
-            f"--ce-steps={budget}"]
+            f"--ce-steps={CE_STEPS}"]
 
 
 def _run(src_text: str, unit: str, budget: int, warnings: bool,
@@ -754,6 +812,67 @@ def _havoc_verdict(src_text: str, unit: str, budget: int) -> tuple[str, str]:
     return Outcome.VERIFIED, ""
 
 
+def _escalate_variant_timeout(src_text: str, unit: str, audit: dict,
+                              outcome: str, why: str) -> tuple[str, str]:
+    """2026-09-11 (ROADMAP 13.4, fz_p_badrec2): a file whose own
+    VC_SUBPROGRAM_VARIANT check already reads a DECISIVE gnatprove verdict
+    (severity medium, status "gave_up" -- the kernel tried and gave up, not
+    merely ran out of its step budget) can still have the WHOLE FILE
+    classified Outcome.TIMEOUT by _classify_unproved's "any limit anywhere"
+    rule, because an UNRELATED check (typically the Post depending on the
+    same non-terminating recursive function) exhausts --steps before
+    resolving. MEASURED on fz_p_badrec2 (spec_fun g(n) = if n<=0 then 0
+    else g(n+1), decreases n -- the self-call INCREASES the measure): its
+    Post VC ("F'Result = G(N)") genuinely needs more than DEFAULT_STEPS's
+    20000 steps to reach its own honest "Unknown"; MEASURED (this machine,
+    gnatprove FSF 16.1.0) to resolve at 50000 steps in ~15s, while at
+    20000 the .spark audit's own proof_attempts field (not a wall-clock
+    artifact) reads "Step limit exceeded" with steps=20001. This is a
+    genuinely resource-starved class distinct from an inherently unproved
+    obligation, and giving the SAME kernel more of its own deterministic
+    budget (never a wall-clock trick, never a relabeling of the verdict
+    gnatprove actually returns) is not "turning a timeout into unproved" --
+    it lets gnatprove itself reach the verdict it already reaches at a
+    higher, still fixed, ESCALATED_STEPS.
+
+    Scoped narrowly, never a blanket steps increase (which would risk
+    changing the 9 of 11 corpus twins whose own honest reading is TIMEOUT,
+    this file's own "WHAT THE REPAIR COST" paragraph above, and any real
+    lowering that legitimately exhausts its budget for an unrelated
+    reason, e.g. count_vowels, AGREEMENT.md's spark column -- MEASURED
+    unaffected by this function, 2026-09-11, spark: its three open
+    conformance cells item): fires ONLY when the ORIGINAL audit already
+    carries a VC_SUBPROGRAM_VARIANT entry at status "gave_up" (kernel-
+    confirmed evidence a recursion's own termination measure has already
+    failed to be established, decisively, at the standard budget) --
+    escalation is not attempted for any other TIMEOUT reading, so a file
+    whose slowness has nothing to do with a broken variant is left exactly
+    as it was. The escalated run never enables --counterexamples
+    (CE_STEPS's own comment: CE's confirmation step accounting reports
+    "limit" regardless of how large --steps is once CE is on, MEASURED up
+    to --steps=1000000), and its result is accepted ONLY if it is itself
+    decisive (not TOOL_ERROR, not another TIMEOUT): an inconclusive
+    escalation changes nothing, the same "only ever strengthens" posture
+    the havoc oracle and rocq's own vacuity smoke already have."""
+    variant_gave_up = any(
+        u["rule"] == "VC_SUBPROGRAM_VARIANT" and u["status"] == "gave_up"
+        for u in audit["unproved"])
+    if not variant_gave_up:
+        return outcome, why
+    p2, audit2, _why2 = _run(src_text, unit, ESCALATED_STEPS, warnings=True,
+                             cntexmp=False)
+    if p2 is None or audit2 is None:
+        return outcome, why           # inconclusive: keep the original
+    outcome2, why2 = _classify_audit(audit2)
+    if outcome2 in (Outcome.TIMEOUT, Outcome.TOOL_ERROR):
+        return outcome, why           # no improvement: keep the original
+    return outcome2, (
+        f"escalated to --steps={ESCALATED_STEPS} (no counterexamples) "
+        "after a VC_SUBPROGRAM_VARIANT gave_up reading was blocked by an "
+        "unrelated check's budget exhaustion at the standard budget: "
+        + why2)
+
+
 def version() -> str:
     if not GNATPROVE:
         raise SystemExit(_GNATPROVE_WHY)
@@ -801,6 +920,13 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
             outcome, why = Outcome.TOOL_ERROR, (
                 f"audit shows every check discharged but gnatprove exited "
                 f"{p.returncode}: " + out[-300:])
+        if outcome == Outcome.TIMEOUT:
+            # 2026-09-11 (ROADMAP 13.4, fz_p_badrec2): see
+            # _escalate_variant_timeout's own docstring. Narrowly scoped,
+            # never fires unless THIS run's own audit already shows a
+            # decisive VC_SUBPROGRAM_VARIANT gave_up.
+            outcome, why = _escalate_variant_timeout(
+                src_text, unit, audit, outcome, why)
     if outcome == Outcome.VERIFIED and cert_named:
         # The name is reserved for refutation evidence (header): a file that
         # carries it in active code never mints VERIFIED, goals or no goals,
@@ -811,15 +937,27 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
             "active code names t_refutation_certificate but no accepted "
             "certificate goal decides the file: a certificate-carrying "
             "file never mints VERIFIED")
+    # 2026-09-11 (ROADMAP 13.4): the havoc oracle (docstring (2) above) is
+    # evidence, never a verdict -- it answers "does this postcondition
+    # constrain the computed result", the question SPEC.md's "The twins"
+    # paragraph and harness.decorative_kind already own under the name
+    # "decorative", not this kernel's Outcome.VACUOUS (reserved, like the
+    # other six kernels' own vacuity smokes, for a `requires` with no
+    # model). So havoc_outcome/havoc_why are recorded in extras below and
+    # NEVER assigned to `outcome`/`why`: gnatprove's own VERIFIED on F
+    # stands even when the havoc run finds F's Post content-free.
     havoc_wall = 0
+    havoc_outcome, havoc_why = "", ""
     if outcome == Outcome.VERIFIED:
         # Only a would-be pass pays for the second kernel run: a refuted twin
         # is already answered, and running the oracle on it would buy nothing.
         h0 = time.monotonic()
-        outcome, why = _havoc_verdict(src_text, unit, budget)
+        havoc_outcome, havoc_why = _havoc_verdict(src_text, unit, budget)
         havoc_wall = int((time.monotonic() - h0) * 1000)
     wall = int((time.monotonic() - t0) * 1000)
     extras = {"banned_tokens": banned[:5], "havoc_ms": havoc_wall}
+    if havoc_outcome:
+        extras["havoc"] = {"outcome": havoc_outcome, "why": havoc_why}
     if audit is not None:
         extras["audit"] = {k: audit[k] for k in
                            ("proved", "post_proved", "justified",

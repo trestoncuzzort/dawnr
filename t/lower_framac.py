@@ -1716,6 +1716,177 @@ witness both sides). The five named for this pass (abs, gcd, sum_upto,
 count_vowels, reverse) at flake 3: abs, gcd, reverse, sum_upto all
 `verified/refuted` (byte-identical, unaffected); count_vowels stays
 `abstain` (the string-library gap named above, unchanged either side).
+
+ROADMAP 13.4, framac-fast, 2026-09-11. `fz_p_at_body`'s undefined witness
+carries no `_site`/`_expr`/`_value` (`harness.real_witness` found the
+undefined `at` inside the BODY, not the `ensures`), so it reached
+`_undef_certificate`, whose ground replay walked only straight-line
+`var`/`assign` statements and returned None the moment it met the body's
+first (and, for `at_body`, only) top-level `if` -- a documented scope
+limit ("if/while/return: not walked"), never exercised because no
+committed task's undefined witness needed it. `_undef_certificate` now
+descends into `if`, resolving each condition against the accumulated
+ground state exactly THE CERTIFICATE's other replay (`_cert_stmts`) does
+for the value/exit kinds: `interp.ev` decides which arm is live, an
+`/*@ assert cond; */` (or its negation) is emitted for the untaken arm,
+and the walk continues into the taken one. A mis-decided branch cannot
+mint a certificate, only fail one (that assert becomes a real WP goal); a
+correctly-decided one lets `at_body`'s own `0 <= s_n && s_n < s_n`
+obligation (always false, `s_n = 0` at the witness) reach the certificate
+exactly as `at_oob`/`at_neg`/`at_zero`/`attotal`'s ensures-level witnesses
+already do. Measured: `fz_p_at_body` x framac moves real TIMEOUT ->
+REFUTED (the probe's own expectation), the four siblings' certificates
+unchanged (byte-identical `t_certificate` bodies, confirmed by re-running
+them through this file), and the six committed tasks named two paragraphs
+above regrade identically (abs/gcd/reverse/sum_upto verified/refuted,
+count_vowels/split_join abstain, all byte-identical), since none of their
+witnesses is `_kind == "undefined"` and the new `if`-branch never fires
+for them. The same pass proposed a verifier-side route for `fz_p_badrec`,
+`fz_p_badrec2`, `fz_p_badvariant`, `fz_p_biglen` and `fz_p_seqlen` (each
+expected `rejected`, each reading TIMEOUT or VACUOUS here): re-ask every
+goal alt-ergo spun on with `-wp-prover qed` alone and read Qed's `Unknown`
+as UNPROVED. Not merged: WP runs Qed before alt-ergo on every goal, so a
+goal alt-ergo spun on is by construction one Qed could not close, and its
+`Unknown` adds nothing; that is a TIMEOUT relabeled. Measured at the merge
+(2026-09-11, alt-ergo 2.4.3 and Z3 4.8.12 through a private why3 config,
+`Typed+nat`, an axiom-free file): `lemma l: 0 < 0;` reads `Stepout`
+under alt-ergo and `Timeout` under Z3, so no prover status this column
+can reach names a false ground fact, the doctrine this file already holds
+for REFUTED. The five stay open; the honest route is the one REFUTED
+already takes, a witness the harness computes (a measure that fails to
+decrease at a concrete input) replayed as a ground certificate Qed proves,
+and that is the next framac item by name.
+
+SEQ VALUE, executable position (2026-09-11, ROADMAP 13.4, the framac-seq
+item). THE ENCODING above (candidate B, a caller-provided output buffer)
+already gives a seq VARIABLE a C representation; the thirteen abstains
+this pass measured (fz_p_lit_empty, fz_p_concat_len, fz_p_lit_index,
+fz_p_pair_seq, fz_p_nest_cell, fz_p_nest_lit, fz_p_nest_eq,
+fz_p_nest_empty, fz_p_str_splitempty, fz_p_str_countempty,
+fz_p_str_findempty, fz_p_str_tab, fz_p_str_lowernonletter) were every
+place a seq-VALUED EXPRESSION (a literal, a concat, a nested cell, a
+row, a string-library result), not a bare seq variable, reached
+`seq_var`'s own "non-variable" refusal -- in FOUR distinct rendering
+sites this pass had to patch together, not one: `cexpr` (the executable
+C VALUE), `code_ats`/`at_asserts` (the executable definedness assert in
+front of the statement), `term`/`_seq_len_render`/`_seq_at_render` (the
+`ensures`/ACSL TERM rendering of the SAME expression), and `defs` (the
+`ensures`'s own DEFINEDNESS obligation) -- a seq expression appearing in
+an `ensures` reaches all four, and missing any one still abstains the
+whole task. The design decision, taken in this pass, is: NEVER
+materialize a literal/concat/slice/nested-cell into a fresh buffer
+first; render each as a closed-form C expression instead, reusing
+memory THE ENCODING already owns:
+  - a `seq` literal `[e0, ..., en-1]` indexed by `at`: a C99 compound
+    literal, `((int[]){e0, ..., en-1})[k]` -- stack-scoped, no malloc,
+    capacity exactly the literal's own element count (`cexpr`'s `at`
+    case; the matching bounds-check tag is `code_ats`'s new `"atn"`).
+  - `len` of a literal/slice/concat expression that is never assigned
+    to a buffer (`fz_p_concat_len`'s `len(s + u)`): a closed-form sum/
+    difference of the operands' own `_n` fields, `_seq_val_len_c`,
+    never touching memory.
+  - `[] + e` assigned to a seq-typed target: SPEC.md's own identity
+    (`len([]) == 0`), folded to a plain `target := e` copy in
+    `seq_assign_lines`, landing regardless of whether the target is
+    EXACT- or CAPACITY-tracked (the pre-existing CAPACITY-only `+`
+    restriction is for the APPEND idiom specifically, an orthogonal
+    case this identity bypasses rather than loosens).
+  - a nested seq's CELL, `at(at(m, i), j)` (`m[i][j]`): THE ENCODING's
+    own flat data+offsets pair already has the value, `m_data[m_off[i]
+    + j]`, no row ever materialized -- landed in all four rendering
+    sites (`cexpr`, `code_ats`'s new `"atrow"` bounds tag, `_seq_at_
+    render`, `defs`).
+  - `len([e0,...])` in ACSL TERM position (`fz_p_lit_empty`'s own
+    `ensures len([]) == 0`): `_seq_len_render` gained the same literal
+    case `cexpr`'s `len` already has.
+
+Landed, measured real=verified matching `_expect` (framac column,
+`conformance.py`'s own manifest, before 46/66 PASS, after 49/66,
+`git diff` isolates each site): fz_p_lit_empty, fz_p_lit_index,
+fz_p_concat_len -- all three of "literal" and "concat", the pass's own
+first two items in the stated order.
+
+Also landed, NOT a new capability but a SAFETY fix surfaced while
+reaching for "nested": `cexpr`'s `==`/`!=` on two seq- or nested-seq-
+typed operands used to fall through to `ARITH`/`CMP`'s generic
+"render both sides, glue with the C operator" path, which for a BARE
+seq variable renders `s == t` as raw C POINTER comparison -- never
+extensional, silently WRONG, the exact hazard this file's own honesty
+rules exist to prevent. No committed task or prior probe reached it (a
+seq/nested-seq `==` previously only ever appeared in `ensures`, which
+`pred()`'s own matching branch already renders correctly); reached for
+the first time by `fz_p_nest_eq`'s body, `r := (m == n)`. Fixed by an
+explicit `NotImplementedError` (an honest abstain, not a guessed loop:
+extensional equality needs a `\forall`-shaped walk over both buffers,
+which is a STATEMENT, not a value `cexpr` can return inline) rather
+than by teaching `cexpr` a loop-based rendering this pass did not
+measure.
+
+Stopped here, each named by the kernel's own exact abstain/WP message,
+none relabeled: "nested" beyond the cell case, "pair", and "string
+members" (this pass's own remaining order) all sit behind gaps this
+pass's seq-VALUE-representation fix does not reach:
+  - fz_p_nest_cell, fz_p_nest_lit: reach a DIFFERENT, pre-existing,
+    orthogonal gap once the seq-value abstain itself is cleared --
+    `code_ats`'s own "conditionally evaluated `at` in executable
+    position: definedness not dischargeable by a plain assert" (an
+    `at`/`len(at(...))` sitting in a LATER conjunct of `and`/`or`,
+    conservatively refused because a later conjunct's safety can
+    depend on an earlier one, C's own short-circuit semantics --
+    unrelated to how a seq VALUE is represented, not touched by this
+    pass).
+  - fz_p_nest_eq: `pred()`'s seq-equality branch (`ensures ... at(m, k)
+    == at(n, k)`, ROW equality inside a `\forall`) still calls
+    `seq_var` on an `at(...)` node directly; even were that rendered
+    (a `_seq_at_render`-shaped row-data read, not attempted this pass),
+    the BODY's own `r := (m == n)` would still hit this pass's own new
+    safety refusal above -- both sides of the cell must land, and
+    neither does.
+  - fz_p_nest_empty, fz_p_str_splitempty: "nested seq (seq<seq>)
+    RETURN: building a fresh row set has no encoding in this lowering"
+    -- a nested seq RETURN needs a SECOND, row-shaped CAPACITY bound
+    (an offsets array sized against its own data-dependent count, on
+    top of the data array's own), which THE ENCODING's CAPACITY
+    machinery (`_ret_capacity`) was built for exactly one dimension;
+    extending it to two is a fresh design, not a rendering-site fix.
+  - fz_p_str_tab: "nested seq (seq<seq>) local variables are not
+    supported by this lowering; only a seq<seq> PARAMETER ... is
+    supported" -- a nested-typed LOCAL has nowhere to live in THE
+    ENCODING at all (no param slot, no return-buffer machinery either);
+    same missing dimension as the RETURN gap above, from the other
+    side.
+  - fz_p_str_countempty, fz_p_str_findempty: "string library member
+    `count`/`find` reaching executable position: a general non-
+    overlapping substring count has no recursive ACSL definition in
+    this lowering yet" -- pre-existing, named in THE WORK section
+    above; `count`/`find` need a NEW ACSL logic function (a recursive
+    substring search/count), not a seq-value rendering fix.
+  - fz_p_str_lowernonletter: "seq return 'r''s length is not
+    statically determinable from the task's params ... and no
+    `ensures` ... gives a CAPACITY bound either" -- `lower(...)` is not
+    in `_expr_seq_len`'s recognized op set (it preserves its argument's
+    length, an easy addition), but `lower`/`upper` also have no
+    EXECUTABLE rendering at all in `seq_assign_lines` (no per-element
+    ACSL letter-range predicate + C loop exists for them yet); the
+    CAPACITY message is the FIRST wall reached, not the only one.
+  - fz_p_pair_seq: "a pair with a seq component is refused by this
+    lowering: a struct field returned BY VALUE has no clean ACSL value
+    semantics" -- named and scoped out deliberately at `_pair_field_c`
+    (this file's own pair-value-machinery section), a struct-encoding
+    redesign (a seq component would need its own pointer+length pair
+    INSIDE the struct, changing how every pair-typed param/return is
+    passed), well outside a rendering-site fix.
+
+Cost of what landed: the compound-literal `at` rendering is bounded by
+construction (a literal's own syntactic element count, no malloc, no
+runtime size); the nested-cell rendering adds no new state, only reads
+THE ENCODING's own existing `m_data`/`m_off` arrays through a second
+level of indexing; the `[] + e` identity and the `len`-of-concat/slice
+closed form add no new C code shape at all, only new algebra over
+existing `_n` fields. None of the four rendering sites this pass
+touched (`cexpr`, `code_ats`/`at_asserts`, `_seq_len_render`/
+`_seq_at_render`, `defs`) gained a new representation; every fix is a
+new CASE recognized by an EXISTING one.
 """
 from __future__ import annotations
 
@@ -2087,6 +2258,43 @@ def seq_var(e: dict, env: dict) -> str:
     raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
 
+def _seq_val_len_c(e: dict, env: dict, funs: dict, task_name: str,
+                   _div_style: str = "bf") -> str:
+    """SEQ VALUE, executable position, item 2 (concat)/item 3 (slice),
+    2026-09-11 (framac-seq): the C length expression for a seq-VALUED
+    expression `e` that is never materialized into a buffer (only
+    `len(e)` is wanted, `fz_p_concat_len`'s own shape, `r := len(s + u)`
+    with no seq-typed local or return in sight), a closed form exactly
+    `_expr_seq_len` already computes at the t-Expr level for the
+    `requires`-time CAPACITY bound -- this is that same arithmetic
+    rendered as a C int expression instead, for a bare variable (its
+    `_n` field), a `seq` literal (its own element count), a `slice`
+    (`hi - lo`) or a `+` (the sum of both operands', recursively). Never
+    reached for `update`/`fill` (SPEC.md's own grammar restricts those to
+    the whole right-hand side of a seq-typed assignment, `seq_assign_lines`
+    above, never nested inside a `len(...)`)."""
+    if "var" in e:
+        v = seq_var(e, env)
+        return f"{v}_n"
+    op = e.get("op")
+    if op == "seq":
+        return str(len(e.get("args", ())))
+    if op == "slice":
+        _, lo, hi = e["args"]
+        lo_c = cexpr(lo, env, funs, task_name, _div_style)
+        hi_c = cexpr(hi, env, funs, task_name, _div_style)
+        return f"(({hi_c}) - ({lo_c}))"
+    if op == "+":
+        left, right = e["args"]
+        left_c = _seq_val_len_c(left, env, funs, task_name, _div_style)
+        right_c = _seq_val_len_c(right, env, funs, task_name, _div_style)
+        return f"(({left_c}) + ({right_c}))"
+    raise NotImplementedError(
+        f"len() of seq expression {e!r} in executable position: only a "
+        f"seq variable, `seq` literal, `slice`, or `+` concatenation has "
+        f"a closed-form length by this lowering")
+
+
 def _slice_alias_base(init: dict, env: dict):
     """SPEC.md "The string library (v1)" (2026-09-11): word_count's own
     committed task declares a seq-typed local from a slice, `t2 :=
@@ -2131,6 +2339,13 @@ def _seq_len_render(e: dict, ctx) -> str:
     rendering since ACSL terms are logic, not memory, unlike a slice
     materialized into an OUTPUT buffer (`seq_assign_lines`'s `slice`
     case), which is real pointer arithmetic over real memory."""
+    if e.get("op") == "seq":
+        # SEQ VALUE, executable position, item 1 (literal), 2026-09-11
+        # (framac-seq): `len([e0, ..., en-1])` in ACSL TERM position
+        # (`fz_p_lit_empty`'s own `ensures len([]) == 0`) is its own
+        # element count, formula substitution exactly like `slice`'s case
+        # below, never a materialized buffer.
+        return str(len(e.get("args", ())))
     if e.get("op") == "slice":
         _, lo, hi = e["args"]
         return f"(({term(hi, ctx)}) - ({term(lo, ctx)}))"
@@ -2196,6 +2411,22 @@ def _seq_at_render(e: dict, k_render: str, ctx) -> str:
     if e.get("op") == "slice":
         s, lo, _ = e["args"]
         return f"{seq_var(s, ctx.env)}[({term(lo, ctx)}) + ({k_render})]"
+    if (e.get("op") == "at"
+            and is_nested_seq_type(typ(e["args"][0], ctx.env, ctx.funs))):
+        # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
+        # (framac-seq): `at(at(m, i), j)` -- `m[i][j]` -- IN ACSL TERM
+        # POSITION (`fz_p_nest_cell`'s own `ensures ... r == at(at(m, i),
+        # j)`), the same formula `cexpr`'s matching case (added
+        # alongside this one) renders for the executable C statement:
+        # cell `j` of row `i` is `m_data[m_off[i] + j]` directly, no row
+        # buffer ever materialized. Guarded to exactly this shape (the
+        # OUTER `at`'s base is ANOTHER `at` whose own base is nested);
+        # `e` itself being nested (a bare row, no further indexing) stays
+        # the NAMED REFUSAL below, unchanged.
+        m, i_e = e["args"]
+        mv = seq_var(m, ctx.env)
+        i_c = term(i_e, ctx)
+        return f"{mv}_data[({mv}_off[({i_c})]) + ({k_render})]"
     if is_nested_seq_type(typ(e, ctx.env, ctx.funs)):
         raise NotImplementedError(
             "nested seq (seq<seq>): a ROW reaching `at`'s own base, or "
@@ -2448,6 +2679,19 @@ def defs(e: dict, ctx: Ctx):
             # case) AND the index is within the slice's own length, `b -
             # a`, not the base's.
             n = _seq_len_render(base, ctx)
+            return _conj([defs(base, ctx), defs(args[1], ctx),
+                          f"(0 <= ({i}) && ({i}) < {n})"])
+        if (base.get("op") == "at"
+                and is_nested_seq_type(typ(base["args"][0], ctx.env, ctx.funs))):
+            # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
+            # (framac-seq): `at(at(m, i), j)`'s own DEFINEDNESS obligation
+            # (`fz_p_nest_cell`'s `ensures`) is bounded by ROW i's length,
+            # the same `m_off[i + 1] - m_off[i]` formula `_seq_at_render`'s
+            # matching case (and `cexpr`'s) already use, not
+            # `seq_var(base, ...)`, which raises on a non-variable base.
+            mv = seq_var(base["args"][0], ctx.env)
+            ib = term(base["args"][1], ctx)
+            n = f"({mv}_off[({ib}) + 1] - {mv}_off[({ib})])"
             return _conj([defs(base, ctx), defs(args[1], ctx),
                           f"(0 <= ({i}) && ({i}) < {n})"])
         n = ctx.seq_len.get(seq_var(base, ctx.env),
@@ -2866,6 +3110,13 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
             m = seq_var(base, env)
             i = cexpr(idx, env, funs, task_name, _div_style)
             return f"({m}_off[({i}) + 1] - {m}_off[({i})])"
+        if "var" not in a0:
+            # SEQ VALUE, executable position, item 2 (concat)/item 3
+            # (slice), 2026-09-11 (framac-seq): `len` of an unmaterialized
+            # seq expression (a literal, slice, or `+`, `fz_p_concat_len`'s
+            # own shape) never needs the buffer itself, only a closed-form
+            # count -- see `_seq_val_len_c`.
+            return _seq_val_len_c(a0, env, funs, task_name, _div_style)
         return f"{seq_var(a0, env)}_n"
     if op == "at":
         # NAMED REFUSAL, added 2026-09-10: a nested seq's ROW reaching
@@ -2883,6 +3134,42 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
                 "directly (not wrapped in `len`): a row VALUE has no C "
                 "representation in the flat data+offsets encoding, only "
                 "its LENGTH does, via `len(m[i])`")
+        if (base.get("op") == "at"
+                and is_nested_seq_type(typ(base["args"][0], env, funs))):
+            # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
+            # (framac-seq): `at(at(m, i), j)` -- `m[i][j]` -- is a CELL of
+            # a nested seq's row, `fz_p_nest_cell`'s own shape (the row
+            # itself, `at(m, i)` alone, has no C value and stays refused
+            # above; only a further `at` consuming that row as ANOTHER
+            # `at`'s base is handled here). The flat data+offsets encoding
+            # (THE ENCODING note below `assigned_names`) puts row `i`'s
+            # elements at `m_data[m_off[i] .. m_off[i+1] - 1]`, so cell
+            # `j` of that row is `m_data[m_off[i] + j]` directly, no row
+            # buffer ever materialized.
+            m, i_e = base["args"]
+            mv = seq_var(m, env)
+            i_c = cexpr(i_e, env, funs, task_name, _div_style)
+            j_c = cexpr(args[1], env, funs, task_name, _div_style)
+            return f"{mv}_data[({mv}_off[{i_c}]) + ({j_c})]"
+        if base.get("op") == "seq":
+            # SEQ VALUE, executable position, item 1 (literal), 2026-09-11
+            # (framac-seq): `at([e0, ..., en-1], k)` -- `fz_p_lit_index`'s
+            # own shape, `[3, 5, 7][1]` -- has no seq-typed C variable to
+            # index (the literal is never assigned anywhere first), so
+            # this renders a C99 compound literal in place, `((int[]){e0,
+            # ..., en-1})[k]`: a bounded, stack-scoped array with exactly
+            # the literal's own element count as its capacity, no malloc,
+            # indexed by the ordinary `at`-bounds assert `at_asserts`
+            # already emits in front of this statement from `code_ats`'s
+            # own `"at"` tag (unchanged: that tag's `seq_var(args[0],
+            # env)` call is why item 1 could not land without ALSO
+            # teaching `seq_var` this shape -- see `code_ats`'s own `at`
+            # case, patched alongside this one).
+            elems = ", ".join(
+                cexpr(a, env, funs, task_name, _div_style)
+                for a in base.get("args", ()))
+            k_c = cexpr(args[1], env, funs, task_name, _div_style)
+            return f"((int[]){{{elems}}})[{k_c}]"
         return (f"{seq_var(base, env)}"
                 f"[{cexpr(args[1], env, funs, task_name, _div_style)}]")
     if op == "pair":
@@ -2950,6 +3237,29 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         return f"({quo} - {neg} * {sign_y})"
     if op in ("==", "!="):
         t0 = typ(args[0], env, funs)
+        if t0 == "seq" or is_nested_seq_type(t0):
+            # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
+            # (framac-seq): NAMED REFUSAL, not a silent wrong answer.
+            # `==`/`!=` on two seqs is EXTENSIONAL (`pred()`'s own
+            # matching branch, used for `ensures`/ACSL predicate
+            # position), which needs a `\forall`-shaped comparison this
+            # function cannot render as a single C VALUE expression (no
+            # loop belongs inside `cexpr`'s own return, and a bare `s ==
+            # t` on two `int *` operands would be C POINTER identity, a
+            # completely different and WRONG relation this lowering must
+            # never emit silently). Measured reaching here for the first
+            # time by `fz_p_nest_eq` (SPEC.md "Nested sequences"), whose
+            # body computes `r := (m == n)` directly rather than through
+            # an `if`/`ensures` case split; no committed task assigns a
+            # bare seq `==`/`!=` to a bool-typed name, so this raises
+            # rather than guess a loop-based rendering this pass did not
+            # measure.
+            raise NotImplementedError(
+                "seq extensional equality (==/!=) reaching executable "
+                "position directly (assigned to a bool-typed name, not "
+                "used only in an `ensures`/ACSL predicate): this "
+                "lowering has no C VALUE rendering for it, only a loop "
+                "would compute it, and this pass does not build one")
         if isinstance(t0, dict) and "pair" in t0:
             # PAIRS, extended 2026-09-10: `p == q` in EXECUTABLE position
             # (SPEC.md's polymorphic `==`, `fz_v1pairs_053`'s own
@@ -3081,7 +3391,27 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
                 "conditionally evaluated `at` in executable position: "
                 "definedness not dischargeable by a plain assert")
         out += code_ats(args[1], env, uncond)
-        out.append(("at", seq_var(args[0], env), args[1]))
+        base = args[0]
+        if "var" in base:
+            out.append(("at", seq_var(base, env), args[1]))
+        elif base.get("op") == "seq":
+            # SEQ VALUE, executable position, item 1 (literal),
+            # 2026-09-11 (framac-seq): a literal base's own bound is its
+            # element count, a plain int, never a `{name}_n` identifier
+            # (see `cexpr`'s matching `at`/`op == "seq"` case, which this
+            # tag's own bounds-check assert must agree with).
+            out.append(("atn", len(base.get("args", ())), args[1]))
+        elif (base.get("op") == "at"
+              and is_nested_seq_type(typ(base["args"][0], env, None))):
+            # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
+            # (framac-seq): `at(at(m, i), j)`'s bounds check is against
+            # ROW i's length, `m_off[i + 1] - m_off[i]` (THE ENCODING),
+            # not a `{name}_n` identifier either (see `cexpr`'s matching
+            # case).
+            m, i_e = base["args"]
+            out.append(("atrow", seq_var(m, env), i_e, args[1]))
+        else:
+            out.append(("at", seq_var(base, env), args[1]))
         return out
     if op in DIVMOD:
         if not uncond:
@@ -3123,6 +3453,23 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
             s, ix = rest
             out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
                        f"&& ({term(ix, ctx)}) < {s}_n; */")
+        elif tag == "atn":
+            # SEQ VALUE, executable position, item 1 (literal), 2026-09-11
+            # (framac-seq): a literal base's bound is its own element
+            # count `n`, a plain int (`code_ats`'s matching `"atn"` case).
+            n, ix = rest
+            out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
+                       f"&& ({term(ix, ctx)}) < {n}; */")
+        elif tag == "atrow":
+            # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
+            # (framac-seq): a nested cell's bound is its own row's length,
+            # `m_off[i + 1] - m_off[i]` (`code_ats`'s matching `"atrow"`
+            # case).
+            m, i_e, ix = rest
+            i_c = term(i_e, ctx)
+            out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
+                       f"&& ({term(ix, ctx)}) < "
+                       f"({m}_off[({i_c}) + 1] - {m}_off[({i_c})]); */")
         elif tag == "nz":
             (yx,) = rest
             out.append(f"{indent}/*@ assert ({term(yx, ctx)}) != 0; */")
@@ -3427,6 +3774,23 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
         # own shape) or, more generally, `r := r + t` for a bare seq `t`:
         # CAPACITY mode only, self-referential on the left. See this
         # function's own docstring for what is and is not measured here.
+        #
+        # SEQ VALUE, executable position, item 1 (literal), 2026-09-11
+        # (framac-seq): `[] + e` is `e` by SPEC.md's own concatenation
+        # identity (len([]) == 0, so every index of the result shifts by
+        # nothing) -- a FULL REPLACEMENT of `target`, not an append, so it
+        # is handled BEFORE the CAPACITY-only restriction below rather
+        # than falling into it: whether `target` is EXACT- or CAPACITY-
+        # tracked, `[] + e` writes exactly `e`'s own elements, the same
+        # copy this function's own `"var" in e` branch (above) already
+        # emits for a bare `target := e`. Only the LEFT operand being the
+        # empty literal is recognized (`e + []`, the identity's mirror, is
+        # not measured by any committed probe or task, so it is left
+        # alone rather than guessed at).
+        left0 = args[0]
+        if left0.get("op") == "seq" and not left0.get("args"):
+            return seq_assign_lines(target, args[1], ctx, indent, funs,
+                                    task_name)
         if cap is None:
             raise NotImplementedError(
                 "seq concatenation assigned to an EXACT-length return "
@@ -4629,7 +4993,18 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
     recursion), a name the witness does not cover, or a body that replays
     to the end without ever finding a false obligation (the witness and
     this walk disagreeing means the witness is not this walk's to
-    certify)."""
+    certify).
+
+    `if` DESCENT, added 2026-09-11 (ROADMAP 13.4, framac-fast): the walk
+    used to stop at the body's first `if` ("not walked", the docstring's
+    own words for the gap, never exercised because no committed task's
+    undefined witness needed it). `fz_p_at_body`'s does: an unguarded `at`
+    sits inside a `then`-branch one level deep. The walk now follows the
+    branch `interp.ev` actually takes on `w`'s own params, exactly THE
+    CERTIFICATE's no-branches discipline (`_cert_stmts`'s own `if` case,
+    same ground condition, same `assert cond;`/`assert (!cond);` emitted
+    in place of the untaken arm): a mis-decided branch cannot mint anything
+    it only fails a false assert under WP, never certifies past it."""
     if w.get("_kind") != "undefined":
         return None
     names = {k: v for k, v in w.items() if not k.startswith("_")}
@@ -4639,7 +5014,49 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
     env_py = {n: (tuple(v) if isinstance(v, list) else v)
               for n, v in names.items()}
     ctx = Ctx(dict(env), funs, ret=None, label="Here")
-    decls = []
+    code = []
+
+    def walk(body: list, ctx: Ctx):
+        """(found_undefined_obligation_or_None, ctx). Mutates `env_py` and
+        `code` (param/local decls and ground `if`-branch asserts, in
+        emission order) as it goes; raises on anything not walked (`while`,
+        `return`, a seq-typed intermediate local), caught by the caller
+        exactly as the old flat loop's `return None` sites were."""
+        for s in body:
+            if "var" in s:
+                nm, e, ty = s["var"]["name"], s["var"]["init"], s["var"]["type"]
+            elif "assign" in s:
+                nm, e = s["assign"]
+                ty = ctx.env.get(nm)
+            elif "if" in s:
+                c = s["if"]
+                ob = defs_t(c["cond"])
+                if ob is not None and not interp.ev(ob, env_py, ifuns, st):
+                    return ob, ctx
+                taken = interp.ev(c["cond"], env_py, ifuns, st)
+                g = pred(c["cond"], ctx)
+                code.append(f"  /*@ assert {g if taken else f'(!{g})'}; */")
+                found, ctx = walk(c["then"] if taken else c["else"], ctx)
+                if found is not None:
+                    return found, ctx
+                continue
+            else:
+                raise ValueError(f"undef-certificate: statement {s!r} "
+                                 "not walked (while/return)")
+            ob = defs_t(e)
+            if ob is not None and not interp.ev(ob, env_py, ifuns, st):
+                return ob, ctx
+            val = interp.ev(e, env_py, ifuns, st)
+            if ty == "seq":
+                raise ValueError("seq-typed intermediate local: scope "
+                                 "limit, materializing its snapshot needs "
+                                 "the full replay this shortcut avoids")
+            if "var" in s:
+                ctx = ctx.bind(nm, ty)
+            env_py[nm] = val
+            code.append(f"  int {nm} = {_int_lit(int(val))};")
+        return None, ctx
+
     try:
         for p in task["params"]:
             if p["name"] not in names:
@@ -4651,34 +5068,15 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                     return None
                 vals = [int(x) for x in v]
                 init = ", ".join(_int_lit(x) for x in vals) or "0"
-                decls.append(f"  int {arr}[{max(len(vals), 1)}] = "
-                             f"{{{init}}};")
-                decls.append(f"  int *{p['name']} = {arr};")
-                decls.append(f"  int {p['name']}_n = {len(vals)};")
+                code.append(f"  int {arr}[{max(len(vals), 1)}] = "
+                            f"{{{init}}};")
+                code.append(f"  int *{p['name']} = {arr};")
+                code.append(f"  int {p['name']}_n = {len(vals)};")
             else:
-                decls.append(f"  int {p['name']} = {_int_lit(int(v))};")
+                code.append(f"  int {p['name']} = {_int_lit(int(v))};")
         ifuns = interp.funs_of(task, twin_body)
         st = interp.St()
-        found = None
-        for s in twin_body:
-            if "var" in s:
-                nm, e, ty = s["var"]["name"], s["var"]["init"], s["var"]["type"]
-            elif "assign" in s:
-                nm, e = s["assign"]
-                ty = ctx.env.get(nm)
-            else:
-                return None                 # if/while/return: not walked
-            ob = defs_t(e)
-            if ob is not None and not interp.ev(ob, env_py, ifuns, st):
-                found = ob
-                break
-            val = interp.ev(e, env_py, ifuns, st)
-            if ty == "seq":
-                return None                 # scope limit, see docstring
-            if "var" in s:
-                ctx = ctx.bind(nm, ty)
-            env_py[nm] = val
-            decls.append(f"  int {nm} = {_int_lit(int(val))};")
+        found, ctx = walk(twin_body, ctx)
         if found is None:
             return None
     except (interp.Undef, interp.Budget, RecursionError, KeyError,
@@ -4686,7 +5084,7 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
         return None
     goal = pred({"op": "not", "args": [found]}, ctx)
     lines = ["", "/*@ assigns \\nothing; */",
-             f"void {CERT_FN}(void) {{", *decls,
+             f"void {CERT_FN}(void) {{", *code,
              f"  /*@ assert {CERT_GOAL}: {goal}; */",
              "  return;", "}", ""]
     return "\n".join(lines)

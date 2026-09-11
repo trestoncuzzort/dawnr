@@ -73,6 +73,31 @@ depends on which module defines it.
 Exit code: 1 if any probe or metamorphic cell reads FAIL, 0 otherwise.
 Writes t/CONFORMANCE.md (or --out) in AGREEMENT.md's row format, one
 "expected" column and a PASS/FAIL/N-A suffix per kernel cell.
+
+fz_p_divreq0, ROADMAP 13.4 (framac-fast), 2026-09-11: `run_items` used to
+lower and grade the REAL program normally whenever `harness.twin_cached`
+came back with no twin, on the theory that the probe's expectation is
+about the real alone (see the `twin_body is None` branch's own comment,
+still true for every OTHER no-twin reason). One reason is not that: op
+`"vacuous-requires-undefined"` means harness's own reference interpreter
+found `requires` UNDEFINED (raised, not merely evaluated False) at every
+type-correct point it tried, which SPEC.md's "Undefined requires
+(normative)" calls the real program itself DEFECTIVE, not merely
+unmeasurable -- the same defect harness already refuses to build a twin
+for. Lowering the real anyway asked seven kernels to reason about a
+precondition with no defined meaning and got seven different answers:
+framac's WP read the emitted definedness-companion `requires` as false and
+called the file VACUOUS (the one soundness-direction gap the day's first
+measurement found), the other six read UNPROVED, having proved nothing
+under an undefined precondition and having no voice of their own to name
+why. `run_items` now applies harness's own refusal to the real too, before
+any lowering: every column reads `lower-error` naming
+`harness.REFUSALS["vacuous-requires-undefined"]`, never a kernel-specific
+guess at the same fact. `REJECTED_OK` (`refuted`, `unproved`, `malformed`,
+`lower-error`) is unchanged; `lower-error` was already a member.
+`t/tlib.py` was not touched: its own no-twin path (`t/COMMAND.md`, `cli.py
+verify`) is a different consumer than this suite's driver and this fix is
+scoped to CONFORMANCE.md's own manifest, per the ROADMAP item's file list.
 """
 from __future__ import annotations
 
@@ -301,7 +326,30 @@ def run_items(items: list[dict], present, outdir: Path, jobs, flake_n: int):
             # No twin, not no real: the probe's expectation is about the
             # REAL program (harness.REFUSALS[op] is why no twin was found,
             # never a reason to skip lowering the real body itself -- see
-            # the module docstring's fz_p_at_oob-shaped example).
+            # the module docstring's fz_p_at_oob-shaped example). One
+            # refusal reason is the exception, ROADMAP 13.4 (framac-fast,
+            # 2026-09-11): "vacuous-requires-undefined" means harness's own
+            # reference interpreter found `requires` UNDEFINED (raised, not
+            # merely False) at every type-correct point it tried -- SPEC.md's
+            # "Undefined requires (normative)" calls the real program itself
+            # DEFECTIVE, the same defect class harness already refuses the
+            # twin for. Lowering the real anyway asks each kernel to reason
+            # about a precondition with no defined meaning, and columns
+            # answer that inconsistently (framac's WP reads the emitted
+            # definedness-companion `requires` false and calls the file
+            # VACUOUS -- the one soundness-direction gap ROADMAP 13.4 found
+            # 2026-09-11 before the harness carried this refusal at all --
+            # while the other six read UNPROVED, having proved nothing under
+            # an undefined precondition and having no voice to name why). So
+            # this refusal is applied to the real here too, before any
+            # lowering: every column reads the SAME `lower-error`, naming
+            # the harness's own refusal reason, never a kernel-specific
+            # guess at it.
+            if op == "vacuous-requires-undefined":
+                label = f"lower-refused: {harness.REFUSALS.get(op, op)}"
+                for bname, _, _ in present:
+                    rows[name][bname] = ("lower-error", label, True)
+                continue
             twin_label = f"no-twin: {harness.REFUSALS.get(op, op)}"
             for bname, lower, suffix in present:
                 try:
