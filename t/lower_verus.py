@@ -3816,10 +3816,20 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
             parts.append({"op": "not", "args": [
                 _conj([subst(en, m2) for en in task["ensures"]])]})
         elif kind == "undefined":
-            ob = _undef_obligation(task, twin_body, m, names, tmap)
-            if ob is None:
-                return None
-            parts.append(ob)
+            if w.get("_site") == "ensures" and isinstance(w.get("_expr"), dict):
+                # harness.real_witness's ensures-level shape (2026-09-12): the
+                # postcondition's own definedness obligation fails at the
+                # witness, so the certificate is its negation, ground; the
+                # body is not replayed (nothing in it is undefined).
+                ob = defined(w["_expr"])
+                if ob == TRUE:
+                    return None
+                parts.append({"op": "not", "args": [subst(ob, m)]})
+            else:
+                ob = _undef_obligation(task, twin_body, m, names, tmap)
+                if ob is None:
+                    return None
+                parts.append(ob)
         else:
             return None          # preservation: see above
         return _unroll(_conj(parts), [_UNROLL_CAP])

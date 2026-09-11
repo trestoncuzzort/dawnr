@@ -5006,6 +5006,17 @@ def certificate(task: dict, twin_body: list, w: dict,
     if CERT_FN in used or CERT_GOAL in used:
         return None                    # a task name would collide or forge
     kind = w.get("_kind")
+    if kind == "undefined" and w.get("_site") == "ensures":
+        # 2026-09-12: an ensures undefined at the witness. The body has a
+        # value there (the witness carries it as _value), and this lowering
+        # refuted these probes before the ensures-level shape existed through
+        # the VALUE certificate plus its own defs() companions; replaying the
+        # body as an undefined witness built nothing and timed out (the pass
+        # 2 gate), so the value certificate is the door.
+        if "_value" not in w:
+            return None
+        w2 = {**w, "_kind": "value", "_real": w["_value"], "_twin": w["_value"], "_ens": True}
+        return _value_certificate(task, twin_body, w2, env, funs, used)
     if kind == "value":
         return _value_certificate(task, twin_body, w, env, funs, used)
     if kind == "undefined":

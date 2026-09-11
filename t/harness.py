@@ -597,7 +597,8 @@ def real_witness(task: dict) -> dict | None:
         except interp.Undef as u:
             w = interp._shown(env0)
             w.update(_kind="undefined", _real="no value",
-                    _site="ensures", _expr=u.expr)
+                    _site="ensures", _expr=u.expr,
+                    _value=interp._j(got))   # the body's own result, defined (2026-09-12)
             return w
         except (interp.Budget, RecursionError):
             continue
