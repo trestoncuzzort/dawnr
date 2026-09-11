@@ -3519,6 +3519,109 @@ def _to_py(v, ty=None):
     return v
 
 
+def _ensures_undef_obligation(task: dict, m: dict, names: dict,
+                               tmap: dict | None = None,
+                               ret_val=None) -> dict | None:
+    """2026-09-12 (ROADMAP item "verus: the four ensures-level probes"):
+    the ENSURES-LEVEL sibling of `_undef_obligation` above. The shape this
+    guards against is `fz_p_at_oob`/`fz_p_at_neg`/`fz_p_at_zero`/
+    `fz_p_attotal` (t/fuzz_lower.py): `s[len(s)]` (or `s[-1]`) appears only
+    in `ensures`, never in the body, so the REAL body always returns a
+    value and the twin obligation `_undef_obligation` walks (a twin BODY
+    statement with no value) never fires -- the violation is in the
+    postcondition's own definedness, not the body's.
+
+    The intended input is harness.real_witness's own "_kind": "undefined",
+    "_site": "ensures" shape (this module's docstring section above,
+    2026-09-12): the witness IS a real-body undefined-ness, but sited in
+    ensures rather than the body, with "_expr" naming the offending
+    subexpression directly. That harness.real_witness change is not in
+    this worktree (confirmed 2026-09-12: `harness.real_witness` here has
+    no "_site"/"_expr" keys at all, grep found none), so `_cert_formula`'s
+    "value" branch is where this actually gets exercised today: for these
+    four probes, `Reference._breaks_ensures` (interp.py) catches the
+    ensures-eval `Undef` and reports it as "breaks ensures" (its own
+    docstring: "an ensures with no value is not satisfied"), so
+    `real_witness` hands back a "_kind": "value", "_ens": True witness
+    whose real and twin values are equal (there is no twin here at all --
+    "_twin" is just `interp._j(got)`, the SAME concrete value `_real` is).
+    Substituting that witness straight into "not ensures[m2]" as the
+    "value" branch normally does re-embeds `s[len(s)]` unresolved into the
+    certificate, which is not a certificate: Verus's `compute_only` cannot
+    reduce an out-of-bounds `Seq::index`, so the real column read
+    "unproved" (measured 2026-09-12, see this file's dated note below).
+    This function is the fix, called FIRST from the "value" branch: it
+    tries evaluating the ensures conjunction at the witness's own values
+    with interp.ev (the same interpreter every other obligation in this
+    file already trusts), and only when THAT raises interp.Undef -- the
+    ensures itself has no value here, not merely a false one -- does it
+    return a certificate at all, so a genuine value-differs-from-spec
+    witness (every other "value" witness this file has ever measured)
+    still falls through to the ordinary "not ensures[m2]" certificate
+    unchanged.
+
+    The certificate itself is `not(defined(ensures conjunction))`,
+    substituted at `m` exactly as `_undef_obligation`'s twin-body
+    obligation is substituted: `defined()` (this file's own function,
+    used for every other definedness obligation this lowering emits) on
+    an `at`/`slice`/`div`/`mod` node produces exactly the guarded bound
+    the task instructions describe (`0 <= i < len(s)` for `at`, the
+    analogous bound for `slice`, `y != 0` for `div`/`mod`) -- there is no
+    second, independent notion of "definedness" introduced here, and no
+    need to locate "_expr" by hand: `defined()` already walks the WHOLE
+    ensures conjunction and short-circuits (via `_guard`) exactly where
+    SPEC.md says a boolean connective's later operand's definedness lives
+    "under" the earlier ones, so the single formula it returns already IS
+    the obligation of whichever subexpression is guilty.
+
+    `ret_val` (measured 2026-09-12, fz_p_attotal): the RETURN var's own
+    witness value, needed here even though this obligation is not ABOUT
+    the return value, because `defined()`'s "and"/"or"/"implies" cases
+    guard a LATER clause's obligation on the FULL earlier clause (`_guard`
+    below is called with the clause `a` itself, not `defined(a)`) --
+    exactly interp.ev's own short-circuit "and"/"implies" order, per
+    SPEC.md. fz_p_attotal's first two ensures clauses are
+    `len(s)>0 ==> r==1` and `len(s)==0 ==> r==0`; both mention `r`, so
+    `interp.ev`-ing them (both to decide the short-circuit AND to decide
+    which `defined()` guard fires) needs `r` bound, even though `r` never
+    appears in the actual undefined subexpression (`s[len(s)]`). Without
+    it this function raised a SPURIOUS `interp.Undef` ("unbound r") on the
+    very first `interp.ev(ens_conj, ...)` probe below -- which this
+    function's own `except interp.Undef: pass` swallowed as if it were
+    the genuine ensures-undefined case -- and then failed the same way a
+    second time evaluating `ob` itself, landing in the final
+    `except (interp.Undef, ...): return None`, so this function silently
+    returned None and fz_p_attotal fell through to the ordinary
+    "not ensures[m2]" certificate (which IS sound and was already REFUTED
+    for the other three probes here, but for fz_p_attotal re-embeds the
+    same unresolved `s[len(s)]` and reads "unproved", confirmed via
+    /tmp scratch measurement before this fix)."""
+    env_py = {n: _to_py(v, tmap.get(n) if tmap else None)
+              for n, v in names.items()}
+    ret_name = task["returns"][0]["name"]
+    if ret_val is not None:
+        env_py[ret_name] = _to_py(ret_val, tmap.get(ret_name) if tmap else None)
+    funs = interp.funs_of(task, task["body"])
+    st = interp.St()
+    ens_conj = _conj(task["ensures"])
+    try:
+        interp.ev(ens_conj, env_py, funs, st)
+        return None                # ensures evaluated cleanly: not this case
+    except interp.Undef:
+        pass
+    except (interp.Budget, RecursionError):
+        return None
+    ob = defined(ens_conj)
+    if ob == TRUE:
+        return None                 # defined() found nothing to blame
+    try:
+        if interp.ev(ob, env_py, funs, st):
+            return None             # defined() disagrees with the Undef above: refuse
+    except (interp.Undef, interp.Budget, RecursionError):
+        return None
+    return {"op": "not", "args": [subst(ob, m)]}
+
+
 class _GiveUp(Exception):
     """Internal signal only (2026-09-10): `_undef_obligation`'s walk met a
     `return` (or any statement it does not know), so replay cannot say
@@ -3676,9 +3779,21 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
                 return None
             m2 = dict(m)
             m2[task["returns"][0]["name"]] = _tlit(tw, ret_type)
-            parts = [subst(rq, m2) for rq in task.get("requires", [])]
-            parts.append({"op": "not", "args": [
-                _conj([subst(en, m2) for en in task["ensures"]])]})
+            # ENSURES-LEVEL undefined (2026-09-12, see
+            # `_ensures_undef_obligation`'s own docstring): tried first,
+            # since a witness in this shape whose ensures has NO VALUE at
+            # all (fz_p_at_oob/at_neg/at_zero/attotal) is not soundly
+            # certified by "not ensures[m2]" below -- that re-embeds the
+            # same undefined subexpression unresolved. Every other "value"
+            # witness measured before this date evaluates its ensures
+            # cleanly and falls straight through unchanged.
+            ens_ob = _ensures_undef_obligation(task, m2, names, tmap, ret_val=tw)
+            if ens_ob is not None:
+                parts.append(ens_ob)
+            else:
+                parts = [subst(rq, m2) for rq in task.get("requires", [])]
+                parts.append({"op": "not", "args": [
+                    _conj([subst(en, m2) for en in task["ensures"]])]})
         elif kind == "exit":
             loop = _twin_loop(task["body"], twin_body)
             if loop is None:

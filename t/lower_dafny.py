@@ -2136,6 +2136,32 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             parts.append(_not(subst(loop["cond"], m)))
             parts.append(_not(_conj([subst(en, m2)
                                      for en in task["ensures"]])))
+        elif kind == "undefined" and w.get("_site") == "ensures":
+            # ENSURES-LEVEL undefined witness (added 2026-09-11): the
+            # violation is in the postcondition itself, not the body, so
+            # there is no twin body to replay -- only `_expr`, the
+            # offending sub-expression's AST node (an `at`/`slice`/
+            # div-or-mod node), evaluated once under
+            # the witness's param values with the SAME `_ev_undef` the
+            # body-level path already uses. `_ev_undef`'s own at/slice/
+            # div/mod cases already build the ground guard and raise
+            # `_DefViol`; reusing them here (rather than re-deriving the
+            # guard from `_expr`'s shape by hand) is the only way this
+            # agrees with the body-level door byte-for-byte. No violation
+            # on replay (our mirror disagreeing with interp.py's, or an
+            # `_expr` shape `_ev_undef` still abstains on) refuses the
+            # certificate rather than guessing, same as the body-level
+            # path.
+            env = dict(names)
+            st2 = interp.St()
+            try:
+                _ev_undef(w["_expr"], env, funs, st2)
+            except _DefViol as dv:
+                guard = dv.guard
+            else:
+                return None
+            parts = [subst(rq, m) for rq in task.get("requires", [])]
+            parts.append(_not(guard))
         elif kind == "undefined":
             # The twin's own body, replayed under the witness (see the
             # section comment above `_DefViol`): the FIRST definedness

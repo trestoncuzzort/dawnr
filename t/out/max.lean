@@ -8,7 +8,7 @@ theorem max_t_spec (x : Int) (y : Int) :
     ∧ ((max_t x y) ≥ y)
     ∧ (((max_t x y) = x) ∨ ((max_t x y) = y)) := by
   first
-  | (unfold max_t
+  | (try unfold max_t
      grind)
   | grind [max_t]
 

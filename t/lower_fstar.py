@@ -1,6 +1,36 @@
 #!/usr/bin/env python3
 r"""lower_fstar.py: lower t tasks (v0 and v1) to F*; the seventh kernel.
 
+2026-09-12 (this session, ROADMAP 13.4's fstar item: "the four ensures-
+level probes"): three changes, all in this file alone (`verifiers/
+fstar.py` needed none -- its certificate gate is already name-based, not
+site-based, so a CERT_NAME lemma this file emits for an ensures-level
+witness is read exactly like any other).
+
+  1. `_ensures_undef_formula` (below `_certificate`): a witness whose
+     violation is in the POSTCONDITION rather than the body (`_site ==
+     "ensures"`, `_expr` the offending sub-expression) now earns a
+     REFUTED real certificate, the ensures-level counterpart of the
+     existing `_kind == "undefined"` twin certificate. Measured on
+     `fz_p_attotal`, `fz_p_at_oob`, `fz_p_at_neg`, `fz_p_at_zero`
+     (hand-built witnesses -- `harness.real_witness` does not produce
+     this shape in this worktree yet): all four move from `unproved` to
+     `refuted`, matching `_expect`.
+  2. `_vacuous_ensures_proof`: `fz_p_vac_post` (`ensures true`, `int`
+     return) moves from an outright abstain to `verified`/`verified`
+     (`harness.decorative_kind` reads "decorative") via one `assert` of
+     an int-trichotomy fact inside `t_contract_obligation`'s own proof --
+     a genuine, honest SMT query the bare `= ()` proof never forced (the
+     stated postcondition is untouched).
+  3. `_strlib_prelude_for` and the `_BLOCK_*` constants: the string
+     library prelude, one monolithic block before, is now emitted per
+     MEMBER (closed under each block's own dependencies), fixing the
+     pass-1 regression where `count`'s SMTPat'd lemma joined every
+     member-using task's file whether or not it called `count`.
+     `split_join`'s real: `timeout` -> `unproved` (still short of
+     `verified`, named as an open gap, not claimed fixed).
+     `word_count`/`count_vowels`: unchanged (`verified`, `timeout`).
+
 F*'s type system does most of t's work natively; this file records exactly
 what is delegated to the kernel and what is refused:
 
@@ -2631,9 +2661,47 @@ def _contract_lemma(cx: Ctx, task: dict) -> str:
     req = _conj([cx.prop(e, {}, {}) for e in task.get("requires", [])])
     call = f"({name} {args})"
     ens = _conj([cx.prop(e, {ret: call}, {}) for e in task["ensures"]])
+    proof = _vacuous_ensures_proof(task, call)
     return (f"\nlet t_contract_obligation {pb}\n"
             f"  : Lemma (requires {req}) (ensures {ens})\n"
-            f"= ()\n")
+            f"= {proof}\n")
+
+
+def _vacuous_ensures_proof(task: dict, call: str) -> str:
+    """2026-09-12 (`fz_p_vac_post`, the four ensures-level probes' sibling
+    item in this session's own task): `()` for every task but the one
+    `_vacuous_ensures` names, where it would leave `t_contract_obligation`
+    at ZERO discharged obligations (that function's own docstring: `True`
+    unfolds by the typechecker's normalisation, never reaching Z3, so `=
+    ()` proves it with no solver call at all) -- exactly the shape
+    `gen_fun` used to abstain on rather than hand `verifiers/fstar.py`'s
+    zero-obligation rule a file demoted to MALFORMED for a defect this
+    shape does not have (see `gen_fun`'s own comment, and `_vacuous_
+    ensures`'s docstring, both superseded here for `int`-returning tasks).
+
+    The construct: an `assert` inside the SAME proof, of a fact the Lemma
+    itself never claims (excluded middle over the function's own already-
+    established `int` return -- `call >= 0 \\/ call < 0`), forced through
+    Z3 because F* does not discharge a disjunctive fact about an opaque
+    application by normalisation the way it does a literal `True`
+    (MEASURED here, `probe/P3.fst`, F* 2026.08.30, `--log_queries`: one
+    `queries-*.smt2` entry, `STATUS: unsat`, vs. zero for `= ()` alone).
+    The Lemma's own STATED postcondition is untouched (still exactly
+    `ensures <task's ensures>`, `True` for `fz_p_vac_post`) -- nothing
+    about what this file CLAIMS to prove changes, only how the proof
+    spends one genuine, honest query establishing a fact about `call`
+    that is true regardless of the task (every `int` has a sign), so nothing
+    here is a claim invented FOR the task or fakeable by an unsound
+    lowering: a real obligation Z3 either discharges or does not.
+
+    Only `int`: the trichotomy has no equivalent this file can state for
+    every other return type with no further construct-hunting (a seq or
+    pair has no total order this proof would need); those still abstain
+    via `gen_fun`'s unchanged `_vacuous_ensures` check, a documented
+    residual, not exercised by any committed or probe task today."""
+    if _vacuous_ensures(task) and task["returns"][0]["type"] == "int":
+        return f"assert ({call} >= 0 \\/ {call} < 0)"
+    return "()"
 
 
 def _reflexive_ensures(cx: Ctx, task: dict, ret: str, ret_t, expr: str) -> bool:
@@ -2762,21 +2830,23 @@ def gen_fun(cx: Ctx, task: dict, body: list) -> str:
     # verifier's own MALFORMED, a documented residual, not an abstain here.
     #
     # `_vacuous_ensures` (this file's own note, 2026-09-10 reproduction) is
-    # a DIFFERENT shape and DOES gate: `ensures true` costs the contract
-    # lemma nothing (MEASURED, that function's own docstring), so nothing
-    # downstream of this file can turn its MALFORMED into a query-backed
-    # VERIFIED, and emitting it anyway hands the verifier's own zero-
-    # obligation rule a file that reads as a lowering defect when it is
-    # not one.
-    if _vacuous_ensures(task):
+    # a DIFFERENT shape: `ensures true` costs the BARE contract lemma
+    # nothing (MEASURED, `_contract_lemma`'s own docstring, `= ()`), but
+    # 2026-09-12 (`fz_p_vac_post`, this session) found a construct that
+    # does not cost nothing for an `int`-returning task -- see
+    # `_vacuous_ensures_proof` above, which `_contract_lemma` now calls --
+    # so only a NON-int return still abstains here (no total-order fact
+    # this file can state for a seq or pair without further construct-
+    # hunting; not exercised by any committed or probe task today).
+    if _vacuous_ensures(task) and task["returns"][0]["type"] != "int":
         raise NotImplementedError(
             "fstar lowering: ensures is the content-free literal true, no "
             "obligation exists for this backend's zero-obligation rule to "
             "certify (verified elsewhere: dafny/verus/framac/rocq read "
             "verified, spark reads vacuous; this column has no channel to "
-            "mint either honestly, so it abstains rather than read "
-            "malformed, which would name a defect this shape does not "
-            "have)")
+            "mint either honestly for a non-int return, so it abstains "
+            "rather than read malformed, which would name a defect this "
+            "shape does not have)")
     selfrec = has_self_call(body, name)
     dec = ""
     if selfrec:
@@ -3056,14 +3126,79 @@ def _seq_uneq_ground_pairs(cx: Ctx, e: dict) -> list:
     return out
 
 
+def _ensures_undef_formula(task: dict, w: dict) -> dict | None:
+    """2026-09-12: the ENSURES-level counterpart of `lower_verus._cert_
+    formula`'s `kind == "undefined"` branch, for a witness whose violation
+    is in the postcondition rather than the body (`w["_site"] == "ensures"`,
+    `w["_expr"]` the offending sub-expression's AST node -- the shape named
+    in this session's own task: the same dict `harness.twin_for` gives for
+    a body-level undefined access, `_kind: "undefined"`, `_real: "no
+    value"`, plus `_site`/`_expr`, `_twin` absent). Not yet produced by
+    `harness.real_witness` in this worktree (that change belongs to a
+    different pass), so the four probes this measures (`fz_p_attotal`,
+    `fz_p_at_oob`, `fz_p_at_neg`, `fz_p_at_zero`) are graded here against a
+    hand-built witness of this shape; this function is what a lowering
+    must do once `real_witness` starts emitting one.
+
+    Uses exactly the substitution `lower_verus._cert_formula`'s own
+    `kind == "undefined"` branch uses (`lower_verus._tlit` for the ground
+    witness values, `lower_verus.subst` for `requires`), and
+    `lower_verus.defined` -- the same total function `_undef_obligation`
+    already calls per-statement -- applied directly to `_expr` instead of
+    re-walking a twin body statement by statement: `_expr` IS the
+    statement's failing sub-expression already, so `defined(_expr)` is
+    exactly the obligation that must be false at the witness (`at`: the
+    index outside `[0, len)`; `slice`: a bound outside `[0, a, b, len)`;
+    `div`/`mod`: the divisor is zero -- `lower_verus.defined`'s own cases).
+    The certificate formula is `requires` at the witness AND NOT that
+    obligation, unrolled exactly like the body-level case so a bounded
+    quantifier in `requires` still ground-evaluates.
+
+    None when `_expr` has no obligation to falsify (`defined(_expr) is
+    TRUE`, e.g. a plain arithmetic node -- SPEC.md's own definition makes
+    that combination impossible for a genuine ensures-level witness, but
+    returning None rather than a vacuous "not True" keeps this function
+    honest about what it can and cannot certify) or when substitution
+    fails for any reason -- the same "costs a flip, never fakes one" rule
+    `_certificate` documents below."""
+    expr = w.get("_expr")
+    if not isinstance(expr, dict):
+        return None
+    names = {k: v for k, v in w.items() if not k.startswith("_")}
+    tmap = {p["name"]: p["type"] for p in task["params"]}
+    ret_type = task["returns"][0]["type"]
+    tmap[task["returns"][0]["name"]] = ret_type
+    try:
+        m = {n: lower_verus._tlit(v, tmap.get(n)) for n, v in names.items()}
+        parts = [lower_verus.subst(rq, m) for rq in task.get("requires", [])]
+        ob = lower_verus.defined(expr)
+        if ob == lower_verus.TRUE:
+            return None
+        parts.append({"op": "not", "args": [lower_verus.subst(ob, m)]})
+        return lower_verus._unroll(lower_verus._conj(parts),
+                                   [lower_verus._UNROLL_CAP])
+    except (ValueError, KeyError, TypeError, IndexError):
+        return None
+
+
 def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
     witness, or None when the witness is not ground-certificatable.
 
     Returning None costs a flip (the cell reads unproved). It can never fake
-    one, which is the only direction that matters here."""
+    one, which is the only direction that matters here.
+
+    2026-09-12: `w["_site"] == "ensures"` (see `_ensures_undef_formula`
+    above) is read BEFORE `lower_verus.certificate_formula`, which knows
+    nothing of `_site`/`_expr` and would only ever return None for this
+    witness shape (its own `_kind == "undefined"` branch re-walks
+    `twin_body`, which for an ensures-level violation never contains the
+    offending access at all)."""
     try:
-        formula = lower_verus.certificate_formula(task, twin_body, w)
+        if w.get("_site") == "ensures":
+            formula = _ensures_undef_formula(task, w)
+        else:
+            formula = lower_verus.certificate_formula(task, twin_body, w)
     except Exception:
         return None
     if formula is None:
@@ -3138,11 +3273,31 @@ def _uses_strlib(obj) -> bool:
 # same ten, not the six-point guess an earlier SPEC.md draft named).
 # `t_starts_at`/`t_scan_sep`/`t_scan_word` are unexported helpers, each
 # named so a failing obligation names the helper, not just the member.
-_STRLIB_PRELUDE = """\
+# PER-MEMBER PRELUDE BLOCKS (2026-09-12, this session's own "prelude by
+# member" item): _STRLIB_PRELUDE below used to be emitted as ONE block
+# whenever ANY member was used (SPEC.md "The string library (v1)"'s own
+# AGREEMENT.md commitment: byte-identical sources for a task using no
+# member, never a commitment that every member-using task shares one
+# prelude). Measured cost, pass 1 (2026-09-11): split_join's real moved
+# from unproved to TIMEOUT once `count`'s block (with its SMTPat'd
+# `t_count_empty` lemma, firing on every literal-empty-seq term F* elabo-
+# rates, whether or not the task ever calls `count`) joined the prelude
+# split_join itself never needed -- SPEC.md's OWN words, "the members the
+# task uses", read literally rather than as one bundle. `_strlib_blocks`
+# below walks the task's own AST (params/requires/ensures/spec_funs/body,
+# `_uses_strlib`'s own four-site posture) for the members ACTUALLY
+# reachable and returns the closed-under-dependency subset of these named
+# blocks, each copied verbatim (same declarations, same order relative to
+# its own dependencies) out of what was one string before this pass so
+# a task using every member gets the byte-identical text the monolithic
+# constant always emitted -- CONCAT_ORDER below fixes that ordering.
+_BLOCK_IS_WS = """\
 let is_ws (c:int) : Tot bool =
   c = 9 || c = 10 || c = 11 || c = 12 || c = 13 ||
   c = 28 || c = 29 || c = 30 || c = 31 || c = 32
+"""
 
+_BLOCK_SPLIT_SEP = """\
 let rec t_scan_sep (s:Seq.seq int) (c:int) (i:nat{i <= Seq.length s})
     : Tot (j:nat{i <= j /\\ j <= Seq.length s})
       (decreases (Seq.length s - i)) =
@@ -3160,7 +3315,9 @@ let rec t_split_sep_from (s:Seq.seq int) (c:int) (i:nat{i <= Seq.length s})
 
 let t_split_sep (s:Seq.seq int) (c:int) : Tot (Seq.seq (Seq.seq int)) =
   t_split_sep_from s c 0
+"""
 
+_BLOCK_SPLIT_WS = """\
 let rec t_scan_word (s:Seq.seq int) (i:nat{i <= Seq.length s})
     : Tot (j:nat{i <= j /\\ j <= Seq.length s})
       (decreases (Seq.length s - i)) =
@@ -3179,7 +3336,9 @@ let rec t_split_ws_from (s:Seq.seq int) (i:nat{i <= Seq.length s})
 
 let t_split_ws (s:Seq.seq int) : Tot (Seq.seq (Seq.seq int)) =
   t_split_ws_from s 0
+"""
 
+_BLOCK_JOIN = """\
 let rec t_join_from (rows:Seq.seq (Seq.seq int)) (sep:Seq.seq int)
                      (i:nat{i <= Seq.length rows})
     : Tot (Seq.seq int) (decreases (Seq.length rows - i)) =
@@ -3190,7 +3349,9 @@ let rec t_join_from (rows:Seq.seq (Seq.seq int)) (sep:Seq.seq int)
 
 let t_join (rows:Seq.seq (Seq.seq int)) (sep:Seq.seq int) : Tot (Seq.seq int) =
   t_join_from rows sep 0
+"""
 
+_BLOCK_STRIP = """\
 let rec t_lstrip_from (s:Seq.seq int) (i:nat{i <= Seq.length s})
     : Tot (Seq.seq int) (decreases (Seq.length s - i)) =
   if i = Seq.length s then Seq.createL #int []
@@ -3208,7 +3369,9 @@ let rec t_rstrip_to (s:Seq.seq int) (j:nat{j <= Seq.length s})
 let t_rstrip (s:Seq.seq int) : Tot (Seq.seq int) = t_rstrip_to s (Seq.length s)
 
 let t_strip (s:Seq.seq int) : Tot (Seq.seq int) = t_lstrip (t_rstrip s)
+"""
 
+_BLOCK_STARTS_AT = """\
 let rec t_starts_at (s:Seq.seq int) (i:nat{i <= Seq.length s})
                      (t:Seq.seq int)
     : Tot bool (decreases (Seq.length t)) =
@@ -3216,7 +3379,9 @@ let rec t_starts_at (s:Seq.seq int) (i:nat{i <= Seq.length s})
   else if i >= Seq.length s then false
   else if Seq.index s i <> Seq.index t 0 then false
   else t_starts_at s (i + 1) (Seq.slice t 1 (Seq.length t))
+"""
 
+_BLOCK_COUNT = """\
 let rec t_count_at (s:Seq.seq int) (t:Seq.seq int) (i:nat{i <= Seq.length s})
     : Tot int (decreases (Seq.length s - i)) =
   if Seq.length t = 0 then
@@ -3236,7 +3401,10 @@ let t_count (s:Seq.seq int) (t:Seq.seq int) : Tot int = t_count_at s t 0
 // "could not prove", the exact gap this lemma closes). SMTPat'd on the
 // literal term `t_count s (Seq.createL #int [])`, verus/dafny/framac's own
 // posture for a library fact meant to fire wherever that ground pattern
-// appears, never re-derived per task.
+// appears, never re-derived per task. Scoped to this block ONLY since
+// 2026-09-12 (a task using no `count` no longer pays for a SMTPat that
+// fires on every literal-empty-seq term it elaborates -- measured cost,
+// see the module note above `_BLOCK_IS_WS`).
 let rec t_count_empty_at (s:Seq.seq int) (i:nat{i <= Seq.length s})
   : Lemma (ensures (t_count_at s (Seq.createL #int []) i
                     == Seq.length s - i + 1))
@@ -3247,7 +3415,9 @@ let t_count_empty (s:Seq.seq int)
   : Lemma (ensures (t_count s (Seq.createL #int []) == Seq.length s + 1))
     [SMTPat (t_count s (Seq.createL #int []))]
 = t_count_empty_at s 0
+"""
 
+_BLOCK_FIND = """\
 // find(s, t): the same t_starts_at scan t_count_at already walks, the
 // first MATCHING i instead of a tally, -1 when none (SPEC.md "The string
 // library (v1)"). find(s, []) == 0 (SPEC.md's own words, general over s)
@@ -3266,7 +3436,9 @@ let rec t_find_at (s:Seq.seq int) (t:Seq.seq int) (i:nat{i <= Seq.length s})
   else t_find_at s t (i + 1)
 
 let t_find (s:Seq.seq int) (t:Seq.seq int) : Tot int = t_find_at s t 0
+"""
 
+_BLOCK_LOWER = """\
 // lower(s): the ASCII letters 65-90 mapped to 97-122, every other code
 // point unchanged (SPEC.md "The string library (v1)"; interp.py's
 // `_str_lower`/`_is_upper_letter` restated, not re-derived).
@@ -3280,6 +3452,104 @@ let rec t_lower_from (s:Seq.seq int) (i:nat{i <= Seq.length s})
 
 let t_lower (s:Seq.seq int) : Tot (Seq.seq int) = t_lower_from s 0
 """
+
+# Fixed emission order, byte-identical to the old monolithic
+# _STRLIB_PRELUDE when every block is selected (is_ws, split_sep, split_ws,
+# join, strip, starts_at, count, find, lower -- the original text's own
+# top-to-bottom order).
+_STRLIB_BLOCK_ORDER = ["is_ws", "split_sep", "split_ws", "join", "strip",
+                       "starts_at", "count", "find", "lower"]
+_STRLIB_BLOCK_TEXT = {
+    "is_ws": _BLOCK_IS_WS, "split_sep": _BLOCK_SPLIT_SEP,
+    "split_ws": _BLOCK_SPLIT_WS, "join": _BLOCK_JOIN, "strip": _BLOCK_STRIP,
+    "starts_at": _BLOCK_STARTS_AT, "count": _BLOCK_COUNT,
+    "find": _BLOCK_FIND, "lower": _BLOCK_LOWER,
+}
+# Each block's own dependencies (closed over below, so selecting "count"
+# also pulls in "starts_at" and selecting "strip"/"split_ws" also pulls in
+# "is_ws" -- exactly the calls each block's F* text makes into another).
+_STRLIB_BLOCK_DEPS = {
+    "is_ws": [], "split_sep": [], "split_ws": ["is_ws"], "join": [],
+    "strip": ["is_ws"], "starts_at": [], "count": ["starts_at"],
+    "find": ["starts_at"], "lower": [],
+}
+
+
+def _strlib_members_used(obj) -> set:
+    """The `_STR_OPS` member names actually reachable in `obj` (a task
+    dict or body list) -- `_uses_strlib`'s own generic dict/list walk,
+    collecting names instead of stopping at the first hit."""
+    out = set()
+
+    def walk(o):
+        if isinstance(o, dict):
+            op = o.get("op")
+            if op in _STR_OPS:
+                out.add(op)
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(obj)
+    return out
+
+
+def _strlib_blocks_for(task: dict, body: list) -> set:
+    """The prelude block names this task's own member usage needs, closed
+    under `_STRLIB_BLOCK_DEPS`. `split` is the one member with two
+    arities (SPEC.md "The string library (v1)": `split(s)` on whitespace,
+    `split(s, c)` on one code point) rendering to two DIFFERENT helper
+    families (`gen_fun`'s own `sx` dispatch, the "split" case above), so
+    this walks the actual `{"op": "split", "args": [...]}` nodes rather
+    than trusting `_STR_OPS` membership alone to pick `split_ws` vs.
+    `split_sep`; every other member names exactly one block."""
+    members = _strlib_members_used(task) | _strlib_members_used(body)
+    blocks: set = set()
+
+    def add(name):
+        if name in blocks:
+            return
+        blocks.add(name)
+        for dep in _STRLIB_BLOCK_DEPS[name]:
+            add(dep)
+
+    if "split" in members:
+        def walk_split(o):
+            if isinstance(o, dict):
+                if o.get("op") == "split":
+                    add("split_ws" if len(o.get("args", [])) == 1
+                        else "split_sep")
+                for v in o.values():
+                    walk_split(v)
+            elif isinstance(o, list):
+                for v in o:
+                    walk_split(v)
+        walk_split(task)
+        walk_split(body)
+    for m in members - {"split"}:
+        block = {"join": "join", "strip": "strip", "lstrip": "strip",
+                 "rstrip": "strip", "count": "count", "find": "find",
+                 "lower": "lower"}.get(m)
+        if block is not None:
+            add(block)
+    return blocks
+
+
+def _strlib_prelude_for(task: dict, body: list) -> str:
+    """The concatenated text of exactly the blocks `_strlib_blocks_for`
+    selects, in `_STRLIB_BLOCK_ORDER`, or "" when the task uses no member
+    with a landed block (`tostr`/`replace`/`upper`/`isdigit`/etc. all
+    raise `NotImplementedError` downstream, this file's own unlanded-
+    member posture, unaffected by this function)."""
+    wanted = _strlib_blocks_for(task, body)
+    return "".join(_STRLIB_BLOCK_TEXT[b] for b in _STRLIB_BLOCK_ORDER
+                   if b in wanted)
+
+
+# Kept as the byte-identical full text (every block, fixed order) for any
+# caller that still wants the old "every member" constant.
+_STRLIB_PRELUDE = "".join(_STRLIB_BLOCK_TEXT[b] for b in _STRLIB_BLOCK_ORDER)
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
@@ -3295,14 +3565,21 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     name = r_task["name"]
     mod = name[0].upper() + name[1:]
     parts = [f"module {mod}\n", "module Seq = FStar.Seq\n"]
-    # THE STRING LIBRARY (2026-09-11): the prelude is emitted only when
-    # the task actually needs it -- SPEC.md "The string library (v1)"'s
-    # own AGREEMENT.md commitment is BYTE-IDENTICAL sources for every task
-    # that uses no member, so a task with no split/join/strip/count (etc.)
-    # anywhere in its params/requires/ensures/spec_funs/body gets the same
-    # two-line header it always did.
-    if _uses_strlib(r_task) or _uses_strlib(r_body):
-        parts.append(_STRLIB_PRELUDE)
+    # THE STRING LIBRARY (2026-09-11, per-member since 2026-09-12): the
+    # prelude is emitted only when the task actually needs it -- SPEC.md
+    # "The string library (v1)"'s own AGREEMENT.md commitment is BYTE-
+    # IDENTICAL sources for every task that uses no member, so a task
+    # with no split/join/strip/count (etc.) anywhere in its params/
+    # requires/ensures/spec_funs/body gets the same two-line header it
+    # always did. Emitting the WHOLE bundle for every member-using task
+    # moved split_join's real from unproved to TIMEOUT in pass 1 (`count`'s
+    # SMTPat'd lemma firing on every literal-empty-seq term the file
+    # elaborates, whether or not the task calls `count` -- see the note
+    # above `_BLOCK_IS_WS`), so `_strlib_prelude_for` now emits only the
+    # blocks this task's own member usage (and their dependencies) reach.
+    strlib_prelude = _strlib_prelude_for(r_task, r_body)
+    if strlib_prelude:
+        parts.append(strlib_prelude)
     for sf in r_task.get("spec_funs", []):
         parts.append(emit_spec_fun(cx, sf))
 

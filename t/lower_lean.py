@@ -5528,9 +5528,28 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
     def certificate(self, w: dict) -> str | None:
         """The t_refutation_certificate block for a twin with witness `w`,
         or None when the witness kind has no ground negation here (then the
-        twin cell honestly reads unproved, never refuted)."""
+        twin cell honestly reads unproved, never refuted).
+
+        2026-09-12 (fz_p_vac_post, "lean" item): a "value"-kind witness
+        whose `_ens` is not True is harness.decorative_kind's OWN
+        "decorative" case -- the twin computes a DIFFERENT value than the
+        real body at this point, but that value does not FALSIFY
+        `ensures` (a content-free or merely loose postcondition, `True`
+        for fz_p_vac_post). There is nothing to refute there: `_cert_value`
+        would try to prove `¬ensures` at a point where `ensures` is not
+        false, fail, and (measured directly on fz_p_vac_post: `unproved`
+        even though the twin's own verification theorem alone would have
+        read `verified`) drag a file that should read VERIFIED down to
+        UNPROVED by attaching an unprovable certificate to it. Guarded
+        here, before `_cert_value` is ever called, so a decorative witness
+        emits no certificate at all and the twin is graded on its own
+        verification theorem, exactly the "exit"/"preservation" kinds'
+        own invariant (invariant_witness's docstring: those ALWAYS entail
+        a refutation, so no matching guard is needed for them)."""
         kind = w.get("_kind")
         if kind == "value":
+            if w.get("_ens") is not True:
+                return None
             build = self._cert_value
         elif kind in ("exit", "preservation"):
             build = self._cert_loop
@@ -5588,6 +5607,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
     # not covered (returns None, the pre-existing abstain): `to_expr` only
     # renders the loop-free shape.
     def _cert_undefined(self, w: dict, _kind: str) -> list | None:
+        # 2026-09-12: an ensures-level witness (_site == "ensures", added
+        # alongside the body-level shape below by harness.real_witness's
+        # second pass over `ensures`) is not this method's shape -- the
+        # REAL body executed fine here, it is `ensures` itself that is
+        # undefined at the witness, so the obligation to negate comes from
+        # `_expr` (the offending sub-expression AST), not from re-running
+        # `to_expr` on the body. See `_cert_undefined_ensures`.
+        if w.get("_site") == "ensures":
+            return self._cert_undefined_ensures(w)
         if any("while" in s for s in self.body):
             return None
         params = self.task["params"]
@@ -5607,6 +5635,48 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                   self._prove(r, tenv, venv, types))
                  for r in self.task.get("requires", [])]
         parts.append((f"(¬{ob})", self._closer()))
+        return parts
+
+    def _cert_undefined_ensures(self, w: dict) -> list | None:
+        """2026-09-12 (t/ROADMAP.md's ensures-level undefined-witness item,
+        "lean" column): the ensures-level twin (`_site == "ensures"`) --
+        the REAL body computes a value at this input just fine, but the
+        `ensures` clause's OWN definedness obligation is false there
+        (interp.py's Undef raised while evaluating `ensures`, never the
+        body; `_expr` is the offending sub-expression harness.real_witness
+        names, e.g. an `at`/`slice`/div-mod node). `dcond` already renders
+        any expression's definedness proposition (emit_clause_wfs's own
+        per-clause `_t_wf{k}` theorems use it, unground, quantified over
+        the params); calling it on `_expr` with the params bound to the
+        witness's GROUND terms instead gives the same proposition already
+        fully instantiated, so its negation is closed and decidable --
+        exactly the `_closer()` door `_cert_undefined`'s body-level twin
+        above already proves its own ground obligation through. No `_twin`
+        key on this witness shape (harness.real_witness's docstring): the
+        twin body is never consulted here, only `ensures` and `_expr`,
+        since the defect measured is in the SPEC's own postcondition, not
+        in what either body computes."""
+        expr = w.get("_expr")
+        if expr is None:
+            return None
+        if any("while" in s for s in self.body):
+            return None      # to_expr/dcond render the loop-free shape only
+        params = self.task["params"]
+        types = dict(self.types)
+        tenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
+                for p in params}
+        d = self.dcond(expr, tenv, types)
+        if d is None:
+            return None      # _expr has no definedness obligation of its own
+        self.cert_funs = interp.funs_of(self.task, self.body)
+        fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
+        self.cert_fns = ", ".join(fns)
+        venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
+                for p in params}
+        parts = [(self.prop(r, tenv, types),
+                  self._prove(r, tenv, venv, types))
+                 for r in self.task.get("requires", [])]
+        parts.append((f"(¬{d})", self._closer()))
         return parts
 
     def _cert_value(self, w: dict, _kind: str) -> list | None:

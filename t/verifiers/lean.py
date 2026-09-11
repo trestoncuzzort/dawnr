@@ -55,6 +55,13 @@ declaring the certificate name can NEVER mint VERIFIED, so planting the
 name in a real program only demotes it. Bans, sentinel and axiom audit
 apply to certificate files unchanged.
 
+2026-09-12 note: the ensures-level undefined witness (_site == "ensures",
+lower_lean.py's `_cert_undefined_ensures`) mints REFUTED through this same
+one door, unchanged -- the certificate it emits is still named
+t_refutation_certificate and is still audited exactly as above; no verdict
+logic here needed to know about `_site` at all, only lower_lean.py's
+certificate BUILDER does.
+
 Verdict classification (lean 4.33.1, measured on this machine 2026-08-31,
 certificate rows and UNPROVED 2026-09-02):
   banned token in stripped source                            -> VACUOUS

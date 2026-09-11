@@ -115,7 +115,20 @@ class Undef(Exception):
     """SPEC.md "Definedness": `at` outside [0, len) has no value, and neither
     does a read of a return name before its first assignment. Never a Python
     IndexError or a None that compares, either of which would be the totalization
-    SPEC.md calls wrong."""
+    SPEC.md calls wrong.
+
+    2026-09-12 (ROADMAP 13.4, the harness column): `expr` names the AST
+    node ev() was evaluating at the moment it raised -- the offending
+    sub-expression itself (an `at`, `slice`, `update`, `fill`, `div`/`mod`,
+    or unbound/unassigned `var`), in evaluation order since ev() raises at
+    the first one it reaches and never continues past it. None only for a
+    call-site Undef that names no single expression (there is none such
+    left below; kept optional so a future raise site need not thread one
+    through). harness.real_witness reads it to build the ensures-level
+    undefined witness's `_expr`."""
+    def __init__(self, msg, expr=None):
+        super().__init__(msg)
+        self.expr = expr
 
 
 class Budget(Exception):
@@ -357,10 +370,10 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return e["bool"]
     if "var" in e:
         if e["var"] not in env:
-            raise Undef(f"unbound {e['var']}")
+            raise Undef(f"unbound {e['var']}", expr=e)
         v = env[e["var"]]
         if v is None:
-            raise Undef(f"{e['var']} read before assignment")
+            raise Undef(f"{e['var']} read before assignment", expr=e)
         return v
     if "ite" in e:
         c = e["ite"]
@@ -391,7 +404,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         c = e["call"]
         f = funs.get(c["fun"])
         if f is None:
-            raise Undef(f"no spec_fun {c['fun']}")
+            raise Undef(f"no spec_fun {c['fun']}", expr=e)
         args = [ev(a, env, funs, st) for a in c["args"]]
         if len(args) != len(f["params"]):
             # zip() would truncate and return a value for a call t has no
@@ -414,7 +427,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
                 sub[ret] = None
                 exec_body(body, sub, funs, st)
                 if sub[ret] is None:
-                    raise Undef("self-call returned no value")
+                    raise Undef("self-call returned no value", expr=e)
                 return sub[ret]
             finally:
                 st.d -= 1
@@ -443,21 +456,21 @@ def ev(e: dict, env: dict, funs: dict, st: St):
     if op == "at":
         s, i = a
         if not (0 <= i < len(s)):
-            raise Undef(f"at index {i} outside [0,{len(s)})")
+            raise Undef(f"at index {i} outside [0,{len(s)})", expr=e)
         return s[i]
     if op == "update":
         # SPEC.md "Sequences as values" (2026-09-09): s[i := v], the same
         # definedness as `at`; a fresh tuple, never a mutation in place.
         s, i, v = a
         if not (0 <= i < len(s)):
-            raise Undef(f"update index {i} outside [0,{len(s)})")
+            raise Undef(f"update index {i} outside [0,{len(s)})", expr=e)
         return s[:i] + (v,) + s[i + 1:]
     if op == "fill":
         # seq(n, v): DEFINED IFF n >= 0. A length past MAX_SEQ decides
         # nothing, like an int past MAX_BITS.
         n, v = a
         if n < 0:
-            raise Undef(f"fill length {n} < 0")
+            raise Undef(f"fill length {n} < 0", expr=e)
         if n > MAX_SEQ:
             raise Budget("seq length cap")
         return (v,) * n
@@ -469,7 +482,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s); the elements a..b-1.
         s, lo, hi = a
         if not (0 <= lo <= hi <= len(s)):
-            raise Undef(f"slice bounds [{lo}..{hi}] outside 0 <= a <= b <= {len(s)}")
+            raise Undef(f"slice bounds [{lo}..{hi}] outside 0 <= a <= b <= {len(s)}", expr=e)
         return tuple(s[lo:hi])
     if op == "pair":
         # SPEC.md "Pairs" (2026-09-10): (a, b), a value defined iff both
@@ -541,7 +554,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         # directly, and the quotient is then exact.
         x, y = a
         if y == 0:
-            raise Undef(f"{op} by zero")
+            raise Undef(f"{op} by zero", expr=e)
         r = x % abs(y)
         return r if op == "mod" else _bounded((x - r) // y)
     if op == "==":

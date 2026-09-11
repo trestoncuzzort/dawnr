@@ -7,7 +7,7 @@ theorem abs_t_spec (x : Int) :
     ((abs_t x) ≥ (0 : Int))
     ∧ (((abs_t x) = x) ∨ ((abs_t x) = (-x))) := by
   first
-  | (unfold abs_t
+  | (try unfold abs_t
      grind)
   | grind [abs_t]
 

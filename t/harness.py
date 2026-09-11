@@ -562,14 +562,45 @@ def real_witness(task: dict) -> dict | None:
     search primitive interp.py does not already provide.
 
     None when the scan finds nothing: every committed task under t/tasks
-    (t/test_real_witness.py asserts this for all of them)."""
+    (t/test_real_witness.py asserts this for all of them).
+
+    2026-09-12 (ROADMAP 13.4, the harness column): a requires-satisfying
+    point where the real body HAS a value can still leave `ensures` itself
+    undefined (an out-of-range `at`, a bad slice bound, a div/mod by zero
+    written directly into the postcondition, never guarded by a `requires`
+    that would exclude it) -- distinct from `ensures` evaluating cleanly to
+    False. Both are certificate-worthy (SPEC.md's definedness obligation
+    covers the postcondition, not only the body), but a kernel proves them
+    two different ways: a false ensures is a VALUE counterexample, an
+    undefined ensures is a DEFINEDNESS counterexample at the offending
+    sub-expression. So this loop, unlike the single `_breaks_ensures` call
+    it replaces, evaluates `ensures` itself instead of delegating, to catch
+    interp.Undef and read the sub-expression it names (interp.Undef.expr,
+    set at every raise site in ev() to the node being evaluated) rather
+    than collapsing both cases into one "value" witness."""
     ref = interp.Reference(task)
     for env0, got in ref.points:
-        if ref._breaks_ensures(env0, got) is True:
+        env = dict(env0)
+        env[ref.ret] = got
+        st = interp.St()
+        try:
+            broke = False
+            for c in task["ensures"]:
+                if not interp.ev(c, env, ref.funs, st):
+                    broke = True
+                    break
+            if broke:
+                w = interp._shown(env0)
+                w.update(_kind="value", _real=interp._j(got),
+                        _twin=interp._j(got), _ens=True)
+                return w
+        except interp.Undef as u:
             w = interp._shown(env0)
-            w.update(_kind="value", _real=interp._j(got),
-                    _twin=interp._j(got), _ens=True)
+            w.update(_kind="undefined", _real="no value",
+                    _site="ensures", _expr=u.expr)
             return w
+        except (interp.Budget, RecursionError):
+            continue
     names = interp._names(task)
     funs = ref.funs
     req = task.get("requires", [])

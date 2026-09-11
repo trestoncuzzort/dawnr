@@ -1,5 +1,12 @@
 """t.verifiers.dafny: the first kernel, exit codes measured not assumed.
 
+Checked 2026-09-11 (ensures-level undefined-witness probes, lower_dafny.py's
+`_certificate`): this module reads REFUTED off the presence of a proved
+`t_refutation_certificate` lemma alone (see CERT_NAME/_CERT below), never off
+where in the task the witness's obligation lived (body vs. ensures), so the
+ensures-site certificate lower_dafny.py now emits mints REFUTED through this
+SAME door as every other refutation certificate, with no change needed here.
+
 Mapping (dafny 4.11.0; the exit codes were measured in dafny_verify.py and
 re-relied-on here, the REFUTED door measured 2026-09-02 on the training box
 with the small probe files this docstring describes), in the order verify()

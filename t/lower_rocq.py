@@ -1612,6 +1612,50 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   PRELUDE additions are. Closing this gap without moving a committed
   cell needs the SAME gating discipline applied to `header()`'s own
   assembly, not merely to the new lemmas' content; left for that pass.
+
+  ENSURES-LEVEL UNDEFINEDNESS (2026-09-12, ROADMAP 13.4, "the four
+  ensures-level probes"): fz_p_at_oob/_at_neg/_at_zero have a TOTAL body
+  (they only branch on `len(s)`) and an unguarded `at` inside `ensures`
+  itself, so the real program is undefined there at every input, not in
+  the body -- the body-level "undefined" witness class `_undef_cert`
+  (below) already certifies does not apply; nothing in the body is
+  undefined for `_first_undef_body` to find. harness.real_witness in
+  this worktree has no ensures-level case of its own (its two loops
+  only catch an Undef the BODY raises); its FIRST loop's
+  `ref._breaks_ensures` does happen to catch the Undef `ensures`
+  itself raises here, but reports it as a "value"-kind witness with
+  `_ens` True and `_real`/`_twin` both the real body's own (irrelevant)
+  return value, a shape `_value_cert` cannot turn into a certificate
+  (the totalized `at` makes the totalized `==` trivially TRUE, nothing
+  false to prove) -- MEASURED: `_try_cert_v1` returns None for all
+  three, `lower()`'s normal fallback then reads UNPROVED, not REFUTED.
+  Fixed with a purely local addition, `_real_ensures_undef_witness`
+  (below `_first_undef_body`): the SAME bounded interp.domain scan
+  real_witness's own second loop runs, but checking each `ensures`
+  clause (not the body) for Undef after the body completes, returning
+  the class this file's task instructions describe -- `_kind`
+  "undefined", `_real` "no value", `_site` "ensures", `_expr` the
+  offending clause, no `_twin` -- consumed by a new branch in
+  `_undef_cert` that runs `_first_undef` on `_expr` directly (the body
+  has nothing to walk) instead of `_first_undef_body`'s statement scan.
+  `lower()` tries this AFTER its existing witness-first attempt comes
+  back empty (real_witness's quirky "value" witness included), on the
+  real side only. Measured: fz_p_at_oob/_at_neg/_at_zero all move
+  real UNPROVED -> REFUTED (matching `_expect`); fz_p_at_body
+  (genuinely body-level undefined) is unchanged, already REFUTED
+  before this pass. Byte identity: all 34 committed t/tasks/*.t
+  lowered before and after hash IDENTICAL (the new scan returns None
+  for every one of them, the fallback never fires). t/verifiers/rocq.py
+  needed NO change: its REFUTED door is already "the declared goals
+  include t_refutation_certificate, kernel-proved" regardless of which
+  class of fact that theorem states, so the new certificate reads
+  REFUTED through the exact door twin refutations already use,
+  matching framac's own defs()-companion behaviour on this class per
+  this task's own instructions. Not attempted this pass, left open by
+  name: the PRELUDE feature-gating split (the paragraph just above)
+  and the five string-library probes it blocks
+  (fz_p_str_countempty/_findempty/_splitempty/_tab/_lowernonletter) --
+  out of scope for "the four ensures-level probes," not touched here.
 """
 from __future__ import annotations
 
@@ -7282,6 +7326,63 @@ def _first_undef_body(stmts, env: dict, funs: dict):
     return None
 
 
+def _real_ensures_undef_witness(task):
+    """2026-09-12 (rocq, the four ensures-level probes): a local stand-in
+    for harness.real_witness's own ensures-level case (ROADMAP 13.4's
+    documented shape) when that change is not yet in this worktree.
+    real_witness's second loop catches an Undef raised evaluating the
+    REAL body itself; it does NOT catch one raised evaluating `ensures`
+    afterward (fz_p_at_oob/_at_neg/_at_zero: the body is total, only the
+    unguarded `at` in `ensures` is undefined at every input), so those
+    three probes reach `lower()` with witness=None from both run_par.py
+    and conformance.py's own no-twin path. This repeats real_witness's
+    exact search (interp.domain over MAX_POINTS, `requires`-filtered,
+    Undef/Budget/RecursionError skipped the same way) but adds the one
+    missing step: after the real body runs to a value, evaluate each
+    `ensures` clause and catch Undef there too. On a hit, returns the
+    shape SPEC.md's ensures-level class carries: `_kind` "undefined" and
+    `_real` "no value" as the body-level case already does, plus `_site`
+    "ensures" (this file's own `_undef_cert`, below, dispatches on it)
+    and `_expr`, the offending clause's own AST node, so `_undef_cert`
+    can run `_first_undef` on THAT expression directly instead of
+    walking the body (the body has nothing to find). No `_twin` key:
+    there is no twin here, only the real disagreeing with its own
+    contract. None when no such point exists in the scanned domain,
+    which is every task outside this probe family -- t/test_real_witness.py
+    style safety: a well-formed task's ensures is never undefined at a
+    point its own real body reaches, so this returns None for all eight
+    byte-identity tasks (measured, see this file's 2026-09-12 note near
+    `lower`)."""
+    names = interp._names(task)
+    funs = interp.funs_of(task, task["body"])
+    req = task.get("requires", [])
+    ret = task["returns"][0]["name"]
+    for env0 in interp.domain(task, names, interp.MAX_POINTS):
+        st = interp.St()
+        try:
+            if not all(interp.ev(c, env0, funs, st) for c in req):
+                continue
+        except (interp.Undef, interp.Budget, RecursionError):
+            continue
+        env = dict(env0)
+        env[ret] = None
+        try:
+            interp.exec_body(task["body"], env, funs, st)
+        except (interp.Undef, interp.Budget, RecursionError):
+            continue
+        for e in task.get("ensures", []):
+            try:
+                interp.ev(e, env, funs, interp.St())
+            except interp.Undef:
+                w = interp._shown(env0)
+                w.update(_kind="undefined", _real="no value",
+                         _site="ensures", _expr=e)
+                return w
+            except (interp.Budget, RecursionError):
+                continue
+    return None
+
+
 def _undef_cert(cx, task, body, witness):
     """Certificate chunk for an "undefined" witness kind (interp.py's
     Reference.witness caught an Undef evaluating the twin body), or None.
@@ -7319,10 +7420,44 @@ def _undef_cert(cx, task, body, witness):
             env_py[v] = tuple(tuple(row) for row in witness[v])
         else:
             env_py[v] = witness[v]
+    funs = interp.funs_of(task, body)
+    if witness.get("_site") == "ensures":
+        # 2026-09-12 (rocq, the four ensures-level probes): the offending
+        # expression lives in `ensures`, not the body -- the body itself
+        # is total (fz_p_at_oob/_at_neg/_at_zero all branch on `len(s)`
+        # only), so `_first_undef_body`'s statement walk finds nothing to
+        # report; it is not even called. Run the (well-defined) body to
+        # get the same env `ensures` itself sees -- `_expr` is one of
+        # `task["ensures"]`'s own clauses (`_real_ensures_undef_witness`,
+        # above), so it can reference the return variable -- then hand
+        # `_expr` straight to `_first_undef`, exactly the walk the
+        # body-level case uses, just rooted at a different AST node.
+        st = interp.St()
+        try:
+            interp.exec_body(body, env_py, funs, st)
+        except Exception:                                     # noqa: BLE001
+            return None
+        expr = witness.get("_expr")
+        if expr is None:
+            return None
+        fact = _first_undef(expr, env_py, funs)
+        if fact is None:
+            return None
+        return (
+            f"(* The REAL's own `ensures` is undefined at the measured "
+            f"witness, {harness.witness(witness)}: no value. SPEC.md's "
+            f"definedness rules make this a defect in the task's own "
+            f"postcondition, never a totalized value to compare against a "
+            f"twin (there is none here); this certifies that specific "
+            f"bound's negation, at the concrete witness, by computation. *)\n"
+            f"Theorem {CERT_NAME} :\n"
+            f"  {fact}.\n"
+            "Proof.\n"
+            "  lia.\n"
+            "Qed.\n")
     prefix, w, suffix = find_while(body)
     if w is not None:
         return None            # not needed by any committed task yet
-    funs = interp.funs_of(task, body)
     fact = _first_undef_body(body, env_py, funs)
     if fact is None:
         return None
@@ -7486,6 +7621,31 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                _try_cert_v1(task, body, witness))
         if cert is not None:
             return cert + (f"\n(* {rc} *)\n" if rc else "")
+    # 2026-09-12 (rocq, the four ensures-level probes): a local stand-in
+    # for harness.real_witness's own ensures-level case, tried on the real
+    # side only (twin_body is None) and only once the ABOVE attempt has
+    # come back empty -- see `_real_ensures_undef_witness`'s docstring on
+    # why it must run even when the caller DID supply a witness: unmodified
+    # harness.real_witness's own first loop (`ref._breaks_ensures`) already
+    # catches the Undef raised evaluating `ensures` at fz_p_at_oob/_at_neg/
+    # _at_zero's witness, but reports it as a "value"-kind witness with
+    # `_ens` True and `_real`/`_twin` both the real's own (irrelevant, the
+    # `ensures` never reads `r`) return value -- not the "undefined"/
+    # "ensures"-site shape `_undef_cert` needs, so `_try_cert_v1` above
+    # dispatches it to `_value_cert`, which has no totalized falsehood to
+    # find (the totalized `at` makes the `==` trivially TRUE) and returns
+    # None, `cert` stays None, and this is reached. Built from the
+    # ALREADY-renamed `task`/`body` above, so no `t_names.remap_witness`
+    # pass of its own. None for every other task (measured: all eight
+    # byte-identity tasks below), so this changes nothing for them beyond
+    # one extra, harmless domain scan.
+    if twin_body is None:
+        ew = _real_ensures_undef_witness(task)
+        if ew is not None:
+            cert = (_try_cert_v1(task, body, ew)
+                    if task.get("t") != 0 else None)
+            if cert is not None:
+                return cert + (f"\n(* {rc} *)\n" if rc else "")
     src = (lower_v0(task, body, witness=None) if task.get("t") == 0 else
           lower_v1(task, body, witness=None))
     if rc:

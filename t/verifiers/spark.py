@@ -228,6 +228,36 @@ F'Result, defeating the exact vacuity check that probe exists to measure
 narrower, principled rule (real fact about the params vs. deliberately
 content-free) was found that draws the line without deciding it by hand
 per probe, which is what an honest gap, not a fix, looks like. Left open.
+
+CONFORMANCE, ROW fz_p_vac_post (2026-09-12, spark: the four ensures-level
+probes item): NOT CLOSED, for a DIFFERENT reason than fz_p_modsign_true's
+same-family gap above, named separately rather than folded into it.
+MEASURED, this kernel: real=vacuous, twin=vacuous (fuzz_lower.py's
+`_expect` reads "decorative"). conformance.py's own grading rule for
+`_expect == "decorative"` (its `grade()`, 2026-09-11) is PASS iff
+`harness.decorative_kind(real_outcome, twin_outcome, w) == "decorative"`,
+and that function's own docstring requires BOTH outcomes to be literally
+`Outcome.VERIFIED` before it returns anything but None -- a VACUOUS/
+VACUOUS pair reads None, never "decorative", by construction. This
+kernel's own havoc oracle (2, above) is DESIGNED to demote exactly
+`ensures => True` from VERIFIED to VACUOUS -- fz_p_vac_post's postcondition
+is the canonical case that instrument exists to catch (this file's own
+"a postcondition that is TRUE of every possible result" line) -- so
+making this cell read VERIFIED/VERIFIED to satisfy decorative_kind would
+mean disabling the havoc oracle for exactly the file it is supposed to
+catch, the same trade fz_p_modsign_true's paragraph above declined for
+the same reason (the twin family shares one oracle; there is no
+per-probe switch). The other half of the rule, `harness.decorative_kind`
+and `grade()`'s "decorative" branch, is harness.py/conformance.py code,
+outside this file's own reach (spark: the four ensures-level probes'
+own file list is lower_spark.py and verifiers/spark.py only). So the
+honest cell IS vacuous/vacuous under this kernel's own taxonomy (a
+content-free contract, correctly caught) and the suite's PASS rule for
+"decorative" cannot read it as a pass without either (a) this kernel
+lying about the postcondition's content, or (b) a change to
+conformance.py's grading rule outside this pass's file scope. Left open,
+same posture as fz_p_modsign_true: named by the kernel's own message
+rather than bought with a weakened havoc oracle.
 """
 from __future__ import annotations
 

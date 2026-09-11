@@ -2319,6 +2319,27 @@ def _has_pair_op(node) -> bool:
     return False
 
 
+_PARTIAL_OPS = frozenset(("at", "update", "fill", "slice", "div", "mod"))
+
+
+def _has_partial_op(node) -> bool:
+    """2026-09-12 (spark: the four ensures-level probes): True iff a node
+    whose `op` is one of SPEC.md's partial operators (`_PARTIAL_OPS`,
+    `defined()`'s own vocabulary above, the OPS a `Pre` at some call site
+    already guards) sits anywhere inside `node`. The SAME shape of cheap,
+    generic recursive descent as `_has_pair_op` above (any dict/list, not
+    an AST-typed walk), used only to short-circuit
+    `_ensures_undef_witness`'s own domain scan before it starts (that
+    function's own PERFORMANCE note)."""
+    if isinstance(node, dict):
+        if node.get("op") in _PARTIAL_OPS:
+            return True
+        return any(_has_partial_op(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_partial_op(v) for v in node)
+    return False
+
+
 def _transient_pair_types(node, types: dict, L) -> list:
     """PAIRS RESIDUAL, CLOSED (2026-09-11): every distinct pair type a
     literal `{"op": "pair", ...}` node ANYWHERE inside `node` resolves to
@@ -3992,12 +4013,39 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
     sub = dict(sub)
     funs = interp.funs_of(task, twin_body)
     st = interp.St()
-    try:
-        for s in twin_body:
+
+    # 2026-09-12 (spark: the four ensures-level probes, item "spark"):
+    # `_walk` recurses into an `if`'s TAKEN branch (told apart by
+    # replaying the same `interp.ev(cond, env_py, ...)` real execution
+    # already used to reach this witness) instead of the old flat
+    # `for s in twin_body` loop's blanket "return None" on any non-
+    # var/assign statement. MEASURED gap this closes: fz_p_at_body's own
+    # undefined `assign` (`r := s[len(s)] - s[len(s)]`) sits inside an
+    # `if len(s) >= 0 then ... else ...`, always-true so always taken,
+    # and the flat loop bailed out on the top-level `if` before ever
+    # seeing it (real column read UNPROVED, not REFUTED, 2026-09-12
+    # measurement, this worktree). `while` and `return` are UNCHANGED,
+    # still an honest "not modeled here" None -- this file does not yet
+    # trust itself to replay a loop or an early exit inside this walk,
+    # exactly the pre-existing fail-closed posture the module docstring
+    # already states for those two shapes.
+    def _walk(stmts: list) -> str | None:
+        for s in stmts:
             if "var" in s:
                 name, e = s["var"]["name"], s["var"]["init"]
             elif "assign" in s:
                 name, e = s["assign"]
+            elif "if" in s:
+                cond = s["if"]["cond"]
+                cob = defined(cond)
+                if cob != TRUE and not interp.ev(cob, env_py, funs, st):
+                    return None
+                taken = (s["if"]["then"] if interp.ev(cond, env_py, funs, st)
+                         else s["if"]["else"])
+                found = _walk(taken)
+                if found is not None:
+                    return found
+                continue
             else:
                 return None
             ob = defined(e)
@@ -4020,8 +4068,99 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                                "bool" if isinstance(val, bool) else "int")
             sub[name] = _cert_lit(list(val) if isinstance(val, tuple)
                                   else val)
+        return None
+
+    try:
+        return _walk(twin_body)
     except (interp.Undef, interp.Budget, RecursionError):
         return None
+
+
+def _ensures_undef_witness(task: dict, body: list) -> dict | None:
+    """2026-09-12 (spark: the four ensures-level probes): the ENSURES-level
+    undefined witness -- the same dict shape harness.twin_for's own
+    body-level "undefined" witness has always produced (`_kind`:
+    "undefined", the parameter values, `_real`: "no value"), extended with
+    `_site`: "ensures" (the violation is in the POSTCONDITION, not the
+    body -- `_twin` absent, there is no twin body to speak of) and
+    `_expr`: the failing `ensures` conjunct's own t-expression AST node.
+    harness.real_witness (this worktree, 2026-09-11 base) does not yet
+    search this case -- its own second loop only catches an Undef raised
+    by exec_body, i.e. a body-level defect -- so this is the hand-built
+    equivalent for a defect that sits entirely in `ensures`, built here
+    (not in harness.py, out of scope for this pass) because certificate()
+    below is the only caller.
+
+    Mirrors real_witness's own second loop byte for byte up through
+    exec_body (interp.domain enumeration bounded at interp.MAX_POINTS,
+    the requires filter, the same three exceptions skipped): where
+    real_witness stops at "did exec_body raise Undef", this walks
+    task['ensures'] afterward and asks, conjunct by conjunct, whether
+    THIS file's own `defined()` obligation (the same reading
+    certificate()'s body-level "undefined" case already trusts,
+    certificate()'s docstring) is false at the point exec_body reached.
+    The first false conjunct's OWN node becomes `_expr`; MEASURED
+    committed shape (fz_p_at_oob/at_neg/at_zero/attotal, 2026-09-12): an
+    `at` whose index is len(s) or -1, unconditionally out of [0, len(s))
+    at every input `requires` (empty, on all four) admits, so the search
+    finds it on the very first enumerated point and needs no wide scan.
+
+    None when every ensures conjunct is defined at every admitted point
+    within the budget: the same "nothing to measure" reading
+    real_witness gives its own caller, so a task whose postcondition is
+    genuinely always defined is unaffected -- MEASURED harmless on
+    fz_p_modsign_true and fz_p_vac_post (neither's `ensures` contains a
+    partial operator at all, so `defined()` is TRUE on every conjunct).
+
+    PERFORMANCE (2026-09-12): `lower()` below calls this on every twin
+    whose witness is shaped like the ONE it is meant to correct (kind
+    "value", `_ens` True) -- MEASURED the single commonest witness shape
+    across the whole committed corpus, not just this pass's own four
+    probes -- so a domain scan on every such call would pay
+    interp.MAX_POINTS() of exec_body + defined()-walk work on tasks whose
+    `ensures` could never contain the defect this function exists to
+    find. The static `_has_partial_op` guard, below, is the same cheap
+    "is the word there at all" reading `_has_pair_op` already gives this
+    file for `pair`, scoped to `ensures` alone (the only place this
+    function ever inspects) rather than the whole task: it costs one
+    walk of `ensures`'s own (small) AST instead of a whole `domain()`
+    enumeration, and returning None here on a "no partial op in ensures"
+    task is EXACTLY the answer the full scan would have given anyway
+    (`defined()` is TRUE on every conjunct with no `at`/`update`/`fill`/
+    `slice`/`div`/`mod` node to make it otherwise) -- an optimization,
+    not a behavior change."""
+    if not any(_has_partial_op(e) for e in task.get("ensures", [])):
+        return None
+    names = interp._names(task)
+    funs = interp.funs_of(task, body)
+    ret = task["returns"][0]["name"]
+    for env0 in interp.domain(task, names, interp.MAX_POINTS):
+        st = interp.St()
+        try:
+            if not all(interp.ev(c, env0, funs, st)
+                      for c in task.get("requires", [])):
+                continue
+        except (interp.Undef, interp.Budget, RecursionError):
+            continue
+        env = dict(env0)
+        env[ret] = None
+        try:
+            interp.exec_body(body, env, funs, st)
+        except (interp.Undef, interp.Budget, RecursionError):
+            continue
+        for e in task["ensures"]:
+            ob = defined(e)
+            if ob == TRUE:
+                continue
+            try:
+                ok = interp.ev(ob, env, funs, st)
+            except (interp.Undef, interp.Budget, RecursionError):
+                ok = True   # honestly can't tell here; not a witness
+            if not ok:
+                w = interp._shown(env0)
+                w.update(_kind="undefined", _real="no value",
+                        _site="ensures", _expr=e)
+                return w
     return None
 
 
@@ -4156,6 +4295,27 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
             parts.append(f"(not {L.expr(loop['cond'], sub, types)})")
             ens = [L.expr(e, {**sub, ret: _cert_lit(post[ret])}, types)
                    for e in task["ensures"]]
+        elif kind == "undefined" and w.get("_site") == "ensures":
+            # 2026-09-12: the ENSURES-level shape (_ensures_undef_witness,
+            # above) -- there is no body statement to replay (the body
+            # has a real value; the POSTCONDITION does not), so the
+            # obligation is `defined()` of the witness's own `_expr`
+            # directly, rendered through the SAME L.expr() every other
+            # certificate part uses, at the witness's parameter values
+            # (`sub`/`types` already built above from `vals`, identical
+            # to every other kind here). Fails closed exactly like
+            # _undef_obligation: a KeyError/ValueError from an `_expr`
+            # this file cannot render (e.g. one that names the return
+            # variable, unbound in `sub` at an ensures-level witness) is
+            # caught by this function's own `except` below, never a
+            # wrong certificate.
+            expr_node = w.get("_expr")
+            if expr_node is None:
+                return ""
+            ob_t = defined(expr_node)
+            if ob_t == TRUE:
+                return ""
+            parts.append(f"(not {L.expr(ob_t, sub, types)})")
         elif kind == "undefined":
             ob = _undef_obligation(task, body, sub, vals, L)
             if ob is None:
@@ -4419,7 +4579,48 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # fake REFUTED, but there is no need to pay even that, or to build a
     # second `Lower`, on a task that needs no rename at all.
     cert_L = L if not renames else Lower(orig_task)
-    cert = certificate(orig_task, orig_body, witness, cert_L)
+    # 2026-09-12 (spark: the four ensures-level probes): a witness needs
+    # correcting BEFORE certificate() ever sees it, not after, for a
+    # second, MEASURED reason beyond `witness is None` (harness.real_
+    # witness is body-level only, this worktree's base, so every REAL
+    # call and every twin call whose own search came back empty pass
+    # None): harness.real_witness's OWN first loop (`ref._breaks_ensures`)
+    # was MEASURED (2026-09-12, this worktree) to mis-read an `ensures`
+    # that is genuinely UNDEFINED at a point as one that is merely FALSE
+    # there -- fz_p_at_oob/at_neg/at_zero/attotal all come back
+    # `{"_kind": "value", "_real": 0, "_twin": 0, "_ens": True}` at
+    # s=[], a "value" witness, even though `at(s, len(s))` has no value
+    # at s=[] at all. certificate()'s "value" branch trusted that kind
+    # literally: it substituted F's call in for `r` and asked the kernel
+    # to prove `not ensures`, an expression that ITSELF calls the
+    # undefined `Elem` and so cannot discharge either (MEASURED: cert
+    # unproved, cell read UNPROVED, not REFUTED). `_ensures_undef_witness`
+    # (above) is the correct, PRECISE diagnosis of the SAME point --
+    # structurally a definedness check, not a value comparison, so it
+    # cannot itself mistake "false" for "undefined" the way `_breaks_
+    # ensures` did -- and is tried FIRST, ahead of trusting a `witness`
+    # of exactly this shape (kind "value", `_ens` True): a witness of
+    # any OTHER shape (a genuine value counterexample, an "exit"/
+    # "preservation" witness, or one already `_site == "ensures"`) is
+    # passed straight through, unexamined, to certificate() below --
+    # this correction is scoped to the ONE shape MEASURED wrong, not a
+    # general override of what harness.twin_cached/real_witness hand in.
+    # `_ensures_undef_witness` itself returns None immediately, no
+    # search cost paid, whenever every `ensures` conjunct is defined at
+    # the point it checks first, which is every task whose postcondition
+    # has no partial operator at all -- MEASURED harmless on every other
+    # committed task (t/tasks/*.t: none of the eight AGREEMENT.md tasks'
+    # `ensures` contains `at`/`div`/`mod`/`slice`, and this pass's own
+    # byte-identity diff, relowering every committed task with no
+    # witness before/after, is how the witness=None half of that claim
+    # is actually checked).
+    w_use = witness
+    if witness is None or (witness.get("_kind") == "value"
+                           and witness.get("_ens") is True):
+        w2 = _ensures_undef_witness(orig_task, orig_body)
+        if w2 is not None:
+            w_use = w2
+    cert = certificate(orig_task, orig_body, w_use, cert_L)
 
     plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
                       for p in task["params"])

@@ -212,6 +212,19 @@ already refuses, and `lower_framac.py`'s `requires` side now emits its
 own `defs()` obligation as a companion clause too, so framac reads
 VACUOUS rather than VERIFIED even when that harness refusal is bypassed.
 
+**The ensures-level undefined witness (2026-09-12, ROADMAP 13.4, the
+harness column).** `harness.real_witness` names a second, distinct
+undefined case: a `requires`-satisfying input where the real body HAS a
+value but `ensures` itself is undefined there (an unguarded `at`, slice
+bound, or div/mod by zero written into the postcondition) -- reported as
+`_kind: "undefined"`, `_site: "ensures"`, `_expr` the first offending
+sub-expression in evaluation order (interp.Undef's own `expr`), and no
+`_twin`, distinct from the body-level undefined witness (`_twin` present,
+no `_site`/`_expr`); a lowering must certify that this obligation fails
+at the witness's input, so the real reads REFUTED, the behaviour
+`lower_framac.py`'s `ensures`-side `defs()` companion clause already
+matches.
+
 **Invariants are checked in order (stated 2026-09-09, measured on the
 sequences-as-values fuzz family).** A loop's invariants are a list, and
 every kernel discharges the definedness of an invariant with only the

@@ -31,9 +31,11 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
+import fuzz_lower                    # noqa: E402
 import harness                       # noqa: E402
 import interp                        # noqa: E402
 import tlib                          # noqa: E402
+from fuzz_lower import AT, I, IFS, OP, V, ASG  # noqa: E402
 from verifiers import Outcome        # noqa: E402
 from verifiers import dafny as dafny_backend  # noqa: E402
 
@@ -120,6 +122,76 @@ def test_wrong_abs_reads_refuted_through_tlib():
         f"wrong_abs real should be REFUTED with the certificate's message, "
         f"got {entry}")
     assert entry.get("real_witness", "none") != "none", entry
+
+
+@test
+def test_ensures_undefined_probes_name_the_site_and_expr():
+    """ROADMAP 13.4, the harness column, 2026-09-12: fz_p_at_oob, fz_p_at_neg,
+    fz_p_at_zero and fz_p_attotal all have a real body that is defined at
+    every input (an if/else assigning r, no `at` in the body at all) but an
+    `ensures` containing an unguarded `at` past the sequence -- the shape
+    the ensures-level undefined witness exists for. Each must come back
+    `_kind` "undefined", `_site` "ensures", carrying `_expr` (the offending
+    `at` node) and no `_twin` -- distinct from the body-level undefined
+    witness (`_twin` present, no `_site`/`_expr`), which is what
+    fz_p_at_body (an unguarded `at` IN the body) must still produce, so the
+    two shapes are checked side by side here."""
+    probes = {t["name"]: t for t in fuzz_lower.probes()
+             if t["name"] in ("fz_p_at_oob", "fz_p_at_neg", "fz_p_at_zero",
+                              "fz_p_attotal", "fz_p_at_body")}
+    assert len(probes) == 5, sorted(probes)
+    for name in ("fz_p_at_oob", "fz_p_at_neg", "fz_p_at_zero", "fz_p_attotal"):
+        w = harness.real_witness(probes[name])
+        assert w is not None, name
+        assert w.get("_kind") == "undefined", (name, w)
+        assert w.get("_site") == "ensures", (name, w)
+        assert isinstance(w.get("_expr"), dict) and "op" in w["_expr"], (name, w)
+        assert "_twin" not in w, (name, w)
+        assert w.get("_real") == "no value", (name, w)
+    w = harness.real_witness(probes["fz_p_at_body"])
+    assert w is not None, "fz_p_at_body"
+    assert w.get("_kind") == "undefined", w
+    assert "_twin" in w, ("fz_p_at_body should stay body-kind", w)
+    assert "_site" not in w and "_expr" not in w, (
+        "fz_p_at_body is a BODY-level undefined witness, not ensures-level", w)
+
+
+@test
+def test_hand_built_ensures_undefined_task():
+    """A task shaped nothing like the `at`-based probes above: `div` by a
+    denominator that is always zero (x - x), written directly into
+    `ensures` and never guarded by `requires`. The body is total (r := x,
+    defined at every x), so this is squarely the ensures-only case."""
+    task = {"t": 1, "name": "test_ensures_div0",
+           "params": [{"name": "x", "type": "int"}],
+           "returns": [{"name": "r", "type": "int"}], "requires": [],
+           "ensures": [OP("==",
+                          OP("div", V("x"), OP("-", V("x"), V("x"))),
+                          I(0))],
+           "body": [ASG("r", V("x"))]}
+    w = harness.real_witness(task)
+    assert w is not None
+    assert w.get("_kind") == "undefined", w
+    assert w.get("_site") == "ensures", w
+    assert w.get("_expr", {}).get("op") == "div", w
+    assert "_twin" not in w, w
+
+
+@test
+def test_hand_built_guarded_at_in_ensures_does_not_trigger():
+    """The negative case the ensures-level witness must NOT fire on: `at`
+    appears in `ensures`, but `requires len(s) > 0` makes it defined at
+    every input the scan ever reaches, and the body computes the same
+    value, so the task is correct end to end and real_witness must be
+    None."""
+    task = {"t": 1, "name": "test_ensures_guarded_at",
+           "params": [{"name": "s", "type": "seq"}],
+           "returns": [{"name": "r", "type": "int"}],
+           "requires": [OP(">", OP("len", V("s")), I(0))],
+           "ensures": [OP("==", V("r"), AT("s", I(0)))],
+           "body": [ASG("r", AT("s", I(0)))]}
+    w = harness.real_witness(task)
+    assert w is None, w
 
 
 def run() -> None:
