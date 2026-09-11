@@ -204,6 +204,14 @@ side, and the same total-logic softness in invariant and spec_fun-body
 positions, is recorded future work in that file's own docstring, not
 silently claimed here.
 
+**The harness refuses it too (added 2026-09-11, ROADMAP 13.4):**
+`harness.twin_for` names a requires undefined at every type-correct input
+`"vacuous-requires-undefined"` and refuses the whole cell before any
+kernel is asked, exactly as a well-defined but unsatisfiable `requires`
+already refuses, and `lower_framac.py`'s `requires` side now emits its
+own `defs()` obligation as a companion clause too, so framac reads
+VACUOUS rather than VERIFIED even when that harness refusal is bypassed.
+
 **Invariants are checked in order (stated 2026-09-09, measured on the
 sequences-as-values fuzz family).** A loop's invariants are a list, and
 every kernel discharges the definedness of an invariant with only the

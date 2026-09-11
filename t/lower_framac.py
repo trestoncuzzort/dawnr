@@ -5255,8 +5255,38 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             # otherwise).
             clauses.append(f"  requires \\separated({a} + (0 .. {a}_n - 1), "
                            f"{b} + (0 .. {b}_n - 1));")
-    clauses += [f"  requires {pred(e, spec_ctx)};"
-                for e in task.get("requires", [])]
+    # DEFINEDNESS OF `requires` ITSELF, added 2026-09-11 (ROADMAP 13.4,
+    # fz_p_divreq0). `ensures` already gets its `defs()` obligation folded
+    # into the GOAL two blocks below (`ensures (d) && (p);`); `requires`
+    # had none, only the raw predicate. That is silently unsound for a
+    # requires whose own truth value is UNDEFINED rather than merely
+    # false: t_div/t_mod are TOTAL ACSL logic functions (this file's own
+    # T_DIVMOD_ACSL note), so `requires x / 0 == 0` renders as `requires
+    # t_div(x, 0) == 0`, a predicate WP can evaluate to true or false
+    # under its own total convention -- never the contradiction SPEC.md
+    # says a `y == 0` divisor actually is. MEASURED (t/CONFORMANCE.md,
+    # fz_p_divreq0, 2026-09-11 run): every other kernel read the real
+    # unproved/refuted on this task; framac alone VERIFIED it, 14/14
+    # goals, because nothing in the emitted contract ever asked WP to
+    # prove the divisor nonzero. Emitting `defs(e)` here as an ADDITIONAL
+    # `requires` clause -- an assumed hypothesis, exactly the shape
+    # fz_p_vac_unsat/fz_p_vac_range's literally-false requires already
+    # trips `_vacuity_smoke`'s existing `wp_smoke_default_requires` doomed-
+    # goal detection on -- makes the combined hypothesis set for
+    # fz_p_divreq0 read `t_div(x, 0) == 0 && (0) != 0`, contradictory by
+    # construction (the second conjunct is literally false whenever the
+    # divisor is a literal 0, and a genuine, checkable side condition
+    # whenever it is a symbolic expression that MAY be zero), so WP's own
+    # smoke test fires and the file reads VACUOUS rather than VERIFIED --
+    # the same outcome fz_p_vac_unsat/fz_p_vac_range already read, not a
+    # new mechanism. `defs()` for a requires with no partial operator
+    # (the overwhelming majority: every committed task) returns None, so
+    # this adds nothing there; unchanged by construction.
+    for e in task.get("requires", []):
+        d = defs(e, spec_ctx)
+        if d is not None:
+            clauses.append(f"  requires {d};")
+        clauses.append(f"  requires {pred(e, spec_ctx)};")
     if "decreases" in task:
         clauses.append(f"  decreases ({term(task['decreases'], spec_ctx)});")
     if rett == "seq":

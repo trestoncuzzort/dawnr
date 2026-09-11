@@ -393,6 +393,16 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
     if not ref.points:
         # UNMEASURABLE, which is a different refusal from "the twin computes
         # the same thing", and the two causes are worth telling apart.
+        if (ref.n_req == 0 and ref.n_domain > 0
+                and ref.req_undef == ref.n_domain):
+            # `requires` itself raised Undef at EVERY point tried (not just
+            # evaluated False): a `div`/`mod` by zero inside `requires`,
+            # ROADMAP 13.4 (2026-09-11). SPEC.md's "Undefined requires
+            # (normative)" calls this DEFECTIVE, the same defect class as a
+            # well-defined but unsatisfiable requires (fz_p_vac_unsat,
+            # fz_p_vac_range), so it gets its own named refusal rather than
+            # being folded into "no-input" silently.
+            return None, "vacuous-requires-undefined", None
         return None, ("no-input" if not ref.n_req else "real-undefined"), None
     # A witness that merely shows real and twin compute DIFFERENT values is
     # not grounds for expecting a refutation: a loose `ensures` can be
@@ -515,6 +525,10 @@ REFUSALS = {
                   "computes, on the whole bounded domain, nothing to measure",
     "no-input": "no input in the bounded domain satisfies `requires`, a "
                 "vacuous precondition, so there is nothing to measure",
+    "vacuous-requires-undefined": "`requires` is undefined (raises, not "
+                "merely evaluates False) at every type-correct input "
+                "tried, a defective precondition per SPEC.md's Undefined "
+                "requires (normative), so there is nothing to measure",
     "real-undefined": "the real body returns no value on any input that "
                       "satisfies `requires`, nothing for a twin to differ "
                       "from",

@@ -142,8 +142,22 @@ def _verify_one(task: dict, kernel: str, flake: int, budget,
 
     lmod, suffix = _LOWER_MOD[kernel]
     lower_fn = importlib.import_module(lmod).lower
-    real_src = lower_fn(task, task["body"])
-    twin_src = lower_fn(task, tb, witness=w)
+    # The same two outcomes run_par.lower_and_dispatch gives a lowering
+    # that cannot express the task: a named NotImplementedError is
+    # "abstain", anything else "lower-error"; neither runs a kernel
+    # (2026-09-11, found by the independent check of 14.4: the single-file
+    # verify raised where the table read abstain / abstain).
+    try:
+        real_src = lower_fn(task, task["body"])
+        twin_src = lower_fn(task, tb, witness=w)
+    except NotImplementedError as e:
+        entry["real"] = entry["twin"] = "abstain"
+        entry["refused"] = f"abstain: {e}"
+        return entry
+    except Exception as e:                       # noqa: BLE001
+        entry["real"] = entry["twin"] = "lower-error"
+        entry["refused"] = f"lower-error: {type(e).__name__}: {e}"
+        return entry
     real_sha = hashlib.sha256(real_src.encode("utf-8")).hexdigest()
     entry["source_sha"] = real_sha
 

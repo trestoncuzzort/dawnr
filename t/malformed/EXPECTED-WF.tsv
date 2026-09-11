@@ -18,8 +18,8 @@ wf-eq-types.t	3	8	eq-types
 wf-fill-types.t	3	8	fill-types
 wf-ite-branches.t	3	8	ite-branches
 wf-len-nonseq.t	3	8	len-nonseq
-wf-local-shadow.t	3	3	local-shadow
-wf-local-v0.t	3	3	local-v0
+wf-local-shadow.t	3	7	local-shadow
+wf-local-v0.t	3	7	local-v0
 wf-loop-decreases.t	4	3	loop-decreases
 wf-loop-invariant-bool.t	4	3	loop-invariant-bool
 wf-no-self-in-ensures.t	1	1	no-self-in-ensures

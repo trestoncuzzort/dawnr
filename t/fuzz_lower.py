@@ -3017,12 +3017,17 @@ def probes() -> list[dict]:
          "requires": [OP("==", OP("div", V("x"), I(0)), I(0))],
          "ensures": [OP("==", V("r"), I(0))],
          "body": [ASG("r", I(0))]},
-        "refuted",
+        "vacuous",
         "`x / 0` has no value at any x, so `requires x / 0 == 0` is "
         "undefined at every type-correct input, not merely narrowed; the "
-        "task is DEFECTIVE and the real lowering must not VERIFY, exactly "
-        "as the analogous `at` probe SPEC.md records under 'Undefined "
-        "requires'", adversarial=True)
+        "task is DEFECTIVE, the same class as fz_p_vac_unsat/fz_p_vac_range "
+        "(a requires with no satisfying input, well-defined or not), and "
+        "the real lowering must not VERIFY -- harness.twin_cached's own "
+        "'vacuous-requires-undefined' refusal (ROADMAP 13.4, 2026-09-11) "
+        "names it so before any kernel is asked; a kernel that lowers the "
+        "real anyway (conformance.py's own no-twin-still-lowers path) must "
+        "read it VACUOUS, exactly as the analogous `at` probe SPEC.md "
+        "records under 'Undefined requires'", adversarial=True)
 
     # --- SPEC.md "At y == 0 both are undefined": `y - y` is well-defined
     # (it is 0), but dividing by it is not, so this body has no value at any

@@ -55,3 +55,16 @@ is the AST that notation parses to, derived from the `.t` text and never
 edited by hand. `run_all.py`, `run_par.py` and `grade.py --tasks DIR` read
 the `.t` files through `tasks_io.py`; a directory with none (a
 spec-experiment run's own generated `tasks/`) is still read as `*.json`.
+
+2026-09-11 (ROADMAP 14.4, "One command"): `python3 t/cli.py <subcommand>`
+is now the one entry point for a person or an editor working on a single
+task, with `parse`, `check`, `format`, `lower`, `verify`, `twin` and
+`explain` subcommands over `surface.py`, `check_wf.py`, `tlib.py` and (for
+`verify` on a whole directory) `run_par.py`'s own `probe_backends`,
+`lower_and_dispatch` and `format_table`, so `verify t/tasks` writes
+byte-identical `AGREEMENT.md` (modulo the timestamp line). Text output by
+default, `--json` for JSON Lines (one record per diagnostic: file, line,
+col, rule, severity, kernel, message), documented with a real example per
+subcommand in `t/COMMAND.md`. `cli.py` is new; it edits none of
+`surface.py`, `check_wf.py`, `tlib.py`, `harness.py`, `names.py` or
+`run_par.py`.

@@ -657,6 +657,7 @@ class Parser:
             self.opt("sym", ";")
             return self.mark(t, {"assign": [target, e]})
         if self.opt("kw", "var"):
+            t = self.tok            # the declared name, not the keyword (2026-09-11)
             vn = self.name("Stmt")
             self.eat("sym", ":", "Stmt")
             ty = self.ptype()

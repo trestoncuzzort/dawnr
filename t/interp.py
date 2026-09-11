@@ -898,15 +898,38 @@ class Reference:
                               # vacuous precondition from a body that never
                               # returns a value (probes fz_p_vac_unsat and
                               # fz_p_at_body respectively).
+        self.n_domain = 0     # every point tried, whatever `requires` did
+                              # with it; the denominator `req_undef` below
+                              # is measured against.
+        self.req_undef = 0    # points where `requires` ITSELF raised Undef
+                              # (e.g. a `div`/`mod` by zero inside requires,
+                              # ROADMAP 13.4, 2026-09-11): distinct from a
+                              # point where requires evaluated cleanly to
+                              # False. `req_undef == n_domain > 0` (and
+                              # n_req == 0) means requires is undefined at
+                              # EVERY type-correct input tried, not merely
+                              # narrowed to nothing -- SPEC.md's "Undefined
+                              # requires (normative)" DEFECTIVE case, a
+                              # different refusal from a well-defined but
+                              # unsatisfiable requires (fz_p_vac_unsat,
+                              # fz_p_vac_range).
         req = task.get("requires", [])
         for env0 in domain(task, _names(task), limit):
+            self.n_domain += 1
             st = St()
             try:
-                if not all(ev(c, env0, self.funs, st) for c in req):
-                    continue
-                self.n_req += 1
-                env = dict(env0)
-                env[self.ret] = None
+                sat = all(ev(c, env0, self.funs, st) for c in req)
+            except Undef:
+                self.req_undef += 1
+                continue          # requires itself has no value here
+            except (Budget, RecursionError):
+                continue          # undecided, so it witnesses nothing
+            if not sat:
+                continue
+            self.n_req += 1
+            env = dict(env0)
+            env[self.ret] = None
+            try:
                 exec_body(task["body"], env, self.funs, st)
                 v = env[self.ret]
                 if v is None:
