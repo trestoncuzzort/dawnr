@@ -102,7 +102,7 @@ EOF
 # ---------------------------------------------------------------- --tests
 run_tests() {
   stage_start tests
-  for f in test_check_wf.py test_surface_errors.py test_twin_rule.py test_names.py \
+  for f in test_check_wf.py test_surface_errors.py test_wf_errors.py test_twin_rule.py test_names.py \
            test_ladder_completeness.py test_tlib.py test_conformance.py doc_test.py test_lift_check.py test_lifter.py test_lift_front.py \
            test_lift_report.py test_lift_rules.py test_mbpp_dfy.py; do
     echo "--- python3 $f ---"

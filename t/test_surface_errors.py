@@ -77,7 +77,13 @@ def main() -> int:
         return 1
 
     listed = {r[0] for r in rows}
-    on_disk = {f for f in os.listdir(MALFORMED_DIR) if f.endswith(".t")}
+    # wf-*.t (ROADMAP 14.2, well-formedness side, added 2026-09-11): a
+    # separate corpus of files that PARSE cleanly and are checked against
+    # t/malformed/EXPECTED-WF.tsv by t/test_wf_errors.py instead -- they
+    # have no row here by design, not by omission, so they are excluded
+    # from this scan rather than counted as coverage gaps.
+    on_disk = {f for f in os.listdir(MALFORMED_DIR)
+              if f.endswith(".t") and not f.startswith("wf-")}
     extra = sorted(on_disk - listed)
     if extra:
         print("FAIL: .t file(s) in t/malformed/ with no EXPECTED.tsv row: %s"

@@ -32,6 +32,26 @@ second, possibly stale, copy):
 
 See fuzz_lower.py's own docstring note (same date) for the paired
 before/after numbers this move was required to reproduce.
+
+ROADMAP 14.2 ("Errors with a position"), well-formedness half, ported
+2026-09-11 onto this module (the RULES table, `_e`, and every check_wf
+helper above stay as wave A left them): `check_wf` gains two optional
+parameters, `positions` (an `id(AST node) -> (line, col)` map, the shape
+`surface.parse(text, positions=...)` fills) and `file`. With `positions`
+omitted (every existing call site: fuzz_lower.py, grade.py,
+test_check_wf.py), `check_wf` returns exactly what it always did, a
+list[str]. With `positions` given, it returns a list[WfError] instead --
+one error object per problem found, each carrying `.message`, `.rule`,
+`.file`, `.line`, `.col`, and a `str()` of `"file:line:col: message
+[SPEC: rule]"`. The position recorded is always that of the innermost
+AST node `_e` was called while examining: `_ty` attributes an error to
+the expression node `e` it is currently typing (not the outer
+expression that called into it), `_check_stmts` to the statement `s`,
+and `check_wf`'s own top-level checks to `task`, a `param`/`return`
+dict, or a `spec_fun` dict as appropriate -- the one place that
+decision is made is `_e` itself, which every error in this file funnels
+through. `surface.check_file(path)` is the new entry point that wires
+this up end to end: parse with positions, then check_wf with them.
 """
 
 from __future__ import annotations
@@ -110,16 +130,85 @@ RULES: dict[str, str] = {
 }
 
 
-def _e(errs: list[str], msg: str, rule: str) -> None:
-    """Append msg to errs with its SPEC.md rule named, fixed form
-    "msg [SPEC: rule]". The rule key must be in RULES; msg is kept
-    unchanged as the prefix so prefix-matching tests still pass."""
-    errs.append(f"{msg} [SPEC: {RULES[rule]}]")
 
 
-# ===========================================================================
-# 1. Well-formedness: SYNTAX.md grammar plus SPEC.md's scope rules.
-# ===========================================================================
+class WfError:
+    """One well-formedness error, position-carrying. `.message` is the same
+    text `check_wf` always produced (no position); `.rule` is a RULES key.
+    `.file`/`.line`/`.col` are the offending AST node's position when
+    `check_wf` was given a `positions` map that has an entry for that node,
+    None otherwise (a node `surface.parse` did not mark, or no `positions`
+    map at all). `str(err)` reads `"file:line:col: message [SPEC: rule]"`
+    with a known position, `"message [SPEC: rule]"` without one -- the
+    no-position form is byte-identical to what `check_wf` without
+    `positions` still returns as a plain string, so a caller printing
+    either kind of error, or SurfaceError from surface.py, reads the same
+    way."""
+
+    __slots__ = ("message", "rule", "file", "line", "col")
+
+    def __init__(self, message: str, rule: str, file=None, line=None, col=None):
+        self.message = message
+        self.rule = rule
+        self.file = file
+        self.line = line
+        self.col = col
+
+    def __str__(self) -> str:
+        tag = f" [SPEC: {RULES[self.rule]}]"
+        if self.line is None:
+            return self.message + tag
+        where = f"{self.file or '<string>'}:{self.line}:{self.col if self.col is not None else '?'}"
+        return f"{where}: {self.message}{tag}"
+
+    __repr__ = __str__
+
+    def __eq__(self, other):
+        if isinstance(other, WfError):
+            return (self.message, self.rule, self.file, self.line, self.col) == (
+                other.message, other.rule, other.file, other.line, other.col)
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.message, self.rule, self.file, self.line, self.col))
+
+
+class _Errs(list):
+    """The list `check_wf` builds its errors into, carrying the `positions`
+    map and `file` name it was called with so `_e()` can look up a node's
+    position without every one of check_wf's helper functions growing two
+    extra parameters just to pass them down to `_e`. When `positions` is
+    None, `_e` appends plain strings (today's behaviour, unchanged); when
+    it is a dict, `_e` appends WfError objects."""
+
+    __slots__ = ("positions", "file")
+
+    def __init__(self, positions=None, file="<string>"):
+        super().__init__()
+        self.positions = positions
+        self.file = file
+
+
+def _e(errs: "_Errs", node, msg: str, rule: str) -> None:
+    """Record one well-formedness error: `msg`/`rule`, at `node`'s position
+    when `errs.positions` is not None and holds an entry for it. `node` is
+    whatever AST dict check_wf or one of its helpers was looking at when it
+    found the problem: the task itself, a param/return/spec_fun dict, a
+    statement dict, or an expression dict -- always a dict `surface.parse`'s
+    `positions=` map could have recorded a (line, col) for.
+
+    With `errs.positions is None` (the default, `check_wf(task)` with no
+    `positions` argument), this appends the exact same string the old
+    module-level `_e(errs, msg, rule)` always appended -- `node` is looked
+    at only inside the `errs.positions is not None` branch, so it is dead
+    weight in that mode and callers need not have marked their tasks."""
+    if errs.positions is None:
+        errs.append(f"{msg} [SPEC: {RULES[rule]}]")
+        return
+    pos = errs.positions.get(id(node))
+    line, col = pos if pos is not None else (None, None)
+    errs.append(WfError(msg, rule, errs.file, line, col))
+
 
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
@@ -185,70 +274,70 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         return "int"
     if "bool" in e:
         if ver == 0:
-            _e(errs, "bool literal in a v0 task", "bool-lit-v1")
+            _e(errs, e, "bool literal in a v0 task", "bool-lit-v1")
         return "bool"
     if "var" in e:
         t = env.get(e["var"])
         if t is None:
-            _e(errs, f"unbound var {e['var']}", "unbound")
+            _e(errs, e, f"unbound var {e['var']}", "unbound")
         return t
     if "ite" in e or "forall" in e or "exists" in e or "call" in e:
         if ver == 0:
-            _e(errs, "v1 expression form in a v0 task", "v1-expr-v0")
+            _e(errs, e, "v1 expression form in a v0 task", "v1-expr-v0")
     if "ite" in e:
         c = e["ite"]
         if _ty(c["cond"], env, funs, ver, errs, bound) != "bool":
-            _e(errs, "ite condition is not bool", "bool-cond")
+            _e(errs, e, "ite condition is not bool", "bool-cond")
         a = _ty(c["then"], env, funs, ver, errs, bound, expect)
         b = _ty(c["else"], env, funs, ver, errs, bound, expect)
         if a != b:
-            _e(errs, f"ite branches differ: {a} vs {b}", "ite-branches")
+            _e(errs, e, f"ite branches differ: {a} vs {b}", "ite-branches")
         return a
     if "forall" in e or "exists" in e:
         q = e["forall"] if "forall" in e else e["exists"]
         v = q["var"]
         if v in env or v in bound:
-            _e(errs, f"bound var {v} shadows a name in scope", "quant-shadow")
+            _e(errs, e, f"bound var {v} shadows a name in scope", "quant-shadow")
         for side in ("lo", "hi"):
             if _ty(q[side], env, funs, ver, errs, bound) != "int":
-                _e(errs, f"quantifier {side} is not int", "quant-bounds")
+                _e(errs, e, f"quantifier {side} is not int", "quant-bounds")
         sub = dict(env)
         sub[v] = "int"
         if _ty(q["body"], sub, funs, ver, errs, bound | {v}) != "bool":
-            _e(errs, "quantifier body is not bool", "quant-body")
+            _e(errs, e, "quantifier body is not bool", "quant-body")
         return "bool"
     if "call" in e:
         c = e["call"]
         f = funs.get(c["fun"])
         if f is None:
-            _e(errs, f"call of unknown fun {c['fun']}", "call-unknown")
+            _e(errs, e, f"call of unknown fun {c['fun']}", "call-unknown")
             return None
         if len(f["params"]) != len(c["args"]):
-            _e(errs, f"arity mismatch calling {c['fun']}", "call-arity")
+            _e(errs, e, f"arity mismatch calling {c['fun']}", "call-arity")
         for p, a in zip(f["params"], c["args"]):
             if _ty(a, env, funs, ver, errs, bound, p["type"]) != p["type"]:
-                _e(errs, f"argument type mismatch calling {c['fun']}", "call-argtype")
+                _e(errs, e, f"argument type mismatch calling {c['fun']}", "call-argtype")
         return f["result"]
     op = e["op"]
     ok = V0_OPS if ver == 0 else V1_OPS
     if op not in ok:
-        _e(errs, f"operator {op!r} not in v{ver}", "op-unknown")
+        _e(errs, e, f"operator {op!r} not in v{ver}", "op-unknown")
         return None
     args = e.get("args", [])
     if op in UNARY and len(args) != 1:
-        _e(errs, f"{op} takes one argument", "op-arity")
+        _e(errs, e, f"{op} takes one argument", "op-arity")
     if op in TERNARY and len(args) != 3:
-        _e(errs, f"{op} takes three arguments", "op-arity")
+        _e(errs, e, f"{op} takes three arguments", "op-arity")
     if op == "split":
         # SPEC.md "The string library": split(s) and split(s, c), two
         # arities of one op, neither the plain-binary nor any other group.
         if len(args) not in (1, 2):
-            _e(errs, "split takes one or two arguments", "strlib-arity")
+            _e(errs, e, "split takes one or two arguments", "strlib-arity")
     elif (op not in UNARY and op not in NARY and op not in TERNARY
             and op not in VARIADIC and len(args) != 2):
-        _e(errs, f"{op} takes two arguments", "op-arity")
+        _e(errs, e, f"{op} takes two arguments", "op-arity")
     if op in NARY and len(args) < 2:
-        _e(errs, f"{op} needs at least two arguments", "op-arity")
+        _e(errs, e, f"{op} needs at least two arguments", "op-arity")
     ts = [_ty(a, env, funs, ver, errs, bound) for a in args]
     NESTED = {"seq": "seq"}
     if op == "seq":
@@ -265,12 +354,12 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
             return "seq"
         if all(t == "seq" for t in ts):
             return NESTED
-        _e(errs, "seq literal elements must be all int or all seq "
+        _e(errs, e, "seq literal elements must be all int or all seq "
                 "(no mixing, no pair or nested-seq rows)", "seq-lit-mixed")
         return "seq"
     if op == "slice":
         if ts[0] not in ("seq", NESTED) or ts[1] != "int" or ts[2] != "int":
-            _e(errs, "slice wants (seq or seq<seq>, int, int)", "slice-types")
+            _e(errs, e, "slice wants (seq or seq<seq>, int, int)", "slice-types")
             return "seq"
         return ts[0]
     if op == "+" and len(ts) == 2 and ts[0] == ts[1] and ts[0] in ("seq", NESTED):
@@ -279,13 +368,13 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         return ts[0]
     if op == "len":
         if ts[0] not in ("seq", NESTED):
-            _e(errs, "len of a non-seq", "len-nonseq")
+            _e(errs, e, "len of a non-seq", "len-nonseq")
         return "int"
     if op == "at":
         # SPEC.md "Nested sequences": at(m, i) on a seq<seq> gives a row
         # (a seq), where at(s, i) on a plain seq gives an int.
         if ts[1] != "int" or ts[0] not in ("seq", NESTED):
-            _e(errs, "at wants (seq or seq<seq>, int)", "at-types")
+            _e(errs, e, "at wants (seq or seq<seq>, int)", "at-types")
             return None
         return "int" if ts[0] == "seq" else "seq"
     if op == "update":
@@ -293,27 +382,27 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         # seq; SPEC.md "Nested sequences" (2026-09-10): m[i := r] on a
         # seq<seq> takes a ROW (a seq) as the third argument, not an int.
         if ts[1] != "int":
-            _e(errs, "update index must be int", "update-types")
+            _e(errs, e, "update index must be int", "update-types")
         if ts[0] == "seq":
             if ts[2] != "int":
-                _e(errs, "update wants (seq, int, int)", "update-types")
+                _e(errs, e, "update wants (seq, int, int)", "update-types")
             return "seq"
         if ts[0] == NESTED:
             if ts[2] != "seq":
-                _e(errs, "update wants (seq<seq>, int, seq) for the row", "update-types")
+                _e(errs, e, "update wants (seq<seq>, int, seq) for the row", "update-types")
             return NESTED
-        _e(errs, "update wants (seq or seq<seq>, int, element)", "update-types")
+        _e(errs, e, "update wants (seq or seq<seq>, int, element)", "update-types")
         return "seq"
     if op == "fill":
         # seq(n, v): v: int gives a seq, v: seq (a row) gives a seq<seq>
         # (SPEC.md "Nested sequences", 2026-09-10).
         if ts[0] != "int":
-            _e(errs, "fill count must be int", "fill-types")
+            _e(errs, e, "fill count must be int", "fill-types")
         if ts[1] == "int":
             return "seq"
         if ts[1] == "seq":
             return NESTED
-        _e(errs, "fill wants (int, int) or (int, seq) for the row", "fill-types")
+        _e(errs, e, "fill wants (int, int) or (int, seq) for the row", "fill-types")
         return "seq"
     if op == "pair":
         # SPEC.md "Pairs" (2026-09-10): (e1, e2), typed from its operands;
@@ -323,7 +412,7 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         # a pair nested as either operand already failed this same check
         # when IT was typed, so ts[0]/ts[1] not in BASE_TYPES catches it.
         if ts[0] not in BASE_TYPES or ts[1] not in BASE_TYPES:
-            _e(errs, "pair components must be int, bool or seq "
+            _e(errs, e, "pair components must be int, bool or seq "
                     "(no pair of pairs, no pair of three)", "pair-types")
         return {"pair": ts}
     if op in ("fst", "snd"):
@@ -333,7 +422,7 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         # rather than an IndexError three lines from now.
         t0 = ts[0]
         if not (isinstance(t0, dict) and set(t0) == {"pair"}):
-            _e(errs, f"{op} wants a pair operand, found {t0!r}", "proj-nonpair")
+            _e(errs, e, f"{op} wants a pair operand, found {t0!r}", "proj-nonpair")
             return None
         return t0["pair"][0 if op == "fst" else 1]
     if op in STRLIB_OPS:
@@ -349,7 +438,7 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
                 "isalpha": (1,), "isupper": (1,), "islower": (1,),
                 "startswith": (2,), "endswith": (2,)}[op]
         if len(ts) not in want:
-            _e(errs, f"{op} wants {' or '.join(str(w) for w in want)} "
+            _e(errs, e, f"{op} wants {' or '.join(str(w) for w in want)} "
                     f"argument(s), found {len(ts)}", "strlib-arity")
             return {"split": NESTED, "join": "seq", "tostr": "seq", "count": "int",
                     "find": "int", "replace": "seq"}.get(op, "seq" if op in
@@ -357,44 +446,44 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         if op == "split":
             if len(ts) == 1:
                 if ts[0] != "seq":
-                    _e(errs, "split wants a seq", "strlib-types")
+                    _e(errs, e, "split wants a seq", "strlib-types")
             elif ts[0] != "seq" or ts[1] != "int":
-                _e(errs, "split wants (seq, int)", "strlib-types")
+                _e(errs, e, "split wants (seq, int)", "strlib-types")
             return NESTED
         if op == "join":
             if ts[0] != NESTED or ts[1] != "seq":
-                _e(errs, "join wants (seq<seq>, seq)", "strlib-types")
+                _e(errs, e, "join wants (seq<seq>, seq)", "strlib-types")
             return "seq"
         if op == "tostr":
             if ts[0] != "int":
-                _e(errs, "tostr wants an int", "strlib-types")
+                _e(errs, e, "tostr wants an int", "strlib-types")
             return "seq"
         if op in ("count", "find"):
             if ts[0] != "seq" or ts[1] != "seq":
-                _e(errs, f"{op} wants (seq, seq)", "strlib-types")
+                _e(errs, e, f"{op} wants (seq, seq)", "strlib-types")
             return "int"
         if op in ("strip", "lstrip", "rstrip", "lower", "upper"):
             if ts[0] != "seq":
-                _e(errs, f"{op} wants a seq", "strlib-types")
+                _e(errs, e, f"{op} wants a seq", "strlib-types")
             return "seq"
         if op == "replace":
             if ts[0] != "seq" or ts[1] != "seq" or ts[2] != "seq":
-                _e(errs, "replace wants (seq, seq, seq)", "strlib-types")
+                _e(errs, e, "replace wants (seq, seq, seq)", "strlib-types")
             return "seq"
         if op in ("isdigit", "isalpha", "isupper", "islower"):
             if ts[0] != "seq":
-                _e(errs, f"{op} wants a seq", "strlib-types")
+                _e(errs, e, f"{op} wants a seq", "strlib-types")
             return "bool"
         if ts[0] != "seq" or ts[1] != "seq":       # startswith, endswith
-            _e(errs, f"{op} wants (seq, seq)", "strlib-types")
+            _e(errs, e, f"{op} wants (seq, seq)", "strlib-types")
         return "bool"
     if op in ("+", "-", "*", "neg", "div", "mod"):
         if any(t != "int" for t in ts):
-            _e(errs, f"{op} over non-int", "arith-int")
+            _e(errs, e, f"{op} over non-int", "arith-int")
         return "int"
     if op in ("<", "<=", ">", ">="):
         if any(t != "int" for t in ts):
-            _e(errs, f"{op} is int-only (SPEC.md gate 1)", "cmp-int")
+            _e(errs, e, f"{op} is int-only (SPEC.md gate 1)", "cmp-int")
         return "bool"
     if op in ("==", "!="):
         # Two seqs compare extensionally since SPEC.md "Sequences as
@@ -416,11 +505,11 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
             zero, one = ts[0] == NESTED and _empty_lit(args[1], ts[1]), \
                        ts[1] == NESTED and _empty_lit(args[0], ts[0])
             if not (zero or one):
-                _e(errs, f"{op} wants two ints, two bools, two seqs, "
+                _e(errs, e, f"{op} wants two ints, two bools, two seqs, "
                        f"two nested seqs, or two pairs of the same type", "eq-types")
         return "bool"
     if any(t != "bool" for t in ts):
-        _e(errs, f"{op} over non-bool", "bool-op")
+        _e(errs, e, f"{op} over non-bool", "bool-op")
     return "bool"
 
 
@@ -434,51 +523,65 @@ def _self_calls(e, name) -> bool:
     return False
 
 
-def check_wf(task: dict) -> list[str]:
-    errs: list[str] = []
+def check_wf(task: dict, positions: dict | None = None,
+            file: str = "<string>") -> list:
+    """Well-formedness errors in `task` (SYNTAX.md's grammar plus SPEC.md's
+    scope, typing and gate rules). With no `positions` argument (the default)
+    the return is a list[str], each `"message [SPEC: rule]"`, byte-identical
+    to check_wf's behaviour before this function grew position-awareness --
+    every existing caller (fuzz_lower.py, grade.py, test_check_wf.py) is
+    unaffected. With a `positions` map (`id(AST node) -> (line, col)`, the
+    shape `surface.parse(text, positions=...)` fills for this same `task`
+    object) the return is a list[WfError] instead, each carrying `file`,
+    `line` and `col` for the AST node `check_wf` or one of its helpers was
+    looking at when it found the problem (the innermost node it can
+    attribute the error to), plus the same `.rule` key and `str()` message
+    as the no-position form, now prefixed `file:line:col: `. An empty list
+    means `task` is well-formed, in either form."""
+    errs = _Errs(positions, file)
     ver = task["t"]
     if not NAME_RE.match(task["name"]):
-        _e(errs, "bad task name", "name")
+        _e(errs, task, "bad task name", "name")
     if len(task["returns"]) != 1:
-        _e(errs, "exactly one return value (SPEC.md v0 and v1)", "one-return")
+        _e(errs, task, "exactly one return value (SPEC.md v0 and v1)", "one-return")
     if not task["ensures"]:
-        _e(errs, "ensures must be non-empty", "ensures-nonempty")
+        _e(errs, task, "ensures must be non-empty", "ensures-nonempty")
     funs = {f["name"]: f for f in task.get("spec_funs", [])}
     if ver == 0 and (funs or "decreases" in task or "gate" in task):
-        _e(errs, "v1 field in a v0 task", "v0-frozen")
+        _e(errs, task, "v1 field in a v0 task", "v0-frozen")
     penv = {p["name"]: p["type"] for p in task["params"]}
     if ver == 0 and any(t != "int" for t in penv.values()):
-        _e(errs, "v0 has int only", "v0-int-only")
+        _e(errs, task, "v0 has int only", "v0-int-only")
     for p in task["params"]:
         if not _valid_type(p["type"]):
-            _e(errs, f"param {p['name']} has an invalid type: {p['type']!r}", "valid-type")
+            _e(errs, p, f"param {p['name']} has an invalid type: {p['type']!r}", "valid-type")
     for r in task["returns"]:
         if not _valid_type(r["type"]):
-            _e(errs, f"return {r['name']} has an invalid type: {r['type']!r}", "valid-type")
+            _e(errs, r, f"return {r['name']} has an invalid type: {r['type']!r}", "valid-type")
     for i, f in enumerate(task.get("spec_funs", [])):
         fenv = {p["name"]: p["type"] for p in f["params"]}
         earlier = {g["name"]: g for g in task["spec_funs"][:i]}
         earlier[f["name"]] = f              # self-recursion is allowed
         if _ty(f["decreases"], fenv, earlier, ver, errs, set()) != "int":
-            _e(errs, f"spec_fun {f['name']} decreases is not int", "spec-fun-decreases-int")
+            _e(errs, f, f"spec_fun {f['name']} decreases is not int", "spec-fun-decreases-int")
         if _ty(f["body"], fenv, earlier, ver, errs, set()) != f["result"]:
-            _e(errs, f"spec_fun {f['name']} body type != result", "spec-fun-body-type")
+            _e(errs, f, f"spec_fun {f['name']} body type != result", "spec-fun-body-type")
     for e in task.get("requires", []):
         if _ty(e, penv, funs, ver, errs, set()) != "bool":
-            _e(errs, "requires clause is not bool", "requires-bool")
+            _e(errs, e, "requires clause is not bool", "requires-bool")
     ret = task["returns"][0]
     eenv = dict(penv)
     eenv[ret["name"]] = ret["type"]
     for e in task["ensures"]:
         if _ty(e, eenv, funs, ver, errs, set()) != "bool":
-            _e(errs, "ensures clause is not bool", "ensures-bool")
+            _e(errs, e, "ensures clause is not bool", "ensures-bool")
     if _self_calls(task["ensures"], task["name"]):
-        _e(errs, "ensures references the task name (SPEC.md gate 3)", "no-self-in-ensures")
+        _e(errs, task, "ensures references the task name (SPEC.md gate 3)", "no-self-in-ensures")
     selfrec = _self_calls(task["body"], task["name"])
     if selfrec and "decreases" not in task:
-        _e(errs, "self-recursive body without a task decreases", "decreases-selfcall")
+        _e(errs, task, "self-recursive body without a task decreases", "decreases-selfcall")
     if not selfrec and "decreases" in task:
-        _e(errs, "task decreases without a self-call", "decreases-selfcall")
+        _e(errs, task, "task decreases without a self-call", "decreases-selfcall")
     bfuns = dict(funs)
     if selfrec:
         bfuns[task["name"]] = {"params": task["params"],
@@ -494,7 +597,7 @@ def _check_returns(body, rname, errs):
     happens to be assignable in scope (SPEC.md Early exit)."""
     for s in body:
         if "return" in s and s["return"][0] != rname:
-            _e(errs, f"return names {s['return'][0]}, not the task's return {rname}",
+            _e(errs, s, f"return names {s['return'][0]}, not the task's return {rname}",
                "return-name")
         elif "if" in s:
             _check_returns(s["if"]["then"], rname, errs)
@@ -508,54 +611,54 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
         if "assign" in s:
             n, e = s["assign"]
             if n not in assignable:
-                _e(errs, f"assign to {n}, not a return or local", "assign-target")
+                _e(errs, s, f"assign to {n}, not a return or local", "assign-target")
             t = _ty(e, env, funs, ver, errs, set(), env.get(n))
             if t != env.get(n):
-                _e(errs, f"assign {n}: {t} into {env.get(n)}", "assign-type")
+                _e(errs, s, f"assign {n}: {t} into {env.get(n)}", "assign-type")
         elif "var" in s:
             if ver == 0:
-                _e(errs, "local in a v0 task", "local-v0")
+                _e(errs, s, "local in a v0 task", "local-v0")
             d = s["var"]
             if d["name"] in env:
-                _e(errs, f"local {d['name']} shadows a name in scope", "local-shadow")
+                _e(errs, s, f"local {d['name']} shadows a name in scope", "local-shadow")
             if not _valid_type(d["type"]):
-                _e(errs, f"local {d['name']} has an invalid type: "
+                _e(errs, s, f"local {d['name']} has an invalid type: "
                        f"{d['type']!r}", "valid-type")
             if _ty(d["init"], env, funs, ver, errs, set(), d["type"]) != d["type"]:
-                _e(errs, f"local {d['name']} init type mismatch", "assign-type")
+                _e(errs, s, f"local {d['name']} init type mismatch", "assign-type")
             env[d["name"]] = d["type"]
             assignable.add(d["name"])
         elif "if" in s:
             c = s["if"]
             if _ty(c["cond"], env, funs, ver, errs, set()) != "bool":
-                _e(errs, "if condition is not bool", "bool-cond")
+                _e(errs, s, "if condition is not bool", "bool-cond")
             _check_stmts(c["then"], dict(env), funs, ver, errs, set(assignable))
             _check_stmts(c["else"], dict(env), funs, ver, errs, set(assignable))
         elif "while" in s:
             if ver == 0:
-                _e(errs, "while in a v0 task", "while-v0")
+                _e(errs, s, "while in a v0 task", "while-v0")
             w = s["while"]
             if _ty(w["cond"], env, funs, ver, errs, set()) != "bool":
-                _e(errs, "loop condition is not bool", "bool-cond")
+                _e(errs, s, "loop condition is not bool", "bool-cond")
             if "decreases" not in w:
-                _e(errs, "loop without decreases (SPEC.md gate 2)", "loop-decreases")
+                _e(errs, s, "loop without decreases (SPEC.md gate 2)", "loop-decreases")
             elif _ty(w["decreases"], env, funs, ver, errs, set()) != "int":
-                _e(errs, "loop decreases is not int", "loop-decreases")
+                _e(errs, s, "loop decreases is not int", "loop-decreases")
             for inv in w.get("invariants", []):
                 if _ty(inv, env, funs, ver, errs, set()) != "bool":
-                    _e(errs, "loop invariant is not bool", "loop-invariant-bool")
+                    _e(errs, s, "loop invariant is not bool", "loop-invariant-bool")
             _check_stmts(w["body"], dict(env), funs, ver, errs, set(assignable))
         elif "return" in s:
             if ver == 0:
-                _e(errs, "return in a v0 task", "return-v0")
+                _e(errs, s, "return in a v0 task", "return-v0")
             n, e = s["return"]
             if n not in assignable:
-                _e(errs, f"return names {n}, not the task's return", "return-name")
+                _e(errs, s, f"return names {n}, not the task's return", "return-name")
             t = _ty(e, env, funs, ver, errs, set(), env.get(n))
             if t != env.get(n):
-                _e(errs, f"return {n}: {t} into {env.get(n)}", "assign-type")
+                _e(errs, s, f"return {n}: {t} into {env.get(n)}", "assign-type")
             if s is not body[-1]:
-                _e(errs, "statement after return is unreachable (SPEC.md Early exit)",
+                _e(errs, s, "statement after return is unreachable (SPEC.md Early exit)",
                    "return-unreachable")
         else:
-            _e(errs, f"t has no statement {sorted(s)!r}", "unknown-stmt")
+            _e(errs, s, f"t has no statement {sorted(s)!r}", "unknown-stmt")

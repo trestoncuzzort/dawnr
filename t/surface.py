@@ -191,6 +191,8 @@ import os
 import re
 import sys
 
+import check_wf
+
 
 # ===========================================================================
 # 1. Canonical form. Two ASTs are the same task when these strings match.
@@ -1030,6 +1032,27 @@ def parse_file(path: str, positions=None) -> dict:
     with open(path, encoding="utf-8") as fh:
         src = fh.read()
     return Parser(src, file=path, positions=positions).program()
+
+
+def check_file(path: str) -> list:
+    """A .t file to its well-formedness errors, parse and check_wf both
+    covered: `parse_file(path, positions=...)`, then `check_wf.check_wf`
+    with that same positions map and `path` as `file`. A file that fails
+    to PARSE never reaches check_wf -- the SurfaceError the parse raised is
+    the sole element of the returned list, the same object `parse_file`
+    would have raised, so a caller can `str()` it exactly like any other
+    error this returns. A file that parses but is not well-formed returns
+    `check_wf`'s list of WfError (empty when well-formed). Added 2026-09-11
+    (ROADMAP 14.2, well-formedness half): the one entry point that wires
+    the parse side's positions to the checker side, so a caller need not
+    know either module's internals to get `file:line:col: message
+    [SPEC: rule]` for a malformed .t file."""
+    positions: dict = {}
+    try:
+        task = parse_file(path, positions=positions)
+    except SurfaceError as exc:
+        return [exc]
+    return check_wf.check_wf(task, positions=positions, file=path)
 
 
 def parse_expr(src: str) -> dict:
