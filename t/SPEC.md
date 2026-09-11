@@ -643,6 +643,86 @@ is split the same day: `seq<seq<int>>` one level deep a burden, `seq<bool>`,
 `seq<string>` in a row, and depth three or more gaps under their own
 names, so the 17 reads 12.
 
+### The string library (v1)
+
+Stated 2026-09-11 (ROADMAP 12.7, the wave after nested sequences),
+measured first: COVERAGE-string-lib.md reads the nl/ census member by
+member. Of the 24,748 problems, 13,266 need the Python string library and
+3,103 need nothing else t lacks: 298 function-shaped (the census's sole
+blockers) and 2,805 stdin-shaped, whose need is almost only `split()` on
+the input, the stdin-signature construct's own business. Over the 298 the
+greedy order is split, str(), join, count, strip, format, replace,
+int(x, base), rstrip, find, lower, f-strings, upper, isdigit, isalpha;
+twelve members reach 240 of 298. The corpus is Python and the model
+writes what it knows, so the semantics are Python's, exactly, one member
+at a time, with the reference interpreter calling Python's own `str`
+methods on the code-point sequence, so parity is by construction and the
+kernels are measured against it.
+
+A string is a `seq` of code points and a list of strings a `seq<seq>`
+(the two sections above); the library adds no type. It adds polymorphic
+operators, each total (Python's are; the library adds no undefined case),
+each with the definedness of its arguments only:
+
+- `split(s)` : seq -> seq<seq>, Python's `s.split()`: runs of whitespace
+  (code points 9, 10, 11, 12, 13, 32) separate, leading and trailing
+  whitespace is dropped, no row is empty; `split("") == []`.
+- `split(s, c)` : seq, int -> seq<seq>, Python's `s.split(chr(c))` on one
+  code point: every occurrence separates, empty rows kept, so
+  `len(split(s, c)) == count(s, [c]) + 1` and `join(split(s, c), [c]) == s`.
+- `join(rows, sep)` : seq<seq>, seq -> seq, Python's `sep.join(rows)`.
+- `tostr(n)` : int -> seq, Python's `str(n)`: decimal digits, `-` at 45
+  for a negative n.
+- `count(s, t)` : seq, seq -> int, Python's `s.count(t)`: non-overlapping
+  occurrences left to right; `count(s, []) == len(s) + 1`.
+- `find(s, t)` : seq, seq -> int, Python's `s.find(t)`: the least index
+  where t occurs, `-1` when none, `find(s, []) == 0`.
+- `strip(s)`, `lstrip(s)`, `rstrip(s)` : seq -> seq, whitespace as above
+  removed at both ends, the left, the right.
+- `replace(s, t, u)` : seq, seq, seq -> seq, Python's `s.replace(t, u)`:
+  every non-overlapping occurrence left to right; `t == []` inserts `u`
+  before every code point and at the end, as Python does.
+- `lower(s)`, `upper(s)` : seq -> seq, the ASCII letters 65 to 90 and 97
+  to 122 mapped, every other code point unchanged (the corpus is ASCII;
+  the Unicode case tables are not in v1, by name).
+- `isdigit(s)`, `isalpha(s)`, `isupper(s)`, `islower(s)` : seq -> bool,
+  Python's on the ASCII classes: `isdigit` iff s is non-empty and every
+  code point is 48 to 57; `isalpha` iff non-empty and every code point a
+  letter; `isupper` iff at least one letter, every letter upper; `islower`
+  likewise.
+- `startswith(s, t)`, `endswith(s, t)` : seq, seq -> bool.
+
+In the notation every member is written Python's way, `s.split()`,
+`s.split(c)`, `sep.join(rows)`, `s.count(t)`, `s.find(t)`, `s.strip()`,
+`s.replace(t, u)`, `s.lower()`, `s.isdigit()`, `s.startswith(t)`, and
+`tostr(n)` as a function; the JSON op is the member's name with the
+receiver first (`{"op": "split", "args": [s, c]}`), `s.split()` and
+`s.split(c)` two arities of one op. A member in specification position is
+the same function (its value in a quantified body or an ensures), so an
+ensures may say `len(s.split(c)) == s.count([c]) + 1`. Twin operators
+apply to a member's arguments as to any expression; no member-specific
+twin exists in v1.
+
+Not in v1, each by name and by the census: `format` and f-strings (a
+desugaring to `tostr` and `+` is the lifter's, not the language's),
+`int(x, base)` and string-to-int parsing (with the stdin-signature
+construct), `strip(s, chars)` and the two one-sided chars forms,
+`split(s, t)` on a multi-code-point separator, `splitlines`, the padding
+members (`zfill`, `center`, `ljust`, `rjust`), the case members that need
+word boundaries (`title`, `capitalize`, `swapcase`), `partition`, and
+`encode`. Each kernel lowers a member to a definition in its prelude, a
+recursive function with the lemmas its own proofs need, measured on the
+committed tasks, the fuzz family `v1strlib`, and the spec experiment's
+pool, which grows by the function-shaped problems whose only gap these
+members close; the per-kernel notes record what each kernel proves about
+a member and what stays an abstain, by name.
+
+Tasks: `word_count` (`len(s.split())`, its twin off-by-one on a bound
+inside the loop-free body's spec), `split_join` (the law `[c].join(s.split(c)) == s`
+as an ensures on the identity task, its twin the wrong variable), and
+`count_vowels` (a loop over code points with an invariant against
+`s.count`), predicted twins to be corrected to the measured ones.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
