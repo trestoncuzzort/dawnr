@@ -873,6 +873,39 @@ bodies), first candidate with a witness winning:
    ill-formed rather than wrong, and a lowering rejects it instead of
    refuting it).
 8. **DROP-GUARD**: one conjunct of an `if`/`while` condition is dropped.
+9. **WRONG-CONSTANT** (twin-ladder wave, 2026-09-11): one assign/return
+   right-hand side or `var` initialiser, proved int-typed by
+   `harness._int_rooted` (a literal, a variable of declared type `int`, or
+   the result of `neg`/`len`/`*`/`-`/`div`/`mod`, never `+`, which this
+   language also overloads for seq concatenation), is wrapped in `expr +- 1`.
+   The rung a straight-line body with no `if`, no loop, no literal, and no
+   `at`/`update`/`fill`/`slice` admits: OFF-BY-ONE has nothing to move there,
+   since there is no literal or indexing op anywhere in the expression, only
+   a computed value returned or assigned whole (`volume := size * size *
+   size`, `ascii := c`).
+10. **WRONG-OPERATOR** (twin-ladder wave, 2026-09-11): one arithmetic
+    operator, `+`, `-`, `*`, `div`, or `mod`, is replaced by another from a
+    fixed per-operator list (`+`/`-`/`*` cycle among themselves, `div` and
+    `mod` swap), at every site COMPARE-FLIP's own walk reaches. Empty
+    wherever the body has no arithmetic operator node, which none of rungs
+    1-8 touch (COMPARE-FLIP and BOUNDARY-SWAP only ever rewrite an order
+    comparison, never the arithmetic feeding one).
+
+Rungs 9 and 10 sit below every rung above in the tried-in-order search: a
+task whose twin was already found by an earlier rung keeps that exact twin,
+byte-identical, which is why they close the five dafny_synthesis rows that
+previously had no twin at all (`234 cubeVolume`, `242 countCharacters`,
+`269 asciiValue`, `626 areaOfLargestTriangleInSemicircle`, `792 countLists`:
+each a straight-line arithmetic body with a single param and no `if`/loop,
+so rungs 1-8 have nothing to mutate and `twin_for` returned `no-operator`)
+and give `397 medianOfThree` a grounded, `ensures`-falsifying twin where
+rungs 1-8 found only a "+nonrefuting" fallback: its `ensures` is a
+disjunction that only pins the result to be ONE OF `a`, `b`, `c` (every
+value-preserving permutation of which var gets returned trivially satisfies
+both disjuncts by reflexivity, so no rung that merely swaps *which* of
+`a`/`b`/`c` comes out can ever falsify it), while WRONG-CONSTANT's `+- 1`
+produces a value equal to none of the three and falsifies the first
+disjunct outright.
 
 Rungs 1 and 2 at site 0 are exactly the v1 rule, so a task whose v1 twin was
 already load-bearing keeps that twin unchanged; measured over the same 1395

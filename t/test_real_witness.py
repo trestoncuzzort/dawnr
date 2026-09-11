@@ -35,7 +35,7 @@ import fuzz_lower                    # noqa: E402
 import harness                       # noqa: E402
 import interp                        # noqa: E402
 import tlib                          # noqa: E402
-from fuzz_lower import AT, I, IFS, OP, V, ASG  # noqa: E402
+from fuzz_lower import AT, I, IFS, OP, V, ASG, LOC, WH, CALL, ITE  # noqa: E402
 from verifiers import Outcome        # noqa: E402
 from verifiers import dafny as dafny_backend  # noqa: E402
 
@@ -191,6 +191,94 @@ def test_hand_built_guarded_at_in_ensures_does_not_trigger():
            "ensures": [OP("==", V("r"), AT("s", I(0)))],
            "body": [ASG("r", AT("s", I(0)))]}
     w = harness.real_witness(task)
+    assert w is None, w
+
+
+@test
+def test_bad_measure_probes_get_a_measure_witness():
+    """ROADMAP 13.4, framac-measure, 2026-09-11: fuzz_lower.py's own
+    "well-definedness IS the termination obligation" family
+    (fz_p_badrec, fz_p_badrec2: a spec_fun whose self-call does not
+    strictly decrease its own `decreases`; fz_p_badvariant: a `while`
+    loop whose own variant does not) must each yield a "measure"-kind
+    witness carrying the site, the concrete argument(s), and both ground
+    measures -- the exact numbers the module docstring above
+    lower_framac.py's `_measure_certificate` states from direct
+    measurement, re-checked here independently of that file."""
+    probes = {t["name"]: t for t in fuzz_lower.probes()
+             if t["name"] in ("fz_p_badrec", "fz_p_badrec2", "fz_p_badvariant")}
+    assert len(probes) == 3, sorted(probes)
+
+    w = harness.real_witness(probes["fz_p_badrec"])
+    assert w is not None, "fz_p_badrec"
+    assert w.get("_kind") == "measure", w
+    assert w.get("_site") == "g", w
+    assert w.get("n") == 0, w
+    assert w.get("_caller_measure") == 0, w
+    assert w.get("_callee_measure") == 0, w
+
+    w = harness.real_witness(probes["fz_p_badrec2"])
+    assert w is not None, "fz_p_badrec2"
+    assert w.get("_kind") == "measure", w
+    assert w.get("_site") == "g", w
+    assert w.get("_caller_measure") is not None, w
+    assert w.get("_callee_measure") is not None, w
+    assert not (w["_callee_measure"] < w["_caller_measure"]), (
+        "the whole point: the callee's measure must NOT be below the "
+        "caller's, or this is not the defect the probe names", w)
+
+    w = harness.real_witness(probes["fz_p_badvariant"])
+    assert w is not None, "fz_p_badvariant"
+    assert w.get("_kind") == "measure", w
+    assert w.get("_site") == 0, w          # the task's only `while`, index 0
+    assert w.get("_caller_measure") == 0, w
+    assert w.get("_callee_measure") == 0, w
+    assert w.get("n", 0) >= 2, (
+        "badvariant's variant is a constant 0: only a SECOND arrival at "
+        "the loop header exposes '0 not below 0', so the witness needs "
+        "n >= 2", w)
+
+
+@test
+def test_good_measure_recursion_and_loop_have_no_witness():
+    """The negative case test_bad_measure_probes_get_a_measure_witness
+    needs alongside it: a spec_fun whose self-call DOES strictly decrease
+    a non-negative `decreases` (the standard countdown, mirroring
+    fz_p_badrec2's shape with `n - 1` in place of `n + 1`), and a `while`
+    loop whose variant (`n - i`) DOES strictly decrease each iteration
+    (mirroring fz_p_badvariant's shape with the real variant in place of
+    the constant 0) -- neither may raise interp.MeasureViolation, so
+    real_witness must read None for both, exactly as it does for every
+    committed task (test_no_committed_task_has_a_real_witness)."""
+    good_rec = {"t": 1, "name": "test_good_rec",
+               "params": [{"name": "n", "type": "int"}],
+               "returns": [{"name": "r", "type": "int"}],
+               "requires": [OP(">=", V("n"), I(0))],
+               "ensures": [OP("==", V("r"), CALL("g", V("n")))],
+               "spec_funs": [{"name": "g",
+                              "params": [{"name": "n", "type": "int"}],
+                              "result": "int", "decreases": V("n"),
+                              "body": ITE(OP("<=", V("n"), I(0)), I(0),
+                                          CALL("g", OP("-", V("n"), I(1))))}],
+               "body": [IFS(OP("<=", V("n"), I(0)),
+                            [ASG("r", I(0))], [ASG("r", I(0))])]}
+    w = harness.real_witness(good_rec)
+    assert w is None, w
+
+    good_loop = {"t": 1, "name": "test_good_loop",
+                "params": [{"name": "n", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [OP(">=", V("n"), I(0))],
+                "ensures": [OP("==", V("r"), V("n"))],
+                "body": [ASG("r", I(0)), LOC("i", "int", I(0)),
+                        WH(OP("<", V("i"), V("n")),
+                           [OP("==", V("r"), V("i")),
+                            OP("and", OP(">=", V("i"), I(0)),
+                               OP("<=", V("i"), V("n")))],
+                           OP("-", V("n"), V("i")),
+                           [ASG("r", OP("+", V("r"), I(1))),
+                            ASG("i", OP("+", V("i"), I(1)))])]}
+    w = harness.real_witness(good_loop)
     assert w is None, w
 
 

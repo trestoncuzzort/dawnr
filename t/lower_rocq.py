@@ -1724,26 +1724,80 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   more arm, `cbn [length]`, since `length` itself is not one of this
   file's opaque functions.
 
-  TWO OF FIVE, NOT ATTEMPTED, NAMED. `fz_p_str_lowernonletter`/
-  `fz_p_str_tab` both need a POINTWISE bridging fact this file has no
-  version of yet: reading `lower_list (t_list f n)` (or `split_ws_list`
-  over a multi-element literal) back index by index needs relating
-  `nth k (lower_list l)` to `lower_c (nth k l)` (a `map_nth`-shaped
-  lemma, complicated by the default-value side condition `map_nth`
-  itself carries) or, for `_tab`, unfolding `split_ws_acc` through
-  three concrete elements' worth of `is_ws` case splits -- neither is
-  the one-unfold shape the three DONE above are; MEASURED unproved,
-  `coqc`'s own message unchanged: "Tactic failure: unsolved t
-  verification condition." Left open by name, not attempted further
-  this pass.
+  ALL FIVE OF FIVE, DONE (2026-09-11, ROADMAP 13.4's rocq item).
+  `fz_p_str_lowernonletter` needed exactly the `map_nth`-shaped pointwise
+  bridge named above (`t_of_list_lower_get`/`length_lower_list_t`, this
+  file's own "lower / upper / ..." section) PLUS one more thing the note
+  above did not anticipate: `lower_c` (a plain `Definition`, not a
+  Notation) is opaque to `t_leaf`'s `lia`/`assumption`/`congruence`/
+  `discriminate`, and MEASURED, `cbn [lower_c]`/`cbn [is_upper_letter]`
+  (the name-whitelist form) does NOT inline either on this Rocq (9.2) --
+  confirmed standalone (`Goal (if is_ws 65 then 1 else 2) = 2. cbn
+  [is_ws].` leaves `is_ws` standing; `unfold is_ws` inlines it in one
+  step). The fix is `unfold lower_c, is_upper_letter` (not `cbn`),
+  feeding the exposed `<=?`/`&&`/`if` back into `t_leb_case`/`t_bred`'s
+  own EXISTING arms rather than trying to re-derive a computation step
+  of their own.
 
-  `fz_p_pair_seq`, NOT ATTEMPTED, NAMED. Still abstain/abstain: the
-  refusal is `_check_pair_types`/`pair_comp_ty`'s own structural one
-  (this file's "PAIRS (v1)" note, above) for a seq pair-component,
-  raised before any proof search starts, not a prelude gap -- fixing it
-  needs `pair_comp_ty`/`pair_ty`/`rty`/`param_binders` to accept a THIRD
-  pair-component shape throughout, not a cheap addition to a gated
-  block. Left open by name.
+  `fz_p_str_tab` needed the SAME `unfold`-not-`cbn` fix for `is_ws` (a
+  length-3 literal reified to its 3 concrete elements by a new
+  `t_list_lit3` lemma, the same one-length-special-case shape
+  `t_list_singleton` already has for length 1), PLUS a SEPARATE, more
+  consequential gap: `t_seq_eqb_case` (PRELUDE_CORE_2, ALWAYS present,
+  not gated to the string block) unconditionally `destruct`s into two
+  branches without first trying the cheap ground-computation route
+  `t_ltb_case`/`t_leb_case`/`t_eqb_case` already have (their own leading
+  `replace ... by lia` arm) -- for a fully CLOSED `t_seq_eqb n f g`
+  (fz_p_str_tab's own shape, no parameter anywhere), `destruct` still
+  produces BOTH goals (Coq does not decide which constructor "actually"
+  holds until something forces the reduction), and the "false" branch's
+  own evidence, once ground `f`/`g` are genuinely equal, is a
+  self-contradictory `~ (forall k, ...)` this file's search cannot
+  discharge (finding a witness needs `intros`+`lia`+`reflexivity`, not
+  `t_go`'s `apply H` step, which needs the goal to already BE `False`).
+  MEASURED: fz_p_str_tab timed out past 90 s on this shared box without
+  a `reflexivity`-first fast path in `t_seq_eqb_case`; adding one closes
+  it in low single-digit seconds, and is safe everywhere else the same
+  way the other case-split tactics' own leading `lia`-arm already is
+  (`reflexivity` failing on a non-ground pair falls straight through to
+  the original three-branch `destruct`, unchanged).
+
+  `fz_p_pair_seq` moves abstain/abstain -> verified/unproved.
+  `pair_comp_ty`'s own refusal (just below) is LIFTED for a seq
+  component: `((Z -> Z) * Z)`, the model's own (function, length) pair
+  wrapped as ONE Coq value -- exactly `Ctx.nested_fn`'s own row codomain,
+  one level up. Measured CONTAINED, as this note's prior pass hoped:
+  `pair_ty`, `param_binders` and `Ctx.ty`'s `fst`/`snd` case all already
+  route through `pair_comp_ty` (or, for `ty()`, generically through the
+  declared pair type) with NO other change; the one real gap was
+  `Ctx.seq_fn`, which had no `fst`/`snd` case at all (a seq PROJECTED
+  out of a pair reached `seq_fn`'s bare `raise ValueError`, not this
+  refusal) -- one new case there, mirroring `nested_fn`'s own `at` case
+  (a literal Coq pair read back via `fst`/`snd`), closes it.
+  `pair_comp_eq_fn` is UNCHANGED, still a named refusal (SPEC.md's pair
+  `==`/`!=` needs a two-argument decidable equality per component,
+  `t_seq_eqb`'s own shape takes a length as a THIRD argument; unneeded
+  by `fz_p_pair_seq`, which never compares two pairs, so left exactly as
+  it was, its own separate, still-real, gap).
+
+  TWIN SIDE, NOT ATTEMPTED, NAMED. `fz_p_str_lowernonletter` and
+  `fz_p_pair_seq` now read verified/UNPROVED rather than the REFUTED a
+  wrong-var mutation should in principle certify: MEASURED, their twin
+  `.v` files carry the SAME `_t_spec` theorem shape as the real (no
+  `t_refutation_certificate` goal), meaning `harness.real_witness`'s own
+  witness-grounding route did not produce a certificate this lowering's
+  refutation-certificate builder (this file's own "Refutation
+  certificates" section, ROADMAP 10.7) can grow into a proof for THESE
+  two witness shapes (a forall-over-range ensures for the first, a
+  guarded `at` through a pair projection for the second) -- an HONEST
+  verified/unproved reading per that section's own stated convention
+  ("a witness kind this lowering cannot ground ... yields no certificate
+  and the cell honestly reads verified/unproved"), not a regression: the
+  REAL side is what ROADMAP 13.4 named as this item's own open cell, and
+  it is fixed; the twin side is a separate, not-yet-attempted gap, named
+  here rather than silently left. `fz_p_str_tab`'s own twin, by
+  contrast, DOES read refuted (MEASURED): its witness is a plain "at an
+  out-of-guard index" shape the certificate builder already grounds.
 """
 from __future__ import annotations
 
@@ -2182,15 +2236,33 @@ Proof.
 Qed.
 
 Ltac t_seq_eqb_case n f g :=
-  let E := fresh "Es" in
-  destruct (Sumbool.sumbool_of_bool (t_seq_eqb n f g)) as [E|E];
-  [ let F := fresh "Ef" in
-    pose proof (proj1 (t_seq_eqb_spec n f g) E) as F;
-    replace (t_seq_eqb n f g) with true in * by (symmetry; exact E)
-  | let F := fresh "Ef" in
-    assert (F : ~ (forall k : Z, 0 <= k < n -> f k = g k))
-      by (intros Hc; apply (proj2 (t_seq_eqb_spec n f g)) in Hc; congruence);
-    replace (t_seq_eqb n f g) with false in * by (symmetry; exact E)
+  first
+  [ (* ROADMAP 13.4, 2026-09-11: a GROUND `n`/`f`/`g` (fz_p_str_tab's own
+       shape: every argument closed, no parameter anywhere) decides by
+       plain computation; tried first, the same "try the cheap direct
+       route before destructing" convention `t_ltb_case`/`t_leb_case`/
+       `t_eqb_case` already have (their own leading `replace ... by
+       lia` arms) just above. Without this, `destruct
+       (Sumbool.sumbool_of_bool ...)` below still produces BOTH goals
+       for a ground, actually-true `t_seq_eqb n f g` (the ONE constructor
+       Coq's own conversion checker would pick is not decided until
+       something forces it), and the "false" branch's own evidence is a
+       `~ (forall k, ...)` this file's search cannot discharge (finding
+       a witness needs `intros`+`lia`+`reflexivity`, not `t_go`'s
+       `apply H` step) -- MEASURED: fz_p_str_tab timed out past 90 s on
+       this shared box without this arm, closes in seconds with it. *)
+    replace (t_seq_eqb n f g) with true in * by reflexivity
+  | replace (t_seq_eqb n f g) with false in * by reflexivity
+  | let E := fresh "Es" in
+    destruct (Sumbool.sumbool_of_bool (t_seq_eqb n f g)) as [E|E];
+    [ let F := fresh "Ef" in
+      pose proof (proj1 (t_seq_eqb_spec n f g) E) as F;
+      replace (t_seq_eqb n f g) with true in * by (symmetry; exact E)
+    | let F := fresh "Ef" in
+      assert (F : ~ (forall k : Z, 0 <= k < n -> f k = g k))
+        by (intros Hc; apply (proj2 (t_seq_eqb_spec n f g)) in Hc; congruence);
+      replace (t_seq_eqb n f g) with false in * by (symmetry; exact E)
+    ]
   ]; t_bred_all.
 
 (* t_pair_eqb (2026-09-10): SPEC.md "Pairs (v1)" makes `==`/`!=` on two
@@ -2778,6 +2850,13 @@ Proof.
   intro c. unfold t_list, t_upd, t_fill. simpl. reflexivity.
 Qed.
 
+(* ROADMAP 13.4, 2026-09-11: fz_p_str_tab's own literal, a length-3 seq
+   reified to its 3 concrete elements -- the same one-length-special-case
+   shape as t_list_singleton just above (length 1), generic in f so a
+   different length-3 literal pays the same lemma. *)
+Lemma t_list_lit3 : forall f, t_list f 3 = [f 0; f 1; f 2].
+Proof. intros f. unfold t_list. simpl. reflexivity. Qed.
+
 (* ============ nested: seq<seq> (fn: Z -> ((Z->Z)*Z), len) <-> list (list Z) ============ *)
 Fixpoint nested_to_list (f : Z -> ((Z -> Z) * Z)) (fuel : nat) : list (list Z) :=
   match fuel with
@@ -3162,6 +3241,32 @@ Definition upper_c (c : Z) : Z := if is_lower_letter c then c - 32 else c.
 Definition lower_list (s : list Z) : list Z := map lower_c s.
 Definition upper_list (s : list Z) : list Z := map upper_c s.
 
+(* ROADMAP 13.4, 2026-09-11: fz_p_str_lowernonletter's own gap -- a
+   pointwise (map_nth-shaped) bridge relating `nth k (lower_list l)` to
+   `lower_c (nth k l)`, closing the complication `map_nth` itself carries
+   (its default-value side condition) by observing `lower_c 0 = 0`, so the
+   same `0` default on both sides of the bridge lets `map_nth` apply
+   directly. `t_of_list_lower_get` is `t_of_list_get` (PRELUDE_CORE_1,
+   above the string block) with one `lower_list` layer read through, same
+   proof shape (`nth_seq_to_list` under `Z2Nat.id`). *)
+Lemma lower_c_zero : lower_c 0 = 0.
+Proof. reflexivity. Qed.
+
+Lemma t_of_list_lower_get : forall f n k, 0 <= k < n ->
+  t_of_list (lower_list (t_list f n)) k = lower_c (f k).
+Proof.
+  intros f n k Hk.
+  unfold t_of_list, lower_list, t_list.
+  replace 0 with (lower_c 0) by (symmetry; apply lower_c_zero).
+  rewrite (map_nth lower_c (seq_to_list f (Z.to_nat n)) 0 (Z.to_nat k)).
+  f_equal.
+  apply nth_seq_to_list.
+  rewrite Z2Nat.id by lia. lia.
+Qed.
+
+Lemma length_lower_list_t : forall f n, length (lower_list (t_list f n)) = Z.to_nat n.
+Proof. intros f n. unfold lower_list. rewrite length_map. apply t_list_length. Qed.
+
 Fixpoint isdigit_go (s : list Z) : bool :=
   match s with
   | [] => true
@@ -3275,6 +3380,51 @@ _STRLIB_GOAL_ARMS = r"""  (* THE STRING LIBRARY (v1), 2026-09-11 (STRLIB's own d
   | |- context [t_find_list ?s []] => rewrite (t_find_list_empty s)
   | |- context [split_ws_list []] => rewrite split_ws_list_empty
   | |- context [length (@nil ?A)] => cbn [length]
+  (* ROADMAP 13.4, 2026-09-11: fz_p_str_lowernonletter -- the pointwise
+     bridge through `lower_list`, `t_of_list_lower_get`/`length_lower_list_t`
+     above, mirroring `t_of_list_get`/`t_list_length` (this same file, just
+     above) with one `lower_list` layer read through. *)
+  | |- context [t_of_list (lower_list (t_list ?f ?n)) ?k] =>
+      rewrite (t_of_list_lower_get f n k) by lia
+  | |- context [length (lower_list (t_list ?f ?n))] =>
+      rewrite (length_lower_list_t f n)
+  (* ROADMAP 13.4, 2026-09-11: `lower_c` is opaque to `t_leaf` (lia/
+     assumption/congruence/discriminate never unfold a Definition), so
+     the pointwise bridge above leaves goals like `lower_c 1000000 =
+     1000000` unsolved. `cbn [is_upper_letter]` alone does NOT inline
+     `is_upper_letter` on this Rocq (9.2) -- the SAME measured quirk
+     `split_ws_list`'s own arm above works around with `unfold`, not
+     `cbn`'s name-whitelist form -- so `unfold` BOTH names here, feeding
+     the exposed `<=?`/`&&`/`if` back into `t_leb_case`/`t_bred`'s own
+     existing arms (just above and below, PRELUDE_CORE_2) the same way
+     any other boolean guard already reduces; those decide `65 <=? c`/
+     `c <=? 90` outright once `c` is a literal (`t_upd_case` has already
+     read the surrounding chain back to one by the time this arm's turn
+     comes), landing on `c = c`, closed by `t_base`'s own leading
+     `solve [lia]` try. *)
+  | |- context [lower_c ?c] => unfold lower_c, is_upper_letter
+  (* ROADMAP 13.4, 2026-09-11: fz_p_str_tab -- a length-3 seq literal
+     reified to its 3 concrete elements (`t_list_lit3` above). `t_list
+     ?f 3` only ever arises from a LITERAL 3-element seq (`seq_fn`'s own
+     "seq" case: the length term is a bare Python-emitted numeral only
+     for a literal, never a parameter's `_len`), so `f` is always a
+     `t_upd`-over-`t_fill` chain built from CONCRETE code points here,
+     not a name to preserve opaque for `t_upd_case`'s later reuse
+     elsewhere; unfolding `t_upd`/`t_fill` too lets `cbn` finish the
+     whole computation in one pass (`is_ws`'s ten `Z.eqb` disjuncts
+     decide outright on a literal) instead of routing three elements'
+     worth of `is_ws` through the generic (and here unnecessary) case-
+     split engine, measured to time out on this shared box. *)
+  | |- context [split_ws_list (t_list ?f 3)] => rewrite (t_list_lit3 f)
+  (* `cbn [is_ws]` alone does NOT unfold `is_ws c` on this Rocq (9.2):
+     measured directly (`if is_ws 65 then _ else _` under `cbn [is_ws]`
+     leaves `is_ws` standing, `unfold is_ws` inlines it in one step) --
+     `unfold` first, THEN `simpl` to finish the whole computation
+     (`split_ws_acc`'s recursion, `t_upd`/`t_fill`'s reads, and every
+     `is_ws`/`Z.eqb` decision on now-concrete code points), same recipe
+     as `t_list_singleton` above (`unfold ...; simpl; reflexivity`). *)
+  | |- context [split_ws_list (?a :: ?b :: ?c :: nil)] =>
+      unfold split_ws_list, split_ws_acc, is_ws, t_upd, t_fill; simpl
 """
 PRELUDE_CORE_3 = r"""  | _ => progress subst
   (* hypothesis position last: a `context` scan over the whole context is the
@@ -3324,6 +3474,16 @@ _STRLIB_HYP_ARMS = r"""  (* THE STRING LIBRARY (v1), 2026-09-11: hypothesis-posi
   | H : context [t_find_list ?s []] |- _ => rewrite (t_find_list_empty s) in H
   | H : context [split_ws_list []] |- _ => rewrite split_ws_list_empty in H
   | H : context [length (@nil ?A)] |- _ => cbn [length] in H
+  (* ROADMAP 13.4, 2026-09-11: hypothesis-position mirrors of the two
+     string-fact pairs just above (fz_p_str_lowernonletter/fz_p_str_tab). *)
+  | H : context [t_of_list (lower_list (t_list ?f ?n)) ?k] |- _ =>
+      rewrite (t_of_list_lower_get f n k) in H by lia
+  | H : context [length (lower_list (t_list ?f ?n))] |- _ =>
+      rewrite (length_lower_list_t f n) in H
+  | H : context [lower_c ?c] |- _ => unfold lower_c, is_upper_letter in H
+  | H : context [split_ws_list (t_list ?f 3)] |- _ => rewrite (t_list_lit3 f) in H
+  | H : context [split_ws_list (?a :: ?b :: ?c :: nil)] |- _ =>
+      unfold split_ws_list, split_ws_acc, is_ws, t_upd, t_fill in H; simpl in H
 """
 PRELUDE_CORE_4 = r"""  end.
 
@@ -4027,6 +4187,23 @@ class Ctx:
                 res = (f"(t_replace_list (t_list {fn_s} {ln_s}) "
                        f"(t_list {fn_t} {ln_t}) (t_list {fn_u} {ln_u}))")
             return f"(t_of_list {res})", f"(Z.of_nat (length {res}))"
+        if op in ("fst", "snd"):
+            # ROADMAP 13.4, 2026-09-11 (fz_p_pair_seq): a seq PROJECTED out
+            # of a pair (`pair_comp_ty`'s new "seq" case, above: the
+            # component is ONE Coq value, `((Z -> Z) * Z)`, the model's
+            # own (function, length) pair). `Ctx.ty` already decided this
+            # node is seq-typed before `seq_fn` was called on it (the
+            # SAME convention `at`'s nested-seq case and `+`/`slice`
+            # already rely on); `px` renders the pair term itself (a
+            # `var` for a pair PARAMETER, `fz_p_pair_seq`'s own shape),
+            # `fst`/`snd` of THAT reads the projected component's own
+            # (fn, len) pair value back, then this function's OWN
+            # `fst`/`snd` pulls the two slots apart -- the same two-step
+            # "pair term, then this codomain's own projection" shape
+            # `nested_fn`'s `at` case already has for a row.
+            comp = self.px(e["args"][0], env, local)
+            proj = f"({op} {comp})"
+            return f"(fst {proj})", f"(snd {proj})"
         raise ValueError(f"t v1 -> rocq: not a seq expression: {op!r}")
 
     def nested_fn(self, e: dict, env: dict, local: dict | None = None
@@ -4938,24 +5115,48 @@ def len_hyps(cx: Ctx) -> list[str]:
 def pair_comp_ty(t: str) -> str:
     """Coq type of one pair COMPONENT (SPEC.md "Pairs (v1)": T1/T2 are each
     "int", "bool" or "seq"). This kernel maps "int"/"bool" straight to
-    Z/bool; a "seq" component is a NAMED REFUSAL, not a silent guess.
-    SPEC.md's own rocq survey (the "Pairs (v1)" section, just before "The
-    twins") already names this kernel's product `Z * Z`, one instance of
-    the general rule stated there: "or a named refusal where the memory
-    model or a seq component costs the certificate." A seq is TWO Coq
-    slots here, not one (MODEL, above: the function+length pair), so it
-    has no single Coq value a `T1 * T2` product could hold as one
-    component without a second, incompatible seq encoding this file does
-    not otherwise use; refusing it loudly here is cheaper and safer than
-    inventing one for a shape no committed task needs."""
+    Z/bool; a "seq" component is `((Z -> Z) * Z)`, the model's own
+    function+length pair (above) wrapped as ONE Coq value instead of two
+    separate binders -- unlike a top-level seq PARAM (which needs two
+    slots at the Gallina binder list itself, `param_binders`' own two-
+    binder split), a seq NESTED one level inside another pair needs only
+    ONE slot at that outer level, since the outer pair's own single Coq
+    binder already provides the wrapping value pairs need one Coq value
+    for; `fst`/`snd` of the outer pair reads (fn, len) back the same way
+    `Ctx.nested_fn`'s own row codomain already does for a nested SEQ
+    (`Z -> ((Z -> Z) * Z)`, the ROW-level version of this exact idea:
+    each row is a Coq pair of the row's own (function, length), which is
+    exactly `pair_comp_ty("seq")`'s result here, one level up).
+
+    ROADMAP 13.4, 2026-09-11 (fz_p_pair_seq): measured CONTAINED --
+    `pair_ty` (this file's product-type builder, just below) already
+    calls `pair_comp_ty` on each component with no other change needed,
+    `param_binders` already renders ANY pair-typed param as one binder
+    via `pair_ty` regardless of what is inside it, and `Ctx.ty`'s
+    `fst`/`snd` case already reads a component's type generically
+    (`t["pair"][0 if op == "fst" else 1]`) with no pair-of-pairs-shaped
+    special case to add. The one REAL gap was `Ctx.seq_fn`, which had no
+    `fst`/`snd` case at all (a seq-VALUED projection out of a pair
+    reached `seq_fn`'s own final `raise ValueError`, not this refusal);
+    `seq_fn`'s new case, below, closes it the same way `nested_fn`'s
+    `at` case already reads a row's own (fn, len) out of a literal Coq
+    pair via `fst`/`snd`. `pair_comp_eq_fn`, just below, is UNCHANGED
+    (still a named refusal): SPEC.md's `==`/`!=` on two pairs needs a
+    DECIDABLE bool equality per component, and a seq's own equality is
+    `t_seq_eqb` (a three-argument function taking the length alongside
+    both sides, not the two-argument shape `t_pair_eqb` is generic
+    over) -- `fz_p_pair_seq` itself never compares two pairs, so this
+    is left exactly as it was, its own separate, still-real, gap."""
     if t == "int":
         return "Z"
     if t == "bool":
         return "bool"
+    if t == "seq":
+        return "((Z -> Z) * Z)"
     raise NotImplementedError(
         f"rocq lowering: a pair component of type {t!r} is refused "
-        f"(SPEC.md's own rocq product is Z * Z; a seq component would "
-        f"need a second seq encoding this file does not have)")
+        f"(SPEC.md's own rocq product is Z * Z or, for a seq component, "
+        f"((Z -> Z) * Z); no other component shape is built)")
 
 
 def pair_comp_eq_fn(t: str) -> str:

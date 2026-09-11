@@ -5027,6 +5027,48 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                    f"{hpre_a}{hinv_init_a if needs_hyp else ''}\n")
         thms = []
 
+        # THE FRAME-FACT GAP (2026-09-11, lean column, ROADMAP 16.2): a
+        # local declared in the PREFIX and never reassigned in the loop
+        # body (`frame`, below -- computed here, ahead of its other use
+        # site further down at "the helper lemma", so this block can read
+        # it too) is loop-invariant by construction (nothing in the
+        # recursion ever touches it), but was never actually SAID so to
+        # the per-clause `_t_wf{k}` theorems above: their own hypothesis
+        # chain was exactly `pre_hyps + inv_props (+ guard_p)`, so a
+        # clause needing the PREFIX's own defining fact about a frame var
+        # -- appendArrayToSeq measured directly: `h := |a|` before the
+        # loop, guard `i_v2 < h`, and the loop-body definedness
+        # obligation `i_v2 < |a|` (for `a[i_v2]`) -- had no hypothesis
+        # relating `h` to `|a|` at all, so the goal was genuinely FALSE
+        # as stated (h is an unconstrained free Int otherwise), not
+        # merely under-searched: `grind` correctly read UNPROVED on it,
+        # one theorem, no amount of automation closes a goal missing a
+        # premise. Every one of the nine named blockers sharing the
+        # `real=unproved, twin=refuted` shape in t/COVERAGE-lifted-785.md's
+        # 2026-09-10 sweep, plus a majority of the 15 newly-lifted tasks,
+        # hit this exact gap (measured: a `t_wf{k}` clause at the
+        # guard/body/decreases/after program points, referencing a frame
+        # var the guard or ensures names). Fixed the same way
+        # `_t_loop_spec`'s own `hfrs` already states this fact for ITS
+        # proof (this file's pre-existing pattern, "the helper lemma"
+        # below): `v = env0[v]` per frame var, a TRUE fact (the prefix's
+        # own straight-line value, sound because nothing in the loop
+        # body's recursion ever reassigns it) added to every wf clause
+        # whose binders already include the state (`sb`) -- every one of
+        # them except "definedness before the loop", which binds only
+        # `pb` (params), never `sb`, so a frame fact naming a state var
+        # would not even typecheck there (state vars are not yet in
+        # scope; unnecessary regardless, since that clause is about the
+        # prefix's own computation, not anything downstream of it).
+        # ADDITIVE ONLY: an extra TRUE hypothesis never weakens what a
+        # theorem states and never lets `grind`/`omega` reach a false
+        # conclusion -- these are proof OBLIGATIONS derived by SPEC.md's
+        # own D() calculus from the task's own requires/ensures/
+        # invariants, unchanged; the only thing added is a fact about
+        # local dataflow the source program already guarantees.
+        frame = [v for v in state if v not in loop_assigned(w["body"])]
+        frame_props = [f"({v} = {env0[v]})" for v in frame]
+
         # program-point definedness: (context) -> obligations
         pre_hyps = self.pre_props()
         inv_props = [self.prop(iv, {}, types) for iv in invs]
@@ -5034,18 +5076,18 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         for i, iv in enumerate(invs):
             d = self.dcond(iv, {}, types)
             if d is not None:
-                wfs.append((pre_hyps + inv_props[:i], d,
+                wfs.append((pre_hyps + inv_props[:i] + frame_props, d,
                             f"definedness of invariant {i + 1}", [iv]))
         if guard_d is not None:
-            wfs.append((pre_hyps + inv_props, guard_d,
+            wfs.append((pre_hyps + inv_props + frame_props, guard_d,
                         "definedness of the loop guard", [w["cond"]]))
         if dec_d is not None:
-            wfs.append((pre_hyps + inv_props + [guard_p], dec_d,
-                        "definedness of the loop decreases",
+            wfs.append((pre_hyps + inv_props + [guard_p] + frame_props,
+                        dec_d, "definedness of the loop decreases",
                         [w["decreases"]]))
         ob = self._conj(obs_body)
         if ob is not None:
-            wfs.append((pre_hyps + inv_props + [guard_p], ob,
+            wfs.append((pre_hyps + inv_props + [guard_p] + frame_props, ob,
                         "definedness of the loop body", [w["body"]]))
         ob = self._conj(obs_pre)
         if ob is not None:
@@ -5053,7 +5095,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                         [prefix]))
         ob = self._conj(obs_suf)
         if ob is not None:
-            wfs.append((pre_hyps + inv_props + [f"(¬{guard_p})"], ob,
+            wfs.append((pre_hyps + inv_props + [f"(¬{guard_p})"]
+                        + frame_props, ob,
                         "definedness after the loop", [suffix]))
         for hyps, obg, why, src in wfs:
             wf_k += 1
@@ -5087,7 +5130,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # self-maintaining; without it the lemma quantified over havocked
         # values, and fr_probe_ret / fr_probe_local were unprovable here
         # while Dafny, Verus and Frama-C proved them (measured 2026-09-02).
-        frame = [v for v in state if v not in loop_assigned(w["body"])]
+        # (`frame` itself now computed above, at "THE FRAME-FACT GAP",
+        # 2026-09-11, so the per-clause `_t_wf{k}` theorems can read it too.)
         has_pre = bool(pre_hyps)
         hpre = f"\n    (hpre : {self.pre_conj()})" if has_pre else ""
         hinvs = "".join(f"\n    (hinv{i + 1} : {p})"

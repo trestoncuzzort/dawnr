@@ -1887,6 +1887,186 @@ existing `_n` fields. None of the four rendering sites this pass
 touched (`cexpr`, `code_ats`/`at_asserts`, `_seq_len_render`/
 `_seq_at_render`, `defs`) gained a new representation; every fix is a
 new CASE recognized by an EXISTING one.
+
+THE MEASURE WITNESS CERTIFICATE, 2026-09-11 (ROADMAP 13.4, framac-measure).
+`fz_p_badrec`, `fz_p_badrec2`, `fz_p_badvariant` (fuzz_lower.py's own
+"well-definedness IS the termination obligation" family, SPEC.md gate 3)
+each break a `decreases`/loop-variant obligation this file has always
+emitted as a lemma (`f_terminates_k` for a spec_fun's self-call, the
+loop's own `loop variant` PO) but never certified: the note directly
+above THE SEMANTIC LINE (top of this file) MEASURED that alt-ergo 2.4.3
+reads Stepout and Z3 4.8.12 reads Timeout on the naked false lemma these
+three probes reduce to (`0 < 0` for `fz_p_badrec` at its own witness), so
+no prover status this column can reach names the fact false -- the exact
+gap the value/undefined/exit certificates above already closed for a
+false `ensures`, unclosed here until now for a false measure.
+
+The fix is the same doctrine, restated for a new witness kind. Two new
+pieces do the work and neither lives in this file:
+  - interp.MeasureViolation (interp.py): raised, opt-in only
+    (`St(check_measures=True)`), by `ev`'s spec_fun "call" case and
+    `exec_body`'s "while" case, the first time a concrete recursive call
+    or loop iteration's measure fails "strictly below the caller's, and
+    the caller's non-negative" -- the well-foundedness rule stated once,
+    checked at both sites, never assumed satisfied because a lemma about
+    it was emitted.
+  - harness.real_witness (harness.py): catches it in the SAME two scans
+    that already catch `Undef` (evaluating `ensures`, and re-executing
+    the body), with `check_measures=True` set ONLY on those scans' own
+    `St` (interp.Reference's own value-computing scan is untouched, so
+    every existing witness kind and every committed task's `real_witness
+    is None` measurement is unaffected -- checked directly, see the
+    dated note in harness.py and t/test_real_witness.py's new cases).
+
+`_measure_certificate` (below, alongside `_value_certificate` and
+`_undef_certificate`) needs no replay of the body at all: the witness's
+`_caller_measure`/`_callee_measure` are ALREADY the two ground integers
+interp.ev computed while walking the real execution, so the certificate
+is the bare arithmetic fact itself, `assert t_refutation_certificate:
+!((caller >= 0) && (callee < caller))`, at those two literals
+(`_int_lit`, THE INT-LITERAL GATE's own routine, in case either measure
+falls outside `int`'s 32-bit range). MEASURED (frama-c 33.0 / alt-ergo
+2.4.3-free / Z3 4.8.12, 2026-09-11): all three probes' real column now
+reads `refuted / rejected` (`_measure_certificate` accepted, matching
+conformance.py's REJECTED_OK) where it previously read `unproved /
+rejected` (the emitted termination lemma was the only route, and no
+prover status on it ever named the fact false); the twin side of each
+cell is unaffected (no probe in this family has a twin: `harness.
+twin_cached` refuses all three on "no-operator"/"no-witness", so only
+the real's own column moves). The other six kernels' verdicts on these
+three probes are unchanged by this file (each rejects a bad measure
+through its own, independent check; framac is the only column this
+patch touches), and this file's dispatch (`certificate()`) still returns
+None, exactly as before, for a witness kind it does not recognize -- a
+lowering handed a witness shape it does not know still lowers the real
+plainly, as it always has.
+
+FRAMAC-SEQ2, ROADMAP 13.4, 2026-09-11 (worktree
+/home/tmcuzzort/tup/.claude/worktrees/wf_09045dfc-4fd-2). The ten seq
+cells above, taken in the stated order, land the FIRST item only and
+stop there, each remaining cell named by the kernel's own exact
+message, unchanged from before this pass (measured both sides,
+`python3 <scratchpad>/framac-seq2/measure.py before` then `after2`,
+`<scratchpad>` = /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-
+804f-aa0d13f350ee/scratchpad):
+
+  LANDED: `count`/`find` (SPEC.md "The string library (v1)"), general
+  recursive ACSL definitions in EXECUTABLE position (T_STRFIND_ACSL,
+  `_has_countfind`, the new `cexpr` branch immediately before
+  `_strlib_abstain`'s call). `fz_p_str_countempty` and
+  `fz_p_str_findempty` both move real ABSTAIN -> VERIFIED (matching
+  `_expect`), the only two of the ten this pass reaches. The receiver
+  must be a bare seq-typed variable and the pattern either a bare
+  seq-typed variable or the empty literal `[]` (an empty pattern needs
+  no real buffer: `\valid_read(t + (0 .. -1))` is vacuously true of any
+  pointer, so the receiver's own pointer stands in at length 0); a
+  non-empty literal, concat, or slice pattern is a NAMED remaining gap
+  (the `cexpr` branch's own `NotImplementedError`, not reached by
+  either probe). `count`/`find` in ACSL TERM or PREDICATE position (a
+  `requires`/`ensures`/invariant calling either symbolically, e.g.
+  `count_vowels`'s own `ensures`) is UNCHANGED, still the
+  `STRLIB_ABSTAIN` refusal, its message updated only to say
+  "specification position", not "no recursive ACSL definition ...
+  yet" (false now that one exists for executable position).
+
+  MEASURED obstacle, not guessed: `count(s, []) == len(s) + 1`
+  (SPEC.md's own identity) does not follow from `t_count_c`'s own
+  proved contract (`\result == t_count(s, ns, t, nt, 0)`, the general
+  recursive value) by a single call -- that is an INDUCTION over the
+  start index with no fixed bound, which Alt-Ergo 2.4.3 cannot perform
+  from one ground instantiation of an uninterpreted recursive logic
+  function. A `lemma` stating the closed form directly, quantified
+  over the start index, TIMED OUT at the pinned budget (20,000,000
+  steps / 60s), the same failure mode T_WORDCOUNT_ACSL's own note
+  above measured for `is_ws` as a separate predicate symbol. The fix:
+  `t_countempty_rec`, a RECURSIVE C FUNCTION (not a lemma, not a loop)
+  with a `decreases` clause and a two-part `ensures` (the closed form
+  AND the bridge to `t_count`) -- Frama-C's own proof obligations for a
+  recursive function are checked by well-founded induction on its
+  `decreases` measure, so the recursive call's own contract becomes
+  the induction hypothesis for free and each step needs only ONE
+  unfold of `t_count`'s defining equation. `find(s, []) == 0` needed no
+  such helper: it is a single unfold at the start index (`t_eqat` over
+  an empty range is vacuously true there), which Alt-Ergo already
+  discharges directly from `t_find_c`'s own contract. Standalone
+  verification, before wiring into the dispatch (frama-c 33.0 /
+  alt-ergo 2.4.3-free, /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-
+  441b-804f-aa0d13f350ee/scratchpad/framac-seq2/t_strfind.c):
+  `t_find_c`, `t_count_c`, `t_countempty_rec` and both empty-pattern
+  harness functions, 103/103 goals, Qed and Alt-Ergo only, smoke
+  31/31.
+
+  STOPPED, unreached this pass, each still the kernel's own exact
+  message (byte-identical to before, `measure.py`'s "before" and
+  "after2" runs both attached under that same scratchpad directory):
+  fz_p_nest_cell, fz_p_nest_lit ("conditionally evaluated `at` in
+  executable position: definedness not dischargeable by a plain
+  assert"), fz_p_nest_eq ("seq position holds non-variable
+  {'op': 'at', ...}"), fz_p_nest_empty, fz_p_str_splitempty ("nested
+  seq (seq<seq>) RETURN: building a fresh row set has no encoding in
+  this lowering"), fz_p_str_tab ("nested seq (seq<seq>) local
+  variables are not supported by this lowering"), fz_p_str_lowernonletter
+  ("seq return 'r''s length is not statically determinable ...");
+  fz_p_pair_seq ("a pair with a seq component is refused by this
+  lowering"). Items 2 through 6 of the stated order (the executable
+  `lower`/`upper` with a length bound, the guarded definedness assert,
+  the extensional-equality loop, nested locals/return, the pair-with-
+  seq redesign) are none of them attempted; each is a fresh design,
+  not a rendering-site fix, per THE WORK's own scoping above.
+
+  REGRESSION, measured both sides: all 34 committed tasks under
+  t/tasks, framac column, `python3 grade.py --tasks tasks --kernels
+  framac,dafny --flake 3 --jobs 8`: byte-identical to
+  t/AGREEMENT.md's own framac column, 31 `verified/refuted`, 3
+  `abstain/abstain` (count_vowels, split_join, swap_rows -- none use
+  `count`/`find` in executable position, count_vowels's own `count`
+  calls are all in its `ensures`/loop invariant, ACSL term position,
+  untouched), sum_upto and reverse both keeping their `invariant-drop`
+  refuted twin. The framac column of the ROADMAP 13.4 conformance
+  suite (66 probes, `probe_manifest()`/`run_items()` restricted to
+  framac via `run_par.probe_backends()`'s own `present` filter, the
+  script is /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-
+  aa0d13f350ee/scratchpad/framac-seq2/conf_framac.py): 51/66 PASS
+  before this pass's edit (git show HEAD:t/lower_framac.py restored
+  for that one run), 53/66 PASS after, the two new PASSes being
+  exactly fz_p_str_countempty and fz_p_str_findempty (diffed field by
+  field between the two runs' JSON, `conf-before.json`/`conf-
+  after.json` under that same scratchpad directory) -- no other
+  cell's verdict moved either direction, no PASS lost.
+
+  ROADMAP 16.2's own framac rows (t/COVERAGE-lifted-785.md,
+  2026-09-10, RE-MEASURED 2026-09-11 rather than trusted: `python3
+  grade.py --tasks <task-set> --kernels framac,dafny --flake 3 --jobs
+  8`, twelve named tasks copied from the 59-lifted set into
+  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee
+  /scratchpad/framac-seq2/roadmap162-tasks, byte-identical result
+  before and after this pass's edit, `r162-before/table.md` vs
+  `r162-after/table.md` under that scratchpad differing only in their
+  timestamp header): none of the twelve calls `count`/`find` anywhere,
+  so none of the abstain/malformed/timeout cells named in ROADMAP 16.2
+  moves. One drift from the 2026-09-10 row, honestly named rather than
+  silently inherited: `dafny_synthesis_task_id_257__swap` reads
+  `verified / refuted` (agreement) at this measurement, not the
+  `verified / timeout` ROADMAP 16.2 groups it under alongside 591 and
+  625 -- 591 and 625 both DO still read `verified / timeout` here,
+  unchanged; 257 itself is not a framac blocker any more (a kernel
+  change since 2026-09-10 the ROADMAP row was never updated for, not
+  a change this pass made -- confirmed by running the SAME "before"
+  file, `git show HEAD:t/lower_framac.py`, and seeing 257 already
+  agree there). The other eleven: 240/262/577/586 still ABSTAIN
+  (seq-concat-into-exact-length-return, pair-with-seq, spec_fun-in-
+  executable-position, seq-concat-with-a-non-target left operand --
+  four DISTINCT gaps, none of them `count`/`find`); 470 still
+  MALFORMED; 591/625 still `verified / timeout`; 3/605 still
+  `timeout / timeout`; 598/86 still `timeout / refuted` -- none of
+  these nine reached by this pass's own scope (T_STRFIND_ACSL touches
+  only `count`/`find`), named here rather than attempted, since fixing
+  any of them is a fresh, unrelated gap (a length-bound redesign, a
+  struct redesign, a spec_fun-inlining decision, or a proof-budget/
+  strategy investigation into an existing TIMEOUT, none of them the
+  ten-cell order this pass follows). The 15 `ds15-new` tasks (the same
+  scratchpad's `roadmap162-tasks-15`) measured the same way, same
+  result: byte-identical before/after, none call `count`/`find`.
 """
 from __future__ import annotations
 
@@ -1987,14 +2167,16 @@ STRLIB_ABSTAIN = {
     "tostr": "the output length depends on `n`'s own runtime digit "
              "count (plus a leading `-`), which this lowering has no "
              "static bound for.",
-    "count": "a general non-overlapping substring count has no "
-             "recursive ACSL definition in this lowering yet; the "
-             "length-1-pattern case `count_vowels` needs is not "
-             "specialized either, on purpose (SPEC.md: a member in "
-             "specification position is the same function, not a "
-             "task-shaped instance of it).",
-    "find": "the same gap as `count`: no recursive ACSL definition of a "
-            "left-to-right substring search is lowered yet.",
+    "count": "reaching ACSL TERM or PREDICATE position (a `requires`/"
+             "`ensures`/invariant calling `count` symbolically): the "
+             "recursive ACSL definition (T_STRFIND_ACSL, ROADMAP 13.4, "
+             "framac-seq2) is wired only to EXECUTABLE position "
+             "(`cexpr`'s own `count`/`find` case, checked before this "
+             "abstain fires); a spec-position occurrence has no ACSL "
+             "TERM rendering yet.",
+    "find": "the same gap as `count`, spec position only: reaching ACSL "
+            "TERM or PREDICATE position has no rendering; EXECUTABLE "
+            "position is lowered (T_STRFIND_ACSL).",
     "lower": "an output seq the same length as its input has no "
              "lowering here yet: no case-map codegen is wired into the "
              "seq-assignment machinery (`seq_assign_lines`) for it.",
@@ -2127,6 +2309,173 @@ def _wordcount(s: list) -> int:
             wc += 1
         prevws = isw
     return wc
+
+
+# framac-seq2, ROADMAP 13.4, 2026-09-11: `count`/`find` (SPEC.md "The
+# string library (v1)"), general recursive ACSL definitions, EXECUTABLE
+# position only (spec/term/predicate position stays the STRLIB_ABSTAIN
+# gap below, unchanged). `t_eqat` is the substring-match predicate at
+# one start index (a bounded `\forall`, not itself recursive: it only
+# ever ranges over `0 <= k < nt`, a fixed-width comparison, so WP proves
+# it directly with no induction, the same shape `fz_p_nest_eq`'s row
+# equality already uses). `t_find`/`t_count` are then a LEFT-TO-RIGHT
+# scan over the start index, recursing forward: `t_find` stops at the
+# first match (`find(s, t)`'s own SPEC.md rule, `-1` when none);
+# `t_count` advances by `nt` past a match (non-overlapping,
+# `count(s, t)`'s own rule) and by 1 past a miss, and at `nt == 0` this
+# same general formula ALREADY gives the right count with no special
+# case: `t_eqat` over an empty range (`0 <= k < 0`) is vacuously true,
+# so every one of the `ns + 1` start positions 0..ns matches and the
+# scan advances by 1 (`nt > 0 ? nt : 1` is 1 there), landing on
+# `count(s, []) == len(s) + 1` (SPEC.md's own identity) by construction,
+# not by a case split on `nt`. `t_find_c`/`t_count_c` are the matching
+# executable loops (an inner loop for `t_eqat` itself, an outer one
+# whose invariant carries the recursive value at the CURRENT index equal
+# to the recursive value at the START index, exactly `t_wc_c`'s own
+# `wc == t_wc(s, i)` shape one level up).
+#
+# MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-11, standalone
+# file, /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-
+# aa0d13f350ee/scratchpad/framac-seq2/t_strfind.c): `t_find_c`,
+# `t_count_c` and two harness functions instantiating each at the
+# EMPTY-pattern case (`fz_p_str_findempty`'s and `fz_p_str_countempty`'s
+# own shape) all PROVED, 103/103 goals, Qed and Alt-Ergo only, no
+# smoke lost (31/31). One genuine obstacle, not a guess: proving
+# `count(s, [], 0) == len(s) + 1` in closed form from `t_count`'s
+# general recursive definition alone is an INDUCTION over the start
+# index that Alt-Ergo cannot discharge from a single call to the
+# already-proved `t_count_c` (no induction principle over an
+# uninterpreted recursive logic function reachable from one ground
+# instantiation) -- attempted first as a standalone `lemma` quantified
+# over the start index, which TIMED OUT at the same budget T_WORDCOUNT
+# ACSL's own note above cites (20,000,000 steps / 60s). The fix: state
+# the SAME fact as a RECURSIVE C FUNCTION's own two-part `ensures`
+# instead of a bare lemma (`t_countempty_rec` below) -- Frama-C's own
+# proof obligations for a recursive function ARE checked by well-founded
+# induction on its `decreases` measure (this file's own T_DIVMOD_ACSL
+# note: "recursive logic functions unfolding at ground arguments... in
+# 6ms" is the same mechanism), so the recursive call's own contract
+# becomes the induction hypothesis for free and each step needs only ONE
+# unfold of `t_count`'s own defining equation, which Alt-Ergo closes in
+# milliseconds. `t_countempty_rec` is emitted unconditionally alongside
+# `t_count_c` (not gated on any one task's own pattern literal being
+# empty) because it restates SPEC.md's own general law, `count(s, []) ==
+# len(s) + 1`, true of every `s`, not a task-shaped instance of it.
+T_STRFIND_ACSL = (
+    "/*@\n"
+    "  predicate t_eqat{L}(int *s, int *t, integer i, integer nt) =\n"
+    "    \\forall integer k; 0 <= k < nt ==> s[i + k] == t[k];\n"
+    "\n"
+    "  logic integer t_find{L}(int *s, integer ns, int *t, integer nt,\n"
+    "                          integer i) =\n"
+    "    i > ns - nt ? -1 :\n"
+    "    (t_eqat(s, t, i, nt) ? i : t_find(s, ns, t, nt, i + 1));\n"
+    "\n"
+    "  logic integer t_count{L}(int *s, integer ns, int *t, integer nt,\n"
+    "                           integer i) =\n"
+    "    i > ns - nt ? 0 :\n"
+    "    (t_eqat(s, t, i, nt) ?\n"
+    "       1 + t_count(s, ns, t, nt, i + (nt > 0 ? nt : 1))\n"
+    "     : t_count(s, ns, t, nt, i + 1));\n"
+    "\n"
+    "  lemma t_find_terminates:\n"
+    "    \\forall int *s, integer ns, int *t, integer nt, integer i;\n"
+    "      i <= ns - nt ==> (i + 1) > i;\n"
+    "  lemma t_count_terminates:\n"
+    "    \\forall int *s, integer ns, int *t, integer nt, integer i;\n"
+    "      i <= ns - nt ==>\n"
+    "        (i + 1) > i && (i + (nt > 0 ? nt : 1)) > i;\n"
+    "*/\n"
+    "/*@\n"
+    "  requires ns >= 0 && nt >= 0 && \\valid_read(s + (0 .. ns - 1));\n"
+    "  requires \\valid_read(t + (0 .. nt - 1));\n"
+    "  assigns \\nothing;\n"
+    "  ensures \\result == t_find(s, ns, t, nt, 0);\n"
+    "*/\n"
+    "int t_find_c(int *s, int ns, int *t, int nt) {\n"
+    "  int i = 0;\n"
+    "  /*@\n"
+    "    loop invariant 0 <= i;\n"
+    "    loop invariant t_find(s, ns, t, nt, 0) == t_find(s, ns, t, nt, i);\n"
+    "    loop assigns i;\n"
+    "    loop variant ns - nt + 1 - i;\n"
+    "  */\n"
+    "  while (i <= ns - nt) {\n"
+    "    int match = 1;\n"
+    "    int k = 0;\n"
+    "    /*@\n"
+    "      loop invariant 0 <= k <= nt;\n"
+    "      loop invariant match == (t_eqat(s, t, i, k) ? 1 : 0);\n"
+    "      loop assigns k, match;\n"
+    "      loop variant nt - k;\n"
+    "    */\n"
+    "    while (k < nt) {\n"
+    "      if (s[i + k] != t[k]) { match = 0; break; }\n"
+    "      k = k + 1;\n"
+    "    }\n"
+    "    if (match) return i;\n"
+    "    i = i + 1;\n"
+    "  }\n"
+    "  return -1;\n"
+    "}\n"
+    "/*@\n"
+    "  requires ns >= 0 && nt >= 0 && \\valid_read(s + (0 .. ns - 1));\n"
+    "  requires \\valid_read(t + (0 .. nt - 1));\n"
+    "  assigns \\nothing;\n"
+    "  ensures \\result == t_count(s, ns, t, nt, 0);\n"
+    "*/\n"
+    "int t_count_c(int *s, int ns, int *t, int nt) {\n"
+    "  int i = 0, c = 0;\n"
+    "  /*@\n"
+    "    loop invariant 0 <= i;\n"
+    "    loop invariant t_count(s, ns, t, nt, 0) ==\n"
+    "                   c + t_count(s, ns, t, nt, i);\n"
+    "    loop assigns i, c;\n"
+    "    loop variant ns - nt + 1 - i;\n"
+    "  */\n"
+    "  while (i <= ns - nt) {\n"
+    "    int match = 1;\n"
+    "    int k = 0;\n"
+    "    /*@\n"
+    "      loop invariant 0 <= k <= nt;\n"
+    "      loop invariant match == (t_eqat(s, t, i, k) ? 1 : 0);\n"
+    "      loop assigns k, match;\n"
+    "      loop variant nt - k;\n"
+    "    */\n"
+    "    while (k < nt) {\n"
+    "      if (s[i + k] != t[k]) { match = 0; break; }\n"
+    "      k = k + 1;\n"
+    "    }\n"
+    "    if (match) { c = c + 1; i = i + (nt > 0 ? nt : 1); }\n"
+    "    else { i = i + 1; }\n"
+    "  }\n"
+    "  return c;\n"
+    "}\n"
+    "/*@\n"
+    "  requires 0 <= i <= ns + 1;\n"
+    "  decreases ns + 1 - i;\n"
+    "  assigns \\nothing;\n"
+    "  ensures \\result == ns + 1 - i;\n"
+    "  ensures \\result == t_count(s, ns, s, 0, i);\n"
+    "*/\n"
+    "int t_countempty_rec(int *s, int ns, int i) {\n"
+    "  if (i > ns) return 0;\n"
+    "  return 1 + t_countempty_rec(s, ns, i + 1);\n"
+    "}\n"
+)
+
+
+def _has_countfind(x) -> bool:
+    """Whether `count`/`find` (SPEC.md "The string library (v1)") occurs
+    anywhere, the same over-inclusive walk `_has_divmod`/`_has_wordcount`
+    use."""
+    if isinstance(x, dict):
+        if x.get("op") in ("count", "find"):
+            return True
+        return any(_has_countfind(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_has_countfind(v) for v in x)
+    return False
 
 
 _PARTIAL_OPS = {"at", "div", "mod", "update", "fill", "call"}
@@ -3084,6 +3433,50 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
                 parts.append(cexpr(a, env, funs, task_name, _div_style))
         return f"{task_name}_t({', '.join(parts)})"
     op, args = e["op"], e.get("args", [])
+    if op in ("count", "find"):
+        # framac-seq2, ROADMAP 13.4, 2026-09-11: `count(s, t)`/`find(s, t)`
+        # in EXECUTABLE position (T_STRFIND_ACSL above), checked before
+        # `_strlib_abstain` fires so a general receiver/pattern pair
+        # reaches the prelude's `t_count_c`/`t_find_c` rather than the
+        # blanket "no recursive ACSL definition" refusal. The receiver
+        # `s` must be a bare seq-typed variable (`seq_var`'s own scope,
+        # unchanged); the pattern `t` is either a bare seq-typed
+        # variable too, or the EMPTY literal `[]` (SPEC.md's own
+        # `count(s, []) == len(s) + 1` / `find(s, []) == 0` identities,
+        # the two probes this pass measures) -- an empty pattern needs
+        # no real buffer, since `\valid_read(t + (0 .. -1))` is vacuously
+        # true of ANY pointer, so `s`'s own pointer stands in at length
+        # 0. A non-empty LITERAL pattern (a `[e0, ...]` with elements, a
+        # concat, a slice) is not lowered: that needs a materialized
+        # buffer for the pattern this pass does not build, named below
+        # rather than guessed at.
+        s_e, t_e = args
+        sv = seq_var(s_e, env)
+        empty_pattern = t_e.get("op") == "seq" and not t_e.get("args")
+        if not empty_pattern and "var" not in t_e:
+            raise NotImplementedError(
+                f"string library member `{op}` reaching executable "
+                f"position with a non-variable, non-empty pattern "
+                f"{t_e!r}: only a seq-typed variable or the empty "
+                f"literal `[]` has a backing buffer for the pattern in "
+                f"this lowering")
+        if op == "count" and empty_pattern:
+            # `t_count_c`'s own contract only gives the RECURSIVE value
+            # `t_count(s, ns, t, 0, 0)`, not the closed form `ns + 1`
+            # SPEC.md states and a task's `ensures` may need; that
+            # closed form is an induction over the start index Alt-Ergo
+            # cannot perform from one ground call (T_STRFIND_ACSL note
+            # above), so the empty-pattern case renders through
+            # `t_countempty_rec` instead, whose own `ensures` carries
+            # BOTH the closed form and the bridge back to `t_count`.
+            return f"t_countempty_rec({sv}, {sv}_n, 0)"
+        if empty_pattern:
+            t_ptr, t_n = sv, "0"
+        else:
+            tv = seq_var(t_e, env)
+            t_ptr, t_n = tv, f"{tv}_n"
+        fn = "t_find_c" if op == "find" else "t_count_c"
+        return f"{fn}({sv}, {sv}_n, {t_ptr}, {t_n})"
     _strlib_abstain(op, "executable position")
     if op == "len":
         a0 = args[0]
@@ -5378,6 +5771,55 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
     return "\n".join(lines)
 
 
+def _measure_certificate(task: dict, twin_body: list, w: dict,
+                         env: dict, funs: dict, used: set) -> str | None:
+    """ROADMAP 13.4, framac-measure, 2026-09-11: the certificate for a
+    "measure"-kind witness (harness.real_witness / interp.MeasureViolation
+    -- see both docstrings), the module docstring's note above this
+    file's THE SEMANTIC LINE section and the one above `_value_certificate`
+    and `_undef_certificate` (`certificate()`'s own doctrine: REFUTED is
+    minted from a certificate the harness computes and the kernel checks,
+    never from a prover status). MEASURED, not assumed (2026-09-11):
+    alt-ergo 2.4.3 reads Stepout and Z3 4.8.12 reads Timeout on the naked
+    lemma `0 < 0` in an axiom-free file (this file's module docstring),
+    so no prover status on the emitted termination lemma
+    (`f_terminates_k`, or the loop's own `loop variant` PO) names a false
+    fact honestly -- a real timeout or a real "no fact was false" both
+    read as unproved noise. The fix already used for a false `ensures` is
+    the same fix here: replay the witness's own two GROUND integers
+    (`_caller_measure`, `_callee_measure`, computed independently by
+    interp.py's bounded scan, not re-derived here) as C constants and
+    assert the concrete arithmetic fact the well-foundedness rule needs
+    -- `0 <= caller && callee < caller` -- is FALSE at exactly these two
+    numbers. Pure ground arithmetic, no axiom, no call, no loop: Qed
+    proves it or the numbers are wrong.
+
+    Unlike `_value_certificate`, no replay of `twin_body` at all: a
+    measure witness's two numbers are ALREADY the trusted final values
+    (interp.ev evaluated the `decreases` expression itself while walking
+    the real execution), so there is nothing here to re-derive them
+    from -- the certificate is the comparison alone, exactly as small as
+    the fact it proves.
+
+    None (no certificate, honestly) when the witness is not this kind, a
+    name collides, or the two measures are not both plain ints (a
+    malformed witness this file did not build and will not certify)."""
+    if w.get("_kind") != "measure":
+        return None
+    if CERT_FN in used or CERT_GOAL in used:
+        return None
+    caller_m, callee_m = w.get("_caller_measure"), w.get("_callee_measure")
+    if (not isinstance(caller_m, int) or isinstance(caller_m, bool)
+           or not isinstance(callee_m, int) or isinstance(callee_m, bool)):
+        return None                    # not the ground-int shape this builds
+    fact = f"(({_int_lit(caller_m)} >= 0) && ({_int_lit(callee_m)} < {_int_lit(caller_m)}))"
+    lines = ["", "/*@ assigns \\nothing; */",
+             f"void {CERT_FN}(void) {{",
+             f"  /*@ assert {CERT_GOAL}: !{fact}; */",
+             "  return;", "}", ""]
+    return "\n".join(lines)
+
+
 def certificate(task: dict, twin_body: list, w: dict,
                 env: dict, funs: dict, used: set) -> str | None:
     """The certificate function's source text, or None with the reason
@@ -5421,6 +5863,8 @@ def certificate(task: dict, twin_body: list, w: dict,
         return _undef_certificate(task, twin_body, w, env, funs, used)
     if kind == "exit":
         return _exit_certificate(task, twin_body, w, env, funs, used)
+    if kind == "measure":
+        return _measure_certificate(task, twin_body, w, env, funs, used)
     return None                        # preservation: see the section note
 
 
@@ -5584,6 +6028,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         header.append(T_DIVMOD_ACSL.rstrip("\n"))
     if _has_wordcount(task) or _has_wordcount(body):
         header.append(T_WORDCOUNT_ACSL.rstrip("\n"))
+    if _has_countfind(task) or _has_countfind(body):
+        header.append(T_STRFIND_ACSL.rstrip("\n"))
     for f in task.get("spec_funs", []):
         header += spec_fun_acsl(f, funs)
 

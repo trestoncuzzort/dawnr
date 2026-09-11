@@ -16,6 +16,20 @@ Twin operators (SPEC.md "The twins", v2, the ladder below, tried in order):
                         (SPEC.md "Pairs", 2026-09-10) a pair's two components
                         swapped, or `fst`/`snd` swapped in one projection.
   DROP-GUARD          : drop one conjunct of an `if`/`while` condition.
+  WRONG-CONSTANT      : (SPEC.md "The twins", the twin-ladder wave,
+                        2026-09-11) `expr +- 1` at one assign/return
+                        right-hand side or `var` initialiser proved
+                        int-typed, the mutation a straight-line body with
+                        no `if`, no loop, no literal, and no `at`/`update`/
+                        `fill`/`slice` admits, so it is never reached by
+                        OFF-BY-ONE.
+  WRONG-OPERATOR      : one arithmetic operator (`+`, `-`, `*`, `div`,
+                        `mod`) replaced by another from a fixed per-operator
+                        list, at the same sites COMPARE-FLIP walks.
+
+Both sit below every rung above: a task whose twin was already found by an
+earlier rung keeps that exact twin, byte-identical (the 34 tasks committed
+under t/tasks are the check).
 
 Selection is derived from the body, never configured per task, and is
 deterministic: operators in the fixed order above, sites within an operator in
@@ -350,13 +364,84 @@ def _c_drop_guard(body, scope):
                            else {"op": "and", "args": rest})
 
 
+_INT_ROOTED_OPS = ("neg", "len", "*", "-", "div", "mod")
+
+
+def _int_rooted(node: dict, ty_of: dict) -> bool:
+    """True when `node`'s value is unambiguously int-typed, checked
+    structurally so WRONG-CONSTANT never wraps a seq/bool/pair-typed site
+    (Python's bool is an int subclass, so a silent `True + 1 == 2` would
+    otherwise pass as a well-typed twin body while actually changing the
+    return's runtime TYPE rather than an int value). `+` is deliberately
+    excluded even though it is arithmetic: SPEC.md "Sequences: literals,
+    concatenation, slices" overloads it for seq concatenation, and this
+    predicate has no type-checker to tell the two apart at an arbitrary
+    subexpression. Every op it does accept (`neg`, `len`, `*`, `-`, `div`,
+    `mod`) has exactly one, int-returning, meaning in this language."""
+    if "int" in node:
+        return True
+    if "var" in node:
+        return ty_of.get(node["var"]) == "int"
+    return node.get("op") in _INT_ROOTED_OPS
+
+
+def _c_wrong_constant(body, scope):
+    """WRONG-CONSTANT (SPEC.md "The twins", twin-ladder wave, 2026-09-11):
+    `expr +- 1` at one assign/return right-hand side or `var` initialiser,
+    restricted to sites `_int_rooted` proves int-typed. The mutation a
+    straight-line body with no `if`, no loop, no literal, and no
+    `at`/`update`/`fill`/`slice` admits -- OFF-BY-ONE has nothing to move
+    there, since there is no literal or indexing op in the expression at
+    all, only a computed value returned or assigned whole (e.g.
+    `volume := size * size * size`, `ascii := c`)."""
+    for path, e, sc, kind in _exprs(body, scope):
+        if kind not in ("rhs", "init"):
+            continue
+        if not _int_rooted(e, dict(sc)):
+            continue
+        for d in (1, -1):
+            yield _replace(body, path, {"op": "+", "args": [e, {"int": d}]})
+
+
+ARITH_ALT = {"+": ("-", "*"), "-": ("+", "*"), "*": ("+", "-"),
+             "div": ("mod",), "mod": ("div",)}
+
+
+def _c_wrong_operator(body, scope):
+    """WRONG-OPERATOR (SPEC.md "The twins", twin-ladder wave, 2026-09-11):
+    one arithmetic operator swapped for another from ARITH_ALT's fixed
+    per-operator list, at every site COMPARE-FLIP's own `_sub` walk
+    reaches. Empty wherever the body has no `+`/`-`/`*`/`div`/`mod` node,
+    which none of the earlier rungs touch (COMPARE-FLIP and BOUNDARY-SWAP
+    only ever rewrite an order comparison, never the arithmetic feeding
+    one)."""
+    for path, e, sc, _kind in _exprs(body, scope):
+        for sp, node in _sub(e, path):
+            op = node.get("op")
+            if op not in ARITH_ALT:
+                continue
+            if op == "+" and not any(_int_rooted(a, dict(sc))
+                                     for a in node["args"]):
+                # `+` is also seq concatenation (SPEC.md "Sequences"); a
+                # swap is only an arithmetic twin when an operand is
+                # provably int. Found at the wave G merge, 2026-09-11:
+                # fz_p_lit_empty's `[] + s` swapped to `[] - s` raised
+                # TypeError in interp and read as a poisoned cell in all
+                # seven columns.
+                continue
+            for alt in ARITH_ALT[op]:
+                yield _replace(body, sp, {"op": alt, "args": node["args"]})
+
+
 EXTENSIONAL = (("collapse-if", _c_collapse_if),
                ("negate-cond", _c_negate_cond),
                ("compare-flip", _c_compare_flip),
                ("boundary-swap", _c_boundary_swap),
                ("off-by-one", _c_off_by_one),
                ("wrong-var", _c_wrong_var),
-               ("drop-guard", _c_drop_guard))
+               ("drop-guard", _c_drop_guard),
+               ("wrong-constant", _c_wrong_constant),
+               ("wrong-operator", _c_wrong_operator))
 
 
 def _invariant_candidates(task: dict):
@@ -423,7 +508,14 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
             n += 1
             if n > MAX_CANDIDATES:
                 break
-            w = ref.witness(twin)
+            try:
+                w = ref.witness(twin)
+            except TypeError:
+                # An ill-typed candidate (a rung rewrote a node whose type
+                # it could not see) is not a program of the language, so
+                # it is not a twin; the next candidate, never a poisoned
+                # cell. 2026-09-11.
+                continue
             if w is None:
                 continue
             if w.get("_ens") is True:
@@ -474,7 +566,11 @@ def ladder_rungs(task: dict) -> list[tuple[str, list, dict | None]]:
             n += 1
             if n > MAX_CANDIDATES:
                 return rungs
-            w = ref.witness(twin)
+            try:
+                w = ref.witness(twin)
+            except TypeError:
+                # Same guard as twin_for: an ill-typed candidate is no rung.
+                continue
             refuted = w is not None and w.get("_ens") is True
             rungs.append((_tag(op, k), twin, w if refuted else None))
     return rungs
@@ -582,7 +678,13 @@ def real_witness(task: dict) -> dict | None:
     for env0, got in ref.points:
         env = dict(env0)
         env[ref.ret] = got
-        st = interp.St()
+        # ROADMAP 13.4, framac-measure, 2026-09-11: check_measures=True
+        # only on THIS scan's own St (interp.Reference above built `got`
+        # with a default, unchecked St, so a bad decreases never keeps a
+        # value from being computed -- it only stops THIS re-evaluation
+        # of `ensures`, exactly where a spec_fun call can reach a broken
+        # measure). See interp.MeasureViolation's docstring.
+        st = interp.St(check_measures=True)
         try:
             broke = False
             for c in task["ensures"]:
@@ -594,6 +696,12 @@ def real_witness(task: dict) -> dict | None:
                 w.update(_kind="value", _real=interp._j(got),
                         _twin=interp._j(got), _ens=True)
                 return w
+        except interp.MeasureViolation as mv:
+            w = interp._shown(env0)
+            w.update(_kind="measure", _site=mv.site,
+                    _caller_measure=interp._j(mv.caller_measure),
+                    _callee_measure=interp._j(mv.callee_measure))
+            return w
         except interp.Undef as u:
             w = interp._shown(env0)
             w.update(_kind="undefined", _real="no value",
@@ -607,16 +715,33 @@ def real_witness(task: dict) -> dict | None:
     req = task.get("requires", [])
     ret = task["returns"][0]["name"]
     for env0 in interp.domain(task, names, interp.MAX_POINTS):
-        st = interp.St()
+        st = interp.St(check_measures=True)
         try:
             if not all(interp.ev(c, env0, funs, st) for c in req):
                 continue
-        except (interp.Undef, interp.Budget, RecursionError):
-            continue
+        except (interp.Undef, interp.Budget, RecursionError,
+               interp.MeasureViolation):
+            continue          # a bad measure IN `requires` decides nothing
         env = dict(env0)
         env[ret] = None
         try:
             interp.exec_body(task["body"], env, funs, st)
+        except interp.MeasureViolation as mv:
+            # A loop's own variant, or a spec_fun the BODY (not just
+            # `ensures`) calls: the first loop above never re-executes
+            # the body, so this is the only scan that reaches it
+            # (fz_p_badvariant, ROADMAP 13.4). `mv.site` is the raw AST
+            # node for a loop (interp.MeasureViolation's docstring) --
+            # not JSON-shaped, so it becomes the loop's own small index
+            # (interp.loop_index) before this witness is shown or diffed
+            # anywhere; a spec_fun's site is already its (JSON-safe) name.
+            site = (mv.site if isinstance(mv.site, str)
+                   else interp.loop_index(task, mv.site))
+            w = interp._shown(env0)
+            w.update(_kind="measure", _site=site,
+                    _caller_measure=interp._j(mv.caller_measure),
+                    _callee_measure=interp._j(mv.callee_measure))
+            return w
         except interp.Undef as u:
             w = interp._shown(env0)
             w.update(_kind="undefined", _real="no value", _twin=str(u),
@@ -636,6 +761,11 @@ def witness(w: dict | None) -> str:
     ins = ", ".join(f"{k}={v}" for k, v in w.items() if not k.startswith("_"))
     if kind in ("exit", "preservation"):
         return f"{kind} at {ins}"
+    if kind == "measure":
+        # ROADMAP 13.4, framac-measure, 2026-09-11.
+        return (f"measure at {w.get('_site')}, {ins} -> "
+               f"{w.get('_callee_measure')} not below "
+               f"{w.get('_caller_measure')}")
     return f"{ins} -> real {w.get('_real')}, twin {w.get('_twin')}"
 
 

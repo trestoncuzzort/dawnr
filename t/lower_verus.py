@@ -314,6 +314,57 @@ loop). Measured (`cmp`, real and twin): `is_prime`, `first_even` and
 `tail` are unaffected by either finding, byte-identical to their
 committed `out/*.rs`.
 
+RESOLVED 2026-09-11 (ROADMAP 16.2): the paragraph above's conclusion was
+wrong about WHY the recursive call fails termination, reached from two
+probes that do not actually match `isNonPrime`'s own shape. Isolated
+again, precisely: `decreases (n / 2) - i` paired with `cond i <= n` (no
+`/ 2` on the guard's own bound) is a GENUINELY UNSOUND measure -- the
+guard stays true well past the point `(n/2) - i` goes negative, so
+Verus is CORRECTLY refusing a decreases that fails its own SPEC.md
+obligation ("`>= 0` whenever the guard holds"); that is the probe the old
+paragraph called "decreases (n/2)-i alone, guard linear" and it proves
+nothing about `isNonPrime`, whose guard and decreases are the ALIGNED
+pair `cond: i <= n/2`, `decreases: (n/2) - i` (`>= 0` exactly whenever
+the guard holds, by construction, exactly SPEC.md's own criterion). The
+real defect is a translation artifact of how `loop()` encodes a `while`
+as a self-checking recursive function: the recursive call at the bottom
+of `if cond {...}` fires once MORE than the guard's own strict-decrease
+budget allows whenever `cond` is `<=` (or otherwise lets the measure hit
+exactly 0 while still true) -- the LAST such call passes a state whose
+measure is `old_measure - 1`, and when `old_measure` was already 0 (the
+final true evaluation of `i <= n/2`), that is -1, which Verus's `int`
+decreases check requires to stay `>= 0` (this box's `rust_verify`,
+confirmed on a from-scratch minimal probe, `probe_term.rs`/`probe_term2.rs`
+in this session's scratch dir: `cond i<=n, decreases n-i` alone, no div
+anywhere, fails with the identical "could not prove termination" the old
+paragraph blamed on `div`/`mod` -- the div was never the cause). A strict
+`<` guard never hits this (guard true implies the hi-i measure is >= 1,
+so one decrement never goes negative), which is exactly why every
+previously committed loop task -- ALL of them `<`, never `<=` -- never
+surfaced it.
+
+The fix costs nothing about fidelity: `decreases` is rendered as `(the
+task's own Expr) + 1`, a CONSTANT SHIFT of the measure, not a different
+one. SPEC.md's obligation on decreases ("`>= 0` whenever the guard holds
+and strictly decreases") is a property of the FAMILY of valid measures,
+not of one specific numeral; adding a constant preserves both clauses
+identically (if `m >= 0` whenever guard holds, so is `m+1`; if `m`
+strictly decreases each step, so does `m+1`) while giving Verus's
+stricter-than-SPEC.md `int` check (which additionally wants the NEXT
+call's measure to be `>= 0`, not just the CURRENT one) exactly the unit
+of slack the `<=` boundary was missing. Nothing that changes what the
+kernel checks moves: `requires`, `ensures`, `invariants` are byte-for-
+byte what they were; only the auxiliary termination witness this
+lowering hands Verus is different, the same category of accommodation
+`_div_mod_law` and the nonlinear_arith bridges already are. Measured
+2026-09-11: `isNonPrime` (3) and `isPrime` (605) both move
+unproved/unproved -> verified/refuted; every previously committed
+verus task's `out/*.rs` is unaffected in substance (the `+ (1int)`
+suffix appears on every loop's `decreases` line now, including the
+already-working `<` ones, where it is provably inert -- `is_prime`,
+`first_even`, `tail` all still verify, `cmp` confirms real and twin
+alike, only that one line differs byte-for-byte).
+
 PAIRS (2026-09-10, SPEC.md "Pairs (v1)"). New type `{"pair": [T1, T2]}`
 (T1, T2 one of "int"/"bool"/"seq") and three new Expr forms: `pair`
 (construction), `fst`/`snd` (projection). Verus's own product type is the
@@ -1115,6 +1166,46 @@ STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
               "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
               "isupper", "islower", "startswith", "endswith"}
 
+ROTATE_PRELUDE = """\
+proof fn t_lemma_rotate_left(l: Seq<int>, n: int)
+    requires
+        0 <= n,
+        n < l.len(),
+    ensures
+        forall|i: int| #![trigger (l[(i + n) % (l.len() as int)])]
+            0 <= i && i < (l.len() as int) ==>
+            ((l.subrange(n, l.len() as int) + l.subrange(0, n))[i]
+             == l[(i + n) % (l.len() as int)]),
+{
+    let r = l.subrange(n, l.len() as int) + l.subrange(0, n);
+    assert forall|i: int| #![trigger (l[(i + n) % (l.len() as int)])]
+        0 <= i && i < (l.len() as int) implies
+        (r[i] == l[(i + n) % (l.len() as int)]) by {
+        if i < (l.len() as int) - n {
+            assert(r[i] == l[n + i]);
+            assert((i + n) % (l.len() as int) == i + n) by (nonlinear_arith)
+                requires
+                    0 <= i,
+                    i < (l.len() as int) - n,
+                    n >= 0,
+                    n < (l.len() as int),
+            ;
+        } else {
+            assert(r[i] == l[i - ((l.len() as int) - n)]);
+            assert((i + n) % (l.len() as int) == i - ((l.len() as int) - n))
+                by (nonlinear_arith)
+                requires
+                    0 <= i,
+                    i < (l.len() as int),
+                    i >= (l.len() as int) - n,
+                    n >= 0,
+                    n < (l.len() as int),
+            ;
+        }
+    };
+}
+"""
+
 STRLIB_PRELUDE = """\
 spec fn t_ws(c: int) -> bool {
     (9 <= c && c <= 13) || (28 <= c && c <= 32)
@@ -1556,6 +1647,27 @@ def _is_ground(e) -> bool:
     return True
 
 
+def _ro_defining_facts(ro: list[str], local_inits: dict[str, dict]
+                        ) -> list[dict]:
+    """2026-09-11 (ROADMAP 16.2, see `loop()`'s own note at the call
+    site). For every name in `ro` (a loop helper's read-only parameters)
+    that is a body-local `var` rather than a task param, and whose OWN
+    initializer mentions only other names also in `ro` (so it is truly a
+    fact about read-only state, never a stale reference to something the
+    loop itself reassigns), returns the Expr `name == init`. `ro` always
+    contains a local's initializer's own dependencies before the local
+    itself in `scope`'s iteration order (a `var` cannot reference a name
+    not yet declared), so this needs no fixpoint/ordering care -- one
+    pass over `ro` suffices."""
+    facts = []
+    ro_set = set(ro)
+    for n in ro:
+        init = local_inits.get(n)
+        if init is not None and _only_params(init, ro_set):
+            facts.append({"op": "==", "args": [{"var": n}, init]})
+    return facts
+
+
 def _only_params(e: dict, pnames: set) -> bool:
     """True iff every leaf of e is a `var` naming one of the task's own
     params -- the condition under which a subexpression can be hoisted,
@@ -1623,6 +1735,75 @@ def _split_join_witnesses(task: dict) -> list[tuple[dict, dict]]:
             continue
         seen.add(key)
         out.append((s_e, c_e))
+    return out
+
+
+def _rotate_terms(node, rname: str, out: list) -> None:
+    """ROTATE-LEFT INDEXING LAW (2026-09-11, ROADMAP 16.2, splitAndAppend).
+    Collects every `(L, N)` pair for which `node` states, anywhere, the
+    shape `forall|i| 0 <= i < len(L) ==> RNAME[i] == L[(i + N) % len(L)]`
+    -- the standard "rotate a sequence left by N" indexing law, true of
+    ANY seq L and int N with `0 <= N < len(L)` regardless of how RNAME
+    was built (`l.subrange(n, l.len()) + l.subrange(0, n)` is the one
+    concrete shape measured, splitAndAppend's own body, but the law
+    itself only mentions L, N and the bound variable, so nothing here
+    inspects the body at all -- same separation of concerns
+    `_join_split_terms` already keeps between finding the LAW and finding
+    what makes it hold). Both occurrences of `L` (the forall's own `hi`
+    and the index expression's own divisor) and both occurrences of `L`'s
+    `.len()` must be the SAME subexpression (`repr`-equal): a forall
+    whose hi and mod-divisor disagree is not this law and is left alone
+    (never raises, just contributes nothing, same policy `_join_split_
+    terms` follows for a lookalike op it does not recognize)."""
+    if isinstance(node, dict):
+        q = node.get("forall")
+        if isinstance(q, dict):
+            body = q.get("body", {})
+            if (body.get("op") == "==" and len(body.get("args", [])) == 2):
+                lhs, rhs = body["args"]
+                if (lhs.get("op") == "at" and lhs.get("args", [None])[0]
+                        == {"var": rname}
+                        and rhs.get("op") == "at"
+                        and len(rhs.get("args", [])) == 2):
+                    l_e, idx = rhs["args"]
+                    hi = q.get("hi", {})
+                    if (q.get("lo") == {"int": 0}
+                            and hi.get("op") == "len"
+                            and hi.get("args") == [l_e]
+                            and idx.get("op") == "mod"
+                            and len(idx.get("args", [])) == 2):
+                        sum_e, div_e = idx["args"]
+                        if (div_e.get("op") == "len"
+                                and div_e.get("args") == [l_e]
+                                and sum_e.get("op") == "+"
+                                and len(sum_e.get("args", [])) == 2
+                                and sum_e["args"][0] == {"var": q.get("var")}):
+                            out.append((l_e, sum_e["args"][1]))
+        for v in node.values():
+            _rotate_terms(v, rname, out)
+    elif isinstance(node, list):
+        for v in node:
+            _rotate_terms(v, rname, out)
+
+
+def _rotate_witnesses(task: dict) -> list[tuple[dict, dict]]:
+    """`_rotate_terms` over the task's own `ensures`, restricted to (L, N)
+    built from params alone, same reasoning and same dedup discipline as
+    `_split_join_witnesses` (whose docstring this mirrors)."""
+    pnames = {p["name"] for p in task.get("params", [])}
+    rname = task["returns"][0]["name"]
+    found: list = []
+    _rotate_terms(task.get("ensures", []), rname, found)
+    out: list[tuple[dict, dict]] = []
+    seen: set = set()
+    for l_e, n_e in found:
+        if not (_only_params(l_e, pnames) and _only_params(n_e, pnames)):
+            continue
+        key = (repr(l_e), repr(n_e))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((l_e, n_e))
     return out
 
 
@@ -2703,6 +2884,11 @@ class _V1:
         self.helpers: list[str] = []   # loop helper proof fns
         self.wf: list[str] = []        # definedness (well-formedness) lemmas
         self.loop_ix = 0
+        # 2026-09-11 (ROADMAP 16.2), name -> defining Expr for every
+        # body-local `var` seen so far in `stmts` (appendArrayToSeq's own
+        # `h`, `let h = a.len()`). See `loop()`'s own note at its read of
+        # this dict for why it exists.
+        self.local_inits: dict[str, dict] = {}
 
     # -- well-formedness lemmas ------------------------------------------
     def _wf_lemma(self, lname: str, params: list[tuple[str, str]],
@@ -2803,9 +2989,26 @@ class _V1:
         reqs = self.task.get("requires", [])
         rname = self.task["returns"][0]["name"]
         for en in self.task["ensures"]:
-            if not _has_nonlinear(en):
+            # 2026-09-11 (ROADMAP 16.2): centeredHexagonalNumber's two
+            # ensures are `result == 3*n*(n-1)+1` (nonlinear on its face)
+            # and `result >= 0` (NOT nonlinear on its face -- no
+            # multiplication anywhere in "result >= 0" itself). The second
+            # clause's actual proof obligation is nonlinear only once
+            # `result` is read back as the value the body actually
+            # assigned (3*n*(n-1)+1 >= 0), so checking `_has_nonlinear` on
+            # `en` before substitution missed it and Verus's default
+            # (linear-only) profile could not discharge the postcondition.
+            # Checking the SUBSTITUTED goal instead catches both shapes:
+            # a nonlinear term already spelled out in the ensures (the
+            # previous case, hoareTripleReqEns, unaffected since
+            # substituting the return name there does not remove the
+            # multiplication) and one hidden behind the return value
+            # (centeredHexagonalNumber, newly caught). Measured: 86 moves
+            # unproved -> verified.
+            goal_e = subst(en, {rname: ret_val})
+            if not _has_nonlinear(goal_e):
                 continue
-            goal = expr(subst(en, {rname: ret_val}))
+            goal = expr(goal_e)
             req_s = ""
             if reqs:
                 req_s = (f"{ind}    requires\n{ind}        "
@@ -2893,6 +3096,7 @@ class _V1:
                 self._assert_nested_eq(v["init"], scope, lines, ind)
                 vt = _vty(v["type"])
                 scope[v["name"]] = (vt, True)
+                self.local_inits[v["name"]] = v["init"]
                 lines.append(f"{ind}let mut {v['name']}: {vt}"
                              f" = {expr(v['init'], vt)};")
                 if _uses_strlib(self.task):
@@ -2956,15 +3160,57 @@ class _V1:
             guard_lines.append(_div_mod_law(x, y, "    "))
         guard_pre = "".join(line + "\n" for line in guard_lines)
 
-        # invariant k may assume invariants 1..k-1 (SPEC.md definedness)
-        allvars = [(n, t) for n, (t, _m) in scope.items()]
-        for j, iv in enumerate(invs):
-            self._wf_lemma(f"t_wf_{self.name}_l{k}_inv{j}", allvars,
-                           invs[:j], defined(iv))
-
+        # 2026-09-11 (ROADMAP 16.2, appendArrayToSeq/arrayToSeq/addLists/
+        # squareElements/elementWiseDivide/getFirstElements/
+        # smallestListLength/findSmallest -- all `invariant-drop#N`
+        # cells this session measured verus unproved on). `h`, in
+        # appendArrayToSeq's own body, is `let h = a.len();` -- a
+        # body-local declared ONCE before the loop and never assigned
+        # inside it, so `loop()` already threads it through as a
+        # READ-ONLY helper parameter (below, in `ro`). What it carried
+        # NO fact about is the relationship `h == a.len()` itself: the
+        # task's own invariants state `i_v2 <= h` and separately
+        # `i_v2 <= a.len()`, never `h == a.len()`, so the recursive
+        # helper's `if (i_v2 < h) { assert(i_v2 < a.len()) ...`
+        # (needed before indexing `a[i_v2]`) had no way to connect the
+        # two and Verus reported "assertion failed" even though the
+        # fact is true at every call (h is exactly as read-only as any
+        # task param: computed once, in scope, never reassigned by the
+        # loop). `_ro_defining_facts` recovers this the same way
+        # `req_clauses`/`inv_ctx` already recover a task-level
+        # `requires`: an EXTRA true premise threaded into the helper,
+        # not a restatement of the task's own contract. Restricted to
+        # locals whose initializer mentions only OTHER read-only names
+        # (never a loop-state variable, which could actually change) so
+        # every fact added is provably an invariant of the recursion,
+        # not an assumption. Measured 2026-09-11: all eight cells above
+        # move unproved -> verified/refuted.
         assigned = _assigned(w["body"]) - _declared(w["body"])
         state = [n for n in scope if scope[n][1] and n in assigned]
         ro = [n for n in scope if n not in state]
+        ro_facts = _ro_defining_facts(ro, self.local_inits)
+
+        # invariant k may assume invariants 1..k-1 (SPEC.md definedness),
+        # and, 2026-09-11 (ROADMAP 16.2, same cause as req_clauses below),
+        # the task's own `requires`: an invariant's definedness can depend
+        # on a read-only parameter fact true for the whole task (b[i]!=0
+        # for every i, a.len()==b.len()) that is never itself restated as
+        # an invariant. Without it the wf lemma for elementWiseDivision's
+        # own invariant (forall k<i_v2, result[k]==a[k]/b[k], defined only
+        # when b[k]!=0) had no way to see b[k]!=0 and Verus reported
+        # "assertion failed" on the wf lemma even after req_clauses below
+        # carried the same fact into the loop helper itself. Measured
+        # 2026-09-11: elementWiseDivision, subtractSequences,
+        # elementWiseSubtraction, multiplyElements, elementWiseModulo,
+        # removeElement all needed this addition too (req_clauses alone
+        # was not enough); harmless where unused, same reasoning as
+        # req_clauses' own note.
+        allvars = [(n, t) for n, (t, _m) in scope.items()]
+        inv_ctx = list(self.task.get("requires", [])) + ro_facts
+        for j, iv in enumerate(invs):
+            self._wf_lemma(f"t_wf_{self.name}_l{k}_inv{j}", allvars,
+                           inv_ctx + invs[:j], defined(iv))
+
         assert state, "loop body assigns nothing in scope, not lowerable"
 
         if len(state) == 1:
@@ -3012,13 +3258,33 @@ class _V1:
             # those go into the helper's own requires alongside the
             # invariants; harmless when unused, since they hold at every
             # call site (established once at task entry, never reassigned).
-            req_clauses = list(self.task.get("requires", [])) + invs
+            req_clauses = list(self.task.get("requires", [])) + ro_facts + invs
         else:
             res_ty = state_ty
             ens = ([expr(subst(i, m)) for i in invs]
                    + [f"(!{expr(subst(cond, m))})"])
             base_val = res_val
-            req_clauses = invs
+            # 2026-09-11 (ROADMAP 16.2, verus column): a loop body can carry
+            # a proof obligation -- elementWiseDivision's b[i_v2] != 0
+            # before the division, subtractSequences'/removeElement's
+            # same-length index facts -- that follows only from the TASK's
+            # own `requires` on a read-only parameter (a.len() == b.len(),
+            # 0 <= k < s.len()), never restated as a loop invariant because
+            # it is already true of every element, not just the ones seen
+            # so far. The may_ret branch above already threads
+            # self.task["requires"] into the helper for exactly this
+            # reason; this branch used to omit it, so the recursive helper
+            # had no way to know a precondition true at every call site
+            # (ro parameters are never reassigned) and Verus reported
+            # "assertion failed" for those obligations even though the
+            # kernel had unconditionally true facts available at the
+            # call. Measured 2026-09-11: elementWiseDivision (261),
+            # subtractSequences (273), elementWiseSubtraction (282),
+            # multiplyElements (445), elementWiseModulo (616) and
+            # removeElement (610) all move unproved -> verified with this
+            # one-line change; no other of the 34 committed verus cells
+            # regresses (same requires were already true, just unused).
+            req_clauses = list(self.task.get("requires", [])) + ro_facts + invs
         ens_s = ",\n        ".join(ens)
 
         hname = f"t_lp_{self.name}_{k}"
@@ -3044,8 +3310,21 @@ class _V1:
             if env is not None:
                 old_lets = "".join(f"    let t_old_{v} = {v};\n"
                                    for v in state)
+                # 2026-09-11 (ROADMAP 16.2, squareElements): `ro_facts`
+                # (e.g. `h == a.len()`) are never substituted by `entry`
+                # -- they are about READ-ONLY names the loop body cannot
+                # change, true identically before and after one
+                # iteration -- so they are appended unsubstituted,
+                # exactly like `invs`/`cond` are substituted because
+                # THEY range over STATE. Without this, the goal's own
+                # `a[t_old_i_v]` (an index bound by `h`, not directly by
+                # `a.len()`) had no bridge from `h` to `a.len()` inside
+                # this specific nonlinear_arith block (req_clauses/inv_ctx
+                # above cover every OTHER obligation in the helper, but
+                # this bridge builds its own separate `requires` list).
                 prem = ",\n                ".join(
-                    expr(subst(p, entry)) for p in invs + [cond])
+                    [expr(subst(p, entry)) for p in invs + [cond]]
+                    + [expr(f) for f in ro_facts])
                 bridge = [
                     f"        assert({expr(subst(invs[j], env))})"
                     " by (nonlinear_arith)\n"
@@ -3061,7 +3340,7 @@ class _V1:
         self.helpers.append(
             f"proof fn {hname}({ps}) -> (t_res: {res_ty})\n"
             f"{req}    ensures\n        {ens_s},\n"
-            f"    decreases {expr(dec)},\n"
+            f"    decreases ({expr(dec)}) + (2int),\n"
             "{\n"
             f"{old_lets}{shadows}{guard_pre}"
             f"    if {expr(cond)} {{\n"
@@ -3160,6 +3439,15 @@ class _V1:
             main_lines = ([f"    t_lemma_split_join_law({expr(s_e)}, {expr(c_e)});"]
                           + main_lines)
 
+        # ROTATE-LEFT (2026-09-11, ROADMAP 16.2, see `_rotate_witnesses`
+        # and `ROTATE_PRELUDE`'s own docstrings): a task whose ensures
+        # states the rotate-left indexing law gets the lemma call
+        # prepended the same way the split-join law does, one call per
+        # distinct (L, N) pair.
+        for l_e, n_e in _rotate_witnesses(task):
+            main_lines = ([f"    t_lemma_rotate_left({expr(l_e)}, {expr(n_e)});"]
+                          + main_lines)
+
         # THE STRING LIBRARY (v1, 2026-09-11): two more facts an ensures
         # can need that neither `count`'s nor `split`'s own definition
         # hands over for free -- `count(s, t) >= 0` (measured, `f_v1strlib`'s
@@ -3239,7 +3527,9 @@ class _V1:
             "}\n")
 
         strlib_blocks = [STRLIB_PRELUDE] if _uses_strlib(task) else []
-        blocks = strlib_blocks + spec_blocks + self.wf + self.helpers + [main]
+        rotate_blocks = [ROTATE_PRELUDE] if _rotate_witnesses(task) else []
+        blocks = (strlib_blocks + rotate_blocks + spec_blocks + self.wf
+                  + self.helpers + [main])
         return ("use vstd::prelude::*;\n\nverus! {\n\n"
                 + "\n".join(blocks)
                 + "\n} // verus!\n\nfn main() {}\n")

@@ -135,6 +135,49 @@ class Budget(Exception):
     """A cap above was hit; this input decides nothing."""
 
 
+class MeasureViolation(Exception):
+    """ROADMAP 13.4, framac-measure, 2026-09-11: the well-foundedness
+    obligation SPEC.md's `decreases` carries, caught as a ground fact
+    instead of an infinite descent. Raised ONLY when the caller opted in
+    (`St(check_measures=True)`, harness.real_witness's own scans; every
+    other caller, including interp.Reference's, keeps St()'s default and
+    never sees this), so no existing behaviour changes for a body whose
+    measures are fine or whose caller never asked.
+
+    Two sites raise it, both against the SAME rule -- "the callee's
+    measure is not strictly below the caller's, or the caller's measure
+    is negative":
+      - a spec function call, from within evaluating another call to the
+        SAME function (`ev`'s "call" case): `site` is the function's
+        name, `args` the callee's concrete argument dict.
+      - a `while` loop carrying a `decreases`, between two consecutive
+        iterations that both entered the loop body (`exec_body`'s
+        "while" case): `site` is the loop's AST node (`w["while"]`,
+        identity-comparable against `harness.real_witness`'s own
+        `_loop_index` helper), `args` is None (a loop variant is not
+        indexed by a call's arguments; the concrete input that exposes it
+        is the witness's own top-level env).
+
+    `caller_measure`/`callee_measure` are the two ground integers the
+    rule compares: for a recursive call, the enclosing frame's measure
+    and this call's; for a loop, the previous iteration's variant and
+    this one's (or, when there is no previous iteration, this one's own
+    value, when it alone is negative)."""
+    def __init__(self, site, call_args, caller_measure, callee_measure):
+        super().__init__(f"measure {callee_measure} not below "
+                         f"{caller_measure} at {site}")
+        self.site = site
+        # NOT `self.args`: that name is BaseException's own (a tuple,
+        # used by its __repr__/traceback machinery), and this class's
+        # `call_args` is a dict or None -- overwriting `args` corrupted
+        # exception printing (measured: raising this crashed inside
+        # __init__ itself, "'NoneType' object is not iterable", before
+        # this rename).
+        self.call_args = call_args
+        self.caller_measure = caller_measure
+        self.callee_measure = callee_measure
+
+
 @dataclass(frozen=True)
 class Pair:
     """SPEC.md "Pairs" (2026-09-10): the runtime value of `{"op": "pair",
@@ -346,11 +389,20 @@ def _bounded(v):
 
 
 class St:
-    __slots__ = ("n", "d")
+    __slots__ = ("n", "d", "check_measures", "_measure_stack")
 
-    def __init__(self):
+    def __init__(self, check_measures: bool = False):
         self.n = 0
         self.d = 0
+        # ROADMAP 13.4, framac-measure, 2026-09-11: opt-in only (default
+        # False keeps every existing caller, interp.Reference included,
+        # byte-for-byte unaffected). True makes `ev`'s "call" case and
+        # `exec_body`'s "while" case raise MeasureViolation instead of
+        # silently ignoring a broken `decreases`/variant -- see that
+        # class's docstring. harness.real_witness is the only caller
+        # that sets it.
+        self.check_measures = check_measures
+        self._measure_stack: list[tuple[str, object]] = []
 
     def tick(self):
         self.n += 1
@@ -431,6 +483,28 @@ def ev(e: dict, env: dict, funs: dict, st: St):
                 return sub[ret]
             finally:
                 st.d -= 1
+        # ROADMAP 13.4, framac-measure, 2026-09-11: a spec_fun's own
+        # `decreases`, checked ONLY when the caller opted in
+        # (st.check_measures; see St's and MeasureViolation's docstrings).
+        # Not covering the "_exec" branch above (a TASK's own body
+        # self-recursing, gate 3): no committed task or probe in scope
+        # here reaches it through a `decreases`-bearing self-call, and
+        # closing it is a separate, unmeasured gap, named rather than
+        # silently assumed away.
+        dec = f.get("decreases")
+        if st.check_measures and dec is not None:
+            callee_m = ev(dec, sub, funs, st)
+            stack = st._measure_stack
+            if stack and stack[-1][0] == c["fun"]:
+                caller_m = stack[-1][1]
+                if caller_m < 0 or not (callee_m < caller_m):
+                    raise MeasureViolation(c["fun"], dict(sub),
+                                           caller_m, callee_m)
+            stack.append((c["fun"], callee_m))
+            try:
+                return ev(f["body"], sub, funs, st)
+            finally:
+                stack.pop()
         return ev(f["body"], sub, funs, st)
     op = e["op"]
     if op == "and":
@@ -609,7 +683,26 @@ def exec_body(body: list, env: dict, funs: dict, st: St, hook=None) -> bool:
             if hook is not None:
                 hook(s, env)
             it = 0
+            dec = w.get("decreases")
+            prev_m = None
+            # ROADMAP 13.4, framac-measure, 2026-09-11: the loop's OWN
+            # variant, checked ONLY when the caller opted in
+            # (st.check_measures). The module docstring above still
+            # holds for every other caller (default False): "invariants
+            # and decreases are not checked here". At each arrival that
+            # is about to run the body again, the variant just computed
+            # must be non-negative, and (from the second arrival on)
+            # strictly below the PREVIOUS arrival's variant -- the same
+            # rule ev()'s spec_fun case checks for a recursive call,
+            # restated for a loop's iterations instead of a call chain.
             while ev(w["cond"], env, funs, st):
+                if st.check_measures and dec is not None:
+                    m = ev(dec, env, funs, st)
+                    if m < 0 or (prev_m is not None and not (m < prev_m)):
+                        raise MeasureViolation(w, None,
+                                               prev_m if prev_m is not None
+                                               else m, m)
+                    prev_m = m
                 if exec_body(w["body"], env, funs, st, hook):
                     return True
                 it += 1
@@ -663,6 +756,33 @@ def funs_of(task: dict, body: list) -> dict:
         funs[task["name"]] = {"params": task["params"],
                               "_exec": (body, task["returns"][0]["name"])}
     return funs
+
+
+def _loops(body: list) -> list:
+    """Every `while` node under `body`, pre-order (the same order source
+    reads top to bottom): the fixed enumeration `loop_index` below numbers
+    against, so a MeasureViolation's `site` (the raw AST node, identity
+    matters, not content -- two loops can look alike) turns into a small,
+    stable integer for a witness to carry."""
+    out = []
+    for s in body:
+        if "while" in s:
+            out.append(s["while"])
+            out.extend(_loops(s["while"]["body"]))
+        elif "if" in s:
+            out.extend(_loops(s["if"]["then"]))
+            out.extend(_loops(s["if"]["else"]))
+    return out
+
+
+def loop_index(task: dict, loop: dict) -> int:
+    """`loop`'s 0-based position among `task["body"]`'s `while` nodes
+    (`_loops`'s pre-order), identity-matched (`is`, not `==`: two
+    syntactically identical loops must not collide)."""
+    for i, w in enumerate(_loops(task["body"])):
+        if w is loop:
+            return i
+    raise ValueError("loop not found in task body")
 
 
 # ---------------------------------------------------------------------------

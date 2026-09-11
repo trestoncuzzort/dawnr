@@ -12,8 +12,8 @@ completed lifter run under out/lift (also outside this repo, gitignored
 the way `LIFTER-785.md`'s own header describes) -- SKIPPED, not failed,
 when either is missing, printing why. Where they are present it reruns
 `build_rows`/`groups`/`greedy_lifter` and asserts the headline counts this
-session measured by hand: 164 programs, 131 lexically in fragment, 59
-lifted, 34 read all seven kernels (31 of them lexically in fragment, 3 not),
+session measured by hand: 164 programs, 131 lexically in fragment, 75
+lifted (59 before wave E's two lifter rows), 34 read all seven kernels (31 of them lexically in fragment, 3 not),
 so a later re-lift or a wider sweep is caught by a changed number here
 rather than only in prose.
 
@@ -105,7 +105,16 @@ def test_full_join_headline_counts():
     in_frag = sum(1 for r in rows if r["in_fragment"])
     assert in_frag == 131, in_frag
     lifted = sum(1 for r in rows if r["lifter_status"] == "lifted")
-    assert lifted == 59, lifted
+    not_swept = sum(1 for r in rows if r["sweep_state"] == "not-swept")
+    if not_swept:
+        # The lift under out/lift is newer than the committed sweep table
+        # (a re-lift landed, the sweep has not): the headline counts below
+        # are pinned to a consistent pair of inputs, so this check waits
+        # for the sweep rather than pin a number nobody measured. 2026-09-11.
+        print("  SKIPPED: %d lifted rows not in the sweep table yet "
+              "(run the sweep, then re-pin these counts)" % not_swept)
+        return
+    assert lifted == 75, lifted   # 2026-09-11: 59 before the two lifter rows of wave E, 75 after (task 578 re-lifted alone after a differential-run timeout under load)
     all_seven = sum(1 for r in rows if r["sweep_state"] == "all-seven")
     assert all_seven == 34, all_seven
     all_seven_infrag = sum(1 for r in rows

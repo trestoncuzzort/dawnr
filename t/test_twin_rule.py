@@ -159,6 +159,55 @@ def test_abs_still_reads_verified_refuted():
         assert row_line == "| abs | verified / refuted |", row_line
 
 
+# A cubeVolume-shaped no-twin row (ROADMAP 16.2, twin-ladder wave): a
+# straight-line int body with no `if`, no loop, no literal, and no
+# `at`/`update`/`fill`/`slice`, the exact shape rungs 1-8 have nothing to
+# mutate in (dafny_synthesis 234 cubeVolume is this shape verbatim, less the
+# name). Before WRONG-CONSTANT this was `no-twin / no-twin` in every column
+# (t/COVERAGE-lifted-785.md); this test runs it through the real pipeline
+# and checks the row that closes.
+CUBE_SHAPED_PROBE = {
+    "t": 1,
+    "name": "cube_shaped_probe",
+    "params": [{"name": "size", "type": "int"}],
+    "returns": [{"name": "volume", "type": "int"}],
+    "requires": [{"op": ">", "args": [{"var": "size"}, {"int": 0}]}],
+    "ensures": [{"op": "==", "args": [{"var": "volume"},
+                {"op": "*", "args": [{"op": "*", "args": [{"var": "size"},
+                {"var": "size"}]}, {"var": "size"}]}]}],
+    "body": [{"assign": ["volume", {"op": "*", "args": [
+        {"op": "*", "args": [{"var": "size"}, {"var": "size"}]},
+        {"var": "size"}]}]}],
+}
+
+
+@test
+def test_cube_shaped_no_twin_row_now_flips():
+    if not _dafny_available():
+        print("  (dafny not on PATH, skipping test_cube_shaped_no_twin_row_now_flips)")
+        return
+    twin_body, op, w = harness.twin_cached(CUBE_SHAPED_PROBE)
+    assert twin_body is not None, (
+        "the twin-ladder wave's WRONG-CONSTANT rung should give this "
+        "straight-line arithmetic body a witnessed twin where rungs 1-8 "
+        "found nothing to mutate")
+    assert op == "wrong-constant", op
+    assert w.get("_ens") is True, w
+
+    with tempfile.TemporaryDirectory(prefix="t-twin-rule-cube-") as td:
+        outdir = Path(td)
+        rows, wits, text = _run_one(CUBE_SHAPED_PROBE, outdir)
+        real, twin, agreed = rows["cube_shaped_probe"]["dafny"]
+        assert agreed, rows
+        assert real == Outcome.VERIFIED, f"real should VERIFY: {real}"
+        assert twin == Outcome.REFUTED, (
+            f"`volume := size*size*size +- 1` breaks `ensures volume == "
+            f"size*size*size` outright: {twin}")
+        row_line = next(l for l in text.splitlines()
+                        if l.startswith("| cube_shaped_probe "))
+        assert row_line == "| cube_shaped_probe | verified / refuted |", row_line
+
+
 @test
 def test_decorative_kind_pure_function():
     """No kernel, no dafny: harness.decorative_kind's own contract, so this

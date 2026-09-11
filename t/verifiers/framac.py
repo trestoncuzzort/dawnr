@@ -1,5 +1,25 @@
 """t.verifiers.framac, the sixth kernel: Frama-C/WP over ACSL contracts.
 
+MEASURE WITNESS, checked not changed, 2026-09-11 (ROADMAP 13.4,
+framac-measure). lower_framac.py's new `_measure_certificate` reuses the
+SAME `CERT_FN`/`CERT_GOAL` names `_value_certificate`/`_undef_certificate`
+already use, and this file's REFUTED doctrine (below) reads the kernel's
+own report for that goal name generically, never branching on the
+witness `_kind` that produced it -- confirmed by reading this file
+end to end rather than assumed: no `_kind`/`witness(` reference exists
+here. So a "measure"-kind certificate needed no change in this file to
+be read as REFUTED with the witness in its message; MEASURED on
+fz_p_badvariant (real: timeout -> refuted, the certificate's own audit
+set accepted) and, separately and honestly, NOT on fz_p_badrec/
+fz_p_badrec2 (real stays "vacuous" before and after this patch --
+`g(n) = g(n) + 1`'s own recursive ACSL `logic function` axiom already
+makes the file's hypotheses derive \\false, caught by `_vacuity_smoke`
+BEFORE this file ever reaches the certificate-goal check; a certificate
+in an already-inconsistent theory proves nothing new, and closing that
+gap is a different, unmeasured fix to how a non-terminating recursive
+logic function gets axiomatized, not to how a measure certificate is
+read).
+
 Pins: Frama-C 33.0 (Arsenic) + alt-ergo 2.4.3-free (NEVER opam's alt-ergo
 2.6.x, which is non-commercial, the WS-7 licensing catch), via opam.
 

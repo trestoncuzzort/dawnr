@@ -2690,6 +2690,12 @@ def cap(name: str) -> str:
 
 _ADA_RUN = re.compile(r"_{2,}")
 
+# Every Ada identifier occurring in an already-lowered text fragment (used
+# by lower_while's own "unmutated local == its init expr" carry, ROADMAP
+# 16.2, 2026-09-11, to check a candidate fact's free names before adding
+# it as a Pre conjunct -- see that call site's own comment).
+_ADA_IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
 
 # --- name capture ----------------------------------------------------------
 
@@ -2714,6 +2720,39 @@ def bound_names(task: dict, body: list) -> set:
     go(task)
     go(body)
     return {n for n in out if isinstance(n, str)}
+
+
+def _requires_free_vars(e) -> set:
+    """Free `var` names an expression AST reads, quantifier-bound names
+    excluded. Used by lower_while (ROADMAP 16.2, 2026-09-11) to find which
+    of the task's own `requires` clauses mention ONLY parameters the loop
+    never touches -- see that call site's comment for why those clauses
+    have to be carried into the loop helper's own Pre."""
+    out: set = set()
+
+    def go(x, bound):
+        if isinstance(x, dict):
+            for k in ("forall", "exists"):
+                if k in x and isinstance(x[k], dict):
+                    q = x[k]
+                    nb = bound | {q.get("var")}
+                    go(q.get("lo"), bound)
+                    go(q.get("hi"), bound)
+                    go(q.get("body"), nb)
+                    return
+            if "var" in x and isinstance(x["var"], str):
+                if x["var"] not in bound:
+                    out.add(x["var"])
+            for k, v in x.items():
+                if k == "var":
+                    continue
+                go(v, bound)
+        elif isinstance(x, list):
+            for v in x:
+                go(v, bound)
+
+    go(e, set())
+    return out
 
 
 def loop_assigned(body: list) -> set:
@@ -3598,8 +3637,70 @@ class Lower:
         # data-dependent op into an invariant at all.
         if invs and any(_has_strlib_op(i) for i in invs):
             invs = sorted(invs, key=lambda i: 0 if _is_bound_inv(i) else 1)
-        pre = "\n       and then ".join(
-            self.expr(i, entry, types) for i in invs)
+        # ROADMAP 16.2, 2026-09-11 (elementWiseModulo and its element-wise
+        # siblings): a loop's own W_k helper carries only the task's stated
+        # invariants as its Pre, per SPEC.md's frame rule above -- but a
+        # `requires` clause the outer task states over params the loop
+        # NEVER assigns (e.g. `forall i: b[i] != 0` for a param `b` the
+        # loop only reads) is true for the whole call, invariant across
+        # every iteration for exactly that reason, and the invariant list
+        # is not this file's to edit (see the string-library note just
+        # above). Left out, gnatprove has no hypothesis at all for the
+        # in-body use that NEEDS it -- here, T_Mod (Elem(A,I), Elem(B,I))
+        # requiring Elem(B,I) /= 0 -- and MEASURED (this session, harness
+        # on dafny_synthesis_task_id_616__elementWiseModulo) two
+        # VC_PRECONDITION checks (the recursive call's own Pre and T_Mod's)
+        # run the --steps budget out to "limit": not a deeper proof
+        # difficulty, a missing hypothesis. Fix: any requires clause whose
+        # free vars are all task PARAMETERS (never a loop-local, so
+        # unaffected by the frame rule) is a fact true before, during and
+        # after the loop, carried into the helper's own Pre alongside the
+        # stated invariants. Not added to Post: nothing downstream of the
+        # loop needs it restated, and the recursive call already reuses it
+        # from its own Pre as a hypothesis, since A/B pass through
+        # unchanged -- confirmed by the matrix rerun this note's commit
+        # cites finding no regression on the 34 already-committed tasks.
+        pnames = {p["name"] for p in tparams}
+        carried = [r for r in self.task.get("requires", [])
+                   if _requires_free_vars(r) <= pnames]
+        carried_pre = [self.expr(r, entry, types) for r in carried]
+        # ROADMAP 16.2, 2026-09-11 (elementWiseDivide's own H, and the same
+        # `h := len(a)` idiom in appendArrayToSeq/arrayToSeq/getFirstElements/
+        # squareElements/addLists/isSmaller/containsSequence/containsK):
+        # a local var the loop's OWN body never assigns (`v not in mut`,
+        # same frame rule as above) but whose value was fixed BEFORE the
+        # loop by a plain `var h = <expr>` step never gets that fact into
+        # W_k's Pre either -- `env[v]` (compile()'s already-lowered Ada
+        # text for that one-time init, still in scope here) says what it
+        # equals, but nothing states `H = <that text>` inside the helper,
+        # so a body use needing it (elementWiseDivide's `Elem (A, I_v2)`,
+        # guarded only by `I_v2 < H`, needs `H <= Len (A)` to conclude
+        # `I_v2 < Len (A)`) has no hypothesis to reach for -- MEASURED
+        # (this session, dafny_synthesis_task_id_618__elementWiseDivide,
+        # AFTER the requires-carry fix just above already lands its OWN
+        # divide-by-zero side condition) two VC_PRECONDITION checks at
+        # "limit", same shape as the requires case. Fix: for such a `v`,
+        # add `Cap(v) = <env[v]>` to Pre too -- but ONLY when `env[v]`'s
+        # own free identifiers (a plain regex over the Ada text already
+        # built with every name capitalized, cheaper than re-deriving the
+        # AST this late) never include a `mut` field's own capitalized
+        # name: an unassigned local declared BEFORE this loop cannot
+        # SYNTACTICALLY reference this loop's own bound variable (it does
+        # not exist yet at that point in the program), but nothing rules
+        # out it referencing some OTHER, enclosing loop's mutated state by
+        # name coincidence, and restating that snapshot as an invariant
+        # good for every recursive depth would be unsound -- so the check
+        # is kept even though no task in this corpus has hit it yet.
+        mut_names = {cap(m) for m in mut}
+        for v in state:
+            if v in hav or v in pnames or env[v] is None:
+                continue
+            ids = set(_ADA_IDENT.findall(env[v]))
+            if ids & mut_names:
+                continue
+            carried_pre.append(f"{cap(v)} = ({env[v]})")
+        pre_parts = carried_pre + [self.expr(i, entry, types) for i in invs]
+        pre = "\n       and then ".join(pre_parts)
         post_parts = [self.expr(i, result, types) for i in invs]
         post_parts.append(f"(not {self.expr(w['cond'], result, types)})")
         post = "\n       and then ".join(post_parts)

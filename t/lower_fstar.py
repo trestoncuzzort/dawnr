@@ -1,6 +1,76 @@
 #!/usr/bin/env python3
 r"""lower_fstar.py: lower t tasks (v0 and v1) to F*; the seventh kernel.
 
+2026-09-11 (ROADMAP 16.2, the fstar column's blockers on the MBPP-DFY
+lifted corpus): two fixes in `gen_loop`, both measured against the actual
+F* kernel, not inferred:
+
+  1. Frame-variable definition. A frame variable in `fvars` (a mutable
+     local from the loop's own prefix that the loop body never assigns,
+     so it is threaded through the recursion unchanged) can carry a
+     defining equation the task's own invariants never restate -- `var h
+     := len(a)` right before the loop, say -- because every other kernel
+     keeps that fact for free about an unmutated local still in scope.
+     This lowering turns `h` into an opaque recursion parameter, erasing
+     that fact for the recursive body's own proof obligations. Measured
+     on dafny-synthesis SquareElements (task 8, ds15-new): F* Error 19 on
+     `Seq.upd squared i_v ...`, "Failed to prove: i_v < FStar.Seq.Base.
+     length squared", because the loop's invariants give `i_v <= len(a)`
+     (non-strict) and `i_v < h` but nothing ties `h` to `len(a)`. Fix:
+     for every `int`-typed frame variable, assert `v == env_pre[v]` (the
+     defining expression already computed for `fbind`/`init`) as an
+     extra loop invariant -- not a new requirement on the task (the frame
+     rule already guarantees the loop preserves it trivially), so no
+     contract is weakened and nothing is assumed; the kernel still proves
+     it as an ordinary invariant-preservation VC. Kept to `int` frame
+     variables only (see the comment at the call site for why a seq-typed
+     one is left alone). Moved 8 of this pass's cells to real=verified
+     matching dafny (106, 460, 587, 618, 62, 728, 8, 95 -- all "exit at
+     h=0" witnesses of the same shape).
+
+  2. Decreases off-by-one. F*'s builtin well-founded order on plain `int`
+     needs the SMALLER (new) measure itself nonnegative, not just the
+     larger (old) one (measured directly, a two-line standalone lemma:
+     `Lemma (requires (0 <= x /\ y == x - 1)) (ensures (y << x))` FAILS,
+     "Failed to prove: y << x"). A loop whose guard is the non-strict `i
+     <= bound` makes its LAST recursive call exactly when `i == bound`:
+     old measure `bound - i` is 0 (fine), new measure after `i := i + 1`
+     is `bound - i - 1 == -1`, which F*'s rule refuses even though the
+     recursion plainly terminates there. Measured on dafny-synthesis
+     LucidNumbers (task 603, ds59-lifted): F* Error 19, "Could not prove
+     termination", "Failed to prove: n - (i_v3 + 1) << n - i_v3", while
+     dafny verifies the identical loop and decreases clause outright (its
+     own rule only needs the OLD value nonneg). Fix: shift the task's own
+     decreases expression by a constant `+ 1` -- confirmed on the same
+     file, byte-identical except the decreases clause, that this alone
+     turns the F* run into "All verification conditions discharged
+     successfully". Harmless where the raw metric never needed the extra
+     room: `new + 1 < old + 1` holds whenever `new < old` did. Moved
+     lucidNumbers (603) to real=verified twin=refuted, matching dafny.
+
+  Measured after both fixes: the 19-task blocker set (ds59-lifted's named
+  blockers + all 15 of ds15-new) at flake 3 against dafny, t/tasks' own 34
+  committed tasks at flake 3 (every cell byte-for-byte the same reading as
+  t/AGREEMENT.md's fstar column -- no regression), and the conformance
+  suite's fstar column (conformance.py's own build_manifest/run_items/
+  grade/format_table, restricted to the fstar column): before and after
+  are identical but for the run timestamp, 66 tasks, 0 FAIL cells in
+  either run. Left open, named honestly rather than relabeled: the
+  "exists"/"forall" divisor-bound family (isNonPrime task 3, isPrime 605,
+  sumOfCommonDivisors 126) needs a real co-divisor lemma the loop's exit
+  invariant does not supply (an actual number-theory gap, not a lowering
+  shape issue) -- and even where fstar's own real now verifies with these
+  two fixes (containsSequence 69, containsK 808, isSmaller 809), the twin
+  still reads verified too there, which is the twin ladder's own open
+  item, not this column's (dafny reads the identical verified/unsound on
+  every one of those three, matching); the three structural ABSTAINs
+  (anyValueExists 414: a quantifier in computational position, isSublist
+  576 and removeElement 610: return-in-prefix and multi-loop-per-body,
+  respectively) are unsupported shapes in this lowering, unchanged; and
+  isArmstrong (598) still times out (nonlinear div/mod arithmetic over
+  cubes, no FStar.Math.Lemmas assist emitted here yet) -- a real timeout
+  at the pinned budget, not relabeled.
+
 2026-09-12 (this session, ROADMAP 13.4's fstar item: "the four ensures-
 level probes"): three changes, all in this file alone (`verifiers/
 fstar.py` needed none -- its certificate gate is already name-based, not
@@ -2900,7 +2970,76 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     guard_b = cx.bx(w["cond"], {}, local)
     guard_p = cx.prop(w["cond"], {}, local)
     invs = [cx.prop(e, {}, local) for e in w.get("invariants", [])]
-    dec = cx.zx(w["decreases"], {}, local)
+    # FRAME-VARIABLE DEFINITION (2026-09-11, ROADMAP 16.2 fstar column):
+    # a frame variable (in `fvars`, threaded through the recursion unchanged
+    # because the loop body never assigns it) can carry a defining
+    # equation from the loop's own prefix -- e.g. `var h := len(a)` right
+    # before the loop -- that the task's own invariants never restate,
+    # because Dafny/Verus/etc. keep it for free as a fact about an
+    # unmutated local still in scope. This lowering turns `h` into an
+    # opaque recursion parameter, so that fact is invisible to the
+    # recursive body's own proof obligations unless stated here: measured
+    # on dafny-synthesis SquareElements (task 8, ds15-new), F* Error 19 on
+    # `Seq.upd squared i_v ...` inside the `i_v < h` branch -- "Failed to
+    # prove: i_v < FStar.Seq.Base.length squared" -- because the loop's
+    # own invariants give `i_v <= len(a)` (non-strict) and `i_v < h`, but
+    # nothing ties `h` to `len(a)`, so Z3 cannot chain them into the
+    # strict bound the index needs. `env_pre[v]` (already computed above
+    # for `fbind`/`init`) is exactly that defining expression, rendered as
+    # an F* term; asserting `v == env_pre[v]` is not a new requirement on
+    # the task (the frame rule above already guarantees the loop preserves
+    # it, trivially: recursive calls pass `v` through unchanged, so the
+    # equation holds at every step it held at the last), so no contract is
+    # weakened and nothing is assumed -- the kernel still has to, and does,
+    # discharge it as an ordinary invariant-preservation VC. Kept to `int`
+    # frame variables only: a seq-typed one could instead pull in a
+    # non-trivial expression (e.g. `Seq.append`) whose repeated appearance
+    # in every recursive call's VC risks the quantifier-instantiation
+    # slowdowns this file's own module docstring already tracks for the
+    # string library prelude, for no benefit measured so far (every
+    # blocker this fixed was a scalar bound, never a seq frame variable).
+    for v in fvars:
+        if _tystr(stys[v]) != "int":
+            continue
+        init_expr = env_pre.get(v)
+        if init_expr is not None and init_expr != v:
+            invs.append(f"({v} == {init_expr})")
+    # DECREASES OFF-BY-ONE (2026-09-11, ROADMAP 16.2 fstar column): a task's
+    # own `decreases` expression is the raw "bound - counter" the task
+    # states (e.g. `n - i`), and every OTHER kernel's own well-founded
+    # order over its native int type accepts it directly. F*'s builtin
+    # `<<` on `int`, measured here (decprobe4.fst, a two-line standalone
+    # lemma with no seq or loop involved at all: `Lemma (requires (0 <= x
+    # /\ y == x - 1)) (ensures (y << x))` -- x nonneg, y one less -- FAILS,
+    # "Failed to prove: y << x"), needs the SMALLER (new) value itself
+    # nonneg, not just the larger (old) one: `x << y` reads `0 <= x /\ x <
+    # y`. A loop whose guard is the non-strict `i <= bound` (inclusive,
+    # SPEC.md's own invariant `i <= bound + 1` says as much) makes its
+    # LAST recursive call exactly when `i == bound`: old measure `bound -
+    # i` is 0 (nonneg, fine), but the new measure after `i := i + 1` is
+    # `bound - i - 1 == -1`, which fails F*'s stricter rule even though
+    # the recursion plainly terminates there (the next guard is false).
+    # Measured on dafny-synthesis LucidNumbers (task 603, ds59-lifted):
+    # F* Error 19 at the recursive call, "Could not prove termination",
+    # "Failed to prove: n - (i_v3 + 1) << n - i_v3" -- while dafny verifies
+    # the identical loop with the identical decreases clause outright
+    # (its own rule only needs the OLD value nonneg, so 0 << -1 is fine
+    # there). The fix is not to weaken or reinterpret the task's decreases
+    # expression, only to give the SAME well-founded fact to F* in a shape
+    # its stricter rule accepts: shifting the whole metric up by a
+    # constant 1 preserves every strict decrease this recursion already
+    # has (all of them decrement `dec` by exactly 1 per call, so `dec + 1`
+    # decrements by exactly 1 too) while keeping it nonneg one step
+    # further down, covering exactly the inclusive-bound boundary above.
+    # Confirmed on the same file (lucid_shift.fst, byte-identical except
+    # `(decreases (n - i_v3))` -> `(decreases ((n - i_v3) + 1))`):
+    # "Verified module ... All verification conditions discharged
+    # successfully". Unconditional and harmless where the raw metric
+    # already stayed nonneg throughout (a strict `<` guard, say): shifting
+    # a metric that never needed the extra room costs nothing, since F*'s
+    # rule is exactly `0 <= new /\ new < old`, and `new+1 < old+1` holds
+    # whenever `new < old` did.
+    dec = f"(({cx.zx(w['decreases'], {}, local)}) + 1)"
     reqs = [cx.prop(e, {}, {}) for e in task.get("requires", [])]
 
     dummy = _dummy(ret_t)
