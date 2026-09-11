@@ -874,6 +874,98 @@ def _bound_membership(binder: str, guard: Expr) -> Optional[Expr]:
     return None
 
 
+def _expr_eq_ignore_line(a, b) -> bool:
+    """Structural equality between two `Expr` subtrees, ignoring every
+    `line` field. dataclass `__eq__` compares `line` too, which is right
+    almost everywhere in this file (two nodes from the same reprinted
+    clause land on the same line) but wrong for row 31's repeated-range
+    detection when the two copies of the range happen to sit on different
+    SOURCE lines -- dafny's own `rprint` always puts a whole clause on one
+    line, but a hand-written or differently-wrapped guard need not."""
+    if a is b:
+        return True
+    if type(a) is not type(b):
+        return False
+    if dataclasses.is_dataclass(a):
+        for f in dataclasses.fields(a):
+            if f.name == "line":
+                continue
+            if not _expr_eq_ignore_line(getattr(a, f.name), getattr(b, f.name)):
+                return False
+        return True
+    if isinstance(a, tuple):
+        return len(a) == len(b) and all(
+            _expr_eq_ignore_line(x, y) for x, y in zip(a, b))
+    return a == b
+
+
+def _extract_unguarded_range(kind: str, body: Expr):
+    """Row 31: dafny's own printer (`rprint`, what `lift_resolve` feeds the
+    lifter) does not always leave an unguarded quantifier's range as the
+    single `range ==> P` / `range && P` shape the two branches above
+    already read. For a body that is itself a conjunction (forall) or
+    disjunction (exists), dafny DISTRIBUTES the range across every
+    top-level clause -- `range ==> (A && B)` prints as `(range ==> A) &&
+    (range ==> B)`, and `range && (A || B)` prints as `(range && A) ||
+    (range && B)` -- so the simple `isinstance(body, Implies)` /
+    `NaryBool("&&")` tests above never fire even though the range is
+    right there, repeated verbatim in every clause. Detects the repeat (by
+    structural equality -- dataclass `__eq__`, sound here because every
+    copy came from re-printing the SAME source guard onto the SAME line)
+    and reassembles the single-guard shape `_bound_range` already knows
+    how to parse. Returns (range_expr, body_without_range) or None."""
+    if kind == "forall":
+        if isinstance(body, Implies):
+            return (body.left, body.right)
+        if isinstance(body, NaryBool) and body.op == "&&" and len(body.args) >= 2 \
+                and all(isinstance(c, Implies) for c in body.args):
+            rng = body.args[0].left
+            if all(_expr_eq_ignore_line(c.left, rng) for c in body.args[1:]):
+                parts = tuple(c.right for c in body.args)
+                new_body = parts[0] if len(parts) == 1 \
+                    else NaryBool(body.line, "&&", parts)
+                return (rng, new_body)
+        return None
+    else:  # "exists"
+        if isinstance(body, NaryBool) and body.op == "||" and len(body.args) >= 2 \
+                and all(isinstance(d, NaryBool) and d.op == "&&" and len(d.args) >= 2
+                        for d in body.args):
+            rng = body.args[0].args[0]
+            if all(_expr_eq_ignore_line(d.args[0], rng) for d in body.args[1:]):
+                def _rest(d):
+                    r = d.args[1:]
+                    return r[0] if len(r) == 1 else NaryBool(d.line, "&&", tuple(r))
+                new_body = NaryBool(body.line, "||", tuple(_rest(d) for d in body.args))
+                return (rng, new_body)
+        return None
+
+
+def _ordered_pair_bound(b1: str, b2: str, c: Chain):
+    """Row 31, the `0 <= i < j < hi` shape (section 4.4 never had it: two
+    binders ordered against the SAME array/seq end, one chain of three
+    relations over four operands, not the two separate two-operand chains
+    the N-binder loop below otherwise expects). Sound to read as `i` over
+    `[lo, hi)` and, nested inside, `j` over `[i+1, hi)` (or `[i, hi)` for a
+    non-strict middle relation): every `i` the tighter original guard
+    would have excluded (those with no valid `j` left) simply gets an
+    empty inner range, contributing nothing to a forall (vacuously true)
+    or an exists (no witness) -- the same widening `in-desugared` already
+    relies on for its `[0, len(s))` outer range. Returns
+    ((lo1,hi1),(lo2,hi2)) for (b1,b2) in that order, or None."""
+    if not (isinstance(c, Chain) and len(c.ops) == 3 and len(c.operands) == 4):
+        return None
+    op1, op2, op3 = c.ops
+    v0, v1, v2, v3 = c.operands
+    if not (_is_ident(v1, b1) and _is_ident(v2, b2)):
+        return None
+    if not (op1 in ("<", "<=") and op2 in ("<", "<=") and op3 in ("<", "<=")):
+        return None
+    lo1 = _plus1(v0) if op1 == "<" else v0
+    hi_shared = _plus1(v3) if op3 == "<=" else v3
+    lo2 = _plus1(Ident(c.line, b1)) if op2 == "<" else Ident(c.line, b1)
+    return ((lo1, hi_shared), (lo2, hi_shared))
+
+
 def bound_quantifier(q: Quantifier):
     """Section 4.4's quantifier-bounding rules, unified into one contract:
     on success, returns {"binders": [(name, lo, hi, membership_seq), ...],
@@ -893,13 +985,28 @@ def bound_quantifier(q: Quantifier):
         guard = q.range
         if guard is None:
             # Unguarded: the range lives inside body as `lo<=k<hi ==> P`
-            # (forall) or `lo<=k<hi && P` (exists).
+            # (forall) or `lo<=k<hi && P` (exists), or (row 31) distributed
+            # across body's own top-level `&&`/`||` -- see
+            # `_extract_unguarded_range`.
             if q.kind == "forall" and isinstance(q.body, Implies):
+                # Row 31: `l in lists ==> P` -- a membership antecedent, not
+                # a numeric range -- binds `l` the same way a GUARDED `k in
+                # s` would (decision 2); tried before `_bound_range` since
+                # a membership chain never parses as one.
+                mem = _bound_membership(b.name, q.body.left)
+                if mem is not None:
+                    return {"binders": [(b.name, None, None, mem)], "body": q.body.right}
                 got = _bound_range(b.name, q.body.left)
-                if got is None or got[2] is not None:
-                    return None  # extra conjuncts with no `==>` shape: bail
-                lo, hi, _ = got
-                return {"binders": [(b.name, lo, hi, None)], "body": q.body.right}
+                if got is not None:
+                    lo, hi, extra = got
+                    # Row 31: a leftover conjunct in the antecedent (e.g.
+                    # `1 <= d <= a && 1 <= d <= b && ...`) used to bail here
+                    # even though the GUARDED branch below folds the very
+                    # same shape back into the body via `Implies` -- there
+                    # is no reason the unguarded form should be stricter.
+                    body = Implies(q.line, extra, q.body.right) if extra is not None \
+                        else q.body.right
+                    return {"binders": [(b.name, lo, hi, None)], "body": body}
             if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
                 got = _bound_range(b.name, q.body)
                 if got is None:
@@ -907,6 +1014,15 @@ def bound_quantifier(q: Quantifier):
                 lo, hi, extra = got
                 body = extra if extra is not None else BoolLit(q.line, True)
                 return {"binders": [(b.name, lo, hi, None)], "body": body}
+            extracted = _extract_unguarded_range(q.kind, q.body)
+            if extracted is not None:
+                rng, new_body = extracted
+                got = _bound_range(b.name, rng)
+                if got is not None:
+                    lo, hi, extra = got
+                    body = Implies(q.line, extra, new_body) if (extra is not None and q.kind == "forall") \
+                        else (NaryBool(q.line, "&&", (extra, new_body)) if extra is not None else new_body)
+                    return {"binders": [(b.name, lo, hi, None)], "body": body}
             return None
         mem = _bound_membership(b.name, guard)
         if mem is not None:
@@ -924,13 +1040,32 @@ def bound_quantifier(q: Quantifier):
 
     # Multiple binders: each finds its own chain conjunct in a top-level
     # "&&" range guard (section 4.4's "two binders" row, generalised to N).
+    # Row 31: an unguarded N-binder quantifier reads its range from `body`
+    # the same way the single-binder case above does (`_extract_unguarded_
+    # range`, which also covers the plain `Implies` shape directly).
     guard = q.range
+    working_body = q.body
+    exists_plain_and = False
     if guard is None:
-        return None
+        if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
+            # Row 31: an unguarded N-binder `exists` never wraps its range
+            # in `Implies` (that's a `forall` thing) -- dafny prints it as
+            # ONE flat `&&` of range chains and predicate conjuncts
+            # together, same shape the single-binder branch above already
+            # reads directly via `_bound_range(b.name, q.body)`.
+            guard = q.body
+            exists_plain_and = True
+        else:
+            extracted = _extract_unguarded_range(q.kind, q.body)
+            if extracted is None:
+                return None
+            guard, working_body = extracted
     conjuncts = list(guard.args) if isinstance(guard, NaryBool) and guard.op == "&&" else [guard]
     used = [False] * len(conjuncts)
     result_binders = []
-    for b in q.binders:
+    i_b = 0
+    while i_b < len(q.binders):
+        b = q.binders[i_b]
         found = None
         for i, c in enumerate(conjuncts):
             if used[i]:
@@ -944,18 +1079,42 @@ def bound_quantifier(q: Quantifier):
                     found = (lo2, hi2)
                     used[i] = True
                     break
-        if found is None:
-            return None
-        result_binders.append((b.name, found[0], found[1], None))
+        if found is not None:
+            result_binders.append((b.name, found[0], found[1], None))
+            i_b += 1
+            continue
+        # Row 31: `0 <= i < j < hi`, one chain binding TWO consecutive
+        # binders at once (`_ordered_pair_bound`) -- tried only when the
+        # single-conjunct match above found nothing for this binder.
+        if i_b + 1 < len(q.binders):
+            b2 = q.binders[i_b + 1]
+            pair_found = None
+            for i, c in enumerate(conjuncts):
+                if used[i] or not isinstance(c, Chain):
+                    continue
+                pair = _ordered_pair_bound(b.name, b2.name, c)
+                if pair is not None:
+                    pair_found = (i, pair)
+                    break
+            if pair_found is not None:
+                i, (bound1, bound2) = pair_found
+                used[i] = True
+                result_binders.append((b.name, bound1[0], bound1[1], None))
+                result_binders.append((b2.name, bound2[0], bound2[1], None))
+                i_b += 2
+                continue
+        return None
     rest = [c for i, c in enumerate(conjuncts) if not used[i]]
     extra = None
     if rest:
         extra = rest[0] if len(rest) == 1 else NaryBool(rest[0].line, "&&", tuple(rest))
-    if extra is not None:
-        body = Implies(q.line, extra, q.body) if q.kind == "forall" \
-            else NaryBool(q.line, "&&", (extra, q.body))
+    if exists_plain_and:
+        body = extra if extra is not None else BoolLit(q.line, True)
+    elif extra is not None:
+        body = Implies(q.line, extra, working_body) if q.kind == "forall" \
+            else NaryBool(q.line, "&&", (extra, working_body))
     else:
-        body = q.body
+        body = working_body
     return {"binders": result_binders, "body": body}
 
 

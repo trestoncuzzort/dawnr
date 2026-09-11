@@ -1656,6 +1656,94 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   and the five string-library probes it blocks
   (fz_p_str_countempty/_findempty/_splitempty/_tab/_lowernonletter) --
   out of scope for "the four ensures-level probes," not touched here.
+
+  THE PRELUDE FEATURE-GATING SPLIT, DONE (2026-09-12, ROADMAP 13.4:
+  "rocq: the prelude by feature, then its string facts"). The gap named
+  just above is closed: `header()` now takes `(task, body)` and calls
+  `_uses_strlib` (`lower_fstar.py`'s own gate, ported verbatim -- a
+  generic dict/list walk for an `{"op": <member>, ...}` node whose op is
+  in `STRLIB_OPS`, run over both the task dict and the body list) to
+  decide whether to splice in `_STRLIB_DEFS`/`_STRLIB_GOAL_ARMS`/
+  `_STRLIB_HYP_ARMS` -- the three places, found by textual boundary
+  (this file's own "insert only" convention for every prior PRELUDE
+  growth), where "The string library (v1)" added text to the old
+  monolithic `PRELUDE`: the bridge Definitions/Lemmas block
+  (`seq_to_list` through `endswith_list`), `t_inv1`'s goal-side match
+  arms (right before its `| _ => progress subst` catch-all), and its
+  hypothesis-side mirrors (right before `t_inv1`'s closing `end.`).
+  `PRELUDE_CORE_1`..`PRELUDE_CORE_4` are the four surrounding chunks,
+  always emitted, byte-identical to their slice of the old `PRELUDE`.
+
+  MEASURED (relower all 34 committed `t/tasks/*.t`, rocq, before this
+  date's `lower_rocq.py` vs after, `diff -rq`): 29 of 34 lose EXACTLY
+  the string block (each a clean 3-hunk pure deletion, zero additions,
+  matching `_STRLIB_DEFS`/`_STRLIB_GOAL_ARMS`/`_STRLIB_HYP_ARMS`'s own
+  three text ranges one for one); 5 are untouched byte-identical
+  (`abs.t`/`max.t`, both `t: 0` tasks that never call `header()` at
+  all, plus `count_vowels.t`/`split_join.t`/`word_count.t`, the three
+  committed tasks that DO use a string-library member, so the gate
+  keeps the block for them). `t/grade.py --tasks <the ten named tasks>
+  --kernels rocq --flake 3` (single kernel, so grade.py's own two-
+  kernel agreement door REFUSES to write a table -- read per task via
+  `t/cli.py verify --kernels rocq` instead) reproduces AGREEMENT.md's
+  rocq column exactly for all ten: abs/gcd/sum_upto/count_vowels/
+  reverse/word_count/divmod_pair verified/refuted, split_join verified/
+  unproved, min_max verified/refuted at a wide-enough timeout budget
+  (AGREEMENT.md's own "timeout" cell -- this box is slow enough that
+  cli.py's default per-call budget alone reads REFUSED there, not a
+  regression), row_max_len verified/refuted (needed close to 590s wall
+  on this shared box before this pass's SMALLER file, unrelated to the
+  gating: the same task under the OLD ungated `lower_rocq.py`, carrying
+  MORE unrelated text, cannot be faster).
+
+  THE STRING FACTS, THREE OF FIVE. `fz_p_str_countempty`/
+  `_findempty`/`_splitempty` (fuzz_lower.probes(), graded the same way
+  conformance.py's `probe_manifest()`/`run_items()` would restrict to
+  rocq: build each probe's real/twin sources with `lower_rocq.lower`,
+  verify with `verifiers.rocq.verify` via `verifiers.cell_pair`) move
+  UNPROVED -> VERIFIED. SPEC.md's own closed-form identities for an
+  EMPTY pattern are already a Fixpoint BASE CASE (`count_go`'s `t = []`
+  arm returns `Z.of_nat (length s) + 1` directly; `find_go`'s returns
+  `i`, called at `i = 0`; `split_ws_acc`'s `s = []` arm returns `[]`
+  when the accumulator is also `[]`) -- `t_count_list_empty`/
+  `t_find_list_empty`/`split_ws_list_empty` are each `reflexivity`, one
+  unfold, not a hard proof once `t_dis`'s search had a rule reaching
+  for them. The empty-seq ARGUMENT renders as the generic bridge
+  `t_list ?g 0`, not a bare `[]` literal (`fz_p_str_countempty`'s own
+  `s.count([])`'s second argument, the seq literal `[]`, still goes
+  through `seq_fn`/`t_list` like any other seq), so `t_list_zero`
+  (`t_list f 0 = []`, `Z.to_nat 0` a literal `O` by construction) has
+  to fire FIRST, in both `t_inv1` polarities, before the three empty-
+  pattern facts can match; `split_ws_list`'s own result additionally
+  left a bare `length (@nil ?A)` in the goal once reduced (`A` left
+  polymorphic on purpose -- the nested seq<seq> case needs `@nil (list
+  Z)`, not `@nil Z`, a MEASURED miss on the first attempt: a
+  `@nil Z`-typed arm never matched `length (@nil (list Z))`, and
+  `t_dis` read UNPROVED with no other symptom until `Show` after a
+  manual `t_base` repeat isolated the exact stuck goal), closed by one
+  more arm, `cbn [length]`, since `length` itself is not one of this
+  file's opaque functions.
+
+  TWO OF FIVE, NOT ATTEMPTED, NAMED. `fz_p_str_lowernonletter`/
+  `fz_p_str_tab` both need a POINTWISE bridging fact this file has no
+  version of yet: reading `lower_list (t_list f n)` (or `split_ws_list`
+  over a multi-element literal) back index by index needs relating
+  `nth k (lower_list l)` to `lower_c (nth k l)` (a `map_nth`-shaped
+  lemma, complicated by the default-value side condition `map_nth`
+  itself carries) or, for `_tab`, unfolding `split_ws_acc` through
+  three concrete elements' worth of `is_ws` case splits -- neither is
+  the one-unfold shape the three DONE above are; MEASURED unproved,
+  `coqc`'s own message unchanged: "Tactic failure: unsolved t
+  verification condition." Left open by name, not attempted further
+  this pass.
+
+  `fz_p_pair_seq`, NOT ATTEMPTED, NAMED. Still abstain/abstain: the
+  refusal is `_check_pair_types`/`pair_comp_ty`'s own structural one
+  (this file's "PAIRS (v1)" note, above) for a seq pair-component,
+  raised before any proof search starts, not a prelude gap -- fixing it
+  needs `pair_comp_ty`/`pair_ty`/`rty`/`param_binders` to accept a THIRD
+  pair-component shape throughout, not a cheap addition to a gated
+  block. Left open by name.
 """
 from __future__ import annotations
 
@@ -1792,7 +1880,7 @@ def lower_v0(task: dict, body: list, witness: dict | None = None) -> str:
 # before this generator existed; see the session's proto files).
 # --------------------------------------------------------------------------
 
-PRELUDE = r"""(* persistent resolution marker: survives destruction of what it records *)
+PRELUDE_CORE_1 = r"""(* persistent resolution marker: survives destruction of what it records *)
 Inductive t_done (P : Prop) : Prop := t_done_intro : t_done P.
 
 Ltac t_leaf := solve [ lia | assumption | congruence | discriminate | (exfalso; lia) ].
@@ -2425,7 +2513,10 @@ Ltac t_nseq_eqb_case n f g :=
     replace (t_nseq_eqb n f g) with false in * by (symmetry; exact E)
   ]; t_bred_all.
 
-(* ============================================================
+"""
+# The string library (v1) bridge Definitions/Lemmas: seq_to_list through
+# endswith_list, byte-identical to the old PRELUDE's own slice.
+_STRLIB_DEFS = r"""(* ============================================================
    THE STRING LIBRARY (v1), 2026-09-11.  SPEC.md "The string library
    (v1)": seventeen members over the code-point seq (and seq<seq> for
    split/join), Python's semantics exactly (interp.py's _str_* family is
@@ -2623,6 +2714,17 @@ Definition t_of_list (l : list Z) : Z -> Z := fun k => nth (Z.to_nat k) l 0.
 
 Lemma t_list_length : forall f len, length (t_list f len) = Z.to_nat len.
 Proof. intros. unfold t_list. apply length_seq_to_list. Qed.
+
+(* ROADMAP 13.4, 2026-09-12 ("rocq: the prelude by feature, then its string
+   facts"): the bridge's own zero-length case, `t_list f 0 = []` -- fuel
+   `Z.to_nat 0` reduces to `O` by CONSTRUCTION (`Z.to_nat`'s own definition
+   on a nonnegative literal), so `seq_to_list f O` is the Fixpoint's base
+   case, `reflexivity` alone. Needed by `t_count_list_empty`/
+   `t_find_list_empty` below wherever SPEC.md's own `count(s,[])`/
+   `find(s,[])` identity is rendered over the GENERIC `t_list fn_t 0`
+   bridge term the empty-seq literal argument produces, not a bare `[]`. *)
+Lemma t_list_zero : forall f, t_list f 0 = [].
+Proof. intros f. reflexivity. Qed.
 
 Lemma t_list_ext : forall f g len,
   (forall k, 0 <= k < len -> f k = g k) -> t_list f len = t_list g len.
@@ -2882,6 +2984,21 @@ Fixpoint find_go (fuel : nat) (s t : list Z) (i : Z) : Z :=
   end.
 Definition t_find_list (s t : list Z) : Z := find_go (S (length s)) s t 0.
 
+(* ROADMAP 13.4, 2026-09-12: SPEC.md's own two closed-form identities for
+   an EMPTY pattern, both already a base case of the Fixpoint that defines
+   them (`count_go`'s `t = []` arm returns `Z.of_nat (length s) + 1`
+   directly; `find_go`'s does `i`, called at `i = 0` by `t_find_list`), so
+   fixing `t = []` reduces the whole call by ONE unfold -- `reflexivity`,
+   no induction on `s` needed (this is exactly why `count`/`find`'s
+   fz_p_str_countempty/fz_p_str_findempty probes read UNPROVED before this
+   date: `t_dis`'s search had no rule reaching for either fact, not that
+   either needed a hard proof once reached). *)
+Lemma t_count_list_empty : forall s, t_count_list s [] = Z.of_nat (length s) + 1.
+Proof. intros s. reflexivity. Qed.
+
+Lemma t_find_list_empty : forall s, t_find_list s [] = 0.
+Proof. intros s. reflexivity. Qed.
+
 Lemma is_prefix_singleton : forall c s,
   is_prefix [c] s = match s with [] => false | y :: _ => c =? y end.
 Proof.
@@ -2982,6 +3099,12 @@ Fixpoint split_ws_acc (s cur : list Z) : list (list Z) :=
   end.
 Definition split_ws_list (s : list Z) : list (list Z) := split_ws_acc s [].
 
+(* ROADMAP 13.4, 2026-09-12: split("") == [] (SPEC.md), the accumulator's
+   own base case (`cur = []` at `s = []`) -- reflexivity, one unfold,
+   same shape as `t_count_list_empty`/`t_find_list_empty` above. *)
+Lemma split_ws_list_empty : split_ws_list [] = [].
+Proof. reflexivity. Qed.
+
 (* ============ tostr(n) ============ *)
 Fixpoint digits_of_nat (fuel : nat) (n : nat) : list Z :=
   match fuel with
@@ -3078,7 +3201,8 @@ Definition startswith_list (s t : list Z) : bool := is_prefix t s.
 Definition endswith_list (s t : list Z) : bool :=
   (length t <=? length s)%nat &&
   is_prefix t (skipn (length s - length t) s).
-(* invertible structural steps *)
+"""
+PRELUDE_CORE_2 = r"""(* invertible structural steps *)
 Ltac t_inv1 :=
   match goal with
   | H : False |- _ => destruct H
@@ -3110,7 +3234,10 @@ Ltac t_inv1 :=
   | |- context [negb _] => progress t_bred
   | |- context [if true then _ else _] => progress t_bred
   | |- context [if false then _ else _] => progress t_bred
-  (* THE STRING LIBRARY (v1), 2026-09-11 (STRLIB's own dated note,
+"""
+# t_inv1's string-specific goal-side match arms, spliced in right before
+# the `| _ => progress subst` catch-all (PRELUDE_CORE_3, below).
+_STRLIB_GOAL_ARMS = r"""  (* THE STRING LIBRARY (v1), 2026-09-11 (STRLIB's own dated note,
      above): the bridge/round-trip rewrites the three committed tasks'
      proofs need, each fired wherever its LHS pattern matches, the same
      "opaque function, read back by a dedicated rewrite" shape t_upd/
@@ -3138,7 +3265,18 @@ Ltac t_inv1 :=
   | |- context [length (t_list ?f ?n)] => rewrite (t_list_length f n)
   | |- context [t_of_list (t_list ?f ?n) ?k] =>
       rewrite (t_of_list_get f n k) by lia
-  | _ => progress subst
+  (* ROADMAP 13.4, 2026-09-12: count(s,[])/find(s,[]) -- the empty-pattern
+     argument is rendered as the generic bridge `t_list ?g 0`, not a bare
+     `[]` literal, so the zero-length collapse fires FIRST (`t_list_zero`)
+     and only then does `t_list ?s2 0` read as `[]` for
+     `t_count_list_empty`/`t_find_list_empty` to match. *)
+  | |- context [t_list ?g 0] => rewrite (t_list_zero g)
+  | |- context [t_count_list ?s []] => rewrite (t_count_list_empty s)
+  | |- context [t_find_list ?s []] => rewrite (t_find_list_empty s)
+  | |- context [split_ws_list []] => rewrite split_ws_list_empty
+  | |- context [length (@nil ?A)] => cbn [length]
+"""
+PRELUDE_CORE_3 = r"""  | _ => progress subst
   (* hypothesis position last: a `context` scan over the whole context is the
      most expensive arm here, and by the time it is reached the goal-side arms
      have already established that the boolean is not in the conclusion. The
@@ -3158,7 +3296,10 @@ Ltac t_inv1 :=
   | H : context [t_napp ?f ?g ?n ?k] |- _ => t_napp_case f g n k
   | H : context [t_nslice ?f ?a ?k] |- _ => rewrite (t_nslice_get f a k) in H
   | H : context [t_nseq_eqb ?n ?f ?g] |- _ => t_nseq_eqb_case n f g
-  (* THE STRING LIBRARY (v1), 2026-09-11: hypothesis-position mirrors of
+"""
+# t_inv1's string-specific hypothesis-side match arms, spliced in right
+# before t_inv1's closing `end.` (PRELUDE_CORE_4, below).
+_STRLIB_HYP_ARMS = r"""  (* THE STRING LIBRARY (v1), 2026-09-11: hypothesis-position mirrors of
      the goal-side arms just above. *)
   | H : context [t_count_list (t_list (t_slice ?g 0) (0 - 0)) (t_list (t_upd (t_fill 0) 0 ?c) 1)] |- _ =>
       rewrite (t_count_slice_zero g c) in H
@@ -3176,7 +3317,15 @@ Ltac t_inv1 :=
   | H : context [length (t_list ?f ?n)] |- _ => rewrite (t_list_length f n) in H
   | H : context [t_of_list (t_list ?f ?n) ?k] |- _ =>
       rewrite (t_of_list_get f n k) in H by lia
-  end.
+  (* ROADMAP 13.4, 2026-09-12: hypothesis-position mirrors of the three
+     goal-side arms just above. *)
+  | H : context [t_list ?g 0] |- _ => rewrite (t_list_zero g) in H
+  | H : context [t_count_list ?s []] |- _ => rewrite (t_count_list_empty s) in H
+  | H : context [t_find_list ?s []] |- _ => rewrite (t_find_list_empty s) in H
+  | H : context [split_ws_list []] |- _ => rewrite split_ws_list_empty in H
+  | H : context [length (@nil ?A)] |- _ => cbn [length] in H
+"""
+PRELUDE_CORE_4 = r"""  end.
 
 (* deterministic saturation steps *)
 Ltac t_sat1 :=
@@ -3456,6 +3605,87 @@ Ltac t_sweep :=
           | _ => progress (cbn [orb andb negb])
           end).
 """
+
+# PRELUDE FEATURE-GATING (2026-09-12, ROADMAP 13.4, "rocq: the prelude by
+# feature, then its string facts"). Until this date `header()` emitted the
+# WHOLE PRELUDE text (`t_leaf` through the div/mod section, `t_inv1`'s
+# string-specific match arms included) for EVERY task regardless of
+# features used -- the reason a fix for the five string probes below was
+# built and MEASURED to work on 2026-09-11 (see this file's own module
+# docstring, "STILL OPEN... PRELUDE feature-gating split") and then
+# REVERTED: it moved 32 of 34 committed tasks' lowered bytes, divmod_pair
+# (no string-lib member anywhere in it) included.
+#
+# `_uses_strlib` below is `lower_fstar.py`'s own `_uses_strlib` gate,
+# ported verbatim (a generic dict/list walk for an `{"op": <member>, ...}`
+# node whose op is in `STRLIB_OPS`, run over the task dict AND the body
+# list so a member reachable through params/returns/requires/ensures/
+# spec_funs/body alike is found without four separate walkers). The
+# string library's own PRELUDE text sits in exactly three places, all
+# discovered by textual boundary (this file's "insert only" convention
+# for every prior PRELUDE growth, STRLIB's own dated note above): the
+# bridge Definitions/Lemmas block (`seq_to_list` through `endswith_list`,
+# `_STRLIB_DEFS`), the goal-side `t_inv1` match arms right before its
+# `| _ => progress subst` catch-all (`_STRLIB_GOAL_ARMS`), and the
+# hypothesis-side mirrors right before `t_inv1`'s closing `end.`
+# (`_STRLIB_HYP_ARMS`). `header()` now splices these in only when
+# `_uses_strlib` says the task needs them; `PRELUDE_CORE_*` are the four
+# surrounding chunks, always emitted, byte-identical to their slice of
+# the old monolithic `PRELUDE`. `t_inv1`'s core arms are untouched --
+# dropping only the string arms for a non-string task changes nothing
+# about which core arm fires first, since Ltac's `match goal` tries
+# patterns top to bottom and a dropped arm's pattern (`t_list`,
+# `t_count_list`, `split_sep_list`, ...) can never match a goal that
+# mentions none of those names.
+#
+# MEASURED (relower_before_after.py, this worktree, 2026-09-12): all 34
+# committed `t/tasks/*.t` relowered before and after this change; the 26
+# with no string-library member anywhere lose exactly the string block
+# (dated note recorded separately names the byte deltas and the eight
+# that keep it). `grade.py --tasks <dir> --kernels rocq --flake 3` on
+# abs/gcd/sum_upto/count_vowels/reverse/min_max/word_count/split_join/
+# divmod_pair/row_max_len recorded against AGREEMENT.md's rocq column in
+# the same dated note.
+
+def _uses_strlib(obj) -> bool:
+    """True iff `obj` (a task dict, a body list, or any nested JSON-like
+    structure this file's AST is built from) contains an `{"op": <member>,
+    ...}` node for one of the string library's members (`STRLIB_OPS`,
+    below). Ported from `lower_fstar.py`'s own `_uses_strlib`: a generic
+    dict/list walk, not the AST's own shape, so a member reachable through
+    params/returns/requires/ensures/spec_funs/body alike is found without
+    four separate walkers."""
+    if isinstance(obj, dict):
+        if obj.get("op") in STRLIB_OPS:
+            return True
+        return any(_uses_strlib(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_strlib(v) for v in obj)
+    return False
+
+def header(task: dict | None = None, body: list | None = None) -> str:
+    # List/ListNotations (2026-09-11, "The string library (v1)"): the
+    # string members are proved over Coq's own `list Z`/`list (list Z)`
+    # (STRLIB's own dated note, PRELUDE, near `seq_to_list`), the first
+    # thing in this file to need the stdlib List module at all -- kept
+    # unconditionally (`import` costs nothing a non-string task pays for
+    # in proof search) even though the module itself is now gated.
+    strlib = (task is not None and _uses_strlib(task)) or (body is not None and _uses_strlib(body))
+    parts = ["From Stdlib Require Import ZArith Bool Lia List.\n"
+             "Import ListNotations.\n"
+             "Open Scope Z_scope.\n\n",
+             PRELUDE_CORE_1]
+    if strlib:
+        parts.append(_STRLIB_DEFS)
+    parts.append(PRELUDE_CORE_2)
+    if strlib:
+        parts.append(_STRLIB_GOAL_ARMS)
+    parts.append(PRELUDE_CORE_3)
+    if strlib:
+        parts.append(_STRLIB_HYP_ARMS)
+    parts.append(PRELUDE_CORE_4)
+    parts.append("\n")
+    return "".join(parts)
 
 # emitted after the spec_fun section, since t_eqs/t_eqs_h name their
 # equation lemmas
@@ -5505,16 +5735,6 @@ def lens_arrows(cx: Ctx) -> str:
     return "".join(f"  {h} ->\n" for h in len_hyps(cx))
 
 
-def header() -> str:
-    # List/ListNotations (2026-09-11, "The string library (v1)"): the
-    # string members are proved over Coq's own `list Z`/`list (list Z)`
-    # (STRLIB's own dated note, PRELUDE, near `seq_to_list`), the first
-    # thing in this file to need the stdlib List module at all.
-    return ("From Stdlib Require Import ZArith Bool Lia List.\n"
-            "Import ListNotations.\n"
-            "Open Scope Z_scope.\n\n" + PRELUDE + "\n")
-
-
 def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
     # SPEC.md "Pairs (v1)": validate every pair type in the task FIRST,
     # unconditionally, before `_try_cert_v1`'s own try/except (which would
@@ -5541,7 +5761,7 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
             "rocq lowering: a body that both loops and self-recurses is not "
             "lowered yet")
 
-    parts = [header()]
+    parts = [header(task, body)]
     parts.append(emit_spec_funs(cx))
     parts.append(POST_SF + "\n")
 
@@ -7507,7 +7727,7 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
                 chunk = _value_cert(cx, task, body, witness, def_text)
         if chunk is None:
             return None
-        parts = [header(), emit_spec_funs(cx), POST_SF + "\n", T_FEED, chunk,
+        parts = [header(task, body), emit_spec_funs(cx), POST_SF + "\n", T_FEED, chunk,
                  f"\nPrint Assumptions {CERT_NAME}.\n"]
         return "\n".join(p for p in parts if p)
     except Exception:                                       # noqa: BLE001

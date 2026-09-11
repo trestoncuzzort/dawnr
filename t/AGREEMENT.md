@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-09-11 20:00Z
+# t cross-kernel agreement, 2026-09-11 21:23Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 

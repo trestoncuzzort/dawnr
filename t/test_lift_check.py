@@ -429,9 +429,78 @@ def test_kernel_unproved_not_folded_into_lift_check_failed(slow: bool) -> None:
     assert lowered_verdict == "unproved", f"expected the kernel verdict recorded separately, got {lowered_verdict!r}"
 
 
+def test_for_desugared_extra_local_end_to_end(slow: bool) -> None:
+    """2026-09-12, ROADMAP 16.2's `lift-check-failed` row: a `for`-
+    desugared loop's own range-bound local (decision 15's `h_t := <hi>`)
+    has no source-side declaration, so `_build_checker_parts` typed its
+    L_inv_k/L_dec_k lemma parameter plain `int` with no fact tying its
+    value to anything -- the <==> obligation then states a claim about
+    an ARBITRARY `h`, not the one the lift's own construction produces,
+    and is genuinely false for an `h` the real run never takes (confirmed
+    by hand: `h == i_v` for an `i_v` past the array's length makes the
+    lifted-side conjunction true while the source-side one, gated by
+    `i_v <= a.Length` a few conjuncts earlier, is not). `_task_var_inits`
+    fixes this by recovering `h`'s own init expr from the task body and
+    requiring `h == <that expr>`. `SquareElements`
+    (dafny-synthesis_task_id_8.dfy) is this shape's plainest member: one
+    `for i := 0 to a.Length` loop, one quantified invariant, nothing
+    else. Asserts every lemma verdict is `verified` and `L_inv_0`'s own
+    text carries the new fact, not merely that the file lifts."""
+    if not slow:
+        print("test_for_desugared_extra_local_end_to_end: skipped (pass --slow)")
+        return
+    dfy_path = test_lifter.CORPUS_DIR / "dafny-synthesis_task_id_8.dfy"
+    t0 = time.monotonic()
+    fx = _lift_source(dfy_path, "SquareElements", timeout_s=90.0)
+    assert fx["status"] == "ok", f"SquareElements lift refused upstream: {fx}"
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out = lift_check.check(fx["task"], fx["source"], fx["closure"], fx["record"],
+                          OUT_DIR / "dafny-synthesis_task_id_8", timeout_s=90.0)
+    wall = round(time.monotonic() - t0, 2)
+    verdicts = dict(fx["record"].checker_verdicts)
+    print(f"test_for_desugared_extra_local_end_to_end: SquareElements "
+         f"verdicts={json.dumps(verdicts)} "
+         f"check_wf={out.refusal is None or out.refusal.reason != 'check-wf-failed'} "
+         f"wall_s={wall}")
+    assert verdicts, "no lemma verdicts recorded at all"
+    non_verified = {k: v for k, v in verdicts.items() if v != "verified"}
+    assert not non_verified, f"non-verified lemma verdict(s) on SquareElements: {non_verified}"
+    for expected in ("L_req", "L_ens", "L_inv_0"):
+        assert expected in verdicts, f"expected lemma {expected!r} missing: {verdicts}"
+    checker_path = OUT_DIR / "dafny-synthesis_task_id_8.check.dfy"
+    checker_text = checker_path.read_text(encoding="utf-8")
+    assert "h == " in checker_text, (
+        "L_inv_0 should require h tied to its own init expr; "
+        f"checker text: {checker_text}")
+
+
+def test_task_var_inits_recovers_for_desugared_bound() -> None:
+    """Fast, no-dafny unit for `_task_var_inits` itself: given a task
+    body shaped like decision 15's for-desugaring (a `var h := <hi>`
+    statement ahead of the `while`, exactly what `lift_rewrite.py`
+    always emits for a `for` loop), the helper returns `h`'s init expr
+    by name, pre-order through `if`/`while` nesting the same way
+    `_task_loops` walks."""
+    body = [
+        {"var": {"name": "h", "type": "int", "init": {"op": "len", "args": [{"var": "a"}]}}},
+        {"var": {"name": "i_v", "type": "int", "init": {"int": 0}}},
+        {"while": {"cond": {"op": "<", "args": [{"var": "i_v"}, {"var": "h"}]},
+                  "invariants": [], "body": [
+            {"if": {"cond": {"bool": True}, "then": [
+                {"var": {"name": "inner", "type": "int", "init": {"int": 1}}}], "else": []}}]}},
+    ]
+    inits = lift_check._task_var_inits(body)
+    assert set(inits) == {"h", "i_v", "inner"}, inits
+    assert inits["h"] == {"op": "len", "args": [{"var": "a"}]}, inits["h"]
+    print("test_task_var_inits_recovers_for_desugared_bound: ok")
+
+
+FAST_TESTS = FAST_TESTS + [test_task_var_inits_recovers_for_desugared_bound]
+
 SLOW_TESTS = [test_seeds_check_end_to_end, test_t7_two_seed_pairs,
              test_inverse_committed_and_corpus, test_array_program_end_to_end,
-             test_kernel_unproved_not_folded_into_lift_check_failed]
+             test_kernel_unproved_not_folded_into_lift_check_failed,
+             test_for_desugared_extra_local_end_to_end]
 
 
 def run(slow: bool = False) -> None:

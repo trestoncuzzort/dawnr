@@ -2868,23 +2868,51 @@ method SumLens(m: seq<seq<int>>) returns (r: int)
         {"op": "len", "args": [{"op": "at", "args": [{"var": "m"}, {"var": "i"}]}]},
         {"int": 0}]}, q["body"]
 
-    # A genuine TWO-binder quantifier (`forall i, j`, not the nested
-    # single-binder `forall i :: forall j :: ...` form) stays refused
-    # `unbounded-quantifier`, the standing refusal, unchanged by row 30.
+    # A two-binder quantifier (`forall i, j`, not the nested single-binder
+    # `forall i :: forall j :: ...` form) whose SECOND binder's range
+    # depends on the first (`0 <= j < |m[i]|`, a jagged row bound) used to
+    # stay refused `unbounded-quantifier` -- row 30 (2026-09-10) never gave
+    # the N-binder branch an unguarded path at all. Row 31 (2026-09-11)
+    # adds exactly that path, and this dependent-range shape is its
+    # textbook case: `j`'s own `hi` (`|m[i]|`) is lifted in a scope where
+    # `i` is already bound (`_lift_quantifier.build` nests inner binders
+    # under outer ones), so the dependency is sound, not a widening.
     two_binder_src = """
-method BadTwoBinder(m: seq<seq<int>>) returns (r: int)
+method GoodTwoBinderJagged(m: seq<seq<int>>) returns (r: int)
   requires forall i, j :: 0 <= i < |m| && 0 <= j < |m[i]| ==> m[i][j] >= 0
   ensures true
 {
   r := 0;
 }
 """
-    v2 = _classify_one(two_binder_src, "BadTwoBinder")
+    task2, rec2 = _lift_one(two_binder_src, "GoodTwoBinderJagged")
+    req2 = task2["requires"][0]
+    assert "forall" in req2, req2
+    outer = req2["forall"]
+    assert outer["hi"] == {"op": "len", "args": [{"var": "m"}]}, outer
+    inner = outer["body"]["forall"]
+    assert inner["hi"] == {"op": "len", "args": [
+        {"op": "at", "args": [{"var": "m"}, {"var": outer["var"]}]}]}, inner
+
+    # A genuine two-binder quantifier -- neither binder bounded by any
+    # index into an array/seq, just an int compared to another int -- has
+    # no shape row 31 reads either, and stays refused `unbounded-
+    # quantifier`, the standing refusal.
+    genuinely_unbounded_src = """
+method BadTwoBinderNoIndex(m: seq<int>) returns (r: bool)
+  ensures r <==> forall i, j :: i < j ==> i + j >= 0
+{
+  r := true;
+}
+"""
+    v2 = _classify_one(genuinely_unbounded_src, "BadTwoBinderNoIndex")
     assert isinstance(v2, C.Refusal) and v2.reason == "unbounded-quantifier", (
         f"expected unbounded-quantifier refusal, got {v2}")
     print("test_nested_seq_param_row_forall: seq<seq<int>> param -> "
           "{'seq': 'seq'}, |m[i]| under a single-binder forall lifts; "
-          "a genuine forall i, j stays refused unbounded-quantifier")
+          "row 31: a two-binder forall with a jagged (i-dependent) inner "
+          "bound now lifts too, nested; a genuine forall i, j with no "
+          "index-implied bound stays refused unbounded-quantifier")
 
 
 def test_nested_seq_cell_read_both_bounds() -> None:
@@ -3050,6 +3078,151 @@ method ArrayComponent(a: array<int>) returns (b: array<int>, c: bool)
           "a nested-seq or array component (arity two) -> multi-return-nested")
 
 
+def test_quantifier_row31_distributed_and_forall() -> None:
+    """Row 31 (2026-09-11), shape (b) forall: dafny's `rprint` distributes
+    `range ==> (A && B)` into `(range ==> A) && (range ==> B)` -- measured
+    verbatim on dafny-synthesis task 230 (`ReplaceBlanksWithChar`)."""
+    src = """
+method Cond(s: seq<int>) returns (v: seq<int>)
+  ensures forall i :: (0 <= i < |s| ==> (s[i] >= 0 ==> v[i] == s[i])) &&
+                       (0 <= i < |s| ==> (s[i] < 0 ==> v[i] == 0))
+{
+  v := s;
+}
+"""
+    task, rec = _lift_one(src, "Cond")
+    ens = task["ensures"][0]
+    q = ens["forall"]
+    assert q["lo"] == {"int": 0} and q["hi"] == {"op": "len", "args": [{"var": "s"}]}, q
+    assert q["body"]["op"] == "and", q["body"]
+    print("test_quantifier_row31_distributed_and_forall: `(range ==> A) && "
+          "(range ==> B)` reassembles into one bounded forall")
+
+
+def test_quantifier_row31_distributed_or_exists() -> None:
+    """Row 31, shape (b) exists: `range && (A || B)` prints as `(range &&
+    A) || (range && B)` -- measured on dafny-synthesis task 454
+    (`ContainsZ`)."""
+    src = """
+method HasZeroOrOne(s: seq<int>) returns (b: bool)
+  ensures b <==> exists i :: (0 <= i < |s| && s[i] == 0) ||
+                              (0 <= i < |s| && s[i] == 1)
+{
+  b := false;
+}
+"""
+    task, rec = _lift_one(src, "HasZeroOrOne")
+    ens = task["ensures"][0]
+    # ensures is `b <==> exists ...`; the exists sits inside an Iff.
+    assert "op" in ens and ens["op"] == "==", ens
+    exists_side = ens["args"][1] if "exists" in ens["args"][1] else ens["args"][0]
+    q = exists_side["exists"]
+    assert q["lo"] == {"int": 0} and q["hi"] == {"op": "len", "args": [{"var": "s"}]}, q
+    assert q["body"]["op"] == "or", q["body"]
+    print("test_quantifier_row31_distributed_or_exists: `(range && A) || "
+          "(range && B)` reassembles into one bounded exists")
+
+
+def test_quantifier_row31_leftover_conjunct_folds() -> None:
+    """Row 31, shape (a): an unguarded forall's antecedent has a bound
+    chain for the binder PLUS a leftover conjunct (`1 <= d <= a && 1 <= d
+    <= b && ... ==> sum >= d`) -- measured on dafny-synthesis task 126
+    (`SumOfCommonDivisors`). The single-binder branch used to bail on any
+    leftover; row 31 folds it into the body via `Implies`, matching what
+    the GUARDED branch already did for the same shape."""
+    src = """
+method SumDivs(a: int, b: int) returns (sum: int)
+  requires a > 0 && b > 0
+  ensures sum >= 0
+  ensures forall d :: 1 <= d <= a && 1 <= d <= b && a % d == 0 && b % d == 0 ==> sum >= d
+{
+  sum := 0;
+}
+"""
+    task, rec = _lift_one(src, "SumDivs")
+    ens = [e for e in task["ensures"] if "forall" in e][0]
+    q = ens["forall"]
+    assert q["lo"] == {"int": 1} and q["hi"] == {"op": "+", "args": [
+        {"var": "a"}, {"int": 1}]}, q  # 1 <= d <= a -> [1, a+1)
+    assert q["body"]["op"] == "implies", q["body"]
+    print("test_quantifier_row31_leftover_conjunct_folds: an unguarded "
+          "forall's leftover antecedent conjunct folds into the body "
+          "instead of bailing")
+
+
+def test_quantifier_row31_multi_binder_unguarded() -> None:
+    """Row 31, shape (c): a multi-binder quantifier with NO `q.range` at
+    all (dafny never prints one here) used to have no path whatsoever --
+    the N-binder branch required a guard. Measured on dafny-synthesis task
+    70 (`AllSequencesEqualLength`, forall) and task 594-shaped exists."""
+    forall_src = """
+method AllEqLen(rows: seq<seq<int>>) returns (r: bool)
+  ensures r <==> forall i, j :: 0 <= i < |rows| && 0 <= j < |rows| ==> |rows[i]| == |rows[j]|
+{
+  r := true;
+}
+"""
+    task, rec = _lift_one(forall_src, "AllEqLen")
+    q = task["ensures"][0]["args"][1]["forall"]
+    assert q["hi"] == {"op": "len", "args": [{"var": "rows"}]}, q
+
+    exists_src = """
+method SomePairSums(a: array<int>) returns (r: bool)
+  ensures r <==> exists i, j :: 0 <= i < a.Length && 0 <= j < a.Length && a[i] + a[j] == 0
+{
+  r := false;
+}
+"""
+    task2, rec2 = _lift_one(exists_src, "SomePairSums")
+    q2 = task2["ensures"][0]["args"][1]["exists"]
+    assert q2["hi"] == {"op": "len", "args": [{"var": "a"}]}, q2
+    print("test_quantifier_row31_multi_binder_unguarded: an unguarded "
+          "N-binder forall AND exists (no `q.range` at all) now both bind")
+
+
+def test_quantifier_row31_ordered_pair() -> None:
+    """Row 31, shape (d): `0 <= i < j < hi`, two binders ordered against
+    the SAME end in one four-operand chain -- measured on dafny-synthesis
+    task 567 (`IsSorted`) and 603 (`LucidNumbers`). `i` reads `[lo, hi)`;
+    `j`, nested inside, reads `[i+1, hi)`."""
+    src = """
+method Sorted(a: array<int>) returns (r: bool)
+  ensures r <==> forall i, j :: 0 <= i < j < a.Length ==> a[i] <= a[j]
+{
+  r := true;
+}
+"""
+    task, rec = _lift_one(src, "Sorted")
+    outer = task["ensures"][0]["args"][1]["forall"]
+    assert outer["lo"] == {"int": 0} and outer["hi"] == {"op": "len", "args": [{"var": "a"}]}, outer
+    inner = outer["body"]["forall"]
+    assert inner["lo"] == {"op": "+", "args": [{"var": outer["var"]}, {"int": 1}]}, inner
+    assert inner["hi"] == outer["hi"], inner
+    print("test_quantifier_row31_ordered_pair: `0 <= i < j < hi` -> nested "
+          "i in [0,hi), j in [i+1,hi)")
+
+
+def test_quantifier_row31_membership_binder_unguarded() -> None:
+    """Row 31: `l in lists ==> P` (an unguarded forall whose antecedent is
+    a MEMBERSHIP test, not a numeric range) binds the same way a GUARDED
+    `k in s` already does (decision 2) -- measured on dafny-synthesis task
+    290 (`MaxLengthList`)."""
+    src = """
+method AllShort(lists: seq<seq<int>>, cap: int) returns (r: bool)
+  ensures r <==> forall l :: l in lists ==> |l| <= cap
+{
+  r := true;
+}
+"""
+    task, rec = _lift_one(src, "AllShort")
+    q = task["ensures"][0]["args"][1]["forall"]
+    assert q["lo"] == {"int": 0}, q
+    assert q["hi"] == {"op": "len", "args": [{"var": "lists"}]}, q
+    assert any(r.rule == "in-desugared" for r in rec.rewrites), rec.rewrites
+    print("test_quantifier_row31_membership_binder_unguarded: `l in lists "
+          "==> P` desugars its unguarded membership antecedent")
+
+
 UNIT_TESTS = [
     test_chain_desugared, test_iff_to_eq, test_nat_return_ensures,
     test_nat_invariant_added_and_dedup, test_spec_fun_totalised,
@@ -3087,6 +3260,12 @@ UNIT_TESTS = [
     test_nested_seq_param_row_forall, test_nested_seq_cell_read_both_bounds,
     test_nested_seq_display_literal, test_nested_seq_row_update,
     test_nested_seq_string_refused, test_array2_refused,
+    test_quantifier_row31_distributed_and_forall,
+    test_quantifier_row31_distributed_or_exists,
+    test_quantifier_row31_leftover_conjunct_folds,
+    test_quantifier_row31_multi_binder_unguarded,
+    test_quantifier_row31_ordered_pair,
+    test_quantifier_row31_membership_binder_unguarded,
 ]
 
 

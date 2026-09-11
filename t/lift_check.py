@@ -726,6 +726,38 @@ def _task_loops(body: list) -> list:
     return out
 
 
+def _task_var_inits(body: list) -> dict:
+    """Name -> init-expr dict for every `{"var": {"name", "init", ...}}`
+    statement in the lifted task's body, pre-order through `if`/`while`
+    (same walk shape as `_task_loops`). A `for`-desugared loop's own
+    range-bound local (decision 15's `h_t := <hi>`) is declared exactly
+    this way, and nowhere else -- it has no source-side counterpart, so
+    the L_inv_k lemma's parameter for it (`extra_names` in
+    `_build_checker_parts`) carries no fact tying its value to anything,
+    making the loop's own <==> obligation state a claim about an
+    arbitrary `h` rather than the one construction actually produces:
+    genuinely false for an `h` the real run never takes (LIFTER-785-
+    RESIDUALS.md's `FindMax`/`FindSmallest` shape, and 2026-09-12's 29-
+    row `lift-check-failed` group's largest sub-shape both reduce to
+    this), not merely hard for Dafny to automate on its own. This lookup
+    lets the caller add `requires h == <the same init expr, printed>` --
+    a fact the lift's own construction establishes once, stated, not
+    invented, per decision 4."""
+    out: dict = {}
+
+    def walk(stmts):
+        for s in stmts:
+            if "var" in s and "init" in s["var"]:
+                out[s["var"]["name"]] = s["var"]["init"]
+            elif "while" in s:
+                walk(s["while"]["body"])
+            elif "if" in s:
+                walk(s["if"]["then"])
+                walk(s["if"].get("else", []))
+    walk(body)
+    return out
+
+
 def _task_loop_scopes(body: list) -> list:
     """Pre-order list of the lifted task's own local-variable names in
     scope at each `while`, index-for-index with `_walk_source_loops` (same
@@ -1312,6 +1344,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     src_loops = _walk_source_loops(source)
     task_loops = _task_loops(task["body"])
     task_loop_scopes = _task_loop_scopes(task["body"])
+    task_var_inits = _task_var_inits(task["body"])
     for k, (loop, scope) in enumerate(src_loops):
         lemma_names.append(f"L_inv_{k}")
         # `scope` (from `_walk_source_loops`) is seeded with `source.params`
@@ -1391,6 +1424,15 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         extra = len(rest_local_names) - len(locals_in_scope)
         extra_names = rest_local_names[:extra] if extra > 0 else []
         aligned_names = rest_local_names[extra:] if extra > 0 else rest_local_names
+        # Row (2026-09-12): each `extra_names` entry is a for-desugared
+        # range-bound local with no source-side value at all -- `_task_
+        # var_inits` recovers the one init expr decision 15's rewrite
+        # always gives it, so the lemma can require it rather than leave
+        # it a free int (see that helper's own docstring for why the
+        # obligation is otherwise unprovable, not merely unautomated).
+        extra_fact_list = [f"{n} == {_t_expr(task_var_inits[n], views)}"
+                           for n in extra_names if n in task_var_inits]
+        extra_fact = _and(extra_fact_list)
         loop_crename = dict(crename)
         for p, true_name in zip(locals_in_scope, aligned_names):
             loop_crename[p.name] = true_name
@@ -1494,8 +1536,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # left-to-right `&&` short-circuit (the same discipline L_req
         # already relies on) establishes them before `src_inv`'s embedded
         # calls are evaluated.
-        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards, this_length_fact])}")
-        lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, src_inv])}) <==> ({lifted_inv})")
+        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards, this_length_fact, extra_fact])}")
+        lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, extra_fact, src_inv])}) <==> ({lifted_inv})")
         if inv_hints:
             lines.append("{")
             lines.extend(inv_hints)
@@ -1515,8 +1557,9 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             src_dec = _print_expr(dec_specs[0].exprs[0], loop_crename)
             lifted_dec = _t_expr(task_loops[k]["decreases"], views)
             lines.append(f"lemma {name}({ps_inv})")
-            if this_length_fact != "true":
-                lines.append(f"  requires {this_length_fact}")
+            dec_req = _and([this_length_fact, extra_fact])
+            if dec_req != "true":
+                lines.append(f"  requires {dec_req}")
             lines.append(f"  ensures ({src_dec}) == ({lifted_dec})")
             lines.append("{ }")
             lines.append("")
