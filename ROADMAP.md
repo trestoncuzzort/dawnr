@@ -1735,6 +1735,8 @@ DONE WHEN: a probe task named for each kernel's reserved words, and one with
 an uppercase initial, lowers and runs in all seven columns.
 UNBLOCKS: 12.4, 15.1.
 
+**13.2 DONE 2026-09-11 (6e87c3d, the fix in the commit after it).** `t/names.py` is the one sanitizing pass: `sanitize(task, reserved, uppercase_ok)` renames every user identifier that collides with the kernel's keyword table (`KEYWORDS`, seven entries, each generous) or starts uppercase where the kernel forbids it, to a `t_` spelling (`tn_` in rocq, whose `t_` prefix is its own certificate namespace), consistently through params, returns, locals, spec functions and bound variables, and every lowering records the map in its emitted source as `t renames: a -> t_a`. Eight probe tasks, one per kernel named after its reserved words and one with uppercase initials, read verified/refuted in all seven columns at flake 3 (the wave's gate run, ~/.local/share/tjob/wave-a-gate2.log: 34 rows, the 26 older rows as banked up to one spark real cell and one fstar twin cell that timed out under a box loaded by the next wave's builders; the committed AGREEMENT.md is regenerated with wave B on a quiet box). The 26 older tasks lower with no rename in every column (test_names.py, 179 lowerings). Found on the way and fixed: fstar's reserved set lacked `int` and `bool`, lean's lacked `forall`/`exists` and its bare type names (a parameter named `Int` shadowed the type; the independent check found it). Found by the matrix gate and fixed before the push: the first wiring replaced the task's body with the twin body before sanitizing, so the invariant-drop certificate (which evaluates the dropped invariant at the exit witness) saw no difference and 13 loop tasks read twin unproved in dafny and verus and timeout in framac; `names.rename_body` now renames the twin under the same map as a separate object, and the 34-row gate run reads as banked. Three probes had to use kernel words that are not t's own notation keywords (`char`/`integer`, `fix`/`cofix`/`measure`, `ghost`/`exec`), since 14.1 makes the notation the input. Open: a task naming both `int` and `Int` makes spark abstain; the lifter's 68 uppercase-initial DafnyBench programs are re-lifted under 12.4, not here.
+
 #### 13.3 What a verified twin means
 
 12.3's open decision, Treston's to make: SPEC.md says a task whose twin
@@ -1745,6 +1747,8 @@ kernels' twin discipline.
 DONE WHEN: SPEC.md states the rule taken, the harness enforces it, and the
 fuzz_lower statistic means only what it says.
 UNBLOCKS: 13.4, 16.1.
+
+**13.3 DONE 2026-09-11 (6e87c3d).** The rule taken (the assumed answer in "Decisions for Treston"): a column whose twin VERIFIES reads `decorative` beside the real outcome, never agreement, and never a bare surviving twin; when the interpreter's witness for that twin entailed a refutation (the `_ens` witness kind), the cell reads `unsound` instead, the kernel-bug signal, counted apart. SPEC.md "The twins" states it; harness.decorative_kind decides it; run_par, grade and fuzz_lower render and count it (fuzz_lower's no_flip now counts only unproved, timeout and malformed twins, with `decorative` and `unsound` lines of their own). Measured: the committed matrix is unchanged cell for cell (no committed task has a verifying twin); the six twins that survived the full family run the same morning (two probes built to, four v0loose specs) now read decorative, unsound 0; test_twin_rule.py 3 of 3 (an `ensures true` task reads verified / decorative through the real pipeline). Open by name: no live `unsound` cell has been observed, the path is covered by a pure-function test only; grade.py's summary prose does not yet count decorative cells.
 
 #### 13.4 The spec freeze and the conformance probes
 
@@ -1786,6 +1790,8 @@ one per check_wf rule, each yields its expected line, column and rule in a
 test.
 UNBLOCKS: 14.4, 15.2.
 
+**14.2 parse side DONE 2026-09-11 (6e87c3d); the well-formedness side is in wave B.** Every token carries line and column; SurfaceError has file, line, col, production and message, printed as `file:line:col: message [production]`, every raise naming the SYNTAX.md production (two lexer-level cases use the section heading they sit under, named in the docstring); `surface.parse_file(path)` reports the path; `surface.parse(text, positions=d)` fills `id(node) -> (line, col)` for the checker. Committed corpus t/malformed/: nine `.t` files, one per production that can fail, with EXPECTED.tsv (file, line, col, production); test_surface_errors.py reads 9 of 9. The round trip did not move (surface.py --check 1,787 of 1,787 both directions after the wave). Open: one `.t` per check_wf rule with line, column and rule, the second half of the bar.
+
 #### 14.3 The checker as a module
 
 `check_wf` moves out of the fuzzer into a module of its own, imported by the
@@ -1795,6 +1801,8 @@ SPEC.md rule it enforces.
 DONE WHEN: the module exists, `fuzz_lower.py` imports it, and the metamorphic,
 truth_fuzz and fuzz_lower sweeps report the same numbers as before the move.
 UNBLOCKS: 14.4, 15.2.
+
+**14.3 DONE 2026-09-11 (6e87c3d).** `t/check_wf.py` holds check_wf and everything only it used (`_valid_type`, `_ty`, the helpers and tables), with a RULES table of 50 keys and every error string ending in `[SPEC: <rule>]` naming the SPEC.md rule it enforces (76 error sites funnel through one helper); fuzz_lower.py imports it and re-exports the same object, so grade.py, surface.py, loop_generate.py and spec_experiment.py are unchanged; no cycle (test_check_wf.py checks the import). Measured before and after the move, kernels not involved: build_corpus(400, 1) 453 tasks with 4 well-formedness errors both times; truth_fuzz --tasks-only 471 tasks (291 true, 167 false, 13 ill-defined) both times; surface.py --check unchanged; test_check_wf.py 35 checks; every t/test_*.py that imports the module passes. Open by name: `_self_calls` is defined once in check_wf.py and aliased into fuzz_lower.py (it serves both); two dead constants moved with the section rather than deleted.
 
 #### 14.4 One command
 
@@ -1929,6 +1937,8 @@ DONE WHEN: a committed install page per OS, followed from a fresh machine by
 a second person, ending in the walk-through.
 UNBLOCKS: 17.2.
 
+**17.1 Linux page written 2026-09-11 (6e87c3d); the second-person clause is open.** t/RUN-ON-LINUX.md, in the shape of the macOS and Windows pages, from this box's no-root install on Ubuntu 24.04 x86_64: every version and discovery path re-run (dafny 4.11.0, verus 0.2026.08.30, gnatprove 16.1.0, lean 4.33.1, rocq 9.2.0 with frama-c 33.0 and alt-ergo-free 2.4.3 in one opam switch, fstar 2026.08.30), the walk-through run and pasted (three tasks in all seven, full agreement; the independent check repeated it on three others). The installer commands that cannot be re-derived from the box are marked "recorded, not re-run". Dafny's discovery finds a root-owned system copy first on this box (present since 2026-09-03), the same version; the page says so. Open: the page followed from a fresh machine by a second person, recorded as a WITNESS file.
+
 #### 17.2 The tag
 
 A 1.0 tag contains: SPEC.md at its frozen version with the conformance
@@ -1950,6 +1960,8 @@ while it is. The em-dash debt in 12.8 is paid before the tag, sentence by
 sentence, not by deleting the character.
 
 DONE WHEN: Treston's call; the roadmap assumes the 1.0 tag is the moment.
+
+**The em-dash debt paid in prose, 2026-09-11 (6e87c3d).** Every em-dash in prose in ROADMAP.md (54), README.md, t/GRADER.md, run_par.py, run_all.py, test_lift_report.py and boundary_probe.py was rewritten sentence by sentence (a comma, a colon, parentheses, or two sentences); the two table generators print a comma in their title from the next run; the committed generated tables keep their old title until regenerated (AGREEMENT.md was, the same day). The independent check found one rewrite that unbalanced a parenthesis in the WS-7 table; fixed before the commit. Out of scope by name: forge/, locallm/, tup/ scripts and receipts (bytes handed back as committed).
 
 ### Decisions for Treston
 
