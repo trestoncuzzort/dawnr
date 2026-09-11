@@ -1,5 +1,8 @@
 # t: task format
 
+SPEC version 1.0-rc1, frozen for the 1.0 tag, 2026-09-11; t:0 frozen, t:1 a
+superset.
+
 A task is one JSON object. Every field is required unless marked optional.
 Two format versions exist. `"t": 0` is frozen: everything in the v0 section
 is unchanged and every v0 task remains valid byte-for-byte. `"t": 1` is a
@@ -11,6 +14,70 @@ Integer semantics in both versions: **mathematical integers**, unbounded, no
 overflow. Backends whose native integers are bounded must add explicit range
 obligations or abstain; t does not paper over a semantic difference with a
 syntax.
+
+## Decisions since t:0
+
+An index, not a restatement: one or two sentences per semantic decision this
+file has taken since `t:0` froze, each pointing at the section that states
+it in full. ROADMAP 13.4's own list, in that order.
+
+- **Definedness and undefined witnesses.** `and`/`or`/`implies`/`ite` are
+  non-strict (short-circuiting); `div`/`mod`/`at`/array indexing are
+  partial, and an input on which the body or a `requires` is undefined is
+  reported as such and never as REFUTED. See "Definedness".
+- **The frame rule.** A `while` loop havocs exactly the variables its own
+  body assigns and nothing else; every other in-scope variable is frame-
+  equal across the loop by construction, one equality obligation per
+  preserved variable. See "Gate 2: loops + invariants".
+- **The twin rule.** A task whose twin VERIFIES is decorative: the twin is
+  known broken (a vacuous spec, or an invariant-drop the kernel re-derives),
+  so a twin VERIFIED now names one specific defect rather than reading as
+  an ordinary result, and is unsound only when the interpreter's own
+  witness entailed a refutation the kernel missed. Landed 2026-09-11. See
+  "The twins".
+- **Div-mod rounding.** Euclidean: `mod` is always non-negative in `[0,
+  |y|)` regardless of operand signs; `y == 0` is undefined for both `div`
+  and `mod`, not a third rounding mode. See "Division and modulo (v1)".
+- **Early exit.** A `return` statement leaves the enclosing function
+  immediately; no statement of its own block may follow it (well-formedness
+  refuses that), and a `return` inside a loop is well-formedness-legal only
+  where reachable. See "Early exit (v1)".
+- **Arrays as seq values, and the invariant order rule.** There is no heap
+  and no aliasing: an array is a `seq` value, mutation is functional
+  (`update`/`fill` return a new sequence), and the loop frame rule havocs a
+  `seq` local or return by name like any other variable. Loop invariants
+  that mention a mutated sequence must state its length before its
+  elements, the order rule every lowering's invariant emission follows. See
+  "Sequences as values (v1)".
+- **Sequence literals, concatenation and slices.** `seq` literals, `++`
+  concatenation and `[lo, hi)` half-open slices are total on in-range
+  arguments and undefined out of range, following the same definedness
+  discipline as `at`. See "Sequences: literals, concatenation, slices
+  (v1)".
+- **Pairs.** A pair is one value, fst/snd projection, no pair of pairs, no
+  seq of pairs, no triple; the loop frame rule havocs a pair variable by
+  name like any other. See "Pairs (v1)".
+- **Nested sequences.** One level deep only: a `seq` of `seq<int>` rows, no
+  third level, no `seq` of bools, no `seq` of pairs; the frame rule havocs a
+  nested seq by name, and the interpreter's length cap applies to both
+  levels. See "Nested sequences (v1)".
+- **Strings as code points.** A string is a `seq` of code points (Unicode
+  scalar values as integers), not a distinct type; every `seq` operator
+  (literals, concatenation, slices, `at`, `update`) applies to a string
+  unchanged. See "Strings as sequences of code points (v1)".
+- **The string library (v1).** `split`, `join`, `tostr`, `count`, `find`,
+  `strip`/`lstrip`/`rstrip`, `replace`, `lower`/`upper`,
+  `isdigit`/`isalpha`/`isupper`/`islower`, `startswith`/`endswith`, landed
+  2026-09-11; `format`/f-strings, `int(x, base)`, a multi-code-point
+  separator, `splitlines`, the padding members, `title`/`capitalize`/
+  `swapcase`, `partition` and `encode` are named out of scope by name, not
+  omitted by accident. See "The string library (v1)" and "What v1 does not
+  claim".
+
+No rule changes here: every decision above is stated in full, with its
+normative text, at the section named. This index exists so a conformance
+probe (`t/conformance.py`) or a reader auditing 1.0 has one place to check
+that every decision taken since `t:0` is both named and pointed at.
 
 ## v0 (`"t": 0`)
 

@@ -48,20 +48,22 @@ import json
 from pathlib import Path
 
 import interp
+import tasks_io
 from verifiers import Outcome, cell_pair
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
 
-KNOWN_VERSIONS = (0, 1)
+KNOWN_VERSIONS = tasks_io.KNOWN_VERSIONS
 
 
 def load(path: Path) -> dict:
-    task = json.loads(path.read_text(encoding="utf-8"))
-    assert task.get("t") in KNOWN_VERSIONS, (
-        f"{path.name}: not a t task I know (t={task.get('t')!r}, "
-        f"known: {KNOWN_VERSIONS})")
-    return task
+    """A task, from a .t file (ROADMAP 14.1: surface.parse) or a .json one
+    (a directory not yet converted, such as a spec-experiment run's own
+    generated tasks/). tasks_io.load_task does the reading and the version
+    check; this wrapper is kept so every existing `harness.load(...)` call
+    site is unchanged."""
+    return tasks_io.load_task(path)
 
 
 def collapse_first_if(body: list) -> tuple[list, bool]:

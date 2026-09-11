@@ -25,20 +25,21 @@ task with a precondition: `fib` visits 86 points and checks 17. Report both or
 the number is not the number.
 
     python3 fidelity_domain.py                  # every task in tasks/
-    python3 fidelity_domain.py tasks/gcd.json   # named tasks only
+    python3 fidelity_domain.py tasks/gcd.t      # named tasks only
     python3 fidelity_domain.py --json           # machine-readable
 
-Standard library only, no dafny, no network. Reading task JSON and counting
-generator output is all it does, so it is fast enough to run in a gate.
+Standard library only, no dafny, no network. Reading a task file and
+counting generator output is all it does, so it is fast enough to run in a
+gate.
 """
-import glob
 import json
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import interp  # noqa: E402
+import interp     # noqa: E402
+import tasks_io   # noqa: E402
 
 
 def widest_gap(values):
@@ -60,8 +61,7 @@ def widest_gap(values):
 
 def measure(path):
     """Domain facts for one task file."""
-    with open(path, encoding="utf-8") as f:
-        task = json.load(f)
+    task = tasks_io.load_task(path)
 
     names = [(p["name"], p["type"]) for p in task["params"]]
     ladders = interp.ladders(task)
@@ -104,7 +104,7 @@ def main(argv):
     paths = [a for a in argv[1:] if not a.startswith("--")]
     if not paths:
         here = os.path.dirname(os.path.abspath(__file__))
-        paths = sorted(glob.glob(os.path.join(here, "tasks", "*.json")))
+        paths = tasks_io.load_dir(os.path.join(here, "tasks"))
 
     rows = [measure(p) for p in paths]
 

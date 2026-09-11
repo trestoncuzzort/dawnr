@@ -39,6 +39,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                      # noqa: E402
+import tasks_io                     # noqa: E402
 from verifiers import Outcome, cell_pair, sha256_file, mp_context   # noqa: E402
 import blockers                     # noqa: E402  (the sole-blocker section, ROADMAP WS-19 move 4)
 
@@ -256,7 +257,8 @@ def main() -> int:
     # the lifted DafnyBench tasks, 2026-09-06) passes all three so it never
     # touches t/tasks, t/out or t/AGREEMENT.md.
     ap.add_argument("--tasks", type=Path, default=HERE / "tasks",
-                    help="directory of task JSON files (default t/tasks)")
+                    help="directory of task .t (or, unconverted, .json) "
+                         "files (default t/tasks)")
     ap.add_argument("--out", type=Path, default=HERE / "out",
                     help="directory for lowered sources and kernel logs (default t/out)")
     ap.add_argument("--table", type=Path, default=HERE / "AGREEMENT.md",
@@ -265,7 +267,7 @@ def main() -> int:
     jobs_arg = args.jobs
     harness.OUT = args.out
     harness.OUT.mkdir(parents=True, exist_ok=True)
-    tasks = sorted(args.tasks.glob("*.json"))
+    tasks = tasks_io.load_dir(args.tasks)
     # Rows are keyed by the task's own name, which is what every cell and
     # every output file uses; on the committed corpus the file stem is the
     # same string, on a lifted corpus it is not (Clover_abs.Abs.json holds

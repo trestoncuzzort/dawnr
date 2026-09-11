@@ -9,7 +9,7 @@ of checks run on success.
 Three things are checked:
 
 1. `test_committed_tasks_well_formed`: every task committed under
-   t/tasks/*.json passes `check_wf(task) == []`. This is the module's own
+   t/tasks/*.t passes `check_wf(task) == []`. This is the module's own
    regression gate: any task the corpus already agreed was well-formed
    must still be well-formed after the move.
 2. `test_malformed_examples`: one hand-built malformed task per rule, for
@@ -95,9 +95,9 @@ def _errs_text(task):
 def test_committed_tasks_well_formed():
     n = 0
     tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks")
-    for path in sorted(glob.glob(os.path.join(tasks_dir, "*.json"))):
-        with open(path) as f:
-            task = json.load(f)
+    import tasks_io
+    for path in sorted(glob.glob(os.path.join(tasks_dir, "*.t"))):
+        task = tasks_io.load_task(path)
         errs = check_wf.check_wf(task)
         assert errs == [], f"{os.path.basename(path)}: check_wf found {errs}"
         n += 1

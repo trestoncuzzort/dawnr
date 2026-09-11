@@ -37,6 +37,7 @@ import lift_classify
 import lift_parse
 import lift_resolve
 import lift_rewrite
+import tasks_io
 from lift_ast import LiftRecord, Refusal
 
 import test_lifter
@@ -313,10 +314,14 @@ def test_inverse_committed_and_corpus(slow: bool) -> None:
     counts = {"match": 0, "mismatch": 0, "recursive": 0,
              "waits-for-integrator": 0, "error": 0}
     mismatches = []
-    task_paths = sorted(TASKS_DIR.glob("*.json"))
-    assert len(task_paths) == 11, f"expected 11 committed tasks, found {len(task_paths)}"
+    task_paths = tasks_io.load_dir(TASKS_DIR)
+    # The docstring above dates from 11 committed tasks; the corpus has grown
+    # since (26, measured here) and this asserts only that the directory
+    # loader found some of them, not a number this file must be kept in sync
+    # with by hand.
+    assert task_paths, f"expected committed tasks in {TASKS_DIR}, found none"
     for p in task_paths:
-        task = json.loads(p.read_text(encoding="utf-8"))
+        task = tasks_io.load_task(p)
         r = lift_check.inverse_test(task, timeout_s=60.0)
         counts[r["status"]] = counts.get(r["status"], 0) + 1
         print(f"inverse[{p.name}]: {r['status']}"

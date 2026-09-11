@@ -27,6 +27,7 @@ from pathlib import Path
 
 import harness
 import ladder_completeness as lc
+import tasks_io
 
 HERE = Path(__file__).resolve().parent
 
@@ -39,7 +40,7 @@ def test(fn):
 
 
 def _rungs(name: str):
-    task = harness.load(HERE / "tasks" / f"{name}.json")
+    task = harness.load(tasks_io.find(HERE / "tasks", name))
     return task, harness.ladder_rungs(task)
 
 
@@ -148,7 +149,7 @@ def test_is_restate_body_false_on_abs_and_sum_upto():
     # abs's ensures is a disjunction, not a single `==`; sum_upto's is an
     # equation between two products, not `ret == body-expression`.
     for name in ("abs", "sum_upto"):
-        task = harness.load(HERE / "tasks" / f"{name}.json")
+        task = harness.load(tasks_io.find(HERE / "tasks", name))
         assert lc.is_restate_body(task) is False, name
 
 

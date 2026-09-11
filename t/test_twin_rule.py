@@ -43,6 +43,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                       # noqa: E402
+import tasks_io
 import lower_dafny                   # noqa: E402
 import run_par                       # noqa: E402
 from verifiers import Outcome        # noqa: E402
@@ -143,7 +144,7 @@ def test_abs_still_reads_verified_refuted():
     if not _dafny_available():
         print("  (dafny not on PATH, skipping test_abs_still_reads_verified_refuted)")
         return
-    abs_task = harness.load(HERE / "tasks" / "abs.json")
+    abs_task = harness.load(tasks_io.find(HERE / "tasks", "abs"))
     with tempfile.TemporaryDirectory(prefix="t-twin-rule-abs-") as td:
         outdir = Path(td)
         rows, wits, text = _run_one(abs_task, outdir)

@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import names
 
 
+import tasks_io
 def _task(name="foo", param="function", local="match", ret="r"):
     return {
         "t": 0,
@@ -110,7 +111,7 @@ class OldTasksByteIdenticalTest(unittest.TestCase):
     def test_all_seven_lowerings_byte_identical(self):
         here = os.path.dirname(os.path.abspath(__file__))
         task_paths = sorted(
-            p for p in glob.glob(os.path.join(here, "tasks", "*.json"))
+            p for p in glob.glob(os.path.join(here, "tasks", "*.t"))
             if "probe_names_" not in os.path.basename(p))
         self.assertTrue(task_paths, "no committed tasks found")
 
@@ -124,7 +125,7 @@ class OldTasksByteIdenticalTest(unittest.TestCase):
         }
         identical = 0
         for path in task_paths:
-            task = json.load(open(path))
+            task = tasks_io.load_task(path)
             for kernel, lower in lowerings.items():
                 try:
                     src = lower(task, task["body"])

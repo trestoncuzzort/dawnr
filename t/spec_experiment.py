@@ -92,6 +92,7 @@ import harness         # noqa: E402
 import interp          # noqa: E402
 import mbpp_dfy        # noqa: E402
 import surface         # noqa: E402
+import tasks_io        # noqa: E402
 
 OUT_ROOT = HERE / "out" / "spec-experiment"
 FEWSHOT = ["abs", "max", "sum_upto", "linear_search", "gcd"]
@@ -538,14 +539,14 @@ def fewshot_text(version: str = "v1") -> str:
         raise ValueError("prompt version must be v1, v2 or v3, got %r" % version)
     parts = []
     for name in FEWSHOT:
-        task = harness.load(HERE / "tasks" / f"{name}.json")
+        task = harness.load(tasks_io.find(HERE / "tasks", name))
         parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
     if version in ("v2", "v3"):
         for _, text in FEWSHOT_V2_EXTRA:
             parts.append("```t\n" + text.rstrip() + "\n```")
     if version == "v3":
         for name in FEWSHOT_V3_EXTRA:
-            task = harness.load(HERE / "tasks" / f"{name}.json")
+            task = harness.load(tasks_io.find(HERE / "tasks", name))
             parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
     return "\n\n".join(parts)
 

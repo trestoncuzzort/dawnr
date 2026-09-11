@@ -265,12 +265,12 @@ COLLAPSE-IF and an invariant drop apply as before.
 {"op": "split", "args": [{"var": "s"}, {"var": "c"}]}
 {"op": "join",  "args": [{"var": "rows"}, {"var": "sep"}]}
 {"op": "tostr", "args": [{"var": "n"}]}
-{"op": "count", "args": [{"var": "s"}, {"var": "t"}]}
-{"op": "replace", "args": [{"var": "s"}, {"var": "t"}, {"var": "u"}]}
+{"op": "count", "args": [{"var": "s"}, {"var": "u"}]}
+{"op": "replace", "args": [{"var": "s"}, {"var": "u"}, {"var": "v"}]}
 {"op": "at", "args": [{"op": "split", "args": [{"var": "s"}]}, {"int": 0}]}
 ```
 written: `s.split()` · `s.split(c)` · `sep.join(rows)` · `tostr(n)` ·
-`s.count(t)` · `s.replace(t, u)` · `s.split()[0]`
+`s.count(u)` · `s.replace(u, v)` · `s.split()[0]`
 
 Since 2026-09-11 (SPEC.md "The string library (v1)"), 17 polymorphic seq
 operators over `seq` and `seq<seq>`, each total (no new definedness

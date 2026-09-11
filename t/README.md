@@ -19,7 +19,12 @@ it is refused here in advance (ROADMAP.md, "The far field").
 
 - Types: `int`. No arrays, no quantifiers, no heap, no loops. v0 exists to prove
   the pipeline, task to lowering to kernel verdict to witness, not expressiveness.
-- A task is JSON (`tasks/*.json`): no parser to write means no parser to trust.
+- A task is committed as JSON (`tasks/*.json`); that was the whole rationale
+  while it held: no parser to write means no parser to trust. Since
+  2026-09-04 a surface notation exists on top of it (`surface.py`,
+  `SYNTAX.md`), so the reasoning now runs the other way: the parser is
+  trusted because its round trip against the committed JSON is measured,
+  not because it doesn't exist.
 - `lower_dafny.py` emits Dafny; `dafny verify` decides. Exit codes as measured
   on 4.11.0: 0 verified, 2 malformed, 4 could-not-prove, which reads UNPROVED
   (TIMEOUT on "out of resource"). Until 2026-09-02 exit 4 was read as refuted;
@@ -41,3 +46,12 @@ it is refused here in advance (ROADMAP.md, "The far field").
 | `lower_dafny.py` | t → Dafny lowering + twin generation + verdict collection. |
 | `tasks/` | Tasks in t. |
 | `out/` | Lowered .dfy files and verdicts (regenerated; witnesses are committed). |
+
+2026-09-11 (ROADMAP 14.1): the line above calling a task JSON is the v0
+description; it is no longer how a task is written or stored. `t/tasks/`
+now holds `.t` files, the surface notation SYNTAX.md documents and
+`surface.py` parses and prints; the JSON this file still calls the format
+is the AST that notation parses to, derived from the `.t` text and never
+edited by hand. `run_all.py`, `run_par.py` and `grade.py --tasks DIR` read
+the `.t` files through `tasks_io.py`; a directory with none (a
+spec-experiment run's own generated `tasks/`) is still read as `*.json`.

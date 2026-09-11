@@ -118,6 +118,18 @@ def _serial() -> bool:
     return os.environ.get("T_CELL_SERIAL", "") not in ("", "0")
 
 
+LAUNCHES = 0    # t/tlib.py's cache measurement: one dispatch through here is
+                # one subprocess launch by the backend's verify(); a cache
+                # hit in tlib.verify never calls flake_check at all, so this
+                # counter going flat across a second verify() call IS the
+                # "ran no kernel" measurement (t/tlib.py, t/test_tlib.py).
+
+
+def reset_launch_count() -> None:
+    global LAUNCHES
+    LAUNCHES = 0
+
+
 def flake_check(verify_fn, path: Path, n: int = 3):
     """Run verify n times; return (Result, agreed). Disagreement returns the
     LAST result (by submission order) with agreed=False, so the caller must
@@ -131,6 +143,8 @@ def flake_check(verify_fn, path: Path, n: int = 3):
     changes no verdict a serial run would have trusted; it changes the
     cell's wall time from n budgets to one. T_CELL_SERIAL=1 is the old
     form, kept for that measurement."""
+    global LAUNCHES
+    LAUNCHES += n
     if _serial() or n <= 1:
         results = [verify_fn(path) for _ in range(n)]
     else:

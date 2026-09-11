@@ -5,10 +5,14 @@ as if this were your first programming class. No prior language assumed. The
 one-page grammar lives in [`SYNTAX.md`](SYNTAX.md) and the precise rules in
 [`SPEC.md`](SPEC.md); come back to those once this page has done its job.
 
-Throughout, examples appear in a readable notation like `r := x + 1`. That
-notation is for humans. A real t task is stored as JSON (you'll see one at
-the end of lesson 1), and nothing parses the pretty form. Think of it the way
-your teacher writes on a whiteboard versus what actually goes in the file.
+Throughout, examples appear in a readable notation like `r := x + 1`. Since
+2026-09-04 that notation has its own parser and printer (`surface.py`), so
+it is a real input to the tool now, not only something for humans to read;
+every task still lives in the repo as JSON (you'll see the same task as
+JSON at the end of lesson 1), and `surface.py` translates between the two
+losslessly (`SYNTAX.md` "The whole grammar"), so think of the notation the
+way your teacher writes on a whiteboard versus what actually goes in the
+file, keeping in mind the whiteboard now has a translator.
 
 ---
 
@@ -37,22 +41,25 @@ reasoning.
 Here is the complete t task `abs`, which computes the absolute value of a
 number (the distance from zero: `abs(5)` is 5, `abs(-5)` is also 5).
 
-```
-task abs
-  takes    x : int
-  returns  r : int
-  ensures  r >= 0
-  ensures  r == x  or  r == -x
-body
+```t
+t 0
+task abs(x: int) returns (r: int)
+ensures r >= 0
+ensures r == x or r == -x
+{
   if x >= 0 { r := x } else { r := -x }
+}
 ```
 
 Read it top to bottom:
 
-- **`task abs`**: every task has a name, like a function in any language.
-- **`takes x : int`**: the *input*. `x` is its name, `int` is its type
-  (lesson 2). Inputs are called **params**.
-- **`returns r : int`**: the *output*, and it has a name too. In t you don't
+- **`t 0`**: the format version every task starts with (lesson 1's end has
+  more on this).
+- **`task abs(x: int)`**: every task has a name, like a function in any
+  language, and a parenthesized, comma-separated list of its inputs after
+  it, `x` its name and `int` its type (lesson 2). Inputs are called
+  **params**.
+- **`returns (r: int)`**: the *output*, and it has a name too. In t you don't
   "return a value" with a statement; you **assign into `r`**, and whatever
   `r` holds at the end is the answer. Every path through the body must give
   `r` a value.
@@ -180,7 +187,7 @@ of two lists of actions.
 ## Lesson 4: statements
 
 A **statement** does something (contrast: an expression *is* something).
-Statements run in order, top to bottom. t has exactly four, and you know two
+Statements run in order, top to bottom. t has exactly five, and you know two
 already:
 
 **Assignment**: `r := x + 1` means "compute the right side, store it in the
@@ -190,14 +197,24 @@ order: *make* r be that.)
 
 **If/else**:
 
-```
+```t
 if x >= 0 { r := x } else { r := -x }
 ```
 
 Evaluate the condition; run one block or the other. The `else` can be empty,
-but it's always written: there is no dangling half-if in t.
+but it's always written: there is no dangling half-if in t. Drop it and the
+parser refuses the task, not the kernel:
 
-The other two statements (`var` and `while`) get their own lessons.
+<!-- t: expect error else -->
+```t
+if x >= 0 { r := x }
+```
+
+`var` and `while` get their own lessons. The fifth, `return Expr;`, is an
+early exit from inside the body (SPEC.md "Early exit"); it does not get a
+lesson of its own here, but it means exactly what it sounds like: whatever
+`Expr` evaluates to becomes the task's answer, right there, and nothing
+after it in that block runs.
 
 ---
 
@@ -246,7 +263,7 @@ before run time.
 
 That's why order matters in logic. This is safe:
 
-```
+```t
 i < len(s)  and  s[i] > 0
 ```
 
@@ -258,11 +275,11 @@ reject it: you looked before you proved it safe to look.
 one in place; you make a new one. `s[i := v]` is the list equal to `s`
 except that position `i` now holds `v` (same range rule as `s[i]`), and
 `seq(n, v)` is the list of `n` copies of `v` (`n` must be `>= 0`). A task
-can return a list (`returns r : seq`) and keep one in a local. Two lists
+can return a list (`returns (r: seq)`) and keep one in a local. Two lists
 are `==` when they have the same length and the same element at every
 position. Swapping two positions is two updates:
 
-```
+```t
 var tmp: int := s[i];
 r := s[i := s[j]];
 r := r[j := tmp];
@@ -283,7 +300,7 @@ including `b`, so it has `b - a` elements, and it is defined only when
 "from the start up to b". The common shape is a loop that grows a list one
 element at a time:
 
-```
+```t
 r := [];
 var i: int := 0;
 while i < len(s)
@@ -312,10 +329,12 @@ control characters and the quote marks.
 
 **The string library.** Since 2026-09-11, t does add string OPERATORS,
 Python's own, written Python's way: `s.split()`, `s.split(c)`,
-`sep.join(rows)`, `tostr(n)`, `s.count(t)`, `s.find(t)`, `s.strip()` (and
-`lstrip`/`rstrip`), `s.replace(t, u)`, `s.lower()`/`s.upper()`,
+`sep.join(rows)`, `tostr(n)`, `s.count(u)`, `s.find(u)`, `s.strip()` (and
+`lstrip`/`rstrip`), `s.replace(u, v)`, `s.lower()`/`s.upper()`,
 `s.isdigit()`/`s.isalpha()`/`s.isupper()`/`s.islower()`, and
-`s.startswith(t)`/`s.endswith(t)`. Each is exactly Python's method of the
+`s.startswith(u)`/`s.endswith(u)`. (`t` itself can't name a value here:
+it's the keyword every task's own file starts with, `t 0` or `t 1`.) Each
+is exactly Python's method of the
 same name (ASCII only for the casing and classification ones: `SPEC.md`
 "The string library (v1)"), so `len(s.split())` counts words and
 `[c].join(s.split(c)) == s` is a law you can write directly as an
@@ -333,14 +352,14 @@ How do you promise "`r` is at least as big as *every* element"? You can't
 write a separate line per element, because you don't know how many there are. You
 quantify:
 
-```
+```t
 forall i in [0, len(s)) . r >= s[i]
 ```
 
 Read: "for every position `i` from 0 up to (but not including) `len(s)`, r
 is at least `s[i]`." Its partner:
 
-```
+```t
 exists i in [0, len(s)) . r == s[i]
 ```
 
@@ -369,7 +388,7 @@ Details that bite beginners:
 **Local variables.** The inputs and the output aren't always enough working
 space. Declare your own:
 
-```
+```t
 var i : int := 1
 ```
 
@@ -457,8 +476,8 @@ One more situation: how do you *promise* "`r` is n factorial"
 contract. You define it as a **spec function**, a small, pure,
 mathematical definition that exists for the contract's sake:
 
-```
-specfun fact(n : int) : int
+```t
+spec fun fact(n: int): int
   decreases n
   = ite(n <= 0, 1, n * fact(n - 1))
 ```

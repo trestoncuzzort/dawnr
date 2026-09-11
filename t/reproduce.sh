@@ -92,7 +92,7 @@ regen_diff() {
 
 usage() {
   cat <<'EOF'
-usage: reproduce.sh [--tests] [--censuses] [--matrix] [--families]
+usage: reproduce.sh [--tests] [--censuses] [--matrix] [--conformance] [--families]
                      [--truth] [--relift] [--sweep] [--all]
 Run with no flags to see this message. Pass one or more stage flags to run
 just those stages, in the fixed dependency order above (not argv order).
@@ -103,7 +103,7 @@ EOF
 run_tests() {
   stage_start tests
   for f in test_check_wf.py test_surface_errors.py test_twin_rule.py test_names.py \
-           test_ladder_completeness.py test_lift_check.py test_lifter.py test_lift_front.py \
+           test_ladder_completeness.py test_tlib.py test_conformance.py doc_test.py test_lift_check.py test_lifter.py test_lift_front.py \
            test_lift_report.py test_lift_rules.py test_mbpp_dfy.py; do
     echo "--- python3 $f ---"
     python3 "$f"
@@ -181,6 +181,19 @@ run_matrix() {
   echo "run_par.py rc=$? (exit 1 is normal: it means some cell disagreed)"
   regen_diff AGREEMENT.md AGREEMENT.regen.md "hand-written task matrix"
   stage_end matrix
+}
+
+# ----------------------------------------------------------- --conformance
+run_conformance() {
+  stage_start conformance
+  # Private --workdir so this never touches out/reproduce-matrix's or
+  # t/out/'s own filenames; conformance.py's own probe/metamorphic task
+  # names (fz_p_*, mm_*) never collide with the 34 committed t/tasks/ names.
+  python3 conformance.py --jobs 12 --flake 3 \
+      --workdir out/reproduce-conformance --out CONFORMANCE.regen.md
+  echo "conformance.py rc=$? (exit 1 is normal: it means some cell FAILed)"
+  regen_diff CONFORMANCE.md CONFORMANCE.regen.md "conformance suite (13.4)"
+  stage_end conformance
 }
 
 # ------------------------------------------------------------- --families
@@ -296,13 +309,14 @@ DO_TESTS=0 DO_CENSUSES=0 DO_MATRIX=0 DO_FAMILIES=0 DO_TRUTH=0 DO_RELIFT=0 DO_SWE
 for arg in "$@"; do
   case "$arg" in
     --tests) DO_TESTS=1 ;;
+    --conformance) DO_CONFORMANCE=1 ;;
     --censuses) DO_CENSUSES=1 ;;
     --matrix) DO_MATRIX=1 ;;
     --families) DO_FAMILIES=1 ;;
     --truth) DO_TRUTH=1 ;;
     --relift) DO_RELIFT=1 ;;
     --sweep) DO_SWEEP=1 ;;
-    --all) DO_TESTS=1 DO_CENSUSES=1 DO_MATRIX=1 DO_FAMILIES=1 DO_TRUTH=1 DO_RELIFT=1 DO_SWEEP=1 ;;
+    --all) DO_TESTS=1 DO_CENSUSES=1 DO_MATRIX=1 DO_CONFORMANCE=1 DO_FAMILIES=1 DO_TRUTH=1 DO_RELIFT=1 DO_SWEEP=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown flag: $arg"; usage; exit 2 ;;
   esac

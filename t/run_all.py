@@ -25,6 +25,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                      # noqa: E402
+import tasks_io                     # noqa: E402
 from verifiers import Outcome, flake_check, sha256_file   # noqa: E402
 
 BACKENDS = [
@@ -43,7 +44,7 @@ BACKENDS = [
 
 
 def main() -> int:
-    tasks = sorted((HERE / "tasks").glob("*.json"))
+    tasks = tasks_io.load_dir(HERE / "tasks")
     cols, rows, all_ok = [], {t.stem: {} for t in tasks}, True
 
     for bname, lmod, suffix in BACKENDS:

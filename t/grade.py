@@ -11,10 +11,12 @@ input is a directory of t task files or a model's replies.
     python3 grade.py --tasks DIR [--out DIR] [--jobs N] [--kernels a,b,c] [--flake N]
     python3 grade.py --replies PATH [--out DIR] [--jobs N] [--kernels a,b,c] [--flake N]
 
---tasks grades t task files directly: every *.json in DIR is graded exactly
+--tasks grades t task files directly: every task in DIR is graded exactly
 as run_par.py grades t/tasks, through the SAME functions (run_par.probe_backends,
 run_par.lower_and_dispatch, run_par.format_table): no cell, gate or flake
-rule is reimplemented here, only called.
+rule is reimplemented here, only called. DIR's .t files are read (ROADMAP
+14.1); a directory with none, such as a spec-experiment run's own generated
+tasks/, is read as *.json instead (tasks_io.load_dir).
 
 --replies grades a model's replies. PATH is either:
   - a directory in the spec experiment's raw record layout
@@ -98,6 +100,7 @@ import mbpp_dfy                      # noqa: E402  (parse_assertion, for JSONL t
 import run_par                       # noqa: E402  (probe_backends, lower_and_dispatch, format_table)
 import spec_experiment as se         # noqa: E402  (find_block, rename_task, pool, run_point)
 import surface                       # noqa: E402
+import tasks_io                      # noqa: E402
 from verifiers import Outcome, acquire_run_lock   # noqa: E402
 
 
@@ -360,7 +363,7 @@ def cmd_tasks(args) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     harness.OUT = args.out
     harness.OUT.mkdir(parents=True, exist_ok=True)
-    tasks = sorted(args.tasks.glob("*.json"))
+    tasks = tasks_io.load_dir(args.tasks)
     if not tasks:
         print(f"\nREFUSED: no tasks in {args.tasks}, nothing was verified. "
               f"Nothing written under {args.out}.")
@@ -415,7 +418,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="t's grader: one entry point for a tasks directory or a model's replies.")
     ap.add_argument("--tasks", type=Path,
-                    help="directory of t task JSON files to grade")
+                    help="directory of t task files to grade (.t, or .json "
+                         "if the directory has no .t files)")
     ap.add_argument("--replies", type=Path,
                     help="a model's replies: the spec experiment's raw record "
                          "directory, or a JSONL file of {id, reply, tests?}")

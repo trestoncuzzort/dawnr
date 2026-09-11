@@ -1420,13 +1420,15 @@ LITERALS = [
 
 
 def _corpus(seeds, n):
-    """The 11 committed tasks, then fuzz_lower's generator. Returns
+    """The committed tasks (ROADMAP 14.1: t/tasks/*.t, read through this
+    file's own parse rather than tasks_io, which imports this module and so
+    cannot be imported back from it), then fuzz_lower's generator. Returns
     (well_formed, rejected_count, total_seen)."""
     here = os.path.dirname(os.path.abspath(__file__))
     good, seen, rejected = [], 0, 0
-    for path in sorted(glob.glob(os.path.join(here, "tasks", "*.json"))):
+    for path in sorted(glob.glob(os.path.join(here, "tasks", "*.t"))):
         with open(path, encoding="utf-8") as fh:
-            good.append((os.path.basename(path), json.load(fh)))
+            good.append((os.path.basename(path), parse(fh.read())))
         seen += 1
     if seeds:
         sys.path.insert(0, here)

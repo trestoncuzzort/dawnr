@@ -1765,6 +1765,49 @@ DONE WHEN: a versioned SPEC.md, a probe suite that runs in one command, and
 all seven lowerings passing it in AGREEMENT.md.
 UNBLOCKS: 17.2.
 
+2026-09-11: SPEC.md carries a version line ("SPEC version 1.0-rc1, frozen
+for the 1.0 tag, 2026-09-11; t:0 frozen, t:1 a superset") and a new
+"Decisions since t:0" section indexing all eleven decisions this ROADMAP
+item names, each pointing at the section that already states it in full
+(no rule changed). `t/conformance.py` is the one-command probe suite:
+`python3 t/conformance.py [--jobs N] [--flake 3] [--out t/CONFORMANCE.md]`,
+a manifest built from `fuzz_lower.probes()` (53 hand-built probes, each
+graded against its own declared `_expect`, read and never restated) plus
+`metamorphic.py`'s 20 named TRANSFORMS (the metamorphic survivors) applied
+to `t/tasks/abs.t`, one committed base verified in all seven
+AGREEMENT.md columns (13 of 20 transforms apply to abs's body/spec; the
+other 7 are named as not-applicable, not silently dropped). Measured here,
+`python3 t/conformance.py --jobs 12 --flake 3` (command run once, as this
+item specifies): 66 tasks, 462 cells (66 x 7), 260 PASS, 202 FAIL, 0
+tripwire bugs, exit code 1; every FAIL is named in `t/CONFORMANCE.md` and
+printed by the run, adversarial-probe FAILs marked in place, none hidden
+behind the manifest. 201 of the 202 FAIL cells are the kernel reading UNPROVED, TIMEOUT,
+VACUOUS, MALFORMED, ABSTAIN or NO-TWIN against a probe that expects
+VERIFIED, REFUTED or VACUOUS -- an honest incompleteness or coverage gap
+by SPEC.md's own Outcome taxonomy, not a kernel accepting a program its
+own probe exhibits a witness against. One cell reads the other way:
+`fz_p_divreq0 x framac` (SPEC.md's own "y == 0 is undefined... a requires
+undefined at every type-correct input is DEFECTIVE") reads VERIFIED where
+the probe's documented expectation is REFUTED -- Frama-C accepted a task
+whose `requires` is undefined everywhere, a real gap named here rather
+than folded into the incompleteness count above. This run shares the box
+with the rest of tonight's parallel work (other ROADMAP items' agents were
+running concurrently in sibling worktrees), so the TIMEOUT/UNPROVED share
+of the 202 is not separated here from ordinary shared-box contention; a
+quieter re-run is the next thing to measure before reading the 202 as a
+kernel-capability count. DONE WHEN's "all seven lowerings passing" is
+NOT met by this measurement: the suite runs in one command and both
+tables exist, but 202 of 462 cells FAIL today. `t/test_conformance.py`
+(13 checks, no kernel) pins the manifest-shape half of the bar: probe
+coverage-by-name against `fuzz_lower.probes()`, every probe's `expected`
+inside the outcome vocabulary, and the 20/13/7 TRANSFORMS partition.
+`t/reproduce.sh --conformance` regenerates `CONFORMANCE.md` into
+`CONFORMANCE.regen.md` and diffs it (exit 1 on the run itself is the
+normal "some cell FAILed" signal, not a script bug); `test_conformance.py`
+is folded into `--tests`. The independent check found the stage's flag
+unwired and two em-dashes in the script's table header; both fixed at
+the merge, and the quiet re-run of the suite is the wave's gate.
+
 ### WS-14: from a JSON tree to a language you type
 
 #### 14.1 `.t` becomes the input
