@@ -159,6 +159,13 @@ run_censuses() {
   python3 mbpp_gate_order.py --markdown out/mbpp-gate-order.regen.md
   cat out/mbpp-gate-order.regen.md
 
+  echo "--- mbpp_lifter_census.py (reads census.json, out/lift, and the" \
+       "committed COVERAGE-lifted-785.md; no re-lift, no kernel run) ---"
+  python3 mbpp_lifter_census.py --out COVERAGE-mbpp-dfy-lifter.regen.md
+  regen_diff COVERAGE-mbpp-dfy-lifter.md COVERAGE-mbpp-dfy-lifter.regen.md \
+      "MBPP-DFY lexical/lifter/sweep join"
+  python3 test_mbpp_lifter_census.py
+
   echo "--- lift_census.py over the CURRENT out/lift (no re-lift here) ---"
   if [ ! -d out/lift ]; then
     echo "WARNING: out/lift does not exist; skipping (run --relift first, or" \

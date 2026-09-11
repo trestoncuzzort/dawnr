@@ -1717,6 +1717,8 @@ follows 10.4: taxonomy measured, lowering landed in all seven, flip table
 reproduced from clean scratch by a skeptic, then the column is claimed. The
 hazards named in 12.7 stand.
 
+2026-09-12: measured, `t/mbpp_lifter_census.py` (reads the lexical census regenerated the same night from today's detectors, a lifter run's `out/lift/*.outcome.json` markers, and the committed `COVERAGE-lifted-785.md`; no kernel run; the first draft read a 2026-09-05 census with gap names since closed and counted 105 in fragment, corrected before the commit). Of the 164, 131 read lexically in fragment (33 out: real 9, set 6, char-arith 3, then eight gates of 1 or 2) and 59 lift; 34 read verified/refuted in all seven kernels. The LIFTER-side gate order over the 131 in-fragment rows, from a base of 34: `unbounded-quantifier` (+30, 64), `lift-check-failed` (+29, 93), `array` (+4), `function-contract` (+4), `heap` (+3), `let-expression` (+2), then the kernels (framac 1, lean 3, and so on). Where it parts from the lexical curve: the lexical curve calls 131 done before its first step, but 97 of those 131 are still out, 72 by a lifter refusal the lexical vocabulary does not name (the two largest are the lifter's own checker failing on a lifted task, mostly its quantifier-equivalence lemma, and an unbounded quantifier in the spec) and 25 by a kernel. The curve counts a refusal closed as a program unlocked; today 25 of the 59 lifted are still short of all seven, so a closed row is an upper bound, not a cell.
+
 DONE WHEN: the census over the 164 shows at least 82 lexically in fragment
 AND the lifter (12.4) lifts them, each opened construct having passed 10.4.
 UNBLOCKS: 16.2.
@@ -1966,6 +1968,8 @@ UNBLOCKS: 16.2, 16.3.
 The coverage half of the bar: 82 of 164 lifted and VERIFIED by all seven
 kernels with twins REFUTED. Measured 2026-09-06 (12.5): 26 of the 164
 lift, 5 count in all seven columns, with fstar's column not yet evidence.
+
+2026-09-12: measured, `t/mbpp_lifter_census.py` (see 13.1's paragraph for the instrument and its inputs). 34 of the 164 read all seven; the distance to 82 is 48. On the LIFTER side the two largest refusal rows would unlock 59 on paper (`unbounded-quantifier` 30, `lift-check-failed` 29), past 82 at the second step; at the lifted corpus's current rate of 34 in all seven of 59 lifted, those 59 would land nearer 34 cells than 59, so the honest reading is: two lifter rows and then the kernel blockers of what they lift (lean and framac first), with the coverage table's own re-sweep as the only measurement that counts.
 
 DONE WHEN: the coverage table beside AGREEMENT.md shows at least 82,
 reproduced from clean scratch by an adversarial reader.
