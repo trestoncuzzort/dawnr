@@ -21,7 +21,7 @@ things about a program nobody wrote. Measured by `python3 t/surface.py
   which recur once per seed.
 - `print(parse(text)) == text` on all 1701, so every task has exactly one
   normal form in the notation.
-- The **16 examples on the `written:` lines of this page parse, unedited**,
+- The **22 examples on the `written:` lines of this page parse, unedited**,
   to the JSON they sit beside (some lines carry more than one, separated by
   `·`). That is what makes this grammar the documented notation rather than
   a new one that resembles it.
@@ -76,6 +76,19 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "seq" | "slice"                    (* v1; written [a, b] (any arity, [] empty) and s[a..b];
                                                    "+" on two seqs is concatenation *)
            | "pair" | "fst" | "snd"             (* v1, since 2026-09-10; written (e1, e2), p.0, p.1 *)
+           | "split"                            (* v1, since 2026-09-11; seq -> seq<seq>, arity 1 or 2;
+                                                   written s.split() and s.split(c) *)
+           | "join" | "tostr" | "count" | "find"
+           | "strip" | "lstrip" | "rstrip" | "replace"
+           | "lower" | "upper"
+           | "isdigit" | "isalpha" | "isupper" | "islower"
+           | "startswith" | "endswith"          (* v1, since 2026-09-11: the string library
+                                                   (SPEC.md "The string library"); written
+                                                   sep.join(rows), tostr(n), s.count(t), s.find(t),
+                                                   s.strip()/s.lstrip()/s.rstrip(), s.replace(t, u),
+                                                   s.lower(), s.upper(), s.isdigit(), s.isalpha(),
+                                                   s.isupper(), s.islower(), s.startswith(t),
+                                                   s.endswith(t) *)
 
 Stmt     ::= {"assign": [Id, Expr]}
            | {"if":    {"cond": Expr, "then": [Stmt*], "else": [Stmt*]}}
@@ -244,6 +257,47 @@ needs no new move: OFF-BY-ONE already reaches an outer or an inner index,
 WRONG-VAR already swaps two seq-typed names (nested or not, since the
 comparison is on the declared type, dict equality included), and
 COLLAPSE-IF and an invariant drop apply as before.
+
+### The string library (v1)
+
+```json
+{"op": "split", "args": [{"var": "s"}]}
+{"op": "split", "args": [{"var": "s"}, {"var": "c"}]}
+{"op": "join",  "args": [{"var": "rows"}, {"var": "sep"}]}
+{"op": "tostr", "args": [{"var": "n"}]}
+{"op": "count", "args": [{"var": "s"}, {"var": "t"}]}
+{"op": "replace", "args": [{"var": "s"}, {"var": "t"}, {"var": "u"}]}
+{"op": "at", "args": [{"op": "split", "args": [{"var": "s"}]}, {"int": 0}]}
+```
+written: `s.split()` · `s.split(c)` · `sep.join(rows)` · `tostr(n)` ·
+`s.count(t)` · `s.replace(t, u)` · `s.split()[0]`
+
+Since 2026-09-11 (SPEC.md "The string library (v1)"), 17 polymorphic seq
+operators over `seq` and `seq<seq>`, each total (no new definedness
+obligation beyond its own arguments'), each Python's own str-method
+semantics: `split(s)` (whitespace runs; `seq -> seq<seq>`), `split(s, c)`
+(one code point, empty rows kept; `seq, int -> seq<seq>`, two arities of
+one op), `join(rows, sep)` (`seq<seq>, seq -> seq`), `tostr(n)` (`int ->
+seq`, decimal digits and `-`), `count(s, t)`/`find(s, t)` (`seq, seq ->
+int`), `strip`/`lstrip`/`rstrip` (`seq -> seq`), `replace(s, t, u)`
+(`seq, seq, seq -> seq`), `lower`/`upper` (`seq -> seq`, ASCII only),
+`isdigit`/`isalpha`/`isupper`/`islower` (`seq -> bool`, ASCII classes),
+`startswith(s, t)`/`endswith(s, t)` (`seq, seq -> bool`). The notation
+writes every member Python's way, a postfix `.name(...)` on its first
+(receiver) argument except `tostr`, a plain function like `len`, and
+`join`, whose AST order is `(rows, sep)` (the receiver is `sep`, second),
+so `sep.join(rows)` prints and parses with its two arguments swapped
+back; postfix chains with indexing and slicing exactly as `.0`/`.1` do
+(`s.split()[0]`, `s.strip().lower()`). `tasks/word_count.json` (`r :=
+len(t2.split())` over a full-length slice of `s`, twin OFF-BY-ONE on the
+slice's `0` bound), `tasks/split_join.json` (the round-trip law
+`[c].join(s.split(c)) == s` as an ensures on a body that rebuilds `s` by
+the law, twin WRONG-VAR: `split(s, c)` becomes `split(trimmed, c)`, a
+decoy `s.strip()` local) and `tasks/count_vowels.json` (a loop counting
+code points against `s.count([97]) + ... + s.count([117])`, the five
+lowercase vowels, twin INVARIANT-DROP) are the committed examples. No new
+twin move: OFF-BY-ONE, WRONG-VAR, COLLAPSE-IF and an invariant drop reach
+these bodies exactly as they reach any seq-typed one.
 
 ### Locals and loops (gate 2)
 

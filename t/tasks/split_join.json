@@ -1,0 +1,120 @@
+{
+ "t": 1,
+ "name": "split_join",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "c",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "s"
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "join",
+     "args": [
+      {
+       "op": "split",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "c"
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "var": "s"
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "trimmed",
+    "type": "seq",
+    "init": {
+     "op": "strip",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "rebuilt",
+    "type": "seq",
+    "init": {
+     "op": "join",
+     "args": [
+      {
+       "op": "split",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "c"
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "var": "rebuilt"
+    }
+   ]
+  }
+ ]
+}

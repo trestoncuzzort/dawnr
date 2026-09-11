@@ -665,8 +665,13 @@ operators, each total (Python's are; the library adds no undefined case),
 each with the definedness of its arguments only:
 
 - `split(s)` : seq -> seq<seq>, Python's `s.split()`: runs of whitespace
-  (code points 9, 10, 11, 12, 13, 32) separate, leading and trailing
-  whitespace is dropped, no row is empty; `split("") == []`.
+  separate, leading and trailing whitespace is dropped, no row is empty;
+  `split("") == []`. Measured 2026-09-11 (`test_strlib.py`'s parity test):
+  "whitespace" is the 10 ASCII code points Python's own `str.isspace()`
+  holds for, 9-13 and 28-32 (FS/GS/RS/US alongside tab/LF/VT/FF/CR/space),
+  not the 6-point guess an earlier draft of this line named; a `chr()`-
+  free interpreter still has to enumerate them, since it never calls
+  `str.isspace()` itself (interp.py's own note on why).
 - `split(s, c)` : seq, int -> seq<seq>, Python's `s.split(chr(c))` on one
   code point: every occurrence separates, empty rows kept, so
   `len(split(s, c)) == count(s, [c]) + 1` and `join(split(s, c), [c]) == s`.
@@ -717,11 +722,20 @@ pool, which grows by the function-shaped problems whose only gap these
 members close; the per-kernel notes record what each kernel proves about
 a member and what stays an abstain, by name.
 
-Tasks: `word_count` (`len(s.split())`, its twin off-by-one on a bound
-inside the loop-free body's spec), `split_join` (the law `[c].join(s.split(c)) == s`
-as an ensures on the identity task, its twin the wrong variable), and
-`count_vowels` (a loop over code points with an invariant against
-`s.count`), predicted twins to be corrected to the measured ones.
+Tasks, twin and witness measured via `harness.twin_cached` (2026-09-11),
+correcting the twins predicted when this section was first drafted:
+`word_count` (`r := len(t2.split())` over `t2 := s[0..len(s)]`, a
+full-length slice standing in for the loop-free body's own copy of `s`;
+twin OFF-BY-ONE on the slice's `0` lower bound, witness `s = []`, real
+`0`, twin undefined -- `slice bounds [1..0]`), `split_join` (the law
+`[c].join(s.split(c)) == s` as an ensures, the body rebuilding `s` by the
+law with a decoy `s.strip()` local also in scope; twin WRONG-VAR, `s`
+becomes `trimmed` inside the rebuild, witness `s = [32]` (one space),
+`c = 0`, real `[32]`, twin `[]`), and `count_vowels` (a loop over code
+points, invariant `r == s[0..i].count([97]) + ... + s[0..i].count([117])`
+against the five lowercase vowels; twin INVARIANT-DROP on that
+invariant, witness `s = []`, exit state `i = 0, r = 1` violating the
+now-unconstrained `ensures`).
 
 ## The twins
 
@@ -795,9 +809,14 @@ No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an
 array with mutation is a `seq` updated functionally ("Sequences as
 values"). No overflow semantics (mathematical integers; bounded backends
 owe explicit range obligations). One return value. No mutual recursion,
-no higher-order functions, no string library
-(sequence literals, concatenation and slices landed 2026-09-09; a string
-is a seq of code points, same night). A pair is one value ("Pairs",
+no higher-order functions. A string is a seq of code points (stated
+2026-09-09, sequence literals/concatenation/slices the same night); its
+library (`split`, `join`, `tostr`, `count`, `find`, `strip`/`lstrip`/
+`rstrip`, `replace`, `lower`/`upper`, `isdigit`/`isalpha`/`isupper`/
+`islower`, `startswith`/`endswith`) landed 2026-09-11 -- not in it, each
+by name: `format` and f-strings, `int(x, base)`, a multi-code-point
+separator, `splitlines`, the padding members, `title`/`capitalize`/
+`swapcase`, `partition`, `encode`. A pair is one value ("Pairs",
 stated 2026-09-10): no pair of pairs, no seq of pairs, no triple. A nested seq is one
 level deep ("Nested sequences", stated 2026-09-10): no third level, no seq
 of bools, no seq of pairs.

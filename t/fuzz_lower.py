@@ -47,6 +47,42 @@ and it still holds for a different reason, given below where the probe is
 defined: the JSON op name is the word `div`, and a literal slash token is
 still not one.
 
+THE STRING LIBRARY (v1, since 2026-09-11): 17 members (split, join, tostr,
+count, find, strip, lstrip, rstrip, replace, lower, upper, isdigit, isalpha,
+isupper, islower, startswith, endswith), per SPEC.md "The string library
+(v1)". `check_wf`'s `_ty` types each from SPEC.md's table (split has two
+arities, one op); this file's own `ev` clone computes each as a direct
+int-tuple transcription of Python's own str method (a CLONE of
+interp.py's `_str_*` helpers, same reasoning: a `chr()`-then-back
+implementation is not total on an out-of-range int, and SPEC.md calls
+every member "total ... the library adds no undefined case"). No new
+V1_OPS well-formedness case needed beyond arity and type: every member's
+only definedness obligation is its own arguments', per SPEC.md.
+
+DATED NOTE 2026-09-11: added `f_v1strlib`, the fuzz family for the string
+library above (COVERAGE-string-lib.md's own census: the nl/ greedy order
+over the sole blockers), eleven shapes, plus five hand-built probes
+(`fz_p_str_splitempty`, `fz_p_str_countempty`, `fz_p_str_findempty`,
+`fz_p_str_tab`, `fz_p_str_lowernonletter`) for SPEC.md's own stated
+identities (`split("") == []`, `count(s, []) == len(s) + 1`, `find(s, [])
+== 0`, the corrected 10-point whitespace set, `lower` fixing every
+non-letter). Measured (`f_v1strlib`'s own docstring carries the per-shape
+breakdown): --n 400 --seed 1 against this family alone saturates at 17
+distinct well-formed tasks (one per shape/sub-variant combination; the
+family's randomness is which member/branch/parameter-name is chosen, not
+an embedded literal, the same saturation already measured for
+`f_v1seqops`, 29 of 16000, and `f_v1divmod`, 16 of 16000), all 17
+`ground_truth`-verified and all 17 carrying a twin (11 off-by-one, 2
+wrong-var, 1 collapse-if, 1 negate-cond, 1 invariant-drop, with
+`tostr_len`'s off-by-one tagged `+nonrefuting`: its ensures is too weak
+to be falsified by the one-off shift the ladder finds). None of the
+seven `lower_*.py` files has a string-lib case yet, so this family is
+exercised through the reference interpreter and the twin ladder only,
+not `run()`'s per-kernel lowering (`--only dafny` and the rest abstain on
+every cell, per `lower`'s own `NotImplementedError` catch); `FAMILIES`
+carries `("v1strlib", f_v1strlib, 4)` regardless, ready for the day a
+kernel lowers a member.
+
 Own output directory, never t/out/: the suite's drivers write t/out/ and a
 second writer of the same filenames corrupts both runs (run_par.py's
 _live_conflict records that lesson). Pass --out.
@@ -109,6 +145,151 @@ MAX_SEQ = 1 << 16         # fill length cap, interp.py's MAX_SEQ mirrored
 
 MAX_DEPTH = 60            # self-call nesting; each level costs ~8 Python
                           # frames, so this stays well inside the interpreter's own limit
+
+
+# SPEC.md "The string library" (2026-09-11): CLONES of interp.py's own
+# `_str_*` helpers (see that file's docstring on why this file's `ev` is a
+# clone and not a shared import). Int-tuple transcriptions of Python's str
+# methods, total on any int (no `chr()`), identical to interp.py's.
+_WS = (9, 10, 11, 12, 13, 28, 29, 30, 31, 32)     # the 10 ASCII code
+                                  # points `chr(c).isspace()` holds for,
+                                  # measured 2026-09-11: interp.py's own
+                                  # docstring on why SPEC.md's own "9, 10,
+                                  # 11, 12, 13, 32" undercounts by 4.
+
+
+def _str_split_ws(s: tuple) -> tuple:
+    out, cur = [], []
+    for c in s:
+        if c in _WS:
+            if cur:
+                out.append(tuple(cur))
+                cur = []
+        else:
+            cur.append(c)
+    if cur:
+        out.append(tuple(cur))
+    return tuple(out)
+
+
+def _str_split_sep(s: tuple, c: int) -> tuple:
+    out, cur = [], []
+    for x in s:
+        if x == c:
+            out.append(tuple(cur))
+            cur = []
+        else:
+            cur.append(x)
+    out.append(tuple(cur))
+    return tuple(out)
+
+
+def _str_join(rows: tuple, sep: tuple) -> tuple:
+    if not rows:
+        return ()
+    out = list(rows[0])
+    for r in rows[1:]:
+        out += list(sep) + list(r)
+    return tuple(out)
+
+
+def _str_tostr(n: int) -> tuple:
+    return tuple(ord(c) for c in str(n))
+
+
+def _str_count(s: tuple, t: tuple) -> int:
+    if not t:
+        return len(s) + 1
+    n, i, lt, ls = 0, 0, len(t), len(s)
+    while i <= ls - lt:
+        if s[i:i + lt] == t:
+            n += 1
+            i += lt
+        else:
+            i += 1
+    return n
+
+
+def _str_find(s: tuple, t: tuple) -> int:
+    if not t:
+        return 0
+    lt, ls = len(t), len(s)
+    for i in range(ls - lt + 1):
+        if s[i:i + lt] == t:
+            return i
+    return -1
+
+
+def _str_strip(s: tuple, left: bool, right: bool) -> tuple:
+    lo, hi = 0, len(s)
+    if left:
+        while lo < hi and s[lo] in _WS:
+            lo += 1
+    if right:
+        while hi > lo and s[hi - 1] in _WS:
+            hi -= 1
+    return s[lo:hi]
+
+
+def _str_replace(s: tuple, t: tuple, u: tuple) -> tuple:
+    if not t:
+        out = []
+        for c in s:
+            out += list(u) + [c]
+        return tuple(out + list(u))
+    out, i, lt, ls = [], 0, len(t), len(s)
+    while i <= ls - lt:
+        if s[i:i + lt] == t:
+            out += list(u)
+            i += lt
+        else:
+            out.append(s[i])
+            i += 1
+    out += list(s[i:])
+    return tuple(out)
+
+
+def _is_upper_letter(c: int) -> bool:
+    return 65 <= c <= 90
+
+
+def _is_lower_letter(c: int) -> bool:
+    return 97 <= c <= 122
+
+
+def _str_lower(s: tuple) -> tuple:
+    return tuple(c + 32 if _is_upper_letter(c) else c for c in s)
+
+
+def _str_upper(s: tuple) -> tuple:
+    return tuple(c - 32 if _is_lower_letter(c) else c for c in s)
+
+
+def _str_isdigit(s: tuple) -> bool:
+    return len(s) > 0 and all(48 <= c <= 57 for c in s)
+
+
+def _str_isalpha(s: tuple) -> bool:
+    return len(s) > 0 and all(_is_upper_letter(c) or _is_lower_letter(c)
+                              for c in s)
+
+
+def _str_isupper(s: tuple) -> bool:
+    has = any(_is_upper_letter(c) or _is_lower_letter(c) for c in s)
+    return has and not any(_is_lower_letter(c) for c in s)
+
+
+def _str_islower(s: tuple) -> bool:
+    has = any(_is_upper_letter(c) or _is_lower_letter(c) for c in s)
+    return has and not any(_is_upper_letter(c) for c in s)
+
+
+def _str_startswith(s: tuple, t: tuple) -> bool:
+    return s[:len(t)] == t
+
+
+def _str_endswith(s: tuple, t: tuple) -> bool:
+    return len(t) <= len(s) and (len(t) == 0 or s[len(s) - len(t):] == t)
 
 
 class St:
@@ -278,6 +459,41 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return args[0].a
     if op == "snd":
         return args[0].b
+    if op == "split":
+        return (_str_split_ws(args[0]) if len(args) == 1
+                else _str_split_sep(args[0], args[1]))
+    if op == "join":
+        return _str_join(args[0], args[1])
+    if op == "tostr":
+        return _str_tostr(args[0])
+    if op == "count":
+        return _str_count(args[0], args[1])
+    if op == "find":
+        return _str_find(args[0], args[1])
+    if op == "strip":
+        return _str_strip(args[0], True, True)
+    if op == "lstrip":
+        return _str_strip(args[0], True, False)
+    if op == "rstrip":
+        return _str_strip(args[0], False, True)
+    if op == "replace":
+        return _str_replace(args[0], args[1], args[2])
+    if op == "lower":
+        return _str_lower(args[0])
+    if op == "upper":
+        return _str_upper(args[0])
+    if op == "isdigit":
+        return _str_isdigit(args[0])
+    if op == "isalpha":
+        return _str_isalpha(args[0])
+    if op == "isupper":
+        return _str_isupper(args[0])
+    if op == "islower":
+        return _str_islower(args[0])
+    if op == "startswith":
+        return _str_startswith(args[0], args[1])
+    if op == "endswith":
+        return _str_endswith(args[0], args[1])
     if op == "==":
         return args[0] == args[1]
     if op == "!=":
@@ -376,11 +592,18 @@ V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
 # undefined at y == 0, so v1's definedness rules apply to them as to at.
 # pair, fst, snd are v1 (SPEC.md "Pairs", 2026-09-10): a pair is a value, and
 # `fst`/`snd` are its only projections.
+# The string library is v1 (SPEC.md "The string library", 2026-09-11): 17
+# polymorphic seq members, split at two arities (one op).
+STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
+             "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
+             "isupper", "islower", "startswith", "endswith"}
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
-         | {"pair", "fst", "snd"})
-TERNARY = {"update", "slice"}
+         | {"pair", "fst", "snd"} | STRLIB_OPS)
+TERNARY = {"update", "slice", "replace"}
 VARIADIC = {"seq"}      # the literal: any arity, zero included
-UNARY = {"neg", "not", "len", "fst", "snd"}
+UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
+         "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
+         "islower"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
@@ -480,7 +703,12 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         errs.append(f"{op} takes one argument")
     if op in TERNARY and len(args) != 3:
         errs.append(f"{op} takes three arguments")
-    if (op not in UNARY and op not in NARY and op not in TERNARY
+    if op == "split":
+        # SPEC.md "The string library": split(s) and split(s, c), two
+        # arities of one op, neither the plain-binary nor any other group.
+        if len(args) not in (1, 2):
+            errs.append("split takes one or two arguments")
+    elif (op not in UNARY and op not in NARY and op not in TERNARY
             and op not in VARIADIC and len(args) != 2):
         errs.append(f"{op} takes two arguments")
     if op in NARY and len(args) < 2:
@@ -572,6 +800,58 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
             errs.append(f"{op} wants a pair operand, found {t0!r}")
             return None
         return t0["pair"][0 if op == "fst" else 1]
+    if op in STRLIB_OPS:
+        # SPEC.md "The string library" (2026-09-11): every member's
+        # signature, seq/int/seq<seq> per the table there. `split` is the
+        # only member with two arities, seq -> seq<seq> at one argument or
+        # (seq, int) -> seq<seq> at two. Arity first, so a call with too
+        # few or too many arguments is a refusal and never an IndexError
+        # (the core's adversarial check found the crash, 2026-09-11).
+        want = {"split": (1, 2), "join": (2,), "tostr": (1,), "count": (2,),
+                "find": (2,), "strip": (1,), "lstrip": (1,), "rstrip": (1,),
+                "replace": (3,), "lower": (1,), "upper": (1,), "isdigit": (1,),
+                "isalpha": (1,), "isupper": (1,), "islower": (1,),
+                "startswith": (2,), "endswith": (2,)}[op]
+        if len(ts) not in want:
+            errs.append(f"{op} wants {' or '.join(str(w) for w in want)} "
+                        f"argument(s), found {len(ts)}")
+            return {"split": NESTED, "join": "seq", "tostr": "seq", "count": "int",
+                    "find": "int", "replace": "seq"}.get(op, "seq" if op in
+                    ("strip", "lstrip", "rstrip", "lower", "upper") else "bool")
+        if op == "split":
+            if len(ts) == 1:
+                if ts[0] != "seq":
+                    errs.append("split wants a seq")
+            elif ts[0] != "seq" or ts[1] != "int":
+                errs.append("split wants (seq, int)")
+            return NESTED
+        if op == "join":
+            if ts[0] != NESTED or ts[1] != "seq":
+                errs.append("join wants (seq<seq>, seq)")
+            return "seq"
+        if op == "tostr":
+            if ts[0] != "int":
+                errs.append("tostr wants an int")
+            return "seq"
+        if op in ("count", "find"):
+            if ts[0] != "seq" or ts[1] != "seq":
+                errs.append(f"{op} wants (seq, seq)")
+            return "int"
+        if op in ("strip", "lstrip", "rstrip", "lower", "upper"):
+            if ts[0] != "seq":
+                errs.append(f"{op} wants a seq")
+            return "seq"
+        if op == "replace":
+            if ts[0] != "seq" or ts[1] != "seq" or ts[2] != "seq":
+                errs.append("replace wants (seq, seq, seq)")
+            return "seq"
+        if op in ("isdigit", "isalpha", "isupper", "islower"):
+            if ts[0] != "seq":
+                errs.append(f"{op} wants a seq")
+            return "bool"
+        if ts[0] != "seq" or ts[1] != "seq":       # startswith, endswith
+            errs.append(f"{op} wants (seq, seq)")
+        return "bool"
     if op in ("+", "-", "*", "neg", "div", "mod"):
         if any(t != "int" for t in ts):
             errs.append(f"{op} over non-int")
@@ -2634,6 +2914,298 @@ def f_v1nested(rng, idx):
             "_shape": "row_sum"}
 
 
+def f_v1strlib(rng, idx):
+    """SPEC.md "The string library (v1)" (2026-09-11): 17 polymorphic seq
+    operators over COVERAGE-string-lib.md's own census (the nl/ greedy
+    order: split, str(), join, count, strip, replace, find, lower, upper,
+    isdigit, isalpha). No new Expr forms and no new well-formedness case
+    (`check_wf`'s `_ty` already types every member), so this family's job
+    is the same as `f_v1nested`'s: coverage of the shapes that dominate,
+    not new machinery. Eleven shapes; MEASURED 2026-09-11 (--n 400 --seed
+    1, this file's own build_corpus loop restricted to this one family):
+    unlike `f_v1nested`/`f_v1pairs`, this family's randomness is almost
+    entirely in WHICH member/branch/parameter-name combination is chosen,
+    not in an embedded integer literal (the census shapes below are laws
+    over PARAMETERS, `s`, `c`, `a`, `b`, `n`, so two draws of the same
+    shape/sub-variant are the same AST), so the build_corpus dedup key
+    saturates fast: 16000 tries (the loop's own `n * 40` cap) produced
+    only 17 distinct well-formed tasks, one per shape/sub-variant
+    combination below (word_count 1, split_row 2, join_split_roundtrip 1,
+    count_pattern 2, find_case 1, strip_len 3, replace_count 1, case_map
+    2, startswith_endswith_slice 2, loop_count 1, tostr_len 1 = 17) --
+    the same saturation already measured for `f_v1seqops` (29 of 16000)
+    and `f_v1divmod` (16 of 16000), neither of which embeds a per-task
+    literal either; `f_v1nested`/`f_v1pairs` reach 400 because their
+    shapes embed an `rng.choice` CONSTANT (a row count, a swap-vs-update
+    pick with a fresh index) directly into the tree. All 17 pass
+    `ground_truth` at "verified" (no generator bug: every real body
+    satisfies its own ensures over 260 sampled inputs) and all 17 got a
+    twin from `harness.make_twin` -- op by shape, this run:
+
+      word_count     `len(t2.split())` over a full-length SLICE `t2 :=
+                     s[0..len(s)]` standing in for a loop-free body's own
+                     copy of `s` -- `word_count.json`'s own committed
+                     shape, generalized: the slice's `0` lower bound is
+                     the only body-level literal. Measured: OFF-BY-ONE.
+      split_row      two variants: `len` states SPEC.md's own identity
+                     `len(s.split(c)) == s.count([c]) + 1` over a decoy
+                     slice copy of `s` (measured: OFF-BY-ONE on the slice
+                     bound); `index` reads `rows[0]` under an `if
+                     len(rows) > 0` guard, the definedness obligation
+                     `split`'s result carries stated explicitly rather
+                     than assumed, `rows` a body-local so the ensures
+                     restates `split(s, c)` directly (a body-local is
+                     invisible to `ensures`, params-and-return only)
+                     (measured: NEGATE-COND).
+      join_split_roundtrip  the law `[c].join(s.split(c)) == s`, the
+                     body rebuilding `s` with a decoy `trimmed :=
+                     s.strip()` local also in scope but unused --
+                     `split_join.json`'s own committed shape, generalized:
+                     WRONG-VAR swaps `s` for `trimmed` inside the
+                     `split` call, the committed task's own measured
+                     twin. Measured: WRONG-VAR.
+      count_pattern  `s.count(t)` over a decoy slice copy, `t` one code
+                     point or `rng.choice` a two-code-point literal (the
+                     census's `count(lit)` / `count(lit,n)` forms).
+                     Measured: OFF-BY-ONE on the slice bound, both forms.
+      find_case      `s.find([c])`, the `-1` case in SPEC.md's own words
+                     stated as an `if idx == -1 then 0 else idx + 1`
+                     (1-based-or-zero, so the two branches are both
+                     reachable and distinguishable). Measured:
+                     COLLAPSE-IF.
+      strip_len      `len(s.strip())` (`rng.choice` also `lstrip`,
+                     `rstrip`) over a decoy slice copy; the census's own
+                     `strip()` / `rstrip()` top forms. Measured:
+                     OFF-BY-ONE on the slice bound, all three members.
+      replace_count  `s.replace([a], [b]).count([b]) == s.count([b]) +
+                     s.count([a])` under `requires a != b`: a single-
+                     code-point pattern's count is a positional tally, so
+                     replacing every `a` with `b` (they differ) shifts
+                     that tally exactly -- no decoy needed. Measured:
+                     WRONG-VAR, swapping `a` for `b` inside the `replace`
+                     call directly.
+      case_map       `lower`/`upper` over a decoy slice copy, with
+                     `s.isalpha() implies r.isupper()` (or `islower`) in
+                     the ensures: SPEC.md's own predicate stated as a
+                     consequence of the map rather than restated as an
+                     independent fact. Measured: OFF-BY-ONE on the slice
+                     bound, both members.
+      startswith_endswith_slice  `s.startswith(s[0..n])` (or the
+                     `endswith` mirror, `s[len(s)-n..len(s)]`), always
+                     true by construction -- no decoy needed, the slice
+                     bound `0`/`n`/`len(s)-n` is itself the target.
+                     Measured: OFF-BY-ONE, both members.
+      loop_count     a `while` loop over code points, invariant `r ==
+                     s[0..i].count([c])`, ensures `r == s.count([c])` --
+                     `count_vowels.json`'s own committed shape with one
+                     code point instead of five. Measured: INVARIANT-DROP
+                     on the running-tally invariant, the load-bearing
+                     rung.
+      tostr_len      `tostr(n + 0)` (the `+ 0` a decoy OFF-BY-ONE target,
+                     `word_count`'s slice trick without a seq): `len(r)
+                     >= 1` always, `n < 0 implies r[0] == 45` ('-') per
+                     SPEC.md's own words. Measured: OFF-BY-ONE, but
+                     TAGGED `+nonrefuting` (harness.py's fallback rung):
+                     `n + 1` vs `n` changes `tostr`'s VALUE but the
+                     ensures is too weak to be FALSIFIED by the shift on
+                     the witness found, so this is the one shape
+                     in the family whose ensures under-specifies `tostr`
+                     against its own twin ladder -- measured, not fixed,
+                     since SPEC.md's `tostr` clause is a length-and-sign
+                     fact only, not a full digit-string characterization.
+
+    Twins go through the GROUNDED ladder (harness.make_twin/twin_cached),
+    same as every other family; no member-specific twin move exists
+    (SPEC.md: "Twin operators apply to a member's arguments as to any
+    expression; no member-specific twin exists in v1"), so the existing
+    eight rungs see a string-lib call exactly as they see any other
+    `OP`/`AT`/`SLICE` node -- no ladder change was needed for this family,
+    the same "no new machinery" property the core landing gave `_ty`/`ev`.
+    Lowering to the seven kernels is NOT attempted here: none of the seven
+    `lower_*.py` files has a string-lib case yet (SPEC.md names this as
+    the wave's own open work), so `run()`'s per-cell `abstain`/`lower-
+    error` catch would fire on every cell; the family is exercised through
+    the reference interpreter and the twin ladder only until a kernel
+    lowers a member."""
+    me = f"fz_v1strlib_{idx:03d}"
+    shape = rng.choice(["word_count", "split_row", "join_split_roundtrip",
+                        "count_pattern", "find_case", "strip_len",
+                        "replace_count", "case_map",
+                        "startswith_endswith_slice", "loop_count",
+                        "tostr_len"])
+
+    if shape == "word_count":
+        body = [LOC("t2", "seq", SLICE("s", I(0), LEN("s"))),
+               ASG("r", OP("len", OP("split", V("t2"))))]
+        ens = [OP("==", V("r"), OP("len", OP("split", V("s"))))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "split_row":
+        variant = rng.choice(["len", "index"])
+        if variant == "len":
+            body = [LOC("t2", "seq", SLICE("s", I(0), LEN("s"))),
+                   ASG("rows", OP("split", V("t2"), V("c")))]
+            ens = [OP("==", OP("len", V("rows")),
+                      OP("+", OP("count", V("s"), SEQ(V("c"))), I(1)))]
+            return {"t": 1, "name": me,
+                    "params": [{"name": "s", "type": "seq"},
+                              {"name": "c", "type": "int"}],
+                    "returns": [{"name": "rows", "type": NEST_T}],
+                    "requires": [], "ensures": ens, "body": body,
+                    "_shape": "split_row_len"}
+        splitexpr = OP("split", V("s"), V("c"))
+        body = [LOC("rows", NEST_T, splitexpr),
+               IFS(OP(">", OP("len", V("rows")), I(0)),
+                   [ASG("r", AT("rows", I(0)))], [ASG("r", SEQ())])]
+        # `rows` is a body-local, invisible to `ensures` (SPEC.md's own
+        # ensures/requires environment is params + return only), so the
+        # ensures restates `split(s, c)` directly rather than naming it.
+        ens = [OP("implies", OP(">", OP("len", splitexpr), I(0)),
+                  OP("==", V("r"), OP("at", splitexpr, I(0)))),
+              OP("implies", OP("==", OP("len", splitexpr), I(0)),
+                  OP("==", LEN("r"), I(0)))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "c", "type": "int"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body,
+                "_shape": "split_row_index"}
+
+    if shape == "join_split_roundtrip":
+        body = [LOC("trimmed", "seq", OP("strip", V("s"))),
+               LOC("rows", NEST_T, OP("split", V("s"), V("c"))),
+               ASG("r", OP("join", V("rows"), SEQ(V("c"))))]
+        ens = [OP("==", V("r"), V("s"))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "c", "type": "int"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "count_pattern":
+        two = rng.choice([True, False])
+        pat = SEQ(V("c1"), V("c2")) if two else SEQ(V("c1"))
+        params = [{"name": "s", "type": "seq"}, {"name": "c1", "type": "int"}]
+        if two:
+            params.append({"name": "c2", "type": "int"})
+        body = [LOC("t2", "seq", SLICE("s", I(0), LEN("s"))),
+               ASG("r", OP("count", V("t2"), pat))]
+        ens = [OP("==", V("r"), OP("count", V("s"), pat)),
+              OP(">=", V("r"), I(0))]
+        return {"t": 1, "name": me, "params": params,
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body,
+                "_shape": "count_two" if two else "count_one"}
+
+    if shape == "find_case":
+        body = [LOC("idx", "int", OP("find", V("s"), SEQ(V("c")))),
+               IFS(OP("==", V("idx"), I(-1)), [ASG("r", I(0))],
+                   [ASG("r", OP("+", V("idx"), I(1)))])]
+        ens = [OP("implies", OP("==", V("r"), I(0)),
+                  FA("k", I(0), LEN("s"), OP("!=", AT("s", V("k")), V("c")))),
+              OP("implies", OP(">", V("r"), I(0)),
+                  AND(OP("==", AT("s", OP("-", V("r"), I(1))), V("c")),
+                     FA("k", I(0), OP("-", V("r"), I(1)),
+                        OP("!=", AT("s", V("k")), V("c")))))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "c", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "strip_len":
+        kind = rng.choice(["strip", "lstrip", "rstrip"])
+        body = [LOC("t2", "seq", SLICE("s", I(0), LEN("s"))),
+               LOC("u", "seq", OP(kind, V("t2"))),
+               ASG("r", OP("len", V("u")))]
+        ens = [OP("<=", V("r"), LEN("s")), OP(">=", V("r"), I(0)),
+              OP("implies", OP("==", LEN("s"), I(0)), OP("==", V("r"), I(0)))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body,
+                "_shape": f"strip_len_{kind}"}
+
+    if shape == "replace_count":
+        body = [LOC("t2", "seq",
+                   OP("replace", V("s"), SEQ(V("a")), SEQ(V("b")))),
+               ASG("r", OP("count", V("t2"), SEQ(V("b"))))]
+        ens = [OP("==", V("r"),
+                  OP("+", OP("count", V("s"), SEQ(V("b"))),
+                     OP("count", V("s"), SEQ(V("a")))))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "a", "type": "int"},
+                          {"name": "b", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [OP("!=", V("a"), V("b"))],
+                "ensures": ens, "body": body, "_shape": shape}
+
+    if shape == "case_map":
+        kind = rng.choice(["lower", "upper"])
+        pred = "islower" if kind == "lower" else "isupper"
+        body = [LOC("t2", "seq", SLICE("s", I(0), LEN("s"))),
+               ASG("r", OP(kind, V("t2")))]
+        ens = [OP("==", LEN("r"), LEN("s")),
+              OP("implies", OP("isalpha", V("s")), OP(pred, V("r")))]
+        return {"t": 1, "name": me,
+                "params": [{"name": "s", "type": "seq"}],
+                "returns": [{"name": "r", "type": "seq"}],
+                "requires": [], "ensures": ens, "body": body,
+                "_shape": f"case_map_{kind}"}
+
+    if shape == "startswith_endswith_slice":
+        kind = rng.choice(["startswith", "endswith"])
+        if kind == "startswith":
+            body = [ASG("r", OP("startswith", V("s"),
+                               SLICE("s", I(0), V("n"))))]
+        else:
+            body = [ASG("r", OP("endswith", V("s"),
+                               SLICE("s", OP("-", LEN("s"), V("n")),
+                                    LEN("s"))))]
+        ens = [OP("==", V("r"), BL(True))]
+        req = [AND(OP(">=", V("n"), I(0)), OP("<=", V("n"), LEN("s")))]
+        return {"t": 1, "name": me, "gate": "quantifiers",
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "n", "type": "int"}],
+                "returns": [{"name": "r", "type": "bool"}],
+                "requires": req, "ensures": ens, "body": body,
+                "_shape": f"{kind}_slice"}
+
+    if shape == "loop_count":
+        body = [ASG("r", I(0)), LOC("i", "int", I(0)),
+               WH_DF(OP("<", V("i"), LEN("s")),
+                  [OP("==", V("r"),
+                      OP("count", SLICE("s", I(0), V("i")), SEQ(V("c")))),
+                   AND(OP(">=", V("i"), I(0)), OP("<=", V("i"), LEN("s")))],
+                  OP("-", LEN("s"), V("i")),
+                  [IFS(OP("==", AT("s", V("i")), V("c")),
+                       [ASG("r", OP("+", V("r"), I(1)))], []),
+                   ASG("i", OP("+", V("i"), I(1)))])]
+        ens = [OP("==", V("r"), OP("count", V("s"), SEQ(V("c"))))]
+        return {"t": 1, "name": me, "gate": "loops",
+                "params": [{"name": "s", "type": "seq"},
+                          {"name": "c", "type": "int"}],
+                "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": ens, "body": body, "_shape": shape}
+
+    # tostr_len: len(tostr(n + 0)) >= 1 always, and a negative n's tostr
+    # starts with '-' (45), SPEC.md's own words; the `+ 0` is a decoy
+    # OFF-BY-ONE target, `word_count`'s slice trick without a seq.
+    body = [LOC("t2", "int", OP("+", V("n"), I(0))),
+           ASG("r", OP("tostr", V("t2")))]
+    ens = [OP(">=", OP("len", V("r")), I(1)),
+          OP("implies", OP("<", V("n"), I(0)), OP("==", AT("r", I(0)), I(45)))]
+    return {"t": 1, "name": me,
+            "params": [{"name": "n", "type": "int"}],
+            "returns": [{"name": "r", "type": "seq"}],
+            "requires": [], "ensures": ens, "body": body,
+            "_shape": "tostr_len"}
+
+
 def f_wrong(rng, idx):
     """Category B: correct-by-construction, then ONE clause perturbed so the
     task is FALSE on a witness the interpreter finds. Every kernel must
@@ -2676,6 +3248,7 @@ FAMILIES = [
     ("v1seqops", f_v1seqops, 4),
     ("v1pairs", f_v1pairs, 4),
     ("v1nested", f_v1nested, 4),
+    ("v1strlib", f_v1strlib, 4),
     ("wrong", f_wrong, 3),
 ]
 
@@ -3465,6 +4038,88 @@ def probes() -> list[dict]:
         "and a seq<seq> with no rows, resolved by the declared type at "
         "the assignment; r's declared type is seq<seq>, so the `expect` "
         "hint types [] as the empty nested seq, len 0")
+
+    # --- SPEC.md "The string library (v1)": `split(s)`'s own stated edge
+    # case, "split("") == []" verbatim, true by construction, no
+    # parameter and no loop.
+    add({"t": 1, "name": "fz_p_str_splitempty",
+         "params": [], "returns": [{"name": "r", "type": {"seq": "seq"}}],
+         "requires": [],
+         "ensures": [OP("==", LEN("r"), I(0))],
+         "body": [ASG("r", OP("split", SEQ()))]},
+        "verified",
+        "SPEC.md's own words: split(\"\") == []; the empty seq has no "
+        "whitespace run to separate, so split returns the empty nested "
+        "seq, len 0")
+
+    # --- SPEC.md's own identity for `count`: "count(s, []) == len(s) + 1"
+    # verbatim, general over a PARAMETER s, no loop: the empty pattern
+    # occurs once before every element and once after, len(s) + 1 places.
+    add({"t": 1, "name": "fz_p_str_countempty",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("+", LEN("s"), I(1)))],
+         "body": [ASG("r", OP("count", V("s"), SEQ()))]},
+        "verified",
+        "SPEC.md's own words: count(s, []) == len(s) + 1, general over "
+        "any s; the empty pattern matches at every gap between elements "
+        "plus both ends")
+
+    # --- SPEC.md's own identity for `find`: "find(s, []) == 0" verbatim,
+    # general over a PARAMETER s, no loop: the empty pattern is found at
+    # the least index, 0, regardless of s's contents or length.
+    add({"t": 1, "name": "fz_p_str_findempty",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), I(0))],
+         "body": [ASG("r", OP("find", V("s"), SEQ()))]},
+        "verified",
+        "SPEC.md's own words: find(s, []) == 0, general over any s; the "
+        "empty pattern occurs at index 0 of any seq")
+
+    # --- The whitespace set, measured 2026-09-11 (test_strlib.py's parity
+    # test against real Python): 9 (tab) is one of the 10 ASCII code
+    # points, not one of the 6 an earlier draft of SPEC.md named, so a
+    # literal [65, 9, 66] ('A', TAB, 'B') must split into two one-code-
+    # point rows, ['A'] and ['B'], with the tab consumed as a separator
+    # and no empty row on either side.
+    add({"t": 1, "name": "fz_p_str_tab",
+         "params": [], "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), BL(True))],
+         "body": [LOC("rows", {"seq": "seq"},
+                     OP("split", SEQ(I(65), I(9), I(66)))),
+                  ASG("r", AND(OP("==", OP("len", V("rows")), I(2)),
+                              OP("==", AT("rows", I(0)), SEQ(I(65))),
+                              OP("==", AT("rows", I(1)), SEQ(I(66)))))]},
+        "verified",
+        "code point 9 (tab) is in SPEC.md's 10-point whitespace set "
+        "(measured 2026-09-11, test_strlib.py, correcting an earlier "
+        "6-point draft), so 'A' TAB 'B' splits into ['A'], ['B'], no "
+        "empty row on either side")
+
+    # --- SPEC.md's own words for `lower`/`upper`: "the ASCII letters ... "
+    # every other code point unchanged". A literal spanning the gaps
+    # around both letter ranges (32 space, 64 '@', 91 '[', 96 '`', 123
+    # '{') plus one code point far outside ASCII (SPEC.md gives a
+    # character no bound but 0..1114111, and the library's `lower` is
+    # total on any int, per interp.py's own `_str_lower`), none of them a
+    # letter, so `lower` must be the identity on the whole literal.
+    add({"t": 1, "name": "fz_p_str_lowernonletter",
+         "params": [], "returns": [{"name": "r", "type": "seq"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"),
+                        SEQ(I(32), I(64), I(91), I(96), I(123), I(1000000)))],
+         "body": [ASG("r", OP("lower",
+                             SEQ(I(32), I(64), I(91), I(96), I(123),
+                                I(1000000))))]},
+        "verified",
+        "32, 64, 91, 96, 123 sit in the gaps just outside both ASCII "
+        "letter ranges (65-90, 97-122) and 1000000 is far outside ASCII "
+        "entirely; SPEC.md's own words say lower leaves every non-letter "
+        "code point unchanged, so the literal is a fixed point")
     return P
 
 

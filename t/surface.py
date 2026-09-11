@@ -30,15 +30,16 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   print(parse(text)) == text on the second pass for all 1628, so printing is
   idempotent and every task has one normal form in the notation.
 
-  The 9 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
+  The 22 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
   beside (two added 2026-09-09, one for the char and string literals below
   and one for sequence literals, concatenation and slices). That
   is the check that this grammar is the documented notation and not a new
   one that resembles it.
 
-  6 of 6 shapes the notation must refuse are refused (REFUSALS, below):
+  8 of 8 shapes the notation must refuse are refused (REFUSALS, below):
   div, `and` at arity 1, a keyword used as a name, a chained comparison, `/`
-  in the lexer, and a comment.
+  in the lexer, a comment, `tostr` (a keyword since 2026-09-11) used as a
+  name, and a dot followed by an unknown string-library member.
 
   100000 of 100000 random ASTs round trip: --fuzz 20000 on each of the seeds
   1 through 5. That instrument samples the GRAMMAR, not t's semantics, and it
@@ -55,6 +56,18 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   are deliberately over DIFFERENT text: the first pass is the invariant
   (a char or string literal parses to its code point(s)); the second, as
   always, is on the canonical text the first pass's AST prints to.
+
+2026-09-11 (SPEC.md "The string library (v1)"): 17 members added (split,
+join, tostr, count, find, strip, lstrip, rstrip, replace, lower, upper,
+isdigit, isalpha, isupper, islower, startswith, endswith), a postfix
+`.name(...)` on every member but `tostr` (a plain function like `len`) and
+`join` (the notation's `sep.join(rows)` swaps the AST's own `(rows, sep)`
+argument order, its receiver second, the one member where "receiver
+first" does not hold). Measured: `python3 t/surface.py --check` with 6 new
+`written:` lines (22 total) and the corpus grown by 3 committed tasks
+(word_count, split_join, count_vowels) still round trips at 100%; see the
+live counts the command itself prints, not the numbers frozen into this
+docstring's 2026-09-04 paragraph above, which this wave did not re-measure.
 
 TWO PLACES WHERE THE OBVIOUS NOTATION WOULD HAVE LOST INFORMATION, since
 both are live in the corpus and both round trip only because they are
@@ -177,7 +190,19 @@ KEYWORDS = {
     "spec", "fun", "return", "var", "while", "invariant", "if", "then", "else",
     "forall", "exists", "in", "len", "true", "false", "and", "or", "not",
     "int", "bool", "seq",
+    "tostr",       # SPEC.md "The string library" (2026-09-11): tostr(n) is
+                   # a function like len(n), reserved the same way.
 }
+
+# SPEC.md "The string library" (2026-09-11): the 16 members reached as a
+# postfix `.name(...)` (every member but tostr, which is a plain function
+# call). These are NOT lexer keywords: `s.split()` only ever means the
+# member because the parser looks for one of these names specifically
+# after a `.`, exactly as `.0`/`.1` are recognised there without reserving
+# "0" and "1"; a task is still free to name a spec_fun or a local `split`.
+STR_METHODS = {"split", "join", "count", "find", "strip", "lstrip", "rstrip",
+              "replace", "lower", "upper", "isdigit", "isalpha", "isupper",
+              "islower", "startswith", "endswith"}
 
 # Longest match first: "==>" before "==" before "=", ":=" before ":".
 SYMBOLS = ["==>", "==", "!=", "<=", ">=", ":=", "=", "<", ">", "+", "-", "*",
@@ -639,19 +664,75 @@ class Parser:
                 e = {"op": "at", "args": [e, idx]}
                 continue
             if self.opt("sym", "."):
-                # p.0 / p.1: the pair projections (SPEC.md "Pairs",
-                # 2026-09-10). The lexer already tokenises "." and a
-                # following NAT separately (there is no float literal in t
-                # to collide with), so `.` here is unambiguously a
-                # projection and not a decimal point; only these two digits
-                # are the grammar, exactly as `and` at arity 1 has none.
-                tok = self.eat("nat")
-                if tok.text not in ("0", "1"):
-                    raise SurfaceError("line %d: a pair projection is .0 "
-                                       "or .1, found .%s"
-                                       % (tok.line, tok.text))
-                e = {"op": "fst" if tok.text == "0" else "snd", "args": [e]}
-                continue
+                if self.tok.kind == "nat":
+                    # p.0 / p.1: the pair projections (SPEC.md "Pairs",
+                    # 2026-09-10). The lexer already tokenises "." and a
+                    # following NAT separately (there is no float literal
+                    # in t to collide with), so `.` here is unambiguously a
+                    # projection and not a decimal point; only these two
+                    # digits are the grammar, exactly as `and` at arity 1
+                    # has none.
+                    tok = self.eat("nat")
+                    if tok.text not in ("0", "1"):
+                        raise SurfaceError("line %d: a pair projection is "
+                                           ".0 or .1, found .%s"
+                                           % (tok.line, tok.text))
+                    e = {"op": "fst" if tok.text == "0" else "snd",
+                        "args": [e]}
+                    continue
+                if self.tok.kind == "id" and self.tok.text in STR_METHODS:
+                    # s.split(), s.count(t), sep.join(rows), ... (SPEC.md
+                    # "The string library", 2026-09-11): postfix, so it
+                    # composes with indexing and slicing the same way .0/.1
+                    # do (s.split()[0], s.strip().lower()).
+                    name = self.eat("id").text
+                    line = self.toks[self.i - 1].line
+                    self.eat("sym", "(")
+                    margs = []
+                    if not self.at("sym", ")"):
+                        while True:
+                            margs.append(self.expr())
+                            if not self.opt("sym", ","):
+                                break
+                    self.eat("sym", ")")
+                    if name == "split":
+                        if len(margs) not in (0, 1):
+                            raise SurfaceError(
+                                "line %d: .split takes zero or one "
+                                "argument, given %d" % (line, len(margs)))
+                        e = {"op": "split", "args": [e] + margs}
+                    elif name == "join":
+                        if len(margs) != 1:
+                            raise SurfaceError(
+                                "line %d: .join takes exactly one "
+                                "argument, given %d" % (line, len(margs)))
+                        # sep.join(rows): SPEC.md's op signature is
+                        # join(rows, sep), the receiver second.
+                        e = {"op": "join", "args": [margs[0], e]}
+                    elif name == "replace":
+                        if len(margs) != 2:
+                            raise SurfaceError(
+                                "line %d: .replace takes exactly two "
+                                "arguments, given %d" % (line, len(margs)))
+                        e = {"op": "replace", "args": [e] + margs}
+                    elif name in ("count", "find", "startswith", "endswith"):
+                        if len(margs) != 1:
+                            raise SurfaceError(
+                                "line %d: .%s takes exactly one argument, "
+                                "given %d" % (line, name, len(margs)))
+                        e = {"op": name, "args": [e, margs[0]]}
+                    else:
+                        # strip, lstrip, rstrip, lower, upper, isdigit,
+                        # isalpha, isupper, islower: no arguments.
+                        if margs:
+                            raise SurfaceError(
+                                "line %d: .%s takes no arguments, given %d"
+                                % (line, name, len(margs)))
+                        e = {"op": name, "args": [e]}
+                    continue
+                raise SurfaceError(
+                    "line %d: a dot must be followed by .0, .1, or a "
+                    "string-library member" % self.tok.line)
             break
         return e
 
@@ -690,6 +771,14 @@ class Parser:
             v = self.expr()
             self.eat("sym", ")")
             return {"op": "fill", "args": [n, v]}
+        if self.at("kw", "tostr"):
+            # tostr(n): SPEC.md "The string library" (2026-09-11), a
+            # function like len(n), not a postfix member.
+            self.eat("kw")
+            self.eat("sym", "(")
+            n = self.expr()
+            self.eat("sym", ")")
+            return {"op": "tostr", "args": [n]}
         if self.opt("sym", "("):
             e = self.expr()
             if self.opt("sym", ","):
@@ -767,7 +856,15 @@ _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
 _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice": 3, "implies": 2,
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
-          "pair": 2, "fst": 1, "snd": 1}
+          "pair": 2, "fst": 1, "snd": 1,
+          # SPEC.md "The string library" (2026-09-11); `split` is excluded
+          # here (one or two arguments) and checked in its own print/parse
+          # branches instead, exactly as `seq`/`and`/`or` are excluded for
+          # their own variable arities.
+          "join": 2, "tostr": 1, "count": 2, "find": 2, "strip": 1,
+          "lstrip": 1, "rstrip": 1, "replace": 3, "lower": 1, "upper": 1,
+          "isdigit": 1, "isalpha": 1, "isupper": 1, "islower": 1,
+          "startswith": 2, "endswith": 2}
 
 
 def _wrap(text: str, prec: int, floor: int) -> str:
@@ -848,6 +945,34 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # p.0 / p.1: the projections, postfix like `at`.
         return _wrap("%s.%s" % (pexpr(args[0], P_POSTFIX),
                                 "0" if op == "fst" else "1"),
+                     P_POSTFIX, floor)
+    if op == "split":
+        # SPEC.md "The string library" (2026-09-11): s.split() / s.split(c),
+        # postfix so it composes with indexing (`s.split()[0]`).
+        if len(args) not in (1, 2):
+            raise SurfaceError("split takes one or two arguments, given %d"
+                               % len(args))
+        inner = "" if len(args) == 1 else pexpr(args[1])
+        return _wrap("%s.split(%s)" % (pexpr(args[0], P_POSTFIX), inner),
+                     P_POSTFIX, floor)
+    if op == "join":
+        # join(rows, sep): the notation reads sep.join(rows), the receiver
+        # SECOND in the AST (SPEC.md states the op's own signature as
+        # "join(rows, sep)"), swapped back here.
+        return _wrap("%s.join(%s)" % (pexpr(args[1], P_POSTFIX),
+                                      pexpr(args[0])), P_POSTFIX, floor)
+    if op == "tostr":
+        return "tostr(%s)" % pexpr(args[0])
+    if op in ("count", "find", "startswith", "endswith"):
+        return _wrap("%s.%s(%s)" % (pexpr(args[0], P_POSTFIX), op,
+                                    pexpr(args[1])), P_POSTFIX, floor)
+    if op in ("strip", "lstrip", "rstrip", "lower", "upper", "isdigit",
+             "isalpha", "isupper", "islower"):
+        return _wrap("%s.%s()" % (pexpr(args[0], P_POSTFIX), op),
+                     P_POSTFIX, floor)
+    if op == "replace":
+        return _wrap("%s.replace(%s, %s)" % (pexpr(args[0], P_POSTFIX),
+                                             pexpr(args[1]), pexpr(args[2])),
                      P_POSTFIX, floor)
     if op == "neg":
         # `-(5)`, never `-5`: the bare form is the literal node. The test is
@@ -997,7 +1122,10 @@ def print_task(task: dict) -> str:
 # 5. The measurement. Every number this file claims is produced here.
 # ===========================================================================
 
-# The nine `written:` lines of SYNTAX.md, each beside the JSON it annotates.
+# The `written:` lines of SYNTAX.md, each beside the JSON it annotates
+# (9 through 2026-09-04, +2 char/string and +5 pairs/nested-seq by
+# 2026-09-10, +6 the string library on 2026-09-11); --check reports the
+# live count as `len(WRITTEN)`, so this comment need not be kept in sync.
 # This table is what makes the grammar the DOCUMENTED notation rather than a
 # new one that resembles it; --check parses each and compares to that JSON.
 WRITTEN = [
@@ -1047,6 +1175,17 @@ WRITTEN = [
     ("stmt", "var m: seq<seq> := [];",
      {"var": {"name": "m", "type": {"seq": "seq"},
               "init": {"op": "seq", "args": []}}}),
+    # SPEC.md "The string library (v1)", added 2026-09-11.
+    ("expr", "s.split()", {"op": "split", "args": [{"var": "s"}]}),
+    ("expr", "s.split(c)",
+     {"op": "split", "args": [{"var": "s"}, {"var": "c"}]}),
+    ("expr", "sep.join(rows)",
+     {"op": "join", "args": [{"var": "rows"}, {"var": "sep"}]}),
+    ("expr", "tostr(n)", {"op": "tostr", "args": [{"var": "n"}]}),
+    ("expr", "s.count(u)",
+     {"op": "count", "args": [{"var": "s"}, {"var": "u"}]}),
+    ("expr", "s.strip().lower()",
+     {"op": "lower", "args": [{"op": "strip", "args": [{"var": "s"}]}]}),
 ]
 
 # Three more char/string probes (SPEC.md "Strings as sequences of code
@@ -1119,6 +1258,13 @@ REFUSALS = [
      "div is written /, the word is the AST's and not the notation's"),
     ("parse", "t 1 task f(x: int) returns (r: int) ensures true { r := 0 } // done",
      "there are no comments"),
+    ("print", {"t": 1, "name": "sk", "params":
+               [{"name": "tostr", "type": "seq"}], "returns":
+               [{"name": "r", "type": "seq"}], "requires": [], "ensures":
+               [{"bool": True}], "body": [{"assign": ["r", {"var": "tostr"}]}]},
+     "tostr is a keyword (SPEC.md \"The string library\") and cannot be a name"),
+    ("parse", "t 1 task f(s: seq) returns (r: seq) ensures true { r := s.upcase(); }",
+     "a dot is followed by .0, .1, or a string-library member; upcase is none"),
 ]
 
 
@@ -1149,7 +1295,7 @@ def _rand_expr(rng, depth: int) -> dict:
     kind = rng.choice([
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
         "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
-        "pair", "fst", "snd",
+        "pair", "fst", "snd", "strlib",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -1192,6 +1338,27 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"op": "pair", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind in ("fst", "snd"):
         return {"op": kind, "args": [_rand_expr(rng, d)]}
+    if kind == "strlib":
+        # SPEC.md "The string library (v1)", added 2026-09-11: 17 members,
+        # `split` at two arities of its own op.
+        op = rng.choice(["split1", "split2", "join", "tostr", "count",
+                        "find", "strip", "lstrip", "rstrip", "replace",
+                        "lower", "upper", "isdigit", "isalpha", "isupper",
+                        "islower", "startswith", "endswith"])
+        if op == "split1":
+            return {"op": "split", "args": [_rand_expr(rng, d)]}
+        if op == "split2":
+            return {"op": "split",
+                    "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
+        if op == "replace":
+            return {"op": "replace", "args": [_rand_expr(rng, d)
+                                              for _ in range(3)]}
+        if op in ("tostr", "strip", "lstrip", "rstrip", "lower", "upper",
+                 "isdigit", "isalpha", "isupper", "islower"):
+            return {"op": op, "args": [_rand_expr(rng, d)]}
+        return {"op": op,                    # join, count, find,
+                "args": [_rand_expr(rng, d),  # startswith, endswith
+                        _rand_expr(rng, d)]}
     if kind == "ite":
         return {"ite": {"cond": _rand_expr(rng, d), "then": _rand_expr(rng, d),
                         "else": _rand_expr(rng, d)}}

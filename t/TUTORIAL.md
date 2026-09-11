@@ -306,9 +306,24 @@ ones known.
 **Strings, briefly.** A string is a list of code points: write `"abc"` or
 `'a'` and t sees numbers, `[97, 98, 99]` or `97`. Nothing new to learn,
 because everything above, `len`, `s[i]`, `+`, a slice, `==`, already works
-on it; t adds no string type and no string operator, just the two literal
-forms. Escapes `\n`, `\t`, `\r`, `\0`, `\'`, `\\`, and, inside `"..."`,
-`\"`, spell the usual control characters and the quote marks.
+on it; t adds no string type, just the two literal forms. Escapes `\n`,
+`\t`, `\r`, `\0`, `\'`, `\\`, and, inside `"..."`, `\"`, spell the usual
+control characters and the quote marks.
+
+**The string library.** Since 2026-09-11, t does add string OPERATORS,
+Python's own, written Python's way: `s.split()`, `s.split(c)`,
+`sep.join(rows)`, `tostr(n)`, `s.count(t)`, `s.find(t)`, `s.strip()` (and
+`lstrip`/`rstrip`), `s.replace(t, u)`, `s.lower()`/`s.upper()`,
+`s.isdigit()`/`s.isalpha()`/`s.isupper()`/`s.islower()`, and
+`s.startswith(t)`/`s.endswith(t)`. Each is exactly Python's method of the
+same name (ASCII only for the casing and classification ones: `SPEC.md`
+"The string library (v1)"), so `len(s.split())` counts words and
+`[c].join(s.split(c)) == s` is a law you can write directly as an
+`ensures`. `split` returns a `seq<seq>`, a row per word, so it composes
+with the nested-seq lesson above: `s.split()[0]` is the first word. These
+chain like `.0`/`.1` do: `s.strip().lower()` runs left to right.
+`tasks/word_count.json`, `tasks/split_join.json` and
+`tasks/count_vowels.json` are the examples.
 
 ---
 

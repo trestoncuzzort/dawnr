@@ -57,6 +57,26 @@ bounded search is a sound proof of FALSITY and never of TRUTH:
 The domain is enumerated, never sampled: the same task always yields the same
 witness, because harness.make_twin's selection must stay deterministic and
 content-derived like the operators it chooses between.
+
+2026-09-11 (SPEC.md "The string library (v1)"): the 17 members (split,
+join, tostr, count, find, strip, lstrip, rstrip, replace, lower, upper,
+isdigit, isalpha, isupper, islower, startswith, endswith) landed here as
+direct int-tuple transcriptions of Python's own str methods, not a
+`chr()`-then-back call as first suggested: measured on the seq witness
+ladder (`ladders()` below), a `chr()` implementation raises Python's own
+ValueError (an escaping crash, not `Undef`) the first time the ladder's
+existing small-negative alphabet entries (-1, -2, -3) reach a string-lib
+op, since a code point is only ever 0..1114111 and `chr(-1)` is not one;
+the int-tuple version is total on any int instead, matching SPEC.md's
+"each total ... the library adds no undefined case". The witness alphabet
+(`ALPHA`, `STR_ALPHA`) was widened from 8 to 13 entries, adding space,
+'a', 'e', 'A', '0', so split has a whitespace run to separate on and
+isdigit/isalpha/isupper/islower each see at least one witness that holds
+and one that does not; without it every string-lib predicate was constant
+(always False) across the whole witness domain of small ints. `word_count`,
+`split_join` and `count_vowels` (tasks/) were run through
+harness.twin_cached to get a measured twin and witness, which corrected
+SPEC.md's three predicted twins to what the ladder actually finds.
 """
 from __future__ import annotations
 
@@ -125,6 +145,183 @@ class Pair:
 
 
 MAX_SEQ = 1 << 16          # fill length cap, the seq analogue of MAX_BITS
+
+
+# ---------------------------------------------------------------------------
+# SPEC.md "The string library (v1)" (2026-09-11): 17 polymorphic seq
+# operators, semantics Python's own str methods on the code-point sequence.
+# Measured 2026-09-11: a `chr()`/`str()`-then-back implementation, the
+# strategy the wave's own instructions suggested, crashes with a Python
+# ValueError on any element outside [0, 1114111] -- and t's `seq` type
+# carries any int, so a witness search over the ordinary seq ladder (which
+# includes small negatives, `_around`'s literal neighbours, and so on) WILL
+# feed one to a string-lib op sooner or later; SPEC.md says these ops are
+# "each total ... the library adds no undefined case", which a crash
+# obviously violates. Every member below is instead worked directly on the
+# tuple of ints, a transcription of what the matching Python str method
+# does (checked member by member against CPython's own behaviour on ASCII
+# input, which is what the corpus is and what the domain below is built
+# from): this is total for ANY int, never calls chr(), and is byte-for-byte
+# what `chr()`-then-Python-method would compute whenever every element
+# genuinely is a code point. `lower`/`upper`/`isdigit`/`isalpha`/`isupper`/
+# `islower` follow SPEC.md's explicit ASCII-only tables (65-90, 97-122,
+# 48-57) rather than Python's own Unicode-aware casing, exactly as SPEC.md
+# states ("the Unicode case tables are not in v1, by name") -- delegating
+# to Python's real `str.lower()` etc. would in fact do MORE than SPEC.md
+# describes for a non-ASCII code point, which is the one place "call
+# Python's method" and "read SPEC.md's own words" would disagree.
+# ---------------------------------------------------------------------------
+_WS = (9, 10, 11, 12, 13, 28, 29, 30, 31, 32)     # SPEC.md's split/strip
+                                  # text names "9, 10, 11, 12, 13, 32";
+                                  # measured 2026-09-11 against real
+                                  # Python (test_strlib.py's parity test,
+                                  # ASCII domain) that Python's own
+                                  # str.split()/str.isspace() also treat
+                                  # 28-31 (FS/GS/RS/US) as whitespace in
+                                  # ASCII, so a strict 6-point set is not
+                                  # "Python's s.split()" as SPEC.md's
+                                  # primary sentence names it; corrected
+                                  # here to the 10 ASCII code points
+                                  # `chr(c).isspace()` actually holds for.
+                                  # Full Unicode has 29 (SPEC.md's own
+                                  # ASCII-corpus stance for lower/upper/
+                                  # isX applies here too, by name).
+
+
+def _str_split_ws(s: tuple) -> tuple:
+    out, cur = [], []
+    for c in s:
+        if c in _WS:
+            if cur:
+                out.append(tuple(cur))
+                cur = []
+        else:
+            cur.append(c)
+    if cur:
+        out.append(tuple(cur))
+    return tuple(out)
+
+
+def _str_split_sep(s: tuple, c: int) -> tuple:
+    out, cur = [], []
+    for x in s:
+        if x == c:
+            out.append(tuple(cur))
+            cur = []
+        else:
+            cur.append(x)
+    out.append(tuple(cur))
+    return tuple(out)
+
+
+def _str_join(rows: tuple, sep: tuple) -> tuple:
+    if not rows:
+        return ()
+    out = list(rows[0])
+    for r in rows[1:]:
+        out += list(sep) + list(r)
+    return tuple(out)
+
+
+def _str_tostr(n: int) -> tuple:
+    return tuple(ord(c) for c in str(n))
+
+
+def _str_count(s: tuple, t: tuple) -> int:
+    if not t:
+        return len(s) + 1
+    n, i, lt, ls = 0, 0, len(t), len(s)
+    while i <= ls - lt:
+        if s[i:i + lt] == t:
+            n += 1
+            i += lt
+        else:
+            i += 1
+    return n
+
+
+def _str_find(s: tuple, t: tuple) -> int:
+    if not t:
+        return 0
+    lt, ls = len(t), len(s)
+    for i in range(ls - lt + 1):
+        if s[i:i + lt] == t:
+            return i
+    return -1
+
+
+def _str_strip(s: tuple, left: bool, right: bool) -> tuple:
+    lo, hi = 0, len(s)
+    if left:
+        while lo < hi and s[lo] in _WS:
+            lo += 1
+    if right:
+        while hi > lo and s[hi - 1] in _WS:
+            hi -= 1
+    return s[lo:hi]
+
+
+def _str_replace(s: tuple, t: tuple, u: tuple) -> tuple:
+    if not t:
+        # SPEC.md: "t == [] inserts u before every code point and at the
+        # end, as Python does."
+        out = []
+        for c in s:
+            out += list(u) + [c]
+        return tuple(out + list(u))
+    out, i, lt, ls = [], 0, len(t), len(s)
+    while i <= ls - lt:
+        if s[i:i + lt] == t:
+            out += list(u)
+            i += lt
+        else:
+            out.append(s[i])
+            i += 1
+    out += list(s[i:])
+    return tuple(out)
+
+
+def _is_upper_letter(c: int) -> bool:
+    return 65 <= c <= 90
+
+
+def _is_lower_letter(c: int) -> bool:
+    return 97 <= c <= 122
+
+
+def _str_lower(s: tuple) -> tuple:
+    return tuple(c + 32 if _is_upper_letter(c) else c for c in s)
+
+
+def _str_upper(s: tuple) -> tuple:
+    return tuple(c - 32 if _is_lower_letter(c) else c for c in s)
+
+
+def _str_isdigit(s: tuple) -> bool:
+    return len(s) > 0 and all(48 <= c <= 57 for c in s)
+
+
+def _str_isalpha(s: tuple) -> bool:
+    return len(s) > 0 and all(_is_upper_letter(c) or _is_lower_letter(c)
+                              for c in s)
+
+
+def _str_isupper(s: tuple) -> bool:
+    has = any(_is_upper_letter(c) or _is_lower_letter(c) for c in s)
+    return has and not any(_is_lower_letter(c) for c in s)
+
+
+def _str_islower(s: tuple) -> bool:
+    has = any(_is_upper_letter(c) or _is_lower_letter(c) for c in s)
+    return has and not any(_is_upper_letter(c) for c in s)
+
+
+def _str_startswith(s: tuple, t: tuple) -> bool:
+    return s[:len(t)] == t
+
+
+def _str_endswith(s: tuple, t: tuple) -> bool:
+    return len(t) <= len(s) and (len(t) == 0 or s[len(s) - len(t):] == t)
 
 
 def _bounded(v):
@@ -284,6 +481,42 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return a[0].a
     if op == "snd":
         return a[0].b
+    if op == "split":
+        # SPEC.md "The string library" (2026-09-11): split(s) on whitespace
+        # runs, split(s, c) on one code point, two arities of one op.
+        return _str_split_ws(a[0]) if len(a) == 1 else _str_split_sep(a[0], a[1])
+    if op == "join":
+        return _str_join(a[0], a[1])
+    if op == "tostr":
+        return _str_tostr(a[0])
+    if op == "count":
+        return _str_count(a[0], a[1])
+    if op == "find":
+        return _str_find(a[0], a[1])
+    if op == "strip":
+        return _str_strip(a[0], True, True)
+    if op == "lstrip":
+        return _str_strip(a[0], True, False)
+    if op == "rstrip":
+        return _str_strip(a[0], False, True)
+    if op == "replace":
+        return _str_replace(a[0], a[1], a[2])
+    if op == "lower":
+        return _str_lower(a[0])
+    if op == "upper":
+        return _str_upper(a[0])
+    if op == "isdigit":
+        return _str_isdigit(a[0])
+    if op == "isalpha":
+        return _str_isalpha(a[0])
+    if op == "isupper":
+        return _str_isupper(a[0])
+    if op == "islower":
+        return _str_islower(a[0])
+    if op == "startswith":
+        return _str_startswith(a[0], a[1])
+    if op == "endswith":
+        return _str_endswith(a[0], a[1])
     if op == "+":
         if isinstance(a[0], tuple):
             # s + t on two seqs is concatenation (SPEC.md "Sequences:
@@ -441,7 +674,12 @@ INTS = ((0, 1, -1, 2, -2)
 
 BOOLS = (False, True)
 
-ALPHA = 8               # sequence element alphabet size
+ALPHA = 13              # sequence element alphabet size; 8 through
+                        # 2026-09-10, raised to 13 on 2026-09-11 (SPEC.md
+                        # "The string library") to fit STR_ALPHA's five
+                        # code points ahead of the truncation below without
+                        # crowding out the literal-derived witnesses a
+                        # non-string seq task still needs.
 
 
 def _dedup(vs):
@@ -513,11 +751,38 @@ def _nested_seq_ladder(rows: tuple) -> tuple:
     return _seq_ladder(rows[:NESTED_ROWS])
 
 
+STR_ALPHA = (32, 97, 101, 65, 48)   # space, 'a', 'e', 'A', '0': added
+                                     # 2026-09-11 for SPEC.md "The string
+                                     # library" so split (needs a
+                                     # whitespace run to separate on) and
+                                     # the predicates isdigit/isalpha/
+                                     # isupper/islower (each need a
+                                     # witness that is one and one that
+                                     # is not) have inputs where the
+                                     # answer is not vacuous; without
+                                     # this the seq alphabet was only
+                                     # small ints and every string-lib
+                                     # predicate was constant on the
+                                     # whole witness domain.
+
+
 def ladders(task: dict) -> dict:
     lits = literals(task)
     ints = tuple(_dedup([0, 1, -1] + _around(lits) + list(INTS)))
+    # STR_ALPHA is appended LAST, not spliced in earlier: _seq_ladder builds
+    # combinations by ALPHABET INDEX (shell order over positions), so
+    # inserting new entries before the literal-derived ones would shift
+    # every existing task's alphabet indices and could silently change
+    # which witness a pre-2026-09-11 task's twin ladder finds first --
+    # exactly the kind of regression this file has no test for except by
+    # re-deriving it. Appending after `[2, -2, 3, -3]` keeps the first 8
+    # dedup'd entries BYTE-IDENTICAL to ALPHA's old value of 8, so every
+    # committed task's already-documented witness (divmod_pair, min_max,
+    # swap_rows, row_max_len) is unchanged; verified 2026-09-11 by
+    # re-running harness.twin_cached on each and comparing to SPEC.md's
+    # committed witness text.
     alpha = tuple(_dedup([0, 1, -1] + _around(lits)
-                         + [2, -2, 3, -3])[:ALPHA])
+                         + [2, -2, 3, -3] + list(STR_ALPHA))[:ALPHA])
     seqs = _seq_ladder(alpha)
     return {"int": ints, "seq": seqs, "bool": BOOLS,
             "nested_seq": _nested_seq_ladder(seqs)}
