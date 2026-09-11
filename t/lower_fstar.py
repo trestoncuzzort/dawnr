@@ -1034,21 +1034,21 @@ tasks, real and twin, `lower()` then `verifiers.fstar.verify()` directly
   relowered BYTE-IDENTICAL to HEAD 7bcd2fa's own `lower_fstar.py` output,
   every one, confirmed by diffing both trees' full `lower()` output for
   all 26 task files side by side -- this file's own diff against HEAD is
-  purely additive (205 insertions, 0 deletions: every new branch is an
+  purely additive (329 insertions, 0 deletions: every new branch is an
   `if op == "<member>"` this file did not check before, so a task that
   never asks for one takes the exact same path it always did).
 
   Family (`fuzz_lower.py --only fstar --tasks
   fz_v1strlib_001,...,fz_v1strlib_098 --n 400 --seed 1 --flake 3 --jobs 8`,
-  as instructed): of the 16 named tasks, only 2 exist in this family's
+  as instructed): of the 17 named tasks, only 2 exist in this family's
   seed-1/n-400 generated corpus at all (`fz_v1strlib_007`,
-  `fz_v1strlib_031`; the other 14 names are not this seed's output --
+  `fz_v1strlib_031`; the other 15 names are not this seed's output --
   measured, not investigated further this pass, named as its own open
   question rather than assumed). `fz_v1strlib_007`: VERIFIED/REFUTED,
   COUNTS, stable across the 3 flake reruns (wall ~6.8s). `fz_v1strlib_031`
   reaches `tostr`: ABSTAIN, exactly the named-abstain message above, not a
   lower-error. The 400-wide sweep across the family's own generator
-  (rather than this fixed 16-name list) was NOT run this pass -- named as
+  (rather than this fixed 17-name list) was NOT run this pass -- named as
   open, not claimed.
 
 OPEN, BY NAME: the join-of-split law (`split_join`'s real lowering,
@@ -1056,8 +1056,8 @@ UNPROVED); the count-against-a-loop step lemma (`count_vowels`'s real
 lowering, TIMEOUT); the eleven un-landed members (`tostr`, `find`,
 `replace`, `lower`, `upper`, `isdigit`, `isalpha`, `isupper`, `islower`,
 `startswith`, `endswith`), each a clean abstain wherever a task reaches
-it; the full 400-wide `v1strlib` family sweep (only the fixed 16-name
-list, itself mostly a miss, was run); why 14 of the 16 names are absent
+it; the full 400-wide `v1strlib` family sweep (only the fixed 17-name
+list, itself mostly a miss, was run); why 15 of the 17 names are absent
 from the seed-1/n-400 corpus. Landed and measured, not claimed beyond
 what is written above: `split`/`join`/`strip`/`lstrip`/`rstrip`/`count`
 typecheck, terminate, and (for `count`/`split`/`join`/`strip` alone, no

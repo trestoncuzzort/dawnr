@@ -127,7 +127,7 @@ CC_SPLITS = ("codecontests_train.jsonl.gz", "codecontests_valid.jsonl.gz",
 # the name from this shared list, only from that one site. `string-lib`
 # split the same way (2026-09-11), but into a gap and a BURDEN, not four
 # gaps: SPEC.md's "The string library (v1)" landed that day naming
-# exactly sixteen members, and a solution-constructs-only site (no
+# seventeen members (sixteen methods and tostr), and a solution-constructs-only site (no
 # io-types reader ever produced `string-lib`, so it stays out of this
 # shared tuple, same as `string-lib-v1`) now tags the burden
 # `string-lib-v1` when EVERY string-library use in the solution is one of
@@ -295,7 +295,7 @@ ORD_CHR_CALLS = {"ord", "chr"}
 # `string-lib` split into the burden `string-lib-v1` and a narrower gap
 # (2026-09-11, the same day SPEC.md's "The string library (v1)" landed;
 # read the dated docstring note above for the story). SPEC.md names
-# exactly sixteen v1 members: split (both arities), join, tostr, count,
+# seventeen v1 members (sixteen methods and tostr): split (both arities), join, tostr, count,
 # find, strip/lstrip/rstrip (no-argument form only), replace, lower,
 # upper, isdigit, isalpha, isupper, islower, startswith, endswith. These
 # two sets cover the STRING_METHODS members that ARE in v1 in every form

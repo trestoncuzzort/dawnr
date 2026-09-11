@@ -576,7 +576,7 @@ THE STRING LIBRARY (added 2026-09-11, SPEC.md "The string library (v1)"):
   `[]`), count_vowels (invariant-drop twin REFUTED, witness exit at
   `s=[]`, `i=0`, `r=1`). (b) the family: `fuzz_lower.py --only dafny --n
   400 --seed 1 --flake 3 --jobs 8` (the `--tasks` name list this wave was
-  given, `fuzz-strlib-names.txt`, matched only 2 of its 16 names against
+  given, `fuzz-strlib-names.txt`, matched only 2 of its 17 names against
   this exact corpus -- unwitnessed why, since `--n`/`--seed` alone should
   be deterministic against the CURRENT `fuzz_lower.py`, which this file
   does not own or edit; both matched tasks read as expected,

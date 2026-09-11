@@ -940,7 +940,7 @@ these shapes shifted since `fuzz-strlib-names.txt` was written -- more
 families were added upstream of `v1strlib` in the same RNG stream since;
 this run's own `corpus.json` names are the current ones, re-derived by
 calling `build_corpus` directly rather than trusting the stale file):
-9 of 17 shapes VERIFIED/REFUTED (`word_count`, `split_row_index`,
+8 of 17 shapes VERIFIED/REFUTED, a ninth VERIFIED with a nonrefuting twin (`word_count`, `split_row_index`,
 `count_one`, `count_two`, `join_split_roundtrip`, `split_row_len`,
 `startswith_slice`, `endswith_slice`, and `tostr_len` VERIFIED/unproved --
 the latter is SPEC's own documented `+nonrefuting` case, not a gap, see

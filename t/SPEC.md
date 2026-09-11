@@ -655,9 +655,11 @@ greedy order is split, str(), join, count, strip, format, replace,
 int(x, base), rstrip, find, lower, f-strings, upper, isdigit, isalpha;
 twelve members reach 240 of 298. The corpus is Python and the model
 writes what it knows, so the semantics are Python's, exactly, one member
-at a time, with the reference interpreter calling Python's own `str`
-methods on the code-point sequence, so parity is by construction and the
-kernels are measured against it.
+at a time, with the reference interpreter transcribing each method over
+tuples of ints (never calling Python's `str` or `chr`, so it stays total on
+any int) and parity with Python's own `str` methods measured by
+`test_strlib.py` on 2,000 sequences per member; the kernels are measured
+against it.
 
 A string is a `seq` of code points and a list of strings a `seq<seq>`
 (the two sections above); the library adds no type. It adds polymorphic

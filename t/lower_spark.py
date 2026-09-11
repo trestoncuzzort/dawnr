@@ -1162,7 +1162,7 @@ THE STRING LIBRARY (v1), SPEC.md 2026-09-11 (ROADMAP 12.7, the wave after
 nested sequences). Seventeen members (split's two arities counted as
 one, per SPEC.md), each restated as this kernel's own definition in the
 prelude, each a total Len/Elem-and-T_Range recursive function, gated
-member by member (needs_strcore plus eleven needs_str_* flags, Lower,
+member by member (needs_strcore plus twelve needs_str_* flags, Lower,
 above) rather than behind one shared flag: gnatprove proves every
 declared subprogram in the emitted file, so one member's own unproved
 contract would otherwise fail every OTHER task sharing a file with it.

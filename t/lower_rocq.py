@@ -2429,8 +2429,8 @@ Ltac t_nseq_eqb_case n f g :=
      ZERO lowering crashes (`ty`/`seq_fn`/`nested_fn`/`zx`/`bx`/`prop`
      dispatch on all seventeen ops without exception on every task the
      family drew) and ZERO disagreements/vs-truth mismatches. 4 of 17
-     real lowerings VERIFIED (fz_v1strlib_004/007/070/190); of those, 3
-     had their twin REFUTED (004, 190, and one more) and 1 (007) had an
+     real lowerings VERIFIED (fz_v1strlib_004/007/070/190); of those, 2
+     had their twin REFUTED (004, 190) and 2 (007, 070) had an
      unproved twin (the same seq-return-value-witness gap named above).
      The other 13 real lowerings read UNPROVED: the lemmas landed here
      are the three committed tasks' own needs (the split/join round trip,

@@ -18,6 +18,12 @@ lets the most problems' whole member set be covered).
 
 Written 2026-09-11 for the string-library design (ROADMAP 12.7, the wave
 after nested sequences); reads the same files nl_census.py reads.
+
+Updated 2026-09-11, later the same day: nl_census.py split the tag into the
+burden `string-lib-v1` and the narrowed gap `string-lib`; this instrument
+now counts a problem as using the library when it carries either, so the
+member tables keep covering all library use, while the sole set follows the
+narrowed gap. The pre-split reading is kept in the table's own dated line.
 """
 from __future__ import annotations
 import argparse, ast, collections, sys, time
@@ -97,7 +103,8 @@ def main() -> int:
         programs.extend(proc(a.limit))
     assert not PENDING, "a scan without a record"
     rows = [(p, p["_scan"]) for p in programs]
-    lib = [(p, m) for p, m in rows if "string-lib" in p.get("gaps", [])]
+    lib = [(p, m) for p, m in rows
+           if "string-lib" in p.get("gaps", []) or "string-lib-v1" in p.get("burdens", [])]
     sole_all = [(p, m) for p, m in lib if set(p.get("gaps", [])) == {"string-lib"}]
     sole_fn = [(p, m) for p, m in sole_all if p.get("shape") == "function"]
     sole = sole_all
@@ -130,13 +137,18 @@ def main() -> int:
     elapsed = time.time() - t0
     w = []
     w.append(f"# The string library, member by member (nl/ census, {time.strftime('%Y-%m-%d')})\n")
-    w.append(f"{len(programs)} problems read the way COVERAGE-nl.md reads them; {len(lib)} tagged "
-             f"`string-lib`; {len(sole)} with `string-lib` as their only gap ({len(sole_fn)} function-shaped, "
+    w.append(f"{len(programs)} problems read the way COVERAGE-nl.md reads them; {len(lib)} use the library "
+             f"(tagged `string-lib`, the gap, or `string-lib-v1`, the burden, since the 2026-09-11 split); "
+             f"{len(sole)} with the gap `string-lib` as their only gap ({len(sole_fn)} function-shaped, "
              f"the census's sole blockers, and {len(sole) - len(sole_fn)} stdin-shaped, which also wait on a signature); "
              f"{nomember} of those use no member this scan sees (an f-string-free `str()`-free tag "
              f"the census gives for `sorted` on a string, or a method reached through a value). "
              f"Run time {elapsed:.1f}s.\n")
     w.append("## Members, by problems using them\n")
+    w.append("First read on 2026-09-11 before nl_census.py split the tag (13,266 tagged, 3,103 sole: 298 "
+             "function-shaped, 2,805 stdin; the greedy order that fixed v1's members was taken over that sole set, "
+             "ROADMAP 12.7). Since the split this table counts the gap and the burden together as library use, "
+             "and the sole set is the narrowed gap's: the members v1 covers no longer keep anything out.\n")
     w.append("| member | problems (all string-lib) | of which function-shaped | among the sole blockers |")
     w.append("|---|---:|---:|---:|")
     for x, c in by_member.most_common():
