@@ -51,6 +51,25 @@ The server is the caller's: `ollama serve` bound to one GPU, started for
 the run and killed at its end (the standing rule on this box). This file
 never starts one; generate refuses with the connection error when none
 answers. Standard library only, plus t's own modules.
+
+2026-09-11: `--pool v3` (SPEC-EXPERIMENT-pool-v2.md's sequel, unwritten as
+a separate file; see this docstring and pool_report's own reasons for the
+measurement). v3 = v2's pool, unioned with every problem v2 still refuses
+whose test assertions parse once `mbpp_dfy.parse_assertion`'s new
+`nested_strings` flag is on too (a `seq-of-seq` argument or expected value
+built only from Python string literals, SPEC.md's "Nested sequences"
+applied to a list of words) AND whose reference solution's own
+string-library use, if any, is entirely SPEC.md's "The string library
+(v1)" sixteen members in v1 forms (`mbpp_dfy.string_lib_v1_only`, a thin
+wrap of `nl_census.solution_tags`). `--prompt v3` adds the string
+library's notation (GRAMMAR_V3) and two more few-shot tasks,
+`word_count` and `split_join` from `tasks/`, printed by `surface.py`
+(unlike v2's two hand-written extras, these use no char/string sugar
+`surface.print_task` cannot round-trip, so the committed tasks themselves
+serve directly). v1 and v2's `pool()`/`pool_report()`/`fewshot_text()`/
+`build_prompt()` outputs are unchanged (v3 is additive, reached only
+through the new branch of `_pool_settings`/`pool`/`pool_report`, and the
+new `PROMPT_VERSIONS` member).
 """
 from __future__ import annotations
 
@@ -92,7 +111,7 @@ def outdir(model: str) -> Path:
 
 # ------------------------------------------------------------------ pool --
 
-POOL_VERSIONS = ("v1", "v2")
+POOL_VERSIONS = ("v1", "v2", "v3")
 
 
 def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
@@ -108,12 +127,22 @@ def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
     Python string literal parses into a t character or a t `seq` of code
     points instead of being refused; the expected value may now also be a
     `seq` (a string result), since `seq` has been a legal t return type
-    since 2026-09-09 ("Sequences as values")."""
+    since 2026-09-09 ("Sequences as values").
+
+    v3: v2's settings, plus `seq-of-seq` as an allowed kind (a list of
+    strings, `mbpp_dfy.parse_assertion`'s `nested_strings=True` reading,
+    SPEC.md "Nested sequences" applied to strings). `pool()`'s v3 branch
+    also runs `mbpp_dfy.string_lib_v1_only` against the reference
+    solution, which this tuple alone cannot express, so `pool()`/
+    `pool_report()` read `version == "v3"` directly for that half rather
+    than folding it in here."""
+    if version == "v3":
+        return True, ("int", "bool", "seq", "seq-of-seq")
     if version == "v2":
         return True, ("int", "bool", "seq")
     if version == "v1":
         return False, ("int", "bool")
-    raise ValueError("pool version must be v1 or v2, got %r" % version)
+    raise ValueError("pool version must be v1, v2 or v3, got %r" % version)
 
 
 def pool(version: str = "v1") -> dict[int, dict]:
@@ -123,14 +152,22 @@ def pool(version: str = "v1") -> dict[int, dict]:
     t's int/bool/seq<int> argument fragment and every expected value is an
     int or a bool. v2: strings are admitted (arguments and results), typed
     as seq (mbpp_dfy.parse_assertion(strings=True)), and a seq expected
-    value is admitted too. Either way a problem with even one refused
-    assertion is out, and the refusal reasons are counted in
+    value is admitted too. v3 (2026-09-11): v2's reading, plus a list of
+    strings (`nested_strings=True`, kind `seq-of-seq`) as an argument or
+    expected value, admitted only when the reference solution's own
+    string-library use, if any, is entirely SPEC.md's v1 members in v1
+    forms (`mbpp_dfy.string_lib_v1_only`); a problem already admitted
+    under v2's own reading needs no solution check; only NEW v3 admissions
+    (`seq-of-seq` used) go through it. Either way a problem with even one
+    refused assertion is out, and the refusal reasons are counted in
     `pool_report`."""
     strings, allowed = _pool_settings(version)
+    nested = version == "v3"
     recs = mbpp_dfy.mbpp_records()
     out = {}
     for tid, r in sorted(recs.items()):
-        pts = [mbpp_dfy.parse_assertion(a, strings=strings) for a in r["test_list"]]
+        pts = [mbpp_dfy.parse_assertion(a, strings=strings, nested_strings=nested)
+               for a in r["test_list"]]
         if not pts or not all(p["ok"] for p in pts):
             continue
         if not all(p["expected"][0] in allowed for p in pts):
@@ -138,19 +175,35 @@ def pool(version: str = "v1") -> dict[int, dict]:
         fns = {p["fn"] for p in pts}
         if len(fns) != 1:
             continue
-        out[tid] = {"rec": r, "points": pts, "fn": fns.pop()}
+        fn = fns.pop()
+        if nested and any(p["expected"][0] == "seq-of-seq" or
+                           any(a[0] == "seq-of-seq" for a in p["args"]) for p in pts):
+            if not mbpp_dfy.string_lib_v1_only(r.get("code", ""), fn):
+                continue
+        out[tid] = {"rec": r, "points": pts, "fn": fn}
     return out
 
 
 def pool_report(version: str = "v1") -> dict:
     strings, allowed = _pool_settings(version)
+    nested = version == "v3"
     recs = mbpp_dfy.mbpp_records()
     why: dict[str, int] = {}
     n_ok = 0
     for tid, r in recs.items():
-        pts = [mbpp_dfy.parse_assertion(a, strings=strings) for a in r["test_list"]]
+        pts = [mbpp_dfy.parse_assertion(a, strings=strings, nested_strings=nested)
+               for a in r["test_list"]]
         bad = [p["why"] for p in pts if not p["ok"]]
-        if not bad and pts and all(p["expected"][0] in allowed for p in pts):
+        ok = not bad and pts and all(p["expected"][0] in allowed for p in pts)
+        if ok and nested:
+            fns = {p["fn"] for p in pts}
+            fn = fns.pop() if len(fns) == 1 else None
+            needs_check = any(p["expected"][0] == "seq-of-seq" or
+                               any(a[0] == "seq-of-seq" for a in p["args"]) for p in pts)
+            if needs_check and (fn is None or not mbpp_dfy.string_lib_v1_only(r.get("code", ""), fn)):
+                ok = False
+                bad = ["solution:string-lib"]
+        if ok:
             n_ok += 1
             continue
         for w in bad or ["expected:%s" % ",".join(sorted({p["expected"][0] for p in pts if p["ok"]}))]:
@@ -216,7 +269,7 @@ ints and a yes/no answer as bool.
 Reply with exactly one t task inside a ```t fenced block and nothing else.
 """
 
-PROMPT_VERSIONS = ("v1", "v2")
+PROMPT_VERSIONS = ("v1", "v2", "v3")
 
 # GRAMMAR_V2 is GRAMMAR plus the sequence trio (literal, concatenation,
 # slice) and the string sugar (SPEC.md "Sequences: literals, concatenation,
@@ -353,23 +406,153 @@ task extract_digits(s: seq) returns (r: seq)
 """),
 ]
 
+# GRAMMAR_V3 is GRAMMAR_V2 plus SPEC.md "The string library (v1)" (stated
+# 2026-09-11): the sixteen v1 members, written Python's own method
+# syntax, and the RULES paragraph's blanket "no string library" line
+# replaced by the precise not-in-v1 list (so the model is told what DOES
+# exist, not only what does not). A separate constant, not a patch to
+# GRAMMAR_V2, so --prompt v1 and v2 stay byte-for-byte what they always
+# were.
+GRAMMAR_V3 = """\
+t is a tiny verified language. A t task is written like this:
+
+    t 0                            (t 1 when the task uses locals, loops,
+                                    seq, quantifiers, spec funs or recursion)
+    gate loops                     (t 1 only: loops | recursion | quantifiers)
+    task NAME(p1: int, p2: seq) returns (r: int)
+      requires EXPR                (zero or more; conjoined)
+      ensures EXPR                 (one or more; conjoined; the contract)
+      decreases EXPR               (only when the task calls itself)
+    spec fun F(a: int): int         (optional helper for the spec, t 1 only)
+      decreases a
+    = EXPR
+    {
+      STATEMENTS
+    }
+
+Types: int (unbounded mathematical integer), bool, seq (a sequence of ints;
+usable as a parameter, a return, or a local, t 1 only). Exactly one return,
+int, bool, or seq. Every path through the body must assign the return
+variable.
+
+Statements:  r := EXPR;    var i: int := EXPR;    var a: seq := EXPR;
+             if EXPR { ... } else { ... }
+             while EXPR invariant EXPR ... decreases EXPR { ... }
+Every while needs invariants strong enough to prove the ensures at exit and
+one decreases expression that is >= 0 and strictly decreases. `else { }` may
+be empty but must be present.
+
+Expressions: integer literals, true, false, names, ( ), + - * (no division,
+no modulo, no shifts), unary -, == != < <= > >=, not, and, or, ==> (implies),
+if C then A else B, len(s), s[i], forall i in [lo, hi) . BODY,
+exists i in [lo, hi) . BODY, F(args) for a spec fun.
+
+SEQUENCES: [e1, ..., en] is a sequence literal, any number of int elements,
+[] the empty sequence. s + t concatenates two sequences (the same + used on
+numbers; t picks the meaning from the types on either side, an int-and-seq
++ is ill-typed). s[a..b] is the slice from position a up to but not
+including b, defined only when 0 <= a <= b <= len(s); s[a..] means
+s[a..len(s)] and s[..b] means s[0..b]. s[i := v] is s with position i
+replaced by v (same range rule); seq(n, v) is n copies of v. Two sequences
+are == when they have the same length and the same element at every
+position.
+
+STRINGS: t has no string type; a string is a seq of Unicode code points.
+'a' is a character literal, its code point (so 'a' is 97), and "abc" is a
+string literal, the sequence [97, 98, 99]; "" is the empty string, the same
+value as []. Escapes \\n \\t \\r \\0 \\' \\\\, and inside "..." also \\", spell
+the usual control characters and the quote marks. len, s[i], +, a slice,
+and == already work on a string because a string is a seq.
+
+THE STRING LIBRARY (v1): written Python's own method syntax, every member
+total (defined for every input):
+    s.split()            seq -> seq<seq>: runs of whitespace separate,
+                          leading/trailing whitespace dropped, no row
+                          empty; split("") == [].
+    s.split(c)            seq, int -> seq<seq>: split on one code point c,
+                          every occurrence separates, empty rows kept.
+    sep.join(rows)        seq<seq>, seq -> seq: sep between consecutive
+                          rows of `rows`.
+    tostr(n)              int -> seq: decimal digits, '-' for negative n.
+    s.count(t)             seq, seq -> int: non-overlapping occurrences of
+                          t in s, left to right.
+    s.find(t)              seq, seq -> int: least index where t occurs in
+                          s, -1 when it does not.
+    s.strip() / s.lstrip() / s.rstrip()   seq -> seq: whitespace trimmed
+                          at both ends / the left / the right.
+    s.replace(t, u)         seq, seq, seq -> seq: every occurrence of t
+                          replaced by u, left to right.
+    s.lower() / s.upper()   seq -> seq: ASCII letters cased, every other
+                          code point unchanged.
+    s.isdigit() / s.isalpha() / s.isupper() / s.islower()   seq -> bool.
+    s.startswith(t) / s.endswith(t)   seq, seq -> bool.
+A library member in specification position (an ensures, a requires, a spec
+fun body) is the same function: `ensures len(s.split(c)) == s.count([c]) +
+1` is valid.
+
+RULES THE PARSER ENFORCES. These operators and names DO NOT EXIST in t and
+make the task unparseable: / % ** ^ & | << >> bin abs min max pow sum
+range. There are no floats, tuples, arrays, dictionaries, sets, or
+comments. Outside the sixteen string-library members above, in the forms
+shown, nothing else from Python's string library exists in t: no format,
+no f-strings, no int(x, base), no strip/lstrip/rstrip with a `chars`
+argument, no split on a separator longer than one code point, no
+splitlines, no zfill/center/ljust/rjust, no title/capitalize/swapcase, no
+partition, no encode -- write what it would have done with the members
+above, the sequence operations, a loop, or a spec fun.
+Quantifier ranges are half-open: `forall i in [lo, hi) . P` means
+lo <= i < hi. Every `if` has both branches: `if C { ... } else { ... }`,
+with `else { }` when there is nothing to do. A task that calls itself
+needs `gate recursion` and a `decreases EXPR` line after its ensures, and
+its ensures may not mention the task's own name (use a spec fun). A
+condition is a bool expression: write `r := (a == b);`, never `r := a == b
+? ...`. Loop variables are declared with `var i: int := 0;` and sequence
+locals with `var a: seq := EXPR;`.
+
+Division and modulo are not in the language. If the problem needs them,
+compute the quantity with a loop of repeated subtraction, or define it with
+a recursive spec fun; never write / or %.
+
+The ensures must say what the result IS, not merely that it exists; a spec
+the tests would disagree with is wrong, and `ensures true` is worthless.
+requires must admit every input the tests use. Encode a list or a string as
+a seq of ints (the notation's "..." and 'x' are sugar for exactly that) and
+a yes/no answer as bool.
+
+Reply with exactly one t task inside a ```t fenced block and nothing else.
+"""
+
+# Two more few-shot tasks for --prompt v3, using the string library
+# GRAMMAR_V3 adds. Unlike FEWSHOT_V2_EXTRA (hand-written text: v2's two
+# examples use the char/string SUGAR surface.print_task never emits),
+# these use only the library's Python-method notation, which
+# surface.print_task prints exactly as written, so they are read straight
+# from the committed, verified tasks (SPEC.md "The string library (v1)":
+# measured via harness.twin_cached, both real/twin-witnessed), the same
+# way FEWSHOT's five are.
+FEWSHOT_V3_EXTRA = ["word_count", "split_join"]
+
 
 def fewshot_text(version: str = "v1") -> str:
     if version not in PROMPT_VERSIONS:
-        raise ValueError("prompt version must be v1 or v2, got %r" % version)
+        raise ValueError("prompt version must be v1, v2 or v3, got %r" % version)
     parts = []
     for name in FEWSHOT:
         task = harness.load(HERE / "tasks" / f"{name}.json")
         parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
-    if version == "v2":
+    if version in ("v2", "v3"):
         for _, text in FEWSHOT_V2_EXTRA:
             parts.append("```t\n" + text.rstrip() + "\n```")
+    if version == "v3":
+        for name in FEWSHOT_V3_EXTRA:
+            task = harness.load(HERE / "tasks" / f"{name}.json")
+            parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
     return "\n\n".join(parts)
 
 
 def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
     if version not in PROMPT_VERSIONS:
-        raise ValueError("prompt version must be v1 or v2, got %r" % version)
+        raise ValueError("prompt version must be v1, v2 or v3, got %r" % version)
     r = entry["rec"]
     tests = "\n".join(r["test_list"])
     arity = len(entry["points"][0]["args"])
@@ -380,7 +563,7 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
             f"of type(s) {kinds}, in the order the tests pass them, returning "
             f"{ret}. The tests must pass and the ensures must specify the "
             f"result.")
-    grammar = GRAMMAR_V2 if version == "v2" else GRAMMAR
+    grammar = GRAMMAR_V3 if version == "v3" else (GRAMMAR_V2 if version == "v2" else GRAMMAR)
     return [{"role": "system", "content": grammar + "\nExamples of complete t tasks:\n\n" + fewshot_text(version)},
             {"role": "user", "content": user}]
 
@@ -561,6 +744,22 @@ def _count(body, key) -> int:
 
 # ----------------------------------------------------------------- tests --
 
+def _as_interp_value(kind: str, val):
+    """A parsed point's (kind, val) as the tuple-shaped value interp.py
+    itself uses: a plain seq is a tuple (unchanged since the v2 fix
+    below), and a seq-of-seq (SPEC.md "Nested sequences", pool v3:
+    mbpp_dfy.parse_assertion's nested_strings reading) is a tuple of
+    tuples, one per row -- interp.py's own nested-seq representation
+    (`_nested_seq_ladder`'s `rows: tuple`), not the plain list of lists
+    mbpp_dfy.parse_assertion hands back. int, bool and negative-int kinds
+    pass through unchanged."""
+    if kind == "seq-of-seq":
+        return tuple(tuple(row) for row in val)
+    if kind == "seq":
+        return tuple(val)
+    return val
+
+
 def run_point(task: dict, point: dict) -> dict:
     """One assertion against the task: {"verdict": pass|fail|requires-excluded|
     undefined|budget|arity|type, ...}. Arguments map positionally."""
@@ -570,9 +769,14 @@ def run_point(task: dict, point: dict) -> dict:
         return {"verdict": "arity", "why": f"{len(args)} args for {len(params)} params"}
     env = {}
     for p, (kind, val) in zip(params, args):
-        if kind != p["type"]:
+        # A seq-of-seq argument is still a t `seq` PARAMETER: t's type
+        # name carries no nesting depth, only the runtime value does
+        # (2026-09-11, pool v3), so it is accepted wherever the task
+        # declares "seq", the same as a plain seq argument always was.
+        decl_ok = kind == p["type"] or (kind == "seq-of-seq" and p["type"] == "seq")
+        if not decl_ok:
             return {"verdict": "type", "why": f"{p['name']} is {p['type']}, test passes {kind}"}
-        env[p["name"]] = tuple(val) if kind == "seq" else val
+        env[p["name"]] = _as_interp_value(kind, val)
     ret = task["returns"][0]["name"]
     funs = interp.funs_of(task, task["body"])
     st = interp.St()
@@ -590,14 +794,16 @@ def run_point(task: dict, point: dict) -> dict:
     ekind, eval_ = point["expected"]
     if got is None:
         return {"verdict": "undefined", "why": "no path assigned the return"}
-    # interp represents a seq value as a tuple (env setup above does the
-    # same on the way in); mbpp_dfy.parse_assertion's expected value is a
-    # plain list, so a seq comparison needs the same normalization the
-    # arguments already get, or a correct seq answer compares unequal to
-    # itself (tuple != list) and every seq-expected point misreports
-    # "fail". Unreachable under the v1 pool, which never admits a seq
-    # expected value; live once --pool v2 does.
-    eval_cmp = tuple(eval_) if ekind == "seq" else eval_
+    # interp represents a seq value as a tuple, and a nested seq as a
+    # tuple of tuples (env setup above does the same on the way in);
+    # mbpp_dfy.parse_assertion's expected value is a plain list (or list
+    # of lists), so a seq/seq-of-seq comparison needs the same
+    # normalization the arguments already get, or a correct answer
+    # compares unequal to itself (tuple != list) and every such point
+    # misreports "fail". Unreachable under the v1 pool, which never
+    # admits a seq expected value; live once --pool v2 (seq) or --pool v3
+    # (seq-of-seq, added 2026-09-11) does.
+    eval_cmp = _as_interp_value(ekind, eval_)
     ok = (isinstance(got, bool) == (ekind == "bool")) and got == eval_cmp
     return {"verdict": "pass" if ok else "fail", "got": interp._j(got), "expected": eval_}
 
@@ -812,15 +1018,21 @@ def main(argv=None) -> int:
         p.add_argument("--model", default="qwen2.5-coder:7b")
         p.add_argument("--pool", choices=POOL_VERSIONS, default="v1",
                         help="v1 (default, frozen 2026-09-08: int/bool "
-                             "arguments and results only) or v2 (admits "
+                             "arguments and results only), v2 (admits "
                              "MBPP tests whose arguments or results are "
-                             "Python strings, typed as seq)")
+                             "Python strings, typed as seq), or v3 "
+                             "(v2 plus a list-of-strings argument or "
+                             "result, seq-of-seq, when the reference "
+                             "solution's string-library use is all v1 "
+                             "members in v1 forms)")
         if name == "generate":
             p.add_argument("--prompt", choices=PROMPT_VERSIONS, default="v1",
-                            help="v1 (default, frozen) or v2 (grammar and "
+                            help="v1 (default, frozen), v2 (grammar and "
                                  "few-shots add the sequence literal/"
                                  "concat/slice trio and the char/string "
-                                 "sugar)")
+                                 "sugar), or v3 (v2 plus the string "
+                                 "library's notation and two more "
+                                 "few-shot tasks)")
             p.add_argument("--host", default="127.0.0.1:11434")
             p.add_argument("--limit", type=int, default=0)
             p.add_argument("--seed", type=int, default=1)

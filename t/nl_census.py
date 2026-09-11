@@ -59,6 +59,14 @@ the end of the report names every approximation.
 
 Stdlib only, deterministic (no randomness, no network, one Python solution
 read from disk in file order per split).
+
+Updated 2026-09-11: the single `string-lib` gap split into a narrower
+`string-lib` gap and a new burden `string-lib-v1`, the way `nested-seq`
+split into four names on 2026-09-10 (read the dated note above
+IO_GAP_NAMES). A solution whose every string-library use reads as one of
+SPEC.md's 'The string library (v1)' sixteen members, in a v1 form, now
+tags only the burden; one use outside v1 anywhere in the solution still
+tags the gap.
 """
 from __future__ import annotations
 
@@ -116,7 +124,18 @@ CC_SPLITS = ("codecontests_train.jsonl.gz", "codecontests_valid.jsonl.gz",
 # solution-AST list-literal reader (a solution-constructs site) reaches all
 # three too; only the JSON sample-io reader (io-types) cannot produce
 # `nested-seq-pair`, since JSON has no tuple type, which does not disqualify
-# the name from this shared list, only from that one site.
+# the name from this shared list, only from that one site. `string-lib`
+# split the same way (2026-09-11), but into a gap and a BURDEN, not four
+# gaps: SPEC.md's "The string library (v1)" landed that day naming
+# exactly sixteen members, and a solution-constructs-only site (no
+# io-types reader ever produced `string-lib`, so it stays out of this
+# shared tuple, same as `string-lib-v1`) now tags the burden
+# `string-lib-v1` when EVERY string-library use in the solution is one of
+# those sixteen members called in a v1 form, and keeps the narrower gap
+# `string-lib` otherwise -- one non-v1 use anywhere in the solution (an
+# f-string, `int(x, base)`, `split` on a multi-code-point or non-literal
+# separator, `strip(chars)`, `sorted()` on a string, or a member SPEC.md
+# does not name at all) tags the gap for the WHOLE solution, never both.
 IO_GAP_NAMES = ("real", "nested-seq", "nested-seq-string", "nested-seq-pair",
                 "nested-seq-deep", "map", "set", "tuple",
                 "multi-return", "none-type", "any-type")
@@ -129,12 +148,18 @@ IO_GAP_NAMES = ("real", "nested-seq", "nested-seq-string", "nested-seq-pair",
 # `solution_tags()` and `io_type_tags()`.
 DETECTORS: dict[str, tuple[str, str]] = {
     # gaps: outside t's fragment (io-types and/or solution AST)
-    "string-lib": ("gap", "the Python string LIBRARY, not the seq-of-code-"
-                   "points model SPEC.md's v1 covers: any str method call "
-                   "(upper/lower/split/join/strip/replace/startswith/"
-                   "endswith/find/count/isdigit/...), an f-string or "
-                   "`.format()`, `str()` or a based `int(x, base)` "
-                   "conversion of a string, or `sorted()` on a string"),
+    "string-lib": ("gap", "a Python string-library use that SPEC.md's "
+                   "'The string library (v1)' does NOT cover (split into "
+                   "this gap and the burden `string-lib-v1` on 2026-09-11, "
+                   "the day that section landed; read the dated docstring "
+                   "note above): an f-string or `.format()`, a based "
+                   "`int(x, base)` conversion, `strip`/`lstrip`/`rstrip` "
+                   "given a `chars` argument, `split` on a literal longer "
+                   "than one code point or on a non-literal separator, "
+                   "`sorted()` on a string, or a call to "
+                   "capitalize/title/zfill/center/ljust/rjust/partition/"
+                   "splitlines/encode/swapcase -- none of which SPEC.md's "
+                   "v1 names"),
     "real": ("gap", "real numbers: a float literal, true division `/`, "
              "math.sqrt, float(), or a decimal-valued io token"),
     "nested-seq": ("gap", "a seq of seq whose row type could not be read "
@@ -217,6 +242,20 @@ DETECTORS: dict[str, tuple[str, str]] = {
                        "iterating over a string, or `in` on a string (a "
                        "bounded exists) -- SPEC.md's 'Strings as sequences "
                        "of code points'"),
+    "string-lib-v1": ("burden", "a Python string-library use that IS one "
+                       "of SPEC.md's 'The string library (v1)' sixteen "
+                       "members, called in a v1 form: `split()` or "
+                       "`split(c)` on a one-code-point literal, `join`, "
+                       "`str()`, `count`/`find`/`replace`/`startswith`/"
+                       "`endswith` with any argument, `strip`/`lstrip`/"
+                       "`rstrip` with no argument, `lower`/`upper`, or one "
+                       "of the four predicates isdigit/isalpha/isupper/"
+                       "islower; tags only when EVERY string-library use "
+                       "in the solution reads this way -- one use outside "
+                       "v1 anywhere in the same solution tags the gap "
+                       "`string-lib` instead, not both. Split from "
+                       "`string-lib` 2026-09-11 the day SPEC.md's section "
+                       "landed"),
     "recursion": ("burden", "the solution's function calls itself; t "
                   "supports this through spec functions (self-calls and "
                   "calls to earlier functions), so it is a burden, not a "
@@ -252,6 +291,56 @@ SORT_CALLS = {"sorted"}
 MATH_BUILTIN_CALLS = {"min", "max", "sum", "abs"}
 APPEND_METHODS = {"append", "extend", "insert"}
 ORD_CHR_CALLS = {"ord", "chr"}
+
+# `string-lib` split into the burden `string-lib-v1` and a narrower gap
+# (2026-09-11, the same day SPEC.md's "The string library (v1)" landed;
+# read the dated docstring note above for the story). SPEC.md names
+# exactly sixteen v1 members: split (both arities), join, tostr, count,
+# find, strip/lstrip/rstrip (no-argument form only), replace, lower,
+# upper, isdigit, isalpha, isupper, islower, startswith, endswith. These
+# two sets cover the STRING_METHODS members that ARE in v1 in every form
+# they take (join, count, find, replace, startswith, endswith all take
+# "any argument" per SPEC, so no form of a call to one of them is a gap);
+# split and the strip family need their own per-call read
+# (`_string_method_call_is_v1`, below) since only ONE of their forms is
+# v1. Every STRING_METHODS name absent from both sets (format,
+# capitalize, title, zfill, center, ljust, rjust, partition, splitlines,
+# encode, swapcase) is never v1, in any form.
+STRING_METHODS_V1_NOARG = {"upper", "lower",
+                            "isdigit", "isalpha", "isupper", "islower"}
+STRING_METHODS_V1_ANYARG = {"join", "count", "find", "replace",
+                             "startswith", "endswith"}
+
+
+def _string_method_call_is_v1(attr: str, call: ast.Call) -> bool:
+    """Is this ONE call to a STRING_METHODS member a v1 form, per SPEC.md's
+    'The string library (v1)'? `call` is the `ast.Call` whose `.func` is
+    the `Attribute` node naming `attr` (`s.attr(...)`), read the same way
+    string_census.py's `_form` reads argument shape: a literal is an
+    `ast.Constant` string node, everything else (a variable, an
+    expression, a call) is unreadable and, for `split`, treated as NOT
+    v1, the same conservative default every other unreadable shape in
+    this file takes. `join`, `count`, `find`, `replace`, `startswith`,
+    `endswith` take v1 in every form (SPEC.md: 'with any argument'), so
+    their membership in STRING_METHODS_V1_ANYARG alone decides them,
+    without reading `call` at all."""
+    if attr in STRING_METHODS_V1_ANYARG:
+        return True
+    if attr in STRING_METHODS_V1_NOARG:
+        return True
+    n = len(call.args) + len(call.keywords)
+    if attr == "split":
+        if n == 0:
+            return True
+        if n == 1 and call.args:
+            a = call.args[0]
+            return (isinstance(a, ast.Constant) and isinstance(a.value, str)
+                    and len(a.value) == 1)
+        return False  # split(sep, maxsplit) is not a v1 form either
+    if attr in ("strip", "lstrip", "rstrip"):
+        return n == 0  # a `chars` argument is the gap, SPEC.md v1 has none
+    return False  # format, capitalize, title, zfill, center, ljust,
+    # rjust, partition, splitlines, encode: never in v1, any form
 
 
 # ---------------------------------------------------------- solution AST
@@ -403,6 +492,24 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
                 excluded_tuples.add(id(tgt))
                 excluded_tuples.add(id(val))
 
+    # `string-lib` / `string-lib-v1` (2026-09-11 split, see the dated note
+    # above IO_GAP_NAMES): every STRING_METHODS Attribute node is visited
+    # separately from any Call that wraps it (ast.walk yields both as
+    # distinct nodes), so a call's ARGUMENTS -- needed to read a v1 form --
+    # are recovered here, once, by mapping each such Attribute node's id()
+    # to the Call it is the `.func` of. An Attribute reached with no
+    # matching Call (a bare method reference, `f = s.strip`) has no
+    # argument to read and is a form this file cannot read, so it is
+    # treated as not-v1 below, the same conservative default every other
+    # unreadable shape here takes.
+    call_of_str_method_attr: dict[int, ast.Call] = {
+        id(n.func): n for n in ast.walk(tree)
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+        and n.func.attr in STRING_METHODS
+    }
+    string_lib_gap = False   # a non-v1 string-library use was found
+    string_lib_v1 = False    # a v1-form string-library use was found
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Constant):
             if isinstance(node.value, str) and node.value != "":
@@ -410,7 +517,7 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             elif isinstance(node.value, float):
                 tags["real"] = True
         elif isinstance(node, ast.JoinedStr):  # f-string
-            tags["string-lib"] = True
+            string_lib_gap = True  # never a v1 form, SPEC.md names no f-string
         elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
             tags["real"] = True
         elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
@@ -473,7 +580,11 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             tags["unbounded-loop"] = True
         elif isinstance(node, ast.Attribute):
             if node.attr in STRING_METHODS:
-                tags["string-lib"] = True
+                call = call_of_str_method_attr.get(id(node))
+                if call is not None and _string_method_call_is_v1(node.attr, call):
+                    string_lib_v1 = True
+                else:
+                    string_lib_gap = True
             if node.attr in APPEND_METHODS:
                 tags["seq-append"] = True
             if node.attr == "sort":
@@ -489,7 +600,8 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             elif name in SORT_CALLS:
                 tags["sort"] = True
                 if node.args and _looks_stringy(node.args[0]):
-                    tags["string-lib"] = True
+                    # sorted() is not one of SPEC.md's sixteen v1 members
+                    string_lib_gap = True
             elif name in MATH_BUILTIN_CALLS:
                 tags["builtin-math"] = True
             elif name == "float":
@@ -497,9 +609,9 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             elif name in ORD_CHR_CALLS:
                 tags["string-as-seq"] = True
             elif name == "str":
-                tags["string-lib"] = True
+                string_lib_v1 = True  # tostr(n), unconditionally v1
             elif name == "int" and len(node.args) >= 2:
-                tags["string-lib"] = True
+                string_lib_gap = True  # int(x, base): not in SPEC.md v1
             elif name in ("map", "filter") and any(isinstance(a, ast.Lambda) for a in node.args):
                 tags["closure"] = True
             elif name == "print":
@@ -525,6 +637,14 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
         for n in top_level_defs:
             if n.name and _is_self_call(n, n.name):
                 tags["recursion"] = True
+
+    # One non-v1 string-library use anywhere in the solution tags the gap
+    # for the whole solution; only when every use found was v1-form does
+    # the burden apply, and only when at least one use was found at all.
+    if string_lib_gap:
+        tags["string-lib"] = True
+    elif string_lib_v1:
+        tags["string-lib-v1"] = True
 
     return dict(tags)
 
@@ -1316,31 +1436,51 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("- Python's own `int` is unbounded, like t's, so no `bigint` detector")
     w("  exists and no problem is ever blocked on integer width;")
     w("- an f-string, `.format()`, and every string method in a fixed list")
-    w("  (`STRING_METHODS` in nl_census.py) all tag the single `string-lib`")
-    w("  gap rather than each having a name of their own, since all three")
-    w("  need the Python string LIBRARY, not just the seq-of-code-points")
-    w("  model SPEC.md's v1 covers; a bare str/f-string/char literal, by")
-    w("  contrast, tags only the burden `string-as-seq`;")
+    w("  (`STRING_METHODS` in nl_census.py) are string-LIBRARY uses, not")
+    w("  the seq-of-code-points model SPEC.md's 'Strings as sequences of")
+    w("  code points' covers (that burden is `string-as-seq`, tagged only")
+    w("  for a bare str/f-string-free/char literal); since 2026-09-11")
+    w("  (SPEC.md's 'The string library (v1)') a string-library use tags")
+    w("  the burden `string-lib-v1` when it is one of the sixteen named")
+    w("  members called in a v1 form (`split()`/`split(c)` on one code")
+    w("  point, `join`, `str()`, `count`/`find`/`replace`/`startswith`/")
+    w("  `endswith` with any argument, no-argument `strip`/`lstrip`/")
+    w("  `rstrip`, `lower`/`upper`, the four is-predicates) and ONLY when")
+    w("  EVERY string-library use in the same solution reads that way; one")
+    w("  use outside v1 anywhere in the solution (an f-string, `.format()`,")
+    w("  `int(x, base)`, `strip(chars)`, `split` on a longer or")
+    w("  non-literal separator, `sorted()` on a string, or a member SPEC.md")
+    w("  does not name) tags the narrower gap `string-lib` for the whole")
+    w("  solution instead, never both;")
     w("- `count` is in `STRING_METHODS` even though `list.count(..)` uses")
     w("  the same attribute name; a solution counting occurrences in a")
-    w("  list, not a string, is over-counted into `string-lib` here, the")
-    w("  same name-only approximation `.sort` already accepts elsewhere;")
+    w("  list, not a string, is over-counted into `string-lib`/")
+    w("  `string-lib-v1` here, the same name-only approximation `.sort`")
+    w("  already accepts elsewhere;")
     w("- `ord`/`chr` calls tag `string-as-seq` (a burden: t already has")
     w("  the code point, this is only the name Python gives it);")
-    w("- `str(..)` is tagged `string-lib` unconditionally, the same")
-    w("  treatment `float(..)` already gets; `int(..)` is tagged only when")
-    w("  called with an explicit base (`int(x, 16)`), unambiguous string")
-    w("  parsing -- a bare `int(x)` is NOT tagged even when x is a string,")
-    w("  since the common `int(input())` idiom would otherwise swamp")
-    w("  `string-lib` on nearly every stdin-shaped solution with input-")
-    w("  parsing boilerplate a signature-extraction step would remove, not")
-    w("  the algorithmic core; this undercounts genuine string-to-int")
-    w("  parsing written without a base argument;")
+    w("- `str(..)` is tagged the burden `string-lib-v1` unconditionally")
+    w("  (SPEC.md's `tostr` is defined for an int, but any argument reads")
+    w("  as v1 here, undercounting nothing), the same treatment `float(..)`")
+    w("  already gets for `real`; `int(..)` is tagged the gap `string-lib`")
+    w("  only when called with an explicit base (`int(x, 16)`), unambiguous")
+    w("  string parsing -- a bare `int(x)` is NOT tagged even when x is a")
+    w("  string, since the common `int(input())` idiom would otherwise")
+    w("  swamp `string-lib` on nearly every stdin-shaped solution with")
+    w("  input-parsing boilerplate a signature-extraction step would")
+    w("  remove, not the algorithmic core; this undercounts genuine")
+    w("  string-to-int parsing written without a base argument;")
     w("- `sorted(..)` always tags the `sort` burden, and additionally tags")
-    w("  `string-lib` only when its argument is SYNTACTICALLY a string (a")
-    w("  literal, an f-string, a `str(..)` call, or a chained string-")
+    w("  the gap `string-lib` (sorted() is not one of SPEC.md's sixteen v1")
+    w("  members, in any form) when its argument is SYNTACTICALLY a string")
+    w("  (a literal, an f-string, a `str(..)` call, or a chained string-")
     w("  method call) -- `sorted(a_variable)` is not resolved to a type")
     w("  and is undercounted when the variable holds a string;")
+    w("- a bare `Attribute` naming a STRING_METHODS member with no `Call`")
+    w("  wrapped around it (a method passed by reference, `f = s.strip`)")
+    w("  has no argument list to read a v1 form from and tags the gap")
+    w("  `string-lib`, the same conservative default every other")
+    w("  unreadable shape in this file takes;")
     w("- iterating over a string, and `in` on a string, are not detected")
     w("  as their own AST shape (both look identical to the same")
     w("  operation on a list without type inference); a solution doing")

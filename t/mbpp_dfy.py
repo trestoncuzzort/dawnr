@@ -28,6 +28,21 @@ is the same discipline LIFTER-DECISIONS.md applies to constructs.
 
 Standard library only. Reads gzipped JSONL and parses Python with `ast`;
 nothing is executed, and no dafny is invoked.
+
+2026-09-11: `_literal`/`parse_assertion` gained `nested_strings` (default
+off, so v1/v2 pools are unaffected byte-for-byte) for spec_experiment.py's
+pool v3: a Python list whose elements are ALL string constants, where the
+plain seq-of-int read would otherwise refuse it (SPEC.md's "Nested
+sequences", a list of multi-character strings), now parses as a t
+`seq-of-seq`, no char-sugar collapse of a length-1 element (an element
+stays a one-entry row, never a bare int, since it is a row of a nested
+seq, not the notation's own top-level string sugar). Also added
+`string_lib_v1_only`, a thin wrapper around `nl_census.solution_tags` that
+answers whether a reference solution's Python string-library use, if any,
+is entirely SPEC.md's "The string library (v1)" sixteen members in v1
+forms -- reused rather than re-implemented so pool v3's solution gate
+reads code exactly the way nl_census's own 2026-09-11 `string-lib` /
+`string-lib-v1` split already does.
 """
 from __future__ import annotations
 
@@ -41,7 +56,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import corpora  # noqa: E402
+import corpora    # noqa: E402
+import nl_census  # noqa: E402  (STRING_METHODS_V1_*, solution_tags, for string_lib_v1_only)
 
 # nl/ sits beside t/ in the repo. The corpus is committed, unlike t-corpora.
 NL_DATA = Path(__file__).resolve().parent.parent / "nl" / "data"
@@ -82,8 +98,9 @@ def dfy_task_ids(corpus_dir: Path) -> dict[int, Path]:
 # Turning one Python assertion into a t-typed point.
 # ---------------------------------------------------------------------------
 
-def _literal(node: ast.AST, strings: bool = False):
-    """A Python AST node as an int, bool, or list-of-int; else raise.
+def _literal(node: ast.AST, strings: bool = False, nested_strings: bool = False):
+    """A Python AST node as an int, bool, list-of-int, or (nested_strings)
+    list-of-strings; else raise.
 
     Deliberately narrow. `ast.literal_eval` would happily return a string, a
     dict or a float, and the caller's job is to REFUSE those by name rather
@@ -102,6 +119,18 @@ def _literal(node: ast.AST, strings: bool = False):
     This mirrors the one place t itself cannot tell a one-character string
     from a character: SPEC.md draws no line between them, so neither does
     this parser.
+
+    `nested_strings` (default False, pool version 3 only): when the plain
+    list-of-int read below fails AND every element of the list is itself a
+    Python string constant, the list parses as `("seq-of-seq", rows)`, one
+    row per element, each row the element's own code points -- no
+    char-sugar collapse of a length-1 element, since a row of a nested seq
+    is never the notation's own top-level sugar. Only engaged as a
+    fallback after the existing read fails, so a list every element of
+    which is already a single-character string (which the plain read below
+    already turns into a flat seq of ints, unchanged since 2026-09-10)
+    keeps that reading; this only catches what the plain read cannot, a
+    list with at least one multi-character string element.
     """
     if isinstance(node, ast.Constant):
         if isinstance(node.value, bool):
@@ -122,13 +151,20 @@ def _literal(node: ast.AST, strings: bool = False):
     if isinstance(node, (ast.List, ast.Tuple)):
         if isinstance(node, ast.Tuple):
             raise _Unsupported("tuple")
-        items = []
-        for el in node.elts:
-            kind, v = _literal(el, strings)
-            if kind != "int":
-                raise _Unsupported("seq-of-" + kind)
-            items.append(v)
-        return ("seq", items)
+        try:
+            items = []
+            for el in node.elts:
+                kind, v = _literal(el, strings)
+                if kind != "int":
+                    raise _Unsupported("seq-of-" + kind)
+                items.append(v)
+            return ("seq", items)
+        except _Unsupported:
+            if nested_strings and node.elts and all(
+                    isinstance(el, ast.Constant) and isinstance(el.value, str)
+                    for el in node.elts):
+                return ("seq-of-seq", [[ord(c) for c in el.value] for el in node.elts])
+            raise
     if isinstance(node, ast.Call):
         fn = getattr(node.func, "id", None) or getattr(node.func, "attr", "call")
         raise _Unsupported("call:" + str(fn))
@@ -143,7 +179,7 @@ class _Unsupported(Exception):
     """An argument outside t's int/bool/seq<int> fragment, named."""
 
 
-def parse_assertion(src: str, strings: bool = False) -> dict:
+def parse_assertion(src: str, strings: bool = False, nested_strings: bool = False) -> dict:
     """One MBPP `assert` line as {ok, fn, args, expected} or {ok: False, why}.
 
     Only the shape `assert f(a, b, ...) == expected` is accepted, plus the
@@ -156,6 +192,12 @@ def parse_assertion(src: str, strings: bool = False) -> dict:
     argument or expected value parses into a t character (a length-1
     string) or a t `seq` of code points (any other length), instead of
     being refused as `arg:str` / `expected:str`.
+
+    `nested_strings` (default False): passed straight to `_literal`.
+    Pool version 3 only: a list argument or expected value all of whose
+    elements are string constants, at least one longer than one character,
+    parses as `("seq-of-seq", rows)` instead of being refused as
+    `arg:seq-of-seq` / `expected:seq-of-seq`.
     """
     try:
         tree = ast.parse(src.strip(), mode="exec")
@@ -190,7 +232,7 @@ def parse_assertion(src: str, strings: bool = False) -> dict:
     args = []
     for a in call.args:
         try:
-            args.append(_literal(a, strings))
+            args.append(_literal(a, strings, nested_strings))
         except _Unsupported as u:
             return {"ok": False, "why": "arg:%s" % u}
 
@@ -198,13 +240,36 @@ def parse_assertion(src: str, strings: bool = False) -> dict:
         expected = ("bool", not negate)
     else:
         try:
-            expected = _literal(rhs, strings)
+            expected = _literal(rhs, strings, nested_strings)
         except _Unsupported as u:
             return {"ok": False, "why": "expected:%s" % u}
         if negate:
             return {"ok": False, "why": "negated-equality"}
 
     return {"ok": True, "fn": fn, "args": args, "expected": expected}
+
+
+def string_lib_v1_only(code: str, fn_name: str | None) -> bool:
+    """True when a reference solution's Python string-library use, if any,
+    is entirely SPEC.md's "The string library (v1)" sixteen members called
+    in v1 forms (split's two arities, strip's no-argument form, ...).
+
+    A thin wrapper over `nl_census.solution_tags`, which already reads a
+    solution's AST this exact way (split 2026-09-11 into the gap
+    `string-lib`, a use outside v1 anywhere in the solution, and the
+    burden `string-lib-v1`, every use found is v1-form): reused rather
+    than re-implemented so pool v3's gate agrees with the census by
+    construction, not by parallel maintenance. Vacuously True when the
+    solution uses no string-library member at all (neither tag is set);
+    on a solution `ast.parse` cannot read, False (the conservative
+    refusal every other unreadable shape in this file takes)."""
+    try:
+        tags = nl_census.solution_tags(code, fn_name, True)
+    except Exception:                                             # noqa: BLE001
+        return False
+    if tags.get("py2-unparseable"):
+        return False
+    return "string-lib" not in tags
 
 
 def tier(corpus_dir: Path | None = None) -> list[dict]:
