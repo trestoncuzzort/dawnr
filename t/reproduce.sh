@@ -22,7 +22,7 @@
 #                lift_census.py read against whatever is CURRENTLY in
 #                t/out/lift (no re-lift; that is --relift below).
 #   --matrix     run_par.py --jobs 16 over t/tasks/ -> AGREEMENT.md.
-#   --families   fuzz_lower.py --n 400 --seed 1 --flake 3 --jobs 8, one run
+#   --families   fuzz_lower.py --n 400 --seed 1 --flake 3 --jobs 24, one run
 #                over every family (no --tasks/--only filter), rows.json
 #                tallied per family and per kernel. No committed table this
 #                ties to as a whole corpus run; printed for inspection.
@@ -187,7 +187,7 @@ run_families() {
   stage_start families
   local out=out/reproduce-families
   rm -rf "$out"
-  python3 fuzz_lower.py --out "$out" --n 400 --seed 1 --jobs 8 --flake 3
+  python3 fuzz_lower.py --out "$out" --n 400 --seed 1 --jobs 24 --flake 3
   echo "fuzz_lower.py rc=$?"
   echo "--- rows.json tallied per family and kernel ---"
   python3 - "$out/rows.json" <<'PYEOF'
