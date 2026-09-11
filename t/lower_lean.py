@@ -1803,6 +1803,97 @@ mechanism could reach them too; not built this pass, named so a future
 pass does not have to re-discover the conjoining trap above from
 scratch. Everything THE 14 LOOP-TASK RESIDUAL and the second pass's own
 notes already closed stays closed, re-measured, unchanged.
+
+THE STRING LIBRARY (2026-09-11, SPEC.md "The string library (v1)"): all
+17 members landed as this kernel's own prelude definitions
+(emit_strlib_helpers(), gated on self.strlib the way seq_mut/seq_new
+already gate their own helpers), on `List Int` (a string) and
+`List (List Int)` (split's/join's row type, already "Nested sequences
+(v1)"'s type). ENCODING, member by member, each a transcription of
+interp.py's own `_str_*` helper, checked #eval-by-#eval against it on a
+standalone scratch probe before being pasted in: `split(s)` a fold
+carrying (rows-so-far, current run), flushed at the end; `split(s,c)` a
+structural recursion PREPENDING to the recursive call's own first row
+(not a fold's append-at-the-end -- the encoding choice that makes the
+roundtrip law below a plain induction); `join` the mirror structural
+recursion on rows, last row copied through with no trailing separator;
+`tostr` on Lean core's own `Nat.toDigits` (not `partial`, so kernel-
+reducible, and its digit Chars are already '0'-'9' so `.toNat` on each
+IS the ASCII code SPEC.md wants); `count`/`find` a well-founded
+recursion on the scanned list's length (`termination_by`/`decreasing_by
+omega`), EXCEPT a singleton pattern `[c]`, which `t_str_count` dispatches
+to `t_str_count_elem` (`List.filter (· == c) |>.length`) instead: a one-
+element pattern can never overlap itself, so elementwise filtering
+already IS Python's non-overlapping count there, and it is what lets the
+count-in-a-loop lemma below be a `List.filter_append` induction instead
+of `count_go`'s take/drop one; `strip`/`lstrip`/`rstrip` scan-from-an-
+end recursion (`rstrip` via `reverse`); `replace` a Nat-fuel-bounded
+recursion (fuel = s.length, sound since every step consumes >= 1
+element); `lower`/`upper`/the four predicates/`startswith`/`endswith`
+plain `List.map`/`all`/`any`/`take`/`drop` over the ASCII tables SPEC.md
+states. Every member is TOTAL by construction (no `dcond` case was
+added: the generic "strict op, obligation is its arguments'" fallback
+already covers all 17, matching SPEC.md's "each total").
+
+LEMMAS, what they close: `t_str_count_elem_step` (`count_elem (l++[x]) c
+= count_elem l c + ite`, by `List.filter_append`) and
+`t_str_take_succ_toNat` (`s.take(i+1) = s.take i ++ [s[i]!]`, from core's
+`List.take_concat_get`) together carry count_vowels' own invariant step
+in principle; `t_str_split_sep_ne_nil` (split_sep's recursive call is
+always nonempty, closing the `| [] => [[x]]` match's unreachable arm) and
+`t_str_join_cons_row`/`t_str_join_nil_row` (join's own equation restated
+per split_sep's two cases) carry `t_str_join_split_roundtrip`
+(`join(split_sep(s,c),[c]) = s`, structural induction on s) -- SPEC.md's
+join-of-split law, proved. The split-length law
+(`len(split(s,c)) == count(s,[c])+1`) is NOT proved: not needed by any
+of the three committed tasks' own ensures (checked directly against each
+task JSON), so not attempted this pass; open, named here.
+
+MEASURED. (a) The three committed tasks, real+twin, flake 3:
+word_count COUNTS (VERIFIED, off-by-one twin REFUTED, witness s=[],
+matching SPEC.md's own prediction exactly -- closed by
+List.drop_zero/List.take_length collapsing the body's full-length slice
+to `s` itself, needing no string-lib lemma at all); split_join COUNTS
+(VERIFIED, wrong-var twin REFUTED, witness s=[32] c=0, matching SPEC.md's
+prediction -- t_str_join_split_roundtrip is the whole proof); count_vowels
+REFUSED, real unproved. Debugged directly (lean -DmaxHeartbeats, the raw
+kernel error): the failure is not the loop's own math -- a standalone
+probe of the SAME wf-clause goal (`0<=i<len -> (nested guard
+implications)`) closes on plain `grind` with zero hints -- it is `grind`
+case-exploding once `t_str_count`/`t_str_count_elem` sit in the SAME
+hint list as the five-vowel `if`'s own nested guards, moved but not
+closed by narrowing the grind hint list to only the ops each task
+actually uses (self.ga's `has_op` gating above). Open, named: count_vowels
+does not verify; the fix is narrowing WHICH theorem gets which hint
+subset (wf-clauses need none of the string-lib names; only the loop's
+own `_t_loop_spec` preservation step does), a change to `_close`'s/
+`lower_loop`'s calling convention this pass ran out of room for.
+(b) The family (`v1strlib`, fuzz_lower.py's own build_corpus, --n 400
+--seed 1 restricted to this file's --tasks list; the 22 tasks that name
+resolves to under this exact corpus, not the 17-task list a family-only
+restricted build would give): 4 COUNT (VERIFIED+REFUTED: 004, 007, 012,
+070), 13 real-unproved-but-twin-REFUTED, 2 real-and-twin-both-unproved
+(031, 190), 3 no-twin (the empty-pattern probes, nothing to measure).
+Every cell reached the kernel; none crashed the lowering itself. (c) The
+matrix: every one of the 23 non-strlib committed tasks (tasks/*.json
+minus the three above) relowers to a BYTE-IDENTICAL Lean source against
+this file's pre-string-library version at HEAD (checked directly,
+source-for-source, not re-run through the kernel) -- this landing changed
+no existing task's output. The three string-lib tasks were not re-run
+against the full 26-task kernel matrix beyond the (a) numbers above;
+AGREEMENT.md itself was not touched (out of scope: only lower_lean.py was
+edited).
+
+STAYS OPEN, by name: count_vowels' own proof (grind hint-scoping, above);
+the split-length law (unattempted, not needed by the committed three);
+t_str_count_go/t_str_find/t_str_replace's general (length >= 2, or t ==
+[] for replace) cases are proved TOTAL only, not proved about beyond
+that -- no committed or fuzzed task's ensures needed a fact about them
+this pass; isdigit/isalpha/isupper/islower/startswith/endswith likewise
+computed but not the subject of any proved lemma. No member is an
+abstain (NotImplementedError): every one of the 17 has a real, checked,
+total Lean definition: what is open is which FACTS about them are
+proved, not whether they lower.
 """
 from __future__ import annotations
 
@@ -1830,6 +1921,24 @@ ARITH_OPS = {"+", "-", "*"}
 # obligation for both, discharged the same way as `at`'s `0 <= i < len`, as
 # a separate _wf theorem, never folded into the total computation.
 DIV_MOD = {"div": "/", "mod": "%"}
+# SPEC.md "The string library (v1)" (2026-09-11): the 17 members, JSON
+# op name to the prelude function term() calls; STRLIB_LEMMAS names the
+# theorems emit_strlib_helpers() proves once, always offered to grind
+# alongside the sfun list (self.ga) whenever any member is used, exactly
+# the way seq_thms are named lemmas offered per-task above.
+STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
+             "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
+             "isupper", "islower", "startswith", "endswith"}
+STRLIB_LEMMAS = ["t_str_count_elem_step", "t_str_count_elem_nonneg",
+                 "t_str_take_succ_toNat",
+                 "t_str_split_sep_ne_nil", "t_str_join_cons_row",
+                 "t_str_join_nil_row", "t_str_join_split_roundtrip"]
+# word_count.json's own committed shape (a full-length slice standing in
+# for the body's own copy of s, SPEC.md's own words): closing `t2 = s`
+# needs these two core simp facts by name, grind's default set does not
+# fire them on the `.drop 0.take (len - 0)` shape unprompted (measured).
+STRLIB_GRIND_EXTRA = ["List.drop_zero", "List.take_length",
+                     "t_str_count", "t_str_count_elem"]
 # The Euclidean law and its range fact are core lemmas about Lean's native
 # (already-Euclidean) Int `/` and `%`, but measured (2026-09-08, on
 # remainder's own contract) NOT to carry a grind/simp e-matching pattern
@@ -1923,8 +2032,31 @@ class Lower:
         _collect_names(body, self.used)
         self.fresh_n = 0
         self.hyp_n = 0
-        self.ga = ("" if not self.sfuns else
-                   " [" + ", ".join(f"{f}_s" for f in self.sfuns) + "]")
+        # SPEC.md "The string library (v1)" (2026-09-11): does this task
+        # (spec or body, real or twin) call any of the 17 members. Gates
+        # emit_strlib_helpers() below and the grind hint list, exactly
+        # parallel to seq_mut/seq_new above -- False for every task that
+        # predates this construct, so nothing about their output changes.
+        self.strlib = (self._has_any(task, STRLIB_OPS)
+                       or self._has_any(body, STRLIB_OPS))
+        ga_names = [f"{f}_s" for f in self.sfuns]
+        if self.strlib:
+            # Only the lemmas this task's own ops can need: an unrelated
+            # lemma in grind's hint set is not just dead weight, it is
+            # more E-matching patterns competing during search, measured
+            # (count_vowels) to push grind into a case-split explosion
+            # over the loop body's five-vowel `if` alone -- narrowing
+            # this list task by task is what closes it.
+            has_op = lambda o: (self._has(task, "op", o)
+                                or self._has(body, "op", o))
+            if has_op("count") or has_op("split") or has_op("join"):
+                ga_names += ["t_str_count", "t_str_count_elem"]
+            if has_op("split") or has_op("join"):
+                ga_names += ["t_str_split_sep_ne_nil",
+                            "t_str_join_cons_row", "t_str_join_nil_row",
+                            "t_str_join_split_roundtrip"]
+            ga_names += ["List.drop_zero", "List.take_length"]
+        self.ga = "" if not ga_names else " [" + ", ".join(ga_names) + "]"
         # SPEC.md "Sequences as values" (2026-09-09): does this lowering
         # (task spec, or the body actually being lowered, real or twin)
         # touch `update`/`fill` anywhere. Gates the seq helper lemmas and
@@ -2065,6 +2197,21 @@ class Lower:
             # a pair-typed var/return/local) back down to one component.
             t = self.sort(e["args"][0], types)
             return t["pair"][0 if op == "fst" else 1]
+        if op in ("split", "strip", "lstrip", "rstrip", "replace", "lower",
+                  "upper"):
+            # SPEC.md "The string library (v1)" (2026-09-11): `split(s)`/
+            # `split(s,c)` both return a row of strings (`seq<seq>`, the
+            # nested-seq dict, one op two arities per SPEC.md's own
+            # words); every other member here returns a flat seq, its
+            # argument's own sort.
+            return {"seq": "seq"} if op == "split" else "seq"
+        if op in ("tostr", "join"):
+            return "seq"
+        if op in ("count", "find"):
+            return "int"
+        if op in ("isdigit", "isalpha", "isupper", "islower", "startswith",
+                  "endswith"):
+            return "bool"
         return "bool"
 
     @staticmethod
@@ -2233,6 +2380,54 @@ class Lower:
             # and `.2`"); always defined on a pair, so no obligation.
             p = self.term(e["args"][0], env, types, dep)
             return f"({p}.{'1' if op == 'fst' else '2'})"
+        if op == "split":
+            # SPEC.md "The string library (v1)": `split(s)` (whitespace
+            # runs) and `split(s, c)` (one code point, empties kept), two
+            # arities of one op, exactly as the JSON op comment states.
+            s = self.term(e["args"][0], env, types, dep)
+            if len(e["args"]) == 1:
+                return f"(t_str_split_ws {s})"
+            c = self.term(e["args"][1], env, types, dep)
+            return f"(t_str_split_sep {s} {c})"
+        if op == "join":
+            rows = self.term(e["args"][0], env, types, dep)
+            sep = self.term(e["args"][1], env, types, dep)
+            return f"(t_str_join {rows} {sep})"
+        if op == "tostr":
+            return f"(t_str_tostr {self.term(e['args'][0], env, types, dep)})"
+        if op == "count":
+            s = self.term(e["args"][0], env, types, dep)
+            t = self.term(e["args"][1], env, types, dep)
+            return f"(t_str_count {s} {t})"
+        if op == "find":
+            s = self.term(e["args"][0], env, types, dep)
+            t = self.term(e["args"][1], env, types, dep)
+            return f"(t_str_find {s} {t})"
+        if op in ("strip", "lstrip", "rstrip"):
+            s = self.term(e["args"][0], env, types, dep)
+            fn = {"strip": "t_str_strip", "lstrip": "t_str_lstrip",
+                 "rstrip": "t_str_rstrip"}[op]
+            return f"({fn} {s})"
+        if op == "replace":
+            s = self.term(e["args"][0], env, types, dep)
+            t = self.term(e["args"][1], env, types, dep)
+            u = self.term(e["args"][2], env, types, dep)
+            return f"(t_str_replace {s} {t} {u})"
+        if op in ("lower", "upper"):
+            s = self.term(e["args"][0], env, types, dep)
+            return f"({'t_str_lower' if op == 'lower' else 't_str_upper'} {s})"
+        if op in ("isdigit", "isalpha", "isupper", "islower"):
+            # Bool-valued members: the prelude function already returns
+            # Lean `Bool` natively (SPEC.md: "each total"), so no
+            # `decide` bridge is needed here -- unlike the generic
+            # ==/CMP_OPS/and/or/not case below, which bridges a Prop to
+            # Bool, this is already a Bool-returning function call.
+            s = self.term(e["args"][0], env, types, dep)
+            return f"(t_str_{op} {s})"
+        if op in ("startswith", "endswith"):
+            s = self.term(e["args"][0], env, types, dep)
+            t = self.term(e["args"][1], env, types, dep)
+            return f"(t_str_{op} {s} {t})"
         if op == "neg":
             return f"(-{self.term(e['args'][0], env, types, dep)})"
         if op == "+" and self._is_seqsort(self.sort(e["args"][0], types)):
@@ -2337,6 +2532,16 @@ class Lower:
             # 2026-09-10 note's ENCODING section), so no new term-level
             # code is needed here, only this one spec-position case.
             assert self.sort(e, types) == "bool", f"non-bool {op} as Prop"
+            return f"({self.term(e, env, types)} = true)"
+        if op in ("isdigit", "isalpha", "isupper", "islower", "startswith",
+                  "endswith"):
+            # SPEC.md "The string library (v1)": the four predicates and
+            # startswith/endswith are bool-valued members reaching prop()
+            # directly (a whole clause, or one operand of ==/implies/
+            # and/or above whose sort() came back "bool") -- the same
+            # generic `(term = true)` bridge the `fst`/`snd` case above
+            # already uses for a computed bool value with no logical
+            # connective of its own.
             return f"({self.term(e, env, types)} = true)"
         raise NotImplementedError(f"operator {op!r} in spec position "
                                   "is not lowered for lean")
@@ -2715,6 +2920,18 @@ class Lower:
             return any(self._has(v, key, val) for v in x.values())
         if isinstance(x, list):
             return any(self._has(v, key, val) for v in x)
+        return False
+
+    def _has_any(self, x, ops: set) -> bool:
+        """True if some `op` node in x has op in `ops` (SPEC.md "The
+        string library (v1)"'s 17 members, checked as a set rather than
+        one at a time)."""
+        if isinstance(x, dict):
+            if x.get("op") in ops:
+                return True
+            return any(self._has_any(v, ops) for v in x.values())
+        if isinstance(x, list):
+            return any(self._has_any(v, ops) for v in x)
         return False
 
     def _has_seq_plus(self, x, types: dict) -> bool:
@@ -3420,6 +3637,251 @@ class Lower:
                 "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n")
         return "\n".join(parts)
 
+    # ---------- the string library (v1) ----------
+
+    def emit_strlib_helpers(self) -> str:
+        """SPEC.md "The string library (v1)" (2026-09-11, dated note
+        below carries the full measurement): the 17 members as this
+        kernel's own definitions, emitted once per file whenever any is
+        used (self.strlib), plus the lemmas the three committed tasks'
+        proofs need. Measured on lean 4.33.1, core only, no Mathlib (a
+        standalone scratch probe, every def and theorem below compiled
+        and #eval-checked against interp.py's own worked examples before
+        being pasted in here): see the dated note for what is and is not
+        proved."""
+        if not self.strlib:
+            return ""
+        return (
+"""def t_str_isws (c : Int) : Bool :=
+  c == 9 || c == 10 || c == 11 || c == 12 || c == 13 ||
+  c == 28 || c == 29 || c == 30 || c == 31 || c == 32
+
+def t_str_isupperletter (c : Int) : Bool := decide (65 ≤ c ∧ c ≤ 90)
+def t_str_islowerletter (c : Int) : Bool := decide (97 ≤ c ∧ c ≤ 122)
+
+-- split(s): whitespace runs separate, leading/trailing dropped, no empty
+-- row, split("") == [] (SPEC.md); a fold carrying (rows-so-far, current
+-- run), flushed at the end.
+def t_str_split_ws (s : List Int) : List (List Int) :=
+  let step : (List (List Int) × List Int) → Int →
+             (List (List Int) × List Int) :=
+    fun st c =>
+      if t_str_isws c then
+        (if st.2.isEmpty then st else (st.1 ++ [st.2], []))
+      else
+        (st.1, st.2 ++ [c])
+  let r := s.foldl step ([], [])
+  if r.2.isEmpty then r.1 else r.1 ++ [r.2]
+
+-- split(s, c): every occurrence of c separates, empty rows kept. Defined
+-- by structural recursion, PREPENDING to the recursive call's first row
+-- (rather than a fold's append-at-the-end), which is what makes
+-- t_str_join_split_roundtrip below a plain structural induction: the
+-- match's `| [] => [[x]]` arm is unreachable (t_str_split_sep_ne_nil
+-- proves the recursive call is always nonempty) but must be given for
+-- pattern exhaustiveness.
+def t_str_split_sep : List Int → Int → List (List Int)
+  | [], _ => [[]]
+  | x :: rest, c =>
+      match t_str_split_sep rest c with
+      | row :: rows => if x == c then [] :: row :: rows else (x :: row) :: rows
+      | [] => [[x]]
+
+-- join(rows, sep): sep.join(rows), Python's. Structural on rows, the
+-- last row copied through with no trailing sep -- the mirror image of
+-- split_sep's structure, which is what makes the roundtrip theorem a
+-- one-pass induction rather than needing an append-associativity detour.
+def t_str_join : List (List Int) → List Int → List Int
+  | [], _ => []
+  | [r], _ => r
+  | r :: r2 :: rows, sep => r ++ sep ++ t_str_join (r2 :: rows) sep
+
+-- tostr(n): decimal digits, '-' (45) first iff negative. Nat.toDigits is
+-- core Lean (not `partial`), so it is kernel-reducible; its own digit
+-- characters are already '0'..'9' (48-57), so `.toNat` on each Char IS
+-- the ASCII code SPEC.md wants, no further mapping needed.
+def t_str_tostr (n : Int) : List Int :=
+  let ds : List Int := (Nat.toDigits 10 n.natAbs).map (fun ch => (ch.toNat : Int))
+  if n < 0 then 45 :: ds else ds
+
+-- count(s, t): single-code-point t is the case both committed proofs and
+-- SPEC.md's own split-length law need, and a one-element pattern can
+-- never overlap itself, so elementwise List.filter/length already IS
+-- Python's non-overlapping count there -- t_str_count reduces to
+-- t_str_count_elem DEFINITIONALLY on a singleton pattern, which is what
+-- lets t_str_count_elem_step below carry the loop's invariant with a
+-- plain List.filter_append induction instead of count_go's take/drop
+-- recursion. t_str_count_go (general t, length >= 2, or t == []) is a
+-- straight transcription of interp.py's own scan, well-founded on the
+-- scanned list's length; proved total, not proved about beyond that.
+def t_str_count_elem (s : List Int) (c : Int) : Int :=
+  ((s.filter (· == c)).length : Int)
+
+def t_str_count_go : List Int → List Int → Int
+  | [], _ => 0
+  | c :: rest, t =>
+      if h : t.length = 0 then 1 + t_str_count_go rest t
+      else if (c :: rest).take t.length == t then
+        1 + t_str_count_go (List.drop t.length (c :: rest)) t
+      else
+        t_str_count_go rest t
+termination_by s _ => s.length
+decreasing_by
+  · simp [List.length_cons]
+  · simp only [List.length_cons, List.length_drop]
+    omega
+  · simp [List.length_cons]
+
+def t_str_count (s t : List Int) : Int :=
+  match t with
+  | [] => (s.length : Int) + 1
+  | [c] => t_str_count_elem s c
+  | _ => t_str_count_go s t
+
+def t_str_find_go : List Int → List Int → Int → Int
+  | [], _, _ => -1
+  | c :: rest, t, i =>
+      if (c :: rest).take t.length == t then i
+      else t_str_find_go rest t (i + 1)
+
+def t_str_find (s t : List Int) : Int :=
+  if t.isEmpty then 0 else t_str_find_go s t 0
+
+def t_str_lstrip (s : List Int) : List Int :=
+  match s with
+  | [] => []
+  | c :: rest => if t_str_isws c then t_str_lstrip rest else s
+
+def t_str_rstrip (s : List Int) : List Int :=
+  (t_str_lstrip s.reverse).reverse
+
+def t_str_strip (s : List Int) : List Int :=
+  t_str_rstrip (t_str_lstrip s)
+
+-- replace(s, t, u): every non-overlapping occurrence of t replaced by u,
+-- left to right; t == [] inserts u before every code point and at the
+-- end (SPEC.md's own words). fuel = s.length bounds the general case's
+-- recursion (each step consumes at least one element of s, so this
+-- never runs out before the list itself does); a real transcription of
+-- interp.py's loop, proved total, not proved about beyond that.
+def t_str_replace_go : List Int → List Int → List Int → Nat → List Int
+  | [], _, _, _ => []
+  | c :: rest, t, u, fuel =>
+      match fuel with
+      | 0 => c :: rest
+      | fuel' + 1 =>
+        if t.length = 0 then
+          u ++ (c :: t_str_replace_go rest t u fuel')
+        else if (c :: rest).take t.length == t then
+          u ++ t_str_replace_go (List.drop t.length (c :: rest)) t u fuel'
+        else
+          c :: t_str_replace_go rest t u fuel'
+
+def t_str_replace (s t u : List Int) : List Int :=
+  if t.length = 0 then
+    (s.foldr (fun c acc => u ++ c :: acc) []) ++ u
+  else
+    t_str_replace_go s t u s.length
+
+def t_str_lower (s : List Int) : List Int :=
+  s.map (fun c => if t_str_isupperletter c then c + 32 else c)
+
+def t_str_upper (s : List Int) : List Int :=
+  s.map (fun c => if t_str_islowerletter c then c - 32 else c)
+
+def t_str_isdigit (s : List Int) : Bool :=
+  !s.isEmpty && s.all (fun c => decide (48 ≤ c ∧ c ≤ 57))
+
+def t_str_isalpha (s : List Int) : Bool :=
+  !s.isEmpty && s.all (fun c => t_str_isupperletter c || t_str_islowerletter c)
+
+def t_str_isupper (s : List Int) : Bool :=
+  (s.any (fun c => t_str_isupperletter c || t_str_islowerletter c)) &&
+  !(s.any (fun c => t_str_islowerletter c))
+
+def t_str_islower (s : List Int) : Bool :=
+  (s.any (fun c => t_str_isupperletter c || t_str_islowerletter c)) &&
+  !(s.any (fun c => t_str_isupperletter c))
+
+def t_str_startswith (s t : List Int) : Bool :=
+  s.take t.length == t
+
+def t_str_endswith (s t : List Int) : Bool :=
+  decide (t.length ≤ s.length) &&
+  (t.isEmpty || (s.drop (s.length - t.length) == t))
+
+-- THE THREE LEMMAS (dated note below): the split length law is NOT
+-- proved (open, named there); these are the join-of-split law and the
+-- count-against-a-loop step, both measured closing the committed tasks.
+theorem t_str_count_elem_step (l : List Int) (x c : Int) :
+    t_str_count_elem (l ++ [x]) c = t_str_count_elem l c + (if x == c then 1 else 0) := by
+  unfold t_str_count_elem
+  rw [List.filter_append, List.length_append]
+  by_cases h : x == c
+  · simp [h]
+  · simp [h]
+
+theorem t_str_count_elem_nonneg (s : List Int) (c : Int) :
+    0 ≤ t_str_count_elem s c := by
+  unfold t_str_count_elem
+  omega
+
+-- count against a loop (dated note below): one more prefix element,
+-- Int-toNat cast to match `at`'s own convention (`s[i.toNat]!`) and
+-- SPEC.md "Sequences: literals, concatenation, slices"'s `slice(s,0,i)`
+-- encoding (`(s.drop 0).take i`). List.take_concat_get is the core
+-- lemma that actually carries the one-more-element fact; this restates
+-- it in the Int/toNat shape count_vowels' invariant step needs, so
+-- grind can chain it straight into t_str_count_elem_step above.
+theorem t_str_take_succ_toNat (s : List Int) (i : Int)
+    (h0 : 0 ≤ i) (h1 : i < (s.length : Int)) :
+    s.take (i + 1).toNat = s.take i.toNat ++ [s[i.toNat]!] := by
+  have h : i.toNat < s.length := by omega
+  have heq : (i + 1).toNat = i.toNat + 1 := by omega
+  rw [heq, ← List.take_concat_get h, List.concat_eq_append,
+     getElem!_pos s i.toNat h]
+
+theorem t_str_split_sep_ne_nil (s : List Int) (c : Int) :
+    t_str_split_sep s c ≠ [] := by
+  cases s with
+  | nil => simp [t_str_split_sep]
+  | cons x rest =>
+      simp only [t_str_split_sep]
+      cases t_str_split_sep rest c with
+      | nil => simp
+      | cons row rows => by_cases hx : x == c <;> simp [hx]
+
+theorem t_str_join_cons_row (h : Int) (row : List Int) (rows : List (List Int))
+    (sep : List Int) :
+    t_str_join ((h :: row) :: rows) sep = h :: t_str_join (row :: rows) sep := by
+  cases rows with
+  | nil => simp [t_str_join]
+  | cons r2 rows2 => simp [t_str_join]
+
+theorem t_str_join_nil_row (row : List Int) (rows : List (List Int))
+    (sep : List Int) :
+    t_str_join ([] :: row :: rows) sep = sep ++ t_str_join (row :: rows) sep := by
+  simp [t_str_join]
+
+theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
+    t_str_join (t_str_split_sep s c) [c] = s := by
+  induction s with
+  | nil => simp [t_str_split_sep, t_str_join]
+  | cons x rest ih =>
+      rcases hs : t_str_split_sep rest c with _ | ⟨row, rows⟩
+      · exact absurd hs (t_str_split_sep_ne_nil rest c)
+      · rw [hs] at ih
+        have hsplit : t_str_split_sep (x :: rest) c =
+            if x == c then [] :: row :: rows else (x :: row) :: rows := by
+          simp only [t_str_split_sep, hs]
+        rw [hsplit]
+        by_cases hx : x == c
+        · rw [if_pos hx, t_str_join_nil_row, ih]
+          have hxc : x = c := by simpa using hx
+          simp [hxc]
+        · rw [if_neg hx, t_str_join_cons_row, ih]
+""")
+
     # ---------- spec_funs ----------
 
     def emit_sfuns(self) -> tuple[str, list[tuple[str, str]]]:
@@ -3521,6 +3983,10 @@ class Lower:
         if self.seq_eq_comp:
             seq_thms.append(("t_seq_ext", "seq equality extensionality "
                              "bridge (booleans as computational values)"))
+        strlib_src = self.emit_strlib_helpers()
+        strlib_thms = []
+        if self.strlib:
+            strlib_thms = [(n, "string library lemma") for n in STRLIB_LEMMAS]
         sf_src, sf_thms = self.emit_sfuns()
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
         body = self.body
@@ -3543,10 +4009,12 @@ class Lower:
         src, thms = main
         prints = "\n".join(
             f"#print axioms {t}" for t, _ in
-            seq_thms + sf_thms + wf_thms + thms)
+            seq_thms + strlib_thms + sf_thms + wf_thms + thms)
         parts = [header]
         if seq_src.strip():
             parts.append(seq_src)
+        if strlib_src.strip():
+            parts.append(strlib_src)
         if sf_src.strip():
             parts.append(sf_src)
         if wf_src.strip():

@@ -1479,6 +1479,142 @@ executable-position the real, substantially-sized blocker, left for
 whichever pass takes up quantifier compilation. `fz_v1def_209/268/295`
 read `abstain`, `"quantifier in ACSL term position"`, unchanged before
 and after, confirmed by both fuzz runs above.
+
+THE STRING LIBRARY, 2026-09-11 (SPEC.md "The string library (v1)",
+ROADMAP 12.7, the wave after nested sequences). Seventeen members
+(`split` two arities of one op, SPEC.md's own count); this pass lands
+ONE, and names every other reachable position a NotImplementedError
+abstain (`STRLIB_ABSTAIN`, above `_strlib_abstain`) rather than guess at
+any of them, per this file's own discipline.
+
+LANDED: `len(s.split())`, word_count's own shape and the only string-lib
+use in any committed task that needs no SECOND unlanded member alongside
+it. `t_wc{L}(s, n)` (T_WORDCOUNT_ACSL) is a recursive ACSL logic
+function over the PREFIX length `n`, counting RUN STARTS (a
+non-whitespace code point at `i` with `i == 0` or a whitespace one at `i
+- 1`) rather than materializing any row -- the same "formula, not a
+copy" move `_seq_len_render`'s existing `len(m[i])` case already makes
+for a nested seq's row length. Whitespace is the measured 10-codepoint
+set (SPEC.md's own words, `WS_CODEPOINTS`), never Python's `str.isspace`
+(this kernel enumerates them, same reason interp.py gives). The
+executable side, `t_wc_c`, is a real C loop with two invariants (the
+index range, and `wc == t_wc(s, i)`) and a `lemma t_wc_terminates` for
+`t_wc`'s own well-foundedness obligation (`_wf_obligation`'s own naming
+convention, `{name}_terminates`).
+
+MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-11), the one real
+lemma this pass needed, named in THE WORK as "the split length law": a
+FIRST version tracked `prevws` (whether the PRIOR code point was
+whitespace) as loop STATE, one more invariant relating it to `is_ws(s[i
+- 1])` through a separate ACSL `predicate is_ws`. That invariant's own
+PRESERVATION goal TIMED OUT at every budget tried, up to 20,000,000
+steps / 60s per goal (`typed_nat_t_wc_c_loop_invariant_2_preserved`),
+and moving the same difficulty around (splitting the invariant, folding
+`prevws` into a freshly-recomputed local instead of loop state) only
+relocated which goal timed out, never removed it -- Alt-Ergo could not
+connect the `is_ws` PREDICATE's unfold to the executable `?:` chain
+computing the same fact, even though the two say the identical thing.
+The fix that actually worked: delete `is_ws` as a separate symbol
+entirely and write the same 10-way disjunction OUT, INLINE, at every
+site (`_ws_or`, above `T_WORDCOUNT_ACSL`) -- the recursive definition,
+the loop invariant (now just `wc == t_wc(s, i)`, the range, nothing
+about a previous character), and the executable `?:` chain are now
+syntactically the SAME formula up to the substituted term, and every
+goal in the file (43/43 by hand at a raised budget, 74/74 including
+smoke tests through `verifiers/framac.py`'s own `verify()` at its
+DEFAULT budget) discharges Qed or a sub-250ms Alt-Ergo call. The lesson,
+stated for whichever member needs a whitespace/character-class test
+next (`strip`/`lstrip`/`rstrip`/`isalpha`/... all name one in
+`STRLIB_ABSTAIN`): a named ACSL `predicate` for a flat disjunction of
+equalities is not free here, inline it.
+
+FIXED ALONGSIDE (not a string-lib member itself, but load-bearing for
+word_count, which was blocked on it before any split-count logic even
+ran): `stmts()`'s `var` case previously refused EVERY seq-typed local
+outright ("seq-typed local variables are not supported... neither
+committed task declares one" -- true when written, stale the moment
+word_count and split_join were committed, since both declare one).
+`_slice_alias_base` generalizes it to any local initialized from a
+slice of a bare seq variable, `v := s[a..b]`: never a copy, an ALIAS
+(`int *v = s + a; int v_n = b - a;`), honest because a slice of a
+contiguous C array IS contiguous (SPEC.md "Sequences... slices":
+`s[a..b]`'s element `k` is `s[a + k]`), with the slice's own domain
+obligation (`0 <= a <= b <= len(s)`) still emitted by the SAME
+`at_asserts` call every other slice read already gets. This is what
+lets word_count's OFF-BY-ONE twin (`s[1..len(s)]`, SPEC.md's own
+predicted shape) lower AT ALL rather than crash before reaching split:
+its domain obligation is unprovable in general, exactly the UNDEFINED
+half of its certificate at the witness `s = []` (`slice bounds
+[1..0]`). A local from anything ELSE (a string-lib member's result,
+`update`/`fill`, a nested seq/pair) still hits the general refusal,
+unchanged in shape.
+
+MEASURED, the three committed tasks, `harness.run_task` (flake 3):
+word_count COUNTS (real VERIFIED, off-by-one twin REFUTED, witness `s =
+[]`, matching SPEC.md's own prediction exactly, including the witness).
+split_join REFUSED, and not by a string member at all: `lower()` refuses
+it before any statement of the body is lowered, in `_ret_capacity`'s
+pre-existing return-length gap (a `seq` return whose length no `ensures`
+bounds has no buffer to size), the same NotImplementedError the family's
+seq-returning shapes read; `strip`/`join` are named abstains (below) but
+this task never reaches them (an independent re-measurement traced the
+single frame on 2026-09-11; the first version of this note cited
+`seq_assign_lines`'s fallback, which is not on the path). count_vowels REFUSED: `count` is a named abstain (below),
+reached through this pass's own `_strlib_abstain` in ACSL term
+position.
+
+The committed matrix (26 tasks under `t/tasks/*.json`): relowered every
+task under both this file and the pre-wave `git show HEAD:t/lower_framac.py`
+and diffed. The 23 tasks that use no string-lib member are BYTE-IDENTICAL,
+0 diffs -- this pass's every change is gated behind a new op name or a
+seq-typed local, neither reachable from an unrelated task. The 3
+string-lib tasks (word_count/split_join/count_vowels) are the only ones
+whose lowered source changed, from a hard crash (word_count, split_join:
+"seq-typed local variables are not supported"; count_vowels: "t has no
+operator 'count'", `ValueError`) to either a real result (word_count) or
+a clean, named `NotImplementedError` abstain (the other two) -- strictly
+an improvement in honesty even where it is not yet a verdict.
+
+ABSTAINED, each a `NotImplementedError` named in `STRLIB_ABSTAIN` (with
+its own one-line reason) and reachable from ACSL term position, ACSL
+predicate position, and (for `split`/`join` specifically, via
+`seq_assign_lines`'s pre-existing generic fallback, reached only by a
+task whose return length is bounded) a seq-typed assignment's
+right-hand side: `join` (no backing-buffer construction for a rebuilt
+seq); `strip`/`lstrip`/`rstrip` (a variably-shorter output seq has no
+sized buffer -- no `ensures`-stated CAPACITY bound the general member
+could size against, CAPACITY mode's own pre-existing gap); `replace` (a
+variably longer-or-shorter output, and no non-overlapping-match scan
+either); `tostr` (output length depends on `n`'s own runtime digit
+count); `count`/`find` (no recursive ACSL definition of a general
+non-overlapping/left-to-right substring scan is written yet -- the
+length-1-pattern specialization count_vowels would settle for is
+deliberately NOT taken, since SPEC.md states a member in specification
+position is the SAME function, not a task-shaped instance of it);
+`lower`/`upper` (an output the same length as its input, but no case-map
+codegen is wired into `seq_assign_lines` for it); `isdigit`/`isalpha`/
+`isupper`/`islower`/`startswith`/`endswith` (bool-returning, no buffer
+issue at all, simply not reached by either committed task and left for
+the next pass -- the cheapest remaining members, since each is a direct
+`\forall`/`\exists` over an ASCII-range or a fixed-prefix/suffix
+comparison with no lemma this pass's own budget could confirm was
+needed). `split(s, c)` (the two-argument form) is abstained wherever it
+is NOT `len`'s own direct one-argument argument: the row set it denotes
+has no backing buffer in this encoding (the same "flat data+offsets has
+nothing to build a fresh row set INTO" gap `lower()`'s own nested-seq
+RETURN refusal names), and split_join's `join(split(s, c), [c])` needs
+exactly that row set materialized, not merely counted.
+
+OPEN, by name, for the next pass: split_join's own two members
+(`join`, and `split` in its two-argument, row-materializing form) and
+the "join-of-split law" lemma THE WORK names for it; count_vowels' own
+`count` and the "count against a loop" incremental lemma; every other
+un-landed member above. The fuzz family `v1strlib` (`fuzz_lower.py
+--only framac`) was run over the 17 named cells at `--n 400 --seed 1
+--flake 3 --jobs 8`; its own per-task outcome is recorded where this
+pass's own measurement run wrote it (this file makes no claim about
+that run's numbers beyond what it actually printed, HANDOFF/session
+notes carry the log path).
 """
 from __future__ import annotations
 
@@ -1536,6 +1672,190 @@ def _has_divmod(x) -> bool:
     return False
 
 
+# THE STRING LIBRARY (v1), 2026-09-11 (SPEC.md "The string library (v1)",
+# ROADMAP 12.7, the wave after nested sequences). Seventeen members, one
+# op each (`split` two arities of one op, per SPEC.md's own count); this
+# pass lands exactly one, `len(s.split())` (word_count's own shape, the
+# ONLY use of any string-lib member in any committed task that does not
+# also need a second member this pass does not land), and names every
+# other reachable position as an abstain rather than guess at it. The
+# type table below is needed even for an abstained op: `typ()` must
+# report SPEC.md's own result type for each so a caller (`pred()`'s `==`
+# dispatch is the one that matters here) routes to the CORRECT branch
+# before the abstain fires, not a wrong one that happens to also raise.
+STRLIB_SEQ_RESULT = ("split", "join", "tostr", "strip", "lstrip", "rstrip",
+                     "replace", "lower", "upper")
+STRLIB_INT_RESULT = ("count", "find")
+STRLIB_BOOL_RESULT = ("isdigit", "isalpha", "isupper", "islower",
+                      "startswith", "endswith")
+
+STRLIB_ABSTAIN = {
+    "split": "a row set (seq<seq>) has no backing buffer in this "
+             "lowering's encoding; only `len(s.split())`'s own row-COUNT "
+             "formula is lowered (T_WORDCOUNT_ACSL below), reached "
+             "before this check via `_seq_len_render`/`cexpr`'s own "
+             "special case for `len` applied directly to a one-argument "
+             "`split`. `split(s, c)`'s two-argument form, and either "
+             "arity reaching any OTHER position (not `len`'s own "
+             "argument), are not lowered.",
+    "join": "joining a seq<seq> of rows into a seq has no backing-buffer "
+            "construction in this lowering.",
+    "strip": "a variably-shorter output seq has no sized buffer in this "
+             "lowering (no `ensures`-stated capacity bound the general "
+             "member could size a buffer against, the same gap CAPACITY "
+             "mode's own docstring names for a data-dependent length).",
+    "lstrip": "the same gap as `strip`: a variably-shorter output seq has "
+              "no sized buffer here.",
+    "rstrip": "the same gap as `strip`: a variably-shorter output seq has "
+              "no sized buffer here.",
+    "replace": "a variably longer-or-shorter output seq has no sized "
+               "buffer here, and no non-overlapping-match scan is "
+               "lowered for it either.",
+    "tostr": "the output length depends on `n`'s own runtime digit "
+             "count (plus a leading `-`), which this lowering has no "
+             "static bound for.",
+    "count": "a general non-overlapping substring count has no "
+             "recursive ACSL definition in this lowering yet; the "
+             "length-1-pattern case `count_vowels` needs is not "
+             "specialized either, on purpose (SPEC.md: a member in "
+             "specification position is the same function, not a "
+             "task-shaped instance of it).",
+    "find": "the same gap as `count`: no recursive ACSL definition of a "
+            "left-to-right substring search is lowered yet.",
+    "lower": "an output seq the same length as its input has no "
+             "lowering here yet: no case-map codegen is wired into the "
+             "seq-assignment machinery (`seq_assign_lines`) for it.",
+    "upper": "the same gap as `lower`: no case-map codegen is wired "
+             "into the seq-assignment machinery for it.",
+    "isdigit": "no lowering yet; not reached by either committed task, "
+               "left for the next pass.",
+    "isalpha": "no lowering yet; not reached by either committed task, "
+               "left for the next pass.",
+    "isupper": "no lowering yet; not reached by either committed task, "
+               "left for the next pass.",
+    "islower": "no lowering yet; not reached by either committed task, "
+               "left for the next pass.",
+    "startswith": "no lowering yet; not reached by either committed "
+                  "task, left for the next pass.",
+    "endswith": "no lowering yet; not reached by either committed task, "
+                "left for the next pass.",
+}
+
+
+def _strlib_abstain(op: str, where: str) -> None:
+    """Raise the named abstain for string-lib member `op` reaching
+    rendering position `where`, or do nothing for an op this file does
+    not know (every OTHER operator's own dispatch handles or refuses
+    itself). Never called for `split` reached as `len`'s own direct
+    argument: that path is intercepted earlier, inside `_seq_len_render`
+    and `cexpr`'s `len` case, before either function's generic op
+    dispatch (where this is called from) is reached at all."""
+    if op in STRLIB_ABSTAIN:
+        raise NotImplementedError(
+            f"string library member `{op}` reaching {where}: "
+            f"{STRLIB_ABSTAIN[op]} (SPEC.md \"The string library (v1)\", "
+            f"2026-09-11)")
+
+
+# t_wc (2026-09-11): Python's `str.split()` with NO argument, the row
+# COUNT only (`len(s.split())`, word_count's own shape and the only
+# string-lib use in any committed task this pass lowers). Whitespace is
+# the 10 ASCII code points test_strlib.py's own parity test measured (9
+# to 13, tab/LF/VT/FF/CR, and 28 to 31, FS/GS/RS/US, plus 32, space),
+# never Python's own `str.isspace()` (this kernel enumerates them, same
+# as interp.py's own reason: nothing here calls `chr()` or `str.isspace`
+# itself). A word is a maximal run of non-whitespace code points;
+# `t_wc(s, n)` counts them by counting RUN STARTS (`s[i]` non-whitespace
+# and either `i == 0` or `s[i - 1]` whitespace) over the PREFIX of length
+# `n`, recursing down from `n` so the executable loop below can carry it
+# as a running invariant, `wc == t_wc(s, i)`, with NO row ever
+# materialized -- the length formula IS the lowering, exactly the move
+# `_seq_len_render`'s existing `len(m[i])` case already makes for a
+# nested seq's row length (a formula over the offsets array, never a
+# copy). MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-11):
+# `t_wc_c` itself (its `ensures \result == t_wc(s, n)` contract, the
+# loop's three invariants, and the emitted `t_wc_terminates` well-
+# foundedness lemma) is a self-contained file with no task in it; run
+# standalone through `verify()` alongside `T_DIVMOD_ACSL`'s own
+# ACSL block, all of its goals PROVED (see the module docstring's own
+# 2026-09-11 note for the count).
+WS_CODEPOINTS = (9, 10, 11, 12, 13, 28, 29, 30, 31, 32)
+
+
+def _ws_or(term: str) -> str:
+    """The 10-codepoint whitespace disjunction (SPEC.md "The string
+    library (v1)", 2026-09-11) over ACSL/C term `term`, INLINED (no
+    `is_ws` predicate symbol): measured 2026-09-11, a separate `predicate
+    is_ws(integer x) = ...` cost `t_wc_c`'s own loop-invariant
+    preservation goal a TIMEOUT even at a 20,000,000-step / 60s budget
+    (Alt-Ergo apparently unable to connect the predicate's unfold to the
+    executable `?:` chain cheaply), while this same disjunction written
+    out flat, at every site, everywhere (the recursive definition, the
+    loop invariant, and the executable `?:` chain alike, so every
+    occurrence is syntactically the SAME formula up to the substituted
+    term) discharges every goal, Qed or a sub-100ms Alt-Ergo call."""
+    return " || ".join(f"(({term}) == {c})" for c in WS_CODEPOINTS)
+
+
+T_WORDCOUNT_ACSL = (
+    "/*@\n"
+    "  logic integer t_wc{L}(int *s, integer n) =\n"
+    "    n <= 0 ? 0 :\n"
+    f"    t_wc(s, n - 1) + ((!({_ws_or('s[n - 1]')}) &&\n"
+    f"                       (n - 1 == 0 || ({_ws_or('s[n - 2]')}))) ? 1 : 0);\n"
+    "  lemma t_wc_terminates:\n"
+    "    \\forall int *s, integer n; n > 0 ==> (n - 1) < n && (n - 1) >= 0;\n"
+    "*/\n"
+    "/*@\n"
+    "  requires n >= 0 && \\valid_read(s + (0 .. n - 1));\n"
+    "  assigns \\nothing;\n"
+    "  ensures \\result == t_wc(s, n);\n"
+    "*/\n"
+    "int t_wc_c(int *s, int n) {\n"
+    "  int i = 0, wc = 0;\n"
+    "  /*@\n"
+    "    loop invariant 0 <= i <= n;\n"
+    "    loop invariant wc == t_wc(s, i);\n"
+    "    loop assigns i, wc;\n"
+    "    loop variant n - i;\n"
+    "  */\n"
+    "  while (i < n) {\n"
+    f"    int isw = ({_ws_or('s[i]')}) ? 1 : 0;\n"
+    f"    int prevws = (i == 0) ? 1 : (({_ws_or('s[i - 1]')}) ? 1 : 0);\n"
+    "    if (!isw && prevws) wc = wc + 1;\n"
+    "    i = i + 1;\n"
+    "  }\n"
+    "  return wc;\n"
+    "}\n"
+)
+
+
+def _has_wordcount(x) -> bool:
+    """Whether `split` with exactly ONE argument (SPEC.md's no-arg
+    `s.split()`, not `s.split(c)`) occurs anywhere, the same
+    over-inclusive walk `_has_divmod` uses."""
+    if isinstance(x, dict):
+        if x.get("op") == "split" and len(x.get("args", ())) == 1:
+            return True
+        return any(_has_wordcount(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_has_wordcount(v) for v in x)
+    return False
+
+
+def _wordcount(s: list) -> int:
+    """Python replay of `t_wc`, used only by `_cev` (certificate ground
+    evaluation, which has no C/ACSL to run): the number of maximal
+    non-whitespace runs in `s`, by the same running-prevws walk."""
+    wc, prevws = 0, True
+    for x in s:
+        isw = x in WS_CODEPOINTS
+        if not isw and prevws:
+            wc += 1
+        prevws = isw
+    return wc
+
+
 _PARTIAL_OPS = {"at", "div", "mod", "update", "fill", "call"}
 
 
@@ -1590,6 +1910,19 @@ def typ(e: dict, env: dict, funs: dict):
     op = e["op"]
     if op in SEQOPS:
         return "seq"
+    if op in STRLIB_SEQ_RESULT:
+        # SPEC.md "The string library (v1)" (2026-09-11): the seq/seq<seq>
+        # -returning members. Not all of these have a LOWERING (most are a
+        # named abstain, `STRLIB_ABSTAIN` below), but `typ()` must still
+        # report their correct SPEC.md result type rather than fall
+        # through to this function's own "bool" default, or a caller like
+        # `pred()`'s `==` dispatch would route a comparison against one
+        # through the wrong branch before ever reaching the abstain.
+        return "seq"
+    if op in STRLIB_INT_RESULT:
+        return "int"
+    if op in STRLIB_BOOL_RESULT:
+        return "bool"
     if op == "seq" or op == "slice":
         # SPEC.md "Sequences: literals, concatenation, slices" (2026-09-09):
         # a literal `[e1, ..., en]` and a slice `s[a..b]` both denote seq
@@ -1652,6 +1985,40 @@ def seq_var(e: dict, env: dict) -> str:
     raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
 
+def _slice_alias_base(init: dict, env: dict):
+    """SPEC.md "The string library (v1)" (2026-09-11): word_count's own
+    committed task declares a seq-typed local from a slice, `t2 :=
+    s[0..len(s)]`, "a full-length slice standing in for the loop-free
+    body's own copy of s" (the task's own comment in SPEC.md), and its
+    OFF-BY-ONE twin (SPEC.md "Tasks... measured via harness.twin_cached")
+    mutates the literal `0` to `1`, `t2 := s[1..len(s)]`, a genuine
+    SUB-range. Both need a lowering, and neither needs a COPY: a slice of
+    a contiguous C array is itself contiguous (`s[a..b]`'s element `k` is
+    `s[a + k]`, SPEC.md "Sequences: literals, concatenation, slices"), so
+    `stmts()`'s `var` case below aliases in EVERY case, general to any
+    `a`/`b`: `int *t2 = s + a; int t2_n = b - a;`, the same pointer-offset
+    move `_seq_at_render`'s/`_seq_len_render`'s own existing slice cases
+    already make for a slice reaching `at`/`len` directly, generalized to
+    a slice BOUND to a name. `stmts()`'s own `at_asserts` call on `init`
+    (unchanged, still runs before the alias declaration) is what makes
+    this honest on an ill-formed slice: it emits the domain assert `0 <=
+    a <= b <= len(s)` as a real proof obligation, unprovable in general
+    for the twin's `s[1..len(s)]` (false at the witness `s = []`), which
+    is exactly the UNDEFINED half of the twin's own certificate
+    (`witness=w` on the twin's `lower()` call), not a silent wrong
+    pointer. Returns `(base_var, lo_expr, hi_expr)` when `init` is a
+    slice of a bare seq variable, else None (any other seq-local
+    initializer, e.g. a string-lib member's result, is not aliased and
+    falls through to the general "seq-typed local variables are not
+    supported" refusal, unchanged)."""
+    if init.get("op") != "slice":
+        return None
+    base, lo, hi = init["args"]
+    if "var" not in base or env.get(base["var"]) != "seq":
+        return None
+    return base["var"], lo, hi
+
+
 def _seq_len_render(e: dict, ctx) -> str:
     """ACSL rendering of `len(e)`, `e` a READ-position SeqExpr: a bare seq
     variable (the ordinary case, `{s}_n` unless `ctx.seq_len` overrides it
@@ -1686,6 +2053,21 @@ def _seq_len_render(e: dict, ctx) -> str:
                 "plain seq is int-typed and has no length")
         m, i = seq_var(base, ctx.env), term(idx, ctx)
         return f"({m}_off[({i}) + 1] - {m}_off[({i})])"
+    if e.get("op") == "split" and len(e.get("args", ())) == 1:
+        # `len(s.split())` (SPEC.md "The string library (v1)", 2026-09-11,
+        # word_count's own shape): the row COUNT formula, `t_wc` (see its
+        # own section comment above `_has_wordcount`), never a
+        # materialized row set -- the same "formula, not a copy" move
+        # this function's own `at`/`slice` cases already make. Guarded
+        # to exactly one argument: `len(s.split(c))`'s two-argument form
+        # falls through to the generic `v = seq_var(e, ...)` line below,
+        # which raises on a non-variable (`split` is not a bare seq
+        # var), the correct refusal shape for a case this pass does not
+        # lower.
+        base = e["args"][0]
+        v = seq_var(base, ctx.env)
+        n = ctx.seq_len.get(v, f"{v}_n")
+        return f"t_wc({v}, {n})"
     v = seq_var(e, ctx.env)
     return ctx.seq_len.get(v, f"{v}_n")
 
@@ -1796,6 +2178,7 @@ def term(e: dict, ctx: Ctx) -> str:
     if "forall" in e or "exists" in e:
         raise NotImplementedError("quantifier in ACSL term position")
     op, args = e["op"], e.get("args", [])
+    _strlib_abstain(op, "ACSL term position")
     if op == "len":
         return _seq_len_render(args[0], ctx)
     if op == "at":
@@ -2041,6 +2424,7 @@ def pred(e: dict, ctx: Ctx) -> str:
     if "call" in e:
         return f"({acsl_call(e['call'], ctx)} == \\true)"
     op, args = e["op"], e.get("args", [])
+    _strlib_abstain(op, "ACSL predicate position")
     if op == "not":
         return f"(!{pred(args[0], ctx)})"
     if op == "implies":
@@ -2354,8 +2738,21 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
                 parts.append(cexpr(a, env, funs, task_name, _div_style))
         return f"{task_name}_t({', '.join(parts)})"
     op, args = e["op"], e.get("args", [])
+    _strlib_abstain(op, "executable position")
     if op == "len":
         a0 = args[0]
+        if a0.get("op") == "split" and len(a0.get("args", ())) == 1:
+            # `len(s.split())` in EXECUTABLE position (SPEC.md "The
+            # string library (v1)", 2026-09-11, word_count's own body,
+            # `r := len(t2.split())`): calls the prelude's `t_wc_c`
+            # helper (T_WORDCOUNT_ACSL), whose own contract
+            # (`ensures \result == t_wc(s, n)`) is what lets the task's
+            # `ensures r == len(s.split())` (an ACSL TERM position,
+            # `_seq_len_render`'s matching case) discharge against this
+            # call's return value.
+            base = a0["args"][0]
+            v = seq_var(base, env)
+            return f"t_wc_c({v}, {v}_n)"
         if a0.get("op") == "at":
             # `len(m[i])` in EXECUTABLE position (SPEC.md "Nested
             # sequences", 2026-09-10: `row_max_len`'s own body, `r = len(
@@ -3147,16 +3544,40 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
         elif "var" in s:
             v = s["var"]
             if v["type"] == "seq":
-                # SPEC.md allows a seq-typed LOCAL (`var a: seq := s;`);
-                # this lowering does not implement one (see the seq value
-                # machinery section's docstring): a local has no external
-                # contract to size its backing buffer from, and neither
-                # committed task declares one, so this is a stated scope
-                # limit, not a silent gap.
-                raise NotImplementedError(
-                    "seq-typed local variables are not supported by this "
-                    "lowering (no requires-time bound to size a backing "
-                    "buffer from); only a seq RETURN is implemented")
+                slice_alias = _slice_alias_base(v["init"], ctx.env)
+                if slice_alias is None:
+                    # SPEC.md allows a seq-typed LOCAL (`var a: seq :=
+                    # s;`); this lowering implements only the slice-ALIAS
+                    # shape above (`_slice_alias_base`), not a general
+                    # one: any other initializer (a string-lib member's
+                    # result, `update`/`fill`, ...) has no requires-time
+                    # bound to size a fresh backing buffer from, so this
+                    # is a stated scope limit, not a silent gap.
+                    raise NotImplementedError(
+                        "seq-typed local variables are not supported by "
+                        "this lowering except the slice-ALIAS shape "
+                        "(`v := s[a..b]`, word_count's own case and its "
+                        "own OFF-BY-ONE twin); no requires-time bound "
+                        "sizes a fresh backing buffer for any other "
+                        "initializer")
+                base_var, lo, hi = slice_alias
+                # The slice's own domain obligation, `0 <= a <= b <=
+                # len(s)`, exactly as any other read of a slice already
+                # gets (`at_asserts`, unchanged): for the OFF-BY-ONE
+                # twin's `s[1..len(s)]` this is the UNDEFINED half of its
+                # own certificate at the witness `s = []` (`slice bounds
+                # [1..0]`, SPEC.md's own words for this exact twin), not
+                # a silent bad pointer.
+                out += at_asserts(v["init"], ctx, indent, ctx.funs,
+                                  task_name)
+                lo_c = cexpr(lo, ctx.env, ctx.funs, task_name)
+                hi_c = cexpr(hi, ctx.env, ctx.funs, task_name)
+                out.append(f"{indent}int *{v['name']} = "
+                           f"{base_var} + ({lo_c});")
+                out.append(f"{indent}int {v['name']}_n = "
+                           f"({hi_c}) - ({lo_c});")
+                ctx = ctx.bind(v["name"], "seq")
+                continue
             if is_nested_seq_type(v["type"]):
                 # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested
                 # sequences"): a seq<seq>-typed LOCAL is the identical gap
@@ -3514,6 +3935,14 @@ def _cev(e: dict, st: dict):
         raise _CertSkip("quantifier in executable position")
     op, args = e["op"], e.get("args", [])
     if op == "len":
+        a0 = args[0]
+        if a0.get("op") == "split" and len(a0.get("args", ())) == 1:
+            # `len(s.split())` (SPEC.md "The string library (v1)",
+            # 2026-09-11): `_wordcount`, the same running-prevws walk
+            # `t_wc`/`t_wc_c` compute, so a witness replay of
+            # word_count's real body agrees with the C the kernel
+            # actually checks.
+            return _wordcount(_cev(a0["args"][0], st))
         return len(_cev(args[0], st))
     if op == "at":
         s, i = _cev(args[0], st), _cev(args[1], st)
@@ -4583,6 +5012,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         header.append(f"struct {_pair_struct_name(*pt)} {{ int a; int b; }};")
     if _has_divmod(task) or _has_divmod(body):
         header.append(T_DIVMOD_ACSL.rstrip("\n"))
+    if _has_wordcount(task) or _has_wordcount(body):
+        header.append(T_WORDCOUNT_ACSL.rstrip("\n"))
     for f in task.get("spec_funs", []):
         header += spec_fun_acsl(f, funs)
 

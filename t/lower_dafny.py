@@ -439,6 +439,190 @@ v1 mapping, gate by gate (SPEC.md):
     and witness) for the twin is byte-identical (Python `==`, not `cmp`)
     to the committed `out/<name>.dfy` and `out/<name>_twin.dfy`.
 
+THE STRING LIBRARY (added 2026-09-11, SPEC.md "The string library (v1)"):
+  the 17 members (split x2 arities, join, tostr, count, find, strip,
+  lstrip, rstrip, replace, lower, upper, isdigit, isalpha, isupper,
+  islower, startswith, endswith) as the kernel's own recursive Dafny
+  functions in `STRLIB_PRELUDE` (a module-level string near `dafny_type`,
+  emitted only when `_uses_strlib` finds an `{"op": M, ...}` node for a
+  member name M -- an op-value AST walk, not a raw string search over the
+  JSON: count_matches.json names its own int-counting spec_fun "count"
+  too, and `_collect_names`-style string matching misfires on it, pulling
+  the prelude into a task gate (c) needs unchanged). `split`/`count` are
+  the two ops needing argument-shape dispatch (`_strlib_lower`, beside
+  `dafny_type`): `split(s)`/`split(s,c)` on arity, `count` on whether its
+  first argument is syntactically `slice(X, 0, HI)` -- see below. Every
+  other member is a flat name -> Dafny-function-name table (`STRLIB_OPS`).
+  Encoding, each a straight port of interp.py's own `_str_*` semantics
+  into a Dafny `function` over `seq<int>` (`seq<seq<int>>` for split's
+  result and join's rows): SplitWs/TokLen skip whitespace runs (`IsWs`,
+  the ten SPEC.md code points) then take maximal non-whitespace tokens;
+  SplitSep keeps every row, prepending onto the recursive tail's own
+  first row; Join concatenates with the separator between rows, empty on
+  no rows, no separator on one; Count/FindFrom scan the front
+  non-overlapping/leftmost, `|t|==0` totalized per SPEC.md
+  (`len(s)+1`/`0`); Strip/LStrip/RStrip peel from the front/back/both;
+  Replace inserts `u` before-and-after every code point when `t==[]`,
+  else substitutes every non-overlapping front match; Lower/Upper map the
+  two ASCII letter ranges, `IsUpperLetter`/`IsLowerLetter` the shared
+  tables `LowerC`/`UpperC`/`IsDigitC`/case-predicates build on; the four
+  predicates follow interp.py's exact empty/mixed rules (`IsDigit`/
+  `IsAlpha`: non-empty and every code point of the class; `IsUpperStr`/
+  `IsLowerStr`: `HasLetter` (some letter) and no letter of the OTHER
+  case, so a non-letter never counts against either); ToStr/DigitsOf
+  build decimal digits from the low end up (`n / 10`, `n % 10`), signing
+  with a leading 45 for `n < 0`; StartsWith/EndsWith compare a boundary
+  slice.
+
+  THE LEMMAS. SPEC.md names three: the split length law, the
+  join-of-split law, count against a loop. All three are stated as
+  function-level `ensures` (never a separate lemma needing a call this
+  file cannot insert into an unedited task body): a Dafny `function`'s
+  own postconditions are proved once, at its declaration, and then
+  assumed for free at every call site, so the design throughout is
+  finding a postcondition whose OWN induction aligns with the function's
+  recursion (front-peel matching front-peel) closely enough for Dafny's
+  automatic per-function induction to close it, reaching for a
+  hand-written `lemma` only where measurement showed the automatic path
+  did not converge, and then reaching it FROM INSIDE the function's own
+  body (Dafny functions may sequence ghost `assert P by { lemma(...); }`
+  statements before their final expression, which still counts as
+  "automatic": the fact is proved once, at the declaration, never at a
+  task's own call site):
+    - split length law and join-of-split law: both live on SplitSep
+      itself (`ensures |SplitSep(s,c)| == Count(s,[c]) + 1` and
+      `ensures Join(SplitSep(s,c),[c]) == s`), and both verify with NO
+      hand-written lemma: SplitSep peels `s[0]`/recurses on `s[1..]`, and
+      so does the induction each postcondition needs, so Dafny's default
+      per-function induction closes both directly (measured: dropping
+      either `ensures` and re-adding it alone still verifies stand-alone,
+      so neither is riding on the other's proof).
+    - count against a loop: count_vowels.json's invariant reads
+      `count(slice(s,0,i),[c])` -- a Dafny slice `s[0..i]` fed straight to
+      the general `Count`, which recurses front-to-back, but the loop's
+      OWN induction needs a back-to-front, prefix-GROWING step
+      (`Count(s[0..i+1],[c])` from `Count(s[0..i],[c])`), and the two
+      directions do not align: attaching that step directly to `Count`
+      as a function `ensures` (both as `Count`'s own postcondition and
+      on a dedicated `CountChar1` helper) TIMED OUT at 30s twice, measured
+      directly (`strlib_test3.dfy`/`strlib_test4.dfy` in this wave's
+      scratch, not committed). Fixed with CountCharPrefix(s, n, c), a
+      SEPARATE prefix-by-INDEX accumulator (`decreases` `n` itself, no
+      slicing in its own body at all) whose postcondition
+      (`CountCharPrefix(s,n,c) == Count(s[0..n],[c])`, guarded
+      `0 <= n <= |s|`) is proved via one embedded
+      `assert ... by { CountAppend1(s[0..n-1], s[n-1], c); }`, where
+      CountAppend1 is the one hand-written lemma this wave needed (an
+      append-one-char step for `Count`, proved by ordinary induction on
+      `s`, front-peeling exactly like `Count` itself: MEASURED to verify
+      in under a second once its recursive calls mirror `Count`'s own).
+      `_strlib_lower`'s `count` dispatch recognizes exactly the
+      `count(slice(s,0,i), [c])` shape (a single-code-point pattern,
+      `_is_singleton_seq`) and rewrites it to `CountCharPrefix(s, i, c)`;
+      every OTHER `count(s, t)` shape, sliced or not, single-point or
+      not, lowers to the general `Count(s, t)`, and a second
+      CountCharPrefix postcondition
+      (`n == |s| ==> CountCharPrefix(s,n,c) == Count(s,[c])`) connects
+      the two automatically at a loop's exit, with no lemma call and no
+      body edit anywhere.
+      CountCharPrefix is deliberately TOTAL (clamped to 0 outside
+      `[0,|s|]`, no `requires`), not merely for convenience: SPEC.md
+      "Invariants are checked in order" (2026-09-09) means an invariant's
+      own definedness may assume only EARLIER invariants in the task's
+      list, and count_vowels.json states its value invariant BEFORE the
+      bounds invariants (`0 <= i`, `i <= len(s)`) that would justify
+      `CountCharPrefix`'s domain -- measured directly, a `requires
+      0 <= n <= |s|` version of CountCharPrefix fails Dafny's own
+      well-formedness check on exactly the FIRST invariant ("function
+      precondition could not be proved", the bounds not yet in scope);
+      a task body is never reordered to fix this, so the function was
+      made total instead, which needs no reordering at all.
+
+  A THIRD SITE NEEDED A NON-LEMMA FIX. word_count.json copies `s` via a
+  full-length slice (`t2 := s[0..len(s)]`) before calling `split`, and
+  Dafny's seq theory does not fold that slice to `s` on its own where the
+  fact is actually needed: a stand-alone `lemma ... ensures s[0..|s|]==s
+  {}` verifies trivially (it IS the Z3 goal), but using it via congruence
+  to justify `SplitWs(t2) == SplitWs(s)` needs an explicit `assert t2 ==
+  s;` in between (measured on a probe file, `wc_min2.dfy`), which is
+  again a task-body edit this file does not make. `_full_self_slice`
+  (beside `_strlib_lower`) folds `slice(X, 0, len(X))` to `X` at LOWERING
+  time instead -- true for any seq, not a string-library fact, but this
+  is the task that needed it: `t2 := s[0..len(s)]` now lowers straight to
+  `t2 := s`, so `SplitWs(t2)` and `SplitWs(s)` are literally the same
+  term and the congruence step is never needed.
+
+  ADDITIONAL ENSURES, found by the fuzz family (below), not by the three
+  committed tasks: `Count(s,t) >= 0`; `ToStr`'s `|ToStr(n)| >= 1` and its
+  leading-45 sign fact; `Lower`/`Upper`'s `|Lower(s)| == |s|` (length
+  preservation) and, guarded on `AllAlpha(s) && |s| > 0`, that the result
+  is all-lower/all-upper (this one DOES need its own induction to align:
+  `AllAlpha`/`HasLetter`/`NoLowerLetter` all peel `s[0]` the same way
+  `Lower` does, so it closes with no hand-written lemma either);
+  `LStrip`/`RStrip`/`Strip`'s `|result| <= |s|` and the empty-input case;
+  and a `Replace`-`Count` interaction
+  (`|t|==|u|==1 && t[0]!=u[0] ==> Count(Replace(s,t,u),u) ==
+  Count(s,u) + Count(s,t)`, one non-lemma-count-of-a-replaced-string
+  fact), proved with one more hand-written lemma, CountConcat1
+  (`Count(x+y,[c]) == Count(x,[c]) + Count(y,[c])`, the same
+  front-peeling style as CountAppend1), embedded the same way inside
+  Replace's own two recursive branches.
+
+  MEASURED. (a) the three committed tasks, `python3 lower_dafny.py
+  word_count split_join count_vowels` (flake 3, harness's default): all
+  three COUNT -- word_count (off-by-one twin REFUTED, witness `s=[]`,
+  real 0, twin an out-of-range slice `[1..0]`), split_join (wrong-var
+  twin REFUTED, witness `s=[32]`(one space)/`c=0`, real `[32]`, twin
+  `[]`), count_vowels (invariant-drop twin REFUTED, witness exit at
+  `s=[]`, `i=0`, `r=1`). (b) the family: `fuzz_lower.py --only dafny --n
+  400 --seed 1 --flake 3 --jobs 8` (the `--tasks` name list this wave was
+  given, `fuzz-strlib-names.txt`, matched only 2 of its 16 names against
+  this exact corpus -- unwitnessed why, since `--n`/`--seed` alone should
+  be deterministic against the CURRENT `fuzz_lower.py`, which this file
+  does not own or edit; both matched tasks read as expected,
+  fz_v1strlib_007 COUNTS and fz_v1strlib_031 is the known nonrefuting
+  off-by-one below). Re-run WITHOUT `--tasks` for the family's real
+  weight in this exact `--n 400 --seed 1` corpus: 17 v1strlib tasks, 15
+  COUNT. The two that do not: fz_v1strlib_031 (`tostr_len`, real
+  VERIFIED, twin genuinely nonrefuting by the corpus's OWN
+  `_twin_op: "off-by-one+nonrefuting"`/`_twin_differs: null` labels --
+  not a lowering gap, the SPEC.md-measured ~9.2% no-witness rate showing
+  up here) and fz_v1strlib_094 (`find_case`, real UNPROVED -- see OPEN,
+  below). Zero disagreements, zero vs-truth misses, on this run or the
+  one before the ADDITIONAL ENSURES pass (which moved 8 shapes from
+  real-unproved to COUNTS: count_one, count_two, case_map_lower,
+  case_map_upper, strip_len_lstrip/rstrip/strip, replace_count). (c) the
+  committed matrix: every task in `t/tasks/*.json` (26, all of them, not
+  a sample) re-lowered via `lower(task, task["body"])` on both this file
+  and the pre-wave `git show HEAD:t/lower_dafny.py`; the 23 that mention
+  no member (an `_uses_strlib`-equivalent AST check, not a name search)
+  are BYTE-IDENTICAL, Python `==`; the 3 that do (count_vowels,
+  split_join, word_count) differ, as expected -- they did not exist
+  before this wave. `t/AGREEMENT.md` (2026-09-10, pre-wave) lists only
+  the 23; its dafny column is unchanged by construction, since the
+  source feeding it is unchanged.
+
+  OPEN, BY NAME: `find`'s full characterization (`find(s,t) == -1` iff no
+  occurrence; otherwise the FIRST occurrence, no earlier one) is NOT a
+  prelude `ensures` -- fz_v1strlib_094's shape (`r := idx+1` on a
+  found index, `0` on `-1`, then asserting both a no-match-before and a
+  found-here-first fact as a `forall`) needs it and reads real UNPROVED.
+  Measured: `FindFrom`'s own value (`-1` or the least matching index) is
+  never in question -- `find_case`'s OTHER two members (the twin still
+  REFUTES) and every use of `find` elsewhere are unaffected -- what is
+  missing is the EXISTENTIAL/no-earlier-occurrence characterization as a
+  reusable fact. A hand-written lemma with explicit `forall k | ...
+  ensures ...` proof blocks (this wave's scratch, `find_test3.dfy`) got
+  partway (the "no match before" quantifier trips on the boundary case
+  `k == i` inside the recursive step, losing the `s[i..i+|t|] != t` fact
+  the enclosing `if`/`else` already established, once inside the
+  `forall`'s own proof scope) and was not finished inside this wave's
+  time budget; left as an honest residual rather than forced. `split(s,
+  t)` on a multi-code-point separator, `format`, f-strings, `int(x,
+  base)`, `splitlines`, the padding members, `title`/`capitalize`/
+  `swapcase`, `partition`, `encode` stay OUT of v1 by SPEC.md's own name,
+  unaffected by this wave.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -461,8 +645,405 @@ OUT = HERE / "out"
 BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
            "+": "+", "-": "-", "*": "*", "div": "/", "mod": "%",
            "implies": "==>"}
+
+# The string library (v1) prelude (SPEC.md "The string library (v1)", 2026-09-11):
+# each of the 17 members as the kernel's own recursive Dafny function over
+# seq<int> (and seq<seq<int>> for split/join), plus the lemmas the three
+# committed tasks' ensures need, stated as function-level `ensures` so Dafny
+# applies them automatically at every call site (no task body is ever edited
+# to insert a lemma call): SplitSep carries the split length law
+# (`|SplitSep(s,c)| == Count(s,[c]) + 1`) and the join-of-split law
+# (`Join(SplitSep(s,c),[c]) == s`) as its own postconditions, proved by
+# Dafny's automatic induction because they align with SplitSep's own
+# front-recursion (peels s[0], recurses on s[1..]); CountCharPrefix is the
+# "count against a loop" lemma, a prefix-by-index accumulator (decreases
+# |n| via `n`'s own clamped measure, not |s|) whose own postcondition
+# proves it equal to Count(s[0..n],[c]) via an embedded
+# `assert ... by { CountAppend1(...); }` (Dafny functions may sequence
+# ghost asserts before their final expression; CountAppend1 is a
+# hand-written lemma because Dafny's automatic per-function induction alone
+# timed out at 30s on the append-style step, measured directly: Count
+# recurses front-to-back but the loop invariant needs a back-to-front
+# (prefix-growing) step, and the two inductions do not align without help).
+# CountCharPrefix is deliberately TOTAL (no `requires`, clamped to 0
+# outside [0,|s|]): count_vowels.json's own invariant list states the
+# value invariant BEFORE the bounds invariants that would justify
+# `0 <= i <= |s|` (SPEC.md "Invariants are checked in order", 2026-09-09),
+# so a `requires 0 <= n <= |s|` version fails Dafny's well-formedness
+# check on exactly that invariant (measured directly: "function
+# precondition could not be proved" at the first invariant, the bounds
+# not yet in scope); a task body is never edited to reorder its own
+# invariants, so the function is made total instead, which sidesteps the
+# gap entirely. `_full_self_slice` (below `_strlib_lower`) folds
+# `slice(X, 0, len(X))` to `X` at lowering time for the same reason:
+# word_count.json copies `s` via a full-length slice before calling
+# `split`, and Dafny's seq theory does not fold that slice to `s` on its
+# own where it is needed (a standalone `ensures s[0..|s|] == s` lemma
+# proves trivially, being the direct goal, but using it via congruence
+# needs an `assert` this file cannot insert into the task's body).
+#
+# The prelude is emitted only when the task (or the body actually being
+# lowered -- a twin's mutated body, when `witness` is set) mentions a
+# member (`_uses_strlib`, an op-name AST walk, never a raw string search:
+# count_matches.json names its own int-counting spec_fun "count" too, and
+# a string search misfires on it), so gate (c)'s byte-identical-source
+# check holds for every task that does not call a member, not merely for
+# their method text.
+STRLIB_PRELUDE = """
+function IsWs(c: int): bool { (9 <= c && c <= 13) || (28 <= c && c <= 32) }
+
+function TokLen(s: seq<int>): int
+  requires |s| > 0 && !IsWs(s[0])
+  ensures 1 <= TokLen(s) <= |s|
+  decreases |s|
+{
+  if |s| == 1 then 1
+  else if IsWs(s[1]) then 1
+  else 1 + TokLen(s[1..])
+}
+
+function SplitWs(s: seq<int>): seq<seq<int>>
+  decreases |s|
+{
+  if |s| == 0 then []
+  else if IsWs(s[0]) then SplitWs(s[1..])
+  else
+    var i := TokLen(s);
+    [s[0..i]] + SplitWs(s[i..])
+}
+
+function Join(rows: seq<seq<int>>, sep: seq<int>): seq<int>
+  decreases |rows|
+{
+  if |rows| == 0 then []
+  else if |rows| == 1 then rows[0]
+  else rows[0] + sep + Join(rows[1..], sep)
+}
+
+function SplitSep(s: seq<int>, c: int): seq<seq<int>>
+  decreases |s|
+  ensures |SplitSep(s, c)| >= 1
+  ensures Join(SplitSep(s, c), [c]) == s
+  ensures |SplitSep(s, c)| == Count(s, [c]) + 1
+{
+  if |s| == 0 then [[]]
+  else if s[0] == c then [[]] + SplitSep(s[1..], c)
+  else
+    var rest := SplitSep(s[1..], c);
+    [[s[0]] + rest[0]] + rest[1..]
+}
+
+function Count(s: seq<int>, t: seq<int>): int
+  decreases |s|
+  ensures Count(s, t) >= 0
+{
+  if |t| == 0 then |s| + 1
+  else if |s| < |t| then 0
+  else if s[0..|t|] == t then 1 + Count(s[|t|..], t)
+  else Count(s[1..], t)
+}
+
+lemma CountAppend1(s: seq<int>, x: int, c: int)
+  ensures Count(s + [x], [c]) == Count(s, [c]) + (if x == c then 1 else 0)
+  decreases |s|
+{
+  if |s| == 0 {
+    assert [x] == [c] <==> x == c;
+  } else {
+    CountAppend1(s[1..], x, c);
+    assert (s + [x])[1..] == s[1..] + [x];
+  }
+}
+
+lemma CountConcat1(x: seq<int>, y: seq<int>, c: int)
+  ensures Count(x + y, [c]) == Count(x, [c]) + Count(y, [c])
+  decreases |x|
+{
+  if |x| == 0 {
+    assert x + y == y;
+  } else {
+    CountConcat1(x[1..], y, c);
+    assert (x + y)[1..] == x[1..] + y;
+  }
+}
+
+function CountCharPrefix(s: seq<int>, n: int, c: int): int
+  decreases if 0 <= n then n else 0
+  ensures 0 <= n <= |s| ==> CountCharPrefix(s, n, c) == Count(s[0..n], [c])
+  ensures 0 <= n <= |s| && n == |s| ==>
+      CountCharPrefix(s, n, c) == Count(s, [c])
+{
+  if 0 <= n <= |s| then
+    (if n == 0 then Count(s[0..0], [c])
+     else
+       assert s[0..n] == s[0..n-1] + [s[n-1]] by {}
+       assert Count(s[0..n], [c]) ==
+              Count(s[0..n-1], [c]) + (if s[n-1] == c then 1 else 0) by {
+         CountAppend1(s[0..n-1], s[n-1], c);
+       }
+       assert n == |s| ==> s[0..n] == s by {}
+       CountCharPrefix(s, n-1, c) + (if s[n-1] == c then 1 else 0))
+  else 0
+}
+
+function DigitChar(d: int): int
+  requires 0 <= d <= 9
+{ 48 + d }
+
+function DigitsOf(n: int): seq<int>
+  requires n >= 0
+  ensures |DigitsOf(n)| >= 1
+  decreases n
+{
+  if n < 10 then [DigitChar(n)]
+  else DigitsOf(n / 10) + [DigitChar(n % 10)]
+}
+
+function ToStr(n: int): seq<int>
+  ensures |ToStr(n)| >= 1
+  ensures n < 0 ==> ToStr(n)[0] == 45
+{
+  if n < 0 then [45] + DigitsOf(-n) else DigitsOf(n)
+}
+
+function FindFrom(s: seq<int>, t: seq<int>, i: int): int
+  requires 0 <= i <= |s|
+  decreases |s| - i
+{
+  if |t| == 0 then i
+  else if i + |t| > |s| then -1
+  else if s[i..i+|t|] == t then i
+  else FindFrom(s, t, i+1)
+}
+
+function Find(s: seq<int>, t: seq<int>): int
+{ FindFrom(s, t, 0) }
+
+function LStrip(s: seq<int>): seq<int>
+  decreases |s|
+  ensures |LStrip(s)| <= |s|
+  ensures |s| == 0 ==> |LStrip(s)| == 0
+{
+  if |s| == 0 then []
+  else if IsWs(s[0]) then LStrip(s[1..])
+  else s
+}
+
+function RStrip(s: seq<int>): seq<int>
+  decreases |s|
+  ensures |RStrip(s)| <= |s|
+  ensures |s| == 0 ==> |RStrip(s)| == 0
+{
+  if |s| == 0 then []
+  else if IsWs(s[|s|-1]) then RStrip(s[0..|s|-1])
+  else s
+}
+
+function Strip(s: seq<int>): seq<int>
+  ensures |Strip(s)| <= |s|
+  ensures |s| == 0 ==> |Strip(s)| == 0
+{
+  assert |s| == 0 ==> |LStrip(s)| == 0 by {}
+  RStrip(LStrip(s))
+}
+
+function Replace(s: seq<int>, t: seq<int>, u: seq<int>): seq<int>
+  decreases |s|
+  ensures (|t| == 1 && |u| == 1 && t[0] != u[0]) ==>
+      Count(Replace(s, t, u), u) == Count(s, u) + Count(s, t)
+{
+  if |t| == 0 then
+    (if |s| == 0 then u else u + [s[0]] + Replace(s[1..], t, u))
+  else if |s| < |t| then s
+  else if s[0..|t|] == t then
+    (assert (|t| == 1 && |u| == 1 && t[0] != u[0]) ==>
+        Count(u + Replace(s[|t|..], t, u), u) ==
+        Count(u, u) + Count(Replace(s[|t|..], t, u), u) by {
+      if |t| == 1 && |u| == 1 && t[0] != u[0] {
+        CountConcat1(u, Replace(s[|t|..], t, u), u[0]);
+      }
+    }
+     u + Replace(s[|t|..], t, u))
+  else
+    (assert (|t| == 1 && |u| == 1 && t[0] != u[0]) ==>
+        Count([s[0]] + Replace(s[1..], t, u), u) ==
+        Count([s[0]], u) + Count(Replace(s[1..], t, u), u) by {
+      if |t| == 1 && |u| == 1 && t[0] != u[0] {
+        CountConcat1([s[0]], Replace(s[1..], t, u), u[0]);
+      }
+    }
+     [s[0]] + Replace(s[1..], t, u))
+}
+
+function IsUpperLetter(c: int): bool { 65 <= c <= 90 }
+function IsLowerLetter(c: int): bool { 97 <= c <= 122 }
+
+function LowerC(c: int): int { if IsUpperLetter(c) then c + 32 else c }
+function UpperC(c: int): int { if IsLowerLetter(c) then c - 32 else c }
+
+function Lower(s: seq<int>): seq<int>
+  decreases |s|
+  ensures |Lower(s)| == |s|
+  ensures AllAlpha(s) && |s| > 0 ==> IsLowerStr(Lower(s))
+{ if |s| == 0 then [] else [LowerC(s[0])] + Lower(s[1..]) }
+
+function Upper(s: seq<int>): seq<int>
+  decreases |s|
+  ensures |Upper(s)| == |s|
+  ensures AllAlpha(s) && |s| > 0 ==> IsUpperStr(Upper(s))
+{ if |s| == 0 then [] else [UpperC(s[0])] + Upper(s[1..]) }
+
+function IsDigitC(c: int): bool { 48 <= c <= 57 }
+
+function AllDigits(s: seq<int>): bool
+  decreases |s|
+{ |s| == 0 || (IsDigitC(s[0]) && AllDigits(s[1..])) }
+
+function IsDigit(s: seq<int>): bool { |s| > 0 && AllDigits(s) }
+
+function AllAlpha(s: seq<int>): bool
+  decreases |s|
+{ |s| == 0 || ((IsUpperLetter(s[0]) || IsLowerLetter(s[0])) && AllAlpha(s[1..])) }
+
+function IsAlpha(s: seq<int>): bool { |s| > 0 && AllAlpha(s) }
+
+function HasLetter(s: seq<int>): bool
+  decreases |s|
+{ if |s| == 0 then false else (IsUpperLetter(s[0]) || IsLowerLetter(s[0]) || HasLetter(s[1..])) }
+
+function NoLowerLetter(s: seq<int>): bool
+  decreases |s|
+{ if |s| == 0 then true else (!IsLowerLetter(s[0]) && NoLowerLetter(s[1..])) }
+
+function NoUpperLetter(s: seq<int>): bool
+  decreases |s|
+{ if |s| == 0 then true else (!IsUpperLetter(s[0]) && NoUpperLetter(s[1..])) }
+
+function IsUpperStr(s: seq<int>): bool { HasLetter(s) && NoLowerLetter(s) }
+function IsLowerStr(s: seq<int>): bool { HasLetter(s) && NoUpperLetter(s) }
+
+function StartsWith(s: seq<int>, t: seq<int>): bool
+{ |t| <= |s| && s[0..|t|] == t }
+
+function EndsWith(s: seq<int>, t: seq<int>): bool
+{ |t| <= |s| && s[|s|-|t|..] == t }
+"""
+
 NARY_OPS = {"and": "&&", "or": "||"}
 TYPES = {"int": "int", "bool": "bool", "seq": "seq<int>"}
+
+
+# SPEC.md "The string library (v1)" (2026-09-11): the 17 members, each the
+# member's own notation name mapped to its prelude function. `split` and
+# `count` are handled by name in `_strlib_lower` below (split for its two
+# arities, count for the slice-prefix special case); everything else is a
+# uniform name -> Dafny-function-name mapping with no argument reshaping.
+STRLIB_OPS = {
+    "join": "Join", "tostr": "ToStr", "find": "Find", "strip": "Strip",
+    "lstrip": "LStrip", "rstrip": "RStrip", "replace": "Replace",
+    "lower": "Lower", "upper": "Upper", "isdigit": "IsDigit",
+    "isalpha": "IsAlpha", "isupper": "IsUpperStr", "islower": "IsLowerStr",
+    "startswith": "StartsWith", "endswith": "EndsWith",
+}
+STRLIB_MEMBERS = frozenset(STRLIB_OPS) | {"split", "count"}
+
+
+def _uses_strlib(obj) -> bool:
+    """True iff some `{"op": M, ...}` node with M a string-library member
+    name (never a raw string match: count_matches.json names its OWN
+    int-counting spec_fun "count", called as `{"call": {"fun": "count",
+    ...}}`, a `_collect_names`-style scan over every string in the JSON
+    would misfire on that name and pull the string-library prelude into a
+    task gate (c) needs byte-identical -- measured directly, that cruder
+    check DOES misfire on count_matches.json)."""
+    if isinstance(obj, dict):
+        if obj.get("op") in STRLIB_MEMBERS:
+            return True
+        return any(_uses_strlib(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_strlib(v) for v in obj)
+    return False
+
+
+def _is_zero_slice(a) -> bool:
+    """True for the JSON shape `slice(X, 0, HI)` (a prefix slice), the shape
+    the "count against a loop" special case below looks for."""
+    return (isinstance(a, dict) and a.get("op") == "slice"
+            and isinstance(a.get("args"), list) and len(a["args"]) == 3
+            and a["args"][1] == {"int": 0})
+
+
+def _is_singleton_seq(a) -> bool:
+    """True for the JSON shape `seq(X)`, a one-code-point pattern literal
+    (`[c]` in the notation) -- the shape every count/split(s,c) single-point
+    pattern in the three committed tasks and SPEC.md's notation takes."""
+    return (isinstance(a, dict) and a.get("op") == "seq"
+            and isinstance(a.get("args"), list) and len(a["args"]) == 1)
+
+
+def _full_self_slice(op: str, raw_args: list, lower_fn) -> str | None:
+    """`slice(X, 0, len(X))` (the same X, structurally) denotes X itself --
+    true for any seq, not a string-library fact, but word_count.json (SPEC.md
+    "The string library (v1)", 2026-09-11) is the task that needs it proved:
+    its body copies `s` via `t2 := s[0..len(s)]` before calling `split`, "a
+    full-length slice standing in for the loop-free body's own copy of `s`"
+    (SPEC.md), and measured directly, Dafny's seq theory does NOT fold
+    `s[0..|s|]` to `s` on its own here: a standalone lemma
+    `ensures s[0..|s|] == s {}` verifies trivially (it IS the goal), but
+    using that fact to justify `SplitWs(t2) == SplitWs(s)` from `t2 ==
+    s[0..|s|]` needs an explicit `assert t2 == s;` in between (measured on a
+    probe file) -- exactly the kind of body edit SPEC.md rules out. Folding
+    the JSON shape at lowering time sidesteps the gap the same way a
+    compiler constant-folds `x + 0`: `t2 := s[0..len(s)]` lowers straight to
+    `t2 := s`, so `SplitWs(t2)` and `SplitWs(s)` are the SAME term and need
+    no congruence step at all. Sound for any `slice(X, 0, len(X))`, string
+    library or not; kept beside `_strlib_lower` because that is the gap it
+    was found closing."""
+    if op != "slice" or len(raw_args) != 3:
+        return None
+    base, lo, hi = raw_args
+    if lo == {"int": 0} and hi == {"op": "len", "args": [base]}:
+        return lower_fn(base)
+    return None
+
+
+def _strlib_lower(op: str, raw_args: list, lower_fn) -> str | None:
+    """Lower a v1 string-library op to a call of its prelude function, or
+    None for a non-string-library op. `lower_fn` lowers one sub-expression
+    (expr's own recursive call in spec position, body_expr's in body
+    position), so this one function serves both dispatch tables.
+
+    `count` gets a special case (SPEC.md's "count against a loop" lemma,
+    2026-09-11): `count(slice(s, 0, i), [c])`, exactly the shape
+    count_vowels.json's invariant takes, lowers to CountCharPrefix(s, i, c)
+    -- the prelude function whose own postcondition carries the
+    index-incremental step (`CountCharPrefix(s,n,c) ==
+    CountCharPrefix(s,n-1,c) + (s[n-1]==c ? 1 : 0)`) the loop's invariant
+    preservation needs and Dafny cannot re-derive from the general `Count`
+    alone (measured: attaching that step directly to `Count` as a function
+    postcondition times out at 30s, front-recursion vs. the prefix-growing
+    direction the loop needs do not align without help -- see the prelude's
+    docstring). Every other `count(s, t)` shape, including the un-sliced
+    `count(s, [c])` in count_vowels.json's own `ensures`, lowers to the
+    general `Count(s, t)`; CountCharPrefix carries its own second
+    postcondition (`n == |s| ==> CountCharPrefix(s,n,c) == Count(s,[c])`)
+    so the two connect automatically at the loop's exit, with no lemma
+    call inserted into the (unedited) task body."""
+    if op == "split":
+        if len(raw_args) == 1:
+            return f"SplitWs({lower_fn(raw_args[0])})"
+        return f"SplitSep({lower_fn(raw_args[0])}, {lower_fn(raw_args[1])})"
+    if op == "count":
+        base, pat = raw_args
+        if _is_zero_slice(base) and _is_singleton_seq(pat):
+            s_e, _, hi_e = base["args"]
+            return (f"CountCharPrefix({lower_fn(s_e)}, {lower_fn(hi_e)}, "
+                    f"{lower_fn(pat['args'][0])})")
+        return f"Count({lower_fn(base)}, {lower_fn(pat)})"
+    fname = STRLIB_OPS.get(op)
+    if fname is None:
+        return None
+    return f"{fname}(" + ", ".join(lower_fn(a) for a in raw_args) + ")"
 
 
 def dafny_type(t) -> str:
@@ -519,7 +1100,13 @@ def expr(e: dict, self_name: str | None = None) -> str:
                 f"self-calls in bodies only (SPEC.md gate 3)")
         args = ", ".join(expr(a, self_name) for a in c["args"])
         return f"{c['fun']}({args})"
-    op, args = e["op"], [expr(a, self_name) for a in e.get("args", [])]
+    op = e["op"]
+    _lower1 = lambda a: expr(a, self_name)
+    sc = (_full_self_slice(op, e.get("args", []), _lower1)
+          or _strlib_lower(op, e.get("args", []), _lower1))
+    if sc is not None:
+        return sc
+    args = [expr(a, self_name) for a in e.get("args", [])]
     if op == "neg":
         return f"(-{args[0]})"
     if op == "not":
@@ -631,6 +1218,11 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
                 return f"({parts[0]} ==> {parts[1]})"
             return "(" + f" {NARY_OPS[op]} ".join(parts) + ")"
         # strict operators: same laziness as the enclosing position
+        _lower1 = lambda a: body_expr(a, ctx, pre, lazy)
+        sc = (_full_self_slice(op, e.get("args", []), _lower1)
+              or _strlib_lower(op, e.get("args", []), _lower1))
+        if sc is not None:
+            return sc
         args = [body_expr(a, ctx, pre, lazy) for a in e.get("args", [])]
         if op == "neg":
             return f"(-{args[0]})"
@@ -1050,7 +1642,85 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         return out, (r if op == "mod" else (x - r) // y)
     if op in _ARITH:
         return out, _ARITH[op](vs[0], vs[1])
+    if op == "seq":
+        return out, list(vs)
+    if op == "slice":
+        s, lo, hi = vs
+        if not (0 <= lo <= hi <= len(s)):
+            raise interp.Undef(f"slice [{lo}..{hi}] outside [0,{len(s)}]")
+        return out, s[lo:hi]
+    if op == "update":
+        s, i, x = vs
+        if not (0 <= i < len(s)):
+            raise interp.Undef(f"update index {i} outside [0,{len(s)})")
+        return out, s[:i] + [x] + s[i + 1:]
+    if op == "fill":
+        n, x = vs
+        if n < 0:
+            raise interp.Undef(f"fill length {n} < 0")
+        return out, [x] * n
+    sv = _strlib_ev(op, vs)
+    if sv is not None:
+        return out, sv
     raise ValueError(f"t has no operator {op!r}")
+
+
+# SPEC.md "The string library (v1)" (2026-09-11): every member is total (no
+# undefined case), so `_strlib_ev` below never raises -- unlike `at`/`div`/
+# `update`/`fill` above, which do -- and it delegates to interp.py's own
+# `_str_*` helpers (already the ground truth `test_strlib.py`'s parity test
+# measures against Python's real `str` methods), converting this file's
+# list-of-int/list-of-list-of-int representation to interp.py's tuple-of-
+# int/tuple-of-tuple-of-int and back, so the certificate machinery's notion
+# of "count"/"split"/etc. is the SAME computation the kernel is being asked
+# to verify, never a second, independently-written implementation that
+# could silently disagree with it (SPEC.md: "parity is by construction").
+# `split`'s arity (1 or 2 args) is the one shape-dependent case; every
+# other member takes a fixed arity.
+_STRLIB_ARITY1 = {
+    "tostr": interp._str_tostr,
+    "strip": lambda s: interp._str_strip(s, True, True),
+    "lstrip": lambda s: interp._str_strip(s, True, False),
+    "rstrip": lambda s: interp._str_strip(s, False, True),
+    "lower": interp._str_lower, "upper": interp._str_upper,
+    "isdigit": interp._str_isdigit, "isalpha": interp._str_isalpha,
+    "isupper": interp._str_isupper, "islower": interp._str_islower,
+}
+_STRLIB_ARITY2 = {
+    "join": lambda rows, sep: interp._str_join(
+        tuple(tuple(r) for r in rows), tuple(sep)),
+    "count": lambda s, t: interp._str_count(tuple(s), tuple(t)),
+    "find": lambda s, t: interp._str_find(tuple(s), tuple(t)),
+    "startswith": lambda s, t: interp._str_startswith(tuple(s), tuple(t)),
+    "endswith": lambda s, t: interp._str_endswith(tuple(s), tuple(t)),
+}
+
+
+def _to_seq_ret(v):
+    """A tuple result from an interp._str_* helper back to this file's list
+    representation; an int/bool result is returned unchanged."""
+    return list(v) if isinstance(v, tuple) else v
+
+
+def _strlib_ev(op: str, vs: list):
+    """Evaluate a v1 string-library op over already-evaluated argument
+    values `vs` (this file's list representation), or None for a non-
+    string-library op (never a genuine string-library result: every member
+    returns an int, a bool, or a seq/seq-of-seq, none of which is Python
+    `None`)."""
+    if op == "split":
+        if len(vs) == 1:
+            return [list(row) for row in interp._str_split_ws(tuple(vs[0]))]
+        s, c = vs
+        return [list(row) for row in interp._str_split_sep(tuple(s), c)]
+    if op == "replace":
+        s, t, u = vs
+        return list(interp._str_replace(tuple(s), tuple(t), tuple(u)))
+    if op in _STRLIB_ARITY1:
+        return _to_seq_ret(_STRLIB_ARITY1[op](tuple(vs[0])))
+    if op in _STRLIB_ARITY2:
+        return _to_seq_ret(_STRLIB_ARITY2[op](vs[0], vs[1]))
+    return None
 
 
 def _gint(e: dict, funs: dict, st) -> int:
@@ -1302,6 +1972,9 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
         return a[0] > a[1]
     if op == ">=":
         return a[0] >= a[1]
+    sv = _strlib_ev(op, a)
+    if sv is not None:
+        return sv
     raise ValueError(f"t has no operator {op!r}")
 
 
@@ -1543,6 +2216,19 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     method = self_name.capitalize()
     ctx = _Ctx(task, method)
     lines = []
+    # SPEC.md "The string library (v1)" (2026-09-11): "each kernel lowers a
+    # member to a definition in its prelude", but gate (c)'s byte-identical
+    # check (every task in t/tasks/*.json that uses no member, unchanged by
+    # this wave) means the prelude is NOT emitted unconditionally -- only
+    # when the task (its requires/ensures/spec_funs/body, `body` too since
+    # a twin's mutated body is what is actually being lowered here) mentions
+    # one of the 17 op names. `_collect_names` already walks every string in
+    # the JSON (op names included, indistinguishable from any other string),
+    # so membership is a cheap, sound test on the op VALUE, not merely on
+    # whether the name appears as a string anywhere (count_matches.json's
+    # own int-counting spec_fun is named "count" too; see _uses_strlib).
+    if _uses_strlib(task) or _uses_strlib(body):
+        lines = [STRLIB_PRELUDE.strip("\n"), ""]
 
     for f in task.get("spec_funs", []):
         ps = ", ".join(f"{p['name']}: {TYPES[p['type']]}"

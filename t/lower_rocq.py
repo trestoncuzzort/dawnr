@@ -2305,6 +2305,659 @@ Ltac t_nseq_eqb_case n f g :=
     replace (t_nseq_eqb n f g) with false in * by (symmetry; exact E)
   ]; t_bred_all.
 
+(* ============================================================
+   THE STRING LIBRARY (v1), 2026-09-11.  SPEC.md "The string library
+   (v1)": seventeen members over the code-point seq (and seq<seq> for
+   split/join), Python's semantics exactly (interp.py's _str_* family is
+   the reference this was checked against member by member).
+
+   ENCODING. The function+length model (MODEL, above) has no induction
+   principle worth the name: `s : Z -> Z` is opaque, so no Coq recursion
+   can walk it structurally. Every member here is instead proved over an
+   honest Coq `list Z` (a row of a nested seq: `list (list Z)`), reached
+   by a BRIDGE pair: `t_list f len` (`seq_to_list`, fuel = `Z.to_nat len`,
+   collecting `f 0, f 1, ..., f (len-1)` via `++` so a `len+1` step is a
+   `++ [f len]` snoc BY CONSTRUCTION, `t_list_snoc`) turns a seq into a
+   list; `t_of_list l` (`fun k => nth (Z.to_nat k) l 0`) turns a list back
+   into a seq function. `t_nlist`/`t_of_nested` are the same pair one
+   level up, `Z -> ((Z -> Z) * Z)` for a nested seq (the same codomain
+   "Nested sequences (v1)" already gave `rty`). Four round-trip lemmas
+   make the bridge honest rather than assumed: `t_of_list_get` (read a
+   built seq back at a point in range), `t_list_of_list`/`t_nlist_of_nested`
+   (list -> seq -> list is the identity), `t_list_ext`/`t_list_slice0`
+   (a seq congruent on `[0, len)` builds the same list; a `slice(s, 0, n)`
+   builds the SAME list `s` itself does, the fact word_count's own proof
+   turns out to need and nothing deeper about `split` at all). Every
+   member is then an ordinary Coq function of `list Z`/`list (list Z)`,
+   called by wrapping its seq-valued arguments in `t_list`/`t_nlist` and
+   its result back out through `t_of_list`/`t_of_nested` (`seq_fn`'s and
+   `nested_fn`'s new `join`/`split`/`strip`/... cases, below in this
+   file's Python).
+
+   MEMBERS. `split(s)` (whitespace runs, `split_ws_list`/`split_ws_acc`,
+   an explicit accumulator so the recursion matches interp.py's own
+   left-to-right `out,cur` loop one line at a time) and `split(s, c)`
+   (`split_sep_list`, a plain structural recursion, PROVED against
+   `join`: `split_join_law`, `join_list (split_sep_list s c) [c] = s`
+   for every `s`,`c`, by induction on `s` -- this is split_join's own
+   ensures, verbatim). `join(rows, sep)` (`join_list`). `tostr(n)`
+   (`t_tostr`/`digits_of_nat`, fuel-bounded decimal digits, sign at 45).
+   `count(s, t)` (`t_count_list`/`count_go`, fuel = `S (length s)`,
+   non-overlapping left to right exactly as `_str_count`; PROVED equal,
+   for a ONE-CODE-POINT pattern only, to a plain structural counter
+   `count_occ1` (`t_count_list_singleton`), because that is the shape
+   count_vowels' own five `count(_, [v])` calls need and a general
+   non-overlapping-match snoc lemma is a materially bigger proof this
+   wave does not attempt -- named open, below). `find(s, t)` shares
+   `count`'s `is_prefix`/fuel shape (`t_find_list`), unproved beyond its
+   own definition (no committed task's ensures reaches it). `strip`/
+   `lstrip`/`rstrip` (`strip_list`/`lstrip_list`/`rstrip_list`, the
+   latter `rev`-then-`lstrip`-then-`rev`, SPEC.md's own two-sided
+   definition literally). `replace(s, t, u)` (`t_replace_list`, the
+   empty-pattern case (`replace_empty`, "insert u before every code
+   point and at the end") kept syntactically separate from the fuel/
+   `is_prefix` non-empty case (`replace_go`), the same split
+   `_str_replace` itself makes). `lower`/`upper` (`lower_list`/
+   `upper_list`, `map` over the ASCII case maps `lower_c`/`upper_c`).
+   `isdigit`/`isalpha`/`isupper`/`islower` (`isdigit_list`/.../
+   `islower_list`, the empty-string and mixed-case rules SPEC.md states).
+   `startswith`/`endswith` (`startswith_list`/`endswith_list`, `is_prefix`
+   reused, `endswith` via `skipn` to the tail of matching length).
+
+   LEMMAS FOR THE THREE TASKS. `word_count`: `t_list_slice0` alone (its
+   `t2 := s[0..len(s)]` builds the identical list `s` itself would, so
+   `len(t2.split()) = len(s.split())` is congruence, not a fact about
+   `split`). `split_join`: `t_list_singleton` (the literal `seq([c])`'s
+   own list is `[c]`), `t_nlist_of_nested` (the round trip `split`'s own
+   nested-seq wrapping and `join`'s own unwrapping cancel), and
+   `split_join_law` itself; the second ensures's extensional seq equality
+   (`EQUALITY`, `prop()`) then needs only `t_list_length`/`Z2Nat.id` for
+   the length conjunct and `t_of_list_get` for the pointwise one, both
+   already generic. `count_vowels`: `t_count_slice_step` (built from
+   `t_list_snoc` + `t_count_list_singleton` + `count_occ1_snoc`), one
+   fact -- "growing the slice by one either does or doesn't add one to a
+   single code point's count" -- reused five times, once per vowel, by
+   the SAME t_inv1 arm below.
+
+   WHAT STAYS OPEN, BY NAME: `count`/`find`/`replace` on a
+   MULTI-code-point pattern have no proved property here (the fuel/
+   `is_prefix` machinery is written to interp.py's own semantics and
+   MEASURED by the family below, but no lemma relates it to anything
+   else); `tostr` has no lemma at all (no committed task's ensures
+   reaches it); `strip`/`lower`/`upper`/`isX`/`startswith`/`endswith`
+   likewise carry their definitions only. None of these is a
+   `NotImplementedError` abstain -- every member above IS the function
+   SPEC.md states, called from `seq_fn`/`nested_fn`/`zx`/`bx`/`prop`
+   exactly where its arity puts it -- the open items are proof debt on
+   arbitrary fuzzed programs, not missing semantics; MEASURED, below,
+   is what that debt costs on the three committed tasks and the
+   `v1strlib` family.
+
+   MEASURED (2026-09-11, `t/lower_rocq.py test1.py word_count split_join
+   count_vowels`, and `fuzz_lower.py --only rocq`, the full `v1strlib`
+   family at `--n 400 --seed 1 --flake 3 --jobs 8`, 17 tasks -- the
+   pre-supplied name list this wave's own instructions carried did not
+   reproduce under this worktree's `build_corpus(400, 1)`, a family
+   ordering/count difference from whatever run produced it; the 17 names
+   `build_corpus` actually draws at that seed were used instead, same
+   n/seed/flake/jobs):
+
+   - word_count: COUNTS (real VERIFIED, off-by-one twin REFUTED).
+   - count_vowels: COUNTS (real VERIFIED, invariant-drop twin REFUTED) --
+     needed one addition beyond the members themselves: `gen_loop`'s
+     per-invariant definedness context was sequential-prefix-only (each
+     invariant's own `at`/`slice`/`div`/`mod` obligation saw only EARLIER
+     invariants), which every task built before this wave never exposed,
+     since their own `at`/`slice` always sat under a `forall` whose OWN
+     binder supplied its range (`row_max_len`/`seq_max`/etc.); count_vowels'
+     invariant is a bare (non-quantified) equation whose `slice(s, 0, i)`
+     needs sibling invariants (`0 <= i`, `i <= len(s)`) regardless of list
+     order. Widened to ALL sibling invariants, gated behind `_has_strlib`
+     (new) so a task that uses no string-library member takes the
+     ORIGINAL code path, unchanged.
+   - split_join: REFUSED, real VERIFIED, wrong-var twin unproved -- a
+     PRE-EXISTING, general gap this wave did not close: `_value_cert`
+     abstains on a seq return outright (its own comment: "no committed
+     task needs it yet"), so a loop-free task with a seq return and a
+     VALUE-kind twin witness has no certificate route and falls back to
+     the full symbolic proof of the (false) twin ensures, which correctly
+     fails to prove rather than fails to REFUTE -- unrelated to any of
+     the 17 members (it would hit ANY future seq-returning committed task
+     with this witness shape), named here rather than patched under this
+     wave's own time budget.
+   - v1strlib family (17 fuzzed tasks, arbitrary member combinations):
+     ZERO lowering crashes (`ty`/`seq_fn`/`nested_fn`/`zx`/`bx`/`prop`
+     dispatch on all seventeen ops without exception on every task the
+     family drew) and ZERO disagreements/vs-truth mismatches. 4 of 17
+     real lowerings VERIFIED (fz_v1strlib_004/007/070/190); of those, 3
+     had their twin REFUTED (004, 190, and one more) and 1 (007) had an
+     unproved twin (the same seq-return-value-witness gap named above).
+     The other 13 real lowerings read UNPROVED: the lemmas landed here
+     are the three committed tasks' own needs (the split/join round trip,
+     the count-of-a-growing-slice step, the slice-congruence fact), not
+     a general algebra for every member combination a fuzzed program can
+     build; a MULTI-code-point `count`/`find`/`replace`, an arbitrary
+     `strip`/`lower`/`upper`/`isX` composed with another member, or a
+     `split`/`join` law with anything but a literal one-code-point
+     separator has no lemma here to discharge it, so `t_dis`'s search
+     exhausts and the file reads unproved rather than fakes a Qed --
+     named, not silent, the same "abstain honestly" rule as an outright
+     refusal.
+   - Matrix regression (relower every non-string task in `t/tasks/*.json`
+     against `git show HEAD:t/lower_rocq.py`, diff): all 23 non-string
+     tasks' generated Coq is BYTE-IDENTICAL from their first `Definition`/
+     `Lemma ..._def_1`/`Fixpoint` onward; the only difference anywhere is
+     the shared PRELUDE's own growth (this date's insertion, zero
+     deletions), the same "PRELUDE DELTA, task text otherwise byte-
+     identical" shape every prior wave's own dated note already
+     established. Since the generated Coq is unchanged, so is every cell
+     `t/AGREEMENT.md` already commits for those 23 tasks. *)
+
+
+(* ============ bridge: seq (fn,len) <-> list Z ============ *)
+Fixpoint seq_to_list (f : Z -> Z) (fuel : nat) : list Z :=
+  match fuel with
+  | O => []
+  | S n => seq_to_list f n ++ [f (Z.of_nat n)]
+  end.
+
+Lemma length_seq_to_list : forall f fuel, length (seq_to_list f fuel) = fuel.
+Proof.
+  induction fuel as [|n IH]; simpl.
+  - reflexivity.
+  - rewrite length_app, IH. simpl. lia.
+Qed.
+
+Lemma seq_to_list_ext : forall fuel f g,
+  (forall k, (0 <= k < Z.of_nat fuel)%Z -> f k = g k) ->
+  seq_to_list f fuel = seq_to_list g fuel.
+Proof.
+  induction fuel as [|n IH]; intros f g H.
+  - reflexivity.
+  - simpl. rewrite (IH f g); [ rewrite (H (Z.of_nat n)) by lia; reflexivity | ].
+    intros k Hk. apply H. lia.
+Qed.
+
+Lemma nth_seq_to_list : forall fuel f k,
+  (0 <= k < Z.of_nat fuel)%Z -> nth (Z.to_nat k) (seq_to_list f fuel) 0 = f k.
+Proof.
+  induction fuel as [|n IH]; intros f k Hk.
+  - lia.
+  - simpl. destruct (Z.eq_dec k (Z.of_nat n)) as [E|NE].
+    + subst k. rewrite Nat2Z.id.
+      rewrite app_nth2 by (rewrite length_seq_to_list; lia).
+      rewrite length_seq_to_list. replace (n - n)%nat with O by lia. reflexivity.
+    + assert (Hk' : (0 <= k < Z.of_nat n)%Z) by lia.
+      rewrite app_nth1.
+      * apply IH. exact Hk'.
+      * rewrite length_seq_to_list.
+        assert (Z.to_nat k < n)%nat.
+        { assert (k < Z.of_nat n)%Z by lia.
+          assert (Z.to_nat k < Z.to_nat (Z.of_nat n))%nat by lia.
+          rewrite Nat2Z.id in H0. lia. }
+        lia.
+Qed.
+
+Definition t_list (f : Z -> Z) (len : Z) : list Z := seq_to_list f (Z.to_nat len).
+Definition t_of_list (l : list Z) : Z -> Z := fun k => nth (Z.to_nat k) l 0.
+
+Lemma t_list_length : forall f len, length (t_list f len) = Z.to_nat len.
+Proof. intros. unfold t_list. apply length_seq_to_list. Qed.
+
+Lemma t_list_ext : forall f g len,
+  (forall k, 0 <= k < len -> f k = g k) -> t_list f len = t_list g len.
+Proof.
+  intros f g len H. unfold t_list. apply seq_to_list_ext.
+  intros k Hk. apply H. lia.
+Qed.
+
+Lemma t_of_list_get : forall f n k, 0 <= k < n -> t_of_list (t_list f n) k = f k.
+Proof.
+  intros f n k Hk. unfold t_of_list, t_list.
+  apply nth_seq_to_list.
+  rewrite Z2Nat.id by lia. lia.
+Qed.
+
+Lemma t_list_of_list : forall (l : list Z), t_list (t_of_list l) (Z.of_nat (length l)) = l.
+Proof.
+  intros l. unfold t_list, t_of_list. rewrite Nat2Z.id.
+  induction l as [|x l' IH] using rev_ind.
+  - reflexivity.
+  - rewrite length_app. simpl length.
+    replace (length l' + 1)%nat with (S (length l')) by lia.
+    simpl seq_to_list.
+    f_equal.
+    + transitivity (seq_to_list (fun k => nth (Z.to_nat k) l' 0) (length l')).
+      * apply seq_to_list_ext. intros k Hk. apply app_nth1. lia.
+      * exact IH.
+    + f_equal. rewrite Nat2Z.id.
+      rewrite app_nth2 by lia.
+      replace (length l' - length l')%nat with O by lia.
+      reflexivity.
+Qed.
+
+Lemma t_list_slice0 : forall f n, t_list (t_slice f 0) n = t_list f n.
+Proof.
+  intros f n. apply t_list_ext. intros k Hk.
+  rewrite t_slice_get. reflexivity.
+Qed.
+
+Lemma t_list_snoc : forall f len, 0 <= len -> t_list f (len + 1) = t_list f len ++ [f len].
+Proof.
+  intros f len Hlen. unfold t_list.
+  replace (Z.to_nat (len + 1)) with (S (Z.to_nat len)) by lia.
+  simpl. rewrite Z2Nat.id by lia. reflexivity.
+Qed.
+
+(* t_upd/t_fill already defined above in the shared PRELUDE (t_upd/t_fill,
+   SPEC.md "Sequences as values (v1)"); reused here unchanged. *)
+Lemma t_list_singleton : forall c, t_list (t_upd (t_fill 0) 0 c) 1 = [c].
+Proof.
+  intro c. unfold t_list, t_upd, t_fill. simpl. reflexivity.
+Qed.
+
+(* ============ nested: seq<seq> (fn: Z -> ((Z->Z)*Z), len) <-> list (list Z) ============ *)
+Fixpoint nested_to_list (f : Z -> ((Z -> Z) * Z)) (fuel : nat) : list (list Z) :=
+  match fuel with
+  | O => []
+  | S n => nested_to_list f n ++ [t_list (fst (f (Z.of_nat n))) (snd (f (Z.of_nat n)))]
+  end.
+Definition t_nlist (f : Z -> ((Z -> Z) * Z)) (len : Z) : list (list Z) :=
+  nested_to_list f (Z.to_nat len).
+Definition t_of_nested (rows : list (list Z)) : Z -> ((Z -> Z) * Z) :=
+  fun k => let row := nth (Z.to_nat k) rows [] in (t_of_list row, Z.of_nat (length row)).
+
+Lemma length_nested_to_list : forall f fuel, length (nested_to_list f fuel) = fuel.
+Proof.
+  induction fuel as [|n IH]; simpl; [reflexivity|].
+  rewrite length_app, IH. simpl. lia.
+Qed.
+
+Lemma nth_nested_to_list : forall fuel f k,
+  (0 <= k < Z.of_nat fuel)%Z ->
+  nth (Z.to_nat k) (nested_to_list f fuel) [] =
+    t_list (fst (f k)) (snd (f k)).
+Proof.
+  induction fuel as [|n IH]; intros f k Hk.
+  - lia.
+  - simpl. destruct (Z.eq_dec k (Z.of_nat n)) as [E|NE].
+    + subst k. rewrite Nat2Z.id.
+      rewrite app_nth2 by (rewrite length_nested_to_list; lia).
+      rewrite length_nested_to_list. replace (n - n)%nat with O by lia. reflexivity.
+    + assert (Hk' : (0 <= k < Z.of_nat n)%Z) by lia.
+      rewrite app_nth1.
+      * apply IH. exact Hk'.
+      * rewrite length_nested_to_list.
+        assert (Z.to_nat k < n)%nat.
+        { assert (k < Z.of_nat n)%Z by lia.
+          assert (Z.to_nat k < Z.to_nat (Z.of_nat n))%nat by lia.
+          rewrite Nat2Z.id in H0. lia. }
+        lia.
+Qed.
+
+Lemma t_nlist_of_nested : forall (X : list (list Z)),
+  t_nlist (t_of_nested X) (Z.of_nat (length X)) = X.
+Proof.
+  intros X. unfold t_nlist, t_of_nested. rewrite Nat2Z.id.
+  induction X as [|row X' IH] using rev_ind.
+  - reflexivity.
+  - rewrite length_app. simpl length.
+    replace (length X' + 1)%nat with (S (length X')) by lia.
+    simpl nested_to_list.
+    f_equal.
+    + rewrite <- IH at 2.
+      assert (Hgen : forall (fuel:nat), (fuel <= length X')%nat ->
+        nested_to_list (fun k => (t_of_list (nth (Z.to_nat k) (X' ++ [row]) []),
+                                   Z.of_nat (length (nth (Z.to_nat k) (X' ++ [row]) []))))
+                        fuel
+        = nested_to_list (fun k => (t_of_list (nth (Z.to_nat k) X' []),
+                                     Z.of_nat (length (nth (Z.to_nat k) X' []))))
+                          fuel).
+      { induction fuel as [|m IHm]; intros Hle; simpl; [reflexivity|].
+        f_equal.
+        - apply IHm. lia.
+        - assert (Hm : (m < length X')%nat) by lia.
+          rewrite Nat2Z.id.
+          rewrite app_nth1 by exact Hm.
+          reflexivity. }
+      apply Hgen. lia.
+    + rewrite Nat2Z.id.
+      rewrite app_nth2 by lia.
+      replace (length X' - length X')%nat with O by lia.
+      simpl. rewrite t_list_of_list. reflexivity.
+Qed.
+Fixpoint split_sep_list (s : list Z) (c : Z) : list (list Z) :=
+  match s with
+  | [] => [[]]
+  | x :: rest =>
+    if x =? c then [] :: split_sep_list rest c
+    else match split_sep_list rest c with
+         | [] => [[x]]
+         | row :: more => (x :: row) :: more
+         end
+  end.
+
+Lemma split_sep_nonempty : forall s c, split_sep_list s c <> [].
+Proof.
+  induction s as [|x rest IH]; intro c; simpl.
+  - discriminate.
+  - destruct (x =? c).
+    + discriminate.
+    + destruct (split_sep_list rest c) as [|row more] eqn:E; discriminate.
+Qed.
+
+Lemma split_sep_eq_step : forall x rest c,
+  x = c -> split_sep_list (x :: rest) c = [] :: split_sep_list rest c.
+Proof. intros x rest c E. simpl. rewrite E, Z.eqb_refl. reflexivity. Qed.
+
+Lemma split_sep_neq_step : forall x rest c row more,
+  x <> c -> split_sep_list rest c = row :: more ->
+  split_sep_list (x :: rest) c = (x :: row) :: more.
+Proof.
+  intros x rest c row more NE E. simpl.
+  rewrite (proj2 (Z.eqb_neq x c) NE). rewrite E. reflexivity.
+Qed.
+
+Fixpoint join_list (rows : list (list Z)) (sep : list Z) : list Z :=
+  match rows with
+  | [] => []
+  | row :: rest =>
+    match rest with
+    | [] => row
+    | _ :: _ => row ++ sep ++ join_list rest sep
+    end
+  end.
+
+Lemma join_one_step : forall row sep, join_list [row] sep = row.
+Proof. reflexivity. Qed.
+
+Lemma join_cons_step : forall row row2 more sep,
+  join_list (row :: row2 :: more) sep = row ++ sep ++ join_list (row2 :: more) sep.
+Proof. reflexivity. Qed.
+
+Lemma split_join_law : forall s c, join_list (split_sep_list s c) [c] = s.
+Proof.
+  induction s as [|x rest IH]; intro c.
+  - reflexivity.
+  - specialize (IH c).
+    destruct (Z.eq_dec x c) as [E|NE].
+    + rewrite (split_sep_eq_step x rest c E).
+      pose proof (split_sep_nonempty rest c) as Hne.
+      destruct (split_sep_list rest c) as [|row more] eqn:Etl.
+      * congruence.
+      * rewrite (join_cons_step [] row more [c]).
+        rewrite IH. subst c. reflexivity.
+    + pose proof (split_sep_nonempty rest c) as Hne.
+      destruct (split_sep_list rest c) as [|row more] eqn:Etl.
+      * congruence.
+      * rewrite (split_sep_neq_step x rest c row more NE Etl).
+        destruct more as [|row2 more2].
+        -- rewrite (join_one_step row [c]) in IH.
+           rewrite (join_one_step (x :: row) [c]).
+           rewrite IH. reflexivity.
+        -- rewrite (join_cons_step row row2 more2 [c]) in IH.
+           rewrite (join_cons_step (x :: row) row2 more2 [c]).
+           rewrite <- app_comm_cons.
+           rewrite IH. reflexivity.
+Qed.
+Fixpoint count_occ1 (s : list Z) (c : Z) : Z :=
+  match s with
+  | [] => 0
+  | x :: rest => (if x =? c then 1 else 0) + count_occ1 rest c
+  end.
+
+Lemma count_occ1_snoc : forall l x c,
+  count_occ1 (l ++ [x]) c = count_occ1 l c + (if x =? c then 1 else 0).
+Proof.
+  induction l as [|y l' IH]; intros x c; simpl.
+  - lia.
+  - rewrite IH. lia.
+Qed.
+
+(* general count, matching interp.py's _str_count: non-overlapping,
+   left to right; count(s, []) = len(s) + 1 *)
+Fixpoint is_prefix (p l : list Z) : bool :=
+  match p with
+  | [] => true
+  | x :: prest =>
+    match l with
+    | [] => false
+    | y :: lrest => (x =? y) && is_prefix prest lrest
+    end
+  end.
+
+Fixpoint count_go (fuel : nat) (s t : list Z) : Z :=
+  match fuel with
+  | O => 0
+  | S f =>
+    match t with
+    | [] => Z.of_nat (length s) + 1
+    | _ :: _ =>
+      if is_prefix t s then 1 + count_go f (skipn (length t) s) t
+      else match s with
+           | [] => 0
+           | _ :: srest => count_go f srest t
+           end
+    end
+  end.
+
+Definition t_count_list (s t : list Z) : Z := count_go (S (length s)) s t.
+
+(* find(s, t): the least index t occurs at, -1 when none, find(s,[])=0
+   (SPEC.md), reusing count_go's own fuel/is_prefix shape but returning
+   an index instead of a running total. *)
+Fixpoint find_go (fuel : nat) (s t : list Z) (i : Z) : Z :=
+  match fuel with
+  | O => -1
+  | S f =>
+    match t with
+    | [] => 0
+    | _ :: _ =>
+      if is_prefix t s then i
+      else match s with
+           | [] => -1
+           | _ :: srest => find_go f srest t (i + 1)
+           end
+    end
+  end.
+Definition t_find_list (s t : list Z) : Z := find_go (S (length s)) s t 0.
+
+Lemma is_prefix_singleton : forall c s,
+  is_prefix [c] s = match s with [] => false | y :: _ => c =? y end.
+Proof.
+  intros c [|y s']; simpl; [reflexivity | apply andb_true_r].
+Qed.
+
+Lemma count_go_singleton : forall fuel s c,
+  (length s < fuel)%nat -> count_go fuel s [c] = count_occ1 s c.
+Proof.
+  induction fuel as [|f IH]; intros s c Hfuel.
+  - simpl in Hfuel. lia.
+  - destruct s as [|x rest].
+    + reflexivity.
+    + simpl. rewrite andb_true_r.
+      destruct (Z.eqb_spec c x) as [E|NE].
+      * subst. rewrite Z.eqb_refl. simpl.
+        rewrite IH by (simpl in Hfuel; lia). lia.
+      * simpl. rewrite (proj2 (Z.eqb_neq x c) (not_eq_sym NE)).
+        rewrite IH by (simpl in Hfuel; lia). lia.
+Qed.
+
+Lemma t_count_list_singleton : forall s c, t_count_list s [c] = count_occ1 s c.
+Proof. intros s c. unfold t_count_list. apply count_go_singleton. lia. Qed.
+
+Lemma t_count_slice_step : forall g i c, 0 <= i ->
+  t_count_list (t_list (t_slice g 0) (i + 1)) [c] =
+  t_count_list (t_list (t_slice g 0) i) [c] + (if g i =? c then 1 else 0).
+Proof.
+  intros g i c Hi.
+  rewrite (t_list_snoc (t_slice g 0) i Hi).
+  rewrite t_count_list_singleton.
+  rewrite count_occ1_snoc.
+  rewrite <- t_count_list_singleton.
+  rewrite t_slice_get.
+  replace (0+i) with i by lia.
+  reflexivity.
+Qed.
+
+(* count_vowels' own generated shape (2026-09-11, MEASURED): a loop
+   invariant over `slice(s, 0, i)` always renders the length as `i - 0`
+   (`seq_fn`'s "slice" case, `hi - lo`, never arithmetically simplified),
+   so the induction step's substituted next-state invariant is literally
+   `i + 1 - 0`, not `i + 1` -- t_count_slice_step's own pattern needs a
+   `- 0`-aware twin rather than a smarter t_inv1 match, since rewriting
+   `t_list (t_slice _ 0) _` unconditionally (t_list_slice0's own arm,
+   below) would otherwise consume the very structure this one needs
+   first. A SECOND race the same way: the pattern's own second argument
+   (the one-code-point literal `seq([c])`) reaches this goal as the RAW
+   `t_list (t_upd (t_fill 0) 0 c) 1` build, not yet the `[c]` list this
+   lemma's own proof works over (`t_list_singleton` turns one into the
+   other) -- stating the LHS/RHS in that raw form directly, rather than
+   depending on `t_list_singleton` having already fired on this one
+   occurrence, is what keeps this arm's own match from losing that race
+   too (MEASURED: the `[c]`-typed version above left the raw form
+   standing whenever `t_list_slice0`'s own arm reached the `t_slice`
+   wrapper on ONE side first, on the very same iteration `t_list_singleton`
+   would have fired the other). *)
+Lemma t_count_slice_step0 : forall g i c, 0 <= i ->
+  t_count_list (t_list (t_slice g 0) (i + 1 - 0)) (t_list (t_upd (t_fill 0) 0 c) 1) =
+  t_count_list (t_list (t_slice g 0) (i - 0)) (t_list (t_upd (t_fill 0) 0 c) 1)
+  + (if g i =? c then 1 else 0).
+Proof.
+  intros g i c Hi.
+  rewrite (t_list_singleton c).
+  replace (i + 1 - 0) with (i + 1) by lia.
+  replace (i - 0) with i by lia.
+  apply t_count_slice_step. exact Hi.
+Qed.
+
+(* count_vowels' loop-ENTRY obligation (2026-09-11, MEASURED): the very
+   first invariant check, `slice(s, 0, 0)`, renders as `0 - 0` (the same
+   un-simplified `hi - lo` `seq_fn`'s "slice" case always emits); an
+   empty slice's count against any one code point is 0, a fact `t_slice`/
+   `t_list`/`count_go` are never unfolded far enough by this file's own
+   delta-avoiding convention to reach on their own. *)
+Lemma t_count_slice_zero : forall g c,
+  t_count_list (t_list (t_slice g 0) (0 - 0)) (t_list (t_upd (t_fill 0) 0 c) 1) = 0.
+Proof.
+  intros g c.
+  rewrite (t_list_singleton c).
+  rewrite t_count_list_singleton.
+  replace (0 - 0) with 0 by lia.
+  reflexivity.
+Qed.
+
+(* ============ split(s) on whitespace runs ============ *)
+Definition is_ws (c : Z) : bool :=
+  (c =? 9) || (c =? 10) || (c =? 11) || (c =? 12) || (c =? 13)
+  || (c =? 28) || (c =? 29) || (c =? 30) || (c =? 31) || (c =? 32).
+
+Fixpoint split_ws_acc (s cur : list Z) : list (list Z) :=
+  match s with
+  | [] => match cur with [] => [] | _ => [cur] end
+  | x :: rest =>
+    if is_ws x then
+      (match cur with [] => split_ws_acc rest [] | _ => cur :: split_ws_acc rest [] end)
+    else split_ws_acc rest (cur ++ [x])
+  end.
+Definition split_ws_list (s : list Z) : list (list Z) := split_ws_acc s [].
+
+(* ============ tostr(n) ============ *)
+Fixpoint digits_of_nat (fuel : nat) (n : nat) : list Z :=
+  match fuel with
+  | O => []
+  | S f => if Nat.eqb n 0 then [] else digits_of_nat f (n / 10) ++ [Z.of_nat (n mod 10) + 48]
+  end.
+
+Definition t_tostr (n : Z) : list Z :=
+  if n =? 0 then [48]
+  else if n <? 0 then 45 :: digits_of_nat (S (Z.to_nat (Z.abs n))) (Z.to_nat (Z.abs n))
+  else digits_of_nat (S (Z.to_nat n)) (Z.to_nat n).
+
+(* ============ strip / lstrip / rstrip ============ *)
+Fixpoint lstrip_list (s : list Z) : list Z :=
+  match s with
+  | [] => []
+  | x :: rest => if is_ws x then lstrip_list rest else s
+  end.
+
+Definition rstrip_list (s : list Z) : list Z := rev (lstrip_list (rev s)).
+Definition strip_list (s : list Z) : list Z := rstrip_list (lstrip_list s).
+
+(* ============ replace(s, t, u) ============ *)
+Fixpoint replace_empty (s u : list Z) : list Z :=
+  match s with
+  | [] => u
+  | x :: rest => u ++ x :: replace_empty rest u
+  end.
+
+Fixpoint replace_go (fuel : nat) (s t u : list Z) : list Z :=
+  match fuel with
+  | O => []
+  | S f =>
+    match s with
+    | [] => []
+    | x :: srest =>
+      if is_prefix t s then u ++ replace_go f (skipn (length t) s) t u
+      else x :: replace_go f srest t u
+    end
+  end.
+
+Definition t_replace_list (s t u : list Z) : list Z :=
+  match t with
+  | [] => replace_empty s u
+  | _ => replace_go (S (length s)) s t u
+  end.
+
+(* ============ lower / upper / isdigit / isalpha / isupper / islower ============ *)
+Definition is_upper_letter (c : Z) : bool := (65 <=? c) && (c <=? 90).
+Definition is_lower_letter (c : Z) : bool := (97 <=? c) && (c <=? 122).
+
+Definition lower_c (c : Z) : Z := if is_upper_letter c then c + 32 else c.
+Definition upper_c (c : Z) : Z := if is_lower_letter c then c - 32 else c.
+
+Definition lower_list (s : list Z) : list Z := map lower_c s.
+Definition upper_list (s : list Z) : list Z := map upper_c s.
+
+Fixpoint isdigit_go (s : list Z) : bool :=
+  match s with
+  | [] => true
+  | x :: rest => (48 <=? x) && (x <=? 57) && isdigit_go rest
+  end.
+Definition isdigit_list (s : list Z) : bool :=
+  match s with [] => false | _ => isdigit_go s end.
+
+Fixpoint isalpha_go (s : list Z) : bool :=
+  match s with
+  | [] => true
+  | x :: rest => (is_upper_letter x || is_lower_letter x) && isalpha_go rest
+  end.
+Definition isalpha_list (s : list Z) : bool :=
+  match s with [] => false | _ => isalpha_go s end.
+
+Fixpoint has_letter (s : list Z) : bool :=
+  match s with
+  | [] => false
+  | x :: rest => is_upper_letter x || is_lower_letter x || has_letter rest
+  end.
+Fixpoint has_lower (s : list Z) : bool :=
+  match s with
+  | [] => false
+  | x :: rest => is_lower_letter x || has_lower rest
+  end.
+Fixpoint has_upper (s : list Z) : bool :=
+  match s with
+  | [] => false
+  | x :: rest => is_upper_letter x || has_upper rest
+  end.
+Definition isupper_list (s : list Z) : bool := has_letter s && negb (has_lower s).
+Definition islower_list (s : list Z) : bool := has_letter s && negb (has_upper s).
+
+(* ============ startswith / endswith ============ *)
+Definition startswith_list (s t : list Z) : bool := is_prefix t s.
+Definition endswith_list (s t : list Z) : bool :=
+  (length t <=? length s)%nat &&
+  is_prefix t (skipn (length s - length t) s).
 (* invertible structural steps *)
 Ltac t_inv1 :=
   match goal with
@@ -2337,6 +2990,34 @@ Ltac t_inv1 :=
   | |- context [negb _] => progress t_bred
   | |- context [if true then _ else _] => progress t_bred
   | |- context [if false then _ else _] => progress t_bred
+  (* THE STRING LIBRARY (v1), 2026-09-11 (STRLIB's own dated note,
+     above): the bridge/round-trip rewrites the three committed tasks'
+     proofs need, each fired wherever its LHS pattern matches, the same
+     "opaque function, read back by a dedicated rewrite" shape t_upd/
+     t_app/t_slice already have above. `t_list_slice0` is word_count's
+     entire proof (a congruence, nothing about `split` itself);
+     `t_count_slice_step` is count_vowels' loop-preservation step, fired
+     once per vowel by the SAME arm; the next four chain split_join's
+     `join(split(s,c),[c]) == s` down to `t_list s s_len = t_list s
+     s_len` (round trip the nested wrap/unwrap, turn the literal `[c]`
+     seq into a list literal, apply the join-of-split law, then the
+     length/pointwise halves of `==`'s own extensional reading). *)
+  | |- context [t_count_list (t_list (t_slice ?g 0) (0 - 0)) (t_list (t_upd (t_fill 0) 0 ?c) 1)] =>
+      rewrite (t_count_slice_zero g c)
+  | |- context [t_count_list (t_list (t_slice ?g 0) (?i + 1 - 0)) (t_list (t_upd (t_fill 0) 0 ?c) 1)] =>
+      rewrite (t_count_slice_step0 g i c) by lia
+  | |- context [t_count_list (t_list (t_slice ?g 0) (?i + 1)) [?c]] =>
+      rewrite (t_count_slice_step g i c) by lia
+  | |- context [t_list (t_slice ?f 0) ?n] => rewrite (t_list_slice0 f n)
+  | |- context [t_nlist (t_of_nested ?X) (Z.of_nat (length ?X))] =>
+      rewrite (t_nlist_of_nested X)
+  | |- context [t_list (t_upd (t_fill 0) 0 ?c) 1] =>
+      rewrite (t_list_singleton c)
+  | |- context [join_list (split_sep_list ?l ?c) [?c]] =>
+      rewrite (split_join_law l c)
+  | |- context [length (t_list ?f ?n)] => rewrite (t_list_length f n)
+  | |- context [t_of_list (t_list ?f ?n) ?k] =>
+      rewrite (t_of_list_get f n k) by lia
   | _ => progress subst
   (* hypothesis position last: a `context` scan over the whole context is the
      most expensive arm here, and by the time it is reached the goal-side arms
@@ -2357,6 +3038,24 @@ Ltac t_inv1 :=
   | H : context [t_napp ?f ?g ?n ?k] |- _ => t_napp_case f g n k
   | H : context [t_nslice ?f ?a ?k] |- _ => rewrite (t_nslice_get f a k) in H
   | H : context [t_nseq_eqb ?n ?f ?g] |- _ => t_nseq_eqb_case n f g
+  (* THE STRING LIBRARY (v1), 2026-09-11: hypothesis-position mirrors of
+     the goal-side arms just above. *)
+  | H : context [t_count_list (t_list (t_slice ?g 0) (0 - 0)) (t_list (t_upd (t_fill 0) 0 ?c) 1)] |- _ =>
+      rewrite (t_count_slice_zero g c) in H
+  | H : context [t_count_list (t_list (t_slice ?g 0) (?i + 1 - 0)) (t_list (t_upd (t_fill 0) 0 ?c) 1)] |- _ =>
+      rewrite (t_count_slice_step0 g i c) in H by lia
+  | H : context [t_count_list (t_list (t_slice ?g 0) (?i + 1)) [?c]] |- _ =>
+      rewrite (t_count_slice_step g i c) in H by lia
+  | H : context [t_list (t_slice ?f 0) ?n] |- _ => rewrite (t_list_slice0 f n) in H
+  | H : context [t_nlist (t_of_nested ?X) (Z.of_nat (length ?X))] |- _ =>
+      rewrite (t_nlist_of_nested X) in H
+  | H : context [t_list (t_upd (t_fill 0) 0 ?c) 1] |- _ =>
+      rewrite (t_list_singleton c) in H
+  | H : context [join_list (split_sep_list ?l ?c) [?c]] |- _ =>
+      rewrite (split_join_law l c) in H
+  | H : context [length (t_list ?f ?n)] |- _ => rewrite (t_list_length f n) in H
+  | H : context [t_of_list (t_list ?f ?n) ?k] |- _ =>
+      rewrite (t_of_list_get f n k) in H by lia
   end.
 
 (* deterministic saturation steps *)
@@ -2784,8 +3483,25 @@ class Ctx:
             # below.
             ct = self.ty(e["args"][0], local)
             return "seq" if (isinstance(ct, dict) and "seq" in ct) else "int"
-        if op in ("-", "*", "neg", "len", "div", "mod"):
+        if op in ("-", "*", "neg", "len", "div", "mod", "count", "find"):
+            # THE STRING LIBRARY (v1), 2026-09-11: `count`/`find` are the
+            # library's own two int-returning members (SPEC.md), joined
+            # to the existing int group.
             return "int"
+        if op == "split":
+            # THE STRING LIBRARY (v1): `split(s)`/`split(s, c)`, two
+            # arities of one op (SPEC.md), both return a LIST OF ROWS,
+            # the nested-seq dict shape `ty()`'s own "seq" literal arm
+            # already uses for a nested container.
+            return {"seq": "seq"}
+        if op in ("join", "tostr", "strip", "lstrip", "rstrip", "replace",
+                  "lower", "upper"):
+            # `join`/`tostr`/`strip`/`lstrip`/`rstrip`/`replace`/`lower`/
+            # `upper`: every other seq-VALUED member (SPEC.md); `isdigit`/
+            # `isalpha`/`isupper`/`islower`/`startswith`/`endswith` need
+            # no arm here at all, since they fall through to this
+            # method's own "bool" default just below, already correct.
+            return "seq"
         if op == "update":
             # SPEC.md "Nested sequences (v1)": `update(m, i, r)` (row `i`
             # replaced) has the SAME type as its own first argument, seq
@@ -2926,6 +3642,41 @@ class Ctx:
             av = self.zx(a, env, local)
             bv = self.zx(b, env, local)
             return f"(t_slice {fn_s} {av})", f"({bv} - {av})"
+        if op in ("join", "tostr", "strip", "lstrip", "rstrip", "replace",
+                  "lower", "upper"):
+            # THE STRING LIBRARY (v1), 2026-09-11 (STRLIB's own dated
+            # note, PRELUDE): every seq-VALUED member is built the same
+            # way, list-of-Z in, list-of-Z out, `t_of_list`/`length`
+            # turning the result back into this file's (fn, len) pair
+            # (the SAME bridge `at` on a nested container already uses
+            # via `fst`/`snd`, one level down). `join`'s first argument
+            # is a nested seq (rows), read via `nested_fn`/`t_nlist`
+            # rather than `seq_fn`/`t_list`; every other argument here is
+            # a plain seq or (`tostr`) an int.
+            if op == "join":
+                rows_e, sep_e = e["args"]
+                rows_fn, rows_len = self.nested_fn(rows_e, env, local)
+                sep_fn, sep_len = self.seq_fn(sep_e, env, local)
+                res = (f"(join_list (t_nlist {rows_fn} {rows_len}) "
+                       f"(t_list {sep_fn} {sep_len}))")
+            elif op == "tostr":
+                n = self.zx(e["args"][0], env, local)
+                res = f"(t_tostr {n})"
+            elif op in ("strip", "lstrip", "rstrip", "lower", "upper"):
+                fname = {"strip": "strip_list", "lstrip": "lstrip_list",
+                         "rstrip": "rstrip_list", "lower": "lower_list",
+                         "upper": "upper_list"}[op]
+                fn_s, ln_s = self.seq_fn(e["args"][0], env, local)
+                res = f"({fname} (t_list {fn_s} {ln_s}))"
+            else:
+                assert op == "replace"
+                s, t, u = e["args"]
+                fn_s, ln_s = self.seq_fn(s, env, local)
+                fn_t, ln_t = self.seq_fn(t, env, local)
+                fn_u, ln_u = self.seq_fn(u, env, local)
+                res = (f"(t_replace_list (t_list {fn_s} {ln_s}) "
+                       f"(t_list {fn_t} {ln_t}) (t_list {fn_u} {ln_u}))")
+            return f"(t_of_list {res})", f"(Z.of_nat (length {res}))"
         raise ValueError(f"t v1 -> rocq: not a seq expression: {op!r}")
 
     def nested_fn(self, e: dict, env: dict, local: dict | None = None
@@ -3003,9 +3754,24 @@ class Ctx:
             av = self.zx(a, env, local)
             bv = self.zx(b, env, local)
             return f"(t_nslice {fn_s} {av})", f"({bv} - {av})"
+        if op == "split":
+            # THE STRING LIBRARY (v1), 2026-09-11: `split(s)` (whitespace
+            # runs) and `split(s, c)` (one code point, empty rows kept),
+            # two arities of one op (SPEC.md), both nested-seq-VALUED;
+            # `t_of_nested`/`length` turn the Coq `list (list Z)` result
+            # back into this codomain's (fn, len) pair, the same bridge
+            # `seq_fn`'s new string-member cases use one level down.
+            args = e["args"]
+            fn_s, ln_s = self.seq_fn(args[0], env, local)
+            if len(args) == 1:
+                res = f"(split_ws_list (t_list {fn_s} {ln_s}))"
+            else:
+                c = self.zx(args[1], env, local)
+                res = f"(split_sep_list (t_list {fn_s} {ln_s}) {c})"
+            return f"(t_of_nested {res})", f"(Z.of_nat (length {res}))"
         raise NotImplementedError(
             f"rocq lowering: nested seq op {op!r} is refused (only var/"
-            f"ite/update/seq/+/slice are built at the outer level; "
+            f"ite/update/seq/+/slice/split are built at the outer level; "
             f"`fill` is the sole refusal left here, unexercised by this "
             f"family; see Nested sequences (v1)'s dated note near "
             f"t_nupd)")
@@ -3126,6 +3892,17 @@ class Ctx:
             a, b = (self.zx(x, env, local) for x in e["args"])
             fn = "t_div" if op == "div" else "t_mod"
             return f"({fn} {a} {b})"
+        if op in ("count", "find"):
+            # THE STRING LIBRARY (v1), 2026-09-11: `s.count(t)`/`s.find(t)`
+            # (SPEC.md), both int-valued, both built the same way `at`'s
+            # own zx() case reads a seq's function half: `t_list` bridges
+            # each argument into a Coq list, `t_count_list`/`t_find_list`
+            # (PRELUDE) do the rest.
+            s, t = e["args"]
+            fn_s, ln_s = self.seq_fn(s, env, local)
+            fn_t, ln_t = self.seq_fn(t, env, local)
+            cfn = "t_count_list" if op == "count" else "t_find_list"
+            return f"({cfn} (t_list {fn_s} {ln_s}) (t_list {fn_t} {ln_t}))"
         raise ValueError(f"t v1 -> rocq: not an int expression: {op!r}")
 
     def bx(self, e: dict, env: dict, local: dict) -> str:
@@ -3225,6 +4002,23 @@ class Ctx:
         if op == "implies":
             a, b = (self.bx(x, env, local) for x in e["args"])
             return f"((negb {a}) || {b})%bool"
+        if op in ("isdigit", "isalpha", "isupper", "islower",
+                  "startswith", "endswith"):
+            # THE STRING LIBRARY (v1), 2026-09-11: the library's six
+            # bool-VALUED members (SPEC.md), each a decidable Coq
+            # `bool` function of the underlying list(s) already
+            # (`isdigit_list`/.../`endswith_list`, PRELUDE), so no
+            # `t_seq_eqb`-style extra decision procedure is needed here.
+            fname = {"isdigit": "isdigit_list", "isalpha": "isalpha_list",
+                     "isupper": "isupper_list", "islower": "islower_list",
+                     "startswith": "startswith_list",
+                     "endswith": "endswith_list"}[op]
+            fn_s, ln_s = self.seq_fn(e["args"][0], env, local)
+            if op in ("startswith", "endswith"):
+                fn_t, ln_t = self.seq_fn(e["args"][1], env, local)
+                return (f"({fname} (t_list {fn_s} {ln_s}) "
+                        f"(t_list {fn_t} {ln_t}))")
+            return f"({fname} (t_list {fn_s} {ln_s}))"
         raise ValueError(f"t v1 -> rocq: not a bool expression: {op!r}")
 
     def prop(self, e: dict, env: dict, local: dict | None = None) -> str:
@@ -3344,6 +4138,14 @@ class Ctx:
         if op in ("<", "<=", ">", ">="):
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {op} {b})"
+        if op in ("isdigit", "isalpha", "isupper", "islower",
+                  "startswith", "endswith"):
+            # THE STRING LIBRARY (v1), 2026-09-11: the same six bool
+            # members as `bx()`'s own arm, reached here in SPEC position
+            # (a `requires`/`ensures`/invariant), stated as `= true`
+            # exactly the way a spec-position `call` already is just
+            # above.
+            return f"({self.bx(e, env, local)} = true)"
         raise ValueError(f"t v1 -> rocq: not a spec expression: {op!r}")
 
     # -- definedness obligations ------------------------------------------
@@ -3879,6 +4681,72 @@ def rty(t) -> str:
     if t == "seq":
         return "Z -> Z"
     return "Z"
+
+
+STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
+              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
+              "isupper", "islower", "startswith", "endswith"}
+
+
+def _expr_has_strlib(e) -> bool:
+    """True iff a string-library op (SPEC.md "The string library (v1)",
+    2026-09-11) appears anywhere inside expression `e`. Used only to gate
+    `gen_loop`'s widened per-invariant definedness context (below,
+    near `inv_ctx`): a task built before this wave never trips that gate,
+    so its generated proof text is untouched, byte for byte."""
+    if not isinstance(e, dict):
+        return False
+    if e.get("op") in STRLIB_OPS:
+        return True
+    if any(_expr_has_strlib(a) for a in e.get("args", [])):
+        return True
+    if "ite" in e:
+        c = e["ite"]
+        return (_expr_has_strlib(c["cond"]) or _expr_has_strlib(c["then"])
+                or _expr_has_strlib(c["else"]))
+    if "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        return (_expr_has_strlib(q["lo"]) or _expr_has_strlib(q["hi"])
+                or _expr_has_strlib(q["body"]))
+    if "call" in e:
+        return any(_expr_has_strlib(a) for a in e["call"]["args"])
+    return False
+
+
+def _has_strlib(task: dict) -> bool:
+    """True iff `task` uses a string-library member anywhere: `requires`,
+    `ensures`, or the body (through `if`/`while`, a `var` init, an
+    `assign`, or a `return`). SPEC.md "The string library (v1)",
+    2026-09-11."""
+    if any(_expr_has_strlib(e) for e in task.get("requires", [])):
+        return True
+    if any(_expr_has_strlib(e) for e in task.get("ensures", [])):
+        return True
+
+    def walk(stmts: list) -> bool:
+        for s in stmts:
+            if "var" in s and _expr_has_strlib(s["var"]["init"]):
+                return True
+            if "assign" in s and _expr_has_strlib(s["assign"][1]):
+                return True
+            if "return" in s and _expr_has_strlib(s["return"][1]):
+                return True
+            if "if" in s:
+                c = s["if"]
+                if (_expr_has_strlib(c["cond"]) or walk(c["then"])
+                        or walk(c["else"])):
+                    return True
+            if "while" in s:
+                w = s["while"]
+                if (_expr_has_strlib(w["cond"])
+                        or _expr_has_strlib(w["decreases"])
+                        or any(_expr_has_strlib(e)
+                               for e in w.get("invariants", []))
+                        or walk(w["body"])):
+                    return True
+        return False
+
+    return walk(task["body"])
 
 
 def _expr_has_pair(e) -> bool:
@@ -4518,7 +5386,12 @@ def lens_arrows(cx: Ctx) -> str:
 
 
 def header() -> str:
-    return ("From Stdlib Require Import ZArith Bool Lia.\n"
+    # List/ListNotations (2026-09-11, "The string library (v1)"): the
+    # string members are proved over Coq's own `list Z`/`list (list Z)`
+    # (STRLIB's own dated note, PRELUDE, near `seq_to_list`), the first
+    # thing in this file to need the stdlib List module at all.
+    return ("From Stdlib Require Import ZArith Bool Lia List.\n"
+            "Import ListNotations.\n"
             "Open Scope Z_scope.\n\n" + PRELUDE + "\n")
 
 
@@ -4765,12 +5638,27 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     dec = cx.zx(w["decreases"], id_env, local)
     invs = [cx.prop(e, id_env, local) for e in w.get("invariants", [])]
 
-    # invariant definedness: each invariant assumes requires + earlier ones
+    # invariant definedness: each invariant assumes requires + earlier ones.
+    # THE STRING LIBRARY (v1), 2026-09-11: count_vowels' own invariant is
+    # a bare (non-quantified) equation whose embedded `slice(s, 0, i)`
+    # needs `0 <= i <= len(s)`, but those bounds are SIBLING invariants
+    # listed AFTER it, not derivable from "requires + earlier ones" alone
+    # (unlike row_max_len/seq_max/etc.'s own `at`, always under a
+    # `forall` whose OWN binder already supplies its range, defs()'s
+    # "forall" case, untouched). Since every invariant in a while loop
+    # holds SIMULTANEOUSLY (not a dependency chain), widening the
+    # definedness context to every sibling invariant -- not only the
+    # ones textually before it -- is the semantically correct rule; it
+    # is applied ONLY when the task uses a string-library member
+    # (`_has_strlib`), so a task built before this wave keeps its
+    # ORIGINAL sequential-prefix context, byte-identical proof text.
     inv_ctx = list(reqs)
+    def_ctx = list(reqs) + invs if _has_strlib(task) else None
     sb = " ".join(f"({v} : {slot_ty[v]})" for v in svars_x)
     for e in w.get("invariants", []):
         iob: list = []
-        cx.defs(e, list(inv_ctx), [], iob, id_env, local)
+        cx.defs(e, list(def_ctx) if def_ctx is not None else list(inv_ctx),
+                [], iob, id_env, local)
         obls += iob
         inv_ctx.append(cx.prop(e, id_env, local))
     # guard + decreases definedness under requires + invariants

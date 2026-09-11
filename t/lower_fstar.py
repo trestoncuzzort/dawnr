@@ -942,6 +942,130 @@ probe, every one the same or strictly better (070/103 unchanged COUNTS;
 unchanged verified/unproved, the named shared-machinery gap; fz_p_vac_post
 malformed/malformed -> abstain/abstain, no longer misnaming a defect).
 
+THE STRING LIBRARY (2026-09-11, SPEC.md "The string library (v1)", the
+wave after nested sequences). Six of the seventeen members landed as this
+kernel's own prelude (`_STRLIB_PRELUDE`, emitted only when a task's
+params/requires/ensures/spec_funs/body reference one, `_uses_strlib`):
+`split` (both arities), `join`, `strip`, `lstrip`, `rstrip`, `count`.
+Eleven stay named abstains, `NotImplementedError` raised from the exact
+dispatch point each would have rendered from (`sx`/`nx`/`zx`/`bx`/`prop`,
+never the generic fallthrough, so `fuzz_lower.py` reads `abstain` and
+never the misleading `lower-error` a bare `ValueError` would give it):
+`tostr`, `find`, `replace`, `lower`, `upper`, `isdigit`, `isalpha`,
+`isupper`, `islower`, `startswith`, `endswith` -- not built this pass,
+named here rather than faked.
+
+ENCODING. Every landed member is a `let rec` over an explicit `nat`
+position, decreasing `Seq.length s - i` (or plain `i`/`Seq.length t` where
+the recursion walks the other direction), built only from `Seq.index`/
+`Seq.length`/`Seq.slice`/`Seq.append`/`Seq.create`/`Seq.createL`, the same
+five combinators every other seq position in this file already renders
+through -- no `Seq.head`/`Seq.tail`/`Seq.cons` (unconfirmed names, never
+needed once `Seq.slice s 1 (Seq.length s)` serves as "tail" the same way
+this file's own `_literal` already treats `Seq.create 1 e` as "cons").
+`is_ws` is SPEC.md's ten whitespace code points (9-13, 28-32), matching
+interp.py's `_WS` exactly, not the six-point guess an earlier SPEC.md
+draft named. `split(s)` (`t_split_ws`) skips whitespace runs, scans a
+maximal non-whitespace run (`t_scan_word`) into a row, and recurses past
+it -- `split(s, c)` (`t_split_sep`) scans to the next occurrence of `c`
+(`t_scan_sep`) or the end, keeping every row including empty ones, and
+recurses past the separator, exactly Python's two `split` forms. `join`
+(`t_join`) walks the rows, appending `sep` after every row but the last.
+`strip`/`lstrip`/`rstrip` (`t_strip`/`t_lstrip`/`t_rstrip`) trim from each
+end independently and compose (`strip = lstrip . rstrip`). `count`
+(`t_count`) walks left to right at `t_count_at`, matching non-overlapping
+occurrences via `t_starts_at` (decreasing on `Seq.length t`, an
+independent measure from the outer scan) and jumping past a match by
+`Seq.length t`; the empty-pattern case (`count(s, []) == len(s) + 1`) is
+its own branch, one `+1` per position including the one at `i =
+Seq.length s`, matching Python exactly (measured, `t_count_at s
+(Seq.createL #int []) 0` unfolds to `Seq.length s + 1` by the same
+induction the loop-free cases below needed no help for).
+
+MEASURED (F* 2026.08.30, z3 4.13.3, z3seed 42, rlimit 50, this session).
+The whole prelude alone (`Probe1.fst`, module + prelude + nothing else):
+`All verification conditions discharged successfully`, no assist, first
+try -- the `t_split_ws_from`/`t_scan_word` pair's own termination
+(`t_split_ws_from s j` after `j := t_scan_word s i` needs `j > i`, proved
+from `t_scan_word`'s weak `i <= j <= Seq.length s` postcondition PLUS one
+definitional unfolding at the call site, since the caller's `i <>
+Seq.length s` and `not (is_ws (Seq.index s i))` facts already match
+`t_scan_word`'s own case split -- reasoned here, confirmed by the clean
+verify, no stronger refinement type needed) included. The three committed
+tasks, real and twin, `lower()` then `verifiers.fstar.verify()` directly
+(not yet through `run_all`/AGREEMENT.md, which this pass does not touch):
+  - `word_count` (`r := len(t2.split())`, `t2 := s[0..len(s)]`): REAL
+    VERIFIED, TWIN REFUTED (the off-by-one witness `s = []`, SPEC.md's
+    own predicted twin) -- COUNTS. A flake-3 re-check of this pair (real
+    and twin, both tasks) was started but did not finish inside this
+    pass's own budget (z3, fixed seed 42, still ran long on the UNPROVED
+    case below); the single run reported here is measured, the x3 repeat
+    is not, named rather than assumed stable. No lemma needed: the full-length slice `s[0..len(s)]` and `s` typing
+    the same to `t_split_ws` needs no separate identity lemma the way the
+    task brief's "split length law" anticipated -- the `Pure`
+    postcondition and the body's own `len(t2.split())` unify with F*'s
+    ambient `Seq.slice` facts directly.
+  - `split_join` (the join-of-split law `[c].join(s.split(c)) == s` as an
+    ensures, `r` rebuilt by the law with a decoy `s.strip()` local also in
+    scope): REAL UNPROVED, TWIN REFUTED (the WRONG-VAR witness `s = [32]`,
+    `c = 0`) -- twin half of COUNTS, real half open. The join-of-split law
+    itself was NOT proved this pass: it needs an explicit induction
+    connecting `t_split_sep_from`'s row-building recursion to
+    `t_join_from`'s row-consuming one (an index-shift lemma across
+    `Seq.append (Seq.create 1 row) rest`, itself needing `Seq.length`/
+    `Seq.index` facts about that append plumbed through one more level of
+    recursion than `t_join_cons`-shaped one-step unfolding gives for
+    free) -- attempted at the single-step level, not carried through the
+    induction, and left OPEN, named, rather than forced. `word_count`'s
+    free ride does not generalize: that task's `ensures` never asks F* to
+    relate two DIFFERENT recursions to each other, only `t_split_ws`
+    applied to two seqs already known equal.
+  - `count_vowels` (a loop, invariant `r == s[0..i].count([97]) + ... +
+    s[0..i].count([117])` against the five lowercase vowels): REAL
+    TIMEOUT (120s wall backstop, budget rlimit 50 exhausted before that),
+    TWIN REFUTED (the INVARIANT-DROP witness `s = []`) -- twin half of
+    COUNTS, real half open. The "count against a loop" lemma this task's
+    invariant needs -- `t_count(s[0..i+1], [x]) == t_count(s[0..i], [x])
+    + (1 if s[i] == x else 0)`, once per vowel, to carry the invariant
+    across one iteration -- was NOT written this pass; named, not built.
+
+  Regression (this pass, required before anything else): all 23
+  previously-committed tasks (`tasks/*.json` less the three string ones)
+  relowered BYTE-IDENTICAL to HEAD 7bcd2fa's own `lower_fstar.py` output,
+  every one, confirmed by diffing both trees' full `lower()` output for
+  all 26 task files side by side -- this file's own diff against HEAD is
+  purely additive (205 insertions, 0 deletions: every new branch is an
+  `if op == "<member>"` this file did not check before, so a task that
+  never asks for one takes the exact same path it always did).
+
+  Family (`fuzz_lower.py --only fstar --tasks
+  fz_v1strlib_001,...,fz_v1strlib_098 --n 400 --seed 1 --flake 3 --jobs 8`,
+  as instructed): of the 16 named tasks, only 2 exist in this family's
+  seed-1/n-400 generated corpus at all (`fz_v1strlib_007`,
+  `fz_v1strlib_031`; the other 14 names are not this seed's output --
+  measured, not investigated further this pass, named as its own open
+  question rather than assumed). `fz_v1strlib_007`: VERIFIED/REFUTED,
+  COUNTS, stable across the 3 flake reruns (wall ~6.8s). `fz_v1strlib_031`
+  reaches `tostr`: ABSTAIN, exactly the named-abstain message above, not a
+  lower-error. The 400-wide sweep across the family's own generator
+  (rather than this fixed 16-name list) was NOT run this pass -- named as
+  open, not claimed.
+
+OPEN, BY NAME: the join-of-split law (`split_join`'s real lowering,
+UNPROVED); the count-against-a-loop step lemma (`count_vowels`'s real
+lowering, TIMEOUT); the eleven un-landed members (`tostr`, `find`,
+`replace`, `lower`, `upper`, `isdigit`, `isalpha`, `isupper`, `islower`,
+`startswith`, `endswith`), each a clean abstain wherever a task reaches
+it; the full 400-wide `v1strlib` family sweep (only the fixed 16-name
+list, itself mostly a miss, was run); why 14 of the 16 names are absent
+from the seed-1/n-400 corpus. Landed and measured, not claimed beyond
+what is written above: `split`/`join`/`strip`/`lstrip`/`rstrip`/`count`
+typecheck, terminate, and (for `count`/`split`/`join`/`strip` alone, no
+loop and no cross-recursion law needed) discharge a real task's contract
+with no lemma at all; twin detection already works on all three committed
+string tasks even where the real side stays open, since a REFUTED twin
+needs only the mutated body to diverge, not the real proof to close.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -1481,6 +1605,17 @@ class Ctx:
             t0 = self.ty(e["args"][0], local)
             if t0 == "seq" or (isinstance(t0, dict) and "seq" in t0):
                 return t0
+        if op == "split":
+            # SPEC.md "The string library (v1)" (2026-09-11): both
+            # arities of `split` return a row of rows, `seq<seq>`, the
+            # same "New type" (`{"seq": "seq"}`) the nested-seq wave gave
+            # a literal.
+            return {"seq": "seq"}
+        if op in ("join", "strip", "lstrip", "rstrip", "replace", "lower",
+                   "upper", "tostr"):
+            return "seq"
+        if op in ("count", "find"):
+            return "int"
         if op in ARITH or op in ("neg", "len"):
             return "int"
         return "bool"
@@ -1576,6 +1711,25 @@ class Ctx:
             if comp is not None:
                 return self.sx(comp, env, local)
             return f"({op} {self.px(e['args'][0], env, local)})"
+        if op == "join":
+            # SPEC.md "The string library (v1)": `join(rows, sep)`,
+            # Python's `sep.join(rows)`.
+            rows, sep = e["args"]
+            return (f"(t_join {self.nx(rows, env, local)} "
+                    f"{self.sx(sep, env, local)})")
+        if op == "strip":
+            return f"(t_strip {self.sx(e['args'][0], env, local)})"
+        if op == "lstrip":
+            return f"(t_lstrip {self.sx(e['args'][0], env, local)})"
+        if op == "rstrip":
+            return f"(t_rstrip {self.sx(e['args'][0], env, local)})"
+        if op in ("tostr", "replace", "lower", "upper"):
+            # 2026-09-11 (SPEC.md "The string library (v1)"): named
+            # abstains, not landed this wave -- see the module docstring's
+            # dated note for what was measured and what stays open.
+            raise NotImplementedError(
+                f"fstar lowering: string library member {op!r} not "
+                "lowered yet (2026-09-11, THE STRING LIBRARY abstain)")
         raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
     def px(self, e: dict, env: dict, local: dict) -> str:
@@ -1660,6 +1814,15 @@ class Ctx:
             s, a, b = e["args"]
             return (f"(Seq.slice {self.nx(s, env, local)} "
                     f"{self.zx(a, env, local)} {self.zx(b, env, local)})")
+        if op == "split":
+            # SPEC.md "The string library (v1)": `split(s)` on whitespace
+            # runs, `split(s, c)` on one code point, two arities of one
+            # op, exactly as the JSON note says.
+            args = e["args"]
+            if len(args) == 1:
+                return f"(t_split_ws {self.sx(args[0], env, local)})"
+            return (f"(t_split_sep {self.sx(args[0], env, local)} "
+                    f"{self.zx(args[1], env, local)})")
         raise NotImplementedError(
             f"nested seq position holds non-variable {e!r}")
 
@@ -1789,6 +1952,16 @@ class Ctx:
             if comp is not None:
                 return self.zx(comp, env, local)
             return f"({op} {self.px(e['args'][0], env, local)})"
+        if op == "count":
+            s, t = e["args"]
+            return (f"(t_count {self.sx(s, env, local)} "
+                    f"{self.sx(t, env, local)})")
+        if op == "find":
+            # 2026-09-11 (SPEC.md "The string library (v1)"): named
+            # abstain, not landed this wave.
+            raise NotImplementedError(
+                "fstar lowering: string library member 'find' not "
+                "lowered yet (2026-09-11, THE STRING LIBRARY abstain)")
         if op in ARITH:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {ARITH[op]} {b})"
@@ -1957,6 +2130,14 @@ class Ctx:
         if op == "implies":
             a, b = (self.bx(x, env, local) for x in e["args"])
             return f"((not {a}) || {b})"
+        if op in ("isdigit", "isalpha", "isupper", "islower", "startswith",
+                   "endswith"):
+            # 2026-09-11 (SPEC.md "The string library (v1)"): named
+            # abstains, not landed this wave -- see the module docstring's
+            # dated note.
+            raise NotImplementedError(
+                f"fstar lowering: string library member {op!r} not "
+                "lowered yet (2026-09-11, THE STRING LIBRARY abstain)")
         raise ValueError(f"t -> fstar: not a bool expression: {op!r}")
 
     def prop(self, e: dict, env: dict, local: dict) -> str:
@@ -2126,6 +2307,14 @@ class Ctx:
         if op in CMP:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {CMP[op]} {b})"
+        if op in ("isdigit", "isalpha", "isupper", "islower", "startswith",
+                   "endswith"):
+            # 2026-09-11 (SPEC.md "The string library (v1)"): named
+            # abstains, not landed this wave -- see the module docstring's
+            # dated note.
+            raise NotImplementedError(
+                f"fstar lowering: string library member {op!r} not "
+                "lowered yet (2026-09-11, THE STRING LIBRARY abstain)")
         raise ValueError(f"t -> fstar: not a spec expression: {op!r}")
 
 
@@ -2898,6 +3087,138 @@ def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
         + f"= assert_norm ({body})\n")
 
 
+# --------------------------------------------------------------------------
+# The string library (v1), SPEC.md "The string library (v1)" (2026-09-11).
+# Six of the seventeen members landed this wave (split, join, strip,
+# lstrip, rstrip, count -- the module docstring's dated note carries the
+# full account); the rest are named abstains via the `op in (...)` checks
+# added to sx/nx/zx/bx/prop above, raising NotImplementedError rather than
+# falling through to a ValueError ("lower-error" in fuzz_lower.py's rows,
+# not "abstain" -- the distinction fuzz_lower.py's own comment above
+# `rows[name][bname] = ("abstain", ...)` draws).
+# --------------------------------------------------------------------------
+
+_STR_OPS = frozenset({
+    "split", "join", "tostr", "count", "find", "strip", "lstrip", "rstrip",
+    "replace", "lower", "upper", "isdigit", "isalpha", "isupper",
+    "islower", "startswith", "endswith",
+})
+
+
+def _uses_strlib(obj) -> bool:
+    """True iff `obj` (a task dict, a body list, or any nested JSON-like
+    structure this file's AST is built from) contains an `{"op": <member>,
+    ...}` node for one of the string library's seventeen members. Walked
+    generically over dict/list rather than following the AST's own
+    shape, the same posture `_decls` above and `lower_verus.subst` take,
+    so a member reachable through `requires`/`ensures`/`spec_funs`/`body`
+    alike is found without four separate walkers."""
+    if isinstance(obj, dict):
+        if obj.get("op") in _STR_OPS:
+            return True
+        return any(_uses_strlib(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_strlib(v) for v in obj)
+    return False
+
+
+# `is_ws`: SPEC.md's ten whitespace code points (9-13, 28-32), measured
+# against `test_strlib.py`'s parity test (interp.py's `_WS` tuple, the
+# same ten, not the six-point guess an earlier SPEC.md draft named).
+# `t_starts_at`/`t_scan_sep`/`t_scan_word` are unexported helpers, each
+# named so a failing obligation names the helper, not just the member.
+_STRLIB_PRELUDE = """\
+let is_ws (c:int) : Tot bool =
+  c = 9 || c = 10 || c = 11 || c = 12 || c = 13 ||
+  c = 28 || c = 29 || c = 30 || c = 31 || c = 32
+
+let rec t_scan_sep (s:Seq.seq int) (c:int) (i:nat{i <= Seq.length s})
+    : Tot (j:nat{i <= j /\\ j <= Seq.length s})
+      (decreases (Seq.length s - i)) =
+  if i = Seq.length s then i
+  else if Seq.index s i = c then i
+  else t_scan_sep s c (i + 1)
+
+let rec t_split_sep_from (s:Seq.seq int) (c:int) (i:nat{i <= Seq.length s})
+    : Tot (Seq.seq (Seq.seq int))
+      (decreases (Seq.length s - i)) =
+  let j = t_scan_sep s c i in
+  if j = Seq.length s then Seq.create 1 (Seq.slice s i j)
+  else Seq.append (Seq.create 1 (Seq.slice s i j))
+                  (t_split_sep_from s c (j + 1))
+
+let t_split_sep (s:Seq.seq int) (c:int) : Tot (Seq.seq (Seq.seq int)) =
+  t_split_sep_from s c 0
+
+let rec t_scan_word (s:Seq.seq int) (i:nat{i <= Seq.length s})
+    : Tot (j:nat{i <= j /\\ j <= Seq.length s})
+      (decreases (Seq.length s - i)) =
+  if i = Seq.length s then i
+  else if is_ws (Seq.index s i) then i
+  else t_scan_word s (i + 1)
+
+let rec t_split_ws_from (s:Seq.seq int) (i:nat{i <= Seq.length s})
+    : Tot (Seq.seq (Seq.seq int))
+      (decreases (Seq.length s - i)) =
+  if i = Seq.length s then Seq.createL #(Seq.seq int) []
+  else if is_ws (Seq.index s i) then t_split_ws_from s (i + 1)
+  else
+    let j = t_scan_word s i in
+    Seq.append (Seq.create 1 (Seq.slice s i j)) (t_split_ws_from s j)
+
+let t_split_ws (s:Seq.seq int) : Tot (Seq.seq (Seq.seq int)) =
+  t_split_ws_from s 0
+
+let rec t_join_from (rows:Seq.seq (Seq.seq int)) (sep:Seq.seq int)
+                     (i:nat{i <= Seq.length rows})
+    : Tot (Seq.seq int) (decreases (Seq.length rows - i)) =
+  if i = Seq.length rows then Seq.createL #int []
+  else if i = Seq.length rows - 1 then Seq.index rows i
+  else Seq.append (Seq.append (Seq.index rows i) sep)
+                  (t_join_from rows sep (i + 1))
+
+let t_join (rows:Seq.seq (Seq.seq int)) (sep:Seq.seq int) : Tot (Seq.seq int) =
+  t_join_from rows sep 0
+
+let rec t_lstrip_from (s:Seq.seq int) (i:nat{i <= Seq.length s})
+    : Tot (Seq.seq int) (decreases (Seq.length s - i)) =
+  if i = Seq.length s then Seq.createL #int []
+  else if is_ws (Seq.index s i) then t_lstrip_from s (i + 1)
+  else Seq.slice s i (Seq.length s)
+
+let t_lstrip (s:Seq.seq int) : Tot (Seq.seq int) = t_lstrip_from s 0
+
+let rec t_rstrip_to (s:Seq.seq int) (j:nat{j <= Seq.length s})
+    : Tot (Seq.seq int) (decreases j) =
+  if j = 0 then Seq.createL #int []
+  else if is_ws (Seq.index s (j - 1)) then t_rstrip_to s (j - 1)
+  else Seq.slice s 0 j
+
+let t_rstrip (s:Seq.seq int) : Tot (Seq.seq int) = t_rstrip_to s (Seq.length s)
+
+let t_strip (s:Seq.seq int) : Tot (Seq.seq int) = t_lstrip (t_rstrip s)
+
+let rec t_starts_at (s:Seq.seq int) (i:nat{i <= Seq.length s})
+                     (t:Seq.seq int)
+    : Tot bool (decreases (Seq.length t)) =
+  if Seq.length t = 0 then true
+  else if i >= Seq.length s then false
+  else if Seq.index s i <> Seq.index t 0 then false
+  else t_starts_at s (i + 1) (Seq.slice t 1 (Seq.length t))
+
+let rec t_count_at (s:Seq.seq int) (t:Seq.seq int) (i:nat{i <= Seq.length s})
+    : Tot int (decreases (Seq.length s - i)) =
+  if Seq.length t = 0 then
+    (if i = Seq.length s then 1 else 1 + t_count_at s t (i + 1))
+  else if i + Seq.length t > Seq.length s then 0
+  else if t_starts_at s i t then 1 + t_count_at s t (i + Seq.length t)
+  else if i = Seq.length s then 0
+  else t_count_at s t (i + 1)
+
+let t_count (s:Seq.seq int) (t:Seq.seq int) : Tot int = t_count_at s t 0
+"""
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # KEYWORD RENAME (2026-09-10, see the note above `_needs_rename`): fix
     # up every `_ck`-refused identifier ONCE, before Ctx or any gen_*/
@@ -2909,6 +3230,14 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     name = r_task["name"]
     mod = name[0].upper() + name[1:]
     parts = [f"module {mod}\n", "module Seq = FStar.Seq\n"]
+    # THE STRING LIBRARY (2026-09-11): the prelude is emitted only when
+    # the task actually needs it -- SPEC.md "The string library (v1)"'s
+    # own AGREEMENT.md commitment is BYTE-IDENTICAL sources for every task
+    # that uses no member, so a task with no split/join/strip/count (etc.)
+    # anywhere in its params/requires/ensures/spec_funs/body gets the same
+    # two-line header it always did.
+    if _uses_strlib(r_task) or _uses_strlib(r_body):
+        parts.append(_STRLIB_PRELUDE)
     for sf in r_task.get("spec_funs", []):
         parts.append(emit_spec_fun(cx, sf))
 

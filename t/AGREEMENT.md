@@ -1,4 +1,4 @@
-# t cross-kernel agreement — 2026-09-10 15:09Z
+# t cross-kernel agreement — 2026-09-11 07:34Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column.
 
@@ -8,6 +8,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | all_nonneg | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | contains | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | count_matches | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| count_vowels | verified / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | verified / refuted | timeout / refuted |
 | digit_sum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | divmod_pair | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | factorial | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -23,10 +24,12 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | reverse | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | row_max_len | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | seq_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| split_join | verified / refuted | verified / refuted | timeout / refuted | abstain / abstain | verified / refuted | verified / unproved | unproved / refuted |
 | sum_upto | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | swap | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | swap_rows | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | tail | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| word_count | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 
 Kernels present: 7 of 7 (dafny, verus, spark, framac, lean, rocq, fstar)
 
@@ -45,12 +48,12 @@ Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `ab
 
 | kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
 |---|---|---|---|
-| framac | 1 | 0 | swap_rows |
+| framac | 1 | 2 | swap_rows |
 | dafny | 0 | 0 | (none) |
-| verus | 0 | 0 | (none) |
-| spark | 0 | 1 | (none) |
-| lean | 0 | 0 | (none) |
-| rocq | 0 | 1 | (none) |
-| fstar | 0 | 0 | (none) |
+| verus | 0 | 1 | (none) |
+| spark | 0 | 3 | (none) |
+| lean | 0 | 1 | (none) |
+| rocq | 0 | 2 | (none) |
+| fstar | 0 | 2 | (none) |
 
 Of the 1 tasks in six, 1 is framac alone.

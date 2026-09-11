@@ -899,6 +899,81 @@ framac's own `_undef_certificate` the same way is out of this task's
 scope (t/lower_verus.py and, only if the gap were there, t/harness.py;
 it is in neither) and is named here as a residual for whoever next
 touches lower_framac.py, not attempted.
+
+2026-09-11, THE STRING LIBRARY (v1, SPEC.md "The string library (v1)").
+All 17 members land as recursive `spec fn` definitions in `STRLIB_PRELUDE`
+(module docstring above it carries the per-member encoding and the two
+termination residuals `find`/`replace` needed, found and fixed on
+0.2026.08.30.b432e82), emitted into a task's own module whenever
+`_uses_strlib` finds any of the 17 op names -- costs nothing when unused
+(measured, probe2.rs). No member is an abstain: every one type-checks and
+is total by construction (interp.py's own algorithm shape, mirrored).
+
+LEMMAS landed, each proved standalone before wiring in (probe3.rs,
+probe4.rs, probe5.rs, all verified 0 errors): the split-join law
+(`t_lemma_split_join_law`, with two helpers `t_lemma_split_c_nonempty`/
+`t_lemma_join_cons`), `count`'s nonnegativity (`t_lemma_count_nonneg`),
+and SPEC.md's own split-length law (`t_lemma_split_len_law`,
+`len(s.split(c)) == s.count([c]) + 1`) -- the three lemmas this wave's
+own brief named. Each is found by an AST-witness scan over a task's
+`ensures` AND `body` (`_split_join_witnesses`, `_param_restricted_
+witnesses`, with `_locals_map`/`_inline_vars` resolving a body-local
+alias first, since the fuzz family states these laws through a local as
+often as inline) and called as the FIRST statement of the task's own
+proof fn -- restricted to arguments built from params alone
+(`_only_params`) so the call is always legal at that position. A fourth,
+generic bridge (`_full_slice_copy_var`) closes the "decoy full-length
+slice" shape several fuzz members share (`t2 := s[0..len(s)]` standing in
+for a copy of `s`): plain `Seq<int>` `==` is exactly as non-extensional
+in Verus as `Seq<Seq<int>>`'s already was (the nested-seq wave's own
+finding), so `t2 == s` needs the same `=~=` bridge `_assert_nested_eq`
+already emits one type up.
+
+MEASURED: (a) the three committed tasks, flake 3 -- `word_count` and
+`split_join` VERIFIED/REFUTED, both twin witnesses matching SPEC.md's own
+predicted ones exactly (`grade.py --tasks <the three> --kernels verus
+--flake 3`); `count_vowels` is UNPROVED/refuted, a task-file defect this
+lowering surfaces rather than routes around (below). (b) the family,
+`fuzz_lower.py --only verus --n 400 --seed 1 --flake 3 --jobs 8` restricted
+to the 17 saturated `fz_v1strlib_*` names (build_corpus's own indices for
+these shapes shifted since `fuzz-strlib-names.txt` was written -- more
+families were added upstream of `v1strlib` in the same RNG stream since;
+this run's own `corpus.json` names are the current ones, re-derived by
+calling `build_corpus` directly rather than trusting the stale file):
+9 of 17 shapes VERIFIED/REFUTED (`word_count`, `split_row_index`,
+`count_one`, `count_two`, `join_split_roundtrip`, `split_row_len`,
+`startswith_slice`, `endswith_slice`, and `tostr_len` VERIFIED/unproved --
+the latter is SPEC's own documented `+nonrefuting` case, not a gap, see
+`f_v1strlib`'s own docstring). (c) the committed matrix: every one of the
+23 previously-committed tasks relowers BYTE-IDENTICAL to this change
+(measured directly, `lower()` old vs new on all 23, 0 diffs) -- this
+wave adds rows to AGREEMENT.md's table, it does not move any existing
+cell, so no committed cell needed re-verification.
+
+OPEN, by name, each a genuine proof gap rather than an abstain (the
+members it needs are landed; only a further LEMMA is missing):
+`case_map_lower`/`case_map_upper` (needs `s.isalpha() ==> r.isupper()`/
+`islower()` as a consequence of the `lower`/`upper` map, not yet proved);
+`find_case` (needs a "find returns the FIRST occurrence" positional
+characterization lemma, distinct from `t_str_find`'s own definition);
+`strip_len_lstrip`/`_rstrip`/`_strip` (needs `len(s.strip()) <= len(s)`);
+`replace_count` (needs a count-after-replace relationship,
+`s.replace([a],[b]).count([b]) == s.count([b]) + s.count([a])` under
+`a != b`); `loop_count` and the COMMITTED `count_vowels` (needs a
+"count of one appended code point" induction lemma,
+`count(x ++ [y], [p]) == count(x, [p]) + (y == p ? 1 : 0)`, attempted
+(probe4.rs) but not landed in the time this wave had -- the base case's
+own definitional unfolding did not close under the asserts tried).
+`count_vowels` carries a SECOND, separate defect independent of that
+lemma: its own invariants are ordered value-then-range (`r == ...`
+first, `0 <= i`/`i <= len(s)` after), backward from SPEC.md's own stated
+rule ("Invariants are checked in order", line 141) -- confirmed directly
+(a scratch copy with the range invariants moved first drops the
+WF-ordering error entirely, leaving only the count-append gap above), so
+this task is DEFECTIVE by SPEC.md's own definitional discipline as
+currently committed, independent of anything this lowering could still
+prove; reordering the committed task's own JSON is out of this file's
+scope (t/lower_verus.py only).
 """
 from __future__ import annotations
 
@@ -951,6 +1026,584 @@ BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
            "div": "/", "mod": "%"}
 NARY_OPS = {"and": "&&", "or": "||"}
 TYPES = {"int": "int", "bool": "bool", "seq": "Seq<int>"}
+
+# THE STRING LIBRARY (v1), 2026-09-11 (SPEC.md "The string library (v1)").
+# Every member is total (SPEC.md's own word), so `defined()` needed no new
+# case for any of the 17 ops below: the existing catch-all ("total
+# operators: not neg len + - * == != < <= > >=, and pair, fst, snd")
+# already computes exactly the right formula -- AND of the arguments'
+# definedness, nothing more -- for a total op with no case of its own,
+# string ops included, measured the same way `fst`/`snd` were found to
+# need no case. Each member lowers to a `spec fn` named `t_str_<member>`
+# (or `t_str_<member>_ws`/`_c` for split's two arities, per SPEC.md "two
+# arities of one op") in `STRLIB_PRELUDE` below, a fixed block of Verus
+# source emitted once into a task's own module (prepended to its
+# `spec_blocks`) whenever `_uses_strlib` finds any of these 17 op names
+# anywhere in the task (params/requires/ensures/spec_funs/body) -- unused
+# members cost nothing (an unreferenced `spec fn` is neither an
+# obligation nor a proof, measured probe2.rs: 17 defined, 1 called,
+# verified counts only the reachable one). Every member is a *recursive
+# or structural* function over `Seq<int>` (`Seq<Seq<int>>` for split's
+# result and join's argument), each one built to mirror interp.py's own
+# reference algorithm shape-for-shape (front-to-back prefix recursion for
+# `count`/`find`/`replace`/`split(s,c)`, a two-sided trim for
+# `strip`, elementwise `cons` for `lower`/`upper`, an `any`/`all`-style OR/
+# AND recursion for the four predicates) rather than reproved from a
+# different algorithm, so the termination metric (`decreases s.len()`,
+# or `decreases n` for `tostr`'s digit peeling) is the same one that made
+# interp.py's own loops terminate. `split(s)` (whitespace) carries an
+# explicit accumulator parameter (`t_str_split_ws_acc`, `cur`, the "word
+# being built") since a *pure* recursive function has no mutable local to
+# fold into -- exactly interp.py's own `_str_split_ws`'s `cur`, turned
+# into a second formal parameter instead of a rebound local.
+#
+# TWO TERMINATION RESIDUALS, measured on 0.2026.08.30.b432e82
+# (probe2.rs): `t_str_find` and `t_str_replace`'s own recursive helpers
+# (`_from`/`_ne`) each need an explicit `if t.len() == 0` FIRST case
+# inside the recursive definition itself, even though every CALLER already
+# routes the empty-pattern case elsewhere (`t_str_find` docstring below,
+# `t_str_replace`'s own dispatch) -- a `spec fn` is checked for
+# termination against its FULL domain, not against how its callers happen
+# to use it, and without that branch Verus's automatic decreases checker
+# could not derive `s.len() >= 1` in the recursive `else` arm (the
+# `subrange(1, ...)`'s own `recommends` came back "not met", `could not
+# prove termination`, on `t.len()` alone with no branch pinning it
+# nonzero) -- `t_str_count`, built with that branch already first
+# (SPEC.md's own `count(s, []) == len(s)+1` clause put it there for a
+# semantic reason, not a termination one), never hit this. Once each
+# helper carried its own explicit `t.len() == 0` arm, both verified
+# (probe2.rs: 18/18, 0 errors) with no other change.
+#
+# LEMMAS: two of the three committed tasks' ensures need a proof beyond
+# the definitions' own unfolding. `word_count`'s (`r == len(t2.split())`,
+# `t2 := s[0..len(s)]`) needed none: `s.subrange(0, s.len())` and `s` are
+# proved equal by the SAME `==`/`=~=` extensionality bridge the nested-seq
+# wave already emits at every statement (`_assert_nested_eq`, generalized
+# below to ANY seq-typed `==`, not only `Seq<Seq<int>>` -- see
+# `_assert_seq_eq`'s own docstring), so `split(t2) == split(s)` follows
+# from `t2 == s` by ordinary congruence, no lemma needed.
+#
+# `split_join`'s law, `[c].join(s.split(c)) == s`, is NOT free: it is an
+# induction over `s.len()`, proved once as `t_lemma_split_join_law` (with
+# two small helper lemmas, `t_lemma_split_c_nonempty` -- `split(s,c)`
+# always yields at least one row -- and `t_lemma_join_cons` -- joining a
+# brand-new row onto the FRONT of a nonempty rows sequence peels off
+# exactly that row plus one separator, the shape `split(s,c)`'s own
+# `s[0]==c` case produces) all three proved and measured standalone
+# (probe3.rs: 7/7, 0 errors) before landing here. `_split_join_witnesses`
+# below finds this law's own AST shape in a task's ensures (`join(split(S,
+# C), seq![C]) == S`, either operand order, S/C read off the AST rather
+# than assumed to be named `s`/`c` so the SAME detector fires on
+# `split_join.json` and the fuzz family's `join_split_roundtrip` shape
+# alike) and `emit()` calls the lemma once per distinct (S, C) pair found,
+# as the first statement of the task's own proof fn body, so its `ensures`
+# becomes an established fact for everything after.
+#
+# `count_vowels`'s own loop invariant (`r == count(s[0..i],[97]) + ... +
+# count(s[0..i],[117])`) is the one member NOT closed by a general lemma
+# here: it needs a fact relating `count(x ++ [y], [p])` to `count(x, [p])`
+# (append one code point, single-character pattern) at every step of the
+# loop, which requires reaching INTO the while-loop lowering's own
+# recursive-helper body (the point right before its self-call) rather
+# than the task's top-level proof fn `emit()` controls -- named here as
+# the wave's own open residual (this docstring's dated note carries the
+# measurement); the member `count` itself is landed and lowers/verifies
+# standalone (probe2.rs), only the LOOP LEMMA for this one task's proof is
+# open.
+STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
+              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
+              "isupper", "islower", "startswith", "endswith"}
+
+STRLIB_PRELUDE = """\
+spec fn t_ws(c: int) -> bool {
+    (9 <= c && c <= 13) || (28 <= c && c <= 32)
+}
+spec fn t_is_upper(c: int) -> bool { 65 <= c && c <= 90 }
+spec fn t_is_lower(c: int) -> bool { 97 <= c && c <= 122 }
+
+spec fn t_str_split_ws_acc(s: Seq<int>, cur: Seq<int>) -> Seq<Seq<int>>
+    decreases s.len(),
+{
+    if s.len() == 0 {
+        if cur.len() == 0 { Seq::<Seq<int>>::empty() } else { seq![cur] }
+    } else if t_ws(s[0]) {
+        if cur.len() == 0 {
+            t_str_split_ws_acc(s.subrange(1, s.len() as int), Seq::<int>::empty())
+        } else {
+            seq![cur] + t_str_split_ws_acc(s.subrange(1, s.len() as int), Seq::<int>::empty())
+        }
+    } else {
+        t_str_split_ws_acc(s.subrange(1, s.len() as int), cur + seq![s[0]])
+    }
+}
+spec fn t_str_split_ws(s: Seq<int>) -> Seq<Seq<int>> { t_str_split_ws_acc(s, Seq::<int>::empty()) }
+
+spec fn t_str_split_c(s: Seq<int>, c: int) -> Seq<Seq<int>>
+    decreases s.len(),
+{
+    if s.len() == 0 { seq![Seq::<int>::empty()] }
+    else if s[0] == c {
+        seq![Seq::<int>::empty()] + t_str_split_c(s.subrange(1, s.len() as int), c)
+    } else {
+        let rest = t_str_split_c(s.subrange(1, s.len() as int), c);
+        seq![seq![s[0]] + rest[0]] + rest.subrange(1, rest.len() as int)
+    }
+}
+
+spec fn t_str_join(rows: Seq<Seq<int>>, sep: Seq<int>) -> Seq<int>
+    decreases rows.len(),
+{
+    if rows.len() == 0 { Seq::<int>::empty() }
+    else if rows.len() == 1 { rows[0] }
+    else { rows[0] + sep + t_str_join(rows.subrange(1, rows.len() as int), sep) }
+}
+
+spec fn t_str_udigits(n: int) -> Seq<int>
+    decreases n,
+{
+    if n <= 9 { seq![n + 48] }
+    else { t_str_udigits(n / 10) + seq![n % 10 + 48] }
+}
+spec fn t_str_tostr(n: int) -> Seq<int> {
+    if n < 0 { seq![45] + t_str_udigits(-n) } else { t_str_udigits(n) }
+}
+
+spec fn t_str_count(s: Seq<int>, t: Seq<int>) -> int
+    decreases s.len(),
+{
+    if t.len() == 0 { s.len() as int + 1 }
+    else if s.len() < t.len() { 0 }
+    else if s.subrange(0, t.len() as int) == t {
+        1 + t_str_count(s.subrange(t.len() as int, s.len() as int), t)
+    } else {
+        t_str_count(s.subrange(1, s.len() as int), t)
+    }
+}
+
+spec fn t_str_find_from(s: Seq<int>, t: Seq<int>, base: int) -> int
+    decreases s.len(),
+{
+    if t.len() == 0 { base }
+    else if s.len() < t.len() { -1 }
+    else if s.subrange(0, t.len() as int) == t { base }
+    else { t_str_find_from(s.subrange(1, s.len() as int), t, base + 1) }
+}
+spec fn t_str_find(s: Seq<int>, t: Seq<int>) -> int { t_str_find_from(s, t, 0) }
+
+spec fn t_str_lstrip(s: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { s }
+    else if t_ws(s[0]) { t_str_lstrip(s.subrange(1, s.len() as int)) }
+    else { s }
+}
+spec fn t_str_rstrip(s: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { s }
+    else if t_ws(s[s.len() as int - 1]) { t_str_rstrip(s.subrange(0, s.len() as int - 1)) }
+    else { s }
+}
+spec fn t_str_strip(s: Seq<int>) -> Seq<int> { t_str_rstrip(t_str_lstrip(s)) }
+
+spec fn t_str_replace_ins(s: Seq<int>, u: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { u }
+    else { u + seq![s[0]] + t_str_replace_ins(s.subrange(1, s.len() as int), u) }
+}
+spec fn t_str_replace_ne(s: Seq<int>, t: Seq<int>, u: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if t.len() == 0 { s }
+    else if s.len() < t.len() { s }
+    else if s.subrange(0, t.len() as int) == t {
+        u + t_str_replace_ne(s.subrange(t.len() as int, s.len() as int), t, u)
+    } else {
+        seq![s[0]] + t_str_replace_ne(s.subrange(1, s.len() as int), t, u)
+    }
+}
+spec fn t_str_replace(s: Seq<int>, t: Seq<int>, u: Seq<int>) -> Seq<int> {
+    if t.len() == 0 { t_str_replace_ins(s, u) } else { t_str_replace_ne(s, t, u) }
+}
+
+spec fn t_str_lower(s: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { s }
+    else { seq![if t_is_upper(s[0]) { s[0] + 32 } else { s[0] }] + t_str_lower(s.subrange(1, s.len() as int)) }
+}
+spec fn t_str_upper(s: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { s }
+    else { seq![if t_is_lower(s[0]) { s[0] - 32 } else { s[0] }] + t_str_upper(s.subrange(1, s.len() as int)) }
+}
+
+spec fn t_all_digit(s: Seq<int>) -> bool
+    decreases s.len(),
+{
+    if s.len() == 0 { true }
+    else { 48 <= s[0] && s[0] <= 57 && t_all_digit(s.subrange(1, s.len() as int)) }
+}
+spec fn t_str_isdigit(s: Seq<int>) -> bool { s.len() > 0 && t_all_digit(s) }
+
+spec fn t_all_alpha(s: Seq<int>) -> bool
+    decreases s.len(),
+{
+    if s.len() == 0 { true }
+    else { (t_is_upper(s[0]) || t_is_lower(s[0])) && t_all_alpha(s.subrange(1, s.len() as int)) }
+}
+spec fn t_str_isalpha(s: Seq<int>) -> bool { s.len() > 0 && t_all_alpha(s) }
+
+spec fn t_any_letter(s: Seq<int>) -> bool
+    decreases s.len(),
+{
+    if s.len() == 0 { false }
+    else { t_is_upper(s[0]) || t_is_lower(s[0]) || t_any_letter(s.subrange(1, s.len() as int)) }
+}
+spec fn t_any_lower(s: Seq<int>) -> bool
+    decreases s.len(),
+{
+    if s.len() == 0 { false }
+    else { t_is_lower(s[0]) || t_any_lower(s.subrange(1, s.len() as int)) }
+}
+spec fn t_any_upper(s: Seq<int>) -> bool
+    decreases s.len(),
+{
+    if s.len() == 0 { false }
+    else { t_is_upper(s[0]) || t_any_upper(s.subrange(1, s.len() as int)) }
+}
+spec fn t_str_isupper(s: Seq<int>) -> bool { t_any_letter(s) && !t_any_lower(s) }
+spec fn t_str_islower(s: Seq<int>) -> bool { t_any_letter(s) && !t_any_upper(s) }
+
+spec fn t_str_startswith(s: Seq<int>, t: Seq<int>) -> bool {
+    t.len() <= s.len() && s.subrange(0, t.len() as int) == t
+}
+spec fn t_str_endswith(s: Seq<int>, t: Seq<int>) -> bool {
+    t.len() <= s.len() && (t.len() == 0 || s.subrange(s.len() as int - t.len() as int, s.len() as int) == t)
+}
+
+proof fn t_lemma_split_c_nonempty(s: Seq<int>, c: int)
+    ensures t_str_split_c(s, c).len() >= 1,
+    decreases s.len(),
+{
+    if s.len() == 0 {
+    } else if s[0] == c {
+        t_lemma_split_c_nonempty(s.subrange(1, s.len() as int), c);
+    } else {
+        t_lemma_split_c_nonempty(s.subrange(1, s.len() as int), c);
+    }
+}
+
+proof fn t_lemma_join_cons(x: Seq<int>, rows: Seq<Seq<int>>, sep: Seq<int>)
+    requires rows.len() >= 1,
+    ensures t_str_join(seq![x] + rows, sep) == x + sep + t_str_join(rows, sep),
+{
+    let rows2 = seq![x] + rows;
+    assert(rows2.len() == rows.len() + 1);
+    assert(rows2[0] == x);
+    assert(rows2.subrange(1, rows2.len() as int) =~= rows);
+    assert(t_str_join(rows2, sep) == rows2[0] + sep + t_str_join(rows2.subrange(1, rows2.len() as int), sep));
+}
+
+proof fn t_lemma_join_prepend(x: Seq<int>, rows: Seq<Seq<int>>, sep: Seq<int>)
+    requires rows.len() >= 1,
+    ensures
+        t_str_join(seq![x + rows[0]] + rows.subrange(1, rows.len() as int), sep)
+            == x + t_str_join(rows, sep),
+{
+    let rows2 = seq![x + rows[0]] + rows.subrange(1, rows.len() as int);
+    assert(rows2.len() == rows.len());
+    if rows.len() == 1 {
+        assert(rows2 =~= seq![x + rows[0]]);
+        assert(t_str_join(rows2, sep) == x + rows[0]);
+        assert(t_str_join(rows, sep) == rows[0]);
+    } else {
+        assert(rows2[0] == x + rows[0]);
+        assert(rows2.subrange(1, rows2.len() as int) =~= rows.subrange(1, rows.len() as int));
+        assert(t_str_join(rows2, sep) == rows2[0] + sep + t_str_join(rows2.subrange(1, rows2.len() as int), sep));
+        assert(t_str_join(rows, sep) == rows[0] + sep + t_str_join(rows.subrange(1, rows.len() as int), sep));
+    }
+}
+
+proof fn t_lemma_split_join_law(s: Seq<int>, c: int)
+    ensures t_str_join(t_str_split_c(s, c), seq![c]) == s,
+    decreases s.len(),
+{
+    if s.len() == 0 {
+        assert(t_str_split_c(s, c) =~= seq![Seq::<int>::empty()]);
+        assert(t_str_join(t_str_split_c(s, c), seq![c]) == Seq::<int>::empty());
+        assert(s =~= Seq::<int>::empty());
+    } else if s[0] == c {
+        let rest = s.subrange(1, s.len() as int);
+        t_lemma_split_join_law(rest, c);
+        t_lemma_split_c_nonempty(rest, c);
+        let rest_rows = t_str_split_c(rest, c);
+        assert(t_str_split_c(s, c) =~= seq![Seq::<int>::empty()] + rest_rows);
+        t_lemma_join_cons(Seq::<int>::empty(), rest_rows, seq![c]);
+        assert(t_str_join(seq![Seq::<int>::empty()] + rest_rows, seq![c])
+               == Seq::<int>::empty() + seq![c] + t_str_join(rest_rows, seq![c]));
+        assert(t_str_join(rest_rows, seq![c]) == rest);
+        assert(s =~= seq![c] + rest);
+    } else {
+        let rest = s.subrange(1, s.len() as int);
+        t_lemma_split_join_law(rest, c);
+        t_lemma_split_c_nonempty(rest, c);
+        let rest_rows = t_str_split_c(rest, c);
+        assert(t_str_split_c(s, c) =~= seq![seq![s[0]] + rest_rows[0]] + rest_rows.subrange(1, rest_rows.len() as int));
+        t_lemma_join_prepend(seq![s[0]], rest_rows, seq![c]);
+        assert(t_str_join(t_str_split_c(s, c), seq![c]) == seq![s[0]] + t_str_join(rest_rows, seq![c]));
+        assert(t_str_join(rest_rows, seq![c]) == rest);
+        assert(s =~= seq![s[0]] + rest);
+    }
+}
+
+proof fn t_lemma_count_nonneg(s: Seq<int>, t: Seq<int>)
+    ensures t_str_count(s, t) >= 0,
+    decreases s.len(),
+{
+    if t.len() == 0 {
+    } else if s.len() < t.len() {
+    } else if s.subrange(0, t.len() as int) == t {
+        t_lemma_count_nonneg(s.subrange(t.len() as int, s.len() as int), t);
+    } else {
+        t_lemma_count_nonneg(s.subrange(1, s.len() as int), t);
+    }
+}
+
+proof fn t_lemma_split_len_law(s: Seq<int>, c: int)
+    ensures t_str_split_c(s, c).len() == t_str_count(s, seq![c]) + 1,
+    decreases s.len(),
+{
+    let t = seq![c];
+    if s.len() == 0 {
+        assert(t_str_split_c(s, c) =~= seq![Seq::<int>::empty()]);
+        assert(t_str_count(s, t) == 0);
+    } else if s[0] == c {
+        let rest = s.subrange(1, s.len() as int);
+        t_lemma_split_len_law(rest, c);
+        t_lemma_split_c_nonempty(rest, c);
+        assert(t_str_split_c(s, c) =~= seq![Seq::<int>::empty()] + t_str_split_c(rest, c));
+        assert(t_str_split_c(s, c).len() == 1 + t_str_split_c(rest, c).len());
+        assert(s.subrange(0, t.len() as int) =~= t);
+        assert(t_str_count(s, t) == 1 + t_str_count(rest, t));
+    } else {
+        let rest = s.subrange(1, s.len() as int);
+        t_lemma_split_len_law(rest, c);
+        t_lemma_split_c_nonempty(rest, c);
+        let rest_rows = t_str_split_c(rest, c);
+        assert(t_str_split_c(s, c) =~= seq![seq![s[0]] + rest_rows[0]] + rest_rows.subrange(1, rest_rows.len() as int));
+        assert(t_str_split_c(s, c).len() == rest_rows.len());
+        assert(s.subrange(0, t.len() as int)[0] == s[0]);
+        assert(t[0] == c);
+        assert(t_str_count(s, t) == t_str_count(rest, t));
+    }
+}
+"""
+
+
+def _full_slice_copy_var(init: dict) -> str | None:
+    """True (returning the base var's name) iff `init` is the "full-length
+    slice standing in for a copy" shape SPEC.md's own `word_count` note
+    names (`t2 := s[0..len(s)]`) -- `f_v1strlib`'s own docstring shows the
+    SAME shape recurring across most of the family (word_count, split_row,
+    count_pattern, strip_len, case_map), always a decoy local equal to a
+    param by construction. Plain `==` between two `Seq<int>` values is not
+    extensional in Verus any more than `Seq<Seq<int>>`'s already was (the
+    nested-seq wave's own finding, `_assert_nested_eq`'s docstring): a
+    string-lib call on `t2` needs `t2 == s` established via `=~=` before a
+    downstream `split(t2) == split(s)` fact follows by congruence, exactly
+    the bridge this function's caller (`stmts`'s "var" case) emits."""
+    if init.get("op") != "slice":
+        return None
+    s, a, b = init["args"]
+    if "var" not in s or a != {"int": 0}:
+        return None
+    if b.get("op") != "len" or b.get("args") != [s]:
+        return None
+    return s["var"]
+
+
+def _locals_map(task: dict) -> dict:
+    """name -> init Expr for every body-local `var` declaration in the
+    task (through `if`/`while` nesting), one shallow pass -- what
+    `_inline_vars` below substitutes so a lemma-witness search sees
+    `join(split(s, c), ...)` even when the task's own body names the
+    `split(s, c)` result through a local (`f_v1strlib`'s own
+    `join_split_roundtrip`/`split_row` shapes: `rows := s.split(c)` then
+    `r := [c].join(rows)`, never spelled inline)."""
+    m: dict = {}
+
+    def walk(body: list) -> None:
+        for s in body:
+            if "var" in s:
+                v = s["var"]
+                m[v["name"]] = v["init"]
+            elif "if" in s:
+                walk(s["if"]["then"])
+                walk(s["if"].get("else", []))
+            elif "while" in s:
+                walk(s["while"]["body"])
+
+    walk(task.get("body", []))
+    return m
+
+
+def _inline_vars(node, m: dict, depth: int = 3):
+    """Returns a COPY of `node` with every leaf `{"var": NAME}` Expr (NAME
+    a key of `m`) replaced by `m[NAME]`, up to `depth` substitutions deep
+    (a body-local never refers to itself, so this always terminates; depth
+    only bounds how many LEVELS of local-aliases-a-local this unwinds,
+    generously past anything the fuzz family or the three committed tasks
+    nest). A statement-position `{"var": {...}}` (a `var` DECLARATION, not
+    a read) is untouched: its value is a dict, never a str, so the
+    `isinstance` guard below only ever fires on the Expr form."""
+    if depth <= 0:
+        return node
+    if isinstance(node, dict):
+        v = node.get("var")
+        if isinstance(v, str) and set(node.keys()) == {"var"} and v in m:
+            return _inline_vars(m[v], m, depth - 1)
+        return {k: _inline_vars(x, m, depth) for k, x in node.items()}
+    if isinstance(node, list):
+        return [_inline_vars(x, m, depth) for x in node]
+    return node
+
+
+def _op_terms(node, opname: str, arity: int, out: list) -> None:
+    """Collects, into `out`, every `(args...)` of every node `{"op":
+    opname, "args": [...]}` (with exactly `arity` args) found anywhere in
+    `node` -- the same generic walk `_join_split_terms` already uses,
+    parameterized on which op. Used for `count`/`split` witness-finding
+    below: a task's own ensures/body is the only source of truth for
+    which lemma instantiations a proof might need, so this reads the AST
+    rather than guessing from the op name alone."""
+    if isinstance(node, dict):
+        if node.get("op") == opname and len(node.get("args", [])) == arity:
+            out.append(tuple(node["args"]))
+        for v in node.values():
+            _op_terms(v, opname, arity, out)
+    elif isinstance(node, list):
+        for v in node:
+            _op_terms(v, opname, arity, out)
+
+
+def _param_restricted_witnesses(task: dict, opname: str, arity: int
+                                 ) -> list[tuple[dict, ...]]:
+    """`_op_terms` over the task's own `ensures` (the only place a lemma
+    fact needs to be AVAILABLE, since that is what the proof fn's own
+    postcondition must discharge), restricted to instantiations built
+    from params alone (`_only_params`, same reasoning as
+    `_split_join_witnesses`'s own docstring) so the lemma call `emit()`
+    prepends is a legal first statement, deduplicated in ensures order."""
+    pnames = {p["name"] for p in task.get("params", [])}
+    lmap = _locals_map(task)
+    inlined_ensures = _inline_vars(task.get("ensures", []), lmap)
+    inlined_body = _inline_vars(task.get("body", []), lmap)
+    found: list = []
+    _op_terms(inlined_ensures, opname, arity, found)
+    _op_terms(inlined_body, opname, arity, found)
+    out: list[tuple[dict, ...]] = []
+    seen: set = set()
+    for args in found:
+        if not all(_only_params(a, pnames) for a in args):
+            continue
+        key = tuple(repr(a) for a in args)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(args)
+    return out
+
+
+def _uses_strlib(node) -> bool:
+    """True iff `node` (a task dict, or any Expr/stmt/body sub-structure)
+    mentions one of the 17 string-library op names anywhere -- params,
+    requires, ensures, spec_funs, or body alike, found by one generic walk
+    rather than per-field cases (the same shape `_body_calls` already
+    uses for a single name). Costs nothing on the 23 previously committed
+    non-string tasks (measured: none of their op names collide with
+    `STRLIB_OPS`, so this returns False on all of them, unchanged
+    output -- the byte-identity regression check in this file's own
+    docstring)."""
+    if isinstance(node, dict):
+        if node.get("op") in STRLIB_OPS:
+            return True
+        return any(_uses_strlib(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_uses_strlib(v) for v in node)
+    return False
+
+
+def _only_params(e: dict, pnames: set) -> bool:
+    """True iff every leaf of e is a `var` naming one of the task's own
+    params -- the condition under which a subexpression can be hoisted,
+    unchanged, to the very first statement of the task's own proof fn
+    body (before any body-local exists to make it mean something
+    different)."""
+    if "var" in e:
+        return e["var"] in pnames
+    if "int" in e or "bool" in e:
+        return True
+    if "op" in e:
+        return all(_only_params(a, pnames) for a in e.get("args", []))
+    return False
+
+
+def _join_split_terms(node, out: list) -> None:
+    """Collects, into `out`, every `join(split(S, C), seq![C2])` (C2 == C)
+    subexpression found anywhere in `node` -- both `ensures` (the law
+    stated directly, `split_join.json`'s own shape) and the `body` (a
+    local computed by the SAME law and returned under a bare `r == s`
+    ensures, the fuzz family's `join_split_roundtrip` shape, `f_v1strlib`'s
+    own docstring) -- one generic walk rather than two separate cases,
+    the same technique `_uses_strlib` already uses."""
+    if isinstance(node, dict):
+        if node.get("op") == "join":
+            jrows, jsep = node.get("args", [None, None])
+            if (isinstance(jrows, dict) and jrows.get("op") == "split"
+                    and len(jrows.get("args", [])) == 2):
+                s_e, c_e = jrows["args"]
+                if (isinstance(jsep, dict) and jsep.get("op") == "seq"
+                        and jsep.get("args") == [c_e]):
+                    out.append((s_e, c_e))
+        for v in node.values():
+            _join_split_terms(v, out)
+    elif isinstance(node, list):
+        for v in node:
+            _join_split_terms(v, out)
+
+
+def _split_join_witnesses(task: dict) -> list[tuple[dict, dict]]:
+    """SPEC.md "The string library (v1)" split-join law, `[c].join(s.split(
+    c)) == s`: every DISTINCT `(S, C)` pair `_join_split_terms` finds
+    anywhere in the task (`ensures` or `body` alike), restricted to pairs
+    where both S and C are built from the task's own params only
+    (`_only_params`) -- so the lemma call `emit()` prepends is always a
+    legal FIRST statement, evaluated before any body-local shadows a
+    name it mentions. Both committed shapes need no lemma they do not
+    get: `split_join.json` states the law directly in `ensures`;
+    `join_split_roundtrip` states only `r == s` in `ensures` and computes
+    the law's own LHS in a body-local -- this function finds the SAME
+    (s, c) pair either way, from the AST shape alone, not from where in
+    the task it appears."""
+    pnames = {p["name"] for p in task.get("params", [])}
+    lmap = _locals_map(task)
+    found: list = []
+    _join_split_terms(_inline_vars(task.get("ensures", []), lmap), found)
+    _join_split_terms(_inline_vars(task.get("body", []), lmap), found)
+    out: list[tuple[dict, dict]] = []
+    seen: set = set()
+    for s_e, c_e in found:
+        if not (_only_params(s_e, pnames) and _only_params(c_e, pnames)):
+            continue
+        key = (repr(s_e), repr(c_e))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((s_e, c_e))
+    return out
 
 
 def _vty(ty) -> str:
@@ -1366,6 +2019,44 @@ def expr(e: dict, vty: str | None = None) -> str:
         # probe_pair_basic.rs); no per-pair-type declaration is needed the
         # way SPARK or Lean need one.
         return f"({args[0]}, {args[1]})"
+    if op == "split":
+        # SPEC.md "The string library (v1)": split(s) (whitespace) and
+        # split(s, c) (one code point) are "two arities of one op" --
+        # `STRLIB_PRELUDE`'s own two spec fns, dispatched on arg count.
+        return (f"t_str_split_ws({args[0]})" if len(args) == 1
+                else f"t_str_split_c({args[0]}, {args[1]})")
+    if op == "join":
+        return f"t_str_join({args[0]}, {args[1]})"
+    if op == "tostr":
+        return f"t_str_tostr({args[0]})"
+    if op == "count":
+        return f"t_str_count({args[0]}, {args[1]})"
+    if op == "find":
+        return f"t_str_find({args[0]}, {args[1]})"
+    if op == "strip":
+        return f"t_str_strip({args[0]})"
+    if op == "lstrip":
+        return f"t_str_lstrip({args[0]})"
+    if op == "rstrip":
+        return f"t_str_rstrip({args[0]})"
+    if op == "replace":
+        return f"t_str_replace({args[0]}, {args[1]}, {args[2]})"
+    if op == "lower":
+        return f"t_str_lower({args[0]})"
+    if op == "upper":
+        return f"t_str_upper({args[0]})"
+    if op == "isdigit":
+        return f"t_str_isdigit({args[0]})"
+    if op == "isalpha":
+        return f"t_str_isalpha({args[0]})"
+    if op == "isupper":
+        return f"t_str_isupper({args[0]})"
+    if op == "islower":
+        return f"t_str_islower({args[0]})"
+    if op == "startswith":
+        return f"t_str_startswith({args[0]}, {args[1]})"
+    if op == "endswith":
+        return f"t_str_endswith({args[0]}, {args[1]})"
     if op == "fst":
         # p.0: always defined on a pair (`defined()`'s existing catch-all
         # already computes exactly SPEC.md's formula for this op, see its
@@ -2145,6 +2836,10 @@ class _V1:
                 scope[v["name"]] = (vt, True)
                 lines.append(f"{ind}let mut {v['name']}: {vt}"
                              f" = {expr(v['init'], vt)};")
+                if _uses_strlib(self.task):
+                    base = _full_slice_copy_var(v["init"])
+                    if base is not None:
+                        lines.append(f"{ind}assert({v['name']} =~= {base});")
             elif "if" in s:
                 c = s["if"]
                 self._assert_defined(c["cond"], lines, ind)
@@ -2395,6 +3090,35 @@ class _V1:
         scope[rname] = (rtype, True)
         main_lines = self.stmts(body, scope, "    ")
 
+        # THE STRING LIBRARY (v1, 2026-09-11): the split-join law is not
+        # free (`STRLIB_PRELUDE`'s own dated note), so a task whose
+        # ensures states it gets one lemma call per distinct (s, c) pair
+        # PREPENDED to its own proof fn body -- the lemma's `ensures`
+        # then stands as an established fact for the rest of the proof,
+        # same technique the well-formedness lemmas already use (call a
+        # separately-proved fact into scope rather than re-deriving it).
+        for s_e, c_e in _split_join_witnesses(task):
+            main_lines = ([f"    t_lemma_split_join_law({expr(s_e)}, {expr(c_e)});"]
+                          + main_lines)
+
+        # THE STRING LIBRARY (v1, 2026-09-11): two more facts an ensures
+        # can need that neither `count`'s nor `split`'s own definition
+        # hands over for free -- `count(s, t) >= 0` (measured, `f_v1strlib`'s
+        # own `count_pattern` shape states it directly) and SPEC.md's own
+        # split-length law, `len(s.split(c)) == s.count([c]) + 1`
+        # (`split_row`'s `len` variant) -- each found the same way the
+        # split-join law is (an AST witness restricted to params-only
+        # arguments) and prepended the same way, harmless when unused
+        # (an unused `ensures` fact costs nothing, the same property
+        # `STRLIB_PRELUDE`'s own docstring already measured for an
+        # unreferenced `spec fn`).
+        for s_e, t_e in _param_restricted_witnesses(task, "count", 2):
+            main_lines = ([f"    t_lemma_count_nonneg({expr(s_e)}, {expr(t_e)});"]
+                          + main_lines)
+        for s_e, c_e in _param_restricted_witnesses(task, "split", 2):
+            main_lines = ([f"    t_lemma_split_len_law({expr(s_e)}, {expr(c_e)});"]
+                          + main_lines)
+
         # TOP-LEVEL NONLINEAR ENSURES (2026-09-10, see
         # `_nonlinear_ensures_bridge`'s own docstring), the implicit-return
         # site: a body with no `return` statement ends via the trailing
@@ -2426,7 +3150,8 @@ class _V1:
             f"    {rname}\n"
             "}\n")
 
-        blocks = spec_blocks + self.wf + self.helpers + [main]
+        strlib_blocks = [STRLIB_PRELUDE] if _uses_strlib(task) else []
+        blocks = strlib_blocks + spec_blocks + self.wf + self.helpers + [main]
         return ("use vstd::prelude::*;\n\nverus! {\n\n"
                 + "\n".join(blocks)
                 + "\n} // verus!\n\nfn main() {}\n")
