@@ -1,118 +1,118 @@
 {
-  "t": 1,
-  "name": "probe_names_framac",
-  "params": [
+ "t": 1,
+ "name": "probe_names_framac",
+ "params": [
+  {
+   "name": "char",
+   "type": "int"
+  },
+  {
+   "name": "integer",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
     {
-      "name": "int",
-      "type": "int"
+     "var": "r"
     },
     {
-      "name": "requires",
-      "type": "int"
+     "var": "char"
     }
-  ],
-  "returns": [
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
     {
-      "name": "r",
-      "type": "int"
-    }
-  ],
-  "requires": [],
-  "ensures": [
-    {
-      "op": ">=",
-      "args": [
-        {
-          "var": "r"
-        },
-        {
-          "var": "int"
-        }
-      ]
+     "var": "r"
     },
     {
-      "op": ">=",
-      "args": [
-        {
-          "var": "r"
-        },
-        {
-          "var": "requires"
-        }
-      ]
-    },
-    {
-      "op": "or",
-      "args": [
-        {
-          "op": "==",
-          "args": [
-            {
-              "var": "r"
-            },
-            {
-              "var": "int"
-            }
-          ]
-        },
-        {
-          "op": "==",
-          "args": [
-            {
-              "var": "r"
-            },
-            {
-              "var": "requires"
-            }
-          ]
-        }
-      ]
+     "var": "integer"
     }
-  ],
-  "body": [
+   ]
+  },
+  {
+   "op": "or",
+   "args": [
     {
-      "var": {
-        "name": "assigns",
-        "type": "int",
-        "init": {
-          "var": "int"
-        }
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "char"
       }
+     ]
     },
     {
-      "if": {
-        "cond": {
-          "op": ">=",
-          "args": [
-            {
-              "var": "assigns"
-            },
-            {
-              "var": "requires"
-            }
-          ]
-        },
-        "then": [
-          {
-            "assign": [
-              "r",
-              {
-                "var": "assigns"
-              }
-            ]
-          }
-        ],
-        "else": [
-          {
-            "assign": [
-              "r",
-              {
-                "var": "requires"
-              }
-            ]
-          }
-        ]
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "integer"
       }
+     ]
     }
-  ]
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "assigns",
+    "type": "int",
+    "init": {
+     "var": "char"
+    }
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "assigns"
+      },
+      {
+       "var": "integer"
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "assigns"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "integer"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
 }

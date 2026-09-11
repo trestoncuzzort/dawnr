@@ -2222,11 +2222,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # task: see that function's own docstring for why (MEASURED on
     # lower_framac.py, a certificate that declares fresh locals spelled
     # after the witness's own keys).
-    if body is not task.get("body"):
-        task = {**task, "body": body}
+    twin_body = body if body is not task.get("body") else None
     task, renames = names.sanitize(task, names.KEYWORDS["dafny"],
                                     uppercase_ok=True)
-    body = task["body"]
+    # the twin body renamed under the same mapping, kept a separate
+    # object from task["body"] (2026-09-11, names.rename_body's note)
+    body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
     if CERT_NAME in _collect_names(task):
         raise ValueError(f"task mentions the protocol name {CERT_NAME!r}")

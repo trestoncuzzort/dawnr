@@ -4920,11 +4920,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # 2026-09-11 on probe_names_framac -- emitted literally `int int =
     # 0;` for a param named `int`, well-formed C nowhere. See
     # `remap_witness`'s own docstring.
-    if body is not task.get("body"):
-        task = {**task, "body": body}
+    twin_body = body if body is not task.get("body") else None
     task, renames = t_names.sanitize(task, t_names.KEYWORDS["framac"],
                                      uppercase_ok=True)
-    body = task["body"]
+    # the twin body renamed under the same mapping, kept a separate
+    # object from task["body"] (2026-09-11, names.rename_body's note)
+    body = t_names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = t_names.remap_witness(witness, renames)
     name, ret = task["name"], task["returns"][0]["name"]
     rett = task["returns"][0]["type"]

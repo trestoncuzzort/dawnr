@@ -3664,11 +3664,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # every previously-committed task. `_certificate` below runs on this
     # SAME renamed task/body, with `witness`'s own keys renamed to match
     # (`names.remap_witness`) -- see that function's own docstring.
-    if body is not task.get("body"):
-        task = {**task, "body": body}
+    twin_body = body if body is not task.get("body") else None
     task, renames = names.sanitize(task, names.KEYWORDS["verus"],
                                     uppercase_ok=True)
-    body = task["body"]
+    # the twin body renamed under the same mapping, kept a separate
+    # object from task["body"] (2026-09-11, names.rename_body's note)
+    body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
     if task.get("t", 0) == 0:
         # v0 used to emit bare literals to keep its output byte-identical to

@@ -393,6 +393,20 @@ def sanitize(task: dict, reserved: set[str], uppercase_ok: bool,
     return new_task, mapping
 
 
+def rename_body(body: list, mapping: dict[str, str]) -> list:
+    """A twin body (harness's mutated copy of `task["body"]`) renamed under
+    the SAME mapping `sanitize` produced for the task, so `lower()` keeps
+    the real task and the twin body as two objects. Added 2026-09-11 after
+    the wave A matrix gate: the first wiring replaced the task's body with
+    the twin body before sanitizing, so every lowering that tells a twin
+    from the real by comparing the two (the invariant-drop certificate,
+    which evaluates the dropped invariant at the exit witness) saw no
+    difference and emitted no certificate: 13 loop tasks read twin
+    unproved in dafny and verus and timeout in framac. Identity is kept
+    when nothing renames (`body` itself is returned)."""
+    return _rename_walk(body, mapping) if mapping else body
+
+
 def remap_witness(witness: dict | None, mapping: dict[str, str]) -> dict | None:
     """The twin witness `w` (harness.twin_cached's own dict: param/local
     names as keys, plus underscore-prefixed metadata keys `_kind`/`_real`/

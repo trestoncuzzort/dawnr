@@ -4123,11 +4123,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # `task`/`body` are returned unchanged (`is`) when nothing needs a
     # rename, which is every previously-committed task.
     orig_task, orig_body = task, body
-    if body is not task.get("body"):
-        task = {**task, "body": body}
+    twin_body = body if body is not task.get("body") else None
     task, renames = t_names.sanitize(task, t_names.KEYWORDS["spark"] | RESERVED,
                                      uppercase_ok=True, check_task_name=False)
-    body = task["body"]
+    # the twin body renamed under the same mapping, kept a separate
+    # object from task["body"] (2026-09-11, names.rename_body's note)
+    body = t_names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     L = Lower(task)
     ret = task["returns"][0]
     psub = {p["name"]: cap(p["name"]) for p in task["params"]}

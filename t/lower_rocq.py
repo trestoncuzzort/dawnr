@@ -7266,11 +7266,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # (mirroring their own witness-first early return) rather than
     # through them: `lower_v0`/`lower_v1` are then called with
     # `witness=None` so they never redo that attempt.
-    if body is not task.get("body"):
-        task = {**task, "body": body}
+    twin_body = body if body is not task.get("body") else None
     task, renames = t_names.sanitize(task, t_names.KEYWORDS["rocq"],
                                      uppercase_ok=True, prefix="tn_")
-    body = task["body"]
+    # the twin body renamed under the same mapping, kept a separate
+    # object from task["body"] (2026-09-11, names.rename_body's note)
+    body = t_names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = t_names.remap_witness(witness, renames)
     rc = t_names.rename_comment(renames)
     if witness is not None:

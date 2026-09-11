@@ -1,118 +1,118 @@
 {
-  "t": 1,
-  "name": "probe_names_rocq",
-  "params": [
+ "t": 1,
+ "name": "probe_names_rocq",
+ "params": [
+  {
+   "name": "fix",
+   "type": "int"
+  },
+  {
+   "name": "measure",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
     {
-      "name": "fun",
-      "type": "int"
+     "var": "r"
     },
     {
-      "name": "forall",
-      "type": "int"
+     "var": "fix"
     }
-  ],
-  "returns": [
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
     {
-      "name": "r",
-      "type": "int"
-    }
-  ],
-  "requires": [],
-  "ensures": [
-    {
-      "op": ">=",
-      "args": [
-        {
-          "var": "r"
-        },
-        {
-          "var": "fun"
-        }
-      ]
+     "var": "r"
     },
     {
-      "op": ">=",
-      "args": [
-        {
-          "var": "r"
-        },
-        {
-          "var": "forall"
-        }
-      ]
-    },
-    {
-      "op": "or",
-      "args": [
-        {
-          "op": "==",
-          "args": [
-            {
-              "var": "r"
-            },
-            {
-              "var": "fun"
-            }
-          ]
-        },
-        {
-          "op": "==",
-          "args": [
-            {
-              "var": "r"
-            },
-            {
-              "var": "forall"
-            }
-          ]
-        }
-      ]
+     "var": "measure"
     }
-  ],
-  "body": [
+   ]
+  },
+  {
+   "op": "or",
+   "args": [
     {
-      "var": {
-        "name": "exists",
-        "type": "int",
-        "init": {
-          "var": "fun"
-        }
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "fix"
       }
+     ]
     },
     {
-      "if": {
-        "cond": {
-          "op": ">=",
-          "args": [
-            {
-              "var": "exists"
-            },
-            {
-              "var": "forall"
-            }
-          ]
-        },
-        "then": [
-          {
-            "assign": [
-              "r",
-              {
-                "var": "exists"
-              }
-            ]
-          }
-        ],
-        "else": [
-          {
-            "assign": [
-              "r",
-              {
-                "var": "forall"
-              }
-            ]
-          }
-        ]
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "measure"
       }
+     ]
     }
-  ]
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "cofix",
+    "type": "int",
+    "init": {
+     "var": "fix"
+    }
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "cofix"
+      },
+      {
+       "var": "measure"
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "cofix"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "measure"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
 }

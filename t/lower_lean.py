@@ -5526,11 +5526,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # function's own docstring for why the renamed spelling, not the
     # original one, is what a certificate that declares its own locals
     # needs.
-    if body is not task.get("body"):
-        task = {**task, "body": body}
+    twin_body = body if body is not task.get("body") else None
     task, renames = names.sanitize(task, names.KEYWORDS["lean"],
                                     uppercase_ok=True)
-    body = task["body"]
+    # the twin body renamed under the same mapping, kept a separate
+    # object from task["body"] (2026-09-11, names.rename_body's note)
+    body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
     lw = Lower(task, body)
     src = lw.lower()

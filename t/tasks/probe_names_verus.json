@@ -1,118 +1,118 @@
 {
-  "t": 1,
-  "name": "probe_names_verus",
-  "params": [
+ "t": 1,
+ "name": "probe_names_verus",
+ "params": [
+  {
+   "name": "proof",
+   "type": "int"
+  },
+  {
+   "name": "ghost",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
     {
-      "name": "proof",
-      "type": "int"
+     "var": "r"
     },
     {
-      "name": "spec",
-      "type": "int"
+     "var": "proof"
     }
-  ],
-  "returns": [
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
     {
-      "name": "r",
-      "type": "int"
-    }
-  ],
-  "requires": [],
-  "ensures": [
-    {
-      "op": ">=",
-      "args": [
-        {
-          "var": "r"
-        },
-        {
-          "var": "proof"
-        }
-      ]
+     "var": "r"
     },
     {
-      "op": ">=",
-      "args": [
-        {
-          "var": "r"
-        },
-        {
-          "var": "spec"
-        }
-      ]
-    },
-    {
-      "op": "or",
-      "args": [
-        {
-          "op": "==",
-          "args": [
-            {
-              "var": "r"
-            },
-            {
-              "var": "proof"
-            }
-          ]
-        },
-        {
-          "op": "==",
-          "args": [
-            {
-              "var": "r"
-            },
-            {
-              "var": "spec"
-            }
-          ]
-        }
-      ]
+     "var": "ghost"
     }
-  ],
-  "body": [
+   ]
+  },
+  {
+   "op": "or",
+   "args": [
     {
-      "var": {
-        "name": "requires",
-        "type": "int",
-        "init": {
-          "var": "proof"
-        }
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "proof"
       }
+     ]
     },
     {
-      "if": {
-        "cond": {
-          "op": ">=",
-          "args": [
-            {
-              "var": "requires"
-            },
-            {
-              "var": "spec"
-            }
-          ]
-        },
-        "then": [
-          {
-            "assign": [
-              "r",
-              {
-                "var": "requires"
-              }
-            ]
-          }
-        ],
-        "else": [
-          {
-            "assign": [
-              "r",
-              {
-                "var": "spec"
-              }
-            ]
-          }
-        ]
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "ghost"
       }
+     ]
     }
-  ]
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "exec",
+    "type": "int",
+    "init": {
+     "var": "proof"
+    }
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "exec"
+      },
+      {
+       "var": "ghost"
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "exec"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "ghost"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
 }
