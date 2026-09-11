@@ -17,7 +17,17 @@ never restates, only reads and grades:
      (Outcome.VACUOUS -- accepted, but the spec was too weak to mean
      anything), "wf-refused" (the checker must refuse the task before any
      kernel sees it) and "lower-error" (every kernel's own lowering must
-     reject the token).
+     reject the token). Two more joined 2026-09-11 (ROADMAP 13.4), each an
+     EXPECTATION CLASS rather than one outcome string, because the probe's
+     own point, in its docstring's own words, is broader than one verdict:
+     "rejected" (fz_p_badrec, fz_p_badrec2, fz_p_badvariant, fz_p_biglen,
+     fz_p_seqlen, fz_p_divreq0 -- a non-well-founded `decreases` or a `seq`
+     length narrowed to a machine width has no proof for a sound kernel to
+     find, so the real must read one of REJECTED_OK below, any voice of
+     "no proof", and must never read verified, timeout or vacuous, defined
+     next to REJECTED_OK) and "decorative" (fz_p_vac_post -- SPEC.md "The
+     twins", 2026-09-11 paragraph: real VERIFIED with twin VERIFIED under
+     the twin rule is decorative, not vacuous, defined next to it).
 
   2. metamorphic.py's named survivors, `metamorphic.TRANSFORMS`: 20 rewrites
      (rename, add-zero, mul-one, sub-zero, double-neg, comm-add,
@@ -95,7 +105,48 @@ BACKENDS = run_par.BACKENDS
 # lower-error. "wf-refused" and "lower-error" are graded outside the seven-
 # kernel cell (see run_items below); the other three are graded against the
 # real column's Outcome string directly.
-OUTCOME_VOCAB = {"verified", "refuted", "vacuous", "wf-refused", "lower-error"}
+OUTCOME_VOCAB = {"verified", "refuted", "vacuous", "wf-refused", "lower-error",
+                 "rejected", "decorative"}
+
+# "rejected" (added 2026-09-11, ROADMAP 13.4, the bad-measure/unbounded-length
+# probes): SPEC.md's own words for these probes' point is not "the real must
+# read exactly REFUTED" -- it is "a kernel must NOT verify". A non-well-founded
+# `decreases` has no termination proof to find (SPEC.md gate 3, "well-
+# definedness IS the termination obligation"), and a `seq` length bounded by a
+# machine type proves a false statement about a quantity SPEC.md gives no
+# upper bound (SPEC.md gate 1, "a `seq` value s has a length `len(s) >= 0`").
+# Both are a column HONESTLY FAILING to produce a proof, and a sound column
+# can fail that in more than one voice: REFUTED (found a countermodel),
+# UNPROVED (the solver gave up without one, verifiers/__init__.py's Outcome
+# docstring), MALFORMED (the ill-formed obligation never typechecked as a
+# goal at all) or LOWER-ERROR (the lowering itself refused to emit the file).
+# What a sound column may NEVER do is VERIFIED (the false theorem SPEC.md
+# rules out is exactly what "verify" would mean here), TIMEOUT (that is
+# "undecided", not "rejected" -- a column that merely ran out of budget has
+# not been shown to have seen the contradiction) or VACUOUS (accepted, for
+# the wrong reason -- the twin rule's own "never a win", verifiers/__init__.py
+# Outcome.VACUOUS). REJECTED_OK is exactly that set, read directly off
+# verifiers/__init__.py's Outcome vocabulary plus this driver's own
+# "lower-error" string; grade() below checks membership in it instead of
+# equality for any probe whose `_expect` is "rejected".
+REJECTED_OK = {"refuted", "unproved", "malformed", "lower-error"}
+
+# "decorative" (added 2026-09-11, ROADMAP 13.4, fz_p_vac_post): SPEC.md
+# "The twins", 2026-09-11 paragraph, and harness.decorative_kind, which
+# already implements the reading -- a pairing of real VERIFIED and twin
+# VERIFIED is not a flip (the harness never counted it as one), but it is
+# not silence either: the ladder tells apart a twin the spec cannot
+# distinguish from the real program ("decorative", `ensures true` being the
+# canonical case, exactly `fz_p_vac_post`'s own body) from a twin a kernel
+# accepted despite its own measured witness saying it must be refuted
+# ("unsound"). A probe whose point is "the postcondition is content-free"
+# is a claim about the FIRST case, not about the twin rule producing
+# "vacuous" (that string names something else entirely, Outcome.VACUOUS,
+# a kernel accepting for the wrong reason on a SINGLE program, not a
+# real/twin pairing). grade() below calls harness.decorative_kind on the
+# measured (real, twin) pair for any probe whose `_expect` is "decorative",
+# the same function run_par.py's own driver already calls to print this
+# reading -- read, not restated.
 
 BASE_TASK_PATH = tasks_io.find(HERE / "tasks", "abs")
 # abs: `| abs | verified / refuted |` x7 in the committed t/AGREEMENT.md,
@@ -309,7 +360,12 @@ def grade(items: list[dict], rows: dict, cols: list) -> dict:
     verdict(task), the base program's outcome, not a twin's; the probe
     manifest's expectation (verified/refuted/wf-refused/lower-error) is
     likewise a statement about the real lowering, per fuzz_lower.py's own
-    `analyse()` (`vs_truth` compares `cells[b][0]`, never `cells[b][1]`)."""
+    `analyse()` (`vs_truth` compares `cells[b][0]`, never `cells[b][1]`).
+    Two expectations read the cell differently, both dated 2026-09-11
+    (ROADMAP 13.4): "rejected" (REJECTED_OK membership on the real outcome
+    alone, still never the twin) and "decorative" (harness.decorative_kind
+    on the (real, twin) PAIR, the one case that is about both columns of
+    the cell, because that is what the twin rule itself is about)."""
     present_names = {b for b, v in cols if not v.startswith("ABSENT")}
     verdicts = {}
     for it in items:
@@ -320,6 +376,11 @@ def grade(items: list[dict], rows: dict, cols: list) -> dict:
             continue
         exp = it["expected"]
         cells = rows.get(name, {})
+        w = None
+        if exp == "decorative":
+            task = it["task"]
+            clean = {k: v for k, v in task.items() if not k.startswith("_")}
+            _, _, w = harness.twin_cached(clean)
         per_col = {}
         for b, v in cols:
             if b not in present_names:
@@ -329,7 +390,14 @@ def grade(items: list[dict], rows: dict, cols: list) -> dict:
             if c is None:
                 per_col[b] = "FAIL"
                 continue
-            per_col[b] = "PASS" if c[0] == exp else "FAIL"
+            if exp == "rejected":
+                per_col[b] = "PASS" if c[0] in REJECTED_OK else "FAIL"
+            elif exp == "decorative":
+                per_col[b] = ("PASS"
+                              if harness.decorative_kind(c[0], c[1], w)
+                              == "decorative" else "FAIL")
+            else:
+                per_col[b] = "PASS" if c[0] == exp else "FAIL"
         verdicts[name] = per_col
     return verdicts
 
@@ -344,12 +412,18 @@ def format_table(cols, items, rows, verdicts, not_applicable, bugs,
              f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",
              "",
              "Cell = real outcome / twin outcome [PASS|FAIL|N/A]. PASS means "
-             "the real outcome equals this row's `expected` column; N/A "
-             "means the kernel's own binary is absent from this run (not "
-             "counted toward exit code). Built from fuzz_lower.py's hand-"
-             "built probes plus metamorphic.py's named TRANSFORMS applied "
-             "to t/tasks/abs.t; see t/conformance.py's module docstring "
-             "for the manifest.",
+             "the real outcome equals this row's `expected` column for "
+             "every `expected` value except two 2026-09-11 expectation "
+             "classes (ROADMAP 13.4): `rejected` (PASS iff the real reads "
+             "any of conformance.REJECTED_OK -- refuted, unproved, "
+             "malformed, lower-error, any honest 'no proof') and "
+             "`decorative` (PASS iff harness.decorative_kind on the real/"
+             "twin PAIR reads 'decorative', the twin-rule finding this "
+             "cell's own probe is about). N/A means the kernel's own "
+             "binary is absent from this run (not counted toward exit "
+             "code). Built from fuzz_lower.py's hand-built probes plus "
+             "metamorphic.py's named TRANSFORMS applied to t/tasks/abs.t; "
+             "see t/conformance.py's module docstring for the manifest.",
              ""]
     col_names = [b for b, _ in cols]
     header = "| task | expected | " + " | ".join(col_names) + " |"

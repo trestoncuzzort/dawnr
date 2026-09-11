@@ -1894,6 +1894,78 @@ computed but not the subject of any proved lemma. No member is an
 abstain (NotImplementedError): every one of the 17 has a real, checked,
 total Lean definition: what is open is which FACTS about them are
 proved, not whether they lower.
+
+2026-09-11 (ROADMAP 13.4, this session's item: lean's own conformance FAIL
+cells, probes fz_p_nodiv/fz_p_modsign_true/fz_p_seqeq_true/fz_p_nest_empty/
+fz_p_str_splitempty/fz_p_str_findempty/fz_p_str_tab/fz_p_str_lowernonletter/
+fz_p_vac_unsat/fz_p_vac_range). Six gaps closed, all here (verifiers/lean.py
+carries the vacuity-smoke read only, no lowering-side vacuity logic):
+  - fz_p_nodiv: the bare `/` token fell into term()'s generic fallback,
+    raising NotImplementedError -> ABSTAIN (run_par.py's own routing), not
+    the ValueError -> LOWER-ERROR every other kernel's adapter raises for
+    the same token. Now raises ValueError explicitly (`term()`'s new `if
+    op == "/"` case, just above the DIV_MOD branch).
+  - fz_p_vac_unsat/fz_p_vac_range: a `requires` unsatisfiable at every
+    input let ANY ensures verify (grind/omega can derive anything from a
+    false hypothesis), and lean had no native contradictory-hypothesis
+    signal the way dafny/verus/spark/framac's own tools already give
+    them. `lower()` now emits a second, independent theorem per task with
+    a nonempty `requires`, `<name>_t_vacuity_smoke : <params> -> hpre ->
+    False`, proved iff the precondition holds nowhere;
+    verifiers/lean.py's own note (below) reads its audit.
+  - fz_p_nest_empty: `[]` at a declared `seq<seq>` slot lowered
+    `([] : List Int)` (a type error against the nested prelude), since
+    term()'s "seq" case had no way to see the assignment/return site's
+    declared type for an EMPTY literal (nonempty ones infer nested-ness
+    from the first element's own sort). `term()` now takes an `expect`
+    parameter, threaded from to_expr's tail return/assign/var cases and
+    through `ite` branches, consulted only by the empty-literal case.
+  - fz_p_str_splitempty/fz_p_str_findempty/fz_p_str_lowernonletter (and
+    fz_p_str_tab, the same root cause as splitempty): `t_str_split_ws`/
+    `t_str_find`/`t_str_lower` (and the sfuns they call) were never named
+    in the grind hint list (`ga_names`, `__init__`) for the split(s)
+    1-arg arity, find, or lower/upper -- only count/split(s,c)/join were.
+    `_has_call()` (free function, arity-aware, split(s) vs split(s,c))
+    plus the widened `ga_names` gating closes it. A `decide` fallback
+    alternative, added to the SIMPLE shape's spec tactic ONLY when the
+    task has zero params (a fully ground goal, like these three's own
+    empty-literal-only probes), closes what grind's e-matching still
+    would not reach even with the name in scope (`t_str_split_ws []`'s
+    own `List.foldl` under a `let`).
+  - fz_p_modsign_true: `unfold {name}_t` hard-FAILS ("Tactic `unfold`
+    failed to unfold ... in ...", measured directly) whenever `ensures`
+    never mentions the return name (`post_conj` then never substitutes
+    the applied call in, so the def name occurs nowhere to unfold) --
+    modsign_true's own `ensures x % y >= 0` is exactly this shape. This
+    silently discarded every div/mod bridge alternative the nested
+    `first` offers, leaving only the bare `grind [name]` fallback, which
+    cannot derive Euclidean mod facts alone. `unfold` is now wrapped
+    `try` in the SIMPLE shape's spec tactic (a no-op exactly when it
+    would have failed; unchanged whenever it succeeds).
+  - fz_p_seqeq_true: `t_seq_ext` (list extensionality from length +
+    pointwise `getElem!`, SPEC.md "Sequences as values") was gated only
+    by a computational-position seq equality in the BODY
+    (`_stmts_have_seq_eq_comp`), whose own docstring argued a PROP-
+    position one (an `ensures` clause) never needs it, since it renders
+    as plain `l1 = l2`, decided by grind's structural/congruence
+    reasoning once the values' own CONSTRUCTION is in scope. True for a
+    straight-line body; false after a loop, where the postcondition's
+    `r = s` is proved from the invariant alone, r and s both OPAQUE
+    variables with no construction to unfold -- exactly seqeq_true's own
+    shape. `self.seq_eq_comp` now also fires on a seq-sorted `==`/`!=`
+    found anywhere in `ensures` (`_prop_has_seq_eq`, new), under
+    and/or/not/implies.
+Measured (this session, lean 4.33.1): all 10 probes PASS at flake 3 after;
+byte identity checked on all 34 committed tasks (`git diff`-visible bytes
+changed on 26 of them -- the `try unfold`/`decide`-fallback/ga_names
+widening touch every SIMPLE-shape task unconditionally, and the vacuity
+smoke touches every task with a nonempty `requires`; 8 stayed byte-
+identical); abs/gcd/sum_upto/reverse re-graded verified/refuted, unchanged
+against the pre-session lowering+verifier on the same identical source
+where bytes did not move, and identical under both lowerings where they
+did (abs/gcd/sum_upto); count_vowels stays unproved/unproved on a BYTE-
+IDENTICAL source both before and after (its own gap, "STAYS OPEN" above,
+not touched by this session -- not one of this session's ten probes).
 """
 from __future__ import annotations
 
@@ -1967,6 +2039,25 @@ def _collect_names(x, out: set) -> None:
     elif isinstance(x, list):
         for v in x:
             _collect_names(v, out)
+
+
+def _has_call(x, op_name: str, arity: int | None = None) -> bool:
+    """True iff `x` contains an Expr node `{"op": op_name, "args": [...]}`
+    with exactly `arity` args (any arity when None). `_has(x, "op", o)`
+    (the `Lower` method below) cannot tell split(s) (1 arg, whitespace
+    runs) from split(s, c) (2 args, one separator code point) apart --
+    one JSON op name, two arities per SPEC.md's own words -- so this
+    free function (2026-09-11, fz_p_str_splitempty/fz_p_str_tab's own
+    grind-hint gap) adds the arity check `__init__`'s ga_names needs to
+    tell them apart."""
+    if isinstance(x, dict):
+        if x.get("op") == op_name and (
+                arity is None or len(x.get("args", [])) == arity):
+            return True
+        return any(_has_call(v, op_name, arity) for v in x.values())
+    if isinstance(x, list):
+        return any(_has_call(v, op_name, arity) for v in x)
+    return False
 
 
 def loop_assigned(body: list) -> set:
@@ -2050,12 +2141,42 @@ class Lower:
             # this list task by task is what closes it.
             has_op = lambda o: (self._has(task, "op", o)
                                 or self._has(body, "op", o))
+            has_split_ws = (_has_call(task, "split", 1)
+                           or _has_call(body, "split", 1))
             if has_op("count") or has_op("split") or has_op("join"):
                 ga_names += ["t_str_count", "t_str_count_elem"]
             if has_op("split") or has_op("join"):
                 ga_names += ["t_str_split_sep_ne_nil",
                             "t_str_join_cons_row", "t_str_join_nil_row",
                             "t_str_join_split_roundtrip"]
+            if has_split_ws:
+                # split(s), the 1-arg whitespace-run arity (SPEC.md "The
+                # string library (v1)"): measured 2026-09-11,
+                # fz_p_str_splitempty/fz_p_str_tab, grind unfolds the
+                # calling task's own `def` (its E-matching equation is
+                # always in scope) but never reaches INTO
+                # t_str_split_ws's own `let`-bound fold without its name
+                # named here too -- the same reason t_str_count/
+                # t_str_count_elem are named above for the count/join
+                # arities, extended to the arity `has_op("split")` alone
+                # does not distinguish from split(s, c).
+                ga_names += ["t_str_split_ws"]
+            if has_op("find"):
+                # find(s, t) (SPEC.md "The string library (v1)"):
+                # measured 2026-09-11, fz_p_str_findempty, the same gap
+                # as split_ws just above -- t_str_find's own `if
+                # t.isEmpty then 0 else ...` never unfolds under grind
+                # without its name in the hint list.
+                ga_names += ["t_str_find", "t_str_find_go"]
+            if has_op("lower"):
+                # lower(s) (SPEC.md "The string library (v1)"): measured
+                # 2026-09-11, fz_p_str_lowernonletter, the same gap --
+                # t_str_lower's own `.map` never unfolds under grind
+                # without its name (and the letter-range predicate it
+                # calls per element) in the hint list.
+                ga_names += ["t_str_lower", "t_str_isupperletter"]
+            if has_op("upper"):
+                ga_names += ["t_str_upper", "t_str_islowerletter"]
             ga_names += ["List.drop_zero", "List.take_length"]
         self.ga = "" if not ga_names else " [" + ", ".join(ga_names) + "]"
         # SPEC.md "Sequences as values" (2026-09-09): does this lowering
@@ -2100,7 +2221,10 @@ class Lower:
         # for every task that predates this construct (none reaches
         # term()'s new ==/!=/CMP_OPS/and/or/not case at all, since that
         # case did not exist), so nothing about their output changes.
-        self.seq_eq_comp = self._stmts_have_seq_eq_comp(body, self.types)
+        self.seq_eq_comp = (
+            self._stmts_have_seq_eq_comp(body, self.types)
+            or any(self._prop_has_seq_eq(e, self.types)
+                  for e in task.get("ensures", [])))
 
     # ---------- naming ----------
 
@@ -2290,12 +2414,46 @@ class Lower:
                     return True
         return False
 
+    def _prop_has_seq_eq(self, e: dict, types: dict) -> bool:
+        """Does `e` (an `ensures`/invariant clause, PROP position) itself
+        state a seq-sorted `==`/`!=` (under and/or/not/implies) -- 2026-
+        09-11, fz_p_seqeq_true: the docstring above `_term_bool_has_seq_eq`
+        argues a prop-position seq equality "needs no extensionality
+        bridge at all" because it renders as plain `l1 = l2`, decided by
+        grind's own structural/congruence reasoning once l1/l2's own
+        CONSTRUCTION is in scope (true for a straight-line body, where
+        the return value's shape is a literal grind can unfold). It is
+        NOT true after a loop: the postcondition's `r = s` is proved from
+        the loop's own invariant (a length fact plus a pointwise
+        `getElem!` quantifier) with r and s both OPAQUE variables, no
+        construction to unfold -- exactly `t_seq_ext`'s own signature,
+        which `self.seq_eq_comp` below must therefore also offer even
+        though the equality sits in `ensures`, never in the body's own
+        computational position `_term_bool_has_seq_eq` scans."""
+        if "op" not in e:
+            return False
+        op = e["op"]
+        if op in ("==", "!="):
+            return self._is_seqsort(self.sort(e["args"][0], types))
+        if op in ("and", "or", "implies"):
+            return any(self._prop_has_seq_eq(a, types) for a in e["args"])
+        if op == "not":
+            return self._prop_has_seq_eq(e["args"][0], types)
+        return False
+
     # ---------- expressions ----------
 
-    def term(self, e: dict, env: dict, types: dict, dep: bool = False) -> str:
+    def term(self, e: dict, env: dict, types: dict, dep: bool = False,
+             expect=None) -> str:
         """Computational (term-level) lowering. `env` substitutes names;
         `dep` makes ite dependent (named hypothesis) so nested requires /
-        termination proofs see the branch condition."""
+        termination proofs see the branch condition. `expect` (2026-09-11,
+        fz_p_nest_empty) is the assignment/return site's own declared
+        type, threaded down from to_expr's tail return/assign/var cases
+        and through `ite`'s branches below -- the ONLY consumer is the
+        empty seq literal `[]` case further down, whose own sort has no
+        element to inspect (see its comment); every other branch ignores
+        it, so passing None everywhere else is unobservable."""
         if "int" in e:
             n = e["int"]
             return f"({n} : Int)" if n >= 0 else f"(({n}) : Int)"
@@ -2306,8 +2464,8 @@ class Lower:
         if "ite" in e:
             c = e["ite"]
             cp = self.prop(c["cond"], env, types)
-            t = self.term(c["then"], env, types, dep)
-            f = self.term(c["else"], env, types, dep)
+            t = self.term(c["then"], env, types, dep, expect)
+            f = self.term(c["else"], env, types, dep, expect)
             if dep:
                 return f"(if {self.fresh_hyp()} : {cp} then {t} else {f})"
             return f"(if {cp} then {t} else {f})"
@@ -2346,13 +2504,20 @@ class Lower:
             # list literal, total type ascription so `[]` elaborates.
             # SPEC.md "Nested sequences (v1)": ascribe `List (List Int)`
             # when the literal's own elements are seqs -- sort() decides
-            # this the same way, bottom-up from the first element; an
-            # empty literal keeps the pre-nested `List Int` ascription,
-            # matching sort()'s own default there.
+            # this the same way, bottom-up from the first element. An
+            # empty literal `[]` has no element to inspect, so SPEC.md's
+            # own resolution ("the declared type says so") falls to
+            # `expect`, the assignment/return site's type, threaded down
+            # from to_expr's tail cases above (2026-09-11,
+            # fz_p_nest_empty: `returns r : seq<seq>` + `r := []` lowered
+            # `([] : List Int)` before this, a type error against the
+            # nested prelude helpers in the same file).
             args = e.get("args", [])
             elems = ", ".join(self.term(a, env, types, dep) for a in args)
-            nested = bool(args) and self._is_seqsort(
-                self.sort(args[0], types))
+            if args:
+                nested = self._is_seqsort(self.sort(args[0], types))
+            else:
+                nested = isinstance(expect, dict) and "seq" in expect
             ty = "List (List Int)" if nested else "List Int"
             return f"([{elems}] : {ty})"
         if op == "slice":
@@ -2445,6 +2610,20 @@ class Lower:
         if op in DIV_MOD:
             a, b = (self.term(x, env, types, dep) for x in e["args"])
             return f"({a} {DIV_MOD[op]} {b})"
+        if op == "/":
+            # fz_p_nodiv (surface.py's own REFUSALS entry, SPEC.md's
+            # notation section, 2026-09-11 note above DIV_MOD): the bare
+            # slash token is surface NOTATION for `div`, never a JSON op
+            # name itself. Left to the generic fallback below, it fell
+            # through to the "boolean operator ... is not lowered for
+            # lean" NotImplementedError, which run_par.py's dispatch
+            # classifies ABSTAIN, not LOWER-ERROR -- every other kernel
+            # (lower_dafny.py, lower_verus.py, lower_spark.py,
+            # lower_framac.py, lower_rocq.py) raises ValueError here
+            # instead, which the same dispatch classifies LOWER-ERROR;
+            # matching that so the lowering REJECTS the token rather
+            # than abstaining on it.
+            raise ValueError(f"t has no operator {op!r}")
         if op in ("==", "!=") or op in CMP_OPS or op in ("and", "or", "not"):
             # BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10): a
             # comparison/equality/logical op reaching term() (as opposed
@@ -2843,7 +3022,7 @@ class Lower:
                 raise NotImplementedError(
                     f"return assigns {x!r}, not the return")
             ob = self.dcond(e, env, types)
-            t = self.term(e, env, types, dep=True)
+            t = self.term(e, env, types, dep=True, expect=self.rett)
             return t, ([ob] if ob else [])
         if "assign" in s:
             x, e = s["assign"]
@@ -2853,7 +3032,8 @@ class Lower:
                 if x != self.ret:
                     raise NotImplementedError(
                         f"body path ends assigning {x!r}, not the return")
-                return self.term(e, env, types, dep=True), obs
+                return self.term(e, env, types, dep=True,
+                                 expect=types.get(x, self.rett)), obs
             # Substitute (not `let`-bind): a later statement's own
             # definedness obligation may need x's VALUE (e.g. `at`/`update`
             # needing len(x)), and obligations are combined into the wf
@@ -2867,7 +3047,7 @@ class Lower:
             # value in a later obligation, so this changes no committed
             # output; first exercised by SPEC.md "Sequences as values",
             # 2026-09-09, e.g. swap's second `r := r[j := tmp]`.)
-            t = self.term(e, env, types, dep=True)
+            t = self.term(e, env, types, dep=True, expect=types.get(x))
             env2 = dict(env)
             env2[x] = t
             re_, obs_r = self.to_expr(rest, env2, types)
@@ -2876,7 +3056,7 @@ class Lower:
             d = s["var"]
             types[d["name"]] = d["type"]
             ob = self.dcond(d["init"], env, types)
-            t = self.term(d["init"], env, types, dep=True)
+            t = self.term(d["init"], env, types, dep=True, expect=d["type"])
             env2 = dict(env)
             env2[d["name"]] = t
             re_, obs_r = self.to_expr(rest, env2, types)
@@ -4008,9 +4188,43 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         else:
             main = self.lower_simple()
         src, thms = main
+        # VACUITY SMOKE (2026-09-11, ROADMAP 13.4/fz_p_vac_unsat,
+        # fz_p_vac_range): dafny's --warn-contradictory-assumptions,
+        # verus's "vacuous" status, spark's VC_INCONSISTENT_PRE and
+        # framac's inconsistent-logic-environment proof all give their
+        # kernels a NATIVE signal that `requires` is unsatisfiable at
+        # every type-correct input; Lean has none, so one is built here.
+        # A second, independent theorem states exactly `requires ->
+        # False` over the SAME params/hpre binder the main theorem
+        # already uses (pre_conj()/binders() below), never touching the
+        # main proof. verifiers/lean.py reads its own post-sentinel
+        # `#print axioms` line (the THEOREM_RE scan already picks up any
+        # `theorem`, this name included, with no special-casing needed
+        # here) to tell vacuous from not: a CLEAN audit line means omega
+        # or grind proved False from hpre alone (the precondition holds
+        # nowhere), an ABSENT or sorryAx-carrying one means the tactic
+        # failed to (satisfiable, not vacuous) -- measured 2026-09-11,
+        # `t2.lean` smoke test: a failed declaration still lets Lean
+        # print every LATER command's audit line and only replaces that
+        # one declaration's own axiom list with sorryAx, so this can
+        # never corrupt the main theorem's own audit even when the smoke
+        # genuinely (and correctly) fails to prove False.
+        smoke_src, smoke_thms = "", []
+        if self.task.get("requires"):
+            params_nt = [(p["name"], p["type"]) for p in self.task["params"]]
+            pb_smoke = self.binders(params_nt)
+            smoke_name = f"{self.name}_t_vacuity_smoke"
+            smoke_src = (
+                f"theorem {smoke_name} {pb_smoke} "
+                f"(hpre : {self.pre_conj()}) : False := by\n"
+                f"  first\n"
+                f"  | omega\n"
+                f"  | grind\n")
+            smoke_thms = [(smoke_name,
+                          "vacuity smoke: is `requires` unsatisfiable")]
         prints = "\n".join(
             f"#print axioms {t}" for t, _ in
-            seq_thms + strlib_thms + sf_thms + wf_thms + thms)
+            seq_thms + strlib_thms + sf_thms + wf_thms + thms + smoke_thms)
         parts = [header]
         if seq_src.strip():
             parts.append(seq_src)
@@ -4021,6 +4235,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if wf_src.strip():
             parts.append(wf_src)
         parts.append(src)
+        if smoke_src:
+            parts.append(smoke_src)
         parts.append(prints + "\n")
         return "\n".join(parts)
 
@@ -4071,11 +4287,26 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             f"theorem {self.name}_t_spec {pb}{hpre} :\n"
             f"    {self.post_conj(applied)} := by\n"
             f"  first\n"
-            f"  | (unfold {self.name}_t{dsimp}\n"
+            # `try` (2026-09-11, fz_p_modsign_true): `unfold` hard-FAILS
+            # (measured: "Tactic `unfold` failed to unfold ... in ...",
+            # aborting this whole `first` alternative before the nested
+            # `spec_tac` ever runs) whenever `ensures` never mentions the
+            # return name -- `post_conj` then never substitutes `applied`
+            # in, so `{name}_t` occurs nowhere in the goal to unfold.
+            # modsign_true's own ensures IS exactly this shape (`x % y >=
+            # 0`, no `r` anywhere): the unconditional `unfold` silently
+            # discarded every div/mod bridge alternative `spec_tac`
+            # offers, leaving only the bare `grind [name]` fallback below,
+            # which cannot derive Euclidean mod facts alone. `try` makes
+            # the unfold a no-op exactly when it would have failed
+            # (identical to before whenever it succeeds), so `spec_tac`
+            # always gets a chance to run either way.
+            f"  | (try unfold {self.name}_t{dsimp}\n"
             f"     {spec_tac})\n"
             f"  | grind [{self.name}_t"
             + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
-               if self.sfuns else "") + "]\n")
+               if self.sfuns else "") + "]\n"
+            + ("  | decide\n" if not self.task["params"] else ""))
         thms.append((f"{self.name}_t_spec", "the contract"))
         return "\n".join(out), thms
 

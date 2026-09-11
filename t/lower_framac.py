@@ -1615,6 +1615,107 @@ un-landed member above. The fuzz family `v1strlib` (`fuzz_lower.py
 pass's own measurement run wrote it (this file makes no claim about
 that run's numbers beyond what it actually printed, HANDOFF/session
 notes carry the log path).
+
+CONFORMANCE 2026-09-11 (ROADMAP 13.4, the framac column's own 15-probe
+assignment: elemwidth, seqeq_false, lit_empty, concat_len, lit_index,
+pair_seq, nest_cell, nest_lit, nest_eq, nest_empty, str_splitempty,
+str_countempty, str_findempty, str_tab, str_lowernonletter). Two closed,
+both certificate bugs, not proof gaps: `fz_p_elemwidth` (real=unproved,
+expected refuted) and `fz_p_seqeq_false` (real=timeout, expected refuted)
+both root-caused to `_value_certificate`/`_undef_certificate`/
+`_exit_certificate` declaring a ground SEQ ARRAY's elements with plain
+`str(x)` instead of `_int_lit(x)` (THE INT-LITERAL GATE above covered
+only the four plain-int sites it names, never the three seq/nested-seq
+array-literal sites): `int t_cert_s[1] = {2147483648};` is not the value
+2^31 under C's own literal-typing rule THE INT-LITERAL GATE measures
+(frama-c casts it, `(int)2147483648`, a narrowing conversion WP's
+Typed+nat does not treat as the identity), so the certificate replayed
+at the WRONG ground value and its own `t_refutation_certificate` goal
+read Stepout. Fixed by routing all five array-literal join sites through
+`_int_lit` (measured: `fz_p_elemwidth` and `fz_p_seqeq_false` now read
+`refuted / refuted`, kernel-accepted certificate). Separately,
+`_value_certificate`'s stated seq-RETURN refusal (its own docstring:
+"a documented gap ... fixing it needs its own measured probe this
+construct wave did not need") is now measured (`fz_p_seqeq_false`'s real
+IS a seq return) and closed WITHOUT the replay that docstring assumed
+a fix would need: a VALUE witness's `_twin` is already the real body's
+own trusted final value (harness.real_witness, computed independently by
+interp.py's bounded scan), so the seq-return case declares `ret` as a
+concrete backing array straight from that value (the same shape a seq
+PARAM's witness already gets) rather than replaying `_cert_stmts` over
+seq-typed assign/var statements (which render every local as a scalar
+`n = rhs;`, wrong C for an array, and remain unfixed for that reason:
+a seq-typed LOCAL mutated mid-body and then read back before return
+still has no certificate route, unmeasured by any of this pass's probes).
+
+The other 13 stay OPEN, named with the kernel's own exact abstain text
+(measured directly, `lower_framac.lower(task, task["body"],
+witness=harness.real_witness(task))`, 2026-09-11):
+
+  fz_p_concat_len, fz_p_lit_index, fz_p_nest_cell, fz_p_nest_eq:
+    "seq position holds non-variable {...}" -- `seq_var` (above) requires
+    an `at`/`len`/`update`/`fill` argument to be a bare seq-typed
+    variable; `s+u` (concat_len), a bare seq literal `[3,5,7]`
+    (lit_index), and `at(m,i)`/`at(m,k)` used AS the seq argument of an
+    outer `at` (nest_cell, nest_eq, one level of nested-seq indexing) are
+    all seq-VALUED EXPRESSIONS in that position, not variables. Closing
+    this needs either a temporary backing buffer materialized per such
+    expression (concat_len, lit_index: a real allocation problem, no
+    stack size is known statically for an arbitrary concat/literal in
+    spec position) or, for the nested-seq row case specifically
+    (nest_cell, nest_eq), a derived ACSL expression over the existing
+    `m_data`/`m_off` encoding (`m_data[m_off[i] + j]`, no new buffer
+    needed) -- a real, scoped fix, but its own measured probe and design
+    pass, not attempted here for lack of that measurement.
+  fz_p_nest_lit:
+    "conditionally evaluated `at` in executable position: definedness
+    not dischargeable by a plain assert" -- an `if`-guarded nested-seq
+    element read where the guard is not syntactically identical to the
+    `at`'s own bounds check; the general conditional-definedness gate
+    `stmts()` already states for the plain-seq case, unclosed here for
+    the nested-seq one either.
+  fz_p_pair_seq:
+    "a pair with a seq component is refused by this lowering: a struct
+    field returned BY VALUE has no clean ACSL value semantics for a
+    buffer pointer plus a length" -- a named, load-bearing architectural
+    refusal (see the PAIRS section above `_pair_field_c`): closing it
+    changes the pair ENCODING itself (a struct field cannot own a
+    pointer+length pair that outlives the struct's own scope the way a
+    plain seq param/return does), not a local fix to one probe.
+  fz_p_nest_empty, fz_p_str_splitempty:
+    "nested seq (seq<seq>) RETURN: building a fresh row set has no
+    encoding in this lowering" -- `lower()`'s own named refusal (its
+    docstring above, unchanged): the flat data+offsets encoding sizes
+    ONE buffer against ONE bound; a built seq<seq> return needs the
+    offsets array's own count sized against a SECOND, independent bound.
+  fz_p_str_countempty:
+    "string library member `count` reaching executable position: a
+    general non-overlapping substring count has no recursive ACSL
+    definition in this lowering yet" -- OPEN, by name, in THE WORK
+    section above already (unchanged by this pass).
+  fz_p_str_findempty:
+    "string library member `find` reaching executable position: ... no
+    recursive ACSL definition of a left-to-right substring search is
+    lowered yet" -- same family as `count`, also pre-existing and named.
+  fz_p_str_tab:
+    "nested seq (seq<seq>) local variables are not supported by this
+    lowering; only a seq<seq> PARAMETER, read via `len`/`at`, is
+    supported" -- `str_tab`'s own body declares a seq<seq>-typed LOCAL
+    (THE ENCODING note's own stated scope limit, unchanged).
+  fz_p_str_lowernonletter:
+    "seq return 'r''s length is not statically determinable from the
+    task's params ... and no `ensures` ... gives a CAPACITY bound either"
+    -- `_ret_capacity` (above) reads a bound directly off one `ensures`
+    shape; `str_lowernonletter`'s own `ensures` states none, so CAPACITY
+    mode has nothing to size the output buffer's `requires` against.
+
+Regression, all 34 committed tasks under t/tasks (not a sample): every
+one lowers BYTE-IDENTICAL before and after this pass's fix (diffed
+directly against `git show HEAD:t/lower_framac.py`'s own `lower()`, same
+witness both sides). The five named for this pass (abs, gcd, sum_upto,
+count_vowels, reverse) at flake 3: abs, gcd, reverse, sum_upto all
+`verified/refuted` (byte-identical, unaffected); count_vowels stays
+`abstain` (the string-library gap named above, unchanged either side).
 """
 from __future__ import annotations
 
@@ -4302,17 +4403,37 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
         return None                    # loop-state or non-falsifying witness
     ret, rett = task["returns"][0]["name"], task["returns"][0]["type"]
     is_pair = isinstance(rett, dict) and "pair" in rett
+    # SEQ RETURN, closed 2026-09-11 (fz_p_seqeq_false, ROADMAP 13.4): the
+    # gap this docstring named above is a REPLAY gap, not a certificate
+    # one -- `_cert_stmts` renders every "assign"/"var" as a plain scalar
+    # `n = rhs;`, wrong C for a seq-typed name (an array cannot be
+    # assigned by name), so a seq return was refused wholesale rather
+    # than emitted unsoundly. But the VALUE witness's `_twin` is already
+    # the REAL body's own trusted final value (computed by interp.py's
+    # bounded scan, harness.real_witness, independent of this file
+    # entirely), so nothing here needs to RE-DERIVE it by replaying the
+    # body at all: declaring `r` as a concrete backing array straight
+    # from the witness (the exact shape a seq PARAM's witness already
+    # gets a few lines below, and `_exit_certificate`'s own seq-local
+    # case) and asserting the negated `ensures` at those ground values is
+    # a strictly smaller, still-sound certificate -- the replay steps
+    # this skips were never load-bearing for the FINAL assert, only for
+    # deriving a value this witness already carries.
+    is_seq_ret = rett == "seq"
     twin_val = w.get("_twin")
     if is_pair:
         if not (isinstance(twin_val, list) and len(twin_val) == 2
                and all(isinstance(x, (bool, int)) for x in twin_val)):
             return None                # e.g. a pair with a seq component
+    elif is_seq_ret:
+        if not (isinstance(twin_val, list)
+               and all(isinstance(x, int) and not isinstance(x, bool)
+                       for x in twin_val)):
+            return None                # a bool-seq or non-ground value
     elif not isinstance(twin_val, (bool, int)):
         return None                    # no-value twins have no ground replay
     if CERT_FN in used or CERT_GOAL in used:
         return None                    # a task name would collide or forge
-    if rett == "seq":
-        return None                    # see the docstring above
     struct_name = None
     if is_pair:
         try:
@@ -4335,7 +4456,7 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                 if arr in used:
                     return None
                 vals = [int(x) for x in v]
-                init = ", ".join(str(x) for x in vals) or "0"
+                init = ", ".join(_int_lit(x) for x in vals) or "0"
                 decls.append(f"  int {arr}[{max(len(vals), 1)}] = "
                              f"{{{init}}};")
                 decls.append(f"  int *{p['name']} = {arr};")
@@ -4369,17 +4490,33 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
             else:
                 decls.append(f"  int {p['name']} = {_int_lit(int(v))};")
                 st[p["name"]] = v
-        _, dec = assigned_names(twin_body)
-        names = [ret] + [d for d in dec if d != ret]
-        if len(set(dec)) != len(dec) or set(dec) & set(st):
-            return None                # flattening scopes would collide
-        decls += [f"  {'struct ' + struct_name if is_pair and n == ret else 'int'}"
-                 f" {n};" for n in names]
         body_out: list = []
-        _cert_stmts(twin_body, Ctx(env, funs, ret=None, label="Here"),
-                    st, task["name"], body_out, [0])
-        if _tty(st.get(ret)) != _tty(w["_twin"]):
-            return None                # replay disagrees with the witness
+        if is_seq_ret:
+            # No replay (see the note above `is_seq_ret`): declare `ret`
+            # as a concrete backing array straight from the trusted
+            # witness value, the same arr+pointer+length shape a seq
+            # PARAM's witness gets above.
+            arr = f"t_cert_{ret}"
+            if arr in used or f"{ret}_n" in used:
+                return None
+            r_vals = [int(x) for x in twin_val]
+            init = ", ".join(_int_lit(x) for x in r_vals) or "0"
+            decls.append(f"  int {arr}[{max(len(r_vals), 1)}] = "
+                         f"{{{init}}};")
+            decls.append(f"  int *{ret} = {arr};")
+            decls.append(f"  int {ret}_n = {len(r_vals)};")
+            st[ret] = r_vals
+        else:
+            _, dec = assigned_names(twin_body)
+            names = [ret] + [d for d in dec if d != ret]
+            if len(set(dec)) != len(dec) or set(dec) & set(st):
+                return None            # flattening scopes would collide
+            decls += [f"  {'struct ' + struct_name if is_pair and n == ret else 'int'}"
+                     f" {n};" for n in names]
+            _cert_stmts(twin_body, Ctx(env, funs, ret=None, label="Here"),
+                        st, task["name"], body_out, [0])
+            if _tty(st.get(ret)) != _tty(w["_twin"]):
+                return None            # replay disagrees with the witness
     except (_CertSkip, NotImplementedError, ValueError, KeyError,
             TypeError, RecursionError):
         return None
@@ -4513,7 +4650,7 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                 if arr in used:
                     return None
                 vals = [int(x) for x in v]
-                init = ", ".join(str(x) for x in vals) or "0"
+                init = ", ".join(_int_lit(x) for x in vals) or "0"
                 decls.append(f"  int {arr}[{max(len(vals), 1)}] = "
                              f"{{{init}}};")
                 decls.append(f"  int *{p['name']} = {arr};")
@@ -4794,8 +4931,8 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
                 data.extend(int(x) for x in row)
                 off.append(len(data))
             data_arr, off_arr = f"t_cert_{n}_data", f"t_cert_{n}_off"
-            data_init = ", ".join(str(x) for x in data) or "0"
-            off_init = ", ".join(str(x) for x in off)
+            data_init = ", ".join(_int_lit(x) for x in data) or "0"
+            off_init = ", ".join(_int_lit(x) for x in off)
             decls.append(f"  int {data_arr}[{max(len(data), 1)}] = "
                          f"{{{data_init}}};")
             decls.append(f"  int {off_arr}[{len(off)}] = {{{off_init}}};")
@@ -4807,7 +4944,7 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
         elif isinstance(v, list):
             arr = f"t_cert_{n}"
             vals = [int(x) for x in v]
-            init = ", ".join(str(x) for x in vals) or "0"
+            init = ", ".join(_int_lit(x) for x in vals) or "0"
             decls.append(f"  int {arr}[{max(len(vals), 1)}] = {{{init}}};")
             decls.append(f"  int *{n} = {arr};")
             decls.append(f"  int {n}_n = {len(vals)};")

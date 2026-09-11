@@ -153,6 +153,51 @@ def test_grade_fail_on_mismatch_and_missing_cell():
 
 
 @test
+def test_grade_rejected_membership_not_equality():
+    """2026-09-11 (ROADMAP 13.4): an "expected": "rejected" item PASSes on
+    ANY of conformance.REJECTED_OK (refuted, unproved, malformed,
+    lower-error), never only on the literal string "rejected" (which is
+    not itself a real-column outcome any backend emits), and FAILs on
+    verified, timeout or vacuous -- the three outcomes REJECTED_OK's own
+    comment says a sound kernel must never speak here."""
+    items = [{"name": "t1", "kind": "probe", "expected": "rejected",
+             "adversarial": True}]
+    cols = [("dafny", "1.0"), ("verus", "1.0"), ("spark", "1.0"),
+           ("framac", "1.0")]
+    rows = {"t1": {"dafny": ("refuted", "refuted", True),
+                   "verus": ("unproved", "unproved", True),
+                   "spark": ("timeout", "timeout", True),
+                   "framac": ("vacuous", "vacuous", True)}}
+    verdicts = cf.grade(items, rows, cols)
+    assert verdicts["t1"]["dafny"] == "PASS"
+    assert verdicts["t1"]["verus"] == "PASS"
+    assert verdicts["t1"]["spark"] == "FAIL"
+    assert verdicts["t1"]["framac"] == "FAIL"
+    assert cf.REJECTED_OK == {"refuted", "unproved", "malformed",
+                              "lower-error"}
+
+
+@test
+def test_grade_decorative_reads_the_pair_via_harness():
+    """2026-09-11 (ROADMAP 13.4): an "expected": "decorative" item is
+    graded through harness.decorative_kind on the (real, twin) PAIR, not
+    real-outcome equality -- fz_p_vac_post's own task, whose measured
+    ladder witness (collapse-if, `_ens` False) is exactly the "nothing
+    entailed a refutation" shape decorative_kind's docstring names."""
+    task = next(p for p in fz.probes() if p["name"] == "fz_p_vac_post")
+    items = [{"name": "fz_p_vac_post", "kind": "probe",
+             "expected": "decorative", "task": task, "adversarial": True}]
+    cols = [("dafny", "1.0")]
+    rows_both_verified = {"fz_p_vac_post": {"dafny": ("verified", "verified",
+                                                      True)}}
+    verdicts = cf.grade(items, rows_both_verified, cols)
+    assert verdicts["fz_p_vac_post"]["dafny"] == "PASS"
+    rows_refuted = {"fz_p_vac_post": {"dafny": ("refuted", "refuted", True)}}
+    verdicts2 = cf.grade(items, rows_refuted, cols)
+    assert verdicts2["fz_p_vac_post"]["dafny"] == "FAIL"
+
+
+@test
 def test_grade_metamorphic_bug_is_hard_fail():
     items = [{"name": "mm_tripwire_x", "kind": "metamorphic-bug",
              "expected": "TRIPWIRE", "adversarial": False}]

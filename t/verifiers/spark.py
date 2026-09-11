@@ -205,6 +205,29 @@ analyzed file, with instantiations recognized structurally, an entity whose
 members' primary sloc is another file, never by name. A subprogram declared
 in the t artifact with no completion (the uninterpreted-function trick, the
 thing this rule exists to catch) has no such members and is still MALFORMED.
+
+CONFORMANCE, ROW fz_p_modsign_true (2026-09-11, ROADMAP WS-19-r7, spark
+column): NOT CLOSED, named honestly rather than papered over. MEASURED,
+this kernel: real=vacuous (fuzz_lower.py's own `_expect` reads "verified").
+The kernel's own message: "vacuous content-free contract: F's postcondition
+still proves when the body is replaced by an arbitrary (Import'd)
+T_Vacuity_Havoc result, so it constrains nothing the body computes". Cause,
+verified by hand: the probe's `ensures` is `mod(x, y) >= 0`, over the
+PARAMETERS x/y directly, never the return name `r` (lower_spark.py's
+post_sub only substitutes F'Result for `r` where `r` actually appears), so
+the compiled Post is a fact about X, Y alone and the havoc oracle above (2)
+correctly finds it holds under an arbitrary F'Result too -- by the SAME
+rule fz_p_vac_post (the shared vac family, not this builder's to touch)
+is DESIGNED to catch. A general fix in lower_spark.py -- always conjoining
+`F'Result = <the body's own computed expression>` to Post -- was
+considered and rejected: it is a no-op for every currently committed
+rendering (F's completion already equals that expression by construction)
+but would ALSO give vac_post's own `ensures => True` a hidden binding to
+F'Result, defeating the exact vacuity check that probe exists to measure
+-- MEASURED by inspection of the havoc mechanism above, not applied. No
+narrower, principled rule (real fact about the params vs. deliberately
+content-free) was found that draws the line without deciding it by hand
+per probe, which is what an honest gap, not a fix, looks like. Left open.
 """
 from __future__ import annotations
 

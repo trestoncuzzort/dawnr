@@ -1537,6 +1537,81 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   list); tetrahedralNumber, is_even, invertArray, max, mystery1 remain,
   each for a distinct, already-named reason, none of them a lowering
   crash, a masked error, or a regression against the committed matrix.
+
+  CONFORMANCE.md's rocq FAIL cells, own column (2026-09-11, ROADMAP 13.4,
+  fz_p_ret_falsens/fz_p_seqeq_false/fz_p_vac_unsat/fz_p_vac_range). Two
+  gaps closed here (both in `_loop_def`/`_value_cert`, this file; the
+  vacuity gap is entirely in verifiers/rocq.py, its own dated note):
+
+  EARLY-EXIT VALUE CERTIFICATES. `_loop_def` (a certificate's own twin-
+  loop Fixpoint builder) had no early-exit model at all: a `return` inside
+  a witnessed loop was silently DROPPED, computing the loop's post-exit
+  state instead of the returned value -- the wrong value at a witness
+  whose whole point IS the early exit. `_try_cert_v1` catches whatever
+  followed (a wrong `cbv; reflexivity` or an outright exception) and
+  falls back to None, so the certificate was never built and the fallback
+  plain lowering tried to prove the task's `ensures` UNIVERSALLY, false
+  by construction for fz_p_ret_falsens (an adversarial probe) -- UNPROVED,
+  never REFUTED. Fixed by mirroring `gen_loop`'s own early-exit branch
+  (the two-outcome `(state, bool)` Fixpoint, gated on the SAME `_DONE`-
+  derived `step_done` gen_loop already computes) inside `_loop_def`,
+  minus the induction lemma a certificate's `cbv`-at-the-witness proof
+  never needs. `fz_p_ret_falsens` moves unproved/unproved -> refuted/
+  refuted (real, matching its twin).
+
+  SEQ-RETURN VALUE CERTIFICATES. `_value_cert` abstained outright on any
+  seq-typed return ("no committed task needs it yet"); `fz_p_seqeq_false`
+  does (SPEC.md's own `r == s` extensional seq equality, refuted at a
+  concrete witness s=[0], real r=[1]). Added a seq-return branch: the
+  `stmt` (the negated ensures) is built exactly as `cx.prop` already
+  renders any seq `==`, unchanged; only the PROOF is bespoke, since
+  `t_dis`'s generic search has no arm for a seq-extensional `forall` (the
+  reason the whole ensures reads UNPROVED without a certificate).
+  `decompose [and]` flattens the conjunction WITHOUT reducing anything
+  first (a standalone probe measured `cbv` before decompose unfolding
+  `Z.le`/`Z.lt` into raw positive-number matches the `repeat match`
+  pattern no longer recognises -- MEASURED WRONG, read UNPROVED, "Cannot
+  find witness"); the length-equality hypothesis decompose leaves
+  UNREDUCED is exactly what the specialize step's own `ltac:(lia)` bound
+  proof needs (lia substitutes through a symbolic-atom equality with no
+  reduction). The differing index is computed in Python from the actual
+  witness values (a real index when the ensures compares `ret` against a
+  seq param, else 0, still correct whenever a LENGTH mismatch alone
+  closes the goal). `fz_p_seqeq_false` moves unproved/refuted -> refuted/
+  refuted (real).
+
+  BYTE IDENTITY. Both fixes sit entirely behind `witness is not None` in
+  `lower()`'s own dispatch (`_loop_def`/`_value_cert` are reachable only
+  from `_try_cert_v1`, itself only tried when a witness is present); a
+  committed task's plain lowering (`witness=None`, every `run_par`/
+  `grade.py` call for a committed `t/tasks/*.t`) never enters either
+  changed function. MEASURED: all 34 `t/tasks/*.t`, relowered before and
+  after both fixes, byte-identical (`diff -rq`, zero differences); the
+  five-task regression (abs, gcd, sum_upto, count_vowels, reverse, flake
+  3) reads verified/refuted for every one, matching AGREEMENT.md's rocq
+  column and CONFORMANCE.md's committed rows exactly, witness included.
+
+  STILL OPEN, NAMED, NOT ATTEMPTED HERE OR REVERTED AFTER MEASURING
+  UNSAFE. fz_p_pair_seq: `pair_comp_ty`'s own NAMED refusal (this file's
+  PAIRS (v1) note, above) for a seq pair-component; unchanged, abstain/
+  abstain. fz_p_str_splitempty (unproved with the same message, measured by the
+  independent check on 2026-09-11 and omitted from this note's first
+  draft), fz_p_str_countempty/fz_p_str_findempty/fz_p_str_tab/
+  fz_p_str_lowernonletter: all five need a NEW general fact (count(s,[])
+  == len(s)+1, find(s,[])==0, or a from-scratch ground computation of
+  `split`/`lower` on a literal) that `t_dis`'s search has no rule for;
+  coqc's own message on every one is identical: "Tactic failure: unsolved
+  t verification condition." A fix WAS built and MEASURED to work
+  (t_count_list_empty/t_find_list_empty/t_list_zero, three lemmas plus
+  four t_inv1 match arms) but then REVERTED: PRELUDE (`header()`'s own
+  text, everything from `t_leaf` through `POST_SF`) is ONE block emitted
+  UNCONDITIONALLY for every task regardless of features used (measured:
+  adding those lines moved EVERY committed task's lowered bytes, 32 of
+  34, divmod_pair -- no string-lib member anywhere in it -- included),
+  not the per-task-gated (`_has_strlib`-style) growth this file's other
+  PRELUDE additions are. Closing this gap without moving a committed
+  cell needs the SAME gating discipline applied to `header()`'s own
+  assembly, not merely to the new lemmas' content; left for that pass.
 """
 from __future__ import annotations
 
@@ -6570,6 +6645,32 @@ def _loop_def(cx, task, prefix, w, suffix):
     dec0 = cx.zx(w["decreases"], {v: env_pre[v] for v in svars_x}, local)
     init_terms = " ".join(env_pre[v] for v in svars_x)
     step_terms = " ".join(step_env[v] for v in svars_x)
+    # Early exit (2026-09-11, ROADMAP 13.4 / fz_p_ret_falsens): a
+    # certificate's twin loop is the SAME Fixpoint shape gen_loop emits
+    # for verification, `return`-in-loop included -- a value witness for
+    # a return-bearing loop (the real body's own bounded-scan witness, or
+    # a twin's) needs the identical two-outcome (state, returned-flag)
+    # Fixpoint gen_loop's step_done-!=-"false" branch builds, mirrored
+    # here WITHOUT the induction lemma (`_value_cert` grounds the whole
+    # thing by `cbv; reflexivity` at the witness's own literal arguments,
+    # no induction needed). Before this, a return-bearing loop's witness
+    # fell through `_loop_def`'s single-outcome model (which silently
+    # drops the early return and computes the loop's POST-exit state
+    # instead, the wrong value at a witness whose whole point is the
+    # early exit), _try_cert_v1's broad except caught whatever followed,
+    # cert building returned None, and the fallback plain lowering then
+    # tried to prove the task's `ensures` UNIVERSALLY -- false by
+    # construction for an adversarial probe like fz_p_ret_falsens -- so
+    # the real read UNPROVED, never REFUTED. Gated on the SAME
+    # `_DONE`-derived `step_done` gen_loop reads (`exec_straight` already
+    # computes it above), and the same seq-state abstain gen_loop raises
+    # NotImplementedError for (returning None here instead, since a
+    # cert's own gap is an opportunistic abstain, not a hard refusal):
+    # `_try_cert_v1`'s caller falls back to the normal lowering exactly
+    # as it always has whenever a certificate cannot be built.
+    step_done = step_env.get(_DONE, "false")
+    if step_done != "false" and any(stys[v] == "seq" for v in svars):
+        return None
     # parenthesize a seq slot's "Z -> Z" before joining with `*` (gen_loop's
     # own fix, same reason: "->" binds looser than "*" in Coq's grammar).
     tup_ty = "(" + " * ".join(
@@ -6577,7 +6678,8 @@ def _loop_def(cx, task, prefix, w, suffix):
         for v in svars_x) + ")%type"
     tup = "(" + ", ".join(svars_x) + ")"
     sb = " ".join(f"({v} : {slot_ty[v]})" for v in svars_x)
-    fixpoint_txt = f"""Fixpoint {name}_loop (fuel : nat) {pb} {sb} : {tup_ty} :=
+    if step_done == "false":
+        fixpoint_txt = f"""Fixpoint {name}_loop (fuel : nat) {pb} {sb} : {tup_ty} :=
   match fuel with
   | O => {tup}
   | S fu =>
@@ -6586,19 +6688,41 @@ def _loop_def(cx, task, prefix, w, suffix):
       else {tup}
   end.
 """
-    if ret_t == "seq":
-        def_lines = (
-            f"Definition {name}_t {pb} : Z -> Z :=\n"
-            f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
-            f"{init_terms}\n  in {env_post[ret]}.\n\n"
-            f"Definition {name}_t_len {pb} : Z :=\n"
-            f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
-            f"{init_terms}\n  in {env_post[ret + '_len']}.\n")
+        if ret_t == "seq":
+            def_lines = (
+                f"Definition {name}_t {pb} : Z -> Z :=\n"
+                f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                f"{init_terms}\n  in {env_post[ret]}.\n\n"
+                f"Definition {name}_t_len {pb} : Z :=\n"
+                f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                f"{init_terms}\n  in {env_post[ret + '_len']}.\n")
+        else:
+            def_lines = (
+                f"Definition {name}_t {pb} : {rty(ret_t)} :=\n"
+                f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                f"{init_terms}\n  in {env_post[ret]}.\n")
     else:
+        # ret_t is neither "seq" nor a nested-seq dict here (the guard
+        # above already abstained on any seq-typed STATE var when a
+        # return is present; the RETURN's own type, ret_t, is what
+        # `rty(ret_t)` names below -- int/bool/pair, gen_loop's own
+        # early-exit branch covers exactly this set).
+        rf = f"{name}_rf"
+        step_tup = "(" + ", ".join(step_env[v] for v in svars_x) + ")"
+        fixpoint_txt = f"""Fixpoint {name}_loop (fuel : nat) {pb} {sb} : ({tup_ty.removesuffix("%type")} * bool)%type :=
+  match fuel with
+  | O => ({tup}, false)
+  | S fu =>
+      if {guard_b}
+      then (if {step_done} then ({step_tup}, true) else {name}_loop fu {pargs} {step_terms})
+      else ({tup}, false)
+  end.
+"""
         def_lines = (
             f"Definition {name}_t {pb} : {rty(ret_t)} :=\n"
-            f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
-            f"{init_terms}\n  in {env_post[ret]}.\n")
+            f"  let '({tup}, {rf}) := {name}_loop (S (Z.to_nat {dec0})) "
+            f"{pargs} {init_terms} in\n"
+            f"  if {rf} then {ret} else {env_post[ret]}.\n")
     text = fixpoint_txt + "\n" + def_lines
     return text, dict(svars=svars, svars_x=svars_x, stys=stys,
                       slot_ty=slot_ty, id_env=id_env, local=local,
@@ -6625,23 +6749,105 @@ def _value_cert(cx, task, body, witness, def_text):
     name = task["name"]
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
-    if ret_t == "seq" or (isinstance(ret_t, dict) and "seq" in ret_t):
-        # A "value" witness kind's `_twin` is a single Python value
-        # (`_glit`'s int/bool contract); a seq twin value is a tuple, which
-        # would need the SAME two-slot (function, length) treatment the
-        # real return already gets in gen_plain/gen_loop, plus a seq-
-        # extensional `stmt`. No committed task needs it yet (swap's twin
-        # is an "undefined" witness, `_undef_cert` below; reverse's is
-        # "exit", `_loop_cert`; swap_rows', SPEC.md "Nested sequences
-        # (v1)"'s own committed loop-free task, is ALSO "undefined"), so
-        # this abstains rather than guessing, the SAME reason extended to
-        # a nested return.
+    if isinstance(ret_t, dict) and "seq" in ret_t:
+        # A NESTED seq return's witness `_twin` is a list of lists
+        # (interp.py's own tuple-of-tuples convention); no committed or
+        # fuzzed task needs a value-witness certificate at that shape yet
+        # (build_matrix's own witnesses are all "undefined"-kind), so this
+        # still abstains rather than guessing -- the plain-`seq` case just
+        # below is the one SPEC.md's own probe (fz_p_seqeq_false) needs.
         return None
     got = _witness_env(task, witness)
     if got is None:
         return None
     env_py, env_txt, seq_defs, ptw, sets, _ = got
     tv = witness.get("_twin")
+    if ret_t == "seq":
+        # SPEC.md "Sequences as values (v1)" / ROADMAP 13.4
+        # (fz_p_seqeq_false, 2026-09-11): a "value" witness's `_twin` for
+        # a plain seq return is a Python list (interp.py's own JSON
+        # shape, `_j`'s tuple-to-list); the real return already gets the
+        # SAME two-slot (function, length) treatment every seq value
+        # here does (`def_text`, built by `_loop_def`/callers upstream),
+        # so the only new work is (1) `env_py[ret]` as the tuple
+        # `interp.ev` expects, so `_falsified_conjunct` can decide
+        # whether this witness is actually a refutation, and (2) a
+        # bespoke proof script -- `t_dis`'s generic search has no arm for
+        # a seq-extensional forall (that gap is exactly why the WHOLE
+        # ensures reads UNPROVED without a certificate), so this builds
+        # one directly: `decompose [and]` flattens every `/\\` SPEC.md's
+        # `==`-on-seq rule nests in WITHOUT reducing anything first (a
+        # standalone probe measured `cbv` here BEFORE decompose unfolding
+        # `Z.le`/`Z.lt` into raw positive-number `match`es, which the
+        # `repeat match` below's `_ <= t_k < _` pattern no longer
+        # recognises syntactically -- MEASURED WRONG, fz_p_seqeq_false's
+        # own certificate read UNPROVED, "Cannot find witness"); the
+        # UNREDUCED length-equality hyp decompose already produces
+        # (`AppliedLen = literal`) is exactly what the `repeat match`'s
+        # own `ltac:(lia)` bound proof needs (lia substitutes through a
+        # symbolic-atom equality without any reduction), so `cbv`
+        # narrows to just the one SPECIALIZED hyp (a plain function
+        # application at a literal index, safe to fully ground) after
+        # each match. `repeat match` finds the resulting
+        # `forall t_k, lo <= t_k < hi -> fnA t_k = fnB t_k` hypothesis
+        # (if any -- a pure length mismatch needs none) and instantiates
+        # it at ONE concrete index this file computes in Python, a real
+        # differing index when the ensures compares `ret` against a seq
+        # PARAM whose own witness value is known, else 0 (still correct
+        # whenever the two seqs' LENGTHS already differ, since that
+        # conjunct alone closes the goal without ever reaching the
+        # forall).
+        if not isinstance(tv, list):
+            return None
+        env_py[ret] = tuple(tv)
+        if not _falsified_conjunct(task, body, env_py):
+            return None
+        gargs = []
+        for p in task["params"]:
+            if p["type"] == "seq" or (isinstance(p["type"], dict)
+                                       and "seq" in p["type"]):
+                gargs += [env_txt[p["name"]], env_txt[p["name"] + "_len"]]
+            else:
+                gargs.append(env_txt[p["name"]])
+        applied_fn = f"({name}_t {' '.join(gargs)})"
+        applied_len = f"({name}_t_len {' '.join(gargs)})"
+        env_stmt = dict(env_txt)
+        env_stmt[ret] = applied_fn
+        env_stmt[ret + "_len"] = applied_len
+        stmt = " /\\ ".join(cx.prop(e, env_stmt) for e in task["ensures"])
+        idx = 0
+        for e in task["ensures"]:
+            if e.get("op") not in ("==", "!="):
+                continue
+            a, b = e["args"]
+            other = None
+            if a == {"var": ret} and isinstance(b, dict) and "var" in b:
+                other = b["var"]
+            elif b == {"var": ret} and isinstance(a, dict) and "var" in a:
+                other = a["var"]
+            if (other is not None and isinstance(env_py.get(other), tuple)):
+                ov = list(env_py[other])
+                for i in range(min(len(tv), len(ov))):
+                    if tv[i] != ov[i]:
+                        idx = i
+                        break
+                break
+        proof = (
+            "Proof.\n"
+            "  intro t_H.\n"
+            "  decompose [and] t_H; clear t_H.\n"
+            "  repeat match goal with\n"
+            "  | H : forall t_k : Z, _ <= t_k < _ -> _ = _ |- False =>\n"
+            f"      specialize (H {_zlit(idx)} ltac:(lia)); cbv in H\n"
+            "  end.\n"
+            "  lia.\n"
+            "Qed.\n")
+        return ("".join(seq_defs) + "\n" + def_text + "\n"
+                f"(* The spec fails at the measured witness, "
+                f"{harness.witness(witness)}: the kernel evaluates the "
+                f"twin there and accepts the negation. *)\n"
+                f"Theorem {CERT_NAME} :\n"
+                f"  ~ ({stmt}).\n" + proof)
     if isinstance(ret_t, dict):
         # SPEC.md "Pairs (v1)": a pair return's witness `_twin` is `_j`'s
         # nested 2-list `[a, b]` (interp.py's own Pair-to-JSON shape), not

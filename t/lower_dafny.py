@@ -982,6 +982,25 @@ def _is_singleton_seq(a) -> bool:
             and isinstance(a.get("args"), list) and len(a["args"]) == 1)
 
 
+def _is_empty_seq_lit(a) -> bool:
+    """True for the JSON shape `seq()`, the empty literal `[]` (fuzz_lower's
+    `SEQ()`, no args). Lowered bare, `[]` types to Dafny's own bracket
+    syntax with nothing to pin its element type; in a context that gives it
+    no other type peg (`|[]| == 0` on its own, no sibling seq expression to
+    unify against) dafny 4.11.0 rejects it: "the type of this expression is
+    underspecified" (measured on fz_p_lit_empty, 2026-09-11, SPEC.md
+    "Sequences: literals, concatenation, slices (v1)"). `len` is the one
+    op where the fix needs no type at all: SPEC.md states len([]) == 0
+    outright, for every element type, so `len` folds an empty-literal
+    argument to the literal `0` rather than emitting `|[]|` -- sound by
+    the spec's own definition, and it sidesteps the inference gap instead
+    of working around it with an ascription Dafny's grammar has no syntax
+    for (`[] : seq<int>` and `[] as seq<int>` were both tried and both
+    rejected by the parser/resolver, measured the same day)."""
+    return (isinstance(a, dict) and a.get("op") == "seq"
+            and isinstance(a.get("args"), list) and len(a["args"]) == 0)
+
+
 def _full_self_slice(op: str, raw_args: list, lower_fn) -> str | None:
     """`slice(X, 0, len(X))` (the same X, structurally) denotes X itself --
     true for any seq, not a string-library fact, but word_count.json (SPEC.md
@@ -1107,6 +1126,8 @@ def expr(e: dict, self_name: str | None = None) -> str:
           or _strlib_lower(op, e.get("args", []), _lower1))
     if sc is not None:
         return sc
+    if op == "len" and _is_empty_seq_lit(e.get("args", [None])[0]):
+        return "0"
     args = [expr(a, self_name) for a in e.get("args", [])]
     if op == "neg":
         return f"(-{args[0]})"
@@ -1225,6 +1246,8 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
         if sc is not None:
             return sc
         args = [body_expr(a, ctx, pre, lazy) for a in e.get("args", [])]
+        if op == "len" and _is_empty_seq_lit(e.get("args", [None])[0]):
+            return "0"
         if op == "neg":
             return f"(-{args[0]})"
         if op == "not":

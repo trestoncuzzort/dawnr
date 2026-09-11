@@ -254,6 +254,155 @@ def _rlimit_timeout(msg: str) -> bool:
     return "timed out" in msg.split("Note:")[0]
 
 
+# THE VACUITY SMOKE (fz_p_vac_unsat/fz_p_vac_range, 2026-09-11): dafny has
+# --warn-contradictory-assumptions, verus has _probe_vacuity (this
+# instrument's model, module docstring "VACUITY IS ASKED OF THE KERNEL, NOT
+# OF A REGEX"), spark and framac each read their own tool's unreachability
+# diagnostic. F* has none of dafny's warning and no --no-cheating-style
+# refusal either, so the same question -- "is this file's obligation
+# discharged under a precondition with NO model, so nothing was actually
+# proved?" -- is put to the solver directly, exactly verus's approach:
+# for every top-level `let NAME (params) : Pure ... (requires (REQ))
+# (ensures ...)` `lower_fstar.py` emits (the `_loop` helper excluded --
+# it carries the SAME task requires re-derived from `req`/`ens`
+# (`task_spec`), never a stronger one, so probing the outer function alone
+# is the whole obligation; the loop helper's own `decreases`-scoped
+# requires is an invariant, a different question), a Lemma is appended
+# with that function's own parameter list and requires clause VERBATIM and
+# `(ensures False)`, body `()`. If the solver discharges it, REQ is
+# unsatisfiable and every VC the original function "proved" under it
+# proved nothing.
+#
+# Measured 2026-08-31-style self-check, same posture as verus's canary: a
+# `t_vacuity_canary` with `requires True` and the identical `ensures False`
+# is appended alongside, and MUST fail (Error 19, "Failed to prove:
+# Prims.l_False") -- if it does not, the probe file itself never reached
+# the solver honestly (a parse failure earlier in the appended text, or a
+# name collision) and NOTHING this instrument measured is a reading:
+# "unusable", never silently kept VERIFIED. A probed function whose own
+# error message is not the ordinary give-up-19 shape (rlimit exhaustion,
+# any other error number) is "undecided", which also refuses rather than
+# guesses. Appending, not rewriting: the probe file carries every original
+# declaration unchanged, so it sees the same spec_funs/opens/imports the
+# real run already resolved and compiles whenever the original does; the
+# cost is one extra kernel invocation, and only ever on a file that would
+# otherwise read VERIFIED (the last gate, exactly where verus's own runs).
+#
+# Measured 2026-09-11, F* 2026.08.30: fz_p_vac_unsat (`requires 1 == 0`)
+# and fz_p_vac_range (`requires x > 0 /\ x < 0`) each discharge their probe
+# lemma with NO error at all (T4.fst, scratch probe) while the canary
+# fails as designed -- both read "vacuous" here, flipping a real that
+# previously read VERIFIED under an unsatisfiable requires.
+_FN_RE = re.compile(
+    r"^let (?:rec )?([A-Za-z_][A-Za-z0-9_']*) (\([^\n]*\))\n"
+    r"  : Pure [^\n]*\n"
+    r"    \(requires (.+)\)\n"
+    r"    \(ensures",
+    re.MULTILINE)
+_VACUITY_CANARY = "t_vacuity_canary"
+
+
+def _run_vacuity_file(src: str, td: str, module: str, budget: int,
+                      pname: str):
+    """One F* run of `src` (written as `<module>.fst` in scratch dir `td`),
+    reporting the Error-19 messages attributed to declaration `pname`, or
+    None on a wall-backstop timeout.
+
+    ISOLATION (2026-09-11, replacing an earlier one-file-many-declarations
+    draft): measured directly (probe_manual.fst) that F* stops checking a
+    file at its FIRST error and never reaches any later declaration -- a
+    single file carrying both the canary and a probed function's own
+    lemma silently skipped whichever one came second, misreading it as
+    "unusable" regardless of its own answer. Every probed declaration
+    (the canary included) therefore gets its OWN file, appending exactly
+    one Lemma to the original source: any error in that run belongs to
+    the one appended declaration, no `ctx`-name attribution needed, and
+    the cost is one extra kernel invocation per requires-bearing function
+    (their own module docstring's posture: this runs only on a file that
+    would otherwise read VERIFIED, so the fast path -- no requires at
+    all -- pays nothing)."""
+    f = Path(td) / f"{module}.fst"
+    f.write_text(src, encoding="utf-8")
+    try:
+        p = run_tree(
+            [FSTAR, "--message_format", "json",
+             "--z3version", Z3_VERSION, "--z3seed", str(Z3_SEED),
+             "--z3rlimit", str(budget),
+             "--warn_error", f"@{TACTIC_ADMIT_NUM}", f.name],
+            capture_output=True, text=True, timeout=WALL_S, cwd=td)
+    except subprocess.TimeoutExpired:
+        return None
+    msgs = []
+    for line in p.stderr.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            d = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if d.get("level") == "Error":
+            msgs.append(" ".join(d.get("msg") or []))
+    return msgs
+
+
+def _probe_vacuity(src_text: str, module: str, budget: int) -> tuple[str, dict]:
+    """Ask the solver whether any top-level task function's `requires` is
+    unsatisfiable. Returns (status, detail), status one of "clean" (every
+    requires has a model, or none exist to probe), "vacuous" (some
+    function's own requires discharged `ensures False` with no assist),
+    or "unusable" (the instrument gave no reading; the caller must refuse
+    rather than trust the file's own VERIFIED)."""
+    targets = [(nm, params, req) for nm, params, req in _FN_RE.findall(src_text)
+              if not nm.endswith("_loop")]
+    if not targets:
+        return "clean", {"probed": 0, "probe_ms": 0}
+    t0 = time.monotonic()
+    canary_src = (src_text + "\n\n"
+                 + f"let {_VACUITY_CANARY} () : Lemma (requires True) "
+                   f"(ensures False) = ()\n")
+    with tempfile.TemporaryDirectory(prefix="t-fstar-vac-",
+                                     ignore_cleanup_errors=True) as td:
+        canary_msgs = _run_vacuity_file(canary_src, td, module, budget,
+                                        _VACUITY_CANARY)
+    ms = int((time.monotonic() - t0) * 1000)
+    detail = {"probed": len(targets), "probe_ms": ms}
+    if canary_msgs is None:
+        detail["why"] = "vacuity probe canary hit the wall backstop"
+        return "unusable", detail
+    if not any("Failed to prove: Prims.l_False" in m for m in canary_msgs):
+        # requires True can never discharge `ensures False`; anything
+        # short of that exact give-up shape means the probe file did not
+        # reach the solver honestly.
+        detail["why"] = "vacuity probe canary was not refuted"
+        return "unusable", detail
+    proved, undecided = [], []
+    for nm, params, req in targets:
+        pname = f"t_vacuity_probe_{nm}"
+        t1 = time.monotonic()
+        target_src = (src_text + "\n\n"
+                     + f"let {pname} {params} : Lemma (requires ({req})) "
+                       f"(ensures False) = ()\n")
+        with tempfile.TemporaryDirectory(prefix="t-fstar-vac-",
+                                         ignore_cleanup_errors=True) as td:
+            msgs = _run_vacuity_file(target_src, td, module, budget, pname)
+        detail["probe_ms"] += int((time.monotonic() - t1) * 1000)
+        if msgs is None:
+            undecided.append(nm)
+            continue
+        if not msgs:
+            proved.append(nm)                   # `ensures False` DISCHARGED
+        elif not any("Failed to prove: Prims.l_False" in m for m in msgs):
+            undecided.append(nm)
+    if undecided:
+        detail["why"] = "vacuity probe undecided for " + ", ".join(undecided[:3])
+        return "unusable", detail
+    if proved:
+        detail["vacuous_fns"] = proved[:5]
+        return "vacuous", detail
+    return "clean", detail
+
+
 def version() -> str:
     if not FSTAR:
         raise SystemExit(_FSTAR_WHY)
@@ -421,11 +570,27 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
             else:
                 cert_detail = {"certificate": "rejected: " + why}
 
+    # THE VACUITY SMOKE (see _probe_vacuity's own docstring): the last
+    # gate, run only on a file that would otherwise read VERIFIED, exactly
+    # where verus's own instrument runs. A "vacuous" reading flips the
+    # outcome; "unusable" refuses rather than trust an unread instrument
+    # (fails closed, never a silent VERIFIED); "clean" changes nothing.
+    vac_detail = {}
+    if outcome == Outcome.VERIFIED:
+        status, probe = _probe_vacuity(src_text, fname[:-len(".fst")], budget)
+        if status == "vacuous":
+            outcome = Outcome.VACUOUS
+            vac_detail = {"vacuity_probe": probe}
+        elif status == "unusable":
+            outcome = Outcome.TOOL_ERROR
+            vac_detail = {"vacuity_probe": probe}
+
     return Result("fstar", version(), src_hash, outcome,
                   ok=outcome == Outcome.VERIFIED, exit_code=p.returncode,
                   wall_ms=wall, budget=bud,
                   error=("" if outcome != Outcome.TOOL_ERROR
-                         else (p.stderr + p.stdout)[-400:]),
+                         else (vac_detail.get("vacuity_probe", {}).get("why", "")
+                               or (p.stderr + p.stdout)[-400:])),
                   extras={"errors": [(n, msg[:200]) for n, msg in errs[:5]],
                           "banned_tokens": banned[:5],
                           "tactic_admitted": admitted,
@@ -434,4 +599,4 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
                           # forgeable; kept so a forgery is legible in the
                           # witness as stdout_query_rows > solver_unsat
                           "stdout_query_rows": queries,
-                          **cert_detail})
+                          **cert_detail, **vac_detail})

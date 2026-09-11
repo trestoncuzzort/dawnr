@@ -944,6 +944,30 @@ reads REFUTED with the kernel's own message, not merely UNPROVED. This is
 what makes "a real task REFUTED with the kernel's message" (this section's
 own bar) a measured outcome rather than an unreachable one.
 
+**2026-09-11 (ROADMAP 13.4): the conformance suite's own probes read this
+section, not a single verdict word, for two families.** `t/conformance.py`
+grades `fuzz_lower.py`'s hand-built probes against `_expect`, and two
+expectations there are EXPECTATION CLASSES rather than one outcome string,
+because the probe's own point is: a non-well-founded `decreases`
+(`fz_p_badrec`, `fz_p_badrec2`, `fz_p_badvariant`, this document's gate 3,
+"well-definedness IS the termination obligation") or a `seq` length bounded
+by a machine type (`fz_p_biglen`, `fz_p_seqlen`, gate 1's `len(s) >= 0`
+with no upper bound) or a `requires` undefined at every type-correct input
+(`fz_p_divreq0`, "Undefined `requires` (normative)" above) has NO PROOF for
+a sound kernel to find, and a sound kernel can fail to find one in more
+than one honest voice: REFUTED, UNPROVED, MALFORMED or LOWER-ERROR all
+count as "rejected"; VERIFIED (the false theorem itself), TIMEOUT
+("undecided" is not "saw the contradiction") and VACUOUS (accepted, for the
+wrong reason) never do. `conformance.py`'s `REJECTED_OK` is this set, read
+directly off `verifiers/__init__.py`'s `Outcome` vocabulary. And
+`fz_p_vac_post` (`ensures true`) expects `decorative`, not `vacuous`: "The
+twins" section above already names what a real-VERIFIED, twin-VERIFIED
+pairing under the grounded ladder means, and `vacuous` (`Outcome.VACUOUS`)
+is a different thing, one kernel's own verdict on one program, never a
+statement about a real/twin pairing. `conformance.py`'s `grade()` calls
+`harness.decorative_kind` on the measured pair for this probe, the same
+function this section's own paragraph names, read rather than reinvented.
+
 ## What v1 does not claim
 
 No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an

@@ -88,6 +88,31 @@ homoglyphs of ASCII tokens do not evade it.
 Budget: -DmaxHeartbeats, Lean's deterministic counter. Determinism is
 architectural; flake_check re-measures it anyway because re-measuring is
 cheap.
+
+2026-09-11 (ROADMAP 13.4, fz_p_vac_unsat/fz_p_vac_range): lean had no
+native contradictory-`requires` signal the way dafny's
+--warn-contradictory-assumptions, verus's "vacuous" status, spark's
+VC_INCONSISTENT_PRE and framac's inconsistent-logic-environment proof
+already give their own kernels -- an unsatisfiable `requires` let ANY
+`ensures` verify (grind/omega derive anything from a false hypothesis),
+so both probes read VERIFIED before this. lower_lean.py's own dated note
+names the fix's lowering half: every task with a nonempty `requires` now
+carries a second, independent theorem `<name>_t_vacuity_smoke : <params>
+-> hpre -> False`. This file's only change is reading it: `smoke_vacuous`
+(a clean post-sentinel audit line on any `*_vacuity_smoke` theorem, via
+the new `_clean_audit` helper) now outranks every other classification,
+the same priority BANNED already has, and mints VACUOUS. A smoke theorem
+that legitimately FAILS (satisfiable `requires`, the ordinary case) makes
+the whole file's exit code nonzero on its own; measured directly
+(`t2.lean`, a two-theorem scratch file: a failing second declaration
+still lets Lean print the FIRST declaration's own later `#print axioms`
+line unaffected, replacing only the failing declaration's own axiom list
+with sorryAx) that this never corrupts the real theorem's own audit, so a
+new branch reads that real theorem's audit directly (real theorems all
+clean despite the nonzero exit) rather than ever inferring VERIFIED from
+the exit code. Measured (this session, lean 4.33.1): fz_p_vac_unsat/
+fz_p_vac_range read VACUOUS after; the other eight of this session's ten
+probes needed no change here, only in lower_lean.py.
 """
 from __future__ import annotations
 
@@ -261,9 +286,50 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
                  if not any(nm == t or nm.endswith("." + t)
                             for nm in tail_names)]
 
+    def _clean_audit(name: str) -> bool:
+        """True iff `name` has a post-sentinel `#print axioms` line whose
+        axioms are all allowlisted: a genuine kernel-checked proof, never
+        a failed tactic (recovered internally as sorryAx, which shows up
+        as its own axiom name here, not a banned SOURCE token)."""
+        if idx < 0:
+            return False
+        lines = [axs for nm, axs in AUDIT_LINE.findall(out[idx:])
+                 if nm == name or nm.endswith("." + name)]
+        return bool(lines) and all(
+            {a.strip() for a in (axs or "").split(",") if a.strip()}
+            <= AXIOM_ALLOW for axs in lines)
+
+    # VACUITY SMOKE (2026-09-11, ROADMAP 13.4/fz_p_vac_unsat,
+    # fz_p_vac_range -- lower_lean.py's own dated note names the pairing):
+    # every task with a `requires` carries a second, independent theorem
+    # `<name>_t_vacuity_smoke : <params> -> hpre -> False`, proved iff the
+    # precondition holds at no type-correct input. THEOREM_RE already
+    # picked it up like any other `theorem`, so no extra source parsing is
+    # needed here, only this audit read. A clean audit line is positive
+    # kernel evidence of unsatisfiability -- the same role dafny's
+    # --warn-contradictory-assumptions warning, verus's "vacuous" status,
+    # spark's VC_INCONSISTENT_PRE and framac's inconsistent-logic-
+    # environment proof already play for their kernels -- and it outranks
+    # every other classification below, the same way BANNED does above:
+    # a task that verifies its main theorem only because hpre is false
+    # (grind can prove anything from a false hypothesis, exactly the
+    # vac_unsat/vac_range measured failure this closes) must never read
+    # VERIFIED. A smoke theorem that legitimately FAILS (satisfiable
+    # `requires`, the overwhelmingly common case) is excluded below from
+    # the main theorem's own exit-code interpretation instead of being
+    # treated as a run-wide error.
+    smoke_names = [t for t in theorems if t.endswith("_vacuity_smoke")]
+    real_names = [t for t in theorems if t not in smoke_names]
+    smoke_vacuous = any(_clean_audit(n) for n in smoke_names)
+
     error = ""
     if "maxHeartbeats" in out or "deterministic timeout" in out:
         outcome = Outcome.TIMEOUT
+    elif smoke_vacuous:
+        outcome = Outcome.VACUOUS
+        error = ("vacuity smoke: `requires` implies False, kernel-checked "
+                 "(" + ", ".join(n for n in smoke_names
+                                 if _clean_audit(n)) + " audits clean)")
     elif CERT_NAME in theorems:
         # The only door to REFUTED. A file declaring the certificate name
         # can never mint VERIFIED, so this branch precedes the exit-0 path
@@ -324,6 +390,18 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
                      + ", ".join(unaudited[:5]))
         else:
             outcome = Outcome.VERIFIED
+    elif (smoke_names and real_names and idx >= 0
+          and all(_clean_audit(n) for n in real_names)):
+        # The nonzero exit is the smoke theorem's OWN honest failure (it
+        # could not prove False: `requires` is satisfiable, the ordinary
+        # case) and nothing else -- every real theorem in the file audits
+        # clean beside it. Lean recovers a failed declaration with
+        # sorryAx and keeps elaborating the rest of the file (measured
+        # 2026-09-11, t2.lean: 'good's own audit line prints unaffected
+        # after 'bad_smoke' fails), so this is read from the real
+        # theorems' OWN audit lines, never inferred from the exit code,
+        # which the smoke theorem's failure alone makes nonzero.
+        outcome = Outcome.VERIFIED
     elif any(m in out for m in UNPROVED_MARKS):
         outcome = Outcome.UNPROVED
         error = ("proof search stopped without a countermodel and without "

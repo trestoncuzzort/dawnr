@@ -2319,6 +2319,50 @@ def _has_pair_op(node) -> bool:
     return False
 
 
+def _transient_pair_types(node, types: dict, L) -> list:
+    """PAIRS RESIDUAL, CLOSED (2026-09-11): every distinct pair type a
+    literal `{"op": "pair", ...}` node ANYWHERE inside `node` resolves to
+    under `types` (`L._ty`, the same static reading a param/return/`var`
+    declaration would give `_pair_types` for a NAMED pair type), dedup'd
+    in first-appearance order the same way `_pair_types` itself dedups.
+    Closes the gap `_has_pair_op`'s own docstring named: a pair built and
+    projected within one expression (`fst(pair(a, b))`, SPEC.md "Pairs")
+    has no declared param/return/`var` for `_pair_types`'s declaration-
+    only scan to see, but its two arguments still have static types under
+    `types` (the same dict `lower()` already threads for `+`/`==`), so the
+    record `_pair_preamble` needs can be read off the `pair` node itself
+    rather than refused by name -- MEASURED, fz_p_pair_proj, real VERIFIED
+    matching fuzz_lower.py's own `_expect`, twin (wrong-var, `a`/`b`
+    swapped) REFUTED. A `pair` node whose own arguments are not typeable
+    under `types` (an unbound name, a quantifier's own bound variable
+    `types` was never given, SPEC.md's "no pair of pairs" violated some
+    other way upstream) is skipped rather than raised on here: `lower()`
+    still raises its own NotImplementedError below when this function
+    comes back empty and `_has_pair_op` is nonetheless True, the same
+    honest-abstain fallback the pre-2026-09-11 code always took, now only
+    reached when a pair truly cannot be typed statically rather than
+    whenever it merely lacks a declaration site."""
+    out: list = []
+
+    def walk(n):
+        if isinstance(n, dict):
+            if n.get("op") == "pair":
+                try:
+                    ty = L._ty(n, types)
+                except (ValueError, KeyError):
+                    ty = None
+                if isinstance(ty, dict) and "pair" in ty and ty not in out:
+                    out.append(ty)
+            for v in n.values():
+                walk(v)
+        elif isinstance(n, list):
+            for v in n:
+                walk(v)
+
+    walk(node)
+    return out
+
+
 def _has_nested_seq_op(node) -> bool:
     """NESTED SEQUENCES RESIDUAL (2026-09-10): True iff a literal nested
     seq node -- `{"op": "seq", "args": [...]}` whose own first argument is
@@ -2352,6 +2396,36 @@ def _has_nested_seq_op(node) -> bool:
         return any(_has_nested_seq_op(v) for v in node.values())
     if isinstance(node, list):
         return any(_has_nested_seq_op(v) for v in node)
+    return False
+
+
+def _has_seq_op(node) -> bool:
+    """FLAT SEQ LITERAL RESIDUAL, CLOSED (2026-09-11): True iff a literal
+    `{"op": "seq", "args": [...]}` node (flat OR nested; `_has_nested_seq_
+    op` already tells the nested case apart when that distinction
+    matters) sits ANYWHERE inside `node`, the same generic, type-blind
+    recursive descent `_has_pair_op`/`_has_nested_seq_op` already use.
+    Needed for the same reason those two are: a flat seq literal can be
+    built and indexed in the SAME expression (`[3, 5, 7][1]`, SPEC.md's
+    literal rule) with no param, return, or `var` of type "seq" anywhere
+    for `needs_seq`'s own declaration-only scan to see, yet Lower.expr's
+    own `seq`/`at` cases still emit Ada text naming Seq/Seqs/Elem, none of
+    which SEQ_PREAMBLE declared: MEASURED, fz_p_lit_index, malformed/
+    malformed. `lower()` folds this into `needs_seq` directly (the same
+    posture `_has_strlib_nested_op`/`_has_nested_seq_op` already fold
+    into `needs_nested_seq`, above) rather than refusing by name: unlike
+    a pair type (record shape depends on the two component types) or
+    the nested-seq preamble (needs the flat SEQ_PREAMBLE built first),
+    SEQ_PREAMBLE is one fixed block with no per-type parameterization at
+    all, so there is nothing a declaration-only scan was ever buying here
+    that this literal-shape scan does not also cover, the same
+    reasoning NESTED_SEQ_PREAMBLE's own fold-in used."""
+    if isinstance(node, dict):
+        if node.get("op") == "seq":
+            return True
+        return any(_has_seq_op(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_seq_op(v) for v in node)
     return False
 
 
@@ -4148,25 +4222,45 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # below) and to widen `reserved` (below) before the name-capture check
     # runs.
     pair_types_used = _pair_types(task, body)
-    # PAIRS RESIDUAL (2026-09-10): a task that builds a pair transiently
-    # (constructed and projected within one expression, no param, return,
-    # or `var` of a pair type anywhere for `_pair_types` to have declared a
-    # record for) would otherwise emit Ada text naming an undeclared
-    # record -- MEASURED, fz_p_pair_proj, malformed/malformed. Refused by
-    # name here, honestly, rather than risked: `_pair_types` coming back
-    # empty is the exact, decidable signal (every other committed pair
-    # task has at least one declared pair type, so this never fires on
-    # them), and this task's own `body` (the twin's body at the twin call,
-    # the real body otherwise) plus `requires`/`ensures`/`spec_funs` is
-    # everywhere `pair` can appear.
+    # PAIRS RESIDUAL, CLOSED (2026-09-11): a task that builds a pair
+    # transiently (constructed and projected within one expression, no
+    # param, return, or `var` of a pair type anywhere for `_pair_types` to
+    # have declared a record for) would otherwise emit Ada text naming an
+    # undeclared record -- MEASURED, fz_p_pair_proj, malformed/malformed
+    # before this fix. `_transient_pair_types` reads each such pair's own
+    # type statically off its two arguments (own docstring); when it finds
+    # at least one, `pair_types_used` widens to include it, exactly as if
+    # a param/return/`var` had declared it, so `_pair_preamble` below
+    # covers it the same way. `base_types` (params + return, already
+    # built above) is threaded, plus each spec_fun's own params merged in
+    # for a pair transient to a spec_fun body -- `_pair_types` coming back
+    # empty is still the exact, decidable signal that a scan is needed at
+    # all (every other committed pair task has at least one declared pair
+    # type, so this never fires on them). Only when NO pair node anywhere
+    # can be typed statically (an unbound name, a quantifier's own bound
+    # variable) does this still raise, the honest-abstain fallback the
+    # pre-2026-09-11 code always took.
     if not pair_types_used and (
             _has_pair_op(body) or _has_pair_op(task.get("requires", []))
             or _has_pair_op(task.get("ensures", []))
             or _has_pair_op(task.get("spec_funs", []))):
-        raise NotImplementedError(
-            "spark: a pair is built and used within one expression, with "
-            "no parameter, return, or local of a pair type anywhere for "
-            "this task's own record declarations to cover")
+        found = (_transient_pair_types(body, base_types, L)
+                 + _transient_pair_types(task.get("requires", []), base_types, L)
+                 + _transient_pair_types(task.get("ensures", []), base_types, L))
+        for sf in task.get("spec_funs", []):
+            sf_types = {**base_types, **{p["name"]: p["type"] for p in sf["params"]}}
+            found += _transient_pair_types(sf, sf_types, L)
+        dedup: list = []
+        for ty in found:
+            if ty not in dedup:
+                dedup.append(ty)
+        if not dedup:
+            raise NotImplementedError(
+                "spark: a pair is built and used within one expression, "
+                "with no parameter, return, or local of a pair type "
+                "anywhere for this task's own record declarations to "
+                "cover")
+        pair_types_used = dedup
     # SPEC.md "Sequences as values" (2026-09-09): seq is now a return and
     # local type too, not just a parameter type, so the preamble condition
     # widens to match: the task's own return, a spec_fun's result, or a
@@ -4195,7 +4289,24 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         or _has_strlib_nested_op(body)
         or _has_strlib_nested_op(task.get("requires", []))
         or _has_strlib_nested_op(task.get("ensures", []))
-        or _has_strlib_nested_op(task.get("spec_funs", [])))
+        or _has_strlib_nested_op(task.get("spec_funs", []))
+        # NESTED SEQUENCES RESIDUAL, CLOSED (2026-09-11): a task that
+        # builds a nested seq LITERAL transiently (constructed and
+        # projected within one expression, no param, return, or `var` of
+        # the nested type anywhere for the scan above to see) still needs
+        # Rows/Seq2/Len/Elem in scope -- MEASURED, fz_p_nest_lit,
+        # malformed/malformed before this line existed. Folded into
+        # needs_nested_seq directly, the same way _has_strlib_nested_op
+        # just above already folds split/join's own transient nested
+        # values in rather than raising: NESTED_SEQ_PREAMBLE is one fixed
+        # block (no per-type parameterization, _pair_types's own "pair"
+        # dict check note), so there is nothing type-specific a
+        # declaration-only scan was ever buying here that a literal-shape
+        # scan does not also cover.
+        or _has_nested_seq_op(body)
+        or _has_nested_seq_op(task.get("requires", []))
+        or _has_nested_seq_op(task.get("ensures", []))
+        or _has_nested_seq_op(task.get("spec_funs", [])))
     needs_seq = (
         needs_nested_seq
         or any(p["type"] == "seq" for p in task["params"])
@@ -4204,26 +4315,17 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
               for sf in task.get("spec_funs", []) for p in sf["params"])
         or any(sf["result"] == "seq" for sf in task.get("spec_funs", []))
         or locals_seq(body)
-        or any("seq" in pt["pair"] for pt in pair_types_used))
-    # NESTED SEQUENCES RESIDUAL (2026-09-10): a task that builds a nested
-    # seq LITERAL transiently (constructed and projected within one
-    # expression, no param, return, or `var` of the nested type anywhere
-    # for `needs_nested_seq` to have found) would otherwise emit Ada text
-    # naming Rows/Seqs/Len/Elem with neither preamble ever requested --
-    # MEASURED, fz_p_nest_lit, malformed/malformed. Refused by name here,
-    # the same posture the pair check just above takes toward
-    # `_has_pair_op`: `needs_nested_seq` coming back False is the exact,
-    # decidable signal (every committed nested-seq task has a declared
-    # param or return of the type, so this never fires on them).
-    if not needs_nested_seq and (
-            _has_nested_seq_op(body)
-            or _has_nested_seq_op(task.get("requires", []))
-            or _has_nested_seq_op(task.get("ensures", []))
-            or _has_nested_seq_op(task.get("spec_funs", []))):
-        raise NotImplementedError(
-            "spark: a nested seq is built and used within one expression, "
-            "with no parameter, return, or local of the nested seq type "
-            "anywhere for this task's own preamble to cover")
+        or any("seq" in pt["pair"] for pt in pair_types_used)
+        # FLAT SEQ LITERAL RESIDUAL, CLOSED (2026-09-11): a task that
+        # builds a flat seq literal transiently (constructed and indexed
+        # within one expression, no param, return, or `var` of type "seq"
+        # anywhere for the checks above to see) still needs Seq/Seqs/Elem
+        # in scope -- MEASURED, fz_p_lit_index, malformed/malformed
+        # before this line existed (`_has_seq_op`'s own docstring).
+        or _has_seq_op(body)
+        or _has_seq_op(task.get("requires", []))
+        or _has_seq_op(task.get("ensures", []))
+        or _has_seq_op(task.get("spec_funs", [])))
 
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,

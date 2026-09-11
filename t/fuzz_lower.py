@@ -2902,9 +2902,13 @@ def probes() -> list[dict]:
          "ensures": [OP("<=", LEN("s"), I(2 ** 31 - 1))],
          "body": [IFS(OP(">=", LEN("s"), I(0)),
                       [ASG("r", I(0))], [ASG("r", I(1))])]},
-        "refuted",
+        "rejected",
         "SPEC.md gives seq a length that is only >= 0; a backend that bounds "
-        "it by a machine type proves a false statement")
+        "it by a machine type proves a false statement, so the point is not "
+        "one verdict word -- a sound kernel must NOT verify, and REFUTED, "
+        "UNPROVED, MALFORMED and LOWER-ERROR are all 'no proof'; VERIFIED, "
+        "TIMEOUT and VACUOUS are not (2026-09-11, ROADMAP 13.4, see "
+        "conformance.py's REJECTED_OK)")
 
     # The three above all put the machine-representability question inside a
     # branch, which WP's smoke test then reports as unreachable (VACUOUS),
@@ -2934,9 +2938,12 @@ def probes() -> list[dict]:
                      OP("<=", LEN("s"), I(2 ** 31 - 1))],
          "body": [IFS(OP(">", LEN("s"), I(0)),
                       [ASG("r", I(1))], [ASG("r", I(0))])]},
-        "refuted",
+        "rejected",
         "SPEC.md gives len(s) no upper bound; verifying it means the lowering "
-        "bounded the sequence length by a machine type")
+        "bounded the sequence length by a machine type; the point is that no "
+        "sound kernel may VERIFY this, not that every column speaks REFUTED "
+        "-- see fz_p_biglen's docstring and conformance.py's REJECTED_OK "
+        "(2026-09-11, ROADMAP 13.4)")
     # A seq's ELEMENTS are mathematical integers too, and no probe reached
     # them until 2026-09-01: lower_framac.py's `int *s` made every element
     # is_sint32 under WP's default model, and this task proved 10/10 goals
@@ -3017,7 +3024,7 @@ def probes() -> list[dict]:
          "requires": [OP("==", OP("div", V("x"), I(0)), I(0))],
          "ensures": [OP("==", V("r"), I(0))],
          "body": [ASG("r", I(0))]},
-        "vacuous",
+        "rejected",
         "`x / 0` has no value at any x, so `requires x / 0 == 0` is "
         "undefined at every type-correct input, not merely narrowed; the "
         "task is DEFECTIVE, the same class as fz_p_vac_unsat/fz_p_vac_range "
@@ -3026,8 +3033,16 @@ def probes() -> list[dict]:
         "'vacuous-requires-undefined' refusal (ROADMAP 13.4, 2026-09-11) "
         "names it so before any kernel is asked; a kernel that lowers the "
         "real anyway (conformance.py's own no-twin-still-lowers path) must "
-        "read it VACUOUS, exactly as the analogous `at` probe SPEC.md "
-        "records under 'Undefined requires'", adversarial=True)
+        "not VERIFY it, exactly as SPEC.md's own 'Undefined requires "
+        "(normative)' section records for the undefined-requires class this "
+        "probe is one instance of: six of seven lowerings SPEC.md measured "
+        "there split between REFUTED (dafny, fstar, well-formedness/typing "
+        "channels) and UNPROVED (verus, spark, lean, rocq); framac's "
+        "VERIFIED there is the one column SPEC.md itself names a live gap, "
+        "never the class's own target. 'rejected' (2026-09-11, ROADMAP "
+        "13.4) is exactly SPEC.md's own split read as one expectation, not "
+        "a fresh invention -- see conformance.py's REJECTED_OK",
+        adversarial=True)
 
     # --- SPEC.md "At y == 0 both are undefined": `y - y` is well-defined
     # (it is 0), but dividing by it is not, so this body has no value at any
@@ -3094,7 +3109,17 @@ def probes() -> list[dict]:
          "ensures": [BL(True)],
          "body": [IFS(OP(">=", V("x"), I(0)),
                       [ASG("r", I(0))], [ASG("r", I(1))])]},
-        "vacuous", "content-free postcondition", adversarial=True)
+        "decorative",
+        "content-free postcondition: SPEC.md 'The twins', 2026-09-11 "
+        "paragraph, and harness.decorative_kind -- real VERIFIED, twin "
+        "VERIFIED under the grounded twin rule is not a flip, and 'vacuous' "
+        "(Outcome.VACUOUS) is the wrong name for it: that string is one "
+        "kernel's own verdict on one program, and this probe's point is a "
+        "claim about the PAIR, that the spec cannot tell real and twin "
+        "apart. 'decorative' is the word the twin rule itself uses "
+        "(conformance.py grades this probe by calling harness.decorative_"
+        "kind on the measured (real, twin) pair, 2026-09-11, ROADMAP 13.4)",
+        adversarial=True)
 
     # --- "a lowering that silently totalizes `at` is wrong."
     add({"t": 1, "name": "fz_p_at_oob", "gate": "quantifiers",
@@ -3143,9 +3168,13 @@ def probes() -> list[dict]:
                         "body": OP("+", CALL("g", V("n")), I(1))}],
          "body": [IFS(OP(">=", V("n"), I(0)),
                       [ASG("r", I(0))], [ASG("r", I(1))])]},
-        "refuted",
+        "rejected",
         "g(n) = g(n)+1 with decreases 0 has no solution; a kernel that "
-        "verifies accepted a non-well-founded logic function",
+        "verifies accepted a non-well-founded logic function -- the "
+        "termination obligation has no proof, in whatever voice the column "
+        "fails to find one (REFUTED, UNPROVED, MALFORMED, LOWER-ERROR all "
+        "count; VERIFIED, TIMEOUT, VACUOUS do not; conformance.py's "
+        "REJECTED_OK, 2026-09-11, ROADMAP 13.4)",
         adversarial=True)
     add({"t": 1, "name": "fz_p_badrec2", "gate": "recursion",
          "params": [{"name": "n", "type": "int"}],
@@ -3158,9 +3187,11 @@ def probes() -> list[dict]:
                                     CALL("g", OP("+", V("n"), I(1))))}],
          "body": [IFS(OP("<=", V("n"), I(0)),
                       [ASG("r", I(0))], [ASG("r", I(0))])]},
-        "refuted",
-        "the self-call increases the measure; the termination obligation must "
-        "fail", adversarial=True)
+        "rejected",
+        "the self-call increases the measure; the termination obligation "
+        "must fail, in whatever voice the column fails to find a proof -- "
+        "see fz_p_badrec's docstring and conformance.py's REJECTED_OK "
+        "(2026-09-11, ROADMAP 13.4)", adversarial=True)
 
     # --- SPEC.md loop rule: "decreases ... is >= 0 whenever the guard holds".
     add({"t": 1, "name": "fz_p_badvariant", "gate": "loops",
@@ -3175,7 +3206,11 @@ def probes() -> list[dict]:
                      I(0),
                      [ASG("r", OP("+", V("r"), I(1))),
                       ASG("i", OP("+", V("i"), I(1)))])]},
-        "refuted", "decreases 0 never strictly decreases", adversarial=True)
+        "rejected", "decreases 0 never strictly decreases; the loop's own "
+        "termination obligation has no proof, in whatever voice the column "
+        "fails to find one (see fz_p_badrec's docstring and "
+        "conformance.py's REJECTED_OK, 2026-09-11, ROADMAP 13.4)",
+        adversarial=True)
 
     # --- SPEC.md "Early exit (v1)": `return` evaluates Expr, assigns it to
     # the return variable, and ends the task; inside a loop it leaves

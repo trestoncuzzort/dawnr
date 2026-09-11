@@ -1626,7 +1626,23 @@ class Ctx:
             return f"(t_lstrip {self.sx(e['args'][0], env, local)})"
         if op == "rstrip":
             return f"(t_rstrip {self.sx(e['args'][0], env, local)})"
-        if op in ("tostr", "replace", "lower", "upper"):
+        if op == "lower":
+            # SPEC.md "The string library (v1)": `lower(s)`, the ASCII
+            # letters 65-90 mapped to 97-122, every other code point
+            # unchanged (fz_p_str_lowernonletter, 2026-09-11). `t_lower`
+            # walks left to right (`t_lower_from`, the same shape
+            # `t_lstrip_from` already builds a result seq element-by-
+            # element with), mapping each code point through `t_lower_cp`
+            # -- interp.py's own `_str_lower`/`_is_upper_letter`, c + 32
+            # iff 65 <= c <= 90, restated, not re-derived. GROUND: measured
+            # (T7.fst, 2026-09-11, F* 2026.08.30) a 6-code-point literal
+            # spanning both gaps around the letter ranges (32, 64, 91, 96,
+            # 123, one far outside ASCII) proves `Seq.equal (t_lower lit)
+            # lit` with no assist -- `t_lower`'s own recursion fully
+            # unfolds over the concrete length, the same "no assist"
+            # posture DIV/MOD and `at` already carry for a ground call.
+            return f"(t_lower {self.sx(e['args'][0], env, local)})"
+        if op in ("tostr", "replace", "upper"):
             # 2026-09-11 (SPEC.md "The string library (v1)"): named
             # abstains, not landed this wave -- see the module docstring's
             # dated note for what was measured and what stays open.
@@ -1860,11 +1876,21 @@ class Ctx:
             return (f"(t_count {self.sx(s, env, local)} "
                     f"{self.sx(t, env, local)})")
         if op == "find":
-            # 2026-09-11 (SPEC.md "The string library (v1)"): named
-            # abstain, not landed this wave.
-            raise NotImplementedError(
-                "fstar lowering: string library member 'find' not "
-                "lowered yet (2026-09-11, THE STRING LIBRARY abstain)")
+            # 2026-09-11 (SPEC.md "The string library (v1)", fz_p_str_
+            # findempty): landed, `t_find`/`t_find_at` in the prelude,
+            # the exact `t_starts_at`-scan `t_count`/`t_count_at` already
+            # walk, returning the first matching `i` instead of a tally.
+            # find(s, []) == 0 (SPEC.md's own words, general over s) needs
+            # NO lemma the way count's empty-pattern identity did: `t_find`
+            # 's own `Seq.length t = 0` branch returns `i` directly, so at
+            # i=0 the ground call `t_find_at s (Seq.createL #int []) 0`
+            # unfolds to `0` by plain definitional normalization the
+            # moment `Seq.length (Seq.createL #int []) = 0` is known
+            # (Seq.Properties.createL's own SMTPat), measured on T6.fst
+            # (2026-09-11, F* 2026.08.30): no assist, first try.
+            s, t = e["args"]
+            return (f"(t_find {self.sx(s, env, local)} "
+                    f"{self.sx(t, env, local)})")
         if op in ARITH:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {ARITH[op]} {b})"
@@ -2964,6 +2990,72 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
 CERT_NAME = "t_refutation_certificate"
 
 
+def _seq_uneq_ground_pairs(cx: Ctx, e: dict) -> list:
+    """Walk a fully-substituted (ground) certificate formula tree and
+    collect every `==`/`!=` node comparing two flat, ground `_seq` seq
+    literals whose Python-level values actually differ.
+
+    fz_p_seqeq_false (2026-09-11): `_certificate`'s formula for a "value"
+    witness is `not(and(len(r)==len(s), r==s))`, ground-substituted so `r`
+    and `s` are both `{"_seq": [...]}` literals; here the two literals hold
+    DIFFERENT elements (the false probe's own point). `prop()`'s own `==`
+    case (measured, its docstring above) renders a seq `==` as `Seq.equal`,
+    whose SMTPat'd lemmas (`lemma_eq_intro`/`lemma_eq_elim`) fire in BOTH
+    directions the moment the literal term `Seq.equal s1 s2` appears -- but
+    only the POSITIVE direction is pattern-driven (index equality ->
+    `equal`); proving two `_seq` literals are NOT `Seq.equal` needs the
+    negated direction, `equal s1 s2 -> s1 == s2` (`lemma_eq_elim`), used
+    contrapositively against F*'s own decidable `==` on two ground `MkSeq`
+    literals -- exactly the gap `prop()`'s own `!=`-on-seq comment already
+    named ("no committed task needs it", measured P2.neq_probe UNPROVED)
+    and this probe is the first to. Returns the qualifying (a, b) node
+    pairs, each rendered once by `_certificate` via a `lemma_eq_elim` +
+    `Classical.move_requires` assist ahead of the final `assert_norm`, so
+    the axiom is already in scope by the time the certificate's own goal
+    (still the ordinary `cx.prop(formula, {}, {})` rendering, unchanged)
+    reaches the solver. `_nested_seq` and non-ground operands (a `var` that
+    escaped substitution) are left alone -- out of scope for what any
+    probe of mine measures, and a walker that only ever ADDS an assist
+    when it is certain the pair is unequal can never fake a certificate."""
+    out = []
+    seen = set()
+
+    def walk(node):
+        if not isinstance(node, dict):
+            return
+        if "op" in node:
+            args = node.get("args", [])
+            if node["op"] in ("==", "!=") and len(args) == 2:
+                a, b = args
+                if "_seq" in a and "_seq" in b:
+                    try:
+                        t0 = cx.ty(a, {})
+                    except Exception:
+                        t0 = None
+                    if t0 == "seq" and tuple(a["_seq"]) != tuple(b["_seq"]):
+                        key = (cx.sx(a, {}, {}), cx.sx(b, {}, {}))
+                        if key not in seen:
+                            seen.add(key)
+                            out.append((a, b))
+            for x in args:
+                walk(x)
+            return
+        if "forall" in node or "exists" in node:
+            q = node.get("forall") or node.get("exists")
+            walk(q.get("body"))
+            return
+        if "ite" in node:
+            it = node["ite"]
+            walk(it.get("cond")); walk(it.get("then")); walk(it.get("else"))
+            return
+        if "call" in node:
+            for x in node.get("call", {}).get("args", []):
+                walk(x)
+
+    walk(e)
+    return out
+
+
 def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
     witness, or None when the witness is not ground-certificatable.
@@ -2978,16 +3070,32 @@ def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
         return None
     try:
         body = cx.prop(formula, {}, {})
+        uneq = _seq_uneq_ground_pairs(cx, formula)
+        helpers = []
+        for i, (a, b) in enumerate(uneq):
+            sa, sb = cx.sx(a, {}, {}), cx.sx(b, {}, {})
+            helpers.append(
+                f"  let seq_uneq_{i} () : Lemma (requires (Seq.equal {sa} {sb}))\n"
+                f"      (ensures False)\n"
+                f"    = Seq.lemma_eq_elim {sa} {sb};\n"
+                f"      assert_norm (~ ({sa} == {sb}))\n"
+                f"  in\n"
+                f"  FStar.Classical.move_requires seq_uneq_{i} ();\n")
     except (KeyError, TypeError, ValueError, NotImplementedError):
         return None
     return (
         "\n// Ground refutation certificate for the measured twin witness." \
-        + "\n// assert_norm evaluates it with no SMT fallback; \n"
+        + "\n// assert_norm evaluates it with no SMT fallback (plus, when "
+        + "the\n// formula needs a seq `==` proved FALSE on two ground "
+        + "literals --\n// Seq.equal's own SMTPat lemmas are one-way -- a "
+        + "small lemma_eq_elim\n// helper ahead of it, using no banned "
+        + "primitive of any kind);\n"
         + "// verifiers/fstar.py mints REFUTED only if a targeted run\n"
         + "// discharges this one lemma, and a file carrying this name\n"
         + "// can never mint VERIFIED." + "\n"
         + f"let {CERT_NAME} () : Lemma ({body})\n"
-        + f"= assert_norm ({body})\n")
+        + "= " + ("\n" + "".join(helpers) if helpers else "")
+        + f"  assert_norm ({body})\n")
 
 
 # --------------------------------------------------------------------------
@@ -3119,6 +3227,58 @@ let rec t_count_at (s:Seq.seq int) (t:Seq.seq int) (i:nat{i <= Seq.length s})
   else t_count_at s t (i + 1)
 
 let t_count (s:Seq.seq int) (t:Seq.seq int) : Tot int = t_count_at s t 0
+
+// count(s, []) == len(s) + 1 (SPEC.md "The string library (v1)", its own
+// words, general over any s), fz_p_str_countempty (2026-09-11): t_count's
+// left-to-right recursion needs an explicit induction to relate the
+// SYMBOLIC s's count to Seq.length s -- SMT alone does not unroll an open-
+// ended `let rec` over a universally quantified s (measured, Error 19,
+// "could not prove", the exact gap this lemma closes). SMTPat'd on the
+// literal term `t_count s (Seq.createL #int [])`, verus/dafny/framac's own
+// posture for a library fact meant to fire wherever that ground pattern
+// appears, never re-derived per task.
+let rec t_count_empty_at (s:Seq.seq int) (i:nat{i <= Seq.length s})
+  : Lemma (ensures (t_count_at s (Seq.createL #int []) i
+                    == Seq.length s - i + 1))
+    (decreases (Seq.length s - i))
+= if i = Seq.length s then () else t_count_empty_at s (i + 1)
+
+let t_count_empty (s:Seq.seq int)
+  : Lemma (ensures (t_count s (Seq.createL #int []) == Seq.length s + 1))
+    [SMTPat (t_count s (Seq.createL #int []))]
+= t_count_empty_at s 0
+
+// find(s, t): the same t_starts_at scan t_count_at already walks, the
+// first MATCHING i instead of a tally, -1 when none (SPEC.md "The string
+// library (v1)"). find(s, []) == 0 (SPEC.md's own words, general over s)
+// needs NO lemma the way count's empty-pattern identity did above: the
+// `Seq.length t = 0` branch returns `i` directly, so the ground call at
+// i=0 unfolds to `0` by plain definitional normalization the moment
+// `Seq.length (Seq.createL #int []) = 0` is known (Seq.Properties.createL's
+// own SMTPat) -- measured (T6.fst, 2026-09-11, F* 2026.08.30): no assist,
+// first try.
+let rec t_find_at (s:Seq.seq int) (t:Seq.seq int) (i:nat{i <= Seq.length s})
+  : Tot int (decreases (Seq.length s - i))
+= if Seq.length t = 0 then i
+  else if i + Seq.length t > Seq.length s then (-1)
+  else if t_starts_at s i t then i
+  else if i = Seq.length s then (-1)
+  else t_find_at s t (i + 1)
+
+let t_find (s:Seq.seq int) (t:Seq.seq int) : Tot int = t_find_at s t 0
+
+// lower(s): the ASCII letters 65-90 mapped to 97-122, every other code
+// point unchanged (SPEC.md "The string library (v1)"; interp.py's
+// `_str_lower`/`_is_upper_letter` restated, not re-derived).
+let t_lower_cp (c:int) : Tot int = if 65 <= c && c <= 90 then c + 32 else c
+
+let rec t_lower_from (s:Seq.seq int) (i:nat{i <= Seq.length s})
+  : Tot (Seq.seq int) (decreases (Seq.length s - i))
+= if i = Seq.length s then Seq.createL #int []
+  else Seq.append (Seq.create 1 (t_lower_cp (Seq.index s i)))
+                  (t_lower_from s (i + 1))
+
+let t_lower (s:Seq.seq int) : Tot (Seq.seq int) = t_lower_from s 0
 """
 
 

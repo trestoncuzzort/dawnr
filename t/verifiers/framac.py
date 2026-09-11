@@ -214,6 +214,22 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    in executable position, factorialOfLastDigit similarly, ghost/triple's
    conditionally-evaluated `at`, swap's timeout) are each a different
    defect, left for whichever pass takes them next.
+
+CONFORMANCE 2026-09-11 (ROADMAP 13.4, the framac column's 15-probe
+assignment named in ../lower_framac.py's own dated note): read in full
+against the vacuity-smoke pattern (this file's -wp-smoke-tests /
+`_DOOMED_GOAL` / `_UNREACHABLE_SMOKE` machinery above) looking for a
+`vac_unsat`/`vac_range`-shaped verifier gap. None of the 15 assigned
+probes is a vacuity probe (that family, `vac_unsat`/`vac_range`/
+`vac_post`, is explicitly the shared harness-level family this pass does
+not own -- see the driving prompt's own family list); every one of the
+15 that stayed open is a LOWERING gap (an ABSTAIN from `lower_framac.py`
+raising NotImplementedError, never a wrong verdict from this file), so
+this file needed no change for them and made none. The two probes this
+pass DID close (`fz_p_elemwidth`, `fz_p_seqeq_false`) were both
+certificate ground-value bugs in ../lower_framac.py's own array-literal
+rendering; this file's REFUTED doctrine (the certificate contract
+stated above) was already correct and unchanged.
 """
 from __future__ import annotations
 

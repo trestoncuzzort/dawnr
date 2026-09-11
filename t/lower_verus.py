@@ -1537,6 +1537,25 @@ def _uses_strlib(node) -> bool:
     return False
 
 
+def _is_ground(e) -> bool:
+    """True iff `e` (an Expr, or any nested part of one) contains no `var`
+    reference anywhere -- a closed term over literals and operators alone.
+    Used to gate `_strlib_ground_bridge` below: substituting a task's
+    return name with its own closed-form value (`_sym`'s result over an
+    env with no params bound) turns a probe's `ensures` into a term
+    `compute_only` can actually decide, but only when every leaf is a
+    literal, never when a param or loop-local escaped the substitution
+    (a task with params, or a body `_sym` could not close, never reaches
+    this predicate as True, so the bridge never fires there)."""
+    if isinstance(e, dict):
+        if "var" in e:
+            return False
+        return all(_is_ground(v) for v in e.values())
+    if isinstance(e, list):
+        return all(_is_ground(v) for v in e)
+    return True
+
+
 def _only_params(e: dict, pnames: set) -> bool:
     """True iff every leaf of e is a `var` naming one of the task's own
     params -- the condition under which a subexpression can be hoisted,
@@ -2795,6 +2814,45 @@ class _V1:
             lines.append(f"{ind}assert({goal}) by (nonlinear_arith)\n{req_s}{ind};")
         return lines
 
+    def _strlib_ground_bridge(self, ret_val: dict, ind: str) -> list[str]:
+        """CONCRETE STRING-LIBRARY LITERALS (2026-09-11, fz_p_str_tab,
+        fz_p_str_lowernonletter). `STRLIB_PRELUDE`'s recursive spec fns
+        (`t_str_split_ws_acc`, `t_str_lower`, ...) are proved terminating
+        by their own `decreases`, but that gives the SMT solver only
+        axiom-style unfolding, gated by Verus's default recursion fuel: a
+        goal that needs the definition unrolled three or six times over a
+        LITERAL (no param, no loop, nothing for induction to hang on) is
+        exactly the case that fuel is too shallow for. Measured directly:
+        fz_p_str_tab (3-element split, 2 levels of recursion down each
+        branch) and fz_p_str_lowernonletter (a 6-element `lower`, 6 levels)
+        both read `postcondition not satisfied` from verus itself with no
+        further diagnostic, on a file where every other proof obligation
+        (all 23 of them) already verifies.
+
+        The fix already lives in this file for nonlinear arithmetic
+        (`_nonlinear_ensures_bridge`, immediately above): hand the solver a
+        `compute_only` goal instead of asking it to unfold axioms on its
+        own. `compute_only` interprets the recursive spec fns GROUND, no
+        SMT, no fuel limit, so it is exactly the right instrument here --
+        but only when the goal has nothing left to substitute: `ret_val`
+        (`_sym`'s closed form for the return name, called with an EMPTY
+        env exactly as the nonlinear bridge's caller does) must contain no
+        `var` at all, checked by `_is_ground` below. A task with params
+        (str_countempty, str_findempty, str_splitempty: general over a
+        parameter `s`) fails that check and gets no bridge line, unchanged
+        -- proved a different way already (SPEC.md's own stated identity,
+        no recursion unfolding needed), and none of the 5 byte-identity
+        tasks (abs, gcd, sum_upto, count_vowels, reverse) call any STRLIB_OP
+        at all, so this method never runs for them."""
+        lines = []
+        rname = self.task["returns"][0]["name"]
+        for en in self.task["ensures"]:
+            goal_expr = subst(en, {rname: ret_val})
+            if not _is_ground(goal_expr):
+                continue
+            lines.append(f"{ind}assert({expr(goal_expr)}) by (compute_only);")
+        return lines
+
     def stmts(self, body: list, scope: dict, ind: str,
               wrap: str | None = None) -> list[str]:
         """scope: ordered {name: (verus_type, mutable)}. Returns lines.
@@ -3134,6 +3192,35 @@ class _V1:
             final_env = _sym(body, {})
             if final_env is not None and rname in final_env:
                 main_lines += self._nonlinear_ensures_bridge(
+                    final_env[rname], "    ")
+
+        # CONCRETE STRING-LIBRARY LITERALS (2026-09-11, see
+        # `_strlib_ground_bridge`'s own docstring): the same implicit-
+        # return site as the nonlinear bridge just above, guarded by
+        # `_uses_strlib` instead of `_has_nonlinear` so a task with no
+        # string-library call (all 23 previously committed/measured
+        # non-string tasks) never calls `_sym` here either.
+        #
+        # REAL ONLY (measured 2026-09-11): a TWIN whose ensures reads
+        # false at this same ground literal turned this bridge's own
+        # assert into the failure -- verus reports "expression simplifies
+        # to false == true" on the bridge's line, not the "postcondition
+        # not satisfied" the twin's own function is supposed to fail
+        # with, so verifiers/verus.py's classifier (which wants that
+        # exact failure on the ORIGINAL fn, plus the SEPARATE
+        # t_refutation_certificate block succeeding) reads TOOL_ERROR /
+        # MALFORMED instead of the REFUTED the twin's own certificate
+        # mechanism (`_certificate` above) already mints correctly on its
+        # own. `lower()` gives the real body the SAME object identity as
+        # `task["body"]` (a twin body is always a freshly renamed copy,
+        # `names.rename_body`'s own return), so that identity check is
+        # what this file already uses (`twin_body = body if body is not
+        # task.get("body") else None`) to tell the two cases apart, one
+        # level up; this reads the same fact.
+        if _uses_strlib(task) and body is task.get("body"):
+            final_env = _sym(body, {})
+            if final_env is not None and rname in final_env:
+                main_lines += self._strlib_ground_bridge(
                     final_env[rname], "    ")
 
         ps = ", ".join(f"{n}: {t}" for n, t in params)

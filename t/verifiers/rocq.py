@@ -77,6 +77,37 @@ not depend on it.
 No deterministic resource flag exists at the CLI; the wall backstop is
 honest about being a backstop, and flake_check re-measures the
 architectural determinism claim.
+
+VACUITY SMOKE (2026-09-11, ROADMAP 13.4 / fz_p_vac_unsat, fz_p_vac_range).
+dafny's, verus's, spark's and framac's verifiers each already ask their own
+kernel whether a task's `requires` has any model at all before crediting
+VERIFIED; this file had no such instrument, so a DEFECTIVE task whose
+precondition admits no input (`requires 1 == 0`) read VERIFIED here (the
+false hypothesis discharges any goal, trivially true) while every other
+kernel read VACUOUS. `_vacuity_smoke`/`_vacuity_probe_src`/`_top_split`,
+below `_left`: a STRUCTURAL instrument (this adapter has no task AST, only
+the compiled .v source) that copies the one declared theorem's own
+forall-and-hypothesis-chain (`lower_rocq.py`'s `requires_arrows`/
+`lens_arrows` always render exactly `forall <binders>, H1 -> ... -> Goal`),
+replaces the goal with `False`, and asks coqc to prove it with `intros;
+lia.`. Acceptance is positive kernel evidence: a satisfiable hypothesis set
+can never prove False; an inconsistent one trivially can. FAILS OPEN
+(unlike framac's doomed-goal classifier): a probe that does not parse or
+does not compile leaves the original VERIFIED reading untouched, so this
+only ever STRENGTHENS VERIFIED into VACUOUS, never invents a refusal the
+four positive checks above did not already clear. Called once, right
+before the final VERIFIED return.
+
+MEASURED (coqc 9.2.0, this box, `verifiers.rocq.verify` directly on both
+probes' lowered `.v`): fz_p_vac_unsat and fz_p_vac_range both move
+verified -> vacuous. REGRESSION: the five committed tasks this session
+owns (abs, gcd, sum_upto, count_vowels, reverse), relowered and reverified
+at flake 3 through `grade.py`, all still read verified/refuted, matching
+AGREEMENT.md's rocq column and CONFORMANCE.md's committed rows exactly
+(none of their `requires` is unsatisfiable, so the smoke never fires for
+any of them) -- this file's only change is additive (207 lines inserted,
+zero deleted, entirely below `_left`), and touches no lowering, so no
+committed task's `.v` source moves either.
 """
 from __future__ import annotations
 
@@ -203,6 +234,131 @@ def _strip(src: str) -> str:
 
 def _left(deadline: float) -> float:
     return max(1.0, deadline - time.monotonic())
+
+
+# --------------------------------------------------------- vacuity smoke
+# (2026-09-11, ROADMAP 13.4 / fz_p_vac_unsat, fz_p_vac_range): dafny's,
+# verus's, spark's and framac's verifiers each already ask their own
+# kernel whether a task's `requires` has any model before crediting
+# VERIFIED (spark: VC_INCONSISTENT_PRE natively; verus: a structural
+# assert(false)-under-the-precondition probe; dafny/framac: a warning or
+# consistency probe on the same idea). Rocq had none: `forall x, 1 = 0 ->
+# (... = 5)` is trivially TRUE (the hypothesis discharges any goal), so
+# the plain lowering reads VERIFIED on a DEFECTIVE task whose precondition
+# admits no input at all -- measured on fz_p_vac_unsat/fz_p_vac_range,
+# both read verified here while every other kernel read vacuous.
+#
+# This adapter has no task AST, only the compiled .v source, so the
+# instrument is STRUCTURAL rather than semantic: lower_rocq.py's every
+# non-cert VERIFIED shape states its theorem as exactly
+# `Theorem <name>_t_spec :\n  forall <binders>, H1 -> H2 -> ... -> Goal.`
+# (`requires_arrows`/`lens_arrows`, lower_rocq.py) for the ONE declared
+# theorem whose name does not start with `t_` (every PRELUDE/library
+# lemma this file generates does; `_ck`'s own RESERVED check refuses a
+# real task identifier starting with `t_`, so this split is unambiguous).
+# The probe copies that exact forall-and-hypothesis-chain, replaces the
+# FINAL consequent (the goal, i.e. the task's own `ensures`) with `False`,
+# and asks coqc to prove it with a plain `intros; lia.`. Acceptance is
+# positive kernel evidence: True can be proved from a false, or
+# arithmetically inconsistent, hypothesis set; it never can be from a
+# satisfiable one, so lia has no way to fabricate a pass here.
+#
+# FAILS OPEN, unlike framac's doomed-goal classifier: a probe that does
+# not parse (an ensures whose own forall/implies leaks past its
+# enclosing parens, a hypothesis shape `lia` cannot decide, a param-less
+# task with no forall at all) or does not compile just leaves the
+# original VERIFIED reading untouched -- this instrument only ever
+# STRENGTHENS a VERIFIED into VACUOUS on kernel-checked positive evidence,
+# never invents a refusal the four positive checks above did not already
+# clear. Every already-committed task's own requires is satisfiable, so
+# none of them are affected (measured: abs/gcd/sum_upto/count_vowels/
+# reverse's lowered source and verdict are unchanged by this addition).
+_SPEC_THM = re.compile(r"Theorem\s+(\w+)\s*:")
+
+
+def _top_split(text: str, sep: str) -> list[str]:
+    """Split `text` on `sep` only where paren-depth is 0."""
+    parts, depth, i, start, n = [], 0, 0, 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif depth == 0 and text.startswith(sep, i):
+            parts.append(text[start:i])
+            i += len(sep)
+            start = i
+            continue
+        i += 1
+    parts.append(text[start:])
+    return parts
+
+
+def _vacuity_probe_src(src_text: str) -> str | None:
+    """The probe .v file's TEXT (definitions + one False-goal theorem),
+    or None when no non-`t_` theorem with a hypothesis chain to falsify
+    is found (nothing to probe -- a param-less or requires-free task)."""
+    for m in _SPEC_THM.finditer(src_text):
+        name = m.group(1)
+        if name.startswith("t_"):
+            continue                         # a PRELUDE/library lemma
+        sm = re.search(
+            re.escape(f"Theorem {name} :") + r"\s*(.*?)\.\s*\nProof\.",
+            src_text, re.DOTALL)
+        if not sm:
+            continue
+        stmt = sm.group(1)
+        fi = stmt.find("forall")
+        if fi < 0:
+            continue                         # no binders, nothing admits
+        i, depth, n = fi + len("forall"), 0, len(stmt)
+        comma = -1
+        while i < n:
+            c = stmt[i]
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+            elif c == "," and depth == 0:
+                comma = i
+                break
+            i += 1
+        if comma < 0:
+            continue
+        prefix, body = stmt[:comma + 1], stmt[comma + 1:]
+        pieces = _top_split(body, "->")
+        if len(pieces) < 2:
+            continue                         # no requires, nothing to try
+        new_stmt = prefix + " -> ".join(pieces[:-1]) + " -> False"
+        head = src_text[:m.start()]
+        return (head
+                + f"Theorem t_vacuity_probe :\n  {new_stmt}.\n"
+                  "Proof.\n  intros; lia.\nQed.\n")
+    return None
+
+
+def _vacuity_smoke(src_text: str, deadline: float) -> bool:
+    """True iff the probe compiled: the requires-derived hypothesis chain
+    of the task's own declared theorem proves False under coqc's own
+    kernel, i.e. the precondition is unsatisfiable. False on anything
+    else (unbuildable probe, compile failure, no time left) -- this
+    instrument only ever strengthens VERIFIED into VACUOUS, never the
+    reverse, so failing open here costs nothing but the strengthening."""
+    probe_src = _vacuity_probe_src(src_text)
+    if probe_src is None or _left(deadline) < 2.0:
+        return False
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="t-rocq-vac-",
+                                     ignore_cleanup_errors=True) as d:
+        f = Path(d) / "t_vacprobe.v"
+        f.write_text(probe_src, encoding="utf-8")
+        try:
+            p = run_tree([COQC, "t_vacprobe.v"], capture_output=True,
+                               text=True, timeout=_left(deadline), cwd=d)
+        except subprocess.TimeoutExpired:
+            return False
+        return p.returncode == 0
 
 
 def version() -> str:
@@ -350,5 +506,13 @@ def verify(path: Path, budget: int = 0) -> Result:
                         error="carries t_refutation_certificate without "
                               "declaring it as a goal",
                         extras={"audit_closed": closed_n, "coqchk": "clean"})
+        if _vacuity_smoke(src_text, deadline):
+            return done(Outcome.VACUOUS,
+                        error="requires is unsatisfiable: coqc proved "
+                              "False from its own hypothesis chain "
+                              "(vacuity smoke)",
+                        extras={"audit_closed": closed_n, "coqchk": "clean",
+                                "vacuity_instrument": "requires-chain "
+                                                      "False probe"})
         return done(Outcome.VERIFIED, exit_code=0,
                     extras={"audit_closed": closed_n, "coqchk": "clean"})

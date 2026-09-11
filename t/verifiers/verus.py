@@ -147,6 +147,20 @@ certificate is consulted, so the audit discipline is unchanged. What the
 adapter cannot check is that the asserted formula IS the negated spec at
 the witness: that binding lives in the lowering, which is the same trust
 already extended to every lowered obligation.
+
+2026-09-11 (ROADMAP 13.4, the verus column's fz_p_str_tab / fz_p_str_
+lowernonletter FAIL cells): closed entirely in t/lower_verus.py (the new
+`_strlib_ground_bridge`, real body only), no change needed here. Both
+probes' gap was the lowering asking the SMT solver to unfold
+STRLIB_PRELUDE's recursive spec fns (`t_str_split_ws_acc`, `t_str_lower`)
+three-to-six levels deep over a ground literal with no induction to hang
+on; verus itself read a bare "postcondition not satisfied" with nothing
+this adapter's own classifier needed to change to read (errors=1,
+verified=23/24, the ordinary VERIFIED path once the bridge closes the
+gap). Measured directly against the verus binary (0.2026.08.30.b432e82)
+before touching this file at all, to confirm the failure was the SMT
+solver's fuel, not this adapter's verdict mapping: the same message, same
+shape, on both probes' unmodified lowered source.
 """
 from __future__ import annotations
 
