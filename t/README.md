@@ -68,3 +68,24 @@ col, rule, severity, kernel, message), documented with a real example per
 subcommand in `t/COMMAND.md`. `cli.py` is new; it edits none of
 `surface.py`, `check_wf.py`, `tlib.py`, `harness.py`, `names.py` or
 `run_par.py`.
+
+2026-09-11 (ROADMAP 15.3/15.5, VS Code): `t/editors/vscode/` is a plain
+JavaScript extension (no TypeScript build) with a TextMate grammar
+(`syntaxes/t.tmLanguage.json`, covering every `surface.KEYWORDS` and
+`surface.STR_METHODS` entry, checked by `t/test_vscode.py`), a client
+that starts `t/lsp.py` over stdio via `vscode-languageclient`, settings
+`t.pythonPath`/`t.serverPath`/`t.kernels`, and a "t verdicts" TreeView
+plus status bar item fed by the `t/verdicts` notification (15.5: real
+and twin per kernel with the witness rendered as text, `absent` for a
+missing kernel, `(provisional)` marked). `npm install && npx @vscode/vsce
+package` produced `t-notation-0.1.0.vsix` (473556 bytes) on this box,
+user-local Node 22 (`~/.local/opt/node`), no changes to `t/lsp.py`,
+`t/cli.py`, `t/harness.py`, `t/run_par.py` or any lowering. This box has
+no display, so the VS Code window itself (diagnostics rendering, hover
+popups, the TreeView painting) is unverified here; `t/editors/
+WALKTHROUGH.md` measures everything reachable without one, including the
+finding that `tlib.verify`'s REAL side is certificate-gated the same way
+`t/verifiers/dafny.py` and `t/verifiers/fstar.py` document (REFUTED only
+via a refutation-certificate lemma, which only the TWIN lowering carries)
+and so cannot itself read `refuted` for any task, a gap in ROADMAP 15.5's
+DONE WHEN as currently reachable through `cli.py verify`/`t/lsp.py`.

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "t",
+  "scopeName": "source.t",
+  "comment": "Generated against t/surface.py KEYWORDS and STR_METHODS (ROADMAP 15.3, 2026-09-11). Every scope below is exercised by t/test_vscode.py's grammar-coverage check.",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#chars" },
+    { "include": "#numbers" },
+    { "include": "#types" },
+    { "include": "#keywords" },
+    { "include": "#string-methods" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.t",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.t",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.t",
+              "match": "\\\\(n|t|r|0|'|\"|\\\\)"
+            }
+          ]
+        }
+      ]
+    },
+    "chars": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.t",
+          "match": "'(\\\\(n|t|r|0|'|\"|\\\\)|[^'\\\\])'"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.t",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "types": {
+      "comment": "int, bool, seq (SYNTAX.md 'Literals'), seq<seq> (SYNTAX.md 'Nested sequences (v1)'), and a pair type (int, int)/(bool, seq) (SYNTAX.md 'Pairs (v1)') -- the pair form is plain grouping punctuation, no distinct type token of its own.",
+        "patterns": [
+        {
+          "name": "storage.type.nested-seq.t",
+          "match": "\\bseq\\s*<\\s*seq\\s*>"
+        },
+        {
+          "name": "storage.type.t",
+          "match": "\\b(int|bool|seq)\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "comment": "Every t/surface.py KEYWORDS entry (see t/SYNTAX.md).",
+      "patterns": [
+        {
+          "name": "keyword.control.conditional.t",
+          "match": "\\b(if|then|else)\\b"
+        },
+        {
+          "name": "keyword.control.loop.t",
+          "match": "\\b(while|invariant|decreases)\\b"
+        },
+        {
+          "name": "keyword.control.flow.t",
+          "match": "\\b(return)\\b"
+        },
+        {
+          "name": "keyword.other.declaration.t",
+          "match": "\\b(t|gate|task|returns|requires|ensures|spec|fun|var)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.t",
+          "match": "\\b(and|or|not|in)\\b"
+        },
+        {
+          "name": "keyword.operator.quantifier.t",
+          "match": "\\b(forall|exists)\\b"
+        },
+        {
+          "name": "keyword.other.builtin.t",
+          "match": "\\b(len|tostr)\\b"
+        },
+        {
+          "name": "constant.language.boolean.t",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "string-methods": {
+      "comment": "Every t/surface.py STR_METHODS entry (SPEC.md 'The string library'): postfix .name(...), so scoped as a member/support-function name right after a dot.",
+      "patterns": [
+        {
+          "name": "support.function.string-method.t",
+          "match": "(?<=\\.)\\s*\\b(startswith|endswith|isupper|islower|isalpha|replace|isdigit|lstrip|rstrip|upper|strip|lower|count|split|find|join)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arrow.t",
+          "match": "==>"
+        },
+        {
+          "name": "keyword.operator.comparison.t",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.assignment.t",
+          "match": ":="
+        },
+        {
+          "name": "keyword.operator.arithmetic.t",
+          "match": "\\+|-|\\*|/|%"
+        },
+        {
+          "name": "punctuation.separator.t",
+          "match": ",|;|:|\\.\\.|\\."
+        },
+        {
+          "name": "punctuation.bracket.t",
+          "match": "\\(|\\)|\\[|\\]|\\{|\\}"
+        }
+      ]
+    }
+  }
+}

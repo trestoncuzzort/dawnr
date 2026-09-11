@@ -1,0 +1,84 @@
+{
+  "name": "t-notation",
+  "displayName": "t notation",
+  "description": "Language support for t: TextMate grammar, the t/lsp.py language client, and a verdicts view for tlib.verify (ROADMAP 15.3, 15.5).",
+  "version": "0.1.0",
+  "publisher": "t",
+  "license": "SEE LICENSE IN ../../../LICENSE",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages"],
+  "activationEvents": [
+    "onLanguage:t"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "t",
+        "aliases": ["t", "t notation"],
+        "extensions": [".t"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "t",
+        "scopeName": "source.t",
+        "path": "./syntaxes/t.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "t",
+      "properties": {
+        "t.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Interpreter used to launch t/lsp.py (see t/LSP.md). Windows: py -3.12 (RUN-ON-WINDOWS.md)."
+        },
+        "t.serverPath": {
+          "type": "string",
+          "default": "t/lsp.py",
+          "description": "Path to lsp.py, relative to the workspace root (this repo's own layout: t/lsp.py next to t/cli.py). An absolute path is used as-is."
+        },
+        "t.kernels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
+          },
+          "default": ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"],
+          "description": "Kernel set passed as initializationOptions.kernels (t/LSP.md) and used by the t.verify command and the automatic post-save verify run."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "t.verify",
+        "title": "t: Verify current file",
+        "category": "t"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tVerdicts",
+          "title": "t verdicts",
+          "icon": "$(check)"
+        }
+      ]
+    },
+    "views": {
+      "tVerdicts": [
+        {
+          "id": "t.verdictsView",
+          "name": "t verdicts"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "9.0.1"
+  }
+}

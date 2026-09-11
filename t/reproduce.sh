@@ -102,7 +102,12 @@ EOF
 # ---------------------------------------------------------------- --tests
 run_tests() {
   stage_start tests
-           test_lift_report.py test_lift_rules.py test_mbpp_dfy.py test_cli.py test_lsp.py test_vacuous_requires.py; do
+  for f in test_check_wf.py test_surface_errors.py test_wf_errors.py test_twin_rule.py \
+           test_names.py test_ladder_completeness.py test_tlib.py test_conformance.py \
+           doc_test.py test_cli.py test_lsp.py test_vacuous_requires.py test_vscode.py \
+           test_lift_check.py test_lifter.py test_lift_front.py test_lift_report.py \
+           test_lift_rules.py test_mbpp_dfy.py; do
+    [ -f "$f" ] || { echo "--- $f: not in this tree, skipped ---"; continue; }
     echo "--- python3 $f ---"
     python3 "$f"
     echo "$f rc=$?"
@@ -303,7 +308,7 @@ if [ $# -eq 0 ]; then
   exit 0
 fi
 
-DO_TESTS=0 DO_CENSUSES=0 DO_MATRIX=0 DO_FAMILIES=0 DO_TRUTH=0 DO_RELIFT=0 DO_SWEEP=0
+DO_TESTS=0 DO_CENSUSES=0 DO_MATRIX=0 DO_CONFORMANCE=0 DO_FAMILIES=0 DO_TRUTH=0 DO_RELIFT=0 DO_SWEEP=0
 for arg in "$@"; do
   case "$arg" in
     --tests) DO_TESTS=1 ;;
@@ -324,6 +329,7 @@ SCRIPT_T0=$(date +%s)
 [ "$DO_TESTS" = 1 ] && run_tests
 [ "$DO_CENSUSES" = 1 ] && run_censuses
 [ "$DO_MATRIX" = 1 ] && run_matrix
+[ "$DO_CONFORMANCE" = 1 ] && run_conformance
 [ "$DO_FAMILIES" = 1 ] && run_families
 [ "$DO_TRUTH" = 1 ] && run_truth
 [ "$DO_RELIFT" = 1 ] && run_relift

@@ -1919,6 +1919,8 @@ DONE WHEN: from a fresh checkout on Linux and on Windows the committed
 walk-through yields every behaviour in the usability half of the bar.
 UNBLOCKS: 15.5, 17.2.
 
+**15.3 built 2026-09-11 (the commit after 7dd3200); the person-run clause is open.** t/editors/vscode/: package.json (language `t` for `.t`, the grammar, settings t.pythonPath, t.serverPath, t.kernels, the command t.verify, the view container "t verdicts"), language-configuration.json, syntaxes/t.tmLanguage.json (a scope for every keyword in surface.KEYWORDS and every string-library member, types, literals, operators), extension.js in plain JavaScript starting `python3 t/lsp.py` over stdio through vscode-languageclient with the kernel list in initializationOptions. Packaged with the user-local Node 22: `npm install && npx @vscode/vsce package` gives t-notation-0.1.0.vsix (322 files, 462 KB), git-ignored, a release artifact. t/test_vscode.py checks the manifest, the grammar against surface's own tables, the client with node --check and the .vsix when built. t/editors/WALKTHROUGH.md is the committed walk-through for Linux and Windows. This box has no display, so no one here has run VS Code: the bar's "from a fresh checkout on Linux and on Windows the walk-through yields every behaviour" is open by name, for a person.
+
 #### 15.4 Visual Studio
 
 Visual Studio 2022 hosts language servers through its own client
@@ -1942,6 +1944,8 @@ DONE WHEN: the walk-through shows a task VERIFIED with its twin REFUTED, a
 real task REFUTED with the kernel's message, and an absent kernel, and the
 same task shows the same verdicts in AGREEMENT.md.
 UNBLOCKS: 17.2.
+
+**15.5 built 2026-09-11 (the same commit); one clause reachable only after the next commit, one clause for a person.** The verdicts view is a TreeDataProvider fed by the server's `t/verdicts` notification: one node per kernel, "real / twin" with the operator, the witness rendered as the input or exit state the server sends, "(provisional)" when the runs disagreed, "absent" for a kernel whose entry says the binary is missing, the kernel's message for a refuted real, and a status bar count of agreeing kernels. Measured through the same stdio session the extension opens: abs.t gives dafny verified / refuted with the collapse-if witness, the same cell as AGREEMENT.md; a kernel forced absent reads absent, never a verdict. The clause "a real task REFUTED with the kernel's message" was found unreachable by the builder: the library lowers the real without a refutation certificate, and REFUTED is certificate-only in dafny and fstar by design, so t/editors/examples/wrong_abs.t (a false ensures) reads unproved; the ground-truth family already refutes false reals by lowering them with the interpreter's counterexample, and the library and the matrix path take the same route in the next commit. The walk-through step for it pastes the measured verdict, not an imagined one. Open: the person-run walk-through.
 
 ### WS-16: the claims
 
