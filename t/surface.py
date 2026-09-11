@@ -146,6 +146,35 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
                | Id "(" (Expr ("," Expr)*)? ")"   (* call *)
                | Id | "(" Expr ("," Expr)? ")"    (* grouping, or the pair literal (v1, 2026-09-10) *)
 
+2026-09-11 (ROADMAP 14.2 "Errors with a position", parse side; check_wf's
+well-formedness side is out of scope here, being built as its own module
+elsewhere): every SurfaceError raised while LEXING or PARSING text now
+carries `file`, `line`, `col` and the SYNTAX.md `production` being parsed
+(see the SurfaceError class docstring for the two SYNTAX.md-heading cases
+where no EBNF production name applies), `Tok` carries a `col` alongside
+its existing `line`, and `str(err)` reads "file:line:col: message
+[production]". Two new entry points: `parse_file(path)` reads and parses
+a .t file, reporting `path` as `file` in any error; `parse(text,
+positions=None)` (and `parse_file(path, positions=None)`) fill an optional
+dict with `id(node) -> (line, col)` for every AST dict the parse builds,
+for the well-formedness side to reuse once it exists (see `Parser.mark`
+and `parse`'s own docstring). PRINTER errors (`pexpr`, `print_task`,
+`_ident`, `_print_type`, `pstmts`) are unchanged: they are raised against a
+possibly-malformed AST with no source text behind it, so they carry a
+message only and `str(err)` falls back to that message, exactly as before
+this note. Measured: `python3 t/surface.py --check --n 40 --seeds 1,2`
+still round trips at 100% (the round trip itself is unchanged, only error
+REPORTING is new) and `python3 t/test_surface_errors.py` passes 9 of 9
+against the committed corpus in `t/malformed/` (one `.t` file per
+production/heading this file's parser can name, listed in
+`t/malformed/EXPECTED.tsv`); see those two commands' own printed output
+for the live counts, not numbers frozen into this paragraph. Open: the
+well-formedness side (`check_wf`, currently in `fuzz_lower.py`, not
+touched by this note) does not yet carry position information or use the
+`positions` dict `parse` now offers; the malformed corpus above therefore
+has no check_wf rows yet, per the ROADMAP item's own DONE WHEN, which
+covers both once check_wf is its own module.
+
 Usage:
 
     python3 t/surface.py --check                 # the round trip, all corpora
@@ -178,7 +207,39 @@ def canon(task: dict) -> str:
 
 
 class SurfaceError(Exception):
-    """A text that is not in the language, or an AST with no notation."""
+    """A text that is not in the language, or an AST with no notation.
+
+    2026-09-11 (ROADMAP 14.2 "Errors with a position"): every error raised
+    while LEXING or PARSING text (the lexer functions and every Parser
+    method) carries the offending token's `file`, `line` and `col`, and the
+    `production` of SYNTAX.md being parsed (or, where SYNTAX.md's own EBNF
+    block has no name for what is being checked, the SYNTAX.md heading the
+    rule sits under: see the note at the top of t/malformed/EXPECTED.tsv
+    for the exact list). `str(err)` then reads "file:line:col: message
+    [production]". Errors raised by the PRINTER (pexpr, print_task,
+    _ident, _print_type, pstmts) are not parse errors: they are given a
+    possibly-malformed AST with no source text behind it, so `line`/`col`/
+    `production` stay None and `str(err)` falls back to the message alone.
+    Measured by `python3 t/test_surface_errors.py` against the corpus in
+    t/malformed/.
+    """
+
+    def __init__(self, message, file=None, line=None, col=None,
+                production=None):
+        self.message = message
+        self.file = file
+        self.line = line
+        self.col = col
+        self.production = production
+        super().__init__(message)
+
+    def __str__(self):
+        if self.line is None:
+            return self.message
+        where = "%s:%s:%s" % (self.file or "<string>", self.line,
+                              self.col if self.col is not None else "?")
+        tag = " [%s]" % self.production if self.production else ""
+        return "%s: %s%s" % (where, self.message, tag)
 
 
 # ===========================================================================
@@ -222,55 +283,72 @@ _HEXDIGIT = "0123456789abcdefABCDEF"
 MAX_CODE_POINT = 1114111  # SPEC.md: a character is an int in [0, 1114111].
 
 
-class Tok:
-    __slots__ = ("kind", "text", "pos", "line")
+# SYNTAX.md names no production for a char/string literal (both are Atom
+# sugar with no EBNF name of their own in surface.py's grammar either, and
+# SYNTAX.md's own Expr production does not mention them by name), so lexer
+# errors raised inside a literal use the SYNTAX.md heading they are
+# documented under instead: "Strings as sequences of code points (v1)".
+# A lexer error with no construct at all to blame (an unexpected
+# character) is filed under "Id", SYNTAX.md's own production for a name,
+# since that is the nearest thing a bare, unrecognised character could
+# have been starting. See t/malformed/EXPECTED.tsv for the full list of
+# these no-name cases.
+LIT_PRODUCTION = "Strings as sequences of code points (v1)"
 
-    def __init__(self, kind, text, pos, line):
-        self.kind, self.text, self.pos, self.line = kind, text, pos, line
+
+class Tok:
+    __slots__ = ("kind", "text", "pos", "line", "col")
+
+    def __init__(self, kind, text, pos, line, col):
+        self.kind, self.text, self.pos, self.line, self.col = (
+            kind, text, pos, line, col)
 
     def __repr__(self):
         return "%s(%r)" % (self.kind, self.text)
 
 
-def _lex_quoted(src: str, i: int, line: int, quote: str):
+def _lex_quoted(src: str, i: int, line: int, line_start: int, file: str,
+                quote: str):
     """Scan a char or string literal body, `i` just past the opening quote.
     Returns (code points, index just past the closing quote). A literal
-    never spans a line, so `line` does not change: a bare newline or the
-    end of input before the closing quote is the same "unterminated"
-    error. Escapes: \\n \\t \\r \\0 \\' \\" \\\\, plus \\u{H...H} (1 to 6
-    hex digits) for any other code point."""
+    never spans a line, so `line` does not change and `col` at any point
+    inside it is `pos - line_start + 1`: a bare newline or the end of
+    input before the closing quote is the same "unterminated" error.
+    Escapes: \\n \\t \\r \\0 \\' \\" \\\\, plus \\u{H...H} (1 to 6 hex
+    digits) for any other code point."""
     n = len(src)
+
+    def err(pos, msg):
+        raise SurfaceError(msg, file=file, line=line,
+                           col=pos - line_start + 1, production=LIT_PRODUCTION)
+
     pts = []
     while True:
         if i >= n or src[i] == "\n":
-            raise SurfaceError("line %d: unterminated literal" % line)
+            err(i, "unterminated literal")
         c = src[i]
         if c == quote:
             return pts, i + 1
         if c == "\\":
             if i + 1 >= n or src[i + 1] == "\n":
-                raise SurfaceError("line %d: unterminated literal" % line)
+                err(i, "unterminated literal")
             e = src[i + 1]
             if e == "u":
                 j = i + 2
                 if j >= n or src[j] != "{":
-                    raise SurfaceError(
-                        "line %d: bad escape \\u, expected \\u{HEX}" % line)
+                    err(i, "bad escape \\u, expected \\u{HEX}")
                 j += 1
                 k = j
                 while k < n and k - j < 6 and src[k] in _HEXDIGIT:
                     k += 1
                 if k == j:
-                    raise SurfaceError(
-                        "line %d: \\u{} needs at least one hex digit" % line)
+                    err(i, "\\u{} needs at least one hex digit")
                 if k >= n or src[k] != "}":
-                    raise SurfaceError(
-                        "line %d: \\u{...} escape missing closing }" % line)
+                    err(i, "\\u{...} escape missing closing }")
                 cp = int(src[j:k], 16)
                 if cp > MAX_CODE_POINT:
-                    raise SurfaceError(
-                        "line %d: \\u{%s} exceeds the maximum code point %d"
-                        % (line, src[j:k], MAX_CODE_POINT))
+                    err(i, "\\u{%s} exceeds the maximum code point %d"
+                        % (src[j:k], MAX_CODE_POINT))
                 pts.append(cp)
                 i = k + 1
                 continue
@@ -278,18 +356,21 @@ def _lex_quoted(src: str, i: int, line: int, quote: str):
                 pts.append(_ESCAPES[e])
                 i += 2
                 continue
-            raise SurfaceError("line %d: bad escape \\%s" % (line, e))
+            err(i, "bad escape \\%s" % e)
         pts.append(ord(c))
         i += 1
 
 
-def lex(src: str) -> list:
+def lex(src: str, file: str = "<string>") -> list:
     """kinds: id, kw, nat, char, str, sym, eof. No comments: see the
     docstring. `char` and `str` tokens carry the decoded value directly
     (an int, a list of ints) rather than the source text: SurfaceError on
     an unterminated literal, a bad escape, or a char literal that does not
-    hold exactly one code point."""
+    hold exactly one code point. `file` is only for error messages: it
+    names the source in every SurfaceError this lexer raises, "<string>"
+    when the text did not come from a file (see parse_file)."""
     toks, i, line, n = [], 0, 1, len(src)
+    line_start = 0
     while i < n:
         c = src[i]
         if c in " \t\r":
@@ -298,40 +379,44 @@ def lex(src: str) -> list:
         if c == "\n":
             line += 1
             i += 1
+            line_start = i
             continue
+        col = i - line_start + 1
         if c == "'":
             start = i
-            pts, i = _lex_quoted(src, i + 1, line, "'")
+            pts, i = _lex_quoted(src, i + 1, line, line_start, file, "'")
             if len(pts) != 1:
                 raise SurfaceError(
-                    "line %d: a char literal holds exactly one code point, "
-                    "found %d" % (line, len(pts)))
-            toks.append(Tok("char", pts[0], start, line))
+                    "a char literal holds exactly one code point, found %d"
+                    % len(pts), file=file, line=line, col=col,
+                    production=LIT_PRODUCTION)
+            toks.append(Tok("char", pts[0], start, line, col))
             continue
         if c == '"':
             start = i
-            pts, i = _lex_quoted(src, i + 1, line, '"')
-            toks.append(Tok("str", pts, start, line))
+            pts, i = _lex_quoted(src, i + 1, line, line_start, file, '"')
+            toks.append(Tok("str", pts, start, line, col))
             continue
         m = _ID.match(src, i)
         if m:
             w = m.group(0)
-            toks.append(Tok("kw" if w in KEYWORDS else "id", w, i, line))
+            toks.append(Tok("kw" if w in KEYWORDS else "id", w, i, line, col))
             i = m.end()
             continue
         m = _NAT.match(src, i)
         if m:
-            toks.append(Tok("nat", m.group(0), i, line))
+            toks.append(Tok("nat", m.group(0), i, line, col))
             i = m.end()
             continue
         for s in SYMBOLS:
             if src.startswith(s, i):
-                toks.append(Tok("sym", s, i, line))
+                toks.append(Tok("sym", s, i, line, col))
                 i += len(s)
                 break
         else:
-            raise SurfaceError("line %d: unexpected character %r" % (line, c))
-    toks.append(Tok("eof", "", n, line))
+            raise SurfaceError("unexpected character %r" % c, file=file,
+                               line=line, col=col, production="Id")
+    toks.append(Tok("eof", "", n, line, n - line_start + 1))
     return toks
 
 
@@ -349,11 +434,23 @@ _OP_TEXT = {"div": "/", "mod": "%"}
 VAL_TYPES = ("int", "bool", "seq")
 
 
+# 2026-09-11 (ROADMAP 14.2): the production every raise site below names.
+# Six are SYNTAX.md's own EBNF names (Task, Type, SpecFun, Stmt, Expr, Op,
+# Id); SYNTAX.md gives no production name to a char/string literal or to
+# the notation's "comparisons do not chain" rule, so those two use the
+# SYNTAX.md heading they are documented under instead. The full list of
+# no-name cases lives in the header comment of t/malformed/EXPECTED.tsv.
+NO_CHAIN_HEADING = "What the notation refuses"
+
+
 class Parser:
-    def __init__(self, src: str):
+    def __init__(self, src: str, file: str = "<string>", positions=None):
         self.ret_name = None      # set by program(); a bare stmt has no task
-        self.toks = lex(src)
+        self.file = file
+        self.positions = positions   # optional dict: id(node) -> (line, col)
+        self.toks = lex(src, file)
         self.i = 0
+        self.production = "Task"  # the SYNTAX.md production being parsed
 
     # -- token plumbing ----------------------------------------------------
 
@@ -365,12 +462,16 @@ class Parser:
         t = self.tok
         return t.kind == kind and (text is None or t.text == text)
 
-    def eat(self, kind: str, text=None) -> Tok:
+    def err(self, tok: Tok, message: str, production=None):
+        raise SurfaceError(message, file=self.file, line=tok.line,
+                           col=tok.col, production=production or self.production)
+
+    def eat(self, kind: str, text=None, production=None) -> Tok:
         t = self.tok
         if not self.at(kind, text):
             want = text if text is not None else kind
-            raise SurfaceError("line %d: expected %r, found %r"
-                               % (t.line, want, t.text or "end of input"))
+            self.err(t, "expected %r, found %r"
+                     % (want, t.text or "end of input"), production)
         self.i += 1
         return t
 
@@ -380,14 +481,23 @@ class Parser:
             return True
         return False
 
-    def name(self) -> str:
-        return self.eat("id").text
+    def mark(self, tok: Tok, node):
+        """Record where `node` (an AST dict this parser just built) starts,
+        if the caller asked for positions (see module docstring 'POSITIONS
+        FOR THE WELL-FORMEDNESS SIDE'). Always returns `node` so call sites
+        read as `return self.mark(tok, {...})`."""
+        if self.positions is not None:
+            self.positions[id(node)] = (tok.line, tok.col)
+        return node
+
+    def name(self, production=None) -> str:
+        return self.eat("id", production=production).text
 
     def vtype(self, allowed=VAL_TYPES) -> str:
-        t = self.eat("kw")
+        t = self.eat("kw", production="Type")
         if t.text not in allowed:
-            raise SurfaceError("line %d: %r is not one of %s"
-                               % (t.line, t.text, " ".join(allowed)))
+            self.err(t, "%r is not one of %s" % (t.text, " ".join(allowed)),
+                     "Type")
         return t.text
 
     def ptype(self):
@@ -401,55 +511,62 @@ class Parser:
         expression, so reading `<` right after the keyword `seq` here is
         unambiguous with no new token: nothing else can follow a type's
         own `seq` keyword at this point in the grammar."""
+        start = self.tok
         if self.at("sym", "("):
-            self.eat("sym", "(")
+            self.eat("sym", "(", "Type")
             t1 = self.vtype()
-            self.eat("sym", ",")
+            self.eat("sym", ",", "Type")
             t2 = self.vtype()
-            self.eat("sym", ")")
-            return {"pair": [t1, t2]}
+            self.eat("sym", ")", "Type")
+            return self.mark(start, {"pair": [t1, t2]})
         t = self.vtype()
         if t == "seq" and self.opt("sym", "<"):
-            self.eat("kw", "seq")
-            self.eat("sym", ">")
-            return {"seq": "seq"}
+            self.eat("kw", "seq", "Type")
+            self.eat("sym", ">", "Type")
+            return self.mark(start, {"seq": "seq"})
         return t
 
     # -- program -----------------------------------------------------------
 
     def program(self) -> dict:
+        start = self.tok
+        self.production = "Task"
         self.eat("kw", "t")
         ver = int(self.eat("nat").text)
         if ver not in (0, 1):
-            raise SurfaceError("format version must be 0 or 1, found %d" % ver)
+            self.err(start, "format version must be 0 or 1, found %d" % ver)
         task = {"t": ver}
         if self.opt("kw", "gate"):
             task["gate"] = self.name()
         self.eat("kw", "task")
         task["name"] = self.name()
-        task["params"] = self.params()
+        task["params"] = self.params("Task")
         self.eat("kw", "returns")
         self.eat("sym", "(")
         rname = self.name()
         self.ret_name = rname
         self.eat("sym", ":")
+        rtok = self.tok
         rtype = self.ptype()
+        self.production = "Task"           # ptype() left it on "Type"
         self.eat("sym", ")")
-        task["returns"] = [{"name": rname, "type": rtype}]
+        task["returns"] = [self.mark(rtok, {"name": rname, "type": rtype})]
 
         requires, ensures, dec = [], [], None
         while self.tok.kind == "kw" and self.tok.text in (
                 "requires", "ensures", "decreases"):
-            what = self.eat("kw").text
+            self.production = "Task"
+            wtok = self.eat("kw")
+            what = wtok.text
             e = self.expr()
+            self.production = "Task"       # expr() left it on "Expr"
             if what == "requires":
                 requires.append(e)
             elif what == "ensures":
                 ensures.append(e)
             else:
                 if dec is not None:
-                    raise SurfaceError("line %d: a task has at most one "
-                                       "decreases" % self.tok.line)
+                    self.err(wtok, "a task has at most one decreases")
                 dec = e
         task["requires"] = requires
         task["ensures"] = ensures
@@ -457,211 +574,270 @@ class Parser:
         funs = []
         while self.at("kw", "spec"):
             funs.append(self.spec_fun())
+        self.production = "Task"           # spec_fun() left it on "SpecFun"
         if funs:
             task["spec_funs"] = funs
         if dec is not None:
             task["decreases"] = dec
         task["body"] = self.block()
+        self.production = "Task"           # block()/stmt() left it on "Stmt"
         self.eat("eof")
-        return task
+        return self.mark(start, task)
 
-    def params(self) -> list:
-        self.eat("sym", "(")
+    def params(self, production: str) -> list:
+        """`production` is the caller's own (Task for a task's own params,
+        SpecFun for a spec_fun's): Params has no name of its own in
+        SYNTAX.md, it is written inline inside both, so every error here is
+        filed under whichever of the two is parsing them."""
+        self.production = production
+        self.eat("sym", "(", production)
         out = []
         if not self.at("sym", ")"):
             while True:
-                pn = self.name()
-                self.eat("sym", ":")
-                out.append({"name": pn, "type": self.ptype()})
+                ptok = self.tok
+                pn = self.name(production)
+                self.eat("sym", ":", production)
+                ty = self.ptype()
+                self.production = production   # ptype() left it on "Type"
+                out.append(self.mark(ptok, {"name": pn, "type": ty}))
                 if not self.opt("sym", ","):
                     break
-        self.eat("sym", ")")
+        self.eat("sym", ")", production)
         return out
 
     def spec_fun(self) -> dict:
+        start = self.tok
+        self.production = "SpecFun"
         self.eat("kw", "spec")
         self.eat("kw", "fun")
-        fn = {"name": self.name(), "params": self.params()}
+        fn = {"name": self.name("SpecFun"), "params": self.params("SpecFun")}
         self.eat("sym", ":")
         fn["result"] = self.vtype(("int", "bool"))
+        self.production = "SpecFun"        # vtype() left it on "Type"
         self.eat("kw", "decreases")
         fn["decreases"] = self.expr()
+        self.production = "SpecFun"        # expr() left it on "Expr"
         self.eat("sym", "=")
         fn["body"] = self.expr()
-        return fn
+        self.production = "SpecFun"
+        return self.mark(start, fn)
 
     # -- statements --------------------------------------------------------
 
     def block(self) -> list:
+        self.production = "Stmt"
         self.eat("sym", "{")
         out = []
         while not self.at("sym", "}"):
             if self.at("eof"):
-                raise SurfaceError("line %d: unterminated block"
-                                   % self.tok.line)
+                self.err(self.tok, "unterminated block")
             out.append(self.stmt())
+            self.production = "Stmt"       # stmt() may leave it on "Expr"
         self.eat("sym", "}")
         return out
 
     def stmt(self) -> dict:
+        self.production = "Stmt"
         t = self.tok
         if self.opt("kw", "return"):
             # SPEC.md "Early exit" (2026-09-08): the AST names the task's
             # return variable, as assign does, so the interpreter needs no
             # context to run it; the notation fills the name from the header.
             if self.ret_name is None:
-                raise SurfaceError("line %d: return outside a task" % t.line)
+                self.err(t, "return outside a task")
             e = self.expr()
             self.opt("sym", ";")
-            return {"return": [self.ret_name, e]}
+            return self.mark(t, {"return": [self.ret_name, e]})
         if t.kind == "id":
             target = self.name()
-            self.eat("sym", ":=")
+            self.eat("sym", ":=", "Stmt")
             e = self.expr()
             self.opt("sym", ";")
-            return {"assign": [target, e]}
+            return self.mark(t, {"assign": [target, e]})
         if self.opt("kw", "var"):
-            vn = self.name()
-            self.eat("sym", ":")
+            vn = self.name("Stmt")
+            self.eat("sym", ":", "Stmt")
             ty = self.ptype()
+            self.production = "Stmt"       # ptype() left it on "Type"
             self.eat("sym", ":=")
             init = self.expr()
             self.opt("sym", ";")
-            return {"var": {"name": vn, "type": ty, "init": init}}
+            return self.mark(t, {"var": {"name": vn, "type": ty,
+                                         "init": init}})
         if self.opt("kw", "if"):
             cond = self.expr()
+            self.production = "Stmt"
             then = self.block()
+            self.production = "Stmt"       # block() left it on "Stmt" already
             self.eat("kw", "else")
             els = self.block()
-            return {"if": {"cond": cond, "then": then, "else": els}}
+            return self.mark(t, {"if": {"cond": cond, "then": then,
+                                        "else": els}})
         if self.opt("kw", "while"):
             cond = self.expr()
+            self.production = "Stmt"
             invs = []
             while self.opt("kw", "invariant"):
                 invs.append(self.expr())
+                self.production = "Stmt"
             self.eat("kw", "decreases")
             dec = self.expr()
+            self.production = "Stmt"
             body = self.block()
-            return {"while": {"cond": cond, "invariants": invs,
-                              "decreases": dec, "body": body}}
-        raise SurfaceError("line %d: %r does not start a statement"
-                           % (t.line, t.text or "end of input"))
+            return self.mark(t, {"while": {"cond": cond, "invariants": invs,
+                                           "decreases": dec, "body": body}})
+        self.err(t, "%r does not start a statement" % (t.text or "end of input"))
 
     # -- expressions -------------------------------------------------------
 
     def expr(self) -> dict:
         """The lowest level: quantifiers and ite, whose bodies run to the
         right as far as they can, then implies."""
+        self.production = "Expr"
+        start = self.tok
         if self.at("kw", "forall") or self.at("kw", "exists"):
             kind = self.eat("kw").text
-            v = self.name()
+            v = self.name("Expr")
             self.eat("kw", "in")
             self.eat("sym", "[")
             lo = self.expr()
+            self.production = "Expr"
             self.eat("sym", ",")
             hi = self.expr()
+            self.production = "Expr"
             self.eat("sym", ")")            # half-open range, SPEC.md gate 1
             self.eat("sym", ".")
-            return {kind: {"var": v, "lo": lo, "hi": hi, "body": self.expr()}}
+            body = self.expr()
+            self.production = "Expr"
+            return self.mark(start, {kind: {"var": v, "lo": lo, "hi": hi,
+                                            "body": body}})
         if self.opt("kw", "if"):
             cond = self.expr()
+            self.production = "Expr"
             self.eat("kw", "then")
             then = self.expr()
+            self.production = "Expr"
             self.eat("kw", "else")
-            return {"ite": {"cond": cond, "then": then, "else": self.expr()}}
+            els = self.expr()
+            self.production = "Expr"
+            return self.mark(start, {"ite": {"cond": cond, "then": then,
+                                             "else": els}})
         return self.p_implies()
 
     def p_implies(self) -> dict:
+        start = self.tok
         left = self.p_or()
         if self.opt("sym", "==>"):
             right = self.expr() if (self.at("kw", "forall")
                                     or self.at("kw", "exists")
                                     or self.at("kw", "if")) else self.p_implies()
-            return {"op": "implies", "args": [left, right]}
+            self.production = "Expr"
+            return self.mark(start, {"op": "implies", "args": [left, right]})
         return left
 
     def p_or(self) -> dict:
+        start = self.tok
         args = [self.p_and()]
         while self.opt("kw", "or"):
             args.append(self.p_and())
-        return args[0] if len(args) == 1 else {"op": "or", "args": args}
+        return (args[0] if len(args) == 1
+               else self.mark(start, {"op": "or", "args": args}))
 
     def p_and(self) -> dict:
+        start = self.tok
         args = [self.p_not()]
         while self.opt("kw", "and"):
             args.append(self.p_not())
-        return args[0] if len(args) == 1 else {"op": "and", "args": args}
+        return (args[0] if len(args) == 1
+               else self.mark(start, {"op": "and", "args": args}))
 
     def p_not(self) -> dict:
+        start = self.tok
         if self.opt("kw", "not"):
-            return {"op": "not", "args": [self.p_not()]}
+            return self.mark(start, {"op": "not", "args": [self.p_not()]})
         return self.p_cmp()
 
     def p_cmp(self) -> dict:
+        start = self.tok
         left = self.p_add()
         if self.tok.kind == "sym" and self.tok.text in CMP_OPS:
             op = self.eat("sym").text
             right = self.p_add()
             if self.tok.kind == "sym" and self.tok.text in CMP_OPS:
-                raise SurfaceError("line %d: comparisons do not chain; "
-                                   "parenthesise" % self.tok.line)
-            return {"op": op, "args": [left, right]}
+                # SYNTAX.md names no production for this rule (Cmp is
+                # surface.py's own non-associative precedence level, not a
+                # SYNTAX.md name): filed under the SYNTAX.md heading that
+                # documents it, "## What the notation refuses".
+                self.err(self.tok, "comparisons do not chain; parenthesise",
+                         NO_CHAIN_HEADING)
+            return self.mark(start, {"op": op, "args": [left, right]})
         return left
 
     def p_add(self) -> dict:
         left = self.p_mul()
         while self.tok.kind == "sym" and self.tok.text in ("+", "-"):
+            start = self.tok
             op = self.eat("sym").text
-            left = {"op": op, "args": [left, self.p_mul()]}
+            left = self.mark(start, {"op": op, "args": [left, self.p_mul()]})
         return left
 
     def p_mul(self) -> dict:
         left = self.p_unary()
         while self.at("sym", "*") or self.at("sym", "/") or self.at("sym", "%"):
+            start = self.tok
             sym = self.toks[self.i].text
             self.eat("sym", sym)
-            left = {"op": _MUL_OPS[sym], "args": [left, self.p_unary()]}
+            left = self.mark(start, {"op": _MUL_OPS[sym],
+                                     "args": [left, self.p_unary()]})
         return left
 
     def p_unary(self) -> dict:
+        start = self.tok
         if self.opt("sym", "-"):
             # `-5` is the literal; `-(5)` is neg of the literal. See the
             # docstring: both nodes are live in the corpus.
             if self.tok.kind == "nat":
-                return {"int": -int(self.eat("nat").text)}
-            return {"op": "neg", "args": [self.p_unary()]}
+                return self.mark(start, {"int": -int(self.eat("nat").text)})
+            return self.mark(start, {"op": "neg", "args": [self.p_unary()]})
         return self.p_postfix()
 
     def p_postfix(self) -> dict:
         e = self.p_atom()
         while True:
+            start = self.tok
             if self.opt("sym", "["):
                 if self.opt("sym", ".."):
                     # s[..b] is s[0..b] (SPEC.md "Sequences: literals,
                     # concatenation, slices"): sugar the parser expands, the
                     # AST carries the three-argument slice only.
                     hi = self.expr()
+                    self.production = "Expr"
                     self.eat("sym", "]")
-                    e = {"op": "slice", "args": [e, {"int": 0}, hi]}
+                    e = self.mark(start, {"op": "slice",
+                                          "args": [e, {"int": 0}, hi]})
                     continue
                 idx = self.expr()
+                self.production = "Expr"
                 if self.opt("sym", ":="):
                     val = self.expr()
+                    self.production = "Expr"
                     self.eat("sym", "]")
-                    e = {"op": "update", "args": [e, idx, val]}
+                    e = self.mark(start, {"op": "update",
+                                          "args": [e, idx, val]})
                     continue
                 if self.opt("sym", ".."):
                     if self.opt("sym", "]"):
                         # s[a..] is s[a..len(s)].
-                        e = {"op": "slice",
-                             "args": [e, idx, {"op": "len", "args": [e]}]}
+                        e = self.mark(start, {"op": "slice", "args": [
+                            e, idx, {"op": "len", "args": [e]}]})
                         continue
                     hi = self.expr()
+                    self.production = "Expr"
                     self.eat("sym", "]")
-                    e = {"op": "slice", "args": [e, idx, hi]}
+                    e = self.mark(start, {"op": "slice", "args": [e, idx, hi]})
                     continue
                 self.eat("sym", "]")
-                e = {"op": "at", "args": [e, idx]}
+                e = self.mark(start, {"op": "at", "args": [e, idx]})
                 continue
             if self.opt("sym", "."):
                 if self.tok.kind == "nat":
@@ -671,122 +847,133 @@ class Parser:
                     # in t to collide with), so `.` here is unambiguously a
                     # projection and not a decimal point; only these two
                     # digits are the grammar, exactly as `and` at arity 1
-                    # has none.
+                    # has none. `.0`/`.1` are `Op` in SYNTAX.md ("fst" |
+                    # "snd"), not `Expr`: a malformed projection names a
+                    # specific operator, not "an expression is missing".
                     tok = self.eat("nat")
                     if tok.text not in ("0", "1"):
-                        raise SurfaceError("line %d: a pair projection is "
-                                           ".0 or .1, found .%s"
-                                           % (tok.line, tok.text))
-                    e = {"op": "fst" if tok.text == "0" else "snd",
-                        "args": [e]}
+                        self.err(tok, "a pair projection is .0 or .1, "
+                                 "found .%s" % tok.text, "Op")
+                    e = self.mark(start, {"op": "fst" if tok.text == "0"
+                                          else "snd", "args": [e]})
                     continue
                 if self.tok.kind == "id" and self.tok.text in STR_METHODS:
                     # s.split(), s.count(t), sep.join(rows), ... (SPEC.md
                     # "The string library", 2026-09-11): postfix, so it
                     # composes with indexing and slicing the same way .0/.1
-                    # do (s.split()[0], s.strip().lower()).
-                    name = self.eat("id").text
-                    line = self.toks[self.i - 1].line
-                    self.eat("sym", "(")
+                    # do (s.split()[0], s.strip().lower()). Every error
+                    # below names one string-library member, so all are
+                    # "Op", SYNTAX.md's production for the operator list.
+                    ntok = self.eat("id")
+                    name = ntok.text
+                    self.eat("sym", "(", "Op")
                     margs = []
                     if not self.at("sym", ")"):
                         while True:
                             margs.append(self.expr())
                             if not self.opt("sym", ","):
                                 break
-                    self.eat("sym", ")")
+                    self.eat("sym", ")", "Op")
                     if name == "split":
                         if len(margs) not in (0, 1):
-                            raise SurfaceError(
-                                "line %d: .split takes zero or one "
-                                "argument, given %d" % (line, len(margs)))
-                        e = {"op": "split", "args": [e] + margs}
+                            self.err(ntok, ".split takes zero or one "
+                                     "argument, given %d" % len(margs), "Op")
+                        e = self.mark(start, {"op": "split",
+                                              "args": [e] + margs})
                     elif name == "join":
                         if len(margs) != 1:
-                            raise SurfaceError(
-                                "line %d: .join takes exactly one "
-                                "argument, given %d" % (line, len(margs)))
+                            self.err(ntok, ".join takes exactly one "
+                                     "argument, given %d" % len(margs), "Op")
                         # sep.join(rows): SPEC.md's op signature is
                         # join(rows, sep), the receiver second.
-                        e = {"op": "join", "args": [margs[0], e]}
+                        e = self.mark(start, {"op": "join",
+                                              "args": [margs[0], e]})
                     elif name == "replace":
                         if len(margs) != 2:
-                            raise SurfaceError(
-                                "line %d: .replace takes exactly two "
-                                "arguments, given %d" % (line, len(margs)))
-                        e = {"op": "replace", "args": [e] + margs}
+                            self.err(ntok, ".replace takes exactly two "
+                                     "arguments, given %d" % len(margs), "Op")
+                        e = self.mark(start, {"op": "replace",
+                                              "args": [e] + margs})
                     elif name in ("count", "find", "startswith", "endswith"):
                         if len(margs) != 1:
-                            raise SurfaceError(
-                                "line %d: .%s takes exactly one argument, "
-                                "given %d" % (line, name, len(margs)))
-                        e = {"op": name, "args": [e, margs[0]]}
+                            self.err(ntok, ".%s takes exactly one argument, "
+                                     "given %d" % (name, len(margs)), "Op")
+                        e = self.mark(start, {"op": name,
+                                              "args": [e, margs[0]]})
                     else:
                         # strip, lstrip, rstrip, lower, upper, isdigit,
                         # isalpha, isupper, islower: no arguments.
                         if margs:
-                            raise SurfaceError(
-                                "line %d: .%s takes no arguments, given %d"
-                                % (line, name, len(margs)))
-                        e = {"op": name, "args": [e]}
+                            self.err(ntok, ".%s takes no arguments, given %d"
+                                     % (name, len(margs)), "Op")
+                        e = self.mark(start, {"op": name, "args": [e]})
                     continue
-                raise SurfaceError(
-                    "line %d: a dot must be followed by .0, .1, or a "
-                    "string-library member" % self.tok.line)
+                # Neither .0/.1 nor a known string-library member: "Op"
+                # again, since the message names the set of valid operators
+                # a dot may introduce.
+                self.err(self.tok, "a dot must be followed by .0, .1, or a "
+                         "string-library member", "Op")
             break
         return e
 
     def p_atom(self) -> dict:
         t = self.tok
         if t.kind == "nat":
-            return {"int": int(self.eat("nat").text)}
+            return self.mark(t, {"int": int(self.eat("nat").text)})
         if t.kind == "char":
             # 'a': sugar for its code point (SPEC.md "Strings as sequences
             # of code points (v1)"). The printer never emits this form.
-            return {"int": self.eat("char").text}
+            return self.mark(t, {"int": self.eat("char").text})
         if t.kind == "str":
             # "abc": sugar for the seq literal of its code points; "" is
             # []. Same spec section; same non-canonical relationship to
             # the printer.
-            return {"op": "seq",
-                    "args": [{"int": cp} for cp in self.eat("str").text]}
+            return self.mark(t, {"op": "seq",
+                                 "args": [{"int": cp}
+                                          for cp in self.eat("str").text]})
         if self.at("kw", "true"):
             self.eat("kw")
-            return {"bool": True}
+            return self.mark(t, {"bool": True})
         if self.at("kw", "false"):
             self.eat("kw")
-            return {"bool": False}
+            return self.mark(t, {"bool": False})
         if self.at("kw", "len"):
             self.eat("kw")
             self.eat("sym", "(")
             e = self.expr()
+            self.production = "Expr"
             self.eat("sym", ")")
-            return {"op": "len", "args": [e]}
+            return self.mark(t, {"op": "len", "args": [e]})
         if self.at("kw", "seq"):
             # seq(n, v), the `fill` constructor (SPEC.md "Sequences as values").
             self.eat("kw")
             self.eat("sym", "(")
             n = self.expr()
+            self.production = "Expr"
             self.eat("sym", ",")
             v = self.expr()
+            self.production = "Expr"
             self.eat("sym", ")")
-            return {"op": "fill", "args": [n, v]}
+            return self.mark(t, {"op": "fill", "args": [n, v]})
         if self.at("kw", "tostr"):
             # tostr(n): SPEC.md "The string library" (2026-09-11), a
             # function like len(n), not a postfix member.
             self.eat("kw")
             self.eat("sym", "(")
             n = self.expr()
+            self.production = "Expr"
             self.eat("sym", ")")
-            return {"op": "tostr", "args": [n]}
+            return self.mark(t, {"op": "tostr", "args": [n]})
         if self.opt("sym", "("):
             e = self.expr()
+            self.production = "Expr"
             if self.opt("sym", ","):
                 # (e1, e2): the pair literal (SPEC.md "Pairs", 2026-09-10).
                 # `(e)` alone, no comma, stays grouping, as it always was.
                 e2 = self.expr()
+                self.production = "Expr"
                 self.eat("sym", ")")
-                return {"op": "pair", "args": [e, e2]}
+                return self.mark(t, {"op": "pair", "args": [e, e2]})
             self.eat("sym", ")")
             return e
         if self.opt("sym", "["):
@@ -796,10 +983,11 @@ class Parser:
             if not self.at("sym", "]"):
                 while True:
                     args.append(self.expr())
+                    self.production = "Expr"
                     if not self.opt("sym", ","):
                         break
             self.eat("sym", "]")
-            return {"op": "seq", "args": args}
+            return self.mark(t, {"op": "seq", "args": args})
         if t.kind == "id":
             ident = self.name()
             if self.opt("sym", "("):
@@ -807,17 +995,41 @@ class Parser:
                 if not self.at("sym", ")"):
                     while True:
                         args.append(self.expr())
+                        self.production = "Expr"
                         if not self.opt("sym", ","):
                             break
                 self.eat("sym", ")")
-                return {"call": {"fun": ident, "args": args}}
-            return {"var": ident}
-        raise SurfaceError("line %d: %r does not start an expression"
-                           % (t.line, t.text or "end of input"))
+                return self.mark(t, {"call": {"fun": ident, "args": args}})
+            return self.mark(t, {"var": ident})
+        self.err(t, "%r does not start an expression"
+                 % (t.text or "end of input"))
 
 
-def parse(src: str) -> dict:
-    return Parser(src).program()
+def parse(src: str, positions=None) -> dict:
+    """Text to canonical JSON. `positions`, if given a dict, is filled with
+    id(node) -> (line, col) for every AST dict this parse builds (the task
+    itself, every param/return/spec_fun entry, every type, every
+    statement, every expression node): the well-formedness side keeps its
+    own copy of the AST and can look a node up in this dict by `id()` to
+    report where in the source it came from, exactly as SurfaceError does
+    for a parse error. A node's position is where it STARTS: the keyword or
+    the first token of the expression, not the whole span. Two distinct
+    nodes never collide in this dict because Python's `id()` is unique
+    among the live objects the parser itself built and nothing here is
+    shared or interned; keep the returned task (or a structure built from
+    walking it) alive for as long as `positions` is read, since `id()` can
+    be reused once an object is garbage collected."""
+    return Parser(src, positions=positions).program()
+
+
+def parse_file(path: str, positions=None) -> dict:
+    """A .t file to canonical JSON, `path` reported (as given, not resolved
+    or normalised) in every SurfaceError this raises, so the caller sees
+    which file was bad without having to catch and re-wrap. See `parse`
+    for `positions`."""
+    with open(path, encoding="utf-8") as fh:
+        src = fh.read()
+    return Parser(src, file=path, positions=positions).program()
 
 
 def parse_expr(src: str) -> dict:

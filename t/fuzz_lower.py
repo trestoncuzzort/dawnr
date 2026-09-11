@@ -88,6 +88,27 @@ second writer of the same filenames corrupts both runs (run_par.py's
 _live_conflict records that lesson). Pass --out.
 
     python3 t/fuzz_lower.py --out DIR --n 120 --seed 1 --jobs 64
+
+Well-formedness moved out, 2026-09-11 (ROADMAP 14.3, "The checker as a
+module"): check_wf, _ty, _valid_type, _self_calls and everything only they
+used (NAME_RE, the operator-classification sets, _check_stmts,
+_check_returns) now live in t/check_wf.py; this file imports that module
+and re-exports the same names (`fuzz_lower.check_wf`, `fuzz_lower.NAME_RE`,
+etc.) as aliases, so every existing caller (grade.py, surface.py,
+loop_generate.py, spec_experiment.py, boundary_probe.py, metamorphic.py,
+test_lift_rules.py) is unchanged. Measured identical before/after the
+move, from t/, kernels not involved:
+  `python3 -c 'import fuzz_lower as f; c=f.build_corpus(400,1); \
+  print(len(c), sum(1 for t in c if f.check_wf(t)))'` -> 453 4 (both)
+  `python3 truth_fuzz.py --tasks-only --out <scratch> --seed 1` ->
+  "corpus: 471 tasks (291 true, 167 false, 13 ill-defined) in 3s; 0
+  candidates discarded" (both, before from a t/ copy with fuzz_lower.py
+  reverted to the pre-move commit, after from this worktree)
+  `python3 surface.py --check --n 20 --seeds 1,2` (after only, no v0
+  before this move existed to compare against since surface.py already
+  called fuzz_lower.check_wf) -> "corpus: 172 tasks seen, 4 rejected by
+  check_wf, 168 well-formed (117 distinct)", both round-trip checks 168 of
+  168, no failures.
 """
 from __future__ import annotations
 
@@ -582,445 +603,24 @@ def exec_body(body: list, env: dict, funs: dict, st: St,
 
 
 # ===========================================================================
-# 2. Well-formedness: SYNTAX.md grammar plus SPEC.md's scope rules.
+# 2. Well-formedness: moved to check_wf.py (ROADMAP 14.3, 2026-09-11).
+# check_wf, _ty, _valid_type and their helpers now live in check_wf.py, a
+# module of its own with no import of this file (checked by
+# test_check_wf.py's test_no_cycle), imported by this file, surface.py and
+# the command. The names below are kept as aliases so grade.py (which reads
+# fuzz_lower.NAME_RE directly) and every other caller of
+# fuzz_lower.check_wf are unchanged.
 # ===========================================================================
 
-NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
-V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
-          "and", "or", "not", "implies"}
-# div and mod are v1 (SPEC.md "Division and modulo", 2026-09-08): Euclidean,
-# undefined at y == 0, so v1's definedness rules apply to them as to at.
-# pair, fst, snd are v1 (SPEC.md "Pairs", 2026-09-10): a pair is a value, and
-# `fst`/`snd` are its only projections.
-# The string library is v1 (SPEC.md "The string library", 2026-09-11): 17
-# polymorphic seq members, split at two arities (one op).
-STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
-             "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
-             "isupper", "islower", "startswith", "endswith"}
-V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
-         | {"pair", "fst", "snd"} | STRLIB_OPS)
-TERNARY = {"update", "slice", "replace"}
-VARIADIC = {"seq"}      # the literal: any arity, zero included
-UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
-         "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
-         "islower"}
-NARY = {"and", "or"}
-BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
-INTR = {"+", "-", "*", "neg", "len"}
-BASE_TYPES = ("int", "bool", "seq")     # every T1, T2 a pair may hold
+import check_wf as _check_wf_mod                     # noqa: E402
+
+NAME_RE = _check_wf_mod.NAME_RE
+check_wf = _check_wf_mod.check_wf
+_valid_type = _check_wf_mod._valid_type
+_ty = _check_wf_mod._ty
+_self_calls = _check_wf_mod._self_calls          # used by _funs_of below, not only check_wf
 
 
-def _valid_type(t) -> bool:
-    """A well-formed t TYPE: "int", "bool", "seq", a pair
-    `{"pair": [T1, T2]}` with T1, T2 each one of int/bool/seq (SPEC.md
-    "Pairs", 2026-09-10): no pair of pairs, no seq of pairs, no pair of
-    three; or `{"seq": "seq"}` (SPEC.md "Nested sequences", 2026-09-10),
-    one level only -- the value under "seq" must be the literal string
-    "seq" and nothing else, so `{"seq": {"seq": "seq"}}` (three levels) and
-    `{"seq": {"pair": [...]}}` (a seq of pairs) are both refused here, by
-    name, exactly as the SPEC says v1 does not have them. Anything else (an
-    unknown string, a malformed dict, a pair whose own component is itself
-    a dict) is refused here rather than left for a KeyError or a silent
-    pass three checks later."""
-    if t in BASE_TYPES:
-        return True
-    if isinstance(t, dict) and set(t) == {"pair"}:
-        return (isinstance(t["pair"], list) and len(t["pair"]) == 2
-                and all(c in BASE_TYPES for c in t["pair"]))
-    return isinstance(t, dict) and t == {"seq": "seq"}
-
-
-def _ty(e, env, funs, ver, errs, bound, expect=None):
-    """Type of e in env, or None; appends to errs. env maps name -> type.
-
-    `expect`, added for SPEC.md "Nested sequences" (2026-09-10): the
-    empty seq literal `[]` has no element to type from, so with zero
-    elements it is ambiguous between a plain `seq` and a `{"seq": "seq"}`
-    with no rows -- "SPEC.md: `[]` the empty nested seq where the
-    declared type says so". Every OTHER position an empty literal can
-    appear in already resolves correctly with no hint at all: a row
-    argument to `update`/`fill`/an outer literal wants a plain `seq`
-    regardless, which is exactly `[]`'s unhinted default below. Only a
-    var init, an assign, a return, an ite branch and a call argument
-    carry a declared type to check against, so only those five thread
-    `expect` down; everywhere else it stays None and behaviour is
-    unchanged from before this construct."""
-    if "int" in e:
-        return "int"
-    if "bool" in e:
-        if ver == 0:
-            errs.append("bool literal in a v0 task")
-        return "bool"
-    if "var" in e:
-        t = env.get(e["var"])
-        if t is None:
-            errs.append(f"unbound var {e['var']}")
-        return t
-    if "ite" in e or "forall" in e or "exists" in e or "call" in e:
-        if ver == 0:
-            errs.append("v1 expression form in a v0 task")
-    if "ite" in e:
-        c = e["ite"]
-        if _ty(c["cond"], env, funs, ver, errs, bound) != "bool":
-            errs.append("ite condition is not bool")
-        a = _ty(c["then"], env, funs, ver, errs, bound, expect)
-        b = _ty(c["else"], env, funs, ver, errs, bound, expect)
-        if a != b:
-            errs.append(f"ite branches differ: {a} vs {b}")
-        return a
-    if "forall" in e or "exists" in e:
-        q = e["forall"] if "forall" in e else e["exists"]
-        v = q["var"]
-        if v in env or v in bound:
-            errs.append(f"bound var {v} shadows a name in scope")
-        for side in ("lo", "hi"):
-            if _ty(q[side], env, funs, ver, errs, bound) != "int":
-                errs.append(f"quantifier {side} is not int")
-        sub = dict(env)
-        sub[v] = "int"
-        if _ty(q["body"], sub, funs, ver, errs, bound | {v}) != "bool":
-            errs.append("quantifier body is not bool")
-        return "bool"
-    if "call" in e:
-        c = e["call"]
-        f = funs.get(c["fun"])
-        if f is None:
-            errs.append(f"call of unknown fun {c['fun']}")
-            return None
-        if len(f["params"]) != len(c["args"]):
-            errs.append(f"arity mismatch calling {c['fun']}")
-        for p, a in zip(f["params"], c["args"]):
-            if _ty(a, env, funs, ver, errs, bound, p["type"]) != p["type"]:
-                errs.append(f"argument type mismatch calling {c['fun']}")
-        return f["result"]
-    op = e["op"]
-    ok = V0_OPS if ver == 0 else V1_OPS
-    if op not in ok:
-        errs.append(f"operator {op!r} not in v{ver}")
-        return None
-    args = e.get("args", [])
-    if op in UNARY and len(args) != 1:
-        errs.append(f"{op} takes one argument")
-    if op in TERNARY and len(args) != 3:
-        errs.append(f"{op} takes three arguments")
-    if op == "split":
-        # SPEC.md "The string library": split(s) and split(s, c), two
-        # arities of one op, neither the plain-binary nor any other group.
-        if len(args) not in (1, 2):
-            errs.append("split takes one or two arguments")
-    elif (op not in UNARY and op not in NARY and op not in TERNARY
-            and op not in VARIADIC and len(args) != 2):
-        errs.append(f"{op} takes two arguments")
-    if op in NARY and len(args) < 2:
-        errs.append(f"{op} needs at least two arguments")
-    ts = [_ty(a, env, funs, ver, errs, bound) for a in args]
-    NESTED = {"seq": "seq"}
-    if op == "seq":
-        # SPEC.md "Sequences: literals, concatenation, slices": [e1, ..., en]
-        # of ints, [] included. SPEC.md "Nested sequences" (2026-09-10)
-        # makes this polymorphic: elements all int is a plain seq, elements
-        # all seq (rows) is a seq<seq>; [] has no element to type from, so
-        # it takes `expect` when the caller has one (a var/assign/return/
-        # ite/call context) and falls back to plain seq otherwise, exactly
-        # the pre-nested behaviour.
-        if not ts:
-            return expect if expect in ("seq", NESTED) else "seq"
-        if all(t == "int" for t in ts):
-            return "seq"
-        if all(t == "seq" for t in ts):
-            return NESTED
-        errs.append("seq literal elements must be all int or all seq "
-                    "(no mixing, no pair or nested-seq rows)")
-        return "seq"
-    if op == "slice":
-        if ts[0] not in ("seq", NESTED) or ts[1] != "int" or ts[2] != "int":
-            errs.append("slice wants (seq or seq<seq>, int, int)")
-            return "seq"
-        return ts[0]
-    if op == "+" and len(ts) == 2 and ts[0] == ts[1] and ts[0] in ("seq", NESTED):
-        # s + t on two seqs (or two nested seqs, SPEC.md "Nested sequences")
-        # is concatenation, the same polymorphism as ==.
-        return ts[0]
-    if op == "len":
-        if ts[0] not in ("seq", NESTED):
-            errs.append("len of a non-seq")
-        return "int"
-    if op == "at":
-        # SPEC.md "Nested sequences": at(m, i) on a seq<seq> gives a row
-        # (a seq), where at(s, i) on a plain seq gives an int.
-        if ts[1] != "int" or ts[0] not in ("seq", NESTED):
-            errs.append("at wants (seq or seq<seq>, int)")
-            return None
-        return "int" if ts[0] == "seq" else "seq"
-    if op == "update":
-        # SPEC.md "Sequences as values": s[i := v] is (seq, int, int) ->
-        # seq; SPEC.md "Nested sequences" (2026-09-10): m[i := r] on a
-        # seq<seq> takes a ROW (a seq) as the third argument, not an int.
-        if ts[1] != "int":
-            errs.append("update index must be int")
-        if ts[0] == "seq":
-            if ts[2] != "int":
-                errs.append("update wants (seq, int, int)")
-            return "seq"
-        if ts[0] == NESTED:
-            if ts[2] != "seq":
-                errs.append("update wants (seq<seq>, int, seq) for the row")
-            return NESTED
-        errs.append("update wants (seq or seq<seq>, int, element)")
-        return "seq"
-    if op == "fill":
-        # seq(n, v): v: int gives a seq, v: seq (a row) gives a seq<seq>
-        # (SPEC.md "Nested sequences", 2026-09-10).
-        if ts[0] != "int":
-            errs.append("fill count must be int")
-        if ts[1] == "int":
-            return "seq"
-        if ts[1] == "seq":
-            return NESTED
-        errs.append("fill wants (int, int) or (int, seq) for the row")
-        return "seq"
-    if op == "pair":
-        # SPEC.md "Pairs" (2026-09-10): (e1, e2), typed from its operands;
-        # T1, T2 must each be int, bool or seq. There is no way to spell a
-        # "seq of pairs" as a type in t (seq is not parameterised), so the
-        # only shape to refuse here is a pair of pairs, one level at a time:
-        # a pair nested as either operand already failed this same check
-        # when IT was typed, so ts[0]/ts[1] not in BASE_TYPES catches it.
-        if ts[0] not in BASE_TYPES or ts[1] not in BASE_TYPES:
-            errs.append("pair components must be int, bool or seq "
-                        "(no pair of pairs, no pair of three)")
-        return {"pair": ts}
-    if op in ("fst", "snd"):
-        # p.0 / p.1: SPEC.md "Pairs". Only a pair operand is defined; a
-        # non-pair operand (including a pair-of-something gone wrong above,
-        # which types as None or a bad dict) is refused with a clear reason
-        # rather than an IndexError three lines from now.
-        t0 = ts[0]
-        if not (isinstance(t0, dict) and set(t0) == {"pair"}):
-            errs.append(f"{op} wants a pair operand, found {t0!r}")
-            return None
-        return t0["pair"][0 if op == "fst" else 1]
-    if op in STRLIB_OPS:
-        # SPEC.md "The string library" (2026-09-11): every member's
-        # signature, seq/int/seq<seq> per the table there. `split` is the
-        # only member with two arities, seq -> seq<seq> at one argument or
-        # (seq, int) -> seq<seq> at two. Arity first, so a call with too
-        # few or too many arguments is a refusal and never an IndexError
-        # (the core's adversarial check found the crash, 2026-09-11).
-        want = {"split": (1, 2), "join": (2,), "tostr": (1,), "count": (2,),
-                "find": (2,), "strip": (1,), "lstrip": (1,), "rstrip": (1,),
-                "replace": (3,), "lower": (1,), "upper": (1,), "isdigit": (1,),
-                "isalpha": (1,), "isupper": (1,), "islower": (1,),
-                "startswith": (2,), "endswith": (2,)}[op]
-        if len(ts) not in want:
-            errs.append(f"{op} wants {' or '.join(str(w) for w in want)} "
-                        f"argument(s), found {len(ts)}")
-            return {"split": NESTED, "join": "seq", "tostr": "seq", "count": "int",
-                    "find": "int", "replace": "seq"}.get(op, "seq" if op in
-                    ("strip", "lstrip", "rstrip", "lower", "upper") else "bool")
-        if op == "split":
-            if len(ts) == 1:
-                if ts[0] != "seq":
-                    errs.append("split wants a seq")
-            elif ts[0] != "seq" or ts[1] != "int":
-                errs.append("split wants (seq, int)")
-            return NESTED
-        if op == "join":
-            if ts[0] != NESTED or ts[1] != "seq":
-                errs.append("join wants (seq<seq>, seq)")
-            return "seq"
-        if op == "tostr":
-            if ts[0] != "int":
-                errs.append("tostr wants an int")
-            return "seq"
-        if op in ("count", "find"):
-            if ts[0] != "seq" or ts[1] != "seq":
-                errs.append(f"{op} wants (seq, seq)")
-            return "int"
-        if op in ("strip", "lstrip", "rstrip", "lower", "upper"):
-            if ts[0] != "seq":
-                errs.append(f"{op} wants a seq")
-            return "seq"
-        if op == "replace":
-            if ts[0] != "seq" or ts[1] != "seq" or ts[2] != "seq":
-                errs.append("replace wants (seq, seq, seq)")
-            return "seq"
-        if op in ("isdigit", "isalpha", "isupper", "islower"):
-            if ts[0] != "seq":
-                errs.append(f"{op} wants a seq")
-            return "bool"
-        if ts[0] != "seq" or ts[1] != "seq":       # startswith, endswith
-            errs.append(f"{op} wants (seq, seq)")
-        return "bool"
-    if op in ("+", "-", "*", "neg", "div", "mod"):
-        if any(t != "int" for t in ts):
-            errs.append(f"{op} over non-int")
-        return "int"
-    if op in ("<", "<=", ">", ">="):
-        if any(t != "int" for t in ts):
-            errs.append(f"{op} is int-only (SPEC.md gate 1)")
-        return "bool"
-    if op in ("==", "!="):
-        # Two seqs compare extensionally since SPEC.md "Sequences as
-        # values"; two pairs compare componentwise since SPEC.md "Pairs"
-        # (2026-09-10), "the polymorphic == again" -- dict equality on the
-        # two type dicts already refuses a `==` across two DIFFERENT pair
-        # types (a pair of (int, int) against a pair of (bool, int)), same
-        # as it refuses int against seq.
-        if ts[0] != ts[1]:
-            # SPEC.md "Nested sequences" (2026-09-10): a bare `[]` with no
-            # hint types "seq" by default (the `op == "seq"` arm above);
-            # against a seq<seq>-typed other side that default is not a
-            # real type error, so an operand that IS the empty-literal AST
-            # node is let through as the empty nested seq it plainly is,
-            # rather than requiring a caller-supplied `expect` at every
-            # `==` site (`==` has no declared type of its own to hint with).
-            def _empty_lit(a, t):
-                return t == "seq" and a.get("op") == "seq" and not a.get("args")
-            zero, one = ts[0] == NESTED and _empty_lit(args[1], ts[1]), \
-                       ts[1] == NESTED and _empty_lit(args[0], ts[0])
-            if not (zero or one):
-                errs.append(f"{op} wants two ints, two bools, two seqs, "
-                           f"two nested seqs, or two pairs of the same type")
-        return "bool"
-    if any(t != "bool" for t in ts):
-        errs.append(f"{op} over non-bool")
-    return "bool"
-
-
-def _self_calls(e, name) -> bool:
-    if isinstance(e, dict):
-        if "call" in e and e["call"]["fun"] == name:
-            return True
-        return any(_self_calls(v, name) for v in e.values())
-    if isinstance(e, list):
-        return any(_self_calls(v, name) for v in e)
-    return False
-
-
-def check_wf(task: dict) -> list[str]:
-    errs: list[str] = []
-    ver = task["t"]
-    if not NAME_RE.match(task["name"]):
-        errs.append("bad task name")
-    if len(task["returns"]) != 1:
-        errs.append("exactly one return value (SPEC.md v0 and v1)")
-    if not task["ensures"]:
-        errs.append("ensures must be non-empty")
-    funs = {f["name"]: f for f in task.get("spec_funs", [])}
-    if ver == 0 and (funs or "decreases" in task or "gate" in task):
-        errs.append("v1 field in a v0 task")
-    penv = {p["name"]: p["type"] for p in task["params"]}
-    if ver == 0 and any(t != "int" for t in penv.values()):
-        errs.append("v0 has int only")
-    for p in task["params"]:
-        if not _valid_type(p["type"]):
-            errs.append(f"param {p['name']} has an invalid type: {p['type']!r}")
-    for r in task["returns"]:
-        if not _valid_type(r["type"]):
-            errs.append(f"return {r['name']} has an invalid type: {r['type']!r}")
-    for i, f in enumerate(task.get("spec_funs", [])):
-        fenv = {p["name"]: p["type"] for p in f["params"]}
-        earlier = {g["name"]: g for g in task["spec_funs"][:i]}
-        earlier[f["name"]] = f              # self-recursion is allowed
-        if _ty(f["decreases"], fenv, earlier, ver, errs, set()) != "int":
-            errs.append(f"spec_fun {f['name']} decreases is not int")
-        if _ty(f["body"], fenv, earlier, ver, errs, set()) != f["result"]:
-            errs.append(f"spec_fun {f['name']} body type != result")
-    for e in task.get("requires", []):
-        if _ty(e, penv, funs, ver, errs, set()) != "bool":
-            errs.append("requires clause is not bool")
-    ret = task["returns"][0]
-    eenv = dict(penv)
-    eenv[ret["name"]] = ret["type"]
-    for e in task["ensures"]:
-        if _ty(e, eenv, funs, ver, errs, set()) != "bool":
-            errs.append("ensures clause is not bool")
-    if _self_calls(task["ensures"], task["name"]):
-        errs.append("ensures references the task name (SPEC.md gate 3)")
-    selfrec = _self_calls(task["body"], task["name"])
-    if selfrec and "decreases" not in task:
-        errs.append("self-recursive body without a task decreases")
-    if not selfrec and "decreases" in task:
-        errs.append("task decreases without a self-call")
-    bfuns = dict(funs)
-    if selfrec:
-        bfuns[task["name"]] = {"params": task["params"],
-                               "result": ret["type"], "body": None,
-                               "decreases": None}
-    _check_stmts(task["body"], dict(eenv), bfuns, ver, errs, {ret["name"]})
-    _check_returns(task["body"], ret["name"], errs)
-    return errs
-
-
-def _check_returns(body, rname, errs):
-    """Every `return` names the task's return variable, never a local that
-    happens to be assignable in scope (SPEC.md Early exit)."""
-    for s in body:
-        if "return" in s and s["return"][0] != rname:
-            errs.append(f"return names {s['return'][0]}, not the task's return {rname}")
-        elif "if" in s:
-            _check_returns(s["if"]["then"], rname, errs)
-            _check_returns(s["if"]["else"], rname, errs)
-        elif "while" in s:
-            _check_returns(s["while"]["body"], rname, errs)
-
-
-def _check_stmts(body, env, funs, ver, errs, assignable):
-    for s in body:
-        if "assign" in s:
-            n, e = s["assign"]
-            if n not in assignable:
-                errs.append(f"assign to {n}, not a return or local")
-            t = _ty(e, env, funs, ver, errs, set(), env.get(n))
-            if t != env.get(n):
-                errs.append(f"assign {n}: {t} into {env.get(n)}")
-        elif "var" in s:
-            if ver == 0:
-                errs.append("local in a v0 task")
-            d = s["var"]
-            if d["name"] in env:
-                errs.append(f"local {d['name']} shadows a name in scope")
-            if not _valid_type(d["type"]):
-                errs.append(f"local {d['name']} has an invalid type: "
-                           f"{d['type']!r}")
-            if _ty(d["init"], env, funs, ver, errs, set(), d["type"]) != d["type"]:
-                errs.append(f"local {d['name']} init type mismatch")
-            env[d["name"]] = d["type"]
-            assignable.add(d["name"])
-        elif "if" in s:
-            c = s["if"]
-            if _ty(c["cond"], env, funs, ver, errs, set()) != "bool":
-                errs.append("if condition is not bool")
-            _check_stmts(c["then"], dict(env), funs, ver, errs, set(assignable))
-            _check_stmts(c["else"], dict(env), funs, ver, errs, set(assignable))
-        elif "while" in s:
-            if ver == 0:
-                errs.append("while in a v0 task")
-            w = s["while"]
-            if _ty(w["cond"], env, funs, ver, errs, set()) != "bool":
-                errs.append("loop condition is not bool")
-            if "decreases" not in w:
-                errs.append("loop without decreases (SPEC.md gate 2)")
-            elif _ty(w["decreases"], env, funs, ver, errs, set()) != "int":
-                errs.append("loop decreases is not int")
-            for inv in w.get("invariants", []):
-                if _ty(inv, env, funs, ver, errs, set()) != "bool":
-                    errs.append("loop invariant is not bool")
-            _check_stmts(w["body"], dict(env), funs, ver, errs, set(assignable))
-        elif "return" in s:
-            if ver == 0:
-                errs.append("return in a v0 task")
-            n, e = s["return"]
-            if n not in assignable:
-                errs.append(f"return names {n}, not the task's return")
-            t = _ty(e, env, funs, ver, errs, set(), env.get(n))
-            if t != env.get(n):
-                errs.append(f"return {n}: {t} into {env.get(n)}")
-            if s is not body[-1]:
-                errs.append("statement after return is unreachable (SPEC.md Early exit)")
-        else:
-            errs.append(f"t has no statement {sorted(s)!r}")
 
 
 # ===========================================================================
@@ -4293,9 +3893,22 @@ def run(corpus, outdir: Path, jobs: int, n_flake: int, only=None):
 
 def analyse(corpus, rows):
     """A cell is a finding when it contradicts another kernel on the same real
-    lowering, or contradicts the reference interpreter."""
+    lowering, or contradicts the reference interpreter.
+
+    SPEC.md "The twins", 2026-09-11 paragraph (ROADMAP 13.3): a real-
+    VERIFIED, twin-VERIFIED cell (still gathered under "twin_survived", the
+    pre-existing per-task summary) is ALSO split, per cell, into
+    "decorative" or "unsound" (harness.decorative_kind, keyed off the same
+    witness twin_for already measured) and is never counted under
+    "no_flip" any more: no_flip is now real-VERIFIED cells whose twin came
+    back UNPROVED, TIMEOUT or MALFORMED, the kernel's own twin discipline,
+    not the fuzzer's spec strength. Before this split, a decorative
+    `ensures true` and a kernel's own unsoundness both landed in the same
+    no_flip bucket as an UNPROVED twin, so the statistic could not tell
+    "this spec is too weak to measure" from "this kernel stopped
+    refuting"."""
     out = {"disagreements": [], "twin_survived": [], "vs_truth": [],
-           "no_flip": []}
+           "no_flip": [], "decorative": [], "unsound": []}
     for task in corpus:
         name = task["name"]
         cells = rows.get(name, {})
@@ -4339,8 +3952,24 @@ def analyse(corpus, rows):
         # run. MEASURED that day: spark went from 101/110 flips to 0/359
         # across three fresh seeds while `disagreements` stayed at 4. The
         # twin's whole purpose is the flip, so a real VERIFIED whose twin is
-        # not REFUTED is recorded here, with the outcome that replaced it.
+        # not REFUTED is recorded here, with the outcome that replaced it,
+        # EXCEPT a twin that came back VERIFIED too (see the docstring
+        # above): that cell is decorative or unsound, not a no-flip.
+        w = None
+        if surv:
+            clean = {k: v for k, v in task.items() if not k.startswith("_")}
+            try:
+                _, _, w = harness.twin_cached(clean)
+            except Exception:                                # noqa: BLE001
+                w = None
         for b, c in cells.items():
+            if c[0] == Outcome.VERIFIED and c[1] == Outcome.VERIFIED:
+                kind = harness.decorative_kind(c[0], c[1], w) or "decorative"
+                out[kind].append(
+                    {"task": name, "family": task.get("_family"),
+                     "op": task.get("_twin_op"), "backend": b,
+                     "witness": harness.witness(w)})
+                continue
             if c[0] == Outcome.VERIFIED and c[1] != Outcome.REFUTED:
                 out["no_flip"].append(
                     {"task": name, "family": task.get("_family"),
@@ -4385,14 +4014,32 @@ def main() -> int:
     nf = {}
     for d in res["no_flip"]:
         nf.setdefault(d["backend"], []).append(d["twin_outcome"])
+    dec = {}
+    for d in res["decorative"]:
+        dec.setdefault(d["backend"], []).append(d["task"])
+    uns = {}
+    for d in res["unsound"]:
+        uns.setdefault(d["backend"], []).append(d["task"])
     print(f"\ndisagreements: {len(res['disagreements'])}  "
           f"vs-truth: {len(res['vs_truth'])}  "
           f"twin-survived: {len(res['twin_survived'])}  "
-          f"no-flip: {len(res['no_flip'])}")
+          f"no-flip: {len(res['no_flip'])}  "
+          f"decorative: {len(res['decorative'])}  "
+          f"unsound: {len(res['unsound'])}")
     for b in sorted(nf):
         c = {o: nf[b].count(o) for o in sorted(set(nf[b]))}
         print(f"  NO-FLIP {b}: {len(nf[b])} real-VERIFIED cells whose twin "
-              f"was not REFUTED: {c}")
+              f"was UNPROVED, TIMEOUT or MALFORMED (the kernel's own twin "
+              f"discipline, SPEC.md \"The twins\" 2026-09-11): {c}")
+    for b in sorted(dec):
+        print(f"  DECORATIVE {b}: {len(dec[b])} real-VERIFIED, twin-VERIFIED "
+              f"cells where the ladder's own witness did not entail a "
+              f"refutation (the spec cannot tell real and twin apart): "
+              f"{dec[b]}")
+    for b in sorted(uns):
+        print(f"  UNSOUND {b}: {len(uns[b])} real-VERIFIED, twin-VERIFIED "
+              f"cells where the ladder's witness DID entail a refutation "
+              f"and the kernel verified the twin anyway: {uns[b]}")
     for d in res["disagreements"]:
         print(f"  DISAGREE {d['task']} [{d['family']}] "
               f"verified={d['verified']} refuted={d['refuted']} "

@@ -542,7 +542,7 @@ def test_build_table_and_report_totals() -> None:
         md_path, json_path = lift_census.write_report(rows, tmp / "report")
         assert md_path.is_file() and json_path.is_file()
         md_text = md_path.read_text(encoding="utf-8")
-        assert "—" not in md_text, "em-dash in report markdown"
+        assert "\u2014" not in md_text, "em-dash in report markdown"
         report_json = json.loads(json_path.read_text(encoding="utf-8"))
         assert report_json["summary"]["census_in_method_rows"] == 77
         print(f"test_build_table_and_report_totals: 77 rows, "

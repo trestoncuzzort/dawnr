@@ -1,0 +1,30 @@
+# t/malformed/EXPECTED.tsv -- 2026-09-11 (ROADMAP 14.2 "Errors with a position").
+# One row per file in this directory: the file, and the line, col and
+# production surface.parse_file(file) must raise a SurfaceError naming.
+# Six productions are SYNTAX.md's own EBNF names (Task, Type, SpecFun,
+# Stmt, Expr, Op, Id -- that is seven, but Id is only reached by the
+# lexer's "unexpected character", not by the parser proper). Two rows use
+# a SYNTAX.md HEADING instead, because SYNTAX.md names no production for
+# either rule: "Strings as sequences of code points (v1)" (a char/string
+# literal is Atom sugar with no EBNF name of its own, so its lexer errors
+# -- unterminated literal, bad escape, wrong code-point count -- are filed
+# under the SYNTAX.md section that documents the literal forms) and "What
+# the notation refuses" (surface.py's non-associative Cmp precedence level
+# has no SYNTAX.md name either; the chained-comparison rule is documented
+# in that section's table, so its error is filed there). Both are listed
+# in surface.py's SurfaceError docstring and in LIT_PRODUCTION/
+# NO_CHAIN_HEADING beside the raise sites that use them.
+# Measured: python3 t/test_surface_errors.py, which parses every file
+# below and checks file/line/col/production all four (line, col and
+# production are the three the ROADMAP bar names; file is checked too
+# since parse_file must report which file was bad).
+file	line	col	production
+task.t	1	1	Task
+type.t	1	15	Type
+specfun.t	4	1	SpecFun
+stmt.t	4	3	Stmt
+expr.t	2	13	Expr
+op.t	4	10	Op
+id.t	3	13	Id
+string-literal.t	4	13	Strings as sequences of code points (v1)
+chained-comparison.t	4	15	What the notation refuses

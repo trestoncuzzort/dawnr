@@ -213,7 +213,7 @@ a verified program on an unaccountable system is a proof about nothing in
 particular, and an accountable system running unverified software is just
 tidy.
 
-The research that came first is in the repository root — an
+The research that came first is in the repository root: an
 execution-verified DPO pipeline whose real finding was that roughly half of a
 measured benchmark gain came from the measuring instrument rather than the
 model. That work is **scaffolding, not law**: it is

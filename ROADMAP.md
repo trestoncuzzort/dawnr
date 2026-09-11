@@ -81,15 +81,15 @@ the matrix below is post-correction.
 
 | Language | Toolchain (pin) | Tier | Verdict taxonomy | Determinism | Corpus (shippable core) | One-line risk |
 |---|---|---|---|---|---|---|
-| SPARK 2014 | GNATprove FSF 16.1.0 tarball (bundles Why3 1.8.2, Z3 4.15.4, cvc5, Alt-Ergo — no COLIBRI); `--prover=z3 --steps=N` | A | Five-way measured (13-probe matrix, independently re-run; unwitnessed beyond this table and its introducing commit, no separate results file states the probe count); exit codes ambiguous — classify from phase errors + per-unit `.spark` JSON; `.spark` distinguishes countermodel from gave-up | `--steps` deterministic; fully self-contained tarball with published per-platform sha256 — best pinning story of the nine | SPARKNaCl (BSD-3), SPARKlib (Apache-2.0), spark_unbound (MIT); 4,422-test GPL suite local-only (unwitnessed count, no separate file states it) | Permissive corpus is an order of magnitude smaller than DafnyBench |
-| Rust (Verus) | Verus release 0.2026.08.30.b432e82 (bundled Z3 4.16.0, Rust stable 1.97.1 via rustup) | A | Five-way measured via `--output-json` + rustc-JSON stderr; exit 0/1 only; rlimit-exhaustion hides inside the errors count — split by message text | `--rlimit` budget; `VERUS_Z3_PATH` + on-by-default solver-version check; every JSON run self-reports version/commit/toolchain | All-MIT: vstd, human-eval-verus (167 tasks, unwitnessed corpus-size figure beyond this table; exclude `tasks/gpt/`), AutoVerus benchmarks, anvil, verified-storage | `assume`/`admit`/`external_body` verify anything at exit 0 — lexical ban on both halves, counted not dropped |
-| F* | Official binary v2026.08.30 pinned per corpus; bundled Z3 4.13.3 via `--smt` + `--z3version`; `--report_assumes error` WITHOUT `--cache_off` (composed combination measured to fail every file — Prims' own axioms trip it) | A | Five-way measured incl. an end-to-end pair demo (7 flips + 1 survivor from one ulib file, unwitnessed beyond this table); both failure classes exit 1 — parse JSON diagnostics (19=refuted, 168/resolution=malformed, 335=vacuity); timeout shares error 19, split by message text | Same Z3 rlimit mechanism as Dafny (`--z3rlimit`×500k units), `--z3seed`, native `--quake` flake checker; three bundled Z3s make pinning mandatory | ulib+examples, HACL*, EverParse, steel, everquic (all Apache-2.0); FStarDataSet-V2 (CDLA-P-2.0, 54.4k definitions, unwitnessed beyond this table and the HuggingFace listing's own size) | Frequent releases break corpora (FStar.Mul removed ~2026-04, not August) — F* version pinned per corpus, cross-version pairs never mixed |
-| C (ACSL/Frama-C WP) | Frama-C 33.0 + Why3 1.8.2; Z3 (MIT) primary with alt-ergo-free 2.4.3 secondary — NOT opam `alt-ergo` 2.6.3, which is OCamlPro non-commercial; frozen why3.conf, `-wp-no-why3-detect` | A | Documented-measured, not yet executed: verdict lives only in `-wp-report-json` (exit 0 with unproved goals); `failed`=prover error→TOOL_ERROR, `invalid`=model-backed refutation, `unknown`=REFUTED, `stepout` distinct | `-wp-steps` is an explicitly machine-independent budget with its own verdict; pin `-wp-timeout` AND `-wp-smoke-timeout` (both default 2s wall) | ACSL by Example (MIT, maintained, targets 33.0); x509-parser BSD arm and Contiki-NG modules need porting | Three default-flag traps + the most fragile no-sudo install (opam `--disable-sandboxing`, source-built GMP, pre-existing gcc required) |
-| Lean 4 | elan-pinned 4.33.1 (post-soundness-fix) + mathlib olean cache; leanprover-community/repl for throughput (Kimina server is stale and pins pre-fix v4.26.0 — do not adopt as-is) | A | Five-way measured + INCOMPLETE for holes; exit 0 ≠ verified (`hasSorry` gate, `#print axioms` allowlist); parse errors carry kind `[anonymous]` — text-match with parse-precedence, never kind-only | No SMT — architectural; `-DmaxHeartbeats` deterministic budget, but in-file `set_option` overrides the CLI (measured) — denylist required in v1 | mathlib4 (286k theorems), Compfiles, Lean Workbook, Batteries — all Apache-2.0 | Per-variant cost 10–100× Dafny without a resident-environment REPL; monthly toolchain churn invalidates receipts |
-| Rocq (Coq) | opam `rocq-core.9.2.0` + `rocq-stdlib.9.2.0` (`rocq-prover.9.2.0` does not exist) + `rocq-mathcomp-boot.2.6.0` | A | Three-pass measured: `-vos` fail→MALFORMED, full compile fail→REFUTED, `rocqchk` axiom scan→VACUOUS vs VERIFIED (parse `* Axioms: <none>` — the section is always printed; rocqchk exits 0 even with axioms) | Architectural — no solver, 5/5 identical verdicts; only wall backstop is nondeterministic | MathComp core/fourcolor/odd-order (CeCILL-B), Iris/std++ (BSD-3); **analysis is CeCILL-C — local-only**; stdlib LGPL local-only | Ubuntu opam route hard-requires gcc (unconfirmed on the Dell) + `--disable-sandboxing`; per-corpus loadpath engineering |
-| Agda | Official 2.8.0 single binary (one sha256 — no solver exists) + stdlib v2.4 at commit, `--safe` always | A | Measured: exit 0 / 42 / 251 + stable bracketed error names; INCOMPLETE class for holes; `--safe` refuses postulates and pragma smuggling ex ante with named SafeFlag* errors | Architectural; RTS heap cap (`-M`) as deterministic resource bound; single-binary fingerprint | agda-stdlib (MIT), cubical (MIT+BSD-3), agda-unimath (MIT), agda-categories (MIT) — ~960k LOC | Ablation unit is a syntactic step/clause, not a line — `find_hints` rewrite; hint density at scale unproven (the pilot is the tripwire) |
-| Haskell (Liquid Haskell) | LH 0.9.14.1.1 on GHC 9.14.1 + **liquid-prelude** (omitting it breaks proof combinators) via package-env; PATH-shim-pinned Z3 4.15.8/4.16.0 | B | Rebuilt by hand: GHC exits 1 for everything — two-pass compile + message-class parse; `--json` in plugin mode is the highest-leverage unknown | No native rlimit — wrapper shim with cumulative per-module Z3 budget; solver `unknown` must be reclassified TIMEOUT from the shim log | LH test suite (BSD-3); benchmark suites per-suite allowlist ONLY — GPL hmatrix is vendored beside them under `tests/benchmarks/` | Three contract pillars (taxonomy, budget, vacuity) all custom; full GHC pipeline per variant |
-| Whiley | wyc 0.10.18 + wyboogie 0.4.8 (`--noverify`) → raw Boogie 3.5.7 `/rlimit` + Z3 4.14.1 | B | Five-way from three stages + stdout regex — Boogie exits 0 on every outcome incl. parse errors; `/smoke` for VACUOUS, Boogie-level havoc for weak specs | Same substrate as Dafny (Boogie rlimit + PROVER_PATH), measured stable | Whiley2Boogie tests (Apache-2.0, ~1409 verifying programs); STD.wy is Apache-2.0 (dossier wrong) | Frontend dormant since 2022 — any bug is fork-and-own; hundreds of pairs, not thousands |
+| SPARK 2014 | GNATprove FSF 16.1.0 tarball (bundles Why3 1.8.2, Z3 4.15.4, cvc5, Alt-Ergo, no COLIBRI); `--prover=z3 --steps=N` | A | Five-way measured (13-probe matrix, independently re-run; unwitnessed beyond this table and its introducing commit, no separate results file states the probe count); exit codes ambiguous: classify from phase errors + per-unit `.spark` JSON; `.spark` distinguishes countermodel from gave-up | `--steps` deterministic; fully self-contained tarball with published per-platform sha256, the best pinning story of the nine | SPARKNaCl (BSD-3), SPARKlib (Apache-2.0), spark_unbound (MIT); 4,422-test GPL suite local-only (unwitnessed count, no separate file states it) | Permissive corpus is an order of magnitude smaller than DafnyBench |
+| Rust (Verus) | Verus release 0.2026.08.30.b432e82 (bundled Z3 4.16.0, Rust stable 1.97.1 via rustup) | A | Five-way measured via `--output-json` + rustc-JSON stderr; exit 0/1 only; rlimit-exhaustion hides inside the errors count: split by message text | `--rlimit` budget; `VERUS_Z3_PATH` + on-by-default solver-version check; every JSON run self-reports version/commit/toolchain | All-MIT: vstd, human-eval-verus (167 tasks, unwitnessed corpus-size figure beyond this table; exclude `tasks/gpt/`), AutoVerus benchmarks, anvil, verified-storage | `assume`/`admit`/`external_body` verify anything at exit 0: lexical ban on both halves, counted not dropped |
+| F* | Official binary v2026.08.30 pinned per corpus; bundled Z3 4.13.3 via `--smt` + `--z3version`; `--report_assumes error` WITHOUT `--cache_off` (composed combination measured to fail every file: Prims' own axioms trip it) | A | Five-way measured incl. an end-to-end pair demo (7 flips + 1 survivor from one ulib file, unwitnessed beyond this table); both failure classes exit 1: parse JSON diagnostics (19=refuted, 168/resolution=malformed, 335=vacuity); timeout shares error 19, split by message text | Same Z3 rlimit mechanism as Dafny (`--z3rlimit`×500k units), `--z3seed`, native `--quake` flake checker; three bundled Z3s make pinning mandatory | ulib+examples, HACL*, EverParse, steel, everquic (all Apache-2.0); FStarDataSet-V2 (CDLA-P-2.0, 54.4k definitions, unwitnessed beyond this table and the HuggingFace listing's own size) | Frequent releases break corpora (FStar.Mul removed ~2026-04, not August): F* version pinned per corpus, cross-version pairs never mixed |
+| C (ACSL/Frama-C WP) | Frama-C 33.0 + Why3 1.8.2; Z3 (MIT) primary with alt-ergo-free 2.4.3 secondary (NOT opam `alt-ergo` 2.6.3, which is OCamlPro non-commercial); frozen why3.conf, `-wp-no-why3-detect` | A | Documented-measured, not yet executed: verdict lives only in `-wp-report-json` (exit 0 with unproved goals); `failed`=prover error→TOOL_ERROR, `invalid`=model-backed refutation, `unknown`=REFUTED, `stepout` distinct | `-wp-steps` is an explicitly machine-independent budget with its own verdict; pin `-wp-timeout` AND `-wp-smoke-timeout` (both default 2s wall) | ACSL by Example (MIT, maintained, targets 33.0); x509-parser BSD arm and Contiki-NG modules need porting | Three default-flag traps + the most fragile no-sudo install (opam `--disable-sandboxing`, source-built GMP, pre-existing gcc required) |
+| Lean 4 | elan-pinned 4.33.1 (post-soundness-fix) + mathlib olean cache; leanprover-community/repl for throughput (Kimina server is stale and pins pre-fix v4.26.0: do not adopt as-is) | A | Five-way measured + INCOMPLETE for holes; exit 0 ≠ verified (`hasSorry` gate, `#print axioms` allowlist); parse errors carry kind `[anonymous]`: text-match with parse-precedence, never kind-only | No SMT, architectural; `-DmaxHeartbeats` deterministic budget, but in-file `set_option` overrides the CLI (measured), so a denylist is required in v1 | mathlib4 (286k theorems), Compfiles, Lean Workbook, Batteries, all Apache-2.0 | Per-variant cost 10–100× Dafny without a resident-environment REPL; monthly toolchain churn invalidates receipts |
+| Rocq (Coq) | opam `rocq-core.9.2.0` + `rocq-stdlib.9.2.0` (`rocq-prover.9.2.0` does not exist) + `rocq-mathcomp-boot.2.6.0` | A | Three-pass measured: `-vos` fail→MALFORMED, full compile fail→REFUTED, `rocqchk` axiom scan→VACUOUS vs VERIFIED (parse `* Axioms: <none>`: the section is always printed; rocqchk exits 0 even with axioms) | Architectural, no solver, 5/5 identical verdicts; only wall backstop is nondeterministic | MathComp core/fourcolor/odd-order (CeCILL-B), Iris/std++ (BSD-3); **analysis is CeCILL-C, local-only**; stdlib LGPL local-only | Ubuntu opam route hard-requires gcc (unconfirmed on the Dell) + `--disable-sandboxing`; per-corpus loadpath engineering |
+| Agda | Official 2.8.0 single binary (one sha256, no solver exists) + stdlib v2.4 at commit, `--safe` always | A | Measured: exit 0 / 42 / 251 + stable bracketed error names; INCOMPLETE class for holes; `--safe` refuses postulates and pragma smuggling ex ante with named SafeFlag* errors | Architectural; RTS heap cap (`-M`) as deterministic resource bound; single-binary fingerprint | agda-stdlib (MIT), cubical (MIT+BSD-3), agda-unimath (MIT), agda-categories (MIT), ~960k LOC | Ablation unit is a syntactic step/clause, not a line: `find_hints` rewrite; hint density at scale unproven (the pilot is the tripwire) |
+| Haskell (Liquid Haskell) | LH 0.9.14.1.1 on GHC 9.14.1 + **liquid-prelude** (omitting it breaks proof combinators) via package-env; PATH-shim-pinned Z3 4.15.8/4.16.0 | B | Rebuilt by hand: GHC exits 1 for everything: two-pass compile + message-class parse; `--json` in plugin mode is the highest-leverage unknown | No native rlimit, a wrapper shim with cumulative per-module Z3 budget instead; solver `unknown` must be reclassified TIMEOUT from the shim log | LH test suite (BSD-3); benchmark suites per-suite allowlist ONLY (GPL hmatrix is vendored beside them under `tests/benchmarks/`) | Three contract pillars (taxonomy, budget, vacuity) all custom; full GHC pipeline per variant |
+| Whiley | wyc 0.10.18 + wyboogie 0.4.8 (`--noverify`) → raw Boogie 3.5.7 `/rlimit` + Z3 4.14.1 | B | Five-way from three stages + stdout regex: Boogie exits 0 on every outcome incl. parse errors; `/smoke` for VACUOUS, Boogie-level havoc for weak specs | Same substrate as Dafny (Boogie rlimit + PROVER_PATH), measured stable | Whiley2Boogie tests (Apache-2.0, ~1409 verifying programs); STD.wy is Apache-2.0 (dossier wrong) | Frontend dormant since 2022: any bug is fork-and-own; hundreds of pairs, not thousands |
 
 ### 7.2 Rollout order: COMPLETE for tier A
 
@@ -105,26 +105,26 @@ Whiley (proven, low ceiling, Whiley's frontend unmaintained).
 
 What `dafny_verify.py` + `dafny_pairs.py` generalize to. One module per language, stdlib-only, importable by both the system Python and `.venv-train` (the dataset_gate rule). Each adapter must supply:
 
-- **`Outcome`** — the five core outcomes plus `TOOL_ERROR`, extended only by measurement (Lean/Agda add `INCOMPLETE` for holes; SPARK may separate flow-analysis failures). Invariants: `ok=True` only for VERIFIED; TIMEOUT (including deterministic resource-out) is never folded into REFUTED; any unlisted diagnostic is TOOL_ERROR, never evidence.
-- **`toolchain_fingerprint(budget) -> dict`** — sha256 of every binary in the verdict path (frontend, solver(s), and runtimes where present: JVM, dotnet, GHC), pinned library identity (stdlib commit, `.vo`/`.agdai`/olean cache), the budget, and the full flag list. Hardening flags (`--report_assumes error`, `-wp-smoke-tests`, `--safe`, `--warn-contradictory-assumptions`) live in the fingerprint; a run without them is a different, weaker instrument.
-- **`verify_source(source, budget) -> Result`** / **`verify_path(...)`** — fresh temp dir per candidate, always: this one pattern defeats every cache trap found across the nine (Dafny obj reuse, gnatprove sessions, F* `.checked` digest hits, GHC recompilation avoidance, Agda `.agdai`). Classification constants cite measurements in the docstring, per house discipline.
-- **`flake_check(source, n=3, budget) -> dict`** — n independent runs, verdict distribution. Mandatory before trusting any single verdict; mandatory cross-platform for near-budget pairs (heartbeat/step counts drift across arch).
-- **`pair_verdict(chosen, rejected, budget) -> dict`** — chosen must be VERIFIED (never vacuous), rejected genuinely REFUTED. Refuses rejected-that-verifies, MALFORMED-as-rejected, and any half containing the language's trust holes (`assume`/`admit`/`magic`, `pragma Assume`, `postulate`, `Admitted`, `sorry`, `external_body`, option-pragma smuggling) — counted, not silently dropped.
-- **`spec_strength(source, budget) -> dict`** — the weak-spec oracle where a body/spec split exists (Dafny havoc, SPARK `Import` function, F* `assume val` havoc, Verus `external_body` havoc, WP `any_int`, Boogie-level `havoc` for Whiley). Where the statement is the spec (Lean/Rocq/Agda) it is replaced by signature pinning plus trivial-arsenal/exfalso probes. Either way the function exists and reports weak/adequate/unchecked — silence is not a pass.
+- **`Outcome`**: the five core outcomes plus `TOOL_ERROR`, extended only by measurement (Lean/Agda add `INCOMPLETE` for holes; SPARK may separate flow-analysis failures). Invariants: `ok=True` only for VERIFIED; TIMEOUT (including deterministic resource-out) is never folded into REFUTED; any unlisted diagnostic is TOOL_ERROR, never evidence.
+- **`toolchain_fingerprint(budget) -> dict`**: sha256 of every binary in the verdict path (frontend, solver(s), and runtimes where present: JVM, dotnet, GHC), pinned library identity (stdlib commit, `.vo`/`.agdai`/olean cache), the budget, and the full flag list. Hardening flags (`--report_assumes error`, `-wp-smoke-tests`, `--safe`, `--warn-contradictory-assumptions`) live in the fingerprint; a run without them is a different, weaker instrument.
+- **`verify_source(source, budget) -> Result`** / **`verify_path(...)`**: fresh temp dir per candidate, always: this one pattern defeats every cache trap found across the nine (Dafny obj reuse, gnatprove sessions, F* `.checked` digest hits, GHC recompilation avoidance, Agda `.agdai`). Classification constants cite measurements in the docstring, per house discipline.
+- **`flake_check(source, n=3, budget) -> dict`**: n independent runs, verdict distribution. Mandatory before trusting any single verdict; mandatory cross-platform for near-budget pairs (heartbeat/step counts drift across arch).
+- **`pair_verdict(chosen, rejected, budget) -> dict`**: chosen must be VERIFIED (never vacuous), rejected genuinely REFUTED. Refuses rejected-that-verifies, MALFORMED-as-rejected, and any half containing the language's trust holes (`assume`/`admit`/`magic`, `pragma Assume`, `postulate`, `Admitted`, `sorry`, `external_body`, option-pragma smuggling), counted, not silently dropped.
+- **`spec_strength(source, budget) -> dict`**: the weak-spec oracle where a body/spec split exists (Dafny havoc, SPARK `Import` function, F* `assume val` havoc, Verus `external_body` havoc, WP `any_int`, Boogie-level `havoc` for Whiley). Where the statement is the spec (Lean/Rocq/Agda) it is replaced by signature pinning plus trivial-arsenal/exfalso probes. Either way the function exists and reports weak/adequate/unchecked: silence is not a pass.
 - **Pairs side** (`verifiers/<lang>_pairs.py`): `find_hints` with the language's ablation unit (whole line for Dafny/F*/Verus/LH/SPARK pragmas; period-terminated sentence for Rocq; step/clause/rewrite for Agda; tactic line or simp-list element for Lean), `drop_unit`, `pairs_from_file`, `subset_pairs_from_file` with budget accounting, `generate`/`write_jsonl`.
 
 Acceptance rule for any new adapter: the language's measured probe matrix becomes its unit-test suite, and the survivor rate (the 26.9% analogue) is re-measured on that language's corpus before a single pair is minted. The Dafny numbers do not carry across; nothing is projected from them.
 
 ### 7.4 Not worth doing
 
-- **Prusti.** Master and releases frozen since 2024-03, pinned to a 2023 nightly rustc, JVM+Viper stack. Verus wins on every axis. If Verus ever stalls, creusot/Kani need their own dossiers (Kani is bounded model checking — different verdict semantics, not a drop-in).
-- **WyTP** (Whiley's native prover) — dead since 2020/2021. Boogie is the only path.
-- **Kimina Lean Server as-is** — stale (~7 months), default-pinned to a Lean that predates the 2026 kernel soundness fixes. Drive leanprover-community/repl directly or fork-and-validate.
+- **Prusti.** Master and releases frozen since 2024-03, pinned to a 2023 nightly rustc, JVM+Viper stack. Verus wins on every axis. If Verus ever stalls, creusot/Kani need their own dossiers (Kani is bounded model checking: different verdict semantics, not a drop-in).
+- **WyTP** (Whiley's native prover), dead since 2020/2021. Boogie is the only path.
+- **Kimina Lean Server as-is**: stale (~7 months), default-pinned to a Lean that predates the 2026 kernel soundness fixes. Drive leanprover-community/repl directly or fork-and-validate.
 - **Exit-code-only classifiers, anywhere.** Dafny is the only language of the ten with a discriminating exit-code split. Every other adapter that shortcuts to exit codes silently merges MALFORMED into REFUTED or vacuous into VERIFIED. This is a standing code-review refusal on every port.
-- **Statement-mutation pairs in Lean/Agda sold as proof pairs.** A mutated statement with a kept proof is an autoformalization/spec-writing pair — a different task. Proof-side mutations (lemma swap, rw flip, step deletion) mint the proof pairs.
+- **Statement-mutation pairs in Lean/Agda sold as proof pairs.** A mutated statement with a kept proof is an autoformalization/spec-writing pair, a different task. Proof-side mutations (lemma swap, rw flip, step deletion) mint the proof pairs.
 - **Directory-glob corpus ingestion.** Twice the hostile checks caught permissive suites sitting beside GPL/unlicensed material in the same tree (LH `tests/benchmarks/` vendors GPL hmatrix; Whiley's WyBench is unlicensed). Per-suite allowlists only.
 - **Known-bad flags:** F* `--proof_recovery` and `--n_cores >1` (the unsoundness issue closed in 2019, but there is no reward-path upside); SPARK `--level` ever and `--replay` in the gate; Frama-C defaults unpinned (2s wall timeouts, smoke off, prover auto-detect); Verus `--num-threads` unpinned; opam `alt-ergo` 2.6.3 (non-commercial license on the pipeline itself).
-- **Nix, apt, or anything needing sudo on the train box.** Every recommended install above is a pinned tarball/zip, rustup, elan, ghcup, or opam `--disable-sandboxing` into `~/.local` — kept away from the provenance venv per the standing train-box rule.
+- **Nix, apt, or anything needing sudo on the train box.** Every recommended install above is a pinned tarball/zip, rustup, elan, ghcup, or opam `--disable-sandboxing` into `~/.local`, kept away from the provenance venv per the standing train-box rule.
 
 ### 7.5 Licensing appendix
 
@@ -140,7 +140,7 @@ Standing rule: shippable means permissive. Non-permissive corpora are usable loc
 | SPARKlib | Apache-2.0 |
 | spark_unbound | MIT |
 | Whiley2Boogie tests; WhileyCompiler tests | Apache-2.0 |
-| STD.wy (corrected — LICENSE in-tree since 2022) | Apache-2.0 |
+| STD.wy (corrected: LICENSE in-tree since 2022) | Apache-2.0 |
 | ACSL by Example | MIT |
 | ANSSI x509-parser (BSD arm; archived, porting cost) | dual BSD/GPL-2.0 |
 | Contiki-NG verified modules (per-fork annotation check) | BSD-3-Clause |
@@ -160,18 +160,18 @@ Standing rule: shippable means permissive. Non-permissive corpora are usable loc
 
 | Corpus | Why |
 |---|---|
-| FStarLang/pulse | No license file detected — all-rights-reserved until clarified |
+| FStarLang/pulse | No license file detected: all-rights-reserved until clarified |
 | mitls-fstar | Custom license, SPDX NOASSERTION |
-| AdaCore/spark2014 testsuite (4,422 tests) | GPL-3.0 — the volume corpus, local calibration only |
+| AdaCore/spark2014 testsuite (4,422 tests) | GPL-3.0 (the volume corpus, local calibration only) |
 | spark-by-example | Unlicensed |
-| Marmaragan; experimental-agentic-verified-software | Mixed/unverified terms — methodological references only |
-| WyBench | Unlicensed — excluded even locally so no pair can trace to it |
+| Marmaragan; experimental-agentic-verified-software | Mixed/unverified terms (methodological references only) |
+| WyBench | Unlicensed: excluded even locally so no pair can trace to it |
 | Frama-C WP regression suite (source tarball) | LGPL-2.1 |
 | VerKer | GPL-3.0 (and AstraVer-targeted) |
-| LH `tests/benchmarks/` outside the six allowlisted suites (hmatrix, nofib, xmonad, …) | GPL and mixed vendored code — never glob the directory |
+| LH `tests/benchmarks/` outside the six allowlisted suites (hmatrix, nofib, xmonad, …) | GPL and mixed vendored code: never glob the directory |
 | Rocq standard library | LGPL-2.1-only |
-| CompCert | INRIA non-commercial — the exact CC BY-NC analogue |
-| math-comp/analysis (corrected — dossier wrongly grouped it with CeCILL-B siblings) | CeCILL-C (weak copyleft) |
+| CompCert | INRIA non-commercial (the exact CC BY-NC analogue) |
+| math-comp/analysis (corrected: dossier wrongly grouped it with CeCILL-B siblings) | CeCILL-C (weak copyleft) |
 | Software Foundations | Admitted-riddled skeletons + authors' do-not-post-solutions request |
 | the1lab/1lab | AGPL-3.0 |
 
@@ -184,29 +184,29 @@ impersonates a plan; nothing here reorders NOW or NEXT.
 
 - **The provable-output model.** The training loop's reward becomes "a proof
   kernel accepted it," across every language WS-7 admits. What this makes
-  provable is each emitted artifact — the model itself is not thereby a proven
+  provable is each emitted artifact: the model itself is not thereby a proven
   object; proving properties of the network is a different research program,
   and the writing never blurs the two.
-- **t.** One spec interlingua over the WS-7 adapters — write a task once, lower
+- **t.** One spec interlingua over the WS-7 adapters: write a task once, lower
   it to Dafny / F* / SPARK / ACSL / Verus / LH, collect N independent kernel
   verdicts; cross-verifier disagreement becomes an instrument finding, this
   program's own genre. Prior art: Why3 (one spec language, many provers) and
   Viper (an intermediate verification language many frontends target). Trust
-  path if t ever grows its own checker: CakeML-style — the checker is verified
+  path if t ever grows its own checker: CakeML-style, the checker is verified
   inside an established kernel (Rocq or Lean). A homemade language certifying a
   homemade system is two unaudited instruments signing each other's receipts,
   and it is refused here in advance.
 - **The reproducible substrate.** Nix/Guix closures are the receipt discipline
-  applied to the operating system — a content-addressed hash of the entire
+  applied to the operating system: a content-addressed hash of the entire
   dependency graph, and D-3's version-matrix cells become one-line derivations.
   Guix's full-source bootstrap is the serious answer to trusting-trust. Slots
   behind WS-4; the receipts learn to record a closure hash.
 - **An OS in t.** The measured price of one verified microkernel with mature
-  tools and a team: seL4 — 8,700 lines of C, ~200,000 lines of proof, ~20
-  person-years. It stays on the horizon until there is a team. The
+  tools and a team: seL4 (8,700 lines of C, ~200,000 lines of proof, ~20
+  person-years). It stays on the horizon until there is a team. The
   LFS-with-receipts build begun 2026-08-31 (Lima VM on the M5 Pro; every
   tarball sha256-manifested, every build command book-extracted and logged) is
-  the pedagogical rung under this — a fully witnessed substrate, not a
+  the pedagogical rung under this: a fully witnessed substrate, not a
   verified one, and labeled accordingly.
 
 ---
@@ -245,7 +245,7 @@ claims move (17.3); going public a second time is Treston's call at the
 
 ---
 
-## WS-10: what t needs next — the audit's bill (opened 2026-09-01)
+## WS-10: what t needs next, the audit's bill (opened 2026-09-01)
 
 Everything here exists because something was *measured*, not because it
 seemed like a good idea. Ordered by how badly it hurts the central claim.
@@ -276,15 +276,15 @@ lowerings.
 Four adapters (verus, spark, framac, fstar) remain porous, and the reason is
 now understood well enough to state as architecture: **an adapter that
 re-parses a rich source language with regexes cannot be sound.** The
-measured evidence is brutal — a Verus probe was defeated by a char literal
+measured evidence is brutal: a Verus probe was defeated by a char literal
 opening a phantom string, by a raw identifier `r#try`, and by a parameter
 named `recommends`; its own canary check silently discarded a correct
 vacuity reading; a Frama-C probe was suppressible by a sentinel the source
 controls.
 
 The harness *generates* the lowered file and therefore holds its AST. The
-vacuity probe must be emitted there — a third artifact per task alongside
-real and twin — so the adapter only ever runs what it was handed. That
+vacuity probe must be emitted there (a third artifact per task alongside
+real and twin), so the adapter only ever runs what it was handed. That
 sidesteps every parser hole at once. Defence against arbitrary hostile
 source stays a bounded, honestly-stated claim: the adapters refuse the known
 verify-anything constructs; they are not a sandbox.
@@ -296,7 +296,7 @@ program. `t/interp.py` now lets the harness *require a witness input where
 real and twin differ* before a twin is accepted, and new operators
 (off-by-one, comparison flip, guard drop, wrong-variable) exist to retry
 when collapse-if is degenerate. What remains is to re-measure the strength
-statistic on a fresh corpus and publish it beside the agreement table —
+statistic on a fresh corpus and publish it beside the agreement table:
 "the flip was measured" is only a claim once the twin is known to differ.
 
 ### 10.4 Grow the fragment, gate by gate
@@ -305,15 +305,15 @@ t is still integers, sequences, loops with invariants, and recursion via
 spec funs. No heap, no floats, no concurrency. Each gate opens the same way
 this one did: measure the taxonomy, land the lowering, have an adversarial
 skeptic reproduce the flip table from clean scratch, and only then claim the
-column. Floats are the most interesting next gate and the most dangerous —
+column. Floats are the most interesting next gate and the most dangerous:
 every kernel's float model differs, which makes it the natural home for the
 next cross-kernel disagreement finding.
 
 ### 10.5 The prove layer
 
 `tup`'s prove layer is still unbuilt: the seven kernels run on the host, not
-inside the distro. Building it puts the whole chain — spec, lowering,
-kernel, libc, compiler — under one receipt discipline, and is the point at
+inside the distro. Building it puts the whole chain (spec, lowering,
+kernel, libc, compiler) under one receipt discipline, and is the point at
 which "a proof is only as good as the machine that checked it" stops being a
 slogan in this repository.
 
@@ -408,7 +408,7 @@ scope. Requires clauses owe definedness unconditionally, a task whose
 requires is undefined at an admissible input is DEFECTIVE, and six of
 seven lowerings surface it; framac is the recorded gap.
 
-## WS-11: PROPOSED — the package-manager question, measured (opened 2026-09-02)
+## WS-11: PROPOSED, the package-manager question, measured (opened 2026-09-02)
 
 0.1 ships no package manager by design, and `tup/overrides/ch08/pkgmgt.sh`
 records the decision rather than leaving it to be inferred. The audit in #17
@@ -423,7 +423,7 @@ proposes is a way to answer the question with numbers instead of taste.
 
 ### 11.1 Ship pairs, not a menu
 
-The tempting version — one image per package manager, let people pick — is
+The tempting version (one image per package manager, let people pick) is
 refused here in advance. N images means N builds, N receipt sets, and N
 witness burdens, in a project whose README already enumerates what is
 unwitnessed; multiplying the surface would grow that list, not shrink it.
@@ -433,7 +433,7 @@ The useful version is the same move `t` already makes. Every variant is built
 **twice**: once **raw**, with no package manager, and once **managed**. The
 raw build is the control, the managed build is the treatment, `inventory.sh`
 diffs the two, and **the diff is the receipt**. This is the twin discipline
-applied to the distro half — the real artifact beside a deliberately altered
+applied to the distro half: the real artifact beside a deliberately altered
 one, where the measured difference is the finding. A package manager whose
 cost cannot be shown as a file-level diff does not ship.
 
@@ -448,20 +448,20 @@ whose entire purpose is inventory-before → install → inventory-after.
 
 ### 11.2 The raw image is the reference, per variant
 
-**Every variant keeps a no-package-manager build, permanently** — not as a
+**Every variant keeps a no-package-manager build, permanently**, not as a
 transitional state before a "real" one arrives. Raw is the reference build:
 it is what the completeness claim is about, it is what a managed build is
 diffed against, and it is the only configuration where "the filesystem is
 the manifest" is true without qualification. If a variant has no raw twin,
 its managed twin has nothing to be measured against and the number is gone.
 
-### 11.3 Candidates per variant — all UNMEASURED
+### 11.3 Candidates per variant (all UNMEASURED)
 
 | Variant | Raw (reference) | Candidate manager | Why |
 |---|---|---|---|
 | **base** | ships raw, always | *none* | The control. Adding one here is what 0.1 already refused, and the refusal is the point. |
 | **agent** | raw twin | `xbps` or `apk` | The layer needs the small userland an agent actually reaches for (git, curl, ripgrep, jq) and needs it to keep moving. Both are small, daemonless, single-binary, and FHS-shaped. |
-| **train** | raw twin | `micromamba` / `uv`, **user-level** | Nobody compiles PyTorch or a CUDA stack. This is already the house practice — WS-7's install rules and the `qemubuild` micromamba env both work this way. A *system* package manager is the wrong instrument here. |
+| **train** | raw twin | `micromamba` / `uv`, **user-level** | Nobody compiles PyTorch or a CUDA stack. This is already the house practice: WS-7's install rules and the `qemubuild` micromamba env both work this way. A *system* package manager is the wrong instrument here. |
 | **prove** | raw twin | toolchain-native (`opam`, `elan`, `rustup`) | Every kernel ships its own installer, and WS-10.5 already assumes them. A system manager would be a second, worse copy of seven working ones. |
 | **infer** | raw twin | *none* | llama.cpp / vLLM are a static binary plus weights. Ship as a layer; a package manager buys nothing. |
 
@@ -470,9 +470,9 @@ Two constraints that bound the whole table:
 - **Nix and Guix are not variants of this.** They replace the filesystem
   architecture (`/gnu/store`, `/nix/store`, no conventional `/usr/lib`), so
   they cannot appear as peers of `xbps` in a swap-one-component matrix.
-  Their place is already recorded under "The far field" — closure hashes as
+  Their place is already recorded under "The far field" (closure hashes as
   the receipt discipline machine-enforced, Guix's full-source bootstrap as
-  the serious answer to trusting-trust — and that entry stays where it is,
+  the serious answer to trusting-trust), and that entry stays where it is,
   slotted behind WS-4, with the receipts learning to record a closure hash.
   A Guix-based tup is a different operating system, and should be costed as
   one if it is ever wanted.
@@ -480,7 +480,7 @@ Two constraints that bound the whole table:
 - **No foreign binary repository, for any candidate.** Every manager above is
   proposed as a *local package format and install tracker*, never pointed at
   an upstream repo. Foreign binaries are built against a different glibc, and
-  the manager's database starts empty — it believes it owns nothing and knows
+  the manager's database starts empty: it believes it owns nothing and knows
   nothing about the 70,146 files already on disk, so the first dependency
   chain overwrites base-system files with no record. That is precisely the
   unaccountable pile the README opens by refusing, and it would be reached in
@@ -493,14 +493,14 @@ being the obvious one: of its build dependencies, `meson`, `ninja`, `gcc`,
 `make`, `pkg-config`, `python3` and `openssl` are all present in the 0.1
 image, but **`libarchive`, `curl`, `gpgme`, `libassuan` and `libgpg-error`
 are all absent** (checked against `INVENTORY-RELEASE-0.1.txt`). So pacman's
-row in the table would include an entire BLFS dependency chain — including
+row in the table would include an entire BLFS dependency chain, including
 `curl`, which tup deliberately does not ship. That chain is arguably the most
 interesting number in the table, and it is a reason to measure pacman, not a
 reason to adopt it.
 
 Also measured and relevant: `/usr/lib/locale/locale-archive` is 226 MiB and
 kernel modules are 312 MB (both per `INVENTORY-RELEASE-0.1.txt`), against a
-2.3 GB image — so "what does a component cost" is already a question with
+2.3 GB image, so "what does a component cost" is already a question with
 large answers on this disk, and the instrument to answer it exists.
 
 UNMEASURED, and the honest first task: build one `tup/layers/pkg-<name>/`
@@ -1284,14 +1284,35 @@ deliberate and of four named kinds, whose own counts sum to 18, not 21 (a
 python count over the tree tonight confirms the shortfall; where the other
 3 belong is unwitnessed, no artifact names them): table and receipt TITLES
 whose bytes land in a committed receipt (5); the EMPTY-CELL marker, a data
-glyph saying "no reading here" (5); `test_lift_report.py`'s own `assert
-"—" not in md_text` (1); and seven that sit inside heredocs writing
+glyph saying "no reading here" (5); `test_lift_report.py`'s own assert
+against a bare em-dash character (1, at the time still a literal glyph in
+the source, see the 2026-09-11 note below); and seven that sit inside heredocs writing
 `/etc/fstab`, `/etc/resolv.conf` and `grub.cfg` INTO the image, where
 editing prose would change every inventory hash and silently invalidate
 the boot witness. `tup/receipts/*.md` were left
 untouched for the same reason: a receipt is evidence, and .gitattributes says
 to hand it back exactly as committed. Reprinting any of these is a decision
 to take on purpose.
+
+17.3 follow-up, measured 2026-09-11 by `grep -rn --include='*.md'
+--include='*.py' --include='*.sh'` over the tree: the 54 sentence-level
+dashes still in this file (this section's own prior wording included) are
+repaired below by the same sentence-by-sentence rule, plus one further
+prose sentence each in `README.md` and `t/GRADER.md`. Of the 21 above,
+`test_lift_report.py`'s assert (1 of the 21) is retired outright: the
+literal em-dash glyph in `assert "..." not in md_text` is now a
+`\u2014` unicode escape, checking for the identical character with no
+bare em-dash byte left in the file. Two of the five EMPTY-CELL emitters
+(`t/run_par.py`, `t/run_all.py`; `t/boundary_probe.py`'s own emitter is a
+third, outside the 12.8 count) are escaped the same way; the glyph they
+print into a generated table is unchanged, only the source literal moved
+to the `\u2014` escape. `t/run_par.py`'s and
+`t/run_all.py`'s title format strings, counted among the TITLES group,
+now print a comma; already-committed tables (`t/AGREEMENT.md` and its
+siblings) keep their old em-dash title until the next matrix run
+regenerates them. What is open, by name: the EMPTY-CELL and TITLE bytes
+already committed inside generated `.md` tables, the seven heredoc lines
+writing image files, and where the earlier unwitnessed 3 belong.
 
 `forge/` and `locallm/` were out of scope from 2026-09-02 to 2026-09-09; Treston
 brought them back on 2026-09-09 as parts of one project ("they just got left

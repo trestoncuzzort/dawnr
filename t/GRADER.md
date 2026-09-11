@@ -335,8 +335,9 @@ convince this kernel: does not count), `timeout / refuted` (the real
 lowering ran out of budget: does not count even though the twin did
 refute), `no-twin / no-twin` (the ladder found nothing to measure),
 `abstain / abstain` (this backend has no lowering for something the task
-uses). A `(FLAKED)` suffix means the three flake runs disagreed; a `—`
-means that kernel was not probed or was excluded by `--kernels`. Below
+uses). A `(FLAKED)` suffix means the three flake runs disagreed; a bare
+em dash (Unicode U+2014) means that kernel was not probed or was excluded
+by `--kernels`. Below
 the table, "Kernels present: N of 7 (...)" names which kernels answered
 at all, and the Backends block gives each one's exact version string, the
 same strings tabulated above.

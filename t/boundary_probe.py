@@ -927,7 +927,7 @@ def report(tasks, rows, cols, per, shared, majority, present, decided):
         for b in present:
             c = cells.get(b)
             if c is None:
-                row.append("—")
+                row.append("\u2014")
             else:
                 row.append(c[0] + ("" if c[1] else " (FLAKED)"))
         w("| " + " | ".join(row) + " |")

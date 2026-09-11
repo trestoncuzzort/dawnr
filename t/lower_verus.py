@@ -986,6 +986,7 @@ if str(HERE) not in sys.path:
 
 import harness                                   # noqa: E402
 import interp                                    # noqa: E402
+import names                                     # noqa: E402
 from verifiers import verus as verus_backend     # noqa: E402
 
 # DIVISION AND MODULO (2026-09-08, SPEC.md "Division and modulo (v1)").
@@ -3656,6 +3657,19 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
 # appends the refutation certificate block (see the section above).
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     global _SUFFIX_INT
+    # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
+    # collides with a Verus/Rust reserved word, before either lowering
+    # path renders anything -- see names.py's module docstring. `task` is
+    # returned unchanged (`is`) when nothing needs a rename, which is
+    # every previously-committed task. `_certificate` below runs on this
+    # SAME renamed task/body, with `witness`'s own keys renamed to match
+    # (`names.remap_witness`) -- see that function's own docstring.
+    if body is not task.get("body"):
+        task = {**task, "body": body}
+    task, renames = names.sanitize(task, names.KEYWORDS["verus"],
+                                    uppercase_ok=True)
+    body = task["body"]
+    witness = names.remap_witness(witness, renames)
     if task.get("t", 0) == 0:
         # v0 used to emit bare literals to keep its output byte-identical to
         # an earlier baseline. That is unsound as an emission rule: Verus
@@ -3683,6 +3697,9 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         cert = _certificate(task, body, witness)
         if cert:
             src += cert
+    rc = names.rename_comment(renames)
+    if rc:
+        src += f"\n// {rc}\n"
     return src
 
 

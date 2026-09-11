@@ -172,7 +172,7 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
     return rows, wits, all_ok
 
 
-def format_table(cols, rows, tasks, out_dir: Path) -> str:
+def format_table(cols, rows, tasks, out_dir: Path, wits: dict | None = None) -> str:
     """The AGREEMENT.md text, exactly as main() has always built it: a UTC
     timestamp header, the cell-grammar line, the `| task | ... |` header and
     one row per task in `rows`'s iteration order, the kernels-present line,
@@ -183,12 +183,24 @@ def format_table(cols, rows, tasks, out_dir: Path) -> str:
     the inline form it replaces (modulo the timestamp, which is
     `datetime.now` at call time either way), so grade.py's table.md is in
     AGREEMENT.md's exact format by construction, not by a second writer
-    kept in sync by hand."""
-    lines = [f"# t cross-kernel agreement — "
+    kept in sync by hand.
+
+    `wits` (task name -> its measured twin witness, `lower_and_dispatch`'s
+    own return value) is what tells a real-VERIFIED/twin-VERIFIED cell
+    "decorative" from "unsound" (SPEC.md "The twins", 2026-09-11, ROADMAP
+    13.3): omitted or missing an entry, such a cell still reads
+    `verified / decorative` (harness.decorative_kind's own conservative
+    default for a witness it cannot see), never `verified / verified`."""
+    wits = wits or {}
+    lines = [f"# t cross-kernel agreement, "
              f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",
              "",
              "Cell = real outcome / twin outcome. Agreement means "
-             "`verified / refuted` in every present column.",
+             "`verified / refuted` in every present column. A real-VERIFIED, "
+             "twin-VERIFIED cell reads `verified / decorative` (the spec "
+             "cannot tell real and twin apart) or `verified / unsound` (the "
+             "twin's own measured witness says a sound kernel must refute "
+             "it, and this one did not); neither counts as agreement.",
              ""]
     header = "| task | " + " | ".join(b for b, _ in cols) + " |"
     lines += [header, "|" + "---|" * (len(cols) + 1)]
@@ -198,8 +210,12 @@ def format_table(cols, rows, tasks, out_dir: Path) -> str:
         row = [tname]
         for bname, _ in cols:
             c = cells.get(bname)
-            row.append("—" if c is None else
-                       f"{c[0]} / {c[1]}" + ("" if c[2] else " (FLAKED)"))
+            if c is None:
+                row.append("\u2014")
+                continue
+            kind = harness.decorative_kind(c[0], c[1], wits.get(tname))
+            twin_text = kind if kind is not None else c[1]
+            row.append(f"{c[0]} / {twin_text}" + ("" if c[2] else " (FLAKED)"))
         lines.append("| " + " | ".join(row) + " |")
         cell_rows[tname] = dict(zip(col_names, row[1:]))
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
@@ -274,7 +290,7 @@ def main() -> int:
               "AGREEMENT.md not written.")
         return 2
 
-    text = format_table(cols, rows, tasks, harness.OUT)
+    text = format_table(cols, rows, tasks, harness.OUT, wits)
     args.table.write_text(text, encoding="utf-8", newline="\n")
     print(f"\n{len(present_names)} kernels, {len(tasks)} tasks: "
           f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, a finding, see ' + str(args.table)}")

@@ -1549,6 +1549,7 @@ if str(HERE) not in sys.path:
 
 import harness                                 # noqa: E402
 import interp                                  # noqa: E402
+import names as t_names                        # noqa: E402
 from verifiers import rocq as rocq_backend     # noqa: E402
 
 # --------------------------------------------------------------------------
@@ -7243,9 +7244,46 @@ def _v0_cert(task: dict, body: list, witness: dict):
 # sites pass it; when a certificate can ground it, the twin file carries
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
-    if task.get("t") == 0:
-        return lower_v0(task, body, witness=witness)
-    return lower_v1(task, body, witness=witness)
+    # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
+    # collides with a Rocq reserved word, before `lower_v0`/`lower_v1`
+    # ever see the task -- see names.py's module docstring. The rename
+    # prefix is `tn_`, not the other six lowerings' `t_`: lower_rocq's
+    # OWN `_ck` (RESERVED, above) already refuses any identifier starting
+    # with `t_` outright, unconditionally, as that lowering's own
+    # certificate/tactic namespace (`t_w_*`, `t_H`, `t_dis`, ...) -- a
+    # `t_`-prefixed rename would collide with that same backstop the
+    # moment `_ck` next saw it, exactly the failure this pass exists to
+    # avoid. `task`/`body` are returned unchanged (`is`) when nothing
+    # needs a rename, which is every previously-committed task.
+    #
+    # `_v0_cert`/`_try_cert_v1` (below `lower_v0`/`lower_v1`) read the
+    # witness `w` against this SAME renamed task/body, `w`'s own keys
+    # already renamed to match (`t_names.remap_witness`) -- both build
+    # Coq LOCALS (`set`/`pose`) spelled after the witness's own keys, so,
+    # exactly like lower_framac.py (see `remap_witness`'s own docstring,
+    # MEASURED there), they need the renamed spelling, not the original
+    # one. The certificate path is tried BEFORE `lower_v0`/`lower_v1`
+    # (mirroring their own witness-first early return) rather than
+    # through them: `lower_v0`/`lower_v1` are then called with
+    # `witness=None` so they never redo that attempt.
+    if body is not task.get("body"):
+        task = {**task, "body": body}
+    task, renames = t_names.sanitize(task, t_names.KEYWORDS["rocq"],
+                                     uppercase_ok=True, prefix="tn_")
+    body = task["body"]
+    witness = t_names.remap_witness(witness, renames)
+    rc = t_names.rename_comment(renames)
+    if witness is not None:
+        cert = (_v0_cert(task, body, witness)
+               if task.get("t") == 0 else
+               _try_cert_v1(task, body, witness))
+        if cert is not None:
+            return cert + (f"\n(* {rc} *)\n" if rc else "")
+    src = (lower_v0(task, body, witness=None) if task.get("t") == 0 else
+          lower_v1(task, body, witness=None))
+    if rc:
+        src += f"\n(* {rc} *)\n"
+    return src
 
 
 if __name__ == "__main__":

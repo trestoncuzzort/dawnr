@@ -1906,6 +1906,7 @@ if str(HERE) not in sys.path:
 
 import harness                                 # noqa: E402
 import interp                                  # noqa: E402
+import names                                   # noqa: E402
 from verifiers import lean as lean_backend     # noqa: E402
 
 CMP_OPS = {"<": "<", "<=": "≤", ">": ">", ">=": "≥"}
@@ -5514,12 +5515,32 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
 # lowering never receives one. When present and certificatable it adds the
 # t_refutation_certificate theorem, the only door to a lean REFUTED.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
+    # collides with a Lean 4 reserved word, before `Lower` ever sees the
+    # task -- see names.py's module docstring. `task` is returned
+    # unchanged (`is`) when nothing needs a rename, which is every
+    # previously-committed task, so this costs one extra scan and changes
+    # nothing downstream for them. `certificate` below reads the witness
+    # `w` against this SAME renamed `self.task`/`self.body`, `w`'s own
+    # keys already renamed to match (`names.remap_witness`) -- see that
+    # function's own docstring for why the renamed spelling, not the
+    # original one, is what a certificate that declares its own locals
+    # needs.
+    if body is not task.get("body"):
+        task = {**task, "body": body}
+    task, renames = names.sanitize(task, names.KEYWORDS["lean"],
+                                    uppercase_ok=True)
+    body = task["body"]
+    witness = names.remap_witness(witness, renames)
     lw = Lower(task, body)
     src = lw.lower()
     if witness is not None:
         cert = lw.certificate(witness)
         if cert is not None:
             src += "\n" + cert
+    rc = names.rename_comment(renames)
+    if rc:
+        src += f"\n-- {rc}\n"
     return src
 
 

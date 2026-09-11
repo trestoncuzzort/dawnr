@@ -1079,6 +1079,7 @@ if str(HERE) not in sys.path:
 
 import harness                                   # noqa: E402
 import lower_verus                               # noqa: E402
+import names                                     # noqa: E402
 from verifiers import fstar as fstar_backend     # noqa: E402
 
 TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int"}
@@ -1189,6 +1190,17 @@ RESERVED = {
     "new", "noeq", "not", "of", "open", "opaque", "private", "rec",
     "requires", "returns", "then", "total", "true", "try", "type", "unfold",
     "unfoldable", "val", "when", "with",
+    # NAMES (2026-09-11, ROADMAP 13.2): not F* keywords, but the two BARE
+    # built-in type names `_tystr`/`TY` ever emit for a t param/return
+    # (`seq` is always qualified, `Seq.seq int`, never bare -- see `TY`'s
+    # own dict). MEASURED (probe_names_framac's `int` param, run through
+    # this file, not just lower_framac.py's own reserved set): a t
+    # parameter named `int` shadows the type `int` for the REST of the
+    # signature, so the NEXT parameter's own `: int` annotation parses as
+    # a reference to the just-shadowed VALUE instead of the primitive
+    # type -- "Expected expression of type Type, got expression int of
+    # type Prims.int", a real malformed, not a rename-mechanism bug.
+    "int", "bool",
 }
 
 
@@ -1319,100 +1331,15 @@ def _needs_rename(name: str) -> bool:
     return name in RESERVED or not name[0].islower()
 
 
-def _declared_in(node) -> set[str]:
-    """Every LOCAL `var` declaration's name and quantifier bound `var`
-    inside an expression/statement tree -- the two `_ck` call sites besides
-    params/returns/spec_funs/the task's own name, which the caller already
-    holds directly and does not need this walk for."""
-    out: set[str] = set()
-    if isinstance(node, dict):
-        v = node.get("var")
-        if isinstance(v, dict) and "name" in v:
-            out.add(v["name"])
-        for kind in ("forall", "exists"):
-            q = node.get(kind)
-            if isinstance(q, dict) and "var" in q:
-                out.add(q["var"])
-        for val in node.values():
-            out |= _declared_in(val)
-    elif isinstance(node, list):
-        for val in node:
-            out |= _declared_in(val)
-    return out
-
-
-def _declared_bad_names(task: dict, body: list) -> list[str]:
-    """Every identifier `_ck` would refuse, declared anywhere in `task` or
-    `body` (the body passed to THIS `lower()` call -- the real body or a
-    twin's, whichever it is; a twin's structural mutations never introduce
-    a declaration the real body lacks, but scanning the one actually being
-    rendered rather than always `task["body"]` costs nothing and misses
-    nothing either way). Sorted so the resulting rename is deterministic
-    (stable across a real/twin pair of `lower()` calls, and across
-    repeated runs) rather than depending on dict/set iteration order."""
-    declared: set[str] = {task["name"]}
-    for p in task["params"]:
-        declared.add(p["name"])
-    for r in task["returns"]:
-        declared.add(r["name"])
-    for sf in task.get("spec_funs", []):
-        declared.add(sf["name"])
-        for p in sf["params"]:
-            declared.add(p["name"])
-        declared |= _declared_in(sf["body"])
-        if "decreases" in sf:
-            declared |= _declared_in(sf["decreases"])
-    declared |= _declared_in(task.get("requires", []))
-    declared |= _declared_in(task.get("ensures", []))
-    if "decreases" in task:
-        declared |= _declared_in(task["decreases"])
-    declared |= _declared_in(body)
-    return sorted(n for n in declared if _needs_rename(n))
-
-
-def _rename_walk(node, mapping: dict[str, str]):
-    """`node` with every identifier `mapping` renames substituted at
-    exactly the shapes listed in the module note above; see that note for
-    why this is a structural (shape-matched) rewrite and not a blind
-    string substitution."""
-    if isinstance(node, list):
-        return [_rename_walk(v, mapping) for v in node]
-    if not isinstance(node, dict):
-        return node
-    if "var" in node:
-        v = node["var"]
-        if isinstance(v, dict):
-            new_v = dict(v)
-            new_v["name"] = mapping.get(v["name"], v["name"])
-            if "init" in new_v:
-                new_v["init"] = _rename_walk(new_v["init"], mapping)
-            return {**node, "var": new_v}
-        return {**node, "var": mapping.get(v, v)}
-    if "assign" in node:
-        tgt, expr = node["assign"]
-        return {**node, "assign": [mapping.get(tgt, tgt),
-                                   _rename_walk(expr, mapping)]}
-    if "return" in node:
-        tgt, expr = node["return"]
-        return {**node, "return": [mapping.get(tgt, tgt),
-                                   _rename_walk(expr, mapping)]}
-    if "forall" in node or "exists" in node:
-        kind = "forall" if "forall" in node else "exists"
-        q = dict(node[kind])
-        q["var"] = mapping.get(q["var"], q["var"])
-        for k in ("lo", "hi", "body"):
-            if k in q:
-                q[k] = _rename_walk(q[k], mapping)
-        return {**node, kind: q}
-    if "call" in node:
-        c = dict(node["call"])
-        c["fun"] = mapping.get(c["fun"], c["fun"])
-        if "args" in c:
-            c["args"] = _rename_walk(c["args"], mapping)
-        return {**node, "call": c}
-    return {k: _rename_walk(v, mapping) for k, v in node.items()}
-
-
+# NAMES (2026-09-11, ROADMAP 13.2): `_declared_in`/`_declared_bad_names`/
+# `_rename_walk`, formerly defined here, are now names.py's kernel-
+# independent `_declared_in`/`_declared_names`/`_rename_walk` (ported
+# verbatim; see that file's own docstrings) -- every other lowering needs
+# the identical mechanism, not an F*-specific copy of it. `_rename_reserved`
+# below is now a thin wrapper over the shared `names.sanitize`, kept under
+# its old name so every call site and the dated notes above (2026-09-04,
+# 2026-09-10) still read correctly: fstar's OWN behaviour is unchanged,
+# only the mechanism producing it is shared.
 def _rename_reserved(task: dict, body: list) -> tuple[dict, list]:
     """(task, body) with every `_ck`-refused identifier replaced by a fresh
     `t_`-prefixed spelling (see the module note above), or the SAME objects
@@ -1420,43 +1347,19 @@ def _rename_reserved(task: dict, body: list) -> tuple[dict, list]:
     (task, body)`-style identity holds for every task with no keyword-
     colliding or uppercase-initial identifier, i.e. every previously-
     committed task: this pass costs one extra scan and changes NOTHING
-    downstream for them."""
-    bad = _declared_bad_names(task, body)
-    if not bad:
-        return task, body
-    used = _collect_names(task) | _collect_names(body)
-    mapping: dict[str, str] = {}
-    for n in bad:
-        cand = f"t_{n}"
-        if cand in used or cand in mapping.values():
-            k = 1
-            while f"{cand}{k}" in used or f"{cand}{k}" in mapping.values():
-                k += 1
-            cand = f"{cand}{k}"
-        mapping[n] = cand
-        used.add(cand)
+    downstream for them. A thin convenience over `_rename_reserved_map`
+    (below) for any caller that does not need the rename map itself."""
+    new_task, _mapping = _rename_reserved_map(task, body)
+    return new_task, new_task["body"]
 
-    def rn(n: str) -> str:
-        return mapping.get(n, n)
 
-    new_task = dict(task)
-    new_task["name"] = rn(task["name"])
-    new_task["params"] = [{**p, "name": rn(p["name"])} for p in task["params"]]
-    new_task["returns"] = [{**r, "name": rn(r["name"])} for r in task["returns"]]
-    new_task["spec_funs"] = [
-        {**sf, "name": rn(sf["name"]),
-         "params": [{**p, "name": rn(p["name"])} for p in sf["params"]],
-         "body": _rename_walk(sf["body"], mapping),
-         **({"decreases": _rename_walk(sf["decreases"], mapping)}
-            if "decreases" in sf else {})}
-        for sf in task.get("spec_funs", [])]
-    new_task["requires"] = _rename_walk(task.get("requires", []), mapping)
-    new_task["ensures"] = _rename_walk(task.get("ensures", []), mapping)
-    if "decreases" in task:
-        new_task["decreases"] = _rename_walk(task["decreases"], mapping)
-    new_task["body"] = _rename_walk(task["body"], mapping)
-    new_body = _rename_walk(body, mapping)
-    return new_task, new_body
+def _rename_reserved_map(task: dict, body: list) -> tuple[dict, dict[str, str]]:
+    """(task, renames): like `_rename_reserved`, but also returns the
+    rename map (`old -> new`, empty when nothing needed a rename) so
+    `lower()` can record it in the emitted source (NAMES, 2026-09-11,
+    ROADMAP 13.2, `names.rename_comment`)."""
+    work = task if body is task.get("body") else {**task, "body": body}
+    return names.sanitize(work, RESERVED, uppercase_ok=False)
 
 
 class Ctx:
@@ -3220,12 +3123,14 @@ let t_count (s:Seq.seq int) (t:Seq.seq int) : Tot int = t_count_at s t 0
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
-    # KEYWORD RENAME (2026-09-10, see the note above `_needs_rename`): fix
-    # up every `_ck`-refused identifier ONCE, before Ctx or any gen_*/
-    # exec_* function sees the task, so the rest of this file never has to
-    # know a rename happened. `r_task is task` (identity, not equality)
-    # when nothing needed it, which is every previously-committed task.
-    r_task, r_body = _rename_reserved(task, body)
+    # KEYWORD RENAME (2026-09-10, through the shared names.py pass since
+    # 2026-09-11 -- see the note above `_needs_rename`): fix up every
+    # `_ck`-refused identifier ONCE, before Ctx or any gen_*/exec_*
+    # function sees the task, so the rest of this file never has to know a
+    # rename happened. `r_task is task` (identity, not equality) when
+    # nothing needed it, which is every previously-committed task.
+    r_task, renames = _rename_reserved_map(task, body)
+    r_body = r_task["body"]
     cx = Ctx(r_task)
     name = r_task["name"]
     mod = name[0].upper() + name[1:]
@@ -3274,6 +3179,9 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         cert = _certificate(cert_cx, task, body, witness)
         if cert is not None:
             parts.append(cert)
+    rc = names.rename_comment(renames)
+    if rc:
+        parts.append(f"// {rc}")
     return "\n".join(parts)
 
 

@@ -1,0 +1,118 @@
+{
+  "t": 1,
+  "name": "probe_names_dafny",
+  "params": [
+    {
+      "name": "function",
+      "type": "int"
+    },
+    {
+      "name": "method",
+      "type": "int"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "ensures": [
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "function"
+        }
+      ]
+    },
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "method"
+        }
+      ]
+    },
+    {
+      "op": "or",
+      "args": [
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "function"
+            }
+          ]
+        },
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "method"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "body": [
+    {
+      "var": {
+        "name": "predicate",
+        "type": "int",
+        "init": {
+          "var": "function"
+        }
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "op": ">=",
+          "args": [
+            {
+              "var": "predicate"
+            },
+            {
+              "var": "method"
+            }
+          ]
+        },
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "predicate"
+              }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "method"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

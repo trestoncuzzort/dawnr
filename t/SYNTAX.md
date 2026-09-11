@@ -406,6 +406,25 @@ exercises all six.
 | a keyword as a name | `len` cannot be both an operator and a spec_fun |
 | **comments** | a comment has no AST node, so it cannot survive `print(parse(text)) == text`; admitting one would make the round trip conditional, and the round trip is the only reason the syntax exists |
 
+## Errors with a position
+
+Since 2026-09-11 (ROADMAP 14.2 "Errors with a position", parse side), every
+error `surface.py` raises while lexing or parsing text is a `SurfaceError`
+carrying the offending token's `file`, `line` and `col`, and the
+`production` above being parsed (SYNTAX.md's own EBNF names -- `Task`,
+`Type`, `SpecFun`, `Stmt`, `Expr`, `Op`, `Id` -- or, for the two rules this
+page names no production for, the heading above the rule: a char/string
+literal error is filed under "Strings as sequences of code points (v1)",
+and the chained-comparison refusal under "What the notation refuses").
+`str(err)` reads `file:line:col: message [production]`; `surface.parse_file
+(path)` reports `path` as `file`. Measured by `python3
+t/test_surface_errors.py` against the committed corpus of malformed `.t`
+files in `t/malformed/` (one per production, named after it) and its
+manifest `t/malformed/EXPECTED.tsv`. `surface.parse(text, positions=None)`
+also, when given a dict, fills it with `id(node) -> (line, col)` for every
+AST dict it builds, for the well-formedness side (`check_wf`, not yet its
+own module) to reuse the same positions once it exists.
+
 ## What does not exist (on purpose)
 
 No unbounded quantifiers. No

@@ -532,6 +532,44 @@ def witness(w: dict | None) -> str:
     return f"{ins} -> real {w.get('_real')}, twin {w.get('_twin')}"
 
 
+def decorative_kind(real_outcome: str, twin_outcome: str,
+                    w: dict | None) -> str | None:
+    """SPEC.md "The twins", 2026-09-11 paragraph (ROADMAP 13.3). None
+    unless a column's real AND twin both come back VERIFIED (the harness
+    already treats every other pairing as not-a-flip); the two outcomes
+    that pairing can mean are told apart by the witness the ladder already
+    measured, never by a fresh assumption:
+
+    - "decorative": the ladder accepted this twin on the fallback path (a
+      witness that shows real and twin compute DIFFERENT values but does
+      not FALSIFY `ensures`, tagged "+nonrefuting" in twin_for, `_ens` not
+      True on a "value" witness). Nothing entailed a refutation here, so
+      a kernel verifying the twin too says the spec cannot tell them
+      apart in that column: `ensures true` is the canonical case. Never
+      counts as agreement, and is not a claim about the kernel.
+    - "unsound": the witness DOES entail a refutation (a value witness
+      that falsifies `ensures`, `_ens is True`; or an INVARIANT-DROP proof
+      witness, kind "exit" or "preservation", which invariant_witness's
+      own docstring says "means a kernel MUST refute the twin"). A kernel
+      that verifies the twin anyway contradicts its own measured witness:
+      a signal about that kernel, not about the spec's strength, counted
+      separately from "decorative" so the two are never averaged
+      together.
+
+    A task with no witness (w is None, or falsy) never reaches this
+    function with twin_outcome VERIFIED under the grounded ladder
+    (twin_for returns twin_body=None, so the caller never lowers or
+    verifies a twin at all): that combination is left as "decorative"
+    rather than raising, so a caller that constructs the pairing by hand
+    (t/test_twin_rule.py) gets the same conservative label a missing
+    witness deserves."""
+    if real_outcome != Outcome.VERIFIED or twin_outcome != Outcome.VERIFIED:
+        return None
+    if w and (w.get("_ens") is True or w.get("_kind") in ("exit", "preservation")):
+        return "unsound"
+    return "decorative"
+
+
 def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
     """lower(task, body, witness=None) -> source text; backend is a
     t.verifiers module. The twin call passes the measured witness so
@@ -558,12 +596,21 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
         return False
     flip = (r_real.outcome == Outcome.VERIFIED
             and r_twin.outcome == Outcome.REFUTED)
+    kind = decorative_kind(r_real.outcome, r_twin.outcome, w)
     tag = (f"COUNTS  (real VERIFIED, {op} twin REFUTED, witness {witness(w)})"
            if flip else
            f"REFUSED (real {r_real.outcome}, {op} twin {r_twin.outcome}"
-           + (f", vacuous spec: the twin is broken on {witness(w)} and the "
-              f"kernel accepted it anyway)"
-              if r_twin.outcome == Outcome.VERIFIED else ")"))
+           # SPEC.md "The twins", 2026-09-11: real VERIFIED and twin
+           # VERIFIED is named, never folded into a bare REFUSED. kind is
+           # "decorative" when nothing the ladder measured entailed a
+           # refutation here (the spec cannot tell real and twin apart,
+           # e.g. `ensures true`) and "unsound" when the witness DID
+           # entail one (a kernel accepted a twin its own measured witness
+           # says it must refute); see decorative_kind's docstring.
+           + (f", unsound: the twin is broken on {witness(w)} and the "
+              f"kernel accepted it anyway)" if kind == "unsound" else
+              f", decorative: the spec cannot tell real from twin, "
+              f"REFUSED)" if kind is not None else ")"))
     print(f"  {name}: {tag}")
     return flip
 

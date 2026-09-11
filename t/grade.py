@@ -266,7 +266,13 @@ def build_verdicts(cols, rows, wits, tasks: list[Path], flake_n, wall_s) -> dict
     verifiers/<kernel>.py docstring: REFUTED is minted if and only if the
     certificate is accepted); the task's twin operator, witness and witness
     kind; the row's gate (AGREEMENT.md's Agreement: verified/refuted,
-    agreed, in every present column) and its columns-counting count."""
+    agreed, in every present column) and its columns-counting count.
+
+    A column's "kind" (SPEC.md "The twins", 2026-09-11, ROADMAP 13.3) is
+    "decorative" or "unsound" exactly when harness.decorative_kind says so
+    (real VERIFIED, twin VERIFIED too); else None. Neither ever sets
+    "counts" (the flip rule is unchanged: real VERIFIED, twin REFUTED,
+    agreed), so this is bookkeeping, not a new gate."""
     detail: dict[str, dict] = {}
     hist: dict[int, int] = {}
     n_gate = 0
@@ -288,6 +294,7 @@ def build_verdicts(cols, rows, wits, tasks: list[Path], flake_n, wall_s) -> dict
                 "real": real, "twin": twin, "agreed": bool(agreed),
                 "counts": counts,
                 "certificate_accepted": bool(twin == Outcome.REFUTED),
+                "kind": harness.decorative_kind(real, twin, w),
             }
         gate = bool(columns) and n_counting == len(columns)
         if gate:
@@ -322,7 +329,7 @@ def build_verdicts(cols, rows, wits, tasks: list[Path], flake_n, wall_s) -> dict
 
 def write_outputs(out_dir: Path, cols, rows, wits, tasks, flake_n, wall_s,
                   all_ok: bool, extra: dict | None = None) -> None:
-    text = run_par.format_table(cols, rows, tasks, harness.OUT)
+    text = run_par.format_table(cols, rows, tasks, harness.OUT, wits)
     (out_dir / "table.md").write_text(text, encoding="utf-8", newline="\n")
 
     verdicts = build_verdicts(cols, rows, wits, tasks, flake_n, wall_s)

@@ -637,6 +637,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import interp                                       # noqa: E402
+import names                                        # noqa: E402
 from verifiers import Outcome, flake_check          # noqa: E402
 from verifiers import dafny as dafny_backend        # noqa: E402
 
@@ -2210,6 +2211,23 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
 # sites pass it; when it is present and ground-certificatable, the lowering
 # appends the refutation certificate lemma (see the section above).
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
+    # collides with a Dafny reserved word, before anything below ever sees
+    # the task -- see names.py's module docstring. `task` is returned
+    # unchanged (`is`) when nothing needs a rename, which is every
+    # previously-committed task, so this costs one extra scan and changes
+    # nothing downstream for them. `_certificate` below is called on
+    # this SAME renamed task/body, with `witness`'s own keys renamed to
+    # match (`names.remap_witness`) rather than on a second, un-renamed
+    # task: see that function's own docstring for why (MEASURED on
+    # lower_framac.py, a certificate that declares fresh locals spelled
+    # after the witness's own keys).
+    if body is not task.get("body"):
+        task = {**task, "body": body}
+    task, renames = names.sanitize(task, names.KEYWORDS["dafny"],
+                                    uppercase_ok=True)
+    body = task["body"]
+    witness = names.remap_witness(witness, renames)
     if CERT_NAME in _collect_names(task):
         raise ValueError(f"task mentions the protocol name {CERT_NAME!r}")
     self_name = task["name"]
@@ -2259,6 +2277,9 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         cert = _certificate(task, body, witness)
         if cert:
             src += "\n" + cert
+    rc = names.rename_comment(renames)
+    if rc:
+        src += f"\n// {rc}\n"
     return src
 
 

@@ -1627,6 +1627,7 @@ if str(HERE) not in sys.path:
 
 import harness                                   # noqa: E402
 import interp                                    # noqa: E402
+import names as t_names                          # noqa: E402
 from verifiers import framac as framac_backend   # noqa: E402
 
 ARITH = {"+": "+", "-": "-", "*": "*"}
@@ -4903,6 +4904,28 @@ def _always_returns(body: list) -> bool:
 # sites pass it; when it is certifiable, the emitted file carries the
 # refutation certificate (see the section above).
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
+    # collides with a C/ACSL reserved word, before anything below ever
+    # sees the task -- see names.py's module docstring (imported as
+    # `t_names` here, since this file's own certificate code already uses
+    # a local `names` dict for the witness's own name->value map).
+    # `task`/`body` are returned unchanged (`is`) when nothing needs a
+    # rename, which is every previously-committed task, so this costs one
+    # extra scan and changes nothing downstream for them. `certificate`
+    # below runs on this SAME renamed task/body/env/funs/used, with
+    # `witness`'s own keys renamed to match (`t_names.remap_witness`):
+    # this file's own certificate declares fresh C LOCALS spelled after
+    # the witness's own keys (`int {n} = ...;`), so building it against
+    # an un-renamed witness/task -- this file's first cut, MEASURED
+    # 2026-09-11 on probe_names_framac -- emitted literally `int int =
+    # 0;` for a param named `int`, well-formed C nowhere. See
+    # `remap_witness`'s own docstring.
+    if body is not task.get("body"):
+        task = {**task, "body": body}
+    task, renames = t_names.sanitize(task, t_names.KEYWORDS["framac"],
+                                     uppercase_ok=True)
+    body = task["body"]
+    witness = t_names.remap_witness(witness, renames)
     name, ret = task["name"], task["returns"][0]["name"]
     rett = task["returns"][0]["type"]
     if is_nested_seq_type(rett):
@@ -5284,6 +5307,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here",
                                  seq_len=body_seq_len),
                        name, "  ")
+    # `certificate` reads the witness `w` against this SAME renamed
+    # task/body/env/funs/used, `w`'s own keys already renamed to match
+    # (`t_names.remap_witness`, above) -- see that function's own
+    # docstring for why this file's certificate specifically needs the
+    # renamed spelling in its own declarations, not the original one.
     cert = (certificate(task, body, witness, env, funs, used)
             if witness is not None else None)
     # RETURN SMOKE, fixed 2026-09-09 (see the note above `lower`): when
@@ -5337,13 +5365,15 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     cfun_ret_ty = (f"struct {struct_name}" if pair_ty is not None else
                   "void" if rett == "seq" and not capacity_mode
                   else "int")
+    rc = t_names.rename_comment(renames)
     return ("\n".join(header) + ("\n" if header else "")
             + "/*@\n" + "\n".join(clauses) + "\n*/\n"
             + f"{cfun_ret_ty} {name}_t({', '.join(cparams)}) {{\n"
             + ret_decl
             + "\n".join(body_lines) + "\n"
             + tail + "}\n"
-            + (cert or ""))
+            + (cert or "")
+            + (f"\n// {rc}\n" if rc else ""))
 
 
 if __name__ == "__main__":

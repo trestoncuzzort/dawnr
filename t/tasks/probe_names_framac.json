@@ -1,0 +1,118 @@
+{
+  "t": 1,
+  "name": "probe_names_framac",
+  "params": [
+    {
+      "name": "int",
+      "type": "int"
+    },
+    {
+      "name": "requires",
+      "type": "int"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "ensures": [
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "int"
+        }
+      ]
+    },
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "requires"
+        }
+      ]
+    },
+    {
+      "op": "or",
+      "args": [
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "int"
+            }
+          ]
+        },
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "requires"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "body": [
+    {
+      "var": {
+        "name": "assigns",
+        "type": "int",
+        "init": {
+          "var": "int"
+        }
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "op": ">=",
+          "args": [
+            {
+              "var": "assigns"
+            },
+            {
+              "var": "requires"
+            }
+          ]
+        },
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "assigns"
+              }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "requires"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

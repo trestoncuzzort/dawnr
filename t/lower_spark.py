@@ -1337,6 +1337,7 @@ if str(HERE) not in sys.path:
 
 import harness                                   # noqa: E402
 import interp                                    # noqa: E402
+import names as t_names                          # noqa: E402
 from verifiers import spark as spark_backend     # noqa: E402
 
 TYPE = {"int": "Big_Integer", "bool": "Boolean", "seq": "Seq"}
@@ -4109,6 +4110,24 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
 # sites pass it; a certificatable witness becomes the certificate goal above.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
+    # collides (case-INsensitively, matching this file's own `reserved_lc`
+    # check below) with an Ada reserved word or this lowering's static
+    # RESERVED namespace, before `Lower(task)` or anything else sees the
+    # task -- see names.py's module docstring. Only the STATIC part of
+    # this file's own collision set is folded in here (RESERVED itself);
+    # the DYNAMIC additions below (Esc/Ret when the body can return,
+    # P_A/P_B and a pair type's own record name when a pair type is used)
+    # stay exactly the pre-existing `clash`/`reserved_lc` check's job --
+    # unaffected by, and running exactly as before after, this pass.
+    # `task`/`body` are returned unchanged (`is`) when nothing needs a
+    # rename, which is every previously-committed task.
+    orig_task, orig_body = task, body
+    if body is not task.get("body"):
+        task = {**task, "body": body}
+    task, renames = t_names.sanitize(task, t_names.KEYWORDS["spark"] | RESERVED,
+                                     uppercase_ok=True, check_task_name=False)
+    body = task["body"]
     L = Lower(task)
     ret = task["returns"][0]
     psub = {p["name"]: cap(p["name"]) for p in task["params"]}
@@ -4288,7 +4307,16 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         aspects.append(f"Subprogram_Variant => "
                        f"(Decreases => (if {d} >= 0 then {d} else 0))")
 
-    cert = certificate(task, body, witness, L)
+    # `certificate` reads the witness `w` and needs param/local names
+    # matching `w`'s own keys -- computed by the harness against the
+    # PRISTINE task -- so, exactly like the other six lowerings, it runs
+    # on the ORIGINAL, un-renamed task/body/Lower here when a rename
+    # actually happened; `certificate`'s own broad `except` already turns
+    # a mismatched lookup into a safe `None` (twin-unproved), never a
+    # fake REFUTED, but there is no need to pay even that, or to build a
+    # second `Lower`, on a task that needs no rename at all.
+    cert_L = L if not renames else Lower(orig_task)
+    cert = certificate(orig_task, orig_body, witness, cert_L)
 
     plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
                       for p in task["params"])
@@ -4381,7 +4409,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     if cert:
         parts += [cert]
     parts += [f"end {pkg};"]
-    return "\n".join(parts) + "\n"
+    rc = t_names.rename_comment(renames)
+    return "\n".join(parts) + "\n" + (f"-- {rc}\n" if rc else "")
 
 
 def ce_instance(task: dict, body: list) -> str:

@@ -134,7 +134,7 @@ def main() -> int:
               "AGREEMENT.md not written.")
         return 2
 
-    lines = [f"# t cross-kernel agreement — "
+    lines = [f"# t cross-kernel agreement, "
              f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",
              "",
              "Cell = real outcome / twin outcome. Agreement means "
@@ -146,7 +146,7 @@ def main() -> int:
         row = [tname]
         for bname, _ in cols:
             c = cells.get(bname)
-            row.append("—" if c is None else
+            row.append("\u2014" if c is None else
                        f"{c[0]} / {c[1]}" + ("" if c[2] else " (FLAKED)"))
         lines.append("| " + " | ".join(row) + " |")
     lines += ["", f"Kernels present: {len(present)} of {len(cols)} "

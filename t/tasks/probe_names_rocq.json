@@ -1,0 +1,118 @@
+{
+  "t": 1,
+  "name": "probe_names_rocq",
+  "params": [
+    {
+      "name": "fun",
+      "type": "int"
+    },
+    {
+      "name": "forall",
+      "type": "int"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "ensures": [
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "fun"
+        }
+      ]
+    },
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "forall"
+        }
+      ]
+    },
+    {
+      "op": "or",
+      "args": [
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "fun"
+            }
+          ]
+        },
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "forall"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "body": [
+    {
+      "var": {
+        "name": "exists",
+        "type": "int",
+        "init": {
+          "var": "fun"
+        }
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "op": ">=",
+          "args": [
+            {
+              "var": "exists"
+            },
+            {
+              "var": "forall"
+            }
+          ]
+        },
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "exists"
+              }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "forall"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

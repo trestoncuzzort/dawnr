@@ -1,0 +1,118 @@
+{
+  "t": 1,
+  "name": "probe_names_upper",
+  "params": [
+    {
+      "name": "Left",
+      "type": "int"
+    },
+    {
+      "name": "Right",
+      "type": "int"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "ensures": [
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "Left"
+        }
+      ]
+    },
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "Right"
+        }
+      ]
+    },
+    {
+      "op": "or",
+      "args": [
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "Left"
+            }
+          ]
+        },
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "Right"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "body": [
+    {
+      "var": {
+        "name": "Tmp",
+        "type": "int",
+        "init": {
+          "var": "Left"
+        }
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "op": ">=",
+          "args": [
+            {
+              "var": "Tmp"
+            },
+            {
+              "var": "Right"
+            }
+          ]
+        },
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "Tmp"
+              }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "Right"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

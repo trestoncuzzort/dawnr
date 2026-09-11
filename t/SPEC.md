@@ -805,6 +805,56 @@ by the actual kernel, both measured and never predicted. Twin VERIFIED now says
 one specific thing, because the twin is known to be broken: the spec is
 vacuous, or the dropped invariant's obligation is one the kernel re-derives.
 
+**2026-09-11 (ROADMAP 13.3): a twin that VERIFIES is REFUSED, named.** A
+column where the real lowering is VERIFIED and the twin is ALSO VERIFIED is
+never counted as agreement and is never folded into a plain "no flip"
+either: it is a named refusal, `decorative` or `unsound`, and the two are
+counted separately because they are different findings about different
+things. `harness.decorative_kind(real_outcome, twin_outcome, w)` is the one
+place this is decided, from the SAME witness `twin_for` already measured
+when it accepted the twin onto the ladder in the first place, never a fresh
+guess:
+
+- `decorative`: the ladder accepted this twin on its fallback path (a
+  witness that shows real and twin compute DIFFERENT values but does not
+  FALSIFY `ensures`, the "+nonrefuting" tag, `w["_ens"]` not `True` on a
+  "value" witness). Nothing the harness measured entailed a refutation
+  here, so the twin verifying too says the SPEC cannot tell real and twin
+  apart in that column, canonically an `ensures true` or an `ensures` the
+  mutation happens not to touch. This is a finding about the task's spec,
+  not about the kernel, and it is a REFUSAL: the cell reads
+  `verified / decorative`, e.g. in `t/AGREEMENT.md` and grade.py's
+  `table.md`, and `t/fuzz_lower.py`'s summary counts it on its own
+  `decorative` line, never inside `no_flip`.
+- `unsound`: the witness DOES entail a refutation, either a value witness
+  that falsifies `ensures` (`w["_ens"] is True`) or an INVARIANT-DROP proof
+  witness (kind `exit` or `preservation`, which `interp.invariant_witness`'s
+  own docstring already states "means a kernel MUST refute the twin"). A
+  kernel that verifies such a twin anyway contradicts its OWN measured
+  witness: a finding about that kernel, kept apart from `decorative` so the
+  two are never averaged together and a kernel's own unsoundness cannot
+  hide behind a weak spec's cover. The cell reads `verified / unsound`, and
+  `fuzz_lower.py`'s summary counts it on its own `unsound` line.
+
+What this changes for the tables: before this paragraph, a real-VERIFIED,
+twin-VERIFIED cell in `t/AGREEMENT.md`/`table.md` read as a bare
+`verified / verified`, indistinguishable at a glance from a genuine
+disagreement, and `fuzz_lower.py`'s `no_flip` statistic lumped it in with a
+twin that came back UNPROVED or TIMEOUT, so `no_flip` measured the
+fuzzer's spec strength (how many twins the ladder could not word strongly
+enough) at the same time as it measured the kernels' twin discipline (how
+many twins a sound kernel actually refuted). `no_flip` now counts ONLY
+real-VERIFIED cells whose twin came back UNPROVED, TIMEOUT or MALFORMED,
+which is the kernel's own twin discipline and nothing else; `decorative`
+and `unsound` are their own counts, measured by
+`t/test_twin_rule.py` and by `python3 t/fuzz_lower.py`'s printed summary.
+The grounded ladder's own guarantee is unchanged by any of this: every twin
+`twin_for` accepts carries a witness (SPEC.md "The twins" above), so
+`decorative` and `unsound` are both about a WITNESSED twin a kernel still
+verified, never about an unmeasurable one (those are `no-witness`,
+`no-input`, `real-undefined` or `no-operator`, REFUSED before a kernel ever
+sees them).
+
 ## What v1 does not claim
 
 No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an

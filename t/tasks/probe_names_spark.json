@@ -1,0 +1,118 @@
+{
+  "t": 1,
+  "name": "probe_names_spark",
+  "params": [
+    {
+      "name": "begin",
+      "type": "int"
+    },
+    {
+      "name": "loop",
+      "type": "int"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "ensures": [
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "begin"
+        }
+      ]
+    },
+    {
+      "op": ">=",
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "loop"
+        }
+      ]
+    },
+    {
+      "op": "or",
+      "args": [
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "begin"
+            }
+          ]
+        },
+        {
+          "op": "==",
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "loop"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "body": [
+    {
+      "var": {
+        "name": "package",
+        "type": "int",
+        "init": {
+          "var": "begin"
+        }
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "op": ">=",
+          "args": [
+            {
+              "var": "package"
+            },
+            {
+              "var": "loop"
+            }
+          ]
+        },
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "package"
+              }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "var": "loop"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
