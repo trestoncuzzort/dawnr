@@ -427,6 +427,47 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
     return None, ("no-witness" if n else "no-operator"), None
 
 
+def ladder_rungs(task: dict) -> list[tuple[str, list, dict | None]]:
+    """Every rung the twin ladder can build for `task` (t/ladder_completeness.py,
+    ROADMAP WS-19 move 6, added 2026-09-11): (operator_tag, twin_body,
+    witness_or_None) per candidate, in the order `twin_for` uses, capped at
+    MAX_CANDIDATES in both phases (twin_for caps only the extensional phase;
+    invariant counts are small, so no measured task differs), but WITHOUT
+    stopping at the first witness: every rung the ladder can build is
+    enumerated, not only the one twin_for would pick.
+
+    `witness_or_None` is the witness dict exactly when the interpreter shows
+    the rung MUST be refuted by a sound kernel: an invariant-drop witness
+    (interp.invariant_witness, which by construction only returns a forcing
+    witness), or an extensional witness whose value also falsifies `ensures`
+    (`w["_ens"] is True`, interp.Reference._breaks_ensures). A witness that
+    only shows a value DIFFERENCE without falsifying `ensures` is recorded
+    as no witness here, the same standard twin_for applies before accepting
+    a rung as a flip. Reuses twin_for's own candidate generators (the
+    invariant and EXTENSIONAL generators above) unchanged; this function
+    adds no new mutation logic."""
+    rungs: list[tuple[str, list, dict | None]] = []
+    n = 0
+    for k, (twin, loop, kept, names) in enumerate(_invariant_candidates(task)):
+        n += 1
+        if n > MAX_CANDIDATES:
+            return rungs
+        w = interp.invariant_witness(task, loop, kept, names)
+        rungs.append((_tag("invariant-drop", k), twin, w))
+    ref = interp.Reference(task)
+    if not ref.points:
+        return rungs
+    for op, gen in EXTENSIONAL:
+        for k, twin in enumerate(gen(task["body"], _scope(task))):
+            n += 1
+            if n > MAX_CANDIDATES:
+                return rungs
+            w = ref.witness(twin)
+            refuted = w is not None and w.get("_ens") is True
+            rungs.append((_tag(op, k), twin, w if refuted else None))
+    return rungs
+
+
 def _scope(task: dict) -> list:
     return [(p["name"], p["type"]) for p in task["params"]]
 

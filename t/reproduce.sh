@@ -103,7 +103,8 @@ EOF
 run_tests() {
   stage_start tests
   for f in test_lift_check.py test_lifter.py test_lift_front.py \
-           test_lift_report.py test_lift_rules.py test_mbpp_dfy.py; do
+           test_lift_report.py test_lift_rules.py test_mbpp_dfy.py \
+           test_ladder_completeness.py; do
     echo "--- python3 $f ---"
     python3 "$f"
     echo "$f rc=$?"

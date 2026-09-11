@@ -1569,6 +1569,28 @@ under the single-twin rule, so the fraction of rungs refuted is measured
 against the tests on those 64 and on round 2's 23 before it enters any
 reward. First hurdle: the measurement.
 
+**Move 6 measured (2026-09-11).** `t/ladder_completeness.py` (new
+`harness.ladder_rungs` beside `twin_for`, reusing its own candidate
+generators unchanged) enumerates EVERY rung the mutation ladder can build
+per well-formed task, not only the first with a witness, over the 7B's 64
+(`out/spec-experiment/qwen2.5-coder-7b`) and round 2's 23
+(`qwen2.5-coder-1.5b-r2`); `t/LADDER-COMPLETENESS.md` is the full table.
+7B: 64 tasks, 33 with every rung refuted, 30 with some, 1 with none; mean
+fraction refuted 0.90 on the 41 tasks whose tests pass and 0.84 on the 22
+that fail, so the fraction does not sort tasks by tests outcome (25 of
+the 33 all-refuted tasks pass their tests, 8 fail; 15 of the 30
+some-refuted tasks pass, 14 fail). Round 2: 23 tasks, 9 all-refuted, 10
+some, 4 none; mean fraction 0.80 on the 3 that pass and 0.73 on the 19
+that fail. The 34-of-35 restate-the-body claim, re-read against the full
+ladder rather than the single-twin rule's first witness: 35 of the 7B's
+64 tasks are the restate-the-body shape (structural detector, checked
+against the committed finding's own count), and 33 of THOSE 35 have
+EVERY rung refuted, one fewer than the 34-of-35 single-twin figure, since
+the full-ladder standard is stricter (all rungs, not just the first
+tried). `t/test_ladder_completeness.py` pins the enumerator's rung count
+and fraction on `t/tasks/abs.json` (6 rungs, 4 refuted) and
+`t/tasks/sum_upto.json` (16 rungs, 14 refuted).
+
 **7. The preregistered reward ablation (survey move 14), and the rest.**
 Two arms, verify-in-one-kernel against seven-kernel verify-plus-refuted-
 twin, matched seeds, the margin declared before the run; the hurdle is
