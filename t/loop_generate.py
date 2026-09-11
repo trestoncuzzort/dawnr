@@ -30,6 +30,13 @@ every requested id already has a raw/<id>.json on disk, this returns before
 touching nvidia-smi or importing torch at all -- a no-op run should not
 touch the GPU.
 
+Pool and prompt versions (added 2026-09-11): --pool and --prompt take the
+same values as spec_experiment.py (v1 default, v2, v3) and are recorded in
+each raw record as pool_version and prompt_version, the keys cmd_generate
+writes. The first use is the string-library control column: the bare base
+on pool v3 with prompt v3, tag qwen2.5-coder-1.5b-r0hf-v3. Downstream
+stages must be run with the same --pool.
+
 --adapter none loads the bare base through this same code path (4-bit,
 same quant config, same generate() call) -- a round-0-equivalent control
 that is not ollama, useful for isolating "transformers vs ollama sampling"
@@ -146,8 +153,9 @@ def parse_ids_text(text: str) -> set[int]:
     return {int(x) for x in (p.strip() for p in parts) if x}
 
 
-def select_ids(limit: int, ids_arg: str, only_heldout: str, ids_file: str = "") -> tuple[dict, list]:
-    P = se.pool()
+def select_ids(limit: int, ids_arg: str, only_heldout: str, ids_file: str = "",
+               pool_version: str = "v1") -> tuple[dict, list]:
+    P = se.pool(pool_version)
     ids = sorted(P)
     if only_heldout:
         held = json.loads(Path(only_heldout).read_text(encoding="utf-8"))
@@ -376,6 +384,10 @@ def main() -> int:
     ap.add_argument("--tag", required=True,
                     help="model tag; records land under out/spec-experiment/<model_tag(tag)>")
     ap.add_argument("--base", default=DEFAULT_BASE)
+    ap.add_argument("--pool", choices=se.POOL_VERSIONS, default="v1",
+                    help="problem pool version, as spec_experiment.py --pool (added 2026-09-11)")
+    ap.add_argument("--prompt", choices=se.PROMPT_VERSIONS, default="v1",
+                    help="prompt version, as spec_experiment.py generate --prompt (added 2026-09-11)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--ids", default="", help="comma-separated task ids, e.g. 100,101")
     ap.add_argument("--ids-file", default="",
@@ -433,7 +445,7 @@ def main() -> int:
     else:
         tag_dirs = [se.outdir(f"{args.tag}-s{k}") for k in range(K)]
 
-    P, ids = select_ids(args.limit, args.ids, args.only_heldout, args.ids_file)
+    P, ids = select_ids(args.limit, args.ids, args.only_heldout, args.ids_file, args.pool)
     if K == 1:
         todo = [tid for tid in ids if not (tag_dirs[0] / "raw" / f"{tid}.json").exists()]
     else:
@@ -534,7 +546,7 @@ def main() -> int:
     asked = 0
     for tid in todo:
         entry = P[tid]
-        messages = se.build_prompt(entry)
+        messages = se.build_prompt(entry, args.prompt)
         t_task0 = time.monotonic()
         # transformers 5.5.0 defaults apply_chat_template(return_tensors="pt") to
         # return_dict=True, i.e. a BatchEncoding, not a bare input_ids tensor --
@@ -565,6 +577,7 @@ def main() -> int:
             options = {"temperature": 0, "seed": args.seed, "max_new_tokens": args.max_new,
                        "note": "greedy transformers generate"}
             record = {"task_id": tid, "fn": entry["fn"], "model": args.tag, "digest": digest,
+                      "pool_version": args.pool, "prompt_version": args.prompt,
                       "options": options, "messages": messages, "reply": reply,
                       "prompt_tokens": prompt_tokens, "reply_tokens": reply_tokens,
                       "eval_s": round(eval_s, 3), "wall_s": round(wall, 3),
@@ -621,6 +634,7 @@ def main() -> int:
             options = {"temperature": 0, "seed": args.seed, "max_new_tokens": args.max_new,
                        "note": "greedy transformers generate"}
             record = {"task_id": tid, "fn": entry["fn"], "model": args.tag, "digest": digest,
+                      "pool_version": args.pool, "prompt_version": args.prompt,
                       "options": options, "messages": local_messages, "reply": reply,
                       "prompt_tokens": cur_prompt_tokens, "reply_tokens": reply_tokens,
                       "eval_s": round(eval_s_total, 3), "wall_s": round(wall, 3),
@@ -648,7 +662,9 @@ def main() -> int:
                            "seed": args.seed, "sample_index": k, "num_samples": K,
                            "max_new_tokens": args.max_new, "note": note}
                 record = {"task_id": tid, "fn": entry["fn"], "model": f"{args.tag}-s{k}",
-                          "digest": digest, "options": options, "messages": messages,
+                          "digest": digest, "pool_version": args.pool,
+                          "prompt_version": args.prompt,
+                          "options": options, "messages": messages,
                           "reply": reply, "prompt_tokens": prompt_tokens,
                           "reply_tokens": reply_tokens, "eval_s": round(per_sample_t, 3),
                           "wall_s": round(per_sample_t, 3), "done_reason": done_reason}
