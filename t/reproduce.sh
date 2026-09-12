@@ -112,7 +112,8 @@ run_tests() {
            test_lower_spark.py test_divisor_bound.py \
            test_framac_seq4.py test_framac_while_cert.py test_lower_lean_divisorbound.py \
            test_lower_fstar_abstains.py test_lower_verus_nested_trigger.py \
-           test_framac_frame_fact.py test_lower_dafny_trigger.py; do
+           test_framac_frame_fact.py test_lower_dafny_trigger.py \
+           test_framac_nested.py test_lower_spark_divisorbound.py; do
     [ -f "$f" ] || { echo "--- $f: not in this tree, skipped ---"; continue; }
     echo "--- python3 $f ---"
     python3 "$f"

@@ -3324,6 +3324,280 @@ def has_return(body: list) -> bool:
     return False
 
 
+# DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, spark's own item):
+# dafny-synthesis isNonPrime (3) and isPrime (605) trial-divide `n` only up
+# to `n div 2` (`cond: i <= n div 2`) while their own `ensures` quantifies
+# the divisor over the WIDER range `[lo, n)` -- a fact no stated invariant
+# supplies is the number-theory lemma this family needs at the loop's
+# exit: any `k` with `lo <= k < n` (`lo` at least 2 for both tasks) and
+# `n rem k = 0` satisfies `k <= n / 2` (`n = k*q`, `q >= 2` since `k < n`
+# rules out `q <= 1`, so `n >= 2*k`). `_quant_mod_relop`/`_result_eq_quant`/
+# `_divisor_bound_target` below are PORTED VERBATIM from lower_fstar.py's
+# own functions of the same name (2026-09-11) -- pure Python over the
+# task/AST dicts, zero spark-specific code, so fstar, verus, lean and spark
+# all recognize the identical shape from the identical detector; only the
+# LEMMA TEXT each kernel emits differs (`_divisor_bound_spark_defs` below).
+#
+# WAVE J'S OWN FINDING (2026-09-12, this session, this worktree): a wave-J
+# builder wrote and proved a lemma family for this shape STANDALONE (this
+# session's own probe1.ads through probe7.ads, gnatprove FSF 16.1.0/z3,
+# --steps 20000, 0 unproved) but did not wire it into this file, because
+# the lemma needs the loop's own counter's POST-LOOP value, which is not
+# visible where `_rotate_lemma_target`/`_split_concat_lemma_target`'s own
+# call sites sit (after `compile()`/`compile_r()` returns, at `lower()`'s
+# "final" merge) -- or rather it IS visible there too (SPARK's own W_k
+# state threading puts every mutated local, `i` included, into `env`
+# whichever statement follows the loop reads it from), but restated here
+# to match this task's own more general instruction: wired instead AT
+# `compile_r`'s own "while" branch, right where `lower_while`'s call binds
+# the loop's result state (`env[i_name]`, `env[result_name]`), so the
+# lemma's own premises (the invariant over `[lo, i)`, carried in `env`'s
+# own boolean-typed `result` field; the guard false at exit and the
+# divisor bound, both proved standalone above) are all in scope with no
+# dependency on this loop being the body's last statement.
+#
+# THE FOUR PROBES, MEASURED (this session, probe1.ads through probe7.ads):
+# probe1 (Divisor_Le_Half alone, `k >= 2 /\ k < n /\ n rem k = 0 ==>
+# k <= n/2`) proves with ZERO help beyond gnatprove's own native `rem`/`/`
+# reasoning -- no induction, no nonlinear_arith escape hatch, the ONE
+# genuinely nonlinear step Z3 already closes unaided. probe2/probe3/probe4
+# (widening the loop's own `[lo, i)` fact to `[lo, n)` through a Boolean
+# parameter `R` standing for the incoming quantifier, or through a bare
+# `for all Kx => N rem Kx /= 0` hypothesis with the RAW `rem` operator in
+# the quantified body) all FAILED at every step budget from 20000 to
+# 300000 under `--prover=z3` (this file's own pinned prover, spark.py's
+# GNATPROVE invocation) -- "provers gave up", not a step-limit timeout, so
+# no larger --steps would have closed it: raw `rem` inside a quantifier's
+# own body gives Z3's E-matching nothing to trigger on (the same
+# "opaque function call costs far more" asymmetry ROTATE_LEMMA_PREAMBLE's
+# own Mod_Lo_Lemma note already measured, mirrored here from the other
+# direction: a NATIVE operator inside a quantifier trigger, rather than a
+# wrapped one, is what fails to match). probe5/probe6 (identical
+# structure, but every `N rem K` recast as a call to this file's own
+# `T_Mod` -- the DIVMOD_PREAMBLE function every task using `mod` already
+# emits, needed regardless of this lemma) PROVE outright at the pinned
+# `--steps 20000 --prover=z3`, both the "forall" family (isPrime) and the
+# "exists" family (isNonPrime): the fix was never more steps or a
+# different prover, only routing the quantifier's own body through the
+# SAME uninterpreted-looking function call every other quantifier in this
+# file's invariants already goes through (Elem calls above), rather than
+# a bare arithmetic operator. probe7 (generalizing `lo` from the literal
+# `Big_Integer'(2)` baked into probe5/probe6 to an ordinary function
+# PARAMETER `Lo`, so ONE static preamble could serve any `lo`) REGRESSED
+# one VC to "step limit exceeded" even at --steps 40000: turning `lo` from
+# a ground literal into a bound variable cost the same E-matching quality
+# `_rotate_lemma_target`'s own Iterable note already flags for a
+# non-zero, non-constant range bound. Reverted: `_divisor_bound_spark_defs`
+# below renders `lo` as the task's own literal text (both matched tasks
+# state `lo = 2`), the same per-task-generated-text discipline
+# `_divisor_bound_fstar_defs`/lean's `emit_divisor_bound` already use for
+# exactly this reason, rather than ROTATE_LEMMA_PREAMBLE's fully-static
+# text (whose own range bounds are ordinary loop-carried values, not
+# quantifier lower bounds, so it never hit this wall).
+def _quant_mod_relop(body):
+    """`body` is `(N % k) RELOP 0` (RELOP one of "=="/"!="); returns
+    `(N, k_name, RELOP)` or None. `k` must appear bare (`{"var": k}`),
+    never a compound expression, matching every task this targets."""
+    if not (isinstance(body, dict) and body.get("op") in ("==", "!=")):
+        return None
+    args = body.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    lhs, rhs = args
+    if rhs != {"int": 0}:
+        return None
+    if not (isinstance(lhs, dict) and lhs.get("op") == "mod"):
+        return None
+    largs = lhs.get("args")
+    if not (isinstance(largs, list) and len(largs) == 2):
+        return None
+    dividend, kexpr = largs
+    if not (isinstance(kexpr, dict) and list(kexpr.keys()) == ["var"]):
+        return None
+    return dividend, kexpr["var"], body["op"]
+
+
+def _result_eq_quant(e, ret: str):
+    """`e` is `result == Quant(...)`; returns `(kind, quant_dict)` for
+    kind in {"forall","exists"}, or None."""
+    if not (isinstance(e, dict) and e.get("op") == "=="):
+        return None
+    args = e.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    a, b = args
+    if a == {"var": ret}:
+        quant_holder = b
+    elif b == {"var": ret}:
+        quant_holder = a
+    else:
+        return None
+    for kind in ("forall", "exists"):
+        if kind in quant_holder:
+            return kind, quant_holder[kind]
+    return None
+
+
+def _divisor_bound_target(task: dict, w: dict) -> dict | None:
+    ret = task["returns"][0]["name"]
+    for en in task.get("ensures", []):
+        found = _result_eq_quant(en, ret)
+        if found is None:
+            continue
+        kind, q = found
+        rel = _quant_mod_relop(q.get("body"))
+        if rel is None:
+            continue
+        dividend, _kname, relop = rel
+        lo = q.get("lo")
+        if lo is None:
+            continue
+        for iv in w.get("invariants", []):
+            ifound = _result_eq_quant(iv, ret)
+            if ifound is None:
+                continue
+            ikind, iq = ifound
+            if ikind != kind or iq.get("lo") != lo:
+                continue
+            irel = _quant_mod_relop(iq.get("body"))
+            if irel is None or irel[0] != dividend or irel[2] != relop:
+                continue
+            ihi = iq.get("hi")
+            if not (isinstance(ihi, dict) and list(ihi.keys()) == ["var"]):
+                continue
+            i_name = ihi["var"]
+            want_cond = {"op": "<=", "args": [
+                {"var": i_name},
+                {"op": "div", "args": [dividend, {"int": 2}]}]}
+            if w.get("cond") != want_cond:
+                continue
+            return {"kind": kind, "relop": relop, "dividend": dividend,
+                    "lo": lo, "i_name": i_name, "result": ret}
+    return None
+
+
+def _find_divisor_bound_plan(task: dict, body: list) -> dict | None:
+    """None, or `_divisor_bound_target`'s own plan for THIS task's top-level
+    `while` loop -- the STATIC half of the match (gates the preamble and
+    reserves this lemma family's names, below, mirroring
+    `_rotate_lemma_target`'s own split between a static scan here and the
+    runtime wiring in `compile_r`/`lower_while`, which alone can read the
+    loop counter's POST-LOOP value this plan's own premises need). Every
+    committed task and every OTHER task in this wave's own 19-task
+    blocker set has no top-level `while` matching this shape, so this
+    returns None for all of them, unchanged."""
+    w = next((s["while"] for s in body if "while" in s), None)
+    if w is None:
+        return None
+    plan = _divisor_bound_target(task, w)
+    if plan is not None and plan["i_name"] in loop_assigned(w["body"]):
+        return plan
+    return None
+
+
+_DIVISOR_BOUND_NAMES = frozenset((
+    "Divisor_Le_Half_Lemma", "No_Divisor_Above_Lemma",
+    "Divisor_Bound_Point_Lemma", "Divisor_Bound_Range_Lemma",
+    "Divisor_Bound_Lemma"))
+
+
+def _divisor_bound_spark_defs(plan: dict, lo_text: str) -> str:
+    """The lemma family probe5.ads/probe6.ads MEASURED to prove (see the
+    module note above): `Divisor_Le_Half_Lemma`/`No_Divisor_Above_Lemma`/
+    `Divisor_Bound_Point_Lemma`/`Divisor_Bound_Range_Lemma` are identical
+    for both families (the underlying fact -- no divisor of `n` reaches
+    above the loop's own exit bound `i` -- does not depend on whether the
+    task's own `ensures` phrases it as a "forall no divisor" or an
+    "exists a divisor"); only the outermost `Divisor_Bound_Lemma`, which
+    restates the loop's own `[lo, i)` invariant fact at the task's full
+    `[lo, n)` range, differs by `plan["kind"]`. `lo_text` is this task's
+    own rendered `lo` expression (a ground literal for both matched
+    tasks, `Big_Integer'(2)`), baked in as literal text rather than
+    threaded as a function parameter (probe7.ads's own regression, the
+    module note above)."""
+    core = f"""\
+   function Divisor_Le_Half_Lemma (N, K : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(2) and then K >= Big_Integer'(2)
+       and then K < N and then T_Mod (N, K) = Big_Integer'(0),
+     Post => Divisor_Le_Half_Lemma'Result and then K <= N / Big_Integer'(2);
+
+   function Divisor_Le_Half_Lemma (N, K : Big_Integer) return Boolean is (True);
+
+   function No_Divisor_Above_Lemma (N, I, K : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(2) and then I >= Big_Integer'(2)
+       and then not (I <= N / Big_Integer'(2))
+       and then I <= K and then K < N,
+     Post => No_Divisor_Above_Lemma'Result and then T_Mod (N, K) /= Big_Integer'(0);
+
+   function No_Divisor_Above_Lemma (N, I, K : Big_Integer) return Boolean is
+     (if T_Mod (N, K) = Big_Integer'(0) then Divisor_Le_Half_Lemma (N, K) else True);
+
+   function Divisor_Bound_Point_Lemma (N, I, K : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(2)
+       and then I >= {lo_text}
+       and then not (I <= N / Big_Integer'(2))
+       and then (for all Kx in T_Range'({lo_text}, I) => T_Mod (N, Kx) /= Big_Integer'(0))
+       and then {lo_text} <= K and then K < N,
+     Post => Divisor_Bound_Point_Lemma'Result and then T_Mod (N, K) /= Big_Integer'(0);
+
+   function Divisor_Bound_Point_Lemma (N, I, K : Big_Integer) return Boolean is
+     (if K < I then True else No_Divisor_Above_Lemma (N, I, K));
+
+   function Divisor_Bound_Range_Lemma (N, I : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(2)
+       and then I >= {lo_text}
+       and then not (I <= N / Big_Integer'(2))
+       and then (for all Kx in T_Range'({lo_text}, I) => T_Mod (N, Kx) /= Big_Integer'(0)),
+     Post => Divisor_Bound_Range_Lemma'Result
+       and then (for all K in T_Range'({lo_text}, N) => T_Mod (N, K) /= Big_Integer'(0));
+
+   function Divisor_Bound_Range_Lemma (N, I : Big_Integer) return Boolean is
+     (for all K in T_Range'({lo_text}, N) => Divisor_Bound_Point_Lemma (N, I, K));
+"""
+    outer_rel = "/=" if plan["relop"] == "!=" else "="
+    quant_kw = "for all" if plan["kind"] == "forall" else "for some"
+    # The "forall" family (isPrime) only needs Divisor_Bound_Range_Lemma's
+    # own fact (over [I, N)) in the Result=True branch: Result=False
+    # already means SOME k in [lo, I) violates the quantifier (Pre's own
+    # "Result = (for all ...)"), and a violation below I is still a
+    # violation over the wider [lo, N) -- plain monotonicity, no lemma
+    # needed. Calling Divisor_Bound_Range_Lemma UNCONDITIONALLY (as an
+    # earlier version of this file did, MEASURED 2026-09-12 this session,
+    # isprime2-run/gnatprove) fails ITS OWN precondition when Result is
+    # False: Range_Lemma's Pre needs the RAW quantifier fact, which Pre
+    # here only gives conditioned on Result being True (the equality
+    # `Result = (for all ...)`), not unconditionally -- gating the call on
+    # `Result` the same way the "exists" family's own body already gates
+    # it on `not Result` fixes the same gap from the other direction.
+    body_expr = ("(if not Result then True\n"
+                "      elsif Divisor_Bound_Range_Lemma (N, I) then True\n"
+                "      else True)"
+                if plan["kind"] == "forall" else
+                "(if Result then True\n"
+                "      elsif Divisor_Bound_Range_Lemma (N, I) then True\n"
+                "      else True)")
+    top = f"""\
+   function Divisor_Bound_Lemma (N, I : Big_Integer; Result : Boolean) return Boolean
+   with
+     Pre  => N >= Big_Integer'(2)
+       and then I <= N / Big_Integer'(2) + Big_Integer'(1)
+       and then not (I <= N / Big_Integer'(2))
+       and then Result = ({quant_kw} Kx in T_Range'({lo_text}, I) =>
+                            T_Mod (N, Kx) {outer_rel} Big_Integer'(0)),
+     Post => Divisor_Bound_Lemma'Result
+       and then Result = ({quant_kw} K in T_Range'({lo_text}, N) =>
+                            T_Mod (N, K) {outer_rel} Big_Integer'(0));
+
+   function Divisor_Bound_Lemma (N, I : Big_Integer; Result : Boolean) return Boolean is
+     {body_expr};
+"""
+    return core + top
+
+
 class Lower:
     def __init__(self, task: dict, ce: bool = False):
         self.task = task
@@ -4016,6 +4290,40 @@ class Lower:
                 env, wesc, wval = self.lower_while(
                     s["while"], env, types, psub, ret_name)
                 combine(wesc, wval)
+                # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, spark's
+                # own item, see the module note above `_quant_mod_relop`):
+                # wired HERE, right after the W_k call above binds this
+                # loop's own result state into `env`, rather than at
+                # `lower()`'s own "final" merge the way SPLIT_CONCAT_LEMMA/
+                # ROTATE_LEMMA are (their own targets need only params and
+                # locals `env` already carries from ordinary substitution,
+                # never a loop's post-loop state): `_dbt["i_name"]` and
+                # `_dbt["result"]` are exactly the two state fields
+                # `lower_while` just wrote into `env` as `{call}.{Field}`
+                # (SPARK's own frame rule, `lower_while`'s docstring
+                # above), so reading them straight out of `env` here needs
+                # no new plumbing through `lower_while`'s own signature.
+                # `self.task` (not the module-level `task`/`body` pair
+                # `_find_divisor_bound_plan` matched against, above
+                # `class Lower`) is the SANITIZED task compile_r actually
+                # walks, so this recomputation stays consistent with `s`
+                # and `env`'s own (possibly renamed) identifiers; recomputed
+                # rather than threaded down from `lower()`'s own
+                # `divisor_target`, at the same low cost every OTHER
+                # while loop in every other committed task already pays
+                # for `rotate_target`/`split_target`'s per-body checks
+                # (a handful of dict lookups, returning None).
+                _dbt = _divisor_bound_target(self.task, s["while"])
+                if (_dbt is not None and _dbt["i_name"] in env
+                        and _dbt["result"] in env):
+                    _n_text = self.expr(_dbt["dividend"], psub, types)
+                    _i_text = env[_dbt["i_name"]]
+                    _r_text = env[_dbt["result"]]
+                    env[_dbt["result"]] = (
+                        f"(if Divisor_Bound_Lemma ({_n_text}, {_i_text}, "
+                        f"{_r_text})\n"
+                        f"      then {_r_text}\n"
+                        f"      else {_r_text})")
             else:
                 raise ValueError(f"unknown statement {sorted(s)!r}")
         return env, esc, val
@@ -4116,6 +4424,30 @@ class Lower:
         # data-dependent op into an invariant at all.
         if invs and any(_has_strlib_op(i) for i in invs):
             invs = sorted(invs, key=lambda i: 0 if _is_bound_inv(i) else 1)
+        # DIVISOR-BOUND EXIT WIDTH (2026-09-12, ROADMAP 16.2, spark's own
+        # item, ported from lower_fstar.py's/lower_lean.py's identical
+        # note): `Divisor_Bound_Lemma`'s own Pre (compile_r's "while"
+        # branch, below `class Lower`) needs `I <= N / 2 + 1` at the
+        # loop's exit -- a fact the task's own invariants never state
+        # (they bound `I` only from below, `2 <= I`) but the loop body
+        # trivially implies: the recursive call only fires when the guard
+        # `I <= N / 2` holds, so the NEXT `I` (`I + 1`) never exceeds
+        # `N / 2 + 1`, and the base case (`I` at 2) satisfies it whenever
+        # `N >= 2` (the task's own `requires`). Added here as an ORDINARY
+        # EXTRA invariant (never a task invariant, never weakening or
+        # restating one), so the kernel proves it through the SAME
+        # invariant-preservation VC every other invariant already gets --
+        # nothing assumed, nothing admitted -- and it feeds both `pre`
+        # (W_k's own Pre, unused there) and `post` (W_k's own Post,
+        # `Divisor_Bound_Lemma`'s call site actually reads) via the SAME
+        # `invs` list every other invariant already threads through.
+        _dbt_iv = _divisor_bound_target(self.task, w)
+        if _dbt_iv is not None:
+            invs = invs + [{"op": "<=", "args": [
+                {"var": _dbt_iv["i_name"]},
+                {"op": "+", "args": [
+                    {"op": "div", "args": [_dbt_iv["dividend"], {"int": 2}]},
+                    {"int": 1}]}]}]
         # ROADMAP 16.2, 2026-09-11 (elementWiseModulo and its element-wise
         # siblings): a loop's own W_k helper carries only the task's stated
         # invariants as its Pre, per SPEC.md's frame rule above -- but a
@@ -4184,6 +4516,35 @@ class Lower:
         post_parts.append(f"(not {self.expr(w['cond'], result, types)})")
         post = "\n       and then ".join(post_parts)
         d = self.expr(w["decreases"], entry, types)
+        # DIVISOR-BOUND LEMMA's own loop, DECREASES OFF-BY-ONE (2026-09-12,
+        # ROADMAP 16.2, spark's own item): isNonPrime/isPrime's own guard
+        # is the INCLUSIVE `i <= n div 2`, so the task's own decreases
+        # (`n div 2 - i`) hits exactly 0 at the LAST true-guard iteration
+        # (`i = n div 2`) -- clamped by the plain `(if D >= 0 then D else
+        # 0)` formula below, the recursive call's own new measure (`D -
+        # 1 = -1`, clamped to 0) TIES the old one (0), not a step-limit
+        # timeout but a genuine tie MEASURED (this session,
+        # isprime-orig-run/gnatprove) unproved at --steps 500000,
+        # --prover=all, on the UNCHANGED baseline (this shape's own
+        # "subprogram variant might fail" predates this wiring entirely,
+        # never named in ROADMAP 16.2's own spark notes, so evidently not
+        # yet measured there). Fixed the way lower_fstar.py's own
+        # "DECREASES OFF-BY-ONE" note (2026-09-11, ROADMAP 16.2) fixes the
+        # identical boundary: shift the clamped metric up by a constant 1,
+        # which preserves every strict decrease the recursion already had
+        # (old and new both shift by the same 1) while keeping the OLD
+        # value strictly positive one step further down, exactly covering
+        # the inclusive-bound tie above (MEASURED, this file, this
+        # session: `variant(D)=max(D,0)` ties at D=0; `variant'(D)=
+        # max(D+1,0)` gives 1 vs. 0, strictly decreasing). Gated to this
+        # ONE matched shape (`_divisor_bound_target` recognizes the exact
+        # AST match, not merely "any inclusive guard"), not applied to
+        # every loop this file lowers: the 34 already-committed tasks and
+        # the rest of the lifted corpus keep this formula byte-for-byte,
+        # so nothing about their own variant proofs is put at risk by a
+        # change MEASURED necessary for exactly two tasks.
+        if _divisor_bound_target(self.task, w) is not None:
+            d = f"(({d}) + Big_Integer'(1))"
         variant = f"(if {d} >= 0 then {d} else 0)"
         inner = {v: cap(v) for v in state}
         if body_has_return:
@@ -5120,8 +5481,24 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # than computed twice.
     rotate_target = _rotate_lemma_target(task, body)
     needs_rotate_lemma = rotate_target is not None
+    # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, spark's own item, see
+    # the module-level note above `_quant_mod_relop`): `divisor_target` is
+    # the static shape match alone (isNonPrime/isPrime's own loop, matched
+    # against the ORIGINAL, un-renamed `task`/`body` exactly like
+    # `rotate_target` just above); the RUNTIME wiring, which alone can see
+    # the loop counter's post-loop value, lives in `compile_r`'s own
+    # "while" branch, far below, and recomputes the identical match
+    # against `self.task` (renamed, consistent with the renamed body it
+    # actually walks) rather than reusing this one -- cheap (a handful of
+    # dict lookups), and every other task's compile_r call pays the same
+    # cost `rotate_target`/`split_target`'s own per-call checks already
+    # do, always returning None.
+    divisor_target = _find_divisor_bound_plan(task, body)
+    needs_divisor_bound_lemma = divisor_target is not None
     reserved = (RESERVED | ({"Esc", "Ret"} if has_return(body) else set())
-               | (_ROTATE_LEMMA_NAMES if needs_rotate_lemma else set()))
+               | (_ROTATE_LEMMA_NAMES if needs_rotate_lemma else set())
+               | (_DIVISOR_BOUND_NAMES if needs_divisor_bound_lemma
+                  else set()))
     # SPEC.md "Pairs" (2026-09-10): each pair type's own record name, its
     # equality wrapper's name (_pair_preamble; reserved whether or not this
     # task ever compares two pairs -- there is no cheap structural
@@ -5220,6 +5597,22 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         final = (f"(if Rotate_Lemma ({l_text}, {n_text})\n"
                 f"      then {final}\n"
                 f"      else {final})")
+
+    # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, spark's own item):
+    # unlike SPLIT_CONCAT_LEMMA/ROTATE_LEMMA above, this lemma's own call
+    # site is not here -- it needs the loop counter's POST-LOOP value,
+    # which only exists inside compile_r's own "while" branch (below), not
+    # in `final`/`env` at this late a point when the loop is not the
+    # body's last statement in general (it happens to be, for both matched
+    # tasks, but the wiring does not rely on that). Only the lemma TEXT is
+    # built here (`divisor_target["lo"]` needs nothing `env` did not
+    # already have from `psub`/`base_types`, computed once, ahead of
+    # `compile()`/`compile_r()`, exactly where `needs_rotate_lemma`'s own
+    # collision-avoiding computation already sits), so `parts` (further
+    # down) can emit it unconditionally on `needs_divisor_bound_lemma`.
+    if needs_divisor_bound_lemma:
+        lo_text = L.expr(divisor_target["lo"], psub, base_types)
+        divisor_bound_defs = _divisor_bound_spark_defs(divisor_target, lo_text)
 
     aspects = []
     reqs = [L.expr(e, psub, base_types) for e in task.get("requires", [])]
@@ -5338,6 +5731,13 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # already takes.
     if needs_rotate_lemma:
         parts += [ROTATE_LEMMA_PREAMBLE]
+    # Divisor_Bound_Lemma's own family calls T_Mod (DIVMOD_PREAMBLE) and
+    # quantifies over T_Range (RANGE_PREAMBLE): both already set by
+    # isNonPrime/isPrime's own `mod`-using body and forall-using
+    # invariants/ensures, the same restraint the ROTATE_LEMMA_PREAMBLE
+    # note above already takes (nothing here forces either flag on).
+    if needs_divisor_bound_lemma:
+        parts += [divisor_bound_defs]
     # THE STRING LIBRARY (v1), 2026-09-11: STRCORE before anything that
     # calls T_Match_At/Is_Ws (count/find/replace/split(s)); the split-state
     # record before either split form; T_Slice/T_Concat (above) before

@@ -316,5 +316,157 @@ class SeqUpdate2ScriptTest(unittest.TestCase):
                          f"first | (grind) | (grind only [{lw._seq_hints()}])")
 
 
+class SeqAppendReadScriptTest(unittest.TestCase):
+    """2026-09-12, ROADMAP 16.2, lean's own item (the append-of-slices
+    shape and the three timeouts): `_seq_append_read_script`, the
+    `_seq_update2_script` template one level down -- READ-after-`++`/
+    slice instead of READ-after-chained-`.set`. Pure-Python checks on
+    the emitted TEXT (the `.lean` file itself is exercised by
+    `t/grade.py`, not here; see `t/COVERAGE-lifted-785.md`'s
+    dafny_synthesis rows for the kernel-checked measurement) -- these
+    catch a regression in the GATE (`None` exactly when `self.seq_new`
+    is False, unchanged for every other task) and in the two things
+    measured to matter for this shape: `Nat.min_def` must NOT appear in
+    this method's own hypothesis normalization or its `simp`'s `disch`
+    (measured 2026-09-12: `omega` already understands `Nat.min`
+    natively -- unfolding it into an `ite` first only gives `omega` an
+    opaque atom it cannot split back out of a `disch` goal, the actual
+    blocker an earlier version of this method could not get past), and
+    `t_seq_ext` is offered only when `self.seq_eq_comp` is set (citing
+    an undeclared name is a compile error, not a soft failure)."""
+
+    def _seq_task(self, name, params, ensures, body):
+        t = _task(name, params, ensures, body, ret_type="seq")
+        t["returns"] = [{"name": "result", "type": "seq"}]
+        return t
+
+    def _split_task(self):
+        # splitArray's own shape (task_id_262): two locals each a
+        # slice of the same base seq, concatenated back into `result`,
+        # whose own ensures equates it to the base seq -- a whole-
+        # SEQUENCE equality, never an indexed read on its own, so this
+        # shape also exercises the `t_seq_ext` opening step. (`result`,
+        # not the bare locals, in `ensures`: `self.types` only tracks
+        # params + the return, so a raw local there would raise inside
+        # `Lower.__init__` on an unrelated pre-existing gap this test
+        # is not about.)
+        body = [
+            {"var": {"name": "firstPart", "type": "seq", "init": {
+                "op": "slice", "args": [
+                    {"var": "arr"}, {"int": 0}, {"var": "l"}]}}},
+            {"var": {"name": "secondPart", "type": "seq", "init": {
+                "op": "slice", "args": [
+                    {"var": "arr"}, {"var": "l"},
+                    {"op": "len", "args": [{"var": "arr"}]}]}}},
+            {"assign": ["result", {"op": "+", "args": [
+                {"var": "firstPart"}, {"var": "secondPart"}]}]},
+        ]
+        return self._seq_task(
+            "splitlike",
+            [{"name": "arr", "type": "seq"}, {"name": "l", "type": "int"}],
+            [{"op": "==", "args": [{"var": "result"}, {"var": "arr"}]}],
+            body)
+
+    def _bare_append_task(self):
+        # a plain `a ++ b` with no slice on either side: `seq_new` fires
+        # (some seq literal/concat/slice construct is present) but
+        # `seq_composed_append_slice` does not.
+        body = [
+            {"assign": ["result", {"op": "+", "args": [
+                {"var": "a"}, {"var": "b"}]}]},
+        ]
+        return self._seq_task(
+            "appendlike",
+            [{"name": "a", "type": "seq"}, {"name": "b", "type": "seq"}],
+            [{"op": "==", "args": [
+                {"op": "at", "args": [{"var": "result"}, {"int": 0}]},
+                {"op": "at", "args": [{"var": "a"}, {"int": 0}]}]}],
+            body)
+
+    def test_none_when_not_seq_new(self):
+        body = [
+            {"assign": ["a_out", {"op": "update", "args": [
+                {"var": "a"}, {"int": 0}, {"int": 1}]}]},
+        ]
+        task = self._seq_task(
+            "singleupdate",
+            [{"name": "a", "type": "seq"}],
+            [{"op": "==", "args": [{"var": "result"}, {"var": "a_out"}]}],
+            body)
+        lw = lower_lean.Lower(task, body)
+        self.assertFalse(lw.seq_new)
+        self.assertIsNone(lw._seq_append_read_script())
+
+    def test_script_present_for_bare_append(self):
+        task = self._bare_append_task()
+        lw = lower_lean.Lower(task, task["body"])
+        self.assertTrue(lw.seq_new)
+        self.assertFalse(lw.seq_composed_append_slice)
+        script = lw._seq_append_read_script()
+        self.assertIsNotNone(script)
+        self.assertIn("t_seq_append_get", script)
+        self.assertIn("t_seq_index_congr", script)
+        # no seq-equality conjunct in this task's own ensures -> no
+        # `t_seq_ext` opening step offered.
+        self.assertNotIn("t_seq_ext", script)
+
+    def test_script_offers_seq_ext_when_seq_eq_comp(self):
+        task = self._split_task()
+        lw = lower_lean.Lower(task, task["body"])
+        self.assertTrue(lw.seq_new)
+        self.assertTrue(lw.seq_composed_append_slice)
+        self.assertTrue(lw.seq_eq_comp)
+        script = lw._seq_append_read_script()
+        self.assertIsNotNone(script)
+        self.assertIn("apply t_seq_ext", script)
+        self.assertIn("t_seq_append_slice2_get", script)
+
+    def test_no_nat_min_def_in_script(self):
+        # THE NAT-CAST TRAP (2026-09-12): `Nat.min_def` in this method's
+        # own normalization or `disch` manufactures an ite `omega`
+        # cannot split back out of a `disch` goal -- measured directly,
+        # named in this method's own docstring. `_seq_hints`'s `grind
+        # only [...]` fallback keeps citing `Nat.min_def` (a different
+        # tactic, `grind`, with the opposite need); this script must not.
+        task = self._split_task()
+        lw = lower_lean.Lower(task, task["body"])
+        script = lw._seq_append_read_script()
+        self.assertIsNotNone(script)
+        self.assertNotIn("Nat.min_def", script)
+        self.assertIn("List.length_take", script)
+        self.assertIn("List.length_drop", script)
+
+    def test_index_congr_declared_for_seq_new_alone(self):
+        # promoted (2026-09-12) from `seq_composed_update2`-only to
+        # `seq_composed_update2 or seq_new`, declared exactly once.
+        task = self._bare_append_task()
+        lw = lower_lean.Lower(task, task["body"])
+        self.assertFalse(lw.seq_composed_update2)
+        self.assertTrue(lw.seq_new)
+        src = lw.emit_seq_helpers()
+        self.assertEqual(src.count("theorem t_seq_index_congr"), 1)
+
+    def test_close_tries_the_script_before_grind_only_fallback(self):
+        task = self._split_task()
+        lw = lower_lean.Lower(task, task["body"])
+        closed = lw._close([task["ensures"], task["body"]], {},
+                           lw.types, "grind")
+        script = lw._seq_append_read_script()
+        self.assertIn(script, closed)
+        self.assertLess(closed.index(script),
+                        closed.index("grind only ["))
+
+    def test_no_change_for_non_seq_task(self):
+        task = _task(
+            "plain", [{"name": "x", "type": "int"}],
+            [{"op": "==", "args": [{"var": "result"}, {"var": "x"}]}],
+            [{"assign": ["result", {"var": "x"}]}])
+        lw = lower_lean.Lower(task, task["body"])
+        self.assertFalse(lw.seq_new)
+        closed = lw._close([task["ensures"], task["body"]], {},
+                           lw.types, "grind")
+        self.assertEqual(closed, "grind")
+
+
 if __name__ == "__main__":
     unittest.main()

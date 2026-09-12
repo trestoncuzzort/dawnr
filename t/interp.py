@@ -1383,7 +1383,22 @@ def invariant_witness(task: dict, loop: dict, kept: list,
     run through whatever follows the loop first (exit_env), because that is
     where a kernel judges `ensures`. A loop under an enclosing while yields
     no exit witness at all (no straight run to the return; its exit
-    obligation is the outer invariant), and the ladder moves on."""
+    obligation is the outer invariant), and the ladder moves on.
+
+    2026-09-12 (ROADMAP 16.2, "twin-order"): the preservation check runs
+    ONE iteration of the loop body and used to demand a surviving invariant
+    hold at whatever state that iteration reaches. But `exec_body` returns
+    True when that iteration itself executed a `return` (SPEC.md "Early
+    exit") -- and a return never comes back to the loop header, so an
+    invariant is not the obligation at that state; `ensures` is, exactly
+    as at a normal loop exit above (this is `exit_env`'s own rule, restated
+    for the return statement's own environment rather than a run through
+    the continuation). Checking `kept` there instead minted a spurious
+    witness on every task whose loop can return mid-iteration
+    (anyValueExists, containsK, containsSequence, isSmaller): a survivor
+    need not hold at a state the loop never revisits, so the ONLY question
+    at a return is whether `ensures` holds there, the same as any other
+    exit."""
     funs = funs_of(task, task["body"])
     cont = continuation(task["body"], loop)
     req = task.get("requires", [])
@@ -1409,7 +1424,13 @@ def invariant_witness(task: dict, loop: dict, kept: list,
                     return w
                 continue
             nxt = dict(env)
-            exec_body(loop["body"], nxt, funs, st)
+            returned = exec_body(loop["body"], nxt, funs, st)
+            if returned:
+                if not all(ev(c, nxt, funs, st) for c in ens):
+                    w = _shown(env)
+                    w["_kind"] = "exit"
+                    return w
+                continue
             if not all(ev(c, nxt, funs, st) for c in kept):
                 w = _shown(env)
                 w["_kind"] = "preservation"

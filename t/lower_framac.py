@@ -2453,7 +2453,226 @@ reached this pass: the design stopped at the sweep abstains above,
 each requiring its own new rendering mechanism (a second capacity
 dimension for nested returns, an executable seq-equality loop, a
 length bound derived differently), not a scoped extension of the
-frame-fact/capacity fixes landed here. Named, not attempted."""
+frame-fact/capacity fixes landed here. Named, not attempted.
+
+FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12 (worktree
+/home/tmcuzzort/tup/.claude/worktrees/wf_2056d1d0-df2-2). Item (a) of
+the design order this pass's own task named ("the extensional seq
+equality loop in executable position ... a statement-shaped rendering
+path stmts() emits before the assignment, a C loop with its own
+invariant WP proves, its result assigned to the bool target"), built
+against the three cells named for it: fz_p_nest_eq (nested seq<seq>
+PARAMETERs), 576 IsSublist and 69 ContainsSequence (flat seq operands,
+a slice and a nested-seq row respectively).
+
+BUILT: `_seq_eq_top`/`_seq_eq_operand_c`/`_seq_eq_loop`/`_seq_eq_value`
+(new functions, just above `stmts()`), wired into `stmts()`'s
+"assign"/"return"/"if" branches (the three call sites that used to hand
+`cexpr()`'s return value straight to a C assignment or an `if` header,
+none of them able to accept a preceding STATEMENT from inside `cexpr`'s
+own return). `cexpr`'s own named refusal (SEQ VALUE, executable
+position, item 4) is UNCHANGED text for every shape this pass does not
+recognize (a seq literal or `+` concatenation operand): `_seq_eq_top`
+gates which `==`/`!=` nodes route to the new loop machinery at all, so
+`cexpr` still raises, unmoved, for anything `_seq_eq_operand_c` cannot
+turn into a pointer/length pair.
+
+MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-12, `python3
+grade.py --tasks <dir> --kernels framac,dafny --flake 3 --jobs 4/8`,
+task JSON copied from `t/out/lifted-tasks/` into
+/tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+scratchpad/framac-nested/roadmap-tasks, and `fuzz_lower.py --n 0 --only
+framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
+
+  LANDED to a full agreement cell: 576 IsSublist, `abstain / abstain`
+  -> `verified / refuted`, matching dafny's own `verified / refuted`
+  cell exactly (`compare-flip#1`, `sub=[], main_v=[] -> real False,
+  twin slice bounds [1..1] outside 0 <= a <= b <= 0`). The 66-probe
+  conformance manifest and the 34-task AGREEMENT.md matrix do not
+  contain this task (it is a ROADMAP 16.2 lifted-sweep row, not a
+  committed task or a fuzz probe), so this is a NEW pass, not a moved
+  cell in either of those two files; ROADMAP 16.2/COVERAGE-lifted-785.md
+  itself is not this pass's file to edit.
+
+  MOVED, not landed: `fz_p_nest_eq` (the 66-item framac conformance
+  manifest's own probe), `abstain -> timeout` (real AND twin both
+  timeout; the manifest still reads this cell FAIL either side, byte-
+  identical PASS/FAIL split before/after, 58/66 both times, diffed
+  field by field). Traced by hand (`frama-c -wp ... fz_p_nest_eq.c`,
+  no `-wp-fct` restriction): 19/22 goals proved, 3 TIMEOUT --
+  `..._ensures`, `..._loop_invariant_2_preserved` (the outer row loop's
+  own doubly-quantified invariant, `\forall k; ... && (\forall j; ...)`,
+  preserved across one more row), `..._loop_invariant_3_preserved` (the
+  inner cell loop's own, preserved across one more cell). The nested
+  case's own invariant asks alt-ergo to re-derive a `\forall`-inside-
+  `\forall` fact for the OLD prefix `[0, i)` from the SAME hypothesis
+  while also folding in the freshly-proved fact for index `i` -- a
+  doubly-quantified instantiation problem, the same capability gap
+  already named for task 460 getFirstElements above ("a doubly-indexed
+  quantifier ... alt-ergo cannot instantiate ... at the pinned budget
+  even with every scalar fact already known ... not attempted here").
+  RULES forbids raising the pinned budget to chase it, so this is
+  reported as the honest TIMEOUT it is, not relabeled and not silently
+  left at the OLD "abstain" text: an abstain hid a construct this
+  lowering had no rendering for at all; a timeout says the rendering
+  exists and the kernel could not close its own proof obligation at the
+  pinned budget, a materially different, more honest claim.
+
+  MOVED, not landed: 69 ContainsSequence, `abstain -> timeout` (real
+  AND twin), traced the same way: `..._loop_4_preserved` (the outer
+  loop's own `\exists k; ... && \forall __k; ...` invariant,
+  preservation), `..._ensures`, `..._loop_7_preserved` (the inner
+  equality loop's, folded into the outer's own `preserved` goal since
+  the inner loop's `__seq_eq0`/`__seq_eq0_i` are declared fresh each
+  outer iteration). The task's own spec states a REAL existential
+  (`result != 0 <==> \exists ...`), not the near-tautological
+  `\exists ... ==> \true` IsSublist's own `ensures` happens to state
+  (which is why IsSublist's outer invariant preservation was
+  Qed/Alt-Ergo-cheap: proving an implication whose consequent is
+  literally `\true` costs nothing), so this is the same doubly-
+  quantified (`\exists` this time, not `\forall`, but the same
+  instantiation shape) capability gap as fz_p_nest_eq's own, not a
+  bug this pass's four owned sites can close.
+
+  FIXED ALONG THE WAY, not a landed cell of its own but what actually
+  let IsSublist's real=verified / twin=refuted cell close at all:
+  `_undef_certificate`'s `walk()` (a certificate-replay function this
+  pass never intended to touch) had a SCALAR RE-DECLARATION bug,
+  dormant until this pass's own fix let IsSublist's framac lowering
+  succeed for the first time (before, the whole task ABSTAINED before
+  any certificate was ever built, so `walk()` never saw a real
+  multi-iteration loop). The old code keyed the C `int` prefix off
+  `"var" in s` alone: an "assign" to the RETURN name (`result`, never a
+  "var" statement anywhere in v1) got NO declaration on its own first
+  assignment (an undeclared-identifier reference), and an "assign"
+  REASSIGNING a "var" name across this replay's own unrolled loop
+  iterations (`i_v`, incremented once per concrete pass) got a FRESH
+  `int` every time, "redefinition of 'i_v' in the same scope" (frama-c's
+  own exact parse error, measured before this fix on IsSublist's
+  compare-flip twin certificate). Fixed with a `declared: set`
+  (seeded with the task's own param names before `walk` runs), keyed
+  on the NAME's own first sight in this call regardless of which
+  statement kind assigned it: `int {nm} = ...;` once, per name, `{nm} =
+  ...;` every time after. MEASURED: IsSublist's twin cert now reads
+  `t_refutation_certificate` proved, `real=verified twin=refuted`,
+  matching `_expect`; no other certificate shape this pass touched
+  changes (the 34-task AGREEMENT.md matrix and the 66-cell conformance
+  manifest's framac column are both BYTE-IDENTICAL before/after this
+  whole pass, this fix included, diffed field by field -- see the
+  REGRESSION paragraph below).
+
+  STOPPED, unreached by design (out of item (a)'s own stated operand
+  scope, `_seq_eq_operand_c`'s own named refusal, not guessed at): a
+  seq LITERAL or `+` concatenation operand of a top-level `==`/`!=`
+  reaching this loop. No committed/fuzzed/lifted task measured needs
+  this shape yet.
+
+  ITEMS (b)/(c)/(d) of this pass's own stated build order (the second
+  CAPACITY dimension for a nested seq<seq> RETURN/LOCAL,
+  fz_p_nest_empty/fz_p_str_splitempty/fz_p_str_tab; an executable
+  `lower`/`upper` bounded by the input's own length, fz_p_str_
+  lowernonletter; a pair-with-a-seq-component RETURN through the
+  buffer encoding, fz_p_pair_seq) were NOT attempted this pass: item
+  (a) alone (the statement-shaped rendering path new to this file, plus
+  the certificate bug it exposed) filled this pass's own scope, and
+  each of (b)/(c)/(d) is its own fresh design over a DIFFERENT part of
+  the seq value machinery (the capacity/offsets encoding, an
+  executable-length-bound rule, `_pair_field_c`'s own struct
+  territory), not a further extension of the equality-loop machinery
+  item (a) built. Each STILL reads its own exact pre-existing message,
+  remeasured (byte-identical to FRAMAC-SEQ4's own note above,
+  `fuzz_lower.py --tasks fz_p_nest_empty,fz_p_str_splitempty,fz_p_str_tab,
+  fz_p_str_lowernonletter,fz_p_pair_seq --only framac --n 0 --flake 3`):
+  `fz_p_nest_empty` and `fz_p_str_splitempty`, "nested seq (seq<seq>)
+  RETURN: building a fresh row set has no encoding in this lowering
+  ..."; `fz_p_str_tab`, "nested seq (seq<seq>) local variables are not
+  supported by this lowering ..."; `fz_p_str_lowernonletter`, "seq
+  return 'r''s length is not statically determinable ..."; `fz_p_pair_
+  seq`, "a pair with a seq component is refused by this lowering ...".
+  The sweep's own six named abstains for this design order (240
+  replaceLastElement, 586 splitAndAppend, 577 factorialOfLastDigit, 603
+  lucidNumbers, 414 anyValueExists, and 576/69 -- now landed/moved,
+  above) are likewise untouched by items (b)/(c)/(d)'s absence: none of
+  414/577/603/240/586 reaches ANY of this pass's own four owned sites
+  (`_seq_eq_top`/`_seq_eq_operand_c`/`_seq_eq_loop`/`_seq_eq_value`,
+  `_undef_certificate`'s `walk()`) either, so none is expected to move
+  and none does; 414 anyValueExists in particular is named by this
+  pass's own task as sharing item (a)'s executable-quantifier-loop
+  shape ("a bounded quantifier in executable position, the same loop
+  path as (a)") but was not itself built this pass: a `\forall`/`\exists`
+  reaching EXECUTABLE position (not compared against another seq) is a
+  DIFFERENT node shape than the `==`/`!=` this pass's own `_seq_eq_top`
+  gates on, sharing only the general STATEMENT-shaped-loop mechanism in
+  spirit, not any code path this pass actually wrote; remeasured
+  unchanged, "bounded quantifier in executable position" (exact
+  wording preserved from before this pass, `fuzz_lower.py`/`grade.py`
+  reaching the pre-existing refusal site, untouched by this pass's own
+  four edits).
+
+  REGRESSION, measured both sides (before = `git show HEAD:t/
+  lower_framac.py` at this pass's own start commit, copied to
+  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+  scratchpad/framac-nested/before-t/lower_framac.py, run inside a full
+  copy of `t/` so every import resolves identically): the 34 committed
+  tasks under t/tasks, framac column, `python3 grade.py --tasks tasks
+  --kernels framac,dafny --flake 3 --jobs 6`: table.md BYTE-IDENTICAL
+  before/after except the timestamp header (31 `verified/refuted`, 3
+  `abstain/abstain` -- count_vowels, split_join, swap_rows -- unchanged,
+  none of the 34 reaches `_seq_eq_top`/`_seq_eq_operand_c`/
+  `_seq_eq_loop`/`_seq_eq_value` or the certificate `declared`-set fix:
+  no committed task compares two seqs with a bare `==`/`!=` in
+  executable position, and no committed task's certificate replay hits
+  the RETURN-name-first-assignment or reassigned-"var"-across-
+  iterations shapes the certificate bug needed). The 66-item framac
+  conformance manifest (own scratchpad script,
+  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+  scratchpad/framac-nested/conf_framac.py, `run_par.BACKENDS` restricted
+  to framac, `conformance.build_manifest()`/`run_items()`/`grade()`
+  called directly): 58/66 PASS both before and after, PASS/FAIL split
+  identical cell for cell (fz_p_nest_eq is the only cell whose own
+  RAW OUTCOME text differs, `abstain -> timeout`, both sides still
+  scored FAIL, matching `_expect` neither before nor after). The 66
+  `dafny_synthesis_*` rows of t/COVERAGE-lifted-785.md that read
+  `verified / refuted` in the framac column TODAY (grepped from the
+  live file, copied into /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-
+  441b-804f-aa0d13f350ee/scratchpad/framac-nested/ds-verified-refuted-
+  tasks, `python3 grade.py --tasks <dir> --kernels framac --min-kernels
+  1 --flake 3 --jobs 8`): table.md BYTE-IDENTICAL before/after (none of
+  the 66 is 576 or 69, neither of which reads `verified/refuted` in
+  that file today; the two pre-existing TIMEOUTs among the 66, 460
+  getFirstElements and 86 centeredHexagonalNumber, stay `timeout/
+  refuted` both sides, unmoved, unchanged from wave J's own note
+  above). `test_framac_seq4.py`'s own two tests for `fz_p_nest_eq`
+  UPDATED this pass (it asserted the OLD "abstain on executable
+  equality" outcome by name; that text no longer applies once item (a)
+  gives it a real rendering) rather than left to fail; a new file,
+  `test_framac_nested.py`, adds six tests for this pass's own three
+  cells and the certificate fix, all six embedding their own task JSON
+  (IsSublist/ContainsSequence's own bodies, copied verbatim from
+  `t/out/lifted-tasks/`, since that directory is generated data, not
+  part of this repo's checked-in tree) so they run without depending on
+  a lifted-sweep set being present on disk; `python3 t/test_framac_
+  seq4.py` and `python3 t/test_framac_nested.py` both read all tests
+  passing, and every other `test_framac_*.py` file in this repo (frame_
+  fact, measure_axiom, while_cert) is unmoved, also all passing.
+
+  OPEN, named rather than attempted (this pass's own scope was item (a)
+  alone): items (b), (c), (d) of the stated build order (a second
+  CAPACITY dimension for nested seq<seq> RETURN/LOCAL; an executable
+  `lower`/`upper` bounded by the input's own length; a pair-with-a-
+  seq-component RETURN through the buffer encoding) and the design's own
+  five stated abstains unrelated to item (a) (240 replaceLastElement,
+  586 splitAndAppend, 577 factorialOfLastDigit, 603 lucidNumbers, 414
+  anyValueExists) -- each still reads the exact message quoted above,
+  none attempted, none a rendering-site fix this pass's four owned
+  sites (`_seq_eq_top`, `_seq_eq_operand_c`, `_seq_eq_loop`,
+  `_seq_eq_value`) could close alone. Additionally, WITHIN item (a)'s
+  own now-built machinery: the nested (fz_p_nest_eq) and doubly-
+  quantified-`\exists` (69 ContainsSequence) shapes both TIMEOUT at the
+  pinned alt-ergo budget rather than verify, a proof-engineering gap
+  (quantifier instantiation, not a missing rendering) this pass does
+  not chase further, matching the identical gap already named and left
+  open for task 460 above."""
 from __future__ import annotations
 
 import sys
@@ -4811,6 +5030,216 @@ def _assigns_target(n: str, ctx: Ctx) -> str:
     return f"{n}[0 .. {n}_n - 1]" if ctx.env.get(n) == "seq" else n
 
 
+# -------------------------------------------- seq extensional equality -----
+#
+# FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12 (the design order's
+# design note above `lower_framac`'s own docstring names the three cells:
+# fz_p_nest_eq, 576 isSublist, 69 containsSequence). `cexpr`'s own
+# `==`/`!=` case (SEQ VALUE, executable position, item 4) already refuses
+# a bare seq-typed `==`/`!=` reaching EXECUTABLE position by name, because
+# a single C VALUE expression cannot render an extensional (`\forall`
+# -shaped) comparison and a bare pointer `==` would be a silently WRONG
+# substitute (C pointer identity, not SPEC's elementwise equality). This
+# section gives `stmts()` a STATEMENT-shaped alternative: a C loop with
+# its own ACSL loop invariant, computing the comparison into a fresh
+# bool-int temp `stmts()` can then use exactly where `cexpr()`'s return
+# value would have gone (an `if` condition, an assign/return
+# right-hand-side) -- never an edit to `cexpr` itself, since `cexpr` has
+# no way to emit a preceding statement from inside its own return.
+_SEQ_EQ_CTR = [0]
+
+
+def _seq_eq_operand_c(e: dict, ctx: Ctx, funs: dict, task_name: str):
+    """(pointer-expr, length-expr, domain-assert-list) for a flat
+    ("seq"-typed) EXECUTABLE-position read operand of the equality loop
+    below. Three shapes, the ones this pass's own three named cells
+    actually need, each MEASURED against the real lifted task JSON before
+    being written (isSublist's `main_v[i_v .. i_v+len(sub)]`,
+    containsSequence's `at(list, i_v)` where `list` is a seq<seq>
+    parameter): a bare seq variable (`{v}_n` elements at `{v}` itself,
+    already `\\valid_read` by that parameter's own `requires`); a slice of
+    one (`{base} + lo` .. `hi - lo` elements, its own domain obligation
+    `0 <= lo <= hi <= len(base)` returned as asserts since no `at`
+    wraps it here for `code_ats`/`at_asserts` to pick up); or a ROW of a
+    nested seq<seq> PARAMETER (`at(m, i)`, THE ENCODING's own
+    `{m}_data + {m}_off[i]` .. `{m}_off[i+1] - {m}_off[i]` elements, its
+    own domain obligation `0 <= i < len(m)`). Anything else (a seq
+    literal or a `+` concatenation operand) is a named NotImplementedError,
+    not guessed at: none of this pass's own three cells needs one, and
+    guessing a rendering un-measured against a real task is exactly what
+    RULES forbids."""
+    if "var" in e:
+        v = seq_var(e, ctx.env)
+        return v, f"{v}_n", []
+    op = e.get("op")
+    if op == "slice":
+        base, lo, hi = e["args"]
+        if "var" not in base:
+            raise NotImplementedError(
+                "seq extensional equality loop: a slice operand's own "
+                "base is not a bare seq variable, out of this pass's own "
+                "scope (fz_p_nest_eq/isSublist/containsSequence, the "
+                "only three cells measured)")
+        bv = seq_var(base, ctx.env)
+        lo_c = cexpr(lo, ctx.env, funs, task_name)
+        hi_c = cexpr(hi, ctx.env, funs, task_name)
+        dom = [f"0 <= ({lo_c})", f"({lo_c}) <= ({hi_c})",
+               f"({hi_c}) <= {bv}_n"]
+        return f"({bv} + ({lo_c}))", f"(({hi_c}) - ({lo_c}))", dom
+    if op == "at":
+        base, idx = e["args"]
+        if "var" in base and is_nested_seq_type(ctx.env.get(base["var"])):
+            nv = seq_var(base, ctx.env)
+            idx_c = cexpr(idx, ctx.env, funs, task_name)
+            dom = [f"0 <= ({idx_c})", f"({idx_c}) < {nv}_n"]
+            return (f"({nv}_data + {nv}_off[{idx_c}])",
+                    f"({nv}_off[({idx_c}) + 1] - {nv}_off[{idx_c}])", dom)
+    raise NotImplementedError(
+        "seq extensional equality loop: only a bare seq variable, a "
+        "slice of one, or a row of a nested seq<seq> PARAMETER has an "
+        "executable-position pointer/length by this pass; a seq literal "
+        "or `+` concatenation operand is a named remaining gap")
+
+
+def _seq_eq_top(e: dict, ctx: Ctx) -> bool:
+    """True iff `e` is a top-level `==`/`!=` between two seq-typed (flat
+    or nested seq<seq>) operands -- the one shape `_seq_eq_loop` renders,
+    distinguished from every other `==`/`!=` (int, bool, pair) `cexpr`
+    already renders as a plain C value with no loop needed."""
+    if e.get("op") not in ("==", "!="):
+        return False
+    t0 = typ(e["args"][0], ctx.env, ctx.funs)
+    return t0 == "seq" or is_nested_seq_type(t0)
+
+
+def _seq_eq_loop(e: dict, ctx: Ctx, indent: str, funs: dict, task_name: str):
+    """Renders `e` (`_seq_eq_top(e, ctx)` already true) as a C loop with
+    its own ACSL loop invariant computing the extensional comparison into
+    a fresh bool-int temp, returning `(statement-lines, c-value-expr)`
+    where `c-value-expr` is what `stmts()` substitutes at the call site
+    (an `if` condition, an assign/return right-hand side) in place of the
+    single value `cexpr` cannot produce. `!=` negates the temp at the
+    call site (`!{tmp}`), never inside this function, so the loop itself
+    and its invariant always state the positive (`==`) fact, one shape to
+    get right rather than two.
+
+    NESTED (fz_p_nest_eq's own `r := (m == n)`, both bare seq<seq>
+    PARAMETER variables -- a computed nested value is a fresh, unrelated
+    gap this pass does not attempt, matching `_seq_eq_operand_c`'s own
+    named scope): an outer loop over row index `i`, each iteration first
+    comparing the two rows' lengths (THE ENCODING's own offsets
+    difference) and then, only if those agree, an INNER loop comparing
+    every cell of that one row -- two real C loops, each with its own WP
+    invariant, rather than a nested `\\forall` inside a single loop
+    invariant (WP proves a loop's OWN invariant only across that loop's
+    own iterations; a nested `\\forall` over an inner range that a single
+    outer loop-invariant states as already fully checked is exactly the
+    shape the outer loop's `loop invariant` conjunct below asks WP to
+    carry forward, unchanged by the inner loop's own local `i2`/`__cell`
+    names, which never escape their own block).
+
+    FLAT (isSublist's `sub == main_v[i..i+len(sub)]`, containsSequence's
+    `sub == at(list, i_v)`): one loop, comparing pointer-plus-length pairs
+    `_seq_eq_operand_c` returns for each operand, structurally the flat
+    case's SAME shape as the nested case's own inner loop (kept as one
+    helper-free block below rather than factored through the nested case's
+    inner-loop code, since the two need different index/name plumbing --
+    the nested case's inner loop is generated per outer iteration, this
+    one only once)."""
+    n = _SEQ_EQ_CTR[0]
+    _SEQ_EQ_CTR[0] += 1
+    eq, i = f"__seq_eq{n}", f"__seq_eq{n}_i"
+    out = []
+    a_e, b_e = e["args"]
+    ta = typ(a_e, ctx.env, ctx.funs)
+    if is_nested_seq_type(ta):
+        if "var" not in a_e or "var" not in b_e:
+            raise NotImplementedError(
+                "seq extensional equality loop: a nested-seq (seq<seq>) "
+                "operand must be a bare PARAMETER variable, not a "
+                "computed row set; out of this pass's own scope "
+                "(fz_p_nest_eq, the only nested cell measured)")
+        av, bv = seq_var(a_e, ctx.env), seq_var(b_e, ctx.env)
+        rl, rr = f"{eq}_rl", f"{eq}_rr"
+        i2 = f"{i}2"
+        row_eq = (f"({av}_off[__k + 1] - {av}_off[__k]) == "
+                 f"({bv}_off[__k + 1] - {bv}_off[__k]) && "
+                 f"(\\forall integer __j; 0 <= __j < "
+                 f"({av}_off[__k + 1] - {av}_off[__k]) ==> "
+                 f"{av}_data[{av}_off[__k] + __j] == "
+                 f"{bv}_data[{bv}_off[__k] + __j])")
+        out.append(f"{indent}int {i} = 0;")
+        out.append(f"{indent}int {eq} = ({av}_n == {bv}_n);")
+        out.append(f"{indent}/*@")
+        out.append(f"{indent}  loop invariant 0 <= {i} <= {av}_n;")
+        out.append(f"{indent}  loop invariant {i} <= {bv}_n;")
+        out.append(f"{indent}  loop invariant {eq} == 1 ==> "
+                  f"(\\forall integer __k; 0 <= __k < {i} ==> "
+                  f"({row_eq}));")
+        out.append(f"{indent}  loop assigns {i}, {eq};")
+        out.append(f"{indent}  loop variant {av}_n - {i};")
+        out.append(f"{indent}*/")
+        out.append(f"{indent}while ({eq} && {i} < {av}_n) {{")
+        out.append(f"{indent}  int {rl} = {av}_off[{i} + 1] - {av}_off[{i}];")
+        out.append(f"{indent}  int {rr} = {bv}_off[{i} + 1] - {bv}_off[{i}];")
+        out.append(f"{indent}  if ({rl} != {rr}) {{")
+        out.append(f"{indent}    {eq} = 0;")
+        out.append(f"{indent}  }} else {{")
+        out.append(f"{indent}    int {i2} = 0;")
+        out.append(f"{indent}    /*@")
+        out.append(f"{indent}      loop invariant 0 <= {i2} <= {rl};")
+        out.append(f"{indent}      loop invariant {eq} == 1 ==> "
+                  f"(\\forall integer __j; 0 <= __j < {i2} ==> "
+                  f"{av}_data[{av}_off[{i}] + __j] == "
+                  f"{bv}_data[{bv}_off[{i}] + __j]);")
+        out.append(f"{indent}      loop assigns {i2}, {eq};")
+        out.append(f"{indent}      loop variant {rl} - {i2};")
+        out.append(f"{indent}    */")
+        out.append(f"{indent}    while ({eq} && {i2} < {rl}) {{")
+        out.append(f"{indent}      if ({av}_data[{av}_off[{i}] + {i2}] != "
+                  f"{bv}_data[{bv}_off[{i}] + {i2}]) {{")
+        out.append(f"{indent}        {eq} = 0;")
+        out.append(f"{indent}      }}")
+        out.append(f"{indent}      {i2} = {i2} + 1;")
+        out.append(f"{indent}    }}")
+        out.append(f"{indent}  }}")
+        out.append(f"{indent}  {i} = {i} + 1;")
+        out.append(f"{indent}}}")
+        return out, eq
+    ap, alen, adom = _seq_eq_operand_c(a_e, ctx, funs, task_name)
+    bp, blen, bdom = _seq_eq_operand_c(b_e, ctx, funs, task_name)
+    for d in adom + bdom:
+        out.append(f"{indent}/*@ assert {d}; */")
+    out.append(f"{indent}int {i} = 0;")
+    out.append(f"{indent}int {eq} = (({alen}) == ({blen}));")
+    out.append(f"{indent}/*@")
+    out.append(f"{indent}  loop invariant 0 <= {i} <= ({alen});")
+    out.append(f"{indent}  loop invariant {i} <= ({blen});")
+    out.append(f"{indent}  loop invariant {eq} == 1 ==> "
+              f"(\\forall integer __j; 0 <= __j < {i} ==> "
+              f"({ap})[__j] == ({bp})[__j]);")
+    out.append(f"{indent}  loop assigns {i}, {eq};")
+    out.append(f"{indent}  loop variant ({alen}) - {i};")
+    out.append(f"{indent}*/")
+    out.append(f"{indent}while ({eq} && {i} < ({alen})) {{")
+    out.append(f"{indent}  if (({ap})[{i}] != ({bp})[{i}]) {{")
+    out.append(f"{indent}    {eq} = 0;")
+    out.append(f"{indent}  }}")
+    out.append(f"{indent}  {i} = {i} + 1;")
+    out.append(f"{indent}}}")
+    return out, eq
+
+
+def _seq_eq_value(e: dict, ctx: Ctx, indent: str, funs: dict,
+                  task_name: str):
+    """`_seq_eq_loop` plus the `!=` negation, in one call for the three
+    `stmts()` call sites (assign/return right-hand side, `if` condition)
+    that substitute its result where a single `cexpr()` value would
+    otherwise go."""
+    lines, tmp = _seq_eq_loop(e, ctx, indent, funs, task_name)
+    return lines, (f"(!{tmp})" if e["op"] == "!=" else tmp)
+
+
 def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
           _prefix: dict | None = None) -> list:
     # THE FRAME-FACT GAP, framac column (2026-09-12, ROADMAP 16.2): a
@@ -4875,6 +5304,18 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             if ctx.env[name] == "seq":
                 out += seq_assign_lines(name, e, ctx, indent, ctx.funs,
                                         task_name)
+            elif _seq_eq_top(e, ctx):
+                # FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12:
+                # fz_p_nest_eq's own `r := (m == n)` -- a bare seq
+                # extensional `==`/`!=` assigned directly to a bool-typed
+                # name, `cexpr`'s own named refusal there (SEQ VALUE,
+                # executable position, item 4) -- now has a
+                # statement-shaped rendering instead of a single C value.
+                out += at_asserts(e, ctx, indent, ctx.funs, task_name)
+                lines, val = _seq_eq_value(e, ctx, indent, ctx.funs,
+                                          task_name)
+                out += lines
+                out.append(f"{indent}{name} = {val};")
             else:
                 out += at_asserts(e, ctx, indent, ctx.funs, task_name)
                 out.append(f"{indent}{name} = "
@@ -4915,6 +5356,21 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                     out.append(f"{indent}return {ctx.seq_len[name]};")
                 else:
                     out.append(f"{indent}return;")
+            elif _seq_eq_top(e, ctx):
+                # FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12: same
+                # rendering as the "assign" branch above, for an early-
+                # exit `return` whose expression is a bare seq
+                # extensional `==`/`!=`. Not exercised by any of this
+                # pass's own three measured cells (none returns one
+                # early), kept correct rather than left to fall through
+                # to `cexpr`'s own named refusal for the same reason the
+                # "assign" branch is not left to either.
+                out += at_asserts(e, ctx, indent, ctx.funs, task_name)
+                lines, val = _seq_eq_value(e, ctx, indent, ctx.funs,
+                                          task_name)
+                out += lines
+                out.append(f"{indent}{name} = {val};")
+                out.append(f"{indent}return {name};")
             else:
                 out += at_asserts(e, ctx, indent, ctx.funs, task_name)
                 out.append(f"{indent}{name} = "
@@ -5002,9 +5458,24 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
         elif "if" in s:
             c = s["if"]
             out += at_asserts(c["cond"], ctx, indent, ctx.funs, task_name)
-            out.append(f"{indent}if "
-                       f"({cexpr(c['cond'], ctx.env, ctx.funs, task_name)}) "
-                       f"{{")
+            if _seq_eq_top(c["cond"], ctx):
+                # FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12:
+                # isSublist's `if (sub == main_v[i..i+len(sub)])` and
+                # containsSequence's `if (sub == at(list, i_v))` -- a
+                # bare seq extensional `==`/`!=` reaching an `if`
+                # CONDITION directly, `cexpr`'s own named refusal there
+                # (SEQ VALUE, executable position, item 4) once more.
+                # `at_asserts` above already covers any `at`/`div`/`mod`
+                # nested inside the comparison's own operands (e.g. a
+                # slice bound), unchanged; the loop's OWN domain asserts
+                # (a slice/row operand's own bound) are emitted by
+                # `_seq_eq_loop` itself.
+                lines, cond_c = _seq_eq_value(c["cond"], ctx, indent,
+                                             ctx.funs, task_name)
+                out += lines
+            else:
+                cond_c = cexpr(c["cond"], ctx.env, ctx.funs, task_name)
+            out.append(f"{indent}if ({cond_c}) {{")
             out += stmts(c["then"], ctx, task_name, indent + "  ",
                         dict(prefix))
             out.append(f"{indent}}} else {{")
@@ -6239,6 +6710,27 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
     code = []
     seq_decls: set = set()   # local (non-param) seq names already given a
                               # C array declaration by the walk below
+    # SCALAR RE-DECLARATION BUG, found 2026-09-12 (FRAMAC-NESTED, see
+    # `walk`'s own "var"/"assign" branch below for the full note):
+    # `declared` tracks every scalar name this certificate has already
+    # given a C `int` declaration to (seeded with the task's own params
+    # just below, before `walk` ever runs, since those get their `int`
+    # declaration from the separate loop right before `walk` is called,
+    # not from `walk` itself), so a NAME'S OWN FIRST assignment inside
+    # `walk` -- whether that assignment arrives as a "var" statement (a
+    # genuinely fresh local) or as an "assign" to the task's RETURN name
+    # (never a "var" statement anywhere, `result` here, since v1 gives a
+    # function's return name no declaring statement of its own, only
+    # `assign`/`return` targets) -- gets the declaring `int` exactly
+    # once, and every later assignment to that same name, by either
+    # statement kind, gets a plain reassignment. Neither `"var" in s`
+    # alone (declares `result` never, the bug this comment's own fix
+    # replaces) nor "declare every assign" (redeclares a loop's own
+    # reassigned locals, isSublist's own `i_v`/`result` across
+    # iterations, the ORIGINAL bug this whole note is about) is right;
+    # this set is the one piece of state that answers "have I, this
+    # call, already emitted this name's own `int`?" correctly for both.
+    declared: set = {p["name"] for p in task["params"]}
 
     def walk(body: list, ctx: Ctx):
         """(found_undefined_obligation_or_None, ctx). Mutates `env_py` and
@@ -6371,8 +6863,36 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                 continue
             if "var" in s:
                 ctx = ctx.bind(nm, ty)
+            # SCALAR RE-DECLARATION BUG, found 2026-09-12 (FRAMAC-NESTED,
+            # ROADMAP 13.4 item (a); isSublist's own while loop, walked
+            # here for the first time once the extensional-equality
+            # loop above let this task's framac lowering succeed at
+            # all): this used to key off `"var" in s` alone, giving `int
+            # {nm} = ...;` to a "var" statement and a bare `{nm} =
+            # ...;` to an "assign" -- wrong on BOTH sides of that split.
+            # An "assign" to the RETURN name (`result`, never a "var"
+            # statement anywhere in v1: a function's return gets no
+            # declaring statement of its own) got the bare form on its
+            # OWN first assignment, an undeclared-identifier error; an
+            # "assign" REASSIGNING a "var" name across loop iterations
+            # this replay unrolls (`i_v`, isSublist's own shape) got the
+            # `int`-prefixed form every time, a "redefinition of '{nm}'
+            # in the same scope" PARSE ERROR (frama-c's own exact
+            # message, measured on isSublist's twin certificate) from
+            # the second iteration on, since C has no re-`int` inside
+            # one block. `declared` (this function's own set, seeded
+            # with the task's params before `walk` is ever called) is
+            # the one piece of state that actually answers "has THIS
+            # NAME been given its own `int` yet by this certificate,
+            # regardless of which statement kind first assigned it":
+            # declare once, on whichever statement (var or assign) is
+            # the name's own first sight, plain-assign every time after.
+            if nm not in declared:
+                code.append(f"  int {nm} = {_int_lit(int(val))};")
+                declared.add(nm)
+            else:
+                code.append(f"  {nm} = {_int_lit(int(val))};")
             env_py[nm] = val
-            code.append(f"  int {nm} = {_int_lit(int(val))};")
         return None, ctx
 
     try:
@@ -6819,6 +7339,15 @@ def _always_returns(body: list) -> bool:
 # sites pass it; when it is certifiable, the emitted file carries the
 # refutation certificate (see the section above).
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # FRAMAC-NESTED, 2026-09-12: `_SEQ_EQ_CTR` names the temps the
+    # extensional seq equality loop above declares (`__seq_eq0`,
+    # `__seq_eq1`, ...) uniquely WITHIN one call to `lower()`; reset here
+    # so two calls in the same process (real then twin, or two different
+    # tasks under one `--jobs` worker) never share a counter value, which
+    # would still be sound C (each call emits its own fresh file) but
+    # would make two different calls' emitted names needlessly depend on
+    # how many equality loops a PRIOR, unrelated call happened to emit.
+    _SEQ_EQ_CTR[0] = 0
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a C/ACSL reserved word, before anything below ever
     # sees the task -- see names.py's module docstring (imported as

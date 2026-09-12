@@ -2082,6 +2082,105 @@ else measured and named rather than guessed at; no lowering feature in
   FAIL before, 0 FAIL after -- no PASS lost or gained.
   `python3 -m unittest test_lower_rocq`: 15 of 15 (14 pre-existing plus
   `NoApplicableTacticIsUnprovedTest`).
+
+ROCQ-5, 2026-09-12 (a second pass over ROCQ-4's own "measured, not fixed"
+list, same seven tasks; no lowering feature changed in this file this
+session either -- confirmed the six cells still read the same and closed
+one specific open question ROCQ-4 left unanswered, named below, without
+touching the generation pipeline).
+
+  RE-CONFIRMED, unchanged (re-measured with `grade.py --tasks tasks
+  --kernels rocq,dafny --flake 3` and, for the six lifted-corpus rows,
+  `grade.py --tasks <the six .json tasks> --kernels rocq,dafny --flake
+  3`, both before touching anything and again after this session's only
+  edit, a docstring): task_id_610 removeElement ABSTAIN/ABSTAIN (the
+  two-sequential-loops architectural gap, unattempted for the same
+  reason ROCQ-4 named -- lower_fstar.py's own `gen_loop_chain` precedent
+  is F*'s Pure-refinement style, not a template this file's Fixpoint/
+  fuel/induction architecture can drop in); task_id_586 splitAndAppend
+  unproved/refuted (the rotate-by-mod case-split lemma, unattempted);
+  task_id_470 pairwiseAddition verified/timeout (the twin's own
+  wall-clock backstop, unattempted); task_id_576 isSublist
+  unproved/unproved (unattempted); task_id_3 isNonPrime and task_id_605
+  isPrime timeout/refuted and unproved/refuted respectively (flake
+  noise between the two, as ROCQ-4 already named).
+
+  THE ONE QUESTION ROCQ-4 LEFT OPEN, ANSWERED: "that lemma [the
+  divisor-bound lemma of lower_fstar.py/lower_verus.py] was not located
+  and ported to lower_rocq.py this session." It ports. Measured
+  standalone (coqc, Rocq 9.2, no lowering change): `t_divisor_le_half`
+  (`n >= 2 -> 2 <= k < n -> t_mod n k = 0 -> k <= t_div n 2`, stated over
+  this file's own `t_mod`/`t_div` pair, never Rocq's native `Z.mod`/
+  `Z.div`) discharges with plain `nia` from `t_div_mod_eq` and
+  `t_mod_bound` alone (the two lemmas already in every task's own
+  PRELUDE) -- no `Znumtheory` import, no nonlinear escape hatch beyond
+  `nia`, the same "one nonlinear fact, otherwise routine" character F*'s
+  own measurement found for Z3. Two extension lemmas built on it,
+  `t_divisor_bound_forall` (isPrime's `!=`/`forall` shape) and
+  `t_divisor_bound_exists` (isNonPrime's `==`/`exists` shape), each
+  `n >= 2 -> 2 <= i -> i <= t_div n 2 + 1 -> ~ (i <= t_div n 2) ->
+  (invariant at i) -> (the task's own ensures at n)`, both close with
+  `lia`/`nia` and no classical-logic axiom (unlike F*'s own version,
+  which needs `FStar.Classical.exists_elim`/`forall_to_exists` for the
+  `!=` case's negative direction -- Rocq's version needs neither
+  because `t_mod n k = 0` is a decidable equality on `Z`, so the
+  contradiction step in `t_divisor_bound_forall`'s forward direction is
+  a plain `intro`+`lia`, not an excluded-middle appeal). Saved standalone
+  at <scratch>/divisor-bound-probe/divisor_bound.v (this worktree does
+  not own that path; it is not part of this patch).
+
+  WHY IT IS NOT WIRED IN, NAMED RATHER THAN GUESSED AT: every one of the
+  four hypotheses above is available at the induction's own exit case
+  EXCEPT `i <= t_div n 2 + 1` (the "exit width" bound -- the loop's
+  counter can overshoot the guard by at most the one increment its own
+  body performs). `_loop_spec`'s conclusion in the early-exit branch
+  (`gen_loop`'s `concl_full`, this file, above) carries `2 <= i'`, the
+  invariant at `i'`, and the negated guard, but never an upper bound on
+  `i'` -- no invariant in the task's own `w["invariants"]` states one
+  either, so the fact is true (every committed and lifted while-loop
+  increments its counter by exactly one place per iteration) but not
+  YET a hypothesis this file's induction carries forward anywhere. Two
+  ways to get it were read this session, neither attempted: thread a
+  new, generically-derived invariant `i <= <loop guard's own bound> + 1`
+  through every early-exit `_loop_spec` (touches `gen_loop`'s hot
+  induction for every task with a `<=`-guarded counter loop, not only
+  this shape, so it needs the same regression care ROCQ-4's own
+  removeElement finding named); or derive it locally, task-shape-gated,
+  from the SAME induction that already proves `_loop_spec` by adding a
+  second conjunct to `concl_full` only when `_divisor_bound_target`
+  matches (cheaper, but the induction's `t_dis_ext` branch would need
+  its own case split against `i' = i + 1` at the ONE step that fails
+  the guard, which this session did not build or test standalone before
+  running out of room). Either path changes `gen_loop`'s shared
+  induction lemma text for tasks well beyond isPrime/isNonPrime, which
+  is exactly the "confirming a chained construction sound needs
+  substantially more room" bar ROCQ-4 set for removeElement; the same
+  bar applies here, so no attempt was committed. No lowering feature in
+  `lower_rocq.py` changed this session; `verifiers/rocq.py` was read for
+  a second classification gap (none of this session's own six
+  re-measured `.v` sources hit the `else MALFORMED` catch-all or any
+  other unclassified coqc message; ROCQ-4's `NoApplicableTacticIsUnprovedTest`
+  fix is untouched).
+
+  REGRESSION (grade.py --tasks tasks --kernels rocq,dafny --flake 3, the
+  34 committed tasks, re-run this session before and after the one
+  docstring edit above): 34 of 34 read the SAME cell as AGREEMENT.md's
+  own rocq column both times (33 verified/refuted, min_max
+  timeout/refuted) -- a true regression check, not inferred, since a
+  docstring-only edit cannot move a `.v` byte either way but the run was
+  still made to have a measured "after" rather than an assumed one. The
+  six COVERAGE-lifted-785.md rows named in this session's own brief
+  (task_id_3, 470, 576, 586, 605, 610), graded standalone at flake 3
+  before and after: identical both times (removeElement abstain/
+  abstain, splitAndAppend unproved/refuted, pairwiseAddition
+  verified/timeout, isSublist unproved/unproved, isNonPrime
+  timeout/refuted, isPrime unproved/refuted) -- none of the six is in
+  scope to move without the exit-width fact above, so none did.
+  `python3 test_names.py`: 8 of 8. `python3 -m unittest test_lower_rocq`:
+  15 of 15, both unchanged from ROCQ-4 (no test added this session: the
+  divisor-bound lemma family lives in a standalone probe file, never
+  imported by `lower_rocq.py`, so it has nothing in this file's own
+  surface for a regression test to pin yet).
 """
 from __future__ import annotations
 

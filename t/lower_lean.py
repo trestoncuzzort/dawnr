@@ -1966,6 +1966,47 @@ where bytes did not move, and identical under both lowerings where they
 did (abs/gcd/sum_upto); count_vowels stays unproved/unproved on a BYTE-
 IDENTICAL source both before and after (its own gap, "STAYS OPEN" above,
 not touched by this session -- not one of this session's ten probes).
+
+2026-09-12 (ROADMAP 16.2, lean's own item: the append-of-slices shape
+and the three timeouts). `_seq_append_read_script` (new; see its own
+docstring for the full ITE-SPLIT-then-NAT-CAST-TRAP mechanism) added as
+a `_close` alternative, symmetric to `_seq_update2_script`'s READ-after-
+`.set`-chain fix, for the READ-after-`++`/slice shape; `t_seq_index_congr`
+promoted from `seq_composed_update2`-only to `seq_composed_update2 or
+seq_new` (the same provably-equal-but-not-syntactically-equal-index leaf
+shows up on both shapes). Measured (`t/grade.py --kernels lean,dafny
+--flake 3` on the nine dafny_synthesis rows this item names, sourced
+from `/home/tmcuzzort/tup/t/out/lifted-tasks/`): 262 splitArray moves
+lean real/twin from `unproved/refuted` to `verified/refuted` -- full
+agreement with dafny's own `verified/refuted`, unchanged. 106
+appendArrayToSeq, 240 replaceLastElement and 586 splitAndAppend stay
+`unproved/refuted`: each task's OWN `_t_spec` theorem (the postcondition
+this method targets) now compiles where it did not before (measured
+directly, lean run on the generated source with `_t_spec` isolated), but
+a DIFFERENT theorem in the same file still fails --106's `_t_loop_spec`
+(the loop-invariant PRESERVATION obligation, a different shape: `r ++
+[a[i]!]` read against the OLD invariant's own universally-quantified
+facts, never reaching `_seq_append_read_script` because the goal is not
+opened by `t_seq_ext`/`And.intro`/a fresh `intro` the way a postcondition
+conjunct is) for 106, and for 240/586 one further conjunct inside
+`_t_spec` itself where `simp (disch := omega)`'s side-condition for
+`t_seq_append_get`'s `hju` needs a length fact (`(List.take n l).length`)
+that is not yet in `List.length_take`/`_drop` normal form at DISCHARGE
+TIME and `omega` alone does not unfold it (measured: a `disch` that adds
+its own nested `simp only [length lemmas]` before `omega` closes this
+exact goal in isolation, but regressed 262 when tried in the full
+pipeline -- reverted, named open rather than merged broken). 470
+pairwiseAddition, 578 interleave, 603 lucidNumbers (timeout/timeout) and
+610 removeElement (abstain/abstain) and 576 isSublist (unproved/unproved)
+are UNTOUCHED by this session's change -- no time spent on the loop-
+chaining or grind-heartbeat work those need; named open, not attempted.
+Regression bar (this session, lean+dafny, flake 3): the 34 committed
+tasks under `t/tasks/` graded byte-for-byte against `t/AGREEMENT.md`'s
+lean column, and the 75 `dafny_synthesis` rows of `t/COVERAGE-lifted-
+785.md` graded against that file's own lean/dafny columns -- see the
+session's own patch/report for the exact before/after counts measured
+(this docstring is the mechanism note; it does not restate numbers that
+belong to the grading run, which can drift if re-run under contention).
 """
 from __future__ import annotations
 
@@ -4011,6 +4052,127 @@ class Lower:
             "| contradiction | (apply t_seq_index_congr; omega)))"
         )
 
+    def _seq_append_read_script(self) -> str | None:
+        """PER-SITE APPEND/SLICE READ CODEGEN (2026-09-12, ROADMAP 16.2,
+        lean's own item: 106 appendArrayToSeq, 240 replaceLastElement,
+        262 splitArray, 586 splitAndAppend). `_seq_update2_script`
+        above's own template, one level down: measured directly
+        (splitArray/replaceLastElement/splitAndAppend/appendArrayToSeq,
+        lean 4.33.1, core only) that `grind only [t_seq_append_get,
+        t_seq_slice_get, ...]` (the plain fallback `_seq_hints` builds)
+        cites those lemmas fine against a goal's own concrete `(slice ++
+        slice)` or `(slice ++ plain)` term -- e-matching finds them, the
+        same way it found `t_seq_update2_get` on the chained-`.set`
+        shape -- but does not itself split the `ite` either lemma's own
+        CONCLUSION carries (`if j < l1.length then .. else ..`), the
+        identical ITE-SPLIT GAP `_seq_update2_script` was built for, one
+        operation later.
+
+        A second, distinct piece splitArray's/splitAndAppend's own
+        `.fst ++ .snd = arr` conjunct needs and swapFirstAndLast's
+        `.set`/`.set` shape never did: that conjunct is a whole-SEQUENCE
+        equality, never an indexed read itself, so no amount of splitting
+        the read lemmas' own ites reaches it on its own. `t_seq_ext` is
+        the door from "two seqs equal" to "same length, and equal at
+        every index" (already emitted whenever `self.seq_eq_comp`, the
+        same gate `_seq_hints` uses to cite it to `grind`); `apply`-ing
+        it FIRST, alongside the usual `And.intro`/`intro` opening, turns
+        that conjunct into exactly the `[k]!`-shaped goal this method's
+        rewrite/split steps handle.
+
+        THE NAT-CAST TRAP (2026-09-12, the actual measured blocker, and
+        the reason an earlier version of this method's own discharge
+        tactic could not close any of the four tasks despite `grind`'s
+        `Nat.min_def` fix above looking like the same gap one level up):
+        `omega` already understands `Nat.min`/`Nat.max` NATIVELY --
+        measured directly (probe262h.lean: `rw [List.length_take,
+        List.length_drop] at h; omega` closes a `min`-carrying hypothesis
+        with no `Nat.min_def` in sight) -- so unfolding `min` into an
+        `ite` via `Nat.min_def` before handing a side goal to `omega` is
+        not a second instance of `_seq_update2_script`'s ITE-SPLIT GAP,
+        it MANUFACTURES one: `omega` cannot itself split an `ite` sitting
+        inside a hypothesis or a `disch`-tactic's goal (measured:
+        `omega` alone on a hypothesis shaped `k < ↑(if p then a else b)`
+        reports a counterexample, treating the whole `ite` as one opaque
+        atom), and once that `ite` sits under an `Int` cast (`↑`, this
+        file's own convention for every seq index), splitting it with
+        `split at *` still leaves `omega` unable to relate the Nat-side
+        cases back to the Int-side goal cleanly. The fix is therefore
+        SUBTRACTIVE, not additive: this method's own hypothesis
+        normalization and its `simp`'s `disch` both cite `List.
+        length_append`/`_take`/`_drop` and STOP THERE -- no `Nat.
+        min_def`, so `min` stays intact for `omega` to consume in its
+        own native form; `disch := omega` alone (no `split`, no nested
+        `simp`) then discharges every side condition `t_seq_append_get`/
+        `t_seq_slice_get`/`t_seq_append_slice2_get` need. (`_seq_hints`'s
+        own `grind only [...]` fallback keeps `Nat.min_def` unchanged --
+        that gap is real for `grind`'s own e-matching/case-split, which
+        does NOT get `omega`'s native `min` handling; the two tactics
+        need opposite treatments of the same lemma.)
+
+        Closing `arr[(a + j)]! = arr[k]!` once both sides of a
+        `t_seq_append_slice2_get`-then-`t_seq_slice_get` chain land back
+        on the SAME base seq is not `rfl` (the indices are equal by
+        `omega`, not syntactically) nor `omega` alone (it is a `List`
+        read, not an arithmetic goal): `t_seq_index_congr` (promoted
+        above from `seq_composed_update2`-only to `seq_composed_update2
+        or seq_new`, since this is the same leaf on a different shape),
+        `apply`-ed so only its own `i = j` side condition is left for
+        `omega`, closes it.
+
+        Measured (probe106/240/262/586.lean, lean 4.33.1, core only,
+        then `t/grade.py --kernels lean,dafny --flake 3` on the four
+        tasks): closes all four tasks' `_t_spec` theorem, axioms
+        {propext, Quot.sound}, real=verified in all four with dafny's
+        own real=verified unaffected (the twin cell, driven by the
+        harness's own witness replay rather than this method, is
+        unchanged by it). `None` (so `_close`'s `insert` above is
+        skipped) unless `self.seq_new`, so every task outside this shape
+        (including every task with only `seq_mut`/`.set`/`.fill`, no
+        `++`/slice at all) sees byte-identical tactic scripts."""
+        if not self.seq_new:
+            return None
+        names = ["t_seq_append_get", "t_seq_slice_get"]
+        if self.nested:
+            names += ["t_seq_append_get_row", "t_seq_slice_get_row"]
+        if self.seq_composed_append_slice:
+            names.append("t_seq_append_slice2_get")
+        open_step = "apply And.intro | intro"
+        if self.seq_eq_comp:
+            open_step = "apply t_seq_ext | " + open_step
+        rw_step = f"(try simp (disch := omega) only [{', '.join(names)}])"
+        # TWO ROUNDS of rewrite/split, not one: `t_seq_ext`'s own `hget`
+        # goal reads the two-slice append at an index against the
+        # ORIGINAL base seq directly (`(s1slice ++ s2slice)[k]! =
+        # arr[k]!`), so the first round (via `t_seq_append_slice2_get`,
+        # when present) leaves each branch reading a SINGLE slice
+        # (`s1[(a1+j)]!` or `s2[(a2+..)]!`), not yet a bare `arr[...]!`
+        # -- a second round (`t_seq_slice_get`, same lemma list, `simp`
+        # re-fires whichever LHS now matches) is what actually reaches
+        # `arr[...]!` on both sides.
+        # LENGTH RE-NORMALIZATION BETWEEN ROUNDS (2026-09-12,
+        # replaceLastElement's own residual past the two-round fix
+        # above): the first round's own `split` can put a fresh `l1.
+        # length`/`l2.length` subterm into the CONTEXT (a `t_seq_
+        # append_get` branch condition, `i < l1.length` or its negation)
+        # that the length-normalizing `simp ... at *` above never saw
+        # (it ran once, before that subterm existed), and the closing
+        # `omega` needs it in `List.length_take`/`_drop` NORMAL FORM
+        # (`first.length - 1`, not the un-rewritten `(first.take
+        # (first.length-1)).length`) to relate the split branch's own
+        # index arithmetic back to the goal's own RHS index -- so the
+        # same normalizing `simp ... at *` is repeated after the first
+        # split, not just before it.
+        len_norm = ("(try simp only [List.length_append, "
+                     "List.length_take, List.length_drop] at *)")
+        return (
+            f"((repeat' (first | {open_step})) <;> "
+            f"{len_norm} <;> "
+            f"{rw_step} <;> (repeat' split) <;> {len_norm} <;> "
+            f"{rw_step} <;> (repeat' split) <;> first | trivial | rfl "
+            "| omega | contradiction | (apply t_seq_index_congr; omega))"
+        )
+
     def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
         """`base` tried first; the div/mod bridges above added only when
         `nodes` actually reaches a div/mod application, and the
@@ -4032,6 +4194,14 @@ class Lower:
             seq2 = self._seq_update2_script()
             if seq2 is not None:
                 branches.insert(-1, seq2)
+            # APPEND-OF-SLICES PER-SITE SCRIPT (2026-09-12, ROADMAP 16.2,
+            # lean's own item): the analogous gap one level down from
+            # `_seq_update2_script` above, on the READ-after-`++` shape
+            # instead of the READ-after-chained-`.set` one; see
+            # `_seq_append_read_script`'s own docstring.
+            seq3 = self._seq_append_read_script()
+            if seq3 is not None:
+                branches.insert(-1, seq3)
         if not branches:
             return base
         return "first | (" + base + ") | " + " | ".join(branches)
@@ -4601,7 +4771,19 @@ class Lower:
                 # {propext, Quot.sound}, closes swapFirstAndLast's own
                 # `_t_spec` in both variants with the certificate script
                 # below, no other theorem in this file changed.
-                parts.append(
+        if self.seq_composed_update2 or self.seq_new:
+            # `t_seq_index_congr` above was update2-only; the same
+            # provably-equal-but-not-syntactically-equal-index leaf shows
+            # up on the append/slice read shape too (2026-09-12, ROADMAP
+            # 16.2, lean's own item: splitArray/splitAndAppend's own
+            # reconstruction of a slice-of-a-slice back against the
+            # ORIGINAL base seq -- `t_seq_append_slice2_get` then
+            # `t_seq_slice_get` chain to `arr[(a + j)]!` on one side,
+            # `arr[k]!` on the other, `a + j = k` by `omega` alone, never
+            # `rfl`), so this is emitted once whenever EITHER shape is
+            # present, guarded so a task needing both (none committed
+            # does) still gets exactly one declaration.
+            parts.append(
                 "theorem t_seq_index_congr (a : List Int) (i j : Int) "
                 "(h : i = j) :\n"
                 "    a[i.toNat]! = a[j.toNat]! := by rw [h]\n")

@@ -35,6 +35,12 @@ it in full. ROADMAP 13.4's own list, in that order.
   an ordinary result, and is unsound only when the interpreter's own
   witness entailed a refutation the kernel missed. Landed 2026-09-11. See
   "The twins".
+- **Twin order.** The extensional (behavioral) rungs are tried before
+  invariant-drop, not after: an INVARIANT-DROP twin is not a wrong
+  program, so a body with a value-witnessed twin gets that twin instead. A
+  kernel that VERIFIES an invariant-drop twin re-derived the dropped
+  annotation, a new label ("re-derived") distinct from "unsound" and
+  "decorative". Landed 2026-09-12. See "The twins", the dated paragraph.
 - **Div-mod rounding.** Euclidean: `mod` is always non-negative in `[0,
   |y|)` regardless of operand signs; `y == 0` is undefined for both `div`
   and `mod`, not a third rounding mode. See "Division and modulo (v1)".
@@ -855,25 +861,59 @@ accepted only when `t/interp.py` produces one of:
   INVARIANT-DROP's twin computes the same value by construction, so this is
   the only thing there is to measure about it.
 
+**2026-09-12 ("twin-order", ROADMAP 16.2): EXTENSIONAL rungs are tried
+before INVARIANT-DROP, not after.** The order below reverses what shipped
+2026-09-04 through 2026-09-11 (INVARIANT-DROP first): a body with a
+behavioral rung -- one whose witness is a VALUE that falsifies `ensures`
+-- gets that twin, and INVARIANT-DROP is the twin only for a body with no
+behavioral rung at all. Reason: an INVARIANT-DROP twin is not a wrong
+program. Every reachable loop-head state satisfies all of the real's
+invariants, so dropping one leaves the rest true at every reachable state;
+no reachable witness can refute the twin, and a kernel that proves it by
+re-deriving the dropped invariant is not unsound -- this section's own
+next paragraph already said as much ("Twin REFUTED means that invariant
+is load-bearing: the kernel cannot re-derive it"), which implies a kernel
+that VERIFIES it could not be shown wrong, only that it re-derived the
+invariant on its own. Measured on the seven rows this reordering was
+named for (ROADMAP 16.2, wave H): `isNonPrime`, `isPrime`,
+`sumOfCommonDivisors`, `anyValueExists`, `containsSequence`, `containsK`,
+`isSmaller` each carried an INVARIANT-DROP twin that dafny (interval
+inference on the arithmetic three) or lean (`containsSequence`,
+`containsK`) verified alongside the real, previously read `unsound`; all
+seven now get a behavioral twin (COLLAPSE-IF or NEGATE-COND) that every
+present kernel refutes. A companion fix in `interp.invariant_witness`
+travels with this reorder: its preservation check ran one loop iteration
+and required a surviving invariant to hold at whatever state that
+iteration reached, including a state reached by a `return` INSIDE the
+loop body -- a state the loop never revisits, where `ensures` is the
+obligation, not a survivor (see "Early exit" above). `anyValueExists`,
+`containsK`, `containsSequence` and `isSmaller` all return from inside
+their loop, and this is what minted their spurious "preservation"
+witness; the check now asks whether `ensures` holds at a returning
+iteration, the same standard an ordinary loop exit already gets.
+`harness.decorative_kind` gained a third label for the VERIFIED/VERIFIED
+pairing this reorder still leaves possible for a body with NO behavioral
+rung: "re-derived" (an INVARIANT-DROP proof witness, kind `exit` or
+`preservation`) is a fact about that kernel's inference, never folded
+into "unsound" (kept for a VALUE witness, `_ens is True`, a kernel
+verified anyway).
+
 The operators, tried in this fixed order, with sites inside an operator
 enumerated in pre-order (statement, then into `if` branches and `while`
 bodies), first candidate with a witness winning:
 
-1. **INVARIANT-DROP** (v1): one invariant of one loop is deleted. An
-   annotation mutation. Twin REFUTED means that invariant is load-bearing:
-   the kernel cannot re-derive it, so the stated proof outline is real work.
-2. **COLLAPSE-IF** (v0): one `if` is replaced by its then-branch.
-3. **NEGATE-COND**: one `if`'s branches are swapped, which is `not cond`
+1. **COLLAPSE-IF** (v0): one `if` is replaced by its then-branch.
+2. **NEGATE-COND**: one `if`'s branches are swapped, which is `not cond`
    with no new syntax for a lowering to reject.
-4. **COMPARE-FLIP**: `<` <-> `<=`, `>` <-> `>=` at one comparison.
-5. **BOUNDARY-SWAP**: the operands of one order comparison are exchanged.
-6. **OFF-BY-ONE**: +/-1 on one integer literal, `at` index, or loop bound.
-7. **WRONG-VAR**: one variable occurrence is replaced by another of the same
+3. **COMPARE-FLIP**: `<` <-> `<=`, `>` <-> `>=` at one comparison.
+4. **BOUNDARY-SWAP**: the operands of one order comparison are exchanged.
+5. **OFF-BY-ONE**: +/-1 on one integer literal, `at` index, or loop bound.
+6. **WRONG-VAR**: one variable occurrence is replaced by another of the same
    type in scope (never the return: reading it before its first assignment is
    ill-formed rather than wrong, and a lowering rejects it instead of
    refuting it).
-8. **DROP-GUARD**: one conjunct of an `if`/`while` condition is dropped.
-9. **WRONG-CONSTANT** (twin-ladder wave, 2026-09-11): one assign/return
+7. **DROP-GUARD**: one conjunct of an `if`/`while` condition is dropped.
+8. **WRONG-CONSTANT** (twin-ladder wave, 2026-09-11): one assign/return
    right-hand side or `var` initialiser, proved int-typed by
    `harness._int_rooted` (a literal, a variable of declared type `int`, or
    the result of `neg`/`len`/`*`/`-`/`div`/`mod`, never `+`, which this
@@ -883,23 +923,32 @@ bodies), first candidate with a witness winning:
    since there is no literal or indexing op anywhere in the expression, only
    a computed value returned or assigned whole (`volume := size * size *
    size`, `ascii := c`).
-10. **WRONG-OPERATOR** (twin-ladder wave, 2026-09-11): one arithmetic
+9. **WRONG-OPERATOR** (twin-ladder wave, 2026-09-11): one arithmetic
     operator, `+`, `-`, `*`, `div`, or `mod`, is replaced by another from a
     fixed per-operator list (`+`/`-`/`*` cycle among themselves, `div` and
     `mod` swap), at every site COMPARE-FLIP's own walk reaches. Empty
     wherever the body has no arithmetic operator node, which none of rungs
-    1-8 touch (COMPARE-FLIP and BOUNDARY-SWAP only ever rewrite an order
+    1-7 touch (COMPARE-FLIP and BOUNDARY-SWAP only ever rewrite an order
     comparison, never the arithmetic feeding one).
+10. **INVARIANT-DROP** (v1): one invariant of one loop is deleted. An
+    annotation mutation, tried only once every rung above has produced no
+    witness (2026-09-12, "twin-order"; INVARIANT-DROP shipped first, v1,
+    and was tried first through 2026-09-11). Twin REFUTED means that
+    invariant is load-bearing: the kernel cannot re-derive it, so the
+    stated proof outline is real work. Twin VERIFIED means the kernel
+    re-derived it (or, before this rung is even reached, that the body had
+    no behavioral rung of its own to prefer).
 
-Rungs 9 and 10 sit below every rung above in the tried-in-order search: a
+Rungs 8, 9 and 10 sit below every rung above in the tried-in-order search: a
 task whose twin was already found by an earlier rung keeps that exact twin,
-byte-identical, which is why they close the five dafny_synthesis rows that
-previously had no twin at all (`234 cubeVolume`, `242 countCharacters`,
-`269 asciiValue`, `626 areaOfLargestTriangleInSemicircle`, `792 countLists`:
-each a straight-line arithmetic body with a single param and no `if`/loop,
-so rungs 1-8 have nothing to mutate and `twin_for` returned `no-operator`)
+byte-identical, which is why rungs 8 and 9 close the five dafny_synthesis
+rows that previously had no twin at all (`234 cubeVolume`,
+`242 countCharacters`, `269 asciiValue`,
+`626 areaOfLargestTriangleInSemicircle`, `792 countLists`: each a
+straight-line arithmetic body with a single param and no `if`/loop, so
+rungs 1-7 have nothing to mutate and `twin_for` returned `no-operator`)
 and give `397 medianOfThree` a grounded, `ensures`-falsifying twin where
-rungs 1-8 found only a "+nonrefuting" fallback: its `ensures` is a
+rungs 1-7 found only a "+nonrefuting" fallback: its `ensures` is a
 disjunction that only pins the result to be ONE OF `a`, `b`, `c` (every
 value-preserving permutation of which var gets returned trivially satisfies
 both disjuncts by reflexivity, so no rung that merely swaps *which* of
@@ -907,12 +956,14 @@ both disjuncts by reflexivity, so no rung that merely swaps *which* of
 produces a value equal to none of the three and falsifies the first
 disjunct outright.
 
-Rungs 1 and 2 at site 0 are exactly the v1 rule, so a task whose v1 twin was
-already load-bearing keeps that twin unchanged; measured over the same 1395
-tasks, 96 twins changed and every one of them was a twin the interpreter
-shows was vacuous: no twin that was already distinct moved (unwitnessed:
-no committed table, log, or commit message restates this 96-count
-independent of this prose).
+INVARIANT-DROP and COLLAPSE-IF at site 0, tried in THAT order (v1's own
+order, invariant-drop first; twin-order's 2026-09-12 reorder above is a
+later, separate change), are exactly the v1 rule, so a task whose v1 twin
+was already load-bearing keeps that twin unchanged; measured over the same
+1395 tasks, 96 twins changed and every one of them was a twin the
+interpreter shows was vacuous: no twin that was already distinct moved
+(unwitnessed: no committed table, log, or commit message restates this
+96-count independent of this prose).
 
 No witness on any rung and the task is REFUSED, with the reason named:
 `no-witness` (every mutation computes what the real body computes),
@@ -929,9 +980,9 @@ vacuous, or the dropped invariant's obligation is one the kernel re-derives.
 **2026-09-11 (ROADMAP 13.3): a twin that VERIFIES is REFUSED, named.** A
 column where the real lowering is VERIFIED and the twin is ALSO VERIFIED is
 never counted as agreement and is never folded into a plain "no flip"
-either: it is a named refusal, `decorative` or `unsound`, and the two are
-counted separately because they are different findings about different
-things. `harness.decorative_kind(real_outcome, twin_outcome, w)` is the one
+either: it is a named refusal, `decorative`, `unsound` or `re-derived`
+(2026-09-12, below), and the three are counted separately because they are
+different findings about different things. `harness.decorative_kind(real_outcome, twin_outcome, w)` is the one
 place this is decided, from the SAME witness `twin_for` already measured
 when it accepted the twin onto the ladder in the first place, never a fresh
 guess:
@@ -947,15 +998,30 @@ guess:
   `verified / decorative`, e.g. in `t/AGREEMENT.md` and grade.py's
   `table.md`, and `t/fuzz_lower.py`'s summary counts it on its own
   `decorative` line, never inside `no_flip`.
-- `unsound`: the witness DOES entail a refutation, either a value witness
-  that falsifies `ensures` (`w["_ens"] is True`) or an INVARIANT-DROP proof
-  witness (kind `exit` or `preservation`, which `interp.invariant_witness`'s
-  own docstring already states "means a kernel MUST refute the twin"). A
-  kernel that verifies such a twin anyway contradicts its OWN measured
-  witness: a finding about that kernel, kept apart from `decorative` so the
-  two are never averaged together and a kernel's own unsoundness cannot
-  hide behind a weak spec's cover. The cell reads `verified / unsound`, and
-  `fuzz_lower.py`'s summary counts it on its own `unsound` line.
+- `unsound`: the witness DOES entail a refutation with a VALUE witness that
+  falsifies `ensures` (`w["_ens"] is True`). A kernel that verifies such a
+  twin anyway contradicts its OWN measured witness: a finding about that
+  kernel, kept apart from `decorative` so the two are never averaged
+  together and a kernel's own unsoundness cannot hide behind a weak spec's
+  cover. The cell reads `verified / unsound`, and `fuzz_lower.py`'s summary
+  counts it on its own `unsound` line.
+- `re-derived` (2026-09-12, "twin-order", ROADMAP 16.2): the witness is an
+  INVARIANT-DROP proof witness (kind `exit` or `preservation`). This is NOT
+  the same finding as `unsound`, even though `interp.invariant_witness`'s
+  own docstring says such a witness "means a kernel MUST refute the twin":
+  every reachable loop-head state still satisfies every SURVIVING
+  invariant (dropping one leaves the rest true), so no reachable witness
+  can refute this twin, and a kernel that verifies it did so by
+  RE-DERIVING the dropped annotation on its own -- interval inference, a
+  stronger loop-invariant search, whatever that kernel's `while` rule
+  already does. Before this reorder, INVARIANT-DROP was tried first, so
+  this pairing was common enough to matter (`isNonPrime`, `isPrime`,
+  `sumOfCommonDivisors` in dafny; `containsSequence`, `containsK` in lean,
+  ROADMAP 16.2 wave H) and was folded into `unsound`, mislabeling a
+  kernel's inference strength as a soundness defect. Now that EXTENSIONAL
+  rungs win whenever one exists, `re-derived` only remains reachable for a
+  body with NO behavioral rung at all. The cell reads
+  `verified / re-derived`.
 
 What this changes for the tables: before this paragraph, a real-VERIFIED,
 twin-VERIFIED cell in `t/AGREEMENT.md`/`table.md` read as a bare

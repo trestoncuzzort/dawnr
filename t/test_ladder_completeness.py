@@ -26,6 +26,26 @@ twin bodies dumped before and after, zero diffs).
 No corpus, no network, no model, no kernel. Standard library plus t's own
 modules.
 
+2026-09-12 (ROADMAP 16.2, "twin-order"): the wrong-constant/wrong-operator
+claim above ("the twins committed under t/tasks are unaffected") was true
+of THAT wave; it is not true of this one. `twin_for` and `ladder_rungs`
+now try the EXTENSIONAL rungs (collapse-if through wrong-operator) FIRST,
+in their existing order, and the invariant-drop candidates LAST, reversing
+the prior order -- SPEC.md's dated paragraph in "The twins" gives the
+reason (an INVARIANT-DROP twin is not a wrong program; a value witness
+that falsifies `ensures` is preferred whenever the body has one). Measured
+directly: of the 34 committed tasks, the 13 whose twin was previously
+invariant-drop all get a NEW twin (a behavioral rung the ladder already
+had, just tried later before): `all_nonneg`, `contains`, `count_matches`,
+`count_vowels`, `digit_sum`, `filter_pos`, `first_even`, `is_prime`,
+`linear_search`, `reverse`, `row_max_len`, `seq_max`, `sum_upto`; the other
+21, whose twin was already extensional, keep the exact same twin body
+(the ordering only ever changes a rung that used to lose to
+invariant-drop). `sum_upto`'s own rung/refuted-fraction counts above are
+UNCHANGED (24 rungs, 19 refuted): `ladder_rungs` enumerates every rung
+regardless of order, so reordering `twin_for`'s SELECTION changes which
+rung wins, never the set `ladder_rungs` returns or their witnesses.
+
 Run as: cd <repo>/t && python3 test_ladder_completeness.py
 """
 from __future__ import annotations
@@ -228,6 +248,110 @@ def test_loose_membership_ensures_only_broken_by_wrong_constant():
     wrong_var = [w for tag, _t, w in rungs if tag.startswith("wrong-var")]
     assert wrong_var and all(w is None for w in wrong_var), (
         "wrong-var swaps a/b/c, which this ensures accepts either way", wrong_var)
+
+
+# ------------------------------------------------- twin-order wave, 16.2 --
+# 2026-09-12: EXTENSIONAL rungs now win over invariant-drop whenever a body
+# has a behavioral one. `first_even` (a committed task, t/tasks/first_even.t)
+# is one of the 13 committed twins this reorder changes -- a loop with an
+# early `return i;` inside its body -- so it doubles as the fixture for the
+# early-return regression in interp.invariant_witness below (measured
+# directly: `dafny_synthesis_task_id_414__anyValueExists`, reproduced here
+# as ANY_VALUE_EXISTS_SHAPED, is the exact JSON body ROADMAP 16.2 names as
+# minting a spurious "preservation" witness before the fix).
+
+@test
+def test_loop_task_now_gets_a_behavioral_twin_first():
+    task = harness.load(tasks_io.find(HERE / "tasks", "first_even"))
+    twin, op, w = harness.twin_for(task)
+    assert twin is not None and w is not None
+    assert not op.startswith("invariant-drop"), (
+        "first_even has a behavioral rung (collapse-if on its early-return "
+        f"`if`), which twin-order now tries before invariant-drop: got {op}")
+    assert w.get("_ens") is True, w
+    # ladder_rungs still enumerates the invariant-drop candidate; it comes
+    # LAST in the list now, and this task's own two invariants (i's bounds,
+    # the "no even seen yet" search invariant) are both still refuted when
+    # tried -- so the reorder changes WHICH rung wins, not whether
+    # invariant-drop remains a rung at all.
+    rungs = harness.ladder_rungs(task)
+    inv_positions = [i for i, (tag, _t, _w) in enumerate(rungs)
+                     if tag.startswith("invariant-drop")]
+    assert inv_positions, "first_even states invariants; some rung must be invariant-drop"
+    assert min(inv_positions) > 0, (
+        "invariant-drop must not be the first rung under twin-order", rungs[0])
+
+
+# `dafny_synthesis_task_id_414__anyValueExists`'s own JSON (ROADMAP 16.2's
+# seven named rows), reproduced verbatim rather than read from the lifted
+# corpus (which sits outside this repo, under t/out/lifted-tasks, not a
+# fixture this test can depend on). Its loop's `if` returns as soon as it
+# finds a match (`result := true; return result;`), WITHOUT incrementing
+# `i_v` first -- the exact shape that makes dropping the loop's own
+# "not found yet" invariant (its 4th, `result == exists k in [0, i_v) ...`)
+# look, to a preservation check that ignores the return, like it broke:
+# `i_v` is unchanged (still short of the range the survivor asks about)
+# but `result` is now True.
+ANY_VALUE_EXISTS_SHAPED = {'body': [{'assign': ['result', {'bool': False}]}, {'var': {'init': {'args': [{'var': 'seq1'}], 'op': 'len'}, 'name': 'h', 'type': 'int'}}, {'var': {'init': {'int': 0}, 'name': 'i_v', 'type': 'int'}}, {'while': {'body': [{'if': {'cond': {'exists': {'body': {'args': [{'args': [{'var': 'seq2'}, {'var': 'k_v3'}], 'op': 'at'}, {'args': [{'var': 'seq1'}, {'var': 'i_v'}], 'op': 'at'}], 'op': '=='}, 'hi': {'args': [{'var': 'seq2'}], 'op': 'len'}, 'lo': {'int': 0}, 'var': 'k_v3'}}, 'else': [], 'then': [{'assign': ['result', {'bool': True}]}, {'return': ['result', {'var': 'result'}]}]}}, {'assign': ['i_v', {'args': [{'var': 'i_v'}, {'int': 1}], 'op': '+'}]}], 'cond': {'args': [{'var': 'i_v'}, {'var': 'h'}], 'op': '<'}, 'decreases': {'args': [{'var': 'h'}, {'var': 'i_v'}], 'op': '-'}, 'invariants': [{'args': [{'int': 0}, {'var': 'i_v'}], 'op': '<='}, {'args': [{'var': 'i_v'}, {'var': 'h'}], 'op': '<='}, {'args': [{'args': [{'int': 0}, {'var': 'i_v'}], 'op': '<='}, {'args': [{'var': 'i_v'}, {'args': [{'var': 'seq1'}], 'op': 'len'}], 'op': '<='}], 'op': 'and'}, {'args': [{'var': 'result'}, {'exists': {'body': {'exists': {'body': {'args': [{'args': [{'var': 'seq2'}, {'var': 'k_v2'}], 'op': 'at'}, {'args': [{'var': 'seq1'}, {'var': 'k_v'}], 'op': 'at'}], 'op': '=='}, 'hi': {'args': [{'var': 'seq2'}], 'op': 'len'}, 'lo': {'int': 0}, 'var': 'k_v2'}}, 'hi': {'var': 'i_v'}, 'lo': {'int': 0}, 'var': 'k_v'}}], 'op': '=='}]}}], 'ensures': [{'args': [{'var': 'result'}, {'exists': {'body': {'exists': {'body': {'args': [{'args': [{'var': 'seq2'}, {'var': 'k'}], 'op': 'at'}, {'args': [{'var': 'seq1'}, {'var': 'i'}], 'op': 'at'}], 'op': '=='}, 'hi': {'args': [{'var': 'seq2'}], 'op': 'len'}, 'lo': {'int': 0}, 'var': 'k'}}, 'hi': {'args': [{'var': 'seq1'}], 'op': 'len'}, 'lo': {'int': 0}, 'var': 'i'}}], 'op': '=='}], 'gate': 'loops', 'name': 'dafny_synthesis_task_id_414__anyValueExists', 'params': [{'name': 'seq1', 'type': 'seq'}, {'name': 'seq2', 'type': 'seq'}], 'requires': [], 'returns': [{'name': 'result', 'type': 'bool'}], 't': 1}
+
+
+@test
+def test_early_return_is_not_a_spurious_preservation_witness():
+    rungs = harness.ladder_rungs(ANY_VALUE_EXISTS_SHAPED)
+    inv = [(tag, w) for tag, _t, w in rungs if tag.startswith("invariant-drop")]
+    assert len(inv) == 4, inv     # one rung per invariant, four invariants
+    # Before the fix, dropping the 1ST invariant ("0 <= i_v") produced a
+    # "preservation" witness at seq1=[0], seq2=[0], h=1, i_v=0, result=False
+    # (measured directly, t/interp.py before this change): the loop's one
+    # iteration takes the early-return branch (result := true; return), so
+    # `i_v` is never incremented, and a preservation check that re-checks
+    # `kept` at that post-body state (rather than `ensures`) sees the 4th,
+    # SURVIVING invariant ("result == exists k in [0, i_v) ...") go from
+    # vacuously true to false while `result` is now True -- a state the
+    # loop NEVER revisits (the method returns from inside the `if`), so it
+    # was never a preservation obligation. `ensures` (`result == exists i
+    # in [0, len(seq1)) ...`) DOES hold there (seq1[0] is exactly why the
+    # branch matched), so the fixed interpreter finds no witness on this
+    # rung any more.
+    tag0, w0 = inv[0]
+    assert tag0 == "invariant-drop", tag0
+    assert w0 is None, (
+        "dropping the 1st invariant must not mint a preservation witness "
+        "out of an early return the loop never revisits", w0)
+    # Rung #3 (dropping the 4th invariant, the search-tracking one itself)
+    # still legitimately returns a witness -- an EXIT witness, at a state
+    # h=0 (seq1 empty) that the standard partial-correctness while rule
+    # (SPEC.md gate 2: modified variables are HAVOCKED, not simulated) does
+    # not rule out even though real execution never reaches it with
+    # result=True: nothing to do with the early-return fix, a genuine
+    # finding that this invariant is load-bearing for THAT rung.
+    tag3, w3 = inv[3]
+    assert tag3 == "invariant-drop#3", tag3
+    assert w3 is not None and w3.get("_kind") == "exit", w3
+    # And twin_for's own selection for this task is a behavioral rung
+    # anyway (collapse-if, tried before invariant-drop under twin-order),
+    # so rung #3's genuine finding never becomes this task's twin.
+    twin, op, w = harness.twin_for(ANY_VALUE_EXISTS_SHAPED)
+    assert twin is not None and w is not None
+    assert not op.startswith("invariant-drop"), op
+    assert w.get("_ens") is True, w
+
+
+@test
+def test_decorative_kind_re_derived_label():
+    """harness.decorative_kind's INVARIANT-DROP branch reads "re-derived",
+    not "unsound" (SPEC.md "The twins", 2026-09-12 paragraph): a kernel
+    that verifies both real and twin when the twin's own witness is an
+    invariant-drop proof witness (kind "exit" or "preservation") re-derived
+    the dropped annotation, which is not a soundness finding the way a
+    VALUE witness (`_ens is True`) is."""
+    from verifiers import Outcome
+    assert harness.decorative_kind(
+        Outcome.VERIFIED, Outcome.VERIFIED, {"_kind": "exit"}) == "re-derived"
+    assert harness.decorative_kind(
+        Outcome.VERIFIED, Outcome.VERIFIED, {"_kind": "preservation"}) == "re-derived"
+    assert harness.decorative_kind(
+        Outcome.VERIFIED, Outcome.VERIFIED, {"_ens": True, "_kind": "value"}) == "unsound"
 
 
 # ------------------------------------------------------- module-level glue --

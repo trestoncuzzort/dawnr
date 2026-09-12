@@ -467,28 +467,24 @@ def _tag(op: str, k: int) -> str:
 
 def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
     """Grounded twin selection: (twin_body, operator, witness), or
-    (None, reason, None) when no rung of the ladder produced a witness."""
+    (None, reason, None) when no rung of the ladder produced a witness.
+
+    2026-09-12 (ROADMAP 16.2, "twin-order"): the EXTENSIONAL rungs are tried
+    FIRST, in their existing order, and the invariant-drop candidates LAST.
+    A body with a behavioral twin -- a value witness that falsifies
+    `ensures` -- gets that twin; invariant-drop remains the twin only for a
+    body with no behavioral rung at all (a straight-line loop obligation
+    with nothing else to mutate, or every extensional rung merely
+    reshuffling values `ensures` cannot tell apart). Reason: an
+    INVARIANT-DROP twin is not a wrong program (SPEC.md "The twins"'
+    dated paragraph below) -- every reachable loop-head state still
+    satisfies every SURVIVING invariant, so no reachable witness can
+    refute it, and a kernel that verifies it by re-deriving the dropped
+    annotation is not unsound. A task whose body actually computes the
+    wrong VALUE should be caught by a value witness before the ladder
+    ever reaches for that reading."""
     n = 0
-    for k, (twin, loop, kept, names) in enumerate(_invariant_candidates(task)):
-        n += 1
-        w = interp.invariant_witness(task, loop, kept, names)
-        if w is not None:
-            return twin, _tag("invariant-drop", k), w
     ref = interp.Reference(task)
-    if not ref.points:
-        # UNMEASURABLE, which is a different refusal from "the twin computes
-        # the same thing", and the two causes are worth telling apart.
-        if (ref.n_req == 0 and ref.n_domain > 0
-                and ref.req_undef == ref.n_domain):
-            # `requires` itself raised Undef at EVERY point tried (not just
-            # evaluated False): a `div`/`mod` by zero inside `requires`,
-            # ROADMAP 13.4 (2026-09-11). SPEC.md's "Undefined requires
-            # (normative)" calls this DEFECTIVE, the same defect class as a
-            # well-defined but unsatisfiable requires (fz_p_vac_unsat,
-            # fz_p_vac_range), so it gets its own named refusal rather than
-            # being folded into "no-input" silently.
-            return None, "vacuous-requires-undefined", None
-        return None, ("no-input" if not ref.n_req else "real-undefined"), None
     # A witness that merely shows real and twin compute DIFFERENT values is
     # not grounds for expecting a refutation: a loose `ensures` can be
     # satisfied by both. Only a witness that FALSIFIES ensures entails that a
@@ -503,27 +499,47 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
     # none, so the weakness is recorded in the tag instead of being silently
     # counted as a flip that failed.
     fallback = None
-    for op, gen in EXTENSIONAL:
-        for k, twin in enumerate(gen(task["body"], _scope(task))):
-            n += 1
+    if ref.points:
+        for op, gen in EXTENSIONAL:
+            for k, twin in enumerate(gen(task["body"], _scope(task))):
+                n += 1
+                if n > MAX_CANDIDATES:
+                    break
+                try:
+                    w = ref.witness(twin)
+                except TypeError:
+                    # An ill-typed candidate (a rung rewrote a node whose
+                    # type it could not see) is not a program of the
+                    # language, so it is not a twin; the next candidate,
+                    # never a poisoned cell. 2026-09-11.
+                    continue
+                if w is None:
+                    continue
+                if w.get("_ens") is True:
+                    return twin, _tag(op, k), w
+                if fallback is None:
+                    fallback = (twin, _tag(op, k) + "+nonrefuting", w)
             if n > MAX_CANDIDATES:
                 break
-            try:
-                w = ref.witness(twin)
-            except TypeError:
-                # An ill-typed candidate (a rung rewrote a node whose type
-                # it could not see) is not a program of the language, so
-                # it is not a twin; the next candidate, never a poisoned
-                # cell. 2026-09-11.
-                continue
-            if w is None:
-                continue
-            if w.get("_ens") is True:
-                return twin, _tag(op, k), w
-            if fallback is None:
-                fallback = (twin, _tag(op, k) + "+nonrefuting", w)
-        if n > MAX_CANDIDATES:
-            break
+    for k, (twin, loop, kept, names) in enumerate(_invariant_candidates(task)):
+        n += 1
+        w = interp.invariant_witness(task, loop, kept, names)
+        if w is not None:
+            return twin, _tag("invariant-drop", k), w
+    if not ref.points:
+        # UNMEASURABLE, which is a different refusal from "the twin computes
+        # the same thing", and the two causes are worth telling apart.
+        if (ref.n_req == 0 and ref.n_domain > 0
+                and ref.req_undef == ref.n_domain):
+            # `requires` itself raised Undef at EVERY point tried (not just
+            # evaluated False): a `div`/`mod` by zero inside `requires`,
+            # ROADMAP 13.4 (2026-09-11). SPEC.md's "Undefined requires
+            # (normative)" calls this DEFECTIVE, the same defect class as a
+            # well-defined but unsatisfiable requires (fz_p_vac_unsat,
+            # fz_p_vac_range), so it gets its own named refusal rather than
+            # being folded into "no-input" silently.
+            return None, "vacuous-requires-undefined", None
+        return None, ("no-input" if not ref.n_req else "real-undefined"), None
     if n > MAX_CANDIDATES and fallback is None:
         return None, "candidate-budget", None
     if fallback is not None:
@@ -534,11 +550,13 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
 def ladder_rungs(task: dict) -> list[tuple[str, list, dict | None]]:
     """Every rung the twin ladder can build for `task` (t/ladder_completeness.py,
     ROADMAP WS-19 move 6, added 2026-09-11): (operator_tag, twin_body,
-    witness_or_None) per candidate, in the order `twin_for` uses, capped at
-    MAX_CANDIDATES in both phases (twin_for caps only the extensional phase;
-    invariant counts are small, so no measured task differs), but WITHOUT
-    stopping at the first witness: every rung the ladder can build is
-    enumerated, not only the one twin_for would pick.
+    witness_or_None) per candidate, in the order `twin_for` uses (2026-09-12,
+    "twin-order": EXTENSIONAL first, invariant-drop last -- see twin_for's
+    own docstring), capped at MAX_CANDIDATES in both phases (twin_for caps
+    only the extensional phase; invariant counts are small, so no measured
+    task differs), but WITHOUT stopping at the first witness: every rung
+    the ladder can build is enumerated, not only the one twin_for would
+    pick.
 
     `witness_or_None` is the witness dict exactly when the interpreter shows
     the rung MUST be refuted by a sound kernel: an invariant-drop witness
@@ -552,27 +570,26 @@ def ladder_rungs(task: dict) -> list[tuple[str, list, dict | None]]:
     adds no new mutation logic."""
     rungs: list[tuple[str, list, dict | None]] = []
     n = 0
+    ref = interp.Reference(task)
+    if ref.points:
+        for op, gen in EXTENSIONAL:
+            for k, twin in enumerate(gen(task["body"], _scope(task))):
+                n += 1
+                if n > MAX_CANDIDATES:
+                    return rungs
+                try:
+                    w = ref.witness(twin)
+                except TypeError:
+                    # Same guard as twin_for: an ill-typed candidate is no rung.
+                    continue
+                refuted = w is not None and w.get("_ens") is True
+                rungs.append((_tag(op, k), twin, w if refuted else None))
     for k, (twin, loop, kept, names) in enumerate(_invariant_candidates(task)):
         n += 1
         if n > MAX_CANDIDATES:
             return rungs
         w = interp.invariant_witness(task, loop, kept, names)
         rungs.append((_tag("invariant-drop", k), twin, w))
-    ref = interp.Reference(task)
-    if not ref.points:
-        return rungs
-    for op, gen in EXTENSIONAL:
-        for k, twin in enumerate(gen(task["body"], _scope(task))):
-            n += 1
-            if n > MAX_CANDIDATES:
-                return rungs
-            try:
-                w = ref.witness(twin)
-            except TypeError:
-                # Same guard as twin_for: an ill-typed candidate is no rung.
-                continue
-            refuted = w is not None and w.get("_ens") is True
-            rungs.append((_tag(op, k), twin, w if refuted else None))
     return rungs
 
 
@@ -784,14 +801,24 @@ def decorative_kind(real_outcome: str, twin_outcome: str,
       a kernel verifying the twin too says the spec cannot tell them
       apart in that column: `ensures true` is the canonical case. Never
       counts as agreement, and is not a claim about the kernel.
-    - "unsound": the witness DOES entail a refutation (a value witness
-      that falsifies `ensures`, `_ens is True`; or an INVARIANT-DROP proof
-      witness, kind "exit" or "preservation", which invariant_witness's
-      own docstring says "means a kernel MUST refute the twin"). A kernel
-      that verifies the twin anyway contradicts its own measured witness:
-      a signal about that kernel, not about the spec's strength, counted
-      separately from "decorative" so the two are never averaged
-      together.
+    - "unsound": the witness DOES entail a refutation, and does so with a
+      VALUE witness that falsifies `ensures` (`_ens is True` on a "value"
+      or "undefined" kind). A kernel that verifies the twin anyway
+      contradicts its own measured witness: a signal about that kernel,
+      not about the spec's strength, counted separately from "decorative"
+      so the two are never averaged together.
+    - "re-derived" (2026-09-12, ROADMAP 16.2, "twin-order"): the witness is
+      an INVARIANT-DROP proof witness (kind "exit" or "preservation").
+      SPEC.md's dated paragraph in "The twins" states why this is NOT a
+      soundness finding the way a value witness is: every reachable
+      loop-head state still satisfies every SURVIVING invariant (dropping
+      one leaves the rest true), so no reachable witness can refute this
+      twin, and a kernel that verifies it did so by re-deriving the
+      dropped annotation on its own -- interval inference, a stronger
+      loop-invariant search, whatever that kernel's `while` rule already
+      does. That is a fact about that kernel's inference, worth naming,
+      never folded into "unsound" (which stays for a program a kernel
+      accepted despite a witness showing its VALUE is wrong).
 
     A task with no witness (w is None, or falsy) never reaches this
     function with twin_outcome VERIFIED under the grounded ladder
@@ -802,7 +829,9 @@ def decorative_kind(real_outcome: str, twin_outcome: str,
     witness deserves."""
     if real_outcome != Outcome.VERIFIED or twin_outcome != Outcome.VERIFIED:
         return None
-    if w and (w.get("_ens") is True or w.get("_kind") in ("exit", "preservation")):
+    if w and w.get("_kind") in ("exit", "preservation"):
+        return "re-derived"
+    if w and w.get("_ens") is True:
         return "unsound"
     return "decorative"
 
@@ -841,11 +870,16 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
            # VERIFIED is named, never folded into a bare REFUSED. kind is
            # "decorative" when nothing the ladder measured entailed a
            # refutation here (the spec cannot tell real and twin apart,
-           # e.g. `ensures true`) and "unsound" when the witness DID
+           # e.g. `ensures true`), "unsound" when a VALUE witness DID
            # entail one (a kernel accepted a twin its own measured witness
-           # says it must refute); see decorative_kind's docstring.
+           # says is wrong), and "re-derived" (2026-09-12, "twin-order")
+           # when an INVARIANT-DROP proof witness did -- not a soundness
+           # finding, the kernel re-derived the dropped annotation; see
+           # decorative_kind's docstring.
            + (f", unsound: the twin is broken on {witness(w)} and the "
               f"kernel accepted it anyway)" if kind == "unsound" else
+              f", re-derived: the kernel re-derived the dropped "
+              f"annotation, {witness(w)})" if kind == "re-derived" else
               f", decorative: the spec cannot tell real from twin, "
               f"REFUSED)" if kind is not None else ")"))
     print(f"  {name}: {tag}")

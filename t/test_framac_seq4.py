@@ -55,34 +55,39 @@ def _lower(name):
 
 @test
 def nest_eq_ensures_lowers_past_the_old_pred_crash():
-    """FIXED this pass: `fz_p_nest_eq`'s own `ensures` (`\\forall k; ...
-    at(m, k) == at(n, k)`) used to crash `pred()` outright
-    (`NotImplementedError: seq position holds non-variable {'op': 'at',
-    ...}`) because the old code called `seq_var` on the `at(...)` operand
-    directly. Confirms the fix by checking the exception it now raises is
-    NOT that one -- the `ensures` itself renders, the task still abstains
-    for a different, later reason (the next test)."""
-    try:
-        _lower("fz_p_nest_eq")()
-    except NotImplementedError as ex:
-        assert "seq position holds non-variable" not in str(ex), str(ex)
-    else:
-        raise AssertionError("fz_p_nest_eq lowered with no exception at all")
+    """FIXED in FRAMAC-SEQ4 (2026-09-12): `fz_p_nest_eq`'s own `ensures`
+    (`\\forall k; ... at(m, k) == at(n, k)`) used to crash `pred()`
+    outright (`NotImplementedError: seq position holds non-variable
+    {'op': 'at', ...}`) because the old code called `seq_var` on the
+    `at(...)` operand directly. Confirms that fix still holds by checking
+    `lower()` raises no exception at all any more (superseded by
+    FRAMAC-NESTED below: the BODY's own executable `r := (m == n)` no
+    longer abstains either, so nothing is left in this task to raise)."""
+    _lower("fz_p_nest_eq")()
 
 
 @test
-def nest_eq_still_abstains_on_the_executable_equality():
-    """The crash moved, the outcome did not: `fz_p_nest_eq`'s BODY computes
-    `r := (m == n)` in EXECUTABLE position, `cexpr`'s own pre-existing named
-    refusal (unchanged by this pass -- no C loop is built)."""
-    try:
-        _lower("fz_p_nest_eq")()
-    except NotImplementedError as ex:
-        assert "executable position" in str(ex), str(ex)
-        assert "no C VALUE rendering" in str(ex), str(ex)
-    else:
-        raise AssertionError("fz_p_nest_eq: expected an executable-equality "
-                              "NotImplementedError, none raised")
+def nest_eq_now_lowers_to_a_loop_not_an_abstain():
+    """FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12: `fz_p_nest_eq`'s
+    BODY computes `r := (m == n)` in EXECUTABLE position, `cexpr`'s own
+    named refusal there (unchanged, still raised for any OTHER seq `==`
+    shape this pass's `_seq_eq_top`/`_seq_eq_loop` do not recognize) --
+    but this exact shape (two bare nested-seq PARAMETER variables) is
+    now a STATEMENT-shaped C loop `stmts()` emits before the assignment,
+    not the abstain the old test above named. Confirmed by checking the
+    emitted C for the loop's own two markers (`__seq_eq0`, the fresh
+    bool temp; a nested `while` for the row-by-row/cell-by-cell walk)
+    rather than an exception. MEASURED SEPARATELY, not by this test
+    (this file only calls `lower()`, no kernel): frama-c/WP schedules
+    real proof goals for the loop's own invariants but does not close
+    all of them at the pinned budget (`ensures` and both loop
+    invariants' own preservation goals TIMEOUT, alt-ergo 2.4.3 cannot
+    instantiate the doubly-quantified row/cell invariant at 20000 steps)
+    -- an honest TIMEOUT, not a false VERIFIED, and not this test's own
+    concern (a lowering-shape check, not a proof-budget one)."""
+    c = _lower("fz_p_nest_eq")()
+    assert "__seq_eq0" in c, c
+    assert c.count("while (") >= 2, c   # outer row loop + inner cell loop
 
 
 @test

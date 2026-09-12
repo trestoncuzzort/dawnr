@@ -211,7 +211,16 @@ def test_cube_shaped_no_twin_row_now_flips():
 @test
 def test_decorative_kind_pure_function():
     """No kernel, no dafny: harness.decorative_kind's own contract, so this
-    check runs even where dafny is absent."""
+    check runs even where dafny is absent.
+
+    2026-09-12 (ROADMAP 16.2, "twin-order"): an INVARIANT-DROP proof
+    witness (kind "exit" or "preservation") now reads "re-derived", not
+    "unsound" -- SPEC.md's dated paragraph in "The twins" says why: every
+    reachable loop-head state still satisfies every surviving invariant,
+    so no reachable witness can refute this twin, and a kernel that
+    verifies it re-derived the dropped annotation rather than being
+    unsound. "unsound" is now reserved for a VALUE witness (`_ens is
+    True`) a kernel verified anyway."""
     assert harness.decorative_kind(Outcome.VERIFIED, Outcome.REFUTED, None) is None
     assert harness.decorative_kind(Outcome.VERIFIED, Outcome.TIMEOUT, None) is None
     assert harness.decorative_kind(Outcome.VERIFIED, Outcome.VERIFIED, None) == "decorative"
@@ -223,10 +232,10 @@ def test_decorative_kind_pure_function():
     ) == "unsound"
     assert harness.decorative_kind(
         Outcome.VERIFIED, Outcome.VERIFIED, {"_kind": "exit"}
-    ) == "unsound"
+    ) == "re-derived"
     assert harness.decorative_kind(
         Outcome.VERIFIED, Outcome.VERIFIED, {"_kind": "preservation"}
-    ) == "unsound"
+    ) == "re-derived"
 
 
 def run() -> None:

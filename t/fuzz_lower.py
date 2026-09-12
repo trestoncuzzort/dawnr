@@ -3948,7 +3948,8 @@ def analyse(corpus, rows):
     "this spec is too weak to measure" from "this kernel stopped
     refuting"."""
     out = {"disagreements": [], "twin_survived": [], "vs_truth": [],
-           "no_flip": [], "decorative": [], "unsound": []}
+           "no_flip": [], "decorative": [], "unsound": [],
+           "re-derived": []}   # 2026-09-12: harness.decorative_kind's third label
     for task in corpus:
         name = task["name"]
         cells = rows.get(name, {})
