@@ -1138,7 +1138,13 @@ def expr(e: dict, self_name: str | None = None) -> str:
         q = e["forall"]
         v = q["var"]
         term = _find_trigger_term(q["body"], v)
-        trig = f" {{:trigger {expr(term, self_name)}}}" if term is not None else ""
+        # Only a slice application gets the explicit trigger: that is the
+        # one shape dafny cannot auto-trigger (isSublist). Stating a
+        # trigger on every quantifier overrode dafny's own choice and
+        # regressed appendArrayToSeq and interleave from verified to
+        # unproved in sweep r22 (caught at the merge, 2026-09-12).
+        trig = (f" {{:trigger {expr(term, self_name)}}}"
+                if term is not None and term.get("op") == "slice" else "")
         return (f"(forall {v}: int{trig} :: "
                 f"({expr(q['lo'], self_name)} <= {v} && "
                 f"{v} < {expr(q['hi'], self_name)}) ==> "
@@ -1147,7 +1153,13 @@ def expr(e: dict, self_name: str | None = None) -> str:
         q = e["exists"]
         v = q["var"]
         term = _find_trigger_term(q["body"], v)
-        trig = f" {{:trigger {expr(term, self_name)}}}" if term is not None else ""
+        # Only a slice application gets the explicit trigger: that is the
+        # one shape dafny cannot auto-trigger (isSublist). Stating a
+        # trigger on every quantifier overrode dafny's own choice and
+        # regressed appendArrayToSeq and interleave from verified to
+        # unproved in sweep r22 (caught at the merge, 2026-09-12).
+        trig = (f" {{:trigger {expr(term, self_name)}}}"
+                if term is not None and term.get("op") == "slice" else "")
         return (f"(exists {v}: int{trig} :: "
                 f"({expr(q['lo'], self_name)} <= {v} && "
                 f"{v} < {expr(q['hi'], self_name)}) && "

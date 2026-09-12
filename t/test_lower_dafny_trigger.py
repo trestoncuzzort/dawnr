@@ -112,6 +112,16 @@ class ExprEmitsTriggerTest(unittest.TestCase):
         self.assertIn("(exists i: int {:trigger main_v[i..(i + |sub|)]} :: ",
                       out)
 
+    def test_forall_over_at_gets_no_trigger(self):
+        # 2026-09-12: a quantifier whose candidate term is an index (`at`),
+        # not a slice, keeps dafny's own trigger choice (appendArrayToSeq
+        # and interleave regressed when every quantifier was annotated).
+        e = {"forall": {"var": "k", "lo": {"int": 0}, "hi": {"var": "n"},
+             "body": {"op": "==", "args": [{"op": "at", "args": [{"var": "r"}, {"var": "k"}]},
+                                            {"op": "at", "args": [{"var": "s"}, {"var": "k"}]}]}}}
+        out = ld.expr(e)
+        self.assertNotIn("{:trigger", out)
+
     def test_forall_with_no_candidate_term_gets_no_trigger(self):
         out = ld.expr(NO_CANDIDATE_FORALL)
         self.assertNotIn("{:trigger", out)
