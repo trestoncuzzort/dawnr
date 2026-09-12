@@ -1941,6 +1941,84 @@ None, exactly as before, for a witness kind it does not recognize -- a
 lowering handed a witness shape it does not know still lowers the real
 plainly, as it always has.
 
+THE WITHHELD-DEFINITION CERTIFICATE, 2026-09-11 (ROADMAP 13.4,
+framac-axiom, worktree /home/tmcuzzort/tup/.claude/worktrees/
+wf_127b4bf3-1c9-1). The note directly above ("THE MEASURE WITNESS
+CERTIFICATE") ends honestly unfinished for two of its own three probes:
+`_measure_certificate` reads REFUTED on `fz_p_badvariant` (a loop's own
+variant) but verifiers/framac.py's module docstring records
+`fz_p_badrec`/`fz_p_badrec2` (a spec_fun's own `decreases`) staying
+VACUOUS before AND after that patch, for a reason unrelated to the
+certificate: `spec_fun_acsl` (below) renders EVERY spec_fun as a full
+recursive ACSL definition, `logic integer g(integer n) = <body>;`, and WP
+assumes a `logic ... = ...` definition as an AXIOM without checking that
+its recursion terminates (this function's own docstring line, unchanged
+by this patch). `fz_p_badrec`'s `g(n) = g(n) + 1` at `decreases 0` is an
+axiom with no solution -- MEASURED (frama-c 33.0, 2026-09-11):
+`verifiers.framac._recursive_defs`/`_consistency_probe` (its own
+"-wp-fct smoke" instrument) reads this inconsistent BEFORE the file ever
+reaches goal generation, so `_vacuity_smoke` scores the whole file
+VACUOUS and the certificate goal -- proved, if it were ever reached -- is
+never asked about. A certificate is a proof INSIDE a theory; an
+inconsistent theory proves everything, so a certificate accepted there
+would prove nothing new, and the fix is not to the certificate at all.
+
+The fix: withhold the definition. `lower()` (below) reads the witness's
+own `_kind`/`_site` -- set by harness.real_witness exactly as THE MEASURE
+WITNESS CERTIFICATE note describes, `_site` a spec_fun's NAME when a
+recursive CALL is where the measure broke (interp.MeasureViolation's own
+two raise sites; a loop's `_site` is turned into an int index before this
+file ever sees it, so `fz_p_badvariant`'s witness names no function and
+nothing here withholds anything for it, unchanged) -- and passes
+`declare_only=True` to `spec_fun_acsl` for exactly that one function on
+this one task. The emitted ACSL becomes a bare declaration, `logic
+integer g(integer n);`, no `=`, no body, no termination lemma: this is
+SOUND, not merely convenient, because the witness IS the task's own
+`decreases` failing at a concrete input the harness computed and
+`_measure_certificate` already restates as ground arithmetic (see that
+function's own docstring) -- the recursive equation a full definition
+would axiomatize is not well founded, so there is no fact to axiomatize
+honestly, and none is. A declaration still gives every `ensures`/`term`
+call to `g` a signature to typecheck against (ACSL elaborates a call from
+the signature alone), and verifiers/framac.py's own `_LOGIC_DEF` regex
+requires a trailing `=` to call a block a "definition" at all (its own
+comment: "never a bare declaration: only definitions are assumed as
+axioms, and only those can make the theory inconsistent") -- so a
+declared-only `g` is invisible to `_recursive_defs`/the consistency
+probe: no axiom is emitted, so there is nothing for WP to doom, and the
+certificate goal is reached and checked exactly as
+`_measure_certificate`'s own docstring already argues it should be.
+Withheld ONLY for the function the witness names, ONLY when the
+witness's `_kind` is "measure": every other spec_fun on the same task,
+and every task with no such witness (every committed task under t/tasks,
+`test_real_witness.py`'s own claim, reconfirmed here by lowering all 34
+with and without an explicit `witness=None` and diffing byte for byte --
+`test_framac_measure_axiom.py`'s `committed_recursive_tasks_are_byte_
+identical`), still gets the full recursive definition, unchanged.
+
+MEASURED, 2026-09-11 (frama-c 33.0 / alt-ergo 2.4.3-free / Z3 4.8.12,
+python3 test_framac_measure_axiom.py and the conformance/AGREEMENT
+re-runs their own dated notes below record): `fz_p_badrec`/
+`fz_p_badrec2`'s real column moves `vacuous -> refuted`, each carrying
+the witness's own two ground measures verbatim in its emitted C (`!((0
+>= 0) && (0 < 0))` for badrec, `!((1 >= 0) && (2 < 1))` for badrec2);
+`fz_p_badvariant`'s cell is untouched (still `refuted / refuted`, no
+spec_fun on that task to withhold anything for). t/conformance.py's full
+66-task manifest, framac column only, moves FAIL cells 12 -> 10 (exactly
+these two rows; every other FAIL/PASS cell, and every other row's own
+source text, byte-identical before and after -- diffed, not eyeballed).
+The 34 committed tasks under t/tasks (gcd, sum_upto, factorial, fib,
+digit_sum, is_prime, contains, count_matches among them, and every task
+carrying a spec_fun) lower to byte-identical C both before and after this
+patch, real and twin, because none carries a witness for `real_witness`
+to find (each is a correct, committed program); graded again at flake 3
+against t/AGREEMENT.md's own recorded cells for the eight named
+recursive tasks, unchanged (`verified / refuted` throughout). The other
+six kernels are untouched by this patch (it edits only this file's
+`spec_fun_acsl` and its one call site in `lower()`) and were not
+re-measured for that reason, not by assumption -- reading the diff is
+the check.
+
 FRAMAC-SEQ2, ROADMAP 13.4, 2026-09-11 (worktree
 /home/tmcuzzort/tup/.claude/worktrees/wf_09045dfc-4fd-2). The ten seq
 cells above, taken in the stated order, land the FIRST item only and
@@ -2067,6 +2145,92 @@ message, unchanged from before this pass (measured both sides,
   ten-cell order this pass follows). The 15 `ds15-new` tasks (the same
   scratchpad's `roadmap162-tasks-15`) measured the same way, same
   result: byte-identical before/after, none call `count`/`find`.
+
+FRAMAC-SEQ3, ROADMAP 13.4, 2026-09-11 (worktree
+/home/tmcuzzort/tup/.claude/worktrees/wf_127b4bf3-1c9-2). The eight
+abstaining seq cells named for this round, taken in the stated order
+(fz_p_nest_cell, fz_p_nest_lit; fz_p_nest_eq; fz_p_nest_empty,
+fz_p_str_splitempty; fz_p_str_tab; fz_p_str_lowernonletter;
+fz_p_pair_seq): item 1 (fz_p_nest_cell, fz_p_nest_lit) LANDS; the other
+six STOP at the same design boundary FRAMAC-SEQ2's own note above
+already drew for them, each remeasured (unchanged) rather than trusted.
+
+  LANDED, item 1: GUARDED DEFINEDNESS (`code_ats`'s own docstring above
+  has the design). `fz_p_nest_cell`'s and `fz_p_nest_lit`'s own measured
+  message before this pass, byte-identical both, `python3
+  <scratchpad>/framac-seq3/measure.py` (`<scratchpad>` =
+  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee
+  /scratchpad): "conditionally evaluated `at` in executable position:
+  definedness not dischargeable by a plain assert" -- both bodies put
+  `at(m, i)`'s own row read inside a LATER conjunct of an `and` guard
+  (`_ncg`'s fourth conjunct `j < len(at(m, i))`, only safe to evaluate
+  once the first two conjuncts, `i`'s own bound, already hold), and
+  `code_ats` used to REFUSE any `at`/`div`/`mod` reached under such a
+  guard outright rather than risk an unconditional assert that would be
+  unsound off that guard. The fix threads the accumulated guard (the
+  tuple of Expr conditions C's own short-circuit `&&`/`||`/`==>`/`?:`
+  already established true by the time a later operand is reached) down
+  through `code_ats` instead of collapsing it to a plain "reached
+  unconditionally or not at all" boolean, and `at_asserts` renders a
+  non-empty guard as an ACSL implication, `(guard) ==> (bound)`, so the
+  bound is demanded only on the path where the operator is actually
+  evaluated -- never weaker than the obligation actually is (an
+  unconditionally reached `at` still gets the exact same bare assert as
+  before, guard `()`), never stronger either (a guard that is FALSE at
+  some input leaves that input's own bound obligation vacuously
+  discharged, exactly C's own semantics). `fz_p_nest_lit` additionally
+  reached a second, narrower gap once the guard fix cleared its own:
+  `len(at([[1,2],[3]], k))` (a row's length, read off a nested SEQ
+  LITERAL rather than a variable) had no executable rendering at all
+  (`cexpr`'s `len`/`at` case called `seq_var` on the literal base and
+  raised "seq position holds non-variable"); fixed the same way item 1
+  of FRAMAC-SEQ2 fixed `at` of a plain literal, a C99 compound literal
+  of each row's own (compile-time-constant) length, indexed by `k`.
+  MEASURED, real=verified matching `_expect` both (frama-c 33.0/alt-ergo
+  2.4.3-free/Z3 4.8.12): `fz_p_nest_cell` and `fz_p_nest_lit` both
+  `verified / timeout` after this pass (before: `abstain / abstain`);
+  the twin's own TIMEOUT is an honest "no proof" (REJECTED_OK's own
+  vocabulary), not a claimed refutation, and is not this pass's own
+  scope to chase (neither probe's `_expect` is "rejected", so the twin
+  column is not graded by `conformance.py`'s own rule, `grade()`'s
+  docstring above, comparing the real outcome only).
+
+  STOPPED, unreached this pass, each still the kernel's own exact
+  message (byte-identical to before, `measure.py`'s own output, this
+  pass's own commit of it): `fz_p_nest_eq` ("seq position holds
+  non-variable {'op': 'at', 'args': [{'var': 'm'}, {'var': 'k'}]}" --
+  `pred()`'s row-equality branch calling `seq_var` on an `at(...)` node
+  directly, ROADMAP 13.4's own item 2, "a C loop computing the equality
+  with its own invariant the kernel proves", a fresh statement-shaped
+  rendering path `cexpr` cannot return inline, not a rendering-site
+  patch); `fz_p_nest_empty` and `fz_p_str_splitempty` ("nested seq
+  (seq<seq>) RETURN: building a fresh row set has no encoding in this
+  lowering ..."; item 3, a second CAPACITY dimension); `fz_p_str_tab`
+  ("nested seq (seq<seq>) local variables are not supported by this
+  lowering ..."; item 4, the same dimension from the local side);
+  `fz_p_str_lowernonletter` ("seq return 'r''s length is not statically
+  determinable ..."; item 5, an executable `lower` with a length bound);
+  `fz_p_pair_seq` ("a pair with a seq component is refused by this
+  lowering ..."; item 6, the buffer-encoded pair return). Each is the
+  fresh design FRAMAC-SEQ2's own note above already named it as, not a
+  rendering-site fix the four sites this pass owns (`cexpr`, `code_ats`/
+  `at_asserts`, `term`/`_seq_len_render`/`_seq_at_render`, `defs`) can
+  close alone; none attempted here for the same reason, not a new one.
+
+  REGRESSION, measured both sides (`<scratchpad>/framac-seq3/
+  conf_framac.py before`/`after`, `probe_manifest()`/`run_items()`
+  restricted to framac): 54/66 PASS before this pass's edit, 56/66 PASS
+  after, diffed field by field between `conf-before.json`/`conf-
+  after.json` -- the only two cells that moved are `fz_p_nest_cell` and
+  `fz_p_nest_lit`, both FAIL->PASS, no PASS lost either direction. The 34
+  committed tasks under t/tasks, framac column, `python3 grade.py
+  --tasks tasks --kernels framac,dafny --flake 3 --jobs 8`: byte-
+  identical to t/AGREEMENT.md's own framac column, cell for cell (31
+  `verified/refuted`, 3 `abstain/abstain` -- count_vowels, split_join,
+  swap_rows -- none of the 34 reaches either of this pass's own two
+  changed sites: no committed task's `at`/`div`/`mod` sits behind a
+  LATER `and`/`or`/`implies` conjunct, and none declares a nested seq
+  literal).
 """
 from __future__ import annotations
 
@@ -3493,13 +3657,29 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
             v = seq_var(base, env)
             return f"t_wc_c({v}, {v}_n)"
         if a0.get("op") == "at":
+            base, idx = a0["args"]
+            if base.get("op") == "seq":
+                # SEQ VALUE, executable position, item 1b (nested
+                # literal row length), 2026-09-11 (ROADMAP 13.4,
+                # framac-seq3): `len([[1, 2], [3]][k])`
+                # (`fz_p_nest_lit`'s own shape) is `len(at(literal, k))`
+                # where the ROW SELECTED never needs a C value of its
+                # own, only its element count -- each row of a nested
+                # LITERAL is itself a literal, so every row's length is
+                # a compile-time constant; a C99 compound literal of
+                # those constants, indexed by `k`, is the same bounded,
+                # stack-scoped idiom `at([e0,...],k)` already uses for a
+                # plain literal (`op == "seq"` case below), one level up.
+                lens = ", ".join(str(len(row.get("args", ())))
+                                 for row in base.get("args", ()))
+                i = cexpr(idx, env, funs, task_name, _div_style)
+                return f"((int[]){{{lens}}})[{i}]"
             # `len(m[i])` in EXECUTABLE position (SPEC.md "Nested
             # sequences", 2026-09-10: `row_max_len`'s own body, `r = len(
             # at(m, 0))` and `if len(at(m, i)) > r`). Same formula
             # `_seq_len_render`'s matching ACSL-side case renders, over
             # the offsets array, since a row has no C value to
             # materialize first.
-            base, idx = a0["args"]
             m = seq_var(base, env)
             i = cexpr(idx, env, funs, task_name, _div_style)
             return f"({m}_off[({i}) + 1] - {m}_off[({i})])"
@@ -3740,15 +3920,36 @@ def _divmod_ternary_cexpr(e: dict, env: dict, funs: dict,
     return cexpr(e, env, funs, task_name, _div_style="ternary")
 
 
-def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
+def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
     """Definedness obligations for every `at`, `div` and `mod` in an
-    executable expression, as tagged tuples: `("at", seq, index-expr)`,
-    `("nz", divisor-expr)`, or `("dm", div-or-mod-node)`. Unconditionally
-    evaluated occurrences are returned (they get an assert in front of the
-    statement); a conditionally evaluated one is refused, because emitting
-    it without a dischargeable guard would silently totalize the operator
-    as C UB (an unguarded `at` as out-of-bounds access, an unguarded
-    `div`/`mod` as division by zero).
+    executable expression, as tagged tuples: `("at", seq, index-expr,
+    guard)`, `("nz", divisor-expr, guard)`, or `("dm", div-or-mod-node,
+    guard)`. `guard` is the tuple of Expr conditions (each already TRUE at
+    this point of the walk) that C's own short-circuit evaluation puts
+    between the top of the statement and this occurrence; empty means
+    "unconditionally reached" (evaluated no matter what the statement's
+    own guards decide), exactly the `uncond=True` case this parameter
+    replaces.
+
+    GUARDED DEFINEDNESS, 2026-09-11 (ROADMAP 13.4, framac-seq3, item 1).
+    Before this pass, a conditionally evaluated occurrence (`guard`
+    non-empty) was REFUSED outright (`fz_p_nest_cell`/`fz_p_nest_lit`'s
+    own measured message, "definedness not dischargeable by a plain
+    assert"): emitting an unconditional assert in front of the whole
+    statement would be UNSOUND (it would demand the bound hold even on
+    the branch where the operator is never evaluated, e.g. `at(m, i)` at
+    `i` out of range on the branch that never reads it) and there was no
+    conditional form to fall back on. The fix threads the accumulated
+    guard down through every `and`/`or`/`implies`/`ite` node -- the
+    SAME set of C short-circuit operators `defs()` (the ACSL predicate
+    side, its own docstring above unchanged) already threads a matching
+    guard through -- and lets `at`/`div`/`mod` attach whatever guard is
+    live at the point they are reached instead of raising. `at_asserts`
+    (below) renders an empty guard exactly as before (byte-identical:
+    every existing unconditional occurrence, on every committed task and
+    prior probe, still reaches guard `()`) and a non-empty one as an
+    ACSL implication, `(guard) ==> (bound)`, discharged only on the path
+    where the operator is actually evaluated.
 
     "dm", added 2026-09-08 alongside `return`: MEASURED on is_prime, whose
     `return` sits behind `if (n % d == 0)`. WP proves `t_mod(n,d) == 0` as
@@ -3767,33 +3968,30 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
     out = []
     if "ite" in e:
         i = e["ite"]
-        out += code_ats(i["cond"], env, uncond)
-        out += code_ats(i["then"], env, False)
-        out += code_ats(i["else"], env, False)
+        out += code_ats(i["cond"], env, guard)
+        out += code_ats(i["then"], env, guard + (i["cond"],))
+        out += code_ats(i["else"], env,
+                        guard + ({"op": "not", "args": [i["cond"]]},))
         return out
     if "call" in e:
         for a in e["call"]["args"]:
-            out += code_ats(a, env, uncond)
+            out += code_ats(a, env, guard)
         return out
     if "op" not in e:
         return out
     op, args = e["op"], e.get("args", [])
     if op == "at":
-        if not uncond:
-            raise NotImplementedError(
-                "conditionally evaluated `at` in executable position: "
-                "definedness not dischargeable by a plain assert")
-        out += code_ats(args[1], env, uncond)
+        out += code_ats(args[1], env, guard)
         base = args[0]
         if "var" in base:
-            out.append(("at", seq_var(base, env), args[1]))
+            out.append(("at", seq_var(base, env), args[1], guard))
         elif base.get("op") == "seq":
             # SEQ VALUE, executable position, item 1 (literal),
             # 2026-09-11 (framac-seq): a literal base's own bound is its
             # element count, a plain int, never a `{name}_n` identifier
             # (see `cexpr`'s matching `at`/`op == "seq"` case, which this
             # tag's own bounds-check assert must agree with).
-            out.append(("atn", len(base.get("args", ())), args[1]))
+            out.append(("atn", len(base.get("args", ())), args[1], guard))
         elif (base.get("op") == "at"
               and is_nested_seq_type(typ(base["args"][0], env, None))):
             # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
@@ -3802,31 +4000,33 @@ def code_ats(e: dict, env: dict, uncond: bool = True) -> list:
             # not a `{name}_n` identifier either (see `cexpr`'s matching
             # case).
             m, i_e = base["args"]
-            out.append(("atrow", seq_var(m, env), i_e, args[1]))
+            out.append(("atrow", seq_var(m, env), i_e, args[1], guard))
         else:
-            out.append(("at", seq_var(base, env), args[1]))
+            out.append(("at", seq_var(base, env), args[1], guard))
         return out
     if op in DIVMOD:
-        if not uncond:
-            raise NotImplementedError(
-                "conditionally evaluated `div`/`mod` in executable "
-                "position: definedness not dischargeable by a plain assert")
-        out += code_ats(args[0], env, uncond)
-        out += code_ats(args[1], env, uncond)
-        out.append(("nz", args[1]))
-        out.append(("dm", e))
+        out += code_ats(args[0], env, guard)
+        out += code_ats(args[1], env, guard)
+        out.append(("nz", args[1], guard))
+        out.append(("dm", e, guard))
         return out
     if op in ("and", "or"):
-        out += code_ats(args[0], env, uncond)
+        out += code_ats(args[0], env, guard)
+        seen = [args[0]]
         for a in args[1:]:
-            out += code_ats(a, env, False)
+            if op == "and":
+                g2 = guard + tuple(seen)
+            else:
+                g2 = guard + tuple({"op": "not", "args": [x]} for x in seen)
+            out += code_ats(a, env, g2)
+            seen.append(a)
         return out
     if op == "implies":
-        out += code_ats(args[0], env, uncond)
-        out += code_ats(args[1], env, False)
+        out += code_ats(args[0], env, guard)
+        out += code_ats(args[1], env, guard + (args[0],))
         return out
     for a in args:
-        out += code_ats(a, env, uncond)
+        out += code_ats(a, env, guard)
     return out
 
 
@@ -3842,17 +4042,19 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
     and fixed."""
     out = []
     for tag, *rest in code_ats(e, ctx.env):
+        *rest, guard = rest
+        body = None
         if tag == "at":
             s, ix = rest
-            out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
-                       f"&& ({term(ix, ctx)}) < {s}_n; */")
+            body = (f"0 <= ({term(ix, ctx)}) "
+                    f"&& ({term(ix, ctx)}) < {s}_n")
         elif tag == "atn":
             # SEQ VALUE, executable position, item 1 (literal), 2026-09-11
             # (framac-seq): a literal base's bound is its own element
             # count `n`, a plain int (`code_ats`'s matching `"atn"` case).
             n, ix = rest
-            out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
-                       f"&& ({term(ix, ctx)}) < {n}; */")
+            body = (f"0 <= ({term(ix, ctx)}) "
+                    f"&& ({term(ix, ctx)}) < {n}")
         elif tag == "atrow":
             # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
             # (framac-seq): a nested cell's bound is its own row's length,
@@ -3860,12 +4062,12 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
             # case).
             m, i_e, ix = rest
             i_c = term(i_e, ctx)
-            out.append(f"{indent}/*@ assert 0 <= ({term(ix, ctx)}) "
-                       f"&& ({term(ix, ctx)}) < "
-                       f"({m}_off[({i_c}) + 1] - {m}_off[({i_c})]); */")
+            body = (f"0 <= ({term(ix, ctx)}) "
+                    f"&& ({term(ix, ctx)}) < "
+                    f"({m}_off[({i_c}) + 1] - {m}_off[({i_c})])")
         elif tag == "nz":
             (yx,) = rest
-            out.append(f"{indent}/*@ assert ({term(yx, ctx)}) != 0; */")
+            body = f"({term(yx, ctx)}) != 0"
         else:                                      # "dm": bridging assert
             (node,) = rest
             if funs is not None and task_name is not None:
@@ -3875,9 +4077,24 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
                 # legal ACSL (a `\prop` cannot multiply an `integer`), and
                 # the ternary form is not smoke-tested here regardless
                 # (see `_divmod_ternary_cexpr`'s docstring).
-                out.append(f"{indent}/*@ assert "
-                           f"({_divmod_ternary_cexpr(node, ctx.env, funs, task_name)}) == "
-                           f"({term(node, ctx)}); */")
+                body = (f"({_divmod_ternary_cexpr(node, ctx.env, funs, task_name)}) == "
+                       f"({term(node, ctx)})")
+        if body is None:
+            continue
+        if not guard:
+            out.append(f"{indent}/*@ assert {body}; */")
+        else:
+            # GUARDED DEFINEDNESS, 2026-09-11 (ROADMAP 13.4, framac-seq3,
+            # item 1): `code_ats`'s own docstring above. `guard` is a
+            # tuple of Expr conditions, each already established true by
+            # the enclosing `if`/`and`/`or`/`implies` structure at the
+            # point this occurrence is reached; renders each through
+            # `pred()` (the ACSL predicate side, so a bool-typed C guard
+            # gets the `!= 0` convention `pred`'s own `var` case already
+            # applies) and states the bound only as a consequence, never
+            # unconditionally.
+            cond = " && ".join(f"({pred(g, ctx)})" for g in guard)
+            out.append(f"{indent}/*@ assert ({cond}) ==> ({body}); */")
     return out
 
 
@@ -4646,9 +4863,44 @@ def self_calls(e: dict, fun: str, path: list) -> list:
     return out
 
 
-def spec_fun_acsl(f: dict, funs: dict) -> list:
+def spec_fun_acsl(f: dict, funs: dict, declare_only: bool = False) -> list:
     """The recursive logic definition plus its measured termination lemmas
-    (WP does not check logic-function termination itself; see docstring)."""
+    (WP does not check logic-function termination itself; see docstring).
+
+    WITHHELD DEFINITION, 2026-09-11 (ROADMAP 13.4, framac-axiom): when
+    `declare_only` is set (`lower()` sets it for exactly the spec_fun a
+    "measure"-kind witness names, harness.real_witness/interp.
+    MeasureViolation), this emits a bare ACSL declaration -- `logic
+    {res} {name}(...);`, no `= body`, no termination lemmas -- instead of
+    the recursive definition below. See the module docstring's dated note
+    "THE WITHHELD-DEFINITION CERTIFICATE" for why this is sound: the
+    witness is the harness's own concrete counterexample to this exact
+    function's `decreases`, confirmed by `_measure_certificate`'s ground
+    arithmetic, so the recursive equation the full definition would axiomatize
+    is not well founded (`g(n) = g(n) + 1` at `decreases 0` has no
+    solution) -- WP assumes a `logic ... = ...` definition as an axiom
+    without checking termination (this function's own un-withheld
+    branch's docstring line above), and an axiom asserting a
+    non-well-founded equation makes the whole ACSL theory inconsistent,
+    read as VACUOUS by verifiers/framac.py's `_vacuity_smoke`/consistency
+    probe before the certificate goal is ever reached (see
+    verifiers/framac.py's own module docstring, "MEASURE WITNESS"
+    section, and this file's own module docstring's "THE
+    WITHHELD-DEFINITION CERTIFICATE" note for the measured before/after
+    -- t/CONFORMANCE.md itself is not this worktree's file to update, so
+    it still reads the pre-patch 450 of 462 until whoever owns it
+    regenerates it). A bare declaration still gives every `ensures`/`term`
+    call site naming `g` something to typecheck against (ACSL only needs
+    the signature to elaborate a call), and `verifiers/framac.py`'s own
+    `_LOGIC_DEF` regex requires a trailing `=` to call a block a
+    "definition" at all, so a declared-only `g` is invisible to the
+    consistency probe: no axiom, nothing to doom. Termination lemmas are
+    skipped too -- there is no defining equation left for them to reason
+    about, and this file already knows (from the witness) that no proof
+    of termination exists to state. Withheld ONLY for the one function
+    the witness names, ONLY when the witness's kind is "measure": every
+    other spec_fun on the same task (and every task with no such witness)
+    still gets its full recursive definition, byte-identical to before."""
     env = {p["name"]: p["type"] for p in f["params"]}
     labeled = funs[f["name"]]["labeled"]
     lab = "{L}" if labeled else ""
@@ -4658,8 +4910,10 @@ def spec_fun_acsl(f: dict, funs: dict) -> list:
             sig += [f"int *{p['name']}", f"integer {p['name']}_n"]
         else:
             sig.append(f"integer {p['name']}")
-    body_ctx = Ctx(env, funs, ret=None, label="L")
     res = {"int": "integer", "bool": "boolean"}[f["result"]]
+    if declare_only:
+        return [f"/*@ logic {res} {f['name']}{lab}({', '.join(sig)}); */"]
+    body_ctx = Ctx(env, funs, ret=None, label="L")
     lines = [f"/*@ logic {res} {f['name']}{lab}({', '.join(sig)}) =",
              f"      {term(f['body'], body_ctx)};", "*/"]
     quant = ", ".join(
@@ -6030,8 +6284,25 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         header.append(T_WORDCOUNT_ACSL.rstrip("\n"))
     if _has_countfind(task) or _has_countfind(body):
         header.append(T_STRFIND_ACSL.rstrip("\n"))
+    # WITHHELD DEFINITION (2026-09-11, ROADMAP 13.4, framac-axiom): a
+    # "measure"-kind witness names, in `_site`, the exact spec_fun whose
+    # own `decreases` the harness caught failing at a concrete input
+    # (interp.MeasureViolation's "call" site; see spec_fun_acsl's own
+    # docstring for why the definition is withheld rather than merely
+    # certified). `_site` is a string ONLY for that call-site shape (a
+    # loop's own site is turned into an int index by harness.py before
+    # this file ever sees it -- fz_p_badvariant's witness, unaffected),
+    # and is checked against `funs` (not merely truthy) so a witness
+    # whose `_site` happens to collide with the task's OWN name (a
+    # spec_fun call from inside a self-recursive task body; is_task is
+    # True there) never withholds the task's own C function.
+    measure_fn = None
+    if witness is not None and witness.get("_kind") == "measure":
+        site = witness.get("_site")
+        if isinstance(site, str) and site in funs and not funs[site]["is_task"]:
+            measure_fn = site
     for f in task.get("spec_funs", []):
-        header += spec_fun_acsl(f, funs)
+        header += spec_fun_acsl(f, funs, declare_only=(f["name"] == measure_fn))
 
     # A seq RETURN's length, computed statically from the body (seq value
     # machinery section, above `assigned_names`): needed at requires-time,

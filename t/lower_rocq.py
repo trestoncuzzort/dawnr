@@ -1798,6 +1798,100 @@ artifact. No Admitted, no Axiom: the adapter bans the tokens outright.
   here rather than silently left. `fz_p_str_tab`'s own twin, by
   contrast, DOES read refuted (MEASURED): its witness is a plain "at an
   out-of-guard index" shape the certificate builder already grounds.
+
+ROADMAP 16.2, rocq's own rows, 2026-09-11. Re-measured before touching
+anything (t/COVERAGE-lifted-785.md's own rocq cells, dated 2026-09-10,
+were a day stale): the 59-task ds59-lifted set and the 15-task ds15-new
+set, both graded in rocq+dafny at flake 3. Three real causes, largest
+first, each fixed in the lowering/prelude, never by relabeling a verdict:
+
+  1. INVARIANT-DROP, EXIT WITNESS, 8 of 15 ds15-new tasks (appendArrayToSeq,
+     arrayToSeq, getFirstElements, elementWiseDivide, addLists,
+     squareElements, findSmallest, smallestListLength; two more,
+     containsK/isSmaller, PRESERVATION-witness siblings out of this wave's
+     scope, turned out to share the cause and were fixed as a side effect).
+     Shared shape: a prefix-declared int local (`h := |a|`) held fixed as
+     the loop's own upper bound while another variable walks up to it.
+     `gen_loop`'s invariant set never carried `h = a_len` -- only ever
+     `i < h` (the guard) and `i <= |a|` (a sibling invariant) separately --
+     so the loop body's own array-index definedness lemma (needing the
+     STRICT `i < a_len`) had no way to combine them. Fixed by threading one
+     synthetic `h == <its own init expression>` invariant per such local,
+     through the SAME `cx.prop`/`cx.defs` calls (and `invariants_ast` list)
+     every other invariant already goes through -- gated on the shape
+     itself (a prefix int local the loop body never reassigns), so a task
+     without one computes an empty list and renders byte-identical to
+     before this existed. All 8 read real=unproved before, verified after
+     (grade.py, flake 3, measured).
+
+  2. NO CERTIFICATE REACHABLE, PLAIN SEQ RETURN, 1 task (swap, task_id_257).
+     `_plain_def`'s seq-return branch bailed outright with a comment
+     ("_value_cert ... abstains on a seq return outright") that was true
+     the day it was written and stale since: `_value_cert` grew a seq
+     branch (SPEC.md "Sequences as values (v1)", ROADMAP 13.4,
+     fz_p_seqeq_false, 2026-09-11) that WANTS exactly the two-Definition
+     (function half, length half) split `_plain_def` refused to build. A
+     loop-free, non-recursive task with a seq return and a "value" witness
+     had no certificate path at all -- `_try_cert_v1` returned None from
+     `def_text is None` before ever reaching `_value_cert` -- so the twin
+     fell back to the plain unprovable theorem: real=verified/twin=
+     UNPROVED, not the REFUTED its own measured witness (a=0, b=1: real
+     [1, 0], twin [0, 0]) already supports. Fixed by giving `_plain_def`
+     the same split `gen_plain`/`gen_loop` already build. A second,
+     smaller gap surfaced once the certificate was reachable at all:
+     `_value_cert`'s seq-branch proof script only reduces a FORALL-shaped
+     falsifying conjunct (`repeat match ... specialize ... cbv in H`); a
+     concrete-index equation against a scalar (`result[0] == b`, swap's
+     own shape, never wrapped in a forall) survived `decompose` unreduced,
+     an opaque application `lia` cannot see through. One unconditional
+     `cbv in *` between the match and the closing `lia` closes it, a
+     no-op for the forall-shaped case (already `cbv`'d per-hit).
+
+  3. NONLINEAR ARITHMETIC, 1 task (centeredHexagonalNumber): `3 * n *
+     (n - 1) + 1 >= 0`, a product of two variables, is outside `lia`'s
+     Presburger fragment; `nia` alone closes it (confirmed standalone).
+     NOT added to the shared POST_SF prelude every task gets: MEASURED
+     WRONG twice on the way here. Bare `nia` sent isPrime's own mod-
+     shaped, genuinely unprovable goal into a search long enough to blow
+     the whole file's 180s wall backstop by itself, turning a fast,
+     honest UNPROVED into a TIMEOUT. Bounding that one call with `timeout
+     5` still did, for isPrime AND containsSequence, from the ACCUMULATED
+     cost of many bounded-but-failing 5s attempts across one file's many
+     `t_dis` call sites. The fix actually landed: a SEPARATE prelude,
+     POST_SF_NIA, spliced in only when `_has_nonlinear_mul(task)` finds a
+     genuine variable-times-variable product (`n * 2` is ordinary linear
+     arithmetic and does not trip it) -- every other task, isPrime and
+     containsSequence included, keeps the original POST_SF, byte-
+     identical, same discipline `_has_strlib`'s own gate already keeps.
+
+  NOT ATTEMPTED, NAMED. task_id_586 (splitAndAppend, a rotate-by-`n mod
+  |l|` shape): real=unproved, coqc's own "unsolved t verification
+  condition" on the main theorem, needing case-split reasoning between
+  `t_slice`/`t_app`'s own boundary and `t_mod`'s two cases that no
+  existing tactic combination reaches -- a genuine capability gap, not a
+  quick fix, left honest rather than papered over. task_id_262
+  (splitArray, ABSTAIN: "a pair component of type seq is refused"),
+  task_id_610 (removeElement, ABSTAIN: "more than one loop per body is
+  not lowered yet") and task_id_80 (tetrahedralNumber, ABSTAIN:
+  "identifier 't_v' collides with the lowering's namespace") are three
+  separate, already-honest lowering-completeness gaps (a genuine `t_`
+  literal user identifier colliding with the tactic/certificate
+  namespace's own reserved prefix, in the last case), each its own
+  feature to add, not this wave's cause. task_id_605 (isPrime) and
+  task_id_598 (isArmstrong) keep their pre-existing timeout readings:
+  isPrime's own goal is genuinely outside every tactic tried (see item 3
+  above); isArmstrong's nonlinear cubic terms interacting with three
+  chained div/mod occurrences were not attempted, named rather than
+  guessed at. task_id_126 (sumOfCommonDivisors) and the twin sides of
+  task_id_3, task_id_605, task_id_69, task_id_808 and task_id_809 are the
+  PRESERVATION-witness family this wave's own brief named out of scope
+  ("another builder's").
+
+  Measured after (grade.py, flake 3): every task of both sets, the 34
+  committed tasks against t/AGREEMENT.md's own rocq column cell for cell
+  (no regression), and the rocq column of t/CONFORMANCE.md's own suite,
+  before and after, diffed (0 FAIL cells lost or gained). See this
+  session's own patch/report for the exact cells.
 """
 from __future__ import annotations
 
@@ -3908,6 +4002,77 @@ Ltac t_side_ext := first [ assumption | solve [ lia ]
                      | solve [ t_eqs_h; t_go_ext 6%nat ] ].
 """
 
+# ROADMAP 16.2, 2026-09-11: a SEPARATE prelude, spliced in only for a task
+# `_has_nonlinear_mul` finds (below), never POST_SF itself, whose `t_dis`
+# gets one more fallback: `solve [ timeout 5 nia ]`, tried LAST, after
+# every `t_vc0` variant has already failed. `t_base`'s own leaf (`lia`) is
+# Presburger-only, so a genuinely nonlinear goal -- centeredHexagonalNumber's
+# `3 * n * (n - 1) + 1 >= 0`, a product of two VARIABLES, not a variable
+# times a literal -- left `t_dis` with nothing that could ever close it;
+# confirmed standalone (`nia` alone closes exactly this goal, `lia` alone
+# does not) before adding it. Tried only after `t_vc0`'s own alternatives,
+# so this variant's own `t_dis` costs a task whose obligations are all
+# Presburger nothing beyond one failed `nia` attempt -- which is exactly
+# why this is NOT spliced into every task's prelude (POST_SF, unchanged,
+# is): `t_dis` is called at every def-lemma, invariant and step site in a
+# file, often dozens of times, and `timeout 5` bounds a SINGLE attempt, not
+# the sum of every attempt across a whole file. MEASURED WRONG twice
+# before landing here: bare `nia` (no timeout) sent isPrime's own mod-
+# shaped, genuinely UNPROVABLE goal into a search long enough to blow the
+# file's 180s wall backstop by itself; `timeout 5 nia` added to POST_SF
+# UNCONDITIONALLY still did, for isPrime and containsSequence, purely from
+# the ACCUMULATED cost of many bounded-but-still-failing attempts across
+# one file's many `t_dis` call sites (each paying its own 5s before
+# `first` moves on) -- both real regressions this file's own history
+# should not repeat. Gating on `_has_nonlinear_mul` closes the actual gap
+# (centeredHexagonalNumber) while leaving every task with no genuine
+# variable-times-variable term (isPrime, containsSequence, every task
+# committed through 2026-09-10, and the string/pairs/nested-seq/early-exit
+# waves after it) on the ORIGINAL POST_SF, byte-identical proof text --
+# the same "a task that does not use it pays nothing" discipline the
+# string-library block already keeps (`_has_strlib`, gen_loop's own
+# `def_ctx`).
+POST_SF_NIA = POST_SF.replace(
+    'Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
+    '                          | solve [ t_eqs_h; t_vc0 ]\n'
+    '                          | solve [ t_eqs; t_eqs_h; t_vc0 ] ]\n'
+    '              || fail "unsolved t verification condition".',
+    'Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
+    '                          | solve [ t_eqs_h; t_vc0 ]\n'
+    '                          | solve [ t_eqs; t_eqs_h; t_vc0 ]\n'
+    '                          | solve [ timeout 5 nia ] ]\n'
+    '              || fail "unsolved t verification condition".')
+assert POST_SF_NIA != POST_SF, "POST_SF_NIA gate: t_dis text not found"
+
+
+def _has_nonlinear_mul(task: dict) -> bool:
+    """True iff some `*` in requires/ensures/body has NEITHER side a
+    literal int -- a genuine variable-times-variable product `lia` cannot
+    reach, the one shape POST_SF_NIA's extra `nia` fallback exists for.
+    `n * 2` or `3 * n` (a variable times a CONSTANT) is already ordinary
+    Presburger arithmetic; only a case like `n * (n - 1)` (centered
+    polygonal numbers' own shape) trips this."""
+    def walk(e) -> bool:
+        if not isinstance(e, dict):
+            return False
+        if e.get("op") == "*":
+            args = e.get("args", [])
+            if len(args) == 2 and not any(
+                    isinstance(a, dict) and "int" in a for a in args):
+                return True
+        for v in e.values():
+            if isinstance(v, dict):
+                if walk(v):
+                    return True
+            elif isinstance(v, list):
+                for item in v:
+                    if walk(item):
+                        return True
+        return False
+    return (any(walk(e) for e in task.get("requires", []))
+            or any(walk(e) for e in task.get("ensures", []))
+            or walk({"body": task.get("body", [])}))
+
 RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
             "match", "with", "end", "fix", "Prop", "Set", "Type", "fuel", "fu",
             "s_len", "mod", "rflag", "rf", "fst", "snd", "pair"}
@@ -5964,7 +6129,7 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
 
     parts = [header(task, body)]
     parts.append(emit_spec_funs(cx))
-    parts.append(POST_SF + "\n")
+    parts.append((POST_SF_NIA if _has_nonlinear_mul(task) else POST_SF) + "\n")
 
     counter = [0]
     parts.append(emit_sf_def_lemmas(cx, counter))
@@ -6174,10 +6339,63 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     svars_x, slot_ty = seq_slots(svars, stys)
     id_env = {v: v for v in svars_x}
 
+    # ROADMAP 16.2, 2026-09-11: a prefix-declared INT local the loop body
+    # never reassigns (upWhileLess's `h := |a|`, held fixed as the loop
+    # bound while `i_v2` walks up to it) is invariant across every
+    # iteration, equal to whatever expression initialized it -- true
+    # whether or not the task's own author wrote that fact down as one of
+    # `w["invariants"]`. Measured: appendArrayToSeq, arrayToSeq,
+    # getFirstElements, elementWiseDivide, addLists, squareElements,
+    # findSmallest, smallestListLength (8 of the 15 lifted 2026-09-10
+    # tasks) all share exactly this shape, and all eight read real=
+    # unproved before this fix: coqc's own "Tactic failure: unsolved t
+    # verification condition" on the loop body's OWN definedness lemma
+    # (`_def_9`-style, indexing the source array at the loop's running
+    # index) needs `i_v2 < a_len` from the guard's `i_v2 < h` PLUS `h =
+    # a_len`, and nothing upstream of this fix ever stated `h = a_len` at
+    # all: `h`'s own invariants only ever bound it against `i_v2`
+    # (`i_v2 <= h`), never against its own defining expression. The fix
+    # threads one synthetic invariant per such local -- `h == a_len` here,
+    # rendered through the SAME `cx.prop`/`cx.defs` calls every other
+    # invariant already goes through below, so it gets the same
+    # definedness check, the same per-step preservation proof (trivial:
+    # the loop body never touches `h`, so the Fixpoint's induction closes
+    # `h' = a_len` for free), and the same initial-state assertion,
+    # costing nothing new anywhere those already succeed. A task with no
+    # such local (every committed task through 2026-09-10) computes an
+    # empty list here and renders byte-identical to before this existed.
+    #
+    # MEASURED WRONG once (2026-09-11), fixed by the `not has_return`
+    # guard below: containsSequence/containsK/isSmaller (the PRESERVATION-
+    # witness family, ROADMAP 16.2's own brief naming these three "another
+    # builder's", out of this fix's scope) share the identical `h := |a|`
+    # prefix shape but ALSO have a `return` inside the loop body, so their
+    # `t_dis_ext`/`t_side_ext` proofs run PRELUDE's witness-instantiation
+    # search (t_go_ext: "every (forall-hypothesis, Z-variable) pair"),
+    # whose cost is sensitive to the hypothesis COUNT. Adding one more
+    # (trivially true, `h = a_len`) hypothesis to that search's context
+    # cost containsSequence nothing in correctness but ~60x its own wall
+    # time (0.9s, honest UNPROVED -> 60s+ TIMEOUT, same file otherwise
+    # byte-identical, MEASURED both ways) with no compensating win (the
+    # real gap there is the preservation family's own, untouched by this
+    # fix either way). None of the 8 target tasks (appendArrayToSeq and
+    # siblings) has a `return` in its loop body, so this guard costs them
+    # nothing; `has_return` is the exact predicate `gen_loop`'s own
+    # early-exit branch (below) already uses to pick its Fixpoint shape.
+    _body_assigned = loop_assigned(w["body"])
+    _extra_invs = [] if has_return(w["body"]) else [
+        {"op": "==", "args": [{"var": s["var"]["name"]}, s["var"]["init"]]}
+        for s in prefix
+        if "var" in s
+        and s["var"].get("type") == "int"
+        and s["var"]["name"] not in _body_assigned
+    ]
+    invariants_ast = list(w.get("invariants", [])) + _extra_invs
+
     guard_b = cx.bx(w["cond"], id_env, local)
     guard_p = cx.prop(w["cond"], id_env, local)
     dec = cx.zx(w["decreases"], id_env, local)
-    invs = [cx.prop(e, id_env, local) for e in w.get("invariants", [])]
+    invs = [cx.prop(e, id_env, local) for e in invariants_ast]
 
     # invariant definedness: each invariant assumes requires + earlier ones.
     # THE STRING LIBRARY (v1), 2026-09-11: count_vowels' own invariant is
@@ -6196,7 +6414,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     inv_ctx = list(reqs)
     def_ctx = list(reqs) + invs if _has_strlib(task) else None
     sb = " ".join(f"({v} : {slot_ty[v]})" for v in svars_x)
-    for e in w.get("invariants", []):
+    for e in invariants_ast:
         iob: list = []
         cx.defs(e, list(def_ctx) if def_ctx is not None else list(inv_ctx),
                 [], iob, id_env, local)
@@ -6260,7 +6478,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
         pat_p = f"[{pat_p} {v}]"
     sb_p = " ".join(f"({v}' : {slot_ty[v]})" for v in svars_x)
     penv = {v: v + "'" for v in svars_x}
-    invs_p = [cx.prop(e, penv, local) for e in w.get("invariants", [])]
+    invs_p = [cx.prop(e, penv, local) for e in invariants_ast]
     guard_pp = cx.prop(w["cond"], penv, local)
     dec0 = cx.zx(w["decreases"],
                  {**{v: env_pre[v] for v in svars_x}}, local)
@@ -6281,7 +6499,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     # only invariants + negated guard about the tuple, the havoc-everything
     # reading: fr_probe_ret / fr_probe_local were unprovable here while
     # Dafny, Verus and Frama-C proved them (measured 2026-09-02).
-    body_assigned = loop_assigned(w["body"])
+    body_assigned = _body_assigned
     frame = [v for v in svars_x if slot_owner(v, svars) not in body_assigned]
     concl = " /\\ ".join(invs_p + [f"(~ {guard_pp})"]
                          + [f"{v}' = {v}" for v in frame])
@@ -6341,7 +6559,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
 
     ini_asserts = "".join(
         f"  assert (Hini{k+1} : {cx.prop(e, {v: env_pre[v] for v in svars_x}, local)}) by t_dis.\n"
-        for k, e in enumerate(w.get("invariants", [])))
+        for k, e in enumerate(invariants_ast))
     lens_intro = " ".join(f"Hl{k+1}" for k in range(n_lens))
     reqs_intro = " ".join(f"Hreq{k+1}" for k in range(n_reqs))
     ini_intro = " ".join(f"Hini{k+1}" for k in range(n_invs))
@@ -7048,13 +7266,35 @@ def _forall_hints(e, env: dict, funs: dict, out: list) -> None:
 def _plain_def(cx, task, body):
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
-    if ret_t == "seq":
-        # _value_cert (the only caller that uses this def_text) abstains on
-        # a seq return outright; matched here so this never builds a
-        # def_text no caller can use.
-        return None
     pb, _ = param_binders(cx)
     local: dict = {}
+    if ret_t == "seq":
+        # ROADMAP 16.2, 2026-09-11: `_value_cert`'s "Sequences as values
+        # (v1)" branch (SPEC.md, ROADMAP 13.4, fz_p_seqeq_false) wants
+        # exactly the two-Definition split `gen_plain`/`gen_loop` already
+        # build for a plain-seq return -- a function half (`_t`) and a
+        # length half (`_t_len`) -- and calls both `{name}_t` and
+        # `{name}_t_len` by name. This function used to bail outright on
+        # `ret_t == "seq"` with a comment saying its only caller
+        # (`_value_cert`) "abstains on a seq return outright", true the
+        # day it was written but stale since `_value_cert` grew that
+        # branch: a PLAIN (loop-free), non-recursive task with a seq
+        # return and a "value" witness -- swap's own shape, `[b, a]` --
+        # had no certificate reachable at all, `_try_cert_v1` returning
+        # None from `def_text is None` alone before ever reaching
+        # `_value_cert`, and the twin fell back to the plain unprovable
+        # theorem: real=verified/twin=UNPROVED, not the honest REFUTED
+        # the measured witness (a=0, b=1: real [1,0], twin [0,0]) already
+        # supports. Mirrors `gen_plain`'s own plain-seq env0/split
+        # exactly; a task with a loop or a self-call never reaches this
+        # branch (`_loop_def`/`_rec_def` own those), so nothing about
+        # them changes.
+        env0 = {ret: "(fun _ : Z => 0)", ret + "_len": "0"}
+        env = exec_straight(cx, body, env0, local, None, [], [])
+        return (f"Definition {task['name']}_t {pb} : Z -> Z := "
+                f"{env[ret]}.\n"
+                f"Definition {task['name']}_t_len {pb} : Z := "
+                f"{env[ret + '_len']}.\n")
     env0 = {ret: default_term(ret_t)}
     env = exec_straight(cx, body, env0, local, None, [], [])
     return (f"Definition {task['name']}_t {pb} : {rty(ret_t)} := "
@@ -7297,6 +7537,26 @@ def _value_cert(cx, task, body, witness, def_text):
                         idx = i
                         break
                 break
+        # ROADMAP 16.2, 2026-09-11 (swap's own witness, a=0, b=1): the
+        # `repeat match` above only reaches a FORALL-shaped conjunct (two
+        # seq params compared pointwise); a conjunct that is itself a
+        # concrete-index equation against a scalar (`result[0] == b`,
+        # never wrapped in a `forall`) is left exactly as `decompose`
+        # produced it -- an unreduced application of `{name}_t`/`t_upd`/
+        # `t_fill` at literal arguments, which `lia` cannot see through
+        # (it treats an opaque function application as an atom, not a
+        # number). One `cbv in *` between the match and the closing
+        # `lia`, unconditional and free of any `_kind`/witness-shape
+        # gate, reduces every surviving hypothesis (the `forall`-derived
+        # ones already `cbv`'d above are idempotent under a second pass)
+        # to literal numerals at these concrete literal arguments, which
+        # is exactly what let this same idiom already close the plain
+        # (non-seq) `_v0_cert`/`_undef_cert` certificates by `lia` alone.
+        # A task whose falsifying conjunct WAS already forall-shaped
+        # (row_max_len, seq_max) already had every hypothesis reduced by
+        # the match's own per-hit `cbv in H`, so this second, blanket
+        # pass is a no-op for them, confirmed by the unchanged AGREEMENT
+        # regression below.
         proof = (
             "Proof.\n"
             "  intro t_H.\n"
@@ -7305,6 +7565,7 @@ def _value_cert(cx, task, body, witness, def_text):
             "  | H : forall t_k : Z, _ <= t_k < _ -> _ = _ |- False =>\n"
             f"      specialize (H {_zlit(idx)} ltac:(lia)); cbv in H\n"
             "  end.\n"
+            "  cbv in *.\n"
             "  lia.\n"
             "Qed.\n")
         return ("".join(seq_defs) + "\n" + def_text + "\n"
@@ -7928,7 +8189,8 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
                 chunk = _value_cert(cx, task, body, witness, def_text)
         if chunk is None:
             return None
-        parts = [header(task, body), emit_spec_funs(cx), POST_SF + "\n", T_FEED, chunk,
+        post_sf = POST_SF_NIA if _has_nonlinear_mul(task) else POST_SF
+        parts = [header(task, body), emit_spec_funs(cx), post_sf + "\n", T_FEED, chunk,
                  f"\nPrint Assumptions {CERT_NAME}.\n"]
         return "\n".join(p for p in parts if p)
     except Exception:                                       # noqa: BLE001

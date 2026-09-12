@@ -55,21 +55,26 @@ F* kernel, not inferred:
   suite's fstar column (conformance.py's own build_manifest/run_items/
   grade/format_table, restricted to the fstar column): before and after
   are identical but for the run timestamp, 66 tasks, 0 FAIL cells in
-  either run. Left open, named honestly rather than relabeled: the
-  "exists"/"forall" divisor-bound family (isNonPrime task 3, isPrime 605,
-  sumOfCommonDivisors 126) needs a real co-divisor lemma the loop's exit
-  invariant does not supply (an actual number-theory gap, not a lowering
-  shape issue) -- and even where fstar's own real now verifies with these
-  two fixes (containsSequence 69, containsK 808, isSmaller 809), the twin
-  still reads verified too there, which is the twin ladder's own open
-  item, not this column's (dafny reads the identical verified/unsound on
-  every one of those three, matching); the three structural ABSTAINs
-  (anyValueExists 414: a quantifier in computational position, isSublist
-  576 and removeElement 610: return-in-prefix and multi-loop-per-body,
-  respectively) are unsupported shapes in this lowering, unchanged; and
-  isArmstrong (598) still times out (nonlinear div/mod arithmetic over
-  cubes, no FStar.Math.Lemmas assist emitted here yet) -- a real timeout
-  at the pinned budget, not relabeled.
+  either run. Left open, named honestly rather than relabeled: even where
+  fstar's own real now verifies with these two fixes (containsSequence
+  69, containsK 808, isSmaller 809), the twin still reads verified too
+  there, which is the twin ladder's own open item, not this column's
+  (dafny reads the identical verified/unsound on every one of those
+  three, matching); the three structural ABSTAINs (anyValueExists 414: a
+  quantifier in computational position, isSublist 576 and removeElement
+  610: return-in-prefix and multi-loop-per-body, respectively) are
+  unsupported shapes in this lowering, unchanged; and isArmstrong (598)
+  still times out (nonlinear div/mod arithmetic over cubes, no
+  FStar.Math.Lemmas assist emitted here yet) -- a real timeout at the
+  pinned budget, not relabeled. The "exists"/"forall" divisor-bound
+  family named here as open (isNonPrime task 3, isPrime 605,
+  sumOfCommonDivisors 126) is CLOSED as of 2026-09-11 (a later session,
+  ROADMAP 16.2's divisor-bound item): see `_divisor_bound_target`'s own
+  docstring near `gen_loop` for the co-divisor lemma this file now emits
+  at the loop's exit, and `_has_ite`'s own note on `dec_shift` for
+  sumOfCommonDivisors's separate (non-divisor) compound-decreases fix.
+  All three move fstar real unproved -> verified; twin unaffected (the
+  twin ladder's own open item above, unchanged by this fix).
 
 2026-09-12 (this session, ROADMAP 13.4's fstar item: "the four ensures-
 level probes"): three changes, all in this file alone (`verifiers/
@@ -2929,6 +2934,211 @@ def gen_fun(cx: Ctx, task: dict, body: list) -> str:
             f"= {expr}\n")
 
 
+# DIVISOR-BOUND LEMMA (2026-09-11, ROADMAP 16.2, divisor-bound item):
+# dafny-synthesis isNonPrime (3) and isPrime (605) trial-divide `n` only up
+# to `n div 2` (`cond: i <= n div 2`) while their own `ensures` quantifies
+# the divisor over the WIDER range `[2, n)` -- a fact no stated invariant
+# supplies is the number-theory lemma this family needs at the loop's
+# exit: any `k` with `2 <= k < n` and `n % k == 0` satisfies `k <= n / 2`
+# (`n == k * q`, `q >= 2` since `k < n` rules out `q <= 1`, so `n >= 2*k`).
+# Measured directly (F* 2026.08.30): the plain lemma `t_divisor_le_half`
+# below, `n % k = 0 ==> k <= n / 2`, discharges with NO hint beyond the
+# native `%`/`/` Z3 already reasons about for every other div/mod
+# obligation this file emits (see the module docstring's own DIV/MOD
+# section) -- no `FStar.Math.Lemmas` import, no `nonlinear_arith`-style
+# escape hatch needed, this is exactly the kind of query Z3's own theory
+# of integers already closes once handed the ONE nonlinear fact isPrime's
+# invariant never states.
+#
+# `_divisor_bound_target` recognizes the shape from the task's own AST,
+# so a task with no such ensures/invariant/cond triple is untouched
+# (every one of the 34 committed tasks and the other 17 of this session's
+# 19-task blocker set have no `result == Quant(...)` ensures at all, so
+# they never reach the inner loop below): an ensures of the form
+# `result == (forall|exists) k in [lo, N) . (N % k) RELOP 0`, a loop
+# invariant of the IDENTICAL shape over `[lo, i)` (`i` the loop's own
+# counter), and a guard `cond` that is exactly `i <= N div 2` -- the
+# textbook "trial divide to the square-root-or-half bound" pattern. Where
+# it matches, `_divisor_bound_fstar_defs` emits the lemma above plus a
+# second lemma, `t_divisor_bound_<task>`, that extends the loop's own
+# `[lo, i)` fact to the full `[lo, N)` ensures using it (case-split on
+# the concrete boolean `result` -- decidable, no classical excluded-middle
+# assumption needed for that split -- and, for the exists/negated-forall
+# direction that needs a witness out of an existential or a negated
+# universal, `FStar.Classical.exists_elim`/`exists_intro_not_all_not`,
+# both from the stock `FStar.Classical` library, no admit/assume
+# anywhere). The lowering calls it once, at the loop's own `Inr` (normal,
+# non-early-return) exit, right where this file already had nothing but
+# the bare `result` -- so every OTHER task's `Inr` line is byte-for-byte
+# unchanged. Measured 2026-09-11: isNonPrime (3) and isPrime (605) move
+# fstar real unproved -> verified (twin unchanged, the twin ladder's own
+# open item per the module docstring); every one of the 34 committed
+# fstar tasks and the conformance suite's fstar column are unaffected
+# (neither has a task matching this shape).
+def _quant_mod_relop(body):
+    """`body` is `(N % k) RELOP 0` (RELOP one of "=="/"!="); returns
+    `(N, k_name, RELOP)` or None. `k` must appear bare (`{"var": k}`),
+    never a compound expression, matching every task this targets."""
+    if not (isinstance(body, dict) and body.get("op") in ("==", "!=")):
+        return None
+    args = body.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    lhs, rhs = args
+    if rhs != {"int": 0}:
+        return None
+    if not (isinstance(lhs, dict) and lhs.get("op") == "mod"):
+        return None
+    largs = lhs.get("args")
+    if not (isinstance(largs, list) and len(largs) == 2):
+        return None
+    dividend, kexpr = largs
+    if not (isinstance(kexpr, dict) and list(kexpr.keys()) == ["var"]):
+        return None
+    return dividend, kexpr["var"], body["op"]
+
+
+def _result_eq_quant(e, ret: str):
+    """`e` is `result == Quant(...)`; returns `(kind, quant_dict)` for
+    kind in {"forall","exists"}, or None."""
+    if not (isinstance(e, dict) and e.get("op") == "=="):
+        return None
+    args = e.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    a, b = args
+    if a == {"var": ret}:
+        quant_holder = b
+    elif b == {"var": ret}:
+        quant_holder = a
+    else:
+        return None
+    for kind in ("forall", "exists"):
+        if kind in quant_holder:
+            return kind, quant_holder[kind]
+    return None
+
+
+def _divisor_bound_target(task: dict, w: dict) -> dict | None:
+    ret = task["returns"][0]["name"]
+    for en in task.get("ensures", []):
+        found = _result_eq_quant(en, ret)
+        if found is None:
+            continue
+        kind, q = found
+        rel = _quant_mod_relop(q.get("body"))
+        if rel is None:
+            continue
+        dividend, _kname, relop = rel
+        lo = q.get("lo")
+        if lo is None:
+            continue
+        for iv in w.get("invariants", []):
+            ifound = _result_eq_quant(iv, ret)
+            if ifound is None:
+                continue
+            ikind, iq = ifound
+            if ikind != kind or iq.get("lo") != lo:
+                continue
+            irel = _quant_mod_relop(iq.get("body"))
+            if irel is None or irel[0] != dividend or irel[2] != relop:
+                continue
+            ihi = iq.get("hi")
+            if not (isinstance(ihi, dict) and list(ihi.keys()) == ["var"]):
+                continue
+            i_name = ihi["var"]
+            want_cond = {"op": "<=", "args": [
+                {"var": i_name},
+                {"op": "div", "args": [dividend, {"int": 2}]}]}
+            if w.get("cond") != want_cond:
+                continue
+            return {"kind": kind, "relop": relop, "dividend": dividend,
+                    "lo": lo, "i_name": i_name, "result": ret}
+    return None
+
+
+def _divisor_bound_fstar_defs(cx: "Ctx", task: dict, plan: dict) -> str:
+    n = cx.zx(plan["dividend"], {}, {})
+    lo = cx.zx(plan["lo"], {}, {})
+    i = plan["i_name"]
+    half = f"t_divisor_le_half_{task['name']}"
+    bound = f"t_divisor_bound_{task['name']}"
+    half_def = (
+        f"let {half} (n:int) (k:int)\n"
+        f"  : Lemma (requires (n >= 2) /\\ ({lo} <= k) /\\ (k < n) /\\ (n % k = 0))\n"
+        f"          (ensures (k <= n / 2))\n"
+        f"= ()\n\n")
+    if plan["relop"] == "!=":
+        body = (
+            f"let {bound} (n:int) ({i}:int) (result:bool)\n"
+            f"  : Lemma\n"
+            f"      (requires (n >= 2) /\\ ({lo} <= {i}) /\\ ({i} <= (n / 2) + 1) /\\ (~ ({i} <= n / 2)) /\\\n"
+            f"                (result <==> (forall (k_v:int). "
+            f"(({lo} <= k_v) /\\ (k_v < {i})) ==> (n % k_v <> 0))))\n"
+            f"      (ensures (result <==> (forall (k:int). "
+            f"(({lo} <= k) /\\ (k < n)) ==> (n % k <> 0))))\n"
+            f"= if result then begin\n"
+            f"    let aux (k:int{{{lo} <= k /\\ k < n}}) : Lemma (n % k <> 0) =\n"
+            f"      if k < {i} then () else if n % k = 0 then {half} n k else ()\n"
+            f"    in\n"
+            f"    FStar.Classical.forall_intro aux\n"
+            f"  end else begin\n"
+            f"    FStar.Classical.exists_intro_not_all_not\n"
+            f"      #int #(fun k_v -> (({lo} <= k_v) /\\ (k_v < {i})) /\\ (n % k_v = 0))\n"
+            f"      (fun (f : (k_v:int -> Lemma (~ "
+            f"((({lo} <= k_v) /\\ (k_v < {i})) /\\ (n % k_v = 0))))) ->\n"
+            f"         FStar.Classical.forall_intro f);\n"
+            f"    let widen (k_v:int) : Lemma ((({lo} <= k_v /\\ k_v < {i}) /\\ n % k_v = 0)\n"
+            f"                                  ==> (exists (k:int). "
+            f"({lo} <= k /\\ k < n) /\\ n % k = 0)) =\n"
+            f"      FStar.Classical.impl_intro_tot\n"
+            f"        (fun (_ : ((({lo} <= k_v) /\\ (k_v < {i})) /\\ (n % k_v = 0))) ->\n"
+            f"           FStar.Classical.exists_intro "
+            f"(fun k -> ({lo} <= k /\\ k < n) /\\ n % k = 0) k_v)\n"
+            f"    in\n"
+            f"    FStar.Classical.forall_to_exists widen\n"
+            f"  end\n")
+    else:
+        body = (
+            f"let {bound} (n:int) ({i}:int) (result:bool)\n"
+            f"  : Lemma\n"
+            f"      (requires (n >= 2) /\\ ({lo} <= {i}) /\\ ({i} <= (n / 2) + 1) /\\ (~ ({i} <= n / 2)) /\\\n"
+            f"                (result <==> (exists (k_v:int). "
+            f"(({lo} <= k_v) /\\ (k_v < {i})) /\\ (n % k_v = 0))))\n"
+            f"      (ensures (result <==> (exists (k:int). "
+            f"(({lo} <= k) /\\ (k < n)) /\\ (n % k = 0))))\n"
+            f"= if result then begin\n"
+            f"    let goal : prop = (exists (k:int). ({lo} <= k /\\ k < n) /\\ n % k = 0) in\n"
+            f"    let handler (k_v:int{{(({lo} <= k_v) /\\ (k_v < {i})) /\\ (n % k_v = 0)}}) "
+            f": Lemma goal =\n"
+            f"      FStar.Classical.exists_intro "
+            f"(fun k -> ({lo} <= k /\\ k < n) /\\ n % k = 0) k_v\n"
+            f"    in\n"
+            f"    FStar.Classical.exists_elim goal\n"
+            f"      #int #(fun k_v -> (({lo} <= k_v) /\\ (k_v < {i})) /\\ (n % k_v = 0))\n"
+            f"      () handler\n"
+            f"  end else begin\n"
+            f"    let aux (k:int{{{lo} <= k /\\ k < n}}) : Lemma (n % k <> 0) =\n"
+            f"      if k < {i} then () else if n % k = 0 then {half} n k else ()\n"
+            f"    in\n"
+            f"    FStar.Classical.forall_intro aux\n"
+            f"  end\n")
+    return half_def + body + "\n"
+
+
+def _has_ite(e) -> bool:
+    """True if `e` (an Expr tree) contains an `ite` node anywhere, the
+    structural marker `dec_shift` above uses to detect a compound,
+    lexicographic-style decreases (see that comment's own docstring)."""
+    if isinstance(e, dict):
+        if "ite" in e:
+            return True
+        return any(_has_ite(v) for v in e.values())
+    if isinstance(e, list):
+        return any(_has_ite(v) for v in e)
+    return False
+
+
 def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
              suffix: list) -> str:
     name = task["name"]
@@ -2970,6 +3180,24 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     guard_b = cx.bx(w["cond"], {}, local)
     guard_p = cx.prop(w["cond"], {}, local)
     invs = [cx.prop(e, {}, local) for e in w.get("invariants", [])]
+    # DIVISOR-BOUND EXIT WIDTH (2026-09-11, ROADMAP 16.2, see
+    # `_divisor_bound_target`'s own docstring above): where the task's
+    # shape matches the trial-divide-to-half family, the divisor-bound
+    # lemma called at the loop's `Inr` exit (below, near `else_branch`)
+    # needs `i <= n/2 + 1` there -- a fact the task's own invariants never
+    # state (they bound `i` only from below, `2 <= i`) but the loop body
+    # trivially implies: the recursive call only fires when the guard
+    # `i <= n/2` holds, so the NEXT `i` (`i+1`) never exceeds `n/2 + 1`,
+    # and the base case (`i` at 2) satisfies it whenever `n >= 2` (the
+    # task's own `requires`). This is exactly the "related exit bound the
+    # loop body implies" case: added here as an ordinary EXTRA invariant
+    # (never a task invariant, never weakening or restating one), so the
+    # kernel proves it through the same invariant-preservation VC every
+    # other invariant already gets -- nothing assumed, nothing admitted.
+    plan = _divisor_bound_target(task, w)
+    if plan is not None and plan["i_name"] in loop_assigned(w["body"]):
+        n_bound_render = cx.zx(plan["dividend"], {}, local)
+        invs.append(f"({plan['i_name']} <= (({n_bound_render}) / 2) + 1)")
     # FRAME-VARIABLE DEFINITION (2026-09-11, ROADMAP 16.2 fstar column):
     # a frame variable (in `fvars`, threaded through the recursion unchanged
     # because the loop body never assigns it) can carry a defining
@@ -3039,7 +3267,34 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     # a metric that never needed the extra room costs nothing, since F*'s
     # rule is exactly `0 <= new /\ new < old`, and `new+1 < old+1` holds
     # whenever `new < old` did.
-    dec = f"(({cx.zx(w['decreases'], {}, local)}) + 1)"
+    # COMPOUND (ITE-SENTINEL) DECREASES (2026-09-11, ROADMAP 16.2 fstar
+    # column, sumOfCommonDivisors task 126): the plain `+ 1` shift above
+    # fixes the single inclusive-bound boundary a LINEAR measure hits, but
+    # a compound one -- a lexicographic-style tuple flattened into one sum
+    # via an `ite` SENTINEL (`(a - i) + (if i <= a then b - i else -1)`,
+    # this lowering's own encoding of a Dafny two-part `decreases a - i,
+    # b - i` clause) crosses TWO boundaries at once: at the phase
+    # transition (`i` moving from `<= a` true to false), the sentinel
+    # branch itself flips from `b - i` to the constant `-1` in the SAME
+    # step the outer `a - i` term also drops by 1, so the combined new
+    # measure can undershoot 0 by MORE than the linear case's single unit.
+    # Measured directly (F* 2026.08.30, `probe126dir` this session): `+ 1`
+    # still fails ("Could not prove termination", new measure `-1` at the
+    # `i = a` boundary); `+ 2` (this task's own decreases, otherwise
+    # byte-identical) verifies outright. Detected structurally (an `ite`
+    # node anywhere in the task's own `decreases` expression, `_has_ite`
+    # below) rather than applied everywhere, so a plain linear decreases
+    # -- every other task with a `decreases`, is_prime/isNonPrime/
+    # isPrime/lucidNumbers included -- keeps the `+ 1` shift already
+    # measured sufficient for it (a bigger shift is never UNSOUND, `new +
+    # c < old + c` and `0 <= new + c` both survive raising `c`, but this
+    # stays minimal and named rather than blanket-raising every task's
+    # shift for one family's own need). Measured after: sumOfCommonDivisors
+    # (126) moves fstar real unproved -> verified (twin unaffected); the
+    # 34 committed tasks and the conformance suite's fstar column
+    # unaffected (none has an `ite` in its own `decreases`).
+    dec_shift = 2 if _has_ite(w["decreases"]) else 1
+    dec = f"(({cx.zx(w['decreases'], {}, local)}) + {dec_shift})"
     reqs = [cx.prop(e, {}, {}) for e in task.get("requires", [])]
 
     dummy = _dummy(ret_t)
@@ -3117,7 +3372,16 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     then_branch = f"(if {body_rc} then Inl {body_rv} else {lname} {pargs}{fargs} {step})"
     else_branch = f"Inr {state_out}"
     wvar = cx.fresh()
-    return (f"let rec {lname} {pb}{fb} {sb}\n"
+    divisor_defs = ""
+    exit_expr = result
+    if plan is not None and plan["result"] in svars and plan["i_name"] in svars:
+        divisor_defs = _divisor_bound_fstar_defs(cx, task, plan)
+        n_render = cx.zx(plan["dividend"], {}, local)
+        bound = f"t_divisor_bound_{task['name']}"
+        exit_expr = (f"({bound} {n_render} {plan['i_name']} {plan['result']}; "
+                     f"{result})")
+    return (f"{divisor_defs}"
+            f"let rec {lname} {pb}{fb} {sb}\n"
             f"  : Pure {outcome_ty}\n"
             f"    (requires {_conj(reqs + invs)})\n"
             f"    (ensures {loop_ens})\n"
@@ -3132,7 +3396,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
             f"    (ensures {ens})\n"
             f"= {fbind}match {lname} {pargs}{fargs} {init} with\n"
             f"  | Inl {wvar} -> {wvar}\n"
-            f"  | Inr {state_out} -> {result}\n")
+            f"  | Inr {state_out} -> {exit_expr}\n")
 
 
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call

@@ -2672,6 +2672,176 @@ NESTED_CONCAT_PREAMBLE = """\
                    T_Eq (Elem (T_Concat'Result, Len (S) + K), Elem (T, K)));
 """
 
+# SPLIT_CONCAT_LEMMA (ROADMAP 16.2, 2026-09-11, dafny_synthesis_task_id_262
+# splitArray): the task's own `ensures` states
+# T_Eq (T_Concat (T_Slice (S, 0, L), T_Slice (S, L, Len (S))), S), a
+# single FOR-ALL goal that needs T_Concat's and T_Slice's own quantified
+# Posts chained at the same index K under a case split (K < L invokes
+# T_Concat's S-prefix conjunct then T_Slice's elementwise fact on the
+# first slice; K >= L invokes T_Concat's T-suffix conjunct then T_Slice's
+# elementwise fact on the second, at index K - L). gnatprove's own
+# automatic instantiation of that NESTED quantifier under a case split
+# was MEASURED (2026-09-11, this task, --steps DEFAULT_STEPS=20000 in
+# t/verifiers/spark.py, then --steps ESCALATED_STEPS=100000) to exceed
+# the budget outright: VC_POSTCONDITION at the limit, real=timeout.
+#
+# FIRST TRY, ABANDONED (2026-09-11, wave G): a per-point induction lemma
+# with a `begin`/`pragma Assert` body -- MEASURED here to be plainly
+# ILLEGAL, not merely slow: a full subprogram body (anything with a
+# `begin`) cannot appear directly in a package SPEC at all ("begin block
+# not allowed in package spec", gnatprove's own compile error) -- only an
+# expression-function body (`is (...)`) is a legal completion there, and
+# this file emits ONE .ads unit, never a package body. A SECOND try
+# recast the same per-point lemma as a pure expression function (no
+# `begin`, Split_Concat_Pt'Result = <the elementwise fact it computes>,
+# trivially true by construction) -- legal, but MEASURED (probe
+# split_test.ads, this session) to still hit VC_POSTCONDITION's step
+# limit on Split_Concat_Up's own inductive step, AT BOTH 20000 and
+# ESCALATED_STEPS=100000: the double e-matching (T_Concat's Post then
+# T_Slice's Post) the case split needs apparently does not fire through
+# an expression-function's implicit unfolding the way it does through an
+# explicit `pragma Assert` -- and the "no begin in a spec" rule above
+# rules out the assert route.
+#
+# WHAT WORKS (probes split_test3/4/5.ads, this session, gnatprove FSF
+# 16.1.0/z3, 0 unproved at --steps 20000): induct on the RESULT LENGTH
+# instead of on a per-point predicate, over NATIVE Seq "=" the whole way
+# rather than T_Eq's T_Range/elementwise encoding (this file's own
+# EQ_PREAMBLE note: the two encodings do not bridge cheaply).
+# T_Concat_Slice_Lemma (S, L, M) states, by induction on M with
+# Subprogram_Variant, that T_Concat_Aux (T_Slice (S,0,L), T_Slice
+# (S,L,Len(S)), M) IS (native "=") T_Slice (S, 0, L + M): the inductive
+# step needs only ONE ground (non-quantified) instantiation of T_Slice's
+# own Post (Elem (T_Slice (S,L,Len(S)), M-1) = Elem (S, L+M-1)) plus
+# T_Concat_Aux's and T_Slice's own recursive DEFINITIONS unfolding at a
+# concrete point -- exactly the "proven-tractable" shape this file's own
+# header docstring already relies on for T_Slice (S, 0, Len (S)) = S.
+# T_Full_Slice_Lemma restates that SAME already-measured fact as its own
+# named lemma (a `True` body; its Post is the entire content) so
+# Split_Concat_Lemma can chain it explicitly at M = Len (S) - L rather
+# than needing gnatprove to reach for it unprompted. Split_Concat_Lemma's
+# own Post is stated in T_Eq (not native "="), matching what F's own Post
+# (below) actually calls; MEASURED (split_test5.ads) that the bridge from
+# native "=" to T_Eq costs nothing extra (0 unproved either way).
+SPLIT_CONCAT_LEMMA_PREAMBLE = """\
+   function T_Concat_Slice_Lemma (S : Seq; L, M : Big_Integer) return Boolean
+   with
+     Pre  => L >= Big_Integer'(0) and then L <= Len (S)
+       and then M >= Big_Integer'(0) and then M <= Len (S) - L,
+     Post => T_Concat_Slice_Lemma'Result
+       and then Seqs."=" (T_Concat_Aux (T_Slice (S, Big_Integer'(0), L),
+                                        T_Slice (S, L, Len (S)), M),
+                          T_Slice (S, Big_Integer'(0), L + M)),
+     Subprogram_Variant => (Decreases => M);
+
+   function T_Concat_Slice_Lemma (S : Seq; L, M : Big_Integer) return Boolean is
+     (if M = Big_Integer'(0) then True
+      else T_Concat_Slice_Lemma (S, L, M - Big_Integer'(1)));
+
+   function T_Full_Slice_Lemma (S : Seq) return Boolean
+   with
+     Post => T_Full_Slice_Lemma'Result
+       and then Seqs."=" (T_Slice (S, Big_Integer'(0), Len (S)), S);
+
+   function T_Full_Slice_Lemma (S : Seq) return Boolean is (True);
+
+   function Split_Concat_Lemma (S : Seq; L : Big_Integer) return Boolean
+   with
+     Pre  => L >= Big_Integer'(0) and then L <= Len (S),
+     Post => Split_Concat_Lemma'Result
+       and then T_Eq (T_Concat (T_Slice (S, Big_Integer'(0), L),
+                                T_Slice (S, L, Len (S))), S);
+
+   function Split_Concat_Lemma (S : Seq; L : Big_Integer) return Boolean is
+     (T_Concat_Slice_Lemma (S, L, Len (S) - L) and then T_Full_Slice_Lemma (S));
+"""
+
+
+def _ast_eq(a, b) -> bool:
+    """Structural equality on t-AST nodes (dict/list/scalar), used only by
+    _split_concat_lemma_target (below) to check that a candidate slice's
+    upper bound is literally the same expression as the next slice's
+    lower bound (the "contiguous split" shape), and that the concatenated
+    whole is literally the same seq the ensures compares against."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_ast_eq(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_ast_eq(x, y) for x, y in zip(a, b))
+    return a == b
+
+
+def _resolve_var(expr, env: dict, depth: int = 0):
+    """Chase a `{"var": name}` reference (and `fst`/`snd` of a `pair`
+    literal) through `env` (local name -> its defining init/assign
+    expression) back to the expression it was bound from, for
+    _split_concat_lemma_target below. Bounded recursion only as a
+    safety net against a body this file's own well-formedness gate
+    (t/lift_check.py, t/check_wf.py) would already have rejected; every
+    real body resolves in well under 20 steps."""
+    if depth > 20 or not isinstance(expr, dict):
+        return expr
+    if isinstance(expr.get("var"), str):
+        bound = env.get(expr["var"])
+        if bound is not None:
+            return _resolve_var(bound, env, depth + 1)
+        return expr
+    if expr.get("op") in ("fst", "snd") and len(expr.get("args", [])) == 1:
+        inner = _resolve_var(expr["args"][0], env, depth + 1)
+        if isinstance(inner, dict) and inner.get("op") == "pair" \
+                and len(inner.get("args", [])) == 2:
+            idx = 0 if expr["op"] == "fst" else 1
+            return _resolve_var(inner["args"][idx], env, depth + 1)
+    return expr
+
+
+def _split_concat_lemma_target(task: dict, body: list):
+    """None, or (S, L) -- the t-AST for the whole seq and the split point
+    -- when this task's `ensures` states exactly
+    T_Concat (T_Slice (S, 0, L), T_Slice (S, L, len(S))) == S (in either
+    operand order, and reached through any chain of local var bindings
+    and pair fst/snd the body's own assignments set up, SPEC.md "Early
+    exit" aside -- this task shape has none). Narrow on purpose (only the
+    ONE shape MEASURED, ROADMAP 16.2, 2026-09-11, to hit gnatprove's
+    --steps limit this way): a task whose `ensures` merely resembles this
+    is left to gnatprove's own automatic proof exactly as before, not
+    routed through Split_Concat_Lemma."""
+    env = {}
+    for stmt in body:
+        if "var" in stmt and isinstance(stmt["var"], dict):
+            env[stmt["var"]["name"]] = stmt["var"].get("init")
+        elif "assign" in stmt:
+            name, val = stmt["assign"]
+            env[name] = val
+    for e in task.get("ensures", []):
+        if e.get("op") != "==" or len(e.get("args", [])) != 2:
+            continue
+        for lhs, rhs in ((e["args"][0], e["args"][1]),
+                        (e["args"][1], e["args"][0])):
+            whole = _resolve_var(lhs, env)
+            concat = _resolve_var(rhs, env)
+            if not (isinstance(concat, dict) and concat.get("op") == "+"
+                    and len(concat.get("args", [])) == 2):
+                continue
+            a = _resolve_var(concat["args"][0], env)
+            b = _resolve_var(concat["args"][1], env)
+            if not (isinstance(a, dict) and a.get("op") == "slice"
+                    and isinstance(b, dict) and b.get("op") == "slice"):
+                continue
+            sa, loa, hia = a["args"]
+            sb, lob, hib = b["args"]
+            sa_r, sb_r = _resolve_var(sa, env), _resolve_var(sb, env)
+            if not (_ast_eq(sa_r, sb_r) and _ast_eq(sa_r, whole)):
+                continue
+            if not (isinstance(loa, dict) and loa.get("int") == 0):
+                continue
+            if not _ast_eq(hia, lob):
+                continue
+            if not (isinstance(hib, dict) and hib.get("op") == "len"
+                    and _ast_eq(_resolve_var(hib["args"][0], env), sa_r)):
+                continue
+            return sa, hia
+    return None
+
 
 def cap(name: str) -> str:
     """The Ada spelling of a t name. Ada identifiers may not carry two
@@ -4659,6 +4829,26 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             raise ValueError(f"body never assigns {ret['name']!r}")
         final = env[ret["name"]]
 
+    # SPLIT_CONCAT_LEMMA (ROADMAP 16.2, 2026-09-11, see the preamble's own
+    # note above): route F's return through Split_Concat_Lemma's own
+    # Post exactly when this task's shape is the ONE MEASURED to need it.
+    # `body` here has already been sanitized/renamed (above), matching
+    # `task`; `env` (just computed) already carries every local's own
+    # rendered Ada text, so a split point given by a local (not only a
+    # bare param) still renders correctly through the merged substitution.
+    split_target = _split_concat_lemma_target(task, body)
+    needs_split_concat_lemma = split_target is not None
+    if needs_split_concat_lemma:
+        lemma_psub = {**psub,
+                     **{k: v for k, v in env.items()
+                        if k not in psub and v is not None}}
+        s_ast, l_ast = split_target
+        s_text = L.expr(s_ast, lemma_psub, base_types)
+        l_text = L.expr(l_ast, lemma_psub, base_types)
+        final = (f"(if Split_Concat_Lemma ({s_text}, {l_text})\n"
+                f"      then {final}\n"
+                f"      else {final})")
+
     aspects = []
     reqs = [L.expr(e, psub, base_types) for e in task.get("requires", [])]
     if reqs:
@@ -4762,6 +4952,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [CONCAT_PREAMBLE]
     if L.needs_concat2:
         parts += [NESTED_CONCAT_PREAMBLE]
+    if needs_split_concat_lemma:
+        parts += [SPLIT_CONCAT_LEMMA_PREAMBLE]
     if L.needs_divmod:
         parts += [DIVMOD_PREAMBLE]
     # THE STRING LIBRARY (v1), 2026-09-11: STRCORE before anything that

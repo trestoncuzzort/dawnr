@@ -107,7 +107,9 @@ run_tests() {
            test_names.py test_ladder_completeness.py test_tlib.py test_conformance.py \
            doc_test.py test_cli.py test_lsp.py test_vacuous_requires.py test_vscode.py \
            test_lift_check.py test_lifter.py test_lift_front.py test_lift_report.py \
-           test_lift_rules.py test_mbpp_dfy.py; do
+           test_lift_rules.py test_mbpp_dfy.py \
+           test_framac_measure_axiom.py test_lower_rocq.py test_lower_lean_seqcomp.py \
+           test_lower_spark.py test_divisor_bound.py; do
     [ -f "$f" ] || { echo "--- $f: not in this tree, skipped ---"; continue; }
     echo "--- python3 $f ---"
     python3 "$f"

@@ -1185,7 +1185,79 @@ class _Admissible:
     Measured on the 407-task corpus (11 committed + 4 seeds x 80 generated),
     NO invariant-carrying loop has an unmodified non-param name in scope, so
     `fixed` is empty everywhere and this filter is a no-op there: the repair
-    closes a latent hole and moves no existing measurement."""
+    closes a latent hole and moves no existing measurement.
+
+    TWIN-PRESERVATION, 2026-09-11 -- investigated, NOT extended to modified
+    names, and here is why by measurement, so the next pass does not retry
+    the same two dead ends. ROADMAP 16.2's wave-G finding is real: on
+    dafny_synthesis 3 isNonPrime, 605 isPrime and 126 sumOfCommonDivisors
+    the invariant-drop witness stands on a MODIFIED loop counter (`i`/`d`,
+    initialised to a literal, stepped by a fixed `+1`) at a value no
+    execution ever reaches (i=1 when `var i := 2` and the loop only ever
+    does `i := i + 1`; i=-1 when `var i := 1` likewise) -- by hand, and by
+    dafny (`dafny verify` on a standalone `while` with NO invariant at all
+    still proves `assert i >= 2` inside the body, from nothing but the
+    literal init and the one `+1` step: dafny auto-infers a monotone
+    counter's own floor, a fact independent of whatever invariant is
+    stated or dropped). Both a JOINT reachable-state-tuple filter and a
+    MARGINAL per-name one (each requiring `exec_body`'s hook to fire on
+    EVERY loop-header arrival, not just the first, itself a separate
+    latent gap this pass found and would have had to fix) were built and
+    measured against the 34 committed tasks: EITHER one, once broadened
+    past unmodified names, silently changes is_prime's own witness (same
+    counter shape, same early-return body) from its committed
+    invariant-drop#1 (exit, d=4, n=4) to invariant-drop (return, d=1,
+    n=2) -- and GRADED, that new twin reads verified/verified in dafny,
+    breaking is_prime's committed verified/refuted row. Worse, the
+    marginal filter (needed so sum_upto's own two committed invariant-drop
+    witnesses, which stand on a run-time-UNREACHABLE (i, r) pair by
+    design -- the pair the DROPPED invariant exists to rule out, not one
+    any execution visits -- keep finding their forcing witness) still
+    fails sum_upto's SECOND rung: dropping `i >= 0 and i <= n` (keeping
+    only the accumulator relation `2*r == i*(i+1)`) is ALSO refuted by
+    dafny (measured directly, hand-built .dfy), because without that
+    bound an abstract, invariant-satisfying `i` may exceed `n` at the
+    natural exit -- exactly the shape of excursion a reachability filter
+    would also have to exclude, and doing so kills this genuine, dafny-
+    confirmed witness too. So dafny's own automatic inference is
+    ASYMMETRIC (a monotone counter's floor, free; the same counter's
+    ceiling against a DIFFERENT invariant's own bound, not free) in a way
+    no reachability model built from the interpreter's OWN semantics can
+    honestly reproduce without asking dafny itself -- which witness
+    computation, by design, never does. No fix shipped here for the three
+    rows above (or for is_prime's shared exposure, currently avoided
+    only because its ladder happens to land on a different, unaffected
+    rung first): they are named honestly as dafny VERIFYING a twin whose
+    witness respects every fact this class's stated frame rule checks
+    (unmodified names' defining equations, `requires`) -- see the
+    reproductions this wave's note names -- and nothing here is changed
+    for them, per this task's own instruction for that case.
+
+    A SEPARATE, independently real bug was also found and, for the same
+    reason, NOT shipped: invariant_witness's own preservation check ran
+    the trial iteration and asked whether `kept` still held regardless of
+    whether that iteration took a `return` path (SPEC.md "Early exit") --
+    a return never reaches "next iteration", so the obligation there is
+    `ensures`, exactly what "exit" already judges at the loop's NATURAL
+    exit, never "kept survives one more step" (a fact about the
+    fall-through path a return never takes). MEASURED on
+    dafny_synthesis 414 anyValueExists, 808 containsK, 69
+    containsSequence and 809 isSmaller (their own k=0 invariant-drop
+    candidate): the trial iteration returns, and `ensures` actually HOLDS
+    at that return -- these are not forcing witnesses by
+    invariant_witness's own stated standard at all, spurious "preservation"
+    hits the harness should never have minted. Correcting just this,
+    alone, with `_Admissible` untouched, ALSO changes is_prime's witness
+    (its own k=0 candidate returns too, and the correction lets its
+    genuine-per-the-interpreter, unreachable-per-dafny d=1 witness through
+    for the reason above) -- the two bugs are entangled on this one
+    committed task, and fixing the return-vs-preservation confusion alone
+    cannot be shipped independently of the counter-reachability question
+    without the same regression. Left unfixed here, named rather than
+    silently patched, per this task's "stop and report" rule on a
+    committed witness change; whoever picks this up next needs BOTH
+    solved together, or a way to keep is_prime's ladder landing on its
+    current (unaffected) rung on purpose."""
 
     def __init__(self, task, loop, names, funs):
         mod = assigned(loop["body"])

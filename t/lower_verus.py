@@ -365,6 +365,21 @@ already-working `<` ones, where it is provably inert -- `is_prime`,
 `first_even`, `tail` all still verify, `cmp` confirms real and twin
 alike, only that one line differs byte-for-byte).
 
+CORRECTION, same date (2026-09-11, a later pass this same day, ROADMAP
+16.2's divisor-bound item): the "-> verified/refuted" claim just above
+was premature -- termination was the only residual this pass had
+isolated so far, but fixing it surfaces a SECOND, separate gap
+underneath: the recursive helper's own `ensures` only carries the
+invariant over `[lo, i)` at the loop's normal exit, while the task's own
+`ensures` (and this file's own top-level wrapper) needs the WIDER `[lo,
+n)` -- measured directly (`rust_verify` on the termination-fixed file
+alone): "postcondition not satisfied" at the wrapper's trailing
+`result`, not a termination error at all. Both tasks in fact read verus
+real=unproved (not verified) until `_divisor_bound_target`/
+`_divisor_bound_verus_defs` (below, near `class _V1`'s own `loop`
+method) close it later this same day -- see that pair's own docstring
+for the actual fix and the measurement that moves them to verified.
+
 PAIRS (2026-09-10, SPEC.md "Pairs (v1)"). New type `{"pair": [T1, T2]}`
 (T1, T2 one of "int"/"bool"/"seq") and three new Expr forms: `pair`
 (construction), `fst`/`snd` (projection). Verus's own product type is the
@@ -2877,6 +2892,219 @@ def _dummy(ty) -> str:
     raise ValueError(f"verus: no dummy literal for type {ty!r}")
 
 
+# DIVISOR-BOUND LEMMA (2026-09-11, ROADMAP 16.2, divisor-bound item):
+# dafny-synthesis isNonPrime (3) and isPrime (605) trial-divide `n` only up
+# to `n div 2` (`cond: i <= n div 2`) while their own `ensures` quantifies
+# the divisor over the WIDER range `[2, n)` -- the fact no stated invariant
+# supplies is the number-theory lemma this family needs at the loop's
+# exit: any `k` with `2 <= k < n` and `n % k == 0` satisfies `k <= n / 2`
+# (`n == (n/k)*k`, and `n/k >= 2` since `k < n` rules out `n/k <= 1`, so
+# `n >= 2*k`). Measured directly (`rust_verify` 0.2026.08.30.b432e82,
+# `probe1.rs` this session): a plain `proof fn` for that fact, with the
+# SAME `nonlinear_arith` bridge this file's own `_div_mod_law` already
+# uses for every other div/mod obligation (assert the Euclidean identity
+# first, by nonlinear_arith requiring the divisor nonzero, THEN the bound
+# itself, by nonlinear_arith over that identity plus the ordinary
+# hypotheses) -- verifies with no other assist.
+#
+# `_divisor_bound_target` recognizes the shape from the task's own AST
+# (identical to `lower_fstar.py`'s own function of the same name, kept as
+# a separate copy here since the two lowerings share no code -- see this
+# file's own module docstring on that), so a task with none of it is
+# untouched: an ensures `result == (forall|exists) k in [lo, N) . (N % k)
+# RELOP 0`, a matching loop invariant of the SAME shape over `[lo, i)`
+# (`i` the loop's own counter), and a guard `cond` exactly `i <= N div
+# 2`. Where it matches, `loop()` (both call sites above) adds the derived
+# exit-bound invariant `i <= N/2 + 1` and calls
+# `t_divisor_bound_<task>` right at the loop's own normal (non-early-
+# return) exit -- so every OTHER task's loop is byte-for-byte unchanged.
+# Measured 2026-09-11: isNonPrime (3) and isPrime (605) move verus real
+# unproved -> verified (twin unchanged, the twin ladder's own open item,
+# not this column's -- `dafny_synthesis_task_id_3__isNonPrime` and
+# `_605__isPrime` both read verus verified/unproved after, matching
+# dafny's own verified/unsound reading on the same two).
+def _quant_mod_relop(body):
+    """`body` is `(N % k) RELOP 0` (RELOP "=="/"!="); returns `(N,
+    k_name, RELOP)` or None. `k` must be a bare var, matching every task
+    this targets."""
+    if not (isinstance(body, dict) and body.get("op") in ("==", "!=")):
+        return None
+    args = body.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    lhs, rhs = args
+    if rhs != {"int": 0}:
+        return None
+    if not (isinstance(lhs, dict) and lhs.get("op") == "mod"):
+        return None
+    largs = lhs.get("args")
+    if not (isinstance(largs, list) and len(largs) == 2):
+        return None
+    dividend, kexpr = largs
+    if not (isinstance(kexpr, dict) and list(kexpr.keys()) == ["var"]):
+        return None
+    return dividend, kexpr["var"], body["op"]
+
+
+def _result_eq_quant(e, ret: str):
+    """`e` is `result == Quant(...)`; returns `(kind, quant_dict)` for
+    kind in {"forall","exists"}, or None."""
+    if not (isinstance(e, dict) and e.get("op") == "=="):
+        return None
+    args = e.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    a, b = args
+    if a == {"var": ret}:
+        quant_holder = b
+    elif b == {"var": ret}:
+        quant_holder = a
+    else:
+        return None
+    for kind in ("forall", "exists"):
+        if kind in quant_holder:
+            return kind, quant_holder[kind]
+    return None
+
+
+def _divisor_bound_target(task: dict, w: dict) -> dict | None:
+    ret = task["returns"][0]["name"]
+    for en in task.get("ensures", []):
+        found = _result_eq_quant(en, ret)
+        if found is None:
+            continue
+        kind, q = found
+        rel = _quant_mod_relop(q.get("body"))
+        if rel is None:
+            continue
+        dividend, _kname, relop = rel
+        lo = q.get("lo")
+        if lo is None:
+            continue
+        for iv in w.get("invariants", []):
+            ifound = _result_eq_quant(iv, ret)
+            if ifound is None:
+                continue
+            ikind, iq = ifound
+            if ikind != kind or iq.get("lo") != lo:
+                continue
+            irel = _quant_mod_relop(iq.get("body"))
+            if irel is None or irel[0] != dividend or irel[2] != relop:
+                continue
+            ihi = iq.get("hi")
+            if not (isinstance(ihi, dict) and list(ihi.keys()) == ["var"]):
+                continue
+            i_name = ihi["var"]
+            want_cond = {"op": "<=", "args": [
+                {"var": i_name},
+                {"op": "div", "args": [dividend, {"int": 2}]}]}
+            if w.get("cond") != want_cond:
+                continue
+            return {"kind": kind, "relop": relop, "dividend": dividend,
+                    "lo": lo, "i_name": i_name, "result": ret}
+    return None
+
+
+def _divisor_bound_verus_defs(task_name: str, plan: dict) -> str:
+    n = expr(plan["dividend"])
+    lo = expr(plan["lo"])
+    i = plan["i_name"]
+    half = f"t_divisor_le_half_{task_name}"
+    bound = f"t_divisor_bound_{task_name}"
+    half_def = (
+        f"proof fn {half}(n: int, k: int)\n"
+        "    requires\n"
+        f"        n >= 2,\n"
+        f"        {lo} <= k,\n"
+        f"        k < n,\n"
+        f"        n % k == 0,\n"
+        "    ensures\n"
+        f"        k <= n / 2,\n"
+        "{\n"
+        "    assert(k != 0);\n"
+        "    assert(n == (n / k) * k + n % k) by (nonlinear_arith)\n"
+        "        requires\n"
+        "            k != 0,\n"
+        "    ;\n"
+        "    assert(k <= n / 2) by (nonlinear_arith)\n"
+        "        requires\n"
+        f"            n >= 2,\n"
+        f"            {lo} <= k,\n"
+        f"            k < n,\n"
+        f"            n % k == 0,\n"
+        "            n == (n / k) * k + n % k,\n"
+        "    ;\n"
+        "}\n\n")
+    pos = "!= 0" if plan["relop"] == "!=" else "== 0"
+    neg = "== 0" if plan["relop"] == "!=" else "!= 0"
+
+    def _forall_block(rel: str) -> str:
+        return (
+            f"        assert forall |k: int| #![trigger (n % k)] "
+            f"({lo} <= k && k < n) implies (n % k {rel}) by {{\n"
+            f"            if k < {i} {{\n"
+            f"                assert(n % k {rel});\n"
+            "            } else {\n"
+            f"                if n % k == 0 {{\n"
+            f"                    {half}(n, k);\n"
+            "                }\n"
+            "            }\n"
+            "        }\n")
+
+    def _exists_block(rel: str) -> str:
+        return (
+            f"        let {ivar} = choose |{ivar}: int| "
+            f"#![trigger (n % {ivar})] ({lo} <= {ivar} && {ivar} < {i}) "
+            f"&& (n % {ivar} {rel});\n"
+            f"        assert({lo} <= {ivar} && {ivar} < n && n % {ivar} {rel});\n"
+            f"        assert(exists |k: int| #![trigger (n % k)] "
+            f"({lo} <= k && k < n) && (n % k {rel}));\n")
+    ivar = "k_v"
+    if plan["kind"] == "forall":
+        # forall-not-a-divisor family (isPrime): true means "still no
+        # divisor found" (widen the forall directly); false means a
+        # divisor WAS found in [lo, i) (`neg`, i.e. `n % k_v == 0`), so
+        # the exists-widen direction uses `neg`, not `pos`.
+        result_true_block = _forall_block(pos)
+        result_false_block = _exists_block(neg)
+        quant_txt = (
+            f"forall|k_v: int| #![trigger (n % k_v)] "
+            f"(({lo} <= k_v) && (k_v < {i})) ==> ((n % k_v) {pos})")
+        quant_full_txt = (
+            f"forall|k: int| #![trigger (n % k)] "
+            f"(({lo} <= k) && (k < n)) ==> ((n % k) {pos})")
+    else:
+        # exists-a-divisor family (isNonPrime): true means a divisor WAS
+        # found in [lo, i) (`pos`, `n % k_v == 0`), widen directly; false
+        # means none found (`neg`, the forall-not-a-divisor direction).
+        result_true_block = _exists_block(pos)
+        result_false_block = _forall_block(neg)
+        quant_txt = (
+            f"exists|k_v: int| #![trigger (n % k_v)] "
+            f"(({lo} <= k_v) && (k_v < {i})) && ((n % k_v) {pos})")
+        quant_full_txt = (
+            f"exists|k: int| #![trigger (n % k)] "
+            f"(({lo} <= k) && (k < n)) && ((n % k) {pos})")
+    bound_def = (
+        f"proof fn {bound}(n: int, {i}: int, result: bool)\n"
+        "    requires\n"
+        f"        n >= 2,\n"
+        f"        {lo} <= {i},\n"
+        f"        {i} <= (n / 2) + 1,\n"
+        f"        !({i} <= n / 2),\n"
+        f"        result == ({quant_txt}),\n"
+        "    ensures\n"
+        f"        result == ({quant_full_txt}),\n"
+        "{\n"
+        "    if result {\n"
+        f"{result_true_block}"
+        "    } else {\n"
+        f"{result_false_block}"
+        "    }\n"
+        "}\n")
+    return half_def + bound_def
+
+
 class _V1:
     def __init__(self, task: dict):
         self.task = task
@@ -3127,6 +3355,28 @@ class _V1:
         invs = w.get("invariants", [])
         cond, dec = w["cond"], w["decreases"]
 
+        # DIVISOR-BOUND EXIT WIDTH (2026-09-11, ROADMAP 16.2, divisor-bound
+        # item, see `_divisor_bound_target`'s own docstring near
+        # `t_divisor_bound_verus_defs` below): where the task matches the
+        # trial-divide-to-half shape, the exit needs `i <= n/2 + 1` -- a
+        # fact the task's own invariants never state but the loop body
+        # implies (the recursive call only fires under the guard `i <=
+        # n/2`, so the next `i` never exceeds `n/2 + 1`; the base case
+        # `i == 2` satisfies it whenever `n >= 2`). Added here as an
+        # ordinary EXTRA invariant, proved by the same invariant-
+        # preservation VC every other invariant already gets (plain
+        # linear arithmetic, no nonlinear_arith bridge needed) -- never a
+        # task invariant, never weakening or restating one. A task with
+        # no such shape gets `_divisor_bound_target` returning `None` and
+        # this is a no-op, so every other loop's `invs` is unaffected.
+        _dbt = _divisor_bound_target(self.task, w)
+        if _dbt is not None:
+            _n_bound = {"op": "+", "args": [
+                {"op": "div", "args": [_dbt["dividend"], {"int": 2}]},
+                {"int": 1}]}
+            invs = invs + [{"op": "<=",
+                             "args": [{"var": _dbt["i_name"]}, _n_bound]}]
+
         # GUARD DEFINEDNESS (2026-09-09, the residual COVERAGE-lifted-785.md
         # names: a `div`/`mod` in a loop guard -- `cond` or `decreases` --
         # is a definedness obligation neither of these two shared no-op
@@ -3363,6 +3613,21 @@ class _V1:
                 lines.append(f"{ind}{state[0]} = {tmp}.2;")
             else:
                 lines += [f"{ind}{v} = {tmp}.2.{j};" for j, v in enumerate(state)]
+            # DIVISOR-BOUND CALL (2026-09-11, ROADMAP 16.2): reached only
+            # when `t_tmp{k}.0` was false (the early return above already
+            # took the other path), i.e. exactly the loop's own normal
+            # exit -- the one place `result`/`i` carry only the `[lo, i)`
+            # fact and the task's `ensures` needs the wider `[lo, n)`
+            # one. `wrap is None` restricts this to the outermost loop
+            # (every task this shape matches has exactly one, un-nested).
+            if (wrap is None and _dbt is not None
+                    and _dbt["result"] in state and _dbt["i_name"] in state):
+                self.helpers.append(
+                    _divisor_bound_verus_defs(self.name, _dbt))
+                n_render = expr(_dbt["dividend"])
+                lines.append(
+                    f"{ind}t_divisor_bound_{self.name}"
+                    f"({n_render}, {_dbt['i_name']}, {_dbt['result']});")
         else:
             if len(state) == 1:
                 lines.append(f"{ind}{state[0]} = {tmp};")

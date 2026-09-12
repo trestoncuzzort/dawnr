@@ -2225,6 +2225,31 @@ class Lower:
             self._stmts_have_seq_eq_comp(body, self.types)
             or any(self._prop_has_seq_eq(e, self.types)
                   for e in task.get("ensures", [])))
+        # THE FRAME-FACT GAP's own open list (2026-09-11, ROADMAP 16.2):
+        # `t_seq_update_get`/`t_seq_append_get`/`t_seq_slice_get` above
+        # are each stated for exactly ONE level of their own operation --
+        # a read after `.set`, after `++`, after a slice -- and `grind`
+        # cannot CHAIN two of them across a nested subterm (measured:
+        # swapFirstAndLast's own `(a.set i1 v1).set i2 v2` needs the
+        # OUTER `.set`'s bridge, then the INNER `.set`'s, at the SAME
+        # index; splitArray's/splitAndAppend's own `firstPart ++
+        # secondPart` (both slices) needs the append bridge THEN,
+        # per-branch, the slice bridge). Fixed the way `_mul_sign_pairs`
+        # above fixes the analogous grind limitation: not by asking grind
+        # to chain, but by emitting ONE lemma per composed SHAPE, proved
+        # once from the single-level bridges (`t_seq_update2_get`/
+        # `t_seq_append_slice2_get`, `emit_seq_helpers` below), fully
+        # GENERIC in its own universally-quantified base/index/bound
+        # variables (unlike `_mul_sign_pairs`'s per-task lemmas, whose
+        # STATEMENT depends on the task's own `requires`) -- so detection
+        # here only needs to answer whether the SHAPE occurs at all, not
+        # extract its concrete operands; grind's own e-matching (already
+        # relied on for the single-level bridges) unifies the universal
+        # lemma against the goal's own concrete nested term in ONE step,
+        # never needing to chain.
+        self.seq_composed_update2 = self._has_seq_update_chain()
+        self.seq_composed_append_slice = self._has_seq_append_of_slice(
+            body, dict(self.types))
 
     # ---------- naming ----------
 
@@ -3115,6 +3140,301 @@ class Lower:
             return any(self._has_any(v, ops) for v in x)
         return False
 
+    # THE NONLINEAR SIGN BRIDGE (2026-09-11, ROADMAP 16.2, lean's
+    # `_seq_composed*`/`_mul_sign_*` trio -- this member): centered
+    # HexagonalNumber's own `result == 3*n*(n-1)+1` with only `n >= 0`
+    # in `requires` needs `(3*n)*(n-1) >= 0`, plain nonlinear sign
+    # reasoning `grind`'s linear cutsat core cannot do and core Lean has
+    # no `nlinarith` for (measured: identical shape to "THE CUBE
+    # NONLINEARITY" above, `_nonneg_bridge_lines`'s own loop-scoped
+    # bridge, but that one only fires inside a loop's invariant-
+    # preservation proof over LOOP STATE variables raised to a fixed
+    # power of itself -- this is a non-loop SIMPLE task, and the two
+    # factors are DIFFERENT expressions (`3*n` and `n - 1`), not one
+    # variable against its own square/cube). GENERIC, not task-specific:
+    # `_mul_sign_pairs` below walks `ensures` and the body looking for
+    # any `*` node whose BOTH operands mention a variable (so `3 * n`
+    # itself, one literal operand, is excluded -- linear, `omega` already
+    # has it) and renders each such pair's two operands to the identical
+    # Lean text `term()` already produces for them (same `env={}`, same
+    # `types`), so the emitted lemma's statement is syntactically the
+    # SAME atom the goal already contains, not a re-derivation grind has
+    # to match up on its own.
+    def _has_var(self, x) -> bool:
+        if isinstance(x, dict):
+            if "var" in x:
+                return True
+            return any(self._has_var(v) for v in x.values())
+        if isinstance(x, list):
+            return any(self._has_var(v) for v in x)
+        return False
+
+    # REGRESSION, remainder/divmod_pair (2026-09-11, caught by this task's
+    # own regression check against 34/34 before the guard below): `x ==
+    # x / y * y + r` (remainder's own Euclidean-law ensures) contains a
+    # `*` node, `(x / y) * y`, with a variable on BOTH sides -- exactly
+    # what `_has_var` alone flags -- but `(x/y)*y` is NOT always `>= 0`
+    # (measured: the emitted `_mul_sign_1` lemma's own `exfalso; omega`
+    # leaf failed outright, `sorryAx`-tainted, x=1 y=2 a live
+    # counterexample to that BRANCH, not to the task), and a lemma whose
+    # OWN proof fails poisons the whole file's audit (VACUOUS/UNPROVED)
+    # even though the real wfbody/spec theorems below it still close on
+    # their own -- ROADMAP 16.2's own honesty rule (never let an added
+    # fact regress an already-passing task) means this needs a real
+    # fix, not a narrower one-task patch. `_is_plain_int_arith` restricts
+    # both factors to the sort this bridge's own proof strategy is sound
+    # for -- plain integer arithmetic built from vars/literals/+/-/*
+    # only, no `/`, `%`, indexing, or calls -- since the CASE-SPLIT
+    # closing tactic's `exfalso; omega` leaves depend on nothing beyond
+    # linear facts about the two factors themselves; a factor built from
+    # `/`/`%` can be sign-INDEPENDENT of the ambient `requires` the way a
+    # bare affine variable expression never is, so this is a genuine
+    # scope restriction, not a workaround.
+    # REGRESSION #2, cubeVolume/multiply/triangularPrismVolume/
+    # tetrahedralNumber (2026-09-11, caught by grading the FULL 74-task
+    # set the assignment named, not just the 34 committed -- the earlier
+    # guard above only fixed remainder's own shape): `_is_plain_int_arith`
+    # alone still let `(size * size) * size` (cubeVolume's own body, no
+    # `>= 0`/`<= 0` ANYWHERE in its ensures -- pure equality restatement,
+    # needing no sign bridge at all) collect the pair `(size * size,
+    # size)`, and the emitted lemma's `exfalso; omega` leaf failed
+    # (`sorryAx`-tainted) because `size * size` is itself NONLINEAR --
+    # omega has no idea how it relates in sign to `size` alone (measured:
+    # "a possible counterexample ... a := size, b := size * size"). Two
+    # independent fixes, both needed: (1) `_is_affine` (below) replaces
+    # `_is_plain_int_arith`, EXCLUDING `*` from what a factor may itself
+    # contain -- a factor must be a plain affine combination of vars and
+    # literals, the exact shape the case-split's own `exfalso; omega`
+    # leaves are actually linear-arithmetic decidable over; (2) detection
+    # no longer scans `ensures`/body UNCONDITIONALLY -- it only fires for
+    # a product that is the (or resolves, through the ensures-named
+    # variable's own straight-line body assignment, to the) operand of an
+    # actual `>=`/`<=`/`>`/`<` comparison against the literal `0` in
+    # `ensures` (`_sign_compare_operands`) -- cubeVolume's own ensures is
+    # equality-only, so this now finds NO comparison target at all,
+    # matching its prior (already-passing) behavior byte-for-byte: no
+    # lemma, no branch, unchanged tactic text.
+    def _is_affine(self, x) -> bool:
+        """True iff `x` is a plain AFFINE integer expression: vars,
+        literals, +/-, and `*` only where at least one side is var-free
+        (a literal scalar) -- `3 * n` (centeredHexagonalNumber's own
+        factor) qualifies, `size * size` (cubeVolume's own inner factor,
+        REGRESSION #2) does not, since omega has no theory relating a
+        squared/product atom's sign to its own base variable. This is
+        the exact boundary the case-split's `exfalso; omega` leaves are
+        sound over: every hypothesis they discharge is linear once both
+        `_mul_sign_pairs` factors are affine in this sense."""
+        if isinstance(x, dict):
+            if "var" in x or "int" in x:
+                return True
+            if x.get("op") in ("+", "-") and isinstance(
+                    x.get("args"), list):
+                return all(self._is_affine(a) for a in x["args"])
+            if (x.get("op") == "*" and isinstance(x.get("args"), list)
+                    and len(x["args"]) == 2):
+                a, b = x["args"]
+                return ((not self._has_var(a) and self._is_affine(b))
+                        or (not self._has_var(b) and self._is_affine(a)))
+            return False
+        return False
+
+    def _collect_sign_targets(self, x, out: list) -> None:
+        if isinstance(x, dict):
+            if (x.get("op") in (">=", "<=", ">", "<")
+                    and isinstance(x.get("args"), list)
+                    and len(x["args"]) == 2):
+                a, b = x["args"]
+                if isinstance(a, dict) and a.get("int") == 0:
+                    out.append(b)
+                elif isinstance(b, dict) and b.get("int") == 0:
+                    out.append(a)
+            for v in x.values():
+                self._collect_sign_targets(v, out)
+        elif isinstance(x, list):
+            for v in x:
+                self._collect_sign_targets(v, out)
+
+    def _resolve_to_body_expr(self, node):
+        """A bare `{"var": name}` sign-compare operand, resolved to
+        NAME's own most recent straight-line `assign` in `self.body`
+        (SIMPLE-shape bodies only, this bridge's current scope) -- the
+        actual formula the `>= 0`/`<= 0` ensures clause is really about,
+        since `ensures` itself only ever names the return variable, never
+        restates its defining expression. Any other node shape (already
+        a formula, not a bare var) is returned unchanged."""
+        if isinstance(node, dict) and "var" in node \
+                and isinstance(self.body, list):
+            name = node["var"]
+            found = None
+            for s in self.body:
+                if (isinstance(s, dict) and "assign" in s
+                        and isinstance(s["assign"], list)
+                        and s["assign"][0] == name):
+                    found = s["assign"][1]
+            if found is not None:
+                return found
+        return node
+
+    def _collect_mul_pairs(self, x, types: dict, out: list,
+                           seen: set) -> None:
+        if isinstance(x, dict):
+            if (x.get("op") == "*" and isinstance(x.get("args"), list)
+                    and len(x["args"]) == 2):
+                a, b = x["args"]
+                if (self._has_var(a) and self._has_var(b)
+                        and self._is_affine(a) and self._is_affine(b)):
+                    try:
+                        ta = self.term(a, {}, types)
+                        tb = self.term(b, {}, types)
+                    except (KeyError, IndexError):
+                        ta = tb = None
+                    if ta is not None and (ta, tb) not in seen:
+                        seen.add((ta, tb))
+                        out.append((ta, tb))
+            for v in x.values():
+                self._collect_mul_pairs(v, types, out, seen)
+        elif isinstance(x, list):
+            for v in x:
+                self._collect_mul_pairs(v, types, out, seen)
+
+    def _mul_sign_pairs(self) -> list:
+        """Every distinct (A, B) affine factor-text pair this task's
+        `ensures` computes a nonlinear product of, restricted to a
+        product that actually feeds a `>= 0`/`<= 0`/`> 0`/`< 0` ensures
+        comparison (`_sign_compare_operands`, resolved through the body
+        when the compared operand is a bare return variable). Order-
+        stable (first occurrence) so emitted lemma names are
+        deterministic across runs -- ROADMAP 16.2's own regression-check
+        discipline needs byte-identical output for an unchanged task."""
+        targets: list = []
+        for e in self.task.get("ensures", []):
+            self._collect_sign_targets(e, targets)
+        out: list = []
+        seen: set = set()
+        for t in targets:
+            resolved = self._resolve_to_body_expr(t)
+            self._collect_mul_pairs(resolved, self.types, out, seen)
+        return out
+
+    def _mul_sign_lemma(self, name: str, a_text: str, b_text: str) -> str:
+        """One generic-STRATEGY, task-hypothesis-SPECIFIC theorem:
+        `0 <= (a_text) * (b_text)` from this task's own `requires` (the
+        `pb`/`hpre` binders every other top-level theorem here already
+        uses). The case split itself never inspects a_text/b_text beyond
+        treating them as opaque `Int`s -- generic over ANY two factors --
+        but the theorem's own STATEMENT is task-specific (params, hpre),
+        because whether the mixed-sign branches are even reachable
+        depends on the task's own `requires`, not on the factors alone.
+        Zero-first ordering matters (measured, probe1/probe2 scratch
+        files, lean 4.33.1, core only): checking `a_text = 0` /
+        `b_text = 0` before the strict-sign split disposes of the
+        boundary where one factor is exactly zero via `simp` alone
+        (`Int.zero_mul`/`Int.mul_zero`, both in the default simp set),
+        so the four strict-sign leaves below are only ever reached with
+        BOTH factors nonzero, and a genuinely-infeasible mixed-sign leaf
+        (the only way the goal is true and this task's own `requires`
+        support it at all) closes on `exfalso; omega` from the ambient
+        linear hypotheses alone -- never a hand proof of the product
+        itself. `Int.mul_pos`/`Int.mul_nonneg`/
+        `Int.mul_nonneg_of_nonpos_of_nonpos` are all core Lean (measured,
+        no Mathlib import), the same discipline "THE CUBE NONLINEARITY"
+        above already established for `Int.mul_nonneg` alone."""
+        pb = self.binders([(p["name"], p["type"])
+                           for p in self.task["params"]])
+        hpre = (f" (hpre : {self.pre_conj()})"
+               if self.task.get("requires") else "")
+        return (
+            f"theorem {name} {pb}{hpre} :\n"
+            f"    (0 : Int) ≤ ({a_text}) * ({b_text}) := by\n"
+            f"  by_cases hA0 : ({a_text}) = 0\n"
+            f"  · rw [hA0]; simp\n"
+            f"  · by_cases hB0 : ({b_text}) = 0\n"
+            f"    · rw [hB0]; simp\n"
+            f"    · by_cases hAp : (0 : Int) < ({a_text})\n"
+            f"      · by_cases hBp : (0 : Int) < ({b_text})\n"
+            f"        · exact Int.le_of_lt (Int.mul_pos hAp hBp)\n"
+            f"        · exfalso; omega\n"
+            f"      · by_cases hBp : (0 : Int) < ({b_text})\n"
+            f"        · exfalso; omega\n"
+            f"        · exact Int.mul_nonneg_of_nonpos_of_nonpos "
+            f"(by omega) (by omega)\n")
+
+    def _has_seq_update_chain(self) -> bool:
+        """True iff some top-level local (SIMPLE-shape body, `self.body`
+        a flat statement list -- a loop's own internal update chain, if
+        any, is not covered here, named open rather than silently
+        folded in) is assigned `update(itself, ..., ...)` at least
+        TWICE in sequence, e.g. `a_out := update(a_out, i1, v1)`
+        immediately or later followed by `a_out := update(a_out, i2,
+        v2)` -- swapFirstAndLast's own exact shape, both committed
+        variants (task_id_591 and task_id_625). The composition this
+        detects is invisible in the raw JSON as a single nested node
+        (each assign is its own flat `update` call); it only becomes a
+        nested Lean term through this file's own symbolic substitution
+        (`sym`/`to_expr` inlining the prior value), so detection here
+        counts REPEATED self-updates of the same variable instead of
+        looking for a nested AST shape that never exists in the source."""
+        if not isinstance(self.body, list):
+            return False
+        counts: dict = {}
+        for s in self.body:
+            if not (isinstance(s, dict) and "assign" in s):
+                continue
+            tgt, val = s["assign"]
+            if (isinstance(val, dict) and val.get("op") == "update"
+                    and isinstance(val.get("args"), list)
+                    and len(val["args"]) == 3
+                    and isinstance(val["args"][0], dict)
+                    and val["args"][0].get("var") == tgt):
+                counts[tgt] = counts.get(tgt, 0) + 1
+        return any(c >= 2 for c in counts.values())
+
+    def _has_seq_append_of_slice(self, x, types: dict) -> bool:
+        """True iff some `+` (seq concat) node's operand, resolved
+        through a local `var`'s own straight-line initializer (a local
+        declared `{"var": {"init": ..., "name": ..., "type": "seq"}}`
+        and never reassigned -- SIMPLE-shape bodies only, splitArray's/
+        splitAndAppend's own committed shape), is itself a `slice` node.
+        Both committed occurrences (task_id_262, task_id_586) have BOTH
+        `+` operands resolve to a slice; an asymmetric append (one bare
+        seq, one slice) is not covered here -- `t_seq_append_get`'s own
+        single-level bridge already handles the bare side, so an
+        asymmetric append only needs `t_seq_append_slice2_get` if BOTH
+        sides need the slice bridge, which this check requires of
+        neither operand alone -- named open rather than silently folded
+        in if a future task needs it."""
+        local_init: dict = {}
+        if isinstance(self.body, list):
+            for s in self.body:
+                if isinstance(s, dict) and "var" in s \
+                        and isinstance(s["var"], dict):
+                    v = s["var"]
+                    if "init" in v and "name" in v:
+                        local_init[v["name"]] = v["init"]
+
+        def resolve(node):
+            if isinstance(node, dict) and "var" in node \
+                    and node["var"] in local_init:
+                return local_init[node["var"]]
+            return node
+
+        def walk(n) -> bool:
+            if isinstance(n, dict):
+                if (n.get("op") == "+" and isinstance(n.get("args"), list)
+                        and len(n["args"]) == 2):
+                    a = resolve(n["args"][0])
+                    b = resolve(n["args"][1])
+                    if ((isinstance(a, dict) and a.get("op") == "slice")
+                            or (isinstance(b, dict)
+                                and b.get("op") == "slice")):
+                        return True
+                return any(walk(v) for v in n.values())
+            if isinstance(n, list):
+                return any(walk(v) for v in n)
+            return False
+
+        return walk(x)
+
     def _has_seq_plus(self, x, types: dict) -> bool:
         """True if some `+` node in x concatenates two seqs (its first
         operand's sort is `seq`, `+` polymorphic by operand type exactly
@@ -3461,6 +3781,14 @@ class Lower:
                 # nested task whose goal IS big enough to hit the same
                 # recursion-depth wall the flat bridge was built for.
                 names += ["t_seq_update_get_row", "t_seq_fill_get_row"]
+            if self.seq_composed_update2:
+                # THE FRAME-FACT GAP's open list (2026-09-11): a chained
+                # double-update read, ONE generic lemma (`emit_seq_
+                # helpers` below), matched by grind's e-matcher against
+                # the goal's own concrete nested `.set` term in a single
+                # step -- no chaining of the two single-level lemmas
+                # required.
+                names.append("t_seq_update2_get")
         if self.seq_new:
             # SPEC.md "Sequences: literals, concatenation, slices (v1)"
             # (2026-09-09): the same recursion-depth wall the update/fill
@@ -3489,6 +3817,15 @@ class Lower:
                 # duplicate; only the two READ bridges, monomorphic in
                 # element type by construction, need one.
                 names += ["t_seq_append_get_row", "t_seq_slice_get_row"]
+            if self.seq_composed_append_slice:
+                # THE FRAME-FACT GAP's open list (2026-09-11): an append
+                # of two slices, read at an index -- ONE generic lemma
+                # composing `t_seq_append_get` then, per branch,
+                # `t_seq_slice_get` (proved once, `emit_seq_helpers`
+                # below), so grind matches the WHOLE nested term in one
+                # e-match step instead of needing to chain the two
+                # single-level bridges across the slice subterm.
+                names.append("t_seq_append_slice2_get")
         if self.seq_eq_comp:
             names.append("t_seq_ext")
         return ", ".join(names + [f"{f}_s" for f in self.sfuns])
@@ -3721,6 +4058,42 @@ class Lower:
                 "  rw [getElem!_pos (List.replicate (n).toNat v) "
                 "(j).toNat hb,"
                 " List.getElem_replicate]\n")
+            if self.seq_composed_update2:
+                # THE FRAME-FACT GAP's open list (2026-09-11):
+                # swapFirstAndLast's own `(a.set i1 v1).set i2 v2`, read
+                # at any index -- fully generic (base/i1/v1/i2/v2/j all
+                # universally quantified, ADDITIVE to `t_seq_update_get`
+                # above, never replacing it), proved by TWO applications
+                # of `t_seq_update_get` itself (outer, then inner) inside
+                # this one theorem's own proof -- the chaining `grind`
+                # cannot do across a nested subterm, done once here by
+                # hand so grind's own e-matching only has to unify the
+                # WHOLE nested term against this lemma's LHS in a single
+                # step. Measured (probe1.lean, lean 4.33.1, core only):
+                # compiles clean, axioms {propext, Quot.sound}, the same
+                # allowlist every other bridge lemma here depends on.
+                parts.append(
+                "theorem t_seq_update2_get (base : List Int) "
+                "(i1 v1 i2 v2 j : Int)\n"
+                "    (hi1 : (0:Int) ≤ i1) (hiu1 : i1 < ((base.length:Int)))\n"
+                "    (hi2 : (0:Int) ≤ i2) (hiu2 : i2 < ((base.length:Int)))\n"
+                "    (hj : (0:Int) ≤ j) (hju : j < ((base.length:Int))) :\n"
+                "    ((base.set i1.toNat v1).set i2.toNat v2)[j.toNat]! =\n"
+                "      if j = i2 then v2 else "
+                "if j = i1 then v1 else base[j.toNat]! := by\n"
+                "  have h1len : (((base.set i1.toNat v1)).length : Int) "
+                "= (base.length:Int) := by\n"
+                "    rw [List.length_set]\n"
+                "  have hiu2' : i2 < (((base.set i1.toNat v1)).length "
+                ": Int) := by rw [h1len]; exact hiu2\n"
+                "  have hju' : j < (((base.set i1.toNat v1)).length "
+                ": Int) := by rw [h1len]; exact hju\n"
+                "  rw [t_seq_update_get (base.set i1.toNat v1) i2 j v2 "
+                "hi2 hiu2' hj hju']\n"
+                "  split\n"
+                "  · rfl\n"
+                "  · next hne =>\n"
+                "    rw [t_seq_update_get base i1 j v1 hi1 hiu1 hj hju]\n")
         if self.seq_new:
             parts.append(
             "theorem t_seq_append_get (l1 l2 : List Int) (j : Int)\n"
@@ -3816,6 +4189,71 @@ class Lower:
                 "  have hb2 : (a.toNat + j.toNat) < s.length := by omega\n"
                 "  have heq : a.toNat + j.toNat = (a + j).toNat := by omega\n"
                 "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n")
+            if self.seq_composed_append_slice:
+                # THE FRAME-FACT GAP's open list (2026-09-11):
+                # splitArray's/splitAndAppend's own `slice ++ slice`, read
+                # at any index -- fully generic (both slices' own base
+                # seq, bounds and the read index all universally
+                # quantified), proved by ONE application of
+                # `t_seq_append_get` (splitting on which side the index
+                # falls in) followed, per branch, by ONE application of
+                # `t_seq_slice_get` -- the exact two-lemma chain across a
+                # nested subterm `grind` cannot do on its own, done once
+                # here so grind's own e-matching only needs to unify the
+                # whole nested `(slice ++ slice)` term against this
+                # lemma's LHS. Measured (probe1.lean, lean 4.33.1, core
+                # only): compiles clean, axioms {propext, Quot.sound}.
+                parts.append(
+                "theorem t_seq_append_slice2_get "
+                "(s1 s2 : List Int) (a1 b1 a2 b2 j : Int)\n"
+                "    (ha1 : (0:Int) ≤ a1) (hab1 : a1 ≤ b1) "
+                "(hbl1 : b1 ≤ ((s1.length:Int)))\n"
+                "    (ha2 : (0:Int) ≤ a2) (hab2 : a2 ≤ b2) "
+                "(hbl2 : b2 ≤ ((s2.length:Int)))\n"
+                "    (hj : (0:Int) ≤ j) (hju : j < (b1 - a1) + (b2 - a2)) "
+                ":\n"
+                "    (((s1.drop a1.toNat).take (b1 - a1).toNat) ++\n"
+                "      ((s2.drop a2.toNat).take (b2 - a2).toNat))"
+                "[j.toNat]! =\n"
+                "      if j < b1 - a1 then s1[(a1 + j).toNat]! "
+                "else s2[(a2 + (j - (b1 - a1))).toNat]! := by\n"
+                "  have hl1 : ((((s1.drop a1.toNat).take (b1 - a1).toNat))."
+                "length : Int) = b1 - a1 := by\n"
+                "    rw [List.length_take, List.length_drop]\n"
+                "    omega\n"
+                "  have hl2 : ((((s2.drop a2.toNat).take (b2 - a2).toNat))."
+                "length : Int) = b2 - a2 := by\n"
+                "    rw [List.length_take, List.length_drop]\n"
+                "    omega\n"
+                "  have hju' : j < ((((s1.drop a1.toNat).take "
+                "(b1 - a1).toNat) ++ ((s2.drop a2.toNat).take "
+                "(b2 - a2).toNat)).length : Int) := by\n"
+                "    rw [List.length_append]\n"
+                "    push_cast\n"
+                "    omega\n"
+                "  rw [t_seq_append_get (((s1.drop a1.toNat).take "
+                "(b1 - a1).toNat)) (((s2.drop a2.toNat).take "
+                "(b2 - a2).toNat)) j hj hju']\n"
+                "  split\n"
+                "  · next hh =>\n"
+                "    rw [if_pos (by rw [hl1] at hh; exact hh)]\n"
+                "    rw [t_seq_slice_get s1 a1 b1 j ha1 hab1 hbl1 hj "
+                "(by rw [hl1] at hh; exact hh)]\n"
+                "  · next hh =>\n"
+                "    rw [if_neg (by rw [hl1] at hh; exact hh)]\n"
+                "    have hk : ((0:Int) ≤ j - "
+                "(((((s1.drop a1.toNat).take (b1 - a1).toNat)).length "
+                ": Int))) := by\n"
+                "      rw [hl1] at hh; omega\n"
+                "    have hku : (j - (((((s1.drop a1.toNat).take "
+                "(b1 - a1).toNat)).length : Int))) < b2 - a2 := by\n"
+                "      rw [hl1] at hh; omega\n"
+                "    rw [t_seq_slice_get s2 a2 b2\n"
+                "        (j - (((((s1.drop a1.toNat).take "
+                "(b1 - a1).toNat)).length : Int)))\n"
+                "        ha2 hab2 hbl2 hk hku]\n"
+                "    congr 2\n"
+                "    rw [hl1]\n")
         return "\n".join(parts)
 
     # ---------- the string library (v1) ----------
@@ -4153,6 +4591,9 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                              "nested seq update-read bridge"),
                             ("t_seq_fill_get_row",
                              "nested seq fill-read bridge")]
+            if self.seq_composed_update2:
+                seq_thms.append(("t_seq_update2_get",
+                                 "composed double-update-read bridge"))
         if self.seq_new:
             seq_thms += [("t_seq_append_get", "seq append-read bridge"),
                         ("t_seq_slice_get", "seq slice-read bridge")]
@@ -4161,6 +4602,9 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                              "nested seq append-read bridge"),
                             ("t_seq_slice_get_row",
                              "nested seq slice-read bridge")]
+            if self.seq_composed_append_slice:
+                seq_thms.append(("t_seq_append_slice2_get",
+                                 "composed append-of-slices-read bridge"))
         if self.seq_eq_comp:
             seq_thms.append(("t_seq_ext", "seq equality extensionality "
                              "bridge (booleans as computational values)"))
@@ -4249,11 +4693,64 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         out = [f"def {self.name}_t {pb} : {self.lean_type(self.rett)} :=\n"
                f"  {expr}\n"]
         thms = []
+        # THE NONLINEAR SIGN BRIDGE (2026-09-11): every distinct product
+        # this task's own ensures/body computes, as its own top-level
+        # lemma (see `_mul_sign_lemma`'s docstring) BEFORE the wfbody/
+        # spec theorems that will cite it -- Lean elaborates top-down, so
+        # a forward reference would not even parse. Empty for every task
+        # with no nonlinear `*` node (`_mul_sign_pairs` returns []), so
+        # every pre-existing task's output is byte-identical.
+        mulsign_pairs = self._mul_sign_pairs()
+        mulsign_names = [self.fresh(f"{self.name}_t_mulsign")
+                         for _ in mulsign_pairs]
+        for nm, (ta, tb) in zip(mulsign_names, mulsign_pairs):
+            out.append(self._mul_sign_lemma(nm, ta, tb))
+            thms.append((nm, "nonlinear sign bridge"))
+        # `grind [name]` alone does NOT work here (measured, probe1/
+        # probe2/probe3 scratch files): grind's own `ring` extension
+        # ring-normalizes a goal like `3 * n * (n - 1) + 1 >= 0` into a
+        # `n ^ 2` MONOMIAL form before e-matching ever runs, so the
+        # lemma's own LHS pattern `(3 * n) * (n - 1)` -- stated over the
+        # UNNORMALIZED product, to match `term()`'s own output text --
+        # no longer occurs as a literal subterm to match against; cutsat
+        # then treats the introduced `n ^ 2` atom as an unconstrained
+        # integer (measured: it happily assigns `n ^ 2 := -1`) and grind
+        # reports failure. `omega`, unlike `grind`, does NOT ring-
+        # normalize -- it treats `(3 * n) * (n - 1)` as one opaque atom,
+        # matching the mulsign lemma's own conclusion syntactically, so a
+        # `have` naming that lemma's instantiation, fed to a plain
+        # `omega` afterward, closes it (measured, probe3.lean: `have
+        # hsign := t_mulsign_1 n hpre; omega` proves the full `result >=
+        # 0 ∧ result = formula` conjunction in one shot, no `constructor`
+        # needed -- omega already decomposes a provable `∧` goal itself).
+        def _mulsign_have_branch(pre_args: str) -> str:
+            haves = "; ".join(
+                f"have _sgn{i} := {nm} {pnames}{pre_args}"
+                for i, nm in enumerate(mulsign_names))
+            return f"({haves}; omega)"
         ob = self._conj(obs)
         if ob is not None:
             hyps = "".join(f"{p} → " for p in self.pre_props())
             tac = self._close([self.body], {}, self.types,
                               f"grind{self.ga}")
+            if mulsign_names:
+                # wfbody states `requires` as CURRIED implications in the
+                # goal itself (no `hpre` binder in scope, unlike `_spec`
+                # below) -- `intro` them under the names the mulsign
+                # lemma's own single conjoined `hpre` argument needs,
+                # rebuilt via the anonymous constructor (Lean 4's `⟨⟩`
+                # already flattens a right-nested `∧` chain, the exact
+                # shape `pre_conj`'s own `" ∧ ".join` produces).
+                pre_props = self.pre_props()
+                if pre_props:
+                    names = [f"_hp{i + 1}" for i in range(len(pre_props))]
+                    pre_args = (" ⟨" + ", ".join(names) + "⟩"
+                               if len(names) > 1 else f" {names[0]}")
+                    branch = ("(intro " + " ".join(names) + "; "
+                             + _mulsign_have_branch(pre_args)[1:])
+                else:
+                    branch = _mulsign_have_branch("")
+                tac = f"first | ({tac}) | {branch}"
             out.append(f"theorem {self.name}_t_wfbody {pb} :\n"
                        f"    {hyps}{ob} := by\n  {tac}\n")
             thms.append((f"{self.name}_t_wfbody", "body definedness"))
@@ -4262,6 +4759,10 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                 if self.task.get("requires") else "")
         spec_tac = self._close([self.task["ensures"], self.body], {},
                                self.types, f"grind{self.ga}")
+        spec_mulsign_branch = (
+            _mulsign_have_branch(" hpre" if self.task.get("requires")
+                                 else "")
+            if mulsign_names else None)
         # SPEC.md "Pairs" (2026-09-10), found on divmod_pair's own spec
         # theorem: `unfold {name}_t` alone (delta only) leaves a `.1`/`.2`
         # projection ON the unfolded pair literal syntactically un-reduced
@@ -4303,7 +4804,10 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             # always gets a chance to run either way.
             f"  | (try unfold {self.name}_t{dsimp}\n"
             f"     {spec_tac})\n"
-            f"  | grind [{self.name}_t"
+            + (f"  | (try unfold {self.name}_t{dsimp}\n"
+               f"     {spec_mulsign_branch})\n"
+               if spec_mulsign_branch else "")
+            + f"  | grind [{self.name}_t"
             + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
                if self.sfuns else "") + "]\n"
             + ("  | decide\n" if not self.task["params"] else ""))
