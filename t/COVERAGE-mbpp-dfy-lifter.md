@@ -6,10 +6,10 @@ parts from the lexical one (`COVERAGE-mbpp-dfy.md`,
 `t/mbpp_gate_order.py`). Three committed sources, joined by file and
 by the sweep's own row-naming convention; no kernel run here.
 
-Headline: 48 of the 164 read verified/refuted in all seven kernels
-(WS-16.2 wants 82). 48 of those 48 are lexically in fragment; 0 are
+Headline: 53 of the 164 read verified/refuted in all seven kernels
+(WS-16.2 wants 82). 53 of those 53 are lexically in fragment; 0 are
 not (the reverse disagreement, named at the bottom of this page).
-The lifter-side greedy below starts from the 48, since its population is the in-fragment rows only.
+The lifter-side greedy below starts from the 53, since its population is the in-fragment rows only.
 
 ## One row per program (164)
 
@@ -37,7 +37,7 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 70 | AllSequencesEqualLength | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 77 | IsDivisibleBy11 | in fragment | lifted | all seven | none (already all seven) |
 | 79 | IsLengthOdd | in fragment | lifted | all seven | none (already all seven) |
-| 80 | TetrahedralNumber | in fragment | lifted | rocq=abstain / abstain | kernel: rocq |
+| 80 | TetrahedralNumber | in fragment | lifted | all seven | none (already all seven) |
 | 82 | SphereVolume | real | refused:real | n/a | lexical gate: real |
 | 85 | SphereSurfaceArea | real | refused:real | n/a | lexical gate: real |
 | 86 | CenteredHexagonalNumber | in fragment | lifted | framac=timeout / refuted | kernel: framac |
@@ -70,7 +70,7 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 251 | InsertBeforeEach | nested-seq-string | refused:nested-seq-string | n/a | lexical gate: nested-seq-string |
 | 257 | Swap | in fragment | lifted | all seven | none (already all seven) |
 | 261 | ElementWiseDivision | in fragment | lifted | all seven | none (already all seven) |
-| 262 | SplitArray | in fragment | lifted | framac=abstain / abstain, lean=unproved / refuted, rocq=abstain / abstain | kernel (co-blocked): framac+lean+rocq |
+| 262 | SplitArray | in fragment | lifted | framac=abstain / abstain, lean=unproved / refuted | kernel (co-blocked): framac+lean |
 | 264 | DogYears | in fragment | lifted | all seven | none (already all seven) |
 | 266 | LateralSurfaceArea | in fragment | lifted | all seven | none (already all seven) |
 | 267 | SumOfSquaresOfFirstNOddNumbers | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
@@ -79,11 +79,11 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 273 | SubtractSequences | in fragment | lifted | all seven | none (already all seven) |
 | 276 | CylinderVolume | real | refused:real | n/a | lexical gate: real |
 | 279 | NthDecagonalNumber | in fragment | lifted | all seven | none (already all seven) |
-| 282 | ElementWiseSubtraction | in fragment | lifted | spark=verified / timeout (FLAKED) | kernel: spark |
+| 282 | ElementWiseSubtraction | in fragment | lifted | all seven | none (already all seven) |
 | 284 | AllElementsEqual | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 290 | MaxLengthList | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 292 | Quotient | in fragment | lifted | all seven | none (already all seven) |
-| 304 | ElementAtIndexAfterRotation | in fragment | lifted | spark=timeout / timeout | kernel: spark |
+| 304 | ElementAtIndexAfterRotation | in fragment | lifted | all seven | none (already all seven) |
 | 307 | DeepCopySeq | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 309 | Max | in fragment | lifted | all seven | none (already all seven) |
 | 310 | ToCharArray | array | refused:array | n/a | lexical gate: array |
@@ -95,7 +95,7 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 404 | Min | in fragment | lifted | all seven | none (already all seven) |
 | 406 | IsOdd | in fragment | lifted | all seven | none (already all seven) |
 | 412 | RemoveOddNumbers | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
-| 414 | AnyValueExists | in fragment | lifted | dafny=verified / unsound, framac=abstain / abstain, fstar=abstain / abstain, lean=unproved / unproved, rocq=abstain / abstain, spark=verified / unsound, verus=malformed / malformed | kernel (co-blocked): dafny+framac+fstar+lean+rocq+spark+verus |
+| 414 | AnyValueExists | in fragment | lifted | dafny=verified / unsound, framac=abstain / abstain, fstar=verified / unsound, lean=unproved / unproved, rocq=abstain / abstain, spark=verified / unsound, verus=verified / unsound | kernel (co-blocked): dafny+framac+fstar+lean+rocq+spark+verus |
 | 424 | ExtractRearChars | nested-seq-string | refused:nested-seq-string | n/a | lexical gate: nested-seq-string |
 | 426 | FilterOddNumbers | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 430 | ParabolaDirectrix | real | refused:real | n/a | lexical gate: real |
@@ -105,7 +105,7 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 435 | LastDigit | in fragment | lifted | all seven | none (already all seven) |
 | 436 | FindNegativeNumbers | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 441 | CubeSurfaceArea | in fragment | lifted | all seven | none (already all seven) |
-| 445 | MultiplyElements | in fragment | lifted | spark=timeout / timeout (FLAKED) | kernel: spark |
+| 445 | MultiplyElements | in fragment | lifted | all seven | none (already all seven) |
 | 447 | CubeElements | in fragment | refused:array | n/a | lifter row: array |
 | 452 | CalculateLoss | in fragment | lifted | all seven | none (already all seven) |
 | 454 | ContainsZ | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
@@ -128,7 +128,7 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 572 | RemoveDuplicates | in fragment | refused:unbounded-quantifier | n/a | lifter row: unbounded-quantifier |
 | 573 | dafny-synthesis_task_id_573 | set | refused:let-expression | n/a | lexical gate: set |
 | 574 | CylinderSurfaceArea | real | refused:real | n/a | lexical gate: real |
-| 576 | IsSublist | in fragment | lifted | dafny=unproved / unproved, framac=abstain / abstain, fstar=abstain / abstain, lean=unproved / unproved, rocq=unproved / unproved, spark=abstain / abstain | kernel (co-blocked): dafny+framac+fstar+lean+rocq+spark |
+| 576 | IsSublist | in fragment | lifted | dafny=unproved / unproved, framac=abstain / abstain, lean=unproved / unproved, rocq=unproved / unproved, spark=abstain / abstain | kernel (co-blocked): dafny+framac+lean+rocq+spark |
 | 577 | FactorialOfLastDigit | in fragment | lifted | framac=abstain / abstain | kernel: framac |
 | 578 | Interleave | in fragment | lifted | lean=timeout / timeout | kernel: lean |
 | 579 | DissimilarElements | in fragment | refused:function-contract | n/a | lifter row: function-contract |
@@ -136,22 +136,22 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 586 | SplitAndAppend | in fragment | lifted | framac=abstain / abstain, lean=unproved / refuted, rocq=unproved / refuted, spark=timeout / refuted | kernel (co-blocked): framac+lean+rocq+spark |
 | 587 | ArrayToSeq | in fragment | lifted | all seven | none (already all seven) |
 | 588 | dafny-synthesis_task_id_588 | in fragment | refused:let-expression | n/a | lifter row: let-expression |
-| 591 | SwapFirstAndLast | in fragment | lifted | framac=verified / timeout, lean=unproved / refuted | kernel (co-blocked): framac+lean |
+| 591 | SwapFirstAndLast | in fragment | lifted | lean=unproved / refuted | kernel: lean |
 | 594 | FirstEvenOddDifference | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
-| 598 | IsArmstrong | in fragment | lifted | dafny=timeout / refuted, framac=timeout / refuted, fstar=timeout / timeout, lean=unproved / refuted, rocq=timeout / timeout, spark=timeout / refuted, verus=unproved / refuted | kernel (co-blocked): dafny+framac+fstar+lean+rocq+spark+verus |
+| 598 | IsArmstrong | in fragment | lifted | rocq=verified / timeout (FLAKED) | kernel: rocq |
 | 599 | SumAndAverage | multi-return-arity | refused:multi-return-nested | n/a | lexical gate: multi-return-arity |
 | 600 | IsEven | in fragment | lifted | all seven | none (already all seven) |
 | 602 | FindFirstRepeatedChar | multi-return-arity | refused:multi-return-nested | n/a | lexical gate: multi-return-arity |
-| 603 | LucidNumbers | in fragment | lifted | framac=abstain / abstain, lean=timeout / timeout, spark=timeout / refuted, verus=malformed / malformed | kernel (co-blocked): framac+lean+spark+verus |
-| 605 | IsPrime | in fragment | lifted | dafny=verified / unsound, framac=timeout / timeout, fstar=verified / unproved, lean=unproved / refuted, rocq=timeout / refuted, spark=timeout / timeout, verus=verified / unproved | kernel (co-blocked): dafny+framac+fstar+lean+rocq+spark+verus |
+| 603 | LucidNumbers | in fragment | lifted | framac=abstain / abstain, lean=timeout / timeout, spark=timeout / refuted | kernel (co-blocked): framac+lean+spark |
+| 605 | IsPrime | in fragment | lifted | dafny=verified / unsound, framac=timeout / timeout, fstar=verified / unproved, rocq=timeout / refuted, spark=timeout / timeout, verus=verified / unproved | kernel (co-blocked): dafny+framac+fstar+rocq+spark+verus |
 | 606 | DegreesToRadians | real | refused:real | n/a | lexical gate: real |
-| 610 | RemoveElement | in fragment | lifted | framac=verified / timeout, fstar=abstain / abstain, lean=abstain / abstain, rocq=abstain / abstain, spark=verified / timeout | kernel (co-blocked): framac+fstar+lean+rocq+spark |
+| 610 | RemoveElement | in fragment | lifted | lean=abstain / abstain, rocq=abstain / abstain, spark=verified / timeout | kernel (co-blocked): lean+rocq+spark |
 | 616 | ElementWiseModulo | in fragment | lifted | all seven | none (already all seven) |
 | 618 | ElementWiseDivide | in fragment | lifted | all seven | none (already all seven) |
 | 622 | FindMedian | in fragment | refused:unbounded-quantifier | n/a | lifter row: unbounded-quantifier |
 | 623 | PowerOfListElements | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 624 | ToUppercase | char-arith | refused:seq-typing | n/a | lexical gate: char-arith |
-| 625 | SwapFirstAndLast | in fragment | lifted | framac=verified / timeout, lean=unproved / refuted | kernel (co-blocked): framac+lean |
+| 625 | SwapFirstAndLast | in fragment | lifted | lean=unproved / refuted | kernel: lean |
 | 626 | AreaOfLargestTriangleInSemicircle | in fragment | lifted | all seven | none (already all seven) |
 | 627 | SmallestMissingNumber | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
 | 629 | FindEvenNumbers | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
@@ -177,7 +177,7 @@ method has no row in `COVERAGE-lifted-785.md`.
 | 776 | CountVowelNeighbors | set | refused:set | n/a | lexical gate: set |
 | 784 | FirstEvenOddIndices | multi-method | refused:return-not-assigned-on-all-paths | n/a | lexical gate: multi-method |
 | 790 | IsEvenAtIndexEven | in fragment | refused:lift-check-failed | n/a | lifter row: lift-check-failed |
-| 792 | CountLists | in fragment | lifted | framac=verified / timeout | kernel: framac |
+| 792 | CountLists | in fragment | lifted | all seven | none (already all seven) |
 | 793 | LastPosition | in fragment | refused:old | n/a | lifter row: old |
 | 798 | ArraySum | in fragment | refused:heap | n/a | lifter row: heap |
 | 799 | dafny-synthesis_task_id_799 | bitvector | refused:bitvector | n/a | lexical gate: bitvector |
@@ -194,8 +194,8 @@ method has no row in `COVERAGE-lifted-785.md`.
 |---|---:|
 | lexically out | 33 |
 | in fragment, refused by the lifter | 56 |
-| lifted, not all seven | 27 |
-| all seven | 48 |
+| lifted, not all seven | 22 |
+| all seven | 53 |
 | total | 164 |
 
 ### Lexically out, by gate (primary gate only, so this partitions the group)
@@ -235,18 +235,17 @@ method has no row in `COVERAGE-lifted-785.md`.
 
 | blocker | count |
 |---|---:|
-| framac (sole) | 4 |
-| spark (sole) | 3 |
+| framac (sole) | 3 |
+| lean (sole) | 3 |
 | rocq (sole) | 1 |
-| lean (sole) | 1 |
-| dafny+framac+fstar+lean+rocq+spark+verus (co-blocked) | 6 |
-| framac+lean (co-blocked) | 4 |
-| dafny+framac+fstar+rocq+spark+verus (co-blocked) | 2 |
-| framac+lean+rocq (co-blocked) | 2 |
-| dafny+framac+fstar+lean+rocq+spark (co-blocked) | 1 |
+| dafny+framac+fstar+lean+rocq+spark+verus (co-blocked) | 4 |
+| framac+lean (co-blocked) | 3 |
+| dafny+framac+fstar+rocq+spark+verus (co-blocked) | 3 |
+| framac+lean+rocq (co-blocked) | 1 |
+| dafny+framac+lean+rocq+spark (co-blocked) | 1 |
 | framac+lean+rocq+spark (co-blocked) | 1 |
-| framac+lean+spark+verus (co-blocked) | 1 |
-| framac+fstar+lean+rocq+spark (co-blocked) | 1 |
+| framac+lean+spark (co-blocked) | 1 |
+| lean+rocq+spark (co-blocked) | 1 |
 
 ## The greedy order on the LIFTER side
 
@@ -255,42 +254,42 @@ a lifter refusal name closed, or one kernel's sole-blocked cells
 closed. Lexical gates are not items here; a lexically-out row is out
 of scope for this curve (see `mbpp_gate_order.py`'s curve for that).
 
-Starting point: 48 of those already read all seven.
+Starting point: 53 of those already read all seven.
 
 | step | change | newly unlocked | cumulative |
 |---|---|---:|---:|
-| 1 | lifter:lift-check-failed | 35 | 83 |
-| 2 | lifter:unbounded-quantifier | 6 | 89 |
-| 3 | kernel:framac | 4 | 93 |
-| 4 | kernel:lean | 5 | 98 |
-| 5 | lifter:array | 4 | 102 |
-| 6 | lifter:function-contract | 4 | 106 |
-| 7 | kernel:rocq | 3 | 109 |
-| 8 | kernel:spark | 4 | 113 |
-| 9 | lifter:heap | 3 | 116 |
-| 10 | lifter:let-expression | 2 | 118 |
-| 11 | lifter:old | 2 | 120 |
-| 12 | kernel:fstar | 1 | 121 |
-| 13 | kernel:dafny | 1 | 122 |
-| 14 | kernel:verus | 9 | 131 |
+| 1 | lifter:lift-check-failed | 35 | 88 |
+| 2 | lifter:unbounded-quantifier | 6 | 94 |
+| 3 | lifter:array | 4 | 98 |
+| 4 | lifter:function-contract | 4 | 102 |
+| 5 | kernel:framac | 3 | 105 |
+| 6 | kernel:lean | 6 | 111 |
+| 7 | lifter:heap | 3 | 114 |
+| 8 | kernel:rocq | 2 | 116 |
+| 9 | kernel:spark | 3 | 119 |
+| 10 | lifter:let-expression | 2 | 121 |
+| 11 | lifter:old | 2 | 123 |
+| 12 | kernel:dafny | 1 | 124 |
+| 13 | kernel:fstar | 0 | 124 |
+| 14 | kernel:verus | 7 | 131 |
 
-Reaches WS-16.2's bar of 82 at step 1, on closing `lifter:lift-check-failed` (83).
+Reaches WS-16.2's bar of 82 at step 1, on closing `lifter:lift-check-failed` (88).
 
 Greedy head: lifter:lift-check-failed (+35)
 
-Distance to 82 from the measured 48: 1 change(s) by name: lifter:lift-check-failed.
+Distance to 82 from the measured 53: 1 change(s) by name: lifter:lift-check-failed.
 
 ## Where the two orders part
 
 `COVERAGE-mbpp-dfy.md`'s lexical curve treats "in fragment" as the
 finish line: it reaches 114 of 164 at its first step and 100% of 164
 by step 16. But of the 131 rows already in fragment (gap set empty,
-nothing left to lex), only 48 read all seven kernels here; the other
-83 are refused by the lifter for a reason no lexical gate names, or
+nothing left to lex), only 53 read all seven kernels here; the other
+78 are refused by the lifter for a reason no lexical gate names, or
 lifted but blocked by a kernel. Every row in the "in fragment,
 refused by the lifter" and "lifted but not all seven" groups above
 is exactly this: the lexical curve already marks it done, and the
 lifter or a kernel is the real remaining gate. None of the lexical
-gates in `COVERAGE-mbpp-dfy.md`'s table would move any of these 83
+gates in `COVERAGE-mbpp-dfy.md`'s table would move any of these 78
 rows; they need a lifter row or a kernel fix instead.
 

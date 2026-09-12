@@ -284,7 +284,21 @@ def greedy_lifter(rows):
             if len(ids) > len(best_ids):
                 best_item, best_ids = it, ids
         if best_item is None:
-            break
+            # No single new item completes a row (every remaining row is
+            # co-blocked by two or more kernels, the seven preservation-
+            # witness rows after sweep r21, 2026-09-12): open the item the
+            # most remaining rows need, covering nothing yet, and go on;
+            # the curve keeps climbing once enough of a row's set is open.
+            # Without this the loop stopped at 124 of 131 and the page's
+            # own claim that every in-fragment row is reached was false.
+            counts = {}
+            for s_ in remaining.values():
+                for it in s_:
+                    if it not in open_items:
+                        counts[it] = counts.get(it, 0) + 1
+            if not counts:
+                break
+            best_item = sorted(counts, key=lambda it: (-counts[it], it))[0]
         open_items.add(best_item)
         for pid in best_ids:
             del remaining[pid]
