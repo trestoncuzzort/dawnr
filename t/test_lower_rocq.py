@@ -244,5 +244,129 @@ class NiaFallbackBoundedTest(unittest.TestCase):
         self.assertFalse(lower_rocq._has_nonlinear_mul(linear_task))
 
 
+# A pair-of-seq return, splitArray's own shape (task_id_262, ROCQ-3,
+# 2026-09-12): `r := (firstPart, secondPart)`, both components seq-typed.
+_PAIR_SEQ_TASK = {
+    "t": 1,
+    "name": "t_pairseq_probe",
+    "params": [{"name": "arr", "type": "seq"}, {"name": "l", "type": "int"}],
+    "requires": [
+        {"op": "<=", "args": [{"int": 0}, {"var": "l"}]},
+        {"op": "<=", "args": [{"var": "l"}, {"op": "len", "args": [{"var": "arr"}]}]},
+    ],
+    "returns": [{"name": "r", "type": {"pair": ["seq", "seq"]}}],
+    "body": [
+        {"var": {"init": {"op": "slice", "args": [{"var": "arr"}, {"int": 0}, {"var": "l"}]},
+                 "name": "firstPart", "type": "seq"}},
+        {"var": {"init": {"op": "slice", "args": [
+            {"var": "arr"}, {"var": "l"}, {"op": "len", "args": [{"var": "arr"}]}]},
+                 "name": "secondPart", "type": "seq"}},
+        {"assign": ["r", {"op": "pair", "args": [{"var": "firstPart"}, {"var": "secondPart"}]}]},
+    ],
+    "ensures": [
+        {"op": "==", "args": [{"op": "len", "args": [{"op": "fst", "args": [{"var": "r"}]}]},
+                               {"var": "l"}]},
+        {"op": "==", "args": [{"op": "len", "args": [{"op": "snd", "args": [{"var": "r"}]}]},
+                               {"op": "-", "args": [{"op": "len", "args": [{"var": "arr"}]},
+                                                     {"var": "l"}]}]},
+    ],
+}
+
+
+class PairOfSeqComponentTest(unittest.TestCase):
+    """`comp_term`'s seq branch used to abstain outright (`pair_comp_ty`
+    already gave a seq pair COMPONENT a Coq type, `((Z -> Z) * Z)`, but
+    nothing built a TERM of it): a `pair` literal with a seq component
+    (splitArray's `r := (firstPart, secondPart)`, task_id_262) hit
+    `NotImplementedError: a pair component of type seq is refused` before
+    ever reaching a proof attempt. Fixed by rendering the component as
+    `(fn, len)`, the same (function, length) pair `seq_fn` already reads
+    back out of a pair projection (ROADMAP 13.4's own `fst`/`snd` case)."""
+
+    def test_lowers_without_abstain(self):
+        src = lower_rocq.lower(dict(_PAIR_SEQ_TASK), _PAIR_SEQ_TASK["body"])
+        self.assertIn("t_pairseq_probe_t_spec", src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_compiles(self):
+        src = lower_rocq.lower(dict(_PAIR_SEQ_TASK), _PAIR_SEQ_TASK["body"])
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+
+    def test_refutation_certificate_reaches_a_wrong_twin(self):
+        # off-by-one twin: swap firstPart/secondPart's own slice bounds
+        # so the pair's components land in the wrong lengths.
+        task = dict(_PAIR_SEQ_TASK)
+        twin_body, op, w = harness.twin_for(task)
+        if w is None:
+            self.skipTest("harness found no witness for this task's twin "
+                          "ladder (not this fix's concern)")
+        chunk = lower_rocq._try_cert_v1(task, twin_body, w)
+        self.assertIsNotNone(
+            chunk, "no certificate built for the pair-of-seq twin: "
+            "comp_term's seq branch regressed back to abstaining")
+
+
+# `t_v`, tetrahedralNumber's own return name (task_id_80, ROCQ-3,
+# 2026-09-12): collides with this file's own `t_`-prefixed certificate/
+# tactic namespace, caught by `_ck` (RESERVED/prefix/suffix check) inside
+# `Ctx.__init__`, reached only if the identifier survives `lower()`'s own
+# `t_names.sanitize` call unrenamed -- which it did, since
+# `t_names.KEYWORDS["rocq"]` is Rocq's own reserved-word list, not this
+# file's private `t_`/`sf_`/`_len` convention.
+_TCOLLISION_TASK = {
+    "t": 1,
+    "name": "t_tv_probe",
+    "params": [{"name": "n", "type": "int"}],
+    "requires": [{"op": "<=", "args": [{"int": 0}, {"var": "n"}]}],
+    "returns": [{"name": "t_v", "type": "int"}],
+    "body": [
+        {"assign": ["t_v", {"op": "div", "args": [
+            {"op": "*", "args": [
+                {"op": "*", "args": [{"var": "n"},
+                                     {"op": "+", "args": [{"var": "n"}, {"int": 1}]}]},
+                {"op": "+", "args": [{"var": "n"}, {"int": 2}]}]},
+            {"int": 6}]}]},
+    ],
+    "ensures": [
+        {"op": "==", "args": [{"var": "t_v"}, {"op": "div", "args": [
+            {"op": "*", "args": [
+                {"op": "*", "args": [{"var": "n"},
+                                     {"op": "+", "args": [{"var": "n"}, {"int": 1}]}]},
+                {"op": "+", "args": [{"var": "n"}, {"int": 2}]}]},
+            {"int": 6}]}]},
+    ],
+}
+
+
+class TPrefixCollisionRenameTest(unittest.TestCase):
+    """A user identifier spelled `t_v` (or any other name `_ck` would
+    refuse: `t_`/`sf_`-prefixed, `_len`-suffixed, or in `RESERVED`) is
+    renamed away by `lower()`'s own `t_names.sanitize` call, the same
+    rename mechanism a `t_names.KEYWORDS["rocq"]` collision already gets,
+    BEFORE `Ctx.__init__`'s `_ck` ever sees it -- so lowering the task
+    below no longer raises, and the rename is recorded in the emitted
+    source's own `t renames:` comment."""
+
+    def test_lowers_without_abstain(self):
+        # lower() raising NotImplementedError here (the pre-fix behavior)
+        # would fail this test outright; reaching the assert is the point.
+        src = lower_rocq.lower(dict(_TCOLLISION_TASK), _TCOLLISION_TASK["body"])
+        self.assertIn("t_tv_probe_t_spec", src)
+
+    def test_rename_recorded_in_comment(self):
+        src = lower_rocq.lower(dict(_TCOLLISION_TASK), _TCOLLISION_TASK["body"])
+        # The task's own name (`t_tv_probe`) also starts with `t_` and is
+        # renamed too (an honest, harmless side effect of the same rule,
+        # not this test's concern); only the RETURN's rename is checked.
+        self.assertIn("t_v -> tn_t_v", src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_compiles(self):
+        src = lower_rocq.lower(dict(_TCOLLISION_TASK), _TCOLLISION_TASK["body"])
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+
+
 if __name__ == "__main__":
     unittest.main()

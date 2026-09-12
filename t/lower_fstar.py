@@ -106,6 +106,61 @@ witness is read exactly like any other).
      `verified`, named as an open gap, not claimed fixed).
      `word_count`/`count_vowels`: unchanged (`verified`, `timeout`).
 
+2026-09-12 (a later session, ROADMAP 16.2's fstar item: "the abstained
+shapes"). The three structural ABSTAINs named in the 2026-09-11 entry above
+(anyValueExists 414, isSublist 576, removeElement 610) are closed:
+
+  1. RETURN IN THE LOOP PREFIX (isSublist, 576): `gen_loop` used to run a
+     loop's prefix through `exec_straight`, which raised the moment a
+     `return` showed up in it. It now runs the prefix through `exec_flow`
+     (the same mechanism a `return` inside the loop BODY already used)
+     and wraps the function's own entry point in `if <retcond> then
+     <retval> else <the unchanged loop/suffix computation>` whenever the
+     prefix actually returns; `pre_rc == "false"` on every previously-
+     supported prefix, so nothing changes there. See `gen_loop`'s own
+     comment at `exec_flow(cx, prefix, ...)`.
+  2. MORE THAN ONE LOOP PER BODY (removeElement, 610): `find_whiles`
+     generalises `find_while` to any number of top-level, sequential,
+     non-nested, not-under-a-conditional while loops (`find_while`'s own
+     single-loop shape is `len(segs) == 1`, byte-identical to before);
+     `gen_loop_chain` lowers the measured two-loop case by chaining each
+     loop's own final state into the next's initial one, restricted to
+     exactly two loops (three or more still raise the same "more than one
+     loop per body" NotImplementedError as before). See `find_whiles` and
+     `gen_loop_chain`.
+  3. A QUANTIFIER IN COMPUTATIONAL POSITION, NON-LITERAL BOUND
+     (anyValueExists, 414): `bx`'s existing LITERAL-BOUND UNROLL (above)
+     still only fires when both ends of the range are literals; the
+     non-literal fallthrough now calls `_quant_helper` instead of raising,
+     which emits a fresh top-level `let rec ... : Pure bool` recursive
+     helper per quantifier site, structurally recursive over the index,
+     with an `ensures (fun r -> r <==> <the logical quantifier>)` proved
+     by the kernel through the helper's own induction (never assumed) and
+     a `requires` restating exactly the domain facts (`_quant_at_
+     obligations`) its `Seq.index` calls need, since a freestanding
+     function has none of the invariant-established context an INLINE
+     quantifier already sits inside. See `_quant_helper`, `_quant_at_
+     obligations`, and `_expr_free_vars`.
+
+  MEASURED (F* 2026.08.30, `t/grade.py` at flake 3, against dafny): all
+  three real programs move ABSTAIN -> verified. isSublist (576): twin
+  refuted, matching a kernel already reading verified/refuted there
+  (dafny itself reads unproved/unproved on this task, a pre-existing,
+  unrelated dafny limitation). removeElement (610): twin refuted, matching
+  dafny's own verified/refuted exactly. anyValueExists (414): twin
+  VERIFIED, not refuted -- a preservation-witness row (the twin-ladder's
+  own open item, unchanged by this fix, named here rather than hidden);
+  dafny reads the identical verified/verified on the same task. Regression
+  bar: the 34 committed tasks at flake 3 read byte-for-byte the same as
+  t/AGREEMENT.md's fstar column (both documented exceptions, count_vowels'
+  timeout and split_join's unproved, unchanged); the conformance suite's
+  fstar column (conformance.py's own build_manifest/run_items/grade/
+  format_table, restricted to the fstar column), before and after this
+  change, are byte-identical but for the run timestamp (66 tasks, 0 FAIL
+  cells in both). See test_lower_fstar_abstains.py for the unit-level
+  regression discipline (`find_whiles`'s one-loop path, `_expr_free_vars`,
+  and a `CommittedTasksUnaffectedTest` mirroring test_names.py's own).
+
 F*'s type system does most of t's work natively; this file records exactly
 what is delegated to the kernel and what is refused:
 
@@ -1339,6 +1394,40 @@ def _ck(name: str) -> str:
     return name
 
 
+def _expr_free_vars(e, bound: frozenset = frozenset()) -> set[str]:
+    """Every `{"var": ...}` name a t expression tree reaches, minus
+    `bound` (2026-09-12, `_quant_helper`'s own free-variable set: the
+    frame a fresh recursive helper needs as explicit parameters). Unlike
+    `_collect_names` (every string anywhere, used only to keep a fresh
+    name unique), this walks the actual expression shape so an op name
+    (`"op": "at"`) or a spec_fun/task name (`"call": {"fun": ...}`) is
+    never mistaken for a variable reference. A quantifier nested inside
+    the expression (SPEC.md allows one, though no committed task nests
+    two) adds its own bound variable to the recursive call over its own
+    body only, exactly `bx`'s own nested-scoping rule."""
+    out: set[str] = set()
+    if isinstance(e, dict):
+        if "var" in e:
+            v = e["var"]
+            if v not in bound:
+                out.add(v)
+            return out
+        if "forall" in e or "exists" in e:
+            q = e["forall"] if "forall" in e else e["exists"]
+            out |= _expr_free_vars(q["lo"], bound)
+            out |= _expr_free_vars(q["hi"], bound)
+            out |= _expr_free_vars(q["body"], bound | {q["var"]})
+            return out
+        for k, v in e.items():
+            if k in ("op", "fun"):
+                continue
+            out |= _expr_free_vars(v, bound)
+    elif isinstance(e, list):
+        for v in e:
+            out |= _expr_free_vars(v, bound)
+    return out
+
+
 def _collect_names(obj) -> set[str]:
     """Every string anywhere in the task JSON, a superset of every
     identifier in scope, so a name absent from it is fresh everywhere."""
@@ -1510,6 +1599,18 @@ class Ctx:
                                         "result": task["returns"][0]["type"]}
         self._used = _collect_names(task)
         self._n = 0
+        # QUANTIFIER-IN-COMPUTATIONAL-POSITION HELPERS (2026-09-12,
+        # ROADMAP 16.2 fstar item): `_quant_helper` appends one `let rec`
+        # F* definition per non-literal-bounded `exists`/`forall` a `bx`
+        # call site reaches, collected here rather than returned up
+        # through every `bx`/`prop`/`gen_loop`/`gen_fun` call in between
+        # (those all thread `env`/`local`, never a place to also carry a
+        # side list of new top-level defs). `lower()` splices this list in
+        # right after the string-library prelude and before the task's own
+        # function/loop, so a helper is always defined before its first
+        # use. Empty for every task with no such quantifier, so this list
+        # costs nothing on any previously-committed task's own render.
+        self.extra_defs: list[str] = []
 
     def fresh(self) -> str:
         while True:
@@ -2066,9 +2167,30 @@ class Ctx:
                 glue = " && " if kind == "forall" else " || "
                 return "(" + glue.join(self.bx(i, env, local)
                                        for i in insts) + ")"
-            raise NotImplementedError(
-                "fstar lowering: a quantifier in computational position has "
-                "no decidable lowering here")
+            # QUANTIFIER IN COMPUTATIONAL POSITION, NON-LITERAL BOUND
+            # (2026-09-12, ROADMAP 16.2 fstar item, the abstained shapes;
+            # measured on dafny-synthesis anyValueExists, task 414: `if
+            # (exists k in [0, len(seq2)). seq2[k] == seq1[i_v]) { ... }`,
+            # `len(seq2)` never a literal). The unroll above still refuses
+            # whenever the range is not literal-bounded -- no change there
+            # -- but a bound need not be a compile-time literal for a
+            # DECIDABLE lowering to exist: `_quant_helper` (below `bx`)
+            # emits one fresh `let rec` boolean helper per quantifier site,
+            # structurally recursive over the index from `lo` to `hi`,
+            # carrying a REFINEMENT return type `r:bool{r <==> <the same
+            # logical quantifier `prop` would render>}` -- the fact this
+            # call site actually needs (an `if`'s own condition has to
+            # connect to whatever the surrounding invariants/ensures state
+            # about the LOGICAL exists/forall, e.g. anyValueExists's own
+            # loop invariant `result == (exists k in [0,i_v). exists ...)`)
+            # -- proved by the kernel through the helper's own structural
+            # induction, never assumed. MEASURED (out/agent-fstar-2/
+            # anyValueExists, F* 2026.08.30, `t/grade.py` at flake 3): real
+            # ABSTAIN -> verified, twin (an exit-witness probe) verified ->
+            # refuted; the twin is a preservation-witness row (see the
+            # module docstring's own dated note for what that means),
+            # reported by name, not claimed proved here.
+            return self._quant_helper(kind, q, env, local)
         op = e["op"]
         if op in ("fst", "snd"):
             # SPEC.md "Pairs": a bool-typed component reached through
@@ -2173,6 +2295,150 @@ class Ctx:
                 f"fstar lowering: string library member {op!r} not "
                 "lowered yet (2026-09-11, THE STRING LIBRARY abstain)")
         raise ValueError(f"t -> fstar: not a bool expression: {op!r}")
+
+    def _quant_at_obligations(self, e, bound_var: str, local: dict,
+                               hivar: str) -> list[str]:
+        """Domain-safety `requires` conjuncts `_quant_helper` needs so its
+        own STANDALONE function (unlike an inline occurrence, which sits
+        inside a loop's own `requires (reqs + invs)` and so already has
+        every invariant-established bound as a hypothesis) can still
+        discharge every `Seq.index` (`at`) the quantifier's own body
+        reaches. Two shapes, purely structural (no witness/interp
+        involved, unlike the twin certificate's own definedness walk):
+
+          1. An `at` indexed by the quantifier's OWN bound variable
+             (`seq2[k_v3]` in anyValueExists' own `exists k_v3 ...`) needs
+             the RANGE's own `hi` bounded by that seq's length, so ranging
+             `[lo, hi)` never reaches out of bounds -- `hivar <= Seq.length
+             seq`. Combined with `_quant_helper`'s own `0 <= {kvar}` base
+             requires (below), this gives both ends of the domain check
+             for every occurrence at the recursion's own index.
+          2. Any OTHER `at` (indexed by a free variable the quantifier
+             closes over -- anyValueExists' own outer loop counter `i_v`
+             in `seq1[i_v]`) needs THAT variable itself bounded by the
+             seq's length -- exactly the fact the CALLING loop's own
+             invariants already establish, so this only restates it as a
+             precondition; the call site (inside that same loop, under
+             those same invariants) is where it actually gets discharged,
+             not here.
+
+        Deduplicated by (seq, index) pair so a body indexing the same seq
+        at the same spot twice (rare, but free) does not double the
+        requires conjunction for no reason."""
+        out: list[str] = []
+        seen: set[tuple] = set()
+
+        def walk(n):
+            if isinstance(n, dict):
+                if n.get("op") == "at":
+                    seq_e, idx_e = n["args"]
+                    seq_r = self.sx(seq_e, {}, local)
+                    if idx_e == {"var": bound_var}:
+                        key = ("hi", seq_r)
+                        if key not in seen:
+                            seen.add(key)
+                            out.append(f"({hivar} <= (Seq.length {seq_r}))")
+                    else:
+                        idx_r = self.zx(idx_e, {}, local)
+                        key = ("idx", idx_r, seq_r)
+                        if key not in seen:
+                            seen.add(key)
+                            out.append(f"((0 <= {idx_r}) /\\ "
+                                       f"({idx_r} < (Seq.length {seq_r})))")
+                for v in n.values():
+                    walk(v)
+            elif isinstance(n, list):
+                for v in n:
+                    walk(v)
+
+        walk(e)
+        return out
+
+    def _quant_helper(self, kind: str, q: dict, env: dict, local: dict) -> str:
+        """QUANTIFIER IN COMPUTATIONAL POSITION, NON-LITERAL BOUND
+        (2026-09-12, ROADMAP 16.2 fstar item, the abstained shapes; see
+        the module note above `bx`'s call site). Emits one fresh `let rec`
+        boolean helper, structurally recursive from `lo` (the seed) up to
+        `hi` (exclusive), over every free variable `q["body"]` reaches
+        besides its own bound variable -- `Seq.seq`/`int`/`bool`-typed
+        params or already-declared locals, whichever type each free name
+        actually has in THIS scope (`local`/`self.tys`, the same lookup
+        `zx`'s own "var" case uses).
+
+        `Pure bool`, not `Tot`: unlike an INLINE occurrence of the same
+        quantifier (already sitting inside `gen_loop`'s own `requires
+        (reqs + invs)`, so every invariant-established bound is already a
+        hypothesis right there), this is a freestanding top-level
+        function, so its own `Seq.index` domain checks -- both inside its
+        recursive body and inside its own `ensures` formula -- need an
+        explicit `requires` restating exactly the bounds the quantifier's
+        body needs (`_quant_at_obligations` above), never a NEW fact this
+        lowering invents: every conjunct is either an arithmetic identity
+        about the range itself (`hi <= Seq.length seq`, provable once and
+        for all independent of any call site) or a restatement of a bound
+        the CALLING loop's own invariants already establish (an outer
+        free variable's own domain fact), discharged at each call site
+        under those same invariants -- MEASURED directly (anyValueExists,
+        task 414, F* 2026.08.30): dropping this `requires` reproduces
+        Error 19, "Failed to prove: j >= 0" / "j < FStar.Seq.Base.length
+        seq2", from the SMT solver trying to type-check `Seq.index seq2 j`
+        for an entirely unconstrained `j:int` inside the bare `Tot`
+        refinement this file emitted before this fix.
+
+        `ensures (fun r -> r <==> <the logical quantifier over [k, hi)>)`
+        is proved by the kernel through the helper's own structural
+        recursion (never assumed): the base case (`k >= hi`) is the
+        SPEC.md vacuous-range reading (an empty range makes `exists`
+        false / `forall` true, an arithmetic fact alone, no need to
+        inspect the body); the step case's own `if`/`else` matches the
+        `<==>`'s own one witness (`k` itself) or one recursive call at a
+        time, the same shape F*'s SMT already discharges for the string
+        library's own `let rec ... : Tot bool` helpers elsewhere in this
+        file.
+
+        `lo`/`hi` are rendered ONCE, at the call site, as plain int terms
+        (`zx`); the helper's own two extra parameters (`hi`, `k`) are
+        named fresh so they can never collide with a free variable of the
+        same name (`fresh_named` off `self._used`, shared with the whole
+        file, not a second, private counter)."""
+        var = q["var"]
+        fv = sorted(_expr_free_vars(q["body"], frozenset({var})))
+        ftys = {v: (local.get(v) or self.tys[v]) for v in fv}
+        lo_r = self.zx(q["lo"], env, local)
+        hi_r = self.zx(q["hi"], env, local)
+        hname = self.fresh_named(f"t_{kind}_at")
+        kvar = self.fresh_named("qidx")
+        hivar = self.fresh_named("qhi")
+        binder = "".join(f" ({v}:{_tystr(ftys[v])})" for v in fv)
+        fargs = "".join(f" {v}" for v in fv)
+        local2 = dict(ftys)
+        local2[var] = "int"
+        pred_bx = self.bx(q["body"], {var: kvar}, local2)
+        logical_body = self.prop(q["body"], {var: "j"}, local2)
+        obligations = self._quant_at_obligations(q["body"], var, local2, hivar)
+        req = _conj([f"(0 <= {kvar})"] + obligations)
+        if kind == "exists":
+            ens_formula = (f"(r <==> (exists (j:int). "
+                           f"(({kvar} <= j) /\\ (j < {hivar})) /\\ "
+                           f"{logical_body}))")
+            base = "false"
+            step = f"(if {pred_bx} then true else {hname}{fargs} {hivar} ({kvar} + 1))"
+        else:
+            ens_formula = (f"(r <==> (forall (j:int). "
+                           f"(({kvar} <= j) /\\ (j < {hivar})) ==> "
+                           f"{logical_body}))")
+            base = "true"
+            step = f"(if {pred_bx} then {hname}{fargs} {hivar} ({kvar} + 1) else false)"
+        self.extra_defs.append(
+            f"let rec {hname}{binder} ({hivar}:int) ({kvar}:int)\n"
+            f"  : Pure bool\n"
+            f"    (requires {req})\n"
+            f"    (ensures (fun r -> {ens_formula}))\n"
+            f"    (decreases ({hivar} - {kvar}))\n"
+            f"= if {kvar} >= {hivar} then {base}\n"
+            f"  else {step}\n")
+        call_args = "".join(f" {env.get(v, v)}" for v in fv)
+        return f"({hname}{call_args} {hi_r} {lo_r})"
 
     def prop(self, e: dict, env: dict, local: dict) -> str:
         """Spec-position proposition. Bare bool terms coerce via b2t; bool
@@ -2631,6 +2897,53 @@ def find_while(body: list):
         raise NotImplementedError(
             "fstar lowering: nested loops are not lowered yet")
     return body[:k], w, body[k + 1:]
+
+
+def find_whiles(body: list):
+    """MULTIPLE SEQUENTIAL LOOPS (2026-09-12, ROADMAP 16.2 fstar item, the
+    abstained shapes; measured on dafny-synthesis removeElement, task 610:
+    one loop copying `s[0..k)` into `v`, immediately followed by a second,
+    independent loop shifting `s[k+1..)` into the rest of `v` -- SEQUENTIAL
+    composition, never nested, never under a conditional). `find_while`'s
+    own single-loop shape is exactly `len(segs) == 1` here (byte-identical
+    prefix/while/suffix split for every previously-committed task, since
+    this function raises the SAME two refusals `find_while` already had --
+    a loop under a conditional, a loop nested inside another loop's body --
+    before ever looking at how many top-level whiles there are).
+
+    Returns `(segs, suffix)`: `segs` is a list of `(prefix, while)` pairs,
+    one per top-level while in body order (`prefix` is the straight-line
+    run of statements immediately before that while, possibly empty for
+    every while after the first); `suffix` is whatever follows the LAST
+    while. `segs == []` means no loop at all (the caller falls back to
+    `gen_fun`)."""
+    def any_while(stmts):
+        for s in stmts:
+            if "while" in s:
+                return True
+            if "if" in s and (any_while(s["if"]["then"])
+                              or any_while(s["if"]["else"])):
+                return True
+        return False
+
+    for s in body:
+        if "if" in s and (any_while(s["if"]["then"])
+                          or any_while(s["if"]["else"])):
+            raise NotImplementedError(
+                "fstar lowering: a loop under a conditional is not lowered yet")
+    idxs = [k for k, s in enumerate(body) if "while" in s]
+    if not idxs:
+        return [], body
+    segs = []
+    start = 0
+    for k in idxs:
+        w = body[k]["while"]
+        if any_while(w["body"]):
+            raise NotImplementedError(
+                "fstar lowering: nested loops are not lowered yet")
+        segs.append((body[start:k], w))
+        start = k + 1
+    return segs, body[start:]
 
 
 # --------------------------------------------------------------------------
@@ -3149,7 +3462,31 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     lname = cx.fresh_named(f"{name}_loop")
 
     local: dict[str, str] = {}
-    env_pre = exec_straight(cx, prefix, {ret: _dummy(ret_t)}, local)
+    # RETURN IN THE LOOP PREFIX (2026-09-12, ROADMAP 16.2 fstar item, the
+    # abstained shapes; measured on dafny-synthesis isSublist, task 576:
+    # `if len(sub) > len(main_v): return false` right before the loop).
+    # `exec_straight` used to run the prefix and raise the moment a return
+    # showed up in it (its own docstring's "abstain rather than drop the
+    # return's effect"), reasoning that the loop and everything after it
+    # would need to run conditionally on "did the prefix already return".
+    # That conditional wrap is exactly what `exec_flow` already computes
+    # for an `if`-return inside a straight-line body (the loop BODY's own
+    # early-exit case just below reuses the identical mechanism one level
+    # down): `pre_rc` is "false" on every previously-supported prefix (no
+    # return in it), so `env_pre` below is byte-identical to the old
+    # `exec_straight` result and every previously-committed task's F* file
+    # is unchanged. When `pre_rc` is not "false", `env_pre` is exec_flow's
+    # own MERGED environment -- valid exactly along the non-returning path
+    # thanks to the same `(if cb then tv else ev)` conditional merge an
+    # `if`-return already gets in a straight-line body -- so the rest of
+    # this function (loop + suffix) is built from it unchanged, and only
+    # the final wrapping (below, at the `let {name}` definition) adds the
+    # `if pre_rc then pre_rv else <unchanged loop/suffix computation>`
+    # guard. MEASURED (out/agent-fstar-2/isSublist, F* 2026.08.30, `t/
+    # cli.py verify` at flake 3): real moves ABSTAIN -> verified, twin
+    # (COMPARE-FLIP on the prefix guard) verified/refuted, matching dafny.
+    dummy0 = _dummy(ret_t)
+    env_pre, pre_rc, pre_rv = exec_flow(cx, prefix, {ret: dummy0}, local, dummy0)
     # SPEC.md frame rule: the loop havocs exactly the syntactic assigned set
     # of its body. Only those variables are threaded through the recursion;
     # every other mutable name is a plain binder of the helper, passed back
@@ -3334,6 +3671,9 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
             loop_ens = (f"(fun {ob} -> let ({', '.join(svars)}) = {ob} in "
                         f"{post})")
             bind = f"let ({', '.join(svars)})"
+        entry_body = f"{fbind}{bind} = {lname} {pargs}{fargs} {init} in\n  {result}"
+        if pre_rc != "false":
+            entry_body = f"if {pre_rc} then {pre_rv} else (\n  {entry_body})"
         return (f"let rec {lname} {pb}{fb} {sb}\n"
                 f"  : Pure {state_ty}\n"
                 f"    (requires {_conj(reqs + invs)})\n"
@@ -3347,8 +3687,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
                 f"  : Pure {_pty(ret_t)}\n"
                 f"    (requires {req})\n"
                 f"    (ensures {ens})\n"
-                f"= {fbind}{bind} = {lname} {pargs}{fargs} {init} in\n"
-                f"  {result}\n")
+                f"= {entry_body}\n")
 
     # A `return` inside the loop body (SPEC.md "Early exit", 2026-09-08).
     # `<lname>` now yields ONE of two outcomes, encoded as F*'s builtin
@@ -3380,6 +3719,11 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
         bound = f"t_divisor_bound_{task['name']}"
         exit_expr = (f"({bound} {n_render} {plan['i_name']} {plan['result']}; "
                      f"{result})")
+    entry_body = (f"{fbind}match {lname} {pargs}{fargs} {init} with\n"
+                  f"  | Inl {wvar} -> {wvar}\n"
+                  f"  | Inr {state_out} -> {exit_expr}")
+    if pre_rc != "false":
+        entry_body = f"if {pre_rc} then {pre_rv} else (\n  {entry_body})"
     return (f"{divisor_defs}"
             f"let rec {lname} {pb}{fb} {sb}\n"
             f"  : Pure {outcome_ty}\n"
@@ -3394,9 +3738,139 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
             f"  : Pure {_pty(ret_t)}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens})\n"
-            f"= {fbind}match {lname} {pargs}{fargs} {init} with\n"
-            f"  | Inl {wvar} -> {wvar}\n"
-            f"  | Inr {state_out} -> {exit_expr}\n")
+            f"= {entry_body}\n")
+
+
+def gen_loop_chain(cx: Ctx, task: dict, segs: list, suffix: list) -> str:
+    """MULTIPLE SEQUENTIAL LOOPS (2026-09-12, ROADMAP 16.2 fstar item, the
+    abstained shapes; measured on dafny-synthesis removeElement, task 610).
+    `find_whiles` (above) already refuses the two shapes this file has
+    always refused (a loop under a conditional, a loop nested in another
+    loop's body); what is new here is TWO top-level loops back to back,
+    sharing the same ambient mutable state -- the frame rule applied once
+    per loop, chained by threading the first loop's own final state into
+    the second loop's own initial one, exactly the way `gen_loop`'s single
+    `let ... in <rest>` already threads a loop's own final state into its
+    OWN suffix. Restricted to exactly two loops -- the one shape measured;
+    three or more still raises the ABSTAIN `find_whiles`'s single-loop
+    sibling always used for "more than one loop", named honestly rather
+    than guessed at.
+
+    No early exit (`return`) is supported here, in a prefix or in either
+    loop's own body: `removeElement`'s own two loops have neither, and
+    threading `exec_flow`'s `(retcond, retval)` outcome through a SECOND
+    chained loop (short-circuiting the remainder of the chain, not just
+    the remainder of one function) is a real extension of the single-loop
+    early-exit encoding above, not attempted here -- ABSTAIN by name
+    instead of a silent wrong answer.
+
+    MEASURED (out/agent-fstar-2/removeElement, F* 2026.08.30, `t/grade.py`
+    at flake 3): real ABSTAIN -> verified, twin (an invariant-drop probe)
+    verified -> refuted, matching dafny (verified/refuted)."""
+    if len(segs) != 2:
+        raise NotImplementedError(
+            "fstar lowering: more than one loop per body is not lowered yet")
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    pb, pargs = param_binders(task)
+    req, ens = task_spec(cx, task)
+    reqs = [cx.prop(e, {}, {}) for e in task.get("requires", [])]
+
+    local: dict[str, str] = {}
+    dummy0 = _dummy(ret_t)
+    env = {ret: dummy0}
+    defs: list[str] = []
+    calls: list[str] = []
+    for seg_idx, (prefix, w) in enumerate(segs):
+        env, pre_rc, pre_rv = exec_flow(cx, prefix, env, local, dummy0)
+        if pre_rc != "false":
+            raise NotImplementedError(
+                "fstar lowering: a `return` in a loop's prefix or suffix is "
+                "not lowered yet")
+        # Every mutable currently in scope (the task's own return plus
+        # every local declared by any prefix seen so far, this segment's
+        # included) is a candidate state/frame variable for THIS loop --
+        # `gen_loop`'s own `mvars` one level up, generalised from "this
+        # loop's immediate prefix" to "everything in scope", since a later
+        # loop in the chain inherits locals an EARLIER prefix declared
+        # (removeElement's own `i_v2`, declared once before the first
+        # loop, threaded through the second with no re-declaration at
+        # all).
+        mvars = [ret] + list(local.keys())
+        hav = loop_assigned(w["body"])
+        svars = [v for v in mvars if v in hav]
+        fvars = [v for v in mvars if v not in hav]
+        if not svars:
+            raise NotImplementedError(
+                "fstar lowering: loop body assigns nothing in scope")
+        stys = {v: (local.get(v) or cx.tys[v]) for v in mvars}
+        lname = cx.fresh_named(f"{name}_loop{seg_idx}")
+        guard_b = cx.bx(w["cond"], {}, local)
+        guard_p = cx.prop(w["cond"], {}, local)
+        invs = [cx.prop(e, {}, local) for e in w.get("invariants", [])]
+        for v in fvars:
+            if _tystr(stys[v]) != "int":
+                continue
+            init_expr = env.get(v)
+            if init_expr is not None and init_expr != v:
+                invs.append(f"({v} == {init_expr})")
+        dec_shift = 2 if _has_ite(w["decreases"]) else 1
+        dec = f"(({cx.zx(w['decreases'], {}, local)}) + {dec_shift})"
+        step_env, body_rc, _body_rv = exec_flow(cx, w["body"], {}, dict(local), dummy0)
+        if body_rc != "false":
+            raise NotImplementedError(
+                "fstar lowering: a `return` inside a loop of a multi-loop "
+                "body is not lowered yet")
+        step = " ".join(step_env.get(v, v) for v in svars)
+        fb = "".join(f" ({v}:{_tystr(stys[v])})" for v in fvars)
+        fargs = "".join(f" {v}" for v in fvars)
+        sb = " ".join(f"({v}:{_tystr(stys[v])})" for v in svars)
+        post = _conj(invs + [f"(~ {guard_p})"])
+        if len(svars) == 1:
+            state_ty = _pty(stys[svars[0]])
+            state_out = svars[0]
+            loop_ens = f"(fun {svars[0]} -> {post})"
+            bind = f"let {svars[0]}"
+        else:
+            state_ty = "(" + " & ".join(_statecomp(stys[v]) for v in svars) + ")"
+            state_out = "(" + ", ".join(svars) + ")"
+            ob = cx.fresh()
+            loop_ens = (f"(fun {ob} -> let ({', '.join(svars)}) = {ob} in "
+                        f"{post})")
+            bind = f"let ({', '.join(svars)})"
+        init = " ".join(env.get(v, v) for v in svars)
+        fbind = "".join(f"let {v} = {env.get(v, v)} in\n  " for v in fvars)
+        defs.append(f"let rec {lname} {pb}{fb} {sb}\n"
+                    f"  : Pure {state_ty}\n"
+                    f"    (requires {_conj(reqs + invs)})\n"
+                    f"    (ensures {loop_ens})\n"
+                    f"    (decreases {dec})\n"
+                    f"= if {guard_b}\n"
+                    f"  then {lname} {pargs}{fargs} {step}\n"
+                    f"  else {state_out}\n")
+        calls.append(f"{fbind}{bind} = {lname} {pargs}{fargs} {init} in")
+        # Threading the loop's own final state into what follows (the next
+        # segment's prefix, or the suffix below): every state variable now
+        # reads as itself, bound by the `let` just emitted -- exactly the
+        # single-loop `gen_loop`'s own `state_out`/`bind` reused one level
+        # up the chain, never re-derived.
+        for v in svars:
+            env[v] = v
+
+    env, post_rc, _post_rv = exec_flow(cx, suffix, env, local, dummy0)
+    if post_rc != "false":
+        raise NotImplementedError(
+            "fstar lowering: a `return` in a loop's prefix or suffix is "
+            "not lowered yet")
+    result = env.get(ret, ret)
+    entry_body = "\n  ".join(calls) + f"\n  {result}"
+    return ("\n".join(defs) + "\n"
+            f"let {name} {pb}\n"
+            f"  : Pure {_pty(ret_t)}\n"
+            f"    (requires {req})\n"
+            f"    (ensures {ens})\n"
+            f"= {entry_body}\n")
 
 
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
@@ -3986,15 +4460,34 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     for sf in r_task.get("spec_funs", []):
         parts.append(emit_spec_fun(cx, sf))
 
-    prefix, w, suffix = find_while(r_body)
-    if w is not None and has_self_call(r_body, name):
+    # MULTIPLE SEQUENTIAL LOOPS (2026-09-12, ROADMAP 16.2 fstar item, the
+    # abstained shapes): `find_whiles` generalises `find_while` to any
+    # number of top-level, non-nested, not-under-a-conditional while
+    # loops in a row -- `segs` has exactly one entry for every
+    # previously-supported task (byte-identical prefix/while/suffix split,
+    # `gen_loop` unchanged below), and `len(segs) > 1` is the new,
+    # `gen_loop_chain` path (restricted to exactly two loops, the measured
+    # shape; three or more still raises the same "more than one loop per
+    # body" NotImplementedError `find_while` always raised).
+    segs, suffix = find_whiles(r_body)
+    if segs and has_self_call(r_body, name):
         raise NotImplementedError(
             "fstar lowering: a body that both loops and self-recurses is "
             "not lowered yet")
-    if w is not None:
-        parts.append(gen_loop(cx, r_task, prefix, w, suffix))
+    if len(segs) == 0:
+        body_src = gen_fun(cx, r_task, r_body)
+    elif len(segs) == 1:
+        body_src = gen_loop(cx, r_task, segs[0][0], segs[0][1], suffix)
     else:
-        parts.append(gen_fun(cx, r_task, r_body))
+        body_src = gen_loop_chain(cx, r_task, segs, suffix)
+    # QUANTIFIER-IN-COMPUTATIONAL-POSITION HELPERS (2026-09-12): whatever
+    # `_quant_helper` appended to `cx.extra_defs` while rendering the body
+    # above must be defined BEFORE that body uses it, so it is spliced in
+    # here rather than after. Empty for every task with no such
+    # quantifier (every previously-committed task included), so `parts`
+    # is byte-identical to before this list existed on that common path.
+    parts.extend(cx.extra_defs)
+    parts.append(body_src)
     # t_contract_obligation (2026-09-10): forces the postcondition through
     # an actual solver query, real and twin alike -- see `_contract_lemma`'s
     # own docstring and the module docstring's dated note.

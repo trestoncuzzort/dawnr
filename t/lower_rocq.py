@@ -1892,6 +1892,85 @@ first, each fixed in the lowering/prelude, never by relabeling a verdict:
   (no regression), and the rocq column of t/CONFORMANCE.md's own suite,
   before and after, diffed (0 FAIL cells lost or gained). See this
   session's own patch/report for the exact cells.
+
+ROCQ-3, 2026-09-12 (ROADMAP 16.2's rocq item: "pair of seq, multi-loop,
+the t_ collision, rotate by mod"). Two of the four closed, both grade.py-
+confirmed (`--tasks <dir> --kernels rocq,dafny --flake 3`), one left named
+rather than guessed, one out of this session's own item list:
+
+  1. task_id_262 splitArray, ABSTAIN -> real=verified/twin=refuted. The
+     ABSTAIN's own message ("a pair component of type seq is refused")
+     was stale: `pair_comp_ty` already gives a seq pair COMPONENT a Coq
+     TYPE, `((Z -> Z) * Z)` (ROADMAP 13.4, fz_p_pair_seq, a PARAM), but
+     `comp_term` -- the only caller that builds a pair-VALUED TERM, `px`'s
+     `pair` op, `r := (firstPart, secondPart)` -- still raised outright
+     for a seq component, never revisited once `pair_comp_ty`'s own type
+     side landed and never exercised by fz_p_pair_seq (a param is never
+     built via a `pair` literal). Fixed by rendering the component as
+     `(fn, len)`, `seq_fn`'s own (function, length) pair, the exact shape
+     `seq_fn`'s existing `fst`/`snd` case already reads back OUT of a
+     pair the other direction. dafny's own cell already read verified/
+     refuted (off-by-one, arr=[], l=0); rocq now matches it exactly, same
+     witness.
+
+  2. task_id_80 tetrahedralNumber, ABSTAIN -> real=verified/twin=refuted.
+     The task's own return is named `t_v`, colliding with this file's
+     `t_`-prefixed certificate/tactic namespace (`_ck`'s RESERVED/prefix/
+     suffix check, `Ctx.__init__`). `lower()`'s own `t_names.sanitize`
+     call already renames away every `t_names.KEYWORDS["rocq"]` collision
+     (Rocq's own reserved words) before `Ctx` ever runs, but `_ck`'s rule
+     is a DIFFERENT, private convention that list never encoded, so
+     `t_v` sailed through unrenamed and hit `_ck`'s raise. Fixed the way
+     the file's own prior note said it could be (rather than widening
+     `_ck` itself, which changes what counts as reserved for every other
+     caller of `_ck` directly): computing the task's own declared names
+     that WOULD trip `_ck` (prefix/suffix/RESERVED, the exact predicate
+     `_ck` already uses) and folding them into `sanitize`'s `reserved`
+     set for this one task -- `sanitize` does not care whether a name is
+     in `reserved` because it is a language keyword or because it is
+     this file's own private collision, so the existing rename mechanism,
+     rename-map comment, and witness remap all apply unchanged. dafny's
+     own cell already read verified/refuted (off-by-one, n=2); rocq now
+     matches it, same witness.
+
+  NOT ATTEMPTED, NAMED (both real capability gaps, not quick fixes):
+  task_id_610 removeElement, ABSTAIN, unchanged ("more than one loop per
+  body is not lowered yet"): `find_while`/`gen_loop` build ONE Fixpoint
+  per task, deriving its own initial state from a straight-line prefix;
+  removeElement's own body is two SEQUENTIAL top-level while loops
+  sharing one index variable (loop 1 copies indices `[0, k)`, loop 2
+  continues the SAME `i_v2` through `[k, len(s))`), which needs a second
+  loop's own Fixpoint fed the FIRST loop's own final state as its initial
+  one -- a genuine architectural extension to `gen_loop`'s single-loop
+  shape (chained loop specs, not a bigger single Fixpoint), not
+  attempted this session: the risk of a half-composed proof obligation
+  reading VERIFIED on an unsound premise is exactly the failure this
+  file's own honesty rules exist to keep out, and confirming a chained
+  construction sound needs more room than this session had. task_id_586
+  splitAndAppend stays real=unproved/twin=refuted, unchanged (a rotate-
+  by-`n mod |l|` shape needing a case split between `t_slice`/`t_app`'s
+  own boundary and `t_mod`'s two cases no tactic combination here
+  reaches, named already by the pass above this one); not re-attempted,
+  no new tactic tried.
+
+  task_id_414 anyValueExists's own ABSTAIN ("a quantifier in
+  computational position has no decidable lowering here") surfaced in
+  this session's own before/after grading but is OUT OF this item's list
+  (ROADMAP 16.2 names it separately) and needs its own feature (a
+  decidable bounded-quantifier instance), not touched here.
+
+  REGRESSION (grade.py --flake 3): the 34 committed tasks in rocq (and
+  dafny, for a same-run cross-check) against t/AGREEMENT.md's own rocq
+  column, cell for cell -- 33 of 34 read verified/refuted unchanged,
+  min_max reads timeout/refuted unchanged (AGREEMENT.md's own recorded
+  reading, a load-sensitive cell this session's fixes cannot reach: no
+  pair, no `t_`-collision, no second loop, no rotate-by-mod in it). The
+  rocq column of the full conformance manifest (conformance.build_manifest
+  + run_items + grade, restricted to the rocq column only, flake 3): 66
+  items, 0 FAIL before this session's changes, 0 FAIL after -- no PASS
+  lost or gained. `python3 -m unittest test_lower_rocq`: 14 of 14, the 4
+  new (`PairOfSeqComponentTest`, `TPrefixCollisionRenameTest`) plus the
+  10 already there.
 """
 from __future__ import annotations
 
@@ -4486,20 +4565,28 @@ class Ctx:
 
     def comp_term(self, e: dict, env: dict, local: dict) -> str:
         """A pair COMPONENT's own Coq term, dispatched on `e`'s type
-        (SPEC.md "Pairs (v1)": a component is "int", "bool" or "seq"; a
-        seq component is a NAMED REFUSAL here, `pair_comp_ty`'s own
-        comment, since it would need a second, incompatible seq encoding).
+        (SPEC.md "Pairs (v1)": a component is "int", "bool" or "seq").
         Used only by `px`'s `pair` case, to render each of the two
-        arguments to `{"op": "pair", ...}` per its OWN type."""
+        arguments to `{"op": "pair", ...}` per its OWN type.
+
+        ROCQ-3, 2026-09-12 (splitArray, `fz_p_pair_seq` is a PARAM, never
+        a `pair` literal, so this branch was never exercised until now):
+        `pair_comp_ty`'s own "seq" case already gives a seq component ONE
+        Coq value, `((Z -> Z) * Z)`, the model's own (function, length)
+        pair; `seq_fn`'s `fst`/`snd` case (ROADMAP 13.4) already reads
+        that shape back out of a pair. Building it is the same pair,
+        literally: `seq_fn(e)` gives the (fn, len) Coq terms, wrapped as
+        one Coq tuple `(fn, len)`, matching `pair_comp_ty("seq")`
+        exactly. The stale refusal this replaces predates that seq_fn
+        case and was never revisited once it landed."""
         t = self.ty(e, local)
         if isinstance(t, dict):
             return self.px(e, env, local)
         if t == "bool":
             return self.bx(e, env, local)
         if t == "seq":
-            raise NotImplementedError(
-                "rocq lowering: a pair component of type seq is refused "
-                "(see pair_comp_ty)")
+            fn, ln = self.seq_fn(e, env, local)
+            return f"({fn}, {ln})"
         return self.zx(e, env, local)
 
     def px(self, e: dict, env: dict, local: dict) -> str:
@@ -8290,9 +8377,42 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # (mirroring their own witness-first early return) rather than
     # through them: `lower_v0`/`lower_v1` are then called with
     # `witness=None` so they never redo that attempt.
+    # ROCQ-3, 2026-09-12 (tetrahedralNumber, `t_v`): `_ck`'s own RESERVED
+    # set and its `t_`/`sf_`-prefix, `_len`-suffix rule (this file's
+    # certificate/tactic namespace, not Rocq's own keywords) are NOT the
+    # same set `t_names.KEYWORDS["rocq"]` sanitizes against -- that list
+    # is only the language's reserved words, so a task whose own return
+    # is named `t_v` sailed past `t_names.sanitize` unrenamed and hit
+    # `_ck`'s raise the moment `Ctx.__init__` ran. Folding the ACTUAL
+    # declared names that would trip `_ck` (computed here, per task, the
+    # same way `_ck` itself decides) into `sanitize`'s `reserved` set
+    # gives them the identical rename `t_names.sanitize` already gives
+    # every KEYWORDS collision (exact-match lookup: `sanitize` does not
+    # care whether a name landed in `reserved` because it IS a keyword or
+    # because it happens to match a name this file's harness computed),
+    # so `_ck` sees only the renamed, `tn_`-prefixed spelling and never
+    # raises for a user identifier again -- its raise is now reachable
+    # only by an actual lowering-internal name collision, its original,
+    # narrower purpose. MEASURED at the merge (2026-09-12): with the task
+    # name excluded below, no committed task's binders start with
+    # `t_`/`sf_` or end `_len` or hit RESERVED (test_names.py's 26-task
+    # byte-identity check passes), so this pass renames nothing beyond
+    # `t_v` and stays exactly the KEYWORDS-only pass for every one of them.
+    ns_declared = t_names._declared_names(task, task.get("body", []))
+    prefix_bad = {n for n in ns_declared
+                  if n.startswith("t_") or n.startswith("sf_")
+                  or n.endswith("_len") or n in RESERVED}
+    # The task's own name is never passed through `_ck` (it names the
+    # module, not a binder), so it must not be in this set: with it in,
+    # the committed task row_max_len (its name ends in _len) was renamed
+    # tn_row_max_len for no collision at all, breaking the names pass's
+    # byte-identity contract for committed tasks (test_names.py, caught
+    # at the merge, 2026-09-12).
+    prefix_bad.discard(task.get("name"))
     twin_body = body if body is not task.get("body") else None
-    task, renames = t_names.sanitize(task, t_names.KEYWORDS["rocq"],
-                                     uppercase_ok=True, prefix="tn_")
+    task, renames = t_names.sanitize(
+        task, t_names.KEYWORDS["rocq"] | prefix_bad,
+        uppercase_ok=True, prefix="tn_")
     # the twin body renamed under the same mapping, kept a separate
     # object from task["body"] (2026-09-11, names.rename_body's note)
     body = t_names.rename_body(twin_body, renames) if twin_body is not None else task["body"]

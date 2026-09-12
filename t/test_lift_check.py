@@ -79,11 +79,21 @@ def _lift_source(dfy_path: Path, method_name: str, timeout_s: float = 60.0) -> d
         return {"status": "refused", "stage": "gradable_methods",
                 "detail": f"{method_name!r} not among {[x.name for x in methods]}"}
 
+    # LIFTER-DECISIONS.md row 32: `lifter.py`'s own pipeline runs this
+    # BEFORE classify, correcting `m` in place against dfy_path's own
+    # text wherever rprint's print disagrees with it -- mirrored here so
+    # this fixture-builder stays a faithful stand-in for the real
+    # pipeline, not a copy that quietly skipped the newest stage.
+    src_warnings, src_refusal = lift_resolve.check_against_source(dfy_path, m)
+    if src_refusal is not None:
+        return {"status": "refused", "stage": "check_against_source", "detail": str(src_refusal)}
+
     plan = lift_classify.classify(module, m)
     if isinstance(plan, Refusal):
         return {"status": "refused", "stage": "classify", "detail": str(plan)}
 
     rr2 = lift_rewrite.rewrite(module, plan, str(dfy_path), "0" * 64)
+    rr2.record.warnings.extend(src_warnings)
     return {"status": "ok", "task": rr2.task, "source": plan.method,
            "closure": plan.closure, "record": rr2.record}
 

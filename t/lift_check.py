@@ -26,6 +26,23 @@ inverse test), and `verifiers/dafny.py` (the dafny invocation and outcome
 classification style for verifying the checker file and running the
 differential harness).
 
+PROVENANCE NOTE on `source` (LIFTER-DECISIONS.md row 32, "do not trust a
+lossy print of the source", 2026-09-12): `source: MethodDecl`'s own
+requires/ensures/invariant/decreases are NOT trusted straight off
+rprint's text by the time this module ever sees them. `lifter.py`'s
+pipeline calls `lift_resolve.check_against_source(dfy_path, method)`
+right after `lift_parse.gradable_methods` and before classify/rewrite/
+this module -- it re-parses those same clauses from the ORIGINAL .dfy
+file's own bytes (the exact grammar, a different token stream) and
+corrects `method` IN PLACE wherever the two trees disagree (measured:
+`dafny-synthesis_task_id_598` IsArmstrong, rprint drops the parens
+around a divided operand of `*`, printing a DIFFERENT tree than the
+source's own `(n / 100) * (n / 100) * (n / 100)`). So `L_req`/`L_ens`/
+`L_inv_k` below already compare the LIFTED task against the SOURCE's own
+text, never against rprint's print of it -- this module needed no lemma
+change of its own once that correction ran upstream, since `source` IS
+the corrected tree, not a second copy of it.
+
 Architecture role (LIFTER-DESIGN.md section 2's table, copied verbatim):
     input: task JSON, source AST
     output: the checker .dfy (section 9), the differential harness .dfy

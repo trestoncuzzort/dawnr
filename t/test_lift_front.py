@@ -168,11 +168,138 @@ def test_resolve_18_1_small() -> None:
     print("test_resolve_18_1_small: 18.1 exit-code discipline holds on 1 clean + 2 exit-2 files")
 
 
+def test_source_disagreement_598() -> None:
+    """LIFTER-DECISIONS.md row 32 ("do not trust a lossy print of the
+    source"), the measured case that motivated it:
+    `dafny-synthesis_task_id_598` IsArmstrong's own ensures reads `(n /
+    100) * (n / 100) * (n / 100) + ...`; dafny's `--rprint:-` drops the
+    parens around a divided operand of `*` and prints `n / 100 * n / 100
+    * n / 100 + ...`, which parses to a DIFFERENT tree. `lift_resolve
+    .check_against_source` must (1) find exactly one disagreement, on
+    `ensures#0`, (2) correct `method.specs` in place to the SOURCE's own
+    tree, never rprint's, and (3) leave `requires` (which the two texts
+    agree on) untouched."""
+    path = CORPUS_DIR / "dafny-synthesis_task_id_598.dfy"
+    r = lr.resolve(path, 60.0)
+    assert r.refusal is None, r.refusal
+    module = lp.parse(r.rprint_text)
+    methods = lp.gradable_methods(module)
+    assert len(methods) == 1 and methods[0].name == "IsArmstrong"
+    method = methods[0]
+    rprint_ensures_before = method.specs[1]
+    assert isinstance(rprint_ensures_before, lift_ast.EnsuresClause)
+
+    warnings, refusal = lr.check_against_source(path, method)
+    assert refusal is None, refusal
+    assert len(warnings) == 1, warnings
+    assert warnings[0].startswith("rprint-source-disagreement: IsArmstrong ensures#0:")
+
+    # requires is untouched (structurally unchanged, same object even).
+    assert method.specs[0] is not None
+    assert isinstance(method.specs[0], lift_ast.RequiresClause)
+    assert lr._struct_eq(method.specs[0], lift_ast.RequiresClause(
+        line=method.specs[0].line, expr=method.specs[0].expr))
+
+    # ensures now parses like the SOURCE's own `(n/100)*(n/100)*(n/100)`:
+    # three INDEPENDENT `n / 100` sub-trees multiplied together, not one
+    # `n / 100` multiplied by `n` and divided by 100 again the way
+    # rprint's dropped parens gave it (measured before this row:
+    # `((n div 100) * n) div 100`). Built and compared structurally
+    # (`_struct_eq`, line-blind) rather than poked at by field path, so a
+    # harmless AST shape change elsewhere cannot make this assertion lie.
+    def lit(n):
+        return lift_ast.IntLit(line=1, value=n)
+
+    def ident(name):
+        return lift_ast.Ident(line=1, name=name)
+
+    def bin_(op, l, r):
+        return lift_ast.Binary(line=1, op=op, left=l, right=r)
+
+    da = bin_("/", ident("n"), lit(100))
+    term_a = bin_("*", bin_("*", da, da), da)
+    mb = bin_("%", bin_("/", ident("n"), lit(10)), lit(10))
+    term_b = bin_("*", bin_("*", mb, mb), mb)
+    mc = bin_("%", ident("n"), lit(10))
+    term_c = bin_("*", bin_("*", mc, mc), mc)
+    expected_ens = lift_ast.EnsuresClause(
+        line=1, expr=lift_ast.Iff(
+            line=1, left=ident("result"),
+            right=lift_ast.Chain(
+                line=1, ops=("==",),
+                operands=(ident("n"), bin_("+", bin_("+", term_a, term_b), term_c)))))
+
+    ens = method.specs[1]
+    assert isinstance(ens, lift_ast.EnsuresClause)
+    assert not lr._struct_eq(ens, rprint_ensures_before), \
+        "ensures was not corrected away from rprint's own (wrong) tree"
+    assert lr._struct_eq(ens, expected_ens), \
+        "corrected ensures does not match the source's own (n/100)*(n/100)*(n/100) grouping"
+    print("test_source_disagreement_598: rprint's dropped-parens ensures is "
+          "corrected to the source's own tree, requires is untouched")
+
+
+def test_align_and_correct_unit() -> None:
+    """A dafny-free unit test of `_align_and_correct`/`_struct_eq`
+    (LIFTER-DECISIONS.md row 32): (1) a genuine disagreement is corrected
+    and logged; (2) an agreeing pair is left alone and logs nothing; (3)
+    a requires/ensures COUNT mismatch refuses `source-unparseable` naming
+    both counts, never guesses an alignment; (4) a `decreases` count
+    mismatch (dafny's own inference, never authored) is logged, never
+    refused."""
+    def lit(n, line=1):
+        return lift_ast.IntLit(line=line, value=n)
+
+    def ident(name, line=1):
+        return lift_ast.Ident(line=line, name=name)
+
+    def bin_(op, l, r, line=1):
+        return lift_ast.Binary(line=line, op=op, left=l, right=r)
+
+    # (1) + (2): one ensures that disagrees (rprint dropped grouping,
+    # `(a * a) * b` printed and reparsed as `a * (a * b)`), one requires
+    # that agrees.
+    rp_req = lift_ast.RequiresClause(line=10, expr=ident("n"))
+    src_req = lift_ast.RequiresClause(line=1, expr=ident("n"))
+    rp_ens = lift_ast.EnsuresClause(
+        line=20, expr=bin_("*", ident("a", 20), bin_("*", ident("a", 20), ident("b", 20), 20), 20))
+    src_ens = lift_ast.EnsuresClause(
+        line=2, expr=bin_("*", bin_("*", ident("a", 2), ident("a", 2), 2), ident("b", 2), 2))
+    rprint_specs = (rp_req, rp_ens)
+    raw_specs = [src_req, src_ens]
+    warnings: list[str] = []
+    new_specs, refusal = lr._align_and_correct(rprint_specs, raw_specs, "Unit", warnings)
+    assert refusal is None
+    assert new_specs[0] is rp_req, "an agreeing requires must not be replaced"
+    assert new_specs[1] is src_ens, "a disagreeing ensures must be replaced by the source's tree"
+    assert len(warnings) == 1 and "ensures#0" in warnings[0]
+
+    # (3): two source ensures where rprint only has one -- refused, not guessed.
+    warnings2: list[str] = []
+    _, refusal2 = lr._align_and_correct((rp_ens,), [src_ens, src_ens], "Unit2", warnings2)
+    assert refusal2 is not None and refusal2.reason == "source-unparseable"
+    assert "1 rprint ensures" in refusal2.token and "2 parsed from the source" in refusal2.token
+
+    # (4): rprint carries an inferred `decreases` the source never wrote
+    # -- logged as a mismatch note only if it disagrees on the overlap
+    # (here there IS no overlap, 0 source decreases), never refused.
+    rp_dec = lift_ast.DecreasesClause(line=30, exprs=(ident("n", 30),))
+    warnings3: list[str] = []
+    new_specs3, refusal3 = lr._align_and_correct((rp_dec,), [], "Unit3", warnings3)
+    assert refusal3 is None
+    assert new_specs3[0] is rp_dec
+    assert warnings3 == []
+    print("test_align_and_correct_unit: disagreement correction, agreement "
+          "pass-through, strict-count refusal, and lenient decreases all hold")
+
+
 FAST_TESTS = [
     test_ast_shape_on_abs,
     test_77_infragment_parse_clean,
     test_seeds_front_end,
     test_resolve_18_1_small,
+    test_source_disagreement_598,
+    test_align_and_correct_unit,
 ]
 
 

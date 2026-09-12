@@ -373,7 +373,13 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
     `FileOutcome` with `resolve_refusal` set and empty `methods`;
     otherwise `lift_parse.parse(.rprint_text)` -> on `LiftParseError`,
     return with `parse_refusal` set; otherwise
-    `lift_parse.gradable_methods(module)`, and for each: `lift_classify
+    `lift_parse.gradable_methods(module)`, and for each: `lift_resolve
+    .check_against_source(dfy_path, method)` (LIFTER-DECISIONS.md row 32
+    -- corrects `method`'s requires/ensures/invariant/decreases in place
+    against the ORIGINAL .dfy text wherever rprint's own print of one
+    parses to a different tree, before any other stage sees it) -> on a
+    `Refusal`, append a `MethodOutcome` with it and move to the next
+    method; otherwise `lift_classify
     .classify(module, method)` -> on `Refusal`, append a `MethodOutcome`
     with it and move to the next method; on `Liftable`, `lift_rewrite
     .rewrite(module, plan, str(dfy_path), rprint_sha256)`, then
@@ -466,6 +472,24 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
         method_name = getattr(method, "name", None) or ""
         method_line = getattr(method, "line", 0)
 
+        # LIFTER-DECISIONS.md row 32 ("do not trust a lossy print of the
+        # source"): correct `method` in place against dfy_path's own
+        # bytes BEFORE classify/rewrite/check ever see it, so a rprint
+        # printer defect (measured: dafny-synthesis_task_id_598
+        # IsArmstrong's `*` operand parens) is fixed at its one source,
+        # not patched around downstream. `src_warnings` is folded into
+        # `record.warnings` once `record` exists, below.
+        src_check_result, src_stage_err = _stage_call(
+            "resolve", "lift_resolve.check_against_source", method_line,
+            lift_resolve.check_against_source, dfy_path, method)
+        if src_stage_err is not None:
+            outcome.methods.append(MethodOutcome(method=method_name, refusal=src_stage_err))
+            continue
+        src_warnings, src_refusal = src_check_result
+        if src_refusal is not None:
+            outcome.methods.append(MethodOutcome(method=method_name, refusal=src_refusal))
+            continue
+
         plan_or_refusal, err = _stage_call(
             "classify", "lift_classify.classify", method_line,
             lift_classify.classify, module, method)
@@ -484,6 +508,7 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
             outcome.methods.append(MethodOutcome(method=method_name, refusal=err))
             continue
         task, record = rewrite_result.task, rewrite_result.record
+        record.warnings.extend(src_warnings)
 
         if skip_check:
             outcome.methods.append(MethodOutcome(

@@ -294,6 +294,32 @@ from .discover import find, missing
 
 GNATPROVE = find("T_GNATPROVE", ['gnatprove'], [".local/gnatprove/**/bin/gnatprove", ".alire/**/bin/gnatprove"])
 _GNATPROVE_WHY = missing("spark", "T_GNATPROVE", ['gnatprove'], [".local/gnatprove/**/bin/gnatprove", ".alire/**/bin/gnatprove"])
+# ROADMAP 16.2, spark round 2 (2026-09-12, wf_092dca46-e41-4, spark-2): the
+# r20 sweep (t/COVERAGE-lifted-785.md, 32 jobs) marked two cells FLAKED --
+# 282 elementWiseSubtraction (real=verified twin=timeout) and 445
+# multiplyElements (real=timeout twin=timeout) -- both closed already by
+# wave G. Re-measured alone (--jobs 2 --flake 3, nothing else running) on
+# this box: both read verified/refuted for spark AND for dafny, full
+# agreement, MEASURED via `python3 grade.py --tasks <282,445 only>
+# --kernels spark,dafny --flake 3 --jobs 2`, wall 48.2s for the two tasks
+# together (verdicts.json summary.wall_s). Neither budget below moved. The
+# r20 timeouts were sweep-load artifacts (32 concurrent gnatprove jobs
+# starving each other of wall clock against WALL_S), not a real cell
+# outcome and not a flake in the twin's semantics.
+#
+# Cost of a genuine spark timeout, measured the same way for comparison:
+# task 3 isNonPrime (a still-open timeout/timeout cell, untouched here)
+# alone at --jobs 2 --flake 3 took 46.3s wall for spark's real+twin pair
+# (both DEFAULT_STEPS limit, not the WALL_S=180 wall backstop). A 32-job
+# sweep packs roughly 16x that concurrency onto the same cores, so a
+# single spark cell's real gnatprove work competing with 31 others is
+# exactly the kind of contention this taxonomy already refuses to call a
+# refutation (TOOL_ERROR/TIMEOUT, never REFUTED) -- but the *sweep's own*
+# verdict can still misreport a cell that would pass alone as timeout.
+# ROADMAP: spark cells at 32-job sweep concurrency should be treated as
+# provisional and re-verified alone (or at low job count) before being
+# read as timeout; this round found zero cells that were genuinely wrong,
+# only load-induced misreads on quiet re-check.
 DEFAULT_STEPS = 20_000
 WALL_S = 180
 # CE_STEPS (2026-09-11, ROADMAP 13.4, fz_p_badrec2): --ce-steps was pinned to

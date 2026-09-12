@@ -2231,6 +2231,130 @@ already drew for them, each remeasured (unchanged) rather than trusted.
   changed sites: no committed task's `at`/`div`/`mod` sits behind a
   LATER `and`/`or`/`implies` conjunct, and none declares a nested seq
   literal).
+
+FRAMAC-SEQ4, ROADMAP 13.4, 2026-09-12 (worktree
+/home/tmcuzzort/tup/.claude/worktrees/wf_092dca46-e41-1). The six seq
+cells FRAMAC-SEQ3's own note above left STOPPED (fz_p_nest_eq;
+fz_p_nest_empty, fz_p_str_splitempty; fz_p_str_tab;
+fz_p_str_lowernonletter; fz_p_pair_seq), taken in the stated order:
+none of the six moves cell-to-verified this pass, each remeasured
+(`python3 <scratchpad>/framac-seq4/measure.py`, `<scratchpad>` =
+/tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+scratchpad) rather than trusted, and one genuine rendering-site bug
+`pred()` had on the FIRST of the six is fixed along the way, named
+below rather than claimed as a landed cell since it does not move
+fz_p_nest_eq's own outcome.
+
+  FIXED, not a landed cell: `pred()`'s `t0 == "seq"` branch (ACSL
+  predicate position's extensional `==`/`!=`) used to require BOTH
+  operands to be bare seq variables via `seq_var(args[0], ...)` /
+  `seq_var(args[1], ...)`, pasting `{v}_n`/`v[__k]` directly. That is
+  too narrow the moment a "seq"-typed operand is a ROW extracted from a
+  nested seq rather than a bare variable -- `at(m, k)`, itself
+  "seq"-typed by `typ()`'s own polymorphism (SPEC.md "Nested
+  sequences") -- which is exactly the shape `fz_p_nest_eq`'s own
+  `ensures` states ("two nested seqs are equal iff same length and
+  equal rows"): `\forall k; ... at(m, k) == at(n, k)`. MEASURED before
+  this fix (frama-c 33.0, `harness.real_witness` plus
+  `lower_framac.lower` standalone): `fz_p_nest_eq` raised
+  `NotImplementedError: seq position holds non-variable {'op': 'at',
+  'args': [{'var': 'm'}, {'var': 'k'}]}` out of `pred()`, i.e. before
+  WP ever saw a goal -- a lowering CRASH on the `ensures` clause
+  itself, not an honest ABSTAIN naming a real gap. The fix routes both
+  operands through `_seq_len_render`/`_seq_at_render` (their own
+  READ-position rules) instead of `seq_var` directly: both already
+  reduce to the exact same `{v}_n`/`v[__k]` for a bare seq variable
+  (verified by inspection, not merely hoped: `_seq_len_render`'s own
+  fallback path IS `ctx.seq_len.get(seq_var(e, ctx.env), ...)`, the
+  same call the old code made inline), and `_seq_at_render`'s own
+  "at(nested, i)" case -- built for `fz_p_nest_cell`'s `m[i][j]` in
+  FRAMAC-SEQ3 -- already renders indexing INTO a row the identical
+  formula way when the row itself (`at(m, k)`) is passed as `e` and the
+  comparison's own quantified index as `k_render`: `m_data[m_off[k] +
+  __k]`, no row ever materialized. So `fz_p_nest_eq`'s `ensures` now
+  renders cleanly (MEASURED, same standalone call, no exception).
+
+  STILL ABSTAIN, item 1 (fz_p_nest_eq): the crash moved, the outcome
+  did not. The task's BODY computes `r := (m == n)` directly (extensional
+  seq equality assigned to a bool-typed name, EXECUTABLE position, not
+  only inside the `ensures` the fix above now handles), which reaches
+  `cexpr`'s own pre-existing named refusal, unchanged by this pass
+  (`==`/`!=` case, "SEQ VALUE, executable position, item 4"): MEASURED
+  after this fix, `fz_p_nest_eq: NotImplementedError: seq extensional
+  equality (==/!=) reaching executable position directly (assigned to a
+  bool-typed name, not used only in an `ensures`/ACSL predicate): this
+  lowering has no C VALUE rendering for it, only a loop would compute
+  it, and this pass does not build one` -- byte-identical wording to
+  `cexpr`'s own docstring there, unmoved because this pass makes no
+  change to `cexpr`'s executable-value path. This is the design
+  boundary ROADMAP 13.4's own item 2 already named ("a C loop computing
+  the equality with its own invariant the kernel proves") and where
+  this pass stops for this cell: `cexpr` returns a single C VALUE
+  expression string with no way to emit a preceding STATEMENT (a loop
+  with its own invariant) from inside that return, so closing item 2
+  needs a new statement-shaped rendering path threaded through
+  `stmts()`'s own assignment codegen, not an edit to any of the four
+  sites this pass owns (`cexpr`, `code_ats`/`at_asserts`,
+  `term`/`_seq_len_render`/`_seq_at_render`, `defs`) -- a fresh
+  design, not attempted here, named rather than guessed at.
+
+  STOPPED, unreached this pass, each remeasured (byte-identical to
+  FRAMAC-SEQ3's own note, `measure.py`'s output above): `fz_p_nest_empty`
+  and `fz_p_str_splitempty` ("nested seq (seq<seq>) RETURN: building a
+  fresh row set has no encoding in this lowering ..."; the second,
+  row-shaped CAPACITY dimension FRAMAC-SEQ2's own note already named,
+  a fresh design over the seq value machinery section, not a rendering
+  site); `fz_p_str_tab` ("nested seq (seq<seq>) local variables are not
+  supported by this lowering ..."; the same dimension from the local
+  side); `fz_p_str_lowernonletter` ("seq return 'r''s length is not
+  statically determinable ..."; an executable `lower` with a length
+  bound equal to the input's, a fresh CAPACITY design of its own, not a
+  rendering-site fix either); `fz_p_pair_seq` ("a pair with a seq
+  component is refused by this lowering ..."; the buffer-encoded pair
+  return, `_pair_field_c`'s own certificate territory this pass's
+  scope excludes -- another builder's file this wave, untouched here
+  in any case). None of the four is attempted: each is the identical
+  fresh-design gap FRAMAC-SEQ2 and FRAMAC-SEQ3 already scoped out of a
+  rendering-site patch, and this pass's own four owned sites (the same
+  ones just listed) have nothing left in them to try for any of the
+  four without first building the second CAPACITY dimension, the
+  nested-local storage, the length-bound design, or the pair-with-seq
+  encoding respectively -- none of which is a `cexpr`/`code_ats`/
+  `at_asserts`/`term`/`_seq_len_render`/`_seq_at_render`/`defs` edit.
+
+  REGRESSION, measured both sides: the 34 committed tasks under
+  t/tasks, framac column, `python3 grade.py --tasks tasks --kernels
+  framac,dafny --flake 3 --jobs 8`: byte-identical to t/AGREEMENT.md's
+  own framac column, cell for cell (31 `verified/refuted`, 3
+  `abstain/abstain` -- count_vowels, split_join, swap_rows, none of the
+  34 reaching `pred()`'s seq `==` branch on a row-extracted operand).
+  The framac column of the ROADMAP 13.4 conformance suite (66 probes,
+  `probe_manifest()`/`run_items()` restricted to framac,
+  `<scratchpad>/framac-seq4/conf_framac.py before`/`after`): 58/66 PASS
+  both before and after this pass's edit, diffed field by field between
+  `conf-before.json`/`conf-after.json` -- ZERO cells differ (the
+  `pred()` fix is invisible to every one of the 66 probes' own outcome,
+  since `fz_p_nest_eq` is the only one reaching the fixed branch on a
+  row operand and its own cell stays ABSTAIN either side, moved from a
+  crash to a named refusal, not to a PASS). ROADMAP 16.2's own named
+  framac cells (t/COVERAGE-lifted-785.md, r20: 240, 262, 414, 576, 577,
+  586, 603, 69, 470, copied into `<scratchpad>/framac-seq4/
+  roadmap162-tasks`, graded `python3 grade.py --tasks
+  roadmap162-tasks --kernels framac,dafny --flake 3 --jobs 8`): all
+  nine read the SAME message as before this pass's edit (240 the
+  exact-length-return concat gap, 262 and 69 read through this pass's
+  own fixed `pred()` branch with no change since neither reaches it --
+  262 is the pair-with-seq refusal, 69 is `cexpr`'s own executable-
+  equality refusal, the same one `fz_p_nest_eq` reaches; 414 a bounded
+  quantifier in executable position; 576 the same executable-equality
+  refusal as 69; 577 a spec_fun call in executable position; 586 a
+  non-target left-operand concat; 603 a length bound the `ensures`
+  cannot supply; 470 malformed), none of them this pass's own scope
+  (T_STRFIND_ACSL/FRAMAC-SEQ2/3 already named these as distinct,
+  unrelated gaps). Nothing in the 34-row AGREEMENT.md matrix or the 462-
+  probe conformance suite's other six columns is touched by this
+  pass's edit (one function, `pred()`'s own `==`/`!=` `t0 == "seq"`
+  case, in this one file).
 """
 from __future__ import annotations
 
@@ -3299,16 +3423,38 @@ def pred(e: dict, ctx: Ctx) -> str:
         if t0 == "seq":
             # `==`/`!=` on two seqs is EXTENSIONAL (SPEC.md "Sequences as
             # values", 2026-09-09): equal lengths and equal elements at
-            # every index. Both operands must be bare seq variables (the
-            # same restriction `seq_var`/`at` already enforce: this
-            # backend has no ACSL rendering of a raw `update`/`fill`
-            # value outside a body assignment, see `term()`).
-            a, b = seq_var(args[0], ctx.env), seq_var(args[1], ctx.env)
-            an = ctx.seq_len.get(a, f"{a}_n")
-            bn = ctx.seq_len.get(b, f"{b}_n")
+            # every index. Rendered through `_seq_len_render`/
+            # `_seq_at_render` (their own READ-position rules), not a
+            # bare `seq_var` name pasted directly: both already cover a
+            # bare seq variable (`{v}_n`/`v[__k]`, this branch's original
+            # and only case before 2026-09-12), and `_seq_at_render`'s
+            # own "at(nested, i)" case (added for `fz_p_nest_cell`,
+            # `m[i][j]`) already renders indexing INTO a ROW the same
+            # formula way, so passing it a ROW EXPRESSION `at(m, i)`
+            # itself as `e` (this call's `k_render` binding the
+            # comparison's own quantified index, not `at`'s inner one)
+            # falls into that exact case and reads the row's cell as
+            # `m_data[m_off[i] + __k]`, no row ever materialized. FIXED
+            # 2026-09-12 (ROADMAP 13.4, framac-seq4): `fz_p_nest_eq`
+            # ("two nested seqs are equal iff same length and equal
+            # rows") states this exact shape in its own `ensures`, one
+            # extensional seq `==` per ROW, `at(m, k) == at(n, k)` under
+            # a `\forall k`, and used to reach this branch's old
+            # `seq_var(args[0], ...)` call with `args[0]` a non-variable
+            # `at(...)` node, `NotImplementedError: seq position holds
+            # non-variable {...}` (MEASURED, frama-c 33.0, before this
+            # patch: `fz_p_nest_eq` real ABSTAIN). No executable C loop
+            # is needed here (ROADMAP 13.4's item 2 named one, but this
+            # call site is `pred()`, ACSL PREDICATE position -- pure
+            # logic, not memory -- not `cexpr`'s executable-value
+            # position, which still refuses the same shape by name,
+            # unchanged, see its own `==`/`!=` case above).
+            an = _seq_len_render(args[0], ctx)
+            bn = _seq_len_render(args[1], ctx)
             eq = (f"(({an} == {bn}) && "
                  f"(\\forall integer __k; 0 <= __k && __k < {an} "
-                 f"==> {a}[__k] == {b}[__k]))")
+                 f"==> {_seq_at_render(args[0], '__k', ctx)} == "
+                 f"{_seq_at_render(args[1], '__k', ctx)}))")
             return eq if op == "==" else f"(!{eq})"
         if isinstance(t0, dict) and "pair" in t0:
             # `==`/`!=` on two pairs is COMPONENTWISE (SPEC.md "Pairs",
@@ -5016,6 +5162,216 @@ def spec_fun_acsl(f: dict, funs: dict, declare_only: bool = False) -> list:
 # witness, and that cell honestly reads unproved rather than certifying
 # something unmeasured.
 
+# --------------------------------------- the divisor-bound lemma -----
+#
+# DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, framac-cert): ported from
+# `lower_verus.py`/`lower_fstar.py`'s own functions of the same name
+# (2026-09-11), restated over THIS file's own t-AST access (`exists`/
+# `forall` dict keys carrying `body`/`hi`/`lo`/`var`, not the other two
+# files' SeqExpr-shaped helpers) and emitted as ACSL, not Rust/F* text.
+# dafny-synthesis isNonPrime (3) and isPrime (605) trial-divide `n` only
+# up to `n div 2` while their own `ensures` quantifies the divisor over
+# the WIDER range `[lo, n)` -- the fact no stated loop invariant supplies
+# is the number-theory lemma this family needs at the loop's exit: any
+# `k` with `lo <= k < n` and `n mod k == 0` satisfies `k <= n div 2`
+# (`n == (n div k) * k`, and `n div k >= 2` since `k < n` rules out
+# `n div k <= 1`, so `n >= 2*k`). Restated here as the single COMPOUND
+# fact the goal actually needs (widening the loop's own `[lo, i)`
+# existential/universal to the full `[lo, n)` one the `ensures` states),
+# rather than the two-step bare bound `lower_verus.py` uses plus an
+# explicit forall-rewrite proof: alt-ergo is an UNTRIGGERED, ground-term
+# driven prover (unlike Z3, the engine behind Verus/Dafny, which needs
+# hand triggers for exactly this shape, `lower_verus.py`'s own dated
+# note), so a single lemma already stated as an `<==>` over `[lo, n)`
+# and `[lo, i)` lets it instantiate at the two ground integers already
+# in the goal's own context (the function's `n`, the loop's own final
+# `i`) with no explicit trigger syntax to write (ACSL/WP has none).
+#
+# `_divisor_bound_target` recognizes the shape from the task's own AST:
+# an `ensures` of the form `result == (forall|exists) k in [lo, N) .
+# (N mod k) RELOP 0`, a matching loop invariant of the SAME shape over
+# `[lo, i)` (`i` the loop's own counter), and a guard `cond` exactly
+# `i <= N div 2`. A task with none of it is untouched.
+#
+# NOT WIRED into `lower()`, measured 2026-09-12 (see the dated note just
+# above the `spec_fun_acsl` header loop in `lower()`, where a hook that
+# called these two functions was tried and then removed): the compound
+# lemma this function builds is syntactically sound ACSL, but alt-ergo
+# 2.4.3 -- this backend's pinned prover, with no `nonlinear_arith`-style
+# escape hatch -- cannot discharge ANY of the nonlinear integer-product
+# reasoning the divisor bound needs, confirmed on inputs far simpler
+# than the compound lemma itself (probe1.c/probe2.c/probe3.c). Kept
+# here, unused, as the measured shape of the fix rather than deleted,
+# so a later session with a different pinned prover (or a hand-supplied
+# Coq/Alt-Ergo proof script, out of this wave's scope) has the target
+# already named.
+def _quant_mod_relop_t(body: dict):
+    """`body` is `(N mod k) RELOP 0` (RELOP "=="/"!="); returns `(N,
+    k_name, RELOP)` or None. `k` must be a bare var, matching every task
+    this targets (mirrors `lower_verus.py`'s function of the same
+    purpose, over this file's own dict shapes)."""
+    if not (isinstance(body, dict) and body.get("op") in ("==", "!=")):
+        return None
+    args = body.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    lhs, rhs = args
+    if rhs != {"int": 0}:
+        return None
+    if not (isinstance(lhs, dict) and lhs.get("op") == "mod"):
+        return None
+    largs = lhs.get("args")
+    if not (isinstance(largs, list) and len(largs) == 2):
+        return None
+    dividend, kexpr = largs
+    if not (isinstance(kexpr, dict) and list(kexpr.keys()) == ["var"]):
+        return None
+    return dividend, kexpr["var"], body["op"]
+
+
+def _result_eq_quant_t(e: dict, ret: str):
+    """`e` is `result == Quant(...)` (either operand order); returns
+    `(kind, quant_dict)` for kind in {"forall", "exists"}, or None."""
+    if not (isinstance(e, dict) and e.get("op") == "=="):
+        return None
+    args = e.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    a, b = args
+    if a == {"var": ret}:
+        qh = b
+    elif b == {"var": ret}:
+        qh = a
+    else:
+        return None
+    for kind in ("forall", "exists"):
+        if kind in qh:
+            return kind, qh[kind]
+    return None
+
+
+def _loops_in(body: list):
+    """Every `while` node in `body`, at any depth under `if` (not into
+    another `while`'s own body: no committed or targeted task nests one
+    trial-divide loop inside another)."""
+    for s in body:
+        if "while" in s:
+            yield s["while"]
+        elif "if" in s:
+            yield from _loops_in(s["if"]["then"])
+            yield from _loops_in(s["if"].get("else") or [])
+
+
+def _divisor_bound_target(task: dict, real_body: list) -> dict | None:
+    ret = task["returns"][0]["name"]
+    for en in task.get("ensures", []):
+        found = _result_eq_quant_t(en, ret)
+        if found is None:
+            continue
+        kind, q = found
+        rel = _quant_mod_relop_t(q.get("body"))
+        if rel is None:
+            continue
+        dividend, _kname, relop = rel
+        lo = q.get("lo")
+        if lo is None:
+            continue
+        for w in _loops_in(real_body):
+            for iv in w.get("invariants", []):
+                ifound = _result_eq_quant_t(iv, ret)
+                if ifound is None:
+                    continue
+                ikind, iq = ifound
+                if ikind != kind or iq.get("lo") != lo:
+                    continue
+                irel = _quant_mod_relop_t(iq.get("body"))
+                if irel is None or irel[0] != dividend or irel[2] != relop:
+                    continue
+                ihi = iq.get("hi")
+                if not (isinstance(ihi, dict)
+                       and list(ihi.keys()) == ["var"]):
+                    continue
+                i_name = ihi["var"]
+                want_cond = {"op": "<=", "args": [
+                    {"var": i_name},
+                    {"op": "div", "args": [dividend, {"int": 2}]}]}
+                if w.get("cond") != want_cond:
+                    continue
+                return {"kind": kind, "relop": relop, "dividend": dividend,
+                        "lo": lo, "i_name": i_name}
+    return None
+
+
+def _free_vars_t(e: dict, out: set) -> None:
+    if "var" in e:
+        out.add(e["var"])
+        return
+    if "int" in e or "bool" in e:
+        return
+    if "ite" in e:
+        i = e["ite"]
+        _free_vars_t(i["cond"], out)
+        _free_vars_t(i["then"], out)
+        _free_vars_t(i["else"], out)
+        return
+    for a in e.get("args", []):
+        _free_vars_t(a, out)
+
+
+def _divisor_bound_lemma_acsl(task: dict, plan: dict, env: dict,
+                              funs: dict) -> str | None:
+    """The lemma's ACSL text (a standalone global block, not attached to
+    any function), or None if the plan's own dividend/lo mix in a name
+    not in `env` (never true for either committed target, guarded so a
+    future shape this was not measured against declines rather than
+    emits unchecked text). `env`/`funs` are the task's own (already built
+    by `lower()` before this is called), so `term()`/`pred()` resolve
+    `n`/`i`'s types exactly as every other ACSL text in this file does;
+    reusing the REAL identifier names as the lemma's own bound variables
+    (rather than minting fresh ones) is what lets alt-ergo's ground-term
+    instantiation find them at the use site with no trigger hint."""
+    dividend, lo, i_name = plan["dividend"], plan["lo"], plan["i_name"]
+    kv = "t_dvk"
+    free: set = set()
+    _free_vars_t(dividend, free)
+    _free_vars_t(lo, free)
+    if any(n not in env for n in free):
+        return None                    # a dividend/lo naming an unknown var
+    # `i_name` is the loop's OWN counter, a local `_divisor_bound_target`
+    # already confirmed is compared (`<=`) against a `div` expression and
+    # used as a quantifier's `hi` bound -- always an int, but never a
+    # PARAMETER, so `env` (params + return only, built above this
+    # function's own call site in `lower()`) never carries it; added here
+    # rather than expecting the caller to.
+    lemma_env = dict(env)
+    lemma_env.setdefault(i_name, "int")
+    bound_names = sorted(free | {i_name})
+    ctx = Ctx(lemma_env, funs, ret=None, label="Here")
+    body_e = {"op": plan["relop"], "args": [
+        {"op": "mod", "args": [dividend, {"var": kv}]}, {"int": 0}]}
+    wide = {plan["kind"]: {"body": body_e, "hi": dividend, "lo": lo,
+                          "var": kv}}
+    narrow = {plan["kind"]: {"body": body_e, "hi": {"var": i_name},
+                             "lo": lo, "var": kv}}
+    # Both `wide`/`narrow` are bool-typed (`typ()`'s own "forall"/"exists"
+    # case), so `pred()`'s "==" case renders this as `<==>`, exactly the
+    # ACSL connective a lemma states -- one `pred()` call over a single
+    # t-Expr tree, the same construction every other ACSL text in this
+    # file uses, rather than hand-formatted `t_div`/`<==>` text that
+    # could drift from what `pred()`/`term()` actually emit elsewhere.
+    guard_e = {"op": "and", "args": [
+        {"op": ">=", "args": [dividend, {"int": 2}]},
+        {"op": ">", "args": [{"var": i_name},
+                             {"op": "div", "args": [dividend, {"int": 2}]}]}]}
+    iff_e = {"op": "==", "args": [wide, narrow]}
+    body_p = pred({"op": "implies", "args": [guard_e, iff_e]}, ctx)
+    decl = "integer " + ", ".join(bound_names)
+    lemma_name = f"t_divisor_bound_{task['name']}"
+    return (f"/*@ lemma {lemma_name}:\n"
+           f"  \\forall {decl}; {body_p};\n"
+           "*/")
+
+
 CERT_FN = "t_certificate"
 CERT_GOAL = "t_refutation_certificate"
 MAX_CERT_STMTS = 256
@@ -5473,6 +5829,45 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                 decls.append(f"  int *{p['name']} = {arr};")
                 decls.append(f"  int {p['name']}_n = {len(vals)};")
                 st[p["name"]] = vals
+            elif is_nested_seq_type(p["type"]):
+                # NESTED SEQ PARAM, added 2026-09-12 (ROADMAP 16.2,
+                # framac-cert, task 792 countLists): the flat
+                # data+offsets pair `lower()`'s own `cparams` loop
+                # already gives this parameter in the twin's C signature
+                # (THE ENCODING, same file, `is_nested_seq_type` branch
+                # a few thousand lines below -- read, not edited, here),
+                # so a witness's row list is declared the identical way:
+                # `_off` holds `n+1` cumulative row-length prefixes
+                # (`_off[0] == 0`, `_off[i+1] - _off[i]` row i's length,
+                # matching `_seq_len_render`'s own nested "at" formula),
+                # `_data` the rows flattened in order. `st[p['name']]`
+                # stays the RAW row list (`_cev`'s "len" case just calls
+                # Python `len()` on it for `len(lists)`, the only nested-
+                # seq operator this task's straight-line replay needs;
+                # a task reading an actual ROW's own cells would need
+                # more, left untried since nothing measured needs it).
+                if not (isinstance(v, list)
+                       and all(isinstance(r, list) for r in v)):
+                    return None            # not a ground row-list witness
+                data_arr = f"t_cert_{p['name']}_data"
+                off_arr = f"t_cert_{p['name']}_off"
+                if data_arr in used or off_arr in used:
+                    return None
+                flat: list = []
+                offs = [0]
+                for row in v:
+                    flat.extend(int(x) for x in row)
+                    offs.append(len(flat))
+                data_init = ", ".join(_int_lit(x) for x in flat) or "0"
+                off_init = ", ".join(_int_lit(x) for x in offs)
+                decls.append(f"  int {data_arr}[{max(len(flat), 1)}] = "
+                             f"{{{data_init}}};")
+                decls.append(f"  int *{p['name']}_data = {data_arr};")
+                decls.append(f"  int {off_arr}[{len(offs)}] = "
+                             f"{{{off_init}}};")
+                decls.append(f"  int *{p['name']}_off = {off_arr};")
+                decls.append(f"  int {p['name']}_n = {len(v)};")
+                st[p["name"]] = v
             elif isinstance(p["type"], dict) and "pair" in p["type"]:
                 # PAIRS, extended 2026-09-10 (the parameter fix above
                 # `_pair_field_c`): a pair-typed PARAMETER's witness
@@ -5662,6 +6057,8 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
               for n, v in names.items()}
     ctx = Ctx(dict(env), funs, ret=None, label="Here")
     code = []
+    seq_decls: set = set()   # local (non-param) seq names already given a
+                              # C array declaration by the walk below
 
     def walk(body: list, ctx: Ctx):
         """(found_undefined_obligation_or_None, ctx). Mutates `env_py` and
@@ -5687,17 +6084,111 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                 if found is not None:
                     return found, ctx
                 continue
+            elif "while" in s:
+                # WHILE DESCENT, added 2026-09-12 (ROADMAP 16.2,
+                # framac-cert): mirrors the `if` case just above and
+                # `_cert_stmts`'s own while-unrolling (2026-09-09) --
+                # concrete guard, one `assert`/`assert (!...)` per
+                # evaluation, `interp.ev` (not a symbolic walk) deciding
+                # which way each iteration goes, so a mis-decided
+                # iteration cannot mint anything, only fail a false
+                # assert under WP. Traced from task 610 removeElement
+                # (t/COVERAGE-lifted-785.md r20): a compare-flip twin's
+                # undefined `v[i_v2]` access (`i_v2` reaching `v_n` one
+                # pass early) sits inside the loop's OWN body, past the
+                # point the old flat walk gave up (`raise ValueError`
+                # below, the same "not walked" signal `lower_verus.py`'s
+                # `_undef_obligation` docstring named for the identical
+                # gap: "loop bodies... not walked"). Capped at
+                # `interp.MAX_LOOP` exactly like `interp.exec_body`'s own
+                # while case, so a non-terminating replay raises
+                # `interp.Budget` (already in the caller's except tuple)
+                # rather than looping the certificate builder itself.
+                w = s["while"]
+                it = 0
+                while True:
+                    ob = defs_t(w["cond"])
+                    if ob is not None and not interp.ev(ob, env_py, ifuns,
+                                                        st):
+                        return ob, ctx
+                    taken = interp.ev(w["cond"], env_py, ifuns, st)
+                    g = pred(w["cond"], ctx)
+                    code.append(f"  /*@ assert "
+                               f"{g if taken else f'(!{g})'}; */")
+                    if not taken:
+                        break
+                    found, ctx = walk(w["body"], ctx)
+                    if found is not None:
+                        return found, ctx
+                    it += 1
+                    if it > interp.MAX_LOOP:
+                        raise interp.Budget("loop cap")
+                continue
             else:
                 raise ValueError(f"undef-certificate: statement {s!r} "
-                                 "not walked (while/return)")
+                                 "not walked (return)")
             ob = defs_t(e)
             if ob is not None and not interp.ev(ob, env_py, ifuns, st):
                 return ob, ctx
             val = interp.ev(e, env_py, ifuns, st)
             if ty == "seq":
-                raise ValueError("seq-typed intermediate local: scope "
-                                 "limit, materializing its snapshot needs "
-                                 "the full replay this shortcut avoids")
+                # SEQ-LOCAL DECLARATION, added 2026-09-12 (ROADMAP 16.2,
+                # framac-cert, task 610 removeElement): a bare `fill`
+                # (fresh buffer) or a self-referential `update` (one
+                # element write) is declared/mutated with the SAME plain
+                # C `int` array + `_n` length pair a seq PARAM already
+                # gets (the loop below this function, `t_cert_<name>` /
+                # `<name>` / `<name>_n`) -- what `_seq_len_render`
+                # (`pred`'s own "len" case, untouched here) renders
+                # `len(<name>)` to is exactly `<name>_n`, so a later
+                # obligation naming this local (610's own `0 <= i_v2 &&
+                # i_v2 < len(v)`, found INSIDE the while loop below) has
+                # something to mean. `fill` declares the array (and its
+                # length) once; `update` overwrites one element in place
+                # (t's seqs are fixed-length once created, so `_n` is
+                # never re-declared). Anything else assigned to a
+                # seq-typed name (a slice, a concat, a SECOND independent
+                # `fill`) still declines outright, unchanged from the
+                # older blanket refusal: re-rendering an arbitrary seq
+                # expression mid-walk is the `_cert_stmts` engine's job,
+                # not this lighter-weight one's.
+                op = e.get("op")
+                if nm not in seq_decls:
+                    # First sight of this seq-typed name: ANY expression
+                    # that reaches here (`fill`, or a bare copy of
+                    # another seq like swapFirstAndLast's own `a_out =
+                    # a`, SEE NOTE ABOVE -- generalized 2026-09-12 past
+                    # `fill` alone once 591/625's own first statement
+                    # measured as the identical gap under a different
+                    # RHS shape) is declared from `val`, the concrete
+                    # tuple `interp.ev` already computed for it, exactly
+                    # the way a seq PARAM is declared below.
+                    vals = [int(x) for x in val]
+                    arr = f"t_cert_{nm}"
+                    if arr in used:
+                        raise ValueError(f"seq-local cert array {arr!r} "
+                                         "collides with a task name")
+                    init = ", ".join(_int_lit(x) for x in vals) or "0"
+                    code.append(f"  int {arr}[{max(len(vals), 1)}] = "
+                               f"{{{init}}};")
+                    code.append(f"  int *{nm} = {arr};")
+                    code.append(f"  int {nm}_n = {len(vals)};")
+                    seq_decls.add(nm)
+                elif (op == "update" and nm in seq_decls and
+                      e["args"][0].get("var") == nm):
+                    idx = interp.ev(e["args"][1], env_py, ifuns, st)
+                    new_v = interp.ev(e["args"][2], env_py, ifuns, st)
+                    code.append(f"  {nm}[{_int_lit(int(idx))}] = "
+                               f"{_int_lit(int(new_v))};")
+                else:
+                    raise ValueError("seq-typed intermediate local: "
+                                     "shape not walked (only a fresh "
+                                     "fill or a self-update, see "
+                                     "the seq-local declaration note)")
+                if "var" in s:
+                    ctx = ctx.bind(nm, ty)
+                env_py[nm] = val
+                continue
             if "var" in s:
                 ctx = ctx.bind(nm, ty)
             env_py[nm] = val
@@ -6303,6 +6794,30 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             measure_fn = site
     for f in task.get("spec_funs", []):
         header += spec_fun_acsl(f, funs, declare_only=(f["name"] == measure_fn))
+
+    # DIVISOR-BOUND LEMMA, tried and MEASURED NOT WIRED, 2026-09-12
+    # (ROADMAP 16.2, framac-cert; `_divisor_bound_target`/
+    # `_divisor_bound_lemma_acsl`, below `spec_fun_acsl`, are the
+    # would-be hook's two functions, kept for the record but not called
+    # here). dafny-synthesis isNonPrime (3) / isPrime (605) real-side
+    # `timeout` is WP's Stepout on exactly the goal the divisor-bound
+    # fact (any `k` with `lo<=k<n` and `n mod k==0` satisfies `k<=n/2`)
+    # would close -- `lower_verus.py`/`lower_fstar.py`'s own dated notes
+    # close the identical gap on their own kernels, both via an EXPLICIT
+    # nonlinear-arithmetic solver call (Z3's `by (nonlinear_arith)`,
+    # neither file's default profile) this file's pinned prover, alt-ergo
+    # 2.4.3, has no equivalent of. MEASURED directly (probe1.c/probe2.c/
+    # probe3.c, this session): even the FLATTENED, hint-free core fact
+    # `q >= 2 && k >= 2 && n == q * k ==> 2 * k <= n` -- a single
+    # multiplication, no division/modulo, no case split -- reads
+    # `[Stepout]` at the pinned budget (`-wp-steps 20000 -wp-timeout
+    # 10`) AND at 50x the budget (`-wp-steps 1000000 -wp-timeout 60`,
+    # tried once to rule out "merely slow"): alt-ergo 2.4.3 does not
+    # discharge a two-variable integer product here at all, hint or no
+    # hint, so no ACSL lemma text this file could emit closes it within
+    # the pinned toolchain -- an honest, named gap (RULES: "a timeout
+    # closes only by a proof inside the pinned budget"), not something
+    # the divisor-bound lemma below can be made to paper over.
 
     # A seq RETURN's length, computed statically from the body (seq value
     # machinery section, above `assigned_names`): needed at requires-time,

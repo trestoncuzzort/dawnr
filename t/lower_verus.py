@@ -1040,6 +1040,46 @@ this task is DEFECTIVE by SPEC.md's own definitional discipline as
 currently committed, independent of anything this lowering could still
 prove; reordering the committed task's own JSON is out of this file's
 scope (t/lower_verus.py only).
+
+2026-09-12, sweep r20's two malformed rows (ROADMAP 16.2, verus-2): 414
+anyValueExists and 603 lucidNumbers both read verus malformed/malformed
+(t/COVERAGE-lifted-785.md). Measured directly (`verus --output-json
+--no-cheating dafny_synthesis_task_id_414__anyValueExists.rs`): "error:
+Could not automatically infer triggers for this quantifier", at 414's
+own preservation-witness ensures (`result == (exists k| P(k) &&
+(exists j| Q(j) && seq2[j]==seq1[k])))`) and, identically, at 603's
+`(forall k| ... (forall l| ... lucid[k] < lucid[l]))` order invariant.
+Root cause: both `expr()`'s existing root-collector, `_at_roots_by_var`,
+and its own docstring's reasoning are right that a nested forall/exists
+REUSING the outer bound variable's name shadows it and so cannot still
+read it -- but wrong to extend that to every nested quantifier: 414's
+inner `exists k_v2` and 603's inner `forall l` bind DIFFERENT names than
+the outer `k_v`/`k_v2`, so the outer variable IS still read from inside
+the inner body (`seq1[k_v]`, `lucid[k_v2]`), a term Verus's own single-
+candidate auto-inference does not look inside a nested quantifier to
+find, hence the outright refusal rather than a low-confidence pick.
+Fixed by a new, narrowly-scoped collector, `_nested_at_roots_by_var`
+(mirrors `_at_roots_by_var` exactly except it recurses into a nested
+quantifier's body whenever that quantifier's own bound name differs from
+v), consulted by `expr()`'s forall/exists case only when the existing
+top-level `roots` is empty -- so it can only ADD a trigger term no
+previously committed quantifier had access to, never change one that
+already had a directly-visible candidate. Measured after the fix
+(`grade.py --tasks <414,603> --kernels verus,dafny --flake 3`): both
+reals now read verus verified (matching dafny); 603's twin now reads
+verus refuted too (matching dafny verified/refuted exactly). 414's own
+twin reads verus verified, matching dafny's verified/verified on the
+same row -- 414 is one of the harness's own named preservation-witness
+rows (dafny_synthesis 3, 605, 126, 414, 69, 808, 809; ROADMAP 16.2's
+skip list), so a still-open twin is not a new defect, only the same
+known gap now visible identically in both kernels rather than hidden
+behind a verus front-end refusal. Regression: the 34-task committed
+matrix (`grade.py --tasks t/tasks --kernels verus --flake 3`) reads
+verus verified/refuted on every task exactly matching t/AGREEMENT.md's
+verus column, cell for cell (count_vowels's own unproved/refuted
+included), and the conformance suite's verus column, rerun in full
+(`conformance.py --jobs 8 --flake 3`), drops no PASS relative to
+t/CONFORMANCE.md's committed run -- see t/test_lower_verus_nested_trigger.py.
 """
 from __future__ import annotations
 
@@ -1945,6 +1985,54 @@ def _at_roots_by_var(e: dict, v: str, out: dict) -> None:
             _at_roots_by_var(q[k], v, out)
 
 
+def _nested_at_roots_by_var(e: dict, v: str, out: dict) -> None:
+    """Collects, into `out` (same shape as `_at_roots_by_var`'s), every
+    `at(X, v)` sub-term of e that lies inside a nested forall/exists BODY
+    whose own bound variable is a DIFFERENT name than v -- the case
+    `_at_roots_by_var` deliberately does not chase (2026-09-12, 414
+    anyValueExists / 603 lucidNumbers, both malformed on the real: a
+    "preservation witness" shape, `exists k| P(k) && (exists j| Q(j) &&
+    r[k]==s[j])`, or a nested order shape, `forall k| ... (forall l| ...
+    lucid[k] < lucid[l])`, where the OUTER bound variable is read only
+    from INSIDE the inner quantifier's body). `_at_roots_by_var`'s own
+    docstring reasons that "a nested forall/exists shadowing v starts a
+    fresh binder, so ... its body cannot [mention the outer v]" -- true
+    when the inner quantifier reuses v's own name, but false whenever it
+    binds a DIFFERENT name (k_v2, l, ...), which is exactly the committed
+    lowering's own naming discipline (every fresh binder gets a name
+    distinct from every enclosing one, `_prenex` and the surface lowering
+    alike): the inner body is then still in scope for the outer v, and
+    Verus's own single-candidate trigger inference does not look inside a
+    nested quantifier for a trigger candidate belonging to the OUTER one,
+    so it refuses outright ("Could not automatically infer triggers")
+    rather than picking a low-confidence term. Called only when
+    `_at_roots_by_var` at the top level found NOTHING (`expr()`'s
+    forall/exists case gates on `not roots`), so this never fires for,
+    and never changes the committed output of, any quantifier whose
+    auto-inference already has a directly-visible candidate."""
+    if "op" in e:
+        op, args = e["op"], e.get("args", [])
+        if op == "at" and len(args) == 2:
+            s, i = args
+            if isinstance(s, dict) and "var" in s and i == {"var": v}:
+                out.setdefault(s["var"], e)
+        for a in args:
+            _nested_at_roots_by_var(a, v, out)
+    elif "ite" in e:
+        c = e["ite"]
+        for k in ("cond", "then", "else"):
+            _nested_at_roots_by_var(c[k], v, out)
+    elif "call" in e:
+        for a in e["call"]["args"]:
+            _nested_at_roots_by_var(a, v, out)
+    elif "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        for k in ("lo", "hi"):
+            _nested_at_roots_by_var(q[k], v, out)
+        if q["var"] != v:
+            _nested_at_roots_by_var(q["body"], v, out)
+
+
 def _mentions_var(e, v: str) -> bool:
     """True iff the bound variable v occurs anywhere in e -- a fully
     generic walk (dict values / list elements), since a t Expr JSON has no
@@ -2091,6 +2179,9 @@ def expr(e: dict, vty: str | None = None) -> str:
         trig = ""
         roots: dict = {}
         _at_roots_by_var(q["body"], v, roots)
+        nested_roots: dict = {}
+        if not roots:
+            _nested_at_roots_by_var(q["body"], v, nested_roots)
         if len(roots) >= 2 and _has_chained_at(q["body"]):
             # SPEC.md "Nested sequences" (2026-09-10) residual
             # (fz_v1nested_069): two or more DISTINCT base sequences
@@ -2138,6 +2229,26 @@ def expr(e: dict, vty: str | None = None) -> str:
             # read of a seq alongside its bound-variable one (seq_max's
             # champion is a VALUE, never re-indexed).
             trig = "".join(f" #![trigger {expr(t)}]" for t in roots.values())
+        elif nested_roots:
+            # NESTED-QUANTIFIER WITNESS (2026-09-12, 414 anyValueExists /
+            # 603 lucidNumbers, both malformed on the real): the bound
+            # variable v is read from a seq only INSIDE a nested
+            # forall/exists's own body (a preservation witness, `exists
+            # k| P(k) && (exists j| Q(j) && r[k]==s[j])`, or a nested
+            # order obligation, `forall k| ... (forall l| ... a[k] <
+            # a[l])`) -- `roots` (top-level only, `_at_roots_by_var`'s own
+            # documented restriction) is empty, so branches above never
+            # fire, yet Verus's own auto-inference does not look inside a
+            # nested quantifier for a trigger candidate belonging to the
+            # OUTER one and refuses outright ("Could not automatically
+            # infer triggers", measured directly on both tasks' real
+            # side). Sound for the same reason the chained/fixed-at cases
+            # above are: it only ever ADDS a trigger term Verus's own
+            # inference never had access to, never removes one, and fires
+            # only when `roots` is empty so no previously committed
+            # quantifier (every one of which already has a directly
+            # visible, auto-inferred candidate) changes.
+            trig = "".join(f" #![trigger {expr(t)}]" for t in nested_roots.values())
         elif not _has_indexable(q["body"]):
             t = _mod_div_trigger(q["body"])
             if t is not None:

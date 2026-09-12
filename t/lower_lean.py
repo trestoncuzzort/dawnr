@@ -2082,6 +2082,108 @@ def loop_assigned(body: list) -> set:
     return out
 
 
+# DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item): dafny-
+# synthesis isNonPrime (3) and isPrime (605) trial-divide `n` only up to
+# `n div 2` (`cond: i <= n div 2`) while their own `ensures` quantifies the
+# divisor over the WIDER range `[2, n)` -- a fact no stated invariant
+# supplies is the number-theory lemma this family needs at the loop's exit:
+# any `k` with `2 <= k < n` and `n % k == 0` satisfies `k <= n / 2` (`n ==
+# k * q`, `q >= 2` since `k < n` rules out `q <= 1`, so `n >= 2*k`).
+# `_divisor_bound_target` is PORTED VERBATIM from lower_fstar.py's own
+# function of the same name (2026-09-11) -- pure Python over the task/AST
+# dicts, zero fstar-specific code, so lean, fstar and verus all recognize
+# the identical shape from the identical detector; only the LEMMA TEXT each
+# kernel emits differs. See `_divisor_bound_lean_defs` (in class Lower,
+# `emit_seq_helpers`'s neighbor) and `lower_loop`'s own injection point
+# (`invs.append`, right after `invs = w.get("invariants", [])`) for how
+# lean uses the match: as an ORDINARY EXTRA loop invariant (`i <= n/2 +
+# 1`), proved through the SAME per-invariant entry/preservation machinery
+# every stated invariant already gets (never assumed), and a direct
+# `exact` of `t_divisor_bound_<task>` at the loop-spec's own exit branch,
+# replacing nothing a stated invariant already covers.
+def _divisor_bound_target(task: dict, w: dict) -> dict | None:
+    ret = task["returns"][0]["name"]
+    for en in task.get("ensures", []):
+        found = _result_eq_quant(en, ret)
+        if found is None:
+            continue
+        kind, q = found
+        rel = _quant_mod_relop(q.get("body"))
+        if rel is None:
+            continue
+        dividend, _kname, relop = rel
+        lo = q.get("lo")
+        if lo is None:
+            continue
+        for iv in w.get("invariants", []):
+            ifound = _result_eq_quant(iv, ret)
+            if ifound is None:
+                continue
+            ikind, iq = ifound
+            if ikind != kind or iq.get("lo") != lo:
+                continue
+            irel = _quant_mod_relop(iq.get("body"))
+            if irel is None or irel[0] != dividend or irel[2] != relop:
+                continue
+            ihi = iq.get("hi")
+            if not (isinstance(ihi, dict) and list(ihi.keys()) == ["var"]):
+                continue
+            i_name = ihi["var"]
+            want_cond = {"op": "<=", "args": [
+                {"var": i_name},
+                {"op": "div", "args": [dividend, {"int": 2}]}]}
+            if w.get("cond") != want_cond:
+                continue
+            return {"kind": kind, "relop": relop, "dividend": dividend,
+                    "lo": lo, "i_name": i_name, "result": ret,
+                    "inv_index": w["invariants"].index(iv)}
+    return None
+
+
+def _quant_mod_relop(body):
+    """`body` is `(N % k) RELOP 0` (RELOP one of "=="/"!="); returns
+    `(N, k_name, RELOP)` or None. `k` must appear bare (`{"var": k}`),
+    never a compound expression, matching every task this targets."""
+    if not (isinstance(body, dict) and body.get("op") in ("==", "!=")):
+        return None
+    args = body.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    lhs, rhs = args
+    if rhs != {"int": 0}:
+        return None
+    if not (isinstance(lhs, dict) and lhs.get("op") == "mod"):
+        return None
+    largs = lhs.get("args")
+    if not (isinstance(largs, list) and len(largs) == 2):
+        return None
+    dividend, kexpr = largs
+    if not (isinstance(kexpr, dict) and list(kexpr.keys()) == ["var"]):
+        return None
+    return dividend, kexpr["var"], body["op"]
+
+
+def _result_eq_quant(e, ret: str):
+    """`e` is `result == Quant(...)`; returns `(kind, quant_dict)` for
+    kind in {"forall","exists"}, or None."""
+    if not (isinstance(e, dict) and e.get("op") == "=="):
+        return None
+    args = e.get("args")
+    if not (isinstance(args, list) and len(args) == 2):
+        return None
+    a, b = args
+    if a == {"var": ret}:
+        quant_holder = b
+    elif b == {"var": ret}:
+        quant_holder = a
+    else:
+        return None
+    for kind in ("forall", "exists"):
+        if kind in quant_holder:
+            return kind, quant_holder[kind]
+    return None
+
+
 def _var_writes(body: list, v: str) -> list:
     """Every RHS expression assigned to `v` anywhere in `body`, top-level or
     nested inside an `if`/`while` (walked the same shape as `loop_assigned`
@@ -2249,7 +2351,31 @@ class Lower:
         # never needing to chain.
         self.seq_composed_update2 = self._has_seq_update_chain()
         self.seq_composed_append_slice = self._has_seq_append_of_slice(
-            body, dict(self.types))
+            [body, task.get("ensures", [])], dict(self.types))
+        # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item):
+        # computed HERE, at __init__ time, not inside `lower_loop` --
+        # `lower()`'s own `emit_seq_helpers()` call (which needs to know
+        # whether to emit `t_divisor_bound_{name}`) runs BEFORE
+        # `lower_loop` does, so the plan must exist before either reads
+        # it. `_divisor_bound_target` (module level, ported verbatim from
+        # lower_fstar.py) needs the loop's own `while` dict, found the
+        # same way `lower_loop` finds it; `None` for every SIMPLE/
+        # RECURSIVE-shape task (no `while` in `body` at all) and every
+        # LOOP-shape task whose ensures/invariants do not match the
+        # trial-divide-to-half family (every one of the 34 committed
+        # tasks and the other 17 of this wave's own target set).
+        self._divisor_bound_plan = None
+        self._divisor_bound_inv_idx = None
+        self._divisor_bound_bound_idx = None
+        _w = next((s["while"] for s in body if "while" in s), None)
+        if _w is not None:
+            _plan = _divisor_bound_target(task, _w)
+            if (_plan is not None
+                    and _plan["i_name"] in loop_assigned(_w["body"])):
+                self._divisor_bound_plan = _plan
+                self._divisor_bound_inv_idx = _plan["inv_index"] + 1
+                self._divisor_bound_bound_idx = (
+                    len(_w.get("invariants", [])) + 1)
 
     # ---------- naming ----------
 
@@ -3391,18 +3517,39 @@ class Lower:
 
     def _has_seq_append_of_slice(self, x, types: dict) -> bool:
         """True iff some `+` (seq concat) node's operand, resolved
-        through a local `var`'s own straight-line initializer (a local
-        declared `{"var": {"init": ..., "name": ..., "type": "seq"}}`
-        and never reassigned -- SIMPLE-shape bodies only, splitArray's/
-        splitAndAppend's own committed shape), is itself a `slice` node.
-        Both committed occurrences (task_id_262, task_id_586) have BOTH
-        `+` operands resolve to a slice; an asymmetric append (one bare
-        seq, one slice) is not covered here -- `t_seq_append_get`'s own
-        single-level bridge already handles the bare side, so an
-        asymmetric append only needs `t_seq_append_slice2_get` if BOTH
-        sides need the slice bridge, which this check requires of
-        neither operand alone -- named open rather than silently folded
-        in if a future task needs it."""
+        through a local variable's LAST straight-line binding (a `var`
+        declaration's own `init`, or a later `assign` to that same name,
+        whichever comes last in `self.body` -- SIMPLE-shape bodies only,
+        every task this targets), is itself a `slice` node, OR a `fst`/
+        `snd` projection of a name whose own last binding is a `pair`
+        node built from two such names. Both committed occurrences
+        (task_id_262, task_id_586) have BOTH `+` operands resolve to a
+        slice; an asymmetric append (one bare seq, one slice) is not
+        covered here -- `t_seq_append_get`'s own single-level bridge
+        already handles the bare side, so an asymmetric append only
+        needs `t_seq_append_slice2_get` if BOTH sides need the slice
+        bridge, which this check requires of neither operand alone --
+        named open rather than silently folded in if a future task needs
+        it.
+
+        DECLARE-THEN-REASSIGN (2026-09-12, ROADMAP 16.2, lean's own
+        item): splitArray (task_id_262) declares `firstPart`/
+        `secondPart` as `var {init: seq(), ...}` (an empty seq literal)
+        and only ASSIGNS the actual slice to them in a later statement --
+        the ORIGINAL version of this method read only each `var` node's
+        own `init`, so `local_init["firstPart"]` stayed the empty-seq
+        literal forever and the slice assignment was never seen at all.
+        Fixed by walking `self.body` in order and letting a later
+        `assign` to a name OVERWRITE its `local_init` entry, matching
+        the SIMPLE-shape straight-line semantics every other detector in
+        this file already assumes (no branches, no loops, so the LAST
+        write before use is the only live one). splitArray's own `+`
+        node, additionally, is not `firstPart + secondPart` (that
+        `walk()` would already find) but `r.fst ++ r.snd` in its
+        ENSURES, where `r` was assigned `pair(firstPart, secondPart)` --
+        so `resolve()` below also unwraps a `fst`/`snd` node through a
+        resolved `pair`, and the caller now walks `ensures` as well as
+        `body` (`x` is a list of roots, not `self.body` alone)."""
         local_init: dict = {}
         if isinstance(self.body, list):
             for s in self.body:
@@ -3411,11 +3558,28 @@ class Lower:
                     v = s["var"]
                     if "init" in v and "name" in v:
                         local_init[v["name"]] = v["init"]
+                elif isinstance(s, dict) and "assign" in s \
+                        and isinstance(s["assign"], list) \
+                        and len(s["assign"]) == 2:
+                    tgt, val = s["assign"]
+                    if isinstance(tgt, str):
+                        local_init[tgt] = val
 
-        def resolve(node):
-            if isinstance(node, dict) and "var" in node \
+        def resolve(node, depth: int = 0):
+            if depth > 4 or not isinstance(node, dict):
+                return node
+            if "var" in node and isinstance(node["var"], str) \
                     and node["var"] in local_init:
-                return local_init[node["var"]]
+                return resolve(local_init[node["var"]], depth + 1)
+            if node.get("op") in ("fst", "snd") \
+                    and isinstance(node.get("args"), list) \
+                    and len(node["args"]) == 1:
+                base = resolve(node["args"][0], depth + 1)
+                if (isinstance(base, dict) and base.get("op") == "pair"
+                        and isinstance(base.get("args"), list)
+                        and len(base["args"]) == 2):
+                    idx = 0 if node["op"] == "fst" else 1
+                    return resolve(base["args"][idx], depth + 1)
             return node
 
         def walk(n) -> bool:
@@ -3610,7 +3774,36 @@ class Lower:
         through `and`, the one combinator measured wrapping a quantified
         invariant alongside a plain one, getEven's own invariant 2) whose
         body reaches a div/mod op, as `(bound_name, lo_hyp, hi_hyp,
-        pairs)`."""
+        pairs)`.
+
+        THE MULTI-CLAUSE ENSURES GAP (2026-09-12, ROADMAP 16.2, lean's
+        own item, splitAndAppend's own residual): `_divmod_branches`'s
+        caller at `lower_simple`'s own `_t_spec` site passes `nodes =
+        [self.task["ensures"], self.body]` -- `self.task["ensures"]`
+        ITSELF a Python list of clauses (one length equality, one
+        `forall` with the mod), not a single Expr dict. Before this
+        fix, `for n in nodes: quants += self._quant_pairs(n, ...)` called
+        this method with `n` bound to that WHOLE LIST as `e`, and the
+        `isinstance(e, dict)` guard below returned `[]` immediately --
+        so a SIMPLE-shape task's `_t_spec` theorem never saw its own
+        ensures-level quantified div/mod at all (only a clause-level
+        `_t_wf{k}` theorem, built from `_close([e], ...)` with `e` the
+        single clause already unwrapped, ever exercised this path,
+        which is why splitAndAppend's own `_wf1` DOES carry the mod
+        bridge while its `_spec` theorem, needing the SAME bridge
+        alongside the seq structural one, never got it). Fixed by
+        descending into a plain list the same way `divmod_pairs`'s own
+        walk and `_has_divmod` already do elsewhere in this file: each
+        element is its own top-level candidate, `depth` reset to the
+        caller's own value for every one (matching how the existing
+        `for n in nodes` loop already calls this method once per node
+        at `depth=0`), so a multi-clause ensures list now contributes
+        every one of its own quantified clauses instead of none."""
+        if isinstance(e, list):
+            out = []
+            for item in e:
+                out += self._quant_pairs(item, env, types, depth)
+            return out
         if not isinstance(e, dict):
             return []
         if "forall" in e:
@@ -3679,8 +3872,12 @@ class Lower:
         else."""
         pairs = self.divmod_pairs(nodes, env, types)
         branches = []
+        seq_gated = self.seq_mut or self.seq_new or self.seq_eq_comp
         if pairs:
             branches.append(f"({self.divmod_prelude(pairs)}; omega)")
+            if seq_gated:
+                branches.append(f"({self.divmod_prelude(pairs)}; "
+                               f"grind only [{self._seq_hints()}])")
         quants = []
         for n in nodes:
             quants += self._quant_pairs(n, env, types)
@@ -3707,15 +3904,50 @@ class Lower:
         # (digit_sum, remainder, swap, tail, filter_pos) succeeds on the
         # very first candidate exactly as before, unchanged verdict,
         # changed only in the never-reached trailing alternative text.
+        # THE MOD-THEN-SEQ GAP (2026-09-12, ROADMAP 16.2, lean's own
+        # item, splitAndAppend/appendArrayToSeq/replaceLastElement's own
+        # residual): every branch above closes with `omega` alone, which
+        # cannot see past an opaque `List.take`/`List.drop`/`++` atom --
+        # fine for a task whose ONLY obligation is the div/mod fact
+        # itself, but splitAndAppend's own `r[i]! = l[(i+n) mod
+        # len(l)]!` needs the mod bridge (to pin down `(i+n) mod
+        # len(l)`'s value) AND the seq structural bridge
+        # (`t_seq_append_get`/`t_seq_slice_get`, to rewrite `r[i]!`
+        # through the `++`/slice `r` unfolds to) IN THE SAME GOAL --
+        # `omega` alone leaves the seq side untouched, and the seq-only
+        # `grind only [...]` branch `_close` appends after this method
+        # returns never sees the mod `have`s at all (a separate `first`
+        # alternative, not composed with this one). Measured directly
+        # (probe586c.lean, lean 4.33.1, core only): swapping the
+        # closing `omega` for `grind only [<seq hints>]` on the
+        # quantified branch -- `grind` still gets every `have` this
+        # prelude put in local context, `only` restricts just its
+        # GLOBAL lemma set -- closes the goal `omega` alone left
+        # unclosed. Added as EXTRA fallback branches, gated the same way
+        # `_seq_hints`/`_close`'s own seq branch already are
+        # (`self.seq_mut or self.seq_new or self.seq_eq_comp`), appended
+        # AFTER every existing `omega`-closed branch above so a task
+        # whose bridge already worked keeps succeeding on its own prior
+        # candidate, unchanged verdict, changed only in trailing
+        # (previously unreached) alternative text.
         for nlead in range(self.MAX_LEAD + 1):
             lead = f"intro{' _' * nlead}; " if nlead else ""
             if pairs and nlead:
                 branches.append(f"({lead}{self.divmod_prelude(pairs)}; "
                                f"omega)")
+                if seq_gated:
+                    branches.append(
+                        f"({lead}{self.divmod_prelude(pairs)}; "
+                        f"grind only [{self._seq_hints()}])")
             for zn, zlo, zhi, qpairs in quants:
                 branches.append(
                     f"({lead}intro {zn} {zlo} {zhi}; "
                     f"{self.divmod_prelude(qpairs)}; omega)")
+                if seq_gated:
+                    branches.append(
+                        f"({lead}intro {zn} {zlo} {zhi}; "
+                        f"{self.divmod_prelude(qpairs)}; "
+                        f"grind only [{self._seq_hints()}])")
         return branches
 
     def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
@@ -3787,8 +4019,17 @@ class Lower:
                 # helpers` below), matched by grind's e-matcher against
                 # the goal's own concrete nested `.set` term in a single
                 # step -- no chaining of the two single-level lemmas
-                # required.
-                names.append("t_seq_update2_get")
+                # required. THE ITE-SPLIT GAP (2026-09-12, ROADMAP 16.2):
+                # the ite-free corollaries (`emit_seq_helpers`'s own
+                # `t_seq_update2_get_hi/_mid/_lo`) are cited ALONGSIDE
+                # the original, not instead of it -- grind still gets
+                # the general fact for any goal shaped to use it
+                # directly, and now also gets the three case-split
+                # forms whose antecedents its own decision procedure
+                # for `Int` equality resolves without needing to open
+                # an `ite` in a cited fact's own conclusion.
+                names += ["t_seq_update2_get", "t_seq_update2_get_hi",
+                          "t_seq_update2_get_mid", "t_seq_update2_get_lo"]
         if self.seq_new:
             # SPEC.md "Sequences: literals, concatenation, slices (v1)"
             # (2026-09-09): the same recursion-depth wall the update/fill
@@ -3803,9 +4044,27 @@ class Lower:
             # default simp set (measured, parallel to `length_set`/
             # `length_replicate`), but named here too since `grind only`
             # drops the default set entirely.
+            #
+            # `Nat.min_def` (2026-09-12, ROADMAP 16.2, lean's own item,
+            # splitArray/splitAndAppend): `List.length_take`'s own
+            # CONCLUSION is `(l.take n).length = min n l.length` -- under
+            # `grind only` (no default simp set) grind cites this fact
+            # but does not itself split the `min` it names into its two
+            # `Nat.le`-guarded cases, so a goal needing to know
+            # `min n l.length = 0` from `n = 0` alone (splitAndAppend's
+            # own length obligation, `min` never unfolded) is left
+            # unclosed with `n = 0` sitting right there in context.
+            # Measured directly (probe586c.lean, lean 4.33.1, core only):
+            # adding `Nat.min_def` (`min n m = if n ≤ m then n else m`,
+            # core Lean, not Mathlib) to this same `grind only` list lets
+            # grind's own case-split machinery open the `ite` and close
+            # the goal with the arithmetic already in context -- the
+            # SAME "cited fact carries an un-split ite" gap named for the
+            # composed get-lemmas below, here in a stock library lemma
+            # instead of one this file emits itself.
             names += ["t_seq_append_get", "t_seq_slice_get",
                       "List.length_append", "List.length_take",
-                      "List.length_drop"]
+                      "List.length_drop", "Nat.min_def"]
             if self.nested:
                 # Same reasoning as the seq_mut branch above, for the
                 # append/slice bridge: `List.length_append`/`_take`/
@@ -3948,6 +4207,102 @@ class Lower:
     # to exactly `take (stop - start) (drop start l)` with no lemmas of
     # its own, so it would only add an extra unfold with nothing to show
     # for it.
+    # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item):
+    # `t_divisor_le_half_<name>` is the pure number-theory fact (`2 <= k
+    # < n`, `n % k == 0` implies `k <= n/2`); `t_divisor_bound_<name>`
+    # uses it to widen the loop's own `[lo, i)` fact (`hquant`) to the
+    # task's full `[lo, n)` ensures, given the extra invariant
+    # `lower_loop` added (`hbound : i <= n/2 + 1`) and the exit branch's
+    # own `hng : not (i <= n/2)`. Both proved by hand, core Lean only
+    # (measured, lean 4.33.1, probediv7.lean/probediv8.lean scratch
+    # probes): `Int.dvd_iff_emod_eq_zero` turns the mod fact into a
+    # witnessed `k ∣ n` (`obtain ⟨c, hc⟩`), then `Int.mul_le_mul_of_
+    # nonneg_left` (a plain order lemma, not `nlinarith`/`polyrith`,
+    # neither of which exists outside Mathlib) does the ONE genuinely
+    # nonlinear step (`c <= 1 -> k*c <= k*1`, and `2 <= c -> k*2 <=
+    # k*c`) that turns `n = k*c` into a linear fact `omega` finishes
+    # from there, `/2`'s own constant-divisor reasoning included
+    # natively. `by_cases` (core Lean, unlike `by_contra`/`push_neg`,
+    # BOTH measured absent from this toolchain -- `by_contra` reported
+    # "unknown tactic" directly, probebc.lean) supplies the one case
+    # split each proof needs. Depends on {propext, Quot.sound} only
+    # (measured via `#print axioms`), the same allowlist every other
+    # bridge lemma in this file already carries.
+    def emit_divisor_bound(self) -> tuple[str, list]:
+        plan = self._divisor_bound_plan
+        if plan is None:
+            return "", []
+        name = self.name
+        half = f"t_divisor_le_half_{name}"
+        bound = f"t_divisor_bound_{name}"
+        lo = self.term(plan["lo"], {}, self.types)
+        half_def = (
+            f"theorem {half} (n k : Int)\n"
+            f"    (hlo : ({lo}) ≤ k) (hk : k < n) (hmod : n % k = (0:Int)) "
+            ":\n"
+            "    k ≤ n / 2 := by\n"
+            "  have hdvd : k ∣ n := Int.dvd_iff_emod_eq_zero.mpr hmod\n"
+            "  obtain ⟨c, hc⟩ := hdvd\n"
+            "  have hc2 : (2:Int) ≤ c := by\n"
+            "    by_cases hcon : c ≤ 1\n"
+            "    · have hle : k * c ≤ k * 1 :=\n"
+            "        Int.mul_le_mul_of_nonneg_left hcon (by omega)\n"
+            "      rw [Int.mul_one] at hle\n"
+            "      omega\n"
+            "    · omega\n"
+            "  have hge : k * 2 ≤ k * c :=\n"
+            "    Int.mul_le_mul_of_nonneg_left hc2 (by omega)\n"
+            "  omega\n\n")
+        i_name = plan["i_name"]
+        if plan["kind"] == "forall":
+            rel = "≠" if plan["relop"] == "!=" else "="
+            bound_def = (
+                f"theorem {bound} (n {i_name} : Int) (result : Bool)\n"
+                f"    (hquant : result = true ↔ (∀ (k : Int), ({lo}) ≤ k "
+                f"→ k < {i_name} → n % k {rel} (0:Int)))\n"
+                f"    (hbound : {i_name} ≤ n / 2 + 1)\n"
+                f"    (hng : ¬ {i_name} ≤ n / 2) :\n"
+                "    result = true ↔ (∀ (k : Int), "
+                f"({lo}) ≤ k → k < n → n % k {rel} (0:Int)) := by\n"
+                "  constructor\n"
+                "  · intro hr k hk1 hk2\n"
+                f"    by_cases hki : k < {i_name}\n"
+                "    · exact hquant.mp hr k hk1 hki\n"
+                "    · by_cases hz : n % k = (0:Int)\n"
+                "      · exfalso\n"
+                f"        have hle : k ≤ n / 2 := "
+                f"{half} n k hk1 hk2 hz\n"
+                "        omega\n"
+                "      · exact hz\n"
+                "  · intro hr\n"
+                "    exact hquant.mpr (fun k hk1 hk2 => "
+                "hr k hk1 (by omega))\n")
+        else:
+            rel = "=" if plan["relop"] == "==" else "≠"
+            bound_def = (
+                f"theorem {bound} (n {i_name} : Int) (result : Bool)\n"
+                f"    (hquant : result = true ↔ (∃ (k : Int), ({lo}) ≤ k "
+                f"∧ k < {i_name} ∧ n % k {rel} (0:Int)))\n"
+                f"    (hbound : {i_name} ≤ n / 2 + 1)\n"
+                f"    (hng : ¬ {i_name} ≤ n / 2) :\n"
+                "    result = true ↔ (∃ (k : Int), "
+                f"({lo}) ≤ k ∧ k < n ∧ n % k {rel} (0:Int)) := by\n"
+                "  constructor\n"
+                "  · intro hr\n"
+                "    obtain ⟨k, hk1, hk2, hk3⟩ := hquant.mp hr\n"
+                "    exact ⟨k, hk1, by omega, hk3⟩\n"
+                "  · intro hr\n"
+                "    obtain ⟨k, hk1, hk2, hk3⟩ := hr\n"
+                f"    by_cases hki : k < {i_name}\n"
+                "    · exact hquant.mpr ⟨k, hk1, hki, hk3⟩\n"
+                "    · exfalso\n"
+                f"      have hle : k ≤ n / 2 := "
+                f"{half} n k hk1 hk2 hk3\n"
+                "      omega\n")
+        return half_def + bound_def, [
+            (half, "divisor-bound lemma, k <= n/2 for a divisor below n"),
+            (bound, "divisor-bound lemma, widens [lo, i) to [lo, n)")]
+
     def emit_seq_helpers(self) -> str:
         if not (self.seq_mut or self.seq_new or self.seq_eq_comp):
             return ""
@@ -4094,6 +4449,64 @@ class Lower:
                 "  · rfl\n"
                 "  · next hne =>\n"
                 "    rw [t_seq_update_get base i1 j v1 hi1 hiu1 hj hju]\n")
+                # THE ITE-SPLIT GAP (2026-09-12, ROADMAP 16.2, lean's own
+                # item, swapFirstAndLast's own residual): `grind only
+                # [t_seq_update2_get, ...]` cites the lemma above fine
+                # (e-matching unifies its LHS against the goal's own
+                # concrete `(base.set i1 v1).set i2 v2` term), but its
+                # CONCLUSION is a two-way nested `ite` (`if j = i2 then
+                # v2 else if j = i1 then v1 else base[j]!`) that grind
+                # does not itself split to line up with the goal's own
+                # UNCONDITIONAL equality (`result[0]! = v2`, no ite in
+                # sight) -- measured directly (probe swapFirstAndLast,
+                # lean 4.33.1, core only): `grind only` cites the fact
+                # but leaves the goal open with the fact's own `ite`
+                # sitting unresolved in context. Fixed the way the
+                # composed lemma itself was built for the ANALOGOUS gap
+                # one level down (chaining two single-level bridges):
+                # three COROLLARIES, one per index case, each a plain
+                # IMPLICATION with NO `ite` in its own conclusion, so
+                # grind never needs to split anything -- its own
+                # decision procedure for `j = i2`/`j = i1` (both plain
+                # `Int` equalities, natively decidable) supplies the
+                # antecedent directly from the goal's own concrete `j`,
+                # `i1`, `i2`. Each is proved by ONE `rw` into the ite
+                # lemma above plus `if_pos`/`if_neg` on the SAME
+                # decidable equality, never re-deriving the update
+                # chain itself.
+                parts.append(
+                "theorem t_seq_update2_get_hi (base : List Int) "
+                "(i1 v1 i2 v2 j : Int)\n"
+                "    (hi1 : (0:Int) ≤ i1) (hiu1 : i1 < ((base.length:Int)))\n"
+                "    (hi2 : (0:Int) ≤ i2) (hiu2 : i2 < ((base.length:Int)))\n"
+                "    (hj : (0:Int) ≤ j) (hju : j < ((base.length:Int)))\n"
+                "    (heq : j = i2) :\n"
+                "    ((base.set i1.toNat v1).set i2.toNat v2)[j.toNat]! "
+                "= v2 := by\n"
+                "  rw [t_seq_update2_get base i1 v1 i2 v2 j hi1 hiu1 hi2 "
+                "hiu2 hj hju, if_pos heq]\n"
+                "\n"
+                "theorem t_seq_update2_get_mid (base : List Int) "
+                "(i1 v1 i2 v2 j : Int)\n"
+                "    (hi1 : (0:Int) ≤ i1) (hiu1 : i1 < ((base.length:Int)))\n"
+                "    (hi2 : (0:Int) ≤ i2) (hiu2 : i2 < ((base.length:Int)))\n"
+                "    (hj : (0:Int) ≤ j) (hju : j < ((base.length:Int)))\n"
+                "    (hne2 : j ≠ i2) (heq1 : j = i1) :\n"
+                "    ((base.set i1.toNat v1).set i2.toNat v2)[j.toNat]! "
+                "= v1 := by\n"
+                "  rw [t_seq_update2_get base i1 v1 i2 v2 j hi1 hiu1 hi2 "
+                "hiu2 hj hju, if_neg hne2, if_pos heq1]\n"
+                "\n"
+                "theorem t_seq_update2_get_lo (base : List Int) "
+                "(i1 v1 i2 v2 j : Int)\n"
+                "    (hi1 : (0:Int) ≤ i1) (hiu1 : i1 < ((base.length:Int)))\n"
+                "    (hi2 : (0:Int) ≤ i2) (hiu2 : i2 < ((base.length:Int)))\n"
+                "    (hj : (0:Int) ≤ j) (hju : j < ((base.length:Int)))\n"
+                "    (hne2 : j ≠ i2) (hne1 : j ≠ i1) :\n"
+                "    ((base.set i1.toNat v1).set i2.toNat v2)[j.toNat]! "
+                "= base[j.toNat]! := by\n"
+                "  rw [t_seq_update2_get base i1 v1 i2 v2 j hi1 hiu1 hi2 "
+                "hiu2 hj hju, if_neg hne2, if_neg hne1]\n")
         if self.seq_new:
             parts.append(
             "theorem t_seq_append_get (l1 l2 : List Int) (j : Int)\n"
@@ -4594,6 +5007,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             if self.seq_composed_update2:
                 seq_thms.append(("t_seq_update2_get",
                                  "composed double-update-read bridge"))
+                seq_thms += [("t_seq_update2_get_hi",
+                             "composed double-update-read bridge, "
+                             "outer-index case"),
+                            ("t_seq_update2_get_mid",
+                             "composed double-update-read bridge, "
+                             "inner-index case"),
+                            ("t_seq_update2_get_lo",
+                             "composed double-update-read bridge, "
+                             "untouched-index case")]
         if self.seq_new:
             seq_thms += [("t_seq_append_get", "seq append-read bridge"),
                         ("t_seq_slice_get", "seq slice-read bridge")]
@@ -4666,10 +5088,14 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                 f"  | grind\n")
             smoke_thms = [(smoke_name,
                           "vacuity smoke: is `requires` unsatisfiable")]
+        db_src, db_thms = self.emit_divisor_bound()
         prints = "\n".join(
             f"#print axioms {t}" for t, _ in
-            seq_thms + strlib_thms + sf_thms + wf_thms + thms + smoke_thms)
+            db_thms + seq_thms + strlib_thms + sf_thms + wf_thms + thms
+            + smoke_thms)
         parts = [header]
+        if db_src.strip():
+            parts.append(db_src)
         if seq_src.strip():
             parts.append(seq_src)
         if strlib_src.strip():
@@ -5131,7 +5557,34 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         snames = " ".join(state)
         pb = self.binders(params_nt)
 
-        invs = w.get("invariants", [])
+        invs = list(w.get("invariants", []))
+        # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item):
+        # `self._divisor_bound_plan` (computed once, at __init__ time --
+        # see its own docstring there for why) recognizes the trial-
+        # divide-to-half family (isNonPrime task 3, isPrime 605); where it
+        # matched, the extra invariant `i <= n/2 + 1` is appended to
+        # `invs` HERE, before every downstream consumer (`inv_props`,
+        # `hinvs`, `init_hinv_pfs`, the preservation goal) reads it -- so
+        # it flows through the SAME generic per-invariant machinery every
+        # STATED invariant already gets (entry proof, preservation proof,
+        # `hinv{k}` parameter), never a special case threaded by hand
+        # through this function's own many branches. It is never assumed:
+        # both obligations (`2 <= n/2 + 1` at entry, `i+1 <= n/2+1` from
+        # the guard `i <= n/2` at the recursive step) are plain linear
+        # facts about Lean's own constant-divisor `/2` that `omega`
+        # (inside the generic `(by {self._gr()})` every invariant's
+        # entry/preservation proof already uses) discharges unaided --
+        # measured directly (probediv7.lean-style scratch probe): this
+        # loop invariant needs no hint beyond what every other
+        # invariant's own proof site already tries.
+        if self._divisor_bound_plan is not None:
+            i_name = self._divisor_bound_plan["i_name"]
+            n_expr = self._divisor_bound_plan["dividend"]
+            invs.append({"op": "<=", "args": [
+                {"var": i_name},
+                {"op": "+", "args": [
+                    {"op": "div", "args": [n_expr, {"int": 2}]},
+                    {"int": 1}]}]})
         # THE DOMAIN HYPOTHESIS (2026-09-10, "THE 14 LOOP-TASK RESIDUAL",
         # this file's own dated note below): `_t_loop`'s bare recursive
         # definition previously carried only the guard (`_hg`) into its own
@@ -5675,6 +6128,24 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # exactly as before -- Prop-irrelevance means `apply ... <;> grind`
         # does not care that the argument in scope is `hok`'s own
         # projection rather than a freshly-proved `have`.
+        # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item):
+        # isNonPrime (task 3, the "exists" family) RETURNS the moment it
+        # finds a divisor (isPrime, the "forall" family, never returns
+        # early), and that return branch's own goal needs no divisor-
+        # bound reasoning -- `i` itself is the witness (`2 <= i` from
+        # `hinv1`, `i < n` from the guard plus `hinv3`, `n % i = 0` the
+        # very fact the `if` just split on). Tried and REVERTED (measured
+        # 2026-09-12, isNonPrime scratch file): an `all_goals (first |
+        # ... | refine ⟨i, ?_, ?_, ?_⟩ <;> omega)` alternative hard-
+        # errors ("Application type mismatch", "expected type is not an
+        # inductive type") on every OTHER goal `repeat split` leaves
+        # that is not itself the bare existential (the recursive
+        # continue-case's own `Iff` goal, among others) -- `first` does
+        # not backtrack out of it the way it does an ordinary failed
+        # `grind`, so this stays a NAMED OPEN GAP rather than a change
+        # that silently corrupts other goals' own proof search. isPrime
+        # (605) is unaffected either way: `kind` there is "forall", so
+        # this whole family never reaches isPrime at all.
         then_tac = (
             f"all_goals (first | (apply {self.name}_t_loop_spec <;> "
             f"{self._gr()}) | {dite_else_tac if can_dite else self._gr()})"
@@ -5701,6 +6172,36 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         n_top_ifs = sum(1 for s in w["body"] if "if" in s)
         split_tac = ("repeat (all_goals split)" if n_top_ifs >= 2
                     else "repeat split")
+        # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item):
+        # the loop-spec's own EXIT branch (guard false: `w["cond"]`
+        # itself, i.e. `i <= n/2`, does not hold, so the ANONYMOUS
+        # negated-guard hypothesis `split` left in context reads `i >
+        # n/2`) is where the `[lo, i)` fact (`hinv{quant_idx}`) needs
+        # widening to `[lo, n)`; `t_divisor_bound_<name>` (emitted by
+        # `_divisor_bound_lean_defs` below) does exactly that, taking the
+        # SAME quant invariant and the freshly-added bound invariant
+        # (`hinv{bound_idx}`, now `i <= n/2 + 1`, added to `invs` above)
+        # plus `¬ i <= n/2` -- proved `(by omega)` from the SAME anonymous
+        # hypothesis `self._gr()` alone already reads (never named,
+        # never `intro`'d: `omega` scans the whole local context, so a
+        # `(by omega)` sub-proof sees it without this file needing to
+        # know `split`'s own binder name for it). ADDITIVE: `first`
+        # tries the pre-existing `self._gr()` FIRST, so any task where it
+        # already closed the exit goal (none of the 34 committed tasks
+        # reach this branch with the plan set, since `_divisor_bound_
+        # target` matches nothing they state) is byte-identical.
+        exit_tac = self._gr()
+        if self._divisor_bound_plan is not None:
+            n_text = self.term(self._divisor_bound_plan["dividend"], {},
+                               self.types)
+            i_name = self._divisor_bound_plan["i_name"]
+            bound_name = f"t_divisor_bound_{self.name}"
+            quant_hinv = f"hinv{self._divisor_bound_inv_idx}"
+            bound_hinv = f"hinv{self._divisor_bound_bound_idx}"
+            exit_tac = (
+                f"first | ({exit_tac}) | (exact {bound_name} {n_text} "
+                f"{i_name} {self.ret} {quant_hinv} {bound_hinv} "
+                f"(by omega))")
         out.append(
             f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs}"
             f"{hfrs} :\n"
@@ -5709,7 +6210,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             f"  split\n"
             f"  · {split_tac}\n"
             f"    {then_tac}\n"
-            f"  · {self._gr()}\n"
+            f"  · {exit_tac}\n"
             f"termination_by ({dec1}).toNat\n"
             + self._dec(dec_needed))
         thms.append((f"{self.name}_t_loop_spec",
