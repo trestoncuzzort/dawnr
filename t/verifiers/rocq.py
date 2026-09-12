@@ -38,13 +38,27 @@ Verdict classification (coqc/coqchk 9.2.0, re-measured on this machine
   audit run finds open assumptions or unsafe-flag reliance,
       or coqchk refuses / lists a t_unit.* assumption          -> VACUOUS
   "Tactic failure" / "Cannot find witness" / "Unable to
-      unify" / "unsolved"                                      -> UNPROVED
+      unify" / "unsolved" / "No applicable tactic"              -> UNPROVED
       (the engine or a decision tactic stopped without a
       countermodel; lia's honest can't-prove is "Cannot find
       witness". Rocq is a proof assistant: an unclosed goal is
       not a disproof, so these never mint REFUTED. ROADMAP 10.7,
       fixed 2026-09-02; a rejected refutation certificate lands
-      here too)
+      here too. "No applicable tactic" added 2026-09-12, ROCQ-4:
+      a `match goal with` (or `first [...]`'s own `fail`) that
+      finds no matching goal shape is the SAME "the engine
+      stopped without a countermodel" event as "Cannot find
+      witness" -- the theorem parsed and resolved fine, a later
+      tactic script just ran out of applicable branches on this
+      goal -- and previously fell through the catch-all `else
+      MALFORMED` below it, misreporting a proof-search
+      incompleteness as "does not parse/resolve". Measured on
+      fz_p_126_sumofcommondivisors's own real side (task_id_126,
+      SumOfCommonDivisors): coqc's raw message is exactly `Error:
+      No applicable tactic.`, one of `_loop_spec`'s own `first`
+      branches raising before the trailing `fail 1 "unsolved..."`
+      is ever reached, matching none of MALFORMED_MARKS or the
+      pre-existing UNPROVED_MARKS.)
   "Syntax error" / "was not found" / "Illegal"                 -> MALFORMED
   source not valid UTF-8 (coqc 9.2 tolerates stray bytes in
       comments, junk_nonutf8.v measured, but this adapter's
@@ -168,7 +182,7 @@ CERT_RE = re.compile(r"\bt_refutation_certificate\b")
 # These mint UNPROVED, never REFUTED (ROADMAP 10.7, fixed 2026-09-02;
 # the old REFUTED_MARKS minted REFUTED from exactly these strings).
 UNPROVED_MARKS = ("Tactic failure", "Cannot find witness", "Unable to unify",
-                  "unsolved")
+                  "unsolved", "No applicable tactic")
 
 MALFORMED_MARKS = ("Syntax error", "was not found", "Illegal", "Unknown")
 

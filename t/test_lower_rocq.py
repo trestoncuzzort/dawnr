@@ -368,5 +368,46 @@ class TPrefixCollisionRenameTest(unittest.TestCase):
         self.assertTrue(ok, out)
 
 
+class NoApplicableTacticIsUnprovedTest(unittest.TestCase):
+    """ROCQ-4, 2026-09-12 (ROADMAP 16.2's rocq item, sumOfCommonDivisors's
+    own real side): `verifiers/rocq.py` classified a nonzero-exit coqc run
+    as MALFORMED whenever its output matched neither `UNPROVED_MARKS` nor
+    `MALFORMED_MARKS` -- the catch-all `else` two lines under the
+    `MALFORMED_MARKS` check. `Error: No applicable tactic.` (a `match goal
+    with` -- here, inside a `first [...]` combinator built exactly like
+    task_id_126 SumOfCommonDivisors's own `_loop_spec` proof -- that finds
+    no matching clause on the live goal) fell into that catch-all: measured
+    on task_id_126's own real side, real=malformed, though the file parses
+    and resolves fine and only a LATER tactic script ran out of applicable
+    branches, the same "stopped without a countermodel" event `UNPROVED_
+    MARKS`'s other four strings already name. Fixed by adding it to
+    `UNPROVED_MARKS`. This test reproduces the exact message directly
+    (Rocq 9.2, standalone probe): `first [ t1 | t2 | ... ]` with every
+    alternative failing and NO explicit `fail "msg"` on any of them
+    raises `Error: No applicable tactic.` verbatim -- the shape
+    task_id_126's own `_loop_spec` combines a `first` around, one branch
+    of which itself contains a `match goal with` that can raise the same
+    way before the designed trailing `fail 1 "unsolved..."` is ever
+    reached."""
+
+    SRC = (
+        "Theorem t_unit_spec : True.\n"
+        "Proof.\n"
+        "  first [ discriminate | congruence ].\n"
+        "Qed.\n")
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_reads_unproved_not_malformed(self):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from verifiers import rocq as rocq_backend
+        from verifiers import Outcome
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "t_unit_probe.v"
+            p.write_text(self.SRC, encoding="utf-8")
+            r = rocq_backend.verify(p)
+        self.assertEqual(r.outcome, Outcome.UNPROVED, r.error)
+        self.assertIn("No applicable tactic", r.error)
+
+
 if __name__ == "__main__":
     unittest.main()

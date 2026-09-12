@@ -247,9 +247,19 @@ WALL_S = 120               # hang backstop only, never the verdict
 
 # Source tokens that can admit an unproved fact or skip/outsource an
 # obligation (measured per docstring). Honest lower_dafny.py output contains
-# no attributes, no @-forms, no strings, no comments, and none of these words.
+# no attributes, no @-forms, no strings, no comments, and none of these
+# words -- except `{:trigger ...}` (2026-09-11, isSublist), which lower_dafny
+# now emits on quantifiers whose body dafny cannot pick a trigger for on its
+# own. A trigger is purely an e-matching hint to the SMT search: it narrows
+# or redirects which ground terms instantiate the bound variable and can
+# make a provable goal time out or a provable-but-slow one fast, but it can
+# never admit a false obligation or skip one outright the way {:axiom},
+# {:verify false} or {:only} can (those change WHAT gets checked; a trigger
+# only changes HOW the checker searches for what it already must check), so
+# it is carved out of the generic {:attr} ban by name while every other
+# attribute (spelled with the same braces) stays banned.
 BANNED_RE = re.compile(
-    r"\{\s*:\s*\w+"                 # every {:attr} pragma ({:axiom}, {:verify false}, {:extern}, {:only}, ...)
+    r"\{\s*:\s*(?!trigger\b)\w+"    # every {:attr} pragma EXCEPT {:trigger ...} ({:axiom}, {:verify false}, {:extern}, {:only}, ...)
     r"|@\s*[A-Za-z_]\w*"            # every 4.10+ @Attribute form (@Axiom, @Verify(false), ...)
     r"|\binclude\b"                 # imports source this scan never sees (e6: exit 0, "2 verified")
     r"|\bassume\w*"                 # assume statement, assume {:axiom}, {:assume_concurrent}

@@ -2355,7 +2355,105 @@ fz_p_nest_eq's own outcome.
   probe conformance suite's other six columns is touched by this
   pass's edit (one function, `pred()`'s own `==`/`!=` `t0 == "seq"`
   case, in this one file).
-"""
+
+2026-09-12, ROADMAP 16.2 framac-3 ("frame facts in loop bodies, the
+sweep abstains, then the seq design cells"): the first of the three
+named timeouts, appendArrayToSeq (task 106), turned out to be TWO
+separate gaps, both fixed here, not the one the wave-I note guessed.
+(1) THE FRAME-FACT GAP, `stmts()`'s own new docstring above its
+definition: a scalar local declared before a `while` and never
+reassigned inside that loop's body (`h := len(a);`) is now stated as an
+equality `loop invariant`. Additive only, threaded through `_prefix`
+with C-scoping copy semantics (an `if`-branch or a loop body gets its
+own copy, never leaking a fact back out or across siblings). (2) THE
+CAPACITY-MODE BARE-SEQ-ASSIGN BUG, `seq_assign_lines`'s `"var" in e`
+branch: `target := src` (a bare seq copy, `r := s;`) used `target`'s
+own buffer CAPACITY as both the copy bound and the fresh length-local
+value; correct only in EXACT mode. Under CAPACITY mode (a later
+append into the same buffer) this over-read `src` and set the
+length-local to a value larger than what was actually copied, so the
+task's own `len(r) == len(s) + i_v2` invariant was FALSELY stated at
+loop entry -- not a search budget problem, an unsound premise alt-ergo
+correctly could not prove. Fixed to use `src`'s own logical length in
+CAPACITY mode; EXACT mode (`bound=None`) is byte-identical to before.
+MEASURED (t/grade.py --tasks <106,460,86 copied from
+t/out/lifted-tasks/> --kernels framac,dafny --flake 3 --jobs 6, this
+worktree): 106 appendArrayToSeq framac real=timeout -> verified,
+agreeing with dafny's verified/refuted; twin unaffected (refuted
+throughout, `flake_check` unchanged). The frame-fact fix ALONE did not
+move 106 (measured as an intermediate step: same two goals timed out,
+`loop_2_preserved`/`loop_6_established`, byte-identical failing-goal
+names before and after that fix alone) -- it was goal `loop_6_established`
+that actually turned out FALSE, not merely hard, once (2) above was
+found by hand-tracing WP's own goal name back to its source invariant.
+The frame-fact fix is kept anyway: additive, sound, and the shape wave
+I's note named (a guard/decreases/body definedness obligation needing a
+prefix constant) does occur elsewhere in this lowering even though it
+was not what blocked 106 specifically; no regression on the 34-task
+AGREEMENT.md matrix (framac column re-measured, byte-identical, all 31
+verified/refuted plus the 3 named abstains) or the 66-item conformance
+manifest's framac column (0 of 66 cells changed, measured against a
+byte-identical copy of this file's pre-wave state, framac column only
+per this file's own regression-bar instructions).
+
+The other two named timeouts are NOT frame-fact gaps, measured directly
+by hand-tracing WP's own failing goal name (frama-c -wp-report-json)
+rather than assumed from the wave-I note:
+  - 86 centeredHexagonalNumber HAS NO LOOP AT ALL (`result = 3*n*(n-1)+1;
+    return result;`, no while, no prefix local to state a fact about).
+    Its lone timeout is `..._t_2`, the second `ensures` (`\result >= 0`),
+    a NONLINEAR arithmetic goal (`n*(n-1) >= 0` for `n >= 0`) alt-ergo
+    2.4.3 cannot discharge at the pinned budget without a case-split
+    hint -- the same class of gap wave I's own note named for
+    isNonPrime/isPrime's divisor-bound lemma ("alt-ergo 2.4.3 cannot
+    discharge the product fact ... at fifty times the pinned budget").
+    Not attempted here: a nonlinear-hint mechanism is a different,
+    larger design than a loop-body frame fact, out of this pass's named
+    scope. Exact message: "timeout budget exhausted on
+    typed_nat_dafny_synthesis_task_id_86_centeredHexagonalNumber_t_2".
+  - 460 getFirstElements DOES have the `h == lst_n` frame fact (emitted
+    by fix (1) above) but still times out, on THREE goals: `ensures_2`
+    (the final forall over `result`), `loop_5_preserved` (the loop's own
+    forall invariant, `result[j] == lst_data[lst_off[j]]`), and
+    `assert_2` (the capacity bound `result_len + 1 <= result_n`) -- a
+    doubly-indexed quantifier (`lst_off[j]`, then `lst_data` at that
+    offset) alt-ergo cannot instantiate at the pinned budget even with
+    every scalar fact already known; a genuinely different capability
+    gap (quantifier triggering/instantiation, not a missing premise) not
+    attempted here. Exact message: "timeout budget exhausted on
+    typed_nat_dafny_synthesis_task_id_460_getFirstElements_t_ensures_2,
+    ..._loop_5_preserved, ..._assert_2".
+
+The nine named abstains/malformed (COVERAGE-lifted-785.md r21) were
+each re-measured against this wave's own edited file (`lower_framac.lower`
+called directly on the copied task JSON; none of the nine's lowering
+path touches `seq_assign_lines`'s `"var" in e` branch or a `while`
+this wave's frame-fact loop touches, so none moved and none was
+expected to): 240 replaceLastElement and 586 splitAndAppend, the
+pre-existing named seq-concatenation refusals (EXACT-length return,
+non-target left operand); 262 splitArray, the pair-with-seq-component
+refusal; 414 anyValueExists and 576 isSublist/69 containsSequence, the
+pre-existing bounded-quantifier/seq-equality executable-position
+refusals; 577 factorialOfLastDigit, the spec_fun-in-executable-position
+refusal; 603 lucidNumbers, the no-CAPACITY-bound refusal. 470
+pairwiseAddition is confirmed MALFORMED at the frama-c level itself
+(not this wave's own code): `frama-c -wp ...` on its own emitted C
+aborts parsing with "invalid operands to binary -; unexpected \U0001d539
+and \U0001d539. Ignoring code annotation" / "Frama-C aborted: invalid
+user input" at the `t_div`-defining assert (line 24 of the emitted
+file), an ACSL TYPE error (boolean subtraction, valid as plain C,
+rejected in ACSL logic position) in the div/mod bridging assert this
+lowering already emits for every div/mod task -- a distinct, pre-
+existing lowering bug this pass diagnosed but did not fix (out of this
+pass's named scope, "frame facts in loop bodies").
+
+ROADMAP 13.4's six seq design cells (nest_eq, nest_empty,
+str_splitempty, str_tab, str_lowernonletter, pair_seq) were NOT
+reached this pass: the design stopped at the sweep abstains above,
+each requiring its own new rendering mechanism (a second capacity
+dimension for nested returns, an executable seq-equality loop, a
+length bound derived differently), not a scoped extension of the
+frame-fact/capacity fixes landed here. Named, not attempted."""
 from __future__ import annotations
 
 import sys
@@ -4452,26 +4550,51 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
     xn = f"{target}_n"
     cap = ctx.seq_len.get(target)          # the length-local, CAPACITY mode
 
-    def _copy_loop(src: str, off: str | None = None) -> list:
+    def _copy_loop(src: str, off: str | None = None,
+                   bound: str | None = None) -> list:
         idx_t = f"({off}) + __t" if off is not None else "__t"
         idx_k = f"({off}) + __k" if off is not None else "__k"
+        n = bound if bound is not None else xn
         return [
             f"{indent}/*@",
-            f"{indent}  loop invariant 0 <= __k <= {xn};",
+            f"{indent}  loop invariant 0 <= __k <= {n};",
             f"{indent}  loop invariant \\forall integer __t; "
             f"0 <= __t < __k ==> {target}[__t] == {src}[{idx_t}];",
             f"{indent}  loop assigns __k, {target}[0 .. {xn} - 1];",
-            f"{indent}  loop variant {xn} - __k;",
+            f"{indent}  loop variant {n} - __k;",
             f"{indent}*/",
-            f"{indent}for (int __k = 0; __k < {xn}; __k++) "
+            f"{indent}for (int __k = 0; __k < {n}; __k++) "
             f"{target}[__k] = {src}[{idx_k}];",
         ]
 
     if "var" in e:
+        # CAPACITY-MODE BARE-SEQ ASSIGN BUG (2026-09-12, ROADMAP 16.2,
+        # appendArrayToSeq's `r := s;` before its own append loop): under
+        # EXACT mode (`cap is None`) `target`'s own declared size `xn`
+        # already equals the assigned value's length by construction (no
+        # committed task before this one paired a bare-seq assign with a
+        # LATER capacity-tracked append into the same buffer), so using
+        # `xn` as the copy bound and as the fresh length value was
+        # correct there. Under CAPACITY mode `xn` is the buffer's full
+        # PHYSICAL capacity (`r_n == s_n + a_n` here), not `src`'s own
+        # logical length -- copying `xn` elements out of `src` reads past
+        # `src`'s own `\valid_read` range whenever `src` is shorter than
+        # the buffer, and setting the length-local to `xn` afterward lies
+        # about how much of the buffer actually holds `src`'s data,
+        # exactly the state `appendArrayToSeq`'s loop invariant `len(r)
+        # == len(s) + i_v2` needs true at `i_v2 == 0` and could not get.
+        # Fixed: the copy bound and the length-local's new value are both
+        # `src`'s own logical length (`ctx.seq_len` if `src` is itself
+        # capacity-tracked, else its plain `{src}_n`) whenever this
+        # assign is capacity-tracked; EXACT mode is untouched (`bound`
+        # stays `None`, `_copy_loop` falls back to `xn` exactly as
+        # before, so every already-committed EXACT-mode task's C is
+        # byte-identical).
         src = seq_var(e, ctx.env)
-        out += _copy_loop(src)
+        src_len = ctx.seq_len.get(src, f"{src}_n")
+        out += _copy_loop(src, bound=(src_len if cap is not None else None))
         if cap is not None:
-            out.append(f"{indent}{cap} = {xn};")
+            out.append(f"{indent}{cap} = {src_len};")
         return out
     op, args = e["op"], e["args"]
     if op == "update":
@@ -4688,12 +4811,46 @@ def _assigns_target(n: str, ctx: Ctx) -> str:
     return f"{n}[0 .. {n}_n - 1]" if ctx.env.get(n) == "seq" else n
 
 
-def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
+def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
+          _prefix: dict | None = None) -> list:
+    # THE FRAME-FACT GAP, framac column (2026-09-12, ROADMAP 16.2): a
+    # scalar local declared in the PREFIX (this statement list, before
+    # some later `while`) and never reassigned inside that loop's body is
+    # loop-invariant by construction (C scoping means nothing in the loop
+    # can touch it unless it is an assignment target, and `assigned_names`
+    # already computes that set), but was never SAID to WP as a `loop
+    # invariant`. Measured directly on appendArrayToSeq (`h := a_n;`
+    # before the loop, guard `i_v2 < h`, body assert `i_v2 < a_n` for
+    # `a[i_v2]`): the invariant list already carries `i_v2 <= a_n` (the
+    # task's own), so the assert needs only `i_v2 != a_n`, which follows
+    # from the guard `i_v2 < h` exactly when `h == a_n` is known -- and it
+    # wasn't, so WP saw a genuinely underdetermined `h` and alt-ergo timed
+    # out searching for a proof of a goal that was one missing premise
+    # from being false. `_prefix` accumulates {name: init-expr} for every
+    # scalar (`int`/`bool`) local declared by a plain `var` statement seen
+    # so far IN THIS CALL's own statement list (mirrors C scoping: a
+    # recursive call for an `if`-branch or a `while`-body gets a COPY, so
+    # a local declared inside one branch never leaks to its sibling or
+    # back out, and a local declared inside the loop body itself never
+    # becomes a fact about the loop it is declared in). A name is dropped
+    # from `_prefix` the moment this same list reassigns it (`assign`),
+    # so only a name that is TRULY never written again carries a fact
+    # forward. At a `while`, every surviving name not in that loop's own
+    # `assigned_names` hit-set gets `loop invariant {name} == {its own
+    # defining expression, rendered now}` -- ADDITIVE ONLY: a TRUE
+    # equality (the prefix's own straight-line computation, unchanged by
+    # anything the loop's recursion can reach) never weakens an existing
+    # obligation and never lets WP discharge a goal that does not
+    # actually follow from the task's own requires/ensures/invariants;
+    # it only gives WP a premise the source program already guarantees
+    # but this lowering used to withhold.
+    prefix = dict(_prefix) if _prefix is not None else {}
     out = []
     for s in body:
         if "assign" in s:
             name, e = s["assign"]
             assert name in ctx.env, f"assign to undeclared {name}"
+            prefix.pop(name, None)
             if is_nested_seq_type(ctx.env[name]):
                 # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested
                 # sequences"): the only seq<seq>-typed names `ctx.env` can
@@ -4836,15 +4993,23 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
             else:
                 out.append(f"{indent}int {v['name']} = "
                            f"{cexpr(v['init'], ctx.env, ctx.funs, task_name)};")
+                # THE FRAME-FACT GAP (see this function's own docstring
+                # comment above): a scalar local's defining expression is
+                # remembered, straight-line, so a later `while` in this
+                # same statement list can state it as a loop invariant if
+                # nothing in that loop reassigns the name.
+                prefix[v["name"]] = v["init"]
         elif "if" in s:
             c = s["if"]
             out += at_asserts(c["cond"], ctx, indent, ctx.funs, task_name)
             out.append(f"{indent}if "
                        f"({cexpr(c['cond'], ctx.env, ctx.funs, task_name)}) "
                        f"{{")
-            out += stmts(c["then"], ctx, task_name, indent + "  ")
+            out += stmts(c["then"], ctx, task_name, indent + "  ",
+                        dict(prefix))
             out.append(f"{indent}}} else {{")
-            out += stmts(c["else"], ctx, task_name, indent + "  ")
+            out += stmts(c["else"], ctx, task_name, indent + "  ",
+                        dict(prefix))
             out.append(f"{indent}}}")
         elif "while" in s:
             w = s["while"]
@@ -4887,6 +5052,20 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
                    for i in w.get("invariants", [])]
             hit, dec = assigned_names(w["body"], ctx.seq_len)
             frame = [n for n in dict.fromkeys(hit) if n not in dec]
+            # THE FRAME-FACT GAP, framac column (2026-09-12, ROADMAP
+            # 16.2, see this function's own docstring comment above for
+            # the full account): every scalar prefix local this loop's
+            # own `hit` set never assigns is stated as an equality loop
+            # invariant, pinning it to its own straight-line defining
+            # expression. `hit` (not `frame`, which also drops names this
+            # loop merely re-declares as its own locals) is the right
+            # test: a name the loop assigns even once is exactly the
+            # thing WP already treats as havocked, so no prefix fact
+            # about it would be sound to state as an invariant.
+            for pn, pinit in prefix.items():
+                if pn not in hit:
+                    ann.append(f"{indent}  loop invariant {pn} == "
+                               f"{cexpr(pinit, ctx.env, ctx.funs, task_name)};")
             # CAPACITY mode's implicit LOWER bound (2026-09-09): `0 <=
             # r_len` is a MATHEMATICAL fact about any seq's length (never
             # negative), true by construction of the encoding itself
@@ -4934,7 +5113,8 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str) -> list:
                        f"({cexpr(w['cond'], ctx.env, ctx.funs, task_name)}) "
                        f"{{")
             out += guard_ats_body
-            out += stmts(w["body"], ctx, task_name, indent + "  ")
+            out += stmts(w["body"], ctx, task_name, indent + "  ",
+                        dict(prefix))
             out.append(f"{indent}}}")
         else:
             raise ValueError(f"t has no statement {s!r}")

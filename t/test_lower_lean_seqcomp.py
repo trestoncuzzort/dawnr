@@ -204,5 +204,117 @@ class SeqComposedDetectionTest(unittest.TestCase):
         self.assertFalse(lw.seq_composed_append_slice)
 
 
+class SeqUpdate2ScriptTest(unittest.TestCase):
+    """2026-09-12, ROADMAP 16.2, lean's own item: `_seq_update2_script`
+    (the per-site codegen closing the ITE-SPLIT GAP's own residual --
+    `grind only [t_seq_update2_get, ..._hi, ..._mid, ..._lo]` cites the
+    composed lemma but does not itself split the ite the general form
+    leaves, measured directly on task_id_591/625). Pure-Python checks on
+    the emitted TEXT (the `.lean` file itself is exercised by t/grade.py,
+    not here); these catch a regression in the GATE (None exactly when
+    `seq_composed_update2` is False, unchanged for every other task) and
+    in the script's own required pieces (never `grind`'s own e-matching
+    alone, never `split_ifs` -- unavailable core-Lean-only, measured
+    directly, 2026-09-12 -- and the new `t_seq_index_congr` bridge)."""
+
+    def _seq_task(self, name, params, ensures, body):
+        t = _task(name, params, ensures, body, ret_type="seq")
+        t["returns"] = [{"name": "result", "type": "seq"}]
+        return t
+
+    def _swap_task(self):
+        # swapFirstAndLast's own shape (task_id_591/625).
+        body = [
+            {"assign": ["a_out", {"var": "a"}]},
+            {"var": {"init": {"op": "at", "args": [
+                {"var": "a_out"}, {"int": 0}]},
+                "name": "temp", "type": "int"}},
+            {"assign": ["a_out", {"op": "update", "args": [
+                {"var": "a_out"}, {"int": 0},
+                {"op": "at", "args": [{"var": "a_out"}, {"op": "-", "args": [
+                    {"op": "len", "args": [{"var": "a_out"}]},
+                    {"int": 1}]}]}]}]},
+            {"assign": ["a_out", {"op": "update", "args": [
+                {"var": "a_out"}, {"op": "-", "args": [
+                    {"op": "len", "args": [{"var": "a_out"}]},
+                    {"int": 1}]},
+                {"var": "temp"}]}]},
+        ]
+        return self._seq_task(
+            "swaplike",
+            [{"name": "a", "type": "seq"}],
+            [{"op": "==", "args": [{"var": "result"}, {"var": "a_out"}]}],
+            body)
+
+    def test_none_when_gate_false(self):
+        body = [
+            {"assign": ["a_out", {"op": "update", "args": [
+                {"var": "a"}, {"int": 0}, {"int": 1}]}]},
+        ]
+        task = self._seq_task(
+            "singleupdate",
+            [{"name": "a", "type": "seq"}],
+            [{"op": "==", "args": [{"var": "result"}, {"var": "a_out"}]}],
+            body)
+        lw = lower_lean.Lower(task, body)
+        self.assertIsNone(lw._seq_update2_script())
+
+    def test_script_present_and_shaped_when_gate_true(self):
+        task = self._swap_task()
+        lw = lower_lean.Lower(task, task["body"])
+        self.assertTrue(lw.seq_composed_update2)
+        script = lw._seq_update2_script()
+        self.assertIsNotNone(script)
+        # the unconditional lemma (simp's own e-matching supplies base/
+        # i1/v1/i2/v2/j from the goal, never a Python-threaded term),
+        # never the ite-carrying corollaries (those stay `_seq_hints`'s
+        # own `grind only` fallback, unchanged) and the new bridge.
+        self.assertIn("t_seq_update2_get]", script)
+        self.assertNotIn("t_seq_update2_get_hi", script)
+        self.assertIn("t_seq_index_congr", script)
+        # `split`, never `split_ifs` (unavailable, core Lean only,
+        # measured 2026-09-12: "unknown tactic").
+        self.assertIn("split", script)
+        self.assertNotIn("split_ifs", script)
+        # every step chained by `<;>`, never a bare `;` (measured,
+        # 2026-09-12: a bare `;` after `repeat'` here makes the whole
+        # tactic silently a no-op, no error, goal left unchanged).
+        self.assertNotIn("; all_goals", script)
+
+    def test_close_tries_the_script_before_grind_only_fallback(self):
+        task = self._swap_task()
+        lw = lower_lean.Lower(task, task["body"])
+        closed = lw._close([task["ensures"], task["body"]], {},
+                           lw.types, "grind")
+        script = lw._seq_update2_script()
+        self.assertIn(script, closed)
+        self.assertLess(closed.index(script),
+                        closed.index("grind only ["))
+
+    def test_emit_seq_helpers_declares_index_congr_bridge(self):
+        task = self._swap_task()
+        lw = lower_lean.Lower(task, task["body"])
+        src = lw.emit_seq_helpers()
+        self.assertIn("theorem t_seq_index_congr", src)
+
+    def test_no_change_for_non_composed_seq_task(self):
+        # `_close`'s new branch is additive: a plain seq-mut task with no
+        # composed update chain sees a byte-identical `grind only [...]`
+        # fallback, no new alternative spliced in.
+        body = [
+            {"assign": ["a_out", {"op": "update", "args": [
+                {"var": "a"}, {"int": 0}, {"int": 1}]}]},
+        ]
+        task = self._seq_task(
+            "singleupdate",
+            [{"name": "a", "type": "seq"}],
+            [{"op": "==", "args": [{"var": "result"}, {"var": "a_out"}]}],
+            body)
+        lw = lower_lean.Lower(task, body)
+        closed = lw._close([task["ensures"], body], {}, lw.types, "grind")
+        self.assertEqual(closed,
+                         f"first | (grind) | (grind only [{lw._seq_hints()}])")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -3950,6 +3950,67 @@ class Lower:
                         f"grind only [{self._seq_hints()}])")
         return branches
 
+    def _seq_update2_script(self) -> str | None:
+        """PER-SITE INDEX CODEGEN (2026-09-12, ROADMAP 16.2, lean's own
+        item): wave I's builder measured that `grind only [t_seq_
+        update2_get, ..._hi, ..._mid, ..._lo]` cites the composed lemma
+        (its e-matching finds the concrete nested `.set`/`.set` term
+        fine) but does not itself SPLIT the ite the general lemma's own
+        conclusion carries, and its ONE reported hand fix (a `have` plus
+        a case split plus `omega`, closing one concrete instance)
+        generalizes to a SHAPE-driven script, not a per-task one: `None`
+        unless `self.seq_composed_update2` is set (task_id_591/625's own
+        gate, unchanged), in which case a tactic that (1) opens every
+        conjunct/`forall` the spec goal's own top-level shape carries
+        (`repeat'`, so it adapts to however many conjuncts THIS task's
+        `ensures` has, never hardcoding an arity); (2) normalizes every
+        `.set`-of-`.set` length in EVERY hypothesis and the goal via
+        `List.length_set` (`at *`, so a `forall`'s own bound carried
+        against the doubly-updated length reads as a bound against the
+        untouched one, the same fact `t_seq_update2_get`'s own `hju`
+        needs); (3) rewrites with the UNCONDITIONAL `t_seq_update2_get`
+        (never the ite-free corollaries -- `simp`'s own e-matching finds
+        `base`/`i1`/`v1`/`i2`/`v2`/`j` from the goal's own concrete term
+        the same way `grind`'s did, so no term is threaded from Python;
+        `omega` discharges the six range obligations from the just-
+        normalized context); (4) splits the ite the rewrite leaves
+        (`repeat' split`, so a doubly-nested ite -- `if j=i2 then .. else
+        if j=i1 then ..`-- opens both levels, never just one); and (5)
+        closes each leaf by whichever of `trivial`/`rfl`/`omega`/
+        `contradiction` applies, or, for the one shape none of those
+        reaches (two READS of the SAME untouched base list at indices
+        provably but not syntactically equal, e.g. swapFirstAndLast's
+        own `a[len(a)-1]! = a[i2]!`), the new `t_seq_index_congr` bridge
+        (`emit_seq_helpers` above), `apply`-ed so only its own `i = j`
+        side condition is left for `omega`. Measured (probe591/625, lean
+        4.33.1, core only, then the full pipeline): closes both
+        committed swapFirstAndLast variants' `_t_spec` theorem, axioms
+        {propext, Quot.sound}; every task without this gate is
+        unaffected (this branch is appended, never substituted, and is
+        `None` for them so `_close` adds nothing new to their text)."""
+        if not self.seq_composed_update2:
+            return None
+        # `<;>` throughout, never a bare `;`/`all_goals` pair (measured,
+        # probeZ/probeAA/probeCC): the identical five steps, written as
+        # `repeat' (...); all_goals (...); all_goals (...); all_goals
+        # (...)` inside ONE enclosing paren on one line, silently make
+        # NO progress at all (no error, the goal left byte-identical to
+        # right after `unfold`) -- some interaction between `repeat'`
+        # and a bare `;`-continuation this file does not otherwise rely
+        # on. The same five steps as separate NEWLINE-separated tactics
+        # (no enclosing parens needed there) or chained with `<;>`
+        # instead close the goal, so `<;>` is the one this method emits;
+        # every branch this file cites by name still fires per goal
+        # (`<;>` distributes over however many `repeat'` left, matching
+        # `all_goals`'s own intent without the bug).
+        return (
+            "((repeat' (first | apply And.intro | intro)) <;> "
+            "(try simp only [List.length_set] at *) <;> "
+            "(try simp (disch := omega) only [t_seq_update2_get]) <;> "
+            "((repeat' split) <;> first | trivial | rfl | omega "
+            "| contradiction | (apply t_seq_index_congr; omega)))"
+        )
+
     def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
         """`base` tried first; the div/mod bridges above added only when
         `nodes` actually reaches a div/mod application, and the
@@ -3961,6 +4022,16 @@ class Lower:
         branches = self._divmod_branches(nodes, env, types)
         if self.seq_mut or self.seq_new or self.seq_eq_comp:
             branches.append(f"(grind only [{self._seq_hints()}])")
+            # PER-SITE INDEX CODEGEN (2026-09-12, ROADMAP 16.2): tried
+            # BEFORE the `grind only` fallback above, since it is the
+            # generated fix for exactly the gap that fallback's own
+            # e-matching cannot close (a many-hypothesis composed lemma
+            # against a nested `.set`/`.set` chain); `None` (so this
+            # `branches.append` is skipped) for every task outside that
+            # one shape, so nothing else changes.
+            seq2 = self._seq_update2_script()
+            if seq2 is not None:
+                branches.insert(-1, seq2)
         if not branches:
             return base
         return "first | (" + base + ") | " + " | ".join(branches)
@@ -4507,6 +4578,33 @@ class Lower:
                 "= base[j.toNat]! := by\n"
                 "  rw [t_seq_update2_get base i1 v1 i2 v2 j hi1 hiu1 hi2 "
                 "hiu2 hj hju, if_neg hne2, if_neg hne1]\n")
+                # PER-SITE INDEX CODEGEN's own closing bridge
+                # (2026-09-12, ROADMAP 16.2, lean's own item): the
+                # generated spec-theorem script (`_seq_update2_script`
+                # below) rewrites the WHOLE goal with the unconditional
+                # `t_seq_update2_get` above (never the hi/mid/lo
+                # corollaries -- those still exist for `_seq_hints`'s own
+                # `grind only` fallback, unchanged), splits the ite it
+                # leaves, and closes each leaf by `rfl`/`omega`/
+                # `contradiction` OR, when the leaf equates two READS of
+                # the UNCHANGED base list at two syntactically different
+                # but numerically equal indices (measured: this is every
+                # leaf `rfl` alone cannot close -- swapFirstAndLast's own
+                # `a[len(a)-1]! = a[i2]!` where `i2` renders through the
+                # doubly-updated seq's own length, not `a`'s), by this
+                # one bridge, `apply`-ed so its `i = j` side-condition
+                # unifies as `omega`'s only remaining obligation. Proved
+                # by one `rw`, generic in the element type is NOT needed
+                # here (every composed-update task committed is `List
+                # Int`), so no `_row` twin. Measured (probe591/625,
+                # lean 4.33.1, core only): compiles clean, axioms
+                # {propext, Quot.sound}, closes swapFirstAndLast's own
+                # `_t_spec` in both variants with the certificate script
+                # below, no other theorem in this file changed.
+                parts.append(
+                "theorem t_seq_index_congr (a : List Int) (i j : Int) "
+                "(h : i = j) :\n"
+                "    a[i.toNat]! = a[j.toNat]! := by rw [h]\n")
         if self.seq_new:
             parts.append(
             "theorem t_seq_append_get (l1 l2 : List Int) (j : Int)\n"

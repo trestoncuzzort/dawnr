@@ -1971,6 +1971,117 @@ rather than guessed, one out of this session's own item list:
   lost or gained. `python3 -m unittest test_lower_rocq`: 14 of 14, the 4
   new (`PairOfSeqComponentTest`, `TPrefixCollisionRenameTest`) plus the
   10 already there.
+
+ROCQ-4, 2026-09-12 (ROADMAP 16.2's rocq item: "two sequential loops,
+rotate by mod, the primes, the pair twin" -- tasks 610 removeElement, 586
+splitAndAppend, 470 pairwiseAddition, 576 isSublist, 126
+sumOfCommonDivisors, 3 isNonPrime, 605 isPrime, from
+COVERAGE-lifted-785.md's own sweep-r21 findings). One classification bug
+fixed in `t/verifiers/rocq.py` (this session's other file), everything
+else measured and named rather than guessed at; no lowering feature in
+`lower_rocq.py` itself changed this session.
+
+  FIXED. task_id_126 sumOfCommonDivisors's own real side read MALFORMED
+  (coqc's raw message `Error: No applicable tactic.`, one of
+  `_loop_spec`'s `first [...]` branches raising before its own trailing
+  `fail 1 "unsolved t verification condition"` is ever reached) though
+  the file parses and resolves fine and only a LATER tactic script ran
+  out of applicable branches on one goal -- the same "the engine stopped
+  without a countermodel" event `UNPROVED_MARKS`'s four existing strings
+  ("Tactic failure", "Cannot find witness", "Unable to unify",
+  "unsolved") already name, previously falling through the unnamed
+  catch-all two lines under `MALFORMED_MARKS` in `verify()`. Fixed by
+  adding "No applicable tactic" to `UNPROVED_MARKS` (`verifiers/rocq.py`,
+  see that file's own docstring and comment for the full account and a
+  standalone-probe citation of the exact message). Measured directly
+  (`verifiers.rocq.verify` on the task's own lowered `.v`, before/after):
+  real malformed -> unproved, twin unchanged at refuted. A new
+  regression test, `test_lower_rocq.NoApplicableTacticIsUnprovedTest`,
+  reproduces the exact coqc message from a minimal `first [...]` with no
+  branch's own `fail` message (standalone-probe-confirmed: Rocq 9.2
+  raises `Error: No applicable tactic.` verbatim when every alternative
+  of a `first` fails silently) so the fix stays covered independent of
+  task_id_126's own proof script.
+
+  MEASURED, NOT FIXED (each read the same both before and after the one
+  fix above; no lowering change attempted for any of these, so none of
+  their sources moved):
+    - task_id_610 removeElement: ABSTAIN, unchanged ("rocq lowering: more
+      than one loop per body is not lowered yet"). Its body is two
+      SEQUENTIAL top-level while loops sharing one index variable, which
+      needs `gen_loop`'s single-Fixpoint-per-task architecture extended
+      to chain a second loop's own Fixpoint off the first loop's exit
+      state (lower_fstar.py's `gen_loop_chain`, 2026-09-12, is the
+      existing precedent for exactly two loops in another kernel) --
+      confirmed, by reading `find_while`/`gen_loop` this session, to be
+      a genuine multi-day architectural gap, not a quick fix: a
+      half-composed chain that reads VERIFIED on an unsound premise (the
+      second loop's own initial-state facts not actually proved from the
+      first loop's real exit) is exactly the failure this file's honesty
+      rules exist to keep out, and confirming a chained construction
+      sound needs substantially more room than a classification fix.
+    - task_id_586 splitAndAppend: real=unproved (coqc: "Tactic failure:
+      unsolved t verification condition" on the main theorem), twin=
+      refuted, unchanged. A rotate-by-`n mod |l|` shape needs a case
+      split between `t_slice`/`t_app`'s own index boundary and `t_mod`'s
+      two-case reading (`0 <= t_mod x y < |y|` from `t_mod_bound`, but
+      WHICH of `t_slice`'s two arms a shifted index lands in still needs
+      its own lemma joining the two) that no existing tactic combination
+      in the PRELUDE's seq block reaches; ROADMAP 16.2's own brief names
+      the fix (write the joining lemma in the prelude's seq block and
+      wire it into `t_inv1`'s tactic match) but building and confirming
+      it sound was not attempted this session, named rather than
+      guessed at.
+    - task_id_470 pairwiseAddition: real=verified, twin=TIMEOUT
+      (unchanged; AGREEMENT.md does not carry this row, so there is no
+      committed baseline to regress). Read the twin's own `.v`
+      (`t_refutation_certificate`): `specialize (t_H t_w_a 0 t_w_result
+      1 0); ...; t_feed t_H; t_dis` needs `t_div 0 2 = 0` (from
+      `t_w_a`'s own `a_len := 0` substitution) to contradict the fed
+      conclusion's `1 = t_div a_len 2`, a ground `t_div`/`t_mod` pair the
+      file's own delta-whitelisted `cbv` path is DESIGNED to compute
+      (see this file's own note on `t_div`/`t_mod`'s "GROUND (x, y) pair"
+      detection, above) -- but `t_feed` must also discharge the
+      certificate's own `forall k, 0 <= k < i_v -> ...` hypothesis at
+      `i_v = 0` (vacuously true) before `t_dis` is even reached, and
+      which of the two steps spins was not isolated this session (no
+      `-time`/profiling run attempted); named as coqc's own wall
+      backstop firing on this one theorem, not diagnosed further.
+    - task_id_576 isSublist: real=unproved, twin=unproved, unchanged.
+      Its own ensures is `(exists ...) -> True` (vacuously provable), so
+      the failure is NOT the final theorem (which discharges fine) but
+      `_loop_spec`'s own invariant-preservation step: coqc's exact
+      message, re-measured standalone this session, is `Error: Tactic
+      failure: unsolved t verification condition.` at the SAME `first
+      [...]`'s `t_side`/`t_dis` combination named for task_id_126 and
+      task_id_586 above, on a goal this session did not isolate further
+      (the loop carries a `t_slice`-under-`exists` invariant, plausibly
+      the same family of case-split gap as splitAndAppend's, but this
+      was not confirmed by reading the specific failing goal).
+    - task_id_605 isPrime and task_id_3 isNonPrime: real=unproved and
+      real=timeout respectively (this session's own re-measurement;
+      flake_check's noise floor plausibly swaps which of the two reads
+      which run to run, both genuinely hard), twin=refuted for both,
+      unchanged. ROADMAP 16.2's own brief names a divisor-bound lemma
+      "of lower_fstar.py and lower_verus.py, proved in a prelude block
+      gated by feature" as the fix; that lemma was not located and
+      ported to `lower_rocq.py` this session (no prelude change made),
+      so this stays a named gap, not a diagnosed-and-declined one.
+
+  REGRESSION (grade.py --tasks tasks --kernels rocq,dafny --flake 3, the
+  34 committed tasks): 34 of 34 read the SAME cell as AGREEMENT.md's own
+  rocq column both before and after `verifiers/rocq.py`'s fix (33
+  verified/refuted, min_max timeout/refuted) -- none of the 34 committed
+  `.v` sources exercise the `else MALFORMED` catch-all this session
+  touched, so none of their outcomes could move either way; this is a
+  true regression check (measured twice, before and after, not inferred
+  from the fix's own description). The rocq column of the full
+  conformance manifest (conformance.build_manifest + run_items + grade,
+  restricted to the rocq column only, flake 3, a standalone script
+  mirroring `conformance.py main()`'s own driver calls): 66 items, 0
+  FAIL before, 0 FAIL after -- no PASS lost or gained.
+  `python3 -m unittest test_lower_rocq`: 15 of 15 (14 pre-existing plus
+  `NoApplicableTacticIsUnprovedTest`).
 """
 from __future__ import annotations
 

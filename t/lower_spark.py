@@ -2756,6 +2756,315 @@ SPLIT_CONCAT_LEMMA_PREAMBLE = """\
      (T_Concat_Slice_Lemma (S, L, Len (S) - L) and then T_Full_Slice_Lemma (S));
 """
 
+# ROTATE_LEMMA (ROADMAP 16.2, 2026-09-12, dafny_synthesis_task_id_586
+# splitAndAppend): the task's own `ensures` states
+# T_Eq's SHAPE but is not T_Eq -- a forall over `i` comparing
+# Elem(T_Concat(T_Slice(L,N,Len(L)),T_Slice(L,0,N)),I) against
+# Elem(L, T_Mod(I+N,Len(L))): the SAME rotate-by-n indexing law
+# lower_verus.py's own ROTATE_PRELUDE states (`(slice(l,n,len)+
+# slice(l,0,n))[i] == l[(i+n) mod len]`), restated here over this file's
+# own T_Concat/T_Slice/T_Mod encoding, named but not built in wave H
+# (ROADMAP 16.2, "586 splitAndAppend... a T_Mod bridging lemma").
+#
+# FIRST TRY, ABANDONED (2026-09-12, this session, probes probe1/probe11/
+# probe12.ads): a single Boolean lemma stating the FULL forall directly
+# (`for all I in T_Range'(0,Len(L)) => Elem(T_Concat(...),I) =
+# Elem(L,T_Mod(I+N,Len(L)))`), proved either by unwinding a count M
+# straight to Len(L) or by asserting the forall outright -- MEASURED to
+# hit VC_POSTCONDITION's step limit at --steps 20000 AND 100000 either
+# way, and MEASURED (probe12.ads, no T_Mod at all, just the raw
+# case-split `if I < Len(L)-N then Elem(L,N+I) else Elem(L,I-(Len(L)-N))`)
+# to time out even WITHOUT T_Mod in the picture: the cost is
+# gnatprove's own automatic instantiation of T_Concat's and T_Slice's
+# QUANTIFIED Posts at a case-split-dependent, still-symbolic point,
+# exactly the "nested quantifier under a case split" wall
+# SPLIT_CONCAT_LEMMA's own docstring already measured for a different
+# task's shape.
+#
+# WHAT WORKS (probes probe13.ads through probe20.ads, this session,
+# gnatprove FSF 16.1.0/z3, 0 unproved at --steps 20000): never ask
+# gnatprove to instantiate a quantified Post at a SYMBOLIC, case-split
+# point at all -- every step below adds exactly ONE CONCRETE point tied
+# to a recursion's own decreasing variant, the same discipline
+# SPLIT_CONCAT_LEMMA's own "WHAT WORKS" note already relies on.
+# Four lemmas, each MEASURED standalone before being composed:
+#   Mod_Lo_Lemma/Mod_Hi_Lemma (X, Y): T_Mod (X, Y) = X (0 <= X < Y) or
+#   X - Y (Y <= X < 2*Y). MEASURED (probe3.ads/probe6.ads): the identity
+#   ITSELF (`(X rem Y) = X`) proves in a handful of steps when stated
+#   directly over `rem`, but the SAME fact restated by calling T_Mod
+#   (an if/then/else wrapping `rem`) TIMES OUT even at --steps 300000
+#   (probe3.ads) -- going through an opaque function call apparently
+#   costs gnatprove far more than unfolding one `if` should. FIXED
+#   (probe9.ads): a rem-only lemma proves the raw fact first (cheap,
+#   MEASURED), and a second lemma calls it, THEN states the T_Mod form;
+#   with the raw fact already IN SCOPE as an established hypothesis
+#   (not something gnatprove must re-derive while also unfolding
+#   T_Mod), the T_Mod-level restatement is free.
+#   Rotate_Lo_Count_Lemma/Rotate_Hi_Count_Lemma (L, N, M): induction on M,
+#   one new CONCRETE point M-1 per step, entirely within one half (Lo:
+#   M <= Len(L)-N, every point < Len(L)-N by construction; Hi: M <= N,
+#   the goal's own range re-based to start at 0 -- MEASURED, probe14.ads
+#   vs probe15.ads: the SAME induction over a range starting at the
+#   symbolic Len(L)-N times out, the identical induction re-based to
+#   start at 0 with the shift folded into the ELEMENT position instead
+#   proves clean; a non-zero T_Range lower bound apparently costs the
+#   Iterable e-matching something a zero one does not) -- neither phase
+#   ever compares M-1 against the OTHER phase's threshold, so no case
+#   split competes with quantifier instantiation in the same step.
+#   Rotate_Lo_Lemma/Rotate_Hi_Lemma restate each Count lemma at its own
+#   full M (Len(L)-N, N respectively), still with no T_Mod.
+#   Rotate_Point_Lemma (L, N, I): ONE concrete point I, calling
+#   Rotate_Lo_Lemma/Rotate_Hi_Lemma (established foralls, extracted at I
+#   by ordinary instantiation, not derived fresh) AND Mod_Lo_Lemma/
+#   Mod_Hi_Lemma (also at I) under the SAME `I < Len(L)-N` case split --
+#   MEASURED (probe18.ads) to prove clean: unlike the FIRST TRY, I here
+#   is a plain function parameter, not a bound variable inside a forall
+#   goal, so no quantifier instantiation happens in this step at all.
+#   Rotate_Full_Count_Lemma (L, N, M): induction on M up to Len(L), each
+#   step calling Rotate_Point_Lemma at the one new concrete point M-1 --
+#   MEASURED (probe19.ads) to combine the two halves' facts into a
+#   single growing forall with 0 unproved, the last piece FIRST TRY
+#   could not do directly.
+# Rotate_Lemma (L, N) restates Rotate_Full_Count_Lemma at M = Len(L),
+# its own Post the literal shape F's ensures needs (MEASURED, probe20.ads:
+# the whole file, 402 checks, 0 unproved at --steps 20000, DEFAULT_STEPS
+# unchanged).
+ROTATE_LEMMA_PREAMBLE = """\
+   function Mod_Lo_Rem_Lemma (X, Y : Big_Integer) return Boolean
+   with
+     Pre  => Y > Big_Integer'(0) and then X >= Big_Integer'(0) and then X < Y,
+     Post => Mod_Lo_Rem_Lemma'Result
+       and then (X rem Y) >= Big_Integer'(0) and then (X rem Y) = X;
+
+   function Mod_Lo_Rem_Lemma (X, Y : Big_Integer) return Boolean is (True);
+
+   function Mod_Lo_Lemma (X, Y : Big_Integer) return Boolean
+   with
+     Pre  => Y > Big_Integer'(0) and then X >= Big_Integer'(0) and then X < Y,
+     Post => Mod_Lo_Lemma'Result and then T_Mod (X, Y) = X;
+
+   function Mod_Lo_Lemma (X, Y : Big_Integer) return Boolean is
+     (if Mod_Lo_Rem_Lemma (X, Y) then True else True);
+
+   function Mod_Hi_Rem_Lemma (X, Y : Big_Integer) return Boolean
+   with
+     Pre  => Y > Big_Integer'(0) and then X >= Y and then X < Big_Integer'(2) * Y,
+     Post => Mod_Hi_Rem_Lemma'Result and then (X rem Y) = X - Y;
+
+   function Mod_Hi_Rem_Lemma (X, Y : Big_Integer) return Boolean is (True);
+
+   function Mod_Hi_Lemma (X, Y : Big_Integer) return Boolean
+   with
+     Pre  => Y > Big_Integer'(0) and then X >= Y and then X < Big_Integer'(2) * Y,
+     Post => Mod_Hi_Lemma'Result and then T_Mod (X, Y) = X - Y;
+
+   function Mod_Hi_Lemma (X, Y : Big_Integer) return Boolean is
+     (if Mod_Hi_Rem_Lemma (X, Y) then True else True);
+
+   function Rotate_Lo_Count_Lemma (L : Seq; N, M : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(0) and then N < Len (L)
+       and then M >= Big_Integer'(0) and then M <= Len (L) - N,
+     Post => Rotate_Lo_Count_Lemma'Result
+       and then (for all J in T_Range'(0, M) =>
+                   Elem (T_Concat (T_Slice (L, N, Len (L)),
+                                  T_Slice (L, Big_Integer'(0), N)), J)
+                   = Elem (L, N + J)),
+     Subprogram_Variant => (Decreases => M);
+
+   function Rotate_Lo_Count_Lemma (L : Seq; N, M : Big_Integer) return Boolean is
+     (if M = Big_Integer'(0) then True
+      else Rotate_Lo_Count_Lemma (L, N, M - Big_Integer'(1)));
+
+   function Rotate_Hi_Count_Lemma (L : Seq; N, M : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(0) and then N < Len (L)
+       and then M >= Big_Integer'(0) and then M <= N,
+     Post => Rotate_Hi_Count_Lemma'Result
+       and then (for all J in T_Range'(0, M) =>
+                   Elem (T_Concat (T_Slice (L, N, Len (L)),
+                                  T_Slice (L, Big_Integer'(0), N)),
+                         Len (L) - N + J)
+                   = Elem (L, J)),
+     Subprogram_Variant => (Decreases => M);
+
+   function Rotate_Hi_Count_Lemma (L : Seq; N, M : Big_Integer) return Boolean is
+     (if M = Big_Integer'(0) then True
+      else Rotate_Hi_Count_Lemma (L, N, M - Big_Integer'(1)));
+
+   function Rotate_Lo_Lemma (L : Seq; N : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(0) and then N < Len (L),
+     Post => Rotate_Lo_Lemma'Result
+       and then (for all J in T_Range'(0, Len (L) - N) =>
+                   Elem (T_Concat (T_Slice (L, N, Len (L)),
+                                  T_Slice (L, Big_Integer'(0), N)), J)
+                   = Elem (L, N + J));
+
+   function Rotate_Lo_Lemma (L : Seq; N : Big_Integer) return Boolean is
+     (if Rotate_Lo_Count_Lemma (L, N, Len (L) - N) then True else True);
+
+   function Rotate_Hi_Lemma (L : Seq; N : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(0) and then N < Len (L),
+     Post => Rotate_Hi_Lemma'Result
+       and then (for all J in T_Range'(0, N) =>
+                   Elem (T_Concat (T_Slice (L, N, Len (L)),
+                                  T_Slice (L, Big_Integer'(0), N)),
+                         Len (L) - N + J)
+                   = Elem (L, J));
+
+   function Rotate_Hi_Lemma (L : Seq; N : Big_Integer) return Boolean is
+     (if Rotate_Hi_Count_Lemma (L, N, N) then True else True);
+
+   function Rotate_Point_Lemma (L : Seq; N, I : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(0) and then N < Len (L)
+       and then I >= Big_Integer'(0) and then I < Len (L),
+     Post => Rotate_Point_Lemma'Result
+       and then Elem (T_Concat (T_Slice (L, N, Len (L)),
+                                T_Slice (L, Big_Integer'(0), N)), I)
+                = Elem (L, T_Mod (I + N, Len (L)));
+
+   function Rotate_Point_Lemma (L : Seq; N, I : Big_Integer) return Boolean is
+     (if I < Len (L) - N then
+        (if Rotate_Lo_Lemma (L, N) and then Mod_Lo_Lemma (I + N, Len (L))
+         then True else True)
+      else
+        (if Rotate_Hi_Lemma (L, N) and then Mod_Hi_Lemma (I + N, Len (L))
+         then True else True));
+
+   function Rotate_Full_Count_Lemma (L : Seq; N, M : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(0) and then N < Len (L)
+       and then M >= Big_Integer'(0) and then M <= Len (L),
+     Post => Rotate_Full_Count_Lemma'Result
+       and then (for all I in T_Range'(0, M) =>
+                   Elem (T_Concat (T_Slice (L, N, Len (L)),
+                                  T_Slice (L, Big_Integer'(0), N)), I)
+                   = Elem (L, T_Mod (I + N, Len (L)))),
+     Subprogram_Variant => (Decreases => M);
+
+   function Rotate_Full_Count_Lemma (L : Seq; N, M : Big_Integer) return Boolean is
+     (if M = Big_Integer'(0) then True
+      else (if Rotate_Full_Count_Lemma (L, N, M - Big_Integer'(1))
+              and then Rotate_Point_Lemma (L, N, M - Big_Integer'(1))
+            then True else True));
+
+   function Rotate_Lemma (L : Seq; N : Big_Integer) return Boolean
+   with
+     Pre  => N >= Big_Integer'(0) and then N < Len (L),
+     Post => Rotate_Lemma'Result
+       and then (for all I in T_Range'(0, Len (L)) =>
+                   Elem (T_Concat (T_Slice (L, N, Len (L)),
+                                  T_Slice (L, Big_Integer'(0), N)), I)
+                   = Elem (L, T_Mod (I + N, Len (L))));
+
+   function Rotate_Lemma (L : Seq; N : Big_Integer) return Boolean is
+     (if Rotate_Full_Count_Lemma (L, N, Len (L)) then True else True);
+"""
+
+_ROTATE_LEMMA_NAMES = frozenset((
+    "Mod_Lo_Rem_Lemma", "Mod_Lo_Lemma", "Mod_Hi_Rem_Lemma", "Mod_Hi_Lemma",
+    "Rotate_Lo_Count_Lemma", "Rotate_Hi_Count_Lemma", "Rotate_Lo_Lemma",
+    "Rotate_Hi_Lemma", "Rotate_Point_Lemma", "Rotate_Full_Count_Lemma",
+    "Rotate_Lemma"))
+
+
+def _rotate_lemma_target(task: dict, body: list):
+    """None, or (L, N) -- the t-AST for the whole seq and the rotate
+    amount -- when this task's `ensures` contains a quantifier of
+    EXACTLY the shape `forall i in [0, len(L)): R[i] == L[(i + N) mod
+    len(L)]`, where R resolves (through the body's own local var
+    bindings, chased by _resolve_var exactly as
+    _split_concat_lemma_target already does) to
+    `slice(L, N, len(L)) + slice(L, 0, N)` -- ROADMAP 16.2, 2026-09-12,
+    the ONE shape MEASURED (this file's ROTATE_LEMMA_PREAMBLE note) to
+    need Rotate_Lemma. Narrow on purpose, the same discipline
+    _split_concat_lemma_target's own docstring already states: a task
+    whose `ensures` merely resembles this is left to gnatprove's own
+    automatic proof exactly as before, never routed through Rotate_
+    Lemma. Order matters (Rotate_Lemma's own Post is proved for exactly
+    this operand order, secondPart then firstPart, matching
+    dafny_synthesis_task_id_586 splitAndAppend's own body) -- a task
+    that concatenates the two slices the OTHER way is left alone too."""
+    env = {}
+    for stmt in body:
+        if "var" in stmt and isinstance(stmt["var"], dict):
+            env[stmt["var"]["name"]] = stmt["var"].get("init")
+        elif "assign" in stmt:
+            name, val = stmt["assign"]
+            env[name] = val
+    for e in task.get("ensures", []):
+        fa = e.get("forall")
+        if not isinstance(fa, dict):
+            continue
+        lo, hi = fa.get("lo"), fa.get("hi")
+        var, bd = fa.get("var"), fa.get("body")
+        if not (isinstance(lo, dict) and lo.get("int") == 0):
+            continue
+        if not (isinstance(bd, dict) and bd.get("op") == "=="
+                and len(bd.get("args", [])) == 2):
+            continue
+        for lhs, rhs in (bd["args"], bd["args"][::-1]):
+            if not (isinstance(lhs, dict) and lhs.get("op") == "at"
+                    and len(lhs.get("args", [])) == 2):
+                continue
+            r_ast, idx = lhs["args"]
+            if not (isinstance(idx, dict) and idx.get("var") == var):
+                continue
+            if not (isinstance(rhs, dict) and rhs.get("op") == "at"
+                    and len(rhs.get("args", [])) == 2):
+                continue
+            l_ast, mod_ast = rhs["args"]
+            if not (isinstance(mod_ast, dict) and mod_ast.get("op") == "mod"
+                    and len(mod_ast.get("args", [])) == 2):
+                continue
+            sum_ast, len_ast = mod_ast["args"]
+            if not (isinstance(sum_ast, dict) and sum_ast.get("op") == "+"
+                    and len(sum_ast.get("args", [])) == 2):
+                continue
+            i_ast, n_ast = sum_ast["args"]
+            if not (isinstance(i_ast, dict) and i_ast.get("var") == var):
+                continue
+            if not (isinstance(len_ast, dict) and len_ast.get("op") == "len"
+                    and len(len_ast.get("args", [])) == 1):
+                continue
+            l_r = _resolve_var(l_ast, env)
+            if not _ast_eq(_resolve_var(len_ast["args"][0], env), l_r):
+                continue
+            if not (isinstance(hi, dict) and hi.get("op") == "len"
+                    and len(hi.get("args", [])) == 1
+                    and _ast_eq(_resolve_var(hi["args"][0], env), l_r)):
+                continue
+            r_r = _resolve_var(r_ast, env)
+            if not (isinstance(r_r, dict) and r_r.get("op") == "+"
+                    and len(r_r.get("args", [])) == 2):
+                continue
+            a, b = r_r["args"]
+            a_r, b_r = _resolve_var(a, env), _resolve_var(b, env)
+            if not (isinstance(a_r, dict) and a_r.get("op") == "slice"
+                    and isinstance(b_r, dict) and b_r.get("op") == "slice"):
+                continue
+            sa, loa, hia = a_r["args"]
+            sb, lob, hib = b_r["args"]
+            if not (_ast_eq(_resolve_var(sa, env), l_r)
+                    and _ast_eq(_resolve_var(sb, env), l_r)):
+                continue
+            n_r = _resolve_var(n_ast, env)
+            if not _ast_eq(_resolve_var(loa, env), n_r):
+                continue
+            if not (isinstance(hia, dict) and hia.get("op") == "len"
+                    and len(hia.get("args", [])) == 1
+                    and _ast_eq(_resolve_var(hia["args"][0], env), l_r)):
+                continue
+            if not (isinstance(lob, dict) and lob.get("int") == 0):
+                continue
+            if not _ast_eq(_resolve_var(hib, env), n_r):
+                continue
+            return l_r, n_r
+    return None
+
 
 def _ast_eq(a, b) -> bool:
     """Structural equality on t-AST nodes (dict/list/scalar), used only by
@@ -4295,11 +4604,28 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
     # `if len(s) >= 0 then ... else ...`, always-true so always taken,
     # and the flat loop bailed out on the top-level `if` before ever
     # seeing it (real column read UNPROVED, not REFUTED, 2026-09-12
-    # measurement, this worktree). `while` and `return` are UNCHANGED,
-    # still an honest "not modeled here" None -- this file does not yet
-    # trust itself to replay a loop or an early exit inside this walk,
-    # exactly the pre-existing fail-closed posture the module docstring
-    # already states for those two shapes.
+    # measurement, this worktree). `return` is UNCHANGED, still an
+    # honest "not modeled here" None -- this file does not yet trust
+    # itself to replay an early exit inside this walk, the pre-existing
+    # fail-closed posture the module docstring already states for that
+    # shape.
+    #
+    # `while` DESCENT (ROADMAP 16.2, 2026-09-12, dafny_synthesis_task_id_
+    # 610 removeElement): mirrors the `if` case just above (a ground
+    # `interp.ev` decides which way each iteration goes, so a
+    # mis-decided iteration cannot mint anything, only fall through to
+    # the "witness and walk disagree" None below) and lower_framac.py's
+    # own `_undef_certificate` while-descent of the same date (that
+    # file's own docstring names this task by number too: "a compare-
+    # flip twin's undefined `v[i_v2]` access... sits inside the loop's
+    # OWN body, past the point the old flat walk gave up"). Capped at
+    # `interp.MAX_LOOP`, exactly like `interp.exec_body`'s own while
+    # case, so a non-terminating replay raises `interp.Budget` (already
+    # in the caller's `except` tuple below) rather than looping this
+    # walk itself; the cond's own definedness is checked exactly like an
+    # `if`'s (a False reading there is not itself surfaced as the found
+    # obligation -- the pre-existing conservative posture the `if` case
+    # above already has, not changed here).
     def _walk(stmts: list) -> str | None:
         for s in stmts:
             if "var" in s:
@@ -4316,6 +4642,23 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                 found = _walk(taken)
                 if found is not None:
                     return found
+                continue
+            elif "while" in s:
+                w = s["while"]
+                it = 0
+                while True:
+                    cond = w["cond"]
+                    cob = defined(cond)
+                    if cob != TRUE and not interp.ev(cob, env_py, funs, st):
+                        return None
+                    if not interp.ev(cond, env_py, funs, st):
+                        break
+                    found = _walk(w["body"])
+                    if found is not None:
+                        return found
+                    it += 1
+                    if it > interp.MAX_LOOP:
+                        raise interp.Budget("loop cap")
                 continue
             else:
                 return None
@@ -4765,7 +5108,20 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # package when a loop actually escapes, so they are only reserved for a
     # task has_return finds a `return` in; the other 13 committed tasks'
     # RESERVED set, and therefore their output, is untouched.
-    reserved = RESERVED | ({"Esc", "Ret"} if has_return(body) else set())
+    # ROADMAP 16.2, 2026-09-12 (ROTATE_LEMMA_PREAMBLE's own note): found
+    # here, ahead of the collision check just below, so a t identifier
+    # that would capitalize onto one of Rotate_Lemma's own names is
+    # caught the same way Esc/Ret and the pair names already are --
+    # unlike _split_concat_lemma_target's own call site (further down,
+    # after compile()), which this file's pre-existing collision check
+    # never covered for Split_Concat_Lemma's names, a gap this addition
+    # does not repeat for its own lemma names. `rotate_target` is reused
+    # verbatim below (after compile(), where `env` first exists) rather
+    # than computed twice.
+    rotate_target = _rotate_lemma_target(task, body)
+    needs_rotate_lemma = rotate_target is not None
+    reserved = (RESERVED | ({"Esc", "Ret"} if has_return(body) else set())
+               | (_ROTATE_LEMMA_NAMES if needs_rotate_lemma else set()))
     # SPEC.md "Pairs" (2026-09-10): each pair type's own record name, its
     # equality wrapper's name (_pair_preamble; reserved whether or not this
     # task ever compares two pairs -- there is no cheap structural
@@ -4846,6 +5202,22 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         s_text = L.expr(s_ast, lemma_psub, base_types)
         l_text = L.expr(l_ast, lemma_psub, base_types)
         final = (f"(if Split_Concat_Lemma ({s_text}, {l_text})\n"
+                f"      then {final}\n"
+                f"      else {final})")
+
+    # ROTATE_LEMMA (ROADMAP 16.2, 2026-09-12, see the preamble's own note
+    # above): `rotate_target` was already computed (above, ahead of the
+    # collision check) against this same sanitized `body`; reused here,
+    # not recomputed, now that `env` exists to render a split point given
+    # by a local exactly as SPLIT_CONCAT_LEMMA's own wiring does.
+    if needs_rotate_lemma:
+        lemma_psub = {**psub,
+                     **{k: v for k, v in env.items()
+                        if k not in psub and v is not None}}
+        l_ast, n_ast = rotate_target
+        l_text = L.expr(l_ast, lemma_psub, base_types)
+        n_text = L.expr(n_ast, lemma_psub, base_types)
+        final = (f"(if Rotate_Lemma ({l_text}, {n_text})\n"
                 f"      then {final}\n"
                 f"      else {final})")
 
@@ -4956,6 +5328,16 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [SPLIT_CONCAT_LEMMA_PREAMBLE]
     if L.needs_divmod:
         parts += [DIVMOD_PREAMBLE]
+    # ROTATE_LEMMA_PREAMBLE calls T_Mod (DIVMOD_PREAMBLE, above) as well
+    # as T_Concat/T_Slice/T_Range (above those): must be emitted after
+    # all three. A task whose shape needs it already sets needs_divmod/
+    # needs_concat/needs_slice/needs_range from its own body and ensures
+    # (the shape _rotate_lemma_target matches cannot arise without
+    # slice, seq-`+` and `mod` all three present), so nothing here forces
+    # those flags on, the same restraint needs_split_concat_lemma above
+    # already takes.
+    if needs_rotate_lemma:
+        parts += [ROTATE_LEMMA_PREAMBLE]
     # THE STRING LIBRARY (v1), 2026-09-11: STRCORE before anything that
     # calls T_Match_At/Is_Ws (count/find/replace/split(s)); the split-state
     # record before either split form; T_Slice/T_Concat (above) before

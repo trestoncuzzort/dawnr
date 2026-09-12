@@ -96,6 +96,157 @@ class SplitConcatLemmaTargetTest(unittest.TestCase):
         self.assertIn("if Split_Concat_Lemma (Arr, L)", out)
 
 
+def _rotate_task():
+    """dafny_synthesis_task_id_586 splitAndAppend's own shape: a rotate
+    by n, secondPart (slice(l,n,len(l))) then firstPart (slice(l,0,n))
+    concatenated, the ensures a forall comparing r[i] against
+    l[(i+n) mod len(l)]."""
+    return {
+        "params": [{"name": "l", "type": "seq"}, {"name": "n", "type": "int"}],
+        "returns": [{"name": "r", "type": "seq"}],
+        "requires": [
+            {"op": ">=", "args": [{"var": "n"}, {"int": 0}]},
+            {"op": "<", "args": [{"var": "n"}, _len("l")]},
+        ],
+        "ensures": [
+            {"op": "==", "args": [_len("r"), _len("l")]},
+            {"forall": {
+                "lo": {"int": 0}, "hi": _len("l"), "var": "i",
+                "body": {"op": "==", "args": [
+                    {"op": "at", "args": [{"var": "r"}, {"var": "i"}]},
+                    {"op": "at", "args": [{"var": "l"}, {
+                        "op": "mod", "args": [
+                            {"op": "+", "args": [{"var": "i"}, {"var": "n"}]},
+                            _len("l")]}]},
+                ]},
+            }},
+        ],
+    }, [
+        {"var": {"name": "firstPart", "type": "seq",
+                 "init": _slice("l", {"int": 0}, {"var": "n"})}},
+        {"var": {"name": "secondPart", "type": "seq",
+                 "init": _slice("l", {"var": "n"}, _len("l"))}},
+        {"assign": ["r", {"op": "+", "args": [
+            {"var": "secondPart"}, {"var": "firstPart"}]}]},
+    ]
+
+
+class RotateLemmaTargetTest(unittest.TestCase):
+    def test_matches_the_splitAndAppend_shape(self):
+        task, body = _rotate_task()
+        target = ls._rotate_lemma_target(task, body)
+        self.assertIsNotNone(target)
+        l_ast, n_ast = target
+        self.assertEqual(l_ast, {"var": "l"})
+        self.assertEqual(n_ast, {"var": "n"})
+
+    def test_no_match_when_the_operand_order_is_reversed(self):
+        # firstPart then secondPart (the OTHER order): Rotate_Lemma's own
+        # proof is for THIS one operand order only (its docstring), so a
+        # task built the other way must not match.
+        task, body = _rotate_task()
+        body[2] = {"assign": ["r", {"op": "+", "args": [
+            {"var": "firstPart"}, {"var": "secondPart"}]}]}
+        self.assertIsNone(ls._rotate_lemma_target(task, body))
+
+    def test_no_match_when_the_ensures_is_unrelated(self):
+        task, body = _rotate_task()
+        task["ensures"] = [{"op": "==", "args": [_len("r"), _len("l")]}]
+        self.assertIsNone(ls._rotate_lemma_target(task, body))
+
+    def test_no_match_when_the_modulus_is_a_different_seq(self):
+        task, body = _rotate_task()
+        task["ensures"][1]["forall"]["body"]["args"][1]["args"][1]["args"][1] = \
+            {"op": "len", "args": [{"var": "n"}]}
+        self.assertIsNone(ls._rotate_lemma_target(task, body))
+
+    def test_wires_through_lower_and_emits_the_preamble(self):
+        task, body = _rotate_task()
+        task = {**task, "t": 0, "name": "fz_rotate_probe"}
+        out = ls.lower(task, body)
+        self.assertIn("Rotate_Lemma", out)
+        self.assertIn("Rotate_Full_Count_Lemma", out)
+        self.assertIn("if Rotate_Lemma (L, N)", out)
+
+
+class UndefObligationWhileDescentTest(unittest.TestCase):
+    """ROADMAP 16.2, 2026-09-12 (dafny_synthesis_task_id_610
+    removeElement, "the while certificate" item): `_undef_obligation`'s
+    own `_walk` used to `return None` (an honest "not modeled here", the
+    file's own pre-existing docstring) the instant it reached a `while`
+    statement, so an undefined access sitting INSIDE a loop body -- 610's
+    own twin, per the module docstring above `_walk` -- read UNPROVED
+    rather than REFUTED. This test is a synthetic, minimal instance of
+    the same shape (an `update` whose index runs past the seq's own
+    length on the loop's SECOND iteration, not reachable from the
+    outside): before the while-descent branch, `_undef_obligation`
+    returned None here too; after it, the obligation is found."""
+
+    def test_finds_the_obligation_on_the_loops_second_iteration(self):
+        task = {
+            "name": "fz_while_undef_probe",
+            "params": [{"name": "s", "type": "seq"}, {"name": "k", "type": "int"}],
+            "returns": [{"name": "v", "type": "seq"}],
+            "requires": [],
+            "ensures": [],
+        }
+        twin_body = [
+            {"var": {"name": "v", "type": "seq",
+                     "init": {"op": "fill", "args": [_len("s"), {"int": 0}]}}},
+            {"var": {"name": "i", "type": "int", "init": {"int": 0}}},
+            {"while": {
+                "cond": {"op": "<", "args": [{"var": "i"}, {"var": "k"}]},
+                "body": [
+                    {"assign": ["v", {"op": "update", "args": [
+                        {"var": "v"}, {"var": "i"}, {"int": 0}]}]},
+                    {"assign": ["i", {"op": "+", "args": [
+                        {"var": "i"}, {"int": 1}]}]},
+                ],
+            }},
+        ]
+        vals = {"s": [0], "k": 5}
+        L = ls.Lower(task)
+        sub = {"s": "S", "k": "K"}
+        obligation = ls._undef_obligation(task, twin_body, sub, vals, L)
+        self.assertIsNotNone(
+            obligation,
+            "the loop's second iteration updates v at index 1 with "
+            "Len(v) = 1 -- an obligation the walk must find now that it "
+            "descends into `while` bodies")
+
+    def test_still_none_when_no_obligation_is_undefined(self):
+        # The SAME loop, but k=1 (one iteration, never out of bounds):
+        # the walk must replay it to the end and find nothing, an honest
+        # None -- the while-descent must not manufacture a false
+        # obligation on a loop that never goes wrong.
+        task = {
+            "name": "fz_while_undef_probe2",
+            "params": [{"name": "s", "type": "seq"}, {"name": "k", "type": "int"}],
+            "returns": [{"name": "v", "type": "seq"}],
+            "requires": [],
+            "ensures": [],
+        }
+        twin_body = [
+            {"var": {"name": "v", "type": "seq",
+                     "init": {"op": "fill", "args": [_len("s"), {"int": 0}]}}},
+            {"var": {"name": "i", "type": "int", "init": {"int": 0}}},
+            {"while": {
+                "cond": {"op": "<", "args": [{"var": "i"}, {"var": "k"}]},
+                "body": [
+                    {"assign": ["v", {"op": "update", "args": [
+                        {"var": "v"}, {"var": "i"}, {"int": 0}]}]},
+                    {"assign": ["i", {"op": "+", "args": [
+                        {"var": "i"}, {"int": 1}]}]},
+                ],
+            }},
+        ]
+        vals = {"s": [0], "k": 1}
+        L = ls.Lower(task)
+        sub = {"s": "S", "k": "K"}
+        obligation = ls._undef_obligation(task, twin_body, sub, vals, L)
+        self.assertIsNone(obligation)
+
+
 class AstEqTest(unittest.TestCase):
     def test_equal_dicts_and_lists(self):
         a = {"op": "len", "args": [{"var": "arr"}]}
@@ -123,6 +274,11 @@ class CommittedTasksUnaffectedTest(unittest.TestCase):
                 ls._split_concat_lemma_target(task, body),
                 f"{path} unexpectedly matches the split-concat pattern; "
                 f"lower_spark.py's own note assumed no committed task does")
+            self.assertIsNone(
+                ls._rotate_lemma_target(task, body),
+                f"{path} unexpectedly matches the rotate-lemma pattern; "
+                f"ROTATE_LEMMA_PREAMBLE's own note assumed no committed "
+                f"task does")
 
 
 if __name__ == "__main__":

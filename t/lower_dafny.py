@@ -1083,6 +1083,47 @@ def dafny_type(t) -> str:
     return TYPES[t]
 
 
+_QUANT_BOOL_OPS = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not",
+                   "implies"}
+
+
+def _contains_var(node, v: str) -> bool:
+    """True if `v` occurs anywhere (as a `{"var": v}` leaf) inside `node`."""
+    if isinstance(node, dict):
+        if node.get("var") == v:
+            return True
+        return any(_contains_var(x, v) for x in node.values())
+    if isinstance(node, list):
+        return any(_contains_var(x, v) for x in node)
+    return False
+
+
+def _find_trigger_term(node, v: str):
+    """Find a Dafny-triggerable subterm of a quantifier body: the first
+    non-boolean `op` node (a function/index/slice application, never a
+    comparison or connective) that mentions the bound variable `v`. Dafny
+    cannot pick a trigger out of a bare comparison like `sub ==
+    main_v[j..j+|sub|]` on its own (2026-09-11, isSublist: `exists j ::
+    ... && sub == main_v[j..j+|sub|]` warns "Could not find a trigger" and,
+    with `--allow-warnings` false by default, that warning alone is dafny's
+    exit 2 -- MALFORMED here, not the proof failure it looks like), but the
+    `slice` application inside the equality is exactly the term egraph
+    matching needs, so callers state that subterm as an explicit
+    `{:trigger ...}`. Recurses depth-first through `args` and returns the
+    first match (there is exactly one candidate in every task this handles
+    today); `None` when nothing containing `v` is an op application at all
+    (a body that is only comparisons/connectives over bare variables needs
+    no trigger and gets none)."""
+    if isinstance(node, dict) and "op" in node:
+        if node["op"] not in _QUANT_BOOL_OPS and _contains_var(node, v):
+            return node
+        for a in node.get("args", []) or []:
+            found = _find_trigger_term(a, v)
+            if found is not None:
+                return found
+    return None
+
+
 def expr(e: dict, self_name: str | None = None) -> str:
     """Lower a spec-position expression. A self-call here is refused: SPEC.md
     puts task self-calls in bodies only, and the twin argument depends on the
@@ -1096,14 +1137,18 @@ def expr(e: dict, self_name: str | None = None) -> str:
     if "forall" in e:
         q = e["forall"]
         v = q["var"]
-        return (f"(forall {v}: int :: "
+        term = _find_trigger_term(q["body"], v)
+        trig = f" {{:trigger {expr(term, self_name)}}}" if term is not None else ""
+        return (f"(forall {v}: int{trig} :: "
                 f"({expr(q['lo'], self_name)} <= {v} && "
                 f"{v} < {expr(q['hi'], self_name)}) ==> "
                 f"{expr(q['body'], self_name)})")
     if "exists" in e:
         q = e["exists"]
         v = q["var"]
-        return (f"(exists {v}: int :: "
+        term = _find_trigger_term(q["body"], v)
+        trig = f" {{:trigger {expr(term, self_name)}}}" if term is not None else ""
+        return (f"(exists {v}: int{trig} :: "
                 f"({expr(q['lo'], self_name)} <= {v} && "
                 f"{v} < {expr(q['hi'], self_name)}) && "
                 f"{expr(q['body'], self_name)})")
