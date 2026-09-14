@@ -57,7 +57,7 @@ by witness, 19 ill-defined by witness.
   - 39 cells REFUTED a task true by construction. Every one is incompleteness
     sold as refutation, since the truth is not in question.
 
-The generated lowerings go to --out (default ~/t-truth-fuzz), never t/out/,
+The generated lowerings go to --out (default <repo>/t-truth-fuzz), never t/out/,
 which the suite's own drivers own.
 """
 from __future__ import annotations
@@ -2062,7 +2062,7 @@ def grade(truth: str, outcome: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=str(Path.home() / "t-truth-fuzz"))
+    ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "t-truth-fuzz"))
     ap.add_argument("--jobs", type=int, default=48)
     ap.add_argument("--mirror", type=int, default=70)
     ap.add_argument("--seed", type=int, default=20260901)

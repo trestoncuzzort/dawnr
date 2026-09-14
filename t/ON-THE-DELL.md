@@ -25,7 +25,7 @@ Without them, `test_seeds_resolve` and `test_seed_acceptance` skip with a
 reason and the rest of the suite passes.
 
     # on the Dell
-    tar czf inventory.tgz -C ~/t-corpora/lifter-design-2026-09-05 inventory
+    tar czf inventory.tgz -C ~/tup/t-corpora/lifter-design-2026-09-05 inventory
     # then copy to the Mac and unpack to the same relative path
 
 DONE WHEN: `python3 test_lifter.py` on the Mac runs those two groups instead of
@@ -92,13 +92,13 @@ fragment**, the documented figure, and **25 of the 164 MBPP-DFY in fragment**,
 which is what ROADMAP WS-13.1 already claims. 785 rprints regenerated, 783
 clean plus the two known exit-2 resolve failures.
 
-    git clone --depth 1 https://github.com/sun-wendy/DafnyBench.git ~/t-corpora/DafnyBench
-    python3 coverage_census.py ~/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth \
+    git clone --depth 1 https://github.com/sun-wendy/DafnyBench.git ~/tup/t-corpora/DafnyBench
+    python3 coverage_census.py ~/tup/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth \
         --name dafnybench --out /tmp/census.md \
-        --json ~/t-corpora/lifter-design-2026-09-05/census.json
+        --json ~/tup/t-corpora/lifter-design-2026-09-05/census.json
 
 **The lifter test suite runs anywhere.** Corpus paths resolve through
-`$T_CORPORA` over `~/t-corpora` (`corpora.py`), and a missing checkout skips
+`$T_CORPORA` over `~/tup/t-corpora` (`corpora.py`), and a missing checkout skips
 with a reason instead of ending the run. The full fast suite passes on the Mac.
 
 **The MBPP-DFY fidelity tier runs on the Mac.** `mbpp_dfy.py` and

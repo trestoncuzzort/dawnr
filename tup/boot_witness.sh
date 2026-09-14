@@ -57,7 +57,7 @@ case "$ARCH" in
     QEMU=$(command -v qemu-system-aarch64 || echo "$QDIR/bin/qemu-system-aarch64")
     ;;
   x86_64)
-    DISK="${TUP_DISK:-$HOME/tup-vm/x86_64/lfs.qcow2}"
+    DISK="${TUP_DISK:-$HOME/tup/tup-vm/x86_64/lfs.qcow2}"
     FW_CODE="(SeaBIOS, bundled in the QEMU build; no firmware file)"
     QEMU=$(command -v qemu-system-x86_64 || echo "$QDIR/bin/qemu-system-x86_64")
     ;;

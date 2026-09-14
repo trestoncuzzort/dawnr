@@ -23,4 +23,4 @@ prediction (each design's "expected lift of the 77"), the measurement in
 
 The full scratch of the run, including per-file inventories, census.json, the
 hand-lift seeds and every experiment the designs cite, is banked outside the
-repo at `~/t-corpora/lifter-design-2026-09-05/`.
+repo at `~/tup/t-corpora/lifter-design-2026-09-05/`.

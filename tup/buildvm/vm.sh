@@ -20,7 +20,7 @@
 # across vcpus by MTTCG. The choice is printed and written to PROVENANCE.txt
 # so the receipt says which one built the system.
 #
-# State lives OUTSIDE the repo in $TUP_VM (default ~/tup-vm/x86_64):
+# State lives OUTSIDE the repo in $TUP_VM (default ~/tup/tup-vm/x86_64):
 #   noble-server-cloudimg-amd64.img   the pristine scaffold image (hashed)
 #   scaffold.qcow2                    overlay the VM actually boots
 #   lfs.qcow2                         the LFS disk: this becomes tup
@@ -30,7 +30,7 @@
 set -eu
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TUP="$(cd "$HERE/.." && pwd)"
-VM="${TUP_VM:-$HOME/tup-vm/x86_64}"
+VM="${TUP_VM:-$HOME/tup/tup-vm/x86_64}"
 Q="${TUP_QEMU:-$HOME/.local/opt/qemu-10.1.3}"
 QEMU="$Q/bin/qemu-system-x86_64"; QIMG="$Q/bin/qemu-img"
 IMG="$VM/noble-server-cloudimg-amd64.img"

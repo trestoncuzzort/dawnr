@@ -91,10 +91,10 @@ The kernels alone run the 11 committed tasks. The lifter needs DafnyBench,
 which is public and small:
 
 ```bash
-git clone --depth 1 https://github.com/sun-wendy/DafnyBench.git ~/t-corpora/DafnyBench
+git clone --depth 1 https://github.com/sun-wendy/DafnyBench.git ~/tup/t-corpora/DafnyBench
 ```
 
-`corpora.py` resolves `$T_CORPORA` first and falls back to `~/t-corpora`, so
+`corpora.py` resolves `$T_CORPORA` first and falls back to `~/tup/t-corpora`, so
 that path needs no configuration either. Missing corpora make the tests skip
 with a reason rather than fail. Regenerating the rest of the bank (the
 census, the in-fragment list, the rprints) is in `ON-THE-DELL.md`; the one

@@ -9,7 +9,7 @@
 #   2 push tup/ and prepare the host   (buildvm/prepare-host.sh: chapters 2-4)
 #   3 launch the chain                 (buildvm/build-all.sh: ch05..ch11)
 #   4 wait for the verdict, polling the consoles; a FAILED marker stops here
-#   5 collect: log dir + manifest -> ~/tup-vm/x86_64/log/, BUILD receipt,
+#   5 collect: log dir + manifest -> ~/tup/tup-vm/x86_64/log/, BUILD receipt,
 #     inventory of the built tree, kernel name, guest-side fstrim
 #   6 stop the VM and boot tup alone   (boot_witness.sh)
 #   7 release images                   (release.sh)
@@ -19,7 +19,7 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TUP="$(cd "$HERE/.." && pwd)"
-VM="${TUP_VM:-$HOME/tup-vm/x86_64}"
+VM="${TUP_VM:-$HOME/tup/tup-vm/x86_64}"
 VMSH="bash $HERE/vm.sh"
 LOGDIR="$VM/log"          # per-page logs stay outside the repo; receipts/ gets the bundle
 GLOG=/mnt/lfs/sources/log

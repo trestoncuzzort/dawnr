@@ -9,13 +9,13 @@ Ubuntu box: `test_lift_front.py` read a file at import time, and
 took down the run instead of skipping it.
 
 The location was never meant to be machine-specific. `t/lifter-design/README.md`
-already documents it as `~/t-corpora/lifter-design-2026-09-05/`, home-relative;
+already documents it as `<repo>/t-corpora/lifter-design-2026-09-05/`, repo-relative;
 the absolute path was one box's instantiation of that.
 
 Resolution, most explicit first, matching discover.py's shape:
 
   1. $T_CORPORA, if set. Points at the data checkout wherever it lives.
-  2. ~/t-corpora, the location the design docs already name.
+  2. <repo>/t-corpora, the location the design docs already name.
 
 Nothing here touches the filesystem at import: these are `Path` objects, not
 reads. Ask `available()` before using one, and skip with a named reason when it
@@ -29,7 +29,8 @@ import os
 from pathlib import Path
 
 # The data checkout root. Everything below hangs off it.
-ROOT = Path(os.environ.get("T_CORPORA", Path.home() / "t-corpora"))
+# Default: the repo's own t-corpora/ (moved in from ~/t-corpora on 2026-09-14).
+ROOT = Path(os.environ.get("T_CORPORA", Path(__file__).resolve().parent.parent / "t-corpora"))
 
 # DafnyBench, cloned from github.com/sun-wendy/DafnyBench (Apache-2.0). The
 # doubled directory name is upstream's own layout, not a mistake here.

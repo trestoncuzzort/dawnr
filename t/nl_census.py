@@ -2,7 +2,7 @@
 """nl_census.py: which constructs the nl/ corpus needs that t does not have,
 problem by problem, and which gate opens the most problems, dated 2026-09-09.
 
-    python3 nl_census.py --out COVERAGE-nl.md --json ~/t-corpora/nl-census/nl-census.json
+    python3 nl_census.py --out COVERAGE-nl.md --json ~/tup/t-corpora/nl-census/nl-census.json
 
 t/coverage_census.py answers this question for 785 DafnyBench ground-truth
 programs, a corpus of proofs already written in a verifier's own syntax. This

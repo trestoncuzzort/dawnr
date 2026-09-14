@@ -915,7 +915,7 @@ All with `PATH=/home/tmcuzzort/.local/dafny:$PATH`, dafny 4.11.0, under
 ## 20. Corpus evidence
 
 Quoted from the ground_truth files (paths relative to
-`/home/tmcuzzort/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth/`):
+`/home/tmcuzzort/tup/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth/`):
 
 - `Clover_abs.dfy`: `if x < 0 {\n    return -x;\n  } else {\n    return x;\n  }` : tail returns in both branches of a tail if (7.1).
 - `Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_Cube.dfy`: `while i != n` with no decreases, `c, k, m := c + k, k + m, m + 6;` : `!=` guard (L2 ite) and an order-safe parallel assignment.

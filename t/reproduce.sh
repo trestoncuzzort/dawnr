@@ -56,9 +56,9 @@ set -u
 cd /home/tmcuzzort/tup/t || exit 1
 
 DIFF_COUNT=0
-CORPUS=/home/tmcuzzort/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth
-NL_CENSUS_JSON_DIR=$HOME/t-corpora/nl-census
-LIFT_CENSUS_JSON=/home/tmcuzzort/t-corpora/lifter-design-2026-09-05/census.json
+CORPUS=/home/tmcuzzort/tup/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth
+NL_CENSUS_JSON_DIR=$HOME/tup/t-corpora/nl-census
+LIFT_CENSUS_JSON=/home/tmcuzzort/tup/t-corpora/lifter-design-2026-09-05/census.json
 
 stage_start() { echo "=== stage: $1 ==="; STAGE_T0=$(date +%s); }
 stage_end() { local t1; t1=$(date +%s); echo "=== stage: $1 done in $((t1 - STAGE_T0))s ==="; }
@@ -249,7 +249,7 @@ PYEOF
 # ---------------------------------------------------------------- --truth
 run_truth() {
   stage_start truth
-  local out=$HOME/t-truth-fuzz-reproduce
+  local out=$HOME/tup/t-truth-fuzz-reproduce
   rm -rf "$out"
   python3 truth_fuzz.py --out "$out" --jobs 24 --seed 1
   echo "truth_fuzz.py rc=$?"

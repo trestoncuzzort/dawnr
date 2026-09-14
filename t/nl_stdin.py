@@ -12,7 +12,7 @@ text into an expected result, i.e. the same (args, expected) point shape
 mbpp_dfy.parse_assertion and spec_experiment.pool() produce for MBPP,
 built here from raw stdin text instead of a Python assert.
 
-    python3 nl_stdin.py --json ~/t-corpora/nl-census/nl-stdin.json \\
+    python3 nl_stdin.py --json ~/tup/t-corpora/nl-census/nl-stdin.json \\
                          --out COVERAGE-nl-stdin.md
 
 For every stdin-shaped problem (an APPS record whose input_output carries

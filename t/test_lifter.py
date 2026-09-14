@@ -46,7 +46,7 @@ import corpora
 # point --census-json/--corpus-dir at wherever census.json and DafnyBench
 # actually are. They used to be one box's absolute paths, which made this
 # suite unrunnable anywhere else; corpora.py resolves them from $T_CORPORA
-# and falls back to ~/t-corpora, the location lifter-design/README.md always
+# and falls back to <repo>/t-corpora, the location lifter-design/README.md always
 # named. Wrapped in pathlib.Path throughout so every join and every file open
 # downstream is Windows-safe.
 # ---------------------------------------------------------------------------

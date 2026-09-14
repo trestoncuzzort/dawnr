@@ -54,7 +54,7 @@ case "$ARCH" in
     [ -n "$FW" ] || { echo "no EDK2 firmware (brew install qemu)" >&2; exit 1; }
     ;;
   x86_64)
-    DISK="${TUP_DISK:-$HOME/tup-vm/x86_64/lfs.qcow2}"
+    DISK="${TUP_DISK:-$HOME/tup/tup-vm/x86_64/lfs.qcow2}"
     FW=""
     QEMU=$(command -v qemu-system-x86_64 || echo "$QDIR/bin/qemu-system-x86_64")
     ;;
