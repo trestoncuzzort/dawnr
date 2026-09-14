@@ -2181,6 +2181,132 @@ touching the generation pipeline).
   divisor-bound lemma family lives in a standalone probe file, never
   imported by `lower_rocq.py`, so it has nothing in this file's own
   surface for a regression test to pin yet).
+
+  VALUE-WITNESS CERTIFICATES THROUGH LOOP BODIES (2026-09-14, ROADMAP
+  16.2, rocq-cert). The reordered twin ladder (SPEC.md "The twins",
+  d38da32, 2026-09-12) tries a behavioral rung (collapse-if, negate-cond,
+  compare-flip, boundary-swap, off-by-one, wrong-var, drop-guard,
+  wrong-constant, wrong-operator) before invariant-drop; a "value"-kind
+  witness on a loop task now reaches `_value_cert` far more often than
+  the old ladder's mostly "exit"/"preservation" traffic that function's
+  loop machinery (`_loop_cert`) was built for, and an "undefined"-kind
+  witness on a loop task now reaches `_undef_cert` AT ALL (it used to
+  refuse a `while` outright, unconditionally). Three committed rows read
+  rocq unproved where they read refuted before the reorder -- filter_pos
+  (collapse-if, seq return, no `return` in the loop), is_prime
+  (collapse-if, bool return, a `return` inside the loop), reverse
+  (compare-flip, an "undefined" witness whose first violation sits
+  inside the loop's own guard) -- and eighteen lifted rows (COVERAGE-
+  lifted-785.md, sweep r23) carried a rocq twin reading unproved. The
+  mechanism this file's own docstring already describes for the OLD
+  ladder's twins ("LOOPS", above: a while becomes a structural Fixpoint
+  over nat fuel, computed at a concrete witness by `cbv`/`vm_compute`)
+  was never the gap -- MEASURED: `filter_pos_t`/`is_prime_t` both already
+  reduced to the CORRECT concrete answer before this date, the exact
+  "unroll the loop by interp into straight-line facts" precedent
+  lower_framac.py's `_cert_stmts` while case and lower_spark.py's
+  while-body replay use, just done in one `cbv` step over a Fixpoint
+  rather than a Python-driven per-iteration replay. What was missing was
+  three narrower gaps downstream of that already-correct value:
+
+  1. `_undef_cert`'s own `if w is not None: return None` refused a
+     "undefined"-kind witness outright the moment ANY while loop was
+     present in the twin body, regardless of where the undefined access
+     actually sat (reverse's own compare-flip mutant corrupts the loop's
+     GUARD, so the very first concrete guard evaluation already walks
+     into the loop wrongly). `_first_undef_body` is extended (a new
+     `_undef_walk`, threading a `stopped` flag for `return` the same way
+     `_cert_stmts` does) to replay a `while` by CONCRETE UNROLLING at the
+     witness -- guard, then body, one Python-loop iteration at a time,
+     capped at `_MAX_UNDEF_UNROLL` (a named abstain past the cap, never a
+     fabricated certificate) -- mirroring lower_framac.py's/lower_spark.py's
+     own precedent exactly, just replayed in Python rather than emitted
+     as Coq asserts (the loop's own Fixpoint route already does the Coq
+     side of this for a VALUE witness; an UNDEFINED witness has no value
+     to certify, only a bound to replay, so this stays a pure Python
+     walk, `_first_undef`'s own existing shape, extended one statement
+     kind).
+
+  2. `_value_cert`'s seq-return branch built its `repeat match`/closing
+     `lia` for row_max_len/seq_max's own shape (a falsified conjunct
+     comparing the twin's output against a SECOND seq PARAM, pointwise
+     equality); filter_pos's own falsified conjunct is a SELF-referential
+     forall INEQUALITY about the twin's own output (`forall k, 0 <= k <
+     len(r) -> r[k] > 0`), which the pattern's `_ = _` tail never matched
+     (repeat match fired zero times) and, even widened, needs the return
+     LENGTH grounded to a Python-known literal (`Ht_rlen`, `vm_compute;
+     reflexivity`) before the match's own bound-check `lia` can see past
+     the otherwise-opaque length application; a second, narrower
+     over-reduction (`cbv` on the freshly specialized hypothesis pushing
+     past `Z.lt`/`Z.le` into raw `comparison` constructors, MEASURED
+     `Eq = Gt -> False`) needed the closer widened from bare `lia` to
+     `first [ lia | congruence | intuition congruence ]`, a strict
+     superset that changes nothing for a task `lia` alone already closed
+     (row_max_len, seq_max, swap: confirmed byte-identical certificates
+     otherwise).
+
+  3. `_value_cert`'s non-seq branch had no way to PROVE a bounded forall
+     true (only `_loop_cert`'s own has_return fix, 2026-09-09, taught the
+     engine to FALSIFY a forall HYPOTHESIS): is_prime's own return-branch
+     ensures, `r == (forall d, ...)`, forces `is_prime_t 3 = false` at
+     the witness, so refuting the `<->` needs the RHS forall PROVED (then
+     the iff's own `->` direction forces `false = true`, closed by
+     `discriminate`), the mirror image of what `_forall_hints` already
+     does. `_forall_true_quants` (new, `_forall_hints`'s own mirror) walks
+     `task["ensures"]` at the ground witness env and records every forall
+     concretely TRUE over its own small range; `_forall_proof_block`
+     proves each by bounded enumeration (`lia` decides the range is
+     exactly a finite disjunction of equalities; each substituted value
+     leaves a closed term `vm_compute` decides), asserted into the
+     certificate's context under a fresh name (`t_bq0`, ...) before
+     `t_dis` runs -- the GENERIC engine's own `t_sat1` rule ("resolve an
+     implication whose antecedent is leaf-provable") then closes the
+     iff's own hard direction by `assumption`, no new Ltac needed. A bare
+     `->` intro pattern at an or-pattern's own leaf is invalid Coq syntax
+     both flat (`[->|->]`, "Expects a disjunctive pattern with 2
+     branches": `destruct` does not auto-flatten a right-nested `\\/`) and
+     nested (`[->|[->|->]]`, "'|' or ']' expected") -- MEASURED both ways
+     before landing on a plain reused name at every leaf (`destruct ...
+     as [E|[E|E]]`) followed by one `subst` (`_nested_or_pat`'s own
+     dated note has the two failed probes verbatim). Scoped to `w is not
+     None and has_return(w["body"])` throughout (both 2 and 3): a
+     loop-free, self-recursive, or return-free-loop task's own call
+     passes the identical `env_py`/`task["ensures"]` it always did, but
+     `quants` is always `[]` there, so its generated proof text is
+     BYTE-IDENTICAL to before this change.
+
+  MEASURED (coqc/coqchk 9.2.0, this box, this worktree,
+  `export PATH=$HOME/.cargo/bin:$HOME/.opam/default/bin:...:$PATH`):
+  `python3 grade.py --tasks tasks --kernels rocq,dafny --flake 3 --jobs 8`
+  on all 34 committed tasks: 34 of 34 read the SAME cell as
+  AGREEMENT.md's own rocq column except the three named above, now
+  verified/refuted (33 verified/refuted, min_max unchanged
+  timeout/refuted -- a pre-existing flaky real, confirmed byte-identical
+  lowered source before/after this diff). `python3 test_lower_rocq_loop_cert.py`
+  (new, this date): 13 of 13, coqc/coqchk both on PATH. Restricted-to-rocq
+  conformance (`conformance.py`'s own `probe_manifest()`/`run_items()`,
+  one column): 66 of 66 PASS both before and after, no PASS lost. Of the
+  75 `dafny_synthesis` rows in COVERAGE-lifted-785.md, graded standalone
+  at flake 3: 58 read the identical cell, 17 moved (all twin-side,
+  unproved/timeout -> refuted; no real moved except task_id_605__isPrime,
+  timeout -> unproved, confirmed BYTE-IDENTICAL lowered source before and
+  after this diff -- a pre-existing flaky real near the 180s wall, not
+  this change's doing): task_id_106__appendArrayToSeq,
+  task_id_261__elementWiseDivision, task_id_273__subtractSequences,
+  task_id_282__elementWiseSubtraction, task_id_445__multiplyElements,
+  task_id_460__getFirstElements, task_id_470__pairwiseAddition,
+  task_id_576__isSublist (real stays unproved, twin unproved -> refuted),
+  task_id_578__interleave, task_id_587__arrayToSeq, task_id_605__isPrime,
+  task_id_616__elementWiseModulo, task_id_618__elementWiseDivide,
+  task_id_728__addLists, task_id_8__squareElements. Of the thirty rows
+  named in this item's own brief, twenty-nine now read verified/refuted;
+  ONE does not: task_id_603__lucidNumbers still reads verified/unproved
+  ("No applicable tactic" -- three ensures conjuncts, each its own
+  forall, and the seq branch's `repeat match` specializes every hit at
+  the SAME single Python-computed index, which falsifies none of the
+  three at n=1's own witness; the falsifying index differs per conjunct
+  and needs `_forall_hints`'s own per-conjunct search wired into the seq
+  branch, not attempted this session -- named, not silently dropped).
 """
 from __future__ import annotations
 
@@ -7560,6 +7686,140 @@ def _forall_hints(e, env: dict, funs: dict, out: list) -> None:
         _forall_hints(a, env, funs, out)
 
 
+_MAX_QUANT_ENUM = 64
+
+
+def _forall_true_quants(e, env: dict, funs: dict, out: list) -> None:
+    """`_forall_hints`'s mirror image, 2026-09-14 (ROADMAP 16.2,
+    rocq-cert: "value-witness certificates through loop bodies"): walk
+    `e` and, for every `forall` it contains, evaluate it concretely at
+    `env` (params/loop state/return already ground Python values, the
+    same witness environment `_forall_hints` reads) and, when the WHOLE
+    bounded range comes out true, record `(node, lo, hi)`. `_forall_hints`
+    finds a witness that FALSIFIES a forall (for a hypothesis this file's
+    generic engine needs to contradict); this instead finds a forall the
+    certificate's own closing proof needs to ESTABLISH true -- is_prime's
+    own return-branch shape, `r == (forall d, ...)`, needs exactly this
+    once the witness forces `r`'s value to `false`: refuting the `<->`
+    needs its surviving direction's antecedent (the forall) PROVED, not
+    falsified, and `t_go`'s search has no step that enumerates a bounded
+    range from nothing. Capped at `_MAX_QUANT_ENUM` (a named abstain past
+    the cap: `_forall_proof_block`'s own enumerated proof is one Coq case
+    per value, so an unbounded range would grow the certificate without
+    bound, never a soundness issue either way). Best-effort throughout,
+    `_forall_hints`'s own convention: Undef/Budget/anything else is
+    silently skipped, since a fact that fails to compute here just leaves
+    `t_dis`'s ordinary search with one less shortcut, never a wrong one."""
+    if not isinstance(e, dict):
+        return
+    if "forall" in e:
+        q = e["forall"]
+        try:
+            lo = interp.ev(q["lo"], env, funs, interp.St())
+            hi = interp.ev(q["hi"], env, funs, interp.St())
+            if 0 <= hi - lo <= _MAX_QUANT_ENUM:
+                ok = True
+                for i in range(lo, hi):
+                    sub = dict(env)
+                    sub[q["var"]] = i
+                    if not bool(interp.ev(q["body"], sub, funs, interp.St())):
+                        ok = False
+                        break
+                if ok:
+                    out.append((e, lo, hi))
+        except Exception:                                   # noqa: BLE001
+            pass
+        _forall_true_quants(q["lo"], env, funs, out)
+        _forall_true_quants(q["hi"], env, funs, out)
+        return                      # q["body"]'s free var is bound, not env
+    if "exists" in e:
+        q = e["exists"]
+        _forall_true_quants(q["lo"], env, funs, out)
+        _forall_true_quants(q["hi"], env, funs, out)
+        return
+    if "ite" in e:
+        c = e["ite"]
+        _forall_true_quants(c["cond"], env, funs, out)
+        _forall_true_quants(c["then"], env, funs, out)
+        _forall_true_quants(c["else"], env, funs, out)
+        return
+    if "call" in e:
+        for a in e["call"]["args"]:
+            _forall_true_quants(a, env, funs, out)
+        return
+    for a in e.get("args", []):
+        _forall_true_quants(a, env, funs, out)
+
+
+def _nested_or_pat(n: int, name: str = "t_bqe") -> str:
+    """Coq `destruct ... as` pattern for an n-way right-nested `\\/`
+    (`v = k0 \\/ (v = k1 \\/ ... \\/ v = k(n-1))`): the SAME name at every
+    leaf (`destruct` scopes each disjunct's binding to its own resulting
+    subgoal, so reusing one identifier across branches -- MEASURED,
+    patttest5.v style probe, 2026-09-14 -- names no conflicting
+    hypothesis). `n` is always >= 2 here (`_forall_proof_block` handles
+    `n == 1` separately, without any `\\/` at all).
+
+    A bare `->` at the pattern's own leaves was tried FIRST and measured
+    wrong two different ways: `[->|[->|->]]` (matching this right-nested
+    `\\/`'s own shape one level at a time) is a Coq SYNTAX error ("'|' or
+    ']' expected"), and the flat `[->|->|->]` an n-ary disjunctive pattern
+    might suggest is a Coq TYPE error ("Expects a disjunctive pattern
+    with 2 branches" -- `destruct` does not auto-flatten a right-nested
+    `\\/` the way the flat bracket list implies). Naming the hypothesis
+    and calling `subst` right after `destruct` (`_forall_proof_block`'s
+    own call site) sidesteps both: nesting brackets around a plain name
+    is unambiguous Coq syntax at any depth, and one `subst {v}` after the
+    `destruct` consumes whichever single equality survived into the
+    branch actually reached."""
+    if n <= 1:
+        return name
+    return f"[{name}|{_nested_or_pat(n - 1, name)}]"
+
+
+def _forall_proof_block(cx, e: dict, lo: int, hi: int, env_txt: dict,
+                        tag: str) -> str:
+    """A self-contained Coq proof establishing the forall AST node `e`
+    (already confirmed true at every concrete i in [lo, hi) by
+    `_forall_true_quants`) as a named fact `tag`, asserted directly into
+    the certificate's proof context. `lo`/`hi` are concrete (Python ints,
+    already evaluated), so `lia` decides `lo <= v < hi` is exactly the
+    finite disjunction of equalities enumerated below; substituting each
+    in turn leaves a fully CLOSED (no free variable but literals) Prop
+    for `vm_compute` to decide, the same "everything is decidable by
+    computation at the concrete witness" discipline `_value_cert`'s own
+    `cbv; reflexivity` step already rests on, just repeated once per
+    value instead of once at a single point. A vacuous range (hi <= lo)
+    needs no enumeration at all: the bound itself is contradictory."""
+    v = e["forall"]["var"]
+    stmt = cx.prop(e, env_txt)
+    if hi <= lo:
+        return (f"  assert ({tag} : {stmt}).\n"
+                f"  {{ intros {v} t_{tag}_hd. exfalso. lia. }}\n")
+    if hi - lo == 1:
+        # `destruct H as ->` (a bare arrow, no enclosing `[...]`) is not a
+        # valid Coq intro pattern on its own ("Disjunctive/conjunctive
+        # pattern expected", MEASURED, is_prime, 2026-09-14) -- only
+        # inside a `[pat1|pat2]` list, which a single-value range has
+        # none of. `subst` substitutes the one equality directly instead.
+        return (
+            f"  assert ({tag} : {stmt}).\n"
+            f"  {{ intros {v} t_{tag}_hd.\n"
+            f"    assert (t_{tag}_hc : {v} = {_zlit(lo)}) by lia.\n"
+            f"    subst {v}.\n"
+            f"    vm_compute; first [ reflexivity | discriminate | lia"
+            f" | congruence ]. }}\n")
+    cases = " \\/ ".join(f"{v} = {_zlit(k)}" for k in range(lo, hi))
+    pat = _nested_or_pat(hi - lo, f"t_{tag}_e")
+    return (
+        f"  assert ({tag} : {stmt}).\n"
+        f"  {{ intros {v} t_{tag}_hd.\n"
+        f"    assert (t_{tag}_hc : {cases}) by lia.\n"
+        f"    destruct t_{tag}_hc as {pat}; subst {v};\n"
+        f"    vm_compute; first [ reflexivity | discriminate | lia"
+        f" | congruence ]. }}\n")
+
+
 def _plain_def(cx, task, body):
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
@@ -7731,7 +7991,7 @@ def _loop_def(cx, task, prefix, w, suffix):
                       step_env=step_env, env_post=env_post, sb=sb)
 
 
-def _value_cert(cx, task, body, witness, def_text):
+def _value_cert(cx, task, body, witness, def_text, w=None):
     """Certificate chunk for a whole-program value witness, or None.
 
     2026-09-10 (COVERAGE-lifted-785.md's twelfth sweep, the two
@@ -7747,7 +8007,22 @@ def _value_cert(cx, task, body, witness, def_text):
     `applied = "(name_t )"`, a bare identifier in extra parens, valid
     Coq syntax. The one thing that WAS missing is exactly this function's
     own refusal to try; every task with at least one param is unaffected
-    (this guard never fired for one)."""
+    (this guard never fired for one).
+
+    `w` (2026-09-14, ROADMAP 16.2, rocq-cert): the task's own `while`
+    node (`find_while`'s middle element), or None for a loop-free or
+    self-recursive task, threaded in ONLY so a return-bearing loop's
+    closing proof can call `_forall_true_quants` (see that function's own
+    docstring, and the dated note above `_first_undef_body`, for the full
+    is_prime story); every other use of `_value_cert` already had a
+    `def_text` built from the SAME `w` at the call site (`_try_cert_v1`),
+    so this costs that caller nothing new to compute, only to pass
+    through. A caller that omits it (`w=None`, the default) gets
+    `has_return(w["body"])` never evaluated (short-circuited below), so
+    every existing call site outside `_try_cert_v1` -- there are none in
+    this file, but the default keeps the signature backward compatible
+    for any future/test caller -- generates byte-identical proof text to
+    before this parameter existed."""
     name = task["name"]
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
@@ -7854,16 +8129,49 @@ def _value_cert(cx, task, body, witness, def_text):
         # the match's own per-hit `cbv in H`, so this second, blanket
         # pass is a no-op for them, confirmed by the unchanged AGREEMENT
         # regression below.
+        # LOOP-BODY VALUE CERTIFICATE, filter_pos's own gap (2026-09-14,
+        # ROADMAP 16.2, rocq-cert; full story in the dated note above
+        # `_first_undef_body`): filter_pos's own falsified conjunct is
+        # `forall k, 0 <= k < len(r) -> r[k] > 0`, a SELF-referential
+        # INEQUALITY about the twin's own output length, not the
+        # two-PARAM pointwise EQUALITY (row_max_len/seq_max) this match
+        # was written for -- widened from `_ = _` to bare `_` (any Prop
+        # closes the same way once specialized; a strict widening, so
+        # every conjunct the old pattern already matched still does).
+        # Even widened, `specialize (H {idx} ltac:(lia))` still needs to
+        # prove `{idx} < (applied_len)` while `applied_len` -- the twin's
+        # own OUTPUT length -- is still an opaque application (lia treats
+        # it as an atom, exactly the reasoning the "ONE cbv in *" note
+        # above already gives for a RESULT of the specialize, not its own
+        # argument): `Ht_rlen` grounds it to the Python-known `len(tv)`
+        # literal by `vm_compute` BEFORE the match ever runs, `try`'d in
+        # (never a hard failure) so a task where the return length never
+        # appears anywhere costs nothing. `cbv in H` on the freshly
+        # specialized hypothesis can still push PAST `Z.lt`/`Z.le` into
+        # the raw `comparison` constructors backing them (`Eq`/`Lt`/`Gt`),
+        # the identical over-reduction this SAME docstring already names
+        # for the hypothesis-side match, just now hit by the ARGUMENT
+        # side too (MEASURED, filter_pos, this date: `Eq = Gt -> False`),
+        # so `lia` alone can fail on a goal that is really just decided
+        # boolean-comparison bookkeeping, not a Z fact; the final closer
+        # widens from bare `lia` to `first [ lia | congruence | intuition
+        # congruence ]`, a strict superset that changes nothing for a
+        # task `lia` alone already closed (row_max_len, seq_max, swap:
+        # confirmed byte-identical certificates otherwise, regression bar
+        # below).
         proof = (
             "Proof.\n"
             "  intro t_H.\n"
             "  decompose [and] t_H; clear t_H.\n"
+            f"  assert (Ht_rlen : {applied_len} = {_zlit(len(tv))}) "
+            f"by (vm_compute; reflexivity).\n"
+            "  try rewrite Ht_rlen in *.\n"
             "  repeat match goal with\n"
-            "  | H : forall t_k : Z, _ <= t_k < _ -> _ = _ |- False =>\n"
+            "  | H : forall t_k : Z, _ <= t_k < _ -> _ |- False =>\n"
             f"      specialize (H {_zlit(idx)} ltac:(lia)); cbv in H\n"
             "  end.\n"
             "  cbv in *.\n"
-            "  lia.\n"
+            "  first [ lia | congruence | intuition congruence ].\n"
             "Qed.\n")
         return ("".join(seq_defs) + "\n" + def_text + "\n"
                 f"(* The spec fails at the measured witness, "
@@ -7929,6 +8237,43 @@ def _value_cert(cx, task, body, witness, def_text):
             lines.append("  cbn [fst snd].\n")
     lines += _call_asserts(cx, task, body, task["ensures"], env_py, env_lit)
     lines += sets
+    # LOOP-BODY VALUE CERTIFICATE, is_prime's own gap (2026-09-14, ROADMAP
+    # 16.2, rocq-cert; full story in the dated note above
+    # `_first_undef_body`): a return-bearing loop's own ensures can need a
+    # bounded forall PROVED true (is_prime's `r == (forall d, ...)`,
+    # once `r`'s witness value forces the `<->`'s hard direction), not
+    # merely falsified -- `_forall_true_quants` finds every such forall
+    # in `task["ensures"]` at the ground witness env, `_forall_proof_block`
+    # proves each by bounded enumeration, and the fact is `assert`ed into
+    # context under a fresh name (`t_bq0`, `t_bq1`, ...) here, BEFORE
+    # `t_dis` runs: the GENERIC engine's own `t_sat1` rule ("resolve an
+    # implication whose antecedent is leaf-provable") then closes the
+    # `<->`'s own `(forall ...) -> ret = lit` hypothesis by `assumption`
+    # against it, no new Ltac needed. Scoped to `w is not None` (a loop is
+    # present) `and has_return(w["body"])`: a loop-free, self-recursive,
+    # or return-free-loop task's `_value_cert` call passes the SAME
+    # `env_py`/`task["ensures"]` it always did, but `quants` is always `[]`
+    # there (nothing calls `_forall_true_quants` at all when the guard is
+    # false), so its generated proof text is BYTE-IDENTICAL to before
+    # this change -- confirmed by the regression bar's own byte-diff
+    # (row_max_len, seq_max, swap, divmod_pair, min_max: none of the
+    # five call sites reaching this branch has a `return` in a loop).
+    if w is not None and has_return(w["body"]):
+        quants: list = []
+        try:
+            funs_q = interp.funs_of(task, task["body"])
+            for e in task["ensures"]:
+                _forall_true_quants(e, dict(env_py), funs_q, quants)
+        except Exception:                                    # noqa: BLE001
+            quants = []
+        seen_q: set = set()
+        for k, (qe, lo, hi) in enumerate(quants):
+            key = (id(qe), lo, hi)
+            if key in seen_q:
+                continue
+            seen_q.add(key)
+            lines.append(_forall_proof_block(cx, qe, lo, hi, env_lit,
+                                             f"t_bq{k}"))
     return ("".join(seq_defs) + "\n" + def_text + "\n"
             f"(* The spec fails at the measured witness, "
             f"{harness.witness(witness)}: the kernel evaluates the twin "
@@ -8267,15 +8612,151 @@ def _first_undef(e, env: dict, funs: dict):
     return None
 
 
+#   through loop bodies for a value witness, wired into `_value_cert`
+#   below (`_forall_true_quants`/`_forall_proof_block`, plus the seq-
+#   return length grounding and closer widening in the seq branch): the
+#   REORDERED twin ladder (SPEC.md "The twins", d38da32) tries a
+#   behavioral rung (collapse-if, compare-flip, ...) before invariant-
+#   drop, so a "value"-kind witness on a loop task -- filter_pos,
+#   is_prime -- now reaches `_value_cert` far more often than the old
+#   ladder's mostly-"exit"/"preservation" traffic `_loop_cert` was built
+#   for. `_value_cert`'s own `def_text` (a `Fixpoint` at the loop, from
+#   `_loop_def`, UNCHANGED by this note) already computes the twin's
+#   VALUE through the loop body correctly by `cbv`/`vm_compute` -- MEASURED
+#   directly: `filter_pos_t`/`is_prime_t` both reduce to the right
+#   concrete answer at their own committed witness before this fix, the
+#   same "unroll the loop by interp into straight-line facts" precedent
+#   lower_framac.py's `_cert_stmts` while case and lower_spark.py's
+#   while-body replay already use, just done in ONE `cbv` step over a
+#   `Fixpoint` rather than a Python-driven per-iteration replay (the
+#   loop's own fuel account, `S (Z.to_nat decreases0)`, is exactly the
+#   trip count a straight-line unrolling would need anyway). What was
+#   missing was never the loop replay itself -- it is two narrower gaps in
+#   the CLOSING proof script downstream of that already-correct value:
+#
+#   (1) filter_pos (no `return`): the seq branch's `repeat match` only
+#   recognized a falsified conjunct shaped `forall t_k, lo <= t_k < hi ->
+#   _ = _` (row_max_len/seq_max's own two-PARAM pointwise-equality shape);
+#   filter_pos's own falsified conjunct is `forall k, 0 <= k < len(r) ->
+#   r[k] > 0`, a self-referential INEQUALITY about the twin's own output,
+#   which the pattern's `_ = _` tail never matched, so the `repeat match`
+#   fired zero times and the certificate's own `specialize (H 0
+#   ltac:(lia))` (tried directly on the unwidened pattern) failed outright:
+#   `ltac:(lia)` cannot prove `0 <= 0 < (filter_pos_t_len t_w_s 1)` while
+#   `filter_pos_t_len t_w_s 1` is still an OPAQUE application (lia treats
+#   it as an atom, not a number, exactly `_value_cert`'s own seq-branch
+#   docstring already names for the two-param case: "lia cannot see
+#   through ... an unreduced application"). Two changes, together (MEASURED
+#   separately: either alone still fails): widen the match's tail from
+#   `_ = _` to bare `_` (any Prop closes the same way once specialized),
+#   and ground the return length to a literal BEFORE the match ever runs
+#   (`Ht_rlen`, added just below `decompose`, `by (vm_compute;
+#   reflexivity)` at the Python-known `len(tv)`, `try rewrite`'d in so a
+#   task where the length never appears costs nothing). Even then, `cbv in
+#   H` on the newly specialized hypothesis can push PAST `Z.lt`/`Z.le`'s
+#   own definition into the raw `comparison` values that back them
+#   (`Eq`/`Lt`/`Gt`), the SAME over-reduction trap this file's seq-branch
+#   docstring already names for the hypothesis-side match ("cbv ... before
+#   decompose unfolding Z.le/Z.lt into raw ... matches") -- `lia` alone
+#   then fails on a goal like `Eq = Gt -> False` (a `comparison` equality,
+#   not a Z fact lia parses), MEASURED (filter_pos, this date): the final
+#   closer widens from bare `lia` to `first [ lia | congruence |
+#   intuition congruence ]`, a strict superset (nothing that closed by
+#   `lia` alone stops closing that way; `congruence`/`intuition congruence`
+#   only fire once `lia` has already failed) so every existing seq-branch
+#   certificate (row_max_len, seq_max, swap) is untouched.
+#
+#   (2) is_prime (has a `return` in its loop): once `is_prime_t 3` is
+#   ground to `false` (`cbv; reflexivity`, unchanged), the certificate's
+#   goal is `~ (false = true <-> forall d, 2 <= d < 3 -> t_mod 3 d <> 0)`
+#   -- refuting the `<->` needs the RHS forall PROVED true (then the
+#   iff's own `->` direction forces `false = true`, closed by
+#   `discriminate`), not falsified: this is the mirror image of
+#   `_loop_cert`'s own has_return fix (2026-09-09, this file's module
+#   docstring, "is_prime read rocq unproved/unproved"), which taught the
+#   ENGINE to find a witness that FALSIFIES a forall HYPOTHESIS
+#   (`_forall_hints`); nothing there proves a forall GOAL true from
+#   scratch, and `t_go`'s own search has no step that enumerates a
+#   bounded range. `_forall_true_quants` (below) is `_forall_hints`'
+#   mirror: it walks `task["ensures"]` at the fully-ground witness env
+#   interp.ev already trusts, and for every forall it finds concretely
+#   TRUE over its own (small, concrete) range, `_forall_proof_block`
+#   builds a SELF-CONTAINED Coq proof of exactly that Prop by ENUMERATING
+#   the finitely many values the bound variable can take (`lia` decides
+#   `lo <= v < hi` is exactly that disjunction, since both are literals)
+#   and closing each case by `vm_compute` (the witness is fully ground, so
+#   every instantiated body is a closed decidable term, the same
+#   "computation, not proof search" discipline `_value_cert`'s own `cbv;
+#   reflexivity` already rests on). `_value_cert` asserts each such fact
+#   into context (as `t_bq0`, `t_bq1`, ...) right before calling `t_dis`;
+#   the GENERIC engine's own `t_sat1` rule ("resolve an implication whose
+#   antecedent is leaf-provable") then closes is_prime's own `H2 :
+#   (forall d, ...) -> false = true` by `assumption` (`t_leaf`'s own first
+#   alternative after `lia`) against `t_bq0`, needing no new Ltac at all
+#   -- MEASURED: adding `t_bq0` alone (no other proof-script change) turns
+#   is_prime's certificate from "unsolved t verification condition" into
+#   `Closed under the global context`. Confined to a `while`-carrying
+#   value certificate (`w is not None`, `_value_cert`'s own signature
+#   below now takes `w`): a plain-def (loop-free) or self-recursive task's
+#   own `_value_cert` call passes `w=None`, so `quants` is always `[]`
+#   there and its generated proof text is BYTE-IDENTICAL to before this
+#   change (confirmed by the regression bar's own byte-diff, this date).
+#
+#   `_undef_cert`'s own while-loop refusal (reverse's own regression,
+#   compare-flip: `s=[] -> twin at index -1 outside [0,0)`) is the THIRD
+#   and last piece, a narrower, separate gap from either of the above:
+#   `_first_undef_body`'s own docstring already said "a `while` ... is not
+#   [yet] needed" and simply refused (`find_while(body) is not None =>
+#   return None`) whenever the twin's own undefined access sits inside a
+#   loop at all, which reverse's own compare-flip mutant does (the guard
+#   itself is what the twin corrupts, so the very first concrete guard
+#   evaluation already walks into the loop wrongly). `_undef_walk` (below)
+#   is `_first_undef_body` extended to REPLAY a `while` by concrete
+#   unrolling at the witness -- lower_framac.py's `_cert_stmts` while case
+#   and lower_spark.py's while-body replay's own precedent, restated here
+#   in Python rather than emitted Coq: evaluate the guard, and if true,
+#   undef-check and (if clean) execute one iteration of the body for
+#   real, exactly as `_first_undef_body`'s own assign/if cases already do
+#   one statement at a time; stop and report the first bound that fails,
+#   in EITHER the guard or the body, at whichever concrete iteration
+#   reaches it first (reverse's own regression needs only iteration 0: the
+#   guard itself is already wrong). `stopped` threads a `return` fired
+#   inside the loop body the same way `_cert_stmts`' own `stopped` flag
+#   does, so a loop this walk unrolls past a `return` never mutates `env`
+#   again afterward (SPEC.md "Early exit": nothing after a `return`
+#   changes the final state). Capped at `_MAX_UNDEF_UNROLL` iterations
+#   (a named abstention past the cap, never a fabricated certificate); no
+#   committed or lifted row needs more than a handful of concrete
+#   iterations before its own witness's bound fails; the fuel a genuinely
+#   unbounded loop would need is exactly what `_value_cert`'s `cbv`-driven
+#   Fixpoint route already handles for a VALUE witness (never routed
+#   through `_undef_cert` at all), so this cap costs nothing there.
+_MAX_UNDEF_UNROLL = 4096
+
+
 def _first_undef_body(stmts, env: dict, funs: dict):
     """Statement-level counterpart of `_first_undef`: walk a straight-
-    line/if body in interp.exec_body's own order, mutating `env` exactly
-    as it would, stopping at the first at/update/fill/div/mod bound that
-    fails. Best-effort: a `while` (no committed task's "undefined" witness
-    needs one, swap's mutant is straight-line) or anything else this does
-    not recognize returns None, which `_undef_cert` reads as "cannot
-    ground this one," the same honest abstention as every other opportunistic
-    certificate builder here."""
+    line/if/while body in interp.exec_body's own order, mutating `env`
+    exactly as it would, stopping at the first at/update/fill/div/mod
+    bound that fails. A `while` is replayed by CONCRETE UNROLLING at the
+    witness (`_undef_walk`'s own case, below the dated 2026-09-14 note
+    just above this function): the guard and body are evaluated one
+    iteration at a time, exactly the way `_cert_stmts` in lower_framac.py
+    already does for its own certificates, capped at `_MAX_UNDEF_UNROLL`
+    iterations. Anything else this does not recognize returns None, which
+    `_undef_cert` reads as "cannot ground this one," the same honest
+    abstention as every other opportunistic certificate builder here."""
+    fact, _stopped = _undef_walk(stmts, env, funs, [0])
+    return fact
+
+
+def _undef_walk(stmts, env: dict, funs: dict, count: list):
+    """`_first_undef_body`'s own engine: returns `(fact_or_None,
+    stopped)`, `stopped` True once a `return` has fired (SPEC.md "Early
+    exit"), mirroring `_cert_stmts`'s identical early-exit contract in
+    lower_framac.py so a `while` that unrolls past a `return` (this
+    file's own `_loop_def`/`gen_loop` already model a return-bearing
+    loop the same way) stops advancing `env` for the caller too."""
     for s in stmts:
         if "assign" in s or "return" in s or "var" in s:
             if "assign" in s:
@@ -8286,23 +8767,38 @@ def _first_undef_body(stmts, env: dict, funs: dict):
                 v, e = s["var"]["name"], s["var"]["init"]
             r = _first_undef(e, env, funs)
             if r is not None:
-                return r
+                return r, False
             env[v] = interp.ev(e, env, funs, interp.St())
             if "return" in s:
-                return None
+                return None, True
         elif "if" in s:
             c = s["if"]
             r = _first_undef(c["cond"], env, funs)
             if r is not None:
-                return r
+                return r, False
             cond = interp.ev(c["cond"], env, funs, interp.St())
-            r = _first_undef_body(c["then"] if cond else c["else"], env, funs)
-            if r is not None:
-                return r
+            fact, stopped = _undef_walk(c["then"] if cond else c["else"],
+                                        env, funs, count)
+            if fact is not None or stopped:
+                return fact, stopped
+        elif "while" in s:
+            wl = s["while"]
+            while True:
+                r = _first_undef(wl["cond"], env, funs)
+                if r is not None:
+                    return r, False
+                if not interp.ev(wl["cond"], env, funs, interp.St()):
+                    break
+                count[0] += 1
+                if count[0] > _MAX_UNDEF_UNROLL:
+                    return None, False   # named abstain: past the cap
+                fact, stopped = _undef_walk(wl["body"], env, funs, count)
+                if fact is not None or stopped:
+                    return fact, stopped
         else:
-            return None            # "while": not needed by any committed
-                                    # task's "undefined" witness yet
-    return None
+            return None, False     # anything else this does not
+                                    # recognize: honest abstention
+    return None, False
 
 
 def _real_ensures_undef_witness(task):
@@ -8434,9 +8930,10 @@ def _undef_cert(cx, task, body, witness):
             "Proof.\n"
             "  lia.\n"
             "Qed.\n")
-    prefix, w, suffix = find_while(body)
-    if w is not None:
-        return None            # not needed by any committed task yet
+    # 2026-09-14 (ROADMAP 16.2, rocq-cert): a `while` in `body` is no
+    # longer refused here -- `_first_undef_body`/`_undef_walk` (above)
+    # replay it by concrete unrolling at the witness, the same "value
+    # witness through loop bodies" mechanism this date's note documents.
     fact = _first_undef_body(body, env_py, funs)
     if fact is None:
         return None
@@ -8483,7 +8980,7 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
             else:
                 def_text = _plain_def(cx, task, body)
             if def_text is not None:
-                chunk = _value_cert(cx, task, body, witness, def_text)
+                chunk = _value_cert(cx, task, body, witness, def_text, w)
         if chunk is None:
             return None
         post_sf = POST_SF_NIA if _has_nonlinear_mul(task) else POST_SF

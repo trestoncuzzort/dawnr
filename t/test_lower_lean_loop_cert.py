@@ -1,0 +1,221 @@
+"""t/test_lower_lean_loop_cert.py: unit tests for lower_lean.py's
+2026-09-14 ROADMAP 16.2 addition (key lean-cert): value-witness
+refutation certificates through loop bodies.
+
+Two independent fixes, pinned separately below:
+
+1. `Lower.lower_loop`'s constant-return-condition special case. A
+   collapse-if twin whose mutated `if` condition becomes the literal
+   Lean `True` (first_even's and is_prime's own committed twins) used
+   to still emit the pre-existing `(if _hr : True then {retval} else
+   {rec_call})` dite for the loop's early-return step. Measured
+   directly (`lean -DmaxHeartbeats=1000000` on the emitted file,
+   2026-09-14): Lean's termination elaborator does not thread `_hr`'s
+   own `¬True` hypothesis into the `decreasing_by` obligation for the
+   now-dead `rec_call` occurrence (confirmed via `set_option
+   pp.all`: the obligation carries only the OUTER `_hg` hypothesis),
+   so the obligation is the raw (and false, since the recursive call's
+   own decreasing argument does not itself decrease) inequality with no
+   way to derive `False` -- `first | omega | grind` fails, Lean
+   recovers with `sorryAx`, and since `WellFounded.fix`'s `Acc.rec`
+   motive is Type-valued (not proof-irrelevant the way a Prop-motived
+   recursor would be), that `sorryAx` makes the WHOLE function stuck on
+   `decide`/`simp`/`grind` forever after -- no certificate tactic can
+   recover from a definition that cannot compute. The fix skips the
+   dite entirely when the return condition is this literal constant
+   (the guard-true step then ALWAYS returns, so the recursive call is
+   not merely unreachable in principle, it is absent from the honest
+   control flow), never firing for the real (whose own `if` condition
+   is never a bare boolean literal).
+
+2. `_cert_undefined_loop`, extending `_cert_undefined`'s pre-existing
+   (loop-free-only) coverage to a body-level undefined witness whose
+   task's body has a `while` -- reverse's own compare-flip twin (guard
+   `i < len(s)` widened to `i <= len(s)`) is the committed example:
+   at s=[], the guard now holds once, the loop body runs, and
+   `s[len(s)-1-i] = s[-1]` is out of bounds. Unlike (1), this
+   certificate never mentions the compiled `{name}_t`/`{name}_t_loop`
+   at all (SPEC.md's definedness calculus is a fact about the raw spec
+   body at the ground witness, independent of whether the compiled
+   function elaborates cleanly): the loop is unrolled concretely,
+   exactly as many iterations as interp.py's own execution takes
+   before raising Undef, mirroring lower_framac.py's `_cert_stmts`
+   while-case and lower_spark.py's own while-body replay (both dated
+   2026-09-12).
+
+Tests 1-2 below are pure-Python source-shape checks (no lean binary
+invoked, matching test_lower_lean_seqcomp.py's/
+test_lower_lean_divisorbound.py's own discipline: catch a regression in
+the fix's own logic, not the kernel's). Test 3 pins first_even's
+committed row's REFUTED verdict by actually invoking the lean kernel
+(verifiers.lean.verify), skipped by name when no lean binary is on
+PATH -- the same "skip a missing tool, name it, never fake a pass"
+discipline t/test_framac_while_cert.py's own missing-corpus skip uses.
+
+Run: cd <repo>/t && python3 test_lower_lean_loop_cert.py
+
+MEASURED 2026-09-14 by `python3 t/test_lower_lean_loop_cert.py`: see the
+printed unittest summary this run produces.
+"""
+import os
+import sys
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import harness
+import interp
+import lower_lean
+import tasks_io
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+class ConstantReturnConditionLoopDefTest(unittest.TestCase):
+    """Pins fix (1)'s SHAPE: first_even's own collapse-if twin (task
+    file, not hand-built -- the exact committed row the regression bar
+    measures) must lower to a NON-recursive `_t_loop` def (no `_hr`
+    dite, no recursive call at all in its body) once the guard-true
+    step's own return condition is the literal `True`."""
+
+    def _twin_src(self, task_name):
+        task = tasks_io.load_task(
+            os.path.join(HERE, "tasks", f"{task_name}.t"))
+        twin, op, w = harness.twin_for(task)
+        self.assertIsNotNone(w, f"{task_name}: no witness from twin_for")
+        return lower_lean.lower(task, twin, w), op, w
+
+    def test_first_even_collapse_if_loop_has_no_dead_recursive_branch(self):
+        src, op, w = self._twin_src("first_even")
+        self.assertEqual(op, "collapse-if")
+        self.assertEqual(w.get("_kind"), "value")
+        # the def itself: no `_hr` dite (the special case's whole point)
+        loop_def = src.split("def first_even_t_loop", 1)[1].split(
+            "def first_even_t ", 1)[0]
+        self.assertNotIn("_hr", loop_def, loop_def)
+        # ... and, since the branch never fires, no recursive occurrence
+        # of the loop function's own name inside its own body either.
+        body_start = loop_def.index(":=")
+        self.assertNotIn("first_even_t_loop", loop_def[body_start:],
+                         loop_def)
+        # `termination_by`/`decreasing_by` are still emitted (harmless on
+        # a now non-recursive def, matching every other lowered shape).
+        self.assertIn("termination_by", loop_def)
+        self.assertIn("t_refutation_certificate", src)
+
+    def test_is_prime_collapse_if_loop_has_no_dead_recursive_branch(self):
+        src, op, w = self._twin_src("is_prime")
+        self.assertEqual(op, "collapse-if")
+        self.assertEqual(w.get("_kind"), "value")
+        loop_def = src.split("def is_prime_t_loop", 1)[1].split(
+            "def is_prime_t ", 1)[0]
+        self.assertNotIn("_hr", loop_def, loop_def)
+        body_start = loop_def.index(":=")
+        self.assertNotIn("is_prime_t_loop", loop_def[body_start:], loop_def)
+        self.assertIn("t_refutation_certificate", src)
+
+    def test_real_body_is_untouched_by_the_special_case(self):
+        """The REAL (never a twin) never has a bare-literal `if`
+        condition, so its own `_t_loop` def must still carry the
+        pre-existing `_hr`-dite/recursive shape byte-for-byte -- this
+        fix touches no path the real's own lowering takes."""
+        task = tasks_io.load_task(os.path.join(HERE, "tasks",
+                                                "first_even.t"))
+        src = lower_lean.lower(task, task["body"], witness=None)
+        loop_def = src.split("def first_even_t_loop", 1)[1].split(
+            "def first_even_t ", 1)[0]
+        self.assertIn("_hr", loop_def, loop_def)
+        self.assertIn("first_even_t_loop", loop_def)
+
+
+class UndefinedLoopCertificateTest(unittest.TestCase):
+    """Pins fix (2)'s SHAPE: reverse's own compare-flip twin (an OOB
+    access one loop iteration in) must build a certificate that never
+    mentions the compiled `reverse_t`/`reverse_t_loop`."""
+
+    def test_reverse_compare_flip_certificate_avoids_the_compiled_loop(self):
+        task = tasks_io.load_task(os.path.join(HERE, "tasks", "reverse.t"))
+        twin, op, w = harness.twin_for(task)
+        self.assertEqual(op, "compare-flip")
+        self.assertEqual(w.get("_kind"), "undefined")
+        self.assertIsNone(w.get("_site"))
+        src = lower_lean.lower(task, twin, w)
+        self.assertIn("t_refutation_certificate", src)
+        cert = src.split("theorem t_refutation_certificate", 1)[1]
+        # the theorem's own STATEMENT (its type, before ":= by") never
+        # mentions the compiled loop function -- `_closer()`'s generic
+        # `simp [reverse_t] | ... | grind [reverse_t]` FALLBACK tactics
+        # do name it (harmless: the certificate's own `decide` alternative
+        # is what actually closes this goal, matching `_cert_undefined`'s
+        # loop-free sibling, whose closer names `self.cert_fns` the same
+        # way), so only the STATEMENT half is checked here.
+        stmt = cert.split(":= by", 1)[0]
+        self.assertNotIn("reverse_t", stmt, stmt)
+        # verifiers/lean.py's own BANNED regex is the actual authority on
+        # what disqualifies a file (`sorry`, `admit`, `assume_val`, a
+        # bare `axiom` DECLARATION -- never the legitimate `#print
+        # axioms` audit line every lowered file ends with); this is only
+        # a sanity check that the certificate text itself never spells
+        # any of the actually-banned tactics.
+        for banned in ("sorry", "admit", "assume_val"):
+            self.assertNotIn(banned, src.lower())
+
+    def test_loop_free_undefined_path_is_unchanged(self):
+        """A loop-free task's own undefined-kind certificate (swap's
+        committed off-by-one twin, `to_expr`'s pre-existing path) must
+        still route through `_cert_undefined`'s original body, never
+        `_cert_undefined_loop` (no `while` in swap's body at all)."""
+        task = tasks_io.load_task(os.path.join(HERE, "tasks", "swap.t"))
+        self.assertFalse(any("while" in s for s in task["body"]))
+        twin, op, w = harness.twin_for(task)
+        src = lower_lean.lower(task, twin, w)
+        self.assertIn("t_refutation_certificate", src)
+
+
+class CommittedRowKernelVerdictTest(unittest.TestCase):
+    """Integration pin: first_even's committed collapse-if twin actually
+    reads REFUTED from the lean kernel (not just a plausible-looking
+    certificate), and its own real still reads VERIFIED -- the two
+    numbers the regression bar cares about. Skipped by name, never
+    silently passed, when no lean binary is on PATH."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from verifiers import lean as lean_backend
+        except Exception as e:                          # noqa: BLE001
+            cls.lean_backend = None
+            cls.skip_reason = f"verifiers.lean import failed: {e}"
+            return
+        if not getattr(lean_backend, "LEAN", None):
+            cls.lean_backend = None
+            cls.skip_reason = "no lean binary on PATH"
+            return
+        cls.lean_backend = lean_backend
+
+    def test_first_even_real_verified_twin_refuted(self):
+        if self.lean_backend is None:
+            self.skipTest(self.skip_reason)
+        import tempfile
+        from pathlib import Path
+        task = tasks_io.load_task(os.path.join(HERE, "tasks",
+                                                "first_even.t"))
+        twin, op, w = harness.twin_for(task)
+        real_src = lower_lean.lower(task, task["body"], witness=None)
+        twin_src = lower_lean.lower(task, twin, w)
+        with tempfile.TemporaryDirectory() as d:
+            rp = Path(d) / "first_even.lean"
+            tp = Path(d) / "first_even_twin.lean"
+            rp.write_text(real_src, encoding="utf-8")
+            tp.write_text(twin_src, encoding="utf-8")
+            r_real = self.lean_backend.verify(rp)
+            r_twin = self.lean_backend.verify(tp)
+        from verifiers import Outcome
+        self.assertEqual(r_real.outcome, Outcome.VERIFIED,
+                         getattr(r_real, "error", ""))
+        self.assertEqual(r_twin.outcome, Outcome.REFUTED,
+                         getattr(r_twin, "error", ""))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

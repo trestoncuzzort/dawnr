@@ -169,6 +169,12 @@ def test_diagnostics_match_check_file():
         params = msg["params"]
         uri = params["uri"]
         path = uri[len("file://"):] if uri.startswith("file://") else uri
+        # 2026-09-14: the transcript was recorded in a git worktree that no
+        # longer exists, so its absolute URIs name files that are not there.
+        # Rebase the recorded path onto this checkout by its t/-relative tail
+        # (tasks/abs.t, malformed/...), which is what the recording meant.
+        if "/t/" in path:
+            path = str(HERE / path.rsplit("/t/", 1)[1])
         errs = surface.check_file(path)
         want = set()
         for err in errs:

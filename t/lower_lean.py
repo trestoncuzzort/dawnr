@@ -2007,6 +2007,67 @@ lean column, and the 75 `dafny_synthesis` rows of `t/COVERAGE-lifted-
 session's own patch/report for the exact before/after counts measured
 (this docstring is the mechanism note; it does not restate numbers that
 belong to the grading run, which can drift if re-run under contention).
+
+2026-09-14 (key lean-cert, ROADMAP 16.2's "value-witness certificates
+through loop bodies"): first_even's, is_prime's and reverse's own
+committed twins (unproved in the reordered-ladder matrix banked at
+d38da32) now read REFUTED. Two independent, narrowly-scoped fixes, both
+detailed at their own call sites (`lower_loop`'s `ret_cond == "True"`
+special case; the new `_cert_undefined_loop` method) rather than
+restated here:
+
+  (a) a collapse-if twin whose mutated `if` collapses to the literal
+      Lean `True` used to still emit the pre-existing `_hr`-dite +
+      dead recursive-call shape for `_t_loop`'s guard-true step;
+      `lean -DmaxHeartbeats=1000000` on the emitted file showed the
+      auto-generated `decreasing_by` obligation for that now-dead call
+      carries no `_hr` hypothesis at all (`set_option pp.all` confirms:
+      only the outer `_hg` threads), so the obligation is unprovable as
+      stated and Lean recovers with `sorryAx`, which -- `Acc.rec`'s
+      motive being Type-valued -- makes the WHOLE function stuck on
+      `decide`/`simp`/`grind` forever after, no certificate tactic
+      recoverable. Fixed by not emitting the dead branch at all when
+      the return condition is this literal constant.
+  (b) a body-level undefined witness (`_cert_undefined`) for a task
+      whose body has a `while` used to abstain unconditionally
+      (`to_expr` renders loop-free shapes only); `_cert_undefined_loop`
+      now unrolls the loop concretely, exactly as many iterations as
+      interp.py's own execution takes before raising Undef, mirroring
+      lower_framac.py's `_cert_stmts` while-case and lower_spark.py's
+      own while-body replay (both 2026-09-12) -- never mentioning the
+      compiled `{name}_t`/`{name}_t_loop` at all, since SPEC.md's
+      definedness calculus is a fact about the raw spec body at the
+      ground witness.
+
+Measured (`python3 t/grade.py --tasks <dir> --kernels lean,dafny --flake
+3 --jobs <n>`, this machine, lean 4.33.1 / dafny 4.11.0+fcb2042):
+  - the 3 committed rows above: unproved -> refuted (twin), real
+    unchanged (verified) in every case; dafny unchanged throughout.
+  - 8 lifted rows probed beyond the 3 committed ones (Clover_array_
+    product.arrayProduct, Clover_array_sum.arraySum, Clover_cal_sum.Sum,
+    Clover_double_array_elements.double_array_elements, Clover_linear_
+    search1.LinearSearch, Clover_rotate.rotate, Dafny-Exercises..
+    ExerciseMaximum.mmaximum1, Dafny_Verify..LoopInvariant.
+    DownWhileGreater): 6 of 8 moved unproved -> refuted; 2 did not
+    (Sum's off-by-one and DownWhileGreater's compare-flip, both routed
+    through the pre-existing `hok`/domain-hypothesis `_t_loop` shape
+    unaffected by either fix above -- lean's own message: `error:
+    unsolved goals / case refine_2 / ⊢ False` after the `_closer()`
+    cascade, i.e. UNPROVED, "refutation certificate declared but not
+    kernel-accepted", named open, not attempted this session).
+  - regression bar: the 34 committed tasks' lean column matches
+    t/AGREEMENT.md byte-for-byte except the 3 rows above (count_vowels'
+    own pre-existing unproved/unproved is unchanged); lean's own 66-task
+    conformance slice (probe_manifest()+metamorphic items, restricted to
+    the lean column via run_par.probe_backends()) reads 0 FAIL both
+    before and after (t/CONFORMANCE.md's own baseline is also 0 FAIL for
+    lean); the 75 dafny_synthesis rows of t/COVERAGE-lifted-785.md that
+    read `verified / refuted` in lean (63 of 75) ALL still do (none
+    moved); as a side effect of fix (b), three more of those 75 rows
+    (task_id_3 isNonPrime, task_id_106 appendArrayToSeq, task_id_414
+    anyValueExists, all `unproved / unproved` at baseline) moved to
+    `unproved / refuted` -- the real side is unaffected in every one of
+    these, so no cell that counted before stopped counting.
 """
 from __future__ import annotations
 
@@ -2065,6 +2126,12 @@ CERT_NAME = "t_refutation_certificate"         # the contract with the adapter
 MAX_ENUM = 16     # ground quantifier enumeration cap; witness domains are
                   # small (interp ladders), so past this the generic closers
                   # get their chance and a miss honestly reads unproved
+MAX_UNDEF_UNROLL = 256   # 2026-09-14 (lean-cert): the concrete unroll cap
+                  # for `_cert_undefined_loop`'s while-body replay, matching
+                  # lower_framac.py's own `MAX_CERT_STMTS` -- a witness
+                  # needing more concrete iterations than this to reach its
+                  # own Undef honestly abstains (returns None) rather than
+                  # building an ever-larger certificate term.
 
 
 def _collect_names(x, out: set) -> None:
@@ -6238,7 +6305,69 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # guard-true step of `_t_loop_spec` gains a second case. A body
         # with no `return` reaches `ret_cond == "False"` and this is
         # byte-identical to the pre-return lowering.
-        if has_return:
+        #
+        # 2026-09-14 (lean-cert, ROADMAP 16.2's value-witness-through-loop
+        # item): `ret_cond == "True"` is not merely a return that HAPPENS
+        # to always fire at this witness -- it is the literal Lean
+        # constant `True` (`sym`'s own "if" case sets `returned = cp`
+        # only when the then-branch always returns and the else-branch
+        # never does; `cp` is this literal string only when `prop` rendered
+        # a BOOLEAN LITERAL condition, SPEC.md's own "True"/"False" case,
+        # which only a collapse-if twin (never the real: no task's own
+        # `if` condition is written as a bare boolean literal) produces).
+        # Measured directly on first_even's and is_prime's own collapse-if
+        # twins (both replace the loop body's `if` condition with the
+        # literal `true`): emitting the pre-existing `(if _hr : True then
+        # {retval} else {rec_call})` dite makes `first_even_t_loop`'s own
+        # `decreasing_by` obligation for the now-dead `rec_call` occurrence
+        # UNPROVABLE, not merely hard -- `lean -DmaxHeartbeats=1000000` on
+        # the emitted file (2026-09-14) shows the auto-generated
+        # decreasing_by goal for that occurrence carries NO `_hr` hypothesis
+        # at all (confirmed via `set_option pp.all`: Lean's termination
+        # elaborator threads branch hypotheses from the OUTERMOST `if`/dite
+        # of a function's own body -- here `_hg` -- but not from a FURTHER
+        # NESTED one written directly as raw `dite` syntax rather than
+        # compiled from Lean's own `match`), so the goal is the RAW
+        # inequality `(len - (dite _hr True instDecidableTrue (fun _=>i)
+        # (fun _=>i+1)) + 1).toNat < (len - i + 1).toNat` with no way to
+        # derive `False` from the (invisible) `¬True`, hence not the
+        # measure's fault, a genuinely absent hypothesis. `first |
+        # omega|grind` fails, Lean recovers with `sorryAx`, and since
+        # `Acc.rec`'s motive is Type-valued (not proof-irrelevant the way
+        # a Prop-motived `Acc.rec` would be), that `sorryAx` makes
+        # `first_even_t_loop` itself STUCK on `decide`/`simp`/`native_decide`
+        # forever after (measured: `first_even_t_wf1`..`first_even_t_loop_spec`
+        # all print `sorryAx` in their `#print axioms`, and so does
+        # `t_refutation_certificate` the moment it mentions `first_even_t`
+        # at all) -- no certificate tactic can recover from a definition
+        # that cannot compute. The fix is at the SOURCE: when the loop
+        # body's own return condition is this literal constant, the guard-
+        # true step ALWAYS returns and the recursive call is not merely
+        # unreachable in principle, it is ABSENT from the honest control
+        # flow -- so it is not emitted at all, and `first_even_t_loop`
+        # becomes what it always semantically was for this twin, a
+        # NON-recursive `if`. `termination_by`/`decreasing_by` are kept
+        # attached (Lean accepts them on a non-recursive def, with only a
+        # benign "unused termination hints" warning, matching every other
+        # code path's own emission shape byte-for-byte) rather than
+        # threading a second shape through every call site below. Does not
+        # touch `_t_loop_spec`'s own proof text (unchanged, still tries
+        # the OLD `split`-based induction and may still fail exactly as
+        # before for such a twin -- allowed, per this file's certificate
+        # docstring: the general spec theorem failing costs nothing but
+        # itself, only the CERTIFICATE and `first_even_t`/`first_even_t_loop`
+        # being clean matter for REFUTED) and never fires for the real
+        # (whose own `if` condition is never a bare boolean literal).
+        if has_return and ret_cond == "True":
+            retval = env_b.get(self.ret, self.ret)
+            out = [f"def {self.name}_t_loop {pb} {sb}{hpre_p}{hinv_p} : "
+                   f"{self.lean_type(self.rett)} :=\n"
+                   f"  if _hg : {guard_p} then\n"
+                   f"    {retval}\n"
+                   f"  else {result}\n"
+                   f"termination_by ({dec1}).toNat\n"
+                   + self._dec(dec_needed)]
+        elif has_return:
             retval = env_b.get(self.ret, self.ret)
             out = [f"def {self.name}_t_loop {pb} {sb}{hpre_p}{hinv_p} : "
                    f"{self.lean_type(self.rett)} :=\n"
@@ -6946,7 +7075,14 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if w.get("_site") == "ensures":
             return self._cert_undefined_ensures(w)
         if any("while" in s for s in self.body):
-            return None
+            # 2026-09-14 (lean-cert): a body-level undefined witness whose
+            # task has a `while` used to abstain unconditionally here
+            # ("LOOP-shaped bodies are not covered", this method's own
+            # pre-existing note) -- `_cert_undefined_loop` below now
+            # covers it by unrolling the loop concretely to the exact
+            # iteration interp.py itself raises Undef at, never touching
+            # `to_expr` (still loop-free-only, unchanged).
+            return self._cert_undefined_loop(w)
         params = self.task["params"]
         types = dict(self.types)
         tenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
@@ -7007,6 +7143,112 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                  for r in self.task.get("requires", [])]
         parts.append((f"(¬{d})", self._closer()))
         return parts
+
+    def _cert_undefined_loop(self, w: dict) -> list | None:
+        """2026-09-14 (lean-cert, ROADMAP 16.2's value-witness-through-loop
+        item): a body-level undefined witness (`_site` != "ensures") for a
+        task whose body has a `while` -- e.g. reverse's own compare-flip
+        twin, guard `i < len(s)` flipped to `i <= len(s)`, so at s=[] the
+        loop body runs once and `s[len(s)-1-i] = s[-1]` is out of bounds.
+        `to_expr` (the loop-free case just above) cannot render this: it
+        demands a body ending in an assignment to `self.ret` or a
+        `return`, which a loop's OWN body (an index bump, typically)
+        usually is neither.
+
+        Mirrors lower_framac.py's `_cert_stmts` while-case and
+        lower_spark.py's own while-body replay (both dated 2026-09-12):
+        the loop is unrolled CONCRETELY, exactly as many iterations as
+        interp.py's own execution takes before raising Undef (found by
+        literally replaying it below, catching interp.Undef at the exact
+        statement that raises it -- never guessed, never assumed). Unlike
+        `_cert_value`'s own loop path (`lower_loop`'s 2026-09-14 fix
+        above), this certificate never mentions `{name}_t`/`{name}_t_loop`
+        at all: SPEC.md's definedness calculus is a fact about the RAW
+        spec body evaluated at the ground witness (`_cert_undefined`'s
+        own loop-free sibling already works this way, `to_expr`'s `obs`
+        conjunction proved false by ground `decide`/`omega`/`simp`/`grind`
+        alone), so nothing here depends on whether the compiled recursive
+        function itself elaborates cleanly.
+
+        Each iteration's own definedness obligation is gathered via
+        `self.sym` (not `to_expr`: a loop body ending in a plain state
+        update, not a return, is exactly `sym`'s own case, already used
+        by `_cert_loop`'s "preservation" kind for the identical reason),
+        with the ground (`interp.exec_body`) and symbolic (`self.sym`)
+        replays kept in lockstep, one iteration behind each other by
+        construction (both start from the same prefix-derived state and
+        advance the same statements each step). The guard holding at
+        every iteration up to and including the last, and the final
+        iteration's own obligation being false, are proved and conjoined
+        as independent ground facts -- the same "AND of separately proved
+        parts" shape `_cert_undefined`'s own `requires`-then-`(¬ob)` list
+        already uses, not an implication chain, since every fact here is
+        already fully ground (no free variable survives the replay)."""
+        body = self.body
+        idx = next((i for i, s in enumerate(body) if "while" in s), None)
+        if idx is None:
+            return None
+        prefix, wh = body[:idx], body[idx]["while"]
+        types = dict(self.types)
+        for s in prefix:
+            if "var" in s:
+                types[s["var"]["name"]] = s["var"]["type"]
+        state = [self.ret] + [s["var"]["name"] for s in prefix
+                              if "var" in s]
+        params = self.task["params"]
+        if any(p["name"] not in w for p in params):
+            return None
+        self.cert_funs = interp.funs_of(self.task, body)
+        fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
+        self.cert_fns = ", ".join(fns)
+        pvenv = {p["name"]: self._unshow(w[p["name"]], p["type"])
+                for p in params}
+        ptenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
+                for p in params}
+        venv = dict(pvenv)
+        try:
+            interp.exec_body(prefix, venv, self.cert_funs, interp.St())
+        except (interp.Undef, interp.Budget, RecursionError):
+            return None      # the prefix itself is undefined: not this shape
+        tenv, _, _ = self.sym(prefix, dict(ptenv), dict(types), state)
+        parts = [(self.prop(r, ptenv, types),
+                  self._prove(r, ptenv, pvenv, types))
+                 for r in self.task.get("requires", [])]
+        for _ in range(MAX_UNDEF_UNROLL):
+            if any(n not in venv or n not in tenv for n in state):
+                return None
+            guard_now = self._cev(wh["cond"], venv)
+            if guard_now is not True:
+                # the guard was already false (or undecidable): interp's
+                # own Undef did not come from entering this loop again, so
+                # this replay does not explain the witness -- honest
+                # abstain, not a guess.
+                return None
+            parts.append((self.prop(wh["cond"], tenv, types),
+                          self._prove(wh["cond"], tenv, venv, types)))
+            venv_next = dict(venv)
+            try:
+                interp.exec_body(wh["body"], venv_next, self.cert_funs,
+                                 interp.St())
+            except (interp.Undef, interp.Budget, RecursionError):
+                # THIS iteration's body is where interp.py itself raises
+                # Undef: `sym`'s own `obs` (loop-free, `wh["body"]`'s own
+                # precondition) instantiated at the SAME ground state names
+                # the exact obligation that fails, ground-proved false by
+                # `_closer()` alone -- the same door `_cert_undefined`'s
+                # loop-free sibling already uses.
+                types2 = dict(types)
+                _, obs, _ = self.sym(wh["body"], tenv, types2, state)
+                ob = self._conj(obs)
+                if ob is None:
+                    return None
+                parts.append((f"(¬{ob})", self._closer()))
+                return parts
+            types2 = dict(types)
+            env_b, _, _ = self.sym(wh["body"], tenv, types2, state)
+            tenv = {**tenv, **env_b}
+            venv = venv_next
+        return None      # too many concrete iterations: honest abstain
 
     def _cert_value(self, w: dict, _kind: str) -> list | None:
         if isinstance(w.get("_twin"), str):

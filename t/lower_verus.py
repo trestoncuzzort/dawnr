@@ -1080,6 +1080,65 @@ verus column, cell for cell (count_vowels's own unproved/refuted
 included), and the conformance suite's verus column, rerun in full
 (`conformance.py --jobs 8 --flake 3`), drops no PASS relative to
 t/CONFORMANCE.md's committed run -- see t/test_lower_verus_nested_trigger.py.
+
+2026-09-14 (ROADMAP 16.2, verus-refusal item). Sweep r23 recorded
+LOWER-ERROR, not a named refusal, for the verus twin of lifted row
+mfs_tmp_tmpmmnu354t_testes_anteriores_t2_ex5_2020_2__leq: a collapse-if
+twin (SPEC.md "The twins") whose `if a[i]<b[i] ... else if a[i]>b[i] ...
+else i=i+1` collapsed to a bare unconditional `return result := true`,
+so `loop()`'s own `state` (`_assigned(body) - _declared(body)`) came out
+empty and hit a bare `assert state, ...` -- an AssertionError, which
+run_par.lower_and_dispatch classifies as lower-error, not the
+NotImplementedError -> abstain path harness.py's own contract reserves
+for a named refusal. Reproduced directly (`harness.load` the record,
+`harness.twin_cached`, `lower_verus.lower` the twin body with its own
+witness): AssertionError at this file's former line 3575.
+
+Fixed two ways. First, the assert is now `raise NotImplementedError(
+"verus: collapse-if twin: loop body assigns no variable in scope")`, so
+an otherwise-unlowerable empty-state loop reads a named refusal instead
+of a crash. Second, when the body is GUARANTEED to return on every path
+through one execution (`_always_returns`, new: does every path reach a
+`return` before falling off the end of the statement list, an `if`
+counting only when BOTH branches always return, a nested `while` never
+counting on its own since its guard can be false on entry), the loop is
+lowered anyway: any execution of the body ends the whole task, so the
+"loop again with unchanged state, forever" non-termination an empty
+`state` would otherwise imply never arises, and the recursive helper's
+own tail call after the body is provably dead code (the body always
+diverges through `return` first) that Verus discharges as vacuous. Any
+OTHER empty-`state` shape (no return on any path, or a return on only
+some paths, so the non-returning path could re-loop with literally
+unchanged state forever) is left exactly as unsupported as before --
+inventing a termination fact the task never stated is not on the table.
+
+Measured (`python3 t/grade.py --tasks <dir containing just this record>
+--kernels verus,dafny --flake 3`): the row moves from lower-error/
+lower-error to verus real=unproved, twin=refuted at the twin's own
+measured witness (a=[1], b=[0]: real returns False, the collapsed twin
+returns True whenever the guard holds at all) -- exactly the row's
+dafny cell already read for the real side (verified), and no ensures or
+invariant was weakened or assumed to get there: the certificate is the
+kernel's own `compute_only` evaluation of the task's stated `ensures` at
+the witness, unchanged. `real=unproved` here is a pre-existing,
+unrelated verus gap on the REAL body (which still assigns `i`, so never
+enters this code path); this fix touches only the twin's lowering.
+
+Regression, all three required by ROADMAP 16.2's own bar: (1) the
+34-task committed matrix (`grade.py --tasks t/tasks --kernels
+verus,dafny --flake 3`) reads byte-for-byte the same table as
+t/AGREEMENT.md's dafny and verus columns, cell for cell (count_vowels's
+own unproved/refuted included) -- this file's new code path is only
+reachable when a loop's `state` is empty, and no committed task has one;
+(2) the conformance suite restricted to verus alone (`conformance.py`'s
+own `build_manifest`/`run_items`/`grade`, called directly, filtered to
+the verus column) reads 66 PASS / 0 FAIL both before and after this
+change, the identical 66 items; (3) all 75 dafny_synthesis rows of
+t/COVERAGE-lifted-785.md, relowered through the SAME grade.py call
+before and after this change (verus + dafny, flake 3), produce a
+byte-identical table (only the run timestamp differs) -- no cell moved,
+including the ones that already read verified/refuted. See
+t/test_lower_verus_refusals.py.
 """
 from __future__ import annotations
 
@@ -2795,6 +2854,31 @@ def _declared(body: list) -> set:
     return out
 
 
+def _always_returns(body: list) -> bool:
+    """True iff every control-flow path through `body` reaches a `return`
+    before falling off the end of the list (2026-09-14, ROADMAP 16.2
+    verus-refusal item). A statement list "always returns" when it ends
+    (possibly after statements with no effect on that fact) in either a
+    bare `return` or an `if` whose `then` AND `else` both always return;
+    a `while` never counts on its own (its guard can be false on entry,
+    so control can fall through it even when its own body always
+    returns). Used only to decide whether a collapse-if twin's loop --
+    one whose body assigns no in-scope variable at all (`loop()`'s own
+    `state` is empty) -- can still be lowered soundly: such a loop is
+    otherwise indistinguishable from a no-op (if it can fall through
+    without returning, looping again changes nothing, forever, whenever
+    the guard is still true) UNLESS every path through one execution of
+    the body is guaranteed to return, in which case the loop runs at
+    most once and never actually iterates."""
+    for s in body:
+        if "return" in s:
+            return True
+        if "if" in s:
+            if _always_returns(s["if"]["then"]) and _always_returns(s["if"].get("else") or []):
+                return True
+    return False
+
+
 def _may_return(body: list) -> bool:
     """True iff `body` contains a `return` (SPEC.md "Early exit",
     2026-09-08), directly, inside an `if` branch, or inside a nested
@@ -3572,11 +3656,43 @@ class _V1:
             self._wf_lemma(f"t_wf_{self.name}_l{k}_inv{j}", allvars,
                            inv_ctx + invs[:j], defined(iv))
 
-        assert state, "loop body assigns nothing in scope, not lowerable"
+        # 2026-09-14 (ROADMAP 16.2, verus-refusal item; measured on the
+        # lifted-corpus row mfs_tmp_tmpmmnu354t_testes_anteriores_t2_ex5_
+        # 2020_2__leq's verus twin, sweep r23 LOWER-ERROR at t/lower_verus.py
+        # line 3575 before this note). A collapse-if twin (SPEC.md "The
+        # twins") can flatten a loop body down to no assignment of any
+        # in-scope variable at all -- here the twin's `if a[i]<b[i] ... else
+        # if a[i]>b[i] ... else i=i+1` collapsed to a bare unconditional
+        # `return result := true`, so `state` (`_assigned(body) -
+        # _declared(body)`) is empty. That shape is sound to lower ONLY
+        # when every path through one execution of the body is GUARANTEED
+        # to return (`_always_returns`): the loop then runs at most once
+        # (if the guard was true, the body always exits the task; if
+        # false, the loop is skipped entirely), so the "loop again with
+        # unchanged state, forever" non-termination that an empty `state`
+        # would otherwise imply never arises -- the recursive helper's
+        # tail call after the body is provably dead code (the body always
+        # diverges through `return` first), Verus discharges it as
+        # vacuous, and the row can genuinely reach VERIFIED/REFUTED
+        # instead of only ever abstaining. Any OTHER empty-`state` shape
+        # (no return at all, or a return on only some paths) is left
+        # exactly as unsupported as before -- a loop with no state change
+        # on a path that does not return would loop the identical state
+        # forever whenever the guard holds again, which is not safe to
+        # translate into a Verus recursive function with a real
+        # `decreases` clause without inventing a fact the task never
+        # stated, so it stays a named refusal.
+        if not state and not _always_returns(w["body"]):
+            raise NotImplementedError(
+                "verus: collapse-if twin: loop body assigns no variable "
+                "in scope")
 
         if len(state) == 1:
             state_ty = scope[state[0]][0]
             res_val = state[0]
+        elif len(state) == 0:
+            state_ty = "()"
+            res_val = "()"
         else:
             state_ty = "(" + ", ".join(scope[v][0] for v in state) + ")"
             res_val = "(" + ", ".join(state) + ")"

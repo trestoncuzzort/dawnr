@@ -161,6 +161,68 @@ shapes"). The three structural ABSTAINs named in the 2026-09-11 entry above
   regression discipline (`find_whiles`'s one-loop path, `_expr_free_vars`,
   and a `CommittedTasksUnaffectedTest` mirroring test_names.py's own).
 
+2026-09-14 (worktree wf_f5dac772-927-4, "fstar-refusal" item): sweep r23
+(ROADMAP 16.2, 2026-09-12 08:37Z) recorded LOWER-ERROR for the fstar twin
+of two lifted rows: `FlexWeek_tmp_tmpc_tfdj_3_ex3.Max`'s and `dafny-
+workout_tmp_tmp0abkw6f8_starter_ex09.ComputeFib`'s `collapse-if` twins.
+Reproduced (`t/harness.twin_for` + `lower_fstar.lower` on both records
+from `t/out/lifted-tasks`): `gen_loop`'s `stys = {v: (local.get(v) or
+cx.tys[v]) for v in mvars}` raised `KeyError: 'i'` / `KeyError: 'c'`. Root
+cause: `collapse-if` turned a conditional early return into an
+UNCONDITIONAL one (the twin's first or second top-level statement); `exec_
+flow` returns the instant it sees a top-level `return`, so it never runs
+any `var` declared LATER in the same straight-line list -- that `var`'s
+type never enters `local`. `gen_loop`'s old `mvars` scan was blind to
+reachability (a syntactic "does `prefix` have a `var` statement" check),
+so it counted the now-dead-code local in regardless, and `stys` then found
+it in neither `local` (never reached) nor `cx.tys` (params/return only).
+
+Fix, in `gen_loop`: (1) when `exec_flow`'s own `pre_rc` for `prefix` comes
+back the literal string `"true"` (every path through `prefix` returns),
+the loop and suffix are provably unreachable -- the function now lowers
+directly as `pre_rv` under the task's own `Pure` signature, built and
+returned before `mvars`/`stys`/the loop machinery exist at all, so the
+KeyError's precondition never arises; nothing assumed, nothing weakened,
+`ensures` is still checked against the actual value the twin returns.
+(2) The `stys` dict comprehension is now wrapped in `try`/`except
+KeyError`, converting any OTHER shape into a `NotImplementedError` naming
+the missing variable and why (t/harness.py: `NotImplementedError` alone
+reads as a named abstain; any other exception is an unnamed lower-error)
+-- believed unreachable from this DSL's actual grammar (a partial-return
+`if` always finishes populating `local` for what follows it, via `exec_
+flow`'s own recursion into `stmts[idx + 1:]`), but exercised directly in
+test_lower_fstar_refusals.py via a mocked `exec_flow`, as a safety net
+against a shape this file has not actually solved reaching the caller as
+a raw, unnamed crash.
+
+MEASURED (F* 2026.08.30, this session, `python3 t/grade.py --tasks <two-
+row copy of t/out/lifted-tasks> --kernels dafny,fstar --flake 3 --jobs 4`):
+before, both rows: `LOWER-ERROR KeyError: 'i'` / `'c'` (real AND twin, since
+`run_par.lower_and_dispatch`'s `except Exception` wraps both `lower(...)`
+calls in the same cell). After: `flexweek_tmp_tmpc_tfdj_3_ex3__max x fstar
+[collapse-if]: real=verified twin=refuted` (matches dafny's own
+verified/refuted, full agreement); `dafny_workout_tmp_tmp0abkw6f8_
+starter_ex09__computeFib x fstar [collapse-if]: real=unproved twin=
+refuted` (twin now agrees with dafny's verified/refuted; the real side's
+own `unproved` is F*'s pre-existing difficulty with this task's REAL
+recursive-fib obligation, a residual this item did not touch, uncovered
+only because the cell is no longer bucketed as LOWER-ERROR -- named here,
+not hidden, and not this item's to fix).
+
+Regression, all measured this session: the 34 committed tasks at flake 3
+read byte-for-byte the same as t/AGREEMENT.md's dafny AND fstar columns
+(0 cells moved, both documented exceptions -- count_vowels' timeout and
+split_join's unproved -- unchanged); the conformance suite's fstar column
+(conformance.py's own build_manifest/run_items/grade, restricted to the
+fstar column) reads 66/66 PASS both before and after, byte-identical but
+for the timestamp; every dafny_synthesis row in t/COVERAGE-lifted-785.md
+whose fstar cell already reads `verified / refuted` (75 of 75) relowers
+BYTE-IDENTICAL real and twin F* source before and after this change (the
+short-circuit only ever fires on `pre_rc == "true"`, which none of these
+75 rows' own prefixes produce), so none of those cells can have moved.
+test_lower_fstar_abstains.py: 11/11 unchanged. See test_lower_fstar_
+refusals.py for this item's own unit-level regression discipline.
+
 F*'s type system does most of t's work natively; this file records exactly
 what is delegated to the kernel and what is refused:
 
@@ -3487,6 +3549,49 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     # (COMPARE-FLIP on the prefix guard) verified/refuted, matching dafny.
     dummy0 = _dummy(ret_t)
     env_pre, pre_rc, pre_rv = exec_flow(cx, prefix, {ret: dummy0}, local, dummy0)
+    # UNCONDITIONAL RETURN BEFORE THE LOOP (2026-09-14, "fstar-refusal"
+    # item, sweep r23's LOWER-ERROR on FlexWeek_..._ex3's Max collapse-if
+    # twin and dafny-workout_..._ex09's ComputeFib collapse-if twin --
+    # see this file's own module docstring, dated note below, for the
+    # measured before/after). `exec_flow` (above) returns the moment it
+    # sees a top-level `return` in a straight-line list, so it never runs
+    # any statement written AFTER an unconditional one -- a `var` declared
+    # later in `prefix` (Max's `i`, ComputeFib's `c`) never enters `local`.
+    # The OLD code unconditionally built `mvars` with a syntactic scan of
+    # `prefix` blind to that ("[s['var']['name'] for s in prefix if 'var'
+    # in s]", below), so it counted `i`/`c` in regardless, and the `stys`
+    # dict comprehension a few lines down then did `local.get(v) or
+    # cx.tys[v]` for a `v` in NEITHER table (a local's type lives in
+    # `local` once a REACHED `var` statement puts it there, never in
+    # `cx.tys`, which holds only params/return) -- `KeyError: 'i'` /
+    # `KeyError: 'c'`. `pre_rc` is the LITERAL string "true" (as opposed to
+    # a conditional merge like "(if cb then true else false)") exactly
+    # when EVERY path through `prefix` returns -- the only way `exec_flow`
+    # produces that literal is the `"return" in s` branch's own immediate
+    # `return env, "true", val`, never reached through an `if`-merge unless
+    # both arms return too, which folds to the same literal. Whenever that
+    # holds, the loop and suffix below are provably unreachable: the
+    # function's value is exactly `pre_rv` on every input satisfying
+    # `requires`, so this returns the task's real `Pure` signature applied
+    # directly to `pre_rv`, well-typed on its own and never touching
+    # `mvars`/`stys`/the loop machinery at all. Sound for the SAME reason
+    # the existing `if pre_rc then pre_rv else (...)` wrap lower in this
+    # function already is (that wrap is exactly this case's general form,
+    # `pre_rc` a boolean the kernel proves rather than a Python-level
+    # certainty) -- this is that wrap's `pre_rc` literally `true` case,
+    # taken early so the `else` branch, which is what raised, is never
+    # built. Nothing assumed, nothing weakened: `ens` is still checked
+    # against `pre_rv`, exactly the value the twin actually returns on
+    # this path. MEASURED 2026-09-14 (`python3 t/lower_fstar.py` smoke
+    # import plus the repro below): both rows now emit F* source (no
+    # exception) and are dispatched to the kernel; see the module
+    # docstring entry dated 2026-09-14 for the verified/refuted verdicts.
+    if pre_rc == "true":
+        return (f"let {name} {pb}\n"
+                f"  : Pure {_pty(ret_t)}\n"
+                f"    (requires {req})\n"
+                f"    (ensures {ens})\n"
+                f"= {pre_rv}\n")
     # SPEC.md frame rule: the loop havocs exactly the syntactic assigned set
     # of its body. Only those variables are threaded through the recursion;
     # every other mutable name is a plain binder of the helper, passed back
@@ -3503,7 +3608,24 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     if not svars:
         raise NotImplementedError(
             "fstar lowering: loop body assigns nothing in scope")
-    stys = {v: (local.get(v) or cx.tys[v]) for v in mvars}
+    # A KeyError here (2026-09-14, "fstar-refusal" item) means some OTHER
+    # shape than the unconditional-return case just above also leaves a
+    # `var` declared in `prefix` out of both `local` (never reached by
+    # `exec_flow`) and `cx.tys` (params/return only) -- a partial-return
+    # prefix (`pre_rc` a conditional merge, not the literal "true" the
+    # case above catches), say. Named honestly as a refusal rather than a
+    # raw `KeyError` reaching the caller as LOWER-ERROR (t/harness.py:
+    # `NotImplementedError` alone reads as an abstain the row can name;
+    # anything else is an unnamed lower-error), per SPEC.md's twin-ladder
+    # posture of never guessing a scope this file has not actually solved.
+    try:
+        stys = {v: (local[v] if v in local else cx.tys[v]) for v in mvars}
+    except KeyError as e:
+        raise NotImplementedError(
+            f"fstar lowering: variable {e.args[0]!r} has no type in scope "
+            f"in the loop prefix (pre_rc={pre_rc!r}); a return earlier in "
+            f"the prefix makes its own 'var' declaration unreachable, a "
+            f"shape not lowered yet") from e
     # `_tystr` (SPEC.md "Pairs", 2026-09-10): a frame or state variable's own
     # type can be a pair, and each sits inside its own binder parens here
     # exactly as a seq's two-token `Seq.seq int` already does (measured,

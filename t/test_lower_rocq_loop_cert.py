@@ -1,0 +1,240 @@
+"""t/test_lower_rocq_loop_cert.py: pins ROADMAP 16.2's rocq-cert item,
+2026-09-14 -- "rocq: value-witness certificates through loop bodies".
+
+The reordered twin ladder (SPEC.md "The twins", d38da32) tries a
+behavioral rung (collapse-if, negate-cond, compare-flip, boundary-swap,
+off-by-one, wrong-var, drop-guard, wrong-constant, wrong-operator) before
+invariant-drop; a "value"-kind witness on a loop task now reaches
+`lower_rocq._value_cert` far more often than the old ladder's mostly
+"exit"/"preservation" traffic that function's loop machinery was built
+for, and an "undefined"-kind witness on a loop task now reaches
+`_undef_cert` at all (it used to refuse a `while` outright). Before this
+date's fix, three committed rows read rocq unproved where they read
+refuted before the reorder: filter_pos (collapse-if, seq return, no
+`return` in the loop), is_prime (collapse-if, bool return, a `return`
+inside the loop), reverse (compare-flip, an "undefined" witness whose
+first violation sits inside the loop's own guard). See lower_rocq.py's
+own 2026-09-14 dated note, just above `_first_undef_body`, for the full
+mechanism and the three separate narrow gaps this closes:
+
+  1. `_undef_cert`'s own while-loop refusal is lifted: `_first_undef_body`
+     (via the new `_undef_walk`) replays a `while` by CONCRETE UNROLLING
+     at the witness, mirroring lower_framac.py's `_cert_stmts` while case
+     and lower_spark.py's while-body replay -- reverse's own regression.
+
+  2. `_value_cert`'s seq branch grounds the twin's own output LENGTH to a
+     literal (`Ht_rlen`, `vm_compute; reflexivity`) before its `repeat
+     match` runs, widens that match from an equality-only body to any
+     Prop, and widens the closing tactic from bare `lia` to a small
+     `first [...]` that also covers the raw `comparison`-constructor
+     leftovers an over-eager `cbv` can produce -- filter_pos's own
+     regression.
+
+  3. `_value_cert` now calls `_forall_true_quants` for a return-bearing
+     loop (`has_return(w["body"])`) and asserts each forall it finds
+     concretely TRUE at the witness (`_forall_proof_block`, a bounded
+     enumeration closed by `vm_compute`) into the certificate's own proof
+     context before `t_dis` runs -- is_prime's own regression (its
+     return-branch ensures needs the RHS forall PROVED, not merely
+     falsified, to force the `<->`'s hard direction).
+
+Each test below lowers a committed `.t` task (surface.parse, harness.
+twin_for -- no hand-built AST, unlike test_lower_rocq.py's own probes:
+the whole point here is the REAL committed shape, not a minimal
+reproduction) and, when coqc is on PATH, actually compiles the emitted
+certificate -- this kernel's own only positive evidence (verifiers/
+rocq.py's own docstring). Skipped, not failed, when coqc is absent."""
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import harness
+import lower_rocq
+import tasks_io
+from verifiers import Outcome
+from verifiers import rocq as rocq_backend
+
+COQC = shutil.which("coqc")
+HERE = Path(__file__).resolve().parent
+
+
+def _compile(src: str) -> tuple[bool, str]:
+    """(accepted, stderr-or-stdout) for one coqc invocation on `src`."""
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "t_test.v"
+        p.write_text(src, encoding="utf-8")
+        r = subprocess.run([COQC, "-q", str(p)], capture_output=True,
+                           text=True, timeout=180, cwd=td)
+        return r.returncode == 0, (r.stdout + r.stderr)
+
+
+_BANNED = re.compile(
+    r"\b(admit|Admitted|sorry|assume|Axiom|trusted)\b", re.IGNORECASE)
+
+
+def _assert_no_shortcuts(test: unittest.TestCase, src: str) -> None:
+    """The honesty rule this whole item exists to serve: a REFUTED verdict
+    comes from a certificate the kernel actually checks, never a token
+    that fakes one. Word-boundary matched (`\\b...\\b`), not a bare
+    substring: an ordinary English word like "admits" (this file's own
+    PRELUDE prose, e.g. "a Prop admits an unbounded forall") must not
+    trip a plain `"admit" in src.lower()` check -- MEASURED, this date,
+    a first draft of this helper did exactly that."""
+    m = _BANNED.search(src)
+    if m is not None:
+        test.fail(f"banned token {m.group(0)!r} in emitted Coq")
+
+
+def _twin_source(task_file: str):
+    """(task, twin_body, witness, source) for the committed `.t` task
+    named `task_file` (a path under t/tasks/), lowered exactly the way
+    grade.py/harness.py do: `harness.twin_for` picks the ladder's own
+    rung and witness, `lower_rocq.lower` gets that witness so the
+    certificate path (`_try_cert_v1`) is tried before the ordinary,
+    unprovable-by-design theorem."""
+    task = tasks_io.load_task(str(HERE / "tasks" / task_file))
+    twin_body, rung, witness = harness.twin_for(task)
+    src = lower_rocq.lower(task, twin_body, witness=witness)
+    return task, twin_body, witness, src, rung
+
+
+class FilterPosLoopCertTest(unittest.TestCase):
+    """filter_pos (SEQ return, no `return` in the loop): a collapse-if
+    twin's falsified conjunct is a SELF-referential forall inequality
+    over the twin's own output length (`forall k, 0 <= k < len(r) ->
+    r[k] > 0`), not the two-seq-PARAM pointwise equality the certificate's
+    `repeat match` was originally built for."""
+
+    def test_witness_is_value_kind_collapse_if(self):
+        _task, _body, witness, _src, rung = _twin_source("filter_pos.t")
+        self.assertEqual(rung, "collapse-if")
+        self.assertEqual(witness.get("_kind"), "value")
+
+    def test_certificate_grounds_the_return_length(self):
+        # Pins the SHAPE of the fix: the return length is grounded to a
+        # literal by `vm_compute` before the `repeat match` that widened
+        # its own body pattern from `_ = _` to bare `_` ever runs, and
+        # the closer widens past bare `lia`.
+        _task, _body, _witness, src, _rung = _twin_source("filter_pos.t")
+        self.assertIn("Ht_rlen", src)
+        self.assertIn("vm_compute; reflexivity", src)
+        self.assertIn("forall t_k : Z, _ <= t_k < _ -> _ |- False", src)
+        self.assertIn("first [ lia | congruence | intuition congruence ]",
+                      src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_certificate_compiles_and_refutes(self):
+        _task, _body, _witness, src, _rung = _twin_source("filter_pos.t")
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+        _assert_no_shortcuts(self, src)
+
+
+class IsPrimeLoopCertTest(unittest.TestCase):
+    """is_prime (a `return` inside the loop): a collapse-if twin forces
+    `is_prime_t 3 = false`, so refuting the ensures' own `<->` needs the
+    RHS forall (`forall d, 2 <= d < 3 -> n mod d <> 0`) PROVED true, the
+    mirror image of `_loop_cert`'s own has_return fix (2026-09-09) for a
+    forall that must be FALSIFIED."""
+
+    def test_witness_is_value_kind_collapse_if(self):
+        _task, _body, witness, _src, rung = _twin_source("is_prime.t")
+        self.assertEqual(rung, "collapse-if")
+        self.assertEqual(witness.get("_kind"), "value")
+
+    def test_certificate_asserts_the_bounded_forall(self):
+        _task, _body, _witness, src, _rung = _twin_source("is_prime.t")
+        self.assertIn("t_bq0", src)
+        # A single-value range (2 <= d < 3) takes the `subst`-only path,
+        # never the (invalid, MEASURED) bare-arrow `destruct` pattern.
+        self.assertIn("subst d", src)
+        self.assertNotIn("as ->", src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_certificate_compiles_and_refutes(self):
+        task, body, witness, src, _rung = _twin_source("is_prime.t")
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+        _assert_no_shortcuts(self, src)
+
+
+class ReverseLoopCertTest(unittest.TestCase):
+    """reverse (an "undefined" witness whose first violation sits inside
+    the loop's own guard): `_undef_cert` used to refuse a `while`
+    outright; `_undef_walk` now unrolls it concretely at the witness."""
+
+    def test_witness_is_undefined_kind_compare_flip(self):
+        _task, _body, witness, _src, rung = _twin_source("reverse.t")
+        self.assertEqual(rung, "compare-flip")
+        self.assertEqual(witness.get("_kind"), "undefined")
+
+    def test_certificate_is_built_at_all(self):
+        # Before this fix `_undef_cert` returned None the moment
+        # `find_while` found a loop, so `lower()` fell through to the
+        # ordinary, unprovable theorem -- no `t_refutation_certificate`
+        # comment, no witness text, in the emitted source at all.
+        _task, _body, witness, src, _rung = _twin_source("reverse.t")
+        self.assertIn("t_refutation_certificate", src)
+        self.assertIn(harness.witness(witness), src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_certificate_compiles_and_refutes(self):
+        _task, _body, _witness, src, _rung = _twin_source("reverse.t")
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+        _assert_no_shortcuts(self, src)
+
+
+@unittest.skipUnless(COQC, "coqc not on PATH")
+class RealUnchangedTest(unittest.TestCase):
+    """Never touch the real's own proof machinery: filter_pos/is_prime/
+    reverse's REAL side must still lower and compile exactly as before
+    this change (the fix only reaches `_try_cert_v1`'s TWIN-only code
+    paths -- `_undef_cert`, `_value_cert`; `lower_v1`/`gen_loop`, which
+    build the real's own theorem, are untouched by this diff)."""
+
+    def test_reals_still_verify(self):
+        for name in ("filter_pos.t", "is_prime.t", "reverse.t"):
+            with self.subTest(task=name):
+                task = tasks_io.load_task(str(HERE / "tasks" / name))
+                src = lower_rocq.lower(task, task["body"], witness=None)
+                ok, out = _compile(src)
+                self.assertTrue(ok, out)
+
+
+@unittest.skipUnless(COQC and shutil.which("coqchk"),
+                     "coqc/coqchk not on PATH")
+class GradedVerdictTest(unittest.TestCase):
+    """The end-to-end contract: verifiers/rocq.py itself reads REFUTED for
+    each fixed twin (not merely "coqc accepted the .v file", which a
+    vacuously-true certificate could also satisfy -- Outcome.REFUTED is
+    rocq.py's own, independently-decided verdict)."""
+
+    def _refuted(self, name: str):
+        task, twin_body, witness, src, _rung = _twin_source(name)
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / f"{task['name']}_twin.v"
+            p.write_text(src, encoding="utf-8")
+            result = rocq_backend.verify(p)
+            self.assertEqual(result.outcome, Outcome.REFUTED,
+                             getattr(result, "detail", ""))
+
+    def test_filter_pos_twin_refuted(self):
+        self._refuted("filter_pos.t")
+
+    def test_is_prime_twin_refuted(self):
+        self._refuted("is_prime.t")
+
+    def test_reverse_twin_refuted(self):
+        self._refuted("reverse.t")
+
+
+if __name__ == "__main__":
+    unittest.main()
