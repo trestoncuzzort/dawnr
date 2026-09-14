@@ -76,7 +76,7 @@ def test_load_sweep_ties_to_committed_file():
         f"{len(sweep)} parsed vs {len(row_lines)} raw dafny_synthesis rows"
     all_seven = sum(1 for cells in sweep.values()
                      if not M.blocking_kernels(cells))
-    assert all_seven == 45, f"all-seven count {all_seven}, expected 45"
+    assert all_seven == 54, f"all-seven count {all_seven}, expected 54"
 
 
 # --------------------------------------- needs census.json + out/lift --
@@ -116,10 +116,10 @@ def test_full_join_headline_counts():
         return
     assert lifted == 75, lifted   # 2026-09-11: 59 before the two lifter rows of wave E, 75 after (task 578 re-lifted alone after a differential-run timeout under load)
     all_seven = sum(1 for r in rows if r["sweep_state"] == "all-seven")
-    assert all_seven == 45, all_seven
+    assert all_seven == 54, all_seven
     all_seven_infrag = sum(1 for r in rows
                             if r["sweep_state"] == "all-seven" and r["in_fragment"])
-    assert all_seven_infrag == 45, all_seven_infrag
+    assert all_seven_infrag == 54, all_seven_infrag
 
     # Groups partition the 131 in-fragment rows.
     total_infrag_grouped = (len(g["refused"]) + len(g["blocked"])
@@ -144,7 +144,7 @@ def test_greedy_lifter_reaches_bar_and_ties_to_groups():
     sweep = M.load_sweep(SWEEP_MD)
     rows = M.build_rows(recs, verdicts, LIFT_DIR, sweep)
     covered0, steps, remaining = M.greedy_lifter(rows)
-    assert covered0 == 45, covered0
+    assert covered0 == 54, covered0
     # Every step's cumulative count is non-decreasing and the final
     # cumulative equals covered0 plus every row this curve's population
     # includes (131 in-fragment rows, all reached since the fallback in

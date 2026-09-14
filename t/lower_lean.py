@@ -7205,7 +7205,22 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                 for p in params}
         ptenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
                 for p in params}
-        venv = dict(pvenv)
+        # 2026-09-14: the replay below runs whole loop bodies through
+        # interp.exec_body, and interp.py's seq ops build TUPLES (`update`
+        # is `s[:i] + (v,) + s[i + 1:]`, `+` is tuple concat), so a seq
+        # witness value must enter this env as interp's own tuple, nested
+        # lists included; `_unshow` leaves it a list on purpose for the
+        # loop-free paths, where only `at`, `len` and `==` ever touch it.
+        # Sweep r24 measured the gap: incrementArray (a seq param, an
+        # `update` in the loop body, a compare-flip twin with an undefined
+        # witness) read LOWER-ERROR "can only concatenate list (not
+        # tuple) to list" on both real and twin, where r23 read
+        # verified / unproved.
+        def _tup(v):
+            if isinstance(v, list):
+                return tuple(_tup(x) for x in v)
+            return v
+        venv = {k: _tup(v) for k, v in pvenv.items()}
         try:
             interp.exec_body(prefix, venv, self.cert_funs, interp.St())
         except (interp.Undef, interp.Budget, RecursionError):

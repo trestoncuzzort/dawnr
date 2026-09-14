@@ -171,6 +171,63 @@ class UndefinedLoopCertificateTest(unittest.TestCase):
         src = lower_lean.lower(task, twin, w)
         self.assertIn("t_refutation_certificate", src)
 
+    def test_seq_param_updated_in_loop_replays_as_tuples(self):
+        """Sweep r24 (2026-09-14) found the loop replay crashing on a seq
+        parameter: incrementArray (a seq param, `update` in the loop body,
+        a compare-flip twin whose witness is undefined one iteration past
+        the end) read LOWER-ERROR "can only concatenate list (not tuple)
+        to list" in lean on both real and twin. interp.py's seq ops build
+        tuples, and `_cert_undefined_loop` handed the witness's lists to
+        interp.exec_body as they came. The same task, inline, must lower
+        with a certificate and never raise."""
+        task = {
+            "name": "inc_array_probe",
+            "params": [{"name": "a", "type": "seq"}],
+            "returns": [{"name": "a_out", "type": "seq"}],
+            "requires": [{"op": ">", "args": [{"op": "len", "args": [{"var": "a"}]}, {"int": 0}]}],
+            "ensures": [
+                {"op": "==", "args": [{"op": "len", "args": [{"var": "a_out"}]},
+                                      {"op": "len", "args": [{"var": "a"}]}]},
+                {"forall": {"var": "i", "lo": {"int": 0},
+                            "hi": {"op": "len", "args": [{"var": "a_out"}]},
+                            "body": {"op": "==", "args": [
+                                {"op": "at", "args": [{"var": "a_out"}, {"var": "i"}]},
+                                {"op": "+", "args": [{"op": "at", "args": [{"var": "a"}, {"var": "i"}]},
+                                                     {"int": 1}]}]}}}],
+            "body": [
+                {"assign": ["a_out", {"var": "a"}]},
+                {"var": {"name": "j", "type": "int", "init": {"int": 0}}},
+                {"while": {
+                    "cond": {"op": "<", "args": [{"var": "j"}, {"op": "len", "args": [{"var": "a_out"}]}]},
+                    "decreases": {"op": "-", "args": [{"op": "len", "args": [{"var": "a_out"}]}, {"var": "j"}]},
+                    "invariants": [
+                        {"op": "==", "args": [{"op": "len", "args": [{"var": "a_out"}]},
+                                              {"op": "len", "args": [{"var": "a"}]}]},
+                        {"op": "and", "args": [{"op": "<=", "args": [{"int": 0}, {"var": "j"}]},
+                                               {"op": "<=", "args": [{"var": "j"}, {"op": "len", "args": [{"var": "a_out"}]}]}]},
+                        {"forall": {"var": "k", "lo": {"var": "j"},
+                                    "hi": {"op": "len", "args": [{"var": "a_out"}]},
+                                    "body": {"op": "==", "args": [
+                                        {"op": "at", "args": [{"var": "a_out"}, {"var": "k"}]},
+                                        {"op": "at", "args": [{"var": "a"}, {"var": "k"}]}]}}},
+                        {"forall": {"var": "m", "lo": {"int": 0}, "hi": {"var": "j"},
+                                    "body": {"op": "==", "args": [
+                                        {"op": "at", "args": [{"var": "a_out"}, {"var": "m"}]},
+                                        {"op": "+", "args": [{"op": "at", "args": [{"var": "a"}, {"var": "m"}]},
+                                                             {"int": 1}]}]}}}],
+                    "body": [
+                        {"assign": ["a_out", {"op": "update", "args": [
+                            {"var": "a_out"}, {"var": "j"},
+                            {"op": "+", "args": [{"op": "at", "args": [{"var": "a_out"}, {"var": "j"}]},
+                                                 {"int": 1}]}]}]},
+                        {"assign": ["j", {"op": "+", "args": [{"var": "j"}, {"int": 1}]}]}]}}],
+        }
+        twin, op, w = harness.twin_for(task)
+        self.assertEqual(op, "compare-flip")
+        self.assertEqual(w.get("_kind"), "undefined")
+        src = lower_lean.lower(task, twin, w)
+        self.assertIn("t_refutation_certificate", src)
+
 
 class CommittedRowKernelVerdictTest(unittest.TestCase):
     """Integration pin: first_even's committed collapse-if twin actually
