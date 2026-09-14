@@ -97,3 +97,6 @@ forge/sync_public.py
 t/.lia.cache
 t/.frama-c/
 t/unsloth_compiled_cache/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
