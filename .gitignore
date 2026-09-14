@@ -110,3 +110,6 @@ t/unsloth_compiled_cache/
 /tup-reports/
 /t-truth-fuzz*/
 /nl-problems/
+
+# Graft deep-pass provider config (Bedrock API key). Private, never committed.
+/.env.graft
