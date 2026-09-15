@@ -119,7 +119,7 @@ Needs an x86_64 variant or edit:
 
 ## Exact next commands
 
-1. Ask Ryan or Dr. Rahman to run (no sudo on this account):
+1. Ask the lab administrators to run (no sudo on this account):
 
        sudo gpasswd -a user kvm
 

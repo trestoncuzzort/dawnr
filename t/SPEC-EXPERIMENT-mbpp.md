@@ -464,7 +464,7 @@ MBPP-DFY subset: 67 pool problems are MBPP-DFY problems (ROADMAP 16.2's family);
 
 ## Reading, written after the run (2026-09-08)
 
-The machine: cs-rahman-dell, four RTX 6000 Ada GPUs (this run pinned to
+The machine: the lab workstation, four RTX 6000 Ada GPUs (this run pinned to
 GPU 0 via ollama.log) with about 6 GB free beside a colleague's resident
 models, qwen2.5-coder:7b through ollama
 0.32.15 (family qwen2, 7.6B parameters, Q4_K_M), 8192 context, temperature

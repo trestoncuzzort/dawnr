@@ -113,3 +113,7 @@ t/unsloth_compiled_cache/
 
 # Graft deep-pass provider config (Bedrock API key). Private, never committed.
 /.env.graft
+
+# nl/: APPS and CodeContests are not shipped (problem statements under the judges' copyright); fetched locally, verified by nl/scripts/verify_manifest.py
+nl/data/apps_raw_*.jsonl.gz
+nl/data/codecontests_*.jsonl.gz

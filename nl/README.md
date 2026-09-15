@@ -174,10 +174,7 @@ original judges' copyright, which is not the dataset authors' to relicense.
 **This directory is not tup's to relicense, and tup's research-use licence does not reach it.** tup
 is private today; `nl/` was imported on that basis. It is excluded from the publish
 whitelist in `forge/sync_public.py`, which is allow-only, so it cannot reach a public
-mirror by omission, only by someone adding it on purpose. Before tup is made public
-again, `nl/` is either removed from the tree or cleared on its own terms; the four upstream
-licences above are BY, not NC, so redistribution with attribution is arguable, but the
-judges' statement copyright is the part nobody here has cleared. Check the terms before
+mirror by omission, only by someone adding it on purpose. On 2026-09-15 it was cleared on its own terms: HumanEval (MIT) and MBPP (CC-BY-4.0), whose statements are the dataset authors' own, stay in the tree with the table above as their attribution; APPS and CodeContests, whose statements are the judges' copyright, are untracked and ignored (`.gitignore` at the repository root) and live only in local checkouts, rebuilt from upstream (`scripts/rebuild_codecontests_full.py` for CodeContests; APPS from `codeparrot/apps`, normalised the same way). `manifest.json` still lists all ten files, so `scripts/verify_manifest.py` reports those five as missing on a fresh clone until they are rebuilt. Check the terms before
 republishing, redistributing outside the lab, or shipping any of it in a public model
 release.
 

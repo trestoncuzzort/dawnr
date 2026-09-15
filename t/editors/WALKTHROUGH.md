@@ -1,7 +1,7 @@
 # t for VS Code: walk-through
 
 2026-09-11. Written against `t/editors/vscode/` at this commit, on the
-Dell box (`cs-rahman-dell`, Linux, no display -- see the note at the
+Dell box (the lab workstation, Linux, no display -- see the note at the
 bottom of this file for exactly what that means for who can run which
 part). ROADMAP 15.3's DONE WHEN names this file: "from a fresh checkout
 on Linux and on Windows the committed walk-through yields every
@@ -218,7 +218,7 @@ for the one cell this box can measure both ways.
 
 Every step above through the raw `t/lsp.py` JSON-RPC traffic, the
 `.vsix` build, `t/test_vscode.py`, and the two CLI greps is measured on
-this box (`cs-rahman-dell`, headless: no display, so no VS Code window
+this box (the lab workstation, headless: no display, so no VS Code window
 runs here, only the language server subprocess it would drive). What
 is NOT measured here, and is the open clause of both ROADMAP 15.3 and
 15.5, is **the VS Code window itself: the diagnostic underline actually

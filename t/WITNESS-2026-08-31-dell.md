@@ -116,7 +116,7 @@ kernels, two SMT-via-Boogie-style (dafny, verus), two SMT-via-Why3/WP
 
 **x86_64 tup: GO, gated on one admin line.** Probe report at
 `tup/X86-FEASIBILITY.md`: /dev/kvm is root:kvm + gdm ACL and this user is
-not in `kvm` (fix: `sudo gpasswd -a user kvm`, Ryan/Dr. Rahman);
+not in `kvm` (fix: `sudo gpasswd -a user kvm`, the lab administrators);
 KVM guest is the recommended path. TCG works today at a measured ~14x per
 thread (honest proxy benchmark, method recorded); rootless chroot is
 measured dead (apparmor_restrict_unprivileged_userns=1, uid_map EPERM).

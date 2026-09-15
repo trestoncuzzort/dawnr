@@ -2,7 +2,7 @@
 
 t itself is plain Python 3.12 with no dependencies; the kernels do the
 proving. This page is written on the box the project has run on all along,
-the Dell (`cs-rahman-dell`), confirmed fresh on 2026-09-11: Ubuntu 24.04.4
+the Dell (the lab workstation), confirmed fresh on 2026-09-11: Ubuntu 24.04.4
 LTS, x86_64, kernel 6.8.0-138-generic. It is a no-root install: the account
 has no sudo (`apt install` is unavailable, not merely password-gated), so
 all seven kernels live under `$HOME` and nothing here needs a package
@@ -232,7 +232,7 @@ commit 2b82aefeff37f78509c876844954b07fcb8813ff).
 ## What is still open
 
 **2026-09-11**: this page was written and its walk-through run entirely on
-the Dell (`cs-rahman-dell`), the same machine that has run t all along; the
+the Dell (the lab workstation), the same machine that has run t all along; the
 bar's "followed from a fresh machine by a second person" is **open by
 name**, no second person and no second Linux machine has followed this
 page yet, unlike the Windows page (confirmed 2026-09-02 on a separate
