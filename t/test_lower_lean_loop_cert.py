@@ -56,6 +56,23 @@ Run: cd <repo>/t && python3 test_lower_lean_loop_cert.py
 
 MEASURED 2026-09-14 by `python3 t/test_lower_lean_loop_cert.py`: see the
 printed unittest summary this run produces.
+
+2026-09-15 (lean-sole, "the nine sole-blocked rows", ROADMAP 16.2/
+COVERAGE-lifted-785.md's "Sole blockers"): added `ParamStateProductBridgeTest`
+and `ParamStateProductBridgeKernelTest`, pinning `lower_lean.Lower.
+_param_state_bridge_lines` (THE PARAM-STATE PRODUCT GAP, see that
+method's own docstring) -- pow's and factorial's own committed shapes
+(a param times a loop-state accumulator, both nonneg) needed `Int.
+mul_nonneg` bridging `_t_loop_spec`'s recursive-apply closer never
+offered before. MEASURED by `python3 t/test_lower_lean_loop_cert.py`:
+`Ran 16 tests ... OK` (lean binary present on this run; the two new
+kernel-invoking tests are not skipped). Regression: `python3 t/grade.py
+--tasks t/tasks --kernels lean,dafny --flake 3 --jobs 4` over all 34
+committed tasks reproduces t/AGREEMENT.md's lean column cell-for-cell
+(count_vowels' pre-existing `unproved / unproved` included, unchanged);
+a lean-only pass of t/conformance.py's own manifest (`probe_manifest()`/
+`run_items()` restricted to the lean column) read 66 PASS, 0 FAIL,
+matching t/CONFORMANCE.md's own baseline (0 FAIL in lean there too).
 """
 import os
 import sys
@@ -473,6 +490,132 @@ class CommittedRowKernelVerdictTest(unittest.TestCase):
                          getattr(r_real, "error", ""))
         self.assertEqual(r_twin.outcome, Outcome.REFUTED,
                          getattr(r_twin, "error", ""))
+
+
+class ParamStateProductBridgeTest(unittest.TestCase):
+    """2026-09-15 (lean-sole, "the nine sole-blocked rows"): `_t_loop_
+    spec`'s own recursive-apply closer needs `0 <= a * x` (a PARAM times
+    a loop-STATE var, both nonneg) to discharge an `hinv`'s recursive-
+    call instance -- built inline, matching Prog-Fun-Solutions_tmp_
+    tmp7_gmnz5f_extra_pow.Pow's own committed shape (a param `a`, an
+    accumulator `x`, `x := a * x` each iteration), not read from
+    t/out/lifted-tasks (gitignored, read-only) so this test is
+    reproducible from the committed repo alone."""
+
+    POW_PROBE = {
+        "name": "pow_probe",
+        "params": [{"name": "a", "type": "int"}, {"name": "n", "type": "int"}],
+        "returns": [{"name": "y", "type": "int"}],
+        "requires": [
+            {"op": ">=", "args": [{"var": "a"}, {"int": 0}]},
+            {"op": ">=", "args": [{"var": "n"}, {"int": 0}]}],
+        "ensures": [
+            {"op": ">=", "args": [{"var": "y"}, {"int": 0}]},
+            {"op": "==", "args": [{"var": "y"}, {
+                "call": {"fun": "pow_v", "args": [{"var": "a"}, {"var": "n"}]}}]}],
+        "spec_funs": [{
+            "name": "pow_v",
+            "params": [{"name": "a_v", "type": "int"}, {"name": "e", "type": "int"}],
+            "result": "int",
+            "decreases": {"var": "e"},
+            "body": {"ite": {
+                "cond": {"op": ">=", "args": [{"var": "e"}, {"int": 0}]},
+                "then": {"ite": {
+                    "cond": {"op": "==", "args": [{"var": "e"}, {"int": 0}]},
+                    "then": {"int": 1},
+                    "else": {"op": "*", "args": [{"var": "a_v"}, {
+                        "call": {"fun": "pow_v", "args": [
+                            {"var": "a_v"},
+                            {"op": "-", "args": [{"var": "e"}, {"int": 1}]}]}}]}}},
+                "else": {"int": 0}}},
+        }],
+        "body": [
+            {"var": {"name": "x", "type": "int", "init": {"int": 1}}},
+            {"var": {"name": "k", "type": "int", "init": {"int": 0}}},
+            {"while": {
+                "cond": {"op": "<", "args": [{"var": "k"}, {"var": "n"}]},
+                "decreases": {"op": "-", "args": [{"var": "n"}, {"var": "k"}]},
+                "invariants": [
+                    {"op": "==", "args": [{"var": "x"}, {
+                        "call": {"fun": "pow_v", "args": [{"var": "a"}, {"var": "k"}]}}]},
+                    {"op": "and", "args": [
+                        {"op": "<=", "args": [{"int": 0}, {"var": "k"}]},
+                        {"op": "<=", "args": [{"var": "k"}, {"var": "n"}]}]},
+                    {"op": ">=", "args": [{"var": "x"}, {"int": 0}]}],
+                "body": [
+                    {"assign": ["x", {"op": "*", "args": [{"var": "a"}, {"var": "x"}]}]},
+                    {"assign": ["k", {"op": "+", "args": [{"var": "k"}, {"int": 1}]}]}],
+            }},
+            {"assign": ["y", {"var": "x"}]},
+        ],
+    }
+
+    def test_recursive_apply_closer_carries_param_state_products(self):
+        """The emitted `_t_loop_spec` tactic text must offer a `0 <= a *
+        x`-shaped fact (either multiplication order) as a `first`-
+        alternative on the recursive-apply closer -- the source-shape
+        half of this fix, no lean binary needed."""
+        task = self.POW_PROBE
+        src = lower_lean.lower(task, task["body"], witness=None)
+        spec = src.split("theorem pow_probe_t_loop_spec", 1)[1].split(
+            "theorem pow_probe_t_spec", 1)[0]
+        self.assertIn("Int.mul_nonneg", spec, spec)
+        self.assertTrue(
+            "(a) * (x)" in spec or "(x) * (a)" in spec, spec)
+
+    def test_real_body_unaffected_when_no_nonlinear_goal_arises(self):
+        """A loop task with no param/state product at all (first_even's
+        committed real) must lower its `_t_loop_spec` byte-identically:
+        `_param_state_bridge_lines` still returns a (harmless, `try`-
+        wrapped) alternative, never removing or reordering the pre-
+        existing `self._gr()` FIRST alternative every already-passing
+        task closes on."""
+        task = tasks_io.load_task(os.path.join(HERE, "tasks",
+                                                "first_even.t"))
+        src = lower_lean.lower(task, task["body"], witness=None)
+        spec = src.split("theorem first_even_t_loop_spec", 1)[1].split(
+            "theorem first_even_t_spec", 1)[0]
+        # the pre-existing plain closer is still the FIRST alternative
+        # tried at the recursive-apply site.
+        self.assertIn("apply first_even_t_loop_spec <;> (first | grind |",
+                      spec.replace("\n", " "), spec)
+
+
+class ParamStateProductBridgeKernelTest(unittest.TestCase):
+    """Integration pin: pow_probe's REAL reads VERIFIED from the lean
+    kernel with this fix (measured UNPROVED before it, `grind` failing
+    on `0 <= a * x` with no theory relating a product's sign to its two
+    factors'). Skipped by name, never silently passed, when no lean
+    binary is on PATH."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from verifiers import lean as lean_backend
+        except Exception as e:                          # noqa: BLE001
+            cls.lean_backend = None
+            cls.skip_reason = f"verifiers.lean import failed: {e}"
+            return
+        if not getattr(lean_backend, "LEAN", None):
+            cls.lean_backend = None
+            cls.skip_reason = "no lean binary on PATH"
+            return
+        cls.lean_backend = lean_backend
+
+    def test_pow_probe_real_verified(self):
+        if self.lean_backend is None:
+            self.skipTest(self.skip_reason)
+        import tempfile
+        from pathlib import Path
+        from verifiers import Outcome
+        task = ParamStateProductBridgeTest.POW_PROBE
+        real_src = lower_lean.lower(task, task["body"], witness=None)
+        with tempfile.TemporaryDirectory() as d:
+            rp = Path(d) / "pow_probe.lean"
+            rp.write_text(real_src, encoding="utf-8")
+            r_real = self.lean_backend.verify(rp)
+        self.assertEqual(r_real.outcome, Outcome.VERIFIED,
+                         getattr(r_real, "error", ""))
 
 
 if __name__ == "__main__":

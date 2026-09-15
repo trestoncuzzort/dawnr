@@ -1348,6 +1348,97 @@ with no lemma at all; twin detection already works on all three committed
 string tasks even where the real side stays open, since a REFUTED twin
 needs only the mutated body to diverge, not the real proof to close.
 
+2026-09-15 (ROADMAP r27, key fstar-closure: "the closure-predicate
+timeouts, the early-exit witnesses, and the malformed seq-of-array
+rows"). Three of the four named gaps closed, measured on F* 2026.08.30
+directly against the emitted source for each row (`fstar.exe
+--message_format json --z3rlimit 50 --report_assumes error`, never a
+raised fuel/ifuel/rlimit):
+
+  1. THE MALFORMED ROWS (dafny-synthesis 2 SharedElements, 161
+     RemoveElements, 249 Intersection, newly lifted by wave P's checker
+     item). MEASURED: "Identifier not found: t_exists_at", Error 72 --
+     `lower()` appended each spec_fun's own rendered text to `parts`
+     immediately in its emission loop, but spliced `cx.extra_defs` (the
+     `let rec t_exists_at ...` helper a NON-LITERAL-BOUNDED quantifier
+     inside a spec_fun body reaches via `_quant_helper`) in only ONCE,
+     later, right before the task's own body -- so `inArray`'s own call
+     to `t_exists_at` landed textually BEFORE that helper's definition,
+     and F* (no forward declarations for `let`) read it as unbound.
+     Fixed by an `extra_cursor` over `cx.extra_defs`, flushing only the
+     NEW entries right before each declaration that could have triggered
+     them (spec_fun loop, then the task body) instead of the whole list
+     once at the end. All three now read `All verification conditions
+     discharged successfully` (real); the 34 committed tasks and the
+     conformance suite's own fstar column use no spec_fun with this
+     shape, so both are unaffected (no `_quant_helper` call site moves).
+
+  2. THE EARLY-EXIT WITNESSES (dafny-synthesis 284 allElementsEqual, 760
+     hasOnlyOneDistinctElement). Two stacked gaps, both closed:
+       a. `_early_exit_witness_hint` (above `exec_flow`): every task with
+          an early-exit boolean check states its own converse in the
+          ensures list ("not(result) ==> exists ..."); this recognizes
+          that clause, unifies its body against the branch condition
+          already known true at the return site (seeing through a frame
+          variable's name via `_resolve_var_defs`/`_resolve_ast` to what
+          it actually equals, e.g. `firstElement` to `a[0]`), and on a
+          match emits nested `FStar.Classical.exists_intro` calls
+          (innermost first) supplying the witness Z3's own positive
+          existential search could not find unaided. `exec_flow` threads
+          a `(task, defs)` context and a `cond_stack` of the AST
+          conditions on the path to each `return`, opt-in via a `wctx`
+          parameter no other caller passes, so every previously-lowered
+          task's file is unchanged. MEASURED trap: `_resolve_var_defs`
+          must exclude the loop's OWN havoc set (`hav`) -- resolving the
+          loop counter itself (also a `var` in `prefix`) to its STALE
+          initial value produced witness `0` instead of `i_v2` on the
+          first draft, caught by inspecting the emitted term before
+          running the kernel.
+       b. `_converse_invariant` (above `gen_loop`): closing (a) exposed a
+          SECOND Error 19 at the outer wrapper's own postcondition on
+          normal loop exit (`Inr`), because the loop's own invariant only
+          ever stated the FORWARD half of the task's iff-shaped contract.
+          Dynamically `result` can only become false at a step that also
+          returns, so the antecedent of the converse direction is
+          vacuously false at every point the loop keeps recursing,
+          REGARDLESS of the converse's own arity -- so this restates the
+          ensures' own "not(result) ==> exists..." clause verbatim, at
+          whatever nesting depth it has (760's is a PAIRWISE, two-level
+          exists, structurally unrelated to its own single-comparison
+          per-iteration invariant), narrowing every level's `hi` from the
+          ensures' full range to the loop's own progress variable (`w
+          ["cond"]`'s left operand). Proved by the kernel via the same
+          vacuous-antecedent argument at every level, not assumed.
+     MEASURED (`t/grade.py --tasks <two-row lifted-tasks copy> --kernels
+     dafny,fstar --flake 3`): both rows move fstar real unproved ->
+     verified, matching dafny's own real (already verified); twin
+     unaffected (the twin ladder's own separate open item this file's
+     2026-09-14 entry already named, unchanged by either fix). Both
+     `test_lower_fstar_abstains.py` and `test_lower_fstar_refusals.py`
+     pass unchanged (neither exercises a spec_fun-with-quantifier or an
+     early-exit task).
+
+  3. THE CLOSURE-PREDICATE TIMEOUTS (412, 426, 436, 554, 629): STILL
+     OPEN, not closed, not relabeled. A fourth lever beyond the three the
+     2026-09-14 entry above already tried was attempted this session: an
+     explicit per-step maintenance proof for the filter-loop's own
+     forward/backward membership invariants (a `forall_intro`-built
+     helper per direction, case-split on "old index" vs "the newly
+     appended element", the old-index case discharged by an `assert` of
+     the ambient invariant's own forall-elimination followed by a second
+     `assert` of the same fact re-stated over the grown accumulator,
+     relying on Seq.append's own index-preservation pattern rather than
+     an explicit `exists_elim` thread). Hand-built and run standalone
+     (probe412.fst, a copy of the emitted source with this assist spliced
+     in before the recursive call): still pinned at 100% CPU past a 150
+     second wall (`timeout 150 fstar.exe ...`, exit 143, no output at
+     all -- not even the earlier run's Error 19, meaning this is stuck
+     even LONGER than the unassisted version), so the added machinery
+     makes it worse, not better, and was not carried into `lower_fstar.py`
+     itself: the 412/426/436/554/629 rows are untouched by this session,
+     their timeout unrelabeled. No fifth lever was attempted; this
+     remains the item's open gap, named exactly as measured.
+
 Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
@@ -2882,13 +2973,165 @@ def _dummy(t) -> str:
 # never needs to skip over siblings; an `if` that returns in one branch is
 # not necessarily last, so statements after it execute along the
 # non-returning path only, via the recursive call on `stmts[idx + 1:]`.
-def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str):
+def _resolve_var_defs(prefix: list) -> dict:
+    """Name -> defining-expression AST for every plain `var` declared in a
+    straight-line prefix (2026-09-15, ROADMAP r27 fstar-closure item, "the
+    early-exit witnesses"). `hasOnlyOneDistinctElement`'s `firstElement :=
+    a[0]`, declared right before the loop, is exactly the case this
+    exists for: the loop body's own early-exit branch compares an array
+    element against `firstElement`, but the task's ensures clause states
+    its witness fact in terms of `a[0]` directly, never the local name --
+    `_early_exit_witness_hint` needs to see through the name to match.
+    Never used to change what is emitted, only to recognize a witness the
+    task's own ensures already names."""
+    return {s["var"]["name"]: s["var"]["init"] for s in prefix if "var" in s}
+
+
+def _resolve_ast(e, defs: dict, _seen: frozenset = frozenset()):
+    """`e` with every `{"var": v}` leaf naming a key of `defs` replaced by
+    that key's own definition (recursively, guarded against a name
+    reappearing in its own expansion). Read-only tree walk; `e` itself is
+    never mutated."""
+    if isinstance(e, dict):
+        if set(e) == {"var"} and e["var"] in defs and e["var"] not in _seen:
+            return _resolve_ast(defs[e["var"]], defs, _seen | {e["var"]})
+        return {k: _resolve_ast(v, defs, _seen) for k, v in e.items()}
+    if isinstance(e, list):
+        return [_resolve_ast(x, defs, _seen) for x in e]
+    return e
+
+
+def _unify_ast(pattern, concrete, qvars: set, subst: dict) -> bool:
+    """Structural unification of `pattern` (a t expression AST that may
+    reference the names in `qvars` as free leaves) against a concrete t
+    expression AST, recording each `qvars` name's bound value into
+    `subst` (already-bound names must match the SAME concrete AST again,
+    not merely something equal-shaped). Every other leaf (an operator
+    string, a literal, a non-quantified variable name) must match
+    exactly. Used only to recognize, never to invent: a mismatch anywhere
+    fails the whole match and no code is generated."""
+    if isinstance(pattern, dict) and set(pattern) == {"var"} \
+            and pattern["var"] in qvars:
+        qv = pattern["var"]
+        if qv in subst:
+            return subst[qv] == concrete
+        subst[qv] = concrete
+        return True
+    if isinstance(pattern, dict):
+        if not isinstance(concrete, dict) or set(pattern) != set(concrete):
+            return False
+        return all(_unify_ast(pattern[k], concrete[k], qvars, subst)
+                   for k in pattern)
+    if isinstance(pattern, list):
+        if not isinstance(concrete, list) or len(pattern) != len(concrete):
+            return False
+        return all(_unify_ast(p, c, qvars, subst)
+                   for p, c in zip(pattern, concrete))
+    return pattern == concrete
+
+
+def _subst_ast(e, subst: dict):
+    """`e` with every `{"var": v}` leaf naming a key of `subst` replaced
+    by that key's bound AST (no recursion into the replacement itself --
+    `subst`'s values are ground witnesses, never quantifier names)."""
+    if isinstance(e, dict):
+        if set(e) == {"var"} and e["var"] in subst:
+            return subst[e["var"]]
+        return {k: _subst_ast(v, subst) for k, v in e.items()}
+    if isinstance(e, list):
+        return [_subst_ast(x, subst) for x in e]
+    return e
+
+
+def _early_exit_witness_hint(cx: "Ctx", task: dict, defs: dict, fact_ast,
+                              env: dict, local: dict) -> str:
+    """EARLY-EXIT EXISTENTIAL WITNESS (2026-09-15, ROADMAP r27
+    fstar-closure item: dafny-synthesis 284 allElementsEqual and 760
+    hasOnlyOneDistinctElement). MEASURED (F* 2026.08.30, `fstar.exe
+    --message_format json`, both .fst files reproduced standalone): F*
+    Error 19 at the early-exit branch, "Subtyping check failed ... Failed
+    to prove: exists (i_v: Prims.int). 0 <= i_v /\\ i_v < ... /\\ ~(a[i_v]
+    == n)" -- a POSITIVE existential-witness goal, Z3's own weakness, not
+    the kernel's: the falsifying index IS in scope at the return (it is
+    exactly the branch-guard variable), but nothing in the emitted term
+    tells Z3 which value to try. Every task this lowering builds an
+    early-exit branch for states its own converse fact in the ensures
+    list as `not(result) ==> EXISTS ...` (SPEC.md's own shape for a
+    boolean search/check function): this function looks for that clause,
+    unifies its innermost body against `fact_ast` (the branch condition,
+    or its negation, already known true at this exact program point -- a
+    frame variable such as `firstElement` is resolved to its own defining
+    expression via `defs` first, so the match sees through the name to
+    what the ensures clause actually states, e.g. `a[0]`), and on a full
+    match emits one `FStar.Classical.exists_intro` call per quantifier in
+    the chain (innermost first, since an outer witness's own obligation
+    needs the inner existential already established as a fact in
+    context) -- a genuine proof step from the SAME hypotheses Z3 already
+    has, never a new assumption: `exists_intro`'s own `requires p
+    witness` is exactly the domain bound plus `fact_ast` itself, which is
+    always what the enclosing branch already guarantees. Returns "" (no
+    code emitted, nothing wrapped) the moment any part of this does not
+    match -- a task whose ensures has no such clause, or whose branch
+    condition does not unify with it, is untouched, so no other
+    committed or previously-lowered task's emitted file changes.
+    MEASURED after: 284 and 760 move fstar real unproved -> verified
+    (dafny's own real already reads verified on both; twin unaffected,
+    the twin ladder's own separate open item)."""
+    ret = task["returns"][0]["name"]
+    for cl in task.get("ensures", []):
+        if not (isinstance(cl, dict) and cl.get("op") == "implies"):
+            continue
+        lhs, rhs = cl["args"]
+        if lhs != {"args": [{"var": ret}], "op": "not"}:
+            continue
+        chain = []
+        node = rhs
+        while isinstance(node, dict) and "exists" in node:
+            chain.append(node["exists"])
+            node = node["exists"]["body"]
+        if not chain:
+            continue
+        qvars = {q["var"] for q in chain}
+        concrete = _resolve_ast(fact_ast, defs)
+        subst: dict = {}
+        if not _unify_ast(node, concrete, qvars, subst):
+            continue
+        if set(subst) != qvars:
+            continue
+        calls = []
+        for i, q in enumerate(chain):
+            v = q["var"]
+            outer = {chain[j]["var"]: subst[chain[j]["var"]] for j in range(i)}
+            body_ast = _subst_ast(q["body"], outer)
+            lo_ast = _subst_ast(q["lo"], outer)
+            hi_ast = _subst_ast(q["hi"], outer)
+            lo_r = cx.zx(lo_ast, env, local)
+            hi_r = cx.zx(hi_ast, env, local)
+            body_txt = cx.prop(body_ast, env, dict(local, **{v: "int"}))
+            pred = (f"(fun ({v}:int) -> (({lo_r} <= {v}) /\\ ({v} < {hi_r})) "
+                    f"/\\ {body_txt})")
+            w_txt = cx.zx(subst[v], env, local)
+            calls.append(f"FStar.Classical.exists_intro {pred} {w_txt}")
+        return "; ".join(reversed(calls))
+    return ""
+
+
+def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
+              wctx: dict | None = None, known: tuple = ()):
     env = dict(env)
     for idx, s in enumerate(stmts):
         if "return" in s:
             name, e = s["return"]
             t = local.get(name) or cx.tys[name]
             val = _render(cx, e, t, env, local)
+            if wctx is not None and known:
+                fact = known[-1]
+                for extra in reversed(known[:-1]):
+                    fact = {"args": [fact, extra], "op": "and"}
+                hint = _early_exit_witness_hint(
+                    cx, wctx["task"], wctx["defs"], fact, env, local)
+                if hint:
+                    val = f"({hint}; {val})"
             return env, "true", val
         elif "assign" in s:
             v, e = s["assign"]
@@ -2903,8 +3146,11 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str):
         elif "if" in s:
             c = s["if"]
             cb = cx.bx(c["cond"], env, local)
-            env_t, rc_t, rv_t = exec_flow(cx, c["then"], env, dict(local), dummy)
-            env_e, rc_e, rv_e = exec_flow(cx, c["else"], env, dict(local), dummy)
+            env_t, rc_t, rv_t = exec_flow(cx, c["then"], env, dict(local),
+                                          dummy, wctx, known + (c["cond"],))
+            env_e, rc_e, rv_e = exec_flow(
+                cx, c["else"], env, dict(local), dummy, wctx,
+                known + ({"args": [c["cond"]], "op": "not"},))
             drop = _decls(c["then"]) | _decls(c["else"])
             merged = {}
             for v in sorted((set(env_t) | set(env_e) | set(env)) - drop):
@@ -2935,7 +3181,7 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str):
             else:
                 rv_if = f"(if {cb} then {rv_t} else {rv_e})"
             rest_env, rc_rest, rv_rest = exec_flow(
-                cx, stmts[idx + 1:], merged, local, dummy)
+                cx, stmts[idx + 1:], merged, local, dummy, wctx, known)
             if rc_if == "false":
                 return rest_env, rc_rest, rv_rest
             if rc_rest == "false":
@@ -3574,6 +3820,78 @@ def _has_ite(e) -> bool:
     return False
 
 
+def _converse_invariant(task: dict, w: dict):
+    """CONVERSE MEMBERSHIP INVARIANT (2026-09-15, ROADMAP r27 fstar-
+    closure item, "the early-exit witnesses" -- the SECOND gap the same
+    two rows, 284 allElementsEqual and 760 hasOnlyOneDistinctElement, hit
+    once `_early_exit_witness_hint` above closed the first). MEASURED
+    (probe284.fst, F* 2026.08.30, hand-edited from the emitted source):
+    after the early-exit branch's own existential witness is supplied, a
+    DIFFERENT F* Error 19 surfaces at the OUTER wrapper's own
+    postcondition, on the `Inr` (normal loop exit) match arm -- "Failed
+    to prove: exists (i_v ...). ... ~(a[i_v] == n))" again, this time
+    because the RECURSIVE HELPER's own invariant only ever states the
+    FORWARD half of the task's iff-shaped contract (`result ==> forall
+    k < i_v2. a[k] == n`, needed for the forward ensures direction),
+    never the backward half the ensures list also states (`(~ result)
+    ==> exists k < len(a). a[k] != n`) -- so nothing ties a possibly-
+    false `result` at normal loop exit back to a witness below the
+    loop's OWN current index.
+
+    Dynamically `result` can only ever BECOME false at the exact step
+    that also returns (every committed early-exit shape lowers `if <bad>:
+    result := false; return` this way), so `result` is in fact always
+    true along any path that keeps looping -- the ANTECEDENT of the
+    converse ensures clause is vacuously false at every point the loop
+    is still recursing, regardless of what its own consequent says. That
+    means the converse invariant needs no connection to whatever POSITIVE
+    invariant the loop already carries (760's own per-iteration check is
+    against `firstElement`, a single comparison, while its ensures'
+    converse is a PAIRWISE existential two levels deep -- a shape a
+    single-comparison invariant cannot be massaged into without its own
+    extra witness step): the fix instead restates the ensures' OWN
+    "not(result) ==> exists..." clause verbatim, at ANY nesting depth,
+    with every level's `hi` narrowed from the ensures' full-range bound to
+    the loop's own progress variable (`w["cond"]`'s left operand, e.g.
+    `i_v2` -- the same value every `k < i_v2`-shaped invariant in this
+    file already uses for "how far the loop has gotten"). Proved by the
+    SAME vacuous-antecedent argument at every level, independent of the
+    body's own shape: the base case (loop's own initial call) has
+    whatever `result` starts as, either already true (antecedent false,
+    trivial) by construction of every committed early-exit task; the step
+    case only recurses along the non-returning path, which by the same
+    shape leaves `result` unchanged. MEASURED after adding this exact
+    clause (i_v2-narrowed, pairwise, two `exists` levels) to a hand-
+    edited copy of the emitted source for 760: `All verification
+    conditions discharged successfully`. Returns `None` (no invariant
+    added, no other task's emitted file changes) when the ensures list
+    has no "not(result) ==> exists..." clause, or the loop's own guard is
+    not a plain `var < bound` comparison this narrows against."""
+    ret = task["returns"][0]["name"]
+    cond = w.get("cond", {})
+    progress = cond.get("args", [None])[0] if isinstance(cond, dict) else None
+    if not (isinstance(progress, dict) and "var" in progress):
+        return None
+    for cl in task.get("ensures", []):
+        if not (isinstance(cl, dict) and cl.get("op") == "implies"
+               and cl["args"][0] == {"args": [{"var": ret}], "op": "not"}):
+            continue
+        chain = []
+        node = cl["args"][1]
+        while isinstance(node, dict) and "exists" in node:
+            chain.append(node["exists"])
+            node = node["exists"]["body"]
+        if not chain:
+            continue
+        new_body = node
+        for q in reversed(chain):
+            new_body = {"exists": {"var": q["var"], "lo": q["lo"],
+                                   "hi": progress, "body": new_body}}
+        return {"args": [{"args": [{"var": ret}], "op": "not"}, new_body],
+                "op": "implies"}
+    return None
+
+
 def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
              suffix: list) -> str:
     name = task["name"]
@@ -3817,7 +4135,25 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     reqs = [cx.prop(e, {}, {}) for e in task.get("requires", [])]
 
     dummy = _dummy(ret_t)
-    step_env, body_rc, body_rv = exec_flow(cx, w["body"], {}, dict(local), dummy)
+    # EARLY-EXIT EXISTENTIAL WITNESS (2026-09-15, see `_early_exit_
+    # witness_hint`'s own docstring): `wctx` reaches every `return` inside
+    # this loop's own body, `defs` letting it see through a frame
+    # variable's name (`firstElement`) to the expression the task's own
+    # ensures actually states a witness fact about.
+    # Only a genuine FRAME variable's definition is safe to substitute in
+    # (2026-09-15, measured: `i_v2` -- the loop's own counter, also
+    # declared by a `var` in `prefix` -- is in `hav`, so resolving it to
+    # its stale INITIAL value `0` instead of leaving it as the mutating
+    # loop variable produced a wrong witness, `0` instead of `i_v2`, on
+    # 284/760's first draft of this fix). `hav` (already computed above)
+    # is exactly the loop's own havoc set (SPEC.md frame rule): excluding
+    # it keeps `firstElement` (760, unassigned in the loop) resolvable
+    # while leaving `i_v2` itself untouched.
+    loop_defs = {k: v for k, v in _resolve_var_defs(prefix).items()
+                if k not in hav}
+    loop_wctx = {"task": task, "defs": loop_defs}
+    step_env, body_rc, body_rv = exec_flow(cx, w["body"], {}, dict(local),
+                                           dummy, loop_wctx)
     step = " ".join(step_env.get(v, v) for v in svars)
     env_post = exec_straight(cx, suffix, {}, dict(local))
     result = env_post.get(ret, ret)
@@ -3885,6 +4221,16 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     # then (if body_rc then Inl body_rv else ...)` shape below, so proving
     # `ens body_rv` there is the same kind of obligation the normal exit
     # discharges from the invariant and the negated guard.
+    # CONVERSE MEMBERSHIP INVARIANT (2026-09-15, see `_converse_invariant`'s
+    # own docstring): only in this early-exit branch, never the no-exit
+    # one above (already returned), so a task without an early exit is
+    # byte-for-byte unaffected. `invs`/`post` are reassigned here, after
+    # the no-exit branch's own `return`, so nothing above this point sees
+    # the extra conjunct.
+    extra_inv = _converse_invariant(task, w)
+    if extra_inv is not None:
+        invs = invs + [cx.prop(extra_inv, {}, local)]
+        post = _conj(invs + [f"(~ {guard_p})"])
     outcome_ty = f"(either {_pty(ret_t)} {state_ty})"
     rvar = cx.fresh()
     loop_ens = (f"(fun res -> match res with "
@@ -4639,8 +4985,38 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     strlib_prelude = _strlib_prelude_for(r_task, r_body)
     if strlib_prelude:
         parts.append(strlib_prelude)
+    # QUANTIFIER-HELPER EMISSION ORDER (2026-09-15, ROADMAP r27 fstar-
+    # closure item, "the malformed seq-of-array rows": dafny-synthesis 2
+    # SharedElements, 161 RemoveElements, 249 Intersection). A spec_fun
+    # whose OWN body contains a non-literal-bounded quantifier (SharedElements'
+    # `inArray(a, x) = exists k in [0,len(a)). a[k]==x`, called from the
+    # loop body in executable position) reaches `_quant_helper` (above,
+    # near `bx`) exactly like a loop invariant does, appending a fresh
+    # `let rec t_exists_at ...` to `cx.extra_defs` as a SIDE EFFECT of
+    # rendering that spec_fun's body. The old code appended every spec_fun's
+    # OWN rendered text to `parts` immediately, in this same loop, and
+    # spliced the WHOLE of `cx.extra_defs` in only once, well below, right
+    # before `body_src` -- so a helper a spec_fun's body calls landed in
+    # the file AFTER the spec_fun that calls it, and F* (no forward
+    # declarations for `let`) read the call as an unbound identifier:
+    # "Identifier not found: t_exists_at", Error 72, MALFORMED here.
+    # MEASURED directly (`fstar.exe --message_format json` on the emitted
+    # source for all three rows, F* 2026.08.30): `inArray` at line 5 calls
+    # `t_exists_at`, defined only at line 7. Fix: flush whatever NEW
+    # entries `cx.extra_defs` picked up since the last flush right before
+    # appending each declaration that could have triggered them, keyed by
+    # a cursor over the list rather than its whole content, so nothing
+    # already flushed for an earlier spec_fun is re-emitted for a later
+    # one. `extra_cursor` stays 0 (this loop appends nothing to `parts`
+    # beyond each spec_fun's own text) for every task with no such
+    # quantifier in a spec_fun body, which is every previously-committed
+    # task -- their emitted files are unchanged.
+    extra_cursor = 0
     for sf in r_task.get("spec_funs", []):
-        parts.append(emit_spec_fun(cx, sf))
+        sf_src = emit_spec_fun(cx, sf)
+        parts.extend(cx.extra_defs[extra_cursor:])
+        extra_cursor = len(cx.extra_defs)
+        parts.append(sf_src)
 
     # MULTIPLE SEQUENTIAL LOOPS (2026-09-12, ROADMAP 16.2 fstar item, the
     # abstained shapes): `find_whiles` generalises `find_while` to any
@@ -4668,7 +5044,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # here rather than after. Empty for every task with no such
     # quantifier (every previously-committed task included), so `parts`
     # is byte-identical to before this list existed on that common path.
-    parts.extend(cx.extra_defs)
+    # 2026-09-15 (see `extra_cursor` above): slice from the cursor, not
+    # the whole list, so a helper already flushed ahead of the spec_fun
+    # that triggered it is never duplicated here.
+    parts.extend(cx.extra_defs[extra_cursor:])
+    extra_cursor = len(cx.extra_defs)
     parts.append(body_src)
     # t_contract_obligation (2026-09-10): forces the postcondition through
     # an actual solver query, real and twin alike -- see `_contract_lemma`'s

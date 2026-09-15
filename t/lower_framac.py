@@ -2955,7 +2955,84 @@ a separate local one (no new CAPACITY dimension, no new buffer) -- not
 attempted this pass: it is a real, separate mechanism (a local-to-return
 aliasing analysis over the body, not a rendering gap), left named for
 whoever takes it next rather than guessed at under the remaining
-budget."""
+budget.
+
+FRAMAC-CAPACITY, 2026-09-15 (ROADMAP 16.2, sweep r26's own two named
+gaps: the CAPACITY-bound-from-invariants item just above, and the
+local-to-return aliasing this same paragraph names). Both closed this
+pass, in `_ret_capacity` (extended to chase a loop invariant's own
+`len(ret) <= V` transitively to a closed form over the task's params,
+substituting in a never-reassigned local's initializer where needed --
+`removeOddNumbers`'s own `len(evenList) <= i_v2 <= h`, `h := len(arr)`)
+and in the new `_fold_local_append_into_ret` (the narrower mechanism
+this paragraph asked for: a seq-typed local whose only use is the
+append idiom then a whole copy into the return is renamed to the return
+directly, dropping the local entirely).
+
+MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, this worktree, 2026-09-15):
+`python3 t/grade.py --tasks <copy of the five 412/426/436/554/629>
+--kernels framac,dafny --flake 3` -- the "no CAPACITY bound" ABSTAIN is
+GONE on all five, replaced by an honest `timeout / refuted` (dafny stays
+`verified / refuted`, unmoved); WP proves 34/37 goals on 412's own C
+(`frama-c -wp -wp-model Typed+nat -wp-steps 20000 -wp-timeout 10
+-wp-par 4`), the 3 Timeouts being the two extensional-membership loop
+invariants' own preservation goals plus their shared `loop_assigns`
+part, unrelated to the CAPACITY bound itself and not attempted here.
+Same command on `<copy of 307, 743>`: the "seq-typed local variables are
+not supported" ABSTAIN is GONE on both, replaced by `timeout / refuted`
+(dafny unmoved); 307's own C reads 24/25 goals proved, one Timeout
+(`loop_invariant_4_established`, the copy-loop's own membership
+invariant at `i_v == 0`, Alt-Ergo).
+
+The six framac-SOLE rows named in ROADMAP 16.2 (`dafny_synthesis_task_id
+_{240,262,460,577}`, `_86__centeredHexagonalNumber`,
+`dafny_verify_tmp_tmphq7j0row_test_cases_ghost__triple`), reproduced
+alone the same way: 240 (`seq concatenation assigned to an EXACT-length
+return ... only the append idiom into a CAPACITY-tracked buffer is
+measured`) and 262 (`a pair with a seq component is refused`) still
+ABSTAIN, both a materially different, larger gap than this pass's own
+two items (a non-append `+` into an EXACT buffer; a struct-returned pair
+carrying a seq field) -- named, not attempted. 577 still ABSTAINs on
+`spec_fun call in executable position`, its OWN spec_fun (`factorial`)
+being self-recursive, the exact case FRAMAC-CLOSURE's `_spec_fun_c`
+scoped itself OUT of (2026-09-14's own dated note, "recursive spec_fun
+mirroring, out of scope"). 460, 86 and `ghost__triple` all lower CLEAN
+(no ABSTAIN, unaffected by anything in this pass) and all still read a
+genuine WP Timeout: 460 (24/27 goals, 3 Timeout, an index-shifted
+membership invariant over a jagged `lst_off`/`lst_data` pair, the same
+family of goal 412 leaves open); 86 (4/5 goals, 1 Timeout on `\result ==
+3*n*(n-1)+1`'s own nonlinearity -- alt-ergo 2.4.3's already-MEASURED
+two-variable-product limit, this file's own `isNonPrime`/`isPrime` dated
+note above `_divisor_bound_lemma_acsl`, unrelated to this pass); and
+`ghost__triple` (7/8 goals, 1 Timeout proving `average_c(2x,4x) ==
+3x` through the ACSL `t_div` definition, the same divmod-reasoning class
+alt-ergo 2.4.3 already measured unable to discharge). None of these
+three is closeable by this file's own lowering: each Timeout sits inside
+alt-ergo's own arithmetic, not in anything `lower_framac.py` chooses to
+emit, so the honest report is the tool's own message, named above, not
+a fix.
+
+Regression, measured this worktree: `python3 t/grade.py --tasks t/tasks
+--kernels framac,dafny --flake 3` -- all 34 committed tasks read
+`verified / refuted` in both columns except the SAME three pre-existing
+ABSTAINs (`count_vowels`, `split_join`, `swap_rows`), byte-identical to
+before this pass (neither of this pass's two new code paths -- the
+invariant-chase, the local-append fold -- ever fires on any committed
+task: none declares a bare seq-typed local, and every committed
+CAPACITY return already has an `ensures`-stated bound). The conformance
+suite's framac column (`conformance.build_manifest`/`run_items`
+restricted to framac alone) reads 61 of 66 PASS, the SAME five FAIL
+cells as before (`fz_p_biglen`, `fz_p_seqlen`, `fz_p_pair_seq`,
+`fz_p_nest_eq`, `fz_p_str_tab`) -- no PASS lost, no new FAIL.
+`test_framac_spec_fun_exec.py`, `test_framac_frame_fact.py`,
+`test_framac_measure_axiom.py`, `test_framac_nested.py`,
+`test_framac_seq4.py` and `test_framac_while_cert.py` all pass
+unchanged. None of the thirteen tasks named above (240, 262, 307, 412,
+426, 436, 460, 554, 577, 629, 743, 86, ghost_triple) read `verified /
+refuted` in the framac column of t/COVERAGE-lifted-785.md before this
+pass (every one was `abstain / abstain` or `timeout / timeout`), so the
+"no real may move" regression bar on that document's own verified/
+refuted cells is vacuously satisfied, not merely unmeasured."""
 from __future__ import annotations
 
 import sys
@@ -5154,7 +5231,7 @@ def _ret_nested_fold(body: list, ret: str) -> list | None:
     return _fold_nested_rows(e)
 
 
-def _ret_capacity(task: dict, ret: str) -> dict | None:
+def _ret_capacity(task: dict, ret: str, body: list) -> dict | None:
     """CAPACITY, 2026-09-09 (the append idiom, `r := r + [x]`). When a seq
     RETURN's exact length has no closed form over the params
     (`_seq_len_track` above failed to resolve it, `filter_pos`'s own
@@ -5162,23 +5239,137 @@ def _ret_capacity(task: dict, ret: str) -> dict | None:
     survives the loop's own before/after check), the return buffer still
     needs SOME `requires`-time bound to size its `\\valid`/`\\separated`
     obligations from -- not the true final length (data-dependent, known
-    only at runtime), but a CAPACITY the true length never exceeds. This
-    is exactly what the task's own `ensures` already states, because the
-    whole point of stating `len(r) <= len(s)` (or `== `) is to bound the
-    result: the first `ensures` of the shape `len(ret) <= E` or `len(ret)
-    == E` gives E, read directly off the task rather than re-derived,
-    since the task author already proved (informally) that E bounds the
-    append loop's own iteration count. None when no such ensures exists,
-    the caller's (`lower()`'s) signal to abstain rather than guess a
-    buffer size."""
+    only at runtime), but a CAPACITY the true length never exceeds.
+
+    Two sources, tried in order:
+
+    1. The task's own `ensures` OR `requires` (2026-09-15, framac-capacity:
+       a `requires` can state the same shape a caller-supplied bound would,
+       so it is read the identical way rather than only half-covered) of
+       the shape `len(ret) <= E` or `len(ret) == E` gives E directly, read
+       off the task rather than re-derived, since the task author already
+       proved (informally) that E bounds the append loop's own iteration
+       count.
+
+    2. FRAMAC-CAPACITY, 2026-09-15 (ROADMAP 16.2, sweep r26's five named
+       rows: 412 removeOddNumbers, 426 filterOddNumbers, 436
+       findNegativeNumbers, 554 findOddNumbers, 629 findEvenNumbers).
+       None of the five states any such `ensures`/`requires` -- the bound
+       instead lives ENTIRELY in the loop's own invariant, e.g.
+       `len(evenList) <= i_v2` conjoined elsewhere with `i_v2 <= h` where
+       `h` was declared, before the loop, as `len(arr)` and is never
+       reassigned. This is exactly SPEC.md's filter idiom: the built
+       output can never outgrow the index that walks the input. So: walk
+       every `while` in `body` (recursively through nested `if`/`while`,
+       `and`-conjuncts flattened) for an invariant `len(ret) <= V`; then
+       CHASE `V` to a closed form over the task's own params, either
+       directly (`V` already only mentions params/ints) or by substituting
+       in the initializer of any local that is itself never reassigned
+       (`h := len(arr)`, `assigned_names` used to confirm `h` is untouched
+       in the body -- an invariant-stated bound on a variable the loop
+       itself mutates would be exactly the "true final length, known only
+       at runtime" case this function must NOT treat as a `requires`-time
+       constant), or by recursing into a further `<=` invariant on that
+       local (`i_v2 <= h`) up to a small depth. None when neither source
+       resolves, the caller's (`lower()`'s) signal to abstain rather than
+       guess a buffer size.
+
+    MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, this worktree,
+    2026-09-15): `python3 t/grade.py --tasks <copy of the five 412/426/
+    436/554/629> --kernels framac,dafny --flake 3` -- see this file's
+    2026-09-15 dated note below `assigned_names` for the exact before/
+    after counts."""
     def is_len_ret(e):
         return (isinstance(e, dict) and e.get("op") == "len"
                 and e.get("args", [{}])[0].get("var") == ret)
-    for e in task.get("ensures", []):
-        if e.get("op") in ("<=", "==") and "args" in e:
+
+    for e in task.get("ensures", []) + task.get("requires", []):
+        if isinstance(e, dict) and e.get("op") in ("<=", "==") and "args" in e:
             a, b = e["args"]
             if is_len_ret(a):
                 return b
+
+    param_names = {p["name"] for p in task.get("params", [])}
+    assigned, _ = assigned_names(body)
+    assigned = set(assigned)
+
+    def var_inits(stmts):
+        out = {}
+        for s in stmts:
+            if "var" in s and isinstance(s["var"], dict) and "init" in s["var"]:
+                out[s["var"]["name"]] = s["var"]["init"]
+            if "if" in s:
+                out.update(var_inits(s["if"].get("then", [])))
+                out.update(var_inits(s["if"].get("else", [])))
+            if "while" in s:
+                out.update(var_inits(s["while"].get("body", [])))
+        return out
+    inits = var_inits(body)
+
+    def resolve(e):
+        # `e` as a closed form over `param_names` alone, substituting in
+        # any never-reassigned local's own initializer, or None when some
+        # sub-expression bottoms out on a local with no such initializer
+        # (a loop-carried counter like `i_v2`) or one the body reassigns.
+        if not isinstance(e, dict):
+            return None
+        if "var" in e:
+            name = e["var"]
+            if name in param_names:
+                return e
+            if name in inits and name not in assigned:
+                return resolve(inits[name])
+            return None
+        if "int" in e:
+            return e
+        if "args" in e:
+            new_args = [resolve(a) for a in e["args"]]
+            if any(a is None for a in new_args):
+                return None
+            return {**e, "args": new_args}
+        return None
+
+    def flatten_and(e):
+        if isinstance(e, dict) and e.get("op") == "and" and "args" in e:
+            out = []
+            for a in e["args"]:
+                out.extend(flatten_and(a))
+            return out
+        return [e]
+
+    def loop_invariants(stmts):
+        out = []
+        for s in stmts:
+            if "while" in s:
+                for inv in s["while"].get("invariants", []):
+                    out.extend(flatten_and(inv))
+                out.extend(loop_invariants(s["while"].get("body", [])))
+            elif "if" in s:
+                out.extend(loop_invariants(s["if"].get("then", [])))
+                out.extend(loop_invariants(s["if"].get("else", [])))
+        return out
+    invs = loop_invariants(body)
+
+    def bound_of(target: dict, depth: int = 0) -> dict | None:
+        r = resolve(target)
+        if r is not None:
+            return r
+        if depth >= 4:
+            return None
+        for inv in invs:
+            if (isinstance(inv, dict) and inv.get("op") in ("<=", "==")
+                    and inv.get("args", [None])[0] == target):
+                got = bound_of(inv["args"][1], depth + 1)
+                if got is not None:
+                    return got
+        return None
+
+    for inv in invs:
+        if (isinstance(inv, dict) and inv.get("op") in ("<=", "==")
+                and "args" in inv and is_len_ret(inv["args"][0])):
+            got = bound_of(inv["args"][1])
+            if got is not None:
+                return got
     return None
 
 
@@ -5533,6 +5724,105 @@ def _ret_written_in_loop(body: list, ret: str) -> bool:
                     or _ret_written_in_loop(s["if"]["else"], ret)):
                 return True
     return False
+
+
+def _only_append_writes(stmts: list, local: str) -> bool:
+    """True iff every assignment to `local` inside `stmts` (recursively,
+    through `if`/`while`) is the self-referential append idiom, `local :=
+    local + ...`, and `local` is never the target of an early `return`.
+    FRAMAC-CAPACITY, 2026-09-15, `_fold_local_append_into_ret`'s own
+    eligibility check, below: the shape it folds is scoped EXACTLY to
+    "grows itself via `+`, nothing else", so any other write to `local`
+    (an `update`, a `fill`, a full replacement `local := t`) leaves this
+    False and the fold does not fire, rather than guessing that renaming
+    it to the return is still sound."""
+    for s in stmts:
+        if "assign" in s:
+            n, e = s["assign"]
+            if n == local and not (isinstance(e, dict) and e.get("op") == "+"
+                                    and e.get("args", [None])[0]
+                                    == {"var": local}):
+                return False
+        elif "return" in s and s["return"][0] == local:
+            return False
+        if "if" in s:
+            if not (_only_append_writes(s["if"].get("then", []), local)
+                    and _only_append_writes(s["if"].get("else", []), local)):
+                return False
+        if "while" in s:
+            if not _only_append_writes(s["while"].get("body", []), local):
+                return False
+    return True
+
+
+def _fold_local_append_into_ret(body: list, ret: str) -> list | None:
+    """FRAMAC-CAPACITY, 2026-09-15 (ROADMAP 16.2, `deepCopySeq`/
+    `rotateRight`'s own shape, sole-blocked on framac before this): SPEC.md
+    puts no seq-typed LOCAL in either task at all -- both build a fresh
+    seq entirely through the append idiom into a local (`newSeq`/
+    `rotated`, declared `:= []`), then, as the body's very last statement,
+    copy that local WHOLE into the actual return (`copy := newSeq`; `r :=
+    rotated`). This lowering has no backing buffer to allocate for an
+    arbitrary seq-typed local (the `var` case's own named refusal, above,
+    "no requires-time bound sizes a fresh backing buffer"), but the
+    RETURN already gets one (the seq value machinery section's own output
+    parameter) -- so when a local's ONLY use, start to finish, is exactly
+    this "append idiom, then one whole copy into the return" shape, there
+    is no need for a second buffer at all: every write meant for the
+    local is rewritten, at lowering time, to write the return's own
+    buffer directly (`t_names.rename_body`, the identical structural
+    rewrite `names.py`'s own reserved-word rename already trusts), and
+    the declaration plus the closing copy are simply dropped, since after
+    the rename they would read `ret := []` immediately followed later by
+    `ret := ret` (a no-op).
+
+    Returns the rewritten body (a NEW list; `body` itself is untouched)
+    or None when the shape does not match -- `lower()`'s signal to fall
+    through to the ordinary `var`-statement handling (and its own named
+    refusal) unchanged. Deliberately narrow: exactly one top-level `var`
+    declaration for `local` (type `seq`, initializer the empty literal
+    `[]`), a top-level closing `assign` of the exact shape `ret := local`
+    as `body`'s LAST statement, `ret` unmentioned anywhere before that
+    (SPEC.md gives the return no reads of its own, but this is checked
+    rather than assumed), and `local` written only by `_only_append_writes`
+    (above) -- neither `deepCopySeq` nor `rotateRight` needs, and this
+    does not attempt, a local built any other way (`update`, `fill`, a
+    slice, a second local) or copied into the return other than wholesale
+    at the very end.
+
+    MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, this worktree,
+    2026-09-15): the "seq-typed local variables are not supported"
+    ABSTAIN is GONE on both tasks after this fold; see this file's
+    2026-09-15 dated note below `assigned_names` for the resulting
+    verdict."""
+    if not body or "assign" not in body[-1]:
+        return None
+    name, e = body[-1]["assign"]
+    if name != ret or not (isinstance(e, dict) and set(e) == {"var"}):
+        return None
+    local = e["var"]
+    if local == ret:
+        return None
+    decl_idx = None
+    for idx, s in enumerate(body[:-1]):
+        if ("var" in s and isinstance(s["var"], dict)
+                and s["var"].get("name") == local):
+            decl_idx = idx
+            break
+    if decl_idx is None:
+        return None
+    decl = body[decl_idx]["var"]
+    init = decl.get("init")
+    if (decl.get("type") != "seq"
+            or not (isinstance(init, dict) and init.get("op") == "seq"
+                    and not init.get("args"))):
+        return None
+    rest = body[:decl_idx] + body[decl_idx + 1:-1]
+    if ret in t_names._collect_names(rest):
+        return None
+    if not _only_append_writes(rest, local):
+        return None
+    return t_names.rename_body(rest, {local: ret})
 
 
 def _assigns_target(n: str, ctx: Ctx) -> str:
@@ -7977,6 +8267,18 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     witness = t_names.remap_witness(witness, renames)
     name, ret = task["name"], task["returns"][0]["name"]
     rett = task["returns"][0]["type"]
+    # FRAMAC-CAPACITY, 2026-09-15: fold a plain seq-typed local whose only
+    # use is the append idiom followed by a whole copy into the return
+    # (`deepCopySeq`/`rotateRight`'s own shape) into the return's own
+    # buffer directly -- see `_fold_local_append_into_ret`'s own
+    # docstring above `_assigns_target`. `rett == "seq"` first, since the
+    # fold only ever matters for a seq-typed return and every non-seq
+    # task's `body` is left `is`-identical, unchanged, exactly as
+    # `t_names.sanitize`'s own no-op guarantee above.
+    if rett == "seq":
+        folded = _fold_local_append_into_ret(body, ret)
+        if folded is not None:
+            body = folded
     nested_return_rows = None
     if is_nested_seq_type(rett):
         nested_return_rows = _ret_nested_fold(body, ret)
@@ -8262,7 +8564,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                 tracked_exact = True
         else:
             capacity_mode = True
-            ret_len_expr = _ret_capacity(task, ret)
+            ret_len_expr = _ret_capacity(task, ret, body)
             if ret_len_expr is None:
                 raise NotImplementedError(
                     f"seq return {ret!r}'s length is not statically "

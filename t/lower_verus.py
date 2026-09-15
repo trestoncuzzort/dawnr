@@ -1204,6 +1204,55 @@ relowered through the same grade.py call (verus alone, flake 3), all 84
 still read verified/refuted, none moved; (4)
 t/test_lower_verus_refusals.py and t/test_lower_verus_nested_trigger.py:
 15 tests, all pass (`python3 -m unittest` from t/).
+
+2026-09-15 (verus-sole, ROADMAP 16.2, t/COVERAGE-lifted-785.md's "Sole
+blockers"). The five rows verus alone blocked
+(dafny_exercises_..._exercisesquare_root__mroot1, formalmethods_..._ex1__
+mult, metodos_formais_..._aula_2_ex1__mult, metodos_formais_..._
+invariantes_multiplicador__mult, mfes_2021_..._8_sum__sum) are a
+multiplication/square-root loop and a closed-form-sum loop, closed with
+three targeted `nonlinear_arith` mechanisms, none an assume, none a
+weakened clause: (1) `_verus_sole_calls_nonlinear_specfn` widens `loop()`'s
+existing invariant-preservation bridge (`nl`) to catch an invariant like
+`s == calcSum(i+1)` whose OWN operators are linear but whose CALLEE's
+body is not (measured on the untouched mfes_2021 sum row: verus's own
+message was "precondition not satisfied" on the recursive call, i.e.
+invariant preservation); (2) a new decrease-inequality assert in the same
+`if nl:` block, fired only when the loop's own `decreases` is nonlinear
+(measured on the untouched mroot1 row: "could not prove termination",
+2 verified/1 error before, 0 errors after -- probe_mroot.rs); (3)
+`_verus_sole_post_loop_bridge`, called only when `stmts`'s "while" case
+marks a loop `task_final` (the task's own last top-level statement) and
+`_verus_sole_zero_forced_var` finds the exact shape `v >= 0` (invariant)
++ `v > 0` (guard) forcing a state variable to the literal 0 (measured on
+the untouched mult rows: "postcondition not satisfied" on the task's own
+`ensures`, after the loop call, never inside the helper). Mechanism (3)
+was first tried unguarded (any `_has_nonlinear` ensures after any
+`task_final` loop) and measured to REGRESS two of the 88 dafny_synthesis
+verus-verified rows (task_id_267__sumOfSquaresOfFirstNOddNumbers,
+task_id_8__squareElements: both already verify via plain SMT congruence,
+a rename not an elimination, and wrapping their already-proving goal in
+`nonlinear_arith` made it fail instead, "assertion failed", measured
+directly) -- `_verus_sole_zero_forced_var`'s exact-match gate is the fix,
+verified by relowering both rows clean afterward.
+
+Measured, all four of this item's own regression bar: (1) `python3 -m
+unittest t.test_lower_verus_refusals t.test_lower_verus_nested_trigger`
+from the repo root: 15 tests, OK (1 skipped, unrelated to this item;
+`test_committed_tasks_relower_unchanged` -- the 34-task byte-identity
+check -- passes); (2) `python3 t/grade.py --tasks t/tasks --kernels
+verus,dafny --flake 3 --jobs 8`: the 34-task table reads cell-for-cell
+identical to t/AGREEMENT.md's dafny and verus columns (compared
+programmatically); (3) the conformance suite restricted to verus alone
+(conformance.build_manifest/run_items/grade, verus column only): 66
+PASS / 0 FAIL, matching t/CONFORMANCE.md's verus column exactly; (4) all
+88 dafny_synthesis rows of t/COVERAGE-lifted-785.md that read verus
+verified/refuted, relowered through the identical grade.py call (verus +
+dafny, flake 3): all 88 unchanged (compared programmatically, 0 moved) --
+this is what caught, and this item's fix resolved, the two-row regression
+above. The five target rows themselves: `python3 t/grade.py --tasks
+<dir-of-the-5-json-records> --kernels verus,dafny --flake 3` reads FULL
+AGREEMENT (verified/refuted in both columns, all five).
 """
 from __future__ import annotations
 
@@ -3064,6 +3113,63 @@ def _has_nonlinear(e: dict) -> bool:
     return False
 
 
+def _verus_sole_calls_nonlinear_specfn(e: dict, task: dict) -> bool:
+    """2026-09-15 (verus-sole, sole-blocker row mfes_2021_..._8_sum, sweep
+    r26). `_has_nonlinear` reads only e's OWN operators, so an invariant
+    like `s == calcSum(i + 1)` -- a plain equality whose call ARGUMENT is
+    linear -- reads as linear even where the CALLEE's own body is
+    `(n_v*(n_v-1))/2`, genuinely nonlinear, and preserving the invariant
+    across one iteration needs that closed form unfolded and combined
+    (measured on the untouched lowering: verus's own message is
+    "precondition not satisfied" on the recursive call, i.e. invariant
+    preservation, not a postcondition or termination failure -- see
+    loop()'s own `nl` computation, which this feeds). Walks the same
+    shapes `_has_nonlinear` does, but at a `call` node checks the NAMED
+    spec_fun's own body (by task["spec_funs"]) instead of the call's
+    args, so a call to a genuinely linear spec_fun (every one of the 34
+    committed verus tasks with a spec_fun) still reads as linear here."""
+    specfns = {f["name"]: f for f in task.get("spec_funs", [])}
+
+    def walk(x: dict) -> bool:
+        if "call" in x:
+            fn = x["call"]["fun"]
+            if fn in specfns and _has_nonlinear(specfns[fn]["body"]):
+                return True
+            return any(walk(a) for a in x["call"]["args"])
+        if "ite" in x:
+            return any(walk(x["ite"][k]) for k in ("cond", "then", "else"))
+        if "forall" in x or "exists" in x:
+            q = x.get("forall") or x.get("exists")
+            return any(walk(q[k]) for k in ("lo", "hi", "body"))
+        if "op" in x:
+            return any(walk(a) for a in x.get("args", []))
+        return False
+
+    return walk(e)
+
+
+def _verus_sole_zero_forced_var(invs: list, cond: dict) -> bool:
+    """2026-09-15 (verus-sole, _verus_sole_post_loop_bridge's own gate,
+    see its docstring for the regression this narrows away from). True
+    iff the loop's guard is exactly `v > 0` for some variable v, and its
+    invariant list contains, verbatim, `v >= 0` -- together these force
+    v to the LITERAL 0 at loop exit (`v >= 0` and `!(v > 0)`), the one
+    elimination step (substituting a proven-zero value into a nonlinear
+    product) Verus's default profile cannot take unaided. Deliberately
+    exact-match, not a general "is v provably constant" solver: broader
+    matching is exactly what caused the regression this guard exists to
+    avoid, and every row this file's own rows target (the mult pair)
+    has precisely this shape."""
+    if cond.get("op") != ">":
+        return False
+    args = cond.get("args", [])
+    if len(args) != 2 or "var" not in args[0] or args[1] != {"int": 0}:
+        return False
+    v = args[0]["var"]
+    return any(iv == {"op": ">=", "args": [{"var": v}, {"int": 0}]}
+               for iv in invs)
+
+
 def _sym(body: list, env: dict) -> dict | None:
     """Equational symbolic execution of a loop body: the effect of one
     iteration as a map from each variable to a t expression over the entry
@@ -3443,6 +3549,199 @@ def _divisor_bound_verus_defs(task_name: str, plan: dict) -> str:
     return half_def + bound_def
 
 
+# EXISTENTIAL-CARRY BRIDGE (2026-09-15, ROADMAP 16.2, verus-closure item,
+# sweep r26's five spec_fn-in-executable-position rows named in wave P's
+# own docstring note above: 412 removeOddNumbers, 426 filterOddNumbers,
+# 436 findNegativeNumbers, 554 findOddNumbers, 629 findEvenNumbers). All
+# five share ONE loop shape: a filter loop appending `src[ctr]` onto a
+# result seq `dst` exactly when `pred(src[ctr])` holds, with an invariant
+# `forall k in [0, ctr): pred(src[k]) ==> exists w in [0, dst.len()):
+# dst[w] == src[k]` (SPEC.md's own witness-membership shape, the mirror of
+# the OTHER direction's invariant that the wf lemma machinery already
+# proves for free). Wave P measured (this file's docstring above) that a
+# bare prefix-preservation assert (`dst[j] == t_old_dst[j]` for `j <
+# t_old_dst.len()`) is NOT enough to re-derive this invariant across one
+# iteration at the recursive tail call: the witness for the JUST-PROCESSED
+# element `src[t_old_ctr]` (index `t_old_ctr`, newly in scope of `k < ctr`
+# now that `ctr` grew by one) needs its OWN proof, since it is not covered
+# by shifting an old witness forward at all.
+#
+# `_verus_closure_carry_target` recognizes this exact shape structurally
+# (never fires on a general shape it cannot fully verify): the invariant's
+# `exists` and the loop body's own `if`/`assign` pair must match a fixed
+# skeleton with `src` a read-only (never-assigned) name and `ctr`/`dst`
+# both loop state; nothing here MODIFIES the task's own invariant or
+# `ensures`, it only supplies the missing intermediate proof step, exactly
+# the same posture as the nonlinear_arith `bridge` above (never removes an
+# obligation, only closes one Verus's own quantifier heuristics could not
+# find alone) and the (2026-09-11) `ro_facts` addition in `loop()` below.
+#
+# The proof `_verus_closure_carry_assert` emits is a plain case split on
+# `k < t_old_ctr` (the OLD invariant instance, extracted via Verus's
+# `choose` from the OLD `dst`, then carried across the seq `+` append by a
+# concrete-index prefix-preservation fact -- Verus's own `Seq::add`
+# definition unfolds this automatically for a ground index) versus `k ==
+# t_old_ctr` (the just-processed element: `pred` holding at it, combined
+# with the fact that `evenList`'s OWN append happens under precisely the
+# same `pred` test, one line earlier in the SAME helper body, means the
+# witness is exactly `t_old_dst.len()`, the newly appended element's own
+# index). Measured directly (`verus <file>.rs`) on 629 findEvenNumbers
+# with this exact block hand-inserted before the recursive tail call:
+# 0 errors (probe at /tmp/629_test.rs, this session). See `loop()`'s own
+# `carry` wiring below for where it is spliced in (right before the
+# recursive call, alongside the nonlinear `bridge`) and its own `old_lets`
+# analogue (`carry_pre`, unconditional -- a second `let t_old_v = v;` for
+# a name the nonlinear branch already declared is harmless shadowing, not
+# an error, so no cross-branch bookkeeping is needed to avoid it).
+def _is_at(node, seqname: str, idxname: str) -> bool:
+    return (isinstance(node, dict) and node.get("op") == "at"
+            and isinstance(node.get("args"), list) and len(node["args"]) == 2
+            and isinstance(node["args"][0], dict)
+            and node["args"][0].get("var") == seqname
+            and isinstance(node["args"][1], dict)
+            and node["args"][1].get("var") == idxname)
+
+
+def _verus_closure_carry_target(w: dict, invs: list, ro: list,
+                                 state: list) -> dict | None:
+    for iv in invs:
+        f = iv.get("forall")
+        if not f or f.get("lo") != {"int": 0}:
+            continue
+        hi = f.get("hi")
+        if not (isinstance(hi, dict) and list(hi.keys()) == ["var"]
+                and hi["var"] in state):
+            continue
+        ctr = hi["var"]
+        kvar = f.get("var")
+        body = f.get("body")
+        if not (isinstance(body, dict) and body.get("op") == "implies"):
+            continue
+        args = body.get("args") or []
+        if len(args) != 2:
+            continue
+        pred, exi = args
+        call = pred.get("call") if isinstance(pred, dict) else None
+        if not call:
+            continue
+        fname = call.get("fun")
+        cargs = call.get("args") or []
+        if len(cargs) != 1 or not isinstance(cargs[0], dict):
+            continue
+        at0 = cargs[0]
+        if at0.get("op") != "at" or len(at0.get("args", [])) != 2:
+            continue
+        srcnode, kn = at0["args"]
+        if not (isinstance(srcnode, dict) and srcnode.get("var") in ro):
+            continue
+        src = srcnode["var"]
+        if not (isinstance(kn, dict) and kn.get("var") == kvar):
+            continue
+        ex = exi.get("exists") if isinstance(exi, dict) else None
+        if not ex or ex.get("lo") != {"int": 0}:
+            continue
+        exhi = ex.get("hi")
+        if not (isinstance(exhi, dict) and exhi.get("op") == "len"
+                and len(exhi.get("args", [])) == 1):
+            continue
+        dstnode = exhi["args"][0]
+        if not (isinstance(dstnode, dict) and dstnode.get("var") in state):
+            continue
+        dst = dstnode["var"]
+        wvar = ex.get("var")
+        exbody = ex.get("body")
+        if not (isinstance(exbody, dict) and exbody.get("op") == "=="
+                and len(exbody.get("args", [])) == 2):
+            continue
+        a, b = exbody["args"]
+        if not (_is_at(a, dst, wvar) and _is_at(b, src, kvar)):
+            continue
+
+        body_stmts = w.get("body", [])
+        if len(body_stmts) != 2:
+            continue
+        s0, s1 = body_stmts
+        ifn = s0.get("if") if isinstance(s0, dict) else None
+        if not ifn or ifn.get("else"):
+            continue
+        cond = ifn.get("cond")
+        condcall = cond.get("call") if isinstance(cond, dict) else None
+        if not condcall or condcall.get("fun") != fname:
+            continue
+        condargs = condcall.get("args") or []
+        if len(condargs) != 1 or not _is_at(condargs[0], src, ctr):
+            continue
+        then = ifn.get("then") or []
+        if len(then) != 1:
+            continue
+        asg = then[0].get("assign") if isinstance(then[0], dict) else None
+        if not asg or asg[0] != dst:
+            continue
+        rhs = asg[1]
+        if not (isinstance(rhs, dict) and rhs.get("op") == "+"
+                and len(rhs.get("args", [])) == 2):
+            continue
+        left, right = rhs["args"]
+        if not (isinstance(left, dict) and left.get("var") == dst):
+            continue
+        if not (isinstance(right, dict) and right.get("op") == "seq"
+                and len(right.get("args", [])) == 1):
+            continue
+        if not _is_at(right["args"][0], src, ctr):
+            continue
+        asg1 = s1.get("assign") if isinstance(s1, dict) else None
+        if not asg1 or asg1[0] != ctr:
+            continue
+        rhs1 = asg1[1]
+        if not (isinstance(rhs1, dict) and rhs1.get("op") == "+"
+                and len(rhs1.get("args", [])) == 2):
+            continue
+        r1a, r1b = rhs1["args"]
+        if not (isinstance(r1a, dict) and r1a.get("var") == ctr):
+            continue
+        if not (isinstance(r1b, dict) and r1b.get("int") == 1):
+            continue
+        return {"ctr": ctr, "dst": dst, "src": src, "fname": fname,
+                "kvar": kvar, "wvar": wvar}
+    return None
+
+
+def _verus_closure_carry_assert(c: dict) -> str:
+    ctr, dst, src, fname = c["ctr"], c["dst"], c["src"], c["fname"]
+    kvar, wvar = c["kvar"], c["wvar"]
+    told_ctr, told_dst = f"t_old_{ctr}", f"t_old_{dst}"
+    cw = f"t_cw_{kvar}"
+    return (
+        f"        assert forall|{kvar}: int| (0int) <= {kvar} && {kvar}"
+        f" < {ctr}\n"
+        f"        implies ({fname}({src}[{kvar}]) ==> exists|{wvar}: int|"
+        f" (0int) <= {wvar} && {wvar} < ({dst}.len() as int) &&"
+        f" {dst}[{wvar}] == {src}[{kvar}]) by {{\n"
+        f"            if {fname}({src}[{kvar}]) {{\n"
+        f"                if {kvar} < {told_ctr} {{\n"
+        f"                    assert((0int) <= {kvar} && {kvar}"
+        f" < {told_ctr});\n"
+        f"                    assert(exists|{wvar}: int| (0int) <= {wvar}"
+        f" && {wvar} < ({told_dst}.len() as int) && {told_dst}[{wvar}]"
+        f" == {src}[{kvar}]);\n"
+        f"                    let {cw} = choose|{wvar}: int| (0int)"
+        f" <= {wvar} && {wvar} < ({told_dst}.len() as int) &&"
+        f" {told_dst}[{wvar}] == {src}[{kvar}];\n"
+        f"                    assert({dst}[{cw}] == {told_dst}[{cw}]);\n"
+        f"                    assert((0int) <= {cw} && {cw}"
+        f" < ({dst}.len() as int));\n"
+        f"                }} else {{\n"
+        f"                    assert({kvar} == {told_ctr});\n"
+        f"                    assert({dst}[({told_dst}.len() as int)]"
+        f" == {src}[{told_ctr}]);\n"
+        f"                    assert((0int) <= ({told_dst}.len() as int)"
+        f" && ({told_dst}.len() as int) < ({dst}.len() as int));\n"
+        f"                }}\n"
+        f"            }}\n"
+        f"        }}\n"
+    )
+
+
 class _V1:
     def __init__(self, task: dict):
         self.task = task
@@ -3679,7 +3978,23 @@ class _V1:
                     lines += self.stmts(c["else"], dict(scope), ind + "    ", wrap)
                 lines.append(f"{ind}}}")
             elif "while" in s:
-                lines += self.loop(s["while"], scope, ind, wrap)
+                # 2026-09-15 (verus-sole, dated note in module docstring
+                # below): `task_final` marks a `while` that is the LAST
+                # statement of the task's own top-level body (never
+                # nested under an `if`, never itself inside another
+                # loop's helper) -- the shape verus_sole_post_loop_bridge
+                # needs (see its own docstring) to know the state
+                # variables it observes right after this call really are
+                # the task's own final values, nothing further computed.
+                # `ind == "    "` is exactly emit()'s own top-level
+                # indent (its one call to `stmts(body, scope, "    ")`);
+                # a nested `if` or `while` always recurses one level
+                # deeper (`ind + "    "`), so this is false for every
+                # other call site without threading a separate flag.
+                is_last = s is body[-1]
+                lines += self.loop(s["while"], scope, ind, wrap,
+                                    task_final=(is_last and wrap is None
+                                                and ind == "    "))
             else:
                 raise ValueError(f"t v1 -> verus: unknown statement {s!r}")
         return lines
@@ -3687,7 +4002,7 @@ class _V1:
     # -- loops: proof mode has no while (measured), so the loop rule is  --
     # -- encoded as a recursive helper lemma; see module docstring.      --
     def loop(self, w: dict, scope: dict, ind: str,
-             wrap: str | None = None) -> list[str]:
+             wrap: str | None = None, task_final: bool = False) -> list[str]:
         k = self.loop_ix
         self.loop_ix += 1
         invs = w.get("invariants", [])
@@ -3922,7 +4237,25 @@ class _V1:
         # conclusion is the invariant over the symbolic post-state. `_sym`
         # gives up (None) when the body may return, same as a nested while,
         # so this is skipped in that case; see `_sym`'s docstring.
-        nl = [j for j, iv in enumerate(invs) if _has_nonlinear(iv)]
+        # 2026-09-15 (verus-sole, sole-blocker row mfes_2021_..._8_sum,
+        # sweep r26): `_has_nonlinear` only looks at an invariant's OWN
+        # operators, so `s == calcSum(i+1)` (a plain equality with a call
+        # whose ARGUMENT is linear) reads as linear even though calcSum's
+        # own body is `(n_v*(n_v-1))/2` -- preserving this invariant
+        # across one iteration needs that closed form unfolded and
+        # combined nonlinearly (measured: verus's own message on the
+        # untouched lowering is "precondition not satisfied" on the
+        # recursive call, i.e. invariant preservation, not a postcondition
+        # or termination failure). `_verus_sole_calls_nonlinear_specfn`
+        # catches this shape so the SAME bridge mechanism below (already
+        # relied on by every other nonlinear invariant) fires for it too;
+        # a task with no spec_fun, or whose spec_funs are all linear,
+        # gets nothing extra from this (empty `task["spec_funs"]` or
+        # `_has_nonlinear` false on every one), so no other committed
+        # task changes.
+        nl = [j for j, iv in enumerate(invs)
+              if _has_nonlinear(iv)
+              or _verus_sole_calls_nonlinear_specfn(iv, self.task)]
         old_lets, bridge = "", []
         if nl:
             entry = {v: {"var": f"t_old_{v}"} for v in state}
@@ -3951,10 +4284,58 @@ class _V1:
                     f"            requires\n                {prem},\n"
                     "        ;"
                     for j in nl]
+                # 2026-09-15 (verus-sole, sole-blocker row mroot1, sweep
+                # r26): a nonlinear `decreases` (here `n - r*r`, the
+                # exact shape a square-root loop needs) is checked by
+                # Verus's OWN termination proof, a query the file has no
+                # other hook into -- measured, "could not prove
+                # termination" on the untouched lowering, with the
+                # invariant-preservation bridge above already in place
+                # and verifying on its own (2 verified, 1 error). Probed
+                # directly (probe_mroot.rs, 2026-09-15): asserting the
+                # exact strict-decrease inequality Verus's termination
+                # check needs, by (nonlinear_arith) over the SAME
+                # premises the invariant bridge above already uses (they
+                # hold at the identical program point, immediately before
+                # the recursive call), makes that fact a plain established
+                # truth in the ambient context Verus's decreases check
+                # then reads unaided -- 0 errors, termination and body
+                # both. Fires only when `dec` itself is nonlinear
+                # (`_has_nonlinear`); every other committed loop's
+                # decreases is linear (a literal subtraction/sum of
+                # variables) and gets nothing extra.
+                if _has_nonlinear(dec):
+                    bridge.append(
+                        f"        assert(({expr(subst(dec, env))})"
+                        f" < ({expr(subst(dec, entry))}))"
+                        " by (nonlinear_arith)\n"
+                        f"            requires\n                {prem},\n"
+                        "        ;")
+
+        # 2026-09-15 (ROADMAP 16.2, verus-closure item): `_verus_closure_
+        # carry_target` above matches the exact filter-append/witness-
+        # membership shape and returns None on anything else, so this
+        # never fires outside the five rows it was measured on (429's
+        # loop assigns two vars, has an early return, etc. all fall
+        # through the structural match). Restricted to `not may_ret`
+        # since the matched shape never contains a `return` (an early
+        # return would need its own substitution into the assert, not
+        # built here) and the assert must run on the FINAL `evenList`/
+        # `i_v2` values, i.e. after `inner`'s own statements, exactly
+        # where the nonlinear `bridge` above already runs.
+        carry = None if may_ret else _verus_closure_carry_target(
+            w, invs, ro, state)
+        carry_pre = ""
+        carry_bridge: list[str] = []
+        if carry is not None:
+            carry_pre = (f"    let t_old_{carry['ctr']} = {carry['ctr']};\n"
+                         f"    let t_old_{carry['dst']} = {carry['dst']};\n")
+            carry_bridge = [_verus_closure_carry_assert(carry)]
 
         hscope = {n: (scope[n][0], n in state) for n in ro + state}
-        inner = self.stmts(w["body"], hscope, "        ",
-                            res_val if may_ret else None) + bridge
+        inner = (self.stmts(w["body"], hscope, "        ",
+                             res_val if may_ret else None)
+                 + bridge + carry_bridge)
         shadows = "".join(f"    let mut {v} = {v};\n" for v in state)
         args = ", ".join(ro + state)
         self.helpers.append(
@@ -3962,7 +4343,7 @@ class _V1:
             f"{req}    ensures\n        {ens_s},\n"
             f"    decreases ({expr(dec)}) + (2int),\n"
             "{\n"
-            f"{old_lets}{shadows}{guard_pre}"
+            f"{old_lets}{carry_pre}{shadows}{guard_pre}"
             f"    if {expr(cond)} {{\n"
             + "\n".join(inner) + "\n"
             f"        {hname}({args})\n"
@@ -4003,7 +4384,75 @@ class _V1:
                 lines.append(f"{ind}{state[0]} = {tmp};")
             else:
                 lines += [f"{ind}{v} = {tmp}.{j};" for j, v in enumerate(state)]
+            if task_final:
+                lines += self._verus_sole_post_loop_bridge(invs, cond, ind)
         return lines
+
+    def _verus_sole_post_loop_bridge(self, invs: list, cond: dict,
+                                      ind: str) -> list[str]:
+        """2026-09-15 (verus-sole, sole-blocker rows formalmethods_..._ex1
+        and metodos_formais_..._ex1/invariantes_multiplicador, sweep r26,
+        both a multiplication loop of the SAME shape: `r` accumulates
+        `x*y` while `m` counts `x` down to 0). LOOPS' own bridge (above)
+        already re-establishes the loop's nonlinear invariant across one
+        iteration, so the recursive helper itself verifies -- measured,
+        both rows read "2 verified, 1 errors" on the untouched lowering,
+        the ONE error a "postcondition not satisfied" on the TASK's own
+        `ensures` (`r == x*y`), after the call, never inside the helper.
+        The gap: the loop's ensures give the task `m >= 0`, `!(m > 0)`
+        and `(m*n)+r == x*y` (Verus's ordinary postcondition propagation,
+        no bridge needed for THAT), from which `m == 0` follows by plain
+        linear arithmetic -- but substituting that into the nonlinear
+        term `m*n` to reach `r == x*y` is exactly the kind of step
+        Verus's default (nonlinear-off) profile cannot take unaided, the
+        same gap LOOPS documents for the loop body itself, just now at
+        the CALL SITE instead. Fixed the same way: an explicit `assert
+        ... by (nonlinear_arith)` right after the state is copied back
+        from the helper's result, with the loop's own exit facts (every
+        invariant, verbatim -- they mention only the ACTUAL state names
+        at this point, not helper-internal ones, so no `subst` is needed
+        -- plus the negated guard) as its own premises, since a
+        nonlinear_arith block sees only what its own `requires` states
+        (module docstring, TOP-LEVEL NONLINEAR ENSURES). Restricted to a
+        `while` that is the task's own LAST top-level statement
+        (`task_final`, set by `stmts`'s "while" case) so this only ever
+        runs once the state variables hold the task's true final values,
+        never a nested or non-final loop's intermediate ones.
+
+        NARROWED (2026-09-15, same day, measured regression): firing on
+        every `_has_nonlinear` ensures after ANY task-final loop broke
+        two of the 88 dafny_synthesis rows this file's own regression bar
+        names -- task_id_267__sumOfSquaresOfFirstNOddNumbers and
+        task_id_8__squareElements, both of which already verify with NO
+        bridge (their final ensures is the loop's own invariant with one
+        variable renamed by a plain equality -- k==n, a substitution any
+        SMT congruence closure does for free, nonlinear-off or not) --
+        wrapping their ALREADY-PROVING goal in a `nonlinear_arith` block
+        made it FAIL instead ("assertion failed", verus's own message,
+        measured directly): that block's weaker, premises-only solver
+        does not get the same congruence machinery the ambient default
+        profile already had. So this now fires only when
+        `_verus_sole_zero_forced_var` finds the SPECIFIC shape the mult
+        rows have and 267/squareElements do not: a state variable driven
+        to the literal 0 by nothing more than an invariant `v >= 0` and
+        the guard `v > 0` -- exactly the elimination step the default
+        profile cannot do, never a plain rename. Measured: both mult
+        rows unproved -> verified, both regressed rows verified (bridge
+        no longer emitted for either, `.rs` byte-identical to before this
+        item), no other of the 88 dafny_synthesis verus cells or the 34
+        committed tasks changes (this item's own regression runs)."""
+        if not _verus_sole_zero_forced_var(invs, cond):
+            return []
+        ensn = [en for en in self.task["ensures"] if _has_nonlinear(en)]
+        if not ensn:
+            return []
+        prem = (",\n" + ind + "        ").join(
+            [expr(iv) for iv in invs] + [f"!({expr(cond)})"])
+        return [
+            f"{ind}assert({expr(en)}) by (nonlinear_arith)\n"
+            f"{ind}    requires\n{ind}        {prem},\n"
+            f"{ind};"
+            for en in ensn]
 
     # -- whole task ------------------------------------------------------
     def emit(self, body: list) -> str:
@@ -4345,11 +4794,43 @@ def _gint(e) -> int:
     raise ValueError(f"quantifier bound not ground: {e!r}")
 
 
-def _unroll(e: dict, budget: list) -> dict:
+def _unroll(e: dict, budget: list, spec_funs: dict | None = None) -> dict:
     """Replace bounded quantifiers (ground bounds) with finite conjunctions
     or disjunctions so compute_only can evaluate the result. budget is a
     one-element countdown over emitted instances; exhausting it raises and
-    the certificate is refused."""
+    the certificate is refused.
+
+    2026-09-15 (ROADMAP 16.2, verus-closure item, sweep r26's three
+    newly-lifted seq-of-array rows: 2 sharedElements, 161 removeElements,
+    249 intersection). All three state their spec_fun `inArray` as `exists
+    i in [0, len(a_v)): a_v[i]==x` and call it from `ensures`/`requires`
+    (`inArray(a, x)`, never inlined). Measured directly (`verus <file>.rs`
+    on the twin's own emitted `t_refutation_certificate`, this session's
+    /tmp/three_rows-grade): `assert_by_compute_only failed to simplify
+    down to true`, because the certificate formula rendered the call as a
+    plain `inArray(seq![...], ...)` Rust call and `compute_only` unfolds a
+    spec fn's body ground but still cannot decide the `exists` left inside
+    it -- the same reason a bare `forall`/`exists` needs the unrolling
+    this function already does, just one level down a spec_fun boundary
+    the walk never crossed before. `spec_funs` (a name -> spec_fun dict,
+    passed by `_cert_formula` below, `None` everywhere else so every OTHER
+    caller of this shared function -- lower_fstar.py's own use of
+    `certificate_formula`, exercised on tasks with no spec_fun call in
+    their certificate at all -- is byte-for-byte unaffected) lets a "call"
+    node whose `fun` names a task spec_fun be INLINED: the call's own
+    (already-unrolled, so ground) arguments are substituted for the
+    spec_fun's formal params into its body, and that substituted body is
+    unrolled again, recursively, so a spec_fun that itself calls another
+    spec_fun (none of the three measured tasks does, but nothing here
+    assumes single-level) still bottoms out. A call to any OTHER function
+    name (not in `spec_funs`, e.g. `isEven`/`isOdd`/`isNegative` above --
+    plain int predicates with no quantifier in their own body, already
+    compute_only-safe as an ordinary call, never named in this session's
+    failures) is left exactly as before: recurse into args, keep the call.
+    Measured (`verus <file>.rs` on all three twins' regenerated
+    certificates): 0 errors; see `_cert_formula`'s own wiring below and
+    t/test_lower_verus_refusals.py / t/test_lower_verus_nested_trigger.py
+    for the regression bar this change must keep passing."""
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
@@ -4360,7 +4841,7 @@ def _unroll(e: dict, budget: list) -> dict:
             if budget[0] < 0:
                 raise ValueError("quantifier unroll budget exhausted")
             insts.append(_unroll(subst(q["body"], {q["var"]: {"int": k}}),
-                                 budget))
+                                 budget, spec_funs))
         if not insts:
             return {"bool": kind == "forall"}
         if len(insts) == 1:
@@ -4368,16 +4849,40 @@ def _unroll(e: dict, budget: list) -> dict:
         return {"op": "and" if kind == "forall" else "or", "args": insts}
     if "ite" in e:
         c = e["ite"]
-        return {"ite": {"cond": _unroll(c["cond"], budget),
-                        "then": _unroll(c["then"], budget),
-                        "else": _unroll(c["else"], budget)}}
+        return {"ite": {"cond": _unroll(c["cond"], budget, spec_funs),
+                        "then": _unroll(c["then"], budget, spec_funs),
+                        "else": _unroll(c["else"], budget, spec_funs)}}
     if "call" in e:
         c = e["call"]
-        return {"call": {"fun": c["fun"],
-                         "args": [_unroll(a, budget) for a in c["args"]]}}
+        cargs = [_unroll(a, budget, spec_funs) for a in c["args"]]
+        # 2026-09-15: inlining is restricted to a spec_fun whose body is
+        # DIRECTLY a bounded quantifier ("forall"/"exists" the only top
+        # -level key) -- never an "ite" (measured regression, this
+        # session: 577 factorialOfLastDigit's `factorial` spec_fun is
+        # self-recursive over an `ite`, and inlining a recursive call with
+        # no ground-reducing evaluation of its own `ite` conditions along
+        # the way recurses until Python's RecursionError, since nothing
+        # here folds constants -- `_gint` only ever runs on a quantifier's
+        # OWN lo/hi, never on an arbitrary subterm). A quantifier-bodied
+        # spec_fun has no such self-call by construction (SPEC.md gate 3:
+        # a spec_fun's body is one expression, and every quantifier this
+        # lowering ever unrolls already terminates in exactly this same
+        # bounded-`range` way), so this stays safe for `inArray` and any
+        # future spec_fun sharing its shape while leaving `factorial` (and
+        # every other recursive or `ite`-bodied spec_fun already lowered
+        # as a plain Verus `spec fn` call) untouched, exactly as before
+        # this date.
+        if (spec_funs and c["fun"] in spec_funs
+                and ("forall" in spec_funs[c["fun"]]["body"]
+                     or "exists" in spec_funs[c["fun"]]["body"])):
+            f = spec_funs[c["fun"]]
+            pmap = {p["name"]: a for p, a in zip(f["params"], cargs)}
+            return _unroll(subst(f["body"], pmap), budget, spec_funs)
+        return {"call": {"fun": c["fun"], "args": cargs}}
     if "op" in e:
         return {"op": e["op"],
-                "args": [_unroll(a, budget) for a in e.get("args", [])]}
+                "args": [_unroll(a, budget, spec_funs)
+                        for a in e.get("args", [])]}
     return e
 
 
@@ -4757,7 +5262,8 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
                 parts.append(ob)
         else:
             return None          # preservation: see above
-        return _unroll(_conj(parts), [_UNROLL_CAP])
+        spec_funs = {f["name"]: f for f in task.get("spec_funs", [])}
+        return _unroll(_conj(parts), [_UNROLL_CAP], spec_funs)
     except (ValueError, KeyError, TypeError, IndexError):
         return None
 

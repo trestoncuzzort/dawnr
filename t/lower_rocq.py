@@ -2551,6 +2551,108 @@ touching the generation pipeline).
   71 of 71 unchanged. `python3 -m unittest test_lower_rocq_loop_cert
   test_lower_rocq test_names`: 40 of 40 before, unchanged after (new
   cases added below run green).
+
+  ROCQ-SOLE, 2026-09-15 (t/COVERAGE-lifted-785.md's rocq-sole-blocked
+  eight, wave P's own note that this item "was still building when this
+  commit was cut"). Built the per-spec_fun lemma generator the eight
+  rows' own "recursive-recurrence family" needs (`_emit_t_eqs_rec`, its
+  own docstring has the full mechanism and the standalone probe that
+  found it): `t_eqs`'s bare `rewrite sf_f_eq` always unfolds whichever
+  `sf_f ?x` occurrence Coq's rewrite finds first -- empirically the
+  GOAL's own leftmost application -- never the occurrence that sits one
+  level inside a `_loop_spec` induction step's own carried invariant
+  HYPOTHESIS, which is where the recursive-recurrence family's real gap
+  lives (extra_sum's `sum`: closing `sf_sum_v n = x + y * k + y *
+  sf_sum_v (k - 1)` from `Hinv : sf_sum_v n = x + y * sf_sum_v k` needs
+  unfolding AT `k`, an argument that never appears in the goal at all).
+  `t_eqs_rec` is a `multimatch` over every `sf_f`-applied-at-fixed-arity
+  occurrence in a HYPOTHESIS (never the goal), unfolds there, resolves
+  the exposed `if` with `t_base`, transports the result into the goal by
+  its generic `sf_f ?a = _` shape; multimatch's own backtracking is what
+  makes this sound and still targeted -- the wrong occurrence (`n`) fails
+  under `first [ ring | nia | lia ]` and Coq retries `k` before the outer
+  `solve` gives up, so nothing is accepted on faith and nothing needs to
+  be told which occurrence is right. Gated on `_has_rec_int_spec_fun` (a
+  self-recursive, INT-result spec_fun): `POST_SF_REC`/`POST_SF_REC_NIA`
+  (`_add_rec_alt`, `_post_sf_for`) add one more `t_dis`/`t_side`
+  alternative, tried LAST, so a task without the gate pays nothing beyond
+  one already-cheap `Ltac t_eqs_rec := fail.` definition
+  (`_emit_t_eqs_rec([])`), never called.
+
+  MEASURED, this date, `export PATH=...:$PATH` then (one task copied to
+  a scratch dir each time, `t/grade.py --tasks <dir> --kernels
+  dafny,rocq --flake <n> --jobs <n>`):
+
+  - extra_sum's `sum` (flake 1): before, rocq real=unproved ("Tactic
+    failure: unsolved t verification condition"); after, real=verified,
+    twin=refuted, FULL AGREEMENT with dafny. `598__isArmstrong` (flake
+    1), not touched on purpose -- it happens to share the same shape --
+    also moved real=unproved to real=verified, twin=refuted.
+  - The other six of the eight rocq-sole rows (`472__containsConsecutive
+    Numbers`, `808__containsK`, `is_even`, `invertArray`, `flex_ex2`'s
+    `max`, `mystery1`) do NOT have this gate's shape at all: `472`,
+    `808`, `invertArray` and `max` declare NO spec_fun (their own gap is
+    a raw array/seq-scan loop invariant, a different mechanism this item
+    did not build); `is_even`'s `even` is a self-recursive BOOL-result
+    spec_fun (`_has_rec_int_spec_fun` excludes it on purpose -- the
+    2026-09-10 note's own reverted ground-substitution gap, a case-split
+    shape `t_eqs_rec`'s `first [ ring | nia | lia ]` finisher has no arm
+    for); `mystery1` is a self-recursive METHOD (`gen_rec`, not
+    `gen_loop`), whose own inline tactic never calls `t_dis`/`t_side` at
+    all, so neither this fix nor any `t_dis` alternative reaches it. All
+    six still read real=unproved (`472`, `808`, `is_even`, `mystery1`) or
+    real=timeout (`invertArray`, `max`) on the real, unchanged, and are
+    left open BY NAME: a genuinely different mechanism each, none of them
+    "the recursive-recurrence lemma" this item was asked to build.
+  - Regression bar. Of the 34 committed tasks, exactly one
+    (`digit_sum`, `while` loop over a self-recursive int spec_fun `dsum`)
+    has this gate's own shape; graded alone (flake 3) it still reads
+    real=verified, twin=refuted, byte-for-byte the same AGREEMENT.md
+    cell (pinned as `DigitSumRecGateNoOpTest` below). `python3 t/grade.py
+    --tasks t/tasks --kernels dafny,rocq --flake 3 --jobs 8`, run once
+    fully: 33 of 34 read AGREEMENT.md's own rocq cell unchanged (min_max
+    still timeout/refuted, the same pre-existing flaky real named on
+    2026-09-10/11/wave-P); `first_even`, `row_max_len` and `seq_max`
+    read a real=timeout FINDING that run alone -- all three have NO
+    spec_fun at all, so `_has_rec_int_spec_fun` is false and their
+    emitted `t_dis`/`t_side` text is POST_SF/POST_SF_NIA, unmodified.
+    Confirmed directly, not merely argued: `row_max_len`'s own real
+    lowering, this diff's version against `git show HEAD:t/lower_rocq.py`'s,
+    line-diffed (`difflib.unified_diff`) -- the ONE line the two differ
+    on is `Ltac t_eqs_rec := fail.`, inserted where `t_eqs`/`t_eqs_h` were
+    already defined, never read by `t_dis`/`t_side`'s own unmodified text;
+    an unreferenced Ltac definition cannot change what any tactic script
+    proves. `uptime` at the time read `load average: 381.28` (this shared
+    box, several sibling worktrees' own grading jobs running at once,
+    ROADMAP's "shared box, fit in" policy); a standalone re-run of just
+    these three at flake 3 (jobs 2) later read `first_even` back to
+    real=verified before this note was written, `row_max_len` still
+    real=timeout under the SAME sustained load, `seq_max` not reached
+    before the recheck was cut for time -- named rather than claimed
+    clean, but the byte-diff above is the actual argument: these three
+    cells cannot have moved because of this patch, only because of the
+    box. Restricted-to-rocq conformance
+    (`probe_manifest()`/`run_items()`, one column, `present` also
+    restricted so only rocq's own kernel is invoked): 66 of 66 PASS
+    both before and after, no PASS lost, no FAIL gained. Of the
+    72 dafny_synthesis rows in t/COVERAGE-lifted-785.md reading
+    `verified / refuted` in rocq, exactly one
+    (`577__factorialOfLastDigit`) has this gate's shape; graded alone
+    (dafny,rocq, flake 3) it still reads verified/refuted in both,
+    unchanged; the other 71 are provably untouched by this diff (their
+    own `_has_rec_int_spec_fun` reads False, so `_post_sf_for` returns
+    the exact pre-existing `POST_SF`/`POST_SF_NIA` object, unmodified),
+    not independently re-graded one by one this date.
+  - `python3 -m unittest test_lower_rocq_loop_cert test_lower_rocq
+    test_names`: 51 of 51 (28 + 15 + 8), all green, new cases
+    (`ExtraSumRecEqTest`, `DigitSumRecGateNoOpTest`) included.
+
+  Files touched: `lower_rocq.py` (`emit_spec_funs`'s own per-spec_fun
+  loop, `_emit_t_eqs_rec`, `_has_rec_int_spec_fun`, `_add_rec_alt`,
+  `POST_SF_REC`, `POST_SF_REC_NIA`, `_post_sf_for`, and both call sites
+  that used to pick `POST_SF_NIA if _has_nonlinear_mul(...) else
+  POST_SF` directly), `test_lower_rocq_loop_cert.py` (two new test
+  classes, no existing case edited).
 """
 from __future__ import annotations
 
@@ -4709,6 +4811,63 @@ POST_SF_NIA = POST_SF.replace(
     '              || fail "unsolved t verification condition".')
 assert POST_SF_NIA != POST_SF, "POST_SF_NIA gate: t_dis text not found"
 
+# ROCQ-SOLE, 2026-09-15: `t_eqs_rec`'s own extra alternative, spliced into
+# BOTH `t_dis` and `t_side` (not `t_dis` alone, the way POST_SF_NIA's
+# `nia` fallback is) -- the gap this closes (extra_sum's `sum`,
+# `_emit_t_eqs_rec`'s own docstring) sits in `_loop_spec`'s induction
+# step, `apply IH; t_side`, never a bare `t_dis` call site. Gated on
+# `_has_rec_int_spec_fun` (a task with no self-recursive int spec_fun
+# gets byte-identical POST_SF/POST_SF_NIA text, `t_eqs_rec` itself always
+# defined but as the one-line `fail` `_emit_t_eqs_rec` emits when its own
+# `rec_int_sf` list is empty, so `solve [ t_eqs_rec; ... ]` costs one
+# failed Ltac dispatch per call site, not a search). Built off POST_SF
+# and POST_SF_NIA both (a task can need both fallbacks at once, e.g. a
+# centered-polygonal-shaped requires alongside a self-recursive spec_fun
+# in the same file; not measured to co-occur in the eight named rows, but
+# the composition is free and kept general rather than asserted away).
+def _add_rec_alt(text: str) -> str:
+    text = text.replace(
+        'Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
+        '                          | solve [ t_eqs_h; t_vc0 ]\n'
+        '                          | solve [ t_eqs; t_eqs_h; t_vc0 ]',
+        'Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
+        '                          | solve [ t_eqs_h; t_vc0 ]\n'
+        '                          | solve [ t_eqs; t_eqs_h; t_vc0 ]\n'
+        '                          | solve [ t_eqs_rec; first [ ring | nia | lia ] ]')
+    text = text.replace(
+        'Ltac t_side := first [ assumption | solve [ lia ]\n'
+        '                     | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
+        '                     | solve [ t_eqs_h; t_vc0 ]\n'
+        '                     | solve [ t_eqs; t_eqs_h; t_vc0 ] ].',
+        'Ltac t_side := first [ assumption | solve [ lia ]\n'
+        '                     | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
+        '                     | solve [ t_eqs_h; t_vc0 ]\n'
+        '                     | solve [ t_eqs; t_eqs_h; t_vc0 ]\n'
+        '                     | solve [ t_eqs_rec; first [ ring | nia | lia ] ] ].')
+    return text
+
+
+POST_SF_REC = _add_rec_alt(POST_SF)
+assert POST_SF_REC != POST_SF, "POST_SF_REC gate: t_dis/t_side text not found"
+POST_SF_REC_NIA = _add_rec_alt(POST_SF_NIA)
+assert POST_SF_REC_NIA != POST_SF_NIA, "POST_SF_REC_NIA gate: t_dis/t_side text not found"
+
+
+def _post_sf_for(task: dict) -> str:
+    """Picks the right POST_SF/POST_SF_NIA/POST_SF_REC/POST_SF_REC_NIA
+    variant for one task, so both call sites (the main lowering and the
+    twin-certificate lowering) apply the same two independent gates
+    (`_has_nonlinear_mul`, `_has_rec_int_spec_fun`) the same way."""
+    nia = _has_nonlinear_mul(task)
+    rec = _has_rec_int_spec_fun(task)
+    if nia and rec:
+        return POST_SF_REC_NIA
+    if rec:
+        return POST_SF_REC
+    if nia:
+        return POST_SF_NIA
+    return POST_SF
+
 
 def _has_nonlinear_mul(task: dict) -> bool:
     """True iff some `*` in requires/ensures/body has NEITHER side a
@@ -4737,6 +4896,18 @@ def _has_nonlinear_mul(task: dict) -> bool:
     return (any(walk(e) for e in task.get("requires", []))
             or any(walk(e) for e in task.get("ensures", []))
             or walk({"body": task.get("body", [])}))
+
+
+def _has_rec_int_spec_fun(task: dict) -> bool:
+    """True iff `task` declares a self-recursive, INT-result spec_fun --
+    the gate for `POST_SF_REC`'s extra `t_eqs_rec` alternative (ROCQ-SOLE,
+    2026-09-15, `_emit_t_eqs_rec`'s own docstring). A bool-result
+    self-recursive spec_fun (is_even's `sf_even`) is untouched: that
+    family's own gap (an opaque BOOL result needing a case split, this
+    file's 2026-09-10 note) is a different, unresolved shape, and
+    `t_eqs_rec`'s `first [ ring | nia | lia ]` finisher has no bool arm."""
+    return any(sf.get("result") == "int" and has_self_call(sf["body"], sf["name"])
+               for sf in task.get("spec_funs", []))
 
 RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
             "match", "with", "end", "fix", "Prop", "Set", "Type", "fuel", "fu",
@@ -6510,6 +6681,15 @@ def emit_spec_funs(cx: Ctx) -> str:
     # param is function+length, two), the same count `atxt` below builds
     # from.
     bool_sf: list[tuple[str, int]] = []
+    # ROCQ-SOLE, 2026-09-15 (t/COVERAGE-lifted-785.md "Sole blockers",
+    # the recursive-recurrence family: extra_sum's sum, flex_ex2's max,
+    # invertArray, computeFib, problem5, sumOfCommonDivisors). Collected
+    # here, used below (after `eqs`) to build `t_eqs_rec`: one match arm
+    # per self-recursive INT-result spec_fun, `(f, holes)` where `holes`
+    # is the same "?a0 ?a1 ..." positional-metavariable text `t_dm1`-style
+    # rules elsewhere in this file already use for a fixed-arity opaque
+    # application.
+    rec_int_sf: list[tuple[str, str, str]] = []
     counter = [0]
     for sf in task.get("spec_funs", []):
         f = sf["name"]
@@ -6530,6 +6710,10 @@ def emit_spec_funs(cx: Ctx) -> str:
         btxt, atxt = " ".join(bs), " ".join(args)
         if sf["result"] == "bool":
             bool_sf.append((f, len(args)))
+        if sf["result"] == "int" and has_self_call(sf["body"], f):
+            pat_holes = " ".join(f"?a{i}" for i in range(len(args)))
+            use_holes = " ".join(f"a{i}" for i in range(len(args)))
+            rec_int_sf.append((f, pat_holes, use_holes))
 
         # body lowering: inside the fixpoint, self-calls use fuel `fu`
         saved_tys = dict(cx.tys)
@@ -6689,6 +6873,7 @@ Qed.
                     + "end;" if ground_arms_h else "")
         chunks.append(f"Ltac t_eqs := {eq_tac} {norm} {ground} idtac.\n")
         chunks.append(f"Ltac t_eqs_h := {eq_tac_h} {norm_h} {ground_h} idtac.\n")
+        chunks.append(_emit_t_eqs_rec(rec_int_sf))
         # ATTEMPTED AND REVERTED (2026-09-10, is_even): a second half of
         # this fix tried putting the identical ground arms inside a new
         # `t_sf_ground`, dispatched from `t_base`'s own `repeat (first
@@ -6712,7 +6897,59 @@ Qed.
     else:
         chunks.append("Ltac t_eqs := idtac.\n")
         chunks.append("Ltac t_eqs_h := idtac.\n")
+        chunks.append(_emit_t_eqs_rec(rec_int_sf))
     return "\n".join(chunks)
+
+
+def _emit_t_eqs_rec(rec_int_sf: list[tuple[str, str, str]]) -> str:
+    """ROCQ-SOLE, 2026-09-15. `t_eqs`'s own bare `rewrite sf_f_eq` always
+    unfolds whichever `sf_f ?x` occurrence Coq's `rewrite` finds first
+    (empirically, the GOAL's own leftmost application, e.g. `sf_sum_v n`
+    on extra_sum's `sum`) -- fine for the def-lemma / t_dis call sites
+    every prior wave built this for, wrong for a `_loop_spec` induction
+    step's own recursive-recurrence premise: closing `sf_sum_v n = x + y *
+    k + y * sf_sum_v (k - 1)` from the carried invariant `Hinv : sf_sum_v
+    n = x + y * sf_sum_v k` needs unfolding `sf_sum_v` at `k` -- an
+    argument that never appears in the GOAL at all, only inside `Hinv`
+    itself, one step to the right of `Hinv`'s own `sf_sum_v n` -- and no
+    schematic `rewrite sf_sum_v_eq` call names `k` (MEASURED: standalone
+    probe on extra_sum's `sum`, `4:{ rewrite sf_sum_v_eq. }` unfolds `sf_
+    sum_v n` and dead-ends on a `sf_sum_v (n - 1)` unrelated to `k - 1`).
+    `t_eqs_rec` is the fix: `multimatch` over every `sf_f` occurrence
+    (arity-exact, via the same "?a0 ?a1 ..." positional-hole idiom
+    `t_dm1`'s own `context [t_div ?a ?b]` arm already uses for a fixed-
+    arity opaque application, so a seq-typed spec_fun's (function, length)
+    pair counts as two holes automatically) INSIDE A HYPOTHESIS, unfolds
+    `sf_f`'s own equation there (not the goal), resolves the ite the
+    unfold exposes with `t_base` (its leading `solve [ lia ]` closes any
+    branch its own new fact contradicts, e.g. extra_sum's `k = 0` branch
+    against `H : 0 < k`), then transports the now-unfolded hypothesis into
+    the goal by its own generic `sf_f ?a = _` shape (whichever direction
+    matches). Backtracking is what makes this SOUND and still targeted:
+    `multimatch`'s first candidate (a occurrence n, wrong here) fails to
+    close under `first [ ring | nia | lia ]` and Coq retries the OTHER
+    occurrence (k) before the outer `solve` gives up, so this never
+    accepts a false step and never needs to be told WHICH occurrence is
+    right. Gated (see `_has_rec_int_spec_fun`, POST_SF_REC) to a task with
+    a genuinely self-recursive int-result spec_fun: the search only ever
+    tries as many candidates as that spec_fun has occurrences of matching
+    arity in one hypothesis, small in every named exemplar (extra_sum,
+    computeFib, problem5, sumOfCommonDivisors: one int param each), and a
+    task with no such spec_fun never defines a non-trivial `t_eqs_rec` at
+    all, so it costs nothing (`Ltac t_eqs_rec := fail.` fails in one Ltac
+    dispatch, before any goal is even inspected). MEASURED clean on
+    extra_sum's `sum` (t/grade.py --tasks <one-task copy> --kernels
+    dafny,rocq --flake 1): real reads verified in dafny and rocq both."""
+    if not rec_int_sf:
+        return "Ltac t_eqs_rec := fail.\n"
+    arms = []
+    for f, pat_holes, use_holes in rec_int_sf:
+        arms.append(
+            f"  | H : context [ sf_{f} {pat_holes} ] |- _ =>\n"
+            f"      rewrite (sf_{f}_eq {use_holes}) in H; repeat t_base;\n"
+            f"      first [ rewrite H | rewrite <- H ]\n")
+    return ("Ltac t_eqs_rec :=\n  multimatch goal with\n"
+            + "".join(arms) + "  end.\n")
 
 
 def emit_sf_def_lemmas(cx: Ctx, counter: list) -> str:
@@ -6802,7 +7039,7 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
 
     parts = [header(task, body)]
     parts.append(emit_spec_funs(cx))
-    parts.append((POST_SF_NIA if _has_nonlinear_mul(task) else POST_SF) + "\n")
+    parts.append(_post_sf_for(task) + "\n")
 
     counter = [0]
     parts.append(emit_sf_def_lemmas(cx, counter))
@@ -9444,7 +9681,7 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
                 chunk = _value_cert(cx, task, body, witness, def_text, w)
         if chunk is None:
             return None
-        post_sf = POST_SF_NIA if _has_nonlinear_mul(task) else POST_SF
+        post_sf = _post_sf_for(task)
         parts = [header(task, body), emit_spec_funs(cx), post_sf + "\n", T_FEED, chunk,
                  f"\nPrint Assumptions {CERT_NAME}.\n"]
         return "\n".join(p for p in parts if p)

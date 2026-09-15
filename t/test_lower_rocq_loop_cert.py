@@ -417,5 +417,93 @@ class GradedVerdictTest(unittest.TestCase):
         self._refuted("reverse.t")
 
 
+_EXTRA_SUM_JSON = Path(
+    "/home/tmcuzzort/tup/t/out/lifted-tasks/"
+    "Prog-Fun-Solutions_tmp_tmp7_gmnz5f_extra_sum.Sum.json")
+
+
+@unittest.skipUnless(_EXTRA_SUM_JSON.is_file(), "lifted corpus row not present")
+class ExtraSumRecEqTest(unittest.TestCase):
+    """prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum (ROCQ-SOLE,
+    2026-09-15): one of t/COVERAGE-lifted-785.md's eight rocq-sole-blocked
+    rows, the "recursive-recurrence family" exemplar. `_loop_spec`'s
+    induction step needs `sf_sum_v n = x + y * k + y * sf_sum_v (k - 1)`
+    from the carried invariant `sf_sum_v n = x + y * sf_sum_v k`; a bare
+    `rewrite sf_sum_v_eq` unfolds the goal's own `sf_sum_v n` (the first
+    occurrence Coq's rewrite finds), not the useful `sf_sum_v k` sitting
+    one level inside the invariant HYPOTHESIS, and dead-ends on an
+    unrelated `sf_sum_v (n - 1)` (MEASURED before this fix: real=unproved,
+    "Tactic failure: unsolved t verification condition", confirmed
+    standalone by `Show` on the induction step's own goal 4). `t_eqs_rec`
+    (`lower_rocq._emit_t_eqs_rec`) fixes it: multimatch over every
+    `sf_sum_v ?a` occurrence IN A HYPOTHESIS, unfold there, resolve the
+    exposed `if` with `t_base`, transport into the goal; backtracking
+    retries the wrong occurrence (`n`) and finds the right one (`k`)
+    before giving up."""
+
+    def _lower(self):
+        task = tasks_io.load_task(str(_EXTRA_SUM_JSON))
+        src = lower_rocq.lower(task, task["body"], witness=None)
+        return task, src
+
+    def test_gate_fires_for_this_task(self):
+        task = tasks_io.load_task(str(_EXTRA_SUM_JSON))
+        self.assertTrue(lower_rocq._has_rec_int_spec_fun(task))
+
+    def test_t_eqs_rec_is_not_the_trivial_fail(self):
+        _task, src = self._lower()
+        self.assertIn("Ltac t_eqs_rec :=\n  multimatch goal with", src)
+        self.assertNotIn("Ltac t_eqs_rec := fail.", src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_real_compiles(self):
+        _task, src = self._lower()
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+        _assert_no_shortcuts(self, src)
+
+    @unittest.skipUnless(COQC and shutil.which("coqchk"),
+                         "coqc/coqchk not on PATH")
+    def test_graded_verdict_is_verified(self):
+        task, src = self._lower()
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / f"{task['name']}.v"
+            p.write_text(src, encoding="utf-8")
+            result = rocq_backend.verify(p)
+            self.assertEqual(result.outcome, Outcome.VERIFIED,
+                             getattr(result, "detail", ""))
+
+
+class DigitSumRecGateNoOpTest(unittest.TestCase):
+    """digit_sum (committed, `t/tasks/digit_sum.t`) also declares a
+    self-recursive int spec_fun (`dsum`) and a `while` loop -- the SAME
+    two conditions `_has_rec_int_spec_fun` gates `t_eqs_rec` on, so it is
+    the regression pin for this item's fix touching an ALREADY-VERIFIED
+    committed row, not only a new one. `t_eqs_rec` is generated (the gate
+    fires) but the plain `t_eqs`/`t_eqs_h` alternatives close digit_sum's
+    own induction step exactly as before this date; this task's real and
+    twin must lower and compile byte-for-byte reachable the same as
+    before (no cell in AGREEMENT.md's digit_sum row may move)."""
+
+    def test_gate_fires_but_real_still_compiles(self):
+        task = tasks_io.load_task(str(HERE / "tasks" / "digit_sum.t"))
+        self.assertTrue(lower_rocq._has_rec_int_spec_fun(task))
+        src = lower_rocq.lower(task, task["body"], witness=None)
+        if COQC:
+            ok, out = _compile(src)
+            self.assertTrue(ok, out)
+
+    @unittest.skipUnless(COQC and shutil.which("coqchk"),
+                         "coqc/coqchk not on PATH")
+    def test_graded_verdict_still_refuted(self):
+        task, twin_body, witness, src, rung = _twin_source("digit_sum.t")
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / f"{task['name']}_twin.v"
+            p.write_text(src, encoding="utf-8")
+            result = rocq_backend.verify(p)
+            self.assertEqual(result.outcome, Outcome.REFUTED,
+                             getattr(result, "detail", ""))
+
+
 if __name__ == "__main__":
     unittest.main()

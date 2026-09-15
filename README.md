@@ -26,6 +26,7 @@ Seven verdicts on one program catch what one verifier cannot: a mistranslation, 
 | DafnyBench programs within t's current language | 334 of 643 gradable | [`t/COVERAGE-dafnybench.md`](t/COVERAGE-dafnybench.md) |
 | Natural-language programming problems with tests, the corpus t aims at | 24,748 problems, 772 of 4,239 function-shaped ones within t's language | [`nl/`](nl/), [`t/COVERAGE-nl.md`](t/COVERAGE-nl.md) |
 | A 1.5B model trained on the twins it refuted | on 161 held-out problems, answers verified with a refuted twin went from 9 to 15 after two rounds (12 to 16 with three samples each); test passes did not move | [`t/LOOP-CURVE.md`](t/LOOP-CURVE.md) |
+| A 27B model writing t tasks from MBPP problems, thinking off | 143 of 368 well formed, 44 verify with a refuted twin in all seven and pass the tests (the 7B managed 4) | [`t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md`](t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md) |
 | tup 0.1 | boots from its own disk to a login prompt under QEMU in 20 to 45 seconds depending on the host, witnessed on macOS, Ubuntu and Windows by someone other than the author | [`tup/receipts/`](tup/receipts/) |
 
 Numbers above are from 2026-09-15. When a number moves, the record moves with it.

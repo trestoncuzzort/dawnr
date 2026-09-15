@@ -2311,7 +2311,62 @@ proof obligation, not the seq-placeholder gap this fix targets; named
 open, the placeholder fix ends its ABSTAIN but does not itself close the
 remaining gap). Neither move is a regression under the bar (`_loop_zero`
 only fires where it previously raised, ABSTAIN was never a kernel
-verdict to begin with)."""
+verdict to begin with).
+
+2026-09-15 (lean-sole, ROADMAP 16.2/COVERAGE-lifted-785.md's "Sole
+blockers": "lean alone: 9"). `Lower._param_state_bridge_lines` (new,
+see its own docstring at `lower_loop`) fixes two of the nine: pow's own
+REAL (`0 <= a * x`, a param times a loop-state accumulator, both
+already nonneg by `requires`/the invariants in scope) and factorial's
+own REAL (`0 <= i * res`, the identical class between two bare loop-
+state vars), both previously UNPROVED because `_t_loop_spec`'s
+recursive-apply closer (`then_tac`, `apply ... <;> self._gr()`) had no
+nonlinear-sign theory to offer `grind` -- `_nonneg_bridge_lines` (pre-
+existing, wired into `_t_loop`'s own hinv-preservation `have`s, never
+into `_t_loop_spec`'s theorem) only ever paired a loop-state term with
+ITSELF, never with a DIFFERENT term or a bare param. MEASURED (`lean
+-DmaxHeartbeats=400000` on each emitted file, this session): both now
+read the exact tool message "error: `grind` failed" only at the
+pre-existing, EXPECTED
+`_t_vacuity_smoke` site (that theorem is meant to fail -- `requires` is
+satisfiable, so `False` is genuinely unprovable there), with zero
+un-expected errors elsewhere; `t/grade.py --tasks <dir> --kernels
+lean,dafny --flake 3` on each alone reads `real=verified twin=refuted`,
+FULL AGREEMENT.
+
+Four of the nine stay open, each for a reason outside this file's own
+loop/recursion/goal-closing functions or measured this session as a
+pre-existing named gap, not attempted further:
+- mfirstCero, find (both `undefined`-kind twin witnesses): the twin's
+  own GUARD (not its body) is itself undefined at the witness (measured
+  directly, a scratch replay: `i <= len(v) and v[i] != 0` at `v = []`,
+  `i = 0` -- the first conjunct holds, so Python's/Lean's short-circuit
+  `and` evaluates the second, `v[0]`, out of bounds) -- `_cert_undefined_
+  loop`'s own `if guard_now is not True: return None` (frozen this wave,
+  belongs to the certificate functions) treats a guard-level Undef
+  identically to a false guard and abstains, so no certificate is ever
+  built. The fix belongs inside that frozen method (distinguishing
+  "guard evaluated to False" from "guard's own evaluation raised
+  Undef", the latter being exactly the witness to certify), not in any
+  function this wave's item owns.
+- dafny_synthesis_task_id_106__appendArrayToSeq (REAL still UNPROVED,
+  `undefined`-kind twin already REFUTED): the pre-existing, already-
+  named "THE INVARIANT-APPLICATION LEAF" residual (`_gr()`'s own
+  docstring above, 2026-09-14) -- `hinv5`/`hinv6`'s own preservation
+  goal needs `List.getElem_append`-style index-congruence reasoning once
+  `r ++ [a[i]!]` and the invariant's own `s`/`a` sides are DIFFERENT
+  lists, tried and reverted there before this wave; unsolved goals
+  confirmed again this session (`lean -DmaxHeartbeats=400000`,
+  `error: unsolved goals` at the `_t_loop_spec` `hinv5`/`hinv6` cases,
+  identical shape).
+- dafny_synthesis_task_id_578__interleave, and the two `getEven` rows
+  (seng2011, dafny_exercise's own `prac3_ex2`): read TIMEOUT/TIMEOUT on
+  both sides of every grade.py run this session, on a box measured at
+  load average 150-255 (`uptime`, this session, concurrently) -- wall-
+  clock TIMEOUT under that contention is not distinguishable here from a
+  genuine heartbeat exhaustion without a dedicated, uncontended
+  `set_option trace.grind.ematch true` probe this session did not reach
+  before its own time budget closed; named open rather than guessed."""
 from __future__ import annotations
 
 import sys
@@ -6381,6 +6436,78 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                          f"(by omega)) (by omega)")
         return lines
 
+    # THE PARAM-STATE PRODUCT GAP (2026-09-15, lean-sole's own item,
+    # "the nine sole-blocked rows"): pow's own `_t_loop_spec` preservation
+    # step needs `0 <= a * x` (a a PARAM, x the accumulator loop-state
+    # variable, both nonneg by the invariants/`requires` in scope) to
+    # discharge `hinv3`'s recursive-call instance -- measured directly
+    # (`lean -DmaxHeartbeats=400000` on the emitted file: `grind` reports
+    # a genuine satisfying assignment for the negation, `a := 0, x := 0`
+    # is a real countermodel to the NEGATED goal only because grind's
+    # linear cutsat core has no theory relating a product's sign to its
+    # two factors' -- the identical class "THE CUBE NONLINEARITY" above
+    # names, but between TWO DISTINCT terms, one of them a bare PARAM
+    # `_nonneg_bridge_lines` never sees (it only ever walks `state`, a
+    # loop's own local variables, never `self.task["params"]`).
+    #
+    # ONLY BARE ATOMS, never a substituted (env_b) new-state term (2026-
+    # 09-15, found chasing factorial's own residual after the first pass
+    # here paired NEW-state terms too, e.g. `res`'s own update `i * res`):
+    # a recursive-call obligation like `_t_loop_spec`'s own `hinv3` reads,
+    # AFTER substitution, `i * res >= 0` where `i`/`res` are already the
+    # CURRENT scope's bare names (the invariant `res >= 0` instantiated at
+    # the call's actual argument expression, which for `res` IS `i * res`
+    # textually) -- so the two FACTORS this goal is actually built from
+    # are always bare params/state vars, and pairing bare atoms alone
+    # already produces the needed fact (`i`, `res` both bare, paired
+    # directly). Pairing the SUBSTITUTED term itself as a factor (the
+    # first version of this fix) is unsound as a `by omega` side
+    # condition to begin with (`0 <= i * res` is exactly as nonlinear as
+    # the goal it is meant to help discharge -- omega cannot prove it,
+    # so that `have` silently fails under `try` and contributes nothing),
+    # so bare atoms are both necessary and sufficient here; dropping the
+    # substituted forms only removes dead alternatives, never a live one.
+    #
+    # BOTH multiplication orders (2026-09-15, same pass): `Int.mul_nonneg
+    # ha hb`'s conclusion is `0 <= t1 * t2` in the SOURCE order of its two
+    # proof arguments, a syntactically different term from `t2 * t1` --
+    # measured directly (factorial's own goal is `i * res`, the have from
+    # the (res, i) pair alone read `res * i`, and `grind` left the goal
+    # unsolved rather than normalizing the commutation on its own). Each
+    # unordered pair is therefore emitted as two independent `try have`s.
+    #
+    # Wired into `then_tac`'s own recursive-apply closer (below) as one
+    # more `first`-alternative AFTER the pre-existing `self._gr()`, so
+    # every already-closing goal keeps closing on that same first
+    # alternative, unchanged; only a goal `self._gr()` alone could not
+    # close gets the extra `try have`s in scope before a second `self._gr()`
+    # attempt. Measured (t/grade.py, lean+dafny, flake 3, this session's
+    # own dated note below carries the regression run): the 34 committed
+    # tasks' own loop cells are unaffected (none reach this second
+    # alternative, `self._gr()` alone already closed every one of them).
+    def _param_state_bridge_lines(self, state: list, types: dict) -> list[str]:
+        terms: list[str] = []
+        seen: set = set()
+        for p in self.task["params"]:
+            if p["type"] == "int" and p["name"] not in seen:
+                seen.add(p["name"])
+                terms.append(p["name"])
+        for v in state:
+            if types.get(v) == "int" and v not in seen:
+                seen.add(v)
+                terms.append(v)
+        lines = []
+        for i, t1 in enumerate(terms):
+            for j, t2 in enumerate(terms[i:], start=i):
+                lines.append(
+                    f"try have _mpb{i}_{j}a : (0:Int) ≤ ({t1}) * ({t2}) "
+                    f":= Int.mul_nonneg (by omega) (by omega)")
+                if t1 != t2:
+                    lines.append(
+                        f"try have _mpb{i}_{j}b : (0:Int) ≤ ({t2}) * ({t1}) "
+                        f":= Int.mul_nonneg (by omega) (by omega)")
+        return lines
+
     # LOOP: one top-level while; invariants become the hypotheses of a
     # recursive helper theorem (the induction hypothesis, literally).
     def lower_loop(self, wf_k: int) -> tuple[str, list]:
@@ -7064,11 +7191,24 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # that silently corrupts other goals' own proof search. isPrime
         # (605) is unaffected either way: `kind` there is "forall", so
         # this whole family never reaches isPrime at all.
+        # THE PARAM-STATE PRODUCT GAP's own closer (`_param_state_bridge_
+        # lines`, above): wired in as one more `first`-alternative on the
+        # recursive-apply's own per-goal closer specifically (never on
+        # `dite_else_tac`/`exit_tac`, both already covered by their own
+        # mechanisms) -- `first` tries the pre-existing `self._gr()`
+        # FIRST, so a goal that already closed on it is byte-identically
+        # unaffected; only a goal it could not close reaches the `try
+        # have`s in scope for a second `self._gr()` attempt.
+        mb_lines = self._param_state_bridge_lines(state, types)
+        rec_closer = (
+            f"(first | {self._gr()} | "
+            f"({'; '.join(mb_lines)}; {self._gr()}))"
+            if mb_lines else self._gr())
         then_tac = (
             f"all_goals (first | (apply {self.name}_t_loop_spec <;> "
-            f"{self._gr()}) | {dite_else_tac if can_dite else self._gr()})"
+            f"{rec_closer}) | {dite_else_tac if can_dite else self._gr()})"
             if has_return or can_dite else
-            f"all_goals (apply {self.name}_t_loop_spec <;> {self._gr()})")
+            f"all_goals (apply {self.name}_t_loop_spec <;> {rec_closer})")
         # SPEC.md "Pairs" (2026-09-10), found on min_max's own two merged
         # if-updates (lo's and hi's, the loop's own state each pass): a
         # bare `repeat split` only chases the FIRST split's TRUE branch

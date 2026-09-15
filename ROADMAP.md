@@ -28,8 +28,8 @@ Two halves. Both must hold before the tag.
 | WS-15 the editors | library, cache and language server done; VS Code built, walk-through not yet run by a second person; Visual Studio open |
 | WS-16 the claims | 16.1 done; 16.2 at 57 of 82; 16.3 open |
 | WS-17 the release | install pages written for three operating systems; second-person clause, the tag, and going public open |
-| WS-18 the training loop | built and measured twice at 1.5B; paused until a stronger model is in the loop |
-| WS-19 the frontier moves | moves 1, 4 and 6 done; move 2 blocked on API access; 3 and 7 waiting |
+| WS-18 the training loop | built and measured twice at 1.5B; a local 27B now supplies positives (44 of 368 in all seven with tests passing) |
+| WS-19 the frontier moves | moves 1, 4 and 6 done; move 2 has a local 27B on the lab workstation; 3 and 7 next |
 
 ## WS-13: the language
 
