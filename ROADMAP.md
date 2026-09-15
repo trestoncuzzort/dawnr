@@ -16,7 +16,7 @@ Numbers on this page are as of 2026-09-15.
 
 Two halves. Both must hold before the tag.
 
-1. **Coverage.** At least 82 of the 164 MBPP-DFY programs lift into t and read all seven, and someone other than the author reproduces the table from a clean checkout. Today: 56 of 164 read all seven and 99 of 164 lift ([`t/COVERAGE-mbpp-dfy-lifter.md`](t/COVERAGE-mbpp-dfy-lifter.md)).
+1. **Coverage.** At least 82 of the 164 MBPP-DFY programs lift into t and read all seven, and someone other than the author reproduces the table from a clean checkout. Today: 57 of 164 read all seven and 99 of 164 lift ([`t/COVERAGE-mbpp-dfy-lifter.md`](t/COVERAGE-mbpp-dfy-lifter.md)).
 2. **Usability.** A fresh checkout opens a `.t` file in VS Code on Linux and Windows, and in Visual Studio on Windows, with syntax highlighting, errors at the token, hover, go to definition, formatting, and the seven verdicts for the real task and its twin with the witness input. The steps are a committed walk-through that a second person has repeated. Today: everything is built for VS Code; no second person has run the walk-through, and the Visual Studio extension is not built.
 
 ## Where things stand
@@ -26,7 +26,7 @@ Two halves. Both must hold before the tag.
 | WS-13 the language | 13.2 and 13.3 done; 13.4 at 457 of 462 conformance cells; 13.1 open |
 | WS-14 the notation | done |
 | WS-15 the editors | library, cache and language server done; VS Code built, walk-through not yet run by a second person; Visual Studio open |
-| WS-16 the claims | 16.1 done; 16.2 at 56 of 82; 16.3 open |
+| WS-16 the claims | 16.1 done; 16.2 at 57 of 82; 16.3 open |
 | WS-17 the release | install pages written for three operating systems; second-person clause, the tag, and going public open |
 | WS-18 the training loop | built and measured twice at 1.5B; paused until a stronger model is in the loop |
 | WS-19 the frontier moves | moves 1, 4 and 6 done; move 2 blocked on API access; 3 and 7 waiting |
@@ -61,7 +61,7 @@ Done. `.t` files are the input ([`t/tasks/`](t/tasks/)); parse and well-formedne
 
 **16.1 The lifter, the sweep, the spec experiment.** Done. The lifter translates DafnyBench programs into t and checks each translation by lemma and by a differential run ([`t/LIFTER-DESIGN.md`](t/LIFTER-DESIGN.md), 35 recorded decisions in [`t/LIFTER-DECISIONS.md`](t/LIFTER-DECISIONS.md)). The sweep grades every lifted task in every verifier ([`t/COVERAGE-lifted-785.md`](t/COVERAGE-lifted-785.md)). The spec experiment asks a model to write a t task from a problem statement and grades the answer with all seven verifiers and the problem's tests ([`t/SPEC-EXPERIMENT-mbpp.md`](t/SPEC-EXPERIMENT-mbpp.md)). One script reproduces all three from scratch ([`t/reproduce.sh`](t/reproduce.sh)).
 
-**16.2 MBPP-DFY to half.** Open, at 56 of 82. The count has moved 5, 34, 48, 53, 56, 45, 54, 56 across the sweeps since 2026-09-06; the drop to 45 was the cost of a stricter twin rule (a refuted twin must be a program whose output differs at a verifier-confirmed input), and the rows have been earned back since. What blocks the remaining rows, by name: a membership invariant over a growing sequence that Verus, Lean and F\* do not yet prove; a Frama-C size bound that must come from a loop invariant; a Rocq bound lemma for recursive specification functions; then the lifter rules 13.1 names. The next sweep after each fix says the number.
+**16.2 MBPP-DFY to half.** Open, at 57 of 82. The count has moved 5, 34, 48, 53, 56, 45, 54, 56, 57 across the sweeps since 2026-09-06; the drop to 45 was the cost of a stricter twin rule (a refuted twin must be a program whose output differs at a verifier-confirmed input), and the rows have been earned back since. What blocks the remaining rows, by name: a membership invariant over a growing sequence that Verus, Lean and F\* do not yet prove; a Frama-C size bound that must come from a loop invariant; a Rocq bound lemma for recursive specification functions; then the lifter rules 13.1 names. The next sweep after each fix says the number.
 
 **16.3 The next corpora.** Open. HumanEval and MBPP bodies from nl/ through the same pipeline. Done when a second coverage table, in the same format, exists over a second corpus.
 

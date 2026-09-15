@@ -21,8 +21,8 @@ Seven verdicts on one program catch what one verifier cannot: a mistranslation, 
 |---|---|---|
 | Committed tasks that verify, with the twin refuted, in all seven verifiers | 30 of 34 | [`t/AGREEMENT.md`](t/AGREEMENT.md) |
 | Conformance probes each verifier must pass | 457 of 462 | [`t/CONFORMANCE.md`](t/CONFORMANCE.md) |
-| Dafny programs from DafnyBench translated into t by the lifter and graded | 326 tasks from 785 programs, 171 of 322 in all seven | [`t/COVERAGE-lifted-785.md`](t/COVERAGE-lifted-785.md) |
-| The 164 LLM-written DafnyBench programs (MBPP-DFY) | 99 of 164 translate, 56 of 164 in all seven | [`t/COVERAGE-mbpp-dfy-lifter.md`](t/COVERAGE-mbpp-dfy-lifter.md) |
+| Dafny programs from DafnyBench translated into t by the lifter and graded | 326 tasks from 785 programs, 182 of 326 in all seven | [`t/COVERAGE-lifted-785.md`](t/COVERAGE-lifted-785.md) |
+| The 164 LLM-written DafnyBench programs (MBPP-DFY) | 99 of 164 translate, 57 of 164 in all seven | [`t/COVERAGE-mbpp-dfy-lifter.md`](t/COVERAGE-mbpp-dfy-lifter.md) |
 | DafnyBench programs within t's current language | 334 of 643 gradable | [`t/COVERAGE-dafnybench.md`](t/COVERAGE-dafnybench.md) |
 | Natural-language programming problems with tests, the corpus t aims at | 24,748 problems, 772 of 4,239 function-shaped ones within t's language | [`nl/`](nl/), [`t/COVERAGE-nl.md`](t/COVERAGE-nl.md) |
 | A 1.5B model trained on the twins it refuted | on 161 held-out problems, answers verified with a refuted twin went from 9 to 15 after two rounds (12 to 16 with three samples each); test passes did not move | [`t/LOOP-CURVE.md`](t/LOOP-CURVE.md) |
