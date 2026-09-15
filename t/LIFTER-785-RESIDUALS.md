@@ -507,6 +507,104 @@ confirmed by the grader's independent pipeline. Newly eligible for the
 sweep the same way every other lifted row is; the 82-cell coverage bar
 itself needs the sweep's own re-run, not attempted here.
 
+## 2026-09-14: the four `L_fun`/`L_req`/`L_inv` checker refusals fixed (spec-function array-to-seq parameter)
+
+Wave O's lifter-contracts item (LIFTER-DECISIONS.md rows 34 and 35) named
+four programs refused at the checker in its own report and in
+`/home/tmcuzzort/tup/t/out/lift`'s own outcome files: `dafny-synthesis_task_id_2`
+SharedElements, `dafny-synthesis_task_id_161` RemoveElements, and
+`dafny-synthesis_task_id_249` Intersection all refuse `token:
+L_fun_inArray`; `dafny-synthesis_task_id_447` CubeElements refuses with no
+spec_fun in play at all.
+
+**Reproduced (this box, dafny 4.11.0).** Re-lifting each alone and running
+dafny directly on the emitted `.check.check.dfy` gives, before the fix:
+
+```
+SharedElements/RemoveElements/Intersection (L_fun_inArray, both its own
+`ensures` and L_ens's forall-hint call):
+  Error: incorrect argument type at index 0 for function parameter 'a_v'
+  (expected seq<int>, found array<int>)
+
+CubeElements (L_inv_0's own `ensures`, no spec_fun involved):
+  Error: size operator expects a collection argument (instead got
+  array<int>)
+```
+
+**The bug, two instances of one class.** `_fn_param_views` (row 28's own
+map from a closure FUNCTION's own char/string-typed params to
+`_view_text`'s substitution vocabulary, kept deliberately separate from
+the METHOD-level `views` dict decision 1's `array_view` populates) never
+had an `"array"` case: an array-typed spec_fun parameter (SharedElements'
+own `inArray(a: array<int>, x: int)`) got the RAW source-typed argument
+name at both call sites `_build_checker_parts` builds against the LIFTED
+spec_fun, whose matching parameter decision 1 already lifts to
+`seq<int>` -- a plain Dafny type mismatch, not a proof gap.
+
+CubeElements has no spec_fun, but the SAME class of bug on a different
+scope: `cubedArray`, an "alloc-fill" array LOCAL allocated inside the
+loop (`var cubedArray := new int[a.Length];`, never a param or return),
+is lifted to a bare task-side `seq` of the same name; the method-level
+`views` dict only ever names params/return, so `L_inv_0`'s own
+`lifted_inv` printed a bare reference to it where the lemma signature
+(built from the source's own `array<int>` local type, correctly) declares
+it `array<int>` -- `|cubedArray|` on an `array<int>` is exactly the same
+"expected seq<int>/collection, found array<int>" mismatch, one property
+(a source array-typed name feeding a t seq-typed use) reached through two
+different name-scopes (a closure function's own params; a loop's own
+in-scope locals) that happened to get view-substitution wired up
+separately and only one of the two ever received it.
+
+**The fix (`t/lift_check.py`).** `_view_kind_for_type` factors the
+char/string/array decision (previously inlined in `_fn_param_views`
+alone) into one function of a source `Type`, shared by every place that
+now builds a views-shaped dict: `_fn_param_views` (spec_fun params,
+extended with the `"array"` case) and a new `loop_views` merge in the
+`L_inv_k` build (method-level `views` plus every loop-in-scope
+`(name, type)` pair from `full_names`/`full_types`, so an in-scope
+array-typed local gets the same `(name[..])` substitution a param already
+had). Neither change touches `_view_text` itself (already handled
+`"array"` correctly, decision 1) or anywhere `views` was already
+populated (params/return recompute to the identical entries, so merging
+is a no-op there) -- no budget raised, no clause weakened, the same
+`(name[..])`/length-fact discipline decision 1 already established for
+params extended to two scopes it had not reached.
+
+**Reproduced fixed, all four, `lift_check` end to end.**
+
+| task | method | checker lemma verdicts | wall |
+|---|---|---|---|
+| dafny-synthesis_task_id_2 | SharedElements | L_fun_inArray/L_req/L_ens/L_inv_0: verified | 93.7s |
+| dafny-synthesis_task_id_161 | RemoveElements | L_fun_inArray/L_req/L_ens/L_inv_0: verified | 94.2s |
+| dafny-synthesis_task_id_249 | Intersection | L_fun_inArray/L_req/L_ens/L_inv_0: verified | 96.3s |
+| dafny-synthesis_task_id_447 | CubeElements | L_req/L_ens/L_inv_0: verified | 7.5s |
+
+(`t/test_lift_check.py`'s new `test_spec_fun_array_param_end_to_end`,
+`--slow`, asserts exactly this table.)
+
+**Graded, flake 3, dafny + rocq** (`t/grade.py --tasks <these 4 tasks>
+--kernels dafny,rocq --flake 3 --jobs 4`): all four read `real=verified`
+in dafny -- the lift this fix makes soundly checkable is also soundly
+verified, not merely accepted by the checker. rocq abstains on the real
+for the three `inArray`-shaped tasks ("a quantifier in computational
+position has no decidable lowering here", an existing rocq-lowering gap
+this item does not own) and reads the CubeElements twin `refuted` in both
+columns (`compare-flip`, witness `a=[] -> real [], twin at index 0
+outside [0,0)`); SharedElements/RemoveElements/Intersection's own twin
+rung (`collapse-if`) reads `real=verified twin=unproved` in dafny, an
+existing twin-ladder-rung gap on THIS program shape, not a regression
+this fix introduces (the fix only concerns whether the checker itself
+accepts the lift, section 9's own scope; the twin's own provability is
+`build_differential`/the grader's business, untouched here).
+
+**Regression, the 164.** Re-lifted all 164 MBPP-DFY programs
+(`t/lifter.py --list <164> --corpus-dir <DafnyBench ground_truth> --jobs 4
+--timeout 200 --force`) and diffed every file's own lift-or-refuse
+verdict against `/home/tmcuzzort/tup/t/out/lift`: see the diff reported
+alongside this patch; no previously-`lifted` task changed or stopped
+lifting, and the four rows above flip `refused:lift-check-failed ->
+lifted`.
+
 ## Not a residual: the 25 `policy-gap:array` rows
 
 `LIFTER-785.md`'s "Undecided rows (26)" is 25 rows reading `policy-gap:array`

@@ -175,5 +175,153 @@ class TestLoopCertFallback(unittest.TestCase):
         self.assertIn("(not (F (", src)
 
 
+class TestGaussSumInvariant(unittest.TestCase):
+    """spark-sole (2026-09-14, `_gauss_sum_target`'s own docstring): a loop
+    invariant `sum == div(i * (i + 1), 2)` gets the extra, ordinary
+    invariant `2 * sum == i * (i + 1)`, so gnatprove's inductive step never
+    has to cross a T_Div case split and a nonlinear product in the same
+    goal. MEASURED gap this pins (this session, gnatprove FSF 16.1.0):
+    gauss's and triangleNumber's own spark REAL used to TIMEOUT
+    (VC_POSTCONDITION severity medium/limit, budget exhausted) even
+    standalone, no contention; with the fix both verify in ~5-7s and their
+    twins (kind "value", already routed through `F_Cert`) read REFUTED,
+    unchanged."""
+
+    def _gauss_task(self):
+        return {
+            "t": 1, "name": "gauss_t", "params": [{"name": "n", "type": "int"}],
+            "returns": [{"name": "sum", "type": "int"}],
+            "requires": [{"op": ">=", "args": [{"var": "n"}, {"int": 0}]}],
+            "ensures": [{"op": "==", "args": [
+                {"var": "sum"},
+                {"op": "div", "args": [
+                    {"op": "*", "args": [{"var": "n"}, {"op": "+", "args": [
+                        {"var": "n"}, {"int": 1}]}]}, {"int": 2}]}]}],
+            "gate": "loops",
+            "body": [
+                {"var": {"name": "sum", "type": "int", "init": {"int": 0}}},
+                {"var": {"name": "i", "type": "int", "init": {"int": 0}}},
+                {"while": {
+                    "cond": {"op": "<", "args": [{"var": "i"}, {"var": "n"}]},
+                    "decreases": {"op": "-", "args": [
+                        {"var": "n"}, {"var": "i"}]},
+                    "invariants": [
+                        {"op": "==", "args": [
+                            {"var": "sum"},
+                            {"op": "div", "args": [
+                                {"op": "*", "args": [
+                                    {"var": "i"}, {"op": "+", "args": [
+                                        {"var": "i"}, {"int": 1}]}]},
+                                {"int": 2}]}]}],
+                    "body": [
+                        {"assign": ["i", {"op": "+", "args": [
+                            {"var": "i"}, {"int": 1}]}]},
+                        {"assign": ["sum", {"op": "+", "args": [
+                            {"var": "sum"}, {"var": "i"}]}]}]}},
+            ],
+        }
+
+    def test_target_matches_running_total_invariant(self):
+        w = self._gauss_task()["body"][2]["while"]
+        found = lower_spark._gauss_sum_target(w)
+        self.assertIsNotNone(found)
+        self.assertEqual(found["var"], "sum")
+        self.assertEqual(found["numerator"], {"op": "*", "args": [
+            {"var": "i"}, {"op": "+", "args": [{"var": "i"}, {"int": 1}]}]})
+
+    def test_no_match_returns_none(self):
+        w = {"invariants": [{"op": ">=", "args": [{"var": "i"}, {"int": 0}]}]}
+        self.assertIsNone(lower_spark._gauss_sum_target(w))
+
+    def test_real_lowering_carries_the_extra_invariant(self):
+        task = self._gauss_task()
+        src = lower_spark.lower(task, task["body"])
+        # The doubled restatement appears somewhere in W_1's Pre/Post
+        # (not pinned to exact whitespace of one particular rendering).
+        self.assertIn("Big_Integer'(2) * Sum", src)
+        self.assertIn("I * (I + Big_Integer'(1))", src)
+
+
+class TestUndefinedCondCertificate(unittest.TestCase):
+    """spark-sole (2026-09-14, `_undef_obligation`'s own dated note): a
+    compare-flip twin whose loop guard runs one iteration too far can make
+    the FIRST undefined operation sit in the loop body's own `if` (or
+    `while`) COND rather than in a `var`/`assign` RHS -- `_walk` used to
+    answer `return None` (no certificate at all) the instant it met that
+    shape, even though `interp.ev` had just confirmed the cond's own
+    definedness obligation false at this concrete witness. MEASURED gap
+    this pins (this session, gnatprove FSF 16.1.0, mmaximum1/findMax/
+    findMin/lookForMin/find_min_index's own spark twins): no
+    T_Refutation_Certificate was ever emitted, so gnatprove reported the
+    file's own honest (but here IRRELEVANT to the twin question) W_1
+    contract failure -- verified/unproved, never verified/refuted. Fixed
+    by surfacing the cond's own false definedness obligation as the found
+    one, the same reading a var/assign RHS's already got two lines below."""
+
+    def _one_at_task(self):
+        # v[0] > v[i]-shaped guard collapsed to a length-1 case: a
+        # compare-flip mutation (`<` -> `<=`) makes the loop run one
+        # iteration too far and read `v[j]` with `j == len(v)`.
+        return {
+            "t": 1, "name": "first_ge_t",
+            "params": [{"name": "v", "type": "seq"}],
+            "returns": [{"name": "r", "type": "int"}],
+            "requires": [{"op": ">", "args": [
+                {"op": "len", "args": [{"var": "v"}]}, {"int": 0}]}],
+            "ensures": [{"op": ">=", "args": [{"var": "r"}, {"int": 0}]}],
+            "gate": "loops",
+            "body": [
+                {"var": {"name": "j", "type": "int", "init": {"int": 0}}},
+                {"var": {"name": "r", "type": "int", "init": {"int": 0}}},
+                {"while": {
+                    "cond": {"op": "<", "args": [
+                        {"var": "j"},
+                        {"op": "len", "args": [{"var": "v"}]}]},
+                    "decreases": {"op": "-", "args": [
+                        {"op": "len", "args": [{"var": "v"}]}, {"var": "j"}]},
+                    "invariants": [
+                        {"op": "<=", "args": [
+                            {"var": "j"},
+                            {"op": "len", "args": [{"var": "v"}]}]}],
+                    "body": [
+                        {"if": {
+                            "cond": {"op": ">", "args": [
+                                {"op": "at", "args": [
+                                    {"var": "v"}, {"var": "j"}]},
+                                {"int": 0}]},
+                            "then": [{"assign": ["r", {"var": "j"}]}],
+                            "else": []}},
+                        {"assign": ["j", {"op": "+", "args": [
+                            {"var": "j"}, {"int": 1}]}]}]}},
+            ],
+        }
+
+    def test_walk_surfaces_the_ifs_own_cond(self):
+        task = self._one_at_task()
+        # The twin: `<` -> `<=` in the while's own guard, a one-line
+        # compare-flip exactly like harness's own mutator would produce.
+        twin_body = [dict(s) for s in task["body"]]
+        twin_while = dict(twin_body[2]["while"])
+        twin_while["cond"] = {"op": "<=", "args": twin_while["cond"]["args"]}
+        twin_body[2] = {"while": twin_while}
+        w = {"v": [0], "_kind": "undefined", "_real": "no value"}
+        sub = {"v": lower_spark._cert_lit([0])}
+        vals = {"v": [0]}
+        L = lower_spark.Lower(task)
+        ob = lower_spark._undef_obligation(task, twin_body, sub, vals, L)
+        self.assertIsNotNone(ob, "the if's own cond must now be surfaced")
+        self.assertIn("not", ob)
+
+    def test_certificate_now_emitted_end_to_end(self):
+        task = self._one_at_task()
+        twin_body = [dict(s) for s in task["body"]]
+        twin_while = dict(twin_body[2]["while"])
+        twin_while["cond"] = {"op": "<=", "args": twin_while["cond"]["args"]}
+        twin_body[2] = {"while": twin_while}
+        w = {"v": [0], "_kind": "undefined", "_real": "no value"}
+        src = lower_spark.lower(task, twin_body, witness=w)
+        self.assertIn("T_Refutation_Certificate", src)
+
+
 if __name__ == "__main__":
     unittest.main()

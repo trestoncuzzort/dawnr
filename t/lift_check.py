@@ -567,6 +567,26 @@ def _closure_rename_map(source: MethodDecl, closure: tuple) -> dict:
 # clause, and its own `expr`/`stmts` helpers are private to that module.
 # ===========================================================================
 
+def _view_kind_for_type(t: Optional[Type]) -> Optional[str]:
+    """The `_view_text` vocabulary entry (`"char"`/`"string"`/`"array"`)
+    a SOURCE type maps to when t's own lifted shape for it is a bare
+    `seq`/`int`, or `None` when the source type already matches t's
+    shape and no view substitution is needed. Shared by every place that
+    builds a `views`-shaped dict from (name, source-type) pairs: the
+    method-level params/return in `_build_checker_parts`, a closure
+    function's own params (`_fn_param_views`), and a loop's in-scope
+    locals (2026-09-14 fix below)."""
+    if t is None:
+        return None
+    if t.kind == "char":
+        return "char"
+    if t.kind == "string" or (t.kind == "seq" and len(t.args) == 1 and t.args[0].kind == "char"):
+        return "string"
+    if t.kind == "array":
+        return "array"
+    return None
+
+
 def _fn_param_views(params) -> dict:
     """Row 28: a closure FUNCTION's own char/string-typed params, keyed
     by name, in `_view_text`'s vocabulary -- distinct from the METHOD
@@ -577,16 +597,25 @@ def _fn_param_views(params) -> dict:
     `c` absent from the method-level `views` entirely since the METHOD
     itself has no `c` parameter, called the LIFTED spec_fun with a bare
     `char`-typed `c` and failed to resolve, "incorrect argument type for
-    function parameter 'c' (expected int, found char)")."""
+    function parameter 'c' (expected int, found char)").
+
+    2026-09-14 fix (LIFTER-785-RESIDUALS.md, the four `L_fun`/`L_req`/
+    `L_inv` `lift-check-failed` rows, SharedElements/RemoveElements/
+    Intersection/CubeElements): extended to array-typed params too --
+    decision 1's own `array_view` (`(name[..])`) was only ever threaded
+    into the METHOD-level `views` dict; a closure FUNCTION's own array
+    -typed parameter (a `spec_fun`'s source argument, called against the
+    LIFTED spec_fun whose matching parameter is a seq per decision 1)
+    never got the same substitution, so the raw `array<int>`-typed name
+    was passed straight to a `seq<int>`-typed parameter -- measured:
+    "incorrect argument type ... (expected seq<int>, found array<int>)"
+    on `inArray(a, x)` in `L_fun_inArray`'s own `ensures` and again in
+    `L_ens`'s forall-hint call."""
     out: dict = {}
     for p in params:
-        if p.type is None:
-            continue
-        if p.type.kind == "char":
-            out[p.name] = "char"
-        elif p.type.kind == "string" or (p.type.kind == "seq" and len(p.type.args) == 1
-                                          and p.type.args[0].kind == "char"):
-            out[p.name] = "string"
+        kind = _view_kind_for_type(p.type)
+        if kind is not None:
+            out[p.name] = kind
     return out
 
 
@@ -1638,7 +1667,25 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             # CURRENT (so-far) value, same as in the ensures clause above.
             inv_exprs = [_split_array_post_state(e, array_mutation.name, post_ident) for e in inv_exprs]
         src_inv = _conj_text(inv_exprs, loop_crename)
-        lifted_inv = (_t_conj(task_loops[k].get("invariants", []), views)
+        # 2026-09-14 fix (LIFTER-785-RESIDUALS.md, CubeElements's own
+        # `L_inv_0` failure, distinct from the `L_fun` one above): the
+        # method-level `views` dict only ever names PARAMS/RETURN, so an
+        # "alloc-fill" array local in scope inside the loop (CubeElements'
+        # own `cubedArray`, an `array<int>` in the source, lifted to a
+        # bare task-side `seq` local of the same name) kept its lemma
+        # parameter typed `array<int>` (`ps_inv` above, from the source's
+        # own `full_types`) while `lifted_inv` printed a bare reference to
+        # it -- "size operator expects a collection argument (instead got
+        # array<int>)" on `|cubedArray|`. `loop_views` adds every
+        # in-scope name whose SOURCE type needs a view (locals_in_scope
+        # included; params/return recompute to the same entries `views`
+        # already has, so merging is a no-op there).
+        loop_views = dict(views)
+        for _n, _t in zip(full_names, full_types):
+            _k = _view_kind_for_type(_t)
+            if _k is not None:
+                loop_views[_n] = _k
+        lifted_inv = (_t_conj(task_loops[k].get("invariants", []), loop_views)
                      if k < len(task_loops) else "true")
         # Same reason as L_ens's forall hint (section 9 item 5, measured):
         # Dafny will not apply a spec_fun's equivalence lemma unprompted.

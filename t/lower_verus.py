@@ -1139,6 +1139,71 @@ before and after this change (verus + dafny, flake 3), produce a
 byte-identical table (only the run timestamp differs) -- no cell moved,
 including the ones that already read verified/refuted. See
 t/test_lower_verus_refusals.py.
+
+2026-09-14 (ROADMAP 16.2, verus-closure item, sweep r25's three MALFORMED
+rows): 472 containsConsecutiveNumbers (`exists k| ... a[k]+1==a[k+1]`),
+567 isSorted (`... exists k_v| ... a[k_v] > a[(k_v+1)]`, inside its own
+`!sorted ==>` ensures clause) and 622 findMedian (`requires ... forall i|
+... a[i] <= a[i+1]`) all lowered to a quantifier Verus rejected outright:
+"Could not automatically infer triggers for this quantifier", measured
+directly on each task's own emitted `.rs` (`verus <file>.rs`). All three
+share one shape none of the existing trigger branches (`_has_chained_at`'s
+NESTED SEQUENCES case, `_has_fixed_at`'s ARGMAX case) catches: exactly one
+seq root read by the bare bound variable (`a[k]`) PLUS a second read of
+the SAME seq offset from it by a constant (`a[k+1]`) -- not two distinct
+roots (not chained), and the offset index still MENTIONS the bound
+variable (not fixed), so both existing branches fall through and no
+explicit trigger was ever supplied. New `_offset_at_by_var` collects this
+offset-read shape and `_root_plus_offset_trigger` combines it with the
+existing root into one `#![trigger ...]` group per term, additive for the
+identical reason the two existing branches are (never removes a candidate
+Verus's own inference would try, only supplies the ones ambiguity was
+hiding). Regenerated all three: MALFORMED/MALFORMED -> verified/refuted
+at each task's own already-measured twin witness (472: a=[0,0], real
+False vs twin True; 567: a=[0,0], real True vs twin False; 622: a=[0],
+b=[0], real 0 vs twin "at index -1 outside [0,1)"), no ensures or
+invariant touched.
+
+The five spec_fun-in-executable-position rows named alongside these three
+in the same sweep (412 removeOddNumbers, 426 filterOddNumbers, 436
+findNegativeNumbers, 554 findOddNumbers, 629 findEvenNumbers, each a
+filter loop calling `isEven`/`isOdd`/`isNegative` in its `if`) are NOT
+closed by this change and are left named rather than papered over: each
+lowers cleanly (no malformed Rust; `isEven` etc. as a plain `spec fn`
+called from the recursive loop helper's own `proof fn` body is legal
+Verus, not a mode error) but Verus's real error is a genuine SMT gap, not
+a syntax one -- `error: precondition not satisfied` at the loop helper's
+own recursive tail call, the loop invariant's `exists k_v5| evenList[k_v5]
+== arr[k_v4]` clause failing to re-derive across the append that grows
+`evenList` (measured directly, `verus <file>.rs`, e.g. 412's own
+`t_lp_..._0`: the failing precondition is line 59's `forall k_v4| ... k_v4
+< i_v2 ==> isEven(arr[k_v4]) ==> exists k_v5| ...`, at the tail call one
+iteration later). An explicit `assert(forall|t_j:int| ... evenList[t_j]
+== t_old_evenList[t_j])` restating seq-`+` prefix preservation right
+after the append did NOT close it (measured, same file, same failing
+line): the gap also needs the NEW index's witness (the just-appended
+element) threaded through, which needs a per-shape existential-carry
+proof this file does not yet generate. dafny's own lowering of these same
+five rows already reads real=unproved (measured, `t/grade.py --tasks
+<dir> --kernels dafny,verus --flake 3` on the eight-row set together),
+so this is not verus-specific surface syntax to fix in this file alone;
+named here as the open gap rather than closed with an unsound shortcut.
+
+Measured regression, all four required by this item's own bar: (1) the
+34-task committed matrix (`grade.py --tasks t/tasks --kernels
+verus,dafny --flake 3`) reads cell-for-cell identical to t/AGREEMENT.md's
+dafny and verus columns (compared programmatically, 34/34 unchanged) --
+the new trigger branch is only reachable when a quantifier body has a
+root read AND a same-seq offset read together, and no committed task's
+quantifier has that shape; (2) the conformance suite restricted to verus
+alone (`conformance.build_manifest`/`run_items`/`grade`, filtered to the
+verus column) reads 66 PASS / 0 FAIL, matching t/CONFORMANCE.md's "every
+FAIL cell is in framac" baseline exactly; (3) all 84 dafny_synthesis rows
+of t/COVERAGE-lifted-785.md that already read verus verified/refuted,
+relowered through the same grade.py call (verus alone, flake 3), all 84
+still read verified/refuted, none moved; (4)
+t/test_lower_verus_refusals.py and t/test_lower_verus_nested_trigger.py:
+15 tests, all pass (`python3 -m unittest` from t/).
 """
 from __future__ import annotations
 
@@ -2092,6 +2157,66 @@ def _nested_at_roots_by_var(e: dict, v: str, out: dict) -> None:
             _nested_at_roots_by_var(q["body"], v, out)
 
 
+def _offset_at_by_var(e: dict, v: str, out: dict) -> None:
+    """Collects, into `out` (key: the rendered index expression string, so
+    two occurrences of the same offset dedupe; value: the `at()` node),
+    every DIRECT `at(X, idx)` sub-term of e where X is a plain variable and
+    idx MENTIONS the bound variable v (`_mentions_var`) but is NOT exactly
+    the bare variable itself (that shape is `_at_roots_by_var`'s own root
+    case, collected separately) -- the "adjacent element" read, `a[k+1]`
+    alongside `a[k]`, measured malformed on three r25/r26 rows: 472
+    containsConsecutiveNumbers (`exists k| ... a[k]+1==a[k+1]`), 567
+    isSorted (`exists k_v| ... a[k_v] > a[(k_v+1)]`), 622 findMedian's
+    `requires` (`forall i| ... a[i] <= a[i+1]`). All three have exactly one
+    seq root (`_at_roots_by_var` finds `a[k]`) plus one offset read of the
+    SAME seq by `k+1`; Verus's own single-candidate auto-inference sees
+    two candidate terms in one body and refuses outright ("Could not
+    automatically infer triggers for this quantifier"), the identical
+    failure mode `_has_fixed_at`'s ARGMAX branch and `_has_chained_at`'s
+    NESTED SEQUENCES branch above already close for their own two-term
+    shapes -- this closes the third: root-plus-offset, same base sequence.
+    Walks the same shapes `_at_roots_by_var` does (args, ite, call,
+    forall/exists lo/hi only, never a shadowing inner body), for the same
+    reason: an offset read only matters as interference within the SAME
+    scope v is bound in."""
+    if "op" in e:
+        op, args = e["op"], e.get("args", [])
+        if op == "at" and len(args) == 2:
+            s, i = args
+            if (isinstance(s, dict) and "var" in s
+                    and i != {"var": v} and _mentions_var(i, v)):
+                out.setdefault(expr(i), e)
+        for a in args:
+            _offset_at_by_var(a, v, out)
+    elif "ite" in e:
+        c = e["ite"]
+        for k in ("cond", "then", "else"):
+            _offset_at_by_var(c[k], v, out)
+    elif "call" in e:
+        for a in e["call"]["args"]:
+            _offset_at_by_var(a, v, out)
+    elif "forall" in e or "exists" in e:
+        q = e.get("forall") or e.get("exists")
+        for k in ("lo", "hi"):
+            _offset_at_by_var(q[k], v, out)
+
+
+def _root_plus_offset_trigger(body: dict, v: str, roots: dict) -> str | None:
+    """Returns the combined `#![trigger ...]` string (one independent group
+    per root PLUS one per offset read) for `expr()`'s ROOT-PLUS-OFFSET
+    branch above, or None when `body` has no offset read of v at all (the
+    common case: every previously committed root-only quantifier). Kept as
+    a single helper, rather than inlining `_offset_at_by_var` at the call
+    site, so the "is there anything to do" check and the string it builds
+    can never drift apart."""
+    offsets: dict = {}
+    _offset_at_by_var(body, v, offsets)
+    if not offsets:
+        return None
+    return ("".join(f" #![trigger {expr(t)}]" for t in roots.values())
+            + "".join(f" #![trigger {expr(t)}]" for t in offsets.values()))
+
+
 def _mentions_var(e, v: str) -> bool:
     """True iff the bound variable v occurs anywhere in e -- a fully
     generic walk (dict values / list elements), since a t Expr JSON has no
@@ -2288,6 +2413,24 @@ def expr(e: dict, vty: str | None = None) -> str:
             # read of a seq alongside its bound-variable one (seq_max's
             # champion is a VALUE, never re-indexed).
             trig = "".join(f" #![trigger {expr(t)}]" for t in roots.values())
+        elif roots and _root_plus_offset_trigger(q["body"], v, roots) is not None:
+            # ROOT-PLUS-OFFSET QUANTIFIER (2026-09-14, r25/r26's three
+            # malformed rows named in `_offset_at_by_var`'s own docstring):
+            # exactly one seq root (`roots`, from the bare-variable read)
+            # PLUS a second read of the same seq offset from it (`k+1`),
+            # neither chained (`_has_chained_at`, false: no `X[i][j]`) nor
+            # fixed (`_has_fixed_at`, false: the offset read still mentions
+            # v) so neither branch above fires, yet Verus's own
+            # single-candidate auto-inference still refuses outright
+            # ("Could not automatically infer triggers") with two visible
+            # candidate terms in the body. Sound for the same reason the
+            # chained/fixed-at cases above are: supplies both terms as
+            # independent trigger groups, never removing a candidate
+            # Verus's own inference would have tried; fires only when an
+            # offset read is actually present, so no previously committed
+            # quantifier (whose single root has no second, offset read of
+            # the same seq) changes.
+            trig = _root_plus_offset_trigger(q["body"], v, roots)
         elif nested_roots:
             # NESTED-QUANTIFIER WITNESS (2026-09-12, 414 anyValueExists /
             # 603 lucidNumbers, both malformed on the real): the bound

@@ -76,6 +76,66 @@ F* kernel, not inferred:
   All three move fstar real unproved -> verified; twin unaffected (the
   twin ladder's own open item above, unchanged by this fix).
 
+2026-09-14 (ROADMAP r25 sole-blocker item, key fstar-closure: "the
+closure-predicate timeouts", the five rows dafny-synthesis 412
+removeOddNumbers, 426 filterOddNumbers, 436 findNegativeNumbers, 554
+findOddNumbers, 629 findEvenNumbers, each a filter loop calling a
+non-recursive spec_fun (isEven/isOdd/isNegative) in executable position,
+plus 284 allElementsEqual and 760 hasOnlyOneDistinctElement). Read F*'s
+own output directly (`fstar.exe --message_format json --z3rlimit 50
+--report_assumes error <name>.fst`, F* 2026.08.30, Z3 4.13.3) for all
+seven, not inferred from the sweep row alone.
+
+  MEASURED, the two "unproved" rows (284, 760): a genuine F* Error 19,
+  "Subtyping check failed ... The SMT solver could not prove the query.
+  Failed to prove: exists (i_v: Prims.int). 0 <= i_v /\ i_v < ... /\
+  ~(FStar.Seq.Base.index a i_v == n)" at the loop's early-exit branch
+  (`if (a[i_v2] <> n) then Inl false else ...`; 284.fst reproduces this
+  standalone). The falsifying index (i_v2) IS in scope at that exact
+  point via the branch guard, but the ensures's existential is a POSITIVE
+  witness-search goal Z3 will not instantiate at i_v2 on its own with no
+  assist -- this needs an explicit witness assertion emitted at the
+  early-exit site (the generic "which local value satisfies this
+  existential" problem for every early-return shape lower_fstar.py emits,
+  not spec_fun-specific), which this pass did not implement. Named open,
+  not closed; not relabeled as timeout or budget-raised.
+
+  MEASURED, the five "timeout" rows: confirmed genuinely stuck, not a
+  slow-but-finite query bumping the pinned rlimit=50 -- `ps` during a live
+  run (412.fst, 60s and 90s wall) shows the child z3 process pinned at
+  ~100% CPU the whole time, past several multiples of what a budget=50
+  query normally costs elsewhere in this file, meaning Z3's own resource
+  counter is not ticking fast enough to catch whatever it is doing
+  (an E-matching/quantifier-instantiation blowup the rlimit accounting
+  does not bound the wall cost of, not a slow-but-terminating search).
+  Tried, on 412.fst standalone, and MEASURED to make no difference (still
+  the 120s WALL_S backstop, `fstar.exe` still pinned at 100% CPU when
+  killed):
+    1. `unfold` on the spec_fun (`unfold let isEven ...`) to force
+       inlining instead of leaving Z3 an opaque application -- unchanged.
+    2. Inlining the predicate call by hand everywhere in the .fst
+       (`isEven (arr[i])` -> `(arr[i] % 2 = 0)`, spec_fun removed
+       entirely) -- unchanged. This rules out the spec_fun call itself
+       (its fuel, its being a function application at all) as the sole
+       cause, contrary to this item's own working hypothesis: the same
+       filter-loop invariant shape (`forall k < len(evenList). ... /\
+       exists k3 < len(arr). arr[k3] == evenList[k]`, a membership fact
+       restated as a nested forall-exists with no pattern) still hangs
+       with the predicate gone.
+    3. An explicit F* trigger pattern on the invariant's inner `exists`
+       (`exists (k3:int). {:pattern (Seq.index evenList k3)} ...`, added
+       by hand to 412.fst) -- unchanged.
+  No fourth lever (a per-loop synthesized unfolding/witness lemma keyed
+  to this invariant shape) was attempted: real engineering, not a
+  one-line probe, and this pass's budget ran out confirming the first
+  three do not touch it. Left OPEN, named honestly with the tool's own
+  evidence above -- no budget constant raised, nothing relabeled from
+  timeout to unproved or refuted. `git diff` for this session touches
+  only this docstring; `t/lower_fstar.py`'s emitted output, `t/AGREEMENT.md`'s
+  34 committed tasks, its conformance column and its lifted-corpus cells
+  are therefore all unchanged (no regression to check because nothing in
+  the lowering itself moved).
+
 2026-09-12 (this session, ROADMAP 13.4's fstar item: "the four ensures-
 level probes"): three changes, all in this file alone (`verifiers/
 fstar.py` needed none -- its certificate gate is already name-based, not

@@ -2851,7 +2851,111 @@ which no longer abstain at all and the fourth of which abstains for a
 different, deeper reason now); every other test in that file and in
 `test_framac_nested.py`/`test_framac_frame_fact.py`/`test_framac_
 while_cert.py`/`test_framac_measure_axiom.py` passes unchanged (`python3
-t/test_framac_*.py` for each, run from `t/`)."""
+t/test_framac_*.py` for each, run from `t/`).
+
+FRAMAC-CLOSURE, 2026-09-14 (sweep r25's five sole-framac-blocker rows,
+dafny-synthesis 412/426/436/554/629). Each calls a spec_fun predicate
+(isEven, isOdd or isNegative) from an `if` inside its loop, EXECUTABLE
+position, and `cexpr`'s "call" case abstained unconditionally on any
+non-self call ("spec_fun call in executable position (ACSL logic
+functions are not executable)"), exactly the gap the module docstring's
+own ABSTAIN-3 note (above) named and left undone. FIXED for the
+NON-RECURSIVE, all-int-parameter case (`_spec_fun_c`, new, next to
+`spec_fun_acsl`): the spec_fun is mirrored as a plain C function
+`{name}_c` whose body is the SAME expression rendered through `cexpr`
+(C, not ACSL `term`) and whose contract states it agrees with the logic
+function at every call (`\result == f(args)` for an int result,
+`(\result != 0) <==> f(args)` for a bool one); `lower()` emits the
+mirror unconditionally for every eligible spec_fun (the T_DIVMOD_ACSL/
+T_CASE_ACSL pattern, over-inclusive by design), and `cexpr`'s "call"
+case now dispatches to `{name}_c(args)` for an eligible non-task call
+instead of raising. The ACSL side is UNCHANGED: every `requires`/
+`ensures`/invariant naming the spec_fun symbolically still calls the
+plain logic function `spec_fun_acsl` already emits, so nothing here
+touches, weakens, or restates what the task's own spec says. Eligible:
+no seq-typed parameter, no self-recursion (`self_calls`, reused).
+INELIGIBLE spec_funs -- `factorialOfLastDigit`'s and `Triple`'s own
+recursive `factorial`, the general case the ABSTAIN-3 note sketches and
+scopes out -- still abstain with the IDENTICAL original message via the
+eligibility check at the call site, UNCHANGED.
+
+MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, this worktree,
+2026-09-14): a standalone probe task (`pickEvenOrOne`, a scalar-only
+`ensures isEven(n) ==> r == 1` calling `isEven` from an `if` in
+executable position, run directly through `lower()`/`verify()`, not
+committed) measures the mirror mechanism itself sound -- 12 of 13 goals
+Proved (Qed/Alt-Ergo), including `isEven_c`'s own `ensures (\result !=
+0) <==> isEven(n)` contract and the caller's `ensures` that depends on
+it; the one Timeout is an unrelated `assigns` frame-condition goal this
+minimal probe's own uninitialized-then-assigned local triggers, not a
+spec_fun-mirroring goal. On the five actual sweep rows (412/426/436/
+554/629), grading them directly (`python3 t/grade.py --tasks <copy of
+the five> --kernels framac,dafny --flake 3`) shows the "spec_fun call in
+executable position" abstain is GONE on every one, replaced by a
+SECOND, unrelated framac abstain that was always one layer beneath it:
+"seq return '<name>''s length is not statically determinable from the
+task's params ... no `ensures` ... gives a CAPACITY bound either" --
+each task filters `arr` into a variable-length output seq with no
+`ensures`-stated size bound (`_ret_capacity`'s own pre-existing gap,
+unrelated to spec_fun calls, and a materially bigger feature: the bound
+IS derivable, but only by combining two of the loop's OWN invariants
+transitively, `len(evenList) <= i_v2 <= h`, which `_ret_capacity` does
+not look at today since it reads only `ensures`). Named rather than
+silently absorbed: this pass's own scope (spec_fun-in-executable-
+position) is closed and MEASURED sound; the CAPACITY-bound-from-
+invariants gap is a distinct, larger item for whoever takes it next.
+
+Regression, measured this worktree: none of the 34 committed tasks
+(t/AGREEMENT.md) declares any spec_fun (`grep spec_fun t/tasks/*.t` ->
+no match), so this change touches ZERO committed-task cells by
+construction; `python3 t/grade.py --tasks t/tasks --kernels framac,dafny
+--flake 3` shows every real cell unchanged (verified, or the same three
+pre-existing ABSTAINs -- count_vowels, split_join, swap_rows -- all
+unrelated to spec_funs). The conformance suite's framac column
+(`conformance.build_manifest`/`run_items`/`grade` restricted to the
+framac backend alone) reads 61 of 66 PASS, the SAME five FAIL cells as
+before this pass (fz_p_biglen, fz_p_seqlen, fz_p_pair_seq, fz_p_nest_eq,
+fz_p_str_tab) -- no PASS lost, no new FAIL. The dafny_synthesis rows of
+t/COVERAGE-lifted-785.md that read verified/refuted in the framac column
+are unmoved BY CONSTRUCTION, not merely unmeasured: `cexpr`'s "call"
+case only reaches its NEW branch when `c["fun"] != task_name`, a
+position that unconditionally raised NotImplementedError (ABSTAIN)
+before this pass on every single task that hit it -- a cell already
+reading verified or refuted never executed that branch's old code at
+all, so it cannot be affected by widening what that branch now accepts.
+
+SEQ-TYPED LOCAL, measured, NOT CLOSED, 2026-09-14 (sweep r25's other two
+sole-framac-blocker rows, dafny-synthesis 307 deepCopySeq and 743
+rotateRight). Exact message (`python3 t/grade.py` on each, unchanged by
+this pass): "seq-typed local variables are not supported by this
+lowering except the slice-ALIAS shape (`v := s[a..b]`, word_count's own
+case and its own OFF-BY-ONE twin); no requires-time bound sizes a fresh
+backing buffer for any other initializer". Both tasks declare a PLAIN
+(not seq<seq>) seq-typed LOCAL (`newSeq`/`rotated`), initialize it to
+`[]`, build it via the SAME per-iteration append idiom the RETURN's own
+CAPACITY machinery already supports (`local := local + [row]` inside the
+loop), and copy it into the actual return (`copy := newSeq`/`r :=
+rotated`) as the body's LAST statement. t/DESIGN-framac-nested-seq.md's
+own "seq-local encoding" (section 1, "A seq<seq> LOCAL is the same
+triple as extra caller-provided scratch parameters") is written for a
+NESTED (seq<seq>) local specifically, matching section 1's own opening
+line ("The representation is the one a parameter already has") and
+section 6's regression list ("the seq<seq> parameter encoding"); neither
+307 nor 743 declares a seq<seq>-typed anything (both `s`/`l`/`copy`/`r`/
+`newSeq`/`rotated` are plain `seq`, confirmed by direct inspection of
+each task's own JSON params/returns/body). So the design's own encoding
+reaches ZERO cases here: it is not that the encoding was applied and
+fell short, but that its scope (seq<seq>) does not cover what these two
+tasks need (a plain seq-typed local later copied whole into the
+return). Closing THIS gap would need a different, narrower move than
+the design describes -- recognizing a seq-typed local whose only use is
+the RETURN's own append idiom, then copying to the return unmodified at
+the end, and building directly into the return's own buffer instead of
+a separate local one (no new CAPACITY dimension, no new buffer) -- not
+attempted this pass: it is a real, separate mechanism (a local-to-return
+aliasing analysis over the body, not a rendering gap), left named for
+whoever takes it next rather than guessed at under the remaining
+budget."""
 from __future__ import annotations
 
 import sys
@@ -4270,9 +4374,30 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
     if "call" in e:
         c = e["call"]
         if c["fun"] != task_name:
-            raise NotImplementedError(
-                "spec_fun call in executable position (ACSL logic functions "
-                "are not executable)")
+            # FRAMAC-CLOSURE, added 2026-09-14 (sweep r25's five sole-
+            # framac-blocker rows, 412/426/436/554/629: each calls a
+            # spec_fun predicate -- isEven, isOdd or isNegative -- from
+            # inside its loop's `if` condition, executable position, not
+            # ACSL. `_spec_fun_c` (below `spec_fun_acsl`) mirrors an
+            # ELIGIBLE spec_fun as a plain C function `{name}_c`, called
+            # here instead of raising; `lower()` emits that mirror's
+            # definition into the header for every spec_fun that
+            # qualifies (see `_spec_fun_c`'s own docstring for the
+            # eligibility rule -- no seq-typed param, no self-recursion).
+            # An INELIGIBLE spec_fun call still raises exactly the
+            # original message, unchanged: no committed task (t/AGREEMENT
+            # .md's 34) declares any spec_fun at all, so this widening
+            # touches only the lifted corpus, never the regression bar.
+            sf = funs.get(c["fun"])
+            if (sf is None or sf.get("is_task")
+                    or any(p["type"] == "seq" for p in sf["params"])
+                    or not sf.get("executable")):
+                raise NotImplementedError(
+                    "spec_fun call in executable position (ACSL logic "
+                    "functions are not executable)")
+            cargs = ", ".join(
+                cexpr(a, env, funs, task_name, _div_style) for a in c["args"])
+            return f"{c['fun']}_c({cargs})"
         if funs[task_name]["result"] == "seq":
             # A seq-returning task (2026-09-09) is lowered to a `void` C
             # function with an output buffer parameter (see the seq value
@@ -6153,6 +6278,62 @@ def spec_fun_acsl(f: dict, funs: dict, declare_only: bool = False) -> list:
     return lines
 
 
+def _spec_fun_c(f: dict, funs: dict) -> list:
+    """FRAMAC-CLOSURE, added 2026-09-14 (sweep r25's five sole-framac-
+    blocker rows, dafny-synthesis 412/426/436/554/629: each calls a
+    spec_fun predicate -- isEven, isOdd or isNegative -- from inside its
+    loop, EXECUTABLE position, e.g. `if isEven(arr[i])`). A spec_fun is
+    an ACSL logic function (`spec_fun_acsl`, above), not C, so such a
+    call has no C counterpart to invoke; `cexpr`'s "call" case raised an
+    unconditional NotImplementedError for exactly this before this pass
+    (the module docstring's own ABSTAIN-3 note names the design this
+    function fills in). Fixed by mirroring the spec_fun as a SECOND,
+    plain C function (`{name}_c`, this function's return value): its
+    BODY is the spec_fun's own expression rendered through `cexpr` (C,
+    not ACSL `term`), and its CONTRACT states it agrees with the logic
+    function everywhere it is called -- `\\result == f(args)` for an
+    int-result spec_fun, `(\\result != 0) <==> f(args)` for a bool-
+    result one (ACSL's `boolean` and C's 0/1 `int` are different types,
+    so a bare `==` would not typecheck). The call site (`cexpr`'s "call"
+    case) then emits `{name}_c(args)` for a call to this spec_fun
+    reaching executable position; every OTHER position (a `requires`/
+    `ensures`/loop invariant naming the spec_fun symbolically) is
+    UNCHANGED, still the plain logic-function call `spec_fun_acsl`
+    already renders -- nothing here touches, weakens, or duplicates what
+    the task's own spec states, exactly SPEC.md's twin-safety rule ("the
+    twin never touches requires, ensures, spec_funs, or decreases").
+
+    Eligibility (checked by the caller, `funs[name]["executable"]`, set
+    in `lower()`'s `funs` construction): no seq-typed PARAMETER (this
+    function's C signature has none to mirror `spec_fun_acsl`'s own
+    buffer-pointer ACSL signature against; unexercised by any lifted
+    task's spec_fun, named rather than guessed at) and NOT self-
+    recursive (a recursive spec_fun's mirror would need its own
+    `decreases`-backed WP termination obligation, the general design the
+    module docstring's ABSTAIN-3 note sketches for `factorial` and
+    leaves undone; `factorialOfLastDigit`/`Triple`, the two lifted tasks
+    that would need it, are UNCHANGED by this function, still abstaining
+    with the identical original message via the ineligibility check at
+    the call site). None of the 34 committed tasks (t/AGREEMENT.md)
+    declares any spec_fun at all (confirmed: `grep spec_fun t/tasks/
+    *.t` -> no match), so this widening reaches only the lifted corpus,
+    never the regression bar's own 34-task column."""
+    params_c = ", ".join(f"int {p['name']}" for p in f["params"])
+    env = {p["name"]: p["type"] for p in f["params"]}
+    body_c = cexpr(f["body"], env, funs, f["name"])
+    args_acsl = ", ".join(p["name"] for p in f["params"])
+    if f["result"] == "bool":
+        contract = f"(\\result != 0) <==> {f['name']}({args_acsl})"
+    else:
+        contract = f"\\result == {f['name']}({args_acsl})"
+    return [
+        "/*@",
+        f"  ensures {contract};",
+        "*/",
+        f"int {f['name']}_c({params_c}) {{ return {body_c}; }}",
+    ]
+
+
 # ------------------------------------------------ refutation certificate ----
 #
 # THE CERTIFICATE (shared protocol, ROADMAP 10.7): WP with alt-ergo never
@@ -7851,10 +8032,22 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
 
     funs = {}
     for f in task.get("spec_funs", []):
+        # "executable" (framac-closure, 2026-09-14): whether this
+        # spec_fun QUALIFIES for a C mirror function (`_spec_fun_c`,
+        # below), so `cexpr`'s "call" case can lower a call to it
+        # reaching executable position instead of abstaining. Eligible:
+        # no seq-typed param (`_spec_fun_c` has no buffer-pointer C
+        # signature to mirror one against) and not self-recursive (a
+        # recursive spec_fun's C mirror would need its OWN `decreases`-
+        # backed termination obligation, ROADMAP's own note on
+        # factorialOfLastDigit/Triple, not attempted by this pass).
         funs[f["name"]] = {
             "params": f["params"], "result": f["result"],
             "labeled": any(p["type"] == "seq" for p in f["params"]),
-            "is_task": False}
+            "is_task": False,
+            "executable": (
+                not any(p["type"] == "seq" for p in f["params"])
+                and not self_calls(f["body"], f["name"], []))}
     funs[name] = {"params": task["params"], "result": rett,
                   "labeled": False, "is_task": True}
 
@@ -7945,6 +8138,19 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             measure_fn = site
     for f in task.get("spec_funs", []):
         header += spec_fun_acsl(f, funs, declare_only=(f["name"] == measure_fn))
+    # FRAMAC-CLOSURE, 2026-09-14: an ELIGIBLE spec_fun (see `_spec_fun_c`'s
+    # own docstring) also gets its C mirror emitted here, unconditionally
+    # (like T_DIVMOD_ACSL/T_CASE_ACSL, over-inclusive by design -- an
+    # unused C function costs nothing), so a call reaching executable
+    # position anywhere in the body (`cexpr`'s "call" case, above) finds
+    # `{name}_c` already declared. A withheld-definition spec_fun
+    # (`f["name"] == measure_fn`) is skipped: its logic function has no
+    # `= body` for `_spec_fun_c` to mirror as C, and the measure witness
+    # already proves ITS own call site refutes via the certificate, not
+    # this mirror.
+    for f in task.get("spec_funs", []):
+        if funs[f["name"]]["executable"] and f["name"] != measure_fn:
+            header += _spec_fun_c(f, funs)
 
     # DIVISOR-BOUND LEMMA, tried and MEASURED NOT WIRED, 2026-09-12
     # (ROADMAP 16.2, framac-cert; `_divisor_bound_target`/

@@ -3488,6 +3488,63 @@ def _result_eq_quant(e, ret: str):
     return None
 
 
+def _gauss_sum_target(w: dict) -> dict | None:
+    """2026-09-14 (spark-sole, ROADMAP 16.2 "spark: the nine sole-blocked
+    rows"): gauss and triangleNumber (a running total kept as `sum ==
+    div(i*(i+1), 2)`, the closed-form arithmetic-series identity) MEASURED
+    the real program itself TIMEOUT under spark, standalone, no contention
+    (`python3 t/verifiers/spark.py` against this file's own lowering of
+    each, this session): gnatprove's own audit reads "VC_POSTCONDITION ...
+    severity medium/limit" on W_1's recursive-call step, budget exhausted
+    at DEFAULT_STEPS -- the loop's own invariant states the running total
+    only through a division (`T_Div`, an if/rem-based case split), and
+    proving the ONE-STEP inductive fact `Sum + (I+1) = T_Div((I+1)*(I+2),
+    2)` from `Sum = T_Div(I*(I+1), 2)` needs Z3 to combine that case
+    split with a genuinely nonlinear product (I*(I+1) vs (I+1)*(I+2)) in
+    the same goal -- MEASURED (this session, a hand-written probe file
+    identical to the real lowering but for one extra invariant) to make
+    Z3 give up within budget every time, whatever the seed.
+
+    FIX (the same "ordinary extra invariant" shape `_divisor_bound_target`
+    already uses, never a task invariant, never weakening or restating
+    one): a loop invariant of the exact shape `V == div(N, 2)` (a running
+    total related to a division by the literal 2) also justifies the
+    UNDIVIDED restatement `2 * V == N` -- true whenever `V`'s own division
+    is exact, which the task's own invariant already establishes since
+    both sides are stated equal -- as an extra invariant proved through
+    the SAME invariant-preservation VC every other invariant already
+    gets. MEASURED (this session, the same hand probe): with `2 * Sum ==
+    I * (I + 1)` added alongside gauss's own invariant, gnatprove VERIFIES
+    the whole file in 5.5s -- the recursive step's inductive fact is now
+    PURELY the polynomial identity `2*(Sum+(I+1)) = (I+1)*(I+2)` given
+    `2*Sum = I*(I+1)`, no `T_Div` case split anywhere in the same goal,
+    which Z3's nonlinear arithmetic handles directly. Numerator `N` is
+    reused byte-for-byte from the matched invariant's own AST (never
+    reconstructed), so the added invariant cannot disagree with the
+    task's own term even if a future task uses a differently-shaped
+    product for the same series.
+
+    Returns None on any other invariant shape (a task with no such
+    invariant, or one dividing by anything but the literal 2, is
+    byte-for-byte unaffected -- MEASURED harmless on the AGREEMENT.md and
+    conformance regression bars, this session's own patch/report)."""
+    for iv in w.get("invariants", []):
+        if not (isinstance(iv, dict) and iv.get("op") == "=="):
+            continue
+        a, b = iv["args"]
+        for var_side, div_side in ((a, b), (b, a)):
+            if not (isinstance(var_side, dict)
+                    and list(var_side.keys()) == ["var"]):
+                continue
+            if not (isinstance(div_side, dict) and div_side.get("op") == "div"):
+                continue
+            num, den = div_side["args"]
+            if den != {"int": 2}:
+                continue
+            return {"var": var_side["var"], "numerator": num}
+    return None
+
+
 def _divisor_bound_target(task: dict, w: dict) -> dict | None:
     ret = task["returns"][0]["name"]
     for en in task.get("ensures", []):
@@ -4507,6 +4564,16 @@ class Lower:
                 {"op": "+", "args": [
                     {"op": "div", "args": [_dbt_iv["dividend"], {"int": 2}]},
                     {"int": 1}]}]}]
+        # spark-sole (2026-09-14, `_gauss_sum_target`'s own docstring):
+        # the undivided restatement of a `V == div(N, 2)` running-total
+        # invariant, added as an ordinary extra invariant so gnatprove's
+        # nonlinear step never has to cross a T_Div case split and a
+        # nonlinear product in the SAME goal.
+        _gst_iv = _gauss_sum_target(w)
+        if _gst_iv is not None:
+            invs = invs + [{"op": "==", "args": [
+                {"op": "*", "args": [{"int": 2}, {"var": _gst_iv["var"]}]},
+                _gst_iv["numerator"]]}]
         # ROADMAP 16.2, 2026-09-11 (elementWiseModulo and its element-wise
         # siblings): a loop's own W_k helper carries only the task's stated
         # invariants as its Pre, per SPEC.md's frame rule above -- but a
@@ -5093,7 +5160,27 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                 cond = s["if"]["cond"]
                 cob = defined(cond)
                 if cob != TRUE and not interp.ev(cob, env_py, funs, st):
-                    return None
+                    # 2026-09-14 (spark-sole, ROADMAP 16.2 "spark: the nine
+                    # sole-blocked rows"): an `if`'s own COND can itself be
+                    # the twin's first undefined operation (a compare-flip
+                    # loop guard that runs one iteration too far reaches an
+                    # `at` inside the body's own `if` test at an
+                    # out-of-range index, MEASURED on mmaximum1/findMax/
+                    # findMin/lookForMin/find_min_index's spark twins:
+                    # gnatprove's own VC_PRECONDITION "gave_up" on W_k's
+                    # untouched Hoare contract, because no certificate was
+                    # ever emitted here -- this walk used to stop with
+                    # `return None`, an honest "not modeled", the instant
+                    # the FIRST false definedness obligation it met was a
+                    # cond rather than a var/assign RHS, even though
+                    # `interp.ev` just confirmed that obligation false at
+                    # this concrete witness the exact same way a var/
+                    # assign RHS's own would be trusted two lines below.
+                    # Surfacing it here is the same reading, never a new
+                    # one: `cob` is `defined(cond)`, ground-false at this
+                    # witness by construction, rendered through the SAME
+                    # L.expr() every other certificate part uses.
+                    return f"(not {L.expr(cob, sub, types)})"
                 taken = (s["if"]["then"] if interp.ev(cond, env_py, funs, st)
                          else s["if"]["else"])
                 found = _walk(taken)
@@ -5107,7 +5194,9 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                     cond = w["cond"]
                     cob = defined(cond)
                     if cob != TRUE and not interp.ev(cob, env_py, funs, st):
-                        return None
+                        # Same widening as the `if` case just above, for a
+                        # while's own guard.
+                        return f"(not {L.expr(cob, sub, types)})"
                     if not interp.ev(cond, env_py, funs, st):
                         break
                     found = _walk(w["body"])

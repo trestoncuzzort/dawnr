@@ -687,13 +687,67 @@ def test_quantified_call_hint_end_to_end(slow: bool) -> None:
         f"forall-statement, not paste a bare call: {checker_text}")
 
 
+def test_spec_fun_array_param_end_to_end(slow: bool) -> None:
+    """2026-09-14 (LIFTER-785-RESIDUALS.md, wave O's own "four programs
+    refused at the checker"): `_fn_param_views` (row 28's own char/string
+    view map for a closure FUNCTION's params) never covered an
+    array-typed one, so a spec_fun called with a source array argument
+    got the raw `array<int>`-typed name where the lifted spec_fun's
+    matching parameter is a `seq<int>` -- measured directly, before the
+    fix: "incorrect argument type at index 0 for function parameter
+    'a_v' (expected seq<int>, found array<int>)" on `inArray(a, x)` in
+    both `L_fun_inArray`'s own `ensures` and `L_ens`'s forall hint call
+    (SharedElements). RemoveElements and Intersection are the same
+    `inArray`-shaped bug on a different task id; CubeElements has NO
+    spec_fun at all -- its own failure is the sibling class fixed
+    alongside this one (`loop_views` in the `L_inv_0` build: an
+    "alloc-fill" array LOCAL in loop scope, not a param, needs the same
+    view). All four are asserted end to end: every lemma verdict
+    `verified`."""
+    if not slow:
+        print("test_spec_fun_array_param_end_to_end: skipped (pass --slow)")
+        return
+    cases = [
+        ("dafny-synthesis_task_id_2", "SharedElements", ("L_req", "L_ens")),
+        ("dafny-synthesis_task_id_161", "RemoveElements", ("L_req", "L_ens")),
+        ("dafny-synthesis_task_id_249", "Intersection", ("L_req", "L_ens")),
+        ("dafny-synthesis_task_id_447", "CubeElements", ("L_req", "L_ens", "L_inv_0")),
+    ]
+    failures = []
+    for file_stem, method_name, expected_lemmas in cases:
+        dfy_path = test_lifter.CORPUS_DIR / f"{file_stem}.dfy"
+        t0 = time.monotonic()
+        fx = _lift_source(dfy_path, method_name, timeout_s=90.0)
+        if fx["status"] != "ok":
+            failures.append(f"{method_name}: lift refused upstream: {fx}")
+            continue
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        lift_check.check(fx["task"], fx["source"], fx["closure"], fx["record"],
+                         OUT_DIR / file_stem, timeout_s=90.0)
+        wall = round(time.monotonic() - t0, 2)
+        verdicts = dict(fx["record"].checker_verdicts)
+        print(f"test_spec_fun_array_param_end_to_end: {method_name} "
+             f"verdicts={json.dumps(verdicts)} wall_s={wall}")
+        if not verdicts:
+            failures.append(f"{method_name}: no lemma verdicts recorded at all")
+            continue
+        non_verified = {k: v for k, v in verdicts.items() if v != "verified"}
+        if non_verified:
+            failures.append(f"{method_name}: non-verified lemma verdict(s): {non_verified}")
+        for expected in expected_lemmas:
+            if expected not in verdicts:
+                failures.append(f"{method_name}: expected lemma {expected!r} missing: {verdicts}")
+    assert not failures, "; ".join(failures)
+
+
 SLOW_TESTS = [test_seeds_check_end_to_end, test_t7_two_seed_pairs,
              test_inverse_committed_and_corpus, test_array_program_end_to_end,
              test_kernel_unproved_not_folded_into_lift_check_failed,
              test_for_desugared_extra_local_end_to_end,
              test_for_desugared_bound_alignment_with_prior_local,
              test_array_view_forall_exists_end_to_end,
-             test_quantified_call_hint_end_to_end]
+             test_quantified_call_hint_end_to_end,
+             test_spec_fun_array_param_end_to_end]
 
 
 def run(slow: bool = False) -> None:

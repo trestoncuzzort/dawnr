@@ -18,6 +18,28 @@ syntax rather than meaning and the witness would be about parsing, not
 proof; twin-unproved means the kernel could neither prove the twin nor
 accept the certificate, which is not knowledge either way.
 
+2026-09-14 (ROADMAP 16.2, dafny-closure): `expr`'s `exists` branch special-
+cases the one shape the lifter's `in` rewrite always produces (`_seq_
+membership`, defined just above `expr`): a bare `exists k :: 0<=k<len(seq)
+&& seq[k]==elem` now lowers to Dafny's own `elem in seq`, which carries a
+built-in axiom a generic quantifier does not get for free. Measured on
+dafny-synthesis 412/426/436/554/629 (each a closure predicate -- isEven,
+isOdd, isNegative -- called in executable position inside a loop that
+appends to its accumulator): the generic exists lowering failed loop-
+invariant MAINTENANCE ("this invariant could not be proved to be
+maintained by the loop") because dafny cannot automatically re-derive,
+across `evenList := evenList + [x]`, that an old membership witness index
+still works after the length changes; native `in` does. The closure
+predicate itself was a correlate, not the cause: the same failure
+reproduces with the predicate call replaced by its raw arithmetic body.
+`dafny-synthesis_task_id_433__isGreater` and `_567__isSorted` read
+"vacuous" on the real (Outcome.VACUOUS, dafny's own `--warn-contradictory-
+assumptions` firing "proved using contradictory assumptions: index in
+range") both before and after this fix, and the SAME warning fires on
+DafnyBench's own untouched hand-written source for both tasks -- this is
+not a lowering defect, named and left open (see verifiers/dafny.py and
+t/test_lower_dafny_closure.py).
+
 v1 mapping, gate by gate (SPEC.md):
   quantifiers: t's bounded forall/exists over [lo,hi) lower to Dafny's native
     bounded quantifiers; `seq` is Dafny's seq<int>, `len` is |s|, `at` is s[i].
@@ -1124,6 +1146,46 @@ def _find_trigger_term(node, v: str):
     return None
 
 
+def _seq_membership(q: dict):
+    """If the `exists` payload `q` has the shape `lo <= v < hi &&
+    at(seq, v) == elem` (or the equality flipped), where the bound
+    variable `v` occurs only as that one index and nowhere in `elem`,
+    return `(seq, elem)`: the whole quantifier is Dafny's own seq
+    membership test `elem in seq[lo..hi]`. `None` when the body is not
+    exactly this shape.
+
+    2026-09-14 (ROADMAP 16.2, dafny-closure): dafny-synthesis 412/426/436/
+    554/629 lower each source's `x in someSeq` (the lifter already turns
+    `in` into this exact exists at lift time -- t's IR has no `in` op, so
+    nothing upstream of this file can change) into a bare `exists k :: ...
+    && seq[k] == elem`. Measured directly: dafny fails to maintain the
+    invariant across `evenList := evenList + [arr[i]]` even with an
+    explicit `{:trigger}` on the index application (a generic quantifier
+    needs the append-preserves-old-indices fact re-derived by hand), while
+    the ORIGINAL Dafny source's native `elem in seq` verifies with no
+    trigger at all: `in` on a seq is a primitive Dafny operator with its
+    own built-in axiom, not sugar the verifier reconstructs at each call
+    site. This is not about the spec_fun in the `if` guard at all --
+    `arr[i] % 2 == 0` inline fails the same invariant the same way
+    (measured in /tmp scratch): the spec_fun call was a correlate of the
+    shape in the sweep, not the cause."""
+    v = q["var"]
+    body = q["body"]
+    if body.get("op") != "==" or len(body.get("args", [])) != 2:
+        return None
+
+    def _at_v(node):
+        return (isinstance(node, dict) and node.get("op") == "at"
+                and node.get("args", [None, None])[1] == {"var": v})
+
+    a, b = body["args"]
+    if _at_v(a) and not _contains_var(b, v):
+        return a["args"][0], b
+    if _at_v(b) and not _contains_var(a, v):
+        return b["args"][0], a
+    return None
+
+
 def expr(e: dict, self_name: str | None = None) -> str:
     """Lower a spec-position expression. A self-call here is refused: SPEC.md
     puts task self-calls in bodies only, and the twin argument depends on the
@@ -1152,6 +1214,18 @@ def expr(e: dict, self_name: str | None = None) -> str:
     if "exists" in e:
         q = e["exists"]
         v = q["var"]
+        mem = _seq_membership(q)
+        if (mem is not None and q["lo"] == {"int": 0}
+                and q["hi"] == {"op": "len", "args": [mem[0]]}):
+            # Whole-sequence membership only (lo==0, hi==len(seq)): this is
+            # exactly Dafny's own `in` primitive, with its own axiom, not a
+            # partial-range read whose `lo<=hi<=|seq|` bound would need a
+            # fresh proof obligation at the call site. See
+            # `_seq_membership`'s docstring for why this beats a
+            # generic quantifier here (dafny-synthesis 412 et al,
+            # 2026-09-14).
+            seq, elemn = mem
+            return f"({expr(elemn, self_name)} in {expr(seq, self_name)})"
         term = _find_trigger_term(q["body"], v)
         # Only a slice application gets the explicit trigger: that is the
         # one shape dafny cannot auto-trigger (isSublist). Stating a

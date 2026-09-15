@@ -2213,7 +2213,105 @@ side names in hand; `_gr()`'s generic call sites (used by the WF
 theorems too, which have no named invariant hypotheses at all) do not,
 so the fix belongs there, not in this shared per-site script. Named
 open, not attempted further this session.
-"""
+
+2026-09-14 (key lean-closure, ROADMAP 16.2's item "the closure-predicate
+timeouts and the seq-typed local abstains"). Two independent fixes, both
+gated so every previously-graded task (the 34 committed AGREEMENT.md
+rows, the conformance suite, every dafny_synthesis row of COVERAGE-
+lifted-785.md already reading verified/refuted) sees BYTE-IDENTICAL
+output -- measured directly: `python3` diffed `lower_lean.lower(task,
+task["body"])` for all 34 `t/tasks/*.t` files against this session's
+own pre-edit copy of the file, zero diffs (none of the 34 use
+`spec_funs` at all, `grep -l spec_funs t/tasks/*.t` reads empty, so
+`sfun_quantified` is False for every one regardless of the fix); the
+seq-placeholder fix only fires when `_loop_zero` previously returned
+`None` for a bare `seq` type, an unconditional `NotImplementedError`
+before today, so it cannot change any lowering that used to succeed.
+
+(1) THE CLOSURE-PREDICATE TIMEOUT. dafny_synthesis 412 removeOddNumbers/
+426 filterOddNumbers/436 findNegativeNumbers/554 findOddNumbers/629
+findEvenNumbers (wave O, `t/out/lifted-tasks`, gitignored) each call a
+spec_fun (`isEven`/`isOdd`/`isNegative`) in executable position inside
+their loop body, under a loop invariant that ALSO quantifies over the
+same spec_fun (`forall k, isEven(evenList[k]) = true -> exists j, ...`).
+Every grind call site in this file (`self.ga`, `f"grind{self.ga}"`) used
+to hand that spec_fun's own equation to grind as a raw E-matching hint;
+measured (`lean -DmaxHeartbeats=400000` on the emitted 412 file,
+`set_option trace.grind.ematch true` on a scratch copy) to exhaust the
+whole per-command heartbeat budget on the FIRST alternative of the
+`first | ...` chain (a `deterministic timeout` is not a normal tactic
+failure -- `first` never gets a turn to try the next branch), reading
+TIMEOUT for both real and twin on every one of the five. Fix: `Lower.
+__init__` now also computes `sfun_quantified` (True iff some spec_fun is
+called inside a `forall`/`exists` reachable anywhere in the task or
+body, via the new module-level `_sfun_under_quantifier`/
+`_calls_any_named` walkers) and `ga_wo_sfuns` (the same grind hint list
+with the spec_fun names stripped back out); the new `Lower._grind_base`
+method returns the pre-existing `f"grind{self.ga}"` when `sfun_quantified`
+is False, and otherwise `f"(first | (simp only [{names}] at * <;>
+grind{self.ga_wo_sfuns}) | grind{self.ga})"` -- citing each spec_fun's
+own equation as a DETERMINISTIC rewrite (closes under quantifier binders
+too, with no E-matching search) FIRST, falling back to the pre-existing
+raw hint only if that fails outright (never tried first on this shape,
+since that ordering was the original bug). An earlier version of this
+session's fix dropped the raw-hint fallback entirely; MEASURED (`t/
+grade.py --tasks <the eight, copied from t/out/lifted-tasks> --kernels
+lean,dafny --flake 3 --jobs 4`) that this regressed 775 IsOddAtIndexOdd's
+own real from VERIFIED to UNPROVED (one of its non-loop grind sites
+closes on the raw hint alone, not on `simp only [...] <;> grind` alone),
+so the fallback was restored; `_grind_base`'s own docstring above carries
+the full account. Every one of the file's 12 `f"grind{self.ga}"` call
+sites (`_gr`'s and `_close`'s own `base`, `emit_sfuns`, `emit_clause_wfs`,
+both SIMPLE/RECURSIVE-shape spec theorems) now goes through
+`_grind_base()` instead, so the fix reaches wherever a spec_fun call
+under a quantifier surfaces, not just the loop-preservation site the
+five committed rows happened to hit it at first. MEASURED, final code
+(`t/grade.py --tasks <412,426,436,554,629,775> --kernels lean,dafny
+--flake 3 --jobs 4`, two full runs, plus single `lean -DmaxHeartbeats=
+400000` runs on 775's own emitted real/twin files to confirm the
+775 fix specifically): 436 findNegativeNumbers moved lean twin TIMEOUT
+-> REFUTED (real stays TIMEOUT, the regression bar's own "no real may
+move" respected, only the twin side moved and only from timeout toward
+refuted, confirmed on two independent flake-3 runs); 412/426/554/629
+stayed real TIMEOUT / twin TIMEOUT (the fix removes one source of
+heartbeat exhaustion, not the invariant list's own inherent quantifier-
+instantiation cost against TWO different sequences at once -- dafny's
+own REAL reads unproved on all five under this op too, so the ensures is
+hard for every kernel here, not a lean-specific gap); 775 confirmed
+restored to the pre-session baseline, real VERIFIED / twin TIMEOUT (a
+single `lean -DmaxHeartbeats=400000` run each, real: exit 0, every
+theorem including `_t_loop_spec`/`_t_spec` audited clean; twin: still
+running past 60s, matching the pre-session "timeout" cell, not re-run
+at flake 3 given this session's own time budget). Named open: the
+invariant list's own two-sequence quantifier cost on 412/426/554/629,
+independent of the spec_fun fix, still needs a dedicated closer (outside
+this session's scope: `lower_loop`'s own codegen owns the loop-
+preservation goal's shape, same as 106 appendArrayToSeq's still-open
+residual noted above).
+
+(2) THE SEQ-TYPED LOCAL ABSTAIN. dafny_synthesis 307 DeepCopySeq (return
+`copy`, type bare `seq`, assigned only in the suffix `copy := newSeq`
+after the loop, never in the prefix or the loop body) and 743
+RotateRight (return `r`, the identical shape) hit `_loop_zero`'s
+unconditional `None` for a bare `seq` type, raising `NotImplementedError
+("state var 'copy'/'r' uninitialized before the loop")` before ever
+reaching a kernel -- ABSTAIN by `run_par.py`'s own routing. Fix: `_loop_
+zero` now returns `"([] : List Int)"` for `t == "seq"`, the empty list,
+total and well-typed exactly like `(0 : Int)`/`false` for `int`/`bool`
+just above it (a bare `seq` state var provably never reads this
+placeholder before the suffix overwrites it, the same argument the
+docstring already makes for the return-name case generally). MEASURED
+(`t/grade.py --tasks <307,743> --kernels lean,dafny --flake 3 --jobs 2`,
+plus a single confirming `lean -DmaxHeartbeats=400000` run each for
+743): 307 DeepCopySeq moved lean ABSTAIN/ABSTAIN -> real VERIFIED / twin
+UNPROVED (confirmed on two independent flake-3 runs); 743 RotateRight
+moved ABSTAIN/ABSTAIN -> real UNPROVED / twin UNPROVED (743's own `_t_
+loop_spec`/`_t_spec` still carry a `sorryAx` -- a genuinely unclosed
+proof obligation, not the seq-placeholder gap this fix targets; named
+open, the placeholder fix ends its ABSTAIN but does not itself close the
+remaining gap). Neither move is a regression under the bar (`_loop_zero`
+only fires where it previously raised, ABSTAIN was never a kernel
+verdict to begin with)."""
 from __future__ import annotations
 
 import sys
@@ -2462,6 +2560,43 @@ def _var_writes(body: list, v: str) -> list:
     return out
 
 
+def _calls_any_named(x, names: set) -> bool:
+    """True if `x` contains a `call` node whose `fun` is in `names`,
+    anywhere (walked the same generic shape as `_var_writes`/
+    `_self_calls_named`). Used only by `_sfun_under_quantifier` below,
+    to look inside one `forall`/`exists` body for a spec_fun call."""
+    if isinstance(x, dict):
+        if "call" in x and isinstance(x["call"], dict) \
+                and x["call"].get("fun") in names:
+            return True
+        return any(_calls_any_named(v, names) for v in x.values())
+    if isinstance(x, list):
+        return any(_calls_any_named(v, names) for v in x)
+    return False
+
+
+def _sfun_under_quantifier(x, names: set) -> bool:
+    """2026-09-14 (lean-closure): True if `x` contains a `forall`/
+    `exists` node whose own body calls one of `names` (the task's
+    spec_funs) -- the closure-predicate-in-a-loop-invariant shape
+    (`__init__`'s `sfun_quantified`, gating `_grind_base`'s deterministic
+    `simp only` unfold instead of handing grind the spec_fun's equation
+    as a raw E-match hint). Walks the whole tree (requires/ensures/
+    invariants/body alike), not just invariants, since a spec_fun this
+    task calls under a quantifier ANYWHERE has the same E-matching cost
+    once it reaches grind's hint list for that theorem."""
+    if isinstance(x, dict):
+        for key in ("forall", "exists"):
+            if key in x and isinstance(x[key], dict):
+                qbody = x[key].get("body")
+                if qbody is not None and _calls_any_named(qbody, names):
+                    return True
+        return any(_sfun_under_quantifier(v, names) for v in x.values())
+    if isinstance(x, list):
+        return any(_sfun_under_quantifier(v, names) for v in x)
+    return False
+
+
 class Lower:
     """One instance per (task, body) pair. Everything derives from the JSON."""
 
@@ -2486,7 +2621,8 @@ class Lower:
         # predates this construct, so nothing about their output changes.
         self.strlib = (self._has_any(task, STRLIB_OPS)
                        or self._has_any(body, STRLIB_OPS))
-        ga_names = [f"{f}_s" for f in self.sfuns]
+        sfun_ga_names = [f"{f}_s" for f in self.sfuns]
+        ga_names = list(sfun_ga_names)
         if self.strlib:
             # Only the lemmas this task's own ops can need: an unrelated
             # lemma in grind's hint set is not just dead weight, it is
@@ -2534,6 +2670,34 @@ class Lower:
                 ga_names += ["t_str_upper", "t_str_islowerletter"]
             ga_names += ["List.drop_zero", "List.take_length"]
         self.ga = "" if not ga_names else " [" + ", ".join(ga_names) + "]"
+        # THE CLOSURE-PREDICATE TIMEOUT (2026-09-14, lean-closure, this
+        # session's own item): `self.ga`, handed to `grind` as an
+        # E-matching hint, is fine for a spec_fun's OWN definedness
+        # theorem and any non-quantified use, but a spec_fun cited
+        # inside a `forall`/`exists` (isEven/isOdd/isNegative-style
+        # closure predicates over a loop's own invariant, dafny_synthesis
+        # 412/426/436/554/629's shared shape: `forall k, isEven(x[k]) <->
+        # exists j, ...`) makes `grind [isEven_s]` search whether to
+        # unfold `isEven_s` at every quantifier instantiation combined
+        # with the invariant list's own case splits -- measured (`lean
+        # -DmaxHeartbeats=400000` on the emitted file, `set_option
+        # trace.grind.ematch true`) to exhaust the WHOLE per-command
+        # heartbeat budget on the very first `first | ...` alternative
+        # (a `deterministic timeout` is not a normal tactic failure:
+        # `first` never gets a turn to try the next branch, so real and
+        # twin both read TIMEOUT). `ga_wo_sfuns` strips the spec_fun
+        # names back out for exactly this shape; `_grind_base()` below
+        # cites each one's own equation as a DETERMINISTIC `simp only`
+        # rewrite first instead (rewrites every call, including ones
+        # under a binder, with no E-matching search at all), so grind
+        # itself never has to consider unfolding it.
+        other_ga_names = [n for n in ga_names if n not in sfun_ga_names]
+        self.ga_wo_sfuns = ("" if not other_ga_names else
+                            " [" + ", ".join(other_ga_names) + "]")
+        self.sfun_names_ga = sfun_ga_names
+        self.sfun_quantified = bool(self.sfuns) and (
+            _sfun_under_quantifier(task, set(self.sfuns))
+            or _sfun_under_quantifier(body, set(self.sfuns)))
         # SPEC.md "Sequences as values" (2026-09-09): does this lowering
         # (task spec, or the body actually being lowered, real or twin)
         # touch `update`/`fill` anywhere. Gates the seq helper lemmas and
@@ -4482,6 +4646,45 @@ class Lower:
             "| omega | contradiction | (apply t_seq_index_congr; omega))"
         )
 
+    def _grind_base(self) -> str:
+        """2026-09-14 (lean-closure): `grind{self.ga}` normally -- byte-
+        identical to every task lowered before this session, since
+        `sfun_quantified` is False whenever no spec_fun is called under
+        a `forall`/`exists` anywhere this task reaches. When it IS True
+        (the closure-predicate-in-a-loop shape), a FIRST attempt cites
+        the spec_fun equations as a deterministic `simp only` rewrite
+        (closes over the whole goal, including under quantifier binders,
+        with no E-matching search) and drops them from grind's own hint
+        list (`ga_wo_sfuns`) for the grind call that follows; the
+        pre-existing `grind{self.ga}` (spec_fun equations handed to
+        grind directly) is kept as a SECOND alternative, tried only if
+        the first one fails outright (not merely slow) -- never tried
+        FIRST on this shape, since that ordering is the original bug
+        (`grind [isEven_s]`'s own E-matching search against a
+        quantified invariant list exhausts the WHOLE per-command
+        heartbeat budget before `first` ever gets a turn to try
+        anything else). MEASURED 2026-09-14 why the second alternative
+        stays: an EARLIER version of this fix dropped `grind{self.ga}`
+        entirely once `sfun_quantified`, and regressed 775
+        IsOddAtIndexOdd's own real from VERIFIED to UNPROVED (`t/
+        grade.py --tasks <307,412,...,775> --kernels lean,dafny --flake
+        3`, this session) -- one of 775's own non-loop grind sites
+        closes on the RAW hint (`grind [isOdd_s]` alone, no preceding
+        `simp`) but not on `simp only [isOdd_s] at * <;> grind` alone,
+        so replacing rather than falling back regressed a real that was
+        never part of the timeout problem this item targets. Every call
+        site that used to interpolate `f\"grind{self.ga}\"` directly now
+        calls this instead (`_gr`'s and `_close`'s own `base`,
+        `emit_sfuns`, `emit_clause_wfs`, the SIMPLE/RECURSIVE-shape spec
+        theorems), so the fix reaches wherever a spec_fun call under a
+        quantifier surfaces, not just the loop-preservation site the
+        five committed timeout rows happened to hit it at first."""
+        if self.sfun_quantified and self.sfun_names_ga:
+            names = ", ".join(self.sfun_names_ga)
+            return (f"(first | (simp only [{names}] at * <;> "
+                    f"grind{self.ga_wo_sfuns}) | grind{self.ga})")
+        return f"grind{self.ga}"
+
     def _close(self, nodes: list, env: dict, types: dict, base: str) -> str:
         """`base` tried first; the div/mod bridges above added only when
         `nodes` actually reaches a div/mod application, and the
@@ -4652,7 +4855,7 @@ class Lower:
         call site passes nothing, so their text is unaffected; only the
         loop invariant/guard/decreases WF theorems (clover_rotate's own
         residual, measured 2026-09-09) pass their source clause."""
-        base = f"grind{self.ga}"
+        base = self._grind_base()
         branches = []
         if nodes is not None:
             branches += self._divmod_branches(nodes, env or {},
@@ -5570,7 +5773,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             if d is not None:
                 tname = f"{f['name']}_s_wf"
                 tac = self._close([f["body"]], {}, dict(ptypes),
-                                  f"grind{self.ga}")
+                                  self._grind_base())
                 out.append(f"theorem {tname} {pb} :\n    {d} := by\n"
                            f"  {tac}\n")
                 thms.append((tname, "definedness of spec_fun "
@@ -5601,7 +5804,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             k += 1
             hyps = "".join(f"{self.prop(x, {}, self.types)} → "
                            for x in reqs[:i])
-            tac = self._close([r], {}, self.types, f"grind{self.ga}")
+            tac = self._close([r], {}, self.types, self._grind_base())
             out.append(f"theorem {self.name}_t_wf{k} "
                        f"{self.binders(params_nt)} :\n    {hyps}{d} := by\n"
                        f"  {tac}\n")
@@ -5617,7 +5820,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             hyps = "".join(f"{p} → " for p in self.pre_props())
             hyps += "".join(f"{self.prop(x, {}, self.types)} → "
                             for x in ens[:i])
-            tac = self._close([e], {}, self.types, f"grind{self.ga}")
+            tac = self._close([e], {}, self.types, self._grind_base())
             out.append(f"theorem {self.name}_t_wf{k} "
                        f"{self.binders(eb)} :\n    {hyps}{d} := by\n"
                        f"  {tac}\n")
@@ -5794,7 +5997,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if ob is not None:
             hyps = "".join(f"{p} → " for p in self.pre_props())
             tac = self._close([self.body], {}, self.types,
-                              f"grind{self.ga}")
+                              self._grind_base())
             if mulsign_names:
                 # wfbody states `requires` as CURRIED implications in the
                 # goal itself (no `hpre` binder in scope, unlike `_spec`
@@ -5820,7 +6023,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         hpre = (f" (hpre : {self.pre_conj()})"
                 if self.task.get("requires") else "")
         spec_tac = self._close([self.task["ensures"], self.body], {},
-                               self.types, f"grind{self.ga}")
+                               self.types, self._grind_base())
         spec_mulsign_branch = (
             _mulsign_have_branch(" hpre" if self.task.get("requires")
                                  else "")
@@ -5897,7 +6100,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if ob is not None:
             hyps = "".join(f"{p} → " for p in self.pre_props())
             out.append(f"theorem {self.name}_t_wfbody {pb} :\n"
-                       f"    {hyps}{ob} := by\n  grind{self.ga}\n")
+                       f"    {hyps}{ob} := by\n  {self._grind_base()}\n")
             thms.append((f"{self.name}_t_wfbody", "body definedness"))
         applied = (f"({self.name}_t {pnames} hpre)" if has_pre
                    else f"({self.name}_t {pnames})")
@@ -5936,7 +6139,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             f"    fun {fun_args} _hm => {self.name}_t_spec {fun_args}\n"
             f"  rw [{self.name}_t.eq_def]\n"
             f"  repeat split\n"
-            f"  all_goals grind{self.ga}\n"
+            f"  all_goals {self._grind_base()}\n"
             f"termination_by ({dec}).toNat\n"
             + self._dec())
         thms.append((f"{self.name}_t_spec", "the contract"))
@@ -5977,7 +6180,24 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             # loop at all; `row_max_len`'s nested param `m` is read-only,
             # never loop state).
             return None
-        return {"int": "(0 : Int)", "bool": "false"}.get(t)
+        # THE SEQ-TYPED LOCAL ABSTAIN (2026-09-14, lean-closure, this
+        # session's own item): a bare "seq" return var not yet set when
+        # the loop is entered (307 DeepCopySeq: `copy` is only assigned
+        # in the SUFFIX, `copy := newSeq`, never read or written in the
+        # prefix or the loop itself) hit the pre-existing `None` here
+        # unconditionally, an honest `NotImplementedError` ("state var
+        # 'copy' uninitialized before the loop") -- ABSTAIN, never a
+        # kernel call. `List Int`'s own canonical placeholder is total
+        # and well-typed exactly like `(0 : Int)`/`false` above: the
+        # empty list, `([] : List Int)`, provably overwritten before
+        # `copy` is ever read (the same "provably overwritten on every
+        # path" argument the docstring above already makes for `_ret`).
+        # Dead for every other lowering: this placeholder is consulted
+        # only when the return var itself is unset entering the loop,
+        # true only when the loop's own state-var scan (`lower_loop`,
+        # above) already found nothing else to do about it.
+        return {"int": "(0 : Int)", "bool": "false",
+                "seq": "([] : List Int)"}.get(t)
 
     @staticmethod
     def _hok_components(n: int) -> list[str]:
