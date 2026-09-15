@@ -76,6 +76,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import concurrent.futures
+import threading
 import re
 import sys
 import time
@@ -592,6 +594,9 @@ def model_digest(host: str, model: str) -> str:
         return "unknown"
 
 
+# 2026-09-15: --jobs N asks N problems at once (a vLLM server batches them;
+# ollama would serialize them). Records are per problem, written whole, and
+# identical in shape to a sequential run; temperature 0 with a fixed seed.
 def cmd_generate(args) -> int:
     d = outdir(args.model)
     P = pool(args.pool)
@@ -601,20 +606,21 @@ def cmd_generate(args) -> int:
     options = {"temperature": 0, "seed": args.seed, "num_ctx": args.num_ctx,
                "num_predict": args.num_predict}
     digest = model_digest(args.host, args.model)
-    done = asked = 0
+    todo = [tid for tid in ids if not (d / "raw" / f"{tid}.json").exists()]
+    state = {"asked": 0, "done": len(ids) - len(todo), "failed": []}
     t_start = time.monotonic()
-    for tid in ids:
-        rec_path = d / "raw" / f"{tid}.json"
-        if rec_path.exists():
-            done += 1
-            continue
+    lock = threading.Lock()
+
+    def one(tid: str) -> None:
         messages = build_prompt(P[tid], args.prompt)
         t0 = time.monotonic()
         try:
             resp = chat(args.host, args.model, messages, options, args.timeout)
         except (urllib.error.URLError, OSError) as e:
             print(f"generate: task {tid}: no answer from {args.host}: {e}", file=sys.stderr)
-            return 2
+            with lock:
+                state["failed"].append(tid)
+            return
         wall = time.monotonic() - t0
         record = {"task_id": tid, "fn": P[tid]["fn"], "model": args.model, "digest": digest,
                   "pool_version": args.pool, "prompt_version": args.prompt,
@@ -624,15 +630,27 @@ def cmd_generate(args) -> int:
                   "reply_tokens": resp.get("eval_count"),
                   "eval_s": round((resp.get("eval_duration") or 0) / 1e9, 3),
                   "wall_s": round(wall, 3), "done_reason": resp.get("done_reason")}
-        rec_path.write_text(json.dumps(record, indent=1), encoding="utf-8")
-        asked += 1
-        done += 1
-        if asked % 10 == 0 or asked == 1:
-            el = time.monotonic() - t_start
-            print(f"generate: {done}/{len(ids)} ({asked} asked this run, {el:.0f} s, "
-                  f"{el / asked:.1f} s each)", flush=True)
-    print(f"generate: {done} of {len(ids)} problems have a reply on disk")
-    return 0
+        (d / "raw" / f"{tid}.json").write_text(json.dumps(record, indent=1), encoding="utf-8")
+        with lock:
+            state["asked"] += 1
+            state["done"] += 1
+            asked = state["asked"]
+            if asked % 10 == 0 or asked == 1:
+                el = time.monotonic() - t_start
+                print(f"generate: {state['done']}/{len(ids)} ({asked} asked this run, {el:.0f} s, "
+                      f"{el / asked:.1f} s each)", flush=True)
+
+    jobs = max(1, getattr(args, "jobs", 1) or 1)
+    if jobs == 1:
+        for tid in todo:
+            one(tid)
+            if state["failed"]:
+                return 2
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as ex:
+            list(ex.map(one, todo))
+    print(f"generate: {state['done']} of {len(ids)} problems have a reply on disk")
+    return 2 if state["failed"] else 0
 
 
 # --------------------------------------------------------------- extract --
@@ -1040,6 +1058,7 @@ def main(argv=None) -> int:
             p.add_argument("--num-ctx", type=int, default=8192)
             p.add_argument("--num-predict", type=int, default=1024)
             p.add_argument("--timeout", type=float, default=600.0)
+            p.add_argument("--jobs", type=int, default=1)
         if name == "table":
             p.add_argument("--out", default=str(HERE / "SPEC-EXPERIMENT-mbpp.md"))
     args = ap.parse_args(argv)
