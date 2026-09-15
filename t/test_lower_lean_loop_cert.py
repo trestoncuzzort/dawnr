@@ -403,6 +403,32 @@ class DomainHypothesisLoopValueCertificateKernelTest(unittest.TestCase):
     def test_cal_sum_real_verified_twin_refuted(self):
         self._check(DomainHypothesisLoopValueCertificateTest.CAL_SUM)
 
+    def test_value_witness_loop_replay_stays_small_with_a_return_in_the_body(self):
+        """Sweep r25 (2026-09-15): `_cert_value_loop` threaded sym's own
+        output env into the next iteration, and a body with a `return`
+        wraps every state term in an if per iteration, so the terms
+        doubled: clover_linear_search1's collapse-if twin hit MemoryError
+        after 23 GB. linear_search's committed twin has the same shape
+        (a value witness, a return inside the loop). Its lowering must
+        finish inside a 4 GB address space and 60 seconds, in a child
+        process so the cap cannot touch this runner."""
+        import subprocess
+        task_path = os.path.join(HERE, "tasks", "linear_search.t")
+        code = (
+            "import sys; sys.path.insert(0, %r)\n"
+            "import tasks_io, harness, lower_lean\n"
+            "task = tasks_io.load_task(%r)\n"
+            "twin, op, w = harness.twin_for(task)\n"
+            "assert w and w.get('_kind') == 'value', (op, w)\n"
+            "src = lower_lean.lower(task, twin, w)\n"
+            "print('OK' if 't_refutation_certificate' in src else 'NOCERT')\n"
+        ) % (HERE, task_path)
+        proc = subprocess.run(
+            ["bash", "-c", "ulimit -v 4194304 && exec python3 -c \"$0\"", code],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr[-800:])
+        self.assertIn("OK", proc.stdout, proc.stdout)
+
 
 class CommittedRowKernelVerdictTest(unittest.TestCase):
     """Integration pin: first_even's committed collapse-if twin actually

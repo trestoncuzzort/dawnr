@@ -7629,6 +7629,17 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                       self._refute(post, tenv_post, venv_post, types)))
         return parts
 
+    @staticmethod
+    def _reground(v):
+        """interp.py's own value (a tuple for a seq, a Pair for a pair,
+        nested) back into the plain list shape `_gterm` reads, which is
+        the shape a witness renders it in (`_j`)."""
+        if isinstance(v, interp.Pair):
+            return [Lower._reground(v.a), Lower._reground(v.b)]
+        if isinstance(v, (tuple, list)):
+            return [Lower._reground(x) for x in v]
+        return v
+
     def _cert_value_loop(self, w: dict, ptenv: dict, pvenv: dict,
                           types: dict) -> tuple[str, str] | None:
         """2026-09-14 (lean-loopcert2): the `(¬post)` part of a "value"-
@@ -7742,6 +7753,25 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             except (interp.Undef, interp.Budget, RecursionError):
                 return None   # not this shape: the "undefined" cert covers it
             types2 = dict(types)
+            # 2026-09-15: re-ground the state entries of `tenv` from
+            # interp's own concrete values before every iteration. The
+            # first landing of this method threaded `sym`'s output env
+            # straight into the next call, and `sym` wraps every state
+            # term in `(if {returned} then {old} else {new})` for a body
+            # with a `return` inside the loop, so the terms doubled per
+            # iteration: sweep r25 (2026-09-15) never reached its first
+            # lean cell, run_par was OOM-killed at 457 GB in this exact
+            # call, and the lowering probe named the row: clover_linear_
+            # search1__linearSearch's collapse-if twin (a value witness
+            # a=[0], e=1, a loop whose body returns), MemoryError after
+            # 23 GB in 32 s. interp holds the ground state one iteration
+            # behind by construction (that is what the replay is for), so
+            # each iteration's terms are built on literals and stay small;
+            # the certificate's final `(¬post)` is unchanged in meaning.
+            for n in state:
+                if n in venv:
+                    tenv[n] = self._gterm(self._reground(venv[n]),
+                                          types.get(n, self.rett))
             env_b, _, _ = self.sym(wh["body"], tenv, types2, state)
             tenv = {**tenv, **env_b}
             venv = venv_next
