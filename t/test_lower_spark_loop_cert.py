@@ -323,5 +323,79 @@ class TestUndefinedCondCertificate(unittest.TestCase):
         self.assertIn("T_Refutation_Certificate", src)
 
 
+class TestEarlyExitOneSidedJoin(unittest.TestCase):
+    """spark-tail, 2026-09-15 (ROADMAP 16.2): compile_r's own "if" merge
+    used to raise NotImplementedError("... assigned on only one branch of
+    an `if` and read later; no join value") whenever the RETURN NAME
+    itself was live on only one side of an if -- exactly the shape
+    `if cond { ...; return X; }` followed by the real "else" as separate
+    statements after the if (the early-exit encoding SPEC.md's own note
+    above describes), because lower()'s own env seed `{ret_name: None}`
+    means the never-taken side of the merge reads Python None, not an
+    Ada expression, and the OLD per-variable loop joined it exactly like
+    an ordinary local instead of recognizing the escape. MEASURED (this
+    session, gnatprove FSF 16.1.0) on
+    formal_verication_dafny_tmp_tmpwgl2qz28_Challenges_ex2.Allow42.json:
+    ABSTAIN "spark: 'r' assigned on only one branch of an `if` and read
+    later; no join value" before the fix; verified/refuted (matching
+    dafny) after it. This is the minimal task-shaped reproduction of that
+    exact bug, independent of the corpus file."""
+
+    def _early_return_task(self) -> dict:
+        return {
+            "name": "one_sided_join",
+            "params": [{"name": "y", "type": "int"}],
+            "returns": [{"name": "r", "type": {"pair": ["int", "bool"]}}],
+            "requires": [],
+            "ensures": [
+                {"op": "implies", "args": [
+                    {"op": "==", "args": [{"var": "y"}, {"int": 0}]},
+                    {"op": "and", "args": [
+                        {"op": "==", "args": [
+                            {"op": "fst", "args": [{"var": "r"}]},
+                            {"int": 1}]},
+                        {"op": "==", "args": [
+                            {"op": "snd", "args": [{"var": "r"}]},
+                            {"bool": True}]}]}]},
+                {"op": "implies", "args": [
+                    {"op": "!=", "args": [{"var": "y"}, {"int": 0}]},
+                    {"op": "and", "args": [
+                        {"op": "==", "args": [
+                            {"op": "fst", "args": [{"var": "r"}]},
+                            {"int": 0}]},
+                        {"op": "==", "args": [
+                            {"op": "snd", "args": [{"var": "r"}]},
+                            {"bool": False}]}]}]},
+            ],
+            "gate": "loops",
+            "body": [
+                {"if": {
+                    "cond": {"op": "==", "args": [{"var": "y"}, {"int": 0}]},
+                    "then": [
+                        {"return": ["r", {"op": "pair", "args": [
+                            {"int": 1}, {"bool": True}]}]}],
+                    "else": []}},
+                {"assign": ["r", {"op": "pair", "args": [
+                    {"int": 0}, {"bool": False}]}]},
+            ],
+        }
+
+    def test_no_longer_abstains_on_the_return_name(self):
+        task = self._early_return_task()
+        src = lower_spark.lower(task, task["body"])
+        self.assertNotIn("None", src)
+        self.assertIn("function F ", src)
+
+    def test_lowered_pair_matches_both_ensures_arms(self):
+        task = self._early_return_task()
+        src = lower_spark.lower(task, task["body"])
+        # The escaping branch's literal (1, True) and the fall-through's
+        # (0, False) must both appear in F's body, joined on the SAME
+        # `y = 0` condition the ensures itself splits on -- not one of
+        # them silently dropped by a bad join.
+        self.assertIn("True", src)
+        self.assertIn("False", src)
+
+
 if __name__ == "__main__":
     unittest.main()

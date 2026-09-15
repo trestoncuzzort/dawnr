@@ -1374,6 +1374,114 @@ harness.twin_cached picked either side of this patch):
     contention, so not re-asserted here); the mechanism above is what
     this docstring pins.
 """
+
+# SPARK-TAIL, 2026-09-15 (ROADMAP 16.2, sweep r26's spark tail item):
+# compile_r's own "if" merge (the return-aware statement compiler, SPEC.md
+# "Early exit") raised NotImplementedError("... assigned on only one
+# branch of an `if` and read later; no join value") whenever the RETURN
+# NAME ITSELF was live on only one side of an `if` -- exactly the shape
+# `if cond { ...; return X; }` with the real "else" as separate statements
+# after the if (this file's own standard early-exit encoding), because
+# lower()'s env seed `{ret_name: None}` means the never-taken side of the
+# per-variable join read Python's None, not an Ada expression, and the OLD
+# loop joined it exactly like an ordinary local instead of recognizing
+# that the escaping side's own env is moot once `combine()` has already
+# captured its value in `esc`/`val`. MEASURED (this session, gnatprove FSF
+# 16.1.0) on formal_verication_dafny_tmp_tmpwgl2qz28_Challenges_ex2.
+# Allow42.json (`if y != 42 { z := x / (42 - y); return (z, false); }`,
+# `r` never assigned before this if): ABSTAIN "spark: 'r' assigned on
+# only one branch of an `if` and read later; no join value" before the
+# fix. The fix, narrowly scoped: when exactly one side's own escape reads
+# the literal "True" `combine()` writes for a straight-line `return` (no
+# further split), the merge takes that side's WHOLE env from the side
+# that does not escape (or vice versa) instead of joining variable by
+# variable; neither side escaping, or a genuinely conditional escape on
+# both sides, keeps the old per-variable join (and its NotImplementedError
+# on a true two-sided ambiguity) untouched. A second, related bug the same
+# task surfaced: `default` (`ret_name`'s value just before the `if`, used
+# as the non-escaping side's filler in the SEPARATE `local_val` ternary
+# that feeds `combine`) is Python None on that same never-yet-assigned
+# shape, and f-string'd straight into the literal text "None" -- not Ada,
+# and only masked by the join bug above since without it that ternary's
+# slot is never reached at this `if` (the whole point of a slot
+# `local_esc`'s own structure guarantees is never selected, but which
+# still has to TYPE-CHECK); fixed by falling back to whichever of
+# val_then/val_else IS defined instead of `default` when `default` is
+# None. MEASURED: allow42 lowers to valid Ada (no "None" substring) and
+# reads verified/refuted in both dafny and spark at flake 3, matching;
+# this closes spark's own one sole-blocked row in
+# t/COVERAGE-lifted-785.md's "Sole blockers" section (r26: spark 1,
+# formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__allow42). The
+# SAME fix also turns dafny_synthesis_task_id_760__hasOnlyOneDistinctElement
+# from spark ABSTAIN (the identical join shape, `if len(a) == 0 { return
+# true; }`) into spark TIMEOUT: real progress (a genuine lowering, not a
+# refusal), but not a close -- its own audit reads VC_PRECONDITION
+# severity medium/status gave_up at the loop helper's own recursive call
+# and VC_POSTCONDITION severity medium/status limit on F's own Post, a
+# proof-cost gap this item does not attempt (ROADMAP 12.7/wave P's own
+# note: F* reads the SAME two rows' reals as needing an explicit
+# existential witness for the early-exit branch, a shape this session did
+# not build for spark either). dafny_synthesis_task_id_284__allElementsEqual
+# was already spark timeout/refuted before this session (not this bug);
+# its own audit reads VC_POSTCONDITION severity medium/status limit,
+# "cannot prove (for some I_v in T_Range'(0, Len (A)) => (Elem (A, I_v) /=
+# N))" -- the SAME existential-witness gap, named open, not attempted.
+#
+# The sweep r26 spark tail's OTHER two rows (both reproduced ALONE, no
+# --jobs contention, this session):
+#   - dafny_synthesis_task_id_594__firstEvenOddDifference: real=verified,
+#     twin=refuted, TWICE, standalone at DEFAULT_STEPS -- the r26 sweep's
+#     own timeout reading (down from r25's refuted) is CONTENTION in the
+#     sweep's own contended tail, exactly as r26's own commit message
+#     named it, not a proof-cost regression; no code change needed or
+#     made.
+#   - Dafny_tmp_tmpmvs2dmry_pancakesort_flip.flip: real=verified (clean,
+#     DEFAULT_STEPS, standalone), twin=TIMEOUT standalone too (so NOT
+#     contention, unlike 594) -- its own audit: VC_PRECONDITION and
+#     VC_SUBPROGRAM_VARIANT severity medium/status limit or gave_up at the
+#     loop helper W_1's own recursive call. Investigated for a targeted
+#     lemma in the spirit of ROTATE_LEMMA_PREAMBLE (built and MEASURED to
+#     verify standalone: an Update2_Lemma family -- Point/Count/Lemma,
+#     proving `Elem (T_Update (T_Update (S, I, VJ), J, VI), K) = (if K = J
+#     then VI elsif K = I then VJ else Elem (S, K))` for every K in
+#     [0, Len(S)) -- but NOT wired into flip's own W_1, because a probe
+#     (t_probe_arith.ads, this session) isolating just the twin's own
+#     arithmetic invariant maintenance obligation --
+#       Pre: I + J = Num, 0 <= I <= Div(Num,2)+1, Div(Num,2) <= J <= Num,
+#            J < I (the twin's own flipped loop guard, real reads I < J)
+#       Post: (I+1) <= Div(Num,2)+1
+#     -- MEASURED gnatprove UNABLE to prove it (medium/limit, the same
+#     reading as the full file), and a hand check finds an actual
+#     counterexample the invariant does not exclude: Num=5, I=3, J=2
+#     satisfies every Pre conjunct (3 <= Div(5,2)+1=3, Div(5,2)=2 <= J=2,
+#     J=2 < I=3) yet the recursive call's own I'=I+1=4 violates
+#     I' <= Div(5,2)+1=3. This is the twin's OWN flipped guard admitting a
+#     state (odd Num, at the exact Div-rounding boundary) the real's guard
+#     `I < J` never reaches, so the invariant it inherits verbatim from
+#     Dafny's loop (sound only for states reachable via the real's own
+#     monotonic I<J progression) is genuinely NOT self-maintaining under
+#     the twin's condition -- a TRUE universal-quantifier failure, not a
+#     resource question. No lemma proves a false goal faster: a lemma
+#     only restates TRUE facts the prover already has in reach, and
+#     forcing this one to read VERIFIED (or hand-relabeling its honest
+#     TIMEOUT) would violate the very rule that licensed building
+#     Update2_Lemma in the first place ("the ensures and requires the
+#     kernel checks are the task's own, never weakened"; "a proof
+#     obligation is proved by the kernel, never assumed"). What WOULD
+#     close this (raising CE_STEPS so gnatprove's own counterexample RAC
+#     can confirm the countermodel above and read a decisive REFUTED
+#     instead of an honest TIMEOUT) is a budget constant this item is
+#     explicitly forbidden from raising, so it is named open, not forced.
+#     Reproduced standalone twice (t594) and once each for flip's real
+#     and twin (real clean, twin timeout both times), all via `python3
+#     t/grade.py --tasks <one-task dir> --kernels dafny,spark --flake 3
+#     --jobs 1` (no sweep contention) plus a direct gnatprove invocation
+#     (this file's own GPR/GPR_SPARKLIB, --steps=20000,
+#     --counterexamples=on --check-counterexamples=on --ce-steps=1000,
+#     the exact flags verify() itself uses) reading the audit JSON by
+#     hand; Update2_Lemma's own probe (t_probe_update2.ads) is kept as
+#     this session's own scratch evidence, not wired into lower_spark.py
+#     since it would not change flip's own verdict.
 from __future__ import annotations
 
 import re
@@ -4383,23 +4491,100 @@ class Lower:
                     c["then"], env, types, psub, ret_name)
                 ee, esc_else, val_else = self.compile_r(
                     c["else"], env, types, psub, ret_name)
-                for v in env:
-                    if et[v] == ee[v]:
+                # SPARK-TAIL, 2026-09-15 (ROADMAP 16.2, allow42's abstain):
+                # a branch that escapes UNCONDITIONALLY (esc == the literal
+                # "True" combine() writes for a straight-line `return`, no
+                # further split) never reaches this merge in real control
+                # flow, so a name assigned ONLY there -- in particular the
+                # return variable, seeded {ret_name: None} in env before
+                # any assignment (lower()'s own env init) and given a real
+                # value only inside the returning branch -- is not a fact
+                # about the continuation and must not be joined against the
+                # other branch's env. MEASURED (dafny_tmp_tmpwgl2qz28_
+                # Challenges_ex2 allow42: `if y != 42 { ...; return (z,
+                # false); }` with the fall-through code, including the
+                # eventual `r := (z, err)`, as separate statements after
+                # the if): et['r'] carried the escaping branch's pair
+                # value, ee['r'] was still the None seed (the `else` here
+                # is empty; the real "else path" is the code AFTER the
+                # if), and the OLD per-variable loop below raised on ANY
+                # None regardless of which side escaped.
+                #
+                # EXACTLY one side escaping unconditionally is the case
+                # this fixes: the continuation (whatever runs after this
+                # `if` in real control flow) is then simply whichever
+                # side does NOT escape, so the WHOLE env carries over
+                # from that side alone, None values included (a None
+                # left in the non-escaping side, like allow42's own `r`,
+                # is fine there precisely because the code AFTER this
+                # `if` -- `r := (z, err)`, a separate statement in the
+                # flattened body -- overwrites it before anything reads
+                # it; lower()'s own final "body never assigns ret_name"
+                # sanity check still catches a genuine miss).
+                #
+                # A first attempt instead special-cased "BOTH sides
+                # escape unconditionally" the same way (skip the merge
+                # entirely, on the theory that nothing continues past
+                # this `if` at all) and broke fz_p_ret_bothbranches
+                # (CONFORMANCE.md, this session's own regression bar):
+                # `if x >= 0 { return r := x; } else { return r := -x;
+                # }` has BOTH sides escaping AND both assigning `r` a
+                # REAL value, so skipping the merge left env['r'] at the
+                # None seed and lower()'s sanity check fired a
+                # lower-error where CONFORMANCE.md had PASSed before.
+                # "Both escape" is therefore folded into the ordinary
+                # per-variable join below instead: it produces the exact
+                # same well-typed ternary placeholder the pre-existing
+                # code always did for two real values (harmless dead
+                # code, since nothing after this `if` can read it when
+                # both sides truly always escape), and a None on one
+                # side there still raises exactly as before -- only the
+                # ONE-SIDED-escape case above is new.
+                then_always = esc_then == "True"
+                else_always = esc_else == "True"
+                if then_always and not else_always:
+                    for v in env:
+                        env[v] = ee[v]
+                elif else_always and not then_always:
+                    for v in env:
                         env[v] = et[v]
-                    elif et[v] is None or ee[v] is None:
-                        raise NotImplementedError(
-                            f"spark: {v!r} assigned on only one branch of "
-                            f"an `if` and read later; no join value")
-                    else:
-                        env[v] = f"(if {cond} then {et[v]} else {ee[v]})"
+                else:
+                    for v in env:
+                        if et[v] == ee[v]:
+                            env[v] = et[v]
+                        elif et[v] is None or ee[v] is None:
+                            raise NotImplementedError(
+                                f"spark: {v!r} assigned on only one branch of "
+                                f"an `if` and read later; no join value")
+                        else:
+                            env[v] = f"(if {cond} then {et[v]} else {ee[v]})"
                 if esc_then is None and esc_else is None:
                     local_esc, local_val = None, None
                 else:
                     then_e = esc_then if esc_then is not None else "False"
                     else_e = esc_else if esc_else is not None else "False"
                     local_esc = f"(if {cond} then {then_e} else {else_e})"
-                    then_v = val_then if esc_then is not None else default
-                    else_v = val_else if esc_else is not None else default
+                    # SPARK-TAIL, 2026-09-15: `default` is `ret_name`'s
+                    # value just before this `if`, used as filler for the
+                    # non-escaping side's slot in local_val -- a slot
+                    # `combine`'s own local_esc guarantees is never
+                    # actually selected (its local_esc arm reads "False"
+                    # exactly there), so it only has to TYPE-CHECK, not
+                    # mean anything. When ret_name has never been assigned
+                    # yet (the {ret_name: None} seed, allow42's own shape:
+                    # `if y != 42 { ...; return (z, false); }` before any
+                    # earlier assignment to `r`), `default` is the Python
+                    # value None, which f-string'd straight into "None" is
+                    # not Ada at all. Falling back to whichever of
+                    # val_then/val_else IS defined (at least one must be,
+                    # since this branch of the outer `if` only runs when
+                    # esc_then or esc_else is not None) keeps the slot
+                    # well-typed without changing which value is ever
+                    # actually read.
+                    fallback = default if default is not None else (
+                        val_then if esc_then is not None else val_else)
+                    then_v = val_then if esc_then is not None else fallback
+                    else_v = val_else if esc_else is not None else fallback
                     local_val = f"(if {cond} then {then_v} else {else_v})"
                 combine(local_esc, local_val)
             elif "while" in s:

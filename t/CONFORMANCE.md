@@ -1,4 +1,4 @@
-# t conformance suite (ROADMAP 13.4) , 2026-09-15 15:34Z
+# t conformance suite (ROADMAP 13.4) , 2026-09-15 20:23Z
 
 Cell = real outcome / twin outcome [PASS|FAIL|N/A]. PASS means the real outcome equals this row's `expected` column for every `expected` value except two 2026-09-11 expectation classes (ROADMAP 13.4): `rejected` (PASS iff the real reads any of conformance.REJECTED_OK -- refuted, unproved, malformed, lower-error, any honest 'no proof') and `decorative` (PASS iff harness.decorative_kind on the real/twin PAIR reads 'decorative', the twin-rule finding this cell's own probe is about). N/A means the kernel's own binary is absent from this run (not counted toward exit code). Built from fuzz_lower.py's hand-built probes plus metamorphic.py's named TRANSFORMS applied to t/tasks/abs.t; see t/conformance.py's module docstring for the manifest.
 
