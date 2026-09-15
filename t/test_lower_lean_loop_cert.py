@@ -229,6 +229,181 @@ class UndefinedLoopCertificateTest(unittest.TestCase):
         self.assertIn("t_refutation_certificate", src)
 
 
+class DomainHypothesisLoopValueCertificateTest(unittest.TestCase):
+    """2026-09-14 (lean-loopcert2, ROADMAP 16.2's value-witness-through-
+    domain-hypothesis-loop item). `_cert_value_loop`'s own two measured
+    shapes, each an inline task matching one of the two lifted rows Wave
+    N left open by name (Clover_cal_sum.Sum, Dafny_Verify_..
+    LoopInvariant.DownWhileGreater) -- built inline rather than read from
+    t/out/lifted-tasks (gitignored, read-only) so this test is
+    reproducible from the committed repo alone."""
+
+    DOWN_WHILE_GREATER = {
+        "name": "down_while_greater_probe",
+        "params": [{"name": "n", "type": "int"}],
+        "returns": [{"name": "i", "type": "int"}],
+        "requires": [{"op": "<=", "args": [{"int": 0}, {"var": "n"}]}],
+        "ensures": [{"op": "==", "args": [{"var": "i"}, {"int": 0}]}],
+        "body": [
+            {"assign": ["i", {"var": "n"}]},
+            {"while": {
+                "cond": {"op": "<", "args": [{"int": 0}, {"var": "i"}]},
+                "decreases": {"var": "i"},
+                "invariants": [
+                    {"op": "and", "args": [
+                        {"op": "<=", "args": [{"int": 0}, {"var": "i"}]},
+                        {"op": "<=", "args": [{"var": "i"}, {"var": "n"}]}]}],
+                "body": [
+                    {"assign": ["i", {"op": "-",
+                                      "args": [{"var": "i"}, {"int": 1}]}]}],
+            }},
+        ],
+    }
+
+    CAL_SUM = {
+        "name": "cal_sum_probe",
+        "params": [{"name": "n", "type": "int"}],
+        "returns": [{"name": "s", "type": "int"}],
+        "requires": [{"op": ">=", "args": [{"var": "n"}, {"int": 0}]}],
+        "ensures": [{"op": "==", "args": [
+            {"var": "s"},
+            {"op": "div", "args": [
+                {"op": "*", "args": [{"var": "n"}, {"op": "+", "args": [
+                    {"var": "n"}, {"int": 1}]}]}, {"int": 2}]}]}],
+        "body": [
+            {"var": {"name": "n_v", "type": "int", "init": {"int": 0}}},
+            {"assign": ["s", {"int": 0}]},
+            {"while": {
+                "cond": {"op": "!=", "args": [{"var": "n_v"}, {"var": "n"}]},
+                "decreases": {"ite": {
+                    "cond": {"op": "<=", "args": [{"var": "n_v"}, {"var": "n"}]},
+                    "then": {"op": "-", "args": [{"var": "n"}, {"var": "n_v"}]},
+                    "else": {"op": "-", "args": [{"var": "n_v"}, {"var": "n"}]}}},
+                "invariants": [
+                    {"op": "and", "args": [
+                        {"op": "<=", "args": [{"int": 0}, {"var": "n_v"}]},
+                        {"op": "<=", "args": [{"var": "n_v"}, {"var": "n"}]}]},
+                    {"op": "==", "args": [
+                        {"var": "s"},
+                        {"op": "div", "args": [
+                            {"op": "*", "args": [
+                                {"var": "n_v"},
+                                {"op": "+", "args": [{"var": "n_v"}, {"int": 1}]}]},
+                            {"int": 2}]}]}],
+                "body": [
+                    {"assign": ["n_v", {"op": "+",
+                                        "args": [{"var": "n_v"}, {"int": 1}]}]},
+                    {"assign": ["s", {"op": "+",
+                                      "args": [{"var": "s"}, {"var": "n_v"}]}]}],
+            }},
+        ],
+    }
+
+    def _stmt_of(self, src):
+        cert = src.split("theorem t_refutation_certificate", 1)[1]
+        return cert.split(":= by", 1)[0]
+
+    def test_down_while_greater_compare_flip_avoids_the_can_dite_placeholder(self):
+        """downWhileGreater's own compare-flip twin: `_t_loop`'s
+        `can_dite`/`hok` mechanism (THE PRESERVATION-HAVE COLLISION's own
+        fix) computes `_loop_zero`'s placeholder (0) at this witness, not
+        the twin's actual value (-1) -- the certificate must never
+        mention the compiled function at all, exactly like the undefined-
+        witness certificates above."""
+        task = self.DOWN_WHILE_GREATER
+        twin, op, w = harness.twin_for(task)
+        self.assertEqual(op, "compare-flip")
+        self.assertEqual(w.get("_kind"), "value")
+        self.assertEqual(w.get("_real"), 0)
+        self.assertEqual(w.get("_twin"), -1)
+        src = lower_lean.lower(task, twin, w)
+        self.assertIn("if hok :", src)   # the can_dite/hok shape did fire
+        self.assertIn("t_refutation_certificate", src)
+        stmt = self._stmt_of(src)
+        self.assertNotIn("down_while_greater_probe_t", stmt, stmt)
+        for banned in ("sorry", "admit", "assume_val"):
+            self.assertNotIn(banned, src.lower())
+
+    def test_cal_sum_off_by_one_avoids_the_poisoned_entry_proof(self):
+        """cal_sum's own off-by-one twin: `_t`'s own entry call to
+        `_t_loop` bakes a GENERIC `(by grind)` proof of the (here
+        genuinely false at entry) invariant, poisoning `_t` itself with
+        `sorryAx` for every input -- the certificate must never mention
+        the compiled function."""
+        task = self.CAL_SUM
+        twin, op, w = harness.twin_for(task)
+        self.assertEqual(op, "off-by-one")
+        self.assertEqual(w.get("_kind"), "value")
+        src = lower_lean.lower(task, twin, w)
+        self.assertIn("t_refutation_certificate", src)
+        stmt = self._stmt_of(src)
+        self.assertNotIn("cal_sum_probe_t", stmt, stmt)
+        for banned in ("sorry", "admit", "assume_val"):
+            self.assertNotIn(banned, src.lower())
+
+    def test_plain_loop_value_witness_is_unaffected(self):
+        """first_even's own committed collapse-if twin needs no domain
+        hypothesis at all (`_loop_needs_domain_hyp` reads False) -- this
+        wave's own new path must not fire, so the certificate keeps
+        mentioning the compiled `first_even_t`/`first_even_t_loop`
+        exactly as the pre-existing `{name}_t`-based path already did."""
+        task = tasks_io.load_task(os.path.join(HERE, "tasks",
+                                                "first_even.t"))
+        twin, op, w = harness.twin_for(task)
+        self.assertEqual(op, "collapse-if")
+        self.assertEqual(w.get("_kind"), "value")
+        src = lower_lean.lower(task, twin, w)
+        stmt = self._stmt_of(src)
+        self.assertIn("first_even_t", stmt, stmt)
+
+
+class DomainHypothesisLoopValueCertificateKernelTest(unittest.TestCase):
+    """Integration pin: both inline tasks above actually read REFUTED
+    from the lean kernel (real stays VERIFIED), skipped by name when no
+    lean binary is on PATH."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from verifiers import lean as lean_backend
+        except Exception as e:                          # noqa: BLE001
+            cls.lean_backend = None
+            cls.skip_reason = f"verifiers.lean import failed: {e}"
+            return
+        if not getattr(lean_backend, "LEAN", None):
+            cls.lean_backend = None
+            cls.skip_reason = "no lean binary on PATH"
+            return
+        cls.lean_backend = lean_backend
+
+    def _check(self, task):
+        if self.lean_backend is None:
+            self.skipTest(self.skip_reason)
+        import tempfile
+        from pathlib import Path
+        from verifiers import Outcome
+        twin, op, w = harness.twin_for(task)
+        real_src = lower_lean.lower(task, task["body"], witness=None)
+        twin_src = lower_lean.lower(task, twin, w)
+        with tempfile.TemporaryDirectory() as d:
+            rp = Path(d) / "real.lean"
+            tp = Path(d) / "twin.lean"
+            rp.write_text(real_src, encoding="utf-8")
+            tp.write_text(twin_src, encoding="utf-8")
+            r_real = self.lean_backend.verify(rp)
+            r_twin = self.lean_backend.verify(tp)
+        self.assertEqual(r_real.outcome, Outcome.VERIFIED,
+                         getattr(r_real, "error", ""))
+        self.assertEqual(r_twin.outcome, Outcome.REFUTED,
+                         getattr(r_twin, "error", ""))
+
+    def test_down_while_greater_real_verified_twin_refuted(self):
+        self._check(DomainHypothesisLoopValueCertificateTest.DOWN_WHILE_GREATER)
+
+    def test_cal_sum_real_verified_twin_refuted(self):
+        self._check(DomainHypothesisLoopValueCertificateTest.CAL_SUM)
+
+
 class CommittedRowKernelVerdictTest(unittest.TestCase):
     """Integration pin: first_even's committed collapse-if twin actually
     reads REFUTED from the lean kernel (not just a plausible-looking

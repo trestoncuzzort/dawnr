@@ -92,19 +92,28 @@ def nest_eq_now_lowers_to_a_loop_not_an_abstain():
 
 @test
 def the_other_five_seq_cells_are_unmoved():
-    """The five cells this pass does not touch each still raise their own
-    pre-existing exact message (byte-identical to FRAMAC-SEQ2/3's own
-    notes): a fresh design (a second CAPACITY dimension, nested locals, an
-    executable length bound, a pair-with-seq encoding), never a
-    rendering-site patch this pass's four owned sites could close alone."""
+    """UPDATED 2026-09-14 (FRAMAC-NESTED, DESIGN-framac-nested-seq.md):
+    three of the five cells this docstring originally named as untouched
+    by FRAMAC-SEQ4 are CLOSED by this later pass, each its own fresh
+    mechanism (`lower_framac.py`'s own dated 2026-09-14 note has the
+    full account): `fz_p_nest_empty`/`fz_p_str_splitempty` (a
+    compile-time-constant nested seq<seq> RETURN, `_ret_nested_fold`/
+    `_fold_nested_rows`) and `fz_p_str_lowernonletter` (an executable
+    `lower`, `_expr_seq_len`'s new case plus `seq_assign_lines`'s new
+    `lower`/`upper` branch). `fz_p_str_tab`'s own LOCAL-declaration gap
+    is ALSO closed the same way (`stmts()`'s `var` case, the same
+    `_fold_nested_rows`), so it now declares its two rows cleanly --
+    but the cell as a whole still abstains, because its body then reads
+    those rows back through `==` NESTED INSIDE `and` (`len(rows)==2 and
+    at(rows,0)==[65] and at(rows,1)==[66]`), never a bare top-level
+    comparison `_seq_eq_top` recognizes (item (a)'s own scope, wave K,
+    2026-09-12), a genuinely different, deeper gap than "local variables
+    are not supported" and not attempted by this pass either. Only
+    `fz_p_pair_seq` (a pair with a seq component, still its own separate
+    encoding problem, see `_pair_field_c`) is truly untouched."""
     expected_substrings = {
-        "fz_p_nest_empty": "nested seq (seq<seq>) RETURN: building a "
-                            "fresh row set has no encoding",
-        "fz_p_str_splitempty": "nested seq (seq<seq>) RETURN: building a "
-                                "fresh row set has no encoding",
-        "fz_p_str_tab": "nested seq (seq<seq>) local variables are not "
-                        "supported",
-        "fz_p_str_lowernonletter": "length is not statically determinable",
+        "fz_p_str_tab": "seq extensional equality (==/!=) reaching "
+                        "executable position directly",
         "fz_p_pair_seq": "a pair with a seq component is refused",
     }
     for name, needle in expected_substrings.items():
@@ -115,6 +124,10 @@ def the_other_five_seq_cells_are_unmoved():
         else:
             raise AssertionError(f"{name}: lowered with no exception; "
                                   f"expected it to still abstain")
+    # The three CLOSED cells now lower with no exception at all.
+    for name in ("fz_p_nest_empty", "fz_p_str_splitempty",
+                 "fz_p_str_lowernonletter"):
+        _lower(name)()
 
 
 @test

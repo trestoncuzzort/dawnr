@@ -2307,6 +2307,101 @@ touching the generation pipeline).
   three at n=1's own witness; the falsifying index differs per conjunct
   and needs `_forall_hints`'s own per-conjunct search wired into the seq
   branch, not attempted this session -- named, not silently dropped).
+
+  ROCQ-PERCONJ (2026-09-14, ROADMAP 16.2, same wave): closes the gap
+  named just above. Reproduced first (`harness.twin_for` on
+  task_id_603__lucidNumbers, `lower()`, `coqc`): its ensures has three
+  forall conjuncts over the twin's own output (a mod-3 property, an
+  upper bound, a strict monotonicity nested two foralls deep); the
+  witness (n=1, twin=[0, 1]) falsifies only the FIRST, at index 1, but
+  `_value_cert`'s seq branch specialized every hit at ONE shared
+  Python-computed index (0, its own default absent a second seq PARAM to
+  compare against) -- MEASURED, coqc: "No applicable tactic". Fixed in
+  three layers, each caught by measurement, not guessed:
+
+  1. `_seq_falsify_indices` (new): `_forall_hints`'s per-CONJUNCT,
+     per-nesting-LEVEL mirror -- walks one forall's own forall-of-forall
+     chain and picks, at each level, the index that falsifies the
+     REMAINING body (or an in-range fallback when that level holds
+     everywhere), so a nested forall gets a PAIR of indices, not one
+     reused twice. `_seq_forall_nodes` (new) collects every forall AST
+     NODE an ensures item contains, wherever nested (never only its own
+     top level). Building one `match goal` ARM per conjunct, keyed on
+     that conjunct's OWN exact rendered Coq text (`cx.prop`, rendered
+     against `Ht_rlen`'s already-rewritten length literal -- MEASURED
+     first without this: matching against the UNREDUCED text left every
+     arm unmatched, since `try rewrite Ht_rlen in *` runs first and
+     changes every hypothesis's own displayed type), fixed 603.
+
+  2. MEASURED REGRESSION, same session: restricting the walk to genuine
+     `forall` AST nodes dropped conformance's rocq column from 66 PASS/0
+     FAIL to 65/1 (fz_p_seqeq_false). SPEC.md's seq `==` (`r == s`) is
+     never a `forall` AST node at all -- `Ctx.prop`'s own `seq` branch
+     (~line 5247) builds `ln_a = ln_b /\\ (forall t_k, ...)` directly as
+     a Python f-string at RENDER time, so there is nothing for an
+     AST-only walk to find. A second loop scans the same top-level
+     ensures list for exactly that shape (`==`/`!=` between two
+     seq-typed expressions) and replicates `Ctx.prop`'s own f-string via
+     `cx.seq_fn`, finding its own falsifying index the ORIGINAL
+     mechanism's way (first index where `interp.ev` disagrees, evaluated
+     once in Python) since there is no AST forall node for
+     `_seq_falsify_indices` to walk. This is why the DEDICATED two-param
+     "other" scan (ROADMAP 16.2, 2026-09-11, row_max_len/seq_max/swap's
+     own note) is gone: it handled exactly this seq-`==` shape by a
+     narrower, ret-vs-param-only route; the general version above
+     subsumes it (row_max_len/seq_max are actually INT-returning tasks
+     that never reach this branch at all; swap's own forall conjunct is
+     a genuine AST node, layer 1's own case -- neither regressed,
+     confirmed below).
+
+  3. MEASURED, same regression run: a seq PARAM's own `env_py` entry is
+     a plain Python list (`_witness_env`'s `vals = list(wv)`), never a
+     tuple; only `ret`'s own entry (set explicitly in this branch) is a
+     tuple. Requiring `tuple` on both sides of the seq-`==` shape's
+     value check left fz_p_seqeq_false's own `s` side unrecognised;
+     accepting `(list, tuple)` on both fixed it.
+
+  MEASURED after all three layers: task_id_603__lucidNumbers reads
+  verified/refuted in both rocq and dafny at flake 3 (was
+  verified/unproved). Regression bar: `python3 grade.py --tasks tasks
+  --kernels rocq,dafny --flake 3 --jobs 8` on the 34 committed tasks --
+  34 of 34 read the identical cell to AGREEMENT.md's own rocq column
+  (min_max still timeout/refuted, a pre-existing flaky real; every other
+  cell unchanged). Restricted-to-rocq conformance (`probe_manifest()`/
+  `run_items()`, one column): 66 of 66 PASS both before and after this
+  diff, no PASS lost (65/1 was the mid-session regression above, closed
+  before this note). `python3 -m unittest test_lower_rocq_loop_cert
+  test_lower_rocq test_names`: 40 of 40 (13 new/changed cases in the
+  first file: FilterPosLoopCertTest's own shape assertion updated for
+  the new per-conjunct arm text, plus a new LucidNumbersPerConjunctTest
+  reading the row directly from the read-only lifted corpus, skipped
+  when that file is absent).
+
+  Swept every OTHER lifted row named in COVERAGE-lifted-785.md's own
+  sweep r24 whose rocq TWIN read unproved or timeout (89 rows; graded
+  standalone at flake 3, rocq+dafny, from the read-only lifted corpus):
+  33 of 89 moved (twin unproved/timeout -> refuted, real unaffected by
+  this diff's own logic in every case checked); 5 did not move, none of
+  them this item's own gap (a DIFFERENT, unrelated certificate path,
+  MEASURED coqc message each): dafny_tmp_tmp0wu8wmfr_heimaverkefni_3_
+  insertionsortmultiset__search and flexweek_tmp_tmpc_tfdj_3_ex3__max
+  ("Unable to unify" on a scalar param witness fact, t_p_<param>_0 -- the
+  generic engine's own param-substitution gap, not a seq forall),
+  dafny_workout_tmp_tmp0abkw6f8_starter_ex09__computeFib (same "Unable
+  to unify" shape on a different literal), prog_fun_solutions_tmp_
+  tmp7_gmnz5f_mockexam2_p5__problem5 and dafny_synthesis_task_id_126__
+  sumOfCommonDivisors ("Tactic failure: unsolved t verification
+  condition", the generic `t_dis` engine's own catch-all, confirmed by a
+  flake-1 isolated rerun of BOTH the original and fixed lower_rocq.py --
+  byte-identical unproved outcome either way, so not this diff's doing).
+  A handful of OTHER rows' REAL-side outcome also differs from the
+  sweep's own r24 cell (verified/unproved/timeout swapping among
+  several rows, e.g. dafny_synthesis_task_id_126 and _809 reading
+  verified in the contended 16-job sweep but unproved in this
+  standalone 6-job run): CONFIRMED pre-existing flakiness, not this
+  diff's doing, by rerunning both task_id_126 and _809 at flake 1 with
+  the ORIGINAL unmodified lower_rocq.py, which reproduces the SAME
+  unproved/timeout reading byte for byte.
 """
 from __future__ import annotations
 
@@ -7751,6 +7846,116 @@ def _forall_true_quants(e, env: dict, funs: dict, out: list) -> None:
         _forall_true_quants(a, env, funs, out)
 
 
+def _seq_falsify_indices(e, env: dict, funs: dict):
+    """2026-09-14 (ROADMAP 16.2, rocq-perconj: "a per-conjunct falsifying
+    index in the seq-return certificate"): `_forall_hints`'s per-CONJUNCT
+    mirror for `_value_cert`'s seq-return branch. `_forall_hints` walks a
+    whole ensures conjunct and pours every forall/exists witness it finds,
+    from every conjunct at once, into one shared list with no record of
+    which conjunct or which nesting level each came from; the seq branch's
+    OWN closing proof needs the opposite: for exactly ONE conjunct `e`
+    (already matched syntactically to its own decomposed hypothesis by the
+    caller), the index to `specialize` it at, one per level of a
+    forall-of-forall chain (lucidNumbers's own shape: a bare forall, an
+    upper-bound forall, and a nested forall two levels deep, each needing
+    ITS OWN witness -- a single shared Python-computed index, the gap this
+    fixes, falsifies at most one of the three and leaves `specialize`
+    proving nothing for the other two, MEASURED as coqc's "No applicable
+    tactic" on dafny_synthesis_task_id_603__lucidNumbers before this
+    function existed).
+
+    Walks `e`'s own forall chain ONE level at a time (never recursing into
+    a sibling conjunct or an unrelated subterm, unlike `_forall_hints`'s
+    whole-tree walk): at each level, evaluate the bound at `env` and pick
+    the first index that falsifies the REMAINING body (the same "first
+    index where interp.ev(body) comes out False" search `_forall_hints`
+    already does for a single forall), then descend into that remaining
+    body with the chosen index bound, one level deeper. A level that is
+    true at every index in range (this conjunct is not the one the twin
+    ladder falsified, or a nested level whose OUTER index happens to make
+    the inner range vacuous) has no falsifying witness to find; `lo` (or
+    0 for an empty range) is used instead, so `specialize` still receives
+    an in-range value and the hypothesis stays well-typed for a deeper
+    level -- or, for a conjunct that turns out true throughout, so the
+    resulting ground fact is simply unused rather than malformed. Returns
+    the per-level index list, or `None` when `e` is not forall-rooted at
+    all or a bound fails to evaluate (Undef/Budget/anything else): the
+    caller then leaves that conjunct out of the match entirely, exactly
+    the pre-fix behavior for anything this search cannot compute -- never
+    a wrong witness, only a conjunct left to the blanket `cbv in
+    *; first [ lia | congruence | intuition congruence ]` closer below."""
+    idxs: list = []
+    node = e
+    while isinstance(node, dict) and "forall" in node:
+        q = node["forall"]
+        try:
+            lo = interp.ev(q["lo"], env, funs, interp.St())
+            hi = interp.ev(q["hi"], env, funs, interp.St())
+        except Exception:                                   # noqa: BLE001
+            return None
+        chosen = lo if hi > lo else 0
+        for i in range(lo, hi):
+            sub = dict(env)
+            sub[q["var"]] = i
+            try:
+                if not bool(interp.ev(q["body"], sub, funs, interp.St())):
+                    chosen = i
+                    break
+            except Exception:                               # noqa: BLE001
+                continue
+        idxs.append(chosen)
+        env = dict(env)
+        env[q["var"]] = chosen
+        node = q["body"]
+    return idxs if idxs else None
+
+
+def _seq_forall_nodes(e, out: list) -> None:
+    """Collect every forall-ROOTED subexpression reachable from `e`, one
+    entry per DISTINCT forall a `match goal` arm needs, into `out`.
+    Companion to `_seq_falsify_indices` (2026-09-14, ROADMAP 16.2,
+    rocq-perconj): that function needs one call PER forall conjunct, but a
+    forall is not always a TOP-LEVEL `task["ensures"]` item -- SPEC.md's
+    seq `==` rule (`r == s`) renders through `cx.prop` as a NESTED `/\\`,
+    `(len_r = len_s) /\\ (forall t_k, ... -> r t_k = s t_k)`, not a bare
+    forall node in the AST at all (the forall only appears once `==` is
+    LOWERED, never in `task["ensures"]` itself). Walking only
+    `task["ensures"]`'s own top-level items for `"forall" in e` (this
+    fix's first draft) missed exactly this shape: `decompose [and]`
+    splits SPEC.md's own nested nested `/\\` into a separate hypothesis
+    same as any other conjunct, but no arm existed to match it, so
+    fz_p_seqeq_false's own forall-shaped hypothesis was left for the
+    generic `cbv in *; first [...]` closer alone -- MEASURED, this date,
+    a regression this walker fixes (conformance's own rocq column: 66
+    PASS before the walker existed, 65 PASS/1 FAIL with only the
+    top-level check). Recurses through every non-quantifier connective an
+    ensures AST can hold (`ite`/`call`/generic `args`, `_forall_hints`'s
+    own traversal) but STOPS at a forall (never descends into its own
+    body separately): `_seq_falsify_indices` already walks a found
+    forall's OWN nested-forall chain, so recursing further here would
+    just find the same inner forall a second time as its own top-level
+    entry, producing a DUPLICATE (harmless, but wasted work) match arm."""
+    if not isinstance(e, dict):
+        return
+    if "forall" in e:
+        out.append(e)
+        return
+    if "exists" in e:
+        return                      # this certificate has no exists arm
+    if "ite" in e:
+        c = e["ite"]
+        _seq_forall_nodes(c["cond"], out)
+        _seq_forall_nodes(c["then"], out)
+        _seq_forall_nodes(c["else"], out)
+        return
+    if "call" in e:
+        for a in e["call"]["args"]:
+            _seq_forall_nodes(a, out)
+        return
+    for a in e.get("args", []):
+        _seq_forall_nodes(a, out)
+
+
 def _nested_or_pat(n: int, name: str = "t_bqe") -> str:
     """Coq `destruct ... as` pattern for an n-way right-nested `\\/`
     (`v = k0 \\/ (v = k1 \\/ ... \\/ v = k(n-1))`): the SAME name at every
@@ -8092,43 +8297,144 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
         env_stmt[ret] = applied_fn
         env_stmt[ret + "_len"] = applied_len
         stmt = " /\\ ".join(cx.prop(e, env_stmt) for e in task["ensures"])
-        idx = 0
+        # PER-CONJUNCT FALSIFYING INDEX (2026-09-14, ROADMAP 16.2,
+        # rocq-perconj): the match below used to be ONE generic arm
+        # (`forall t_k : Z, _ <= t_k < _ -> _`) shared by every
+        # forall-shaped conjunct, specialized everywhere at a SINGLE
+        # Python-computed `idx` (a pointwise-comparison-against-a-param
+        # index, row_max_len/seq_max's own shape, or 0 by default).
+        # lucidNumbers's ensures has three forall conjuncts over the
+        # twin's own output alone (no second seq param to compare
+        # against, so the old search always fell back to 0) -- a mod-3
+        # property, an upper bound, and a strict monotonicity nested two
+        # foralls deep -- and its witness (n=1, twin=[0, 1]) falsifies
+        # only the FIRST at index 1, so `specialize (H 0 ltac:(lia))`
+        # proved nothing and every arm read "No applicable tactic"
+        # (MEASURED, this date, coqc on the generated .v). Building one
+        # match ARM PER conjunct, keyed on that conjunct's own EXACT
+        # rendered Coq text (`cx.prop(e, env_stmt)`, the identical text
+        # already embedded in `stmt` at the same position -- `decompose`
+        # only splits the `/\\`, it never touches conjunct syntax, so the
+        # resulting hypothesis's type is syntactically this same term)
+        # lets each arm carry its OWN `_seq_falsify_indices` search
+        # (`_forall_hints`'s per-conjunct, per-nesting-level mirror,
+        # defined above) instead of one index shared by every arm.
+        # row_max_len/seq_max's own two-seq-param equality conjunct is
+        # exactly a forall this same per-conjunct search already
+        # evaluates correctly (the body is `at(ret,t_k) = at(other,t_k)`,
+        # false at the first differing index -- the same fact the OLD
+        # bespoke "other" scan computed by a different route), so the
+        # dedicated two-param scan this replaces is now redundant, not
+        # merely superseded; the regression bar below confirms neither
+        # task's VERDICT moved.
+        funs_seq = interp.funs_of(task, body)
+        # `try rewrite Ht_rlen in *` (below) already ground `applied_len`
+        # to the LITERAL `len(tv)` in every surviving hypothesis before
+        # this match ever runs (it is unconditional, `in *`, not scoped
+        # to the goal); `env_stmt` still carries the UNREDUCED `applied_len`
+        # (needed verbatim for `stmt`, the theorem's own source text,
+        # which is written before any tactic runs), so matching each arm
+        # against `env_stmt`'s rendering -- MEASURED, this date, coqc
+        # "No applicable tactic" on 603's own three arms, none of which
+        # matched a single decomposed hypothesis -- looks for a hypothesis
+        # shape the rewrite already replaced. `env_stmt_rw` renders each
+        # arm's pattern with the same length literal `Ht_rlen` rewrote in,
+        # so the arm matches the hypothesis as it actually reads at the
+        # point the match runs.
+        env_stmt_rw = dict(env_stmt)
+        env_stmt_rw[ret + "_len"] = _zlit(len(tv))
+        # `_seq_forall_nodes` walks every ensures AST for a genuine
+        # `forall` NODE, wherever nested (lucidNumbers/filter_pos's own
+        # shape: an explicit `forall` right in the task's own ensures).
+        # SPEC.md's seq `==` (`r == s`, split_join/fz_p_seqeq_false's own
+        # shape) is a SEPARATE case: `Ctx.prop`'s `seq` branch (~line
+        # 5247) builds `ln_a = ln_b /\ (forall t_k, 0 <= t_k < ln_a ->
+        # fn_a t_k = fn_b t_k)` directly as a Python f-string, never as a
+        # `forall` AST node at all -- there is nothing for `_seq_forall_
+        # nodes`'s AST-only walk to find (MEASURED, this date: adding
+        # ONLY the AST walk regressed conformance's rocq column from 66
+        # PASS/0 FAIL to 65 PASS/1 FAIL, fz_p_seqeq_false, before this
+        # second loop existed). The second loop below scans the SAME
+        # top-level ensures list for exactly that shape (`==`/`!=`
+        # between two seq-typed expressions) and replicates `Ctx.prop`'s
+        # own f-string byte for byte via `cx.seq_fn`, so its arm's
+        # pattern is the identical term the seq-equality's forall half
+        # elaborates to; the falsifying index is found the ORIGINAL
+        # (pre-per-conjunct) mechanism's own way -- the first index where
+        # the two sides' WITNESS values (evaluated directly by
+        # `interp.ev`, once, in Python, not through Coq) differ -- since
+        # there is no AST forall NODE here for `_seq_falsify_indices`'s
+        # own search to walk.
+        forall_nodes: list = []
         for e in task["ensures"]:
-            if e.get("op") not in ("==", "!="):
+            _seq_forall_nodes(e, forall_nodes)
+        conjuncts: list = [
+            (cx.prop(fe, env_stmt_rw),
+             _seq_falsify_indices(fe, dict(env_py), funs_seq))
+            for fe in forall_nodes]
+        for e in task["ensures"]:
+            if not (isinstance(e, dict) and e.get("op") in ("==", "!=")):
                 continue
             a, b = e["args"]
-            other = None
-            if a == {"var": ret} and isinstance(b, dict) and "var" in b:
-                other = b["var"]
-            elif b == {"var": ret} and isinstance(a, dict) and "var" in a:
-                other = a["var"]
-            if (other is not None and isinstance(env_py.get(other), tuple)):
-                ov = list(env_py[other])
-                for i in range(min(len(tv), len(ov))):
-                    if tv[i] != ov[i]:
-                        idx = i
-                        break
-                break
+            try:
+                if cx.ty(a, {}) != "seq" or cx.ty(b, {}) != "seq":
+                    continue
+                va = interp.ev(a, dict(env_py), funs_seq, interp.St())
+                vb = interp.ev(b, dict(env_py), funs_seq, interp.St())
+            except Exception:                               # noqa: BLE001
+                continue
+            # A seq PARAM's env_py value is a plain Python list
+            # (`_witness_env`'s own `vals = list(wv)`), never a tuple; only
+            # `ret`'s own entry, set explicitly a few lines above this
+            # branch, is a tuple. Accepting either (MEASURED: requiring
+            # `tuple` on both sides left fz_p_seqeq_false's own `s` side
+            # unrecognised and this whole arm silently skipped) treats
+            # both representations as the same seq value, exactly what
+            # `interp.ev` itself does for every other seq operation here.
+            if not (isinstance(va, (list, tuple))
+                    and isinstance(vb, (list, tuple))):
+                continue
+            idx = 0
+            for i in range(min(len(va), len(vb))):
+                if va[i] != vb[i]:
+                    idx = i
+                    break
+            fn_a, ln_a = cx.seq_fn(a, env_stmt_rw, {})
+            fn_b, _ = cx.seq_fn(b, env_stmt_rw, {})
+            conj_text = (f"(forall t_k : Z, 0 <= t_k < {ln_a} -> "
+                        f"{fn_a} t_k = {fn_b} t_k)")
+            conjuncts.append((conj_text, [idx]))
+        arms = []
+        seen_arm: set = set()
+        for conj_text, idxs in conjuncts:
+            if not idxs or conj_text in seen_arm:
+                continue
+            seen_arm.add(conj_text)
+            spec = "; ".join(
+                f"specialize (H {_zlit(i)} ltac:(lia))" for i in idxs)
+            arms.append(f"  | H : {conj_text} |- False =>\n"
+                        f"      {spec}; cbv in H\n")
+        match_block = ("  repeat match goal with\n" + "".join(arms)
+                       + "  end.\n") if arms else ""
         # ROADMAP 16.2, 2026-09-11 (swap's own witness, a=0, b=1): the
-        # `repeat match` above only reaches a FORALL-shaped conjunct (two
-        # seq params compared pointwise); a conjunct that is itself a
-        # concrete-index equation against a scalar (`result[0] == b`,
-        # never wrapped in a `forall`) is left exactly as `decompose`
-        # produced it -- an unreduced application of `{name}_t`/`t_upd`/
-        # `t_fill` at literal arguments, which `lia` cannot see through
-        # (it treats an opaque function application as an atom, not a
-        # number). One `cbv in *` between the match and the closing
-        # `lia`, unconditional and free of any `_kind`/witness-shape
-        # gate, reduces every surviving hypothesis (the `forall`-derived
-        # ones already `cbv`'d above are idempotent under a second pass)
-        # to literal numerals at these concrete literal arguments, which
-        # is exactly what let this same idiom already close the plain
-        # (non-seq) `_v0_cert`/`_undef_cert` certificates by `lia` alone.
-        # A task whose falsifying conjunct WAS already forall-shaped
-        # (row_max_len, seq_max) already had every hypothesis reduced by
-        # the match's own per-hit `cbv in H`, so this second, blanket
-        # pass is a no-op for them, confirmed by the unchanged AGREEMENT
-        # regression below.
+        # match above only reaches a FORALL-shaped conjunct; a conjunct
+        # that is itself a concrete-index equation against a scalar
+        # (`result[0] == b`, never wrapped in a `forall`) is left exactly
+        # as `decompose` produced it -- an unreduced application of
+        # `{name}_t`/`t_upd`/`t_fill` at literal arguments, which `lia`
+        # cannot see through (it treats an opaque function application as
+        # an atom, not a number). One `cbv in *` between the match and
+        # the closing `lia`, unconditional and free of any `_kind`/
+        # witness-shape gate, reduces every surviving hypothesis (the
+        # `forall`-derived ones already `cbv`'d above are idempotent
+        # under a second pass) to literal numerals at these concrete
+        # literal arguments, which is exactly what let this same idiom
+        # already close the plain (non-seq) `_v0_cert`/`_undef_cert`
+        # certificates by `lia` alone. A task whose falsifying conjunct
+        # WAS already forall-shaped (row_max_len, seq_max) already had
+        # every hypothesis reduced by the match's own per-hit `cbv in H`,
+        # so this second, blanket pass is a no-op for them, confirmed by
+        # the unchanged AGREEMENT regression below.
         # LOOP-BODY VALUE CERTIFICATE, filter_pos's own gap (2026-09-14,
         # ROADMAP 16.2, rocq-cert; full story in the dated note above
         # `_first_undef_body`): filter_pos's own falsified conjunct is
@@ -8157,8 +8463,11 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
         # widens from bare `lia` to `first [ lia | congruence | intuition
         # congruence ]`, a strict superset that changes nothing for a
         # task `lia` alone already closed (row_max_len, seq_max, swap:
-        # confirmed byte-identical certificates otherwise, regression bar
-        # below).
+        # confirmed unchanged VERDICT by the regression bar below; the
+        # per-conjunct match above changes the exact certificate TEXT for
+        # these three tasks, no longer byte-identical to before this
+        # date's rocq-perconj fix, but the VERIFIED/REFUTED verdict each
+        # already read is unchanged).
         proof = (
             "Proof.\n"
             "  intro t_H.\n"
@@ -8166,10 +8475,7 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
             f"  assert (Ht_rlen : {applied_len} = {_zlit(len(tv))}) "
             f"by (vm_compute; reflexivity).\n"
             "  try rewrite Ht_rlen in *.\n"
-            "  repeat match goal with\n"
-            "  | H : forall t_k : Z, _ <= t_k < _ -> _ |- False =>\n"
-            f"      specialize (H {_zlit(idx)} ltac:(lia)); cbv in H\n"
-            "  end.\n"
+            + match_block +
             "  cbv in *.\n"
             "  first [ lia | congruence | intuition congruence ].\n"
             "Qed.\n")

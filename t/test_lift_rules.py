@@ -160,7 +160,15 @@ def _lex(text: str) -> list[_Tok]:
             continue
         if c.isalpha() or c == "_":
             j = i
-            while j < n and (text[j].isalnum() or text[j] in "_"):
+            # "#<alnum>" as an identifier tail (row 33, 2026-09-14): the
+            # real front end (`lift_parse._lex`) already accepts this for
+            # rprint's own synthesised names like "_t#0" (a chained
+            # quantifier's compiler-introduced companion binder); this shim
+            # lexer needs the same extension so a unit test can write that
+            # exact shape directly rather than only via a corpus fixture.
+            while j < n and (text[j].isalnum() or text[j] in "_"
+                              or (text[j] == "#" and j + 1 < n
+                                  and text[j + 1].isalnum())):
                 j += 1
             while j < n and text[j] == "'":
                 j += 1
@@ -655,7 +663,16 @@ class _P:
             line = self.peek().line
             self.advance()
             depth = 0
-            parts = []
+            # `lift_parse._parse_new_rhs` keeps the leading "new" IN its
+            # captured text (it slices the source starting before the
+            # `advance()` past the keyword); this shim used to advance
+            # first and start `parts` empty, dropping "new" entirely, so
+            # a shim-parsed `NewRhs.text` never matched
+            # `lift_classify._ARRAY_NEW_SHAPE_RE`/`_NEW_ARRAY_RE` (both
+            # anchored on a leading `new`) -- decision 22's alloc-fill
+            # row silently never fired on ANY shim-parsed snippet,
+            # falling through to `local-index-assign-no-alloc` instead.
+            parts = ["new"]
             while True:
                 t = self.peek()
                 if depth == 0 and t.text in (",", ";"):
@@ -1510,6 +1527,141 @@ method ArrWrite(a: array<int>, i: int, v: int) returns (r: int)
     assert isinstance(v, C.Refusal) and v.reason == "array-mutation", f"expected array-mutation refusal, got {v}"
     print("test_array_readonly_as_seq_and_mutation_refusal: read-only array<int> -> seq + len/at; "
           "a write refuses array-mutation")
+
+
+def test_array_readonly_shadowed_by_closure_fn_param() -> None:
+    """Measured on `dafny-synthesis_task_id_755` (`SecondSmallest`): a
+    closure function's OWN parameter can share a name with the method's
+    array parameter (`min(s: seq<int>)` alongside `SecondSmallest(s:
+    array<int>)`); a call inside that function to ITS OWN same-named
+    parameter (`MinPair(s)`) must not read as the ARRAY escaping to a
+    call. `array_readonly_issue`'s scope-blind identifier scan used to
+    flag exactly this as `array` (false positive) before the shadow
+    guard (`_closure_root_shadows`)."""
+    src = """
+function MinPair(s: seq<int>): int
+{
+  if s[0] <= s[1] then s[0] else s[1]
+}
+
+function Min2(s: seq<int>): int
+  requires |s| >= 2
+{
+  MinPair(s)
+}
+
+method UsesShadow(s: array<int>) returns (r: int)
+  requires s.Length >= 2
+  ensures r == r
+{
+  r := Min2(s[..]);
+}
+"""
+    task, rec = _lift_one(src, "UsesShadow")
+    assert "array-readonly-as-seq" in _rule_names(rec)
+    assert task["params"][0]["type"] == "seq"
+    print("test_array_readonly_shadowed_by_closure_fn_param: a closure function's own "
+          "same-named parameter does not falsely escape the method's array param")
+
+
+def test_array_alloc_fill_local_with_readonly_param() -> None:
+    """Measured on `dafny-synthesis_task_id_447` (`CubeElements`): a
+    read-only array PARAMETER (`a`, decision 1) alongside a SEPARATE,
+    decision-22 alloc-fill LOCAL (`var cubedArray := new int[a.Length];
+    ...; return cubedArray;`) in the same method. Two bugs, both fixed by
+    this row: (1) classify's generic per-node scan used to flag the
+    alloc-fill local's own `VarDeclStmt` as `array` ("local array"),
+    unconditionally, even though `find_array_mutation` had already
+    accepted it -- refusing the whole method (and along with it the
+    genuinely read-only `a`) on a local decision 22 already validated;
+    (2) once that let the method through to rewrite, `_lift_stmt`'s
+    `VarDeclStmt`/`NewRhs` branch read `json_ty` before ever assigning it
+    on that branch (`UnboundLocalError`)."""
+    src = """
+method CubeLike(a: array<int>) returns (cubed: array<int>)
+  ensures cubed.Length == a.Length
+  ensures forall i :: 0 <= i < a.Length ==> cubed[i] == a[i] * a[i] * a[i]
+{
+  var cubedArray := new int[a.Length];
+  for i := 0 to a.Length
+    invariant 0 <= i <= a.Length
+    invariant cubedArray.Length == a.Length
+    invariant forall k :: 0 <= k < i ==> cubedArray[k] == a[k] * a[k] * a[k]
+  {
+    cubedArray[i] := a[i] * a[i] * a[i];
+  }
+  return cubedArray;
+}
+"""
+    task, rec = _lift_one(src, "CubeLike")
+    assert "array-readonly-as-seq" in _rule_names(rec)
+    assert task["params"][0]["type"] == "seq"
+    assert task["returns"][0]["type"] == "seq"
+    print("test_array_alloc_fill_local_with_readonly_param: a read-only array param "
+          "alongside a separate alloc-fill local both lift; no UnboundLocalError")
+
+
+def test_function_reads_own_array_param_dropped() -> None:
+    """Measured on `dafny-synthesis_task_id_2/161/249/579` (`InArray`,
+    the MBPP-DFY 164's own four `function-contract` census rows): a
+    closure function's `reads` clause naming only its OWN read-only
+    array parameter (`predicate InArray(a: array<int>, x: int) reads a`)
+    is framing, not a functional contract -- a Dafny function can never
+    write through any reference -- so it is dropped, not refused, and
+    passing the method's own array param to that function (`InArray(a,
+    x)`) is exempted from the "passed to a call" escape check. Also
+    covers `_function_decreases`'s companion fix: dafny's rprint always
+    materialises an inferred `decreases {a}, a, x` (a `SetDisplay`) for
+    ANY `reads`-bearing function, self-recursive or not, and this
+    predicate never self-calls -- `_function_decreases` must return
+    `None` (no decreases needed) rather than try to lift that
+    `SetDisplay`, which has no expression mapping at all."""
+    src = """
+predicate InArr(a: array<int>, x: int)
+  reads a
+  decreases {a}, a, x
+{
+  exists i :: 0 <= i < a.Length && a[i] == x
+}
+
+method UsesInArr(a: array<int>, y: int) returns (r: bool)
+  ensures r == InArr(a, y)
+{
+  r := InArr(a, y);
+}
+"""
+    task, rec = _lift_one(src, "UsesInArr")
+    assert "function-reads-array-dropped" in _rule_names(rec), _rule_names(rec)
+    assert task["params"][0]["type"] == "seq", task["params"]
+    spec_fun = task["spec_funs"][0]
+    assert spec_fun["params"][0]["type"] == "seq", spec_fun["params"]
+    print("test_function_reads_own_array_param_dropped: a `reads`-clause on a spec_fun's "
+          "own read-only array param drops rather than refuses; its own inferred "
+          "`decreases {a}, ...` set is never lifted")
+
+
+def test_function_reads_non_array_still_refuses() -> None:
+    """The widening above is narrow: a `reads` clause naming anything
+    OTHER than one of the function's own array-typed parameters (here, a
+    bare `*`) still refuses `function-contract` exactly as before."""
+    src = """
+predicate ReadsStar(x: int)
+  reads *
+{
+  x >= 0
+}
+
+method UsesReadsStar(x: int) returns (r: bool)
+  ensures r == ReadsStar(x)
+{
+  r := ReadsStar(x);
+}
+"""
+    v = _classify_one(src, "UsesReadsStar")
+    assert isinstance(v, C.Refusal) and v.reason == "function-contract", (
+        f"expected function-contract refusal, got {v}")
+    print("test_function_reads_non_array_still_refuses: `reads *` still refuses "
+          "function-contract")
 
 
 def test_decreases_tuple_projection_and_guess_sum() -> None:
@@ -3223,12 +3375,133 @@ method AllShort(lists: seq<seq<int>>, cap: int) returns (r: bool)
           "==> P` desugars its unguarded membership antecedent")
 
 
+def test_quantifier_row33_equality_filter_exists() -> None:
+    """Row 33 (2026-09-14): an `exists` with a companion binder pinned by
+    an equality filter (`| _t#0 == i + 1`) -- dafny's own resolver print of
+    a chained index inside a quantifier -- eliminates `_t#0` by
+    substitution and bounds the remaining binder `i` the ordinary way.
+    Measured verbatim (rprint) on dafny-synthesis task 472
+    (`ContainsConsecutiveNumbers`)."""
+    src = """
+method HasConsecutive(a: array<int>) returns (result: bool)
+  requires a.Length > 0
+  ensures result <==> exists i: int, _t#0: int | _t#0 == i + 1 :: 0 <= i && i < a.Length - 1 && a[i] + 1 == a[_t#0]
+{
+  result := false;
+}
+"""
+    task, rec = _lift_one(src, "HasConsecutive")
+    ens = task["ensures"][0]
+    exists_side = ens["args"][1] if "exists" in ens["args"][1] else ens["args"][0]
+    q = exists_side["exists"]
+    assert q["lo"] == {"int": 0}, q
+    assert q["hi"] == {"op": "-", "args": [
+        {"op": "len", "args": [{"var": "a"}]}, {"int": 1}]}, q
+    # The eliminated `_t#0` never appears anywhere in the lifted body; every
+    # occurrence became `at(a, i + 1)` (`i`'s own fresh renamed name).
+    dumped = json.dumps(q)
+    assert "_t#0" not in dumped, dumped
+    assert q["body"]["op"] == "==", q["body"]
+    print("test_quantifier_row33_equality_filter_exists: `_t#0 == i + 1` "
+          "eliminates the companion binder, i bounds the ordinary way")
+
+
+def test_quantifier_row33_equality_filter_forall_requires() -> None:
+    """Row 33: the same shape inside a `forall` `requires` clause, with the
+    equality on the OTHER side (`i + 1 == _t#0`) -- measured on
+    dafny-synthesis task 622 (`FindMedian`)."""
+    src = """
+method Bounded(a: array<int>) returns (r: bool)
+  requires forall i: int, _t#0: int | i + 1 == _t#0 :: 0 <= i && i < a.Length - 1 ==> a[i] <= a[_t#0]
+  ensures r == true
+{
+  r := true;
+}
+"""
+    task, rec = _lift_one(src, "Bounded")
+    req = task["requires"][0]
+    q = req["forall"]
+    assert q["lo"] == {"int": 0}, q
+    assert q["hi"] == {"op": "-", "args": [
+        {"op": "len", "args": [{"var": "a"}]}, {"int": 1}]}, q
+    # The whole antecedent was consumed as i's own range bound, so the
+    # body is exactly the consequent -- no leftover "implies" wrapper.
+    assert q["body"] == {"op": "<=", "args": [
+        {"op": "at", "args": [{"var": "a"}, {"var": "i"}]},
+        {"op": "at", "args": [{"var": "a"}, {"op": "+", "args": [
+            {"var": "i"}, {"int": 1}]}]}]}, q["body"]
+    assert "_t#0" not in json.dumps(q), q
+    print("test_quantifier_row33_equality_filter_forall_requires: the "
+          "equality's sides may appear in either order")
+
+
+def test_quantifier_row33_two_equality_binders() -> None:
+    """Row 33: TWO independent equality-filter binders in the same method
+    (dafny-synthesis task 751's `IsMinHeap` shape has one such quantifier
+    per ensures branch) each eliminate on their own."""
+    src = """
+method Heapish(a: array<int>) returns (result: bool)
+  ensures result ==> forall i: int, _t#0: int | _t#0 == 2 * i + 1 :: 0 <= i && i < a.Length / 2 ==> a[i] <= a[_t#0]
+  ensures !result ==> exists i: int, _t#0: int | _t#0 == 2 * i + 2 :: 0 <= i && i < a.Length / 2 && a[i] > a[_t#0]
+{
+  result := true;
+}
+"""
+    task, rec = _lift_one(src, "Heapish")
+    for ens in task["ensures"]:
+        assert "_t#0" not in json.dumps(ens), ens
+    print("test_quantifier_row33_two_equality_binders: two independent "
+          "equality-filter quantifiers each eliminate their own binder")
+
+
+def test_quantifier_row33_self_reference_stays_refused() -> None:
+    """Row 33's soundness guard: an equation that mentions its OWN binder
+    on both sides (`_t#0 == _t#0 + 1`, unsatisfiable/circular, never a real
+    definition) must not be read as a substitution -- the quantifier stays
+    refused `unbounded-quantifier` exactly as before this row."""
+    src = """
+method Weird(a: array<int>) returns (result: bool)
+  ensures result <==> exists i: int, _t#0: int | _t#0 == _t#0 + 1 :: 0 <= i && i < a.Length && a[i] == a[_t#0]
+{
+  result := false;
+}
+"""
+    v = _classify_one(src, "Weird")
+    assert isinstance(v, C.Refusal) and v.reason == "unbounded-quantifier", (
+        f"expected unbounded-quantifier refusal, got {v}")
+    print("test_quantifier_row33_self_reference_stays_refused: `_t#0 == "
+          "_t#0 + 1` is circular, never read as a defining equation")
+
+
+def test_quantifier_row33_no_equation_and_no_range_stays_refused() -> None:
+    """Row 31/33's own carve-out, unchanged: a binder with neither an
+    index-implied range nor a defining equation (compared only by
+    membership/arithmetic against another BOUND variable, not a constant
+    or outer-scope expression) stays refused `unbounded-quantifier`."""
+    src = """
+method Weird2(x: int, y: int) returns (result: bool)
+  ensures result <==> exists z: int :: z < x + y
+{
+  result := false;
+}
+"""
+    v = _classify_one(src, "Weird2")
+    assert isinstance(v, C.Refusal) and v.reason == "unbounded-quantifier", (
+        f"expected unbounded-quantifier refusal, got {v}")
+    print("test_quantifier_row33_no_equation_and_no_range_stays_refused: "
+          "no range, no defining equation -> still refused")
+
+
 UNIT_TESTS = [
     test_chain_desugared, test_iff_to_eq, test_nat_return_ensures,
     test_nat_invariant_added_and_dedup, test_spec_fun_totalised,
     test_tail_return, test_parallel_assign_temps, test_default_init,
     test_split_conjuncts_ensures_not_invariants, test_in_desugared_fresh_binder,
     test_array_readonly_as_seq_and_mutation_refusal,
+    test_array_readonly_shadowed_by_closure_fn_param,
+    test_array_alloc_fill_local_with_readonly_param,
+    test_function_reads_own_array_param_dropped,
+    test_function_reads_non_array_still_refuses,
     test_decreases_tuple_projection_and_guess_sum, test_multi_method_one_task_each,
     test_set_refused_before_rewrite, test_calls_other_method_in_assignment,
     test_null_refuses_heap, test_bodyless_method_refused,
@@ -3266,6 +3539,11 @@ UNIT_TESTS = [
     test_quantifier_row31_multi_binder_unguarded,
     test_quantifier_row31_ordered_pair,
     test_quantifier_row31_membership_binder_unguarded,
+    test_quantifier_row33_equality_filter_exists,
+    test_quantifier_row33_equality_filter_forall_requires,
+    test_quantifier_row33_two_equality_binders,
+    test_quantifier_row33_self_reference_stays_refused,
+    test_quantifier_row33_no_equation_and_no_range_stays_refused,
 ]
 
 

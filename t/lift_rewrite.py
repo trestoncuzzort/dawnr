@@ -841,17 +841,34 @@ def _loop_decreases(w: WhileStmt, dc: DecreasesClause, scope: Scope, fn_names, s
 
 
 def _function_decreases(d: FunctionDecl, fn_scope: Scope, fn_names, record, renamer) -> dict:
+    calls = [c for c in walk(d.body) if isinstance(c, Call)
+             and isinstance(c.fn, Ident) and c.fn.name == d.name] if d.body is not None else []
+    if not calls:
+        # No self-call, no decreases needed at all (section 6, function
+        # rules) -- checked by SELF-CALLS, not by whether dafny happens
+        # to print a decreases clause: dafny's rprint always materialises
+        # one for any function with a nonempty `reads` clause (a leading
+        # heap-ordering `{obj, ...}` set), self-recursive or not, so a
+        # printed clause is not evidence recursion is present. Row
+        # (function-parameter widening, this wave): before this, the
+        # gate below was `if not dcs`, which only a NON-recursive
+        # `reads`-bearing function's PRINTED-but-unneeded decreases could
+        # ever reach once classify started accepting an array-only reads
+        # clause (this wave) -- `dc.exprs[0]` is a `SetDisplay` `_lift
+        # _expr` has no case for at all, crashing rewrite with "no
+        # expression mapping for SetDisplay" rather than returning
+        # `None` here as every other non-recursive spec_fun already does.
+        # Measured on `dafny-synthesis_task_id_2/161/249/579` (`InArray`,
+        # `reads a`, zero self-calls, printed `decreases {a}, a, x`).
+        return None
     dcs = [s for s in d.specs if isinstance(s, DecreasesClause)]
     if not dcs:
-        # No self-call, no decreases needed at all (section 6, function rules).
         return None
     dc = dcs[0]
     exprs = dc.exprs
     if len(exprs) == 1:
         record.decreases_origin[d.name or "?"] = "stated"
         return _lift_expr(exprs[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
-    calls = [c for c in walk(d.body) if isinstance(c, Call)
-             and isinstance(c.fn, Ident) and c.fn.name == d.name]
     param_names = [p.name for p in d.params]
     dropped = unchanged_at_every_call(param_names, calls, len(exprs))
     kept = [exprs[i] for i in range(len(exprs)) if i not in dropped]
@@ -1147,6 +1164,22 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                     # declared type (if any) says.
                     rhs_e = _lift_new_array(rhs, scope, fn_names, self_name, task_name, record, renamer)
                     ty = "seq"
+                    # Decision 22 (this wave, array read-only): a local
+                    # bound straight to `new int[n]`/`new nat[n]` has no
+                    # `json_ty` computed above (that only happens in the
+                    # `else` arm, from `nm.type`/the initialiser's own
+                    # shape) -- `json_ty` stays unset here on purpose so
+                    # the fallback below (`if json_ty is None: json_ty =
+                    # ty`) gives it the plain `"seq"` a flat `fill(...)`
+                    # value needs, matching every other seq-typed local.
+                    # Measured on `dafny-synthesis_task_id_447`
+                    # (`CubeElements`, `var cubedArray := new
+                    # int[a.Length];`): before this line, `json_ty` was
+                    # read at the bottom of this branch while still
+                    # unbound (`UnboundLocalError`) the first time
+                    # classify ever let an alloc-fill local this shape
+                    # reach the rewriter at all.
+                    json_ty = None
                 else:
                     rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
                     json_ty = None
@@ -1245,6 +1278,25 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
         if s.direction == "to":
             h_t = renamer.fresh("h", record, "local")
             scope.types[h_t] = "int"
+            # `lift_check._task_loop_scopes`'s end-alignment heuristic
+            # mis-assigns this bound local whenever the source declared a
+            # real local (here `i`) BEFORE the for-loop: the task's own
+            # declaration order becomes [<real locals...>, h_t, i_t], with
+            # h_t landing in the MIDDLE, not at either end (measured:
+            # dafny-synthesis_task_id_267's SumOfSquaresOfFirstNOddNumbers,
+            # task order [i, h, k] against source scope [i, k] -- a
+            # front-or-back guess cannot single out `h_t` there). Recording
+            # it here, keyed by the for-loop's own source line (matching
+            # `_walk_source_loops`'s `loop.line`, section 9's per-loop
+            # lemma key), lets `lift_check` remove exactly this name from
+            # the task's loop-scope list instead of reconstructing which
+            # position is "extra" from lengths alone. `LiftRecord` carries
+            # no declared field for this (not this row's file to touch);
+            # a plain dict attached at first use is exactly as durable
+            # for one rewrite pass's own record instance.
+            if not hasattr(record, "for_bound_locals"):
+                record.for_bound_locals = {}
+            record.for_bound_locals.setdefault(s.line, []).append(h_t)
             out.append({"var": {"name": h_t, "type": "int", "init": hi_e}})
             out.append({"var": {"name": i_t, "type": "int", "init": lo_e}})
             cond = {"op": "<", "args": [{"var": i_t}, {"var": h_t}]}
@@ -1362,12 +1414,16 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
     for p in d.params:
         tname = renamer.fresh(p.name, record, "fnparam")
         scope.renames[p.name] = tname
-        if p.type is not None and p.type.kind == "seq":
-            ty = "seq"
-        elif p.type is not None and p.type.kind == "bool":
-            ty = "bool"
-        else:
-            ty = "int"
+        # Row (decision 1 / array read-only, this wave): `_t_type_of`
+        # already answers "seq" for `kind == "array"` (it exists
+        # precisely to unify a method's own array/seq/string params);
+        # this used to hand-roll seq/bool/else-int with no array case at
+        # all, so a closure function's own array-typed parameter (only
+        # reachable once classify's `reads`-clause and call-escape rows
+        # above accept one, e.g. `InArray(a: array<int>, x: int)`) fell
+        # into "else: ty = int" -- wrong for every later `.Length`/index
+        # expression `_lift_expr` still lowers generically off `scope`.
+        ty = _t_type_of(p.type)
         scope.types[tname] = ty
         params_out.append({"name": tname, "type": _t_json_type(p.type)})
         if p.type is not None and p.type.kind == "nat":
@@ -1395,7 +1451,22 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
             record.clauses_dropped.append(ClauseDropped(rule="function-ensures-dropped", count=1))
             record.rewrites.append(Rewrite(rule="function-ensures-dropped", line=spec.line))
         elif isinstance(spec, ReadsClause):
-            pass  # already refused by classify if non-trivial
+            # Empty, dropped silently, no provenance needed (nothing
+            # was ever there to frame). A NON-empty one only reaches
+            # here when classify's own reads-clause row already
+            # confirmed every expr names one of `d`'s own read-only
+            # array parameters -- t has no heap to frame once that
+            # array is a `seq` value, so it is dropped the same way,
+            # recorded here (this module's OWN `record`, the one that
+            # actually reaches the sidecar's `"rewrites"` list --
+            # `classify`'s parallel `Liftable.rewrites` is a plan, never
+            # the persisted provenance `lifter.py` writes). Anything
+            # else non-empty still refuses `function-contract` in
+            # classify and never reaches this function at all.
+            nonempty = isinstance(spec.exprs, tuple) and spec.exprs
+            if nonempty:
+                record.clauses_dropped.append(ClauseDropped(rule="function-reads-array-dropped", count=1))
+                record.rewrites.append(Rewrite(rule="function-reads-array-dropped", line=spec.line))
 
     body_e = _lift_expr(d.body, scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
     if guard_parts:

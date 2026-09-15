@@ -2068,6 +2068,151 @@ Measured (`python3 t/grade.py --tasks <dir> --kernels lean,dafny --flake
     anyValueExists, all `unproved / unproved` at baseline) moved to
     `unproved / refuted` -- the real side is unaffected in every one of
     these, so no cell that counted before stopped counting.
+
+2026-09-14 (lean-loopcert2, ROADMAP 16.2's own item, continuing directly
+from the note just above): the two rows that note left open by name,
+Clover_cal_sum.Sum (off-by-one) and Dafny_Verify_..LoopInvariant.
+DownWhileGreater (compare-flip), both route their "value"-kind witness
+through a loop whose OWN termination needs THE DOMAIN HYPOTHESIS (`_t`/
+`_t_loop`'s `hpre`/`hinv{i}` params, `lower_loop`'s 2026-09-10 machinery)
+-- `_cert_value`'s pre-existing `{name}_t`-based path cannot certificate
+either, MEASURED as two DISTINCT failure modes (`lean` run directly on
+each emitted file, this session):
+
+  - cal_sum: `{name}_t`'s own definition passes the loop's initial
+    invariant to `{name}_t_loop` as a GENERIC `(by grind)` proof
+    obligation (true for the real, for every `n`) -- the off-by-one
+    twin's mutated entry state makes this obligation FALSE for every
+    `n` (not only the specific witness), so `(by grind)` fails at
+    DEFINITION TIME and `sorryAx` poisons `{name}_t` itself
+    unconditionally; the certificate's own message names the true
+    site, `{name}_t`'s `(by grind)` call, never the certificate's own
+    text.
+  - downWhileGreater: `{name}_t_loop`'s `can_dite`/`hok` mechanism
+    (THE PRESERVATION-HAVE COLLISION's own fix, this file's earlier
+    dated note) DECIDES the preservation obligation at the mutated
+    step and, reading it false, returns `_loop_zero`'s PLACEHOLDER (0)
+    instead of continuing -- sound for `{name}_t_loop_spec`'s own total-
+    function proof, but not what interp.py's own execution computes at
+    the same witness (-1, harness.twin_for's own measurement).
+    `ensures` genuinely holds of the PLACEHOLDER, so the certificate's
+    `¬(applied = 0)` is a FALSE goal -- lean's own measured message,
+    verbatim: `error: unsolved goals` / `case refine_2 ⊢ False`.
+
+THE FIX: `_cert_value_loop` (new, called from `_cert_value` before its
+own `{name}_t`-based attempt, only when a while loop needs the domain
+hypothesis) never mentions the compiled `{name}_t`/`{name}_t_loop` at
+all -- it replays the RAW loop concretely, exactly as `_cert_undefined_
+loop` already does for an undefined witness (ground `interp.exec_body`
+picks the branch, `self.sym` renders the same ground state as closed
+Lean terms one iteration behind), but continues until the guard reads
+ground-False (a normal exit, always reached for a "value"-kind witness)
+rather than until an interp.Undef, capped at the same MAX_UNDEF_UNROLL.
+A final cross-check against `w["_twin"]` (never assumed) means a replay
+bug can only make this method abstain (falling through to the pre-
+existing path), never assert an unverified claim.
+
+MEASURED (`lean` on each emitted file, this machine, lean 4.33.1):
+  - both rows above: unproved -> refuted (twin); real unchanged
+    (verified) in both.
+  - the same "value"-kind + domain-hyp-loop shape scanned across all 302
+    lifted tasks (harness.twin_for + `_loop_needs_domain_hyp` on the
+    loop, filtered to lean's own `unproved` cells in t/COVERAGE-
+    lifted-785.md's sweep r24): 27 candidates found; 15 (including the
+    2 named above) now read refuted (verified real unaffected in every
+    one); 12 remain honestly unproved (a genuinely different gap this
+    fix does not reach -- e.g. computePower's own dropped-termination-
+    bound class, this file's earlier dated note). The 13 additional
+    rows: mroot2, mroot3 (both Dafny-Exercises..ExerciseSquareRoot),
+    computePower x4 (ai_agent_validation/verify_examples,
+    generated_code, two spellings), cube x2 (same two corpora),
+    generated_code_minimum, sumIntsLoop, flip (pancakesort), carre,
+    foo (simplemultiplication), gcdI x3 (three ex_05/ex_06 spellings),
+    sumOfCommonDivisors.
+  - regression bar, re-measured after this fix: the 34 committed tasks'
+    lean column matches t/AGREEMENT.md byte-for-byte (count_vowels
+    unchanged, unproved/unproved); lean's own 66-task conformance slice
+    reads 0 FAIL (unchanged); all 63 of the dafny_synthesis rows in
+    t/COVERAGE-lifted-785.md reading `verified / refuted` in lean still
+    do (none moved) -- `python3 t/grade.py --tasks t/tasks
+    --kernels dafny,lean --flake 3 --jobs 8` and a `conformance.py`
+    probe restricted to the lean column via `run_par.probe_backends()`,
+    both run directly against the emitted sources on this machine.
+
+2026-09-14 (key lean-seqcomp, ROADMAP 16.2's "closing the composed seq
+goals", t/DESIGN-lean-seq-composition.md's rows): THE SILENT-DISCH GAP.
+`_seq_append_read_script`'s own `rw_step`, `simp (disch := omega) only
+[t_seq_append_get, ...]`, discharges EVERY side condition a cited
+lemma's instantiation carries; `hju : j < ((l1++l2).length : Int)` has a
+`.length` of a `List.take`/`.drop`/`++` term `omega` alone cannot see
+through, so on that side condition the lemma was never APPLIED at all
+(`simp` reports "made no progress", not a wrong rewrite -- measured
+directly, probe240c/f.lean, this session's own scratch probes) --
+naively adding a length-normalizing `simp only [...]` before `omega`
+inside the SAME disch regressed (probe240c/g.lean: `hj`'s own goal, `0 ≤
+j`, has no length term, so an un-`try`-guarded `simp only [length
+lemmas]` there raises "simp made no progress" itself and aborts the
+`;`-sequenced `omega` that used to close it alone) -- almost certainly
+the exact regression 2026-09-12's own docstring above named ("regressed
+262 when tried in the full pipeline") without isolating which of the
+two side conditions was the actual cause. The fix: `try` around the
+`simp only [...]` step alone (never the whole disch), plus
+`List.length_cons`/`List.length_nil` in that same normalizing set (106
+appendArrayToSeq's own `r ++ [a[i]!]` is a literal ONE-ELEMENT list,
+whose own `.length` needs them; measured, probe106f.lean). Additive by
+construction and gated the same way `_seq_append_read_script` always
+was (`self.seq_new` alone): a side condition `omega` already closed
+unaided keeps closing the same way. Measured (`t/grade.py --kernels
+lean,dafny --flake 3`, this machine, lean 4.33.1 / dafny
+4.11.0+fcb2042): 240 replaceLastElement and 262 splitArray move lean
+real from `unproved` to `verified` (twin stays `refuted` in both,
+dafny unchanged), each confirmed stable across three separate re-grades
+of the same generated source (this session's own scratch runs, not
+committed); 106 appendArrayToSeq, 470 pairwiseAddition, 576 isSublist,
+578 interleave, 586 splitAndAppend, 603 lucidNumbers and 610
+removeElement are UNCHANGED (106/586 reach a DIFFERENT residual gap past
+this one, named below; 470/578/603 stay the pre-existing grind-heartbeat
+timeouts; 576 hits a distinct elaboration error unrelated to seq
+composition, "unknown identifier `result`", named open, not diagnosed
+this session; 610 still abstains, "only a single top-level loop is
+lowered for lean" -- the two-sequential-loop chaining this item's own
+design doc named, not attempted this session, out of scope for the time
+available). Regression bar: the 34 t/tasks/ committed tasks are BYTE-
+IDENTICAL in behaviour under this change (measured: none of the 34 sets
+`self.seq_new`, so `_seq_append_read_script`'s gate never fires for any
+of them; `t/grade.py --kernels dafny,lean --flake 3` over all 34 read 33
+of 34 agreeing, `count_vowels` unproved/unproved unchanged, matching
+t/AGREEMENT.md's own lean column exactly, zero cells moved); the lean
+column of every OTHER `seq_new` dafny_synthesis row in t/COVERAGE-
+lifted-785.md (257 swap, 261 elementWiseDivision, 273
+subtractSequences, 445 multiplyElements, 460 getFirstElements, 587
+arrayToSeq, 618 elementWiseDivide, 728 addLists -- the 15 seq_new rows
+of that file's 75, this session's own grep over `lower_lean.Lower(...).
+seq_new`) is unchanged (all already `verified / refuted`, still
+`verified / refuted`).
+
+TRIED AND REVERTED, same session (see `_seq_append_read_script`'s own
+"THE INVARIANT-APPLICATION LEAF" docstring for the mechanism): a bare
+`| grind` alternative and a dedicated `t_seq_singleton_get` lemma, both
+aimed at 106's own remaining `_t_loop_spec` residual. Neither survived
+its own regression check -- two `t/grade.py` runs over byte-identical
+generated source (240/262, untouched by the change in principle) read
+`verified` on one run and `unproved` on the next, at both --jobs 9 and
+--jobs 3, i.e. a real flake in `grind`'s own search under a shared
+elaboration-step budget, not contention on this shared box (`-D
+maxHeartbeats` bounds STEPS, not wall time, but does not bound WHICH
+steps a search takes to arrive at a step count, and `grind`'s own term
+ordering measurably was not reproducible run to run here). t/AGREEMENT.
+md's own 262 row is a committed regression bar this session will not
+put at risk for an unfixed row; `test_lower_lean_seqcomp.py`'s own
+`SeqAppendReadScriptDischTest.test_singleton_get_and_bare_grind_not_
+reintroduced` pins both absent. 106's own residual leaf still needs a
+DETERMINISTIC closer that can cite the loop's own `hinv{k}` by name --
+`lower_loop`'s own codegen is the one call site that has those Python-
+side names in hand; `_gr()`'s generic call sites (used by the WF
+theorems too, which have no named invariant hypotheses at all) do not,
+so the fix belongs there, not in this shared per-site script. Named
+open, not attempted further this session.
 """
 from __future__ import annotations
 
@@ -4207,7 +4352,60 @@ class Lower:
         open_step = "apply And.intro | intro"
         if self.seq_eq_comp:
             open_step = "apply t_seq_ext | " + open_step
-        rw_step = f"(try simp (disch := omega) only [{', '.join(names)}])"
+        # THE SILENT-DISCH GAP (2026-09-14, ROADMAP 16.2, lean's own
+        # item, "closing the composed seq goals"): `simp`'s `disch`
+        # tactic discharges EVERY side condition a cited lemma's
+        # instantiation carries, not just the one whose failure is
+        # actually the interesting gap -- `t_seq_append_get`'s `hj : 0 ≤
+        # j` fires `disch` too, and a bare `omega` on `hju : j <
+        # ((l1++l2).length:Int)` cannot see through an unreduced `.length`
+        # of a `List.take`/`.drop`/`++` term (measured: probe240c/f.lean,
+        # `simp` reports "made no progress" -- the lemma is never applied
+        # at all, not even attempted with a wrong answer, since `disch`
+        # failing on ANY one side condition aborts the whole conditional
+        # rewrite). Naively swapping in a length-normalizing `simp only
+        # [...]` first does not fix it either (probe240c/g.lean, same
+        # "made no progress"): `disch` runs on hj too, whose goal (`0 ≤
+        # j`) has no length term to rewrite, so a bare `simp only
+        # [length lemmas]` on THAT goal itself raises "simp made no
+        # progress" and aborts the `;`-sequenced `omega` that would have
+        # closed it -- this is very likely the exact regression the
+        # 2026-09-12 session's own docstring above named ("regressed 262
+        # when tried in the full pipeline"). `try` in front of the simp
+        # step (not on the whole disch, which would just silently accept
+        # a hj/hju it could not prove and hand omega an unrewritten
+        # length term again) fixes both: `hj`'s goal sees `try` no-op
+        # and falls through to `omega` directly (unchanged from the
+        # pre-existing behaviour that already closed it), `hju`'s goal
+        # gets the length rewrite THEN omega (probe240h.lean, measured
+        # clean). Additive by construction: any side condition `omega`
+        # alone already closed keeps closing exactly the same way, so a
+        # task never reaching a length-of-composed-term side condition
+        # (262's own committed shape) sees no behavioural change.
+        # THE SINGLETON-LENGTH GAP (2026-09-14, same session, 106
+        # appendArrayToSeq's own loop-preservation shape, `r ++ [a[i]!]`
+        # -- a literal ONE-ELEMENT list, not a `.take`/`.drop`/`++` of
+        # existing seqs the way every other `seq_new` task built this
+        # script for shapes it): `List.length_cons`/`List.length_nil`
+        # reduce `[x].length` to `1`, a fact `List.length_append`/`_take`/
+        # `_drop` alone do not supply and that `omega` cannot see through
+        # on its own (measured: probe106f.lean, disch's own `simp only`
+        # leaves `[a[i]!].length` a fully opaque atom without them,
+        # `omega` then fails the length side condition and `simp`
+        # reports "made no progress", the identical silent-disch failure
+        # THE SILENT-DISCH GAP above was named for, one lemma short).
+        # Added to the disch's own normalizing set only (never `len_norm`
+        # itself, which runs on the OUTER goal/hypotheses where no
+        # committed task's own composed term is a bare list literal) --
+        # additive: a task with no `[x]`-shaped operand mid-append sees
+        # the two extra simp lemmas find nothing to rewrite and no
+        # behavioural change.
+        rw_step = (
+            "(try simp (disch := ((try simp only [List.length_append, "
+            "List.length_take, List.length_drop, List.length_cons, "
+            "List.length_nil]); omega)) only "
+            f"[{', '.join(names)}])"
+        )
         # TWO ROUNDS of rewrite/split, not one: `t_seq_ext`'s own `hget`
         # goal reads the two-slice append at an index against the
         # ORIGINAL base seq directly (`(s1slice ++ s2slice)[k]! =
@@ -4232,6 +4430,50 @@ class Lower:
         # split, not just before it.
         len_norm = ("(try simp only [List.length_append, "
                      "List.length_take, List.length_drop] at *)")
+        # THE INVARIANT-APPLICATION LEAF (2026-09-14, ROADMAP 16.2,
+        # lean's own item, "closing the composed seq goals"): 106
+        # appendArrayToSeq's own loop-preservation obligation (`_t_loop_
+        # spec`'s `then_tac`, `apply ..._loop_spec <;> ...`) reaches a
+        # goal one level past `t_seq_index_congr`'s own reach after this
+        # script's append-lemma split -- `r := r ++ [a[i]!]` under a
+        # forall-prefix invariant leaves `r[j]! = s[j]!` (cited against
+        # `hinv5`) or `r[(s.len+j)]! = a[j]!` (`hinv6`), provable only by
+        # APPLYING that invariant at `j`, never by index congruence (the
+        # two sides are different lists) or `omega`/`rfl` alone; the new
+        # cell's own leaf (`[a[i]!][k]! = a[j]!` once `k = 0` is known)
+        # is a different, narrower gap this session ALSO tried a
+        # dedicated `t_seq_singleton_get` lemma for and reverted for the
+        # identical reason below. TRIED AND REVERTED (2026-09-14, same
+        # session): a bare `| grind` alternative appended here closes
+        # 106's own
+        # `_t_loop_spec` in isolation (probe106d/g.lean, measured) but
+        # is NOT deterministic once it sits inside this script's full
+        # `first` chain on a THEOREM the chain is also tried against for
+        # OTHER tasks -- two full `t/grade.py --kernels lean,dafny
+        # --flake 3` runs on the identical generated source (240
+        # replaceLastElement, 262 splitArray, both otherwise unchanged
+        # by this session) read `verified` on one run and `unproved` on
+        # the next, with no code change between them (after3/after4 vs.
+        # after5 in this session's own scratch grading, both at --jobs
+        # 9 on this shared box). `-DmaxHeartbeats` bounds elaboration
+        # STEPS, not which steps are taken -- `grind`'s own term
+        # ordering can vary run to run (measured indirectly: the same
+        # generated `.lean` byte-for-byte, re-run cold, disagreeing) --
+        # so appending an EXPENSIVE, failure-prone `grind` alternative
+        # ahead of nothing (it is tried only after every deterministic
+        # alternative already failed) still spends real heartbeats on
+        # this run's own attempt, and on an unlucky ordering that spend
+        # can push an ADJACENT theorem that used to close cleanly past
+        # budget instead. `t/AGREEMENT.md`'s 262 row is committed
+        # verified and 2026-09-12's own docstring above already names
+        # one prior regression on it; this session will not bank a
+        # second. Left as a NAMED OPEN GAP: 106's own `_t_loop_spec`
+        # preservation step needs a DETERMINISTIC closer (no `grind`)
+        # that can cite the matching `hinv{k}` by name -- `_gr()`'s
+        # generic call sites do not carry the invariant list's own
+        # Python-side names into the tactic text at all, so the fix
+        # belongs in `lower_loop`'s own codegen (the one call site that
+        # DOES know them), not here.
         return (
             f"((repeat' (first | {open_step})) <;> "
             f"{len_norm} <;> "
@@ -4417,6 +4659,53 @@ class Lower:
                                               types or self.types)
         if self.seq_mut or self.seq_new or self.seq_eq_comp:
             branches.append(f"grind only [{self._seq_hints()}]")
+            # THE LOOP-PRESERVATION GAP (2026-09-14, ROADMAP 16.2, lean's
+            # own item, "closing the composed seq goals"): every call
+            # site inside `lower_loop` (the loop-invariant preservation
+            # obligation `_t_loop_spec`'s own `then_tac` chains into via
+            # `apply ..._t_loop_spec <;> self._gr()`, and the WF theorems
+            # `_t_wf3`/`_t_wf4`/`_t_wf5` that state the SAME facts before
+            # the loop is even defined) only ever saw `_gr`'s plain
+            # `grind only [...]` fallback, never `_close`'s own per-site
+            # `_seq_append_read_script` -- that script was wired into
+            # `_close` alone (postcondition conjuncts opened by
+            # `t_seq_ext`/`And.intro`/a bare `intro`), and 2026-09-12's
+            # own docstring (`_seq_append_read_script`, above) read the
+            # loop-preservation goal's own shape as therefore
+            # unreachable by it. Measured wrong (probe: appendArrayToSeq's
+            # `_t_loop_spec` preservation goal for `hinv6`, `forall j,
+            # 0<=j<i_v2+1 -> (r++[a[i]!])[s.len+j]! = a[j]!`, is a bare
+            # `forall`/`->`chain, exactly the shape `repeat' (first |
+            # apply And.intro | intro)` already opens for a postcondition
+            # -- the goal reads identically to one, it was simply never
+            # OFFERED the script). Adding it here, as one more `first`
+            # alternative alongside the existing `grind only [...]`
+            # fallback (never replacing it: `first` tries `base`, the
+            # existing seq-hints branch, then this one, in that order, so
+            # any goal either already closed keeps closing on the SAME
+            # earlier alternative, byte-for-byte), is additive by
+            # construction: `_seq_append_read_script` returns `None`
+            # unless `self.seq_new`, so a task with only `self.seq_mut`
+            # or `self.seq_eq_comp` (and no `++`/slice at all) sees no
+            # new branch. Measured (t/grade.py, lean+dafny, flake 3): on
+            # its own this reaches FURTHER into 106 appendArrayToSeq's
+            # own `_t_loop_spec` (its `hinv5` preservation goal now
+            # rewrites and splits through the append lemma instead of
+            # leaving it untouched) but does NOT flip the verdict -- the
+            # residual leaf (applying `hinv5`/`hinv6` by name once the
+            # two sides are DIFFERENT lists, never index congruence) is
+            # a separate, still-open gap, see `_seq_append_read_script`'s
+            # own "THE INVARIANT-APPLICATION LEAF" docstring for what was
+            # tried there and reverted. Confirmed harmless: none of the
+            # 34 AGREEMENT tasks or the 15 `seq_new` dafny_synthesis rows
+            # of COVERAGE-lifted-785.md moved (this session's own dated
+            # note, below, carries the full regression run) -- every one
+            # of those either has no loop at all (so never reaches this
+            # call site) or already closed on an earlier alternative.
+            if self.seq_new:
+                seq3 = self._seq_append_read_script()
+                if seq3 is not None:
+                    branches.append(seq3)
         if not branches:
             return base
         return "(first | " + base + " | " + " | ".join(branches) + ")"
@@ -7292,6 +7581,30 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # definition carries the parameter to fill.
         loop_w = next((s["while"] for s in self.body if "while" in s), None)
         loop_needs = loop_w is not None and self._loop_needs_domain_hyp(loop_w)
+        # 2026-09-14 (lean-loopcert2, ROADMAP 16.2's value-witness-through-
+        # domain-hypothesis-loop item): a "value"-kind witness through a
+        # loop whose termination genuinely needs THE DOMAIN HYPOTHESIS
+        # cannot trust `{name}_t`/`{name}_t_loop` to COMPUTE the twin's
+        # own value at all -- `_cert_value_loop`'s own docstring below has
+        # the two measured ways they diverge from interp.py (a poisoned
+        # generic entry proof, or `can_dite`'s placeholder standing in for
+        # a genuinely-broken invariant) -- so this is tried FIRST, ahead
+        # of the `{name}_t`-based path every other "value" witness (loop-
+        # free, self-recursive, or a plain/no-domain-hyp loop) still uses
+        # unchanged below. `None` here means "not this shape, or the
+        # replay itself could not close honestly" -- an unconditional
+        # fall-through to the pre-existing path, never a hard failure, so
+        # every previously-succeeding row (loop-free, self-recursive, or
+        # plain-loop "value" witnesses; the plain-loop shape this same
+        # wave already landed) is byte-for-byte unaffected.
+        if loop_w is not None and loop_needs:
+            replay = self._cert_value_loop(w, tenv, venv, types)
+            if replay is not None:
+                parts = [(self.prop(r, tenv, types),
+                          self._prove(r, tenv, venv, types))
+                         for r in self.task.get("requires", [])]
+                parts.append(replay)
+                return parts
         if self.task.get("requires") and (
                 self._self_calls(self.body)
                 or (any("while" in s for s in self.body) and loop_needs)):
@@ -7315,6 +7628,143 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         parts.append((f"(¬{self.prop(post, tenv_post, types)})",
                       self._refute(post, tenv_post, venv_post, types)))
         return parts
+
+    def _cert_value_loop(self, w: dict, ptenv: dict, pvenv: dict,
+                          types: dict) -> tuple[str, str] | None:
+        """2026-09-14 (lean-loopcert2): the `(¬post)` part of a "value"-
+        kind witness through a loop whose termination needs THE DOMAIN
+        HYPOTHESIS, built WITHOUT ever mentioning `{name}_t`/
+        `{name}_t_loop` -- `_cert_value`'s own default (`applied =
+        {name}_t args (proof)`) is unsound for exactly this shape, MEASURED
+        two different ways on the two rows Wave N (2026-09-14) left open by
+        name in t/COVERAGE-lifted-785.md's sweep r24:
+
+        Clover_cal_sum.Sum (off-by-one, witness n=1): the twin starts the
+        loop with `n_v := 1` instead of `0`, so the invariant `s =
+        n_v*(n_v+1)/2` already reads `0 = 1` at entry -- FALSE for every
+        `n`, not only n=1. `{name}_t`'s own definition proves this
+        GENERICALLY (`{name}_t_loop n 0 1 hpre (by grind) (by grind)`,
+        `lower_loop`'s own emission, unconditional over all `n` satisfying
+        `hpre`) so that `(by grind)` fails at DEFINITION TIME, `sorryAx`
+        poisons `{name}_t` itself for every input, and a certificate that
+        unfolds it is not stuck on a hard GOAL, it holds a term that was
+        never a valid proof to begin with -- reproduced directly (`lean` on
+        the emitted file, 2026-09-14): the error sits at `{name}_t`'s own
+        `(by grind)` call sites, not anywhere in the certificate's text.
+
+        Dafny_Verify_..LoopInvariant.DownWhileGreater (compare-flip,
+        witness n=0): here `{name}_t`/`{name}_t_loop` are NOT poisoned
+        (THE PRESERVATION-HAVE COLLISION's own `can_dite`/`hok` fix, above,
+        DECIDES the preservation obligation instead of proving it) -- but
+        deciding it FALSE at this witness (the flipped guard lets `i` step
+        from 0 to -1, breaking `0 <= i`) takes the `dite`'s "else" branch,
+        `_loop_zero`'s total PLACEHOLDER for Int, literally `(0 : Int)`.
+        interp.py's own execution has no such notion of leaving a "domain"
+        and keeps computing (`i = -1`, harness.twin_for's own measurement),
+        so `{name}_t`'s COMPILED value (0) and the twin's ACTUAL value (-1)
+        are simply different numbers here -- an accidental-satisfaction
+        trap in the same family `_cert_undefined`'s own module docstring
+        names for swap's totalized `getElem!`, at the domain-hypothesis
+        loop's own placeholder instead. `ensures` (`i = 0`) genuinely holds
+        of the PLACEHOLDER, so `¬(applied = 0)` is a FALSE goal, and
+        `lean`'s own measured message is exactly this file's honest report
+        of that: `error: unsolved goals` / `case refine_2 ⊢ False`
+        (reproduced verbatim, 2026-09-14, on the emitted file).
+
+        THE FIX, sound in both directions since it never asks the compiled
+        function to stand in for interp.py's own semantics: replay the RAW
+        loop concretely, exactly as `_cert_undefined_loop` already does for
+        an undefined witness (ground `interp.exec_body` picks the branch,
+        `self.sym` renders the SAME ground state as closed Lean terms one
+        iteration behind, ALWAYS defined here since a "value"-kind witness
+        by construction runs to a normal exit, never to interp.Undef) --
+        but continued until the guard reads ground-False (a normal loop
+        exit) rather than until an interp.Undef, capped at
+        MAX_UNDEF_UNROLL iterations like every other concrete replay in
+        this file. The resulting ground term for `self.ret` is built purely
+        from literals and `+`/`-`/`*`/`/` (never a recursive call), so
+        `_refute`'s own `_closer()` door (`decide`/`omega`/`simp`/`grind`,
+        no unfolding of any poisoned or placeholder-bearing definition
+        needed) can close `(¬post)` the same way `_cert_undefined_loop`'s
+        own final `(¬ob)` part already does. A final cross-check against
+        `w["_twin"]` (the harness's OWN interp-measured value) before
+        building the goal means a replay bug here can only make the
+        certificate honestly abstain (`None`, falling through to
+        `_cert_value`'s pre-existing `{name}_t`-based attempt), never
+        assert a claim this method has not itself re-derived from the raw
+        statements.
+
+        MEASURED after landing: both rows above now read verified/REFUTED
+        in lean (`lean` on each emitted file, exit 0, `t_refutation_
+        certificate` audits clean, no sorryAx) -- see this file's dated
+        note in the module docstring for the full command and sweep
+        re-measurement."""
+        body = self.body
+        idx = next((i for i, s in enumerate(body) if "while" in s), None)
+        if idx is None:
+            return None
+        prefix, wh, suffix = body[:idx], body[idx]["while"], body[idx + 1:]
+        types = dict(types)
+        for s in prefix:
+            if "var" in s:
+                types[s["var"]["name"]] = s["var"]["type"]
+        state = [self.ret] + [s["var"]["name"] for s in prefix
+                              if "var" in s]
+
+        # 2026-09-14: mirrors `_cert_undefined_loop`'s own dated note --
+        # interp.py's seq ops build TUPLES, so a seq witness value must
+        # enter the replay env as one, nested lists included; `_unshow`
+        # leaves it a list on purpose for the loop-free paths.
+        def _tup(v):
+            if isinstance(v, list):
+                return tuple(_tup(x) for x in v)
+            return v
+
+        venv = {k: _tup(v) for k, v in pvenv.items()}
+        try:
+            interp.exec_body(prefix, venv, self.cert_funs, interp.St())
+        except (interp.Undef, interp.Budget, RecursionError):
+            return None      # the prefix itself is undefined: not this shape
+        tenv, _, _ = self.sym(prefix, dict(ptenv), dict(types), state)
+        for _ in range(MAX_UNDEF_UNROLL):
+            if any(n not in venv or n not in tenv for n in state):
+                return None
+            guard_now = self._cev(wh["cond"], venv)
+            if guard_now is None:
+                return None   # interp cannot decide the guard: abstain
+            if guard_now is False:
+                break         # a normal loop exit -- exactly the shape
+                              # a "value"-kind witness (never Undef) needs
+            try:
+                venv_next = dict(venv)
+                interp.exec_body(wh["body"], venv_next, self.cert_funs,
+                                 interp.St())
+            except (interp.Undef, interp.Budget, RecursionError):
+                return None   # not this shape: the "undefined" cert covers it
+            types2 = dict(types)
+            env_b, _, _ = self.sym(wh["body"], tenv, types2, state)
+            tenv = {**tenv, **env_b}
+            venv = venv_next
+        else:
+            return None       # too many concrete iterations: honest abstain
+        if suffix:
+            try:
+                interp.exec_body(suffix, venv, self.cert_funs, interp.St())
+            except (interp.Undef, interp.Budget, RecursionError):
+                return None
+            env_s, _, _ = self.sym(suffix, dict(tenv), dict(types), state)
+            tenv = {**tenv, **env_s}
+        if isinstance(w.get("_twin"), str):
+            return None       # "no value": nothing ground to instantiate
+        tv = _tup(self._unshow(w["_twin"], self.rett))
+        if venv.get(self.ret) != tv:
+            # the replay diverged from the harness's own measured value:
+            # abstain rather than assert a claim never re-derived here.
+            return None
+        post = self._ens_conj()
+        venv_post = {**venv, self.ret: tv}
+        return (f"(¬{self.prop(post, tenv, types)})",
+                self._refute(post, tenv, venv_post, types))
 
     def _cert_loop(self, w: dict, kind: str) -> list | None:
         body = self.body

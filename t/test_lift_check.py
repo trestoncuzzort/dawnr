@@ -214,8 +214,63 @@ def test_expr_printers_atoms() -> None:
     print("test_expr_printers_atoms: t-expr and source-expr printer atoms check out")
 
 
+def test_quantified_fun_call_scoping_and_array_bound() -> None:
+    """2026-09-14 checker gap (ROADMAP 16.2's unbounded-quantifier row,
+    the 20 `lift-check-failed` residuals it did not touch): a spec_fun
+    call found by `_find_fun_calls` inside a source `forall`/`exists`
+    uses that quantifier's OWN bound variable, not a lemma parameter --
+    `L_fun_isEven(evenList[k]);` pasted as a bare top-level statement in
+    the `L_inv_k` body is `unresolved identifier: k` (measured, dafny
+    4.11.0, dafny-synthesis_task_id_412 RemoveOddNumbers and five
+    siblings: 426, 436, 554, 594, 629). `_find_fun_calls` must report the
+    call's innermost enclosing `Quantifier` so `build_checker` wraps the
+    hint in a matching forall-statement instead; `_array_index_guards`
+    must additionally bound an `array<T>` base's index (an `array`, unlike
+    a `seq`, has no length fact free for the taking -- measured on the
+    same six: fixing the scoping alone still left `index out of range`
+    on `arr[k]` for `k` ranging only `0 <= k < i`, since `i <= arr.Length`
+    is part of the very obligation the hint is helping prove, not yet an
+    assumption inside the lemma body)."""
+    from lift_ast import Quantifier, Call, Ident, Index, Binary, Param, Type
+
+    k = Ident(line=1, name="k")
+    idx = Index(line=1, base=Ident(line=1, name="arr"), index=k)
+    call = Call(line=1, fn=Ident(line=1, name="IsEven"), args=(idx,))
+    rng = Binary(line=1, op="<", left=k, right=Ident(line=1, name="n"))
+    q = Quantifier(line=1, kind="forall",
+                   binders=(Param(line=1, name="k", type=Type(line=1, kind="int")),),
+                   attrs=(), range=rng, body=call)
+
+    found = lift_check._find_fun_calls([q], {"IsEven"})
+    assert len(found) == 1, found
+    got_call, got_q = found[0]
+    assert got_call is call, found
+    assert got_q is q, ("a call under a quantifier must report THAT "
+                        f"quantifier, not None: {found}")
+
+    src_params = [Param(line=1, name="arr",
+                        type=Type(line=1, kind="array", args=(Type(line=1, kind="int"),)))]
+    bounds = lift_check._array_index_guards(call, src_params, {})
+    assert bounds == ["0 <= k && k < arr.Length"], bounds
+
+    # A plain lemma-parameter argument (no enclosing quantifier at all)
+    # reports `None` -- the existing, unwrapped hint path stays unwrapped.
+    plain_call = Call(line=1, fn=Ident(line=1, name="IsEven"), args=(Ident(line=1, name="n"),))
+    found2 = lift_check._find_fun_calls([plain_call], {"IsEven"})
+    assert len(found2) == 1 and found2[0][1] is None, found2
+
+    # A seq base (no `array` kind) gets no `.Length` bound manufactured --
+    # `|s|` is always defined, so nothing here is needed for it.
+    seq_idx = Index(line=1, base=Ident(line=1, name="s"), index=k)
+    seq_call = Call(line=1, fn=Ident(line=1, name="IsEven"), args=(seq_idx,))
+    seq_params = [Param(line=1, name="s",
+                        type=Type(line=1, kind="seq", args=(Type(line=1, kind="int"),)))]
+    assert lift_check._array_index_guards(seq_call, seq_params, {}) == []
+    print("test_quantified_fun_call_scoping_and_array_bound: ok")
+
+
 FAST_TESTS = [test_t7_mutations_json_level, test_param_overlay_precedence,
-             test_expr_printers_atoms]
+             test_expr_printers_atoms, test_quantified_fun_call_scoping_and_array_bound]
 
 
 # ===========================================================================
@@ -505,12 +560,140 @@ def test_task_var_inits_recovers_for_desugared_bound() -> None:
     print("test_task_var_inits_recovers_for_desugared_bound: ok")
 
 
+def test_for_desugared_bound_alignment_with_prior_local(slow: bool) -> None:
+    """2026-09-14 fix (LIFTER-785-RESIDUALS.md, the 14-row `for`-shaped
+    `lift-check-failed` group): when the source declares a REAL local
+    before its `for` loop, `lift_rewrite`'s desugared bound (`h_t`) lands
+    in the MIDDLE of the task's own declaration order, not at the front
+    or back -- the old end-alignment guess in `_build_checker_parts`
+    (`extra_names = rest_local_names[:extra]`) mis-took the source's
+    real local as the "extra" one instead, mis-binding `L_inv_0`'s
+    parameters (measured on this exact program: `h == ((2 * k) + 1)`
+    where the source itself never relates `h` to anything -- the real
+    fact belongs to `i`). `dafny-synthesis_task_id_267.dfy`
+    (`SumOfSquaresOfFirstNOddNumbers`) is this shape's plainest member:
+    `var i := 1;` then `for k := 0 to n`. Asserts `record.for_bound_locals`
+    records exactly the desugared bound (not `i`), and that every lemma
+    verdict is `verified` end to end."""
+    if not slow:
+        print("test_for_desugared_bound_alignment_with_prior_local: skipped (pass --slow)")
+        return
+    dfy_path = test_lifter.CORPUS_DIR / "dafny-synthesis_task_id_267.dfy"
+    t0 = time.monotonic()
+    fx = _lift_source(dfy_path, "SumOfSquaresOfFirstNOddNumbers", timeout_s=90.0)
+    assert fx["status"] == "ok", f"SumOfSquaresOfFirstNOddNumbers lift refused upstream: {fx}"
+    record = fx["record"]
+    bound_names = {n for names in getattr(record, "for_bound_locals", {}).values() for n in names}
+    assert len(bound_names) == 1, (
+        f"expected exactly one desugared bound local, got {bound_names}")
+    # The real source local `i` (declared before the for-loop) must NOT
+    # be the one recorded as a desugaring-only extra.
+    task_local_names = {s["var"]["name"] for s in fx["task"]["body"] if "var" in s}
+    assert "i" not in bound_names, f"source's real local mis-recorded as extra: {bound_names}"
+    assert bound_names <= task_local_names, (bound_names, task_local_names)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out = lift_check.check(fx["task"], fx["source"], fx["closure"], record,
+                          OUT_DIR / "dafny-synthesis_task_id_267", timeout_s=90.0)
+    wall = round(time.monotonic() - t0, 2)
+    verdicts = dict(record.checker_verdicts)
+    print(f"test_for_desugared_bound_alignment_with_prior_local: "
+         f"SumOfSquaresOfFirstNOddNumbers verdicts={json.dumps(verdicts)} "
+         f"for_bound_locals={record.for_bound_locals} "
+         f"check_wf={out.refusal is None or out.refusal.reason != 'check-wf-failed'} "
+         f"wall_s={wall}")
+    assert verdicts, "no lemma verdicts recorded at all"
+    non_verified = {k: v for k, v in verdicts.items() if v != "verified"}
+    assert not non_verified, f"non-verified lemma verdict(s): {non_verified}"
+
+
+def test_array_view_forall_exists_end_to_end(slow: bool) -> None:
+    """2026-09-14 fix (LIFTER-785-RESIDUALS.md, the 2 `while`-shaped
+    `lift-check-failed` rows): an array-typed parameter read through
+    both direct indexing (source syntax) and the seq VIEW `(a[..])`
+    (decision 1) in the SAME `<==>` needs Dafny to connect `a[k]` and
+    `(a[..])[k]` itself -- measured NOT automatic once the surrounding
+    `<==>` combines a `forall`-guarded conjunct with an `exists`-guarded
+    one (isolated single-guard copies of either half verify with no
+    hint at all). `array_view_fact`, threaded into `L_ens`/`L_inv_k`'s
+    own `requires`, states this always-true fact once.
+    `dafny-synthesis_task_id_433.dfy` (`IsGreater`) is exactly this
+    shape: `ensures result ==> forall ...` alongside
+    `ensures !result ==> exists ...`. Asserts every lemma verdict is
+    `verified` end to end."""
+    if not slow:
+        print("test_array_view_forall_exists_end_to_end: skipped (pass --slow)")
+        return
+    dfy_path = test_lifter.CORPUS_DIR / "dafny-synthesis_task_id_433.dfy"
+    t0 = time.monotonic()
+    fx = _lift_source(dfy_path, "IsGreater", timeout_s=90.0)
+    assert fx["status"] == "ok", f"IsGreater lift refused upstream: {fx}"
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out = lift_check.check(fx["task"], fx["source"], fx["closure"], fx["record"],
+                          OUT_DIR / "dafny-synthesis_task_id_433", timeout_s=90.0)
+    wall = round(time.monotonic() - t0, 2)
+    verdicts = dict(fx["record"].checker_verdicts)
+    print(f"test_array_view_forall_exists_end_to_end: IsGreater "
+         f"verdicts={json.dumps(verdicts)} "
+         f"check_wf={out.refusal is None or out.refusal.reason != 'check-wf-failed'} "
+         f"wall_s={wall}")
+    assert verdicts, "no lemma verdicts recorded at all"
+    non_verified = {k: v for k, v in verdicts.items() if v != "verified"}
+    assert not non_verified, f"non-verified lemma verdict(s) on IsGreater: {non_verified}"
+    for expected in ("L_req", "L_ens", "L_inv_0"):
+        assert expected in verdicts, f"expected lemma {expected!r} missing: {verdicts}"
+    checker_path = OUT_DIR / "dafny-synthesis_task_id_433.check.dfy"
+    checker_text = checker_path.read_text(encoding="utf-8")
+    assert "[..][k]" in checker_text, (
+        "L_ens should carry the array-view index fact; "
+        f"checker text: {checker_text}")
+
+
 FAST_TESTS = FAST_TESTS + [test_task_var_inits_recovers_for_desugared_bound]
+
+
+def test_quantified_call_hint_end_to_end(slow: bool) -> None:
+    """2026-09-14, end-to-end companion to
+    `test_quantified_fun_call_scoping_and_array_bound`: FindNegativeNumbers
+    (dafny-synthesis_task_id_436.dfy) is one of the 22 ROADMAP 16.2's
+    unbounded-quantifier row newly classifies, one of the 20 that still
+    read `lift-check-failed` afterward -- an `IsNegative(arr[k])` call
+    sits inside the loop invariant's own `forall k :: 0 <= k < i ==>
+    IsNegative(arr[k]) ==> ...` and, pre-fix, made `build_checker` paste
+    `L_fun_isNegative(arr[k_v]);` as a bare statement in `L_inv_0`'s body
+    (`unresolved identifier: k_v`). Asserts every lemma verdict is
+    `verified`, not merely that the file lifts."""
+    if not slow:
+        print("test_quantified_call_hint_end_to_end: skipped (pass --slow)")
+        return
+    dfy_path = test_lifter.CORPUS_DIR / "dafny-synthesis_task_id_436.dfy"
+    t0 = time.monotonic()
+    fx = _lift_source(dfy_path, "FindNegativeNumbers", timeout_s=90.0)
+    assert fx["status"] == "ok", f"FindNegativeNumbers lift refused upstream: {fx}"
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    lift_check.check(fx["task"], fx["source"], fx["closure"], fx["record"],
+                     OUT_DIR / "dafny-synthesis_task_id_436", timeout_s=90.0)
+    wall = round(time.monotonic() - t0, 2)
+    verdicts = dict(fx["record"].checker_verdicts)
+    print(f"test_quantified_call_hint_end_to_end: FindNegativeNumbers "
+         f"verdicts={json.dumps(verdicts)} wall_s={wall}")
+    assert verdicts, "no lemma verdicts recorded at all"
+    non_verified = {k: v for k, v in verdicts.items() if v != "verified"}
+    assert not non_verified, f"non-verified lemma verdict(s) on FindNegativeNumbers: {non_verified}"
+    for expected in ("L_req", "L_ens", "L_inv_0"):
+        assert expected in verdicts, f"expected lemma {expected!r} missing: {verdicts}"
+    checker_text = (OUT_DIR / "dafny-synthesis_task_id_436.check.dfy").read_text(encoding="utf-8")
+    assert "forall" in checker_text.split("lemma L_inv_0", 1)[1].split("lemma", 1)[0], (
+        "L_inv_0's own body should re-quantify the IsNegative hint under a "
+        f"forall-statement, not paste a bare call: {checker_text}")
+
 
 SLOW_TESTS = [test_seeds_check_end_to_end, test_t7_two_seed_pairs,
              test_inverse_committed_and_corpus, test_array_program_end_to_end,
              test_kernel_unproved_not_folded_into_lift_check_failed,
-             test_for_desugared_extra_local_end_to_end]
+             test_for_desugared_extra_local_end_to_end,
+             test_for_desugared_bound_alignment_with_prior_local,
+             test_array_view_forall_exists_end_to_end,
+             test_quantified_call_hint_end_to_end]
 
 
 def run(slow: bool = False) -> None:

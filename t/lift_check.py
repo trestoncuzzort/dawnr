@@ -43,6 +43,18 @@ text, never against rprint's print of it -- this module needed no lemma
 change of its own once that correction ran upstream, since `source` IS
 the corrected tree, not a second copy of it.
 
+CHECKER-GAP NOTE (2026-09-14, LIFTER-785-RESIDUALS.md's dated section):
+`_find_fun_calls` now reports, per call, the innermost `Quantifier` node
+whose own bound variable the call's arguments reference (or `None`), and
+`_build_checker_parts`'s hint-building loop re-quantifies such a call
+under a matching forall-statement instead of pasting it as a bare
+out-of-scope statement (`unresolved identifier`); `_array_index_guards`
+supplies the `array<T>`-length bound such a hint (quantified or not) can
+otherwise index past. See `_quantifier_for_call` and
+`_array_index_guards`'s own docstrings for the measured failures this
+closes and LIFTER-785-RESIDUALS.md for what it does not (the separate
+`_task_loop_scopes` end-alignment gap, owned elsewhere this wave).
+
 Architecture role (LIFTER-DESIGN.md section 2's table, copied verbatim):
     input: task JSON, source AST
     output: the checker .dfy (section 9), the differential harness .dfy
@@ -1038,19 +1050,102 @@ def _walk_exprs(e):
         yield from _walk_exprs(c)
 
 
+def _quantifier_for_call(call: Call, stack: list) -> Optional[Quantifier]:
+    """The innermost `Quantifier` in `stack` (outermost first) whose own
+    bound variable is referenced (free) in `call`'s argument expressions,
+    or `None` when every name `call`'s arguments mention is already
+    outside any quantifier (so it is a lemma parameter, in scope wherever
+    the call is hinted). 2026-09-14 (checker gap, char-membership /
+    seq-element quantifiers): a call found by `_find_fun_calls` used to be
+    hinted as a bare top-level statement in the `L_inv_k` lemma body
+    regardless of where it was found, which is only sound when every name
+    in its arguments is a lemma parameter. A call textually inside a
+    source `forall`/`exists` (e.g. `IsEven(evenList[k])` inside
+    `forall k :: 0 <= k < |evenList| ==> IsEven(evenList[k])`, or the
+    string case `IsDigit(s[k])` inside a quantifier over a string's
+    characters) uses that quantifier's OWN bound `k`, which is not a
+    lemma parameter and not in scope at the lemma body's top level --
+    `L_fun_isEven(evenList[k_v]);` pasted there is `unresolved identifier:
+    k_v` (measured, dafny 4.11.0, dafny-synthesis_task_id_412
+    RemoveOddNumbers and five siblings: 426, 436, 554, 594, 629, all the
+    same shape, isEven/isOdd/isNegative each in this same position)."""
+    arg_names = set()
+    for a in call.args:
+        for node in _walk_exprs(a):
+            if isinstance(node, Ident):
+                arg_names.add(node.name)
+    for q in reversed(stack):
+        if any(b.name in arg_names for b in q.binders):
+            return q
+    return None
+
+
+def _array_index_guards(call: Call, src_params: list, crename: dict) -> list:
+    """`0 <= <idx> && <idx> < <base>.Length` for every `Index` node in
+    `call`'s own arguments whose base is a plain `array<T>`-typed
+    parameter and whose index is a simple identifier -- an `array`'s own
+    bound is never automatically available to a hint call the way a
+    `seq`'s own length is (`|s|` is always defined for any `s`, so `s[k]`
+    is safe wherever a range already reads `k < |s|`; `a[k]` for an
+    `array a` needs `k < a.Length` stated somewhere the hint can reach,
+    which the ENCLOSING lemma's own `ensures` does not supply -- that fact
+    is part of the SAME theorem the hint is helping prove, not yet an
+    assumption available to a statement inside the lemma's body, even
+    though the source's own loop invariant carried both facts side by
+    side and verified).
+
+    2026-09-14, two measured shapes: (1) a quantified hint's own binder --
+    dafny-synthesis_task_id_412 RemoveOddNumbers and four siblings (426,
+    436, 554, 629), all an array-return accumulator with a `forall k ::
+    0 <= k < i ==> ...arr[k]...` invariant, `index out of range` on
+    `arr[k_v]` inside the wrapping forall once the scoping fix above let
+    it parse at all; (2) a plain lemma-parameter argument that is a
+    not-found sentinel in some of the lemma's own cases --
+    dafny-synthesis_task_id_594 FirstEvenOddDifference's bare
+    `L_fun_isEven(a[firstOdd]);`, unconditionally called even where
+    `firstOdd == -1`. Both need the same `0 <= idx && idx < a.Length`
+    fact, one folded into the forall's own range (never narrowing what the
+    OUTER ensures needs proved: `a[idx]` is undefined there too outside
+    that bound), the other into the hint's own `if` guard."""
+    out = []
+    src_by_name = {p.name: p for p in src_params}
+    for a in call.args:
+        for node in _walk_exprs(a):
+            if isinstance(node, Index) and isinstance(node.index, Ident) \
+                    and isinstance(node.base, Ident):
+                p = src_by_name.get(node.base.name)
+                if p is not None and p.type is not None and p.type.kind == "array":
+                    idx_name = crename.get(node.index.name, node.index.name)
+                    base_name = crename.get(node.base.name, node.base.name)
+                    bound = f"0 <= {idx_name} && {idx_name} < {base_name}.Length"
+                    if bound not in out:
+                        out.append(bound)
+    return out
+
+
 def _find_fun_calls(exprs: list, fd_names: set) -> list:
     """Every distinct `Call` to a closure function found anywhere in
     `exprs` (an invariant's, say), de-duplicated by (callee, printed
-    argument list) so the same application is not hinted twice."""
+    argument list) so the same application is not hinted twice. Each
+    entry is `(call, quantifier)`: `quantifier` is the innermost enclosing
+    `Quantifier` node whose own bound variable the call's arguments
+    reference (see `_quantifier_for_call`), or `None` when the call's
+    arguments are already all lemma-parameter names."""
     out, seen = [], set()
+
+    def walk(e, stack):
+        if isinstance(e, Quantifier):
+            stack = stack + [e]
+        if isinstance(e, Call) and isinstance(e.fn, Ident) and e.fn.name in fd_names:
+            key = (e.fn.name, tuple(_print_expr(a, {}) for a in e.args))
+            if key not in seen:
+                seen.add(key)
+                out.append((e, _quantifier_for_call(e, stack)))
+        for c in _expr_children(e):
+            walk(c, stack)
+
     for e in exprs:
-        for node in _walk_exprs(e):
-            if isinstance(node, Call) and isinstance(node.fn, Ident) \
-                    and node.fn.name in fd_names:
-                key = (node.fn.name, tuple(_print_expr(a, {}) for a in node.args))
-                if key not in seen:
-                    seen.add(key)
-                    out.append(node)
+        walk(e, [])
     return out
 
 
@@ -1193,6 +1288,29 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         elif ret_type_src.kind == "char":
             views[ret["name"]] = "char"
     lifted_req = _t_conj(task.get("requires", []), views)
+
+    # 2026-09-14 fix (LIFTER-785-RESIDUALS.md, the 2 `while`-shaped
+    # `lift-check-failed` rows, IsGreater/FindFirstOdd): a bare
+    # array-typed parameter or return used through BOTH direct indexing
+    # (the source's own syntax, printed on the LEFT of an L_ens/L_inv_k
+    # `<==>`) and the seq VIEW `(a[..])` decision 1 substitutes for it
+    # on the RIGHT (`_view_text` above) needs Dafny to connect `a[k]`
+    # and `(a[..])[k]` itself -- ordinarily automatic, but measured NOT
+    # automatic once the surrounding `<==>` combines a `forall`-guarded
+    # conjunct with an `exists`-guarded one in the SAME conjunction
+    # (dafny-synthesis_task_id_433's IsGreater: `result ==> forall ...`
+    # alongside `!result ==> exists ...`; isolated single-guard copies
+    # of either half verify with no hint at all on this box, dafny
+    # 4.11.0, only the two together fail, confirmed in
+    # /tmp/mini433{b,c,d,e}.dfy). Not a fact about THIS task; a fact
+    # about arrays, true for every array of every length -- threading
+    # it into `requires` costs nothing per decision 4 (an always-true
+    # premise, weakening neither side of any `<==>`) and gives Dafny
+    # the same trigger the isolated single-guard case already finds on
+    # its own.
+    array_view_fact = _and([f"forall k: int :: 0 <= k < {name}.Length ==> "
+                            f"{name}[k] == {name}[..][k]"
+                            for name, kind in views.items() if kind == "array"])
 
     # (3) L_fun_F per spec_fun whose closure function is found. `args`
     # (raw names) calls the SOURCE function, whose own params genuinely
@@ -1350,7 +1468,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             f"  forall {binders} | {guard} ensures "
             f"{fn_src}({args}) == {f['name']}({lifted_args}) {{ L_fun_{f['name']}({args}); }}")
     lines.append(f"lemma L_ens({lem_ps_ens})")
-    lines.append(f"  requires {_and([lifted_req, ens_length_fact])}")
+    lines.append(f"  requires {_and([lifted_req, ens_length_fact, array_view_fact])}")
     lines.append(f"  ensures ({_and([ret_type_clause, ens_length_fact, src_ens_conj])}) <==> ({lifted_ens})")
     lines.append("{")
     lines.extend(hint_lines)
@@ -1362,6 +1480,22 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     task_loops = _task_loops(task["body"])
     task_loop_scopes = _task_loop_scopes(task["body"])
     task_var_inits = _task_var_inits(task["body"])
+    # Flat, method-wide (not per-loop): a NESTED for-loop's scope carries
+    # every enclosing for-loop's own desugared bound too (measured:
+    # dafny-synthesis_task_id_401's IndexWiseAddition, the inner `for j`
+    # loop's true_local_names is `[h, i_v3, subResult, h_v, j_v2]` --
+    # `h` is the OUTER for's bound, recorded under the outer loop's own
+    # line, not the inner one's), so keying the lookup by `loop.line`
+    # alone (this loop's own bound only) still leaves an outer bound
+    # unrecognized at an inner loop and misaligns it exactly as before.
+    # `renamer.fresh` (lift_rewrite.py) guarantees every inserted name is
+    # unique for the whole method, so a flat name-membership test across
+    # every recorded bound, regardless of which loop inserted it, is
+    # exact: a name can only appear in `true_local_names` at all when it
+    # is actually in scope at this point (`_task_loop_scopes`'s own
+    # positional walk already guarantees that).
+    all_bound_locals = {n for names in getattr(record, "for_bound_locals", {}).values()
+                        for n in names}
     for k, (loop, scope) in enumerate(src_loops):
         lemma_names.append(f"L_inv_{k}")
         # `scope` (from `_walk_source_loops`) is seeded with `source.params`
@@ -1438,9 +1572,32 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # a/b inside the body").
         pair_task_names = true_local_names[:2] if pair_src is not None else []
         rest_local_names = true_local_names[2:] if pair_src is not None else true_local_names
-        extra = len(rest_local_names) - len(locals_in_scope)
-        extra_names = rest_local_names[:extra] if extra > 0 else []
-        aligned_names = rest_local_names[extra:] if extra > 0 else rest_local_names
+        # 2026-09-14 fix (LIFTER-785-RESIDUALS.md, the 14-row `for`-shaped
+        # `lift-check-failed` group): `all_bound_locals` (above; sourced
+        # from `record.for_bound_locals`, set by `lift_rewrite`'s
+        # `to`-direction `ForStmt` case) names every desugared bound
+        # local POSITIONALLY, at the point it was inserted, rather than
+        # asking this end-alignment guess to reconstruct it from lengths
+        # alone. The old guess (extras are always a prefix or a suffix of
+        # declaration order) is wrong whenever the source declared a real
+        # local before the for-loop: the task's own order becomes
+        # [<real locals...>, h_t, i_t] with the extra in the MIDDLE
+        # (dafny-synthesis_task_id_267: task order [i, h, k], source
+        # scope [i, k], the old code took extra_names=[i, h] instead of
+        # [h] and mis-bound the source's real `i` to the task's `h_t`).
+        # When the record has no bound locals at all (a genuine `while`,
+        # a `downto` for, or an older caller not yet threading the
+        # record) `record_extra` is empty and the two lines below behave
+        # exactly as the old length-based guess did (`extra <= 0` there
+        # was already the common no-extras case).
+        record_extra = [n for n in rest_local_names if n in all_bound_locals]
+        if record_extra:
+            extra_names = record_extra
+            aligned_names = [n for n in rest_local_names if n not in all_bound_locals]
+        else:
+            extra = len(rest_local_names) - len(locals_in_scope)
+            extra_names = rest_local_names[:extra] if extra > 0 else []
+            aligned_names = rest_local_names[extra:] if extra > 0 else rest_local_names
         # Row (2026-09-12): each `extra_names` entry is a for-desugared
         # range-bound local with no source-side value at all -- `_task_
         # var_inits` recovers the one init expr decision 15's rewrite
@@ -1514,15 +1671,24 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # not be proved" / "value does not satisfy the subset constraints
         # of 'nat'" on the embedded call, confirmed from the dafny text
         # log on each, fixed by this same one-line generalisation).
+        # 2026-09-14: a call under an enclosing quantifier (`q` below, from
+        # `_find_fun_calls`) has that quantifier's OWN bound variable in
+        # its arguments, not a lemma parameter -- so its domain guard is
+        # only well-scoped INSIDE that quantifier's own range, never at
+        # this lemma's top-level `requires` (see `_quantifier_for_call`'s
+        # docstring for the failure this excludes: `unresolved identifier`
+        # on the guard itself, the same way the bare hint call was).
         call_guard_list = []
-        for call in inv_calls:
+        for call, q in inv_calls:
+            if q is not None:
+                continue
             fd_match = next(fd for fd in fdecls if fd.name == call.fn.name)
             g = _call_guard(fd_match, call, loop_crename)
             if g not in call_guard_list:
                 call_guard_list.append(g)
         call_guards = _and(call_guard_list)
         inv_hints = []
-        for call in inv_calls:
+        for call, q in inv_calls:
             fd_match = next(fd for fd in fdecls if fd.name == call.fn.name)
             f = _match_spec_fun(fd_match, task.get("spec_funs", []), record)
             if f is None:
@@ -1530,10 +1696,53 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             args = ", ".join(_print_expr(a, loop_crename) for a in call.args)
             guard = _call_guard(fd_match, call, loop_crename)
             call_line = f"L_fun_{f['name']}({args});"
-            if guard == "true":
-                inv_hints.append(f"  {call_line}")
+            array_bounds = _array_index_guards(call, src_params, loop_crename)
+            if q is None:
+                # A bare lemma-parameter argument can be a not-found
+                # sentinel in some of the lemma's own cases (594's
+                # `firstOdd == -1`, see `_array_index_guards`); the same
+                # bound protects it here as an `if` guard, never the
+                # top-level `call_guards` above (which would leak into the
+                # lemma's own `requires`/`ensures` unconditionally, wrongly
+                # narrowing a case where the sentinel legitimately holds).
+                full_guard = _and([guard] + array_bounds) if array_bounds else guard
+                if full_guard == "true":
+                    inv_hints.append(f"  {call_line}")
+                else:
+                    inv_hints.append(f"  if {full_guard} {{ {call_line} }}")
             else:
-                inv_hints.append(f"  if {guard} {{ {call_line} }}")
+                # Re-quantify the hint under `q`'s own binders and range
+                # (or, for the unguarded `forall x :: R ==> B` form Dafny
+                # also allows, `R` read off the body's own `Implies` --
+                # `Quantifier.range` is `None` there per lift_ast's own
+                # doc), so the call's bound variable is in scope exactly
+                # where the source's own quantifier put it. A plain
+                # forall-STATEMENT with no `ensures` (the idiom the L_ens
+                # hint above already uses `ensures` for, since it proves a
+                # fact beyond the callee's own postcondition; this one
+                # doesn't): Dafny generalises a called lemma's `ensures`
+                # over the statement's own binder for every value
+                # satisfying its range, which is exactly the fact `src_inv`
+                # below needs at each such value.
+                binders = ", ".join(_print_binder(b, loop_crename) for b in q.binders)
+                if q.range is not None:
+                    rng = _print_expr(q.range, loop_crename)
+                elif isinstance(q.body, Implies):
+                    rng = _print_expr(q.body.left, loop_crename)
+                else:
+                    rng = "true"
+                # Safety bounds go FIRST: Dafny's `&&` is short-circuit, so
+                # `k_v < arr.Length` must be assumable before `rng`'s own
+                # text re-indexes `arr[k_v]` inside itself (measured: with
+                # the bound appended instead of prepended, the SAME `index
+                # out of range` recurs one conjunct over).
+                if array_bounds:
+                    rng = _and(array_bounds + [rng])
+                body_line = (f"    {call_line}" if guard == "true"
+                            else f"    if {guard} {{ {call_line} }}")
+                inv_hints.append(f"  forall {binders} | {rng} {{")
+                inv_hints.append(body_line)
+                inv_hints.append("  }")
         lines.append(f"lemma L_inv_{k}({ps_inv})")
         # `nat_clause`/`call_guards` also belong in `requires`, not only
         # inside the ensures' left conjunct: a local that is nat-typed in
@@ -1553,7 +1762,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # left-to-right `&&` short-circuit (the same discipline L_req
         # already relies on) establishes them before `src_inv`'s embedded
         # calls are evaluated.
-        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards, this_length_fact, extra_fact])}")
+        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards, this_length_fact, extra_fact, array_view_fact])}")
         lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, extra_fact, src_inv])}) <==> ({lifted_inv})")
         if inv_hints:
             lines.append("{")

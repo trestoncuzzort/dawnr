@@ -119,13 +119,17 @@ class FilterPosLoopCertTest(unittest.TestCase):
 
     def test_certificate_grounds_the_return_length(self):
         # Pins the SHAPE of the fix: the return length is grounded to a
-        # literal by `vm_compute` before the `repeat match` that widened
-        # its own body pattern from `_ = _` to bare `_` ever runs, and
-        # the closer widens past bare `lia`.
+        # literal by `vm_compute` before the per-conjunct `repeat match`
+        # (rocq-perconj, 2026-09-14: one arm per ensures conjunct, keyed
+        # on its own exact rendered text post-`Ht_rlen`-rewrite, each
+        # specializing at ITS OWN falsifying index -- no longer one
+        # generic `_ <= t_k < _` wildcard arm shared by every conjunct
+        # at a single shared index) ever runs, and the closer widens
+        # past bare `lia`.
         _task, _body, _witness, src, _rung = _twin_source("filter_pos.t")
         self.assertIn("Ht_rlen", src)
         self.assertIn("vm_compute; reflexivity", src)
-        self.assertIn("forall t_k : Z, _ <= t_k < _ -> _ |- False", src)
+        self.assertIn("|- False =>\n      specialize (H 0 ltac:(lia))", src)
         self.assertIn("first [ lia | congruence | intuition congruence ]",
                       src)
 
@@ -190,6 +194,73 @@ class ReverseLoopCertTest(unittest.TestCase):
         ok, out = _compile(src)
         self.assertTrue(ok, out)
         _assert_no_shortcuts(self, src)
+
+
+_LUCID_JSON = Path(
+    "/home/tmcuzzort/tup/t/out/lifted-tasks/"
+    "dafny-synthesis_task_id_603.LucidNumbers.json")
+
+
+@unittest.skipUnless(_LUCID_JSON.is_file(), "lifted corpus row not present")
+class LucidNumbersPerConjunctTest(unittest.TestCase):
+    """dafny_synthesis_task_id_603__lucidNumbers (rocq-perconj, 2026-09-14:
+    "a per-conjunct falsifying index in the seq-return certificate"): the
+    lifted row named in ROADMAP 16.2 as `_value_cert`'s seq branch's
+    Sole blocker. Its ensures has THREE forall conjuncts over the twin's
+    own output (a mod-3 property, an upper bound, a strict monotonicity
+    nested two foralls deep); the witness (n=1, twin=[0, 1]) falsifies
+    only the FIRST, at index 1 -- the OLD single-shared-index match
+    (`specialize (H 0 ...)` everywhere) proved nothing and coqc read "No
+    applicable tactic" (MEASURED, this date, before this fix). This task
+    is not in the committed 34 (`t/tasks`, AGREEMENT.md's own regression
+    set), so it is read directly from the read-only lifted corpus named
+    in this item's own instructions; the test is skipped, not failed,
+    when that file is absent."""
+
+    def _lower(self):
+        task = tasks_io.load_task(str(_LUCID_JSON))
+        twin_body, rung, witness = harness.twin_for(task)
+        src = lower_rocq.lower(task, twin_body, witness=witness)
+        return task, twin_body, witness, src, rung
+
+    def test_witness_is_value_kind_collapse_if(self):
+        _task, _body, witness, _src, rung = self._lower()
+        self.assertEqual(rung, "collapse-if")
+        self.assertEqual(witness.get("_kind"), "value")
+
+    def test_three_arms_at_three_distinct_index_lists(self):
+        # Pins the FIX's own shape: one match arm per forall conjunct
+        # (three, for this task), the first specialized at index 1 (the
+        # actual falsifying index, not the old shared default 0), the
+        # third (nested two levels) specialized twice on the same `H`.
+        _task, _body, _witness, src, _rung = self._lower()
+        self.assertEqual(src.count("|- False =>"), 3)
+        self.assertIn(
+            "-> ((t_mod ((dafny_synthesis_task_id_603__lucidNumbers_t 1) "
+            "i) 3) = 0)) |- False =>\n      specialize (H 1 ltac:(lia))",
+            src)
+        self.assertIn(
+            "specialize (H 0 ltac:(lia)); specialize (H 1 ltac:(lia)); "
+            "cbv in H",
+            src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_certificate_compiles_and_refutes(self):
+        _task, _body, _witness, src, _rung = self._lower()
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+        _assert_no_shortcuts(self, src)
+
+    @unittest.skipUnless(COQC and shutil.which("coqchk"),
+                         "coqc/coqchk not on PATH")
+    def test_graded_verdict_is_refuted(self):
+        task, _body, _witness, src, _rung = self._lower()
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / f"{task['name']}_twin.v"
+            p.write_text(src, encoding="utf-8")
+            result = rocq_backend.verify(p)
+            self.assertEqual(result.outcome, Outcome.REFUTED,
+                             getattr(result, "detail", ""))
 
 
 @unittest.skipUnless(COQC, "coqc not on PATH")

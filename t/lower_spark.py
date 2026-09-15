@@ -1323,6 +1323,56 @@ per-shape list, above) -- this session's roster did not reach them and
 there was no time left to regenerate the family without one to measure
 each shape individually; the spec experiment's pool (function-shaped nl/
 problems this member closes) -- not run.
+
+2026-09-14 (key spark-cert, ROADMAP 16.2 "value-witness certificates
+through loop bodies"): spark alone blocked seven of AGREEMENT.md's
+matrix rows (2e0f9c0), all with a "value" witness through a task whose
+body is a single while loop -- all_nonneg, contains, linear_search,
+row_max_len, seq_max, count_matches, filter_pos. MEASURED cause
+(gnatprove FSF 16.1.0, `python3 t/verifiers/spark.py` against
+t/out/all_nonneg_twin.ads before this session's fix, and directly via
+`verifiers.spark.verify`): the "value" certificate called F(args), and
+gnatprove reasons about F(args) by TRUSTING F's loop helper W_k's
+declared Pre/Post, never by unfolding the recursion. A twin whose own
+mutation genuinely breaks the stated invariant (all_nonneg_twin's
+collapse-if rung: the recursive call's own Pre, "R = (for all J in
+[0,I) => elem>=0)", stops holding partway through) leaves that
+recursive-call precondition permanently unprovable -- gnatprove's own
+text, unchanged before/after this fix: "medium: precondition might
+fail, cannot prove ... provers gave up before completing the proof" --
+and Big_Integer's opacity to gnatprove's counterexample engine
+(verifiers/spark.py's own header, MEASURED there already) means that
+obligation can never escalate to severity "high" either, so the CELL
+read verified/unproved (or verified/timeout, count_matches/filter_pos)
+regardless of the certificate's own budget.
+
+FIX: `Lower.loop_certs` (lower_while's own note) stashes, for every
+loop this pass lowers, an UNCONTRACTED clone `W_k_Cert` -- the SAME
+record type and the SAME recursive body as `W_k`, stripped of Pre/Post,
+owing only a Subprogram_Variant (termination alone, never dependent on
+the loop's own invariant). certificate()'s "value" kind, when the
+witness's task needs no rename and has EXACTLY one loop (the same
+single-loop restriction the pre-existing "exit" kind already applies),
+clones F itself into `F_Cert` (F's own already-rendered body text,
+`W_k` renamed to `W_k_Cert`) and calls THAT instead of F. gnatprove
+then computes the twin's actual value at the witness's ground literal
+arguments by ordinary defining-axiom unfolding -- ground SMT work, not
+an assumption -- never touching W_k's own (possibly unprovable)
+contract. A task with no loop, or more than one, or a rename, is
+byte-for-byte unaffected: the old F(args) goal is kept verbatim.
+
+MEASURED (`python3 grade.py --tasks <dir> --kernels spark,dafny
+--flake 3 --jobs 7`, this machine, gnatprove FSF 16.1.0 / Why3 1.8.2+git,
+dafny 4.11.0+fcb2042; both runs against the SAME collapse-if rung
+harness.twin_cached picked either side of this patch):
+  - the 7 rows above, spark twin: unproved -> refuted (all_nonneg,
+    linear_search, seq_max, row_max_len, contains) and timeout ->
+    refuted (count_matches, filter_pos); every real UNCHANGED
+    (verified); dafny's own column unchanged throughout (control).
+  - regression bar: full detail and exact before/after counts are the
+    session's own patch/report (a re-run can drift under this box's own
+    contention, so not re-asserted here); the mechanism above is what
+    this docstring pins.
 """
 from __future__ import annotations
 
@@ -3641,6 +3691,15 @@ class Lower:
         self.needs_str_split_w = False
         self.needs_str_join = False
         self.spec_fun_names = {sf["name"] for sf in task.get("spec_funs", [])}
+        # 2026-09-14 (spark-cert, ROADMAP 16.2 "value-witness certificates
+        # through loop bodies"): one UNCONTRACTED clone of each W_k this
+        # compile pass lowers, keyed by the contracted helper's own name
+        # ("W_1", ...). certificate()'s "value" kind reads this to replay
+        # a twin's loop at a concrete witness without needing W_k's own
+        # Pre/Post (see lower_while's own dated note, below, for why that
+        # contract can be genuinely unprovable for a twin and certificate()
+        # must not inherit that obligation).
+        self.loop_certs: dict[str, str] = {}
         # The counterexample instance walks the SAME tree with the SAME
         # operator table; only the numeric type of a literal differs, so a
         # transcription slip cannot make the instance disagree with the
@@ -4611,6 +4670,43 @@ class Lower:
             f"\n"
             f"   {sig}\n"
             f"   is ({body_expr});\n")
+        # 2026-09-14 (spark-cert): the SAME record and recursive body,
+        # renamed W_k -> W_k_Cert throughout and stripped of Pre/Post,
+        # kept ONLY the Subprogram_Variant termination measure. Built
+        # from the SAME local pieces (`fields`, `cond`, `rec_args`, `agg`,
+        # `variant`, and `besc`/`bval`/`benv` under an early exit) the
+        # contracted block above uses, never by re-deriving or re-lowering
+        # anything: the two blocks can disagree only if this file's own
+        # string literals do, not because of a second, independent read
+        # of the loop.
+        def _cert_body(nm: str, tn: str) -> str:
+            if body_has_return:
+                esc_fields_c = ", ".join(f"{cap(v)} => {benv[v]}"
+                                         for v in mut)
+                base_case_c = (f"{tn}'({agg}, Esc => False, "
+                              f"Ret => {cap(ret_name)})")
+                recurse_or_escape_c = (
+                    f"(if {besc}\n"
+                    f"         then {tn}'({esc_fields_c}, Esc => True, "
+                    f"Ret => {bval})\n"
+                    f"         else {nm} ({', '.join(rec_args)}))")
+                return (f"(if {cond}\n"
+                       f"        then {recurse_or_escape_c}\n"
+                       f"        else {base_case_c})")
+            return (f"(if {cond}\n"
+                   f"        then {nm} ({', '.join(rec_args)})\n"
+                   f"        else {tn}'({agg}))")
+        cert_name, cert_tname = f"{name}_Cert", f"{tname}_Cert"
+        cert_sig = f"function {cert_name} ({'; '.join(plist)}) return " \
+                   f"{cert_tname}"
+        self.loop_certs[name] = (
+            f"   type {cert_tname} is record\n{fields}\n   end record;\n"
+            f"\n"
+            f"   {cert_sig}\n"
+            f"   with Subprogram_Variant => (Decreases => {variant});\n"
+            f"\n"
+            f"   {cert_sig}\n"
+            f"   is ({_cert_body(cert_name, cert_tname)});\n")
         # A state var may still be Python None here: the pre-check above lets
         # exactly the unassigned return-target case through (SPEC.md "Early
         # exit"), so it needs a placeholder Ada value for the call site --
@@ -5139,7 +5235,8 @@ def _ensures_undef_witness(task: dict, body: list) -> dict | None:
     return None
 
 
-def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
+def certificate(task: dict, body: list, w: dict | None, L: Lower,
+                final: str | None = None) -> str:
     """THE REFUTATION CERTIFICATE (10.8). One additional ground goal, named
     exactly T_Refutation_Certificate, that instantiates the harness witness
     so the kernel itself can judge it: verifiers/spark.py mints REFUTED only
@@ -5240,6 +5337,7 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
             for k, v in vals.items()}
     types[ret] = task["returns"][0]["type"]
     ens = None
+    pre_decls = ""
     try:
         parts = [L.expr(e, sub, types) for e in task.get("requires", [])]
         if kind == "value":
@@ -5249,6 +5347,49 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
                 return ""
             args = ", ".join(sub[p["name"]] for p in task["params"])
             call = f"F ({args})" if args else "F"
+            # 2026-09-14 (spark-cert, ROADMAP 16.2): a loop task's F calls
+            # a Hoare-contracted W_k, and gnatprove reasons about F(args)
+            # by TRUSTING W_k's declared Post, never by unfolding the
+            # recursion -- so the goal above passes only when W_k's OWN
+            # contract (an obligation entirely separate from this goal)
+            # also discharges. A twin whose mutation genuinely breaks the
+            # stated invariant (all_nonneg_twin.ads's drop-guard, MEASURED
+            # 2026-09-14: "medium: precondition might fail, cannot prove
+            # (R = (for all J ... ))" at W_1's own recursive call, severity
+            # never escalating past "medium" -- Big_Integer's opacity to
+            # gnatprove's counterexample engine, this file's header) can
+            # never discharge that obligation, so trusting F(args) here
+            # would build a certificate resting on an axiom the kernel
+            # itself never verified. Fix: call F_Cert instead, an
+            # otherwise-identical clone of F whose own loop call goes to
+            # W_k_Cert (`Lower.loop_certs`, lower_while's own note) -- an
+            # UNCONTRACTED recursive function owing only termination, so
+            # gnatprove computes F_Cert(args) by ordinary defining-axiom
+            # unfolding at the GROUND literal `args` this witness already
+            # supplies, never by trusting an unproven Pre/Post pair. Only
+            # attempted when `final` (F's own already-rendered body,
+            # passed by lower() only when the task needed no rename --
+            # see lower()'s own `cert_L` note) is available and the twin
+            # has EXACTLY one loop with a stashed clone (the same
+            # single-loop restriction the "exit" kind already applies,
+            # just below): anything else falls back to the plain F(args)
+            # goal above, unchanged from before this session.
+            loops = _cert_loops(body)
+            if (final is not None and len(loops) == 1
+                    and len(L.loop_certs) == 1 and args):
+                loop_name = next(iter(L.loop_certs))
+                cert_block = L.loop_certs[loop_name]
+                f_cert_body = re.sub(rf'\b{re.escape(loop_name)}\b',
+                                     f"{loop_name}_Cert", final)
+                plist_c = "; ".join(
+                    f"{cap(p['name'])} : {ada_type(p['type'])}"
+                    for p in task["params"])
+                ret_ty_c = ada_type(task["returns"][0]["type"])
+                fsig_c = f"function F_Cert ({plist_c}) return {ret_ty_c}"
+                pre_decls = (cert_block + "\n"
+                            f"   {fsig_c} is\n"
+                            f"     ({f_cert_body});\n\n")
+                call = f"F_Cert ({args})"
             ens = [L.expr(e, {**sub, ret: call}, types)
                    for e in task["ensures"]]
         elif kind == "exit":
@@ -5306,7 +5447,8 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower) -> str:
         parts.append(neg)
     conj = "\n      and then ".join(parts)
     sig = f"function {CERT_NAME} return Boolean"
-    return (f"   --  Refutation certificate: the measured witness, restated\n"
+    return (pre_decls +
+            f"   --  Refutation certificate: the measured witness, restated\n"
             f"   --  as one ground goal for the kernel to judge (see the\n"
             f"   --  header). This file can never claim VERIFIED.\n"
             f"   {sig}\n"
@@ -5676,7 +5818,13 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         w2 = _ensures_undef_witness(orig_task, orig_body)
         if w2 is not None:
             w_use = w2
-    cert = certificate(orig_task, orig_body, w_use, cert_L)
+    # `final` (F's own already-rendered body, above) is consistent with
+    # `cert_L`'s own `loop_certs` ONLY when `cert_L is L` (no rename, the
+    # common case, `cert_L`'s own note above); handed to certificate()
+    # only then, so a renamed task's certificate keeps exactly its
+    # pre-existing F(args)-based "value" goal (spark-cert, 2026-09-14).
+    cert = certificate(orig_task, orig_body, w_use, cert_L,
+                       final=(final if cert_L is L else None))
 
     plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
                       for p in task["params"])

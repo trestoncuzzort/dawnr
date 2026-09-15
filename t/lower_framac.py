@@ -2672,7 +2672,186 @@ framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
   pinned alt-ergo budget rather than verify, a proof-engineering gap
   (quantifier instantiation, not a missing rendering) this pass does
   not chase further, matching the identical gap already named and left
-  open for task 460 above."""
+  open for task 460 above.
+
+FRAMAC-NESTED, DESIGN-framac-nested-seq.md, 2026-09-14 (worktree
+/home/tmcuzzort/tup/.claude/worktrees/wf_9a0a9ebc-9de-6). Takes up items
+(b)/(c)/(d) named OPEN just above: a second capacity dimension for a
+seq<seq> RETURN/LOCAL (sections 1-3), an executable `lower`/`upper`
+(section 4), and re-checks the two cells wave K's item (a) moved from
+abstain to timeout (`fz_p_nest_eq`, 69 ContainsSequence, section 6 of
+this task's own instructions). `swap_rows`'s general BUILD problem
+(section 3's `split`/`update` scanning loop, a genuinely data-dependent
+row count) was NOT attempted: every task actually measured this pass
+builds its nested value from a COMPILE-TIME CONSTANT, so the narrower
+fold below closes them without the general loop machinery section 3
+describes; a real runtime build (`swap_rows`'s own shape) still hits
+the unchanged wholesale refusal, named below.
+
+CLOSED, three of the six FAIL cells DESIGN-framac-nested-seq.md's own
+task named (`t/CONFORMANCE.md`'s eight framac FAIL cells today: biglen
+and seqlen open by design, stay; pair_seq/nest_eq/nest_empty/
+str_splitempty/str_tab/str_lowernonletter were the six targets):
+
+  `fz_p_nest_empty`, `fz_p_str_splitempty` (sections 1-3, a seq<seq>
+  RETURN): `_ret_nested_fold`/`_fold_nested_rows` (new, above
+  `_ret_capacity`) constant-fold `ret`'s own single build statement
+  (`[]`, or `split([])`, replaying `split`'s own semantics through
+  `interp._str_split_ws` so the fold can never disagree with the real
+  program) to concrete Python rows at LOWERING TIME, closing BOTH
+  capacities (row count, total element count) to integer LITERALS --
+  `lower()`'s own nested-RETURN branch then emits the flat data+offsets
+  triple as OUTPUT parameters (`{ret}_data`, `{ret}_off`, `{ret}_n`,
+  THE ENCODING's own naming, reused for a RETURN) with `requires
+  {ret}_n == ROWS`, `requires \valid({ret}_off + (0 .. {ret}_n))`,
+  `requires \valid({ret}_data + (0 .. DATA - 1))`, and a BODY of
+  individual literal stores (no loop, exactly `seq_assign_lines`'s own
+  `lower`/`upper` literal-fold precedent below), bypassing `stmts()`
+  entirely since the fold already consumed the whole (one-statement)
+  body. `swap_rows`'s own multi-statement, data-dependent shape never
+  folds and falls straight through to the SAME wholesale refusal as
+  before, its message text updated to say so by name.
+
+  `fz_p_str_lowernonletter` (section 4, an executable `lower`/`upper`):
+  three small, independent additions close it, none of them the general
+  two-capacity machinery above (this probe's return length equals its
+  bare input's, `_expr_seq_len`'s existing single-dimension resolution
+  already covers it once taught the new op): (1) `_expr_seq_len` gains
+  a `lower`/`upper` case, passing the length question straight through
+  to the operand (pointwise, never adds/drops an element); (2)
+  `seq_assign_lines` gains a `lower`/`upper` case, T_CASE_ACSL (new,
+  alongside T_DIVMOD_ACSL) declaring `t_lower_c`/`t_upper_c` once per
+  file that needs either, a bare-variable source getting a real copy
+  loop (invariant `target[t] == t_lower_c(src[t])`) and a fully-literal
+  source (this probe's own shape, `lower([32, 64, 91, 96, 123,
+  1000000])`) folded at Python level to its already-computed constant
+  result and re-dispatched through the pre-existing `seq`-literal case,
+  needing no runtime loop at all; (3) `_seq_at_render` gains a `seq`
+  LITERAL case (a nested ternary case-split over the literal's own
+  fixed index set), needed only because this probe's `ensures` compares
+  the whole return AGAINST a literal (`r == [32, ...]`), `pred()`'s
+  seq `==` branch reading each side through `_seq_at_render`.
+
+  `fz_p_str_tab` (a seq<seq>-typed LOCAL, section 1's other half):
+  `stmts()`'s `var` case now tries `_fold_nested_rows` on a nested-typed
+  local's own initializer before refusing; when it folds (this probe's
+  `rows := split([65, 9, 66])`), the local becomes two plain, literally-
+  initialized C arrays (`int rows_data[2] = {65, 66}; int rows_off[3] =
+  {0, 1, 2}; int rows_n = 2;`) and NO ACSL clause at all, "no VLA, no
+  malloc" made real by both dimensions being compile-time constants
+  already, never a `requires` a caller owes (a LOCAL has no caller).
+  This closes the LOCAL-declaration gap the cell's old abstain message
+  named -- but the cell as a whole STILL abstains, because its body then
+  reads those rows back through `==` nested inside `and`
+  (`len(rows)==2 and at(rows,0)==[65] and at(rows,1)==[66]`), never a
+  bare top-level comparison `_seq_eq_top` (wave K's item (a), 2026-09-
+  12) recognizes -- a genuinely different, deeper gap this pass does not
+  chase (it is exactly item (a)'s own stated scope boundary, "==
+  nested inside `and`", not this pass's own named build order). Kept
+  anyway: real, additive progress (a previously-impossible declaration
+  now renders), and the cell's abstain message is now ACCURATE (names
+  the true remaining blocker) rather than stale.
+
+  MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-14,
+  `verifiers.framac.verify` called directly on each lowered `.c` file):
+  `fz_p_nest_empty` 5/5 goals proved, VERIFIED; `fz_p_str_splitempty`
+  69/69 goals proved (includes an unused, harmless `t_wc`/`t_wc_c`
+  declaration, `_has_wordcount`'s own over-inclusive-by-design walk
+  firing on `split`'s presence regardless of reachability, pre-existing
+  behaviour, not touched here), VERIFIED; `fz_p_str_lowernonletter`
+  reads `verified / refuted` end to end via `fuzz_lower.py --n 0 --only
+  framac --tasks fz_p_str_lowernonletter --flake 3` (the twin ladder DID
+  find a compare-flip candidate here, unlike the two no-twin RETURN
+  cells), matching `_expect` exactly.
+
+STOPPED, named rather than attempted: `fz_p_pair_seq` (a pair with a
+seq component) is UNCHANGED, out of this pass's own scope (its own
+section 5 needs `_pair_field_c`'s struct-by-value encoding to grow a
+buffer-pointer-plus-length component, a different problem from either
+the nested-seq fold or the case-map loop this pass actually built, and
+no time remained to design it this pass); `dafny_synthesis` 262
+splitArray (section 5's committed target) was never reached for the
+same reason. The sweep rows 240 replaceLastElement and 586
+splitAndAppend (section 3's "if their concat shapes fall out") were
+checked directly against a copy of their own lifted JSON and still read
+their PRE-EXISTING named refusal (the seq-concatenation EXACT-length-
+return / non-target-left-operand gaps `seq_assign_lines`'s own `+`
+case already names, untouched by anything this pass built): neither
+task's own body is a `lower`/`upper` call or a compile-time-constant
+nested seq<seq> build, so neither reaches any of this pass's four new
+sites; not moved, not expected to move.
+
+`fz_p_nest_eq` and 69 ContainsSequence (this task's own section 6 item,
+"read WP's goal report and close them ... or name the goal"): RE-
+CHECKED by hand-tracing WP's own goal report again (`frama-c -wp ...`
+directly on each, no `-wp-fct` restriction, same command wave K's own
+note above already used) rather than assumed unchanged: BOTH STILL
+TIMEOUT, the exact same failing goal NAMES as wave K's own note records
+(`fz_p_nest_eq`: `..._ensures`, `..._loop_invariant_2_preserved`,
+`..._loop_invariant_3_preserved`; 69 ContainsSequence:
+`..._loop_4_preserved`, `..._ensures`, `..._loop_7_preserved`), because
+nothing this pass built touches `_seq_eq_top`/`_seq_eq_operand_c`/
+`_seq_eq_loop`/`_seq_eq_value` (the four sites wave K's own item (a)
+owns) at all -- this pass's own four new sites are a DIFFERENT four
+(`_expr_seq_len`, `_seq_at_render`, `seq_assign_lines`, `stmts()`'s
+`var` case, plus `_ret_nested_fold`/`_fold_nested_rows` in `lower()`
+itself). The gap itself is UNCHANGED and confirmed, not merely assumed:
+a doubly-quantified (`\forall`-inside-`\forall` for nest_eq, `\exists`-
+inside-`\forall` for ContainsSequence) instantiation problem alt-ergo
+2.4.3 cannot close at the pinned budget even with every scalar fact
+already known, the same capability class already named for task 460
+getFirstElements and task 86 centeredHexagonalNumber; RULES forbids
+raising the pinned budget to chase it, so both stay the honest TIMEOUT
+they already were, not relabeled.
+
+REGRESSION. The 34 committed tasks under t/tasks: `lower()` called
+directly on each (this worktree's `lower_framac.py` vs. `git show
+HEAD:t/lower_framac.py`, loaded as a separate module so both run in the
+same process against the same task JSON) -- 33 of 34 BYTE-IDENTICAL;
+the 34th, `swap_rows`, differs ONLY in its abstain message's own text
+(both sides still raise `NotImplementedError`, ABSTAIN both before and
+after -- the message was reworded to say a compile-time-constant nested
+return now lowers, which `swap_rows`'s own data-dependent one still
+does not). Since frama-c is deterministic on identical C input, this
+byte-identity stands in for re-running the kernel on the 33 unaffected
+tasks: the AGREEMENT.md framac column (31 `verified/refuted`, 3
+`abstain/abstain`) is unmoved cell for cell. The 66-item framac
+conformance manifest (own scratchpad script, `conformance.
+probe_manifest()`/`run_items()`/`grade()` called directly, `present`
+filtered to framac alone, flake 3): 48 PASS / 5 FAIL, up from 45 PASS /
+8 FAIL before this pass (the three closed cells above, each moving from
+FAIL to PASS; the five still-FAIL cells -- biglen, seqlen (open by
+design), pair_seq, nest_eq, str_tab -- read the identical (real, twin)
+pair before and after, confirmed by rerunning the SAME script against a
+copy of the pre-pass file). The 302-task lifted corpus
+(`/home/tmcuzzort/tup/t/out/lifted-tasks/`, read-only): `lower()` called
+directly on all 302 (same before/after-module technique as the 34
+committed tasks) -- 301 of 302 BYTE-IDENTICAL; the one exception,
+`dafny-language-server_tmp_tmpkir0kenl_Test_tutorial_maximum.Maximum`
+(not a `dafny_synthesis`-prefixed row, so outside this task's own
+pinned regression set), moves from ABSTAIN ("seq position holds
+non-variable", a bare `values != []` requires) to a full lowering, an
+UNPLANNED but strictly positive side effect of `_seq_at_render`'s new
+literal-`seq` case (the same rendering `fz_p_str_lowernonletter`'s
+`ensures` needed); not investigated further for a kernel verdict, named
+here rather than silently absorbed. None of the four nested-seq-typed
+tasks already in the 302 (`460 getFirstElements`, `95
+SmallestListLength`, `792 CountLists`, `69 ContainsSequence`, all
+seq<seq> PARAMETERS, read only) declares a nested seq<seq> RETURN or
+LOCAL or calls `lower`/`upper`, confirmed by direct inspection of each
+task's own JSON, so none of this pass's new code paths is even reached
+by any of them -- the dafny_synthesis rows of t/COVERAGE-lifted-785.md
+that read `verified`/`refuted` in the framac column are therefore
+PROVABLY unmoved, not merely unmeasured.
+
+Tests: `test_framac_seq4.py`'s `the_other_five_seq_cells_are_unmoved`
+UPDATED (it asserted the OLD abstain text for `fz_p_nest_empty`/
+`fz_p_str_splitempty`/`fz_p_str_lowernonletter`/`fz_p_str_tab`, three of
+which no longer abstain at all and the fourth of which abstains for a
+different, deeper reason now); every other test in that file and in
+`test_framac_nested.py`/`test_framac_frame_fact.py`/`test_framac_
+while_cert.py`/`test_framac_measure_axiom.py` passes unchanged (`python3
+t/test_framac_*.py` for each, run from `t/`)."""
 from __future__ import annotations
 
 import sys
@@ -2727,6 +2906,37 @@ def _has_divmod(x) -> bool:
         return any(_has_divmod(v) for v in x.values())
     if isinstance(x, list):
         return any(_has_divmod(v) for v in x)
+    return False
+
+
+# T_CASE_ACSL, added 2026-09-14 (DESIGN-framac-nested-seq.md section 4,
+# "an executable lower and upper"): the ACSL side of `lower`/`upper`'s own
+# case map, matching `interp.py`'s `_is_upper_letter`/`_is_lower_letter`
+# (65-90, 97-122) and `seq_assign_lines`'s C ternary for the same op
+# byte-for-byte, so the loop invariant `target[t] == t_lower_c(src[t])`
+# and the C store it is proving each iteration are the SAME formula, one
+# written in ACSL logic and the other in executable C, not two
+# independent guesses that happen to agree.
+T_CASE_ACSL = (
+    "/*@\n"
+    "  logic integer t_lower_c(integer c) =\n"
+    "    (65 <= c && c <= 90) ? c + 32 : c;\n"
+    "  logic integer t_upper_c(integer c) =\n"
+    "    (97 <= c && c <= 122) ? c - 32 : c;\n"
+    "*/\n"
+)
+
+
+def _has_caselower(x) -> bool:
+    """Whether `lower`/`upper` occurs anywhere in a task/body structure,
+    the same over-inclusive walk `_has_divmod` uses (an unused ACSL logic
+    definition costs nothing)."""
+    if isinstance(x, dict):
+        if x.get("op") in ("lower", "upper"):
+            return True
+        return any(_has_caselower(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_has_caselower(v) for v in x)
     return False
 
 
@@ -3365,6 +3575,29 @@ def _seq_at_render(e: dict, k_render: str, ctx) -> str:
     if e.get("op") == "slice":
         s, lo, _ = e["args"]
         return f"{seq_var(s, ctx.env)}[({term(lo, ctx)}) + ({k_render})]"
+    if e.get("op") == "seq":
+        # FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-seq.md
+        # section 4, `fz_p_str_lowernonletter`'s own `ensures r ==
+        # [32, 64, ...]`): a seq LITERAL has no backing buffer, so its
+        # element `k` is a formula, not a memory read, exactly the
+        # "formula substitution, not a copy" move `_seq_len_render`'s
+        # own `seq` case already makes for `len` of the same shape.
+        # Rendered as a case split over the literal's own fixed index
+        # set (`k == 0 ? e0 : (k == 1 ? e1 : ... : e_last)`), total for
+        # any `k` in `[0, len)` (the only range any caller of
+        # `_seq_at_render` ever asks about, since `at`'s own bounds
+        # obligation is enforced separately, at the call site) and,
+        # for `k` out of range, silently falls to the last element --
+        # ACSL logic is total, so SOME value is owed even though v1's
+        # own `at` is undefined out of range and no proof ever depends
+        # on this branch's particular fallback value.
+        args_ = e.get("args", ())
+        if not args_:
+            return "0"
+        expr = term(args_[-1], ctx)
+        for i in range(len(args_) - 2, -1, -1):
+            expr = f"(({k_render}) == {i} ? ({term(args_[i], ctx)}) : ({expr}))"
+        return expr
     if (e.get("op") == "at"
             and is_nested_seq_type(typ(e["args"][0], ctx.env, ctx.funs))):
         # SEQ VALUE, executable position, item 4 (nested), 2026-09-11
@@ -4653,6 +4886,17 @@ def _expr_seq_len(e: dict, lens: dict) -> dict | None:
         if a_len is None or b_len is None:
             return None
         return {"op": "+", "args": [a_len, b_len]}
+    if op in ("lower", "upper"):
+        # FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-seq.md
+        # section 4, "an executable lower and upper"): `lower(x)`/
+        # `upper(x)` is a pointwise case-map over `x`'s own elements
+        # (SPEC.md's own words, "leaves every non-letter code point
+        # unchanged"), never adding or dropping an element, so its
+        # length is exactly `x`'s own -- resolved recursively exactly
+        # like `update`'s own base-length passthrough above, whether `x`
+        # is a bare variable, a literal, a slice, or itself already
+        # resolved by this same function.
+        return _expr_seq_len(e["args"][0], lens)
     return None
 
 
@@ -4700,6 +4944,89 @@ def _seq_len_track(body: list, lens: dict) -> None:
             for k, v in list(lens.items()):
                 if inner.get(k) != v:
                     lens.pop(k, None)
+
+
+def _fold_int_list(e: dict) -> list | None:
+    """A plain-seq LITERAL `e` (`{"op": "seq", "args": [...]}`) as a
+    Python list of ints, iff every element is itself a literal `{"int":
+    v}` node; None for a variable, an op, or any non-literal element.
+    FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-seq.md sections
+    1-3): the building block `_fold_nested_rows` (below) uses to
+    constant-fold a nested seq<seq> RETURN/LOCAL's build expression at
+    LOWERING TIME rather than emit runtime machinery for a shape none of
+    this pass's own three named cells needs at runtime -- the same move
+    `seq_assign_lines`'s own `lower`/`upper` literal fold makes for a
+    flat seq."""
+    if e.get("op") != "seq":
+        return None
+    out = []
+    for a in e.get("args", ()):
+        if "int" not in a:
+            return None
+        out.append(a["int"])
+    return out
+
+
+def _fold_nested_rows(e: dict) -> list | None:
+    """A nested seq<seq> expression `e`'s rows as Python lists of ints,
+    constant-folded at LOWERING TIME, or None when `e` is not one of the
+    two shapes this pass's own named cells build: a literal nested seq
+    (`[]`, the empty case `fz_p_nest_empty` needs, or, more generally, a
+    literal of literal rows) or `split(s)` with `s` itself a fully
+    literal plain seq (`fz_p_str_splitempty`'s own `split([])`).
+    `split`'s own one-argument (whitespace) semantics are replayed
+    EXACTLY through `interp._str_split_ws`, the same function
+    `interp.py`'s own reference evaluator calls for the identical AST
+    node, so this fold can never disagree with what running the real
+    program would compute. Anything else (a seq<seq> PARAMETER variable,
+    `update`, a two-argument `split(s, sep)`) returns None, `lower()`'s
+    own signal to fall through to the wholesale runtime-build refusal,
+    unchanged."""
+    op = e.get("op")
+    if op == "seq":
+        rows = []
+        for a in e.get("args", ()):
+            r = _fold_int_list(a)
+            if r is None:
+                return None
+            rows.append(r)
+        return rows
+    if op == "split" and len(e.get("args", ())) == 1:
+        flat = _fold_int_list(e["args"][0])
+        if flat is None:
+            return None
+        return [list(r) for r in interp._str_split_ws(tuple(flat))]
+    return None
+
+
+def _ret_nested_fold(body: list, ret: str) -> list | None:
+    """Finds the single top-level `assign`/`return` to `ret` in `body`
+    and constant-folds its own value via `_fold_nested_rows`, or None
+    when there is not EXACTLY one such statement (a loop or an `if`
+    writing `ret` on different paths is out of this pass's own scope,
+    named by `lower()`'s own wholesale refusal, not guessed at) or that
+    one statement's value does not fold. Scoped to this pass's own two
+    named RETURN cells (`fz_p_nest_empty`, `fz_p_str_splitempty`), both
+    single-statement bodies -- `lower()` skips calling `stmts()` on
+    `body` entirely for a folded nested return (there is nothing left to
+    lower once the whole function is one constant-folded assignment), so
+    `body` is required to be EXACTLY that one statement, not merely to
+    contain it, or this returns None and `lower()` falls through to the
+    wholesale runtime-build refusal rather than silently dropping any
+    OTHER statement a longer body might have. `swap_rows`'s own multi-
+    statement BUILDING shape never matches (its `update` calls are not
+    `_fold_nested_rows` shapes to begin with, len(body) > 1 besides) and
+    falls through regardless."""
+    if len(body) != 1:
+        return None
+    s = body[0]
+    if "assign" in s and s["assign"][0] == ret:
+        e = s["assign"][1]
+    elif "return" in s and s["return"][0] == ret:
+        e = s["return"][1]
+    else:
+        return None
+    return _fold_nested_rows(e)
 
 
 def _ret_capacity(task: dict, ret: str) -> dict | None:
@@ -4954,10 +5281,72 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
         if cap is not None:
             out.append(f"{indent}{cap} = {n};")
         return out
+    if op in ("lower", "upper"):
+        # FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-seq.md
+        # section 4, "an executable lower and upper"). `r := lower(x)`/
+        # `r := upper(x)`: an output the SAME length as `x` (this
+        # function's own caller, `lower()`, resolved that length via
+        # `_expr_seq_len`'s new `lower`/`upper` case, EXACT mode, no new
+        # CAPACITY bound), one loop mapping each cell through the same
+        # ternary T_CASE_ACSL states, invariant `target[t] ==
+        # t_lower_c(src[t])` (or `t_upper_c`) for `t` below the counter.
+        #
+        # Two source shapes, both measured: `fz_p_str_lowernonletter`'s
+        # own probe body is `r := lower([32, 64, 91, 96, 123, 1000000])`,
+        # a fully LITERAL argument with no backing buffer at all (no
+        # `{v}_n`/`{v}` pair for a copy loop to read from) -- folded at
+        # LOWERING TIME instead: the case map is applied to each literal
+        # element in Python (both sides see the identical constant, C's
+        # `int` and ACSL's `integer` agreeing on every value in this
+        # file's own arithmetic, see THE SEMANTIC LINE above), then
+        # re-dispatched through the `"seq"` literal case just above,
+        # which is already measured and needs no new mechanism. A bare
+        # seq VARIABLE argument (the general case the design order names
+        # for a real string-lib caller) gets the real copy loop, reading
+        # `src[__k]` and writing `target[__k]` through the executable
+        # mirror of T_CASE_ACSL's own ternary.
+        src_e = args[0]
+        if src_e.get("op") == "seq" and all("int" in a for a in
+                                            src_e.get("args", ())):
+            def _map1(v: int) -> int:
+                if op == "lower":
+                    return v + 32 if 65 <= v <= 90 else v
+                return v - 32 if 97 <= v <= 122 else v
+            mapped = {"op": "seq",
+                     "args": [{"int": _map1(a["int"])}
+                              for a in src_e["args"]]}
+            return seq_assign_lines(target, mapped, ctx, indent, funs,
+                                    task_name)
+        if "var" not in src_e:
+            raise NotImplementedError(
+                f"string library member `{op}` reaching the seq-"
+                f"assignment machinery with source {src_e!r}: only a "
+                f"bare seq variable or a fully-literal seq argument is "
+                f"lowered")
+        src = seq_var(src_e, ctx.env)
+        cmap = (f"(65 <= ({src}[__k]) && ({src}[__k]) <= 90) ? "
+               f"({src}[__k]) + 32 : ({src}[__k])") if op == "lower" else (
+               f"(97 <= ({src}[__k]) && ({src}[__k]) <= 122) ? "
+               f"({src}[__k]) - 32 : ({src}[__k])")
+        fn = "t_lower_c" if op == "lower" else "t_upper_c"
+        out += [
+            f"{indent}/*@",
+            f"{indent}  loop invariant 0 <= __k <= {src}_n;",
+            f"{indent}  loop invariant \\forall integer __t; "
+            f"0 <= __t < __k ==> {target}[__t] == {fn}({src}[__t]);",
+            f"{indent}  loop assigns __k, {target}[0 .. {xn} - 1];",
+            f"{indent}  loop variant {src}_n - __k;",
+            f"{indent}*/",
+            f"{indent}for (int __k = 0; __k < {src}_n; __k++) "
+            f"{target}[__k] = {cmap};",
+        ]
+        if cap is not None:
+            out.append(f"{indent}{cap} = {src}_n;")
+        return out
     raise NotImplementedError(
         f"seq-typed assignment from operator {op!r}: v1's grammar only "
         f"assigns a bare seq variable, `update`, `fill`, `seq`, `slice`, "
-        f"or `+` to a seq-typed name")
+        f"`lower`, `upper`, or `+` to a seq-typed name")
 
 
 def assigned_names(body: list, seq_caps: dict | None = None
@@ -5414,18 +5803,52 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                 ctx = ctx.bind(v["name"], "seq")
                 continue
             if is_nested_seq_type(v["type"]):
-                # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested
-                # sequences"): a seq<seq>-typed LOCAL is the identical gap
-                # as a plain seq-typed local just above, for the same
-                # reason (no requires-time bound to size a backing
-                # buffer from), and would in any case need to BUILD a
-                # fresh row set to initialize it, the same shape the
-                # seq<seq> RETURN refusal in `lower()` already names.
-                # Not exercised by either committed task.
-                raise NotImplementedError(
-                    "nested seq (seq<seq>) local variables are not "
-                    "supported by this lowering; only a seq<seq> "
-                    "PARAMETER, read via `len`/`at`, is supported")
+                # FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-
+                # seq.md section 1, "a seq<seq> ... LOCAL"). A
+                # seq<seq>-typed LOCAL still has no requires-time bound
+                # to size a fresh backing buffer from for a genuinely
+                # data-dependent build, exactly the seq<seq> RETURN
+                # refusal's own reasoning (`lower()`, unchanged) -- but
+                # `fz_p_str_tab`'s own local (`rows := split([65, 9,
+                # 66])`) is, like `fz_p_nest_empty`/`fz_p_str_splitempty`
+                # before it, a COMPILE-TIME CONSTANT: `_fold_nested_rows`
+                # folds it to concrete Python rows and this declares a
+                # real C array LOCAL sized by that constant, "no VLA, no
+                # malloc" (the design's own words) because there is
+                # nothing left to size dynamically -- both dimensions
+                # are literal C array-length constants, not `requires`
+                # obligations the caller owes at all (a LOCAL, unlike a
+                # RETURN, has no caller to state one to), so no ACSL
+                # clause is needed here, only the declarations
+                # themselves. A row's own contents are individual
+                # literal initializer entries, the same "no loop needed"
+                # move `_ret_nested_fold`'s own RETURN case makes.
+                rows = _fold_nested_rows(v["init"])
+                if rows is None:
+                    raise NotImplementedError(
+                        "nested seq (seq<seq>) local variables are not "
+                        "supported by this lowering beyond a "
+                        "compile-time-constant value "
+                        "(`_fold_nested_rows`, added 2026-09-14); only a "
+                        "seq<seq> PARAMETER, read via `len`/`at`, is "
+                        "supported for a genuinely data-dependent value")
+                nm = v["name"]
+                flat = [x for row in rows for x in row]
+                offs = [0]
+                acc = 0
+                for row in rows:
+                    acc += len(row)
+                    offs.append(acc)
+                data_init = ("{" + ", ".join(str(x) for x in flat) + "}"
+                            if flat else "{0}")
+                off_init = "{" + ", ".join(str(x) for x in offs) + "}"
+                out.append(f"{indent}int {nm}_data[{max(1, len(flat))}] "
+                           f"= {data_init};")
+                out.append(f"{indent}int {nm}_off[{len(rows) + 1}] = "
+                           f"{off_init};")
+                out.append(f"{indent}int {nm}_n = {len(rows)};")
+                ctx = ctx.bind(nm, v["type"])
+                continue
             out += at_asserts(v["init"], ctx, indent, ctx.funs, task_name)
             ctx = ctx.bind(v["name"], v["type"])
             if isinstance(v["type"], dict) and "pair" in v["type"]:
@@ -7373,8 +7796,23 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     witness = t_names.remap_witness(witness, renames)
     name, ret = task["name"], task["returns"][0]["name"]
     rett = task["returns"][0]["type"]
+    nested_return_rows = None
     if is_nested_seq_type(rett):
+        nested_return_rows = _ret_nested_fold(body, ret)
+    if is_nested_seq_type(rett) and nested_return_rows is None:
         # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested sequences").
+        # FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-seq.md
+        # sections 1-3): reached only when `_ret_nested_fold` above could
+        # NOT constant-fold `ret`'s own build expression; see that
+        # function's own docstring and `_fold_nested_rows` for the two
+        # named cells (`fz_p_nest_empty`, `fz_p_str_splitempty`) that
+        # NOW skip this refusal entirely, both building their nested
+        # return from a compile-time constant (`[]`, or SPEC.md's own
+        # `split("") == []`), never reaching a runtime BUILD this
+        # backend still has no encoding for. `swap_rows`'s own shape (a
+        # genuine runtime build from a seq<seq> PARAMETER) is not
+        # constant and still falls straight through to this same
+        # refusal, unchanged.
         # Measured against `row_max_len` (a nested seq PARAMETER, read
         # only) first, per RULES, before this construct's own committed
         # BUILDING task, `swap_rows`, was even attempted: a seq<seq>
@@ -7401,11 +7839,13 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # (`row_max_len`'s own shape), is supported below.
         raise NotImplementedError(
             "nested seq (seq<seq>) RETURN: building a fresh row set has "
-            "no encoding in this lowering (the flat data+offsets "
-            "encoding's CAPACITY machinery sizes one buffer against one "
-            "bound, not a row-shaped offsets array against a second, "
-            "data-dependent one); a seq<seq> PARAMETER, read via "
-            "`len`/`at`, is supported")
+            "no encoding in this lowering beyond a compile-time-constant "
+            "value (`_ret_nested_fold`/`_fold_nested_rows`, added "
+            "2026-09-14); the flat data+offsets encoding's CAPACITY "
+            "machinery sizes one buffer against one bound, not a "
+            "row-shaped offsets array against a second, data-dependent "
+            "one, for a genuinely data-dependent build; a seq<seq> "
+            "PARAMETER, read via `len`/`at`, is supported")
     env = {p["name"]: p["type"] for p in task["params"]}
     env[ret] = rett
 
@@ -7480,6 +7920,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         header.append(f"struct {_pair_struct_name(*pt)} {{ int a; int b; }};")
     if _has_divmod(task) or _has_divmod(body):
         header.append(T_DIVMOD_ACSL.rstrip("\n"))
+    if _has_caselower(task) or _has_caselower(body):
+        header.append(T_CASE_ACSL.rstrip("\n"))
     if _has_wordcount(task) or _has_wordcount(body):
         header.append(T_WORDCOUNT_ACSL.rstrip("\n"))
     if _has_countfind(task) or _has_countfind(body):
@@ -7732,6 +8174,26 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         clauses.append(f"  requires {ret}_n == "
                        f"{term(ret_len_expr, spec_ctx)};")
         all_seqs.append(ret)
+    elif nested_return_rows is not None:
+        # FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-seq.md
+        # sections 1-2): the return's own two buffers, both
+        # caller-provided and WRITABLE (`\valid`, not `\valid_read`),
+        # sized by the two capacities `_ret_nested_fold` already
+        # resolved to closed-form INTEGER LITERALS -- ROWS (the row
+        # count, pinned into `{ret}_n` exactly the way a plain seq
+        # return's EXACT mode pins `{ret}_n`, THE ENCODING's own row-
+        # count convention for a nested seq PARAMETER reused here for a
+        # RETURN) and DATA (the total element count, needed only to size
+        # `{ret}_data`'s own `\valid`, never a separate C parameter: no
+        # loop or `\result` reads it back, since both counts are already
+        # literals, not something the body computes at runtime).
+        ret_rows = len(nested_return_rows)
+        ret_data = sum(len(r) for r in nested_return_rows)
+        clauses.append(f"  requires {ret}_n >= 0;")
+        clauses.append(f"  requires {ret}_n == {ret_rows};")
+        clauses.append(f"  requires \\valid({ret}_off + (0 .. {ret}_n));")
+        clauses.append(f"  requires \\valid({ret}_data + "
+                       f"(0 .. {ret_data} - 1));")
     for k, a in enumerate(all_seqs):
         for b in all_seqs[k + 1:]:
             # No two seq buffers may alias: swap's copy-then-write and
@@ -7782,6 +8244,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # a plain C local, never aliased into `ret`'s memory
         # (`\separated`, above).
         clauses.append(f"  assigns {ret}[0 .. {ret}_n - 1];")
+    elif nested_return_rows is not None:
+        # FRAMAC-NESTED, added 2026-09-14: the return's own two buffers
+        # only, the same "only the return buffer's own elements" rule
+        # above, over both the offsets array and the data array.
+        clauses.append(f"  assigns {ret}_off[0 .. {ret}_n], "
+                       f"{ret}_data[0 .. {ret_data} - 1];")
     else:
         clauses.append("  assigns \\nothing;")
     for e in task["ensures"]:
@@ -7821,10 +8289,33 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             cparams.append(f"int {p['name']}")
     if rett == "seq":
         cparams += [f"int *{ret}", f"int {ret}_n"]
+    elif nested_return_rows is not None:
+        # FRAMAC-NESTED, added 2026-09-14: the same flat data+offsets
+        # triple THE ENCODING already uses for a nested seq<seq>
+        # PARAMETER, appended as OUTPUT parameters exactly the way a
+        # plain seq return appends `int *{ret}, int {ret}_n` above.
+        cparams += [f"int *{ret}_data", f"int *{ret}_off", f"int {ret}_n"]
 
-    body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here",
-                                 seq_len=body_seq_len),
-                       name, "  ")
+    if nested_return_rows is not None:
+        # FRAMAC-NESTED, added 2026-09-14: the whole function body IS
+        # the fold (`_ret_nested_fold` required `body` to be exactly one
+        # statement), so nothing is handed to `stmts()` at all -- one
+        # literal store per element (`r_data`), one per row boundary
+        # (`r_off`), the same "individual stores, no loop" move
+        # `seq_assign_lines`'s own `seq`-literal case makes for a flat
+        # seq, just over two buffers instead of one.
+        body_lines = []
+        off = 0
+        for k, row in enumerate(nested_return_rows):
+            body_lines.append(f"  {ret}_off[{k}] = {off};")
+            for j, v in enumerate(row):
+                body_lines.append(f"  {ret}_data[{off + j}] = {v};")
+            off += len(row)
+        body_lines.append(f"  {ret}_off[{len(nested_return_rows)}] = {off};")
+    else:
+        body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here",
+                                     seq_len=body_seq_len),
+                           name, "  ")
     # `certificate` reads the witness `w` against this SAME renamed
     # task/body/env/funs/used, `w`'s own keys already renamed to match
     # (`t_names.remap_witness`, above) -- see that function's own
@@ -7861,6 +8352,12 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         tail = ""
     elif rett == "seq":
         tail = "" if _always_returns(body) else f"  return {LEN};\n"
+    elif nested_return_rows is not None:
+        # FRAMAC-NESTED, added 2026-09-14: `void`, the same "return
+        # value already lives in the caller-provided buffer" rule as a
+        # plain seq return's EXACT mode, above -- both counts are
+        # already pinned by `requires`, nothing left to report back.
+        tail = ""
     else:
         tail = "" if _always_returns(body) else f"  return {ret};\n"
     # PAIRS (2026-09-10): a pair-typed RETURN's local and the function's
@@ -7879,9 +8376,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                f"  int {LEN} = {cexpr(ret_len_expr, env, funs, name)};\n"
                if tracked_exact else
                f"  int {LEN};\n" if capacity_mode else
+               "" if nested_return_rows is not None else
                ("" if rett == "seq" else f"  int {ret};\n"))
     cfun_ret_ty = (f"struct {struct_name}" if pair_ty is not None else
                   "void" if rett == "seq" and not capacity_mode
+                  else "void" if nested_return_rows is not None
                   else "int")
     rc = t_names.rename_comment(renames)
     return ("\n".join(header) + ("\n" if header else "")

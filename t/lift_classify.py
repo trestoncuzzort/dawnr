@@ -966,6 +966,88 @@ def _ordered_pair_bound(b1: str, b2: str, c: Chain):
     return ((lo1, hi_shared), (lo2, hi_shared))
 
 
+def _mentions_ident(e: Expr, name: str) -> bool:
+    """True iff `Ident(name)` occurs anywhere in `e`'s subtree (row 33's
+    self-reference guard: an equation `_t#0 == _t#0 + 1` does not define
+    `_t#0`, it is unsatisfiable/circular, so it must never be read as a
+    substitution)."""
+    if isinstance(e, Ident):
+        return e.name == name
+    if dataclasses.is_dataclass(e):
+        return any(_mentions_any(getattr(e, f.name), name) for f in dataclasses.fields(e))
+    return False
+
+
+def _mentions_any(val, name: str) -> bool:
+    if isinstance(val, tuple):
+        return any(_mentions_any(v, name) for v in val)
+    if dataclasses.is_dataclass(val):
+        return _mentions_ident(val, name)
+    return False
+
+
+def _subst_ast(e: Expr, name: str, repl: Expr) -> Expr:
+    """Plain AST-level substitution of `Ident(name)` by `repl` throughout
+    `e` (row 33). Distinct from `lift_rewrite._subst`: that one runs at
+    rewrite time against an already fresh-renamed scope and knows about
+    the `_AtHole` membership sentinel; this one runs here, at classify
+    time, directly on the still-unrewritten `lift_ast.Expr` tree, purely
+    to eliminate an equality-filter binder before the existing bounding
+    rules ever see it."""
+    if isinstance(e, Ident):
+        return repl if e.name == name else e
+    if dataclasses.is_dataclass(e):
+        changes = {}
+        for f in dataclasses.fields(e):
+            val = getattr(e, f.name)
+            newval = _subst_ast_any(val, name, repl)
+            if newval is not val:
+                changes[f.name] = newval
+        return dataclasses.replace(e, **changes) if changes else e
+    return e
+
+
+def _subst_ast_any(val, name: str, repl: Expr):
+    if isinstance(val, tuple):
+        return tuple(_subst_ast_any(v, name, repl) for v in val)
+    if dataclasses.is_dataclass(val):
+        return _subst_ast(val, name, repl)
+    return val
+
+
+def _binder_defining_equality(binders: tuple, guard: Optional[Expr]):
+    """Row 33 (2026-09-14): find a top-level conjunct of `guard` that is a
+    plain equality `Chain(("==",), (A, B))` where exactly one side is a
+    bare `Ident` naming one of `binders` and the other side does not
+    mention that same binder (so the equation fixes it uniquely in terms
+    of the rest of the quantifier's own binders and outer scope, never in
+    terms of itself). This is dafny's own resolver-introduced companion
+    binder for a chained index (`exists i, _t#0 | _t#0 == i + 1 :: ...`,
+    the synthetic name printed for `a[i + 1]` inside an `exists`/`forall`
+    whose bound variable dafny would otherwise have to re-derive), but the
+    match is purely structural: any binder pinned by a same-shaped
+    equality qualifies, source-written or resolver-synthesised alike.
+    Returns (binder_name, replacement_expr, remaining_guard) for the
+    FIRST such conjunct found, or None. `remaining_guard` is `guard` with
+    that one conjunct removed (None if nothing else was in it)."""
+    if guard is None:
+        return None
+    conjuncts = list(guard.args) if isinstance(guard, NaryBool) and guard.op == "&&" else [guard]
+    names = {b.name for b in binders}
+    for i, c in enumerate(conjuncts):
+        if not (isinstance(c, Chain) and len(c.ops) == 1 and c.ops[0] == "=="):
+            continue
+        a, b = c.operands
+        for lhs, rhs in ((a, b), (b, a)):
+            if isinstance(lhs, Ident) and lhs.name in names and not _mentions_ident(rhs, lhs.name):
+                rest = [x for j, x in enumerate(conjuncts) if j != i]
+                remaining = None
+                if rest:
+                    remaining = rest[0] if len(rest) == 1 else NaryBool(c.line, "&&", tuple(rest))
+                return (lhs.name, rhs, remaining)
+    return None
+
+
 def bound_quantifier(q: Quantifier):
     """Section 4.4's quantifier-bounding rules, unified into one contract:
     on success, returns {"binders": [(name, lo, hi, membership_seq), ...],
@@ -976,7 +1058,41 @@ def bound_quantifier(q: Quantifier):
     become `0`/`len(s)` and `body` must still be substituted `k -> s[j]`
     by the caller using the returned fresh binder position). Returns None
     when the range is not one of section 4.4's bounded shapes (the caller
-    refuses `unbounded-quantifier`)."""
+    refuses `unbounded-quantifier`).
+
+    Row 33 (2026-09-14): before any of the shapes below are tried, a
+    binder pinned by an equality filter clause (`| _t#0 == i + 1`, row 31's
+    own carve-out -- "a binder defined by an equation rather than bounded
+    by an inequality") is eliminated by substitution: the quantifier over
+    `_t#0` with body `P(_t#0)` becomes the quantifier over the REMAINING
+    binders with body `P(i + 1)`, `_t#0` itself gone. This can repeat (an
+    equality can define more than one binder) and always runs before the
+    single/multi-binder range logic below, so every existing shape keeps
+    reading exactly the range/body it already read once the equality
+    binder(s) are gone; a quantifier with no equality-filter conjunct at
+    all falls through unchanged, byte for byte. A binder with no defining
+    equation and no range stays refused `unbounded-quantifier` by the same
+    path as before -- this only ever REMOVES a binder, never invents a
+    bound for one that has neither an equation nor a range."""
+    while True:
+        found = _binder_defining_equality(q.binders, q.range)
+        if found is None:
+            break
+        name, repl, remaining_guard = found
+        new_binders = tuple(b for b in q.binders if b.name != name)
+        if len(new_binders) == 0:
+            # The whole quantifier collapses to a closed boolean with no
+            # binders left -- not a shape any in-corpus program has ever
+            # exercised (every measured equality-filter binder has at
+            # least one companion binder left), and t's own forall/exists
+            # node has no zero-binder form to build here; left refused
+            # rather than guessed.
+            return None
+        new_body = _subst_ast(q.body, name, repl)
+        if remaining_guard is not None:
+            remaining_guard = _subst_ast(remaining_guard, name, repl)
+        q = dataclasses.replace(q, binders=new_binders, range=remaining_guard, body=new_body)
+
     if len(q.binders) == 0:
         return None
 
@@ -1392,6 +1508,39 @@ def scan_null_checks(method: MethodDecl
 # Read-only array condition (decision 1 / section 18.6).
 # ---------------------------------------------------------------------------
 
+def _closure_root_shadows(root: Node, method: MethodDecl, name: str) -> bool:
+    """True iff `root` is a closure `FunctionDecl`/`LemmaDecl` (never
+    `method` itself) whose OWN parameter list rebinds `name`, so every
+    bare `Ident` spelled `name` inside `root`'s body and specs denotes
+    ITS OWN parameter, never the method's same-named one -- Dafny scopes
+    a function's parameters to its own declaration, and nothing in
+    `root` can read past that shadow to reach an outer binding of the
+    same name (`root` is never nested inside `method`; it is a sibling
+    top-level declaration `_closure` pulled in because `method` calls
+    it, so there is no enclosing-scope relationship for `root`'s OWN
+    `name` to see through in the first place).
+
+    Row (decision 1 / array read-only, this wave): measured on
+    `dafny-synthesis_task_id_755` (`SecondSmallest`, array param `s`).
+    The closure includes `min(s: seq<int>)`, whose OWN parameter is also
+    named `s` (an unrelated seq, shadowing the method's array); `min`'s
+    body calls `MinPair(s)`. `array_readonly_issue`'s scan used to walk
+    every closure root with one flat, scope-blind identifier match, so
+    `MinPair(s)` read as the ARRAY `s` escaping to a call and refused a
+    genuinely read-only parameter (`array`, false positive). Guarding
+    each root by its own parameter list before scanning it fixes exactly
+    this and nothing else: the guard only SILENCES matches inside a root
+    that provably cannot see the outer `name` at all, so no method that
+    previously satisfied the read-only condition can newly fail it, and
+    no write to the TRUE `param_name` anywhere reachable is silenced (a
+    shadowing root's own body cannot write to the outer array under a
+    name it does not bind)."""
+    if root is method:
+        return False
+    params = getattr(root, "params", None)
+    return bool(params) and any(p.name == name for p in params)
+
+
 def array_readonly_issue(param_name: str, method: MethodDecl,
                           closure: tuple[Decl, ...]) -> Optional[str]:
     """None if `param_name` (an `array<int|nat>` parameter) satisfies the
@@ -1412,16 +1561,41 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
     that satisfied the OLD, stricter condition can newly fail it, so no
     currently-lifted task can change here (an already-successful lift's
     scope has no `NewRhs` in it at all -- if it did, this branch would
-    have refused it before decision 22 existed)."""
+    have refused it before decision 22 existed).
+
+    Passing `param_name` to a CLOSURE `FunctionDecl` (a spec_fun
+    candidate, e.g. `InArray(a, x)`) is exempted from the "passed to a
+    call" escape check, unlike passing it to another METHOD (still
+    unreachable here in practice -- a call of a different method already
+    refuses `calls-other-method` before this function ever runs) or
+    through an unresolved callee. A Dafny FUNCTION can never write
+    through any reference it is handed -- functions have no assignment
+    statements and no heap mutation at all, ghost or not -- so hand it
+    the array under decision 1's OWN read-only condition and nothing new
+    can happen to it; the function's own parameter picks up the identical
+    seq value `lift_rewrite.py` already threads through every other
+    scope. Measured on `dafny-synthesis_task_id_2/161/249/579`
+    (`SharedElements`/`RemoveElements`/`Intersection`/
+    `DissimilarElements`, all four calling `InArray(a, x)`/`InArray(b,
+    x)`): before this exemption, the bare `a`/`b` argument tripped this
+    same escape check the reads-clause row above also had to widen, so
+    fixing only the reads clause would have left these four refused
+    `array` instead."""
+    closure_fn_names = {d.name for d in closure if isinstance(d, FunctionDecl) and d.name}
     scope: list[Node] = [method] + list(closure)
     for root in scope:
+        shadowed = _closure_root_shadows(root, method, param_name)
         for n in walk(root):
             if isinstance(n, Assign):
                 for lhs in n.targets:
-                    if (lhs.kind == "index" and isinstance(lhs.base, Ident)
-                            and lhs.base.name == param_name):
+                    if (not shadowed and lhs.kind == "index"
+                            and isinstance(lhs.base, Ident) and lhs.base.name == param_name):
                         return "array-mutation"
+            if isinstance(n, Call) and isinstance(n.fn, Ident) and n.fn.name in closure_fn_names:
+                continue  # a pure spec_fun call: exempted above
             if isinstance(n, (Call, CallStmt)):
+                if shadowed:
+                    continue
                 args = n.args
                 for a in args:
                     if isinstance(a, Ident) and a.name == param_name:
@@ -1434,8 +1608,11 @@ def _array_passed_to_call(name: str, method: MethodDecl, closure: tuple[Decl, ..
     in the method's closure -- the aliasing half of `array_readonly
     _issue`, factored out so decision 22's mutated array can reuse it
     without also tripping that function's own array-mutation check
-    (which the mutated array is EXPECTED to trip)."""
+    (which the mutated array is EXPECTED to trip). Shadow-guarded the
+    same way and for the same reason as `array_readonly_issue`."""
     for root in [method] + list(closure):
+        if _closure_root_shadows(root, method, name):
+            continue
         for n in walk(root):
             if isinstance(n, (Call, CallStmt)):
                 for a in n.args:
@@ -1644,21 +1821,79 @@ def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...]
     return ArrayMutation(kind="modifies-param", name=name, elem_kind=elem_kind), None
 
 
+def _dropped_function_decreases_set_ids(closure: tuple[Decl, ...]) -> frozenset[int]:
+    """`id()`s of every `SetDisplay` dafny's rprint puts in an INFERRED
+    decreases clause (`decreases {a}, a, x`) on a closure `FunctionDecl`
+    that never self-calls. Dafny always materialises a leading `{obj,
+    ...}` heap-ordering component for any function with a nonempty
+    `reads` clause -- whether or not the function actually recurses --
+    but t's own decreases synthesis for a spec_fun with NO self-call
+    needs no decreases at all (`_lift_function`, SPEC.md gate 3) and
+    never reads the source's decreases in that case, so this set literal
+    is dead text this row never elaborates.
+
+    Row (decision 1's function-parameter widening, this wave): measured
+    on `dafny-synthesis_task_id_2/161/249/579` (`InArray`, `reads a`, no
+    self-call, printed `decreases {a}, a, x`). The generic per-node scan
+    used to flag every `SetDisplay` unconditionally (`"set"`); once the
+    reads-clause and call-escape rows above accept `InArray` itself,
+    this inferred set was the next false refusal on the exact same four
+    rows. A SELF-recursive function's `decreases` is untouched here (its
+    `SetDisplay`, if any, is left for the generic scan and for
+    `_decreases_issues`'s own lexicographic-projection check, since t
+    DOES read that function's decreases then); so is any `SetDisplay`
+    anywhere else in a requires/ensures/body -- this only exempts a node
+    that is (a) inside a `DecreasesClause`'s own expression list and (b)
+    on a function this row already proved is never re-elaborated."""
+    ids: set[int] = set()
+    for d in closure:
+        if not isinstance(d, FunctionDecl) or d.body is None:
+            continue
+        self_calls = [c for c in walk(d.body) if isinstance(c, Call)
+                      and isinstance(c.fn, Ident) and c.fn.name == d.name]
+        if self_calls:
+            continue
+        for s in d.specs:
+            if isinstance(s, DecreasesClause) and not isinstance(s.exprs, Star):
+                for e in s.exprs:
+                    if isinstance(e, SetDisplay):
+                        ids.add(id(e))
+    return frozenset(ids)
+
+
 def _array_mutation_accepted_ids(method: MethodDecl, mutation: Optional[ArrayMutation],
                                   ret_param: Optional[Param]) -> frozenset[int]:
-    """`id()`s of the `Old`/`Fresh`/`Slice` nodes decision 22 maps rather
-    than refuses (the `id()`-set pattern `_self_call_positions` already
-    uses for the same reason: a flat per-node scan has no context of its
-    own, so the exemption is looked up by node identity instead).
+    """`id()`s of the `Old`/`Fresh`/`Slice`/`VarDeclStmt` nodes decision 22
+    maps rather than refuses (the `id()`-set pattern `_self_call
+    _positions` already uses for the same reason: a flat per-node scan
+    has no context of its own, so the exemption is looked up by node
+    identity instead).
 
     `old(a[k])` and `old(a[..])` on the ONE `modifies`-param array (`a`
     reads as the parameter both inside and outside `old` in t; the scope
     substitution that makes the OUTSIDE reading mean the return is
     `lift_rewrite.py`'s job, not this one's); `a[..]` with no `old`
-    wrapper on that same name (post-state, reading as the return); and
+    wrapper on that same name (post-state, reading as the return);
     `fresh(b)` where `b` is the return of a `alloc-fill` method whose
     return type is `array<int|nat>` (SPEC.md: "`fresh(b)` on a returned
-    array is dropped'')."""
+    array is dropped''); and the `VarDeclStmt` that binds an `alloc-fill`
+    mutation's own local to `new int[..]`/`new nat[..]` (`var cubedArray
+    := new int[a.Length];`).
+
+    That last one is its own row (this wave, array read-only): measured
+    on `dafny-synthesis_task_id_447` (`CubeElements`). `find_array
+    _mutation` already validates the local's `new`-shape and marks it
+    `alloc-fill`, but the GENERIC per-node scan (`_scan_node_for_issues`)
+    separately flags every array-typed `VarDeclStmt` as `local array`
+    unconditionally, with no notion of decision 22 at all -- so a
+    genuinely read-only array PARAMETER (`a`, never assigned, never
+    passed to a call) was refused `array` anyway, on account of an
+    UNRELATED local decision 22 already accepted. Exempting exactly the
+    one `VarDeclStmt` `find_array_mutation` itself classified widens
+    acceptance only for a local already proven to be decision 22's own
+    accepted shape; every other array-typed local (one `find_array
+    _mutation` did NOT map -- two-dimensional, non-int/nat element, or
+    simply never mutated at all) still hits the generic rule unchanged."""
     if mutation is None:
         return frozenset()
     ids: set[int] = set()
@@ -1676,12 +1911,20 @@ def _array_mutation_accepted_ids(method: MethodDecl, mutation: Optional[ArrayMut
             elif (isinstance(n, Slice) and isinstance(n.base, Ident)
                     and n.base.name == name and n.lo is None and n.hi is None):
                 ids.add(id(n))
-    elif mutation.kind == "alloc-fill" and ret_param is not None \
-            and ret_param.type is not None and ret_param.type.kind == "array" \
-            and not ret_param.type.nullable and _is_array_of_int(ret_param.type):
+    elif mutation.kind == "alloc-fill":
+        name = mutation.name
         for n in walk(method):
-            if isinstance(n, Fresh) and isinstance(n.arg, Ident) and n.arg.name == ret_param.name:
-                ids.add(id(n))
+            if isinstance(n, VarDeclStmt) and n.names and n.init:
+                for i, nm in enumerate(n.names):
+                    if (nm.name == name and i < len(n.init)
+                            and isinstance(n.init[i], NewRhs)):
+                        ids.add(id(n))
+        if (ret_param is not None and ret_param.type is not None
+                and ret_param.type.kind == "array" and not ret_param.type.nullable
+                and _is_array_of_int(ret_param.type)):
+            for n in walk(method):
+                if isinstance(n, Fresh) and isinstance(n.arg, Ident) and n.arg.name == ret_param.name:
+                    ids.add(id(n))
     return frozenset(ids)
 
 
@@ -1864,7 +2107,8 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
     null_checks = scan_null_checks(method)
     accepted_ids = (_array_mutation_accepted_ids(method, array_mutation, ret_param)
-                     | frozenset(id(m) for _, _, m in null_checks))
+                     | frozenset(id(m) for _, _, m in null_checks)
+                     | _dropped_function_decreases_set_ids(closure))
     for root in scope_roots:
         for n in walk(root):
             _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids)
@@ -2044,13 +2288,44 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
         issues.append(mr)
 
     # -- function-contract (a `reads` clause on any closure function) ----
+    # A `reads` clause naming exactly the function's OWN array-typed
+    # parameter(s) (`predicate InArray(a: array<int>, x: int) reads a`)
+    # is framing, not a functional contract: a Dafny FUNCTION can never
+    # write through any reference (functions are heap-read-only by
+    # construction, ghost or not), so the array named is read-only in
+    # this function's body by CONSTRUCTION, the exact condition decision
+    # 1 already grants a method's own array parameter -- t has no heap
+    # to frame in the first place once that array lifts to a `seq`
+    # value, so the clause is simply dropped, the same way an empty
+    # `reads ()` already was before this row. Measured on
+    # `dafny-synthesis_task_id_2/161/249/579` (`InArray`, the MBPP-DFY
+    # 164's own four `function-contract` census rows, every one this
+    # exact predicate): `InArray` has NO `requires`/`ensures` at all,
+    # only `reads a` -- the one thing this row's own name in
+    # LIFTER-DECISIONS.md ("a function with its own requires or
+    # ensures") does not actually describe, which is why every one of
+    # these four stayed refused under the generic reads-nonempty rule
+    # this loop used to apply unconditionally. A reads clause naming
+    # anything ELSE (a field, a different array, `*`, a non-array
+    # expression) still refuses `function-contract` exactly as before:
+    # this widening touches only the shape decision 1 already trusts.
     for d in closure:
         if isinstance(d, FunctionDecl):
+            own_array_names = {p.name for p in d.params
+                                if p.type is not None and p.type.kind == "array"
+                                and not p.type.nullable and _is_array_of_int(p.type)}
             for s in d.specs:
                 if isinstance(s, ReadsClause):
-                    nonempty = isinstance(s.exprs, Star) or (isinstance(s.exprs, tuple) and s.exprs)
-                    if nonempty:
+                    if isinstance(s.exprs, Star):
                         issues.append((s.line, "function-contract", d.name or "?"))
+                        continue
+                    exprs = s.exprs if isinstance(s.exprs, tuple) else ()
+                    if not exprs:
+                        continue
+                    if all(isinstance(e, Ident) and e.name in own_array_names for e in exprs):
+                        rewrites.append(Rewrite(rule="function-reads-array-dropped", line=s.line))
+                        continue
+                    issues.append((s.line, "function-contract", d.name or "?"))
 
     # -- decreases inference (section 6 / decision 11) --------------------
     dec_issues = _decreases_issues(method, closure)
@@ -2136,11 +2411,13 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         issues.append((n.line, "nondet", "*"))
     elif isinstance(n, VarDeclStmt) and n.names and any(
             nm.type is not None and nm.type.kind == "array" for nm in n.names):
-        issues.append((n.line, "array", "local array"))
+        if id(n) not in accepted_ids:
+            issues.append((n.line, "array", "local array"))
     elif isinstance(n, MapDisplay):
         issues.append((n.line, "map", "{...}"))
     elif isinstance(n, SetDisplay):
-        issues.append((n.line, "set", "{...}"))
+        if id(n) not in accepted_ids:
+            issues.append((n.line, "set", "{...}"))
     elif isinstance(n, Comprehension) and n.kind == "set":
         issues.append((n.line, "set", "set-comprehension"))
     elif isinstance(n, Comprehension) and n.kind == "map":

@@ -468,5 +468,99 @@ class SeqAppendReadScriptTest(unittest.TestCase):
         self.assertEqual(closed, "grind")
 
 
+class SeqAppendReadScriptDischTest(unittest.TestCase):
+    """2026-09-14, ROADMAP 16.2, key lean-seqcomp ("closing the composed
+    seq goals"): THE SILENT-DISCH GAP fix. `simp (disch := omega) only
+    [t_seq_append_get, ...]` discharges EVERY side condition a cited
+    lemma's own instantiation carries -- `hju : j < ((l1++l2).length :
+    Int)`, whose `.length` of a `List.take`/`.drop`/`++` term `omega`
+    alone cannot see through -- so a bare `omega` disch left the lemma
+    UNAPPLIED (`simp` reports "made no progress", measured directly,
+    probe240c/f.lean, this session's own scratch probes) rather than
+    applied with a wrong answer; 240 replaceLastElement and 586
+    splitAndAppend stayed `unproved` at the 2026-09-12 baseline for
+    exactly this reason. The fix wraps the length-normalizing `simp
+    only [...]` in its own `try` INSIDE the disch (never around the
+    whole disch, which would just swallow a genuine failure and hand
+    `omega` an unrewritten length term again): a side condition with no
+    length term to rewrite (`hj : 0 ≤ j`) sees the `try` no-op and falls
+    through to `omega` unchanged; one that does (`hju`) gets the
+    rewrite first. These are pure-Python checks on the emitted TEXT --
+    the kernel-checked measurement (240/586/262, lean+dafny, flake 3;
+    262 held as the standing regression bar named in this method's own
+    docstring) lives in t/COVERAGE-lifted-785.md's own dafny_synthesis
+    rows and this session's dated docstring note, not here.
+
+    A `| grind` (and a `t_seq_singleton_get` lemma) were ALSO tried at
+    this leaf, for 106 appendArrayToSeq's own `_t_loop_spec` residual,
+    and REVERTED: two `t/grade.py --kernels lean,dafny --flake 3` runs
+    over the byte-identical generated source (240/262 included, neither
+    touched by that change) disagreed on 240 and 262 with no code
+    change between them (`verified` on one run, `unproved` on the
+    next) -- `-DmaxHeartbeats` bounds elaboration STEPS, not which
+    steps a run's own `grind` takes to get there, so an extra
+    expensive, failure-prone alternative ahead of nothing measurably
+    changed which OTHER theorem's own budget ran out first. Asserting
+    its ABSENCE here pins that revert against a future reintroduction
+    that skips re-measuring the flake."""
+
+    def _seq_task(self, name, params, ensures, body):
+        t = _task(name, params, ensures, body, ret_type="seq")
+        t["returns"] = [{"name": "result", "type": "seq"}]
+        return t
+
+    def _append_task(self):
+        body = [
+            {"assign": ["result", {"op": "+", "args": [
+                {"var": "a"}, {"var": "b"}]}]},
+        ]
+        return self._seq_task(
+            "appendlike",
+            [{"name": "a", "type": "seq"}, {"name": "b", "type": "seq"}],
+            [{"op": "==", "args": [
+                {"op": "at", "args": [{"var": "result"}, {"int": 0}]},
+                {"op": "at", "args": [{"var": "a"}, {"int": 0}]}]}],
+            body)
+
+    def test_disch_tries_length_normalization_before_omega(self):
+        task = self._append_task()
+        lw = lower_lean.Lower(task, task["body"])
+        script = lw._seq_append_read_script()
+        self.assertIsNotNone(script)
+        self.assertIn(
+            "disch := ((try simp only [List.length_append, "
+            "List.length_take, List.length_drop, List.length_cons, "
+            "List.length_nil]); omega)", script)
+
+    def test_disch_length_simp_step_itself_is_try_guarded(self):
+        # THE regression this fix is for: a bare (non-`try`) length
+        # simp inside disch raises "simp made no progress" on a side
+        # condition with no length term (`hj : 0 ≤ j`), aborting the
+        # `;`-sequenced `omega` that would otherwise have closed it --
+        # measured directly, probe240g.lean. The `try` must wrap the
+        # `simp only [...]` step alone, not the whole `disch := (...)`.
+        task = self._append_task()
+        lw = lower_lean.Lower(task, task["body"])
+        script = lw._seq_append_read_script()
+        self.assertIsNotNone(script)
+        self.assertIn("(try simp only [List.length_append", script)
+
+    def test_singleton_get_and_bare_grind_not_reintroduced(self):
+        # THE LOOP-PRESERVATION GAP's own `| grind` alternative, and a
+        # dedicated `t_seq_singleton_get` lemma, were both tried for
+        # 106 appendArrayToSeq's own residual and reverted (measured
+        # flaky: 240/262 disagreed run to run with no code change) --
+        # pinned absent so a future change does not silently reintroduce
+        # the same flake.
+        task = self._append_task()
+        lw = lower_lean.Lower(task, task["body"])
+        script = lw._seq_append_read_script()
+        self.assertIsNotNone(script)
+        self.assertNotIn("grind", script)
+        self.assertNotIn("t_seq_singleton_get", script)
+        src = lw.emit_seq_helpers()
+        self.assertNotIn("t_seq_singleton_get", src)
+
+
 if __name__ == "__main__":
     unittest.main()
