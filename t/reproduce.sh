@@ -164,9 +164,9 @@ run_censuses() {
 
   echo "--- mbpp_gate_order.py (reads out/lift, no re-lift) ---"
   echo "NOTE: no committed markdown for this instrument (out/mbpp-gate-order.md" \
-       "is gitignored); its numbers are only quoted into ROADMAP.md prose, so" \
+       "is gitignored); its numbers are only quoted into internal/ROADMAP-LOG.md prose, so" \
        "there is nothing to diff against automatically -- read the printed" \
-       "table by hand against the ROADMAP.md paragraph that cites it."
+       "table by hand against the internal/ROADMAP-LOG.md paragraph that cites it."
   python3 mbpp_gate_order.py --markdown out/mbpp-gate-order.regen.md
   cat out/mbpp-gate-order.regen.md
 
@@ -267,7 +267,7 @@ print(f"total records: {len(rows) if hasattr(rows, '__len__') else 'n/a'}")
 PYEOF
   echo "NOTE: no single committed table covers a full ground-truth run;" \
        "compare $out/results.json's disagreement count by hand against" \
-       "whatever ROADMAP.md/WITNESS-*.md paragraph is being checked."
+       "whatever internal/ROADMAP-LOG.md/WITNESS-*.md paragraph is being checked."
   stage_end truth
 }
 
