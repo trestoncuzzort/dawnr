@@ -66,7 +66,7 @@ The first command regrades every committed task in every verifier it finds and r
 | [`tup/`](tup/) | the distribution's build driver, overrides and receipts |
 | [`nl/`](nl/) | 24,748 natural-language programming problems with tests, from four public sources |
 | [`forge/`](forge/) | the training pipeline that grades a model by the twins it refutes |
-| [`locallm/`](locallm/) | a character-level model trained from scratch on your own machine (MIT) |
+| [`locallm/`](locallm/) | a character-level model trained from scratch on your own machine |
 | [`ROADMAP.md`](ROADMAP.md) | what is done, what is next, and the bar for 1.0 |
 | [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md) | the dated engineering log behind the roadmap, kept for the record |
 
@@ -78,6 +78,6 @@ The first command regrades every committed task in every verifier it finds and r
 
 ## License
 
-[`locallm/`](locallm/) is MIT. The rest is a working research record. Third-party datasets keep their own licenses.
+Research use only: the whole repository may be used, copied, modified and redistributed for research and education, and for nothing else without written permission ([`LICENSE`](LICENSE)). Third-party material keeps its own licenses; the problem corpora under `nl/` list theirs. `locallm/` was MIT until 2026-09-15.
 
 Copyright (c) 2026 Treston Malachi Cuzzort.

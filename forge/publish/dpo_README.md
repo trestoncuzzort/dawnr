@@ -205,4 +205,4 @@ checkout's structure.
 
 ## License
 
-MIT — see [../LICENSE](../LICENSE). Copyright (c) 2026 Treston Malachi Cuzzort.
+Research use only, see [../LICENSE](../LICENSE). Copyright (c) 2026 Treston Malachi Cuzzort.

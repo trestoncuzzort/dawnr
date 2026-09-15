@@ -43,8 +43,8 @@ CLONE = HERE.parent / "_srlm_forge_publish"   # sibling, never inside the repo
 # dpo/ -- same files, no longer a subdirectory of someone else's project.
 EXTRA = {
     "publish/forge_README.md": "README.md",
-    # The forge's OWN licence. Deliberately not localllm/LICENSE: that one is
-    # MIT and covers a different project. This work is all rights reserved.
+    # The forge's OWN licence file, kept in step with the repository root
+    # LICENSE (research use only, 2026-09-15).
     "publish/forge_LICENSE": "LICENSE",
 }
 

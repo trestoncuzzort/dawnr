@@ -171,7 +171,7 @@ Licences are as declared on HuggingFace and have **not** been independently revi
 separately that problem *statements* from Codeforces, AtCoder, CodeChef and Aizu carry the
 original judges' copyright, which is not the dataset authors' to relicense.
 
-**This directory is not tup's to relicense, and tup's MIT licence does not reach it.** tup
+**This directory is not tup's to relicense, and tup's research-use licence does not reach it.** tup
 is private today; `nl/` was imported on that basis. It is excluded from the publish
 whitelist in `forge/sync_public.py`, which is allow-only, so it cannot reach a public
 mirror by omission, only by someone adding it on purpose. Before tup is made public

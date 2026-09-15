@@ -408,6 +408,6 @@ It is small. It is yours. It is honest about what it is.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Treston Malachi Cuzzort.
+Research use only, see [LICENSE](LICENSE) and the repository root [LICENSE](../LICENSE). locallm was MIT until 2026-09-15; a copy obtained under MIT before then keeps it. Copyright (c) 2026 Treston Malachi Cuzzort.
 
 Use it, change it, ship it, sell it. Keep the copyright notice.
