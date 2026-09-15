@@ -263,6 +263,116 @@ class LucidNumbersPerConjunctTest(unittest.TestCase):
                              getattr(result, "detail", ""))
 
 
+_TESTDOUBLE_JSON = Path(
+    "/home/tmcuzzort/tup/t/out/lifted-tasks/"
+    "dafny-learn_tmp_tmpn94ir40q_R01_functions.TestDouble.json")
+
+
+@unittest.skipUnless(_TESTDOUBLE_JSON.is_file(), "lifted corpus row not present")
+class TestDoubleReflexivityTest(unittest.TestCase):
+    """dafny_learn_tmp_tmpn94ir40q_r01_functions__testDouble (2026-09-15,
+    this item's rocq-sole task): one of t/COVERAGE-lifted-785.md's eight
+    rocq-sole-blocked rows. `sf_double` is a degenerate, non-recursive
+    spec_fun (coqc's own "Not a truly recursive fixpoint" warning), so the
+    REAL theorem's goal (`2 * val = sf_double val`) is already true BY
+    COMPUTATION before any rewrite runs -- and `t_eqs`'s own `try rewrite
+    sf_double_eq` step FAILS outright with coqc's "Tactic generated a
+    subgoal identical to the original goal" (silently swallowed by
+    `try`), leaving the goal exactly as it started for `t_vc0` to fail on
+    a second time. `t_leaf` had no `reflexivity` arm to close this
+    directly (MEASURED before this date's fix: real=unproved, coqc's own
+    "Tactic failure: unsolved t verification condition"). This task is
+    not in the committed 34, so it is read from the read-only lifted
+    corpus; skipped, not failed, when that file is absent."""
+
+    def _lower(self):
+        task = tasks_io.load_task(str(_TESTDOUBLE_JSON))
+        src = lower_rocq.lower(task, task["body"], witness=None)
+        return task, src
+
+    def test_prelude_has_reflexivity_leaf(self):
+        # Pins the fix itself: reflexivity, tried first, sound (it can
+        # only close a goal already definitionally true on both sides).
+        _task, src = self._lower()
+        self.assertIn(
+            "Ltac t_leaf := solve [ reflexivity | lia | assumption "
+            "| congruence | discriminate | (exfalso; lia) ].", src)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_real_compiles(self):
+        _task, src = self._lower()
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+
+    @unittest.skipUnless(COQC and shutil.which("coqchk"),
+                         "coqc/coqchk not on PATH")
+    def test_graded_verdict_is_verified(self):
+        task, src = self._lower()
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / f"{task['name']}.v"
+            p.write_text(src, encoding="utf-8")
+            result = rocq_backend.verify(p)
+            self.assertEqual(result.outcome, Outcome.VERIFIED,
+                             getattr(result, "detail", ""))
+
+
+class ConjunctionSplitTest(unittest.TestCase):
+    """t_go/t_go_ext had NO rule for a conjunctive goal before this date
+    (2026-09-15): `t_leaf`'s `assumption` cannot introduce a conjunction
+    even when every conjunct is individually a hypothesis, so a
+    `_loop_spec`'s own five-plus-conjunct conclusion relied entirely on
+    `lia`'s partial (opaque-spec_fun-blind) native `/\\` handling inside
+    `t_leaf`. Prelude-only (no committed/lifted task's OWN outcome flips
+    on this arm alone -- every row it also touches needs a further,
+    separately-named proof step, see lower_rocq.py's 2026-09-15 note),
+    so this pins the Ltac feature directly against a synthetic goal
+    shaped exactly like a `_loop_spec` conclusion."""
+
+    def test_go_split_arm_present(self):
+        prelude = lower_rocq.PRELUDE_CORE_4
+        self.assertIn("| |- _ /\\ _ => split; t_go m\n        end\n",
+                      prelude)
+        self.assertIn("| |- _ /\\ _ => split; t_go_ext m\n        end\n",
+                      prelude)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_conjunctive_goal_closes_from_matching_hypotheses(self):
+        # A synthetic task whose real theorem's conclusion is a five-way
+        # conjunction, each conjunct individually a hypothesis (mirrors a
+        # `_loop_spec` base-case conclusion after `inversion`/`subst`) --
+        # UNPROVED without the split arm (confirmed by reverting it),
+        # closes now.
+        task = {
+            "t": 1, "name": "t_conj_probe",
+            "params": [{"name": "i", "type": "int"},
+                       {"name": "n", "type": "int"},
+                       {"name": "b", "type": "int"}],
+            "requires": [
+                {"op": "and", "args": [
+                    {"op": "and", "args": [
+                        {"op": "<", "args": [{"int": 0}, {"var": "i"}]},
+                        {"op": "<=", "args": [{"var": "i"}, {"var": "n"}]}]},
+                    {"op": "and", "args": [
+                        {"op": ">=", "args": [{"var": "b"}, {"int": 0}]},
+                        {"op": "not", "args": [
+                            {"op": "<", "args": [{"var": "i"}, {"var": "n"}]}]}]}]}],
+            "returns": [{"name": "result", "type": "bool"}],
+            "body": [{"assign": ["result", {"bool": True}]}],
+            "ensures": [
+                {"op": "and", "args": [
+                    {"op": "and", "args": [
+                        {"op": "<", "args": [{"int": 0}, {"var": "i"}]},
+                        {"op": "<=", "args": [{"var": "i"}, {"var": "n"}]}]},
+                    {"op": "and", "args": [
+                        {"op": ">=", "args": [{"var": "b"}, {"int": 0}]},
+                        {"op": "not", "args": [
+                            {"op": "<", "args": [{"var": "i"}, {"var": "n"}]}]}]}]}],
+        }
+        src = lower_rocq.lower(task, task["body"], witness=None)
+        ok, out = _compile(src)
+        self.assertTrue(ok, out)
+
+
 @unittest.skipUnless(COQC, "coqc not on PATH")
 class RealUnchangedTest(unittest.TestCase):
     """Never touch the real's own proof machinery: filter_pos/is_prime/

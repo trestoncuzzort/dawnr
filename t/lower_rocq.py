@@ -2402,6 +2402,155 @@ touching the generation pipeline).
   diff's doing, by rerunning both task_id_126 and _809 at flake 1 with
   the ORIGINAL unmodified lower_rocq.py, which reproduces the SAME
   unproved/timeout reading byte for byte.
+
+2026-09-15 (rocq's eight sweep-r25 sole-blocked rows, standalone at flake
+  3, rocq+dafny, from the read-only lifted corpus): testDouble,
+  isArmstrong, containsK, is_even, invertArray, extra_sum's own `sum`,
+  flex_ex2's own `max`, and CVS-projeto_aula2's own `mystery1` (t/
+  COVERAGE-lifted-785.md's "Sole blockers" table). coqc's own message,
+  reproduced individually before any change here:
+    - isArmstrong: no failure at all standalone (verified/refuted); the
+      sweep's own "verified / timeout" cell is CONFIRMED contention, not
+      a real gap (re-measured three times, always verified/refuted alone).
+    - testDouble: "Tactic failure: unsolved t verification condition" on
+      the theorem's own closing `t_dis` (`(dafny_learn..._t val) = sf_double
+      val`), NOT on any loop/induction lemma -- `sf_double` is a
+      degenerate, non-recursive spec_fun (coqc's own "Not a truly
+      recursive fixpoint" warning fires on it), so `2 * val = sf_double
+      val` is already true BY COMPUTATION alone; `t_eqs`'s `try rewrite
+      sf_double_eq` step itself FAILS with coqc's own "Tactic generated a
+      subgoal identical to the original goal" (`try` swallows it silently,
+      confirmed with `Show` instrumentation on a copy), because the goal
+      already converts to `2*val=2*val` before any rewrite runs, and
+      `rewrite`'s own no-op guard refuses a substitution that changes
+      nothing up to conversion. `t_leaf` had no `reflexivity` arm to catch
+      this directly. FIXED: `t_leaf := solve [ reflexivity | lia |
+      assumption | congruence | discriminate | (exfalso; lia) ]`, tried
+      first (cheap, and it can only ever close a goal both sides of which
+      are already definitionally equal -- sound by construction, never a
+      new door to REFUTED, which is gated on `t_refutation_certificate`
+      alone per verifiers/rocq.py's own contract). MEASURED: testDouble
+      now reads verified/refuted in both rocq and dafny at flake 3.
+    - containsK: "Tactic failure: unsolved t verification condition" on
+      `_def_3` (an array-bound definedness obligation, `0 <= i < s_len`
+      from the guard's `i < h` alone), NOT a loop-induction failure.
+      ALREADY NAMED, not new: this file's own 2026-09-11 note above
+      `_extra_invs` (`not has_return` guard) documents that containsK
+      shares upWhileLess's `h := |a|` prefix shape (`h` a read-only int
+      local whose synthetic `h = s_len` invariant this file's 16.2 fix
+      threads for EVERY such local) but is explicitly EXCLUDED because it
+      has a `return` in its loop body: threading the extra hypothesis
+      into the return family's own `t_go_ext` witness-instantiation
+      search was MEASURED to cost containsSequence ~60x its own wall time
+      (0.9s honest UNPROVED to 60s+ TIMEOUT) for no compensating win, so
+      the guard stays. Not re-measured today (out of this item's scope --
+      it would mean re-running that same containsSequence/isSmaller
+      trade-off study, not a one-line change); left open BY NAME, same
+      reason as 2026-09-11.
+    - is_even: "Tactic failure: unsolved t verification condition" on
+      `_loop_spec`'s own induction step (`destruct r; t_sweep; first
+      [apply IH; t_side | intro Heq; ...; t_dis | fail]`), the `r=true`
+      branch's `(negb r = true) <-> (sf_even (i+1) = true)` goal after
+      `t_eqs` unfolds `sf_even`'s recursive equation one step. ALREADY
+      NAMED, not new: this file's own 2026-09-10 note (above `bool_sf`'s
+      ground-fact substitution) names this EXACT gap ("an opaque BOOL
+      spec_fun result needs a case split no saturation step here makes")
+      and records a REVERTED attempt (widening `t_base` to reach the
+      ground-substitution arms mid-search turned the clean UNPROVED into
+      a TIMEOUT, for no proof gained). Not reattempted today.
+    - extra_sum's `sum`, flex_ex2's `max` (timeout), invertArray
+      (timeout): same `_loop_spec` induction-step shape as is_even, over
+      an INT-valued (not bool) recursive spec_fun (`sum_v`) or an array
+      scan; NEWLY NAMED today, not previously documented in this file.
+      The `/\\` conjunction fix below (t_go/t_go_ext) is necessary but not
+      sufficient: a debugged copy of a sibling case (computeFib, from
+      wave O's OTHER named gap, below) shows the induction step's real
+      remaining goal, after `apply IH` fails and the base-case rewrite
+      unfolds one level, is a genuine PROOF OBLIGATION this engine has no
+      rule for (a rolling two-term recurrence's cross-sum identity, or a
+      bound like `sf_fib (i+1) >= 0` that is never stated as an explicit
+      loop invariant and needs induction over the spec_fun's OWN
+      recursive structure to derive) -- Dafny's own verifier proves these
+      automatically via unbounded function-body unfolding; this engine's
+      `t_eqs` unfolds a spec_fun's equation exactly ONCE per `t_dis` call
+      and has no general bound/nonnegativity lemma synthesis. Left open
+      BY NAME; a real fix needs either a per-spec_fun auto-derived bound
+      lemma (proved once, by induction, alongside `sf_<f>_eq`) or a
+      deeper `t_dis` search, neither attempted today (both are the kind
+      of change wave O's own POST_SF_NIA note warns against landing
+      without a load-sensitivity measurement first).
+    - mystery1: SAME message, but on a THIRD, separate proof script:
+      mystery1 is a self-recursive METHOD (`gen_rec`, not `gen_loop`), and
+      `_fuel_spec`'s own inline tactic (`repeat first [reflexivity | solve
+      [lia] | solve [apply IH; ...] | split | f_equal]`) never calls
+      `t_dis`/`t_go` at all, so neither of today's two fixes reaches it.
+      Un-investigated beyond reproduction; named here so it is not
+      confused with the `t_go`-family gap above.
+
+  Wave O's own two named gaps (t/COVERAGE-mbpp-dfy-lifter.md /
+  HANDOFF-2026-09-12.md), re-measured today with BOTH fixes below
+  applied: "Unable to unify" on a scalar param-witness fact no longer
+  reproduces on search/max/computeFib as that literal message -- with
+  `reflexivity` in `t_leaf` and the `/\\` split below, all three now fail
+  earlier or later in the SAME `_loop_spec` induction-step shape named
+  for extra_sum/max/invertArray above (a rolling-recurrence or
+  binary-search-midpoint definedness fact this engine's search does not
+  reach), reading TIMEOUT (search, max, standalone 60-180s) or the
+  generic "unsolved t verification condition" (computeFib, confirmed by
+  instrumenting the induction step directly: `apply IH; t_side` fails on
+  a `sf_fib (i+1) >= 0` side condition, then the base-case fallback
+  wrongly tries `inversion` on a non-literal recursive-call equation and
+  falls through). problem5 and sumOfCommonDivisors (the SECOND named
+  gap's own exemplars) are the identical `_loop_spec`/t_div-t_mod shape;
+  neither closes today, same reason.
+
+  TWO FIXES LANDED, both generic (no per-task special-casing), both
+  SOUND (neither can open a new door to REFUTED, which stays gated on
+  `t_refutation_certificate` alone; both can only turn UNPROVED/TIMEOUT
+  into VERIFIED for a REAL obligation that was already true):
+
+  1. `t_leaf` gains a `reflexivity` arm, tried first (PRELUDE_CORE_1,
+     above `t_have`). Closes any goal both of whose sides are already
+     definitionally equal without needing `t_eqs`'s rewrite at all --
+     testDouble's own shape (a degenerate, non-recursive spec_fun) and,
+     per the mini2.v probe (`Theorem: 2*val = sf_double val. Proof.
+     intros. reflexivity. Qed.` -- confirmed standalone), any FUTURE task
+     whose spec_fun's fuel-Fixpoint happens to reduce in one step.
+
+  2. `t_go`/`t_go_ext` gain a `_ /\\ _ => split; t_go m` (`t_go_ext m`)
+     arm, tried FIRST among the `S ?m` alternatives (before `exists`,
+     `\\/`, `_=_`, `apply H`). MEASURED GAP: neither `t_go` nor `t_go_ext`
+     had ANY rule for a conjunctive goal before this -- `t_leaf`'s
+     `assumption` cannot introduce a conjunction even when every conjunct
+     is individually a hypothesis (confirmed with `test_split` in
+     prelude_only.v: `0 < i <= n /\\ b = b /\\ c = c /\\ b >= 0 /\\ ~ i < n`
+     from three matching hypotheses closes via `t_vc0` only AFTER this
+     arm is added, fails without it). This is why every `_loop_spec`'s
+     own conjunctive CONCLUSION (five-plus conjuncts is typical) was
+     relying entirely on `lia`'s native (but partial: it does not reduce
+     through an opaque spec_fun's own if-then-else unfolding) handling of
+     `/\\` inside `t_leaf`'s `solve [ lia | ... ]`, never on `t_go`'s own
+     search splitting the goal apart first. Necessary for closing a
+     conjunctive goal piecewise once each conjunct individually reduces
+     to a leaf (confirmed via the synthetic `test_split`), but NOT
+     sufficient by itself for computeFib/search/max/problem5/
+     sumOfCommonDivisors/extra_sum, whose remaining conjunct needs an
+     actual proof step (a recurrence identity or a bound), not just
+     isolation.
+
+  REGRESSION BAR, both changes together: `python3 grade.py --tasks tasks
+  --kernels rocq,dafny --flake 3 --jobs 8` on the 34 committed tasks --
+  34 of 34 read the identical cell to AGREEMENT.md's own rocq column
+  (min_max still timeout/refuted, the same pre-existing flaky real named
+  above and on 2026-09-10/11). Restricted-to-rocq conformance
+  (`probe_manifest()`/`run_items()`, one column): 66 of 66 PASS both
+  before and after, no PASS lost, no FAIL gained. Every dafny_synthesis
+  row of t/COVERAGE-lifted-785.md whose rocq cell already read "verified
+  / refuted" (71 of the file's 95 dafny_synthesis rows) still does,
+  standalone at flake 3, rocq+dafny, from the read-only lifted corpus:
+  71 of 71 unchanged. `python3 -m unittest test_lower_rocq_loop_cert
+  test_lower_rocq test_names`: 40 of 40 before, unchanged after (new
+  cases added below run green).
 """
 from __future__ import annotations
 
@@ -2541,7 +2690,7 @@ def lower_v0(task: dict, body: list, witness: dict | None = None) -> str:
 PRELUDE_CORE_1 = r"""(* persistent resolution marker: survives destruction of what it records *)
 Inductive t_done (P : Prop) : Prop := t_done_intro : t_done P.
 
-Ltac t_leaf := solve [ lia | assumption | congruence | discriminate | (exfalso; lia) ].
+Ltac t_leaf := solve [ reflexivity | lia | assumption | congruence | discriminate | (exfalso; lia) ].
 
 (* succeeds iff some hypothesis has exactly type T *)
 Ltac t_have T := match goal with H2 : ?T2 |- _ => constr_eq T T2 end.
@@ -4274,6 +4423,9 @@ Ltac t_go n :=
     | S ?m =>
       first
       [ lazymatch goal with
+        | |- _ /\ _ => split; t_go m
+        end
+      | lazymatch goal with
         | |- exists _ : Z, _ =>
             first [ exists 0; t_go m
                   | multimatch goal with x : Z |- _ => exists x; t_go m end ]
@@ -4343,6 +4495,9 @@ Ltac t_go_ext n :=
     | S ?m =>
       first
       [ lazymatch goal with
+        | |- _ /\ _ => split; t_go_ext m
+        end
+      | lazymatch goal with
         | |- exists _ : Z, _ =>
             first [ exists 0; t_go_ext m
                   | multimatch goal with x : Z |- _ => exists x; t_go_ext m end ]
