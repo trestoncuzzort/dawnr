@@ -1,0 +1,57 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_928__change_date_format",
+ "params": [
+  {
+   "name": "side",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "var": "side"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "var": "side"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

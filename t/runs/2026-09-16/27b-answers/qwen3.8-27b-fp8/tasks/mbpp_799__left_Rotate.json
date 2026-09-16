@@ -1,0 +1,255 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_799__left_Rotate",
+ "params": [
+  {
+   "name": "x",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "call": {
+        "fun": "pow2",
+        "args": [
+         {
+          "var": "n"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "pow2",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "*",
+      "args": [
+       {
+        "int": 2
+       },
+       {
+        "call": {
+         "fun": "pow2",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "x"
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "x"
+         },
+         {
+          "call": {
+           "fun": "pow2",
+           "args": [
+            {
+             "var": "i"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

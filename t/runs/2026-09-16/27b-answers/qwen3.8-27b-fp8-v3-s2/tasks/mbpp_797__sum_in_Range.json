@@ -1,0 +1,349 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_797__sum_in_Range",
+ "params": [
+  {
+   "name": "l",
+   "type": "int"
+  },
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r2",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "l"
+    },
+    {
+     "var": "r"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r2"
+    },
+    {
+     "call": {
+      "fun": "sum_odds",
+      "args": [
+       {
+        "var": "l"
+       },
+       {
+        "var": "r"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "sum_odds",
+   "params": [
+    {
+     "name": "l",
+     "type": "int"
+    },
+    {
+     "name": "r",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "-",
+    "args": [
+     {
+      "var": "r"
+     },
+     {
+      "var": "l"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": ">",
+      "args": [
+       {
+        "var": "l"
+       },
+       {
+        "var": "r"
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "l"
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "var": "l"
+         },
+         {
+          "call": {
+           "fun": "sum_odds",
+           "args": [
+            {
+             "op": "+",
+             "args": [
+              {
+               "var": "l"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "var": "r"
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "sum_odds",
+         "args": [
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "l"
+            },
+            {
+             "int": 1
+            }
+           ]
+          },
+          {
+           "var": "r"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r2",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "var": "l"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "var": "l"
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r2"
+       },
+       {
+        "call": {
+         "fun": "sum_odds",
+         "args": [
+          {
+           "var": "l"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "+",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "i"
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r2",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "r2"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,108 @@
+{
+ "t": 0,
+ "name": "mbpp_354__tn_ap",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "d",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        {
+         "var": "d"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        {
+         "var": "d"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

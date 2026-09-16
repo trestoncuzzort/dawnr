@@ -1,0 +1,1339 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_764__number_ctr",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "op": "-",
+                     "args": [
+                      {
+                       "op": "-",
+                       "args": [
+                        {
+                         "op": "-",
+                         "args": [
+                          {
+                           "op": "len",
+                           "args": [
+                            {
+                             "var": "s"
+                            }
+                           ]
+                          },
+                          {
+                           "op": "len",
+                           "args": [
+                            {
+                             "op": "replace",
+                             "args": [
+                              {
+                               "var": "s"
+                              },
+                              {
+                               "op": "seq",
+                               "args": [
+                                {
+                                 "int": 48
+                                }
+                               ]
+                              },
+                              {
+                               "op": "seq",
+                               "args": []
+                              }
+                             ]
+                            }
+                           ]
+                          }
+                         ]
+                        },
+                        {
+                         "op": "len",
+                         "args": [
+                          {
+                           "op": "replace",
+                           "args": [
+                            {
+                             "var": "s"
+                            },
+                            {
+                             "op": "seq",
+                             "args": [
+                              {
+                               "int": 49
+                              }
+                             ]
+                            },
+                            {
+                             "op": "seq",
+                             "args": []
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       ]
+                      },
+                      {
+                       "op": "len",
+                       "args": [
+                        {
+                         "op": "replace",
+                         "args": [
+                          {
+                           "var": "s"
+                          },
+                          {
+                           "op": "seq",
+                           "args": [
+                            {
+                             "int": 50
+                            }
+                           ]
+                          },
+                          {
+                           "op": "seq",
+                           "args": []
+                          }
+                         ]
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "op": "len",
+                     "args": [
+                      {
+                       "op": "replace",
+                       "args": [
+                        {
+                         "var": "s"
+                        },
+                        {
+                         "op": "seq",
+                         "args": [
+                          {
+                           "int": 51
+                          }
+                         ]
+                        },
+                        {
+                         "op": "seq",
+                         "args": []
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "op": "len",
+                   "args": [
+                    {
+                     "op": "replace",
+                     "args": [
+                      {
+                       "var": "s"
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 52
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": []
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "op": "len",
+                 "args": [
+                  {
+                   "op": "replace",
+                   "args": [
+                    {
+                     "var": "s"
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 53
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": []
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "op": "len",
+               "args": [
+                {
+                 "op": "replace",
+                 "args": [
+                  {
+                   "var": "s"
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 54
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": []
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "op": "replace",
+               "args": [
+                {
+                 "var": "s"
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 55
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": []
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "op": "len",
+           "args": [
+            {
+             "op": "replace",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 56
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": []
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "len",
+         "args": [
+          {
+           "op": "replace",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 57
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 9
+        },
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "int": 0
+       },
+       {
+        "var": "i"
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "op": "-",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "-",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "op": "-",
+                  "args": [
+                   {
+                    "op": "-",
+                    "args": [
+                     {
+                      "op": "-",
+                      "args": [
+                       {
+                        "op": "-",
+                        "args": [
+                         {
+                          "op": "-",
+                          "args": [
+                           {
+                            "op": "-",
+                            "args": [
+                             {
+                              "op": "-",
+                              "args": [
+                               {
+                                "op": "len",
+                                "args": [
+                                 {
+                                  "var": "s"
+                                 }
+                                ]
+                               },
+                               {
+                                "op": "len",
+                                "args": [
+                                 {
+                                  "op": "replace",
+                                  "args": [
+                                   {
+                                    "var": "s"
+                                   },
+                                   {
+                                    "op": "seq",
+                                    "args": [
+                                     {
+                                      "int": 48
+                                     }
+                                    ]
+                                   },
+                                   {
+                                    "op": "seq",
+                                    "args": []
+                                   }
+                                  ]
+                                 }
+                                ]
+                               }
+                              ]
+                             },
+                             {
+                              "op": "len",
+                              "args": [
+                               {
+                                "op": "replace",
+                                "args": [
+                                 {
+                                  "var": "s"
+                                 },
+                                 {
+                                  "op": "seq",
+                                  "args": [
+                                   {
+                                    "int": 49
+                                   }
+                                  ]
+                                 },
+                                 {
+                                  "op": "seq",
+                                  "args": []
+                                 }
+                                ]
+                               }
+                              ]
+                             }
+                            ]
+                           },
+                           {
+                            "op": "len",
+                            "args": [
+                             {
+                              "op": "replace",
+                              "args": [
+                               {
+                                "var": "s"
+                               },
+                               {
+                                "op": "seq",
+                                "args": [
+                                 {
+                                  "int": 50
+                                 }
+                                ]
+                               },
+                               {
+                                "op": "seq",
+                                "args": []
+                               }
+                              ]
+                             }
+                            ]
+                           }
+                          ]
+                         },
+                         {
+                          "op": "len",
+                          "args": [
+                           {
+                            "op": "replace",
+                            "args": [
+                             {
+                              "var": "s"
+                             },
+                             {
+                              "op": "seq",
+                              "args": [
+                               {
+                                "int": 51
+                               }
+                              ]
+                             },
+                             {
+                              "op": "seq",
+                              "args": []
+                             }
+                            ]
+                           }
+                          ]
+                         }
+                        ]
+                       },
+                       {
+                        "op": "len",
+                        "args": [
+                         {
+                          "op": "replace",
+                          "args": [
+                           {
+                            "var": "s"
+                           },
+                           {
+                            "op": "seq",
+                            "args": [
+                             {
+                              "int": 52
+                             }
+                            ]
+                           },
+                           {
+                            "op": "seq",
+                            "args": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "op": "len",
+                      "args": [
+                       {
+                        "op": "replace",
+                        "args": [
+                         {
+                          "var": "s"
+                         },
+                         {
+                          "op": "seq",
+                          "args": [
+                           {
+                            "int": 53
+                           }
+                          ]
+                         },
+                         {
+                          "op": "seq",
+                          "args": []
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "op": "len",
+                    "args": [
+                     {
+                      "op": "replace",
+                      "args": [
+                       {
+                        "var": "s"
+                       },
+                       {
+                        "op": "seq",
+                        "args": [
+                         {
+                          "int": 54
+                         }
+                        ]
+                       },
+                       {
+                        "op": "seq",
+                        "args": []
+                       }
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "op": "len",
+                  "args": [
+                   {
+                    "op": "replace",
+                    "args": [
+                     {
+                      "var": "s"
+                     },
+                     {
+                      "op": "seq",
+                      "args": [
+                       {
+                        "int": 55
+                       }
+                      ]
+                     },
+                     {
+                      "op": "seq",
+                      "args": []
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "op": "replace",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "op": "seq",
+                    "args": [
+                     {
+                      "int": 56
+                     }
+                    ]
+                   },
+                   {
+                    "op": "seq",
+                    "args": []
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "op": "replace",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "op": "seq",
+                  "args": [
+                   {
+                    "int": 57
+                   }
+                  ]
+                 },
+                 {
+                  "op": "seq",
+                  "args": []
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "*",
+            "args": [
+             {
+              "int": 9
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "-",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "op": "-",
+                  "args": [
+                   {
+                    "op": "-",
+                    "args": [
+                     {
+                      "op": "-",
+                      "args": [
+                       {
+                        "op": "-",
+                        "args": [
+                         {
+                          "op": "-",
+                          "args": [
+                           {
+                            "op": "-",
+                            "args": [
+                             {
+                              "op": "-",
+                              "args": [
+                               {
+                                "op": "len",
+                                "args": [
+                                 {
+                                  "op": "slice",
+                                  "args": [
+                                   {
+                                    "var": "s"
+                                   },
+                                   {
+                                    "int": 0
+                                   },
+                                   {
+                                    "var": "i"
+                                   }
+                                  ]
+                                 }
+                                ]
+                               },
+                               {
+                                "op": "len",
+                                "args": [
+                                 {
+                                  "op": "replace",
+                                  "args": [
+                                   {
+                                    "op": "slice",
+                                    "args": [
+                                     {
+                                      "var": "s"
+                                     },
+                                     {
+                                      "int": 0
+                                     },
+                                     {
+                                      "var": "i"
+                                     }
+                                    ]
+                                   },
+                                   {
+                                    "op": "seq",
+                                    "args": [
+                                     {
+                                      "int": 48
+                                     }
+                                    ]
+                                   },
+                                   {
+                                    "op": "seq",
+                                    "args": []
+                                   }
+                                  ]
+                                 }
+                                ]
+                               }
+                              ]
+                             },
+                             {
+                              "op": "len",
+                              "args": [
+                               {
+                                "op": "replace",
+                                "args": [
+                                 {
+                                  "op": "slice",
+                                  "args": [
+                                   {
+                                    "var": "s"
+                                   },
+                                   {
+                                    "int": 0
+                                   },
+                                   {
+                                    "var": "i"
+                                   }
+                                  ]
+                                 },
+                                 {
+                                  "op": "seq",
+                                  "args": [
+                                   {
+                                    "int": 49
+                                   }
+                                  ]
+                                 },
+                                 {
+                                  "op": "seq",
+                                  "args": []
+                                 }
+                                ]
+                               }
+                              ]
+                             }
+                            ]
+                           },
+                           {
+                            "op": "len",
+                            "args": [
+                             {
+                              "op": "replace",
+                              "args": [
+                               {
+                                "op": "slice",
+                                "args": [
+                                 {
+                                  "var": "s"
+                                 },
+                                 {
+                                  "int": 0
+                                 },
+                                 {
+                                  "var": "i"
+                                 }
+                                ]
+                               },
+                               {
+                                "op": "seq",
+                                "args": [
+                                 {
+                                  "int": 50
+                                 }
+                                ]
+                               },
+                               {
+                                "op": "seq",
+                                "args": []
+                               }
+                              ]
+                             }
+                            ]
+                           }
+                          ]
+                         },
+                         {
+                          "op": "len",
+                          "args": [
+                           {
+                            "op": "replace",
+                            "args": [
+                             {
+                              "op": "slice",
+                              "args": [
+                               {
+                                "var": "s"
+                               },
+                               {
+                                "int": 0
+                               },
+                               {
+                                "var": "i"
+                               }
+                              ]
+                             },
+                             {
+                              "op": "seq",
+                              "args": [
+                               {
+                                "int": 51
+                               }
+                              ]
+                             },
+                             {
+                              "op": "seq",
+                              "args": []
+                             }
+                            ]
+                           }
+                          ]
+                         }
+                        ]
+                       },
+                       {
+                        "op": "len",
+                        "args": [
+                         {
+                          "op": "replace",
+                          "args": [
+                           {
+                            "op": "slice",
+                            "args": [
+                             {
+                              "var": "s"
+                             },
+                             {
+                              "int": 0
+                             },
+                             {
+                              "var": "i"
+                             }
+                            ]
+                           },
+                           {
+                            "op": "seq",
+                            "args": [
+                             {
+                              "int": 52
+                             }
+                            ]
+                           },
+                           {
+                            "op": "seq",
+                            "args": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "op": "len",
+                      "args": [
+                       {
+                        "op": "replace",
+                        "args": [
+                         {
+                          "op": "slice",
+                          "args": [
+                           {
+                            "var": "s"
+                           },
+                           {
+                            "int": 0
+                           },
+                           {
+                            "var": "i"
+                           }
+                          ]
+                         },
+                         {
+                          "op": "seq",
+                          "args": [
+                           {
+                            "int": 53
+                           }
+                          ]
+                         },
+                         {
+                          "op": "seq",
+                          "args": []
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "op": "len",
+                    "args": [
+                     {
+                      "op": "replace",
+                      "args": [
+                       {
+                        "op": "slice",
+                        "args": [
+                         {
+                          "var": "s"
+                         },
+                         {
+                          "int": 0
+                         },
+                         {
+                          "var": "i"
+                         }
+                        ]
+                       },
+                       {
+                        "op": "seq",
+                        "args": [
+                         {
+                          "int": 54
+                         }
+                        ]
+                       },
+                       {
+                        "op": "seq",
+                        "args": []
+                       }
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "op": "len",
+                  "args": [
+                   {
+                    "op": "replace",
+                    "args": [
+                     {
+                      "op": "slice",
+                      "args": [
+                       {
+                        "var": "s"
+                       },
+                       {
+                        "int": 0
+                       },
+                       {
+                        "var": "i"
+                       }
+                      ]
+                     },
+                     {
+                      "op": "seq",
+                      "args": [
+                       {
+                        "int": 55
+                       }
+                      ]
+                     },
+                     {
+                      "op": "seq",
+                      "args": []
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "op": "replace",
+                  "args": [
+                   {
+                    "op": "slice",
+                    "args": [
+                     {
+                      "var": "s"
+                     },
+                     {
+                      "int": 0
+                     },
+                     {
+                      "var": "i"
+                     }
+                    ]
+                   },
+                   {
+                    "op": "seq",
+                    "args": [
+                     {
+                      "int": 56
+                     }
+                    ]
+                   },
+                   {
+                    "op": "seq",
+                    "args": []
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "op": "replace",
+                "args": [
+                 {
+                  "op": "slice",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "int": 0
+                   },
+                   {
+                    "var": "i"
+                   }
+                  ]
+                 },
+                 {
+                  "op": "seq",
+                  "args": [
+                   {
+                    "int": 57
+                   }
+                  ]
+                 },
+                 {
+                  "op": "seq",
+                  "args": []
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "*",
+            "args": [
+             {
+              "int": 9
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "op": "slice",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "int": 0
+                 },
+                 {
+                  "var": "i"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "and",
+        "args": [
+         {
+          "op": ">=",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "int": 48
+           }
+          ]
+         },
+         {
+          "op": "<=",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "int": 57
+           }
+          ]
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

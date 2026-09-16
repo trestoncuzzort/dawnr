@@ -1,0 +1,590 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_188__prod_Square",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "exists": {
+      "var": "a",
+      "lo": {
+       "int": 2
+      },
+      "hi": {
+       "op": "+",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      "body": {
+       "exists": {
+        "var": "b",
+        "lo": {
+         "int": 2
+        },
+        "hi": {
+         "op": "+",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        "body": {
+         "op": "==",
+         "args": [
+          {
+           "op": "*",
+           "args": [
+            {
+             "op": "*",
+             "args": [
+              {
+               "op": "*",
+               "args": [
+                {
+                 "var": "a"
+                },
+                {
+                 "var": "a"
+                }
+               ]
+              },
+              {
+               "var": "b"
+              }
+             ]
+            },
+            {
+             "var": "b"
+            }
+           ]
+          },
+          {
+           "var": "n"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "bool": false
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "m",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "found",
+    "type": "bool",
+    "init": {
+     "bool": false
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": "<=",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "m"
+          },
+          {
+           "var": "m"
+          }
+         ]
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "not",
+       "args": [
+        {
+         "var": "found"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "m"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "op": "not",
+        "args": [
+         {
+          "var": "found"
+         }
+        ]
+       },
+       {
+        "forall": {
+         "var": "k",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "m"
+         },
+         "body": {
+          "op": "!=",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "var": "k"
+             },
+             {
+              "var": "k"
+             }
+            ]
+           },
+           {
+            "var": "n"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "m"
+        },
+        {
+         "var": "m"
+        }
+       ]
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "m"
+           },
+           {
+            "var": "m"
+           }
+          ]
+         },
+         {
+          "var": "n"
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "found",
+          {
+           "bool": true
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "m",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "var": "found"
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "m"
+          },
+          {
+           "var": "m"
+          }
+         ]
+        },
+        {
+         "var": "n"
+        }
+       ]
+      }
+     ]
+    },
+    "then": [
+     {
+      "var": {
+       "name": "is_prime",
+       "type": "bool",
+       "init": {
+        "bool": true
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "d",
+       "type": "int",
+       "init": {
+        "int": 2
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": "and",
+        "args": [
+         {
+          "op": "<=",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "var": "d"
+             },
+             {
+              "var": "d"
+             }
+            ]
+           },
+           {
+            "var": "m"
+           }
+          ]
+         },
+         {
+          "var": "is_prime"
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "d"
+          },
+          {
+           "int": 2
+          }
+         ]
+        },
+        {
+         "op": "implies",
+         "args": [
+          {
+           "var": "is_prime"
+          },
+          {
+           "forall": {
+            "var": "k",
+            "lo": {
+             "int": 2
+            },
+            "hi": {
+             "var": "d"
+            },
+            "body": {
+             "op": "implies",
+             "args": [
+              {
+               "op": "<=",
+               "args": [
+                {
+                 "op": "*",
+                 "args": [
+                  {
+                   "var": "k"
+                  },
+                  {
+                   "var": "k"
+                  }
+                 ]
+                },
+                {
+                 "var": "m"
+                }
+               ]
+              },
+              {
+               "op": "!=",
+               "args": [
+                {
+                 "op": "mod",
+                 "args": [
+                  {
+                   "var": "m"
+                  },
+                  {
+                   "var": "k"
+                  }
+                 ]
+                },
+                {
+                 "int": 0
+                }
+               ]
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "d"
+           },
+           {
+            "var": "d"
+           }
+          ]
+         }
+        ]
+       },
+       "body": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "op": "mod",
+             "args": [
+              {
+               "var": "m"
+              },
+              {
+               "var": "d"
+              }
+             ]
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "is_prime",
+             {
+              "bool": false
+             }
+            ]
+           }
+          ],
+          "else": []
+         }
+        },
+        {
+         "assign": [
+          "d",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "d"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "if": {
+       "cond": {
+        "op": "and",
+        "args": [
+         {
+          "op": ">=",
+          "args": [
+           {
+            "var": "m"
+           },
+           {
+            "int": 4
+           }
+          ]
+         },
+         {
+          "op": "not",
+          "args": [
+           {
+            "var": "is_prime"
+           }
+          ]
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "bool": true
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "bool": false
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "bool": false
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

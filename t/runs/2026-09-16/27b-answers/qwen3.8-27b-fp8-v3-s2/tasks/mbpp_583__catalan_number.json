@@ -1,0 +1,188 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_583__catalan_number",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "cat",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "cat",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "div",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "cat",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "op": "-",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "int": 4
+             },
+             {
+              "var": "n"
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "call": {
+         "fun": "mbpp_583__catalan_number",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

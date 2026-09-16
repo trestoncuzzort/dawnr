@@ -1,0 +1,494 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_593__removezero_ip",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "op": "replace",
+         "args": [
+          {
+           "op": "replace",
+           "args": [
+            {
+             "op": "replace",
+             "args": [
+              {
+               "op": "replace",
+               "args": [
+                {
+                 "op": "replace",
+                 "args": [
+                  {
+                   "op": "replace",
+                   "args": [
+                    {
+                     "op": "replace",
+                     "args": [
+                      {
+                       "var": "s"
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 48
+                        },
+                        {
+                         "int": 56
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 56
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 48
+                      },
+                      {
+                       "int": 57
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 57
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 48
+                    },
+                    {
+                     "int": 49
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 49
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 48
+                  },
+                  {
+                   "int": 50
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 50
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 48
+                },
+                {
+                 "int": 51
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 51
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 48
+              },
+              {
+               "int": 52
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 52
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 48
+            },
+            {
+             "int": 53
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 53
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 48
+          },
+          {
+           "int": 54
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 54
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 48
+        },
+        {
+         "int": 55
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 55
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "op": "replace",
+         "args": [
+          {
+           "op": "replace",
+           "args": [
+            {
+             "op": "replace",
+             "args": [
+              {
+               "op": "replace",
+               "args": [
+                {
+                 "op": "replace",
+                 "args": [
+                  {
+                   "op": "replace",
+                   "args": [
+                    {
+                     "op": "replace",
+                     "args": [
+                      {
+                       "var": "s"
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 48
+                        },
+                        {
+                         "int": 56
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 56
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 48
+                      },
+                      {
+                       "int": 57
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 57
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 48
+                    },
+                    {
+                     "int": 49
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 49
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 48
+                  },
+                  {
+                   "int": 50
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 50
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 48
+                },
+                {
+                 "int": 51
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 51
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 48
+              },
+              {
+               "int": 52
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 52
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 48
+            },
+            {
+             "int": 53
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 53
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 48
+          },
+          {
+           "int": 54
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 54
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 48
+        },
+        {
+         "int": 55
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 55
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

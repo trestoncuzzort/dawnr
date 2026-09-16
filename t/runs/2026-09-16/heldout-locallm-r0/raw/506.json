@@ -1,0 +1,22 @@
+{
+ "task_id": 506,
+ "fn": "permutation_coefficient",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to calculate the permutation coefficient of given p(n, k).\nSignature: permutation_coefficient(int, int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_17__perimeter_triangle(a: int, b: int, c: int) returns (r: int)\n  ensures r == a + b + c\n{\n  r := a + b + c;\n}\n```",
+ "done_reason": "length"
+}

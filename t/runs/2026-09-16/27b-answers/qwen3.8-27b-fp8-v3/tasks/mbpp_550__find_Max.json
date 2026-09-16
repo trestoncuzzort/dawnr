@@ -1,0 +1,104 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_550__find_Max",
+ "params": [
+  {
+   "name": "a",
+   "type": "seq"
+  },
+  {
+   "name": "lo",
+   "type": "int"
+  },
+  {
+   "name": "hi",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "lo"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<",
+   "args": [
+    {
+     "var": "hi"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "a"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "lo"
+    },
+    {
+     "var": "hi"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "var": "hi"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "var": "hi"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,61 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_786__right_insertion",
+ "params": [
+  {
+   "name": "length",
+   "type": "int"
+  },
+  {
+   "name": "width",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "length"
+      },
+      {
+       "var": "width"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "length"
+      },
+      {
+       "var": "width"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

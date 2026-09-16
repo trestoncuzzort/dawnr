@@ -1,0 +1,410 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_555__difference",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "div",
+         "args": [
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "op": "+",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "int": 2
+          }
+         ]
+        },
+        {
+         "op": "div",
+         "args": [
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "op": "+",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "int": 2
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "div",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "int": 2
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "sum_cubes",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "sum_nat",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "sum_cubes"
+       },
+       {
+        "op": "div",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "op": "div",
+              "args": [
+               {
+                "op": "*",
+                "args": [
+                 {
+                  "op": "-",
+                  "args": [
+                   {
+                    "var": "i"
+                   },
+                   {
+                    "int": 1
+                   }
+                  ]
+                 },
+                 {
+                  "var": "i"
+                 }
+                ]
+               },
+               {
+                "int": 2
+               }
+              ]
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "i"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "var": "i"
+           }
+          ]
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "sum_nat"
+       },
+       {
+        "op": "div",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "-",
+            "args": [
+             {
+              "var": "i"
+             },
+             {
+              "int": 1
+             }
+            ]
+           },
+           {
+            "var": "i"
+           }
+          ]
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "+",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "sum_cubes",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "sum_cubes"
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "var": "i"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "var": "i"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "sum_nat",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "sum_nat"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "var": "sum_cubes"
+      },
+      {
+       "var": "sum_nat"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

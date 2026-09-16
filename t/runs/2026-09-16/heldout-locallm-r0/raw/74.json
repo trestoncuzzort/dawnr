@@ -1,0 +1,22 @@
+{
+ "task_id": 74,
+ "fn": "is_samepatterns",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to check whether it follows the sequence given in the patterns array.\nSignature: is_samepatterns(seq-of-seq, seq) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_195__swap_List(s: seq) returns (r: seq)\n  requires len(s) >= 2\n  ensures len(r) == len(s)\n  ensures r[0] == s[len(s) - 1]\n  ensures r[len(s) - 1] == s[0]\n  ensures forall i in [1, len(s) - 1) . r[i] == s[i]\n{\n  r := s;\n  r := r[0 := s[len(s) - 1]];\n  r := r[len(s) - 1 := s[0]];\n}\n```",
+ "done_reason": "length"
+}

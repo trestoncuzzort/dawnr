@@ -1,0 +1,439 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_711__product_Equal",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "call": {
+        "fun": "prod_even",
+        "args": [
+         {
+          "var": "n"
+         }
+        ]
+       }
+      },
+      {
+       "call": {
+        "fun": "prod_odd",
+        "args": [
+         {
+          "var": "n"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "prod_even",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "prod_even",
+           "args": [
+            {
+             "op": "div",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 100
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 10
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "prod_odd",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "then": {
+        "var": "n"
+       },
+       "else": {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "prod_odd",
+           "args": [
+            {
+             "op": "div",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 100
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "op": "mod",
+          "args": [
+           {
+            "op": "div",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "int": 10
+             }
+            ]
+           },
+           {
+            "int": 10
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "pe",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "po",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "m",
+    "type": "int",
+    "init": {
+     "var": "n"
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "pos",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "m"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "m"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "pos"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "m"
+    },
+    "body": [
+     {
+      "var": {
+       "name": "d",
+       "type": "int",
+       "init": {
+        "op": "mod",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      }
+     },
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "pos"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "pe",
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "pe"
+            },
+            {
+             "var": "d"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "po",
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "po"
+            },
+            {
+             "var": "d"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "m",
+       {
+        "op": "div",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "pos",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "pos"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "pe"
+      },
+      {
+       "var": "po"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

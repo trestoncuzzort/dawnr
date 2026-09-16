@@ -1,0 +1,126 @@
+{
+ "t": 0,
+ "name": "mbpp_626__triangle_area",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": ">=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "var": "n"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "n"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

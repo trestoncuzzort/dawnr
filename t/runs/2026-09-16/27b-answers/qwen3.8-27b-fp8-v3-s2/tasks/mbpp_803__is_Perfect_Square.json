@@ -1,0 +1,123 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_803__is_Perfect_Square",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "exists": {
+      "var": "i",
+      "lo": {
+       "int": 0
+      },
+      "hi": {
+       "op": "+",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      "body": {
+       "op": "==",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "i"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "var": "n"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "exists": {
+      "var": "i",
+      "lo": {
+       "int": 0
+      },
+      "hi": {
+       "op": "+",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      "body": {
+       "op": "==",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "i"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "var": "n"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

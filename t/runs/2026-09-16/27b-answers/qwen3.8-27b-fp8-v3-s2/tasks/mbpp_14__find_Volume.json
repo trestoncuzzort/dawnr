@@ -1,0 +1,80 @@
+{
+ "t": 0,
+ "name": "mbpp_14__find_Volume",
+ "params": [
+  {
+   "name": "base",
+   "type": "int"
+  },
+  {
+   "name": "height",
+   "type": "int"
+  },
+  {
+   "name": "length",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "base"
+        },
+        {
+         "var": "height"
+        }
+       ]
+      },
+      {
+       "var": "length"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "base"
+        },
+        {
+         "var": "height"
+        }
+       ]
+      },
+      {
+       "var": "length"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

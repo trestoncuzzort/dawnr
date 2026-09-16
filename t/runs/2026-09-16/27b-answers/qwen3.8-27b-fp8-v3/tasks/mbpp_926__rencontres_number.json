@@ -1,0 +1,557 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_926__rencontres_number",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "k",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "k"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "k"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "rn",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "var": "k"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "rn",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "n"
+     },
+     {
+      "var": "k"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "k"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "int": 0
+       }
+      }
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "k"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "call": {
+           "fun": "rn",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         },
+         {
+          "call": {
+           "fun": "rn",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "int": 0
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "op": "+",
+        "args": [
+         {
+          "call": {
+           "fun": "rn",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "k"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "-",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "int": 1
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "rn",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "var": "k"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "n"
+   },
+   {
+    "var": "k"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "k"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 1
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 0
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "k"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "var": {
+          "name": "a",
+          "type": "int",
+          "init": {
+           "int": 0
+          }
+         }
+        },
+        {
+         "var": {
+          "name": "b",
+          "type": "int",
+          "init": {
+           "int": 0
+          }
+         }
+        },
+        {
+         "assign": [
+          "a",
+          {
+           "call": {
+            "fun": "mbpp_926__rencontres_number",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "int": 1
+             }
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "assign": [
+          "b",
+          {
+           "call": {
+            "fun": "mbpp_926__rencontres_number",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "int": 0
+             }
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "var": {
+          "name": "c",
+          "type": "int",
+          "init": {
+           "int": 0
+          }
+         }
+        },
+        {
+         "var": {
+          "name": "d",
+          "type": "int",
+          "init": {
+           "int": 0
+          }
+         }
+        },
+        {
+         "assign": [
+          "c",
+          {
+           "call": {
+            "fun": "mbpp_926__rencontres_number",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "k"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "assign": [
+          "d",
+          {
+           "call": {
+            "fun": "mbpp_926__rencontres_number",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "var": "k"
+             }
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "c"
+            },
+            {
+             "op": "*",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "var": "d"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "task_id": 957,
+ "fn": "get_First_Set_Bit_Pos",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to get the position of rightmost set bit.\nSignature: get_First_Set_Bit_Pos(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate recursion\ntask mbpp_732__fibonacci(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == fibs(n)\n  decreases n\nspec fun fibs(n: int): int\n  decreases n\n= if n <= 1 then n else fibs(n - 1) + fibs(n - 2)\n{\n  if n <= 1 {\n    r := n;\n  } else {\n    var a: int := mbpp_873__fibonacci(n - 1);\n   var b: int := mbpp_873__fibonacci(n - 2);\n   r := a + b;\n  }\n}\n```",
+ "done_reason": "length"
+}

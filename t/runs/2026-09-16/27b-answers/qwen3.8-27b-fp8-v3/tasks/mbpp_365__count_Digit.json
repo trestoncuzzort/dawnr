@@ -1,0 +1,73 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_365__count_Digit",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "op": "tostr",
+       "args": [
+        {
+         "var": "n"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "len",
+     "args": [
+      {
+       "op": "tostr",
+       "args": [
+        {
+         "var": "n"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

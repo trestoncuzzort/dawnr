@@ -1,0 +1,261 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_239__get_total_number_of_sequences",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "m",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "m"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "count_seq",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "var": "m"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "count_seq",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    },
+    {
+     "name": "m",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "n"
+     },
+     {
+      "var": "m"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<=",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "int": 0
+       },
+       "else": {
+        "call": {
+         "fun": "count_seq",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          },
+          {
+           "op": "div",
+           "args": [
+            {
+             "var": "m"
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "n"
+   },
+   {
+    "var": "m"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "<=",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "call": {
+            "fun": "mbpp_239__get_total_number_of_sequences",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "op": "div",
+              "args": [
+               {
+                "var": "m"
+               },
+               {
+                "int": 2
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

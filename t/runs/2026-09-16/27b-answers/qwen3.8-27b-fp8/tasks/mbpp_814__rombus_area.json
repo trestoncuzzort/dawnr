@@ -1,0 +1,210 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_814__rombus_area",
+ "params": [
+  {
+   "name": "d1",
+   "type": "int"
+  },
+  {
+   "name": "d2",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "d1"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "d2"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "d1"
+      },
+      {
+       "var": "d2"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "prod",
+    "type": "int",
+    "init": {
+     "op": "*",
+     "args": [
+      {
+       "var": "d1"
+      },
+      {
+       "var": "d2"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "var": "prod"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "int": 2
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       {
+        "var": "prod"
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "prod"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "i"
+        }
+       ]
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "var": "i"
+    }
+   ]
+  }
+ ]
+}

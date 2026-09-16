@@ -1,0 +1,288 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_55__tn_gp",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "res",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "res"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "call": {
+        "fun": "pow_r",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "pow_r",
+   "params": [
+    {
+     "name": "base",
+     "type": "int"
+    },
+    {
+     "name": "exp",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "exp"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "exp"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "*",
+      "args": [
+       {
+        "var": "base"
+       },
+       {
+        "call": {
+         "fun": "pow_r",
+         "args": [
+          {
+           "var": "base"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "exp"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "res",
+    {
+     "var": "a"
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "res"
+       },
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "call": {
+           "fun": "pow_r",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "i"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "res",
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "res"
+         },
+         {
+          "var": "r"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

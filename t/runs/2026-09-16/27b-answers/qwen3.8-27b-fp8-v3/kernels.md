@@ -1,0 +1,356 @@
+# t cross-kernel agreement, 2026-09-16 21:31Z
+
+Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
+
+| task | dafny | verus | spark | framac | lean | rocq | fstar |
+|---|---|---|---|---|---|---|---|
+| mbpp_102__snake_to_camel | unproved / unproved | unproved / refuted | timeout / malformed | abstain / abstain | unproved / unproved | timeout / refuted | unproved / refuted |
+| mbpp_103__eulerian_num | unproved / unproved | unproved / refuted | timeout / refuted | timeout / unproved | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_107__count_Hexadecimal | unproved / refuted | unproved / refuted | unproved / refuted | abstain / abstain | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_108__merge_sorted_list | refuted / refuted | refuted / refuted | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_109__odd_Equivalent | unproved / unproved | unproved / refuted | unproved / refuted | timeout / unproved | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_10__small_nnum | refuted / refuted | refuted / refuted | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_112__perimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_11__remove_Occ | unproved / refuted | refuted / refuted | refuted / refuted | abstain / abstain | refuted / unproved | unproved / refuted | unproved / refuted |
+| mbpp_121__check_triplet | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_122__smartNumber | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_123__amicable_numbers_sum | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_127__multiply_int | unproved / refuted | unproved / refuted | timeout / refuted | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_135__hexagonal_num | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_138__is_Sum_Of_Powers_Of_Two | unproved / unproved | unproved / unproved | timeout / refuted | unproved / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_14__find_Volume | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_150__does_Contain_B | verified / refuted | unproved / refuted | verified / refuted | abstain / abstain | verified / refuted | unproved / refuted | unproved / refuted |
+| mbpp_151__is_coprime | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_162__sum_series | unproved / refuted | unproved / refuted | timeout / refuted | vacuous / vacuous | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_168__frequency | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | unproved / refuted | abstain / abstain |
+| mbpp_169__get_pell | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_16__text_lowercase_underscore | unproved / refuted | unproved / refuted | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_171__perimeter_pentagon | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_172__count_occurance | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_173__remove_splchar | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | verified / refuted |
+| mbpp_175__is_valid_parenthese | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_176__perimeter_triangle | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_179__is_num_keith | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_17__square_perimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_184__greater_specificnum | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted |
+| mbpp_188__prod_Square | unproved / unproved | unproved / unproved | refuted / timeout | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_189__first_Missing_Positive | unproved / unproved | malformed / malformed | refuted / timeout | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_18__remove_dirty_chars | verified / refuted | unproved / refuted | verified / refuted | abstain / abstain | timeout / timeout | abstain / abstain | timeout / refuted |
+| mbpp_190__count_Intgral_Points | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_194__octal_To_Decimal | unproved / unproved | unproved / unproved | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_195__first | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_199__highest_Power_of_2 | refuted / refuted | refuted / refuted | unproved / refuted | unproved / refuted | refuted / refuted | unproved / refuted | refuted / refuted |
+| mbpp_19__test_duplicate | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
+| mbpp_201__chkList | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted |
+| mbpp_202__remove_even | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / refuted | timeout / refuted | unproved / refuted |
+| mbpp_204__count | verified / unproved | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | verified / refuted | timeout / refuted |
+| mbpp_207__find_longest_repeating_subseq | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_208__is_decimal | unproved / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_210__is_allowed_specific_char | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted |
+| mbpp_212__fourth_Power_Sum | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / timeout |
+| mbpp_217__first_Repeated_Char | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_218__min_Operations | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_21__multiples_of_num | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_221__first_even | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_223__is_majority | refuted / unproved | refuted / refuted | refuted / refuted | abstain / abstain | unproved / refuted | unproved / refuted | refuted / refuted |
+| mbpp_225__find_Min | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / unproved | timeout / refuted | unproved / refuted |
+| mbpp_226__odd_values_string | verified / refuted | verified / refuted | verified / timeout | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted |
+| mbpp_227__min_of_three | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_22__find_first_duplicate | unproved / refuted | unproved / refuted | timeout / unproved | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_230__replace_blank | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_234__volume_cube | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_235__even_bit_set_number | refuted / refuted | malformed / malformed | timeout / timeout | timeout / timeout | timeout / timeout | timeout / timeout | refuted / refuted |
+| mbpp_239__get_total_number_of_sequences | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_244__next_Perfect_Square | unproved / unproved | unproved / refuted | unproved / refuted | refuted / refuted | unproved / unproved | unproved / refuted | unproved / refuted |
+| mbpp_251__insert_element | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted |
+| mbpp_260__newman_prime | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_264__dog_age | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_266__lateralsurface_cube | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_267__square_Sum | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_268__find_star_num | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_269__ascii_value | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_270__sum_even_and_even_index | unproved / unproved | verified / refuted | timeout / refuted | verified / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_271__even_Power_Sum | refuted / refuted | refuted / refuted | timeout / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_279__is_num_decagonal | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_281__all_unique | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
+| mbpp_282__sub_list | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_283__validate | unproved / unproved | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_285__text_match_two_three | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / timeout | timeout / unproved | unproved / refuted |
+| mbpp_287__square_Sum | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_28__binomial_Coeff | unproved / unproved | unproved / refuted | timeout / refuted | timeout / unproved | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_291__count_no_of_ways | unproved / unproved | unproved / refuted | timeout / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_292__find | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_302__set_Bit_Number | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_306__max_sum_increasing_subseq | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_308__large_product | refuted / refuted | refuted / refuted | malformed / malformed | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_309__maximum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_313__pos_nos | refuted / unproved | refuted / refuted | refuted / timeout | refuted / refuted | unproved / refuted | refuted / unproved | refuted / refuted |
+| mbpp_316__find_last_occurrence | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_318__max_volume | unproved / unproved | unproved / refuted | timeout / timeout | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_323__re_arrange | refuted / refuted | refuted / refuted | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | refuted / refuted |
+| mbpp_328__rotate_left | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_337__text_match_word | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_345__diff_consecutivenums | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_348__find_ways | unproved / unproved | unproved / refuted | timeout / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_349__check | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / unproved | timeout / unproved | unproved / refuted |
+| mbpp_34__find_missing | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_352__unique_Characters | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_354__tn_ap | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_355__count_Rectangles | unproved / unproved | unproved / refuted | unproved / refuted | refuted / vacuous | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_356__find_angle | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_358__moddiv_list | refuted / refuted | refuted / refuted | malformed / malformed | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_35__find_rect_num | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_360__get_carol | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_362__max_occurrences | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | refuted / refuted | unproved / refuted |
+| mbpp_365__count_Digit | verified / unproved | verified / refuted | malformed / malformed | abstain / abstain | verified / refuted | verified / refuted | abstain / abstain |
+| mbpp_369__lateralsurface_cuboid | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_371__smallest_missing | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_372__heap_assending | unproved / unproved | malformed / malformed | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_373__volume_cuboid | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_377__remove_Char | verified / refuted | unproved / refuted | timeout / refuted | abstain / abstain | timeout / timeout | timeout / refuted | unproved / refuted |
+| mbpp_379__surfacearea_cuboid | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_382__find_rotation_count | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | unproved / unproved | timeout / refuted | refuted / refuted |
+| mbpp_385__get_perrin | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_387__even_or_odd | refuted / refuted | refuted / refuted | timeout / timeout | abstain / abstain | unproved / unproved | refuted / refuted | refuted / refuted |
+| mbpp_388__highest_Power_of_2 | refuted / refuted | refuted / refuted | unproved / refuted | unproved / refuted | refuted / refuted | unproved / refuted | refuted / refuted |
+| mbpp_389__find_lucas | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_392__get_max_sum | unproved / unproved | unproved / refuted | timeout / timeout | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_403__is_valid_URL | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_404__minimum | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_411__snake_to_camel | unproved / unproved | unproved / refuted | timeout / malformed | abstain / abstain | unproved / unproved | refuted / refuted | unproved / refuted |
+| mbpp_412__remove_odd | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | timeout / refuted |
+| mbpp_414__overlapping | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_41__filter_evennumbers | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | timeout / timeout | timeout / refuted | timeout / timeout |
+| mbpp_420__cube_Sum | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_426__filter_oddnumbers | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | timeout / timeout | timeout / refuted | timeout / timeout |
+| mbpp_427__change_date_format | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_428__shell_sort | unproved / refuted | timeout / refuted | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_433__check_greater | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | abstain / abstain | verified / unproved |
+| mbpp_434__text_match_one | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_436__neg_nos | unproved / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_437__remove_odd | refuted / refuted | refuted / refuted | refuted / timeout | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_43__text_match | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | timeout / unproved | unproved / refuted |
+| mbpp_441__surfacearea_cube | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_443__largest_neg | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_447__cube_nums | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_448__cal_sum | unproved / unproved | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_44__text_match_string | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / unproved | verified / refuted | unproved / refuted |
+| mbpp_451__remove_whitespaces | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | verified / refuted |
+| mbpp_453__sumofFactors | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_454__text_match_wordz | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / unproved | timeout / unproved | unproved / refuted |
+| mbpp_458__rectangle_area | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_459__remove_uppercase | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | verified / refuted |
+| mbpp_466__find_peak | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_46__test_distinct | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_472__check_Consecutive | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_474__replace_char | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_477__is_lower | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_478__remove_lowercase | unproved / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / refuted | timeout / refuted | timeout / timeout |
+| mbpp_47__compute_Last_Digit | unproved / refuted | unproved / refuted | timeout / refuted | vacuous / vacuous | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_481__is_subset_sum | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_482__match | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | timeout / unproved | unproved / refuted |
+| mbpp_492__binary_search | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | unproved / refuted | refuted / refuted |
+| mbpp_498__gcd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_499__diameter_circle | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_4__heap_queue_largest | refuted / refuted | refuted / refuted | timeout / timeout | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_501__num_comm_div | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_502__find | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_503__add_consecutive_nums | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_504__sum_Of_Series | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_507__remove_words | unproved / refuted | unproved / refuted | malformed / malformed | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_509__average_Odd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_511__find_Min_Sum | timeout / refuted | malformed / malformed | refuted / refuted | unproved / unproved | unproved / unproved | timeout / timeout | refuted / refuted |
+| mbpp_515__modular_sum | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_517__largest_pos | unproved / refuted | unproved / refuted | unproved / refuted | timeout / refuted | unproved / refuted | timeout / refuted | unproved / refuted |
+| mbpp_518__sqrt_root | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | unproved / unproved | refuted / refuted | refuted / refuted |
+| mbpp_520__get_lcm | unproved / unproved | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_521__check_isosceles | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | verified / refuted |
+| mbpp_525__parallel_lines | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_526__capitalize_first_last_letters | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_529__jacobsthal_lucas | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_52__parallelogram_area | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_531__min_coins | unproved / unproved | unproved / refuted | timeout / refuted | refuted / unproved | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_536__nth_items | timeout / refuted | malformed / refuted | timeout / timeout | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
+| mbpp_539__basesnum_coresspondingnum | verified / unproved | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_542__fill_spaces | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_543__count_digits | verified / unproved | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / timeout | abstain / abstain |
+| mbpp_550__find_Max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_554__Split | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | timeout / timeout | timeout / refuted | timeout / timeout |
+| mbpp_555__difference | timeout / refuted | verified / refuted | timeout / refuted | timeout / refuted | unproved / unproved | unproved / refuted | timeout / refuted |
+| mbpp_556__find_Odd_Pair | unproved / unproved | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_557__toggle_string | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_55__tn_gp | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_565__split | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_567__issort_list | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / refuted | unproved / refuted |
+| mbpp_571__max_sum_pair_diff_lessthan_K | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_576__is_Sub_Array | unproved / unproved | malformed / malformed | timeout / timeout | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_577__last_Digit_Factorial | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_578__interleave_lists | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | timeout / timeout | verified / refuted | verified / refuted |
+| mbpp_581__surface_Area | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_584__find_adverbs | tool_error / tool_error | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | timeout / refuted | abstain / abstain |
+| mbpp_586__split_Arr | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_591__swap_List | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_593__removezero_ip | refuted / refuted | refuted / refuted | refuted / timeout | abstain / abstain | refuted / refuted | refuted / refuted | abstain / abstain |
+| mbpp_597__find_kth | unproved / unproved | malformed / malformed | refuted / refuted | abstain / abstain | timeout / timeout | unproved / unproved | refuted / refuted |
+| mbpp_598__armstrong_number | refuted / refuted | refuted / refuted | abstain / abstain | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_59__is_octagonal | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_5__count_ways | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_602__first_repeated_char | unproved / refuted | unproved / refuted | unproved / unproved | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_605__prime_num | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_609__floor_Min | refuted / refuted | refuted / refuted | refuted / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_610__remove_kth_element | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_620__largest_subset | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_623__nth_nums | unproved / unproved | unproved / refuted | unproved / refuted | abstain / abstain | unproved / refuted | unproved / unproved | unproved / refuted |
+| mbpp_624__is_upper | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_625__swap_List | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_626__triangle_area | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_628__replace_spaces | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / unproved | abstain / abstain |
+| mbpp_629__Split | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | timeout / timeout | timeout / refuted | timeout / timeout |
+| mbpp_62__smallest_num | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted |
+| mbpp_631__replace_spaces | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_634__even_Power_Sum | refuted / refuted | refuted / refuted | timeout / timeout | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_635__heap_sort | unproved / refuted | unproved / refuted | malformed / malformed | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_640__remove_parenthesis | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_641__is_nonagonal | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_644__reverse_Array_Upto_K | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_649__sum_Range_list | unproved / unproved | unproved / refuted | timeout / refuted | vacuous / vacuous | unproved / refuted | unproved / unproved | unproved / refuted |
+| mbpp_654__rectangle_perimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_655__fifth_Power_Sum | refuted / refuted | refuted / refuted | timeout / timeout | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_664__average_Even | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_666__count_char | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_668__replace | refuted / refuted | refuted / refuted | timeout / timeout | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_670__decreasing_trend | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / timeout | unproved / refuted |
+| mbpp_672__max_of_three | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_673__convert | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | unproved / unproved | unproved / refuted |
+| mbpp_676__remove_extra_char | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | verified / refuted |
+| mbpp_677__validity_triangle | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | verified / refuted |
+| mbpp_678__remove_spaces | verified / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | verified / refuted | unproved / refuted |
+| mbpp_680__increasing_trend | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / refuted | unproved / refuted |
+| mbpp_681__smallest_Divisor | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / unproved | unproved / refuted | unproved / refuted |
+| mbpp_682__mul_list | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_683__sum_Square | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_684__count_Char | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_687__recur_gcd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_68__is_Monotonic | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / timeout | unproved / refuted |
+| mbpp_690__mul_consecutive_nums | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_692__last_Two_Digits | unproved / unproved | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_69__is_sublist | unproved / unproved | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_701__equilibrium_index | unproved / unproved | unproved / refuted | unproved / refuted | abstain / abstain | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_702__removals | unproved / unproved | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_706__is_subset | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_711__product_Equal | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | timeout / timeout |
+| mbpp_716__rombus_perimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_718__alternate_elements | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_727__remove_char | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | verified / refuted |
+| mbpp_728__sum_list | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_729__add_list | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_72__dif_Square | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | verified / refuted |
+| mbpp_732__replace_specialchar | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_733__find_first_occurrence | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_736__left_insertion | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted |
+| mbpp_741__all_Characters_Same | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted |
+| mbpp_743__rotate_right | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_748__capital_words_spaces | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_749__sort_numeric_strings | refuted / refuted | refuted / refuted | malformed / malformed | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_74__is_samepatterns | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_751__check_min_heap | unproved / refuted | timeout / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / refuted | unproved / timeout |
+| mbpp_752__jacobsthal_num | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_754__extract_index_list | unproved / refuted | unproved / refuted | verified / refuted | timeout / refuted | timeout / timeout | timeout / unproved | timeout / timeout |
+| mbpp_756__text_match_zero_one | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_759__is_decimal | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_760__unique_Element | unproved / refuted | unproved / refuted | malformed / refuted | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_764__number_ctr | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | timeout / refuted | abstain / abstain |
+| mbpp_771__check_expression | unproved / refuted | unproved / malformed | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
+| mbpp_77__is_Diff | timeout / timeout | unproved / refuted | timeout / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_781__count_Divisors | refuted / unproved | refuted / unproved | refuted / refuted | abstain / abstain | unproved / unproved | unproved / unproved | refuted / unproved |
+| mbpp_786__right_insertion | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
+| mbpp_787__text_match_three | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | timeout / unproved | unproved / refuted |
+| mbpp_789__perimeter_polygon | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_793__last | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_794__text_starta_endb | verified / refuted | verified / refuted | verified / malformed | abstain / abstain | unproved / refuted | abstain / abstain | verified / malformed |
+| mbpp_797__sum_in_Range | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_800__remove_all_spaces | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_803__is_Perfect_Square | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_804__is_Product_Even | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / refuted |
+| mbpp_807__first_odd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_812__road_rd | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_823__check_substring | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / unproved | timeout / refuted | abstain / abstain |
+| mbpp_824__remove_even | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | timeout / refuted |
+| mbpp_825__access_elements | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_838__min_Swaps | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_844__get_Number | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / unproved | unproved / refuted | unproved / refuted |
+| mbpp_852__remove_negs | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | timeout / refuted |
+| mbpp_853__sum_of_odd_Factors | unproved / unproved | refuted / refuted | refuted / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | refuted / refuted |
+| mbpp_856__find_Min_Swaps | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | unproved / unproved | unproved / refuted |
+| mbpp_860__check_alphanumeric | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / unproved | abstain / abstain | unproved / refuted |
+| mbpp_865__ntimes_list | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_86__centered_hexagonal_number | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_873__fibonacci | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_876__lcm | refuted / unproved | refuted / refuted | refuted / refuted | timeout / timeout | unproved / unproved | refuted / refuted | refuted / refuted |
+| mbpp_877__sort_String | unproved / unproved | malformed / malformed | malformed / malformed | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_881__sum_even_odd | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | timeout / timeout | unproved / unproved | timeout / refuted |
+| mbpp_882__parallelogram_perimeter | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_890__find_Extra | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_891__same_Length | verified / unproved | verified / refuted | malformed / malformed | abstain / abstain | verified / refuted | verified / refuted | abstain / abstain |
+| mbpp_895__max_sum_subseq | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | refuted / refuted | unproved / unproved | refuted / refuted |
+| mbpp_898__extract_elements | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_899__check | unproved / unproved | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_89__closest_num | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_8__square_nums | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_900__match_num | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_905__sum_of_square | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | unproved / refuted | verified / refuted |
+| mbpp_907__lucky_num | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | timeout / refuted | verified / refuted | verified / refuted |
+| mbpp_908__find_fixed_point | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_910__check_date | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | unproved / refuted | verified / refuted |
+| mbpp_917__text_uppercase_lowercase | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | timeout / unproved | unproved / refuted |
+| mbpp_918__coin_change | unproved / unproved | refuted / refuted | refuted / refuted | unproved / unproved | refuted / unproved | unproved / unproved | refuted / refuted |
+| mbpp_919__multiply_list | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / refuted | unproved / unproved | timeout / refuted |
+| mbpp_923__super_seq | unproved / unproved | unproved / refuted | timeout / refuted | timeout / unproved | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_924__max_of_two | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_926__rencontres_number | unproved / unproved | unproved / refuted | timeout / refuted | refuted / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_928__change_date_format | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
+| mbpp_92__is_undulating | unproved / unproved | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_931__sum_series | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_932__remove_duplic_list | verified / refuted | unproved / refuted | malformed / malformed | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_933__camel_to_snake | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_934__dealnnoy_num | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_935__series_sum | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| mbpp_937__max_char | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | timeout / refuted | verified / refuted |
+| mbpp_93__power | unproved / unproved | unproved / refuted | unproved / refuted | malformed / malformed | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_944__num_position | unproved / refuted | unproved / refuted | unproved / refuted | verified / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_955__is_abundant | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| mbpp_960__get_noOfways | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
+| mbpp_961__roman_to_int | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted |
+| mbpp_962__sum_Even | malformed / malformed | malformed / malformed | malformed / malformed | malformed / malformed | unproved / unproved | unproved / unproved | unproved / unproved |
+| mbpp_967__check | verified / refuted | verified / refuted | timeout / refuted (FLAKED) | abstain / abstain | verified / unproved | timeout / unproved | unproved / refuted |
+| mbpp_970__min_of_two | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| mbpp_971__maximum_segments | refuted / refuted | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_973__left_rotate | unproved / refuted | unproved / refuted | timeout / unproved | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| mbpp_9__find_Rotations | refuted / unproved | refuted / refuted | refuted / refuted | abstain / abstain | timeout / timeout | timeout / refuted | refuted / unproved |
+
+Kernels present: 7 of 7 (dafny, verus, spark, framac, lean, rocq, fstar)
+
+Backends:
+- dafny: dafny 4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2
+- verus: verus 0.2026.08.30.b432e82
+- spark: gnatprove FSF 16.1.0 / Why3 for gnatprove version 1.8.2+git
+- framac: frama-c 33.0 (Arsenic) / alt-ergo 2.4.3-free
+- lean: Lean (version 4.33.1
+- rocq: The Rocq Prover, version 9.2
+- fstar: F* 2026.08.30 / platform=Linux_x86_64 / system=Unix / compiler=OCaml 5.3.0 / date=2026-08-30 16:26:18 +0000 / commit=2b82aefeff37f78509c876844954b07fcb8813ff
+
+Verdict basis: every source file hashed; e.g. `mbpp_102__snake_to_camel.dfy` 5ed925c6f2c8380c…, `mbpp_102__snake_to_camel.rs` 1dfcba236b706ee3…
+
+## Sole blockers
+
+| kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
+|---|---|---|---|
+| lean | 8 | 46 | mbpp_525__parallel_lines, mbpp_557__toggle_string, mbpp_62__smallest_num, mbpp_641__is_nonagonal, mbpp_718__alternate_elements, mbpp_759__is_decimal, mbpp_804__is_Product_Even, mbpp_825__access_elements |
+| framac | 4 | 41 | mbpp_586__split_Arr, mbpp_610__remove_kth_element, mbpp_684__count_Char, mbpp_743__rotate_right |
+| verus | 3 | 27 | mbpp_21__multiples_of_num, mbpp_260__newman_prime, mbpp_292__find |
+| spark | 2 | 18 | mbpp_287__square_Sum, mbpp_474__replace_char |
+| rocq | 1 | 47 | mbpp_786__right_insertion |
+| dafny | 0 | 11 | (none) |
+| fstar | 0 | 35 | (none) |
+
+Of the 18 tasks in six, 8 are lean alone, 4 are framac alone, 3 are verus alone, 2 are spark alone, 1 is rocq alone.

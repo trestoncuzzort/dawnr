@@ -1,0 +1,393 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_511__find_Min_Sum",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 2
+    }
+   ]
+  },
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "int": 12
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "int": 105
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "int": 2
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "d",
+    "type": "int",
+    "init": {
+     "int": 2
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "temp",
+    "type": "int",
+    "init": {
+     "var": "n"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "d"
+        },
+        {
+         "var": "d"
+        }
+       ]
+      },
+      {
+       "var": "temp"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "int": 1
+       },
+       {
+        "var": "d"
+       }
+      ]
+     },
+     {
+      "op": "or",
+      "args": [
+       {
+        "op": "<=",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "d"
+           },
+           {
+            "var": "d"
+           }
+          ]
+         },
+         {
+          "var": "temp"
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "temp"
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "temp"
+           },
+           {
+            "op": "*",
+            "args": [
+             {
+              "var": "d"
+             },
+             {
+              "op": "div",
+              "args": [
+               {
+                "var": "temp"
+               },
+               {
+                "var": "d"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "r"
+              },
+              {
+               "var": "temp"
+              }
+             ]
+            },
+            {
+             "var": "d"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "assign": [
+          "temp",
+          {
+           "op": "div",
+           "args": [
+            {
+             "var": "temp"
+            },
+            {
+             "var": "d"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "d",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "d"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "temp"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "r"
+           },
+           {
+            "var": "n"
+           }
+          ]
+         },
+         {
+          "var": "temp"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "else": []
+   }
+  }
+ ]
+}

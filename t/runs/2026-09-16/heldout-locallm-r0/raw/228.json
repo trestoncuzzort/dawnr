@@ -1,0 +1,22 @@
+{
+ "task_id": 228,
+ "fn": "all_Bits_Set_In_The_Given_Range",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether all the bits are unset in the given range or not.\nSignature: all_Bits_Set_In_The_Given_Range(int, int, int) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_509__abs(x: int) returns (r: int)\n  requires x >= 0\n  ensures r == x * x\n{\n  r := x + 1;\n}\n```",
+ "done_reason": "length"
+}

@@ -1,0 +1,517 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_918__coin_change",
+ "params": [
+  {
+   "name": "coins",
+   "type": "seq"
+  },
+  {
+   "name": "target",
+   "type": "int"
+  },
+  {
+   "name": "amount",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "amount"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "coins"
+      }
+     ]
+    },
+    "body": {
+     "op": ">",
+     "args": [
+      {
+       "op": "at",
+       "args": [
+        {
+         "var": "coins"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "cc",
+      "args": [
+       {
+        "var": "coins"
+       },
+       {
+        "var": "target"
+       },
+       {
+        "var": "amount"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "cc",
+   "params": [
+    {
+     "name": "coins",
+     "type": "seq"
+    },
+    {
+     "name": "target",
+     "type": "int"
+    },
+    {
+     "name": "amount",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "amount"
+     },
+     {
+      "op": "-",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "coins"
+         }
+        ]
+       },
+       {
+        "var": "target"
+       }
+      ]
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "amount"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "target"
+         },
+         {
+          "op": "len",
+          "args": [
+           {
+            "var": "coins"
+           }
+          ]
+         }
+        ]
+       },
+       "then": {
+        "int": 0
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "<",
+          "args": [
+           {
+            "var": "amount"
+           },
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "coins"
+             },
+             {
+              "var": "target"
+             }
+            ]
+           }
+          ]
+         },
+         "then": {
+          "call": {
+           "fun": "cc",
+           "args": [
+            {
+             "var": "coins"
+            },
+            {
+             "op": "+",
+             "args": [
+              {
+               "var": "target"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "var": "amount"
+            }
+           ]
+          }
+         },
+         "else": {
+          "op": "+",
+          "args": [
+           {
+            "call": {
+             "fun": "cc",
+             "args": [
+              {
+               "var": "coins"
+              },
+              {
+               "var": "target"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "amount"
+                },
+                {
+                 "op": "at",
+                 "args": [
+                  {
+                   "var": "coins"
+                  },
+                  {
+                   "var": "target"
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "call": {
+             "fun": "cc",
+             "args": [
+              {
+               "var": "coins"
+              },
+              {
+               "op": "+",
+               "args": [
+                {
+                 "var": "target"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "var": "amount"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "amount"
+   },
+   {
+    "op": "-",
+    "args": [
+     {
+      "op": "len",
+      "args": [
+       {
+        "var": "coins"
+       }
+      ]
+     },
+     {
+      "var": "target"
+     }
+    ]
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "amount"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "target"
+         },
+         {
+          "op": "len",
+          "args": [
+           {
+            "var": "coins"
+           }
+          ]
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "<",
+           "args": [
+            {
+             "var": "amount"
+            },
+            {
+             "op": "at",
+             "args": [
+              {
+               "var": "coins"
+              },
+              {
+               "var": "target"
+              }
+             ]
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "call": {
+               "fun": "mbpp_918__coin_change",
+               "args": [
+                {
+                 "var": "coins"
+                },
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "target"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "var": "amount"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "var": {
+             "name": "a",
+             "type": "int",
+             "init": {
+              "call": {
+               "fun": "mbpp_918__coin_change",
+               "args": [
+                {
+                 "var": "coins"
+                },
+                {
+                 "var": "target"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "amount"
+                  },
+                  {
+                   "op": "at",
+                   "args": [
+                    {
+                     "var": "coins"
+                    },
+                    {
+                     "var": "target"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            }
+           },
+           {
+            "var": {
+             "name": "b",
+             "type": "int",
+             "init": {
+              "call": {
+               "fun": "mbpp_918__coin_change",
+               "args": [
+                {
+                 "var": "coins"
+                },
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "target"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "var": "amount"
+                }
+               ]
+              }
+             }
+            }
+           },
+           {
+            "assign": [
+             "r",
+             {
+              "op": "+",
+              "args": [
+               {
+                "var": "a"
+               },
+               {
+                "var": "b"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "task_id": 935,
+ "fn": "series_sum",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to calculate the sum of series 1\u00b2+2\u00b2+3\u00b2+\u2026.+n\u00b2.\nSignature: series_sum(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nProblem: Write a function to calculate the sum of series 1+2+3+.+n.\nSignature: series_sum(int) -> int\nt 0\ntask mbpp_27__sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}\n```",
+ "done_reason": "length"
+}

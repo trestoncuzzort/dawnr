@@ -1,0 +1,284 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_127__multiply_int",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "b"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "while": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "b"
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "<=",
+         "args": [
+          {
+           "int": 0
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "op": "<=",
+         "args": [
+          {
+           "var": "i"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "b"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       "body": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "var": "a"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "assign": [
+          "i",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ],
+    "else": [
+     {
+      "while": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "b"
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "<=",
+         "args": [
+          {
+           "var": "b"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "op": "<=",
+         "args": [
+          {
+           "var": "i"
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "neg",
+        "args": [
+         {
+          "var": "i"
+         }
+        ]
+       },
+       "body": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "var": "a"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "assign": [
+          "i",
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

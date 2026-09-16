@@ -1,0 +1,326 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_681__smallest_Divisor",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 2
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 2
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "mod",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "d",
+    "lo": {
+     "int": 2
+    },
+    "hi": {
+     "var": "r"
+    },
+    "body": {
+     "op": "not",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "op": "mod",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "var": "d"
+          }
+         ]
+        },
+        {
+         "int": 0
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "d",
+    "type": "int",
+    "init": {
+     "int": 2
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": "<=",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "d"
+          },
+          {
+           "var": "d"
+          }
+         ]
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "!=",
+       "args": [
+        {
+         "op": "mod",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "var": "d"
+          }
+         ]
+        },
+        {
+         "int": 0
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "d"
+       },
+       {
+        "int": 2
+       }
+      ]
+     },
+     {
+      "op": "or",
+      "args": [
+       {
+        "op": "<=",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "d"
+           },
+           {
+            "var": "d"
+           }
+          ]
+         },
+         {
+          "var": "n"
+         }
+        ]
+       },
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "forall": {
+       "var": "i",
+       "lo": {
+        "int": 2
+       },
+       "hi": {
+        "var": "d"
+       },
+       "body": {
+        "op": "not",
+        "args": [
+         {
+          "op": "==",
+          "args": [
+           {
+            "op": "mod",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "int": 0
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "d"
+        },
+        {
+         "var": "d"
+        }
+       ]
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "d",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "op": "mod",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "var": "d"
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "d"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "n"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "task_id": 411,
+ "fn": "snake_to_camel",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to convert the given snake case string to camel case string by using regex.\nSignature: snake_to_camel(seq) -> seq\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_631__fill_spaces(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . (s[i] == 32 ==> r[i] == 95) and (s[i] == 95 ==> r[i] == 32) and (s[i] != 32 and s[i] != 95 ==> r[i] == s[i])\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . (s[k] == 32 ==> r[k] == 95) and (s[k] == 95 ==> r[k] == 32) and (s[k] != 32 and s[k] != 95 ==> r[k] == s[k])\n    decreases len(s) - i\n  {\n    if s[i] == 32 {\n      r := r + [95];\n    } else {\n      if s[i] == 95 {\n       r := r + [32];\n     } else {\n       r := r + [s[i]];\n     }\n    }\n    i := i + 1;\n  }\n}\n```",
+ "done_reason": "length"
+}

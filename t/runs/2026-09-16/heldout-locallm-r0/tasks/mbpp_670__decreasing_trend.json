@@ -1,0 +1,73 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_670__decreasing_trend",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 4
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "int": 13
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 4
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "int": 13
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

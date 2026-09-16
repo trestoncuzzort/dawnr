@@ -1,0 +1,319 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_107__count_Hexadecimal",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "var": "b"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "count_hex",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "var": "b"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "has_hex_letter",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "bool",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 16
+       }
+      ]
+     },
+     "then": {
+      "op": ">=",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 10
+       }
+      ]
+     },
+     "else": {
+      "op": "or",
+      "args": [
+       {
+        "call": {
+         "fun": "has_hex_letter",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 16
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "call": {
+         "fun": "has_hex_letter",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 16
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "count_hex",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "b",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "-",
+    "args": [
+     {
+      "var": "b"
+     },
+     {
+      "var": "a"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": ">",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "var": "b"
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "ite": {
+         "cond": {
+          "call": {
+           "fun": "has_hex_letter",
+           "args": [
+            {
+             "var": "a"
+            }
+           ]
+          }
+         },
+         "then": {
+          "int": 1
+         },
+         "else": {
+          "int": 0
+         }
+        }
+       },
+       {
+        "call": {
+         "fun": "count_hex",
+         "args": [
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "int": 1
+            }
+           ]
+          },
+          {
+           "var": "b"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "-",
+  "args": [
+   {
+    "var": "b"
+   },
+   {
+    "var": "a"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "ite": {
+           "cond": {
+            "call": {
+             "fun": "has_hex_letter",
+             "args": [
+              {
+               "var": "a"
+              }
+             ]
+            }
+           },
+           "then": {
+            "int": 1
+           },
+           "else": {
+            "int": 0
+           }
+          }
+         },
+         {
+          "call": {
+           "fun": "mbpp_107__count_Hexadecimal",
+           "args": [
+            {
+             "op": "+",
+             "args": [
+              {
+               "var": "a"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

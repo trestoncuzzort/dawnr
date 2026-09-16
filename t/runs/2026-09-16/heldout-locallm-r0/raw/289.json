@@ -1,0 +1,22 @@
+{
+ "task_id": 289,
+ "fn": "odd_Days",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to calculate the number of odd days in a given year.\nSignature: odd_Days(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_509__average_Odd(n: int) returns (r: int)\n  requires n >= 1\n  requires n % 2 == 1\n  ensures 2 * r == n + 1\n{\n  r := (n + 1) / 2;\n}\n```",
+ "done_reason": "length"
+}

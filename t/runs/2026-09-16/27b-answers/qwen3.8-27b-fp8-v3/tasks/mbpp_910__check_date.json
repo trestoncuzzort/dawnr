@@ -1,0 +1,605 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_910__check_date",
+ "params": [
+  {
+   "name": "day",
+   "type": "int"
+  },
+  {
+   "name": "month",
+   "type": "int"
+  },
+  {
+   "name": "year",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "<=",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 12
+        }
+       ]
+      },
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "day"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "<=",
+       "args": [
+        {
+         "var": "day"
+        },
+        {
+         "int": 31
+        }
+       ]
+      },
+      {
+       "op": "implies",
+       "args": [
+        {
+         "op": "or",
+         "args": [
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 1
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 3
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 5
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 7
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 8
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 10
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 11
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "<=",
+         "args": [
+          {
+           "var": "day"
+          },
+          {
+           "int": 31
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "implies",
+       "args": [
+        {
+         "op": "or",
+         "args": [
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 4
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 6
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 9
+            }
+           ]
+          },
+          {
+           "op": "==",
+           "args": [
+            {
+             "var": "month"
+            },
+            {
+             "int": 11
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "<=",
+         "args": [
+          {
+           "var": "day"
+          },
+          {
+           "int": 30
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "implies",
+       "args": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "month"
+          },
+          {
+           "int": 2
+          }
+         ]
+        },
+        {
+         "ite": {
+          "cond": {
+           "op": "or",
+           "args": [
+            {
+             "op": "and",
+             "args": [
+              {
+               "op": "==",
+               "args": [
+                {
+                 "op": "mod",
+                 "args": [
+                  {
+                   "var": "year"
+                  },
+                  {
+                   "int": 4
+                  }
+                 ]
+                },
+                {
+                 "int": 0
+                }
+               ]
+              },
+              {
+               "op": "!=",
+               "args": [
+                {
+                 "op": "mod",
+                 "args": [
+                  {
+                   "var": "year"
+                  },
+                  {
+                   "int": 100
+                  }
+                 ]
+                },
+                {
+                 "int": 0
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "op": "==",
+             "args": [
+              {
+               "op": "mod",
+               "args": [
+                {
+                 "var": "year"
+                },
+                {
+                 "int": 400
+                }
+               ]
+              },
+              {
+               "int": 0
+              }
+             ]
+            }
+           ]
+          },
+          "then": {
+           "op": "<=",
+           "args": [
+            {
+             "var": "day"
+            },
+            {
+             "int": 29
+            }
+           ]
+          },
+          "else": {
+           "op": "<=",
+           "args": [
+            {
+             "var": "day"
+            },
+            {
+             "int": 28
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "is_leap",
+    "type": "bool",
+    "init": {
+     "op": "or",
+     "args": [
+      {
+       "op": "and",
+       "args": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "mod",
+           "args": [
+            {
+             "var": "year"
+            },
+            {
+             "int": 4
+            }
+           ]
+          },
+          {
+           "int": 0
+          }
+         ]
+        },
+        {
+         "op": "!=",
+         "args": [
+          {
+           "op": "mod",
+           "args": [
+            {
+             "var": "year"
+            },
+            {
+             "int": 100
+            }
+           ]
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "op": "mod",
+         "args": [
+          {
+           "var": "year"
+          },
+          {
+           "int": 400
+          }
+         ]
+        },
+        {
+         "int": 0
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "max_day",
+    "type": "int",
+    "init": {
+     "int": 31
+    }
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": "or",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 4
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 6
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 9
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 11
+        }
+       ]
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "max_day",
+       {
+        "int": 30
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "month"
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       "then": [
+        {
+         "if": {
+          "cond": {
+           "var": "is_leap"
+          },
+          "then": [
+           {
+            "assign": [
+             "max_day",
+             {
+              "int": 29
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "assign": [
+             "max_day",
+             {
+              "int": 28
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ],
+       "else": []
+      }
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "<=",
+       "args": [
+        {
+         "var": "month"
+        },
+        {
+         "int": 12
+        }
+       ]
+      },
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "day"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "<=",
+       "args": [
+        {
+         "var": "day"
+        },
+        {
+         "var": "max_day"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

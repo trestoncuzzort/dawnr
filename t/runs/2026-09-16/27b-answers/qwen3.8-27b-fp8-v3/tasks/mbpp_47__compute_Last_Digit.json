@@ -1,0 +1,417 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_47__compute_Last_Digit",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "var": "a"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 10
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "product_last_digit",
+      "args": [
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       {
+        "var": "b"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "product_last_digit",
+   "params": [
+    {
+     "name": "lo",
+     "type": "int"
+    },
+    {
+     "name": "hi",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "-",
+    "args": [
+     {
+      "var": "hi"
+     },
+     {
+      "var": "lo"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": ">",
+      "args": [
+       {
+        "var": "lo"
+       },
+       {
+        "var": "hi"
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "mod",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "product_last_digit",
+           "args": [
+            {
+             "op": "+",
+             "args": [
+              {
+               "var": "lo"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "var": "hi"
+            }
+           ]
+          }
+         },
+         {
+          "var": "lo"
+         }
+        ]
+       },
+       {
+        "int": 10
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "op": "+",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": "<=",
+        "args": [
+         {
+          "int": 0
+         },
+         {
+          "var": "r"
+         }
+        ]
+       },
+       {
+        "op": "<",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "b"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "+",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "body": [
+     {
+      "var": {
+       "name": "prod",
+       "type": "int",
+       "init": {
+        "op": "*",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "d",
+       "type": "int",
+       "init": {
+        "var": "prod"
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "d"
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "body": [
+        {
+         "assign": [
+          "d",
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "d"
+            },
+            {
+             "int": 10
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "var": "d"
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

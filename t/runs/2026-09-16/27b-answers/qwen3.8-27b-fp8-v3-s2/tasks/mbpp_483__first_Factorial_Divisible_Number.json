@@ -1,0 +1,322 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_483__first_Factorial_Divisible_Number",
+ "params": [
+  {
+   "name": "x",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "x"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "x"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "mod",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "x"
+        },
+        {
+         "var": "r"
+        }
+       ]
+      },
+      {
+       "var": "x"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "or",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    {
+     "op": "!=",
+     "args": [
+      {
+       "op": "mod",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "x"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "var": "x"
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "fact",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "!=",
+     "args": [
+      {
+       "op": "mod",
+       "args": [
+        {
+         "var": "fact"
+        },
+        {
+         "var": "x"
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "fact"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     {
+      "op": "!=",
+      "args": [
+       {
+        "op": "mod",
+        "args": [
+         {
+          "var": "fact"
+         },
+         {
+          "var": "x"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "forall": {
+       "var": "k",
+       "lo": {
+        "int": 1
+       },
+       "hi": {
+        "var": "r"
+       },
+       "body": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "k"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      }
+     }
+    ],
+    "decreases": {
+     "int": 0
+    },
+    "body": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "fact",
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "fact"
+         },
+         {
+          "var": "r"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "task_id": 675,
+ "fn": "sum_nums",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to add two integers. however, if the sum is between the given range it will return 20.\nSignature: sum_nums(int, int, int, int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_1276__sum_list(a: int, b: int, c: int) returns (r: int)\n  ensures r == a + b + c\n{\n  r := a + b + c;\n}\n```",
+ "done_reason": "length"
+}

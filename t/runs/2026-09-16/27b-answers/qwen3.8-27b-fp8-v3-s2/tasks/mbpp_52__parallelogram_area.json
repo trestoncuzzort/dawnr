@@ -1,0 +1,60 @@
+{
+ "t": 0,
+ "name": "mbpp_52__parallelogram_area",
+ "params": [
+  {
+   "name": "base",
+   "type": "int"
+  },
+  {
+   "name": "height",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "base"
+      },
+      {
+       "var": "height"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "base"
+      },
+      {
+       "var": "height"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

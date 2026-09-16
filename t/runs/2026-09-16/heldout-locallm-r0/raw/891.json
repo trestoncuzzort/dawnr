@@ -1,0 +1,22 @@
+{
+ "task_id": 891,
+ "fn": "same_Length",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the given two numbers have same number of digits or not.\nSignature: same_Length(int, int) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_581__sum_list(a: int, b: int) returns (r: int)\n  requires b > 0\n  ensures r == b * r.0 + r.1\n  ensures 0 <= r.1 and r.1 < b\n{\n  var c: int := 0;\n  var r_v: int := 0;\n  c := 0;\n  r_v := a;\n  while r_v >= b\n    invariant a == b * c + r_v and r_v >= 0 and b > 0\n    decreases r_v\n  {\n    c := c + 1;\n    r_v := r_v - b;\n  }\n  r := (c, r_v);\n}\n```",
+ "done_reason": "length"
+}

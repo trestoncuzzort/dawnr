@@ -1,0 +1,22 @@
+{
+ "task_id": 559,
+ "fn": "max_sub_array_sum",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the largest sum of contiguous subarray in the given array.\nSignature: max_sub_array_sum(seq, int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_59__surface_Area(a: int, l: int) returns (r: int)\n  ensures r == a * a + 2 * a * l\n{\n  r := a * a + 2 * a * l;\n}\n```",
+ "done_reason": "length"
+}

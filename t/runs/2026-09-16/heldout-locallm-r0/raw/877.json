@@ -1,0 +1,22 @@
+{
+ "task_id": 877,
+ "fn": "sort_String",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to sort the given string.\nSignature: sort_String(seq) -> seq\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_732__surface_Area(a: seq) returns (r: seq)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(a)) . r[i] == a[i] + b[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == a[k] + b[k]\n    decreases len(a) - i\n  {\n    r := r + [a[i] + b[i]];\n    i := i + 1;\n  }\n}\n```",
+ "done_reason": "length"
+}

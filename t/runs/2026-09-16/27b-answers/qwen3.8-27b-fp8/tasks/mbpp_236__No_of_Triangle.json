@@ -1,0 +1,679 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_236__No_of_Triangle",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "k",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "k"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": ">",
+     "args": [
+      {
+       "var": "k"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": -1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": "<=",
+     "args": [
+      {
+       "var": "k"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "call": {
+          "fun": "tri",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "var": "k"
+               }
+              ]
+             },
+             {
+              "int": 1
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "ite": {
+          "cond": {
+           "op": ">=",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "op": "*",
+             "args": [
+              {
+               "int": 2
+              },
+              {
+               "var": "k"
+              }
+             ]
+            }
+           ]
+          },
+          "then": {
+           "call": {
+            "fun": "tri",
+            "args": [
+             {
+              "op": "+",
+              "args": [
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "op": "*",
+                  "args": [
+                   {
+                    "int": 2
+                   },
+                   {
+                    "var": "k"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          },
+          "else": {
+           "int": 0
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "tri",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "a"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "div",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "op": "+",
+          "args": [
+           {
+            "var": "a"
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "int": 2
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "k"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": -1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "var": {
+       "name": "a",
+       "type": "int",
+       "init": {
+        "op": "+",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "var": "k"
+           }
+          ]
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "b",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "if": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "int": 2
+           },
+           {
+            "var": "k"
+           }
+          ]
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "b",
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "op": "*",
+               "args": [
+                {
+                 "int": 2
+                },
+                {
+                 "var": "k"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "b",
+          {
+           "int": 0
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "var": {
+       "name": "sum",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "i",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "a"
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "sum"
+          },
+          {
+           "op": "div",
+           "args": [
+            {
+             "op": "*",
+             "args": [
+              {
+               "var": "i"
+              },
+              {
+               "op": "+",
+               "args": [
+                {
+                 "var": "i"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "and",
+         "args": [
+          {
+           "op": ">=",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          {
+           "op": "<=",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "var": "a"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       "body": [
+        {
+         "assign": [
+          "i",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "assign": [
+          "sum",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "sum"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "var": {
+       "name": "sum2",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "j",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "j"
+         },
+         {
+          "var": "b"
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "sum2"
+          },
+          {
+           "op": "div",
+           "args": [
+            {
+             "op": "*",
+             "args": [
+              {
+               "var": "j"
+              },
+              {
+               "op": "+",
+               "args": [
+                {
+                 "var": "j"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "and",
+         "args": [
+          {
+           "op": ">=",
+           "args": [
+            {
+             "var": "j"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          {
+           "op": "<=",
+           "args": [
+            {
+             "var": "j"
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "b"
+         },
+         {
+          "var": "j"
+         }
+        ]
+       },
+       "body": [
+        {
+         "assign": [
+          "j",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "j"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "assign": [
+          "sum2",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "sum2"
+            },
+            {
+             "var": "j"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "sum"
+         },
+         {
+          "var": "sum2"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

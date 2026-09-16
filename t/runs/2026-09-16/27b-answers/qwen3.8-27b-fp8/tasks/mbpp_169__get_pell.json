@@ -1,0 +1,281 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_169__get_pell",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "pell",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "pell",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "op": "+",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "int": 2
+           },
+           {
+            "call": {
+             "fun": "pell",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "pell",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 2
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 1
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "var": {
+          "name": "a",
+          "type": "int",
+          "init": {
+           "call": {
+            "fun": "mbpp_169__get_pell",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          }
+         }
+        },
+        {
+         "var": {
+          "name": "b",
+          "type": "int",
+          "init": {
+           "call": {
+            "fun": "mbpp_169__get_pell",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 2
+               }
+              ]
+             }
+            ]
+           }
+          }
+         }
+        },
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "*",
+             "args": [
+              {
+               "int": 2
+              },
+              {
+               "var": "a"
+              }
+             ]
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

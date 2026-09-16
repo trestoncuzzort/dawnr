@@ -1,0 +1,22 @@
+{
+ "task_id": 887,
+ "fn": "is_odd",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the given number is odd or not using bitwise operator.\nSignature: is_odd(int) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_732__dog_age(n: int) returns (r: int)\n  ensures r == 4 * n - 2 * n\n{\n  r := 4 * n + 13;\n}\n```",
+ "done_reason": "length"
+}

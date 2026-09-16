@@ -1,0 +1,541 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_934__dealnnoy_num",
+ "params": [
+  {
+   "name": "m",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "m"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "delannoy",
+      "args": [
+       {
+        "var": "m"
+       },
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "delannoy",
+   "params": [
+    {
+     "name": "m",
+     "type": "int"
+    },
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "m"
+     },
+     {
+      "var": "n"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "and",
+      "args": [
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 0
+         }
+        ]
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "call": {
+         "fun": "delannoy",
+         "args": [
+          {
+           "int": 0
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         "then": {
+          "call": {
+           "fun": "delannoy",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "m"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "int": 0
+            }
+           ]
+          }
+         },
+         "else": {
+          "op": "+",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "call": {
+               "fun": "delannoy",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "m"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "var": "n"
+                }
+               ]
+              }
+             },
+             {
+              "call": {
+               "fun": "delannoy",
+               "args": [
+                {
+                 "var": "m"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "delannoy",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "m"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "m"
+   },
+   {
+    "var": "n"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "m"
+        },
+        {
+         "int": 0
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 0
+        }
+       ]
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "call": {
+            "fun": "mbpp_934__dealnnoy_num",
+            "args": [
+             {
+              "int": 0
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "call": {
+               "fun": "mbpp_934__dealnnoy_num",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "m"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "int": 0
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "var": {
+             "name": "a",
+             "type": "int",
+             "init": {
+              "call": {
+               "fun": "mbpp_934__dealnnoy_num",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "m"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "var": "n"
+                }
+               ]
+              }
+             }
+            }
+           },
+           {
+            "var": {
+             "name": "b",
+             "type": "int",
+             "init": {
+              "call": {
+               "fun": "mbpp_934__dealnnoy_num",
+               "args": [
+                {
+                 "var": "m"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            }
+           },
+           {
+            "var": {
+             "name": "c",
+             "type": "int",
+             "init": {
+              "call": {
+               "fun": "mbpp_934__dealnnoy_num",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "m"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            }
+           },
+           {
+            "assign": [
+             "r",
+             {
+              "op": "+",
+              "args": [
+               {
+                "op": "+",
+                "args": [
+                 {
+                  "var": "a"
+                 },
+                 {
+                  "var": "b"
+                 }
+                ]
+               },
+               {
+                "var": "c"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,363 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_540__find_Diff",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    {
+     "var": "n"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "call": {
+        "fun": "maxfreq",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      },
+      {
+       "call": {
+        "fun": "minfreq",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "maxfreq",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "forall": {
+         "var": "i",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "op": "len",
+          "args": [
+           {
+            "var": "s"
+           }
+          ]
+         },
+         "body": {
+          "forall": {
+           "var": "j",
+           "lo": {
+            "int": 0
+           },
+           "hi": {
+            "op": "len",
+            "args": [
+             {
+              "var": "s"
+             }
+            ]
+           },
+           "body": {
+            "op": "implies",
+            "args": [
+             {
+              "op": "==",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               },
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "i"
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "op": "==",
+              "args": [
+               {
+                "var": "j"
+               },
+               {
+                "var": "i"
+               }
+              ]
+             }
+            ]
+           }
+          }
+         }
+        }
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "call": {
+         "fun": "maxfreq",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "minfreq",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "forall": {
+         "var": "i",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "op": "len",
+          "args": [
+           {
+            "var": "s"
+           }
+          ]
+         },
+         "body": {
+          "forall": {
+           "var": "j",
+           "lo": {
+            "int": 0
+           },
+           "hi": {
+            "op": "len",
+            "args": [
+             {
+              "var": "s"
+             }
+            ]
+           },
+           "body": {
+            "op": "implies",
+            "args": [
+             {
+              "op": "==",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               },
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "i"
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "op": "==",
+              "args": [
+               {
+                "var": "j"
+               },
+               {
+                "var": "i"
+               }
+              ]
+             }
+            ]
+           }
+          }
+         }
+        }
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "call": {
+         "fun": "minfreq",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  }
+ ]
+}

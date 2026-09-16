@@ -1,0 +1,22 @@
+{
+ "task_id": 322,
+ "fn": "position_min",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find all index positions of the minimum values in a given list.\nSignature: position_min(seq) -> seq\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_190__perimeter(side: int) returns (r: int)\n  ensures r == 4 * side\n{\n  r := 4 * side;\n}\n```",
+ "done_reason": "length"
+}

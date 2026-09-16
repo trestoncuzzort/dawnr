@@ -1,0 +1,117 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_483__first_Factorial_Divisible_Number",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 3
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "n"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 3
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "n"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

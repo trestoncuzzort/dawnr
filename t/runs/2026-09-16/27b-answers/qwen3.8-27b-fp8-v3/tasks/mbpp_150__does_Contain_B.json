@@ -1,0 +1,430 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_150__does_Contain_B",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  },
+  {
+   "name": "d",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "or",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "and",
+       "args": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "d"
+          },
+          {
+           "int": 0
+          }
+         ]
+        },
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": ">",
+       "args": [
+        {
+         "var": "d"
+        },
+        {
+         "int": 0
+        }
+       ]
+      },
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "var": "a"
+        }
+       ]
+      },
+      {
+       "call": {
+        "fun": "is_mult",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "b"
+           },
+           {
+            "var": "a"
+           }
+          ]
+         },
+         {
+          "var": "d"
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "<",
+       "args": [
+        {
+         "var": "d"
+        },
+        {
+         "int": 0
+        }
+       ]
+      },
+      {
+       "op": "<=",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "var": "a"
+        }
+       ]
+      },
+      {
+       "call": {
+        "fun": "is_mult",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "a"
+           },
+           {
+            "var": "b"
+           }
+          ]
+         },
+         {
+          "op": "neg",
+          "args": [
+           {
+            "var": "d"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "is_mult",
+   "params": [
+    {
+     "name": "x",
+     "type": "int"
+    },
+    {
+     "name": "y",
+     "type": "int"
+    }
+   ],
+   "result": "bool",
+   "decreases": {
+    "var": "x"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "y"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "bool": false
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "x"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "bool": false
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "var": "x"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         "then": {
+          "bool": true
+         },
+         "else": {
+          "call": {
+           "fun": "is_mult",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "x"
+              },
+              {
+               "var": "y"
+              }
+             ]
+            },
+            {
+             "var": "y"
+            }
+           ]
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "d"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "var": "b"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "if": {
+          "cond": {
+           "op": ">=",
+           "args": [
+            {
+             "var": "b"
+            },
+            {
+             "var": "a"
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "call": {
+               "fun": "is_mult",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "b"
+                  },
+                  {
+                   "var": "a"
+                  }
+                 ]
+                },
+                {
+                 "var": "d"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "assign": [
+             "r",
+             {
+              "bool": false
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "<=",
+           "args": [
+            {
+             "var": "b"
+            },
+            {
+             "var": "a"
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "call": {
+               "fun": "is_mult",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "a"
+                  },
+                  {
+                   "var": "b"
+                  }
+                 ]
+                },
+                {
+                 "op": "neg",
+                 "args": [
+                  {
+                   "var": "d"
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "assign": [
+             "r",
+             {
+              "bool": false
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

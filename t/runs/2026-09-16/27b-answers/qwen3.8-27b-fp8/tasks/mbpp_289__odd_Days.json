@@ -1,0 +1,181 @@
+{
+ "t": 0,
+ "name": "mbpp_289__odd_Days",
+ "params": [
+  {
+   "name": "year",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "year"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "or",
+   "args": [
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "int": 5
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "year"
+        },
+        {
+         "int": 100
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "int": 6
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "year"
+        },
+        {
+         "int": 50
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "int": 2
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "year"
+        },
+        {
+         "int": 75
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "year"
+      },
+      {
+       "int": 100
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 5
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "year"
+         },
+         {
+          "int": 50
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 6
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 2
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

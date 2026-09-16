@@ -1,0 +1,449 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_47__compute_Last_Digit",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "var": "a"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 10
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "last_digit_product",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "var": "b"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "last_digit_product",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "b",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "-",
+    "args": [
+     {
+      "var": "b"
+     },
+     {
+      "var": "a"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "b"
+       },
+       {
+        "var": "a"
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "mod",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "last_digit_product",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "b"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "b"
+           },
+           {
+            "int": 10
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "int": 10
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "op": "+",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "<",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "call": {
+         "fun": "last_digit_product",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "+",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "body": [
+     {
+      "var": {
+       "name": "d",
+       "type": "int",
+       "init": {
+        "var": "i"
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "d"
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "var": "d"
+       },
+       "body": [
+        {
+         "assign": [
+          "d",
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "d"
+            },
+            {
+             "int": 10
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "var": {
+       "name": "p",
+       "type": "int",
+       "init": {
+        "op": "*",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "var": "d"
+         }
+        ]
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "p"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "p"
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "var": "p"
+       },
+       "body": [
+        {
+         "assign": [
+          "p",
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "p"
+            },
+            {
+             "int": 10
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "var": "p"
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

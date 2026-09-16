@@ -1,0 +1,22 @@
+{
+ "task_id": 283,
+ "fn": "validate",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the frequency of each digit is less than or equal to the digit itself.\nSignature: validate(int) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate recursion\ntask mbpp_89__cuboid(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}\n```",
+ "done_reason": "length"
+}

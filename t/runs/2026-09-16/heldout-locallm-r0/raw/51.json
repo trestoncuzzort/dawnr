@@ -1,0 +1,22 @@
+{
+ "task_id": 51,
+ "fn": "check_equilateral",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to print check if the triangle is equilateral or not.\nSignature: check_equilateral(int, int, int) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_ == c + k\n{\n  r := c + k;\n}\n```",
+ "done_reason": "length"
+}

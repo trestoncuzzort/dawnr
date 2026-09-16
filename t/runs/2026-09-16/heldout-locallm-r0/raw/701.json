@@ -1,0 +1,22 @@
+{
+ "task_id": 701,
+ "fn": "equilibrium_index",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the equilibrium index of the given array.\nSignature: equilibrium_index(seq) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_19__lateralsurface_cuboid(l: int, w: int, h: int) returns (r: int)\n  ensures r == 2 * (l + w) * h\n{\n  r := 2 * (l + w) * h;\n}\n```",
+ "done_reason": "length"
+}

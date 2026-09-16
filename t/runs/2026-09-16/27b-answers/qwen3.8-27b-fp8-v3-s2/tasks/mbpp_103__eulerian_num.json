@@ -1,0 +1,451 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_103__eulerian_num",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "m",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "m"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<",
+   "args": [
+    {
+     "var": "m"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "en",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "var": "m"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "en",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    },
+    {
+     "name": "m",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "n"
+     },
+     {
+      "var": "m"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "int": 0
+       }
+      }
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "op": "+",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "-",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "var": "m"
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "en",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "m"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "var": "m"
+             },
+             {
+              "int": 1
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "en",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "var": "m"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "n"
+   },
+   {
+    "var": "m"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 1
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 0
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "m"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 1
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "var": {
+          "name": "a",
+          "type": "int",
+          "init": {
+           "call": {
+            "fun": "mbpp_103__eulerian_num",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "m"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          }
+         }
+        },
+        {
+         "var": {
+          "name": "b",
+          "type": "int",
+          "init": {
+           "call": {
+            "fun": "mbpp_103__eulerian_num",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "var": "m"
+             }
+            ]
+           }
+          }
+         }
+        },
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "*",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "var": "m"
+                }
+               ]
+              },
+              {
+               "var": "a"
+              }
+             ]
+            },
+            {
+             "op": "*",
+             "args": [
+              {
+               "op": "+",
+               "args": [
+                {
+                 "var": "m"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "var": "b"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

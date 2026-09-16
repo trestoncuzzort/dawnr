@@ -1,0 +1,92 @@
+{
+ "t": 0,
+ "name": "mbpp_112__perimeter",
+ "params": [
+  {
+   "name": "r",
+   "type": "int"
+  },
+  {
+   "name": "h",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "res",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "res"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "r"
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "h"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "res",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "r"
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "var": "h"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

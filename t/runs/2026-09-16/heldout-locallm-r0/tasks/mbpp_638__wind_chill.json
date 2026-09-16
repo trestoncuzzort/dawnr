@@ -1,0 +1,80 @@
+{
+ "t": 0,
+ "name": "mbpp_638__wind_chill",
+ "params": [
+  {
+   "name": "l",
+   "type": "int"
+  },
+  {
+   "name": "w",
+   "type": "int"
+  },
+  {
+   "name": "h",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "l"
+        },
+        {
+         "var": "w"
+        }
+       ]
+      },
+      {
+       "var": "h"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "l"
+        },
+        {
+         "var": "w"
+        }
+       ]
+      },
+      {
+       "var": "h"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

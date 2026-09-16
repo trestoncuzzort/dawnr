@@ -1,0 +1,73 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_687__recur_gcd",
+ "params": [
+  {
+   "name": "length",
+   "type": "int"
+  },
+  {
+   "name": "width",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "length"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "length"
+      },
+      {
+       "var": "width"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "length"
+      },
+      {
+       "var": "width"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

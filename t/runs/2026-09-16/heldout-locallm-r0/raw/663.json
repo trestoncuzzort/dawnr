@@ -1,0 +1,22 @@
+{
+ "task_id": 663,
+ "fn": "find_max_val",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the largest possible value of k such that k modulo x is y.\nSignature: find_max_val(int, int, int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_369__lateralsurface_cuboid(l: int, w: int, h: int) returns (r: int)\n  ensures r == 2 * (l + w) * h\n{\n  r := 2 * (l + w) * h;\n}\n```",
+ "done_reason": "length"
+}

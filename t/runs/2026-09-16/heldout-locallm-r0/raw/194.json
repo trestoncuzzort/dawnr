@@ -1,0 +1,22 @@
+{
+ "task_id": 194,
+ "fn": "octal_To_Decimal",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to convert octal number to decimal number.\nSignature: octal_To_Decimal(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_89__closest_num(n: int) returns (r: int)\n  ensures r == n - 1\n{\n  r := n - 1;\n}\n```",
+ "done_reason": "length"
+}

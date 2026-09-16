@@ -1,0 +1,22 @@
+{
+ "task_id": 545,
+ "fn": "toggle_F_and_L_bits",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to toggle only first and last bits of a given number.\nSignature: toggle_F_and_L_bits(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate quantifiers\ntask mbpp_59__is_octagonal(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 3 * n * n - 2 * n\n{\n  r := 3 * n * n - 2 * n;\n}\n```",
+ "done_reason": "length"
+}

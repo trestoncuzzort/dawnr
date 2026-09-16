@@ -1,0 +1,528 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_392__get_max_sum",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "gms",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "gms",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 6
+       }
+      ]
+     },
+     "then": {
+      "var": "n"
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "op": "+",
+              "args": [
+               {
+                "call": {
+                 "fun": "gms",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "op": "div",
+                     "args": [
+                      {
+                       "var": "n"
+                      },
+                      {
+                       "int": 2
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               },
+               {
+                "call": {
+                 "fun": "gms",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "op": "div",
+                     "args": [
+                      {
+                       "var": "n"
+                      },
+                      {
+                       "int": 3
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             {
+              "call": {
+               "fun": "gms",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "op": "div",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "int": 4
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "gms",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "op": "div",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 5
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "var": "n"
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "call": {
+               "fun": "gms",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "op": "div",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "int": 2
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "call": {
+               "fun": "gms",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "op": "div",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "int": 3
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "gms",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "op": "div",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 4
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "gms",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "op": "div",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 5
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "var": "n"
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 6
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "n"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "var": {
+       "name": "s",
+       "type": "int",
+       "init": {
+        "op": "+",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "call": {
+               "fun": "mbpp_392__get_max_sum",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "op": "div",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "int": 2
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "call": {
+               "fun": "mbpp_392__get_max_sum",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "op": "div",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "int": 3
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "mbpp_392__get_max_sum",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "op": "div",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 4
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "mbpp_392__get_max_sum",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "op": "div",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 5
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     },
+     {
+      "if": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "s"
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "n"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

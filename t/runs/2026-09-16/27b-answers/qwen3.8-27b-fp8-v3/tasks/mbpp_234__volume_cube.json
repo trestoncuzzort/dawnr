@@ -1,0 +1,72 @@
+{
+ "t": 0,
+ "name": "mbpp_234__volume_cube",
+ "params": [
+  {
+   "name": "s",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

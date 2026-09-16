@@ -1,0 +1,223 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_610__remove_kth_element",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "k",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": "<=",
+     "args": [
+      {
+       "int": 0
+      },
+      {
+       "var": "k"
+      }
+     ]
+    },
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "k"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 0
+      },
+      {
+       "var": "k"
+      }
+     ]
+    },
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "int": 0
+      },
+      {
+       "var": "k"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "k"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "r"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "var": "k"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "int": 0
+        },
+        {
+         "var": "k"
+        }
+       ]
+      },
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "k"
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

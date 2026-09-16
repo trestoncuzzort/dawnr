@@ -1,0 +1,7 @@
+t 1
+task r2_s248(n: int) returns (hexNum: int)
+  requires n >= 0
+  ensures hexNum == n * (2 * n - 1)
+{
+  hexNum := n * (2 * n - 2);
+}

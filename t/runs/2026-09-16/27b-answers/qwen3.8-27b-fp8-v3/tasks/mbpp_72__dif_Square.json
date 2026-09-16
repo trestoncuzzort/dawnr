@@ -1,0 +1,56 @@
+{
+ "t": 0,
+ "name": "mbpp_72__dif_Square",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "!=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "!=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,69 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_228__all_Bits_Set_In_The_Given_Range",
+ "params": [
+  {
+   "name": "x",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "x"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "var": "x"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

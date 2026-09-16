@@ -1,0 +1,22 @@
+{
+ "task_id": 45,
+ "fn": "get_gcd",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the gcd of the given array elements.\nSignature: get_gcd(seq) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_509__gcd(a: int, b: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  ensures r == gcds(a, b)\n  decreases a + b\nspec fun gcds(a: int, b: int): int\n  decreases a + b\n= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a\n{\n  if a == 0 {\n    r := b;\n  } else {\n    if b == 0 {\n      r := a;\n    } else {\n      if a > b {\n        r := gcd(a - b, b);\n      } else {\n        if b > a {\n         r := gcd(a, b - a);\n        } else {\n         r := a;\n       }\n      }\n    }\n  }\n}\n```",
+ "done_reason": "length"
+}

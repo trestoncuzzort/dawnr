@@ -1,0 +1,200 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_239__get_total_number_of_sequences",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "m",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "m"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "count_seq",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "var": "m"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "count_seq",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    },
+    {
+     "name": "m",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "var": "m"
+     },
+     "else": {
+      "call": {
+       "fun": "count_seq",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        {
+         "op": "div",
+         "args": [
+          {
+           "var": "m"
+          },
+          {
+           "int": 2
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "m"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "call": {
+         "fun": "mbpp_239__get_total_number_of_sequences",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          },
+          {
+           "op": "div",
+           "args": [
+            {
+             "var": "m"
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,338 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_283__validate",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "forall": {
+      "var": "d",
+      "lo": {
+       "int": 0
+      },
+      "hi": {
+       "int": 10
+      },
+      "body": {
+       "op": "<=",
+       "args": [
+        {
+         "call": {
+          "fun": "count_digit",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "var": "d"
+           }
+          ]
+         }
+        },
+        {
+         "var": "d"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "count_digit",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    },
+    {
+     "name": "d",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 10
+           }
+          ]
+         },
+         {
+          "var": "d"
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "int": 1
+         },
+         {
+          "call": {
+           "fun": "count_digit",
+           "args": [
+            {
+             "op": "div",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 10
+              }
+             ]
+            },
+            {
+             "var": "d"
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "count_digit",
+         "args": [
+          {
+           "op": "div",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 10
+            }
+           ]
+          },
+          {
+           "var": "d"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "bool": true
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "int": 10
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "forall": {
+         "var": "d",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "<=",
+          "args": [
+           {
+            "call": {
+             "fun": "count_digit",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "var": "d"
+              }
+             ]
+            }
+           },
+           {
+            "var": "d"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "int": 10
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "call": {
+           "fun": "count_digit",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "bool": false
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

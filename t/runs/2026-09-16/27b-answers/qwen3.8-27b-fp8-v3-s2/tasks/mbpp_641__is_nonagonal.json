@@ -1,0 +1,219 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_641__is_nonagonal",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 9
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "int": 7
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "prod",
+    "type": "int",
+    "init": {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 9
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "int": 7
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "rem",
+    "type": "int",
+    "init": {
+     "var": "prod"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "rem"
+      },
+      {
+       "int": 2
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "rem"
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "int": 2
+           },
+           {
+            "var": "r"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "var": "prod"
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "rem"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "rem"
+    },
+    "body": [
+     {
+      "assign": [
+       "rem",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "rem"
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

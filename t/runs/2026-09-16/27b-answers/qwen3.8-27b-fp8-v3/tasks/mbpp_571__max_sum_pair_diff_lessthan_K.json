@@ -1,0 +1,652 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_571__max_sum_pair_diff_lessthan_K",
+ "params": [
+  {
+   "name": "arr",
+   "type": "seq"
+  },
+  {
+   "name": "k",
+   "type": "int"
+  },
+  {
+   "name": "K",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "k"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "K"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "max_pair_sum",
+      "args": [
+       {
+        "var": "arr"
+       },
+       {
+        "var": "k"
+       },
+       {
+        "var": "K"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "max_pair_sum",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    },
+    {
+     "name": "k",
+     "type": "int"
+    },
+    {
+     "name": "K",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "op": "len",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     },
+     {
+      "var": "k"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "or",
+      "args": [
+       {
+        "op": "<",
+        "args": [
+         {
+          "op": "len",
+          "args": [
+           {
+            "var": "s"
+           }
+          ]
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "k"
+         },
+         {
+          "int": 0
+         }
+        ]
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "s"
+                 }
+                ]
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "s"
+                 }
+                ]
+               },
+               {
+                "int": 2
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "var": "K"
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "call": {
+             "fun": "max_pair_sum",
+             "args": [
+              {
+               "op": "slice",
+               "args": [
+                {
+                 "var": "s"
+                },
+                {
+                 "int": 0
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "op": "len",
+                   "args": [
+                    {
+                     "var": "s"
+                    }
+                   ]
+                  },
+                  {
+                   "int": 2
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "k"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "var": "K"
+              }
+             ]
+            }
+           },
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "s"
+                 }
+                ]
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "op": "-",
+            "args": [
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             },
+             {
+              "int": 2
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "max_pair_sum",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 0
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "op": "len",
+               "args": [
+                {
+                 "var": "s"
+                }
+               ]
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "var": "k"
+          },
+          {
+           "var": "K"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "op": "len",
+    "args": [
+     {
+      "var": "arr"
+     }
+    ]
+   },
+   {
+    "var": "k"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "or",
+     "args": [
+      {
+       "op": "<",
+       "args": [
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "arr"
+          }
+         ]
+        },
+        {
+         "int": 2
+        }
+       ]
+      },
+      {
+       "op": "<=",
+       "args": [
+        {
+         "var": "k"
+        },
+        {
+         "int": 0
+        }
+       ]
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "arr"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "arr"
+                 }
+                ]
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "arr"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "arr"
+                 }
+                ]
+               },
+               {
+                "int": 2
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "var": "K"
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "+",
+             "args": [
+              {
+               "call": {
+                "fun": "mbpp_571__max_sum_pair_diff_lessthan_K",
+                "args": [
+                 {
+                  "op": "slice",
+                  "args": [
+                   {
+                    "var": "arr"
+                   },
+                   {
+                    "int": 0
+                   },
+                   {
+                    "op": "-",
+                    "args": [
+                     {
+                      "op": "len",
+                      "args": [
+                       {
+                        "var": "arr"
+                       }
+                      ]
+                     },
+                     {
+                      "int": 2
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "op": "-",
+                  "args": [
+                   {
+                    "var": "k"
+                   },
+                   {
+                    "int": 1
+                   }
+                  ]
+                 },
+                 {
+                  "var": "K"
+                 }
+                ]
+               }
+              },
+              {
+               "op": "at",
+               "args": [
+                {
+                 "var": "arr"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "op": "len",
+                   "args": [
+                    {
+                     "var": "arr"
+                    }
+                   ]
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "op": "at",
+             "args": [
+              {
+               "var": "arr"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "op": "len",
+                 "args": [
+                  {
+                   "var": "arr"
+                  }
+                 ]
+                },
+                {
+                 "int": 2
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "call": {
+            "fun": "mbpp_571__max_sum_pair_diff_lessthan_K",
+            "args": [
+             {
+              "op": "slice",
+              "args": [
+               {
+                "var": "arr"
+               },
+               {
+                "int": 0
+               },
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "op": "len",
+                  "args": [
+                   {
+                    "var": "arr"
+                   }
+                  ]
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "var": "k"
+             },
+             {
+              "var": "K"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

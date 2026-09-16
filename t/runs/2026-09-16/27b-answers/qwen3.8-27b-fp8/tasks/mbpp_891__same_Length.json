@@ -1,0 +1,336 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_891__same_Length",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "call": {
+        "fun": "num_digits",
+        "args": [
+         {
+          "var": "a"
+         }
+        ]
+       }
+      },
+      {
+       "call": {
+        "fun": "num_digits",
+        "args": [
+         {
+          "var": "b"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "num_digits",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "int": 1
+       },
+       {
+        "call": {
+         "fun": "num_digits",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 10
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "da",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "db",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "ta",
+    "type": "int",
+    "init": {
+     "var": "a"
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "tb",
+    "type": "int",
+    "init": {
+     "var": "b"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "ta"
+      },
+      {
+       "int": 10
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "da"
+       },
+       {
+        "call": {
+         "fun": "num_digits",
+         "args": [
+          {
+           "var": "ta"
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "ta"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "ta"
+    },
+    "body": [
+     {
+      "assign": [
+       "ta",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "ta"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "da",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "da"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "tb"
+      },
+      {
+       "int": 10
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "db"
+       },
+       {
+        "call": {
+         "fun": "num_digits",
+         "args": [
+          {
+           "var": "tb"
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "tb"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "tb"
+    },
+    "body": [
+     {
+      "assign": [
+       "tb",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "tb"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "db",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "db"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "da"
+      },
+      {
+       "var": "db"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

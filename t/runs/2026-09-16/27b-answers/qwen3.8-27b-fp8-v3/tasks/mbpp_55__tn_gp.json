@@ -1,0 +1,212 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_55__tn_gp",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "res",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "res"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "call": {
+        "fun": "rpow",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "rpow",
+   "params": [
+    {
+     "name": "b",
+     "type": "int"
+    },
+    {
+     "name": "e",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "e"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "e"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "*",
+      "args": [
+       {
+        "var": "b"
+       },
+       {
+        "call": {
+         "fun": "rpow",
+         "args": [
+          {
+           "var": "b"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "e"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "res",
+       {
+        "var": "a"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "res",
+       {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "mbpp_55__tn_gp",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "var": "r"
+            }
+           ]
+          }
+         },
+         {
+          "var": "r"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

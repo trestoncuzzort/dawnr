@@ -1,0 +1,192 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_502__find",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "op": "div",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": "<=",
+     "args": [
+      {
+       "int": 0
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "a"
+    }
+   ]
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "b"
+           },
+           {
+            "op": "div",
+            "args": [
+             {
+              "var": "a"
+             },
+             {
+              "var": "b"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "int": 0
+       },
+       {
+        "var": "r"
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "r"
+    },
+    "body": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "var": "b"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

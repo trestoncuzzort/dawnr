@@ -1,0 +1,104 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_101__kth_element",
+ "params": [
+  {
+   "name": "arr",
+   "type": "seq"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "k",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "int": 0
+    },
+    {
+     "var": "k"
+    }
+   ]
+  },
+  {
+   "op": "<",
+   "args": [
+    {
+     "var": "k"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "arr"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "arr"
+      },
+      {
+       "var": "k"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "arr"
+      },
+      {
+       "var": "k"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

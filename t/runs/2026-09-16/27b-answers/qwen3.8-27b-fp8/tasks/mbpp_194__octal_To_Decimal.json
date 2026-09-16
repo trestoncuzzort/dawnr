@@ -1,0 +1,354 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_194__octal_To_Decimal",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "or",
+   "args": [
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "*",
+           "args": [
+            {
+             "int": 2
+            },
+            {
+             "int": 8
+            }
+           ]
+          },
+          {
+           "int": 5
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 25
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "*",
+           "args": [
+            {
+             "int": 3
+            },
+            {
+             "int": 8
+            }
+           ]
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 30
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "*",
+           "args": [
+            {
+             "int": 4
+            },
+            {
+             "int": 8
+            }
+           ]
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 40
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "pos",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "temp",
+    "type": "int",
+    "init": {
+     "var": "n"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "temp"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "pos"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "temp"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "temp"
+    },
+    "body": [
+     {
+      "var": {
+       "name": "digit",
+       "type": "int",
+       "init": {
+        "op": "-",
+        "args": [
+         {
+          "var": "temp"
+         },
+         {
+          "op": "div",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "int": 8
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "temp"
+               },
+               {
+                "op": "mod",
+                "args": [
+                 {
+                  "var": "temp"
+                 },
+                 {
+                  "int": 8
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "int": 8
+           }
+          ]
+         }
+        ]
+       }
+      }
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "digit"
+           },
+           {
+            "var": "pos"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "pos",
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "pos"
+         },
+         {
+          "int": 8
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "temp",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "temp"
+         },
+         {
+          "var": "digit"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

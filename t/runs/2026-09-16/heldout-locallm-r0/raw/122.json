@@ -1,0 +1,22 @@
+{
+ "task_id": 122,
+ "fn": "smartNumber",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find n\u2019th smart number.\nSignature: smartNumber(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nProblem: Write a function to find nth smart number.\nSignature: smartNumber(int) -> int\nt 0\ntask mbpp_268__sum_list(n: int) returns (r: int)\n  ensures r == n - 1\n{\n  r := n - 1;\n}\n```",
+ "done_reason": "length"
+}

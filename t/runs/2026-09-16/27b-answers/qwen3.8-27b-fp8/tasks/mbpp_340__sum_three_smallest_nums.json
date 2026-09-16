@@ -1,0 +1,1453 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_340__sum_three_smallest_nums",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    {
+     "int": 3
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "sum3",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "sum3",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 3
+       }
+      ]
+     },
+     "then": {
+      "op": "+",
+      "args": [
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "op": "at",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "len",
+          "args": [
+           {
+            "var": "s"
+           }
+          ]
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "op": "len",
+            "args": [
+             {
+              "var": "s"
+             }
+            ]
+           },
+           {
+            "int": 1
+           }
+          ]
+         },
+         "then": {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         "else": {
+          "int": 0
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "m1",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "m2",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "m3",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "found1",
+    "type": "bool",
+    "init": {
+     "bool": false
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "found2",
+    "type": "bool",
+    "init": {
+     "bool": false
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "found3",
+    "type": "bool",
+    "init": {
+     "bool": false
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "op": "len",
+          "args": [
+           {
+            "var": "s"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "found1"
+       },
+       {
+        "op": ">",
+        "args": [
+         {
+          "var": "m1"
+         },
+         {
+          "int": 0
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "found2"
+       },
+       {
+        "op": "and",
+        "args": [
+         {
+          "op": ">",
+          "args": [
+           {
+            "var": "m2"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "op": ">=",
+          "args": [
+           {
+            "var": "m2"
+           },
+           {
+            "var": "m1"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "found3"
+       },
+       {
+        "op": "and",
+        "args": [
+         {
+          "op": ">",
+          "args": [
+           {
+            "var": "m3"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "op": ">=",
+          "args": [
+           {
+            "var": "m3"
+           },
+           {
+            "var": "m2"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "found1"
+       },
+       {
+        "forall": {
+         "var": "j",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "implies",
+          "args": [
+           {
+            "op": "<",
+            "args": [
+             {
+              "var": "j"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "implies",
+            "args": [
+             {
+              "op": ">",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               },
+               {
+                "int": 0
+               }
+              ]
+             },
+             {
+              "op": ">=",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               },
+               {
+                "var": "m1"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "found2"
+       },
+       {
+        "forall": {
+         "var": "j",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "implies",
+          "args": [
+           {
+            "op": "<",
+            "args": [
+             {
+              "var": "j"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "implies",
+            "args": [
+             {
+              "op": ">",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               },
+               {
+                "int": 0
+               }
+              ]
+             },
+             {
+              "op": "or",
+              "args": [
+               {
+                "op": ">=",
+                "args": [
+                 {
+                  "op": "at",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "var": "j"
+                   }
+                  ]
+                 },
+                 {
+                  "var": "m2"
+                 }
+                ]
+               },
+               {
+                "op": "==",
+                "args": [
+                 {
+                  "op": "at",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "var": "j"
+                   }
+                  ]
+                 },
+                 {
+                  "var": "m1"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "found3"
+       },
+       {
+        "forall": {
+         "var": "j",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "implies",
+          "args": [
+           {
+            "op": "<",
+            "args": [
+             {
+              "var": "j"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "implies",
+            "args": [
+             {
+              "op": ">",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               },
+               {
+                "int": 0
+               }
+              ]
+             },
+             {
+              "op": "or",
+              "args": [
+               {
+                "op": ">=",
+                "args": [
+                 {
+                  "op": "at",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "var": "j"
+                   }
+                  ]
+                 },
+                 {
+                  "var": "m3"
+                 }
+                ]
+               },
+               {
+                "op": "==",
+                "args": [
+                 {
+                  "op": "at",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "var": "j"
+                   }
+                  ]
+                 },
+                 {
+                  "var": "m2"
+                 }
+                ]
+               },
+               {
+                "op": "==",
+                "args": [
+                 {
+                  "op": "at",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "var": "j"
+                   }
+                  ]
+                 },
+                 {
+                  "var": "m1"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "i"
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "if": {
+          "cond": {
+           "op": "not",
+           "args": [
+            {
+             "var": "found1"
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "m1",
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "s"
+               },
+               {
+                "var": "i"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "assign": [
+             "found1",
+             {
+              "bool": true
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "if": {
+             "cond": {
+              "op": "<",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "s"
+                 },
+                 {
+                  "var": "i"
+                 }
+                ]
+               },
+               {
+                "var": "m1"
+               }
+              ]
+             },
+             "then": [
+              {
+               "if": {
+                "cond": {
+                 "var": "found3"
+                },
+                "then": [
+                 {
+                  "assign": [
+                   "m3",
+                   {
+                    "var": "m2"
+                   }
+                  ]
+                 }
+                ],
+                "else": []
+               }
+              },
+              {
+               "if": {
+                "cond": {
+                 "var": "found2"
+                },
+                "then": [
+                 {
+                  "assign": [
+                   "m2",
+                   {
+                    "var": "m1"
+                   }
+                  ]
+                 }
+                ],
+                "else": []
+               }
+              },
+              {
+               "assign": [
+                "m1",
+                {
+                 "op": "at",
+                 "args": [
+                  {
+                   "var": "s"
+                  },
+                  {
+                   "var": "i"
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             "else": [
+              {
+               "if": {
+                "cond": {
+                 "op": "==",
+                 "args": [
+                  {
+                   "op": "at",
+                   "args": [
+                    {
+                     "var": "s"
+                    },
+                    {
+                     "var": "i"
+                    }
+                   ]
+                  },
+                  {
+                   "var": "m1"
+                  }
+                 ]
+                },
+                "then": [
+                 {
+                  "if": {
+                   "cond": {
+                    "var": "found3"
+                   },
+                   "then": [
+                    {
+                     "if": {
+                      "cond": {
+                       "op": "<",
+                       "args": [
+                        {
+                         "op": "at",
+                         "args": [
+                          {
+                           "var": "s"
+                          },
+                          {
+                           "var": "i"
+                          }
+                         ]
+                        },
+                        {
+                         "var": "m3"
+                        }
+                       ]
+                      },
+                      "then": [
+                       {
+                        "assign": [
+                         "m3",
+                         {
+                          "var": "m2"
+                         }
+                        ]
+                       },
+                       {
+                        "assign": [
+                         "m2",
+                         {
+                          "op": "at",
+                          "args": [
+                           {
+                            "var": "s"
+                           },
+                           {
+                            "var": "i"
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ],
+                      "else": []
+                     }
+                    }
+                   ],
+                   "else": [
+                    {
+                     "if": {
+                      "cond": {
+                       "var": "found2"
+                      },
+                      "then": [
+                       {
+                        "if": {
+                         "cond": {
+                          "op": "<",
+                          "args": [
+                           {
+                            "op": "at",
+                            "args": [
+                             {
+                              "var": "s"
+                             },
+                             {
+                              "var": "i"
+                             }
+                            ]
+                           },
+                           {
+                            "var": "m2"
+                           }
+                          ]
+                         },
+                         "then": [
+                          {
+                           "assign": [
+                            "m2",
+                            {
+                             "op": "at",
+                             "args": [
+                              {
+                               "var": "s"
+                              },
+                              {
+                               "var": "i"
+                              }
+                             ]
+                            }
+                           ]
+                          }
+                         ],
+                         "else": []
+                        }
+                       }
+                      ],
+                      "else": [
+                       {
+                        "assign": [
+                         "m2",
+                         {
+                          "op": "at",
+                          "args": [
+                           {
+                            "var": "s"
+                           },
+                           {
+                            "var": "i"
+                           }
+                          ]
+                         }
+                        ]
+                       },
+                       {
+                        "assign": [
+                         "found2",
+                         {
+                          "bool": true
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ],
+                "else": [
+                 {
+                  "if": {
+                   "cond": {
+                    "var": "found2"
+                   },
+                   "then": [
+                    {
+                     "if": {
+                      "cond": {
+                       "op": "<",
+                       "args": [
+                        {
+                         "op": "at",
+                         "args": [
+                          {
+                           "var": "s"
+                          },
+                          {
+                           "var": "i"
+                          }
+                         ]
+                        },
+                        {
+                         "var": "m2"
+                        }
+                       ]
+                      },
+                      "then": [
+                       {
+                        "if": {
+                         "cond": {
+                          "var": "found3"
+                         },
+                         "then": [
+                          {
+                           "assign": [
+                            "m3",
+                            {
+                             "var": "m2"
+                            }
+                           ]
+                          }
+                         ],
+                         "else": []
+                        }
+                       },
+                       {
+                        "assign": [
+                         "m2",
+                         {
+                          "op": "at",
+                          "args": [
+                           {
+                            "var": "s"
+                           },
+                           {
+                            "var": "i"
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ],
+                      "else": [
+                       {
+                        "if": {
+                         "cond": {
+                          "op": "==",
+                          "args": [
+                           {
+                            "op": "at",
+                            "args": [
+                             {
+                              "var": "s"
+                             },
+                             {
+                              "var": "i"
+                             }
+                            ]
+                           },
+                           {
+                            "var": "m2"
+                           }
+                          ]
+                         },
+                         "then": [
+                          {
+                           "if": {
+                            "cond": {
+                             "var": "found3"
+                            },
+                            "then": [
+                             {
+                              "if": {
+                               "cond": {
+                                "op": "<",
+                                "args": [
+                                 {
+                                  "op": "at",
+                                  "args": [
+                                   {
+                                    "var": "s"
+                                   },
+                                   {
+                                    "var": "i"
+                                   }
+                                  ]
+                                 },
+                                 {
+                                  "var": "m3"
+                                 }
+                                ]
+                               },
+                               "then": [
+                                {
+                                 "assign": [
+                                  "m3",
+                                  {
+                                   "op": "at",
+                                   "args": [
+                                    {
+                                     "var": "s"
+                                    },
+                                    {
+                                     "var": "i"
+                                    }
+                                   ]
+                                  }
+                                 ]
+                                }
+                               ],
+                               "else": []
+                              }
+                             }
+                            ],
+                            "else": [
+                             {
+                              "assign": [
+                               "m3",
+                               {
+                                "op": "at",
+                                "args": [
+                                 {
+                                  "var": "s"
+                                 },
+                                 {
+                                  "var": "i"
+                                 }
+                                ]
+                               }
+                              ]
+                             },
+                             {
+                              "assign": [
+                               "found3",
+                               {
+                                "bool": true
+                               }
+                              ]
+                             }
+                            ]
+                           }
+                          }
+                         ],
+                         "else": [
+                          {
+                           "if": {
+                            "cond": {
+                             "var": "found3"
+                            },
+                            "then": [
+                             {
+                              "if": {
+                               "cond": {
+                                "op": "<",
+                                "args": [
+                                 {
+                                  "op": "at",
+                                  "args": [
+                                   {
+                                    "var": "s"
+                                   },
+                                   {
+                                    "var": "i"
+                                   }
+                                  ]
+                                 },
+                                 {
+                                  "var": "m3"
+                                 }
+                                ]
+                               },
+                               "then": [
+                                {
+                                 "assign": [
+                                  "m3",
+                                  {
+                                   "op": "at",
+                                   "args": [
+                                    {
+                                     "var": "s"
+                                    },
+                                    {
+                                     "var": "i"
+                                    }
+                                   ]
+                                  }
+                                 ]
+                                }
+                               ],
+                               "else": []
+                              }
+                             }
+                            ],
+                            "else": [
+                             {
+                              "assign": [
+                               "m3",
+                               {
+                                "op": "at",
+                                "args": [
+                                 {
+                                  "var": "s"
+                                 },
+                                 {
+                                  "var": "i"
+                                 }
+                                ]
+                               }
+                              ]
+                             },
+                             {
+                              "assign": [
+                               "found3",
+                               {
+                                "bool": true
+                               }
+                              ]
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ],
+                   "else": [
+                    {
+                     "assign": [
+                      "m2",
+                      {
+                       "op": "at",
+                       "args": [
+                        {
+                         "var": "s"
+                        },
+                        {
+                         "var": "i"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "assign": [
+                      "found2",
+                      {
+                       "bool": true
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "var": "found3"
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "var": "m1"
+           },
+           {
+            "var": "m2"
+           }
+          ]
+         },
+         {
+          "var": "m3"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "var": "found2"
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "m1"
+            },
+            {
+             "var": "m2"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "var": "found1"
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "var": "m1"
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "assign": [
+             "r",
+             {
+              "int": 0
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

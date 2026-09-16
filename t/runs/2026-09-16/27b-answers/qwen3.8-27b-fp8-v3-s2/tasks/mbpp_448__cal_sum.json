@@ -1,0 +1,596 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_448__cal_sum",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "perrin_sum",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "perrin",
+   "params": [
+    {
+     "name": "k",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "k"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "k"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 3
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "k"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": {
+        "int": 0
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "var": "k"
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         "then": {
+          "int": 2
+         },
+         "else": {
+          "op": "+",
+          "args": [
+           {
+            "call": {
+             "fun": "perrin",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "k"
+                },
+                {
+                 "int": 2
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "call": {
+             "fun": "perrin",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "k"
+                },
+                {
+                 "int": 3
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "perrin_sum",
+   "params": [
+    {
+     "name": "k",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "k"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<",
+      "args": [
+       {
+        "var": "k"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "call": {
+         "fun": "perrin",
+         "args": [
+          {
+           "var": "k"
+          }
+         ]
+        }
+       },
+       {
+        "call": {
+         "fun": "perrin_sum",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "k"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 3
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 3
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 2
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "int": 5
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "var": {
+             "name": "p0",
+             "type": "int",
+             "init": {
+              "int": 3
+             }
+            }
+           },
+           {
+            "var": {
+             "name": "p1",
+             "type": "int",
+             "init": {
+              "int": 0
+             }
+            }
+           },
+           {
+            "var": {
+             "name": "p2",
+             "type": "int",
+             "init": {
+              "int": 2
+             }
+            }
+           },
+           {
+            "assign": [
+             "r",
+             {
+              "int": 5
+             }
+            ]
+           },
+           {
+            "var": {
+             "name": "i",
+             "type": "int",
+             "init": {
+              "int": 3
+             }
+            }
+           },
+           {
+            "while": {
+             "cond": {
+              "op": "<=",
+              "args": [
+               {
+                "var": "i"
+               },
+               {
+                "var": "n"
+               }
+              ]
+             },
+             "invariants": [
+              {
+               "op": ">=",
+               "args": [
+                {
+                 "var": "i"
+                },
+                {
+                 "int": 3
+                }
+               ]
+              },
+              {
+               "op": "<=",
+               "args": [
+                {
+                 "var": "i"
+                },
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "op": "==",
+               "args": [
+                {
+                 "var": "p0"
+                },
+                {
+                 "call": {
+                  "fun": "perrin",
+                  "args": [
+                   {
+                    "op": "-",
+                    "args": [
+                     {
+                      "var": "i"
+                     },
+                     {
+                      "int": 3
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              },
+              {
+               "op": "==",
+               "args": [
+                {
+                 "var": "p1"
+                },
+                {
+                 "call": {
+                  "fun": "perrin",
+                  "args": [
+                   {
+                    "op": "-",
+                    "args": [
+                     {
+                      "var": "i"
+                     },
+                     {
+                      "int": 2
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              },
+              {
+               "op": "==",
+               "args": [
+                {
+                 "var": "p2"
+                },
+                {
+                 "call": {
+                  "fun": "perrin",
+                  "args": [
+                   {
+                    "op": "-",
+                    "args": [
+                     {
+                      "var": "i"
+                     },
+                     {
+                      "int": 1
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              },
+              {
+               "op": "==",
+               "args": [
+                {
+                 "var": "r"
+                },
+                {
+                 "call": {
+                  "fun": "perrin_sum",
+                  "args": [
+                   {
+                    "op": "-",
+                    "args": [
+                     {
+                      "var": "i"
+                     },
+                     {
+                      "int": 1
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ],
+             "decreases": {
+              "op": "-",
+              "args": [
+               {
+                "op": "+",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               },
+               {
+                "var": "i"
+               }
+              ]
+             },
+             "body": [
+              {
+               "var": {
+                "name": "next",
+                "type": "int",
+                "init": {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "p1"
+                  },
+                  {
+                   "var": "p0"
+                  }
+                 ]
+                }
+               }
+              },
+              {
+               "assign": [
+                "p0",
+                {
+                 "var": "p1"
+                }
+               ]
+              },
+              {
+               "assign": [
+                "p1",
+                {
+                 "var": "p2"
+                }
+               ]
+              },
+              {
+               "assign": [
+                "p2",
+                {
+                 "var": "next"
+                }
+               ]
+              },
+              {
+               "assign": [
+                "r",
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "r"
+                  },
+                  {
+                   "var": "next"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "assign": [
+                "i",
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "i"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

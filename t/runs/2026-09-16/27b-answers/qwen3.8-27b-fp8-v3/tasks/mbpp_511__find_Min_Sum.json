@@ -1,0 +1,1949 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_511__find_Min_Sum",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 2
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "min_sum_factors",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "min_sum_factors",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       "then": {
+        "int": 2
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 3
+           }
+          ]
+         },
+         "then": {
+          "int": 3
+         },
+         "else": {
+          "ite": {
+           "cond": {
+            "op": "==",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "int": 5
+             }
+            ]
+           },
+           "then": {
+            "int": 5
+           },
+           "else": {
+            "ite": {
+             "cond": {
+              "op": "==",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 7
+               }
+              ]
+             },
+             "then": {
+              "int": 7
+             },
+             "else": {
+              "ite": {
+               "cond": {
+                "op": "==",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 11
+                 }
+                ]
+               },
+               "then": {
+                "int": 11
+               },
+               "else": {
+                "ite": {
+                 "cond": {
+                  "op": "==",
+                  "args": [
+                   {
+                    "var": "n"
+                   },
+                   {
+                    "int": 13
+                   }
+                  ]
+                 },
+                 "then": {
+                  "int": 13
+                 },
+                 "else": {
+                  "ite": {
+                   "cond": {
+                    "op": "==",
+                    "args": [
+                     {
+                      "var": "n"
+                     },
+                     {
+                      "int": 17
+                     }
+                    ]
+                   },
+                   "then": {
+                    "int": 17
+                   },
+                   "else": {
+                    "ite": {
+                     "cond": {
+                      "op": "==",
+                      "args": [
+                       {
+                        "var": "n"
+                       },
+                       {
+                        "int": 19
+                       }
+                      ]
+                     },
+                     "then": {
+                      "int": 19
+                     },
+                     "else": {
+                      "ite": {
+                       "cond": {
+                        "op": "==",
+                        "args": [
+                         {
+                          "var": "n"
+                         },
+                         {
+                          "int": 23
+                         }
+                        ]
+                       },
+                       "then": {
+                        "int": 23
+                       },
+                       "else": {
+                        "ite": {
+                         "cond": {
+                          "op": "==",
+                          "args": [
+                           {
+                            "var": "n"
+                           },
+                           {
+                            "int": 29
+                           }
+                          ]
+                         },
+                         "then": {
+                          "int": 29
+                         },
+                         "else": {
+                          "ite": {
+                           "cond": {
+                            "op": "==",
+                            "args": [
+                             {
+                              "var": "n"
+                             },
+                             {
+                              "int": 31
+                             }
+                            ]
+                           },
+                           "then": {
+                            "int": 31
+                           },
+                           "else": {
+                            "ite": {
+                             "cond": {
+                              "op": "==",
+                              "args": [
+                               {
+                                "var": "n"
+                               },
+                               {
+                                "int": 37
+                               }
+                              ]
+                             },
+                             "then": {
+                              "int": 37
+                             },
+                             "else": {
+                              "ite": {
+                               "cond": {
+                                "op": "==",
+                                "args": [
+                                 {
+                                  "var": "n"
+                                 },
+                                 {
+                                  "int": 41
+                                 }
+                                ]
+                               },
+                               "then": {
+                                "int": 41
+                               },
+                               "else": {
+                                "ite": {
+                                 "cond": {
+                                  "op": "==",
+                                  "args": [
+                                   {
+                                    "var": "n"
+                                   },
+                                   {
+                                    "int": 43
+                                   }
+                                  ]
+                                 },
+                                 "then": {
+                                  "int": 43
+                                 },
+                                 "else": {
+                                  "ite": {
+                                   "cond": {
+                                    "op": "==",
+                                    "args": [
+                                     {
+                                      "var": "n"
+                                     },
+                                     {
+                                      "int": 47
+                                     }
+                                    ]
+                                   },
+                                   "then": {
+                                    "int": 47
+                                   },
+                                   "else": {
+                                    "ite": {
+                                     "cond": {
+                                      "op": "==",
+                                      "args": [
+                                       {
+                                        "var": "n"
+                                       },
+                                       {
+                                        "int": 53
+                                       }
+                                      ]
+                                     },
+                                     "then": {
+                                      "int": 53
+                                     },
+                                     "else": {
+                                      "ite": {
+                                       "cond": {
+                                        "op": "==",
+                                        "args": [
+                                         {
+                                          "var": "n"
+                                         },
+                                         {
+                                          "int": 59
+                                         }
+                                        ]
+                                       },
+                                       "then": {
+                                        "int": 59
+                                       },
+                                       "else": {
+                                        "ite": {
+                                         "cond": {
+                                          "op": "==",
+                                          "args": [
+                                           {
+                                            "var": "n"
+                                           },
+                                           {
+                                            "int": 61
+                                           }
+                                          ]
+                                         },
+                                         "then": {
+                                          "int": 61
+                                         },
+                                         "else": {
+                                          "ite": {
+                                           "cond": {
+                                            "op": "==",
+                                            "args": [
+                                             {
+                                              "var": "n"
+                                             },
+                                             {
+                                              "int": 67
+                                             }
+                                            ]
+                                           },
+                                           "then": {
+                                            "int": 67
+                                           },
+                                           "else": {
+                                            "ite": {
+                                             "cond": {
+                                              "op": "==",
+                                              "args": [
+                                               {
+                                                "var": "n"
+                                               },
+                                               {
+                                                "int": 71
+                                               }
+                                              ]
+                                             },
+                                             "then": {
+                                              "int": 71
+                                             },
+                                             "else": {
+                                              "ite": {
+                                               "cond": {
+                                                "op": "==",
+                                                "args": [
+                                                 {
+                                                  "var": "n"
+                                                 },
+                                                 {
+                                                  "int": 73
+                                                 }
+                                                ]
+                                               },
+                                               "then": {
+                                                "int": 73
+                                               },
+                                               "else": {
+                                                "ite": {
+                                                 "cond": {
+                                                  "op": "==",
+                                                  "args": [
+                                                   {
+                                                    "var": "n"
+                                                   },
+                                                   {
+                                                    "int": 79
+                                                   }
+                                                  ]
+                                                 },
+                                                 "then": {
+                                                  "int": 79
+                                                 },
+                                                 "else": {
+                                                  "ite": {
+                                                   "cond": {
+                                                    "op": "==",
+                                                    "args": [
+                                                     {
+                                                      "var": "n"
+                                                     },
+                                                     {
+                                                      "int": 83
+                                                     }
+                                                    ]
+                                                   },
+                                                   "then": {
+                                                    "int": 83
+                                                   },
+                                                   "else": {
+                                                    "ite": {
+                                                     "cond": {
+                                                      "op": "==",
+                                                      "args": [
+                                                       {
+                                                        "var": "n"
+                                                       },
+                                                       {
+                                                        "int": 89
+                                                       }
+                                                      ]
+                                                     },
+                                                     "then": {
+                                                      "int": 89
+                                                     },
+                                                     "else": {
+                                                      "ite": {
+                                                       "cond": {
+                                                        "op": "==",
+                                                        "args": [
+                                                         {
+                                                          "var": "n"
+                                                         },
+                                                         {
+                                                          "int": 97
+                                                         }
+                                                        ]
+                                                       },
+                                                       "then": {
+                                                        "int": 97
+                                                       },
+                                                       "else": {
+                                                        "ite": {
+                                                         "cond": {
+                                                          "op": "==",
+                                                          "args": [
+                                                           {
+                                                            "op": "mod",
+                                                            "args": [
+                                                             {
+                                                              "var": "n"
+                                                             },
+                                                             {
+                                                              "int": 2
+                                                             }
+                                                            ]
+                                                           },
+                                                           {
+                                                            "int": 0
+                                                           }
+                                                          ]
+                                                         },
+                                                         "then": {
+                                                          "op": "+",
+                                                          "args": [
+                                                           {
+                                                            "int": 2
+                                                           },
+                                                           {
+                                                            "call": {
+                                                             "fun": "min_sum_factors",
+                                                             "args": [
+                                                              {
+                                                               "op": "div",
+                                                               "args": [
+                                                                {
+                                                                 "var": "n"
+                                                                },
+                                                                {
+                                                                 "int": 2
+                                                                }
+                                                               ]
+                                                              }
+                                                             ]
+                                                            }
+                                                           }
+                                                          ]
+                                                         },
+                                                         "else": {
+                                                          "ite": {
+                                                           "cond": {
+                                                            "op": "==",
+                                                            "args": [
+                                                             {
+                                                              "op": "mod",
+                                                              "args": [
+                                                               {
+                                                                "var": "n"
+                                                               },
+                                                               {
+                                                                "int": 3
+                                                               }
+                                                              ]
+                                                             },
+                                                             {
+                                                              "int": 0
+                                                             }
+                                                            ]
+                                                           },
+                                                           "then": {
+                                                            "op": "+",
+                                                            "args": [
+                                                             {
+                                                              "int": 3
+                                                             },
+                                                             {
+                                                              "call": {
+                                                               "fun": "min_sum_factors",
+                                                               "args": [
+                                                                {
+                                                                 "op": "div",
+                                                                 "args": [
+                                                                  {
+                                                                   "var": "n"
+                                                                  },
+                                                                  {
+                                                                   "int": 3
+                                                                  }
+                                                                 ]
+                                                                }
+                                                               ]
+                                                              }
+                                                             }
+                                                            ]
+                                                           },
+                                                           "else": {
+                                                            "ite": {
+                                                             "cond": {
+                                                              "op": "==",
+                                                              "args": [
+                                                               {
+                                                                "op": "mod",
+                                                                "args": [
+                                                                 {
+                                                                  "var": "n"
+                                                                 },
+                                                                 {
+                                                                  "int": 5
+                                                                 }
+                                                                ]
+                                                               },
+                                                               {
+                                                                "int": 0
+                                                               }
+                                                              ]
+                                                             },
+                                                             "then": {
+                                                              "op": "+",
+                                                              "args": [
+                                                               {
+                                                                "int": 5
+                                                               },
+                                                               {
+                                                                "call": {
+                                                                 "fun": "min_sum_factors",
+                                                                 "args": [
+                                                                  {
+                                                                   "op": "div",
+                                                                   "args": [
+                                                                    {
+                                                                     "var": "n"
+                                                                    },
+                                                                    {
+                                                                     "int": 5
+                                                                    }
+                                                                   ]
+                                                                  }
+                                                                 ]
+                                                                }
+                                                               }
+                                                              ]
+                                                             },
+                                                             "else": {
+                                                              "ite": {
+                                                               "cond": {
+                                                                "op": "==",
+                                                                "args": [
+                                                                 {
+                                                                  "op": "mod",
+                                                                  "args": [
+                                                                   {
+                                                                    "var": "n"
+                                                                   },
+                                                                   {
+                                                                    "int": 7
+                                                                   }
+                                                                  ]
+                                                                 },
+                                                                 {
+                                                                  "int": 0
+                                                                 }
+                                                                ]
+                                                               },
+                                                               "then": {
+                                                                "op": "+",
+                                                                "args": [
+                                                                 {
+                                                                  "int": 7
+                                                                 },
+                                                                 {
+                                                                  "call": {
+                                                                   "fun": "min_sum_factors",
+                                                                   "args": [
+                                                                    {
+                                                                     "op": "div",
+                                                                     "args": [
+                                                                      {
+                                                                       "var": "n"
+                                                                      },
+                                                                      {
+                                                                       "int": 7
+                                                                      }
+                                                                     ]
+                                                                    }
+                                                                   ]
+                                                                  }
+                                                                 }
+                                                                ]
+                                                               },
+                                                               "else": {
+                                                                "ite": {
+                                                                 "cond": {
+                                                                  "op": "==",
+                                                                  "args": [
+                                                                   {
+                                                                    "op": "mod",
+                                                                    "args": [
+                                                                     {
+                                                                      "var": "n"
+                                                                     },
+                                                                     {
+                                                                      "int": 11
+                                                                     }
+                                                                    ]
+                                                                   },
+                                                                   {
+                                                                    "int": 0
+                                                                   }
+                                                                  ]
+                                                                 },
+                                                                 "then": {
+                                                                  "op": "+",
+                                                                  "args": [
+                                                                   {
+                                                                    "int": 11
+                                                                   },
+                                                                   {
+                                                                    "call": {
+                                                                     "fun": "min_sum_factors",
+                                                                     "args": [
+                                                                      {
+                                                                       "op": "div",
+                                                                       "args": [
+                                                                        {
+                                                                         "var": "n"
+                                                                        },
+                                                                        {
+                                                                         "int": 11
+                                                                        }
+                                                                       ]
+                                                                      }
+                                                                     ]
+                                                                    }
+                                                                   }
+                                                                  ]
+                                                                 },
+                                                                 "else": {
+                                                                  "ite": {
+                                                                   "cond": {
+                                                                    "op": "==",
+                                                                    "args": [
+                                                                     {
+                                                                      "op": "mod",
+                                                                      "args": [
+                                                                       {
+                                                                        "var": "n"
+                                                                       },
+                                                                       {
+                                                                        "int": 13
+                                                                       }
+                                                                      ]
+                                                                     },
+                                                                     {
+                                                                      "int": 0
+                                                                     }
+                                                                    ]
+                                                                   },
+                                                                   "then": {
+                                                                    "op": "+",
+                                                                    "args": [
+                                                                     {
+                                                                      "int": 13
+                                                                     },
+                                                                     {
+                                                                      "call": {
+                                                                       "fun": "min_sum_factors",
+                                                                       "args": [
+                                                                        {
+                                                                         "op": "div",
+                                                                         "args": [
+                                                                          {
+                                                                           "var": "n"
+                                                                          },
+                                                                          {
+                                                                           "int": 13
+                                                                          }
+                                                                         ]
+                                                                        }
+                                                                       ]
+                                                                      }
+                                                                     }
+                                                                    ]
+                                                                   },
+                                                                   "else": {
+                                                                    "ite": {
+                                                                     "cond": {
+                                                                      "op": "==",
+                                                                      "args": [
+                                                                       {
+                                                                        "op": "mod",
+                                                                        "args": [
+                                                                         {
+                                                                          "var": "n"
+                                                                         },
+                                                                         {
+                                                                          "int": 17
+                                                                         }
+                                                                        ]
+                                                                       },
+                                                                       {
+                                                                        "int": 0
+                                                                       }
+                                                                      ]
+                                                                     },
+                                                                     "then": {
+                                                                      "op": "+",
+                                                                      "args": [
+                                                                       {
+                                                                        "int": 17
+                                                                       },
+                                                                       {
+                                                                        "call": {
+                                                                         "fun": "min_sum_factors",
+                                                                         "args": [
+                                                                          {
+                                                                           "op": "div",
+                                                                           "args": [
+                                                                            {
+                                                                             "var": "n"
+                                                                            },
+                                                                            {
+                                                                             "int": 17
+                                                                            }
+                                                                           ]
+                                                                          }
+                                                                         ]
+                                                                        }
+                                                                       }
+                                                                      ]
+                                                                     },
+                                                                     "else": {
+                                                                      "ite": {
+                                                                       "cond": {
+                                                                        "op": "==",
+                                                                        "args": [
+                                                                         {
+                                                                          "op": "mod",
+                                                                          "args": [
+                                                                           {
+                                                                            "var": "n"
+                                                                           },
+                                                                           {
+                                                                            "int": 19
+                                                                           }
+                                                                          ]
+                                                                         },
+                                                                         {
+                                                                          "int": 0
+                                                                         }
+                                                                        ]
+                                                                       },
+                                                                       "then": {
+                                                                        "op": "+",
+                                                                        "args": [
+                                                                         {
+                                                                          "int": 19
+                                                                         },
+                                                                         {
+                                                                          "call": {
+                                                                           "fun": "min_sum_factors",
+                                                                           "args": [
+                                                                            {
+                                                                             "op": "div",
+                                                                             "args": [
+                                                                              {
+                                                                               "var": "n"
+                                                                              },
+                                                                              {
+                                                                               "int": 19
+                                                                              }
+                                                                             ]
+                                                                            }
+                                                                           ]
+                                                                          }
+                                                                         }
+                                                                        ]
+                                                                       },
+                                                                       "else": {
+                                                                        "ite": {
+                                                                         "cond": {
+                                                                          "op": "==",
+                                                                          "args": [
+                                                                           {
+                                                                            "op": "mod",
+                                                                            "args": [
+                                                                             {
+                                                                              "var": "n"
+                                                                             },
+                                                                             {
+                                                                              "int": 23
+                                                                             }
+                                                                            ]
+                                                                           },
+                                                                           {
+                                                                            "int": 0
+                                                                           }
+                                                                          ]
+                                                                         },
+                                                                         "then": {
+                                                                          "op": "+",
+                                                                          "args": [
+                                                                           {
+                                                                            "int": 23
+                                                                           },
+                                                                           {
+                                                                            "call": {
+                                                                             "fun": "min_sum_factors",
+                                                                             "args": [
+                                                                              {
+                                                                               "op": "div",
+                                                                               "args": [
+                                                                                {
+                                                                                 "var": "n"
+                                                                                },
+                                                                                {
+                                                                                 "int": 23
+                                                                                }
+                                                                               ]
+                                                                              }
+                                                                             ]
+                                                                            }
+                                                                           }
+                                                                          ]
+                                                                         },
+                                                                         "else": {
+                                                                          "ite": {
+                                                                           "cond": {
+                                                                            "op": "==",
+                                                                            "args": [
+                                                                             {
+                                                                              "op": "mod",
+                                                                              "args": [
+                                                                               {
+                                                                                "var": "n"
+                                                                               },
+                                                                               {
+                                                                                "int": 29
+                                                                               }
+                                                                              ]
+                                                                             },
+                                                                             {
+                                                                              "int": 0
+                                                                             }
+                                                                            ]
+                                                                           },
+                                                                           "then": {
+                                                                            "op": "+",
+                                                                            "args": [
+                                                                             {
+                                                                              "int": 29
+                                                                             },
+                                                                             {
+                                                                              "call": {
+                                                                               "fun": "min_sum_factors",
+                                                                               "args": [
+                                                                                {
+                                                                                 "op": "div",
+                                                                                 "args": [
+                                                                                  {
+                                                                                   "var": "n"
+                                                                                  },
+                                                                                  {
+                                                                                   "int": 29
+                                                                                  }
+                                                                                 ]
+                                                                                }
+                                                                               ]
+                                                                              }
+                                                                             }
+                                                                            ]
+                                                                           },
+                                                                           "else": {
+                                                                            "ite": {
+                                                                             "cond": {
+                                                                              "op": "==",
+                                                                              "args": [
+                                                                               {
+                                                                                "op": "mod",
+                                                                                "args": [
+                                                                                 {
+                                                                                  "var": "n"
+                                                                                 },
+                                                                                 {
+                                                                                  "int": 31
+                                                                                 }
+                                                                                ]
+                                                                               },
+                                                                               {
+                                                                                "int": 0
+                                                                               }
+                                                                              ]
+                                                                             },
+                                                                             "then": {
+                                                                              "op": "+",
+                                                                              "args": [
+                                                                               {
+                                                                                "int": 31
+                                                                               },
+                                                                               {
+                                                                                "call": {
+                                                                                 "fun": "min_sum_factors",
+                                                                                 "args": [
+                                                                                  {
+                                                                                   "op": "div",
+                                                                                   "args": [
+                                                                                    {
+                                                                                     "var": "n"
+                                                                                    },
+                                                                                    {
+                                                                                     "int": 31
+                                                                                    }
+                                                                                   ]
+                                                                                  }
+                                                                                 ]
+                                                                                }
+                                                                               }
+                                                                              ]
+                                                                             },
+                                                                             "else": {
+                                                                              "ite": {
+                                                                               "cond": {
+                                                                                "op": "==",
+                                                                                "args": [
+                                                                                 {
+                                                                                  "op": "mod",
+                                                                                  "args": [
+                                                                                   {
+                                                                                    "var": "n"
+                                                                                   },
+                                                                                   {
+                                                                                    "int": 37
+                                                                                   }
+                                                                                  ]
+                                                                                 },
+                                                                                 {
+                                                                                  "int": 0
+                                                                                 }
+                                                                                ]
+                                                                               },
+                                                                               "then": {
+                                                                                "op": "+",
+                                                                                "args": [
+                                                                                 {
+                                                                                  "int": 37
+                                                                                 },
+                                                                                 {
+                                                                                  "call": {
+                                                                                   "fun": "min_sum_factors",
+                                                                                   "args": [
+                                                                                    {
+                                                                                     "op": "div",
+                                                                                     "args": [
+                                                                                      {
+                                                                                       "var": "n"
+                                                                                      },
+                                                                                      {
+                                                                                       "int": 37
+                                                                                      }
+                                                                                     ]
+                                                                                    }
+                                                                                   ]
+                                                                                  }
+                                                                                 }
+                                                                                ]
+                                                                               },
+                                                                               "else": {
+                                                                                "ite": {
+                                                                                 "cond": {
+                                                                                  "op": "==",
+                                                                                  "args": [
+                                                                                   {
+                                                                                    "op": "mod",
+                                                                                    "args": [
+                                                                                     {
+                                                                                      "var": "n"
+                                                                                     },
+                                                                                     {
+                                                                                      "int": 41
+                                                                                     }
+                                                                                    ]
+                                                                                   },
+                                                                                   {
+                                                                                    "int": 0
+                                                                                   }
+                                                                                  ]
+                                                                                 },
+                                                                                 "then": {
+                                                                                  "op": "+",
+                                                                                  "args": [
+                                                                                   {
+                                                                                    "int": 41
+                                                                                   },
+                                                                                   {
+                                                                                    "call": {
+                                                                                     "fun": "min_sum_factors",
+                                                                                     "args": [
+                                                                                      {
+                                                                                       "op": "div",
+                                                                                       "args": [
+                                                                                        {
+                                                                                         "var": "n"
+                                                                                        },
+                                                                                        {
+                                                                                         "int": 41
+                                                                                        }
+                                                                                       ]
+                                                                                      }
+                                                                                     ]
+                                                                                    }
+                                                                                   }
+                                                                                  ]
+                                                                                 },
+                                                                                 "else": {
+                                                                                  "ite": {
+                                                                                   "cond": {
+                                                                                    "op": "==",
+                                                                                    "args": [
+                                                                                     {
+                                                                                      "op": "mod",
+                                                                                      "args": [
+                                                                                       {
+                                                                                        "var": "n"
+                                                                                       },
+                                                                                       {
+                                                                                        "int": 43
+                                                                                       }
+                                                                                      ]
+                                                                                     },
+                                                                                     {
+                                                                                      "int": 0
+                                                                                     }
+                                                                                    ]
+                                                                                   },
+                                                                                   "then": {
+                                                                                    "op": "+",
+                                                                                    "args": [
+                                                                                     {
+                                                                                      "int": 43
+                                                                                     },
+                                                                                     {
+                                                                                      "call": {
+                                                                                       "fun": "min_sum_factors",
+                                                                                       "args": [
+                                                                                        {
+                                                                                         "op": "div",
+                                                                                         "args": [
+                                                                                          {
+                                                                                           "var": "n"
+                                                                                          },
+                                                                                          {
+                                                                                           "int": 43
+                                                                                          }
+                                                                                         ]
+                                                                                        }
+                                                                                       ]
+                                                                                      }
+                                                                                     }
+                                                                                    ]
+                                                                                   },
+                                                                                   "else": {
+                                                                                    "ite": {
+                                                                                     "cond": {
+                                                                                      "op": "==",
+                                                                                      "args": [
+                                                                                       {
+                                                                                        "op": "mod",
+                                                                                        "args": [
+                                                                                         {
+                                                                                          "var": "n"
+                                                                                         },
+                                                                                         {
+                                                                                          "int": 47
+                                                                                         }
+                                                                                        ]
+                                                                                       },
+                                                                                       {
+                                                                                        "int": 0
+                                                                                       }
+                                                                                      ]
+                                                                                     },
+                                                                                     "then": {
+                                                                                      "op": "+",
+                                                                                      "args": [
+                                                                                       {
+                                                                                        "int": 47
+                                                                                       },
+                                                                                       {
+                                                                                        "call": {
+                                                                                         "fun": "min_sum_factors",
+                                                                                         "args": [
+                                                                                          {
+                                                                                           "op": "div",
+                                                                                           "args": [
+                                                                                            {
+                                                                                             "var": "n"
+                                                                                            },
+                                                                                            {
+                                                                                             "int": 47
+                                                                                            }
+                                                                                           ]
+                                                                                          }
+                                                                                         ]
+                                                                                        }
+                                                                                       }
+                                                                                      ]
+                                                                                     },
+                                                                                     "else": {
+                                                                                      "ite": {
+                                                                                       "cond": {
+                                                                                        "op": "==",
+                                                                                        "args": [
+                                                                                         {
+                                                                                          "op": "mod",
+                                                                                          "args": [
+                                                                                           {
+                                                                                            "var": "n"
+                                                                                           },
+                                                                                           {
+                                                                                            "int": 53
+                                                                                           }
+                                                                                          ]
+                                                                                         },
+                                                                                         {
+                                                                                          "int": 0
+                                                                                         }
+                                                                                        ]
+                                                                                       },
+                                                                                       "then": {
+                                                                                        "op": "+",
+                                                                                        "args": [
+                                                                                         {
+                                                                                          "int": 53
+                                                                                         },
+                                                                                         {
+                                                                                          "call": {
+                                                                                           "fun": "min_sum_factors",
+                                                                                           "args": [
+                                                                                            {
+                                                                                             "op": "div",
+                                                                                             "args": [
+                                                                                              {
+                                                                                               "var": "n"
+                                                                                              },
+                                                                                              {
+                                                                                               "int": 53
+                                                                                              }
+                                                                                             ]
+                                                                                            }
+                                                                                           ]
+                                                                                          }
+                                                                                         }
+                                                                                        ]
+                                                                                       },
+                                                                                       "else": {
+                                                                                        "ite": {
+                                                                                         "cond": {
+                                                                                          "op": "==",
+                                                                                          "args": [
+                                                                                           {
+                                                                                            "op": "mod",
+                                                                                            "args": [
+                                                                                             {
+                                                                                              "var": "n"
+                                                                                             },
+                                                                                             {
+                                                                                              "int": 59
+                                                                                             }
+                                                                                            ]
+                                                                                           },
+                                                                                           {
+                                                                                            "int": 0
+                                                                                           }
+                                                                                          ]
+                                                                                         },
+                                                                                         "then": {
+                                                                                          "op": "+",
+                                                                                          "args": [
+                                                                                           {
+                                                                                            "int": 59
+                                                                                           },
+                                                                                           {
+                                                                                            "call": {
+                                                                                             "fun": "min_sum_factors",
+                                                                                             "args": [
+                                                                                              {
+                                                                                               "op": "div",
+                                                                                               "args": [
+                                                                                                {
+                                                                                                 "var": "n"
+                                                                                                },
+                                                                                                {
+                                                                                                 "int": 59
+                                                                                                }
+                                                                                               ]
+                                                                                              }
+                                                                                             ]
+                                                                                            }
+                                                                                           }
+                                                                                          ]
+                                                                                         },
+                                                                                         "else": {
+                                                                                          "ite": {
+                                                                                           "cond": {
+                                                                                            "op": "==",
+                                                                                            "args": [
+                                                                                             {
+                                                                                              "op": "mod",
+                                                                                              "args": [
+                                                                                               {
+                                                                                                "var": "n"
+                                                                                               },
+                                                                                               {
+                                                                                                "int": 61
+                                                                                               }
+                                                                                              ]
+                                                                                             },
+                                                                                             {
+                                                                                              "int": 0
+                                                                                             }
+                                                                                            ]
+                                                                                           },
+                                                                                           "then": {
+                                                                                            "op": "+",
+                                                                                            "args": [
+                                                                                             {
+                                                                                              "int": 61
+                                                                                             },
+                                                                                             {
+                                                                                              "call": {
+                                                                                               "fun": "min_sum_factors",
+                                                                                               "args": [
+                                                                                                {
+                                                                                                 "op": "div",
+                                                                                                 "args": [
+                                                                                                  {
+                                                                                                   "var": "n"
+                                                                                                  },
+                                                                                                  {
+                                                                                                   "int": 61
+                                                                                                  }
+                                                                                                 ]
+                                                                                                }
+                                                                                               ]
+                                                                                              }
+                                                                                             }
+                                                                                            ]
+                                                                                           },
+                                                                                           "else": {
+                                                                                            "ite": {
+                                                                                             "cond": {
+                                                                                              "op": "==",
+                                                                                              "args": [
+                                                                                               {
+                                                                                                "op": "mod",
+                                                                                                "args": [
+                                                                                                 {
+                                                                                                  "var": "n"
+                                                                                                 },
+                                                                                                 {
+                                                                                                  "int": 67
+                                                                                                 }
+                                                                                                ]
+                                                                                               },
+                                                                                               {
+                                                                                                "int": 0
+                                                                                               }
+                                                                                              ]
+                                                                                             },
+                                                                                             "then": {
+                                                                                              "op": "+",
+                                                                                              "args": [
+                                                                                               {
+                                                                                                "int": 67
+                                                                                               },
+                                                                                               {
+                                                                                                "call": {
+                                                                                                 "fun": "min_sum_factors",
+                                                                                                 "args": [
+                                                                                                  {
+                                                                                                   "op": "div",
+                                                                                                   "args": [
+                                                                                                    {
+                                                                                                     "var": "n"
+                                                                                                    },
+                                                                                                    {
+                                                                                                     "int": 67
+                                                                                                    }
+                                                                                                   ]
+                                                                                                  }
+                                                                                                 ]
+                                                                                                }
+                                                                                               }
+                                                                                              ]
+                                                                                             },
+                                                                                             "else": {
+                                                                                              "ite": {
+                                                                                               "cond": {
+                                                                                                "op": "==",
+                                                                                                "args": [
+                                                                                                 {
+                                                                                                  "op": "mod",
+                                                                                                  "args": [
+                                                                                                   {
+                                                                                                    "var": "n"
+                                                                                                   },
+                                                                                                   {
+                                                                                                    "int": 71
+                                                                                                   }
+                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                  "int": 0
+                                                                                                 }
+                                                                                                ]
+                                                                                               },
+                                                                                               "then": {
+                                                                                                "op": "+",
+                                                                                                "args": [
+                                                                                                 {
+                                                                                                  "int": 71
+                                                                                                 },
+                                                                                                 {
+                                                                                                  "call": {
+                                                                                                   "fun": "min_sum_factors",
+                                                                                                   "args": [
+                                                                                                    {
+                                                                                                     "op": "div",
+                                                                                                     "args": [
+                                                                                                      {
+                                                                                                       "var": "n"
+                                                                                                      },
+                                                                                                      {
+                                                                                                       "int": 71
+                                                                                                      }
+                                                                                                     ]
+                                                                                                    }
+                                                                                                   ]
+                                                                                                  }
+                                                                                                 }
+                                                                                                ]
+                                                                                               },
+                                                                                               "else": {
+                                                                                                "ite": {
+                                                                                                 "cond": {
+                                                                                                  "op": "==",
+                                                                                                  "args": [
+                                                                                                   {
+                                                                                                    "op": "mod",
+                                                                                                    "args": [
+                                                                                                     {
+                                                                                                      "var": "n"
+                                                                                                     },
+                                                                                                     {
+                                                                                                      "int": 73
+                                                                                                     }
+                                                                                                    ]
+                                                                                                   },
+                                                                                                   {
+                                                                                                    "int": 0
+                                                                                                   }
+                                                                                                  ]
+                                                                                                 },
+                                                                                                 "then": {
+                                                                                                  "op": "+",
+                                                                                                  "args": [
+                                                                                                   {
+                                                                                                    "int": 73
+                                                                                                   },
+                                                                                                   {
+                                                                                                    "call": {
+                                                                                                     "fun": "min_sum_factors",
+                                                                                                     "args": [
+                                                                                                      {
+                                                                                                       "op": "div",
+                                                                                                       "args": [
+                                                                                                        {
+                                                                                                         "var": "n"
+                                                                                                        },
+                                                                                                        {
+                                                                                                         "int": 73
+                                                                                                        }
+                                                                                                       ]
+                                                                                                      }
+                                                                                                     ]
+                                                                                                    }
+                                                                                                   }
+                                                                                                  ]
+                                                                                                 },
+                                                                                                 "else": {
+                                                                                                  "ite": {
+                                                                                                   "cond": {
+                                                                                                    "op": "==",
+                                                                                                    "args": [
+                                                                                                     {
+                                                                                                      "op": "mod",
+                                                                                                      "args": [
+                                                                                                       {
+                                                                                                        "var": "n"
+                                                                                                       },
+                                                                                                       {
+                                                                                                        "int": 79
+                                                                                                       }
+                                                                                                      ]
+                                                                                                     },
+                                                                                                     {
+                                                                                                      "int": 0
+                                                                                                     }
+                                                                                                    ]
+                                                                                                   },
+                                                                                                   "then": {
+                                                                                                    "op": "+",
+                                                                                                    "args": [
+                                                                                                     {
+                                                                                                      "int": 79
+                                                                                                     },
+                                                                                                     {
+                                                                                                      "call": {
+                                                                                                       "fun": "min_sum_factors",
+                                                                                                       "args": [
+                                                                                                        {
+                                                                                                         "op": "div",
+                                                                                                         "args": [
+                                                                                                          {
+                                                                                                           "var": "n"
+                                                                                                          },
+                                                                                                          {
+                                                                                                           "int": 79
+                                                                                                          }
+                                                                                                         ]
+                                                                                                        }
+                                                                                                       ]
+                                                                                                      }
+                                                                                                     }
+                                                                                                    ]
+                                                                                                   },
+                                                                                                   "else": {
+                                                                                                    "ite": {
+                                                                                                     "cond": {
+                                                                                                      "op": "==",
+                                                                                                      "args": [
+                                                                                                       {
+                                                                                                        "op": "mod",
+                                                                                                        "args": [
+                                                                                                         {
+                                                                                                          "var": "n"
+                                                                                                         },
+                                                                                                         {
+                                                                                                          "int": 83
+                                                                                                         }
+                                                                                                        ]
+                                                                                                       },
+                                                                                                       {
+                                                                                                        "int": 0
+                                                                                                       }
+                                                                                                      ]
+                                                                                                     },
+                                                                                                     "then": {
+                                                                                                      "op": "+",
+                                                                                                      "args": [
+                                                                                                       {
+                                                                                                        "int": 83
+                                                                                                       },
+                                                                                                       {
+                                                                                                        "call": {
+                                                                                                         "fun": "min_sum_factors",
+                                                                                                         "args": [
+                                                                                                          {
+                                                                                                           "op": "div",
+                                                                                                           "args": [
+                                                                                                            {
+                                                                                                             "var": "n"
+                                                                                                            },
+                                                                                                            {
+                                                                                                             "int": 83
+                                                                                                            }
+                                                                                                           ]
+                                                                                                          }
+                                                                                                         ]
+                                                                                                        }
+                                                                                                       }
+                                                                                                      ]
+                                                                                                     },
+                                                                                                     "else": {
+                                                                                                      "ite": {
+                                                                                                       "cond": {
+                                                                                                        "op": "==",
+                                                                                                        "args": [
+                                                                                                         {
+                                                                                                          "op": "mod",
+                                                                                                          "args": [
+                                                                                                           {
+                                                                                                            "var": "n"
+                                                                                                           },
+                                                                                                           {
+                                                                                                            "int": 89
+                                                                                                           }
+                                                                                                          ]
+                                                                                                         },
+                                                                                                         {
+                                                                                                          "int": 0
+                                                                                                         }
+                                                                                                        ]
+                                                                                                       },
+                                                                                                       "then": {
+                                                                                                        "op": "+",
+                                                                                                        "args": [
+                                                                                                         {
+                                                                                                          "int": 89
+                                                                                                         },
+                                                                                                         {
+                                                                                                          "call": {
+                                                                                                           "fun": "min_sum_factors",
+                                                                                                           "args": [
+                                                                                                            {
+                                                                                                             "op": "div",
+                                                                                                             "args": [
+                                                                                                              {
+                                                                                                               "var": "n"
+                                                                                                              },
+                                                                                                              {
+                                                                                                               "int": 89
+                                                                                                              }
+                                                                                                             ]
+                                                                                                            }
+                                                                                                           ]
+                                                                                                          }
+                                                                                                         }
+                                                                                                        ]
+                                                                                                       },
+                                                                                                       "else": {
+                                                                                                        "ite": {
+                                                                                                         "cond": {
+                                                                                                          "op": "==",
+                                                                                                          "args": [
+                                                                                                           {
+                                                                                                            "op": "mod",
+                                                                                                            "args": [
+                                                                                                             {
+                                                                                                              "var": "n"
+                                                                                                             },
+                                                                                                             {
+                                                                                                              "int": 97
+                                                                                                             }
+                                                                                                            ]
+                                                                                                           },
+                                                                                                           {
+                                                                                                            "int": 0
+                                                                                                           }
+                                                                                                          ]
+                                                                                                         },
+                                                                                                         "then": {
+                                                                                                          "op": "+",
+                                                                                                          "args": [
+                                                                                                           {
+                                                                                                            "int": 97
+                                                                                                           },
+                                                                                                           {
+                                                                                                            "call": {
+                                                                                                             "fun": "min_sum_factors",
+                                                                                                             "args": [
+                                                                                                              {
+                                                                                                               "op": "div",
+                                                                                                               "args": [
+                                                                                                                {
+                                                                                                                 "var": "n"
+                                                                                                                },
+                                                                                                                {
+                                                                                                                 "int": 97
+                                                                                                                }
+                                                                                                               ]
+                                                                                                              }
+                                                                                                             ]
+                                                                                                            }
+                                                                                                           }
+                                                                                                          ]
+                                                                                                         },
+                                                                                                         "else": {
+                                                                                                          "var": "n"
+                                                                                                         }
+                                                                                                        }
+                                                                                                       }
+                                                                                                      }
+                                                                                                     }
+                                                                                                    }
+                                                                                                   }
+                                                                                                  }
+                                                                                                 }
+                                                                                                }
+                                                                                               }
+                                                                                              }
+                                                                                             }
+                                                                                            }
+                                                                                           }
+                                                                                          }
+                                                                                         }
+                                                                                        }
+                                                                                       }
+                                                                                      }
+                                                                                     }
+                                                                                    }
+                                                                                   }
+                                                                                  }
+                                                                                 }
+                                                                                }
+                                                                               }
+                                                                              }
+                                                                             }
+                                                                            }
+                                                                           }
+                                                                          }
+                                                                         }
+                                                                        }
+                                                                       }
+                                                                      }
+                                                                     }
+                                                                    }
+                                                                   }
+                                                                  }
+                                                                 }
+                                                                }
+                                                               }
+                                                              }
+                                                             }
+                                                            }
+                                                           }
+                                                          }
+                                                         }
+                                                        }
+                                                       }
+                                                      }
+                                                     }
+                                                    }
+                                                   }
+                                                  }
+                                                 }
+                                                }
+                                               }
+                                              }
+                                             }
+                                            }
+                                           }
+                                          }
+                                         }
+                                        }
+                                       }
+                                      }
+                                     }
+                                    }
+                                   }
+                                  }
+                                 }
+                                }
+                               }
+                              }
+                             }
+                            }
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "d",
+    "type": "int",
+    "init": {
+     "int": 2
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "d"
+        },
+        {
+         "var": "d"
+        }
+       ]
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "int": 2
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "d"
+       },
+       {
+        "int": 2
+       }
+      ]
+     },
+     {
+      "op": "or",
+      "args": [
+       {
+        "op": "<=",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "d"
+           },
+           {
+            "var": "d"
+           }
+          ]
+         },
+         {
+          "var": "r"
+         }
+        ]
+       },
+       {
+        "op": ">",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "var": "r"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "d"
+        },
+        {
+         "var": "d"
+        }
+       ]
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "r"
+           },
+           {
+            "var": "d"
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "d"
+            },
+            {
+             "op": "div",
+             "args": [
+              {
+               "var": "r"
+              },
+              {
+               "var": "d"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "d",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

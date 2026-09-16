@@ -1,0 +1,22 @@
+{
+ "task_id": 483,
+ "fn": "first_Factorial_Divisible_Number",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the first natural number whose factorial is divisible by x.\nSignature: first_Factorial_Divisible_Number(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_59__fibonacci(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 3 * n * n - 2 * n\n{\n  r := 3 * n * n - 2 * n;\n}\n```",
+ "done_reason": "length"
+}

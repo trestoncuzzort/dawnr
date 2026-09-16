@@ -1,0 +1,619 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_564__count_Pairs",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "div",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "int": 2
+        }
+       ]
+      },
+      {
+       "call": {
+        "fun": "sum_pairs",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "sum_pairs",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    },
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": {
+        "int": 0
+       },
+       "else": {
+        "op": "+",
+        "args": [
+         {
+          "ite": {
+           "cond": {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "s"
+               },
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "s"
+               },
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 2
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           "then": {
+            "int": 1
+           },
+           "else": {
+            "int": 0
+           }
+          }
+         },
+         {
+          "call": {
+           "fun": "sum_pairs",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "op": "-",
+        "args": [
+         {
+          "op": "div",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "var": "i"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "i"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "sum_pairs",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "var": {
+       "name": "j",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "j"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "op": "+",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "op": "div",
+                 "args": [
+                  {
+                   "op": "*",
+                   "args": [
+                    {
+                     "var": "i"
+                    },
+                    {
+                     "op": "-",
+                     "args": [
+                      {
+                       "var": "i"
+                      },
+                      {
+                       "int": 1
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "int": 2
+                  }
+                 ]
+                },
+                {
+                 "call": {
+                  "fun": "sum_pairs",
+                  "args": [
+                   {
+                    "var": "s"
+                   },
+                   {
+                    "var": "i"
+                   }
+                  ]
+                 }
+                }
+               ]
+              },
+              {
+               "op": "div",
+               "args": [
+                {
+                 "op": "*",
+                 "args": [
+                  {
+                   "var": "j"
+                  },
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "j"
+                    },
+                    {
+                     "int": 1
+                    }
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "int": 2
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "call": {
+              "fun": "sum_pairs",
+              "args": [
+               {
+                "var": "s"
+               },
+               {
+                "var": "j"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "and",
+         "args": [
+          {
+           "op": ">=",
+           "args": [
+            {
+             "var": "j"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          {
+           "op": "<=",
+           "args": [
+            {
+             "var": "j"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "j"
+         }
+        ]
+       },
+       "body": [
+        {
+         "if": {
+          "cond": {
+           "op": "!=",
+           "args": [
+            {
+             "op": "at",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "var": "j"
+              }
+             ]
+            },
+            {
+             "op": "at",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "var": "i"
+              }
+             ]
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "op": "+",
+              "args": [
+               {
+                "var": "r"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          ],
+          "else": []
+         }
+        },
+        {
+         "assign": [
+          "j",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "j"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

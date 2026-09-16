@@ -1,0 +1,22 @@
+{
+ "task_id": 56,
+ "fn": "check",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check if a given number is one less than twice its reverse.\nSignature: check(int) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate recursion\ntask mbpp_89__closest_num(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\nspec fun sum(n_v: int): int\n  decreases n_v\n= if n_v >= 0 then if n_v == 0 then 0 else n_v + sum(n_v - 1) else 0\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant 0 <= i and i <= n\n    invariant r == sum(i)\n    invariant r >= 0\n    decreases n - i\n  {\n    r := r + 1;\n    i := i + 1;\n  }\n}\n```",
+ "done_reason": "length"
+}

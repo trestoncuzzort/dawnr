@@ -1,0 +1,22 @@
+{
+ "task_id": 489,
+ "fn": "frequency_Of_Largest",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the frequency of the largest value in a given array.\nSignature: frequency_Of_Largest(int, seq) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_591__first(s: seq, x: int, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [0, r) . i < len(s) ==> s[i] != x)\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}\n```",
+ "done_reason": "length"
+}

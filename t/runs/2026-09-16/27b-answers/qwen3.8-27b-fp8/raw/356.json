@@ -1,0 +1,30 @@
+{
+ "task_id": 356,
+ "fn": "find_angle",
+ "model": "qwen3.8-27b-fp8",
+ "digest": "unknown",
+ "pool_version": "v1",
+ "prompt_version": "v1",
+ "options": {
+  "temperature": 0,
+  "seed": 1,
+  "num_ctx": 8192,
+  "num_predict": 3072
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "t is a tiny verified language. A t task is written like this:\n\n    t 0                            (t 1 when the task uses locals, loops,\n                                    seq, quantifiers, spec funs or recursion)\n    gate loops                     (t 1 only: loops | recursion | quantifiers)\n    task NAME(p1: int, p2: seq) returns (r: int)\n      requires EXPR                (zero or more; conjoined)\n      ensures EXPR                 (one or more; conjoined; the contract)\n      decreases EXPR               (only when the task calls itself)\n    spec fun F(a: int): int         (optional helper for the spec, t 1 only)\n      decreases a\n    = EXPR\n    {\n      STATEMENTS\n    }\n\nTypes: int (unbounded mathematical integer), bool, seq (a read-only sequence\nof ints, parameters only). Exactly one return, int or bool. Every path\nthrough the body must assign the return variable.\n\nStatements:  r := EXPR;    var i: int := EXPR;    if EXPR { ... } else { ... }\n             while EXPR invariant EXPR ... decreases EXPR { ... }\nEvery while needs invariants strong enough to prove the ensures at exit and\none decreases expression that is >= 0 and strictly decreases. `else { }` may\nbe empty but must be present.\n\nExpressions: integer literals, true, false, names, ( ), + - * (no division,\nno modulo, no shifts), unary -, == != < <= > >=, not, and, or, ==> (implies),\nif C then A else B, len(s), s[i], forall i in [lo, hi) . BODY,\nexists i in [lo, hi) . BODY, F(args) for a spec fun.\n\nRULES THE PARSER ENFORCES. These operators and names DO NOT EXIST in t and\nmake the task unparseable: / % ** ^ & | << >> bin abs min max pow sum\nrange. There are no strings, floats, tuples, arrays, dictionaries, sets or\ncomments. Quantifier ranges are half-open: `forall i in [lo, hi) . P` means\nlo <= i < hi. Every `if` has both branches: `if C { ... } else { ... }`,\nwith `else { }` when there is nothing to do. A task that calls itself\nneeds `gate recursion` and a `decreases EXPR` line after its ensures, and\nits ensures may not mention the task's own name (use a spec fun). A\ncondition is a bool expression: write `r := (a == b);`, never `r := a == b\n? ...`. Loop variables are declared with `var i: int := 0;`.\n\nDivision and modulo are not in the language. If the problem needs them,\ncompute the quantity with a loop of repeated subtraction, or define it with\na recursive spec fun; never write / or %.\n\nThe ensures must say what the result IS, not merely that it exists; a spec\nthe tests would disagree with is wrong, and `ensures true` is worthless.\nrequires must admit every input the tests use. Encode a list as a seq of\nints and a yes/no answer as bool.\n\nReply with exactly one t task inside a ```t fenced block and nothing else.\n\nExamples of complete t tasks:\n\n```t\nt 0\ntask abs(x: int) returns (r: int)\n  ensures r >= 0\n  ensures r == x or r == -x\n{\n  if x < 0 {\n    r := -x;\n  } else {\n    r := x;\n  }\n}\n```\n\n```t\nt 0\ntask max(x: int, y: int) returns (r: int)\n  ensures r >= x\n  ensures r >= y\n  ensures r == x or r == y\n{\n  if x >= y {\n    r := x;\n  } else {\n    r := y;\n  }\n}\n```\n\n```t\nt 1\ngate loops\ntask sum_upto(n: int) returns (r: int)\n  requires n >= 0\n  ensures 2 * r == n * (n + 1)\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant 2 * r == i * (i + 1)\n    invariant i >= 0 and i <= n\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}\n```\n\n```t\nt 1\ngate loops\ntask linear_search(s: seq, x: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . i < len(s) ==> s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}\n```\n\n```t\nt 1\ngate recursion\ntask gcd(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  ensures r == gcds(a, b)\n  decreases a + b\nspec fun gcds(a: int, b: int): int\n  decreases a + b\n= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a\n{\n  if a == 0 {\n    r := b;\n  } else {\n    if b == 0 {\n      r := a;\n    } else {\n      if a > b {\n        r := gcd(a - b, b);\n      } else {\n        if b > a {\n          r := gcd(a, b - a);\n        } else {\n          r := a;\n        }\n      }\n    }\n  }\n}\n```"
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the third angle of a triangle using two angles.\n\nTests:\nassert find_angle(47,89)==44\nassert find_angle(45,95)==40\nassert find_angle(50,40)==90\n\nWrite the t task named `find_angle` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_angle(a: int, b: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  requires a + b < 180\n  ensures r == 180 - a - b\n{\n  r := 180 - a - b;\n}\n```",
+ "prompt_tokens": 1655,
+ "reply_tokens": 82,
+ "eval_s": 0.0,
+ "wall_s": 3.661,
+ "done_reason": "stop"
+}

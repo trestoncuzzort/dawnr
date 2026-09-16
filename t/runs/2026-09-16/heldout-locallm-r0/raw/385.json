@@ -1,0 +1,22 @@
+{
+ "task_id": 385,
+ "fn": "get_perrin",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the n'th perrin number using recursion.\nSignature: get_perrin(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_404__diameter_triangle(a: int, b: int) returns (r: int)\n  ensures r == 2 * (a + b)\n{\n  r := 2 * (a + b);\n}\n```",
+ "done_reason": "length"
+}

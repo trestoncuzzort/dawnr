@@ -1,0 +1,608 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_598__armstrong_number",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "call": {
+        "fun": "sum_of_powers",
+        "args": [
+         {
+          "var": "n"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "sum_of_powers",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "then": {
+        "var": "n"
+       },
+       "else": {
+        "op": "+",
+        "args": [
+         {
+          "call": {
+           "fun": "sum_of_powers",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 10
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "bool": false
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "digits",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "temp",
+    "type": "int",
+    "init": {
+     "var": "n"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "temp"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "temp"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "digits"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "temp"
+    },
+    "body": [
+     {
+      "assign": [
+       "digits",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "digits"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "temp",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "temp"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "digits",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": []
+   }
+  },
+  {
+   "var": {
+    "name": "sum",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "t2",
+    "type": "int",
+    "init": {
+     "var": "n"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "t2"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "t2"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "sum"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "t2"
+    },
+    "body": [
+     {
+      "var": {
+       "name": "d",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "tt",
+       "type": "int",
+       "init": {
+        "var": "t2"
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "tt"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "tt"
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "var": "tt"
+       },
+       "body": [
+        {
+         "assign": [
+          "tt",
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "tt"
+            },
+            {
+             "int": 10
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "d",
+       {
+        "var": "tt"
+       }
+      ]
+     },
+     {
+      "var": {
+       "name": "p",
+       "type": "int",
+       "init": {
+        "int": 1
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "i",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "digits"
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "i"
+          },
+          {
+           "int": 0
+          }
+         ]
+        },
+        {
+         "op": "<=",
+         "args": [
+          {
+           "var": "i"
+          },
+          {
+           "var": "digits"
+          }
+         ]
+        },
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "p"
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "digits"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       "body": [
+        {
+         "assign": [
+          "p",
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "p"
+            },
+            {
+             "var": "d"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "assign": [
+          "i",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "sum",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "sum"
+         },
+         {
+          "var": "p"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "t2",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "t2"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "sum",
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "else": []
+   }
+  },
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "sum"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "bool": true
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "bool": false
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

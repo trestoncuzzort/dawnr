@@ -1,0 +1,683 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_923__super_seq",
+ "params": [
+  {
+   "name": "s1",
+   "type": "seq"
+  },
+  {
+   "name": "s2",
+   "type": "seq"
+  },
+  {
+   "name": "n1",
+   "type": "int"
+  },
+  {
+   "name": "n2",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "n1"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "n2"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n1"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n2"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "ss_len",
+      "args": [
+       {
+        "var": "s1"
+       },
+       {
+        "var": "s2"
+       },
+       {
+        "var": "n1"
+       },
+       {
+        "var": "n2"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "ss_len",
+   "params": [
+    {
+     "name": "s1",
+     "type": "seq"
+    },
+    {
+     "name": "s2",
+     "type": "seq"
+    },
+    {
+     "name": "n1",
+     "type": "int"
+    },
+    {
+     "name": "n2",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "n1"
+     },
+     {
+      "var": "n2"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n1"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "var": "n2"
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n2"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "var": "n1"
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s1"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n1"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s2"
+             },
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n2"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         "then": {
+          "op": "+",
+          "args": [
+           {
+            "int": 1
+           },
+           {
+            "call": {
+             "fun": "ss_len",
+             "args": [
+              {
+               "var": "s1"
+              },
+              {
+               "var": "s2"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n1"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n2"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         "else": {
+          "op": "+",
+          "args": [
+           {
+            "int": 1
+           },
+           {
+            "ite": {
+             "cond": {
+              "op": "<=",
+              "args": [
+               {
+                "call": {
+                 "fun": "ss_len",
+                 "args": [
+                  {
+                   "var": "s1"
+                  },
+                  {
+                   "var": "s2"
+                  },
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n1"
+                    },
+                    {
+                     "int": 1
+                    }
+                   ]
+                  },
+                  {
+                   "var": "n2"
+                  }
+                 ]
+                }
+               },
+               {
+                "call": {
+                 "fun": "ss_len",
+                 "args": [
+                  {
+                   "var": "s1"
+                  },
+                  {
+                   "var": "s2"
+                  },
+                  {
+                   "var": "n1"
+                  },
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n2"
+                    },
+                    {
+                     "int": 1
+                    }
+                   ]
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             "then": {
+              "call": {
+               "fun": "ss_len",
+               "args": [
+                {
+                 "var": "s1"
+                },
+                {
+                 "var": "s2"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n1"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "var": "n2"
+                }
+               ]
+              }
+             },
+             "else": {
+              "call": {
+               "fun": "ss_len",
+               "args": [
+                {
+                 "var": "s1"
+                },
+                {
+                 "var": "s2"
+                },
+                {
+                 "var": "n1"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n2"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            }
+           }
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "n1"
+   },
+   {
+    "var": "n2"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n1"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "n2"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n2"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "n1"
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "op": "at",
+             "args": [
+              {
+               "var": "s1"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n1"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "op": "at",
+             "args": [
+              {
+               "var": "s2"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n2"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "op": "+",
+              "args": [
+               {
+                "int": 1
+               },
+               {
+                "call": {
+                 "fun": "mbpp_923__super_seq",
+                 "args": [
+                  {
+                   "var": "s1"
+                  },
+                  {
+                   "var": "s2"
+                  },
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n1"
+                    },
+                    {
+                     "int": 1
+                    }
+                   ]
+                  },
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n2"
+                    },
+                    {
+                     "int": 1
+                    }
+                   ]
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "var": {
+             "name": "a",
+             "type": "int",
+             "init": {
+              "call": {
+               "fun": "mbpp_923__super_seq",
+               "args": [
+                {
+                 "var": "s1"
+                },
+                {
+                 "var": "s2"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n1"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                },
+                {
+                 "var": "n2"
+                }
+               ]
+              }
+             }
+            }
+           },
+           {
+            "var": {
+             "name": "b",
+             "type": "int",
+             "init": {
+              "call": {
+               "fun": "mbpp_923__super_seq",
+               "args": [
+                {
+                 "var": "s1"
+                },
+                {
+                 "var": "s2"
+                },
+                {
+                 "var": "n1"
+                },
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n2"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            }
+           },
+           {
+            "if": {
+             "cond": {
+              "op": "<=",
+              "args": [
+               {
+                "var": "a"
+               },
+               {
+                "var": "b"
+               }
+              ]
+             },
+             "then": [
+              {
+               "assign": [
+                "r",
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "int": 1
+                  },
+                  {
+                   "var": "a"
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             "else": [
+              {
+               "assign": [
+                "r",
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "int": 1
+                  },
+                  {
+                   "var": "b"
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

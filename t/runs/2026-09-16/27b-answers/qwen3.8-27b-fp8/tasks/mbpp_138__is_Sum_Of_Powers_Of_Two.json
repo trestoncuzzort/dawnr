@@ -1,0 +1,308 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": ">",
+       "args": [
+        {
+         "var": "n"
+        },
+        {
+         "int": 0
+        }
+       ]
+      },
+      {
+       "exists": {
+        "var": "k",
+        "lo": {
+         "int": 0
+        },
+        "hi": {
+         "var": "n"
+        },
+        "body": {
+         "op": "==",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "op": "*",
+           "args": [
+            {
+             "int": 2
+            },
+            {
+             "var": "k"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "bool": false
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "var": {
+       "name": "i",
+       "type": "int",
+       "init": {
+        "int": 0
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "found",
+       "type": "bool",
+       "init": {
+        "bool": false
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": "and",
+        "args": [
+         {
+          "op": "<",
+          "args": [
+           {
+            "var": "i"
+           },
+           {
+            "var": "n"
+           }
+          ]
+         },
+         {
+          "op": "not",
+          "args": [
+           {
+            "var": "found"
+           }
+          ]
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": "and",
+         "args": [
+          {
+           "op": ">=",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          {
+           "op": "<=",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "var": "n"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "implies",
+         "args": [
+          {
+           "op": "not",
+           "args": [
+            {
+             "var": "found"
+            }
+           ]
+          },
+          {
+           "forall": {
+            "var": "j",
+            "lo": {
+             "int": 0
+            },
+            "hi": {
+             "var": "i"
+            },
+            "body": {
+             "op": "implies",
+             "args": [
+              {
+               "op": "<",
+               "args": [
+                {
+                 "var": "j"
+                },
+                {
+                 "var": "n"
+                }
+               ]
+              },
+              {
+               "op": "!=",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "op": "*",
+                 "args": [
+                  {
+                   "int": 2
+                  },
+                  {
+                   "var": "j"
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ],
+       "decreases": {
+        "op": "-",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       "body": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "op": "*",
+             "args": [
+              {
+               "int": 2
+              },
+              {
+               "var": "i"
+              }
+             ]
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "found",
+             {
+              "bool": true
+             }
+            ]
+           }
+          ],
+          "else": []
+         }
+        },
+        {
+         "assign": [
+          "i",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "var": "found"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

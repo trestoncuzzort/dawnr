@@ -1,0 +1,22 @@
+{
+ "task_id": 776,
+ "fn": "count_vowels",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to count those characters which have vowels as their neighbors in the given string.\nSignature: count_vowels(seq) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_509__count_Intgral_Points(x1: int, y1: int, x2: int) returns (r: int)\n  requires x1 <= x2\n  requires y1 <= y2\n  ensures r == (x2 - x1 - 1) * (y2 - y1 - 1) or x1 == x2 and y1 == y2 and r == 1\n{\n  if x1 == x2 and y1 == y2 {\n    r := 1;\n  } else {\n    r := (x2 - x1 - 1) * (y2 - y1 - 1);\n  }\n}\n```",
+ "done_reason": "length"
+}

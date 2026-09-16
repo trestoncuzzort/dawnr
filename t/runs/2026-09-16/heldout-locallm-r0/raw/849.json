@@ -1,0 +1,22 @@
+{
+ "task_id": 849,
+ "fn": "Sum",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find sum of all prime divisors of a given number.\nSignature: Sum(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate recursion\ntask mbpp_873__sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}\n```",
+ "done_reason": "length"
+}

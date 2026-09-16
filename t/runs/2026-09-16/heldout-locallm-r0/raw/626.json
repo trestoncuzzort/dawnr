@@ -1,0 +1,22 @@
+{
+ "task_id": 626,
+ "fn": "triangle_area",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the largest triangle that can be inscribed in the semicircle.\nSignature: triangle_area(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_458__Listgrage_Odd(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == (n + 1) * d\n{\n  r := n * (n - 1) + 1;\n}\n```",
+ "done_reason": "length"
+}

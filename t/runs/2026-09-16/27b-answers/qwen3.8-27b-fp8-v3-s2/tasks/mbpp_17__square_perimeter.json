@@ -1,0 +1,56 @@
+{
+ "t": 0,
+ "name": "mbpp_17__square_perimeter",
+ "params": [
+  {
+   "name": "s",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,867 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_701__equilibrium_index",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "or",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": -1
+      }
+     ]
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "int": 0
+        }
+       ]
+      },
+      {
+       "op": "<",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "call": {
+          "fun": "sum_left",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "r"
+           }
+          ]
+         }
+        },
+        {
+         "call": {
+          "fun": "sum_right",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "r"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": -1
+      }
+     ]
+    },
+    {
+     "forall": {
+      "var": "i",
+      "lo": {
+       "int": 0
+      },
+      "hi": {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      "body": {
+       "op": "!=",
+       "args": [
+        {
+         "call": {
+          "fun": "sum_left",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "i"
+           }
+          ]
+         }
+        },
+        {
+         "call": {
+          "fun": "sum_right",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "i"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "op": "implies",
+   "args": [
+    {
+     "op": "!=",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": -1
+      }
+     ]
+    },
+    {
+     "forall": {
+      "var": "j",
+      "lo": {
+       "int": 0
+      },
+      "hi": {
+       "var": "r"
+      },
+      "body": {
+       "op": "implies",
+       "args": [
+        {
+         "op": "<",
+         "args": [
+          {
+           "var": "j"
+          },
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "!=",
+         "args": [
+          {
+           "call": {
+            "fun": "sum_left",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "var": "j"
+             }
+            ]
+           }
+          },
+          {
+           "call": {
+            "fun": "sum_right",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "var": "j"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "sum_left",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    },
+    {
+     "name": "i",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "i"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "call": {
+         "fun": "sum_left",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "op": "at",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "i"
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "sum_right",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    },
+    {
+     "name": "i",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "-",
+    "args": [
+     {
+      "op": "len",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     },
+     {
+      "var": "i"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "op": "at",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       {
+        "call": {
+         "fun": "sum_right",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": -1
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "total",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": "<=",
+        "args": [
+         {
+          "int": 0
+         },
+         {
+          "var": "i"
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "op": "len",
+          "args": [
+           {
+            "var": "s"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": -1
+         }
+        ]
+       },
+       {
+        "forall": {
+         "var": "j",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "implies",
+          "args": [
+           {
+            "op": "<",
+            "args": [
+             {
+              "var": "j"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "!=",
+            "args": [
+             {
+              "call": {
+               "fun": "sum_left",
+               "args": [
+                {
+                 "var": "s"
+                },
+                {
+                 "var": "j"
+                }
+               ]
+              }
+             },
+             {
+              "call": {
+               "fun": "sum_right",
+               "args": [
+                {
+                 "var": "s"
+                },
+                {
+                 "var": "j"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ]
+         }
+        }
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "op": "!=",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": -1
+         }
+        ]
+       },
+       {
+        "op": "and",
+        "args": [
+         {
+          "op": ">=",
+          "args": [
+           {
+            "var": "r"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "op": "<",
+          "args": [
+           {
+            "var": "r"
+           },
+           {
+            "op": "len",
+            "args": [
+             {
+              "var": "s"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "op": "==",
+          "args": [
+           {
+            "call": {
+             "fun": "sum_left",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "var": "r"
+              }
+             ]
+            }
+           },
+           {
+            "call": {
+             "fun": "sum_right",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "var": "r"
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "forall": {
+           "var": "j",
+           "lo": {
+            "int": 0
+           },
+           "hi": {
+            "var": "r"
+           },
+           "body": {
+            "op": "implies",
+            "args": [
+             {
+              "op": "<",
+              "args": [
+               {
+                "var": "j"
+               },
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "s"
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "op": "!=",
+              "args": [
+               {
+                "call": {
+                 "fun": "sum_left",
+                 "args": [
+                  {
+                   "var": "s"
+                  },
+                  {
+                   "var": "j"
+                  }
+                 ]
+                }
+               },
+               {
+                "call": {
+                 "fun": "sum_right",
+                 "args": [
+                  {
+                   "var": "s"
+                  },
+                  {
+                   "var": "j"
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            ]
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "total"
+       },
+       {
+        "call": {
+         "fun": "sum_left",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "var": {
+       "name": "left_sum",
+       "type": "int",
+       "init": {
+        "var": "total"
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "right_sum",
+       "type": "int",
+       "init": {
+        "call": {
+         "fun": "sum_right",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "left_sum"
+         },
+         {
+          "var": "right_sum"
+         }
+        ]
+       },
+       "then": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "int": -1
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "var": "i"
+             }
+            ]
+           }
+          ],
+          "else": []
+         }
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "total",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "total"
+         },
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "i"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

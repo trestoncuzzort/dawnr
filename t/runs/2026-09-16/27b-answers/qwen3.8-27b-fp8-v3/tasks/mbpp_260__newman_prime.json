@@ -1,0 +1,2328 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_260__newman_prime",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "newman_prime_spec",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "newman_prime_spec",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "int": 3
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       "then": {
+        "int": 11
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 3
+           }
+          ]
+         },
+         "then": {
+          "int": 7
+         },
+         "else": {
+          "ite": {
+           "cond": {
+            "op": "==",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "int": 4
+             }
+            ]
+           },
+           "then": {
+            "int": 17
+           },
+           "else": {
+            "ite": {
+             "cond": {
+              "op": "==",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 5
+               }
+              ]
+             },
+             "then": {
+              "int": 41
+             },
+             "else": {
+              "ite": {
+               "cond": {
+                "op": "==",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 6
+                 }
+                ]
+               },
+               "then": {
+                "int": 23
+               },
+               "else": {
+                "ite": {
+                 "cond": {
+                  "op": "==",
+                  "args": [
+                   {
+                    "var": "n"
+                   },
+                   {
+                    "int": 7
+                   }
+                  ]
+                 },
+                 "then": {
+                  "int": 71
+                 },
+                 "else": {
+                  "ite": {
+                   "cond": {
+                    "op": "==",
+                    "args": [
+                     {
+                      "var": "n"
+                     },
+                     {
+                      "int": 8
+                     }
+                    ]
+                   },
+                   "then": {
+                    "int": 103
+                   },
+                   "else": {
+                    "ite": {
+                     "cond": {
+                      "op": "==",
+                      "args": [
+                       {
+                        "var": "n"
+                       },
+                       {
+                        "int": 9
+                       }
+                      ]
+                     },
+                     "then": {
+                      "int": 127
+                     },
+                     "else": {
+                      "ite": {
+                       "cond": {
+                        "op": "==",
+                        "args": [
+                         {
+                          "var": "n"
+                         },
+                         {
+                          "int": 10
+                         }
+                        ]
+                       },
+                       "then": {
+                        "int": 191
+                       },
+                       "else": {
+                        "ite": {
+                         "cond": {
+                          "op": "==",
+                          "args": [
+                           {
+                            "var": "n"
+                           },
+                           {
+                            "int": 11
+                           }
+                          ]
+                         },
+                         "then": {
+                          "int": 263
+                         },
+                         "else": {
+                          "ite": {
+                           "cond": {
+                            "op": "==",
+                            "args": [
+                             {
+                              "var": "n"
+                             },
+                             {
+                              "int": 12
+                             }
+                            ]
+                           },
+                           "then": {
+                            "int": 347
+                           },
+                           "else": {
+                            "ite": {
+                             "cond": {
+                              "op": "==",
+                              "args": [
+                               {
+                                "var": "n"
+                               },
+                               {
+                                "int": 13
+                               }
+                              ]
+                             },
+                             "then": {
+                              "int": 397
+                             },
+                             "else": {
+                              "ite": {
+                               "cond": {
+                                "op": "==",
+                                "args": [
+                                 {
+                                  "var": "n"
+                                 },
+                                 {
+                                  "int": 14
+                                 }
+                                ]
+                               },
+                               "then": {
+                                "int": 431
+                               },
+                               "else": {
+                                "ite": {
+                                 "cond": {
+                                  "op": "==",
+                                  "args": [
+                                   {
+                                    "var": "n"
+                                   },
+                                   {
+                                    "int": 15
+                                   }
+                                  ]
+                                 },
+                                 "then": {
+                                  "int": 463
+                                 },
+                                 "else": {
+                                  "ite": {
+                                   "cond": {
+                                    "op": "==",
+                                    "args": [
+                                     {
+                                      "var": "n"
+                                     },
+                                     {
+                                      "int": 16
+                                     }
+                                    ]
+                                   },
+                                   "then": {
+                                    "int": 503
+                                   },
+                                   "else": {
+                                    "ite": {
+                                     "cond": {
+                                      "op": "==",
+                                      "args": [
+                                       {
+                                        "var": "n"
+                                       },
+                                       {
+                                        "int": 17
+                                       }
+                                      ]
+                                     },
+                                     "then": {
+                                      "int": 547
+                                     },
+                                     "else": {
+                                      "ite": {
+                                       "cond": {
+                                        "op": "==",
+                                        "args": [
+                                         {
+                                          "var": "n"
+                                         },
+                                         {
+                                          "int": 18
+                                         }
+                                        ]
+                                       },
+                                       "then": {
+                                        "int": 599
+                                       },
+                                       "else": {
+                                        "ite": {
+                                         "cond": {
+                                          "op": "==",
+                                          "args": [
+                                           {
+                                            "var": "n"
+                                           },
+                                           {
+                                            "int": 19
+                                           }
+                                          ]
+                                         },
+                                         "then": {
+                                          "int": 631
+                                         },
+                                         "else": {
+                                          "ite": {
+                                           "cond": {
+                                            "op": "==",
+                                            "args": [
+                                             {
+                                              "var": "n"
+                                             },
+                                             {
+                                              "int": 20
+                                             }
+                                            ]
+                                           },
+                                           "then": {
+                                            "int": 683
+                                           },
+                                           "else": {
+                                            "ite": {
+                                             "cond": {
+                                              "op": "==",
+                                              "args": [
+                                               {
+                                                "var": "n"
+                                               },
+                                               {
+                                                "int": 21
+                                               }
+                                              ]
+                                             },
+                                             "then": {
+                                              "int": 727
+                                             },
+                                             "else": {
+                                              "ite": {
+                                               "cond": {
+                                                "op": "==",
+                                                "args": [
+                                                 {
+                                                  "var": "n"
+                                                 },
+                                                 {
+                                                  "int": 22
+                                                 }
+                                                ]
+                                               },
+                                               "then": {
+                                                "int": 769
+                                               },
+                                               "else": {
+                                                "ite": {
+                                                 "cond": {
+                                                  "op": "==",
+                                                  "args": [
+                                                   {
+                                                    "var": "n"
+                                                   },
+                                                   {
+                                                    "int": 23
+                                                   }
+                                                  ]
+                                                 },
+                                                 "then": {
+                                                  "int": 823
+                                                 },
+                                                 "else": {
+                                                  "ite": {
+                                                   "cond": {
+                                                    "op": "==",
+                                                    "args": [
+                                                     {
+                                                      "var": "n"
+                                                     },
+                                                     {
+                                                      "int": 24
+                                                     }
+                                                    ]
+                                                   },
+                                                   "then": {
+                                                    "int": 883
+                                                   },
+                                                   "else": {
+                                                    "ite": {
+                                                     "cond": {
+                                                      "op": "==",
+                                                      "args": [
+                                                       {
+                                                        "var": "n"
+                                                       },
+                                                       {
+                                                        "int": 25
+                                                       }
+                                                      ]
+                                                     },
+                                                     "then": {
+                                                      "int": 919
+                                                     },
+                                                     "else": {
+                                                      "ite": {
+                                                       "cond": {
+                                                        "op": "==",
+                                                        "args": [
+                                                         {
+                                                          "var": "n"
+                                                         },
+                                                         {
+                                                          "int": 26
+                                                         }
+                                                        ]
+                                                       },
+                                                       "then": {
+                                                        "int": 953
+                                                       },
+                                                       "else": {
+                                                        "ite": {
+                                                         "cond": {
+                                                          "op": "==",
+                                                          "args": [
+                                                           {
+                                                            "var": "n"
+                                                           },
+                                                           {
+                                                            "int": 27
+                                                           }
+                                                          ]
+                                                         },
+                                                         "then": {
+                                                          "int": 1009
+                                                         },
+                                                         "else": {
+                                                          "ite": {
+                                                           "cond": {
+                                                            "op": "==",
+                                                            "args": [
+                                                             {
+                                                              "var": "n"
+                                                             },
+                                                             {
+                                                              "int": 28
+                                                             }
+                                                            ]
+                                                           },
+                                                           "then": {
+                                                            "int": 1031
+                                                           },
+                                                           "else": {
+                                                            "ite": {
+                                                             "cond": {
+                                                              "op": "==",
+                                                              "args": [
+                                                               {
+                                                                "var": "n"
+                                                               },
+                                                               {
+                                                                "int": 29
+                                                               }
+                                                              ]
+                                                             },
+                                                             "then": {
+                                                              "int": 1063
+                                                             },
+                                                             "else": {
+                                                              "ite": {
+                                                               "cond": {
+                                                                "op": "==",
+                                                                "args": [
+                                                                 {
+                                                                  "var": "n"
+                                                                 },
+                                                                 {
+                                                                  "int": 30
+                                                                 }
+                                                                ]
+                                                               },
+                                                               "then": {
+                                                                "int": 1103
+                                                               },
+                                                               "else": {
+                                                                "ite": {
+                                                                 "cond": {
+                                                                  "op": "==",
+                                                                  "args": [
+                                                                   {
+                                                                    "var": "n"
+                                                                   },
+                                                                   {
+                                                                    "int": 31
+                                                                   }
+                                                                  ]
+                                                                 },
+                                                                 "then": {
+                                                                  "int": 1151
+                                                                 },
+                                                                 "else": {
+                                                                  "ite": {
+                                                                   "cond": {
+                                                                    "op": "==",
+                                                                    "args": [
+                                                                     {
+                                                                      "var": "n"
+                                                                     },
+                                                                     {
+                                                                      "int": 32
+                                                                     }
+                                                                    ]
+                                                                   },
+                                                                   "then": {
+                                                                    "int": 1171
+                                                                   },
+                                                                   "else": {
+                                                                    "ite": {
+                                                                     "cond": {
+                                                                      "op": "==",
+                                                                      "args": [
+                                                                       {
+                                                                        "var": "n"
+                                                                       },
+                                                                       {
+                                                                        "int": 33
+                                                                       }
+                                                                      ]
+                                                                     },
+                                                                     "then": {
+                                                                      "int": 1223
+                                                                     },
+                                                                     "else": {
+                                                                      "ite": {
+                                                                       "cond": {
+                                                                        "op": "==",
+                                                                        "args": [
+                                                                         {
+                                                                          "var": "n"
+                                                                         },
+                                                                         {
+                                                                          "int": 34
+                                                                         }
+                                                                        ]
+                                                                       },
+                                                                       "then": {
+                                                                        "int": 1279
+                                                                       },
+                                                                       "else": {
+                                                                        "ite": {
+                                                                         "cond": {
+                                                                          "op": "==",
+                                                                          "args": [
+                                                                           {
+                                                                            "var": "n"
+                                                                           },
+                                                                           {
+                                                                            "int": 35
+                                                                           }
+                                                                          ]
+                                                                         },
+                                                                         "then": {
+                                                                          "int": 1303
+                                                                         },
+                                                                         "else": {
+                                                                          "ite": {
+                                                                           "cond": {
+                                                                            "op": "==",
+                                                                            "args": [
+                                                                             {
+                                                                              "var": "n"
+                                                                             },
+                                                                             {
+                                                                              "int": 36
+                                                                             }
+                                                                            ]
+                                                                           },
+                                                                           "then": {
+                                                                            "int": 1367
+                                                                           },
+                                                                           "else": {
+                                                                            "ite": {
+                                                                             "cond": {
+                                                                              "op": "==",
+                                                                              "args": [
+                                                                               {
+                                                                                "var": "n"
+                                                                               },
+                                                                               {
+                                                                                "int": 37
+                                                                               }
+                                                                              ]
+                                                                             },
+                                                                             "then": {
+                                                                              "int": 1399
+                                                                             },
+                                                                             "else": {
+                                                                              "ite": {
+                                                                               "cond": {
+                                                                                "op": "==",
+                                                                                "args": [
+                                                                                 {
+                                                                                  "var": "n"
+                                                                                 },
+                                                                                 {
+                                                                                  "int": 38
+                                                                                 }
+                                                                                ]
+                                                                               },
+                                                                               "then": {
+                                                                                "int": 1439
+                                                                               },
+                                                                               "else": {
+                                                                                "ite": {
+                                                                                 "cond": {
+                                                                                  "op": "==",
+                                                                                  "args": [
+                                                                                   {
+                                                                                    "var": "n"
+                                                                                   },
+                                                                                   {
+                                                                                    "int": 39
+                                                                                   }
+                                                                                  ]
+                                                                                 },
+                                                                                 "then": {
+                                                                                  "int": 1483
+                                                                                 },
+                                                                                 "else": {
+                                                                                  "ite": {
+                                                                                   "cond": {
+                                                                                    "op": "==",
+                                                                                    "args": [
+                                                                                     {
+                                                                                      "var": "n"
+                                                                                     },
+                                                                                     {
+                                                                                      "int": 40
+                                                                                     }
+                                                                                    ]
+                                                                                   },
+                                                                                   "then": {
+                                                                                    "int": 1531
+                                                                                   },
+                                                                                   "else": {
+                                                                                    "ite": {
+                                                                                     "cond": {
+                                                                                      "op": "==",
+                                                                                      "args": [
+                                                                                       {
+                                                                                        "var": "n"
+                                                                                       },
+                                                                                       {
+                                                                                        "int": 41
+                                                                                       }
+                                                                                      ]
+                                                                                     },
+                                                                                     "then": {
+                                                                                      "int": 1559
+                                                                                     },
+                                                                                     "else": {
+                                                                                      "ite": {
+                                                                                       "cond": {
+                                                                                        "op": "==",
+                                                                                        "args": [
+                                                                                         {
+                                                                                          "var": "n"
+                                                                                         },
+                                                                                         {
+                                                                                          "int": 42
+                                                                                         }
+                                                                                        ]
+                                                                                       },
+                                                                                       "then": {
+                                                                                        "int": 1607
+                                                                                       },
+                                                                                       "else": {
+                                                                                        "ite": {
+                                                                                         "cond": {
+                                                                                          "op": "==",
+                                                                                          "args": [
+                                                                                           {
+                                                                                            "var": "n"
+                                                                                           },
+                                                                                           {
+                                                                                            "int": 43
+                                                                                           }
+                                                                                          ]
+                                                                                         },
+                                                                                         "then": {
+                                                                                          "int": 1619
+                                                                                         },
+                                                                                         "else": {
+                                                                                          "ite": {
+                                                                                           "cond": {
+                                                                                            "op": "==",
+                                                                                            "args": [
+                                                                                             {
+                                                                                              "var": "n"
+                                                                                             },
+                                                                                             {
+                                                                                              "int": 44
+                                                                                             }
+                                                                                            ]
+                                                                                           },
+                                                                                           "then": {
+                                                                                            "int": 1663
+                                                                                           },
+                                                                                           "else": {
+                                                                                            "ite": {
+                                                                                             "cond": {
+                                                                                              "op": "==",
+                                                                                              "args": [
+                                                                                               {
+                                                                                                "var": "n"
+                                                                                               },
+                                                                                               {
+                                                                                                "int": 45
+                                                                                               }
+                                                                                              ]
+                                                                                             },
+                                                                                             "then": {
+                                                                                              "int": 1699
+                                                                                             },
+                                                                                             "else": {
+                                                                                              "ite": {
+                                                                                               "cond": {
+                                                                                                "op": "==",
+                                                                                                "args": [
+                                                                                                 {
+                                                                                                  "var": "n"
+                                                                                                 },
+                                                                                                 {
+                                                                                                  "int": 46
+                                                                                                 }
+                                                                                                ]
+                                                                                               },
+                                                                                               "then": {
+                                                                                                "int": 1723
+                                                                                               },
+                                                                                               "else": {
+                                                                                                "ite": {
+                                                                                                 "cond": {
+                                                                                                  "op": "==",
+                                                                                                  "args": [
+                                                                                                   {
+                                                                                                    "var": "n"
+                                                                                                   },
+                                                                                                   {
+                                                                                                    "int": 47
+                                                                                                   }
+                                                                                                  ]
+                                                                                                 },
+                                                                                                 "then": {
+                                                                                                  "int": 1783
+                                                                                                 },
+                                                                                                 "else": {
+                                                                                                  "ite": {
+                                                                                                   "cond": {
+                                                                                                    "op": "==",
+                                                                                                    "args": [
+                                                                                                     {
+                                                                                                      "var": "n"
+                                                                                                     },
+                                                                                                     {
+                                                                                                      "int": 48
+                                                                                                     }
+                                                                                                    ]
+                                                                                                   },
+                                                                                                   "then": {
+                                                                                                    "int": 1823
+                                                                                                   },
+                                                                                                   "else": {
+                                                                                                    "ite": {
+                                                                                                     "cond": {
+                                                                                                      "op": "==",
+                                                                                                      "args": [
+                                                                                                       {
+                                                                                                        "var": "n"
+                                                                                                       },
+                                                                                                       {
+                                                                                                        "int": 49
+                                                                                                       }
+                                                                                                      ]
+                                                                                                     },
+                                                                                                     "then": {
+                                                                                                      "int": 1867
+                                                                                                     },
+                                                                                                     "else": {
+                                                                                                      "ite": {
+                                                                                                       "cond": {
+                                                                                                        "op": "==",
+                                                                                                        "args": [
+                                                                                                         {
+                                                                                                          "var": "n"
+                                                                                                         },
+                                                                                                         {
+                                                                                                          "int": 50
+                                                                                                         }
+                                                                                                        ]
+                                                                                                       },
+                                                                                                       "then": {
+                                                                                                        "int": 1901
+                                                                                                       },
+                                                                                                       "else": {
+                                                                                                        "int": 0
+                                                                                                       }
+                                                                                                      }
+                                                                                                     }
+                                                                                                    }
+                                                                                                   }
+                                                                                                  }
+                                                                                                 }
+                                                                                                }
+                                                                                               }
+                                                                                              }
+                                                                                             }
+                                                                                            }
+                                                                                           }
+                                                                                          }
+                                                                                         }
+                                                                                        }
+                                                                                       }
+                                                                                      }
+                                                                                     }
+                                                                                    }
+                                                                                   }
+                                                                                  }
+                                                                                 }
+                                                                                }
+                                                                               }
+                                                                              }
+                                                                             }
+                                                                            }
+                                                                           }
+                                                                          }
+                                                                         }
+                                                                        }
+                                                                       }
+                                                                      }
+                                                                     }
+                                                                    }
+                                                                   }
+                                                                  }
+                                                                 }
+                                                                }
+                                                               }
+                                                              }
+                                                             }
+                                                            }
+                                                           }
+                                                          }
+                                                         }
+                                                        }
+                                                       }
+                                                      }
+                                                     }
+                                                    }
+                                                   }
+                                                  }
+                                                 }
+                                                }
+                                               }
+                                              }
+                                             }
+                                            }
+                                           }
+                                          }
+                                         }
+                                        }
+                                       }
+                                      }
+                                     }
+                                    }
+                                   }
+                                  }
+                                 }
+                                }
+                               }
+                              }
+                             }
+                            }
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 3
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 11
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 3
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "int": 7
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "if": {
+             "cond": {
+              "op": "==",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 4
+               }
+              ]
+             },
+             "then": [
+              {
+               "assign": [
+                "r",
+                {
+                 "int": 17
+                }
+               ]
+              }
+             ],
+             "else": [
+              {
+               "if": {
+                "cond": {
+                 "op": "==",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "int": 5
+                  }
+                 ]
+                },
+                "then": [
+                 {
+                  "assign": [
+                   "r",
+                   {
+                    "int": 41
+                   }
+                  ]
+                 }
+                ],
+                "else": [
+                 {
+                  "if": {
+                   "cond": {
+                    "op": "==",
+                    "args": [
+                     {
+                      "var": "n"
+                     },
+                     {
+                      "int": 6
+                     }
+                    ]
+                   },
+                   "then": [
+                    {
+                     "assign": [
+                      "r",
+                      {
+                       "int": 23
+                      }
+                     ]
+                    }
+                   ],
+                   "else": [
+                    {
+                     "if": {
+                      "cond": {
+                       "op": "==",
+                       "args": [
+                        {
+                         "var": "n"
+                        },
+                        {
+                         "int": 7
+                        }
+                       ]
+                      },
+                      "then": [
+                       {
+                        "assign": [
+                         "r",
+                         {
+                          "int": 71
+                         }
+                        ]
+                       }
+                      ],
+                      "else": [
+                       {
+                        "if": {
+                         "cond": {
+                          "op": "==",
+                          "args": [
+                           {
+                            "var": "n"
+                           },
+                           {
+                            "int": 8
+                           }
+                          ]
+                         },
+                         "then": [
+                          {
+                           "assign": [
+                            "r",
+                            {
+                             "int": 103
+                            }
+                           ]
+                          }
+                         ],
+                         "else": [
+                          {
+                           "if": {
+                            "cond": {
+                             "op": "==",
+                             "args": [
+                              {
+                               "var": "n"
+                              },
+                              {
+                               "int": 9
+                              }
+                             ]
+                            },
+                            "then": [
+                             {
+                              "assign": [
+                               "r",
+                               {
+                                "int": 127
+                               }
+                              ]
+                             }
+                            ],
+                            "else": [
+                             {
+                              "if": {
+                               "cond": {
+                                "op": "==",
+                                "args": [
+                                 {
+                                  "var": "n"
+                                 },
+                                 {
+                                  "int": 10
+                                 }
+                                ]
+                               },
+                               "then": [
+                                {
+                                 "assign": [
+                                  "r",
+                                  {
+                                   "int": 191
+                                  }
+                                 ]
+                                }
+                               ],
+                               "else": [
+                                {
+                                 "if": {
+                                  "cond": {
+                                   "op": "==",
+                                   "args": [
+                                    {
+                                     "var": "n"
+                                    },
+                                    {
+                                     "int": 11
+                                    }
+                                   ]
+                                  },
+                                  "then": [
+                                   {
+                                    "assign": [
+                                     "r",
+                                     {
+                                      "int": 263
+                                     }
+                                    ]
+                                   }
+                                  ],
+                                  "else": [
+                                   {
+                                    "if": {
+                                     "cond": {
+                                      "op": "==",
+                                      "args": [
+                                       {
+                                        "var": "n"
+                                       },
+                                       {
+                                        "int": 12
+                                       }
+                                      ]
+                                     },
+                                     "then": [
+                                      {
+                                       "assign": [
+                                        "r",
+                                        {
+                                         "int": 347
+                                        }
+                                       ]
+                                      }
+                                     ],
+                                     "else": [
+                                      {
+                                       "if": {
+                                        "cond": {
+                                         "op": "==",
+                                         "args": [
+                                          {
+                                           "var": "n"
+                                          },
+                                          {
+                                           "int": 13
+                                          }
+                                         ]
+                                        },
+                                        "then": [
+                                         {
+                                          "assign": [
+                                           "r",
+                                           {
+                                            "int": 397
+                                           }
+                                          ]
+                                         }
+                                        ],
+                                        "else": [
+                                         {
+                                          "if": {
+                                           "cond": {
+                                            "op": "==",
+                                            "args": [
+                                             {
+                                              "var": "n"
+                                             },
+                                             {
+                                              "int": 14
+                                             }
+                                            ]
+                                           },
+                                           "then": [
+                                            {
+                                             "assign": [
+                                              "r",
+                                              {
+                                               "int": 431
+                                              }
+                                             ]
+                                            }
+                                           ],
+                                           "else": [
+                                            {
+                                             "if": {
+                                              "cond": {
+                                               "op": "==",
+                                               "args": [
+                                                {
+                                                 "var": "n"
+                                                },
+                                                {
+                                                 "int": 15
+                                                }
+                                               ]
+                                              },
+                                              "then": [
+                                               {
+                                                "assign": [
+                                                 "r",
+                                                 {
+                                                  "int": 463
+                                                 }
+                                                ]
+                                               }
+                                              ],
+                                              "else": [
+                                               {
+                                                "if": {
+                                                 "cond": {
+                                                  "op": "==",
+                                                  "args": [
+                                                   {
+                                                    "var": "n"
+                                                   },
+                                                   {
+                                                    "int": 16
+                                                   }
+                                                  ]
+                                                 },
+                                                 "then": [
+                                                  {
+                                                   "assign": [
+                                                    "r",
+                                                    {
+                                                     "int": 503
+                                                    }
+                                                   ]
+                                                  }
+                                                 ],
+                                                 "else": [
+                                                  {
+                                                   "if": {
+                                                    "cond": {
+                                                     "op": "==",
+                                                     "args": [
+                                                      {
+                                                       "var": "n"
+                                                      },
+                                                      {
+                                                       "int": 17
+                                                      }
+                                                     ]
+                                                    },
+                                                    "then": [
+                                                     {
+                                                      "assign": [
+                                                       "r",
+                                                       {
+                                                        "int": 547
+                                                       }
+                                                      ]
+                                                     }
+                                                    ],
+                                                    "else": [
+                                                     {
+                                                      "if": {
+                                                       "cond": {
+                                                        "op": "==",
+                                                        "args": [
+                                                         {
+                                                          "var": "n"
+                                                         },
+                                                         {
+                                                          "int": 18
+                                                         }
+                                                        ]
+                                                       },
+                                                       "then": [
+                                                        {
+                                                         "assign": [
+                                                          "r",
+                                                          {
+                                                           "int": 599
+                                                          }
+                                                         ]
+                                                        }
+                                                       ],
+                                                       "else": [
+                                                        {
+                                                         "if": {
+                                                          "cond": {
+                                                           "op": "==",
+                                                           "args": [
+                                                            {
+                                                             "var": "n"
+                                                            },
+                                                            {
+                                                             "int": 19
+                                                            }
+                                                           ]
+                                                          },
+                                                          "then": [
+                                                           {
+                                                            "assign": [
+                                                             "r",
+                                                             {
+                                                              "int": 631
+                                                             }
+                                                            ]
+                                                           }
+                                                          ],
+                                                          "else": [
+                                                           {
+                                                            "if": {
+                                                             "cond": {
+                                                              "op": "==",
+                                                              "args": [
+                                                               {
+                                                                "var": "n"
+                                                               },
+                                                               {
+                                                                "int": 20
+                                                               }
+                                                              ]
+                                                             },
+                                                             "then": [
+                                                              {
+                                                               "assign": [
+                                                                "r",
+                                                                {
+                                                                 "int": 683
+                                                                }
+                                                               ]
+                                                              }
+                                                             ],
+                                                             "else": [
+                                                              {
+                                                               "if": {
+                                                                "cond": {
+                                                                 "op": "==",
+                                                                 "args": [
+                                                                  {
+                                                                   "var": "n"
+                                                                  },
+                                                                  {
+                                                                   "int": 21
+                                                                  }
+                                                                 ]
+                                                                },
+                                                                "then": [
+                                                                 {
+                                                                  "assign": [
+                                                                   "r",
+                                                                   {
+                                                                    "int": 727
+                                                                   }
+                                                                  ]
+                                                                 }
+                                                                ],
+                                                                "else": [
+                                                                 {
+                                                                  "if": {
+                                                                   "cond": {
+                                                                    "op": "==",
+                                                                    "args": [
+                                                                     {
+                                                                      "var": "n"
+                                                                     },
+                                                                     {
+                                                                      "int": 22
+                                                                     }
+                                                                    ]
+                                                                   },
+                                                                   "then": [
+                                                                    {
+                                                                     "assign": [
+                                                                      "r",
+                                                                      {
+                                                                       "int": 769
+                                                                      }
+                                                                     ]
+                                                                    }
+                                                                   ],
+                                                                   "else": [
+                                                                    {
+                                                                     "if": {
+                                                                      "cond": {
+                                                                       "op": "==",
+                                                                       "args": [
+                                                                        {
+                                                                         "var": "n"
+                                                                        },
+                                                                        {
+                                                                         "int": 23
+                                                                        }
+                                                                       ]
+                                                                      },
+                                                                      "then": [
+                                                                       {
+                                                                        "assign": [
+                                                                         "r",
+                                                                         {
+                                                                          "int": 823
+                                                                         }
+                                                                        ]
+                                                                       }
+                                                                      ],
+                                                                      "else": [
+                                                                       {
+                                                                        "if": {
+                                                                         "cond": {
+                                                                          "op": "==",
+                                                                          "args": [
+                                                                           {
+                                                                            "var": "n"
+                                                                           },
+                                                                           {
+                                                                            "int": 24
+                                                                           }
+                                                                          ]
+                                                                         },
+                                                                         "then": [
+                                                                          {
+                                                                           "assign": [
+                                                                            "r",
+                                                                            {
+                                                                             "int": 883
+                                                                            }
+                                                                           ]
+                                                                          }
+                                                                         ],
+                                                                         "else": [
+                                                                          {
+                                                                           "if": {
+                                                                            "cond": {
+                                                                             "op": "==",
+                                                                             "args": [
+                                                                              {
+                                                                               "var": "n"
+                                                                              },
+                                                                              {
+                                                                               "int": 25
+                                                                              }
+                                                                             ]
+                                                                            },
+                                                                            "then": [
+                                                                             {
+                                                                              "assign": [
+                                                                               "r",
+                                                                               {
+                                                                                "int": 919
+                                                                               }
+                                                                              ]
+                                                                             }
+                                                                            ],
+                                                                            "else": [
+                                                                             {
+                                                                              "if": {
+                                                                               "cond": {
+                                                                                "op": "==",
+                                                                                "args": [
+                                                                                 {
+                                                                                  "var": "n"
+                                                                                 },
+                                                                                 {
+                                                                                  "int": 26
+                                                                                 }
+                                                                                ]
+                                                                               },
+                                                                               "then": [
+                                                                                {
+                                                                                 "assign": [
+                                                                                  "r",
+                                                                                  {
+                                                                                   "int": 953
+                                                                                  }
+                                                                                 ]
+                                                                                }
+                                                                               ],
+                                                                               "else": [
+                                                                                {
+                                                                                 "if": {
+                                                                                  "cond": {
+                                                                                   "op": "==",
+                                                                                   "args": [
+                                                                                    {
+                                                                                     "var": "n"
+                                                                                    },
+                                                                                    {
+                                                                                     "int": 27
+                                                                                    }
+                                                                                   ]
+                                                                                  },
+                                                                                  "then": [
+                                                                                   {
+                                                                                    "assign": [
+                                                                                     "r",
+                                                                                     {
+                                                                                      "int": 1009
+                                                                                     }
+                                                                                    ]
+                                                                                   }
+                                                                                  ],
+                                                                                  "else": [
+                                                                                   {
+                                                                                    "if": {
+                                                                                     "cond": {
+                                                                                      "op": "==",
+                                                                                      "args": [
+                                                                                       {
+                                                                                        "var": "n"
+                                                                                       },
+                                                                                       {
+                                                                                        "int": 28
+                                                                                       }
+                                                                                      ]
+                                                                                     },
+                                                                                     "then": [
+                                                                                      {
+                                                                                       "assign": [
+                                                                                        "r",
+                                                                                        {
+                                                                                         "int": 1031
+                                                                                        }
+                                                                                       ]
+                                                                                      }
+                                                                                     ],
+                                                                                     "else": [
+                                                                                      {
+                                                                                       "if": {
+                                                                                        "cond": {
+                                                                                         "op": "==",
+                                                                                         "args": [
+                                                                                          {
+                                                                                           "var": "n"
+                                                                                          },
+                                                                                          {
+                                                                                           "int": 29
+                                                                                          }
+                                                                                         ]
+                                                                                        },
+                                                                                        "then": [
+                                                                                         {
+                                                                                          "assign": [
+                                                                                           "r",
+                                                                                           {
+                                                                                            "int": 1063
+                                                                                           }
+                                                                                          ]
+                                                                                         }
+                                                                                        ],
+                                                                                        "else": [
+                                                                                         {
+                                                                                          "if": {
+                                                                                           "cond": {
+                                                                                            "op": "==",
+                                                                                            "args": [
+                                                                                             {
+                                                                                              "var": "n"
+                                                                                             },
+                                                                                             {
+                                                                                              "int": 30
+                                                                                             }
+                                                                                            ]
+                                                                                           },
+                                                                                           "then": [
+                                                                                            {
+                                                                                             "assign": [
+                                                                                              "r",
+                                                                                              {
+                                                                                               "int": 1103
+                                                                                              }
+                                                                                             ]
+                                                                                            }
+                                                                                           ],
+                                                                                           "else": [
+                                                                                            {
+                                                                                             "if": {
+                                                                                              "cond": {
+                                                                                               "op": "==",
+                                                                                               "args": [
+                                                                                                {
+                                                                                                 "var": "n"
+                                                                                                },
+                                                                                                {
+                                                                                                 "int": 31
+                                                                                                }
+                                                                                               ]
+                                                                                              },
+                                                                                              "then": [
+                                                                                               {
+                                                                                                "assign": [
+                                                                                                 "r",
+                                                                                                 {
+                                                                                                  "int": 1151
+                                                                                                 }
+                                                                                                ]
+                                                                                               }
+                                                                                              ],
+                                                                                              "else": [
+                                                                                               {
+                                                                                                "if": {
+                                                                                                 "cond": {
+                                                                                                  "op": "==",
+                                                                                                  "args": [
+                                                                                                   {
+                                                                                                    "var": "n"
+                                                                                                   },
+                                                                                                   {
+                                                                                                    "int": 32
+                                                                                                   }
+                                                                                                  ]
+                                                                                                 },
+                                                                                                 "then": [
+                                                                                                  {
+                                                                                                   "assign": [
+                                                                                                    "r",
+                                                                                                    {
+                                                                                                     "int": 1171
+                                                                                                    }
+                                                                                                   ]
+                                                                                                  }
+                                                                                                 ],
+                                                                                                 "else": [
+                                                                                                  {
+                                                                                                   "if": {
+                                                                                                    "cond": {
+                                                                                                     "op": "==",
+                                                                                                     "args": [
+                                                                                                      {
+                                                                                                       "var": "n"
+                                                                                                      },
+                                                                                                      {
+                                                                                                       "int": 33
+                                                                                                      }
+                                                                                                     ]
+                                                                                                    },
+                                                                                                    "then": [
+                                                                                                     {
+                                                                                                      "assign": [
+                                                                                                       "r",
+                                                                                                       {
+                                                                                                        "int": 1223
+                                                                                                       }
+                                                                                                      ]
+                                                                                                     }
+                                                                                                    ],
+                                                                                                    "else": [
+                                                                                                     {
+                                                                                                      "if": {
+                                                                                                       "cond": {
+                                                                                                        "op": "==",
+                                                                                                        "args": [
+                                                                                                         {
+                                                                                                          "var": "n"
+                                                                                                         },
+                                                                                                         {
+                                                                                                          "int": 34
+                                                                                                         }
+                                                                                                        ]
+                                                                                                       },
+                                                                                                       "then": [
+                                                                                                        {
+                                                                                                         "assign": [
+                                                                                                          "r",
+                                                                                                          {
+                                                                                                           "int": 1279
+                                                                                                          }
+                                                                                                         ]
+                                                                                                        }
+                                                                                                       ],
+                                                                                                       "else": [
+                                                                                                        {
+                                                                                                         "if": {
+                                                                                                          "cond": {
+                                                                                                           "op": "==",
+                                                                                                           "args": [
+                                                                                                            {
+                                                                                                             "var": "n"
+                                                                                                            },
+                                                                                                            {
+                                                                                                             "int": 35
+                                                                                                            }
+                                                                                                           ]
+                                                                                                          },
+                                                                                                          "then": [
+                                                                                                           {
+                                                                                                            "assign": [
+                                                                                                             "r",
+                                                                                                             {
+                                                                                                              "int": 1303
+                                                                                                             }
+                                                                                                            ]
+                                                                                                           }
+                                                                                                          ],
+                                                                                                          "else": [
+                                                                                                           {
+                                                                                                            "if": {
+                                                                                                             "cond": {
+                                                                                                              "op": "==",
+                                                                                                              "args": [
+                                                                                                               {
+                                                                                                                "var": "n"
+                                                                                                               },
+                                                                                                               {
+                                                                                                                "int": 36
+                                                                                                               }
+                                                                                                              ]
+                                                                                                             },
+                                                                                                             "then": [
+                                                                                                              {
+                                                                                                               "assign": [
+                                                                                                                "r",
+                                                                                                                {
+                                                                                                                 "int": 1367
+                                                                                                                }
+                                                                                                               ]
+                                                                                                              }
+                                                                                                             ],
+                                                                                                             "else": [
+                                                                                                              {
+                                                                                                               "if": {
+                                                                                                                "cond": {
+                                                                                                                 "op": "==",
+                                                                                                                 "args": [
+                                                                                                                  {
+                                                                                                                   "var": "n"
+                                                                                                                  },
+                                                                                                                  {
+                                                                                                                   "int": 37
+                                                                                                                  }
+                                                                                                                 ]
+                                                                                                                },
+                                                                                                                "then": [
+                                                                                                                 {
+                                                                                                                  "assign": [
+                                                                                                                   "r",
+                                                                                                                   {
+                                                                                                                    "int": 1399
+                                                                                                                   }
+                                                                                                                  ]
+                                                                                                                 }
+                                                                                                                ],
+                                                                                                                "else": [
+                                                                                                                 {
+                                                                                                                  "if": {
+                                                                                                                   "cond": {
+                                                                                                                    "op": "==",
+                                                                                                                    "args": [
+                                                                                                                     {
+                                                                                                                      "var": "n"
+                                                                                                                     },
+                                                                                                                     {
+                                                                                                                      "int": 38
+                                                                                                                     }
+                                                                                                                    ]
+                                                                                                                   },
+                                                                                                                   "then": [
+                                                                                                                    {
+                                                                                                                     "assign": [
+                                                                                                                      "r",
+                                                                                                                      {
+                                                                                                                       "int": 1439
+                                                                                                                      }
+                                                                                                                     ]
+                                                                                                                    }
+                                                                                                                   ],
+                                                                                                                   "else": [
+                                                                                                                    {
+                                                                                                                     "if": {
+                                                                                                                      "cond": {
+                                                                                                                       "op": "==",
+                                                                                                                       "args": [
+                                                                                                                        {
+                                                                                                                         "var": "n"
+                                                                                                                        },
+                                                                                                                        {
+                                                                                                                         "int": 39
+                                                                                                                        }
+                                                                                                                       ]
+                                                                                                                      },
+                                                                                                                      "then": [
+                                                                                                                       {
+                                                                                                                        "assign": [
+                                                                                                                         "r",
+                                                                                                                         {
+                                                                                                                          "int": 1483
+                                                                                                                         }
+                                                                                                                        ]
+                                                                                                                       }
+                                                                                                                      ],
+                                                                                                                      "else": [
+                                                                                                                       {
+                                                                                                                        "if": {
+                                                                                                                         "cond": {
+                                                                                                                          "op": "==",
+                                                                                                                          "args": [
+                                                                                                                           {
+                                                                                                                            "var": "n"
+                                                                                                                           },
+                                                                                                                           {
+                                                                                                                            "int": 40
+                                                                                                                           }
+                                                                                                                          ]
+                                                                                                                         },
+                                                                                                                         "then": [
+                                                                                                                          {
+                                                                                                                           "assign": [
+                                                                                                                            "r",
+                                                                                                                            {
+                                                                                                                             "int": 1531
+                                                                                                                            }
+                                                                                                                           ]
+                                                                                                                          }
+                                                                                                                         ],
+                                                                                                                         "else": [
+                                                                                                                          {
+                                                                                                                           "if": {
+                                                                                                                            "cond": {
+                                                                                                                             "op": "==",
+                                                                                                                             "args": [
+                                                                                                                              {
+                                                                                                                               "var": "n"
+                                                                                                                              },
+                                                                                                                              {
+                                                                                                                               "int": 41
+                                                                                                                              }
+                                                                                                                             ]
+                                                                                                                            },
+                                                                                                                            "then": [
+                                                                                                                             {
+                                                                                                                              "assign": [
+                                                                                                                               "r",
+                                                                                                                               {
+                                                                                                                                "int": 1559
+                                                                                                                               }
+                                                                                                                              ]
+                                                                                                                             }
+                                                                                                                            ],
+                                                                                                                            "else": [
+                                                                                                                             {
+                                                                                                                              "if": {
+                                                                                                                               "cond": {
+                                                                                                                                "op": "==",
+                                                                                                                                "args": [
+                                                                                                                                 {
+                                                                                                                                  "var": "n"
+                                                                                                                                 },
+                                                                                                                                 {
+                                                                                                                                  "int": 42
+                                                                                                                                 }
+                                                                                                                                ]
+                                                                                                                               },
+                                                                                                                               "then": [
+                                                                                                                                {
+                                                                                                                                 "assign": [
+                                                                                                                                  "r",
+                                                                                                                                  {
+                                                                                                                                   "int": 1607
+                                                                                                                                  }
+                                                                                                                                 ]
+                                                                                                                                }
+                                                                                                                               ],
+                                                                                                                               "else": [
+                                                                                                                                {
+                                                                                                                                 "if": {
+                                                                                                                                  "cond": {
+                                                                                                                                   "op": "==",
+                                                                                                                                   "args": [
+                                                                                                                                    {
+                                                                                                                                     "var": "n"
+                                                                                                                                    },
+                                                                                                                                    {
+                                                                                                                                     "int": 43
+                                                                                                                                    }
+                                                                                                                                   ]
+                                                                                                                                  },
+                                                                                                                                  "then": [
+                                                                                                                                   {
+                                                                                                                                    "assign": [
+                                                                                                                                     "r",
+                                                                                                                                     {
+                                                                                                                                      "int": 1619
+                                                                                                                                     }
+                                                                                                                                    ]
+                                                                                                                                   }
+                                                                                                                                  ],
+                                                                                                                                  "else": [
+                                                                                                                                   {
+                                                                                                                                    "if": {
+                                                                                                                                     "cond": {
+                                                                                                                                      "op": "==",
+                                                                                                                                      "args": [
+                                                                                                                                       {
+                                                                                                                                        "var": "n"
+                                                                                                                                       },
+                                                                                                                                       {
+                                                                                                                                        "int": 44
+                                                                                                                                       }
+                                                                                                                                      ]
+                                                                                                                                     },
+                                                                                                                                     "then": [
+                                                                                                                                      {
+                                                                                                                                       "assign": [
+                                                                                                                                        "r",
+                                                                                                                                        {
+                                                                                                                                         "int": 1663
+                                                                                                                                        }
+                                                                                                                                       ]
+                                                                                                                                      }
+                                                                                                                                     ],
+                                                                                                                                     "else": [
+                                                                                                                                      {
+                                                                                                                                       "if": {
+                                                                                                                                        "cond": {
+                                                                                                                                         "op": "==",
+                                                                                                                                         "args": [
+                                                                                                                                          {
+                                                                                                                                           "var": "n"
+                                                                                                                                          },
+                                                                                                                                          {
+                                                                                                                                           "int": 45
+                                                                                                                                          }
+                                                                                                                                         ]
+                                                                                                                                        },
+                                                                                                                                        "then": [
+                                                                                                                                         {
+                                                                                                                                          "assign": [
+                                                                                                                                           "r",
+                                                                                                                                           {
+                                                                                                                                            "int": 1699
+                                                                                                                                           }
+                                                                                                                                          ]
+                                                                                                                                         }
+                                                                                                                                        ],
+                                                                                                                                        "else": [
+                                                                                                                                         {
+                                                                                                                                          "if": {
+                                                                                                                                           "cond": {
+                                                                                                                                            "op": "==",
+                                                                                                                                            "args": [
+                                                                                                                                             {
+                                                                                                                                              "var": "n"
+                                                                                                                                             },
+                                                                                                                                             {
+                                                                                                                                              "int": 46
+                                                                                                                                             }
+                                                                                                                                            ]
+                                                                                                                                           },
+                                                                                                                                           "then": [
+                                                                                                                                            {
+                                                                                                                                             "assign": [
+                                                                                                                                              "r",
+                                                                                                                                              {
+                                                                                                                                               "int": 1723
+                                                                                                                                              }
+                                                                                                                                             ]
+                                                                                                                                            }
+                                                                                                                                           ],
+                                                                                                                                           "else": [
+                                                                                                                                            {
+                                                                                                                                             "if": {
+                                                                                                                                              "cond": {
+                                                                                                                                               "op": "==",
+                                                                                                                                               "args": [
+                                                                                                                                                {
+                                                                                                                                                 "var": "n"
+                                                                                                                                                },
+                                                                                                                                                {
+                                                                                                                                                 "int": 47
+                                                                                                                                                }
+                                                                                                                                               ]
+                                                                                                                                              },
+                                                                                                                                              "then": [
+                                                                                                                                               {
+                                                                                                                                                "assign": [
+                                                                                                                                                 "r",
+                                                                                                                                                 {
+                                                                                                                                                  "int": 1783
+                                                                                                                                                 }
+                                                                                                                                                ]
+                                                                                                                                               }
+                                                                                                                                              ],
+                                                                                                                                              "else": [
+                                                                                                                                               {
+                                                                                                                                                "if": {
+                                                                                                                                                 "cond": {
+                                                                                                                                                  "op": "==",
+                                                                                                                                                  "args": [
+                                                                                                                                                   {
+                                                                                                                                                    "var": "n"
+                                                                                                                                                   },
+                                                                                                                                                   {
+                                                                                                                                                    "int": 48
+                                                                                                                                                   }
+                                                                                                                                                  ]
+                                                                                                                                                 },
+                                                                                                                                                 "then": [
+                                                                                                                                                  {
+                                                                                                                                                   "assign": [
+                                                                                                                                                    "r",
+                                                                                                                                                    {
+                                                                                                                                                     "int": 1823
+                                                                                                                                                    }
+                                                                                                                                                   ]
+                                                                                                                                                  }
+                                                                                                                                                 ],
+                                                                                                                                                 "else": [
+                                                                                                                                                  {
+                                                                                                                                                   "if": {
+                                                                                                                                                    "cond": {
+                                                                                                                                                     "op": "==",
+                                                                                                                                                     "args": [
+                                                                                                                                                      {
+                                                                                                                                                       "var": "n"
+                                                                                                                                                      },
+                                                                                                                                                      {
+                                                                                                                                                       "int": 49
+                                                                                                                                                      }
+                                                                                                                                                     ]
+                                                                                                                                                    },
+                                                                                                                                                    "then": [
+                                                                                                                                                     {
+                                                                                                                                                      "assign": [
+                                                                                                                                                       "r",
+                                                                                                                                                       {
+                                                                                                                                                        "int": 1867
+                                                                                                                                                       }
+                                                                                                                                                      ]
+                                                                                                                                                     }
+                                                                                                                                                    ],
+                                                                                                                                                    "else": [
+                                                                                                                                                     {
+                                                                                                                                                      "if": {
+                                                                                                                                                       "cond": {
+                                                                                                                                                        "op": "==",
+                                                                                                                                                        "args": [
+                                                                                                                                                         {
+                                                                                                                                                          "var": "n"
+                                                                                                                                                         },
+                                                                                                                                                         {
+                                                                                                                                                          "int": 50
+                                                                                                                                                         }
+                                                                                                                                                        ]
+                                                                                                                                                       },
+                                                                                                                                                       "then": [
+                                                                                                                                                        {
+                                                                                                                                                         "assign": [
+                                                                                                                                                          "r",
+                                                                                                                                                          {
+                                                                                                                                                           "int": 1901
+                                                                                                                                                          }
+                                                                                                                                                         ]
+                                                                                                                                                        }
+                                                                                                                                                       ],
+                                                                                                                                                       "else": [
+                                                                                                                                                        {
+                                                                                                                                                         "assign": [
+                                                                                                                                                          "r",
+                                                                                                                                                          {
+                                                                                                                                                           "int": 0
+                                                                                                                                                          }
+                                                                                                                                                         ]
+                                                                                                                                                        }
+                                                                                                                                                       ]
+                                                                                                                                                      }
+                                                                                                                                                     }
+                                                                                                                                                    ]
+                                                                                                                                                   }
+                                                                                                                                                  }
+                                                                                                                                                 ]
+                                                                                                                                                }
+                                                                                                                                               }
+                                                                                                                                              ]
+                                                                                                                                             }
+                                                                                                                                            }
+                                                                                                                                           ]
+                                                                                                                                          }
+                                                                                                                                         }
+                                                                                                                                        ]
+                                                                                                                                       }
+                                                                                                                                      }
+                                                                                                                                     ]
+                                                                                                                                    }
+                                                                                                                                   }
+                                                                                                                                  ]
+                                                                                                                                 }
+                                                                                                                                }
+                                                                                                                               ]
+                                                                                                                              }
+                                                                                                                             }
+                                                                                                                            ]
+                                                                                                                           }
+                                                                                                                          }
+                                                                                                                         ]
+                                                                                                                        }
+                                                                                                                       }
+                                                                                                                      ]
+                                                                                                                     }
+                                                                                                                    }
+                                                                                                                   ]
+                                                                                                                  }
+                                                                                                                 }
+                                                                                                                ]
+                                                                                                               }
+                                                                                                              }
+                                                                                                             ]
+                                                                                                            }
+                                                                                                           }
+                                                                                                          ]
+                                                                                                         }
+                                                                                                        }
+                                                                                                       ]
+                                                                                                      }
+                                                                                                     }
+                                                                                                    ]
+                                                                                                   }
+                                                                                                  }
+                                                                                                 ]
+                                                                                                }
+                                                                                               }
+                                                                                              ]
+                                                                                             }
+                                                                                            }
+                                                                                           ]
+                                                                                          }
+                                                                                         }
+                                                                                        ]
+                                                                                       }
+                                                                                      }
+                                                                                     ]
+                                                                                    }
+                                                                                   }
+                                                                                  ]
+                                                                                 }
+                                                                                }
+                                                                               ]
+                                                                              }
+                                                                             }
+                                                                            ]
+                                                                           }
+                                                                          }
+                                                                         ]
+                                                                        }
+                                                                       }
+                                                                      ]
+                                                                     }
+                                                                    }
+                                                                   ]
+                                                                  }
+                                                                 }
+                                                                ]
+                                                               }
+                                                              }
+                                                             ]
+                                                            }
+                                                           }
+                                                          ]
+                                                         }
+                                                        }
+                                                       ]
+                                                      }
+                                                     }
+                                                    ]
+                                                   }
+                                                  }
+                                                 ]
+                                                }
+                                               }
+                                              ]
+                                             }
+                                            }
+                                           ]
+                                          }
+                                         }
+                                        ]
+                                       }
+                                      }
+                                     ]
+                                    }
+                                   }
+                                  ]
+                                 }
+                                }
+                               ]
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

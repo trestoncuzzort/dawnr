@@ -1,0 +1,4052 @@
+{
+ "3": {
+  "task_id": 3,
+  "fn": "is_not_prime",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "ca32bb282de82dfe",
+  "model_name": "mbpp_19__find_rect_num",
+  "stage": "task",
+  "name": "mbpp_3__is_not_prime",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "4": {
+  "task_id": 4,
+  "fn": "heap_queue_largest",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c38fb06f5c6f1deb",
+  "model_name": "mbpp_542__sub_list",
+  "stage": "task",
+  "name": "mbpp_4__heap_queue_largest",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "6": {
+  "task_id": 6,
+  "fn": "differ_At_One_Bit_Pos",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f25b5b887fdd6f2b",
+  "model_name": "mbpp_509__average_Odd",
+  "stage": "task",
+  "name": "mbpp_6__differ_At_One_Bit_Pos",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "10": {
+  "task_id": 10,
+  "fn": "small_nnum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7e24c5077482eb05",
+  "model_name": "mbpp_509__surface_Area",
+  "stage": "task",
+  "name": "mbpp_10__small_nnum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "18": {
+  "task_id": 18,
+  "fn": "remove_dirty_chars",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "ce584f1b2a6e854b",
+  "model_name": "mbpp_732__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_18__remove_dirty_chars",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "20": {
+  "task_id": 20,
+  "fn": "is_woodall",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "61428453599ffaca",
+  "model_name": "mbpp_509__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_20__is_woodall",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "24": {
+  "task_id": 24,
+  "fn": "binary_to_decimal",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "084f66c487a9672d",
+  "model_name": "mbpp_369__dog_age",
+  "stage": "task",
+  "name": "mbpp_24__binary_to_decimal",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "28": {
+  "task_id": 28,
+  "fn": "binomial_Coeff",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "4b8e11dd6e1b2ef1",
+  "model_name": "mbpp_4__volume_cube",
+  "stage": "task",
+  "name": "mbpp_28__binomial_Coeff",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "32": {
+  "task_id": 32,
+  "fn": "max_Prime_Factors",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2f08fb236b3531d3",
+  "model_name": "mbpp_35__find_rect_num",
+  "stage": "task",
+  "name": "mbpp_32__max_Prime_Factors",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "34": {
+  "task_id": 34,
+  "fn": "find_missing",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f2a546f7bd2171e4",
+  "model_name": "mbpp_19__first",
+  "stage": "task",
+  "name": "mbpp_34__find_missing",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "38": {
+  "task_id": 38,
+  "fn": "div_even_odd",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "dd4b69ec593fae34",
+  "model_name": "mbpp_263__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_38__div_even_odd",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "39": {
+  "task_id": 39,
+  "fn": "rearange_string",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "678e12066d9baf21",
+  "model_name": "mbpp_654__first",
+  "stage": "task",
+  "name": "mbpp_39__rearange_string",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "45": {
+  "task_id": 45,
+  "fn": "get_gcd",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f35b3dea666dd42d",
+  "model_name": "mbpp_509__gcd",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]; call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; assign r: None into int [SPEC: assign's expression type must match the target's declare"
+ },
+ "47": {
+  "task_id": 47,
+  "fn": "compute_Last_Digit",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "239d845be944f4b4",
+  "model_name": "mbpp_190__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_47__compute_Last_Digit",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "51": {
+  "task_id": 51,
+  "fn": "check_equilateral",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0958c9c3a6b703bc",
+  "stage": "parse",
+  "why": "<string>:2:12: expected '(', found '==' [Task]"
+ },
+ "53": {
+  "task_id": 53,
+  "fn": "check_Equality",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2239a947b387a404",
+  "model_name": "mbpp_28__sub_list",
+  "stage": "task",
+  "name": "mbpp_53__check_Equality",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "56": {
+  "task_id": 56,
+  "fn": "check",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "75dca4ab7f0823d8",
+  "model_name": "mbpp_89__closest_num",
+  "stage": "task",
+  "name": "mbpp_56__check",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "60": {
+  "task_id": 60,
+  "fn": "max_len_sub",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e15e20553fa37071",
+  "model_name": "mbpp_19__lateralsurface_cuboid",
+  "stage": "wf",
+  "why": "unbound var h [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]; unbound var h [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]"
+ },
+ "66": {
+  "task_id": 66,
+  "fn": "pos_count",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b89818c9389ef79",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_66__pos_count",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "68": {
+  "task_id": 68,
+  "fn": "is_Monotonic",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_68__is_Monotonic",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "72": {
+  "task_id": 72,
+  "fn": "dif_Square",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f983df72038e9a41",
+  "model_name": "mbpp_8__square_nums",
+  "stage": "task",
+  "name": "mbpp_72__dif_Square",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "74": {
+  "task_id": 74,
+  "fn": "is_samepatterns",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "654d9e2a0cd05352",
+  "model_name": "mbpp_195__swap_List",
+  "stage": "task",
+  "name": "mbpp_74__is_samepatterns",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "78": {
+  "task_id": 78,
+  "fn": "count_With_Odd_SetBits",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "69b4b9e34db0e840",
+  "model_name": "mbpp_509__count_Intgral_Points",
+  "stage": "wf",
+  "why": "unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; <= is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; - over non-int [SPEC: + - * neg div mod are int-only]; unboun"
+ },
+ "86": {
+  "task_id": 86,
+  "fn": "centered_hexagonal_number",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bfef53618e209494",
+  "model_name": "mbpp_89__closes_num",
+  "stage": "task",
+  "name": "mbpp_86__centered_hexagonal_number",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "91": {
+  "task_id": 91,
+  "fn": "find_substring",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_91__find_substring",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "96": {
+  "task_id": 96,
+  "fn": "divisor",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "d6fa23a8ab692fb5",
+  "model_name": "mbpp_509__gcd",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]; call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; assign r: None into int [SPEC: assign's expression type must match the target's declare"
+ },
+ "103": {
+  "task_id": 103,
+  "fn": "eulerian_num",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2e776b0d3949997a",
+  "model_name": "mbpp_404__tn_ap",
+  "stage": "wf",
+  "why": "unbound var d [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]; unbound var d [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]"
+ },
+ "108": {
+  "task_id": 108,
+  "fn": "merge_sorted_list",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "844fef6249ce6899",
+  "model_name": "mbpp_72__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_108__merge_sorted_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "119": {
+  "task_id": 119,
+  "fn": "search",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "6d79f4daebdf5299",
+  "model_name": "mbpp_642__first",
+  "stage": "task",
+  "name": "mbpp_119__search",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "122": {
+  "task_id": 122,
+  "fn": "smartNumber",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "b9fe3b69482d2781",
+  "stage": "parse",
+  "why": "<string>:1:1: expected 't', found 'Problem' [Task]"
+ },
+ "125": {
+  "task_id": 125,
+  "fn": "find_length",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bc1b558f2a9113c7",
+  "model_name": "mbpp_19__first",
+  "stage": "task",
+  "name": "mbpp_125__find_length",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "126": {
+  "task_id": 126,
+  "fn": "sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a45d1a6351d8f078",
+  "model_name": "mbpp_732__sum",
+  "stage": "task",
+  "name": "mbpp_126__sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "138": {
+  "task_id": 138,
+  "fn": "is_Sum_Of_Powers_Of_Two",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "08a0e998afe273a6",
+  "model_name": "mbpp_732__fistar_num",
+  "stage": "task",
+  "name": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "141": {
+  "task_id": 141,
+  "fn": "pancake_sort",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "74ea7871fab58451",
+  "model_name": "mbpp_631__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_141__pancake_sort",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "144": {
+  "task_id": 144,
+  "fn": "sum_Pairs",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2d27a3b0718daf1a",
+  "model_name": "mbpp_591__swap_List",
+  "stage": "task",
+  "name": "mbpp_144__sum_Pairs",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "149": {
+  "task_id": 149,
+  "fn": "longest_subseq_with_diff_one",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e8ba40191685db14",
+  "model_name": "mbpp_190__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_149__longest_subseq_with_diff_one",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "151": {
+  "task_id": 151,
+  "fn": "is_coprime",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c4b53a312894f8e6",
+  "model_name": "mbpp_73__count_Intgral_Points",
+  "stage": "wf",
+  "why": "unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; <= is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; - over non-int [SPEC: + - * neg div mod are int-only]; unboun"
+ },
+ "158": {
+  "task_id": 158,
+  "fn": "min_Ops",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "642317a9eb2a24c9",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_158__min_Ops",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "161": {
+  "task_id": 161,
+  "fn": "remove_elements",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "ce584f1b2a6e854b",
+  "model_name": "mbpp_732__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_161__remove_elements",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "164": {
+  "task_id": 164,
+  "fn": "areEquivalent",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e45018d9097f3d6c",
+  "model_name": "mbpp_19__surface_Area",
+  "stage": "task",
+  "name": "mbpp_164__areEquivalent",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "167": {
+  "task_id": 167,
+  "fn": "next_Power_Of_2",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "836113fb6010b6ee",
+  "model_name": "mbpp_909__gcd",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]; call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; assign r: None into int [SPEC: assign's expression type must match the target's declare"
+ },
+ "169": {
+  "task_id": 169,
+  "fn": "get_pell",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "81ecc730c0813347",
+  "model_name": "mbpp_289__coinal",
+  "stage": "task",
+  "name": "mbpp_169__get_pell",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "175": {
+  "task_id": 175,
+  "fn": "is_valid_parenthese",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7310444a5772b2e7",
+  "model_name": "mbpp_263__replace_blank",
+  "stage": "task",
+  "name": "mbpp_175__is_valid_parenthese",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "179": {
+  "task_id": 179,
+  "fn": "is_num_keith",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2b2be47edc8121a9",
+  "model_name": "mbpp_268__find_star_num",
+  "stage": "task",
+  "name": "mbpp_179__is_num_keith",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "184": {
+  "task_id": 184,
+  "fn": "greater_specificnum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c5e48d5ef872fa1a",
+  "model_name": "mbpp_733__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_184__greater_specificnum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "187": {
+  "task_id": 187,
+  "fn": "longest_common_subsequence",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_187__longest_common_subsequence",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "189": {
+  "task_id": 189,
+  "fn": "first_Missing_Positive",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "642317a9eb2a24c9",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_189__first_Missing_Positive",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "194": {
+  "task_id": 194,
+  "fn": "octal_To_Decimal",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "64921c57645dea12",
+  "model_name": "mbpp_89__closest_num",
+  "stage": "task",
+  "name": "mbpp_194__octal_To_Decimal",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "201": {
+  "task_id": 201,
+  "fn": "chkList",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "9bc8f0cd677c723a",
+  "model_name": "mbpp_8__count_Intgral_Points",
+  "stage": "wf",
+  "why": "unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; <= is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; - over non-int [SPEC: + - * neg div mod are int-only]; unboun"
+ },
+ "203": {
+  "task_id": 203,
+  "fn": "hamming_Distance",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7382900576989411",
+  "model_name": "mbpp_591__gcd",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]; call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; assign r: None into int [SPEC: assign's expression type must match the target's declare"
+ },
+ "208": {
+  "task_id": 208,
+  "fn": "is_decimal",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7ceac16d35bb68db",
+  "model_name": "mbpp_732__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_208__is_decimal",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "212": {
+  "task_id": 212,
+  "fn": "fourth_Power_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7718c4ed50e84741",
+  "model_name": "mbpp_89__sum",
+  "stage": "task",
+  "name": "mbpp_212__fourth_Power_Sum",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "220": {
+  "task_id": 220,
+  "fn": "replace_max_specialchar",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "cab361fb3bbb98d4",
+  "model_name": "mbpp_732__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_220__replace_max_specialchar",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "221": {
+  "task_id": 221,
+  "fn": "first_even",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_221__first_even",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "224": {
+  "task_id": 224,
+  "fn": "count_Set_Bits",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "64921c57645dea12",
+  "model_name": "mbpp_89__closest_num",
+  "stage": "task",
+  "name": "mbpp_224__count_Set_Bits",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "228": {
+  "task_id": 228,
+  "fn": "all_Bits_Set_In_The_Given_Range",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2b6612c98454a82c",
+  "model_name": "mbpp_509__abs",
+  "stage": "task",
+  "name": "mbpp_228__all_Bits_Set_In_The_Given_Range",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "232": {
+  "task_id": 232,
+  "fn": "larg_nnum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "31a2a38cf1f03f34",
+  "model_name": "mbpp_591__swap_List",
+  "stage": "task",
+  "name": "mbpp_232__larg_nnum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "235": {
+  "task_id": 235,
+  "fn": "even_bit_set_number",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "47ac9665b7b345e5",
+  "model_name": "mbpp_235__volume_cube",
+  "stage": "task",
+  "name": "mbpp_235__even_bit_set_number",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "239": {
+  "task_id": 239,
+  "fn": "get_total_number_of_sequences",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "6a791e463054159f",
+  "model_name": "mbpp_19__find_star_num",
+  "stage": "task",
+  "name": "mbpp_239__get_total_number_of_sequences",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "245": {
+  "task_id": 245,
+  "fn": "max_sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_245__max_sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "247": {
+  "task_id": 247,
+  "fn": "lps",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "67380c127aad3ad6",
+  "model_name": "mbpp_542__fill_spaces",
+  "stage": "wf",
+  "why": "unbound var c [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]; unbound var c [SPEC: a na"
+ },
+ "258": {
+  "task_id": 258,
+  "fn": "count_odd",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f4582c3ce6266d5a",
+  "model_name": "mbpp_264__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_258__count_odd",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "267": {
+  "task_id": 267,
+  "fn": "square_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f983df72038e9a41",
+  "model_name": "mbpp_8__square_nums",
+  "stage": "task",
+  "name": "mbpp_267__square_Sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "269": {
+  "task_id": 269,
+  "fn": "ascii_value",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "d05247b46a892d8b",
+  "model_name": "mbpp_59__surface_Area",
+  "stage": "task",
+  "name": "mbpp_269__ascii_value",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "271": {
+  "task_id": 271,
+  "fn": "even_Power_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "4406a594c6dc97aa",
+  "model_name": "mbpp_73__sum",
+  "stage": "task",
+  "name": "mbpp_271__even_Power_Sum",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "275": {
+  "task_id": 275,
+  "fn": "get_Position",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "654d9e2a0cd05352",
+  "model_name": "mbpp_195__swap_List",
+  "stage": "task",
+  "name": "mbpp_275__get_Position",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "283": {
+  "task_id": 283,
+  "fn": "validate",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "6706c2cb0892f18c",
+  "model_name": "mbpp_89__cuboid",
+  "stage": "task",
+  "name": "mbpp_283__validate",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "287": {
+  "task_id": 287,
+  "fn": "square_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f983df72038e9a41",
+  "model_name": "mbpp_8__square_nums",
+  "stage": "task",
+  "name": "mbpp_287__square_Sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "289": {
+  "task_id": 289,
+  "fn": "odd_Days",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f25b5b887fdd6f2b",
+  "model_name": "mbpp_509__average_Odd",
+  "stage": "task",
+  "name": "mbpp_289__odd_Days",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "295": {
+  "task_id": 295,
+  "fn": "sum_div",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a97ae3fb2dbb8be8",
+  "model_name": "mbpp_279__sum",
+  "stage": "task",
+  "name": "mbpp_295__sum_div",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "302": {
+  "task_id": 302,
+  "fn": "set_Bit_Number",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "6e77fa30ae87d37d",
+  "model_name": "mbpp_264__sub_list",
+  "stage": "task",
+  "name": "mbpp_302__set_Bit_Number",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "306": {
+  "task_id": 306,
+  "fn": "max_sum_increasing_subseq",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f3f2038c3a0d3358",
+  "model_name": "mbpp_190__find_star_num",
+  "stage": "task",
+  "name": "mbpp_306__max_sum_increasing_subseq",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "308": {
+  "task_id": 308,
+  "fn": "large_product",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "97748fcd330f0e75",
+  "model_name": "mbpp_732__sum_list",
+  "stage": "task",
+  "name": "mbpp_308__large_product",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "313": {
+  "task_id": 313,
+  "fn": "pos_nos",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7ceac16d35bb68db",
+  "model_name": "mbpp_732__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_313__pos_nos",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "318": {
+  "task_id": 318,
+  "fn": "max_volume",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "1b85dbf69f2960a1",
+  "model_name": "mbpp_309__max_of_two",
+  "stage": "task",
+  "name": "mbpp_318__max_volume",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "322": {
+  "task_id": 322,
+  "fn": "position_min",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "33c7040e3d061e65",
+  "model_name": "mbpp_190__perimeter",
+  "stage": "task",
+  "name": "mbpp_322__position_min",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "325": {
+  "task_id": 325,
+  "fn": "get_Min_Squares",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "fcd4b1684623da2d",
+  "model_name": "mbpp_8__sum_num",
+  "stage": "task",
+  "name": "mbpp_325__get_Min_Squares",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "329": {
+  "task_id": 329,
+  "fn": "neg_count",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f983df72038e9a41",
+  "model_name": "mbpp_8__square_nums",
+  "stage": "task",
+  "name": "mbpp_329__neg_count",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "330": {
+  "task_id": 330,
+  "fn": "find_char",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "01546149f35e262d",
+  "model_name": "mbpp_542__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_330__find_char",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "334": {
+  "task_id": 334,
+  "fn": "check_Validity",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "abc95fa1b4c15b38",
+  "model_name": "mbpp_509__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_334__check_Validity",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "339": {
+  "task_id": 339,
+  "fn": "find_Divisor",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e469cb857cc800ff",
+  "model_name": "mbpp_309__maximum",
+  "stage": "task",
+  "name": "mbpp_339__find_Divisor",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "344": {
+  "task_id": 344,
+  "fn": "count_Odd_Squares",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "d6797369ea336104",
+  "model_name": "mbpp_59__count_Intgral_Points",
+  "stage": "wf",
+  "why": "unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; <= is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; - over non-int [SPEC: + - * neg div mod are int-only]; unboun"
+ },
+ "345": {
+  "task_id": 345,
+  "fn": "diff_consecutivenums",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bb031edaba6e1061",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_345__diff_consecutivenums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "347": {
+  "task_id": 347,
+  "fn": "count_Squares",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "09e3f7732785875d",
+  "model_name": "mbpp_8__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_347__count_Squares",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "351": {
+  "task_id": 351,
+  "fn": "first_Element",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "642317a9eb2a24c9",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_351__first_Element",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "355": {
+  "task_id": 355,
+  "fn": "count_Rectangles",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "9695933550270523",
+  "model_name": "mbpp_89__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_355__count_Rectangles",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "358": {
+  "task_id": 358,
+  "fn": "moddiv_list",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c4aa6ddee26c841f",
+  "model_name": "mbpp_282__sub_list",
+  "stage": "task",
+  "name": "mbpp_358__moddiv_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "362": {
+  "task_id": 362,
+  "fn": "max_occurrences",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b89818c9389ef79",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_362__max_occurrences",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "366": {
+  "task_id": 366,
+  "fn": "adjacent_num_product",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c5e48d5ef872fa1a",
+  "model_name": "mbpp_733__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_366__adjacent_num_product",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "374": {
+  "task_id": 374,
+  "fn": "permute_string",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_374__permute_string",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "375": {
+  "task_id": 375,
+  "fn": "round_num",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2f08fb236b3531d3",
+  "model_name": "mbpp_35__find_rect_num",
+  "stage": "task",
+  "name": "mbpp_375__round_num",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "383": {
+  "task_id": 383,
+  "fn": "even_bit_toggle_number",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a08c859c548ea03c",
+  "model_name": "mbpp_264__diameter_circle",
+  "stage": "task",
+  "name": "mbpp_383__even_bit_toggle_number",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "385": {
+  "task_id": 385,
+  "fn": "get_perrin",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f57adcbd61d142a9",
+  "model_name": "mbpp_404__diameter_triangle",
+  "stage": "task",
+  "name": "mbpp_385__get_perrin",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "387": {
+  "task_id": 387,
+  "fn": "even_or_odd",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bb031edaba6e1061",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_387__even_or_odd",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "389": {
+  "task_id": 389,
+  "fn": "find_lucas",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "91065c036cfbb918",
+  "model_name": "mbpp_268__find_rect_num",
+  "stage": "task",
+  "name": "mbpp_389__find_lucas",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "402": {
+  "task_id": 402,
+  "fn": "ncr_modp",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "308e664d4a604df6",
+  "model_name": "mbpp_379__max_of_two",
+  "stage": "task",
+  "name": "mbpp_402__ncr_modp",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "411": {
+  "task_id": 411,
+  "fn": "snake_to_camel",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "093387ff3e26fa42",
+  "model_name": "mbpp_631__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_411__snake_to_camel",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "414": {
+  "task_id": 414,
+  "fn": "overlapping",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7ceac16d35bb68db",
+  "model_name": "mbpp_732__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_414__overlapping",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "420": {
+  "task_id": 420,
+  "fn": "cube_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "64921c57645dea12",
+  "model_name": "mbpp_89__closest_num",
+  "stage": "task",
+  "name": "mbpp_420__cube_Sum",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "428": {
+  "task_id": 428,
+  "fn": "shell_sort",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "8064535d85925e4b",
+  "model_name": "mbpp_732__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_428__shell_sort",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "436": {
+  "task_id": 436,
+  "fn": "neg_nos",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_436__neg_nos",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "443": {
+  "task_id": 443,
+  "fn": "largest_neg",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f087fb89e973ac8c",
+  "model_name": "mbpp_509__sum_list",
+  "stage": "task",
+  "name": "mbpp_443__largest_neg",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "447": {
+  "task_id": 447,
+  "fn": "cube_nums",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f983df72038e9a41",
+  "model_name": "mbpp_8__square_nums",
+  "stage": "task",
+  "name": "mbpp_447__cube_nums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "453": {
+  "task_id": 453,
+  "fn": "sumofFactors",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "b593203c18054988",
+  "model_name": "mbpp_78__sum_list",
+  "stage": "wf",
+  "why": "v0 has int only [SPEC: v0 has int only]; operator 'len' not in v0 [SPEC: an operator must be in the declared version's operator set]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or tw"
+ },
+ "454": {
+  "task_id": 454,
+  "fn": "text_match_wordz",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bb031edaba6e1061",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_454__text_match_wordz",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "463": {
+  "task_id": 463,
+  "fn": "max_subarray_product",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_463__max_subarray_product",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "467": {
+  "task_id": 467,
+  "fn": "decimal_to_Octal",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "60274c06eac41c1f",
+  "model_name": "mbpp_23__max_of_two",
+  "stage": "task",
+  "name": "mbpp_467__decimal_to_Octal",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "469": {
+  "task_id": 469,
+  "fn": "max_profit",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bf406582a79668cc",
+  "model_name": "mbpp_95__first",
+  "stage": "task",
+  "name": "mbpp_469__max_profit",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "472": {
+  "task_id": 472,
+  "fn": "check_Consecutive",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a488a00121dd2a35",
+  "model_name": "mbpp_8__closest_num",
+  "stage": "task",
+  "name": "mbpp_472__check_Consecutive",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "474": {
+  "task_id": 474,
+  "fn": "replace_char",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "5005f8f1d3095f76",
+  "model_name": "mbpp_230__replace_spaces",
+  "stage": "task",
+  "name": "mbpp_474__replace_char",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "479": {
+  "task_id": 479,
+  "fn": "first_Digit",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "28e45ea38de4c281",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_479__first_Digit",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "482": {
+  "task_id": 482,
+  "fn": "match",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "70fbebff10981231",
+  "model_name": "mbpp_631__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_482__match",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "483": {
+  "task_id": 483,
+  "fn": "first_Factorial_Divisible_Number",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "5be16f090b07fb34",
+  "model_name": "mbpp_59__fibonacci",
+  "stage": "task",
+  "name": "mbpp_483__first_Factorial_Divisible_Number",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "489": {
+  "task_id": 489,
+  "fn": "frequency_Of_Largest",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "82d766e724767b6e",
+  "model_name": "mbpp_591__first",
+  "stage": "task",
+  "name": "mbpp_489__frequency_Of_Largest",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "492": {
+  "task_id": 492,
+  "fn": "binary_search",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "394ccbdf3e80ca81",
+  "model_name": "mbpp_63__replace_blank",
+  "stage": "task",
+  "name": "mbpp_492__binary_search",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "502": {
+  "task_id": 502,
+  "fn": "find",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "fa3bf9e0b840d92b",
+  "model_name": "mbpp_354__find_rect_num",
+  "stage": "task",
+  "name": "mbpp_502__find",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "503": {
+  "task_id": 503,
+  "fn": "add_consecutive_nums",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f983df72038e9a41",
+  "model_name": "mbpp_8__square_nums",
+  "stage": "task",
+  "name": "mbpp_503__add_consecutive_nums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "506": {
+  "task_id": 506,
+  "fn": "permutation_coefficient",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0c29da30b7dc318a",
+  "model_name": "mbpp_17__perimeter_triangle",
+  "stage": "task",
+  "name": "mbpp_506__permutation_coefficient",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "510": {
+  "task_id": 510,
+  "fn": "no_of_subsequences",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e554553ba78e2e47",
+  "model_name": "mbpp_542__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_510__no_of_subsequences",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "515": {
+  "task_id": 515,
+  "fn": "modular_sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "fa9d21d48e1a300d",
+  "model_name": "mbpp_728__sum_list",
+  "stage": "task",
+  "name": "mbpp_515__modular_sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "516": {
+  "task_id": 516,
+  "fn": "radix_sort",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "8bb2131fdbefa2af",
+  "model_name": "mbpp_728__sub_list",
+  "stage": "task",
+  "name": "mbpp_516__radix_sort",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "518": {
+  "task_id": 518,
+  "fn": "sqrt_root",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "85db73c4ffa444dd",
+  "model_name": "mbpp_17__square_perimeter",
+  "stage": "task",
+  "name": "mbpp_518__sqrt_root",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "521": {
+  "task_id": 521,
+  "fn": "check_isosceles",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "002aeb2820371529",
+  "model_name": "mbpp_732__calcR",
+  "stage": "task",
+  "name": "mbpp_521__check_isosceles",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "524": {
+  "task_id": 524,
+  "fn": "max_sum_increasing_subsequence",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e21e0ddf84bc8d35",
+  "model_name": "mbpp_73__sub_list",
+  "stage": "task",
+  "name": "mbpp_524__max_sum_increasing_subsequence",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "527": {
+  "task_id": 527,
+  "fn": "get_pairs_count",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7f9d3bd650c453cd",
+  "model_name": "mbpp_190__average_Odd",
+  "stage": "task",
+  "name": "mbpp_527__get_pairs_count",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "531": {
+  "task_id": 531,
+  "fn": "min_coins",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "04cc9bb6784e536d",
+  "model_name": "mbpp_73__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_531__min_coins",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "536": {
+  "task_id": 536,
+  "fn": "nth_items",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "05830549d603f6aa",
+  "model_name": "mbpp_19__swap_List",
+  "stage": "task",
+  "name": "mbpp_536__nth_items",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "541": {
+  "task_id": 541,
+  "fn": "check_abundant",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "dd9ee8264ced3fac",
+  "model_name": "mbpp_264__dog_age",
+  "stage": "task",
+  "name": "mbpp_541__check_abundant",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "545": {
+  "task_id": 545,
+  "fn": "toggle_F_and_L_bits",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "9385ecc28de03c34",
+  "model_name": "mbpp_59__is_octagonal",
+  "stage": "task",
+  "name": "mbpp_545__toggle_F_and_L_bits",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "548": {
+  "task_id": 548,
+  "fn": "longest_increasing_subsequence",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a488a00121dd2a35",
+  "model_name": "mbpp_8__closest_num",
+  "stage": "task",
+  "name": "mbpp_548__longest_increasing_subsequence",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "550": {
+  "task_id": 550,
+  "fn": "find_Max",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "642317a9eb2a24c9",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_550__find_Max",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "552": {
+  "task_id": 552,
+  "fn": "Seq_Linear",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f983df72038e9a41",
+  "model_name": "mbpp_8__square_nums",
+  "stage": "task",
+  "name": "mbpp_552__Seq_Linear",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "556": {
+  "task_id": 556,
+  "fn": "find_Odd_Pair",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7cd5e73558d94ce2",
+  "model_name": "mbpp_190__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_556__find_Odd_Pair",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "559": {
+  "task_id": 559,
+  "fn": "max_sub_array_sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "826ff6e1ad0ce5f4",
+  "model_name": "mbpp_59__surface_Area",
+  "stage": "task",
+  "name": "mbpp_559__max_sub_array_sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "565": {
+  "task_id": 565,
+  "fn": "split",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c4aa6ddee26c841f",
+  "model_name": "mbpp_282__sub_list",
+  "stage": "task",
+  "name": "mbpp_565__split",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "566": {
+  "task_id": 566,
+  "fn": "sum_digits",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "681adfdfc858a9c0",
+  "model_name": "mbpp_268__sum_decagonal",
+  "stage": "task",
+  "name": "mbpp_566__sum_digits",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "571": {
+  "task_id": 571,
+  "fn": "max_sum_pair_diff_lessthan_K",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a6c8ccdef64c398c",
+  "stage": "parse",
+  "why": "<string>:1:1: expected 't', found 'Problem' [Task]"
+ },
+ "575": {
+  "task_id": 575,
+  "fn": "count_no",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "345f005a36254349",
+  "model_name": "mbpp_309__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_575__count_no",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "583": {
+  "task_id": 583,
+  "fn": "catalan_number",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "64921c57645dea12",
+  "model_name": "mbpp_89__closest_num",
+  "stage": "task",
+  "name": "mbpp_583__catalan_number",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "584": {
+  "task_id": 584,
+  "fn": "find_adverbs",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2d62a2e8c14bb1a8",
+  "model_name": "mbpp_509__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_584__find_adverbs",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "592": {
+  "task_id": 592,
+  "fn": "sum_Of_product",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f0cbb7b03f171e32",
+  "model_name": "mbpp_373__find_first_occurrence",
+  "stage": "wf",
+  "why": "v0 has int only [SPEC: v0 has int only]; operator 'len' not in v0 [SPEC: an operator must be in the declared version's operator set]; < is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; operator 'at' not in v0 [SPEC: an operator must be in the declared version's operator set]; =="
+ },
+ "593": {
+  "task_id": 593,
+  "fn": "removezero_ip",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "ce584f1b2a6e854b",
+  "model_name": "mbpp_732__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_593__removezero_ip",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "597": {
+  "task_id": 597,
+  "fn": "find_kth",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "5580a8f0bfc46196",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_597__find_kth",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "604": {
+  "task_id": 604,
+  "fn": "reverse_words",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "d612e3a09ae8c2cf",
+  "model_name": "mbpp_732__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_604__reverse_words",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "605": {
+  "task_id": 605,
+  "fn": "prime_num",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "edaa9d0702ffdd50",
+  "model_name": "mbpp_49__perimeter",
+  "stage": "task",
+  "name": "mbpp_605__prime_num",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "609": {
+  "task_id": 609,
+  "fn": "floor_Min",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "9c0a193cc24ff454",
+  "model_name": "mbpp_354__volume_cuboid",
+  "stage": "task",
+  "name": "mbpp_609__floor_Min",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "623": {
+  "task_id": 623,
+  "fn": "nth_nums",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0c260278039ea12f",
+  "model_name": "mbpp_542__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_623__nth_nums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "626": {
+  "task_id": 626,
+  "fn": "triangle_area",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "ea3d1867b73e3880",
+  "model_name": "mbpp_458__Listgrage_Odd",
+  "stage": "wf",
+  "why": "unbound var d [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]"
+ },
+ "629": {
+  "task_id": 629,
+  "fn": "Split",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bb031edaba6e1061",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_629__Split",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "633": {
+  "task_id": 633,
+  "fn": "pair_OR_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_633__pair_OR_Sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "636": {
+  "task_id": 636,
+  "fn": "Check_Solution",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "239d845be944f4b4",
+  "model_name": "mbpp_190__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_636__Check_Solution",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "638": {
+  "task_id": 638,
+  "fn": "wind_chill",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "35a18a30a94b83e6",
+  "model_name": "mbpp_230__volume_cuboid",
+  "stage": "task",
+  "name": "mbpp_638__wind_chill",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "644": {
+  "task_id": 644,
+  "fn": "reverse_Array_Upto_K",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c0bb96fb5abd00f5",
+  "stage": "parse",
+  "why": "<string>:1:1: expected 't', found 'Problem' [Task]"
+ },
+ "650": {
+  "task_id": 650,
+  "fn": "are_Equal",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "fa3882f8a0304813",
+  "model_name": "mbpp_191__surface_Area",
+  "stage": "wf",
+  "why": "unbound var b [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; at wants (seq or seq<seq>, int) [SPEC: at wants (seq or seq<seq>, int) (Gate 1; Nested sequences)]; + over non-int [SPEC: + - * neg div mod are int-only]; unbound var b [SPEC: a name must be bound before use (v0 and Ga"
+ },
+ "656": {
+  "task_id": 656,
+  "fn": "find_Min_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "d163a26d60182e0b",
+  "model_name": "mbpp_195__find_first",
+  "stage": "task",
+  "name": "mbpp_656__find_Min_Sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "658": {
+  "task_id": 658,
+  "fn": "max_occurrences",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b89818c9389ef79",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_658__max_occurrences",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "663": {
+  "task_id": 663,
+  "fn": "find_max_val",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c655f352d428fbd5",
+  "model_name": "mbpp_369__lateralsurface_cuboid",
+  "stage": "task",
+  "name": "mbpp_663__find_max_val",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "665": {
+  "task_id": 665,
+  "fn": "move_last",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0c260278039ea12f",
+  "model_name": "mbpp_542__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_665__move_last",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "669": {
+  "task_id": 669,
+  "fn": "check_IP",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e554553ba78e2e47",
+  "model_name": "mbpp_542__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_669__check_IP",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "670": {
+  "task_id": 670,
+  "fn": "decreasing_trend",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e87d42402b17f4b2",
+  "model_name": "mbpp_64__dog_age",
+  "stage": "task",
+  "name": "mbpp_670__decreasing_trend",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "672": {
+  "task_id": 672,
+  "fn": "max_of_three",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a18758fb957ddce7",
+  "model_name": "mbpp_924__max_of_two",
+  "stage": "task",
+  "name": "mbpp_672__max_of_three",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "675": {
+  "task_id": 675,
+  "fn": "sum_nums",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "3ee715a718b40984",
+  "model_name": "mbpp_1276__sum_list",
+  "stage": "task",
+  "name": "mbpp_675__sum_nums",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "680": {
+  "task_id": 680,
+  "fn": "increasing_trend",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7aed59c7520f567d",
+  "model_name": "mbpp_64__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_680__increasing_trend",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "682": {
+  "task_id": 682,
+  "fn": "mul_list",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "9206154978973483",
+  "model_name": "mbpp_282__array__sum",
+  "stage": "task",
+  "name": "mbpp_682__mul_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "683": {
+  "task_id": 683,
+  "fn": "sum_Square",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2986e3740c050ddc",
+  "model_name": "mbpp_89__sum_list",
+  "stage": "task",
+  "name": "mbpp_683__sum_Square",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "687": {
+  "task_id": 687,
+  "fn": "recur_gcd",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "760b04e6de4fde6c",
+  "model_name": "mbpp_73__rectangle_area",
+  "stage": "task",
+  "name": "mbpp_687__recur_gcd",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "692": {
+  "task_id": 692,
+  "fn": "last_Two_Digits",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "239d845be944f4b4",
+  "model_name": "mbpp_190__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_692__last_Two_Digits",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "699": {
+  "task_id": 699,
+  "fn": "min_Swaps",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "93547ecc979268f6",
+  "model_name": "mbpp_542__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_699__min_Swaps",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "701": {
+  "task_id": 701,
+  "fn": "equilibrium_index",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bbc685e2d0a11424",
+  "model_name": "mbpp_19__lateralsurface_cuboid",
+  "stage": "task",
+  "name": "mbpp_701__equilibrium_index",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "706": {
+  "task_id": 706,
+  "fn": "is_subset",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2239a947b387a404",
+  "model_name": "mbpp_28__sub_list",
+  "stage": "task",
+  "name": "mbpp_706__is_subset",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "711": {
+  "task_id": 711,
+  "fn": "product_Equal",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b89818c9389ef79",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_711__product_Equal",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "719": {
+  "task_id": 719,
+  "fn": "text_match",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "4654c29f0a6cf3d0",
+  "model_name": "mbpp_642__lateralsurface_cuboid",
+  "stage": "wf",
+  "why": "unbound var h [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]; unbound var h [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]"
+ },
+ "723": {
+  "task_id": 723,
+  "fn": "count_same_pair",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b89818c9389ef79",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_723__count_same_pair",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "729": {
+  "task_id": 729,
+  "fn": "add_list",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c4aa6ddee26c841f",
+  "model_name": "mbpp_282__sub_list",
+  "stage": "task",
+  "name": "mbpp_729__add_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "734": {
+  "task_id": 734,
+  "fn": "sum_Of_Subarray_Prod",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f52a9bbbd407617e",
+  "model_name": "mbpp_509__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_734__sum_Of_Subarray_Prod",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "736": {
+  "task_id": 736,
+  "fn": "left_insertion",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "5580a8f0bfc46196",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_736__left_insertion",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "741": {
+  "task_id": 741,
+  "fn": "all_Characters_Same",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "63e6ebd1d212858a",
+  "model_name": "mbpp_509__surface_Area",
+  "stage": "wf",
+  "why": "unbound var l [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]; unbound var l [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; * over non-int [SPEC: + - * neg div mod are int-only]"
+ },
+ "748": {
+  "task_id": 748,
+  "fn": "capital_words_spaces",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7c826c6834aa3344",
+  "model_name": "mbpp_631__replace_spaces",
+  "stage": "task",
+  "name": "mbpp_748__capital_words_spaces",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "751": {
+  "task_id": 751,
+  "fn": "check_min_heap",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "740a405bee9bd8de",
+  "model_name": "mbpp_631__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_751__check_min_heap",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "757": {
+  "task_id": 757,
+  "fn": "count_reverse_pairs",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c0ac075300eacab9",
+  "model_name": "mbpp_509__converse",
+  "stage": "task",
+  "name": "mbpp_757__count_reverse_pairs",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "765": {
+  "task_id": 765,
+  "fn": "is_polite",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "3118959ad402f095",
+  "model_name": "mbpp_17__perimeter",
+  "stage": "task",
+  "name": "mbpp_765__is_polite",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "768": {
+  "task_id": 768,
+  "fn": "check_Odd_Parity",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "f25b5b887fdd6f2b",
+  "model_name": "mbpp_509__average_Odd",
+  "stage": "task",
+  "name": "mbpp_768__check_Odd_Parity",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "769": {
+  "task_id": 769,
+  "fn": "Diff",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "28e45ea38de4c281",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_769__Diff",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "775": {
+  "task_id": 775,
+  "fn": "odd_position",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "92f6acb827613c27",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_775__odd_position",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "776": {
+  "task_id": 776,
+  "fn": "count_vowels",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "69b4b9e34db0e840",
+  "model_name": "mbpp_509__count_Intgral_Points",
+  "stage": "wf",
+  "why": "unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; <= is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; - over non-int [SPEC: + - * neg div mod are int-only]; unboun"
+ },
+ "782": {
+  "task_id": 782,
+  "fn": "Odd_Length_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "16f5bcf26252ce21",
+  "model_name": "mbpp_509__surface_Area",
+  "stage": "wf",
+  "why": "unbound var b [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; at wants (seq or seq<seq>, int) [SPEC: at wants (seq or seq<seq>, int) (Gate 1; Nested sequences)]; - over non-int [SPEC: + - * neg div mod are int-only]; unbound var b [SPEC: a name must be bound before use (v0 and Ga"
+ },
+ "786": {
+  "task_id": 786,
+  "fn": "right_insertion",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "81d26d75fa2e6291",
+  "model_name": "mbpp_195__rectangle_area",
+  "stage": "task",
+  "name": "mbpp_786__right_insertion",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "793": {
+  "task_id": 793,
+  "fn": "last",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7dacc055ffae739f",
+  "model_name": "mbpp_195__lateralsurface_cuboid",
+  "stage": "task",
+  "name": "mbpp_793__last",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "798": {
+  "task_id": 798,
+  "fn": "_sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b89818c9389ef79",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_798___sum",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "800": {
+  "task_id": 800,
+  "fn": "remove_all_spaces",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "94186cdffd8cdc33",
+  "model_name": "mbpp_631__replace_specialchar",
+  "stage": "task",
+  "name": "mbpp_800__remove_all_spaces",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "802": {
+  "task_id": 802,
+  "fn": "count_Rotation",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "4a6e2935f74bc8f1",
+  "model_name": "mbpp_89__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_802__count_Rotation",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "804": {
+  "task_id": 804,
+  "fn": "is_Product_Even",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "224c512f7ba8da4a",
+  "model_name": "mbpp_732__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_804__is_Product_Even",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "813": {
+  "task_id": 813,
+  "fn": "string_length",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e91cd7a767d71590",
+  "model_name": "mbpp_59__swap_List",
+  "stage": "task",
+  "name": "mbpp_813__string_length",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "814": {
+  "task_id": 814,
+  "fn": "rombus_area",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "5db0760a9ede3f7a",
+  "model_name": "mbpp_409__rombus_perimeter",
+  "stage": "task",
+  "name": "mbpp_814__rombus_area",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "822": {
+  "task_id": 822,
+  "fn": "pass_validity",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "6875d100821bc85c",
+  "model_name": "mbpp_282__array__triangleSearea",
+  "stage": "task",
+  "name": "mbpp_822__pass_validity",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "826": {
+  "task_id": 826,
+  "fn": "check_Type_Of_Triangle",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2197f24bee83c0aa",
+  "model_name": "mbpp_732__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_826__check_Type_Of_Triangle",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "831": {
+  "task_id": 831,
+  "fn": "count_Pairs",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a4d95ed9e7129f86",
+  "model_name": "mbpp_8__count_Intgral_Points",
+  "stage": "task",
+  "name": "mbpp_831__count_Pairs",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "837": {
+  "task_id": 837,
+  "fn": "cube_Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "64921c57645dea12",
+  "model_name": "mbpp_89__closest_num",
+  "stage": "task",
+  "name": "mbpp_837__cube_Sum",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "840": {
+  "task_id": 840,
+  "fn": "Check_Solution",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "b29517c8cb1f7af6",
+  "model_name": "mbpp_190__count_Intgral_Points",
+  "stage": "wf",
+  "why": "unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; <= is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; unbound var y2 [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; - over non-int [SPEC: + - * neg div mod are int-only]; unboun"
+ },
+ "842": {
+  "task_id": 842,
+  "fn": "get_odd_occurence",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "c5e48d5ef872fa1a",
+  "model_name": "mbpp_733__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_842__get_odd_occurence",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "844": {
+  "task_id": 844,
+  "fn": "get_Number",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "5c279758bd19654f",
+  "model_name": "mbpp_264__diameter_triangle",
+  "stage": "task",
+  "name": "mbpp_844__get_Number",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "846": {
+  "task_id": 846,
+  "fn": "find_platform",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "95c76f217875a01e",
+  "model_name": "mbpp_195__find_first_occurrence",
+  "stage": "task",
+  "name": "mbpp_846__find_platform",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "849": {
+  "task_id": 849,
+  "fn": "Sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b7717759ada07e5",
+  "model_name": "mbpp_873__sum",
+  "stage": "task",
+  "name": "mbpp_849__Sum",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "853": {
+  "task_id": 853,
+  "fn": "sum_of_odd_Factors",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "78111530489c9c43",
+  "model_name": "mbpp_279__sum",
+  "stage": "wf",
+  "why": "operator 'div' not in v0 [SPEC: an operator must be in the declared version's operator set]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]; operator 'div'"
+ },
+ "856": {
+  "task_id": 856,
+  "fn": "find_Min_Swaps",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "366ec51fcdca50e4",
+  "model_name": "mbpp_191__rectangle_specialchar",
+  "stage": "task",
+  "name": "mbpp_856__find_Min_Swaps",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "860": {
+  "task_id": 860,
+  "fn": "check_alphanumeric",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "4eec8650b1949c58",
+  "model_name": "mbpp_631__lab3_spaces",
+  "stage": "task",
+  "name": "mbpp_860__check_alphanumeric",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "866": {
+  "task_id": 866,
+  "fn": "check_monthnumb",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "6aa78d73d3afcecd",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_866__check_monthnumb",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "867": {
+  "task_id": 867,
+  "fn": "min_Num",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "ce38e14b611b79f7",
+  "model_name": "mbpp_72__min_of_three",
+  "stage": "wf",
+  "why": "unbound var c [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]; unbound var c [SPEC: a na"
+ },
+ "876": {
+  "task_id": 876,
+  "fn": "lcm",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "abe91a5f031b42a0",
+  "model_name": "mbpp_89__gcd",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]; call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; assign r: None into int [SPEC: assign's expression type must match the target's declare"
+ },
+ "877": {
+  "task_id": 877,
+  "fn": "sort_String",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e166c2c52c4e65d0",
+  "model_name": "mbpp_732__surface_Area",
+  "stage": "wf",
+  "why": "unbound var b [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; at wants (seq or seq<seq>, int) [SPEC: at wants (seq or seq<seq>, int) (Gate 1; Nested sequences)]; + over non-int [SPEC: + - * neg div mod are int-only]; unbound var b [SPEC: a name must be bound before use (v0 and Ga"
+ },
+ "882": {
+  "task_id": 882,
+  "fn": "parallelogram_perimeter",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0691a69e652508c6",
+  "model_name": "mbpp_789__perimeter_polygon",
+  "stage": "task",
+  "name": "mbpp_882__parallelogram_perimeter",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "885": {
+  "task_id": 885,
+  "fn": "is_Isomorphic",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "7ceac16d35bb68db",
+  "model_name": "mbpp_732__fill_spaces",
+  "stage": "task",
+  "name": "mbpp_885__is_Isomorphic",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "887": {
+  "task_id": 887,
+  "fn": "is_odd",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "44b73a3bfbc66735",
+  "model_name": "mbpp_732__dog_age",
+  "stage": "task",
+  "name": "mbpp_887__is_odd",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "891": {
+  "task_id": 891,
+  "fn": "same_Length",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "cb56e060f831bad6",
+  "model_name": "mbpp_581__sum_list",
+  "stage": "wf",
+  "why": "operator 'fst' not in v0 [SPEC: an operator must be in the declared version's operator set]; * over non-int [SPEC: + - * neg div mod are int-only]; operator 'snd' not in v0 [SPEC: an operator must be in the declared version's operator set]; + over non-int [SPEC: + - * neg div mod are int-only]; oper"
+ },
+ "899": {
+  "task_id": 899,
+  "fn": "check",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "69ef018cc389fee7",
+  "model_name": "mbpp_89__closest_num",
+  "stage": "task",
+  "name": "mbpp_899__check",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "900": {
+  "task_id": 900,
+  "fn": "match_num",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "74bcd2d885ec80bf",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_900__match_num",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "903": {
+  "task_id": 903,
+  "fn": "count_Unset_Bits",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "832e9626a098dc39",
+  "model_name": "mbpp_89__countgral_Points",
+  "stage": "task",
+  "name": "mbpp_903__count_Unset_Bits",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "908": {
+  "task_id": 908,
+  "fn": "find_fixed_point",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "bc1b558f2a9113c7",
+  "model_name": "mbpp_19__first",
+  "stage": "task",
+  "name": "mbpp_908__find_fixed_point",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "911": {
+  "task_id": 911,
+  "fn": "maximum_product",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "8dd17821d9b55f18",
+  "model_name": "mbpp_732__paralle_specialchar",
+  "stage": "task",
+  "name": "mbpp_911__maximum_product",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "914": {
+  "task_id": 914,
+  "fn": "is_Two_Alter",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2c526429133cd26a",
+  "model_name": "mbpp_5tm2__sub_list",
+  "stage": "task",
+  "name": "mbpp_914__is_Two_Alter",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "919": {
+  "task_id": 919,
+  "fn": "multiply_list",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "2239a947b387a404",
+  "model_name": "mbpp_28__sub_list",
+  "stage": "task",
+  "name": "mbpp_919__multiply_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "928": {
+  "task_id": 928,
+  "fn": "change_date_format",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "a2bdd1c404323b97",
+  "model_name": "mbpp_6q__are_perimeter",
+  "stage": "task",
+  "name": "mbpp_928__change_date_format",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "931": {
+  "task_id": 931,
+  "fn": "sum_series",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e5d7c7f074efce73",
+  "stage": "parse",
+  "why": "<string>:1:1: expected 't', found 'Problem' [Task]"
+ },
+ "935": {
+  "task_id": 935,
+  "fn": "series_sum",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "138c566233d6bc6c",
+  "stage": "parse",
+  "why": "<string>:1:1: expected 't', found 'Problem' [Task]"
+ },
+ "937": {
+  "task_id": 937,
+  "fn": "max_char",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "0b89818c9389ef79",
+  "model_name": "mbpp_8__sum_list",
+  "stage": "task",
+  "name": "mbpp_937__max_char",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "947": {
+  "task_id": 947,
+  "fn": "len_log",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "fccc6a6a02fcf802",
+  "model_name": "mbpp_72__sub_list",
+  "stage": "task",
+  "name": "mbpp_947__len_log",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "953": {
+  "task_id": 953,
+  "fn": "subset",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "fa9d21d48e1a300d",
+  "model_name": "mbpp_728__sum_list",
+  "stage": "task",
+  "name": "mbpp_953__subset",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "957": {
+  "task_id": 957,
+  "fn": "get_First_Set_Bit_Pos",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "e5d894bfff39302b",
+  "model_name": "mbpp_732__fibonacci",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]; call of unknown fun mbpp_873__fibonacci [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; local a init type mismatch [SPEC: assign's expression type must match t"
+ },
+ "961": {
+  "task_id": 961,
+  "fn": "roman_to_int",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "67bbd85576d4f5cc",
+  "model_name": "mbpp_195__first",
+  "stage": "task",
+  "name": "mbpp_961__roman_to_int",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "962": {
+  "task_id": 962,
+  "fn": "sum_Even",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "5dce8b83fbfb1c10",
+  "model_name": "mbpp_2309__sub_decagonal",
+  "stage": "task",
+  "name": "mbpp_962__sum_Even",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "970": {
+  "task_id": 970,
+  "fn": "min_of_two",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "ed6aa4706509347a",
+  "model_name": "mbpp_924__min_of_three",
+  "stage": "wf",
+  "why": "unbound var c [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; <= is int-only (SPEC.md gate 1) [SPEC: < <= > >= are int-only (Gate 1)]; unbound var c [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]; == wants two ints, two bools, two seqs, two nested seqs, or two"
+ },
+ "973": {
+  "task_id": 973,
+  "fn": "left_rotate",
+  "reply_tokens": null,
+  "done_reason": "length",
+  "block_sha256": "fc3f9c3868cc2d51",
+  "model_name": "mbpp_195__swap_List",
+  "stage": "task",
+  "name": "mbpp_973__left_rotate",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ }
+}

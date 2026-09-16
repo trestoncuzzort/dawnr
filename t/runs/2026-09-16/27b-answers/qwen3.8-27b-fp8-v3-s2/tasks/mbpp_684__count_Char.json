@@ -1,0 +1,96 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_684__count_Char",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "c",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "count",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "doubled",
+    "type": "seq",
+    "init": {
+     "op": "+",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "var": "s"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "count",
+     "args": [
+      {
+       "var": "doubled"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

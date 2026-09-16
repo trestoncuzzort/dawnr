@@ -1,0 +1,22 @@
+{
+ "task_id": 928,
+ "fn": "change_date_format",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to convert a date of yyyy-mm-dd format to dd-mm-yyyy format.\nSignature: change_date_format(seq) -> seq\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_6q__are_perimeter(side: int) returns (r: int)\n  ensures r == 4 * side\n{\n  r := 4 * side;\n}\n```",
+ "done_reason": "length"
+}

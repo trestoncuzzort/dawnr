@@ -1,0 +1,22 @@
+{
+ "task_id": 566,
+ "fn": "sum_digits",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to get the sum of a non-negative integer.\nSignature: sum_digits(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_268__sum_decagonal(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (4 * n - 3)\n{\n  r := n * (4 * n - 3);\n}\n```",
+ "done_reason": "length"
+}

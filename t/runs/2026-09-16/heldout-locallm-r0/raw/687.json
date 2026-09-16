@@ -1,0 +1,22 @@
+{
+ "task_id": 687,
+ "fn": "recur_gcd",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the greatest common divisor (gcd) of two integers by using recursion.\nSignature: recur_gcd(int, int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate recursion\ntask mbpp_73__rectangle_area(length: int, width: int) returns (r: int)\n  requires length > 0\n  ensures r == length * width\n{\n  r := length * width;\n}\n```",
+ "done_reason": "length"
+}

@@ -1,0 +1,97 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_701__equilibrium_index",
+ "params": [
+  {
+   "name": "l",
+   "type": "int"
+  },
+  {
+   "name": "w",
+   "type": "int"
+  },
+  {
+   "name": "h",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "l"
+          },
+          {
+           "var": "w"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "var": "h"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 2
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "l"
+          },
+          {
+           "var": "w"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "var": "h"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

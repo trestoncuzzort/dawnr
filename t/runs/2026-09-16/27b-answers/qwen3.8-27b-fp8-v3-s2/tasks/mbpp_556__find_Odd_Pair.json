@@ -1,0 +1,350 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_556__find_Odd_Pair",
+ "params": [
+  {
+   "name": "arr",
+   "type": "seq"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "arr"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "call": {
+        "fun": "evens",
+        "args": [
+         {
+          "var": "arr"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      },
+      {
+       "call": {
+        "fun": "odds",
+        "args": [
+         {
+          "var": "arr"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "evenp",
+   "params": [
+    {
+     "name": "x",
+     "type": "int"
+    }
+   ],
+   "result": "bool",
+   "decreases": {
+    "var": "x"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<",
+      "args": [
+       {
+        "var": "x"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "call": {
+       "fun": "evenp",
+       "args": [
+        {
+         "op": "neg",
+         "args": [
+          {
+           "var": "x"
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "x"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "bool": true
+       },
+       "else": {
+        "op": "not",
+        "args": [
+         {
+          "call": {
+           "fun": "evenp",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "x"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "evens",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    },
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "ite": {
+         "cond": {
+          "call": {
+           "fun": "evenp",
+           "args": [
+            {
+             "op": "at",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         },
+         "then": {
+          "int": 1
+         },
+         "else": {
+          "int": 0
+         }
+        }
+       },
+       {
+        "call": {
+         "fun": "evens",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "odds",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    },
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "op": "-",
+    "args": [
+     {
+      "var": "n"
+     },
+     {
+      "call": {
+       "fun": "evens",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "n"
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "call": {
+        "fun": "evens",
+        "args": [
+         {
+          "var": "arr"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      },
+      {
+       "call": {
+        "fun": "odds",
+        "args": [
+         {
+          "var": "arr"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

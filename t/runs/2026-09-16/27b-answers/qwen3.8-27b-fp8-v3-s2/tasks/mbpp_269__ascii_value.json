@@ -1,0 +1,40 @@
+{
+ "t": 0,
+ "name": "mbpp_269__ascii_value",
+ "params": [
+  {
+   "name": "c",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "c"
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "c"
+    }
+   ]
+  }
+ ]
+}

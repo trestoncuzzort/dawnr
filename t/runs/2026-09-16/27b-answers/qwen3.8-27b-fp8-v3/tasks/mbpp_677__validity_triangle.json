@@ -1,0 +1,166 @@
+{
+ "t": 0,
+ "name": "mbpp_677__validity_triangle",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  },
+  {
+   "name": "c",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": ">",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        },
+        {
+         "var": "c"
+        }
+       ]
+      },
+      {
+       "op": ">",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "c"
+          }
+         ]
+        },
+        {
+         "var": "b"
+        }
+       ]
+      },
+      {
+       "op": ">",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "b"
+          },
+          {
+           "var": "c"
+          }
+         ]
+        },
+        {
+         "var": "a"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": ">",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        },
+        {
+         "var": "c"
+        }
+       ]
+      },
+      {
+       "op": ">",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "c"
+          }
+         ]
+        },
+        {
+         "var": "b"
+        }
+       ]
+      },
+      {
+       "op": ">",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "b"
+          },
+          {
+           "var": "c"
+          }
+         ]
+        },
+        {
+         "var": "a"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

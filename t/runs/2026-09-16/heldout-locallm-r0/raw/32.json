@@ -1,0 +1,22 @@
+{
+ "task_id": 32,
+ "fn": "max_Prime_Factors",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the largest prime factor of a given number.\nSignature: max_Prime_Factors(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_35__find_rect_num(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}\n```",
+ "done_reason": "length"
+}

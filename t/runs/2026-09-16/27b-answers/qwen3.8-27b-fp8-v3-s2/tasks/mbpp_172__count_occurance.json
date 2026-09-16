@@ -1,0 +1,78 @@
+{
+ "t": 1,
+ "name": "mbpp_172__count_occurance",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "count",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 115
+        },
+        {
+         "int": 116
+        },
+        {
+         "int": 100
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "count",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 115
+        },
+        {
+         "int": 116
+        },
+        {
+         "int": 100
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

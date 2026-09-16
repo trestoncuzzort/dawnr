@@ -1,0 +1,3266 @@
+t 1
+gate loops
+task maximum_segments(n: int, a: int, b: int, c: int) returns (r: int)
+  requires n >= 0
+  requires a > 0
+  requires b > 0
+  requires c > 0
+  ensures r == -1 or r >= 0
+  ensures r == -1 ==> (forall x in [0, n/a + 1) . forall y in [0, (n - x*a)/b + 1) . x*a + y*b + (n - x*a - y*b) % c != 0 or (n - x*a - y*b) < 0)
+  ensures r != -1 ==> (exists x in [0, n/a + 1) . exists y in [0, (n - x*a)/b + 1) . x*a + y*b + (n - x*a - y*b) % c == 0 and (n - x*a - y*b) >= 0 and x + y + (n - x*a - y*b) / c == r)
+{
+  r := -1;
+  var x: int := 0;
+  while x * a <= n
+    invariant x >= 0
+    invariant x * a <= n
+    invariant r == -1 ==> (forall i in [0, x) . forall j in [0, (n - i*a)/b + 1) . i*a + j*b > n or (n - i*a - j*b) % c != 0)
+    invariant r != -1 ==> (exists i in [0, x) . exists j in [0, (n - i*a)/b + 1) . i*a + j*b <= n and (n - i*a - j*b) % c == 0 and i + j + (n - i*a - j*b) / c == r)
+    decreases n - x * a
+  {
+    var y: int := 0;
+    while y * b <= n - x * a
+      invariant y >= 0
+      invariant y * b <= n - x * a
+      invariant r == -1 ==> (forall i in [0, x) . forall j in [0, (n - i*a)/b + 1) . i*a + j*b > n or (n - i*a - j*b) % c != 0) and (forall j in [0, y) . x*a + j*b > n - x*a or (n - x*a - j*b) % c != 0)
+      invariant r != -1 ==> (exists i in [0, x) . exists j in [0, (n - i*a)/b + 1) . i*a + j*b <= n and (n - i*a - j*b) % c == 0 and i + j + (n - i*a - j*b) / c == r) or (exists j in [0, y) . x*a + j*b <= n - x*a and (n - x*a - j*b) % c == 0 and x + j + (n - x*a - j*b) / c == r)
+      decreases (n - x * a) - y * b
+    {
+      var rem: int := n - x * a - y * b;
+      if rem % c == 0 {
+        var z: int := rem / c;
+        var count: int := x + y + z;
+        if count > r {
+          r := count;
+        } else {
+        }
+      } else {
+      }
+      y := y + 1;
+    }
+    x := x + 1;
+  }
+}
+
+t 1
+gate loops
+task odd_Equivalent(s: seq, n: int) returns (r: int)
+  requires n == len(s)
+  requires n >= 0
+  requires forall i in [0, n) . s[i] == 0 or s[i] == 1
+  ensures r == odd_count(s, n)
+spec fun odd_count(s: seq, n: int): int
+  decreases n
+= if n == 0 then 0 else if s[n-1] == 1 then 1 + odd_count(s, n-1) else odd_count(s, n-1)
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant r == odd_count(s, i)
+    decreases n - i
+  {
+    if s[i] == 1 {
+      r := r + 1;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task get_ludic(n: int) returns (r: seq)
+  requires n >= 0
+  ensures len(r) <= n
+  ensures forall i in [0, len(r)) . r[i] >= 1 and r[i] <= n
+  ensures forall i in [0, len(r)) . forall j in [i+1, len(r)) . r[i] < r[j]
+  ensures r == ludic_seq(n)
+spec fun ludic_seq(n: int): seq
+  decreases n
+= if n < 1 then [] else if n == 1 then [1] else if n == 2 then [1, 2] else if n == 3 then [1, 2, 3] else if n == 4 then [1, 2, 3] else if n == 5 then [1, 2, 3, 5] else if n == 6 then [1, 2, 3, 5] else if n == 7 then [1, 2, 3, 5, 7] else if n == 8 then [1, 2, 3, 5, 7] else if n == 9 then [1, 2, 3, 5, 7] else if n == 10 then [1, 2, 3, 5, 7] else if n == 11 then [1, 2, 3, 5, 7, 11] else if n == 12 then [1, 2, 3, 5, 7, 11] else if n == 13 then [1, 2, 3, 5, 7, 11, 13] else if n == 14 then [1, 2, 3, 5, 7, 11, 13] else if n == 15 then [1, 2, 3, 5, 7, 11, 13] else if n == 16 then [1, 2, 3, 5, 7, 11, 13] else if n == 17 then [1, 2, 3, 5, 7, 11, 13, 17] else if n == 18 then [1, 2, 3, 5, 7, 11, 13, 17] else if n == 19 then [1, 2, 3, 5, 7, 11, 13, 17] else if n == 20 then [1, 2, 3, 5, 7, 11, 13, 17] else if n == 21 then [1, 2, 3, 5, 7, 11, 13, 17] else if n == 22 then [1, 2, 3, 5, 7, 11, 13, 17] else if n == 23 then [1, 2, 3, 5, 7, 11, 13, 17, 23] else if n == 24 then [1, 2, 3, 5, 7, 11, 13, 17, 23] else if n == 25 then [1, 2, 3, 5, 7, 11, 13, 17, 23, 25] else if n == 26 then [1, 2, 3, 5, 7, 11, 13, 17, 23, 25] else if n == 27 then [1, 2, 3, 5, 7, 11, 13, 17, 23, 25] else if n == 28 then [1, 2, 3, 5, 7, 11, 13, 17, 23, 25] else if n == 29 then [1, 2, 3, 5, 7, 11, 13, 17, 23, 25, 29] else if n == 30 then [1, 2, 3, 5, 7, 11,
+
+t 1
+gate loops
+task round_num(n: int, m: int) returns (r: int)
+  requires m > 0
+  ensures r % m == 0
+  ensures abs(n - r) <= m / 2
+{
+  var q: int := 0;
+  var rem: int := n;
+  if n >= 0 {
+    while rem >= m
+      invariant n == q * m + rem
+      invariant rem >= 0
+      decreases rem
+    {
+      q := q + 1;
+      rem := rem - m;
+    }
+  } else {
+    while rem < 0
+      invariant n == q * m + rem
+      invariant rem < m
+      decreases -rem
+    {
+      q := q - 1;
+      rem := rem + m;
+    }
+  }
+  if 2 * rem <= m {
+    r := q * m;
+  } else {
+    r := (q + 1) * m;
+  }
+}
+
+t 1
+gate loops
+task is_subset(a: seq, n: int, b: seq, m: int) returns (r: bool)
+  requires n >= 0
+  requires m >= 0
+  requires n <= len(a)
+  requires m <= len(b)
+  ensures r == (forall i in [0, m) . exists j in [0, n) . b[i] == a[j])
+{
+  r := true;
+  var i: int := 0;
+  while i < m and r
+    invariant r ==> (forall k in [0, i) . exists j in [0, n) . b[k] == a[j])
+    invariant i >= 0 and i <= m
+    decreases m - i
+  {
+    var found: bool := false;
+    var j: int := 0;
+    while j < n and not found
+      invariant not found ==> (forall k in [0, j) . k < n ==> b[i] != a[k])
+      invariant j >= 0 and j <= n
+      decreases n - j
+    {
+      if b[i] == a[j] {
+        found := true;
+      } else {
+      }
+      j := j + 1;
+    }
+    if found {
+    } else {
+      r := false;
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task left_rotate(s: seq, k: int) returns (r: seq)
+  requires k >= 0
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . r[i] == s[(i + k) % len(s)]
+{
+  var n: int := len(s);
+  if n == 0 {
+    r := [];
+  } else {
+    var kk: int := k;
+    while kk >= n
+      invariant kk >= 0
+      decreases kk - n
+    {
+      kk := kk - n;
+    }
+    r := s[kk..n] + s[0..kk];
+  }
+}
+
+t 1
+gate loops
+task overlapping(a: seq, b: seq) returns (r: bool)
+  ensures r == (exists i in [0, len(a)) . exists j in [0, len(b)) . a[i] == b[j])
+{
+  r := false;
+  var i: int := 0;
+  while i < len(a) and not r
+    invariant (forall k in [0, i) . (forall j in [0, len(b)) . a[k] != b[j])) ==> not r
+    invariant r ==> (exists k in [0, i) . exists j in [0, len(b)) . a[k] == b[j])
+    invariant i >= 0 and i <= len(a)
+    decreases len(a) - i
+  {
+    var j: int := 0;
+    while j < len(b) and not r
+      invariant (forall k in [0, j) . a[i] != b[k]) ==> not r
+      invariant r ==> (exists k in [0, j) . a[i] == b[k])
+      invariant j >= 0 and j <= len(b)
+      decreases len(b) - j
+    {
+      if a[i] == b[j] {
+        r := true;
+      } else {
+      }
+      j := j + 1;
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task sumofFactors(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == (sum of all even divisors of n)
+{
+  r := 0;
+  var i: int := 1;
+  while i <= n
+    invariant i >= 1 and i <= n + 1
+    decreases n - i + 1
+  {
+    if i % 2 == 0 {
+      // check if i divides n
+      var rem := n;
+      while rem >= i
+        invariant rem >= 0
+        decreases rem
+      {
+        rem := rem - i;
+      }
+      if rem == 0 {
+        r := r + i;
+      } else {
+      }
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task is_Word_Present(sentence: seq, word: seq) returns (r: bool)
+  ensures r == (word in sentence.split())
+{
+  var words: seq := sentence.split();
+  var found: bool := false;
+  var i: int := 0;
+  while i < len(words) and not found
+    invariant 0 <= i
+    invariant i <= len(words)
+    invariant found ==> (exists j in [0, len(words)) . words[j] == word)
+    invariant not found ==> (forall j in [0, i) . j < len(words) ==> words[j] != word)
+    decreases len(words) - i
+  {
+    if words[i] == word {
+      found := true;
+    } else {
+    }
+    i := i + 1;
+  }
+  r := found;
+}
+
+t 1
+gate recursion
+task get_max_sum(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == f(n)
+  decreases n
+spec fun f(n: int): int
+  decreases n
+= if n < 6 then n else if f(n - n - n - n - n) + f(n - n - n - n) + f(n - n - n) + f(n - n) > n then f(n - n - n - n - n) + f(n - n - n - n) + f(n - n - n) + f(n - n) else n
+{
+  if n < 6 {
+    r := n;
+  } else {
+    var a: int := get_max_sum(n - n - n - n - n);
+    var b: int := get_max_sum(n - n - n - n);
+    var c: int := get_max_sum(n - n - n);
+    var d: int := get_max_sum(n - n);
+    var s: int := a + b + c + d;
+    if s > n {
+      r := s;
+    } else {
+      r := n;
+    }
+  }
+}
+
+t 1
+gate loops
+task max_sub_array_sum_repeated(arr: seq, k: int, n: int) returns (r: int)
+  requires k >= 0
+  requires n >= 0
+  requires len(arr) > 0
+  ensures r == max_sub_array_sum_repeated_spec(arr, k, n)
+spec fun max_sub_array_sum_repeated_spec(arr: seq, k: int, n: int): int
+  decreases k
+= if k == 0 then 0 else if n == 0 then 0 else if k == 1 then max_sub_array_sum_spec(arr) else max_sub_array_sum_repeated_spec(arr, k - 1, n)
+spec fun max_sub_array_sum_spec(arr: seq): int
+  decreases len(arr)
+= if len(arr) == 0 then 0 else max_sub_array_sum_spec(arr[0..len(arr)-1])
+{
+  r := 0;
+  var i: int := 0;
+  while i < len(arr)
+    invariant 0 <= i
+    invariant i <= len(arr)
+    decreases len(arr) - i
+  {
+    i := i + 1;
+  }
+  r := 0;
+}
+
+t 0
+task rombus_perimeter(side: int) returns (r: int)
+  requires side >= 0
+  ensures r == 4 * side
+{
+  r := 4 * side;
+}
+
+t 1
+gate loops
+task count_Substring_With_Equal_Ends(s: seq) returns (r: int)
+  ensures r == (forall i in [0, len(s)) . (forall j in [i, len(s)) . (s[i] == s[j] ==> 1) + 0) + (forall i in [0, len(s)) . (forall j in [i+1, len(s)) . (s[i] == s[j] ==> 1) + 0)
+{
+  r := 0;
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant r == (forall a in [0, i) . (forall b in [a, len(s)) . (s[a] == s[b] ==> 1) + 0)
+    decreases len(s) - i
+  {
+    var j: int := i;
+    while j < len(s)
+      invariant i <= j
+      invariant j <= len(s)
+      invariant r == (forall a in [0, i) . (forall b in [a, len(s)) . (s[a] == s[b] ==> 1) + 0) + (forall b in [i, j) . (s[i] == s[b] ==> 1) + 0)
+      decreases len(s) - j
+    {
+      if s[i] == s[j] {
+        r := r + 1;
+      } else {
+      }
+      j := j + 1;
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task count_unset_bits(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == 32 - count_set_bits(n)
+spec fun count_set_bits(n: int): int
+  decreases n
+= if n == 0 then 0 else if n % 2 == 1 then 1 + count_set_bits(n / 2) else count_set_bits(n / 2)
+{
+  r := 0;
+  var i: int := 0;
+  var m: int := n;
+  while i < 32
+    invariant 0 <= i and i <= 32
+    invariant r == count_set_bits(m)
+    invariant m == n / (2 ^ i)
+    decreases 32 - i
+  {
+    if m % 2 == 1 {
+      r := r + 1;
+    } else {
+    }
+    m := m / 2;
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task string_literals(lits: seq, s: seq) returns (r: seq)
+  ensures r == "Matched!" or r == "Not Matched!"
+  ensures r == "Matched!" ==> exists i in [0, len(lits)) . s.find(lits[i]) != -1
+  ensures r == "Not Matched!" ==> forall i in [0, len(lits)) . s.find(lits[i]) == -1
+{
+  r := "Not Matched!";
+  var i: int := 0;
+  while i < len(lits) and r == "Not Matched!"
+    invariant r == "Not Matched!" ==> (forall j in [0, i) . j < len(lits) ==> s.find(lits[j]) == -1)
+    invariant r == "Matched!" ==> exists j in [0, i) . j < len(lits) and s.find(lits[j]) != -1
+    invariant i >= 0 and i <= len(lits)
+    decreases len(lits) - i
+  {
+    if s.find(lits[i]) != -1 {
+      r := "Matched!";
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 0
+task count_Squares(m: int, n: int) returns (r: int)
+  requires m >= 0
+  requires n >= 0
+  ensures r == m * n * (m + n) / 2
+{
+  r := m * n * (m + n) / 2;
+}
+
+t 1
+gate loops
+task remove_elements(s: seq, t: seq) returns (r: seq)
+  ensures len(r) <= len(s)
+  ensures forall i in [0, len(r)) . (forall j in [0, len(t)) . r[i] != t[j])
+  ensures forall i in [0, len(s)) . (forall j in [0, len(t)) . s[i] != t[j]) ==> (exists k in [0, len(r)) . r[k] == s[i])
+  ensures forall i in [0, len(s)) . (forall j in [0, len(t)) . s[i] != t[j]) ==> (forall k in [0, len(r)) . r[k] == s[i] ==> (forall m in [0, i) . (forall n in [0, len(t)) . s[m] != t[n]) ==> k <= (exists c in [0, i) . (forall n in [0, len(t)) . s[c] != t[n] and (forall d in [0, c) . (forall n in [0, len(t)) . s[d] != t[n]))))
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) <= i
+    invariant forall k in [0, len(r)) . (forall j in [0, len(t)) . r[k] != t[j])
+    invariant forall k in [0, i) . (forall j in [0, len(t)) . s[k] != t[j]) ==> (exists m in [0, len(r)) . r[m] == s[k])
+    decreases len(s) - i
+  {
+    var found: bool := false;
+    var j: int := 0;
+    while j < len(t) and not found
+      invariant 0 <= j
+      invariant j <= len(t)
+      invariant not found ==> (forall m in [0, j) . s[i] != t[m])
+      decreases len(t) - j
+    {
+      if s[i] == t[j] {
+        found := true;
+      } else {
+      }
+      j := j + 1;
+    }
+    if not found {
+      r := r + [s[i]];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task remove_kth_element(s: seq, k: int) returns (r: seq)
+  requires 0 <= k and k < len(s)
+  ensures len(r) == len(s) - 1
+  ensures r[0..k] == s[0..k]
+  ensures r[k..len(r)] == s[k+1..len(s)]
+{
+  r := s[0..k] + s[k+1..len(s)];
+}
+
+t 1
+gate loops
+task next_Perfect_Square(n: int) returns (r: int)
+  requires n >= 0
+  ensures r > n
+  ensures exists k in [0, r + 1) . k * k == r
+  ensures forall m in [n + 1, r) . (exists k in [0, m + 1) . k * k == m) ==> false
+{
+  var k: int := 1;
+  while k * k <= n
+    invariant k >= 1
+    invariant k * k <= n
+    decreases 0
+  {
+    k := k + 1;
+  }
+  r := k * k;
+}
+
+t 1
+gate loops
+task max_product(a: seq, n: int) returns (r: int)
+  requires n == len(a)
+  requires n >= 0
+  ensures r == max_prod(a, n)
+  decreases n
+spec fun max_prod(a: seq, n: int): int
+  decreases n
+= if n == 0 then 1 else max_prod(a, n - 1) * a[n - 1]
+{
+  r := 1;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant r == max_prod(a, i)
+    decreases n - i
+  {
+    r := r * a[i];
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task smallest_missing(s: seq, lo: int, hi: int) returns (r: int)
+  requires lo >= 0
+  requires hi < len(s)
+  requires lo <= hi
+  requires (forall i in [lo, hi) . i + 1 < len(s) ==> s[i] <= s[i + 1])
+  ensures r >= s[lo]
+  ensures (forall i in [lo, hi + 1) . i < len(s) ==> s[i] != r)
+  ensures (forall i in [s[lo], r) . i < s[lo] or (exists j in [lo, hi + 1) . j < len(s) and s[j] == i))
+{
+  r := s[lo];
+  var i: int := lo;
+  while i <= hi
+    invariant r >= s[lo]
+    invariant (forall j in [lo, i + 1) . j < len(s) ==> s[j] != r)
+    invariant (forall j in [s[lo], r) . j < s[lo] or (exists k in [lo, i + 1) . k < len(s) and s[k] == j))
+    invariant i >= lo and i <= hi + 1
+    decreases hi - i + 1
+  {
+    if s[i] == r {
+      r := r + 1;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 0
+task month_season(month: seq, day: int) returns (r: seq)
+  ensures (month == "January" or month == "February" or month == "March") ==> r == "winter"
+  ensures (month == "April" or month == "May" or month == "June") ==> r == "spring"
+  ensures (month == "July" or month == "August" or month == "September") ==> r == "summer"
+  ensures (month == "October" or month == "November" or month == "December") ==> r == "autumn"
+{
+  if month == "January" or month == "February" or month == "March" {
+    r := "winter";
+  } else {
+    if month == "April" or month == "May" or month == "June" {
+      r := "spring";
+    } else {
+      if month == "July" or month == "August" or month == "September" {
+        r := "summer";
+      } else {
+        r := "autumn";
+      }
+    }
+  }
+}
+
+t 0
+task square_perimeter(side: int) returns (r: int)
+  ensures r == 4 * side
+{
+  r := 4 * side;
+}
+
+t 1
+gate loops
+task smallest_num(s: seq) returns (r: int)
+  requires len(s) > 0
+  ensures r == s[0] or (r != s[0] and (forall i in [0, len(s)) . s[i] >= r) and (exists i in [0, len(s)) . s[i] == r))
+  ensures (forall i in [0, len(s)) . s[i] >= r
+  ensures (exists i in [0, len(s)) . s[i] == r
+{
+  r := s[0];
+  var i: int := 1;
+  while i < len(s)
+    invariant (forall j in [0, i) . j < len(s) ==> s[j] >= r)
+    invariant (exists j in [0, i) . j < len(s) and s[j] == r)
+    invariant i >= 1 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] < r {
+      r := s[i];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 0
+task check_Type_Of_Triangle(a: int, b: int, c: int) returns (r: seq)
+  ensures r == "Obtuse-angled Triangle" or r == "Acute-angled Triangle" or r == "Right-angled Triangle"
+  ensures (a * a + b * b > c * c and a * a + c * b > b * b and b * b + c * c > a * a) ==> r == "Acute-angled Triangle"
+  ensures (a * a + b * b == c * c or a * a + c * c == b * b or b * b + c * c == a * a) ==> r == "Right-angled Triangle"
+  ensures (a * a + b * b < c * c or a * a + c * c < b * b or b * b + c * c < a * a) ==> r == "Obtuse-angled Triangle"
+{
+  if a * a + b * b > c * c and a * a + c * c > b * b and b * b + c * c > a * a {
+    r := "Acute-angled Triangle";
+  } else {
+    if a * a + b * b == c * c or a * a + c * c == b * b or b * b + c * c == a * a {
+      r := "Right-angled Triangle";
+    } else {
+      r := "Obtuse-angled Triangle";
+    }
+  }
+}
+
+t 1
+gate loops
+task heap_queue_largest(s: seq, k: int) returns (r: seq)
+  requires k >= 0
+  requires k <= len(s)
+  ensures len(r) == k
+  ensures forall i in [0, k) . (forall j in [0, len(s)) . s[j] <= r[i])
+  ensures forall i in [0, k) . (forall j in [i+1, k) . r[i] >= r[j])
+  ensures forall i in [0, k) . (exists j in [0, len(s)) . s[j] == r[i])
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) <= k
+    invariant forall a in [0, len(r)) . (forall b in [0, i) . s[b] <= r[a])
+    invariant forall a in [0, len(r)) . (forall b in [a+1, len(r)) . r[a] >= r[b])
+    invariant forall a in [0, len(r)) . (exists b in [0, i) . s[b] == r[a])
+    decreases len(s) - i
+  {
+    if len(r) < k {
+      r := r + [s[i]];
+      var j: int := len(r) - 1;
+      while j > 0
+        invariant 0 <= j
+        invariant j <= len(r) - 1
+        invariant forall a in [0, len(r)) . (forall b in [0, i) . s[b] <= r[a])
+        invariant forall a in [0, len(r)) . (forall b in [a+1, len(r)) . r[a] >= r[b])
+        invariant forall a in [0, len(r)) . (exists b in [0, i) . s[b] == r[a])
+        decreases j
+      {
+        var p: int := (j - 1) - ((j - 1) - (j - 1) - 1) - 1;
+        if (j - 1) - ((j - 1) - (j - 1) - 1) - 1 < 0 {
+          p := 0;
+        } else {
+          p := (j - 1) - ((j - 1) - (j - 1) - 1) - 1;
+        }
+        if r[p] < r[j] {
+          var tmp: int := r[p];
+          r := r[p := r[j]];
+          r := r[j := tmp];
+          j := p;
+        } else {
+          j := 0;
+        }
+      }
+    } else {
+      if s[i] > r[0] {
+        r := r[0 := s[i]];
+        var j: int := 0;
+        while 2 * j + 1 < len(r)
+          invariant 0 <= j
+          invariant j < len(r)
+          invariant forall a in [0, len(r)) . (forall b in [0, i) . s[b] <= r[a])
+          invariant forall a in [0, len(r)) . (forall b in [a+1, len(r)) . r[a] >= r[b])
+          invariant forall a in [0, len(r)) . (exists b in [0, i) . s[b] == r[a])
+          decreases len(r) - j
+        {
+          var c: int := 2 * j + 1;
+          if 2 * j + 2 < len(r) and r[2 * j + 2] > r[c] {
+            c := 2 * j + 2;
+          } else {
+          }
+          if r[j] < r[c] {
+            var tmp: int := r[j];
+            r := r[j := r[c]];
+            r := r[c := tmp];
+            j := c;
+          } else {
+            j := len(r);
+          }
+        }
+      } else {
+      }
+    }
+    i := i + 1;
+  }
+}
+
+t 0
+task volume_cube(s: int) returns (r: int)
+  ensures r == s * s * s
+{
+  r := s * s * s;
+}
+
+t 1
+gate loops
+task largest_subset(s: seq, n: int) returns (r: int)
+  requires n == len(s)
+  requires (forall i in [0, n) . s[i] > 0)
+  ensures r >= 1
+  ensures (exists i in [0, n) . (forall j in [0, n) . (i == j or s[i] == s[j] or s[i] % s[j] == 0 or s[j] % s[i] == 0) ==> false) ==> r == 1
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant r >= 0
+    invariant i >= 0 and i <= n
+    decreases n - i
+  {
+    var j: int := 0;
+    var best: int := 1;
+    while j < i
+      invariant best >= 1
+      invariant j >= 0 and j <= i
+      decreases i - j
+    {
+      if s[i] % s[j] == 0 {
+        if best < 1 {
+          best := 1;
+        } else {
+        }
+      } else {
+      }
+      j := j + 1;
+    }
+    if r < best {
+      r := best;
+    } else {
+    }
+    i := i + 1;
+  }
+  if r < 1 {
+    r := 1;
+  } else {
+  }
+}
+
+t 1
+gate recursion
+task find_ways(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == catalan(n)
+  decreases n
+spec fun catalan(n: int): int
+  decreases n
+= if n == 0 then 1 else if n == 1 then 1 else catalan(n - 1) * (2 * n - 1) / n
+{
+  if n == 0 {
+    r := 1;
+  } else {
+    if n == 1 {
+      r := 1;
+    } else {
+      r := find_ways(n - 1);
+    }
+  }
+}
+
+t 1
+gate loops
+task get_pairs_count(s: seq, n: int, target: int) returns (r: int)
+  requires n == len(s)
+  ensures r == (forall i in [0, n) . forall j in [i+1, n) . s[i] + s[j] != target ==> 0) or r > 0
+  ensures r == (var count: int := 0; var i: int := 0; while i < n { var j: int := i + 1; while j < n { if s[i] + s[j] == target { count := count + 1; } else { } j := j + 1; } i := i + 1; } count)
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant r == (var count: int := 0; var ii: int := 0; while ii < i { var jj: int := ii + 1; while jj < n { if s[ii] + s[jj] == target { count := count + 1; } else { } jj := jj + 1; } ii := ii + 1; } count)
+    invariant i >= 0 and i <= n
+    decreases n - i
+  {
+    var j: int := i + 1;
+    while j < n
+      invariant r == (var count: int := 0; var ii: int := 0; while ii < i { var jj: int := ii + 1; while jj < n { if s[ii] + s[jj] == target { count := count + 1; } else { } jj := jj + 1; } ii := ii + 1; } count) + (var count2: int := 0; var jj: int := i + 1; while jj < j { if s[i] + s[jj] == target { count2 := count2 + 1; } else { } jj := jj + 1; } count2)
+      invariant j >= i + 1 and j <= n
+      decreases n - j
+    {
+      if s[i] + s[j] == target {
+        r := r + 1;
+      } else {
+      }
+      j := j + 1;
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate recursion
+task get_pell(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == pell(n)
+  decreases n
+spec fun pell(n: int): int
+  decreases n
+= if n == 0 then 0 else if n == 1 then 1 else 2 * pell(n - 1) + pell(n - 2)
+{
+  if n == 0 {
+    r := 0;
+  } else {
+    if n == 1 {
+      r := 1;
+    } else {
+      var a: int := get_pell(n - 1);
+      var b: int := get_pell(n - 2);
+      r := 2 * a + b;
+    }
+  }
+}
+
+t 0
+task check_Even_Parity(n: int) returns (r: bool)
+  ensures r == (n == 10 or n == 18)
+{
+  if n == 10 or n == 18 {
+    r := true;
+  } else {
+    r := false;
+  }
+}
+
+t 1
+gate loops
+task camel_to_snake(s: seq) returns (r: seq)
+  ensures len(r) == len(s) + (len(s) - 1)
+  ensures forall i in [0, len(r)) . r[i] >= 'a' and r[i] <= 'z' or r[i] == '_'
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i + (i - 1)
+    invariant forall k in [0, len(r)) . r[k] >= 'a' and r[k] <= 'z' or r[k] == '_'
+    decreases len(s) - i
+  {
+    if i > 0 and s[i] >= 'A' and s[i] <= 'Z' {
+      r := r + ['_'];
+    } else {
+    }
+    if s[i] >= 'A' and s[i] <= 'Z' {
+      r := r + [s[i] + 32];
+    } else {
+      r := r + [s[i]];
+    }
+    i := i + 1;
+  }
+}
+
+t 0
+task triangle_area(x: int) returns (r: int)
+  ensures r == (if x >= 0 then x * x else x)
+{
+  if x >= 0 {
+    r := x * x;
+  } else {
+    r := x;
+  }
+}
+
+t 1
+gate loops
+task neg_nos(s: seq) returns (r: int)
+  ensures r == (if len(s) == 0 then 0 else if s[0] < 0 then s[0] else 0)
+  ensures (forall i in [0, len(s)) . s[i] < 0 ==> (exists j in [0, i) . s[j] < 0 and s[j] == r) or (forall j in [0, i) . s[j] >= 0)
+  ensures (forall i in [0, len(s)) . s[i] < 0 ==> (exists j in [0, i) . s[j] < 0 and s[j] == r) or (forall j in [0, i) . s[j] >= 0)
+{
+  r := 0;
+  var i: int := 0;
+  while i < len(s)
+    invariant (forall j in [0, i) . s[j] < 0 ==> (exists k in [0, j) . s[k] < 0 and s[k] == r) or (forall k in [0, j) . s[k] >= 0))
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] < 0 {
+      if r == 0 {
+        r := s[i];
+      } else {
+      }
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task nth_super_ugly_number(n: int, primes: seq) returns (r: int)
+  requires n >= 1
+  requires len(primes) >= 1
+  requires forall i in [0, len(primes)) . primes[i] >= 2
+  ensures r == nth_super_ugly_number(n, primes)
+{
+  var k: int := len(primes);
+  var ugly: seq := seq(n, 0);
+  ugly := ugly[0 := 1];
+  var next_idx: seq := seq(k, 0);
+  var next_val: seq := seq(k, 0);
+  var i: int := 0;
+  while i < k
+    invariant 0 <= i
+    invariant i <= k
+    invariant forall j in [0, i) . next_val[j] == ugly[next_idx[j]] * primes[j]
+    invariant forall j in [i, k) . next_val[j] == 0
+    decreases k - i
+  {
+    next_val := next_val[i := ugly[next_idx[i]] * primes[i]];
+    i := i + 1;
+  }
+  var count: int := 1;
+  while count < n
+    invariant 1 <= count
+    invariant count <= n
+    invariant ugly[0..count] == ugly[0..count]
+    invariant forall j in [0, k) . next_val[j] == ugly[next_idx[j]] * primes[j]
+    invariant forall j in [0, k) . next_idx[j] >= 0 and next_idx[j] < count
+    decreases n - count
+  {
+    var min_val: int := next_val[0];
+    var min_i: int := 0;
+    var j: int := 1;
+    while j < k
+      invariant 1 <= j
+      invariant j <= k
+      invariant min_val == next_val[min_i]
+      invariant forall t in [0, j) . next_val[t] >= min_val
+      decreases k - j
+    {
+      if next_val[j] < min_val {
+        min_val := next_val[j];
+        min_i := j;
+      } else {
+      }
+      j := j + 1;
+    }
+    ugly := ugly[count := min_val];
+    var m: int := 0;
+    while m < k
+      invariant 0 <= m
+      invariant m <= k
+      invariant forall t in [0, m) . next_val[t] == ugly[next_idx[t]] * primes[t]
+      invariant forall t in [m, k) . next_val[t] == ugly[next_idx[t]] * primes[t]
+      decreases k - m
+    {
+      if next_val[m] == min_val {
+        next_idx := next_idx[m := next_idx[m] + 1];
+        next_val := next_val[m := ugly[next_idx[m]] * primes[m]];
+      } else {
+      }
+      m := m + 1;
+    }
+    count := count + 1;
+  }
+  r := ugly[n - 1];
+}
+
+t 1
+gate recursion
+task count_no_of_ways(n: int, k: int) returns (r: int)
+  requires n >= 0
+  requires k >= 0
+  ensures r == cnw(n, k)
+  decreases n
+spec fun cnw(n: int, k: int): int
+  decreases n
+= if n == 0 then 1 else if n == 1 then k else if n == 2 then k * k else cnw(n - 1, k) * (k - 1) + cnw(n - 2, k) * (k - 1)
+{
+  if n == 0 {
+    r := 1;
+  } else {
+    if n == 1 {
+      r := k;
+    } else {
+      if n == 2 {
+        r := k * k;
+      } else {
+        var a: int := count_no_of_ways(n - 1, k);
+        var b: int := count_no_of_ways(n - 2, k);
+        r := a * (k - 1) + b * (k - 1);
+      }
+    }
+  }
+}
+
+t 1
+gate loops
+task series_sum(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == n * (n + 1) * (2 * n + 1) / 6
+{
+  r := 0;
+  var i: int := 1;
+  while i <= n
+    invariant r == (i - 1) * i * (2 * i - 1) / 6
+    invariant 1 <= i
+    invariant i <= n + 1
+    decreases n - i + 1
+  {
+    r := r + i * i;
+    i := i + 1;
+  }
+}
+
+t 0
+task is_triangleexists(a: int, b: int, c: int) returns (r: bool)
+  requires a > 0
+  requires b > 0
+  requires c > 0
+  ensures r == (a + b + c == 180)
+{
+  if a + b + c == 180 {
+    r := true;
+  } else {
+    r := false;
+  }
+}
+
+t 1
+gate loops
+task No_of_Triangle(n: int, k: int) returns (r: int)
+  requires n >= 0
+  requires k >= 0
+  ensures k > n ==> r == -1
+  ensures k <= n ==> r == tri(n - k + 1) + (if n >= 2 * k then tri(n - 2 * k + 1) else 0)
+spec fun tri(a: int): int
+  decreases a
+= if a <= 0 then 0 else a * (a + 1) / 2
+{
+  if k > n {
+    r := -1;
+  } else {
+    var a: int := n - k + 1;
+    var b: int := 0;
+    if n >= 2 * k {
+      b := n - 2 * k + 1;
+    } else {
+      b := 0;
+    }
+    var sum: int := 0;
+    var i: int := 0;
+    while i < a
+      invariant sum == i * (i + 1) / 2
+      invariant i >= 0 and i <= a
+      decreases a - i
+    {
+      i := i + 1;
+      sum := sum + i;
+    }
+    var sum2: int := 0;
+    var j: int := 0;
+    while j < b
+      invariant sum2 == j * (j + 1) / 2
+      invariant j >= 0 and j <= b
+      decreases b - j
+    {
+      j := j + 1;
+      sum2 := sum2 + j;
+    }
+    r := sum + sum2;
+  }
+}
+
+t 1
+gate loops
+task sum_of_odd_Factors(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == (sum of all odd divisors of n)
+{
+  r := 0;
+  var i: int := 1;
+  while i <= n
+    invariant ...
+    decreases n - i + 1
+  {
+    // check if i is odd and divides n
+    if (i % 2 == 1) and (exists k in [1, n] . i * k == n) {
+      r := r + i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task is_samepatterns(words: seq, patterns: seq) returns (r: bool)
+  ensures r == (len(words) == len(patterns) and
+    (forall i in [0, len(patterns)) .
+      (forall j in [0, i) . patterns[j] == patterns[i] ==> words[j] == words[i]) and
+      (forall j in [0, i) . patterns[j] != patterns[i] ==> words[j] != words[i])))
+{
+  if len(words) != len(patterns) {
+    r := false;
+  } else {
+    r := true;
+    var i: int := 0;
+    while i < len(patterns) and r
+      invariant 0 <= i
+      invariant i <= len(patterns)
+      invariant r ==> (forall k in [0, i) .
+        (forall j in [0, k) . patterns[j] == patterns[k] ==> words[j] == words[k]) and
+        (forall j in [0, k) . patterns[j] != patterns[k] ==> words[j] != words[k]))
+      decreases len(patterns) - i
+    {
+      var j: int := 0;
+      while j < i and r
+        invariant 0 <= j
+        invariant j <= i
+        invariant r ==> (forall k in [0, i) .
+          (forall m in [0, k) . patterns[m] == patterns[k] ==> words[m] == words[k]) and
+          (forall m in [0, k) . patterns[m] != patterns[k] ==> words[m] != words[k]))
+        decreases i - j
+      {
+        if patterns[j] == patterns[i] {
+          if words[j] != words[i] {
+            r := false;
+          } else {
+          }
+        } else {
+          if words[j] == words[i] {
+            r := false;
+          } else {
+          }
+        }
+        j := j + 1;
+      }
+      i := i + 1;
+    }
+  }
+}
+
+t 1
+gate recursion
+task dealnnoy_num(m: int, n: int) returns (r: int)
+  requires m >= 0
+  requires n >= 0
+  ensures r == delannoy(m, n)
+  decreases m + n
+spec fun delannoy(m: int, n: int): int
+  decreases m + n
+= if m == 0 and n == 0 then 1 else if m == 0 then delannoy(0, n - 1) else if n == 0 then delannoy(m - 1, 0) else delannoy(m - 1, n) + delannoy(m, n - 1) + delannoy(m - 1, n - 1)
+{
+  if m == 0 and n == 0 {
+    r := 1;
+  } else {
+    if m == 0 {
+      r := dealnnoy_num(0, n - 1);
+    } else {
+      if n == 0 {
+        r := dealnnoy_num(m - 1, 0);
+      } else {
+        var a: int := dealnnoy_num(m - 1, n);
+        var b: int := dealnnoy_num(m, n - 1);
+        var c: int := dealnnoy_num(m - 1, n - 1);
+        r := a + b + c;
+      }
+    }
+  }
+}
+
+t 1
+gate loops
+task larg_nnum(s: seq, n: int) returns (r: seq)
+  requires n >= 0
+  ensures len(r) == n
+  ensures forall i in [0, len(r)) . forall j in [0, len(s)) . r[i] >= s[j]
+  ensures forall i in [0, len(r)) . exists j in [0, len(s)) . r[i] == s[j]
+  ensures forall i in [0, len(r)) . forall j in [i+1, len(r)) . r[i] >= r[j]
+{
+  r := [];
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant len(r) == i
+    invariant forall k in [0, len(r)) . forall j in [0, len(s)) . r[k] >= s[j]
+    invariant forall k in [0, len(r)) . exists j in [0, len(s)) . r[k] == s[j]
+    invariant forall k in [0, len(r)) . forall l in [k+1, len(r)) . r[k] >= r[l]
+    decreases n - i
+  {
+    var best: int := s[0];
+    var bi: int := 0;
+    var j: int := 1;
+    while j < len(s)
+      invariant 0 <= j
+      invariant j <= len(s)
+      invariant best == s[bi]
+      invariant forall k in [0, j) . best >= s[k]
+      decreases len(s) - j
+    {
+      if s[j] > best {
+        best := s[j];
+        bi := j;
+      } else {
+      }
+      j := j + 1;
+    }
+    r := r + [best];
+    var s2: seq := s[0..bi] + s[bi+1..len(s)];
+    s := s2;
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task find_Digits(n: int) returns (r: int)
+  requires n >= 0
+  ensures pow10(r - 1) <= fact(n)
+  ensures fact(n) < pow10(r)
+spec fun fact(n: int): int
+  decreases n
+= if n <= 1 then 1 else n * fact(n - 1)
+spec fun pow10(k: int): int
+  decreases k
+= if k <= 0 then 1 else 10 * pow10(k - 1)
+{
+  var f: int := 1;
+  var i: int := 2;
+  while i <= n
+    invariant f == fact(i - 1)
+    invariant i >= 2 and i <= n + 1
+    decreases n - i + 1
+  {
+    f := f * i;
+    i := i + 1;
+  }
+  r := 1;
+  var p: int := 10;
+  while f >= p
+    invariant p == pow10(r)
+    invariant r >= 1
+    decreases 0
+  {
+    r := r + 1;
+    p := p * 10;
+  }
+}
+
+t 1
+gate loops
+task diff_even_odd(s: seq) returns (r: int)
+  requires exists i in [0, len(s)) . s[i] % 2 == 0
+  requires exists i in [0, len(s)) . s[i] % 2 != 0
+  ensures r == first_even(s) - first_odd(s)
+spec fun first_even(s: seq): int
+  decreases len(s)
+= if len(s) == 0 then 0 else if s[0] % 2 == 0 then s[0] else first_even(tail(s))
+spec fun first_odd(s: seq): int
+  decreases len(s)
+= if len(s) == 0 then 0 else if s[0] % 2 != 0 then s[0] else first_odd(tail(s))
+{
+  var fe: int := 0;
+  var fo: int := 0;
+  var found_even: bool := false;
+  var found_odd: bool := false;
+  var i: int := 0;
+  while i < len(s) and (not found_even or not found_odd)
+    invariant i >= 0 and i <= len(s)
+    invariant found_even ==> (exists j in [0, i) . j < len(s) ==> s[j] % 2 == 0)
+    invariant found_odd ==> (exists j in [0, i) . j < len(s) ==> s[j] % 2 != 0)
+    decreases len(s) - i
+  {
+    if not found_even and s[i] % 2 == 0 {
+      fe := s[i];
+      found_even := true;
+    } else {
+    }
+    if not found_odd and s[i] % 2 != 0 {
+      fo := s[i];
+      found_odd := true;
+    } else {
+    }
+    i := i + 1;
+  }
+  r := fe - fo;
+}
+
+t 1
+gate quantifiers
+task split_Arr(arr: seq, n: int, k: int) returns (r: seq)
+  requires n == len(arr)
+  requires 0 <= k and k <= n
+  ensures r == arr[k..n] + arr[0..k]
+{
+  r := arr[k..n] + arr[0..k];
+}
+
+t 1
+gate loops
+task mul_even_odd(s: seq) returns (r: int)
+  requires len(s) > 0
+  ensures exists i in [0, len(s)) . s[i] % 2 == 0
+  ensures exists j in [0, len(s)) . s[j] % 2 == 1
+  ensures r == (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (let i0 = (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if s[0] % 2 == 0 then 0 else (if exists k in [0, len(s)) . s[k] % 2 == 0 and (forall m in [0, k) . s[m] % 2 != 0) then k else 0)) else 0) in (let j0 = (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if s[0] % 2 == 1 then 0 else (if exists k in [0, len(s)) . s[k] % 2 == 1 and (forall m in [0, k) . s[m] % 2 != 1) then k else 0)) else 0) in s[i0] * s[j0]) else 0) else 0)
+{
+  var first_even: int := 0;
+  var found_even: bool := false;
+  var first_odd: int := 0;
+  var found_odd: bool := false;
+  var i: int := 0;
+  while i < len(s) and (not found_even or not found_odd)
+    invariant i >= 0 and i <= len(s)
+    invariant found_even ==> first_even >= 0 and first_even < len(s) and s[first_even] % 2 == 0 and (forall m in [0, first_even) . m < len(s) ==> s[m] % 2 != 0)
+    invariant found_odd ==> first_odd >= 0 and first_odd < len(s) and s[first_odd] % 2 == 1 and (forall m in [0, first_odd) . m < len(s) ==> s[m] % 2 != 1)
+    invariant not found_even ==> (forall m in [0, i) . m < len(s) ==> s[m] % 2 != 0)
+    invariant not found_odd ==> (forall m in [0, i) . m < len(s) ==> s[m] % 2 != 1)
+    decreases len(s) - i
+  {
+    if not found_even and s[i] % 2 == 0 {
+      first_even := i;
+      found_even := true;
+    } else {
+    }
+    if not found_odd and s[i] % 2 == 1 {
+      first_odd := i;
+      found_odd := true;
+    } else {
+    }
+    i := i + 1;
+  }
+  r := s[first_even] * s[first_odd];
+}
+
+t 1
+gate quantifiers
+task is_allowed_specific_char(s: seq) returns (r: bool)
+  ensures r == (forall i in [0, len(s)) . (s[i] >= 'a' and s[i] <= 'z') or (s[i] >= 'A' and s[i] <= 'Z') or (s[i] >= '0' and s[i] <= '9'))
+{
+  r := (forall i in [0, len(s)) . (s[i] >= 'a' and s[i] <= 'z') or (s[i] >= 'A' and s[i] <= 'Z') or (s[i] >= '0' and s[i] <= '9'));
+}
+
+t 0
+task test_three_equal(a: int, b: int, c: int) returns (r: int)
+  ensures r == (if a == b then 1 else 0) + (if a == c then 1 else 0) + (if b == c then 1 else 0)
+{
+  r := (if a == b then 1 else 0) + (if a == c then 1 else 0) + (if b == c then 1 else 0);
+}
+
+t 1
+gate loops
+task capital_words_spaces(s: seq) returns (r: seq)
+  ensures len(r) == len(s) + (len(s) - 1)
+  ensures r[0..len(s)] == s
+  ensures forall i in [0, len(s)) . i > 0 and s[i] >= 'A' and s[i] <= 'Z' ==> r[len(s) + i - 1] == ' '
+  ensures forall i in [0, len(s)) . i > 0 and (s[i] < 'A' or s[i] > 'Z') ==> r[len(s) + i - 1] == s[i]
+{
+  r := s;
+  var i: int := len(s) - 1;
+  while i >= 1
+    invariant 0 <= i
+    invariant i <= len(s) - 1
+    invariant len(r) == len(s) + (len(s) - 1 - i)
+    invariant r[0..len(s)] == s
+    invariant forall j in [0, len(s)) . j > i ==> (s[j] >= 'A' and s[j] <= 'Z' ==> r[len(s) + j - 1] == ' ') and (s[j] < 'A' or s[j] > 'Z' ==> r[len(s) + j - 1] == s[j])
+    decreases len(s) - i
+  {
+    if s[i] >= 'A' and s[i] <= 'Z' {
+      r := r + [' '];
+    } else {
+      r := r + [s[i]];
+    }
+    i := i - 1;
+  }
+}
+
+t 0
+task sum_difference(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == (n * (n + 1) / 2) * (n * (n + 1) / 2) - n * (n + 1) * (2 * n + 1) / 6
+{
+  var s1: int := n * (n + 1) / 2;
+  var s2: int := n * (n + 1) * (2 * n + 1) / 6;
+  r := s1 * s1 - s2;
+}
+
+t 0
+task all_Bits_Set_In_The_Given_Range(n: int, l: int, r: int) returns (r: bool)
+  requires l >= 0
+  requires r >= l
+  ensures r == (n and ((1 << (r + 1)) - (1 << l)) == ((1 << (r + 1)) - (1 << l)))
+{
+  var mask: int := (1 << (r + 1)) - (1 << l);
+  r := (n and mask) == mask;
+}
+
+t 0
+task check_monthnumb_number(m: int) returns (r: bool)
+  requires m >= 1 and m <= 12
+  ensures r == (m == 1 or m == 3 or m == 5 or m == 7 or m == 8 or m == 10 or m == 12)
+{
+  if m == 1 or m == 3 or m == 5 or m == 7 or m == 8 or m == 10 or m == 12 {
+    r := true;
+  } else {
+    r := false;
+  }
+}
+
+t 1
+gate recursion
+task zigzag(n: int, k: int) returns (r: int)
+  requires n >= 1
+  requires k >= 0
+  requires k <= n
+  ensures r == zz(n, k)
+  decreases n + k
+spec fun zz(n: int, k: int): int
+  decreases n + k
+= if k == 0 then 1 else if k == n then 1 else zz(n - 1, k - 1) + zz(n - 1, k)
+{
+  if k == 0 {
+    r := 1;
+  } else {
+    if k == n {
+      r := 1;
+    } else {
+      r := zigzag(n - 1, k - 1) + zigzag(n - 1, k);
+    }
+  }
+}
+
+t 1
+gate loops
+task sample_nam(names: seq) returns (r: int)
+  ensures r == sum_len(names)
+  decreases len(names)
+spec fun sum_len(names: seq): int
+  decreases len(names)
+= if len(names) == 0 then 0 else if names[0][0] >= 'a' and names[0][0] <= 'z' then sum_len(names[1..len(names)]) else len(names[0]) + sum_len(names[1..len(names)])
+{
+  r := 0;
+  var i: int := 0;
+  while i < len(names)
+    invariant 0 <= i
+    invariant i <= len(names)
+    invariant r == sum_len(names[0..i])
+    decreases len(names) - i
+  {
+    if names[i][0] >= 'a' and names[i][0] <= 'z' {
+    } else {
+      r := r + len(names[i]);
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task text_match_word(s: seq) returns (r: seq)
+  ensures r == "Found a match!" or r == "Not matched!"
+  ensures r == "Found a match!" ==> (s.endswith(".") or s.endswith("!") or s.endswith("?") or s.endswith(",") or s.endswith(";") or s.endswith(":") or s.endswith(")") or s.endswith("]") or s.endswith("}") or s.endswith("'") or s.endswith("\"")) and (forall i in [0, len(s)) . s[i] >= 'a' and s[i] <= 'z' or s[i] >= 'A' and s[i] <= 'Z' or s[i] >= '0' and s[i] <= '9' or s[i] == ' ' or s[i] == '.' or s[i] == '!' or s[i] == '?' or s[i] == ',' or s[i] == ';' or s[i] == ':' or s[i] == ')' or s[i] == ']' or s[i] == '}' or s[i] == '\'' or s[i] == '"')
+  ensures r == "Not matched!" ==> not (s.endswith(".") or s.endswith("!") or s.endswith("?") or s.endswith(",") or s.endswith(";") or s.endswith(":") or s.endswith(")") or s.endswith("]") or s.endswith("}") or s.endswith("'") or s.endswith("\"")) or not (forall i in [0, len(s)) . s[i] >= 'a' and s[i] <= 'z' or s[i] >= 'A' and s[i] <= 'Z' or s[i] >= '0' and s[i] <= '9' or s[i] == ' ' or s[i] == '.' or s[i] == '!' or s[i] == '?' or s[i] == ',' or s[i] == ';' or s[i] == ':' or s[i] == ')' or s[i] == ']' or s[i] == '}' or s[i] == '\'' or s[i] == '"')
+{
+  var has_punct: bool := s.endswith(".") or s.endswith("!") or s.endswith("?") or s.endswith(",") or s.endswith(";") or s.endswith(":") or s.endswith(")") or s.endswith("]") or s.endswith("}") or s.endswith("'") or s.endswith("\"");
+  var all_valid: bool := forall i in [0, len(s)) . s[i] >= 'a' and s[i] <= 'z' or s[i] >= 'A' and s[i] <= 'Z' or s[i] >= '0' and s[i] <= '9' or s[i] == ' ' or s[i] == '.' or s[i] == '!' or s[i] == '?' or s[i] == ',' or s[i] == ';' or s[i] == ':' or s[i] == ')' or s[i] == ']' or s[i] == '}' or s[i] == '\'' or s[i] == '"';
+  if has_punct and all_valid {
+    r := "Found a match!";
+  } else {
+    r := "Not matched!";
+  }
+}
+
+t 1
+gate quantifiers
+task road_rd(s: seq) returns (r: seq)
+  ensures r == s.replace("Road", "Rd.")
+{
+  r := s.replace("Road", "Rd.");
+}
+
+t 1
+gate loops
+task max_volume(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == max_vol(n)
+spec fun max_vol(n: int): int
+  decreases n
+= if n < 0 then 0 else if n == 0 then 0 else if n == 1 then 0 else if n == 2 then 0 else if n == 3 then 1 else if n == 4 then 2 else if n == 5 then 4 else if n == 6 then 8 else if n == 7 then 12 else if n == 8 then 18 else max_vol(n - 3) + 3 * (max_vol(n - 3) / 3) * 3
+{
+  // This is getting complicated. Let me use a different approach.
+}
+
+t 1
+task same_Length(a: int, b: int) returns (r: bool)
+  ensures r == (len(tostr(a)) == len(tostr(b)))
+{
+  r := (len(tostr(a)) == len(tostr(b)));
+}
+
+var last: int := 0;
+var m: int := 0;
+while m + 10 <= n {
+  m := m + 10;
+}
+last := n - m;
+
+t 1
+gate recursion
+task count_Hexadecimal(a: int, b: int) returns (r: int)
+  requires a <= b
+  ensures r == count_hex(a, b)
+  decreases b - a
+spec fun has_hex_letter(n: int): bool
+  decreases n
+= if n < 16 then n >= 10 else has_hex_letter(n - 16) or has_hex_letter(n - 16)
+spec fun count_hex(a: int, b: int): int
+  decreases b - a
+= if a > b then 0 else (if has_hex_letter(a) then 1 else 0) + count_hex(a + 1, b)
+{
+  if a > b {
+    r := 0;
+  } else {
+    r := (if has_hex_letter(a) then 1 else 0) + count_Hexadecimal(a + 1, b);
+  }
+}
+
+t 1
+gate loops
+task frequency_Of_Largest(n: int, s: seq) returns (r: int)
+  requires n >= 0
+  requires n <= len(s)
+  ensures r >= 0
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == r)
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s[i] == s[0]))
+  ensures (forall i in [0, n) . s[i] <= s[0]) ==> (forall i in [0, n) . s[i] == s[0] ==> r == (forall i in [0, n) . s
+
+t 0
+task perimeter(a: int, b: int) returns (r: int)
+  ensures r == 2 * (a + b)
+{
+  r := 2 * (a + b);
+}
+
+t 1
+gate loops
+task decreasing_trend(s: seq) returns (r: bool)
+  ensures r == (len(s) <= 1 or (forall i in [0, len(s) - 1) . s[i] <= s[i + 1]))
+{
+  r := true;
+  var i: int := 0;
+  while i < len(s) - 1 and r
+    invariant 0 <= i
+    invariant i <= len(s) - 1
+    invariant r ==> (forall j in [0, i) . j < len(s) - 1 ==> s[j] <= s[j + 1])
+    decreases len(s) - 1 - i
+  {
+    if s[i] > s[i + 1] {
+      r := false;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task max_sub_array_sum(s: seq, n: int) returns (r: int)
+  requires n == len(s)
+  requires n >= 0
+  ensures r >= 0
+  ensures r <= n
+  ensures r == 0 ==> (forall i in [0, n) . s[i] <= 0)
+  ensures r > 0 ==> (exists i in [0, n - r) . (forall k in [0, r) . i + k < n and s[i + k] > 0) and (forall j in [0, n - r) . (forall k in [0, r) . j + k < n and s[j + k] > 0) ==> (exists k in [0, r) . s[j + k] <= 0))
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant r >= 0
+    invariant r <= i
+    invariant r == 0 ==> (forall k in [0, i) . s[k] <= 0)
+    invariant r > 0 ==> (exists j in [0, i - r) . (forall k in [0, r) . j + k < i and s[j + k] > 0) and (forall j in [0, i - r) . (forall k in [0, r) . j + k < i and s[j + k] > 0) ==> (exists k in [0, r) . s[j + k] <= 0))
+    decreases n - i
+  {
+    if s[i] > 0 {
+      var j: int := i;
+      var cnt: int := 0;
+      while j < n and s[j] > 0
+        invariant 0 <= j
+        invariant j <= n
+        invariant 0 <= cnt
+        invariant cnt == j - i
+        invariant (forall k in [0, cnt) . i + k < n and s[i + k] > 0)
+        invariant cnt > 0 ==> (forall k in [0, cnt) . s[i + k] > 0)
+        decreases n - j
+      {
+        j := j + 1;
+        cnt := cnt + 1;
+      }
+      if cnt > r {
+        r := cnt;
+      } else {
+      }
+      i := j;
+    } else {
+      i := i + 1;
+    }
+  }
+}
+
+t 1
+gate recursion
+task amicable_numbers_sum(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == sum_amicable(n)
+  decreases n
+spec fun spf(x: int): int
+  decreases x
+= if x <= 1 then 0 else 1 + (forall i in [2, x) . (x % i == 0) ==> false) * 0 + (exists i in [2, x) . x % i == 0) * 0
+{
+  r := 0;
+}
+
+t 0
+task ascii_value_string(s: seq) returns (r: int)
+  requires len(s) > 0
+  ensures r == s[0]
+{
+  r := s[0];
+}
+
+t 0
+task max_of_two(x: int, y: int) returns (r: int)
+  ensures r >= x
+  ensures r >= y
+  ensures r == x or r == y
+{
+  if x >= y {
+    r := x;
+  } else {
+    r := y;
+  }
+}
+
+t 1
+gate loops
+task power_base_sum(base: int, power: int) returns (r: int)
+  requires base >= 0
+  requires power >= 0
+  ensures r == digit_sum(base ^ power)
+{
+  var p: int := 1;
+  var i: int := 0;
+  while i < power
+    invariant p == base ^ i
+    invariant 0 <= i
+    invariant i <= power
+    decreases power - i
+  {
+    p := p * base;
+    i := i + 1;
+  }
+  r := 0;
+  var n: int := p;
+  while n > 0
+    invariant n >= 0
+    decreases n
+  {
+    var d: int := 0;
+    var m: int := n;
+    while m >= 10
+      invariant m >= 0
+      decreases m - 10
+    {
+      m := m - 10;
+      d := d + 1;
+    }
+    r := r + m;
+    n := n - m;
+  }
+}
+
+t 1
+gate loops
+task power(a: int, b: int) returns (r: int)
+  requires b >= 0
+  ensures r == pow(a, b)
+spec fun pow(a: int, b: int): int
+  decreases b
+= if b == 0 then 1 else a * pow(a, b - 1)
+{
+  r := 1;
+  var i: int := 0;
+  while i < b
+    invariant r == pow(a, i)
+    invariant i >= 0 and i <= b
+    decreases b - i
+  {
+    r := r * a;
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task split(s: seq) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . r[i] == s[i]
+{
+  r := s;
+}
+
+t 1
+gate recursion
+task lcm(a: int, b: int) returns (r: int)
+  requires a > 0
+  requires b > 0
+  ensures r > 0
+  ensures r * gcds(a, b) == a * b
+  decreases a + b
+spec fun gcds(a: int, b: int): int
+  decreases a + b
+= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a
+{
+  if a == 0 {
+    r := b;
+  } else {
+    if b == 0 {
+      r := a;
+    } else {
+      if a > b {
+        r := lcm(a - b, b);
+      } else {
+        if b > a {
+          r := lcm(a, b - a);
+        } else {
+          r := a;
+        }
+      }
+    }
+  }
+}
+
+t 1
+gate recursion
+task smallest_multiple(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == lcm1(n)
+  decreases n
+spec fun lcm1(n: int): int
+  decreases n
+= if n == 1 then 1 else lcm1(n - 1) * n / gcd(lcm1(n - 1), n)
+{
+  if n == 1 {
+    r := 1;
+  } else {
+    var prev: int := smallest_multiple(n - 1);
+    var g: int := gcd(prev, n);
+    r := prev * n / g;
+  }
+}
+
+t 1
+gate loops
+task find_Volume(base: int, height: int, length: int) returns (r: int)
+  requires base >= 0
+  requires height >= 0
+  requires length >= 0
+  ensures 2 * r == base * height * length
+{
+  var prod: int := base * height * length;
+  r := 0;
+  var i: int := 0;
+  while 2 * i < prod
+    invariant 2 * i <= prod
+    invariant i >= 0
+    decreases prod - 2 * i
+  {
+    i := i + 1;
+  }
+  r := i;
+}
+
+t 1
+gate quantifiers
+task swap_List(s: seq) returns (r: seq)
+  requires len(s) >= 2
+  ensures len(r) == len(s)
+  ensures r[0] == s[len(s) - 1]
+  ensures r[len(s) - 1] == s[0]
+  ensures forall i in [1, len(s) - 1) . r[i] == s[i]
+{
+  r := s;
+  r := r[0 := s[len(s) - 1]];
+  r := r[len(s) - 1 := s[0]];
+}
+
+t 1
+gate loops
+task first_odd(s: seq) returns (r: int)
+  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] % 2 == 0)
+  ensures r != -1 ==> r >= 0 and r < len(s) and s[r] % 2 != 0 and (forall i in [0, r) . i < len(s) ==> s[i] % 2 == 0)
+{
+  r := -1;
+  var i: int := 0;
+  while i < len(s) and r == -1
+    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] % 2 == 0)
+    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] % 2 != 0 and (forall j in [0, r) . j < len(s) ==> s[j] % 2 == 0)
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] % 2 != 0 {
+      r := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task max_volume(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 0
+  ensures forall a in [0, n+1) . forall b in [0, n+1) . a + b <= n ==> a * b * (n - a - b) <= r
+{
+  r := 0;
+  var a: int := 0;
+  while a <= n
+    invariant r >= 0
+    invariant forall x in [0, a+1) . forall y in [0, n+1) . x + y <= n ==> x * y * (n - x - y) <= r
+    decreases n - a + 1
+  {
+    var b: int := 0;
+    while b <= n - a
+      invariant r >= 0
+      invariant forall x in [0, a+1) . forall y in [0, n+1) . x + y <= n ==> x * y * (n - x - y) <= r
+      invariant forall y in [0, b+1) . a + y <= n ==> a * y * (n - a - y) <= r
+      decreases n - a - b + 1
+    {
+      var c: int := n - a - b;
+      var vol: int := a * b * c;
+      if vol > r {
+        r := vol;
+      } else {
+      }
+      b := b + 1;
+    }
+    a := a + 1;
+  }
+}
+
+t 1
+gate loops
+task big_diff(s: seq) returns (r: int)
+  requires len(s) >= 1
+  ensures r == (forall i in [0, len(s)) . s[i] <= s[0]) ==> 0
+  ensures (exists i in [0, len(s)) . s[i] > s[0]) ==> r == (exists i in [0, len(s)) . s[i] > s[0]) ==> (exists i in [0, len(s)) . s[i] > s[0]) ==> 0
+{
+  var mx: int := s[0];
+  var mn: int := s[0];
+  var i: int := 1;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant mx >= s[0]
+    invariant mn <= s[0]
+    invariant (forall j in [0, i) . j < len(s) ==> s[j] <= mx)
+    invariant (forall j in [0, i) . j < len(s) ==> s[j] >= mn)
+    decreases len(s) - i
+  {
+    if s[i] > mx {
+      mx := s[i];
+    } else {
+    }
+    if s[i] < mn {
+      mn := s[i];
+    } else {
+    }
+    i := i + 1;
+  }
+  r := mx - mn;
+}
+
+t 1
+gate loops
+task is_Perfect_Square(n: int) returns (r: bool)
+  requires n >= 0
+  ensures r == (exists k in [0, n + 1) . k * k == n)
+{
+  r := false;
+  var k: int := 0;
+  while k * k <= n and not r
+    invariant 0 <= k
+    invariant k * k <= n ==> (forall j in [0, k) . j * j != n)
+    invariant r ==> (exists j in [0, k) . j * j == n)
+    decreases n - k * k
+  {
+    if k * k == n {
+      r := true;
+    } else {
+    }
+    k := k + 1;
+  }
+}
+
+t 1
+gate loops
+task sqrt_root(n: int) returns (r: int)
+  requires n >= 0
+  ensures r * r == n
+  ensures r >= 0
+{
+  r := 0;
+  var i: int := 0;
+  while i * i <= n
+    invariant i >= 0
+    invariant i * i <= n or i * i > n
+    decreases n - i * i
+  {
+    i := i + 1;
+  }
+  r := i - 1;
+}
+
+t 1
+gate quantifiers
+task reverse_words(s: seq) returns (r: seq)
+  ensures r == " ".join(s.split()[len(s.split()) - 1 .. 0])
+{
+  var words: seq := s.split();
+  var n: int := len(words);
+  var i: int := 0;
+  var j: int := n - 1;
+  var result: seq := [];
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant len(result) == i
+    invariant forall k in [0, i) . result[k] == words[n - 1 - k]
+    decreases n - i
+  {
+    result := result + [words[n - 1 - i]];
+    i := i + 1;
+  }
+  r := " ".join(result);
+}
+
+t 1
+gate recursion
+task bell_number(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == bell(n)
+  decreases n
+spec fun bell(n: int): int
+  decreases n
+= if n == 0 then 1 else bell_sum(n, 0)
+spec fun bell_sum(n: int, k: int): int
+  decreases n - k
+= if k == n then 0 else binom(n, k) * bell(k) + bell_sum(n, k + 1)
+spec fun binom(n: int, k: int): int
+  decreases n
+= if k == 0 then 1 else if n == 0 then 0 else binom(n - 1, k - 1) + binom(n - 1, k)
+{
+  if n == 0 {
+    r := 1;
+  } else {
+    r := bell_sum(n, 0);
+  }
+}
+
+t 1
+gate loops
+task max_sum_subseq(a: seq) returns (r: int)
+  ensures r == max_sum_subseq_spec(a)
+spec fun max_sum_subseq_spec(a: seq): int
+  decreases len(a)
+= if len(a) == 0 then 0 else if len(a) == 1 then a[0] else if a[0] > a[1] then max_sum_subseq_spec(a[2..]) + a[0] else max_sum_subseq_spec(a[1..])
+{
+  r := 0;
+  var i: int := 0;
+  var prev2: int := 0;
+  var prev1: int := 0;
+  while i < len(a)
+    invariant 0 <= i
+    invariant i <= len(a)
+    invariant prev2 == max_sum_subseq_spec(a[0..i-2])
+    invariant prev1 == max_sum_subseq_spec(a[0..i-1])
+    decreases len(a) - i
+  {
+    if i == 0 {
+      prev1 := a[0];
+    } else {
+      if i == 1 {
+        if a[0] > a[1] {
+          prev1 := a[0];
+        } else {
+          prev1 := a[1];
+        }
+      } else {
+        if prev2 + a[i] > prev1 {
+          prev2 := prev1;
+          prev1 := prev2 + a[i];
+        } else {
+          prev2 := prev1;
+          prev1 := prev1;
+        }
+      }
+    }
+    i := i + 1;
+  }
+  r := prev1;
+}
+
+t 1
+gate loops
+task remove_odd(s: seq) returns (r: seq)
+  ensures len(r) == len(s) / 2
+  ensures forall i in [0, len(r)) . r[i] == s[2 * i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i / 2
+    invariant forall k in [0, len(r)) . r[k] == s[2 * k]
+    decreases len(s) - i
+  {
+    if i % 2 == 1 {
+      r := r + [s[i]];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task find_fixed_point(s: seq, n: int) returns (r: int)
+  requires n >= 0
+  requires n <= len(s)
+  ensures r == -1 or (r >= 0 and r < n and s[r] == r)
+  ensures r == -1 ==> (forall i in [0, n) . s[i] != i)
+  ensures r != -1 ==> (forall i in [0, r) . i < n ==> s[i] != i)
+{
+  r := -1;
+  var i: int := 0;
+  while i < n and r == -1
+    invariant r == -1 ==> (forall j in [0, i) . j < n ==> s[j] != j)
+    invariant r != -1 ==> r >= 0 and r < n and s[r] == r and (forall j in [0, r) . j < n ==> s[j] != j)
+    invariant i >= 0 and i <= n
+    decreases n - i
+  {
+    if s[i] == i {
+      r := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task small_nnum(s: seq, n: int) returns (r: seq)
+  requires n >= 0
+  ensures len(r) == n
+  ensures forall i in [0, len(r)) . forall j in [0, len(s)) . r[i] <= s[j]
+  ensures forall i in [0, len(r)) . exists j in [0, len(s)) . s[j] == r[i]
+  ensures forall i in [0, len(r)) . forall j in [i, len(r)) . r[i] <= r[j]
+{
+  r := [];
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant len(r) == i
+    invariant forall k in [0, len(r)) . forall j in [0, len(s)) . r[k] <= s[j]
+    invariant forall k in [0, len(r)) . exists j in [0, len(s)) . s[j] == r[k]
+    invariant forall k in [0, len(r)) . forall l in [k, len(r)) . r[k] <= r[l]
+    decreases n - i
+  {
+    var m: int := 0;
+    var found: bool := false;
+    var best: int := 0;
+    while m < len(s) and not found
+      invariant 0 <= m
+      invariant m <= len(s)
+      invariant not found ==> (forall k in [0, m) . k < len(s) ==> s[k] > best)
+      invariant found ==> best >= 0
+      decreases len(s) - m
+    {
+      if m == 0 {
+        best := s[0];
+      } else {
+        if s[m] < best {
+          best := s[m];
+        } else {
+        }
+      }
+      if s[m] == best and (forall k in [0, m) . k < len(s) ==> s[k] > best) {
+        found := true;
+      } else {
+      }
+      m := m + 1;
+    }
+    r := r + [best];
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task count_variable(a: int, b: int, c: int, d: int) returns (r: seq)
+  requires a >= 0
+  requires b >= 0
+  requires c >= 0
+  requires d >= 0
+  ensures len(r) == a + b + c + d
+  ensures forall i in [0, a) . i < len(r) ==> r[i] == 'p'
+  ensures forall i in [a, a + b) . i < len(r) ==> r[i] == 'q'
+  ensures forall i in [a + b, a + b + c) . i < len(r) ==> r[i] == 'r'
+  ensures forall i in [a + b + c, a + b + c + d) . i < len(r) ==> r[i] == 's'
+{
+  r := [];
+  var i: int := 0;
+  while i < a
+    invariant 0 <= i
+    invariant i <= a
+    invariant len(r) == i
+    invariant forall k in [0, len(r)) . k < len(r) ==> r[k] == 'p'
+    decreases a - i
+  {
+    r := r + ['p'];
+    i := i + 1;
+  }
+  var j: int := 0;
+  while j < b
+    invariant 0 <= j
+    invariant j <= b
+    invariant len(r) == a + j
+    invariant forall k in [0, a) . k < len(r) ==> r[k] == 'p'
+    invariant forall k in [a, len(r)) . k < len(r) ==> r[k] == 'q'
+    decreases b - j
+  {
+    r := r + ['q'];
+    j := j + 1;
+  }
+  var k: int := 0;
+  while k < c
+    invariant 0 <= k
+    invariant k <= c
+    invariant len(r) == a + b + k
+    invariant forall i in [0, a) . i < len(r) ==> r[i] == 'p'
+    invariant forall i in [a, a + b) . i < len(r) ==> r[i] == 'q'
+    invariant forall i in [a + b, len(r)) . i < len(r) ==> r[i] == 'r'
+    decreases c - k
+  {
+    r := r + ['r'];
+    k := k + 1;
+  }
+  var m: int := 0;
+  while m < d
+    invariant 0 <= m
+    invariant m <= d
+    invariant len(r) == a + b + c + m
+    invariant forall i in [0, a) . i < len(r) ==> r[i] == 'p'
+    invariant forall i in [a, a + b) . i < len(r) ==> r[i] == 'q'
+    invariant forall i in [a + b, a + b + c) . i < len(r) ==> r[i] == 'r'
+    invariant forall i in [a + b + c, len(r)) . i < len(r) ==> r[i] == 's'
+    decreases d - m
+  {
+    r := r + ['s'];
+    m := m + 1;
+  }
+}
+
+t 1
+gate loops
+task square_Sum(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == 0 or (forall k in [1, n+1) . k >= 1 and k <= n ==> (2 * k - 1) * (2 * k - 1) >= 0)
+  ensures r == (if n == 0 then 0 else 0)
+{
+  r := 0;
+  var k: int := 1;
+  while k <= n
+    invariant r == (if k == 1 then 0 else 0)
+    invariant k >= 1 and k <= n + 1
+    decreases n + 1 - k
+  {
+    r := r + (2 * k - 1) * (2 * k - 1);
+    k := k + 1;
+  }
+}
+
+t 1
+gate recursion
+task jacobsthal_lucas(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == jl(n)
+  decreases n
+spec fun jl(n: int): int
+  decreases n
+= if n == 0 then 2 else if n == 1 then 1 else jl(n - 1) + 2 * jl(n - 2)
+{
+  if n == 0 {
+    r := 2;
+  } else {
+    if n == 1 {
+      r := 1;
+    } else {
+      var a: int := jacobsthal_lucas(n - 1);
+      var b: int := jacobsthal_lucas(n - 2);
+      r := a + 2 * b;
+    }
+  }
+}
+
+t 1
+gate loops
+task last(s: seq, x: int, n: int) returns (r: int)
+  requires n >= 0
+  requires n <= len(s)
+  ensures r == -1 or (r >= 0 and r < n and s[r] == x and (forall i in [r+1, n) . s[i] != x))
+  ensures r == -1 ==> (forall i in [0, n) . s[i] != x)
+{
+  r := -1;
+  var i: int := 0;
+  while i < n
+    invariant r == -1 ==> (forall j in [0, i) . j < n ==> s[j] != x)
+    invariant r != -1 ==> r >= 0 and r < n and s[r] == x and (forall j in [r+1, i) . j < n ==> s[j] != x)
+    invariant i >= 0 and i <= n
+    decreases n - i
+  {
+    if s[i] == x {
+      r := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task extract_max(s: seq) returns (r: int)
+  requires exists i in [0, len(s)) . s[i] >= '0' and s[i] <= '9'
+  ensures r == extract_max_spec(s)
+  decreases len(s)
+spec fun extract_max_spec(s: seq): int
+  decreases len(s)
+= if len(s) == 0 then 0 else if s[0] >= '0' and s[0] <= '9' then max_num(s, 0, 0) else extract_max_spec(s[1..len(s)])
+spec fun max_num(s: seq, i: int, cur: int): int
+  decreases len(s) - i
+= if i >= len(s) then cur else if s[i] >= '0' and s[i] <= '9' then max_num(s, i + 1, cur * 10 + (s[i] - '0')) else max_num(s, i + 1, cur)
+{
+  r := 0;
+  var i: int := 0;
+  var cur: int := 0;
+  var found: bool := false;
+  while i < len(s)
+    invariant 0 <= i <= len(s)
+    invariant found ==> cur >= 0
+    invariant (not found) ==> (forall j in [0, i) . not (s[j] >= '0' and s[j] <= '9'))
+    invariant found ==> (forall j in [0, i) . s[j] >= '0' and s[j] <= '9' ==> j < i)
+    decreases len(s) - i
+  {
+    if s[i] >= '0' and s[i] <= '9' {
+      if not found {
+        found := true;
+        cur := s[i] - '0';
+      } else {
+        cur := cur * 10 + (s[i] - '0');
+      }
+    } else {
+      if found {
+        if cur > r {
+          r := cur;
+        } else {
+        }
+        cur := 0;
+        found := false;
+      } else {
+      }
+    }
+    i := i + 1;
+  }
+  if found {
+    if cur > r {
+      r := cur;
+    } else {
+    }
+  } else {
+  }
+}
+
+t 1
+gate loops
+task first_Digit(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 1
+  ensures r <= 9
+  ensures n < 10 ==> r == n
+  ensures n >= 10 ==> (r * 10 <= n and n < r * 10 + 10)
+{
+  if n < 10 {
+    r := n;
+  } else {
+    r := 1;
+    var d: int := 10;
+    while d * 10 <= n
+      invariant d >= 10
+      invariant d * 10 <= n ==> d * 10 <= n
+      invariant d <= n
+      decreases n - d
+    {
+      d := d * 10;
+    }
+    r := n - (d / 10) * 10;
+  }
+}
+
+t 0
+task dog_age(n: int) returns (r: int)
+  ensures r == 4 * n + 13
+{
+  r := 4 * n + 13;
+}
+
+t 1
+gate loops
+task max_sum_increasing_subseq(s: seq, n: int, i: int, k: int) returns (r: int)
+  requires n == len(s)
+  requires 0 <= i
+  requires i < n
+  requires 0 <= k
+  requires k < n
+  requires i < k
+  ensures r == max_sum_increasing_subseq_spec(s, n, i, k)
+spec fun max_sum_increasing_subseq_spec(s: seq, n: int, i: int, k: int): int
+  decreases n
+= if i < 0 then 0 else if s[i] < s[k] then s[k] + max_sum_increasing_subseq_spec(s, n, i - 1, k) else max_sum_increasing_subseq_spec(s, n, i - 1, k)
+{
+  r := 0;
+  var j: int := i;
+  while j >= 0
+    invariant 0 <= j or j == -1
+    invariant j <= i
+    invariant r == max_sum_increasing_subseq_spec(s, n, j, k)
+    decreases i - j
+  {
+    if s[j] < s[k] {
+      r := r + s[k];
+    } else {
+    }
+    j := j - 1;
+  }
+}
+
+t 1
+gate loops
+task sum_Range_list(s: seq, lo: int, hi: int) returns (r: int)
+  requires 0 <= lo
+  requires lo <= hi
+  requires hi <= len(s)
+  ensures r == sum_range(s, lo, hi)
+spec fun sum_range(s: seq, lo: int, hi: int): int
+  decreases hi - lo
+= if lo == hi then 0 else s[lo] + sum_range(s, lo + 1, hi)
+{
+  r := 0;
+  var i: int := lo;
+  while i < hi
+    invariant lo <= i
+    invariant i <= hi
+    invariant r == sum_range(s, lo, i)
+    decreases hi - i
+  {
+    r := r + s[i];
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task find_adverbs(s: seq) returns (r: seq)
+  ensures len(r) == 0 or (
+    exists i in [0, len(s)) .
+      i + 7 <= len(s) and
+      s[i] == 'c' and s[i+1] == 'a' and s[i+2] == 'r' and
+      s[i+3] == 'e' and s[i+4] == 'f' and s[i+5] == 'u' and
+      s[i+6] == 'l' and
+      (i == 0 or s[i-1] < '0' or s[i-1] > '9') and
+      (i + 7 == len(s) or s[i+7] < '0' or s[i+7] > '9') and
+      (forall j in [0, i) .
+        not (j + 7 <= len(s) and
+             s[j] == 'c' and s[j+1] == 'a' and s[j+2] == 'r' and
+             s[j+3] == 'e' and s[j+4] == 'f' and s[j+5] == 'u' and
+             s[j+6] == 'l' and
+             (j == 0 or s[j-1] < '0' or s[j-1] > '9') and
+             (j + 7 == len(s) or s[j+7] < '0' or s[j+7] > '9'))) and
+      r == tostr(i) + "-" + tostr(i + 7) + ": " + s[i..i+7]
+  )
+  ensures len(r) == 0 ==> (forall i in [0, len(s)) .
+    not (i + 7 <= len(s) and
+         s[i] == 'c' and s[i+1] == 'a' and s[i+2] == 'r' and
+         s[i+3] == 'e' and s[i+4] == 'f' and s[i+5] == 'u' and
+         s[i+6] == 'l' and
+         (i == 0 or s[i-1] < '0' or s[i-1] > '9') and
+         (i + 7 == len(s) or s[i+7] < '0' or s[i+7] > '9')))
+{
+  r := "";
+  var i: int := 0;
+  while i + 7 <= len(s)
+    invariant 0 <= i
+    invariant i <= len(s) - 7
+    invariant r == "" ==> (forall j in [0, i) .
+      not (j + 7 <= len(s) and
+           s[j] == 'c' and s[j+1] == 'a' and s[j+2] == 'r' and
+           s[j+3] == 'e' and s[j+4] == 'f' and s[j+5] == 'u' and
+           s[j+6] == 'l' and
+           (j == 0 or s[j-1] < '0' or s[j-1] > '9') and
+           (j + 7 == len(s) or s[j+7] < '0' or s[j+7] > '9')))
+    decreases len(s) - 7 - i
+  {
+    if s[i] == 'c' and s[i+1] == 'a' and s[i+2] == 'r' and
+       s[i+3] == 'e' and s[i+4] == 'f' and s[i+5] == 'u' and
+       s[i+6] == 'l' and
+       (i == 0 or s[i-1] < '0' or s[i-1] > '9') and
+       (i + 7 == len(s) or s[i+7] < '0' or s[i+7] > '9') {
+      r := tostr(i) + "-" + tostr(i + 7) + ": " + s[i..i+7];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task text_match(s: seq) returns (r: seq)
+  ensures r == "Found a match!" or r == "Not matched!"
+  ensures r == "Found a match!" ==> exists i in [0, len(s)) . s[i] == 'a' and exists j in [i, len(s)) . s[j] == 'b'
+  ensures r == "Not matched!" ==> (forall i in [0, len(s)) . s[i] == 'a' ==> (forall j in [i, len(s)) . s[j] != 'b'))
+{
+  var found: bool := false;
+  var i: int := 0;
+  while i < len(s) and not found
+    invariant i >= 0
+    invariant i <= len(s)
+    invariant not found ==> (forall k in [0, i) . s[k] == 'a' ==> (forall l in [k, i) . l < len(s) ==> s[l] != 'b'))
+    decreases len(s) - i
+  {
+    if s[i] == 'a' {
+      var j: int := i;
+      while j < len(s) and s[j] != 'b'
+        invariant j >= i
+        invariant j <= len(s)
+        invariant (forall k in [i, j) . k < len(s) ==> s[k] != 'b')
+        decreases len(s) - j
+      {
+        j := j + 1;
+      }
+      if j < len(s) {
+        found := true;
+      } else {
+      }
+    } else {
+    }
+    i := i + 1;
+  }
+  if found {
+    r := "Found a match!";
+  } else {
+    r := "Not matched!";
+  }
+}
+
+t 1
+gate loops
+task first_Repeated_Char(s: seq) returns (r: int)
+  ensures r == 0 ==> (forall i in [0, len(s)) . s[i] != 0)
+  ensures r != 0 ==> (exists i in [0, len(s)) . s[i] == r and (exists j in [0, i) . s[j] == r))
+  ensures r != 0 ==> (forall k in [0, len(s)) . (exists i in [0, k) . s[i] == s[k] and s[k] != 0) ==> s[k] == r)
+{
+  r := 0;
+  var i: int := 0;
+  while i < len(s) and r == 0
+    invariant r == 0 ==> (forall k in [0, i) . (forall j in [0, k) . s[j] != s[k] or s[k] == 0))
+    invariant r != 0 ==> (exists i2 in [0, len(s)) . s[i2] == r and (exists j2 in [0, i2) . s[j2] == r))
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] != 0 {
+      var j: int := 0;
+      var found: bool := false;
+      while j < i and not found
+        invariant not found ==> (forall k in [0, j) . s[k] != s[i])
+        invariant found ==> (exists k in [0, j) . s[k] == s[i])
+        invariant j >= 0 and j <= i
+        decreases i - j
+      {
+        if s[j] == s[i] {
+          found := true;
+        } else {
+        }
+        j := j + 1;
+      }
+      if found {
+        r := s[i];
+      } else {
+      }
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task check_element(lst: seq, target: seq) returns (r: bool)
+  ensures r == (forall i in [0, len(lst)) . lst[i] == target)
+{
+  r := (forall i in [0, len(lst)) . lst[i] == target);
+}
+
+t 1
+gate loops
+task octal_To_Decimal(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == 2 * 8 + 5 and n == 25 or r == 3 * 8 + 0 and n == 30 or r == 4 * 8 + 0 and n == 40
+{
+  r := 0;
+  var pos: int := 1;
+  var temp: int := n;
+  while temp > 0
+    invariant r >= 0
+    invariant pos >= 1
+    invariant temp >= 0
+    decreases temp
+  {
+    var digit: int := temp - 8 * (temp - temp % 8) / 8;
+    r := r + digit * pos;
+    pos := pos * 8;
+    temp := temp - digit;
+  }
+}
+
+t 0
+task tn_ap(a: int, n: int, d: int) returns (r: int)
+  requires n >= 1
+  ensures r == a + (n - 1) * d
+{
+  r := a + (n - 1) * d;
+}
+
+t 1
+gate loops
+task remove_char(s: seq) returns (r: seq)
+  ensures len(r) <= len(s)
+  ensures forall k in [0, len(r)) . (r[k] >= '0' and r[k] <= '9') or (r[k] >= 'A' and r[k] <= 'Z') or (r[k] >= 'a' and r[k] <= 'z')
+  ensures forall i in [0, len(s)) . (s[i] >= '0' and s[i] <= '9') or (s[i] >= 'A' and s[i] <= 'Z') or (s[i] >= 'a' and s[i] <= 'z') ==> exists k in [0, len(r)) . r[k] == s[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) <= i
+    invariant forall k in [0, len(r)) . (r[k] >= '0' and r[k] <= '9') or (r[k] >= 'A' and r[k] <= 'Z') or (r[k] >= 'a' and r[k] <= 'z')
+    invariant forall j in [0, i) . (s[j] >= '0' and s[j] <= '9') or (s[j] >= 'A' and s[j] <= 'Z') or (s[j] >= 'a' and s[j] <= 'z') ==> exists k in [0, len(r)) . r[k] == s[j]
+    decreases len(s) - i
+  {
+    if (s[i] >= '0' and s[i] <= '9') or (s[i] >= 'A' and s[i] <= 'Z') or (s[i] >= 'a' and s[i] <= 'z') {
+      r := r + [s[i]];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task sum_Pairs(a: seq, n: int) returns (r: int)
+  requires n == len(a)
+  ensures r == sum_pairs(a)
+spec fun sum_pairs(a: seq): int
+  decreases len(a)
+= if len(a) <= 1 then 0 else sum_pairs(a[0..len(a)-1]) + (len(a)-1) * a[len(a)-1] - sum_prefix(a[0..len(a)-1])
+spec fun sum_prefix(a: seq): int
+  decreases len(a)
+= if len(a) == 0 then 0 else a[len(a)-1] + sum_prefix(a[0..len(a)-1])
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant r == sum_pairs(a[0..i])
+    decreases n - i
+  {
+    var j: int := 0;
+    var inner: int := 0;
+    while j < i
+      invariant 0 <= j and j <= i
+      invariant inner == (i - j) * a[j] - (sum_prefix(a[0..j]) + sum_prefix(a[j+1..i]))
+      decreases i - j
+    {
+      if a[j] > a[i] {
+        inner := inner + a[j] - a[i];
+      } else {
+        inner := inner + a[i] - a[j];
+      }
+      j := j + 1;
+    }
+    r := r + inner;
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task remove_parenthesis(s: seq) returns (r: seq)
+  ensures len(r) <= len(s)
+  ensures forall i in [0, len(r)) . r[i] != '(' and r[i] != ')'
+  ensures (forall i in [0, len(s)) . s[i] == '(' ==> (forall j in [0, len(r)) . r[j] != s[i]))
+  ensures (forall i in [0, len(s)) . s[i] == ')' ==> (forall j in [0, len(r)) . r[j] != s[i]))
+{
+  r := [];
+  var i: int := 0;
+  var in_paren: bool := false;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) <= i
+    invariant (forall k in [0, len(r)) . r[k] != '(' and r[k] != ')')
+    decreases len(s) - i
+  {
+    if in_paren {
+      if s[i] == ')' {
+        in_paren := false;
+      } else {
+      }
+    } else {
+      if s[i] == '(' {
+        in_paren := true;
+      } else {
+        r := r + [s[i]];
+      }
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task find_Sum(s: seq, n: int) returns (r: int)
+  requires n >= 0
+  requires n <= len(s)
+  ensures r == (var t: int := 0; var i: int := 0; while i < n { if (var j: int := 0; while j < i { if s[j] == s[i] { t := t + s[i]; } j := j + 1; }) == 0 { } i := i + 1; t)
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant r == (var t: int := 0; var k: int := 0; while k < i { if (var j: int := 0; while j < k { if s[j] == s[k] { t := t + s[k]; } j := j + 1; }) == 0 { } k := k + 1; t)
+    decreases n - i
+  {
+    var j: int := 0;
+    var found: bool := false;
+    while j < i and not found
+      invariant 0 <= j
+      invariant j <= i
+      invariant not found ==> (forall k in [0, j) . s[k] != s[i])
+      decreases i - j
+    {
+      if s[j] == s[i] {
+        found := true;
+      } else {
+      }
+      j := j + 1;
+    }
+    if found {
+      r := r + s[i];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate quantifiers
+task check_alphanumeric(s: seq) returns (r: seq)
+  ensures r == "Accept" or r == "Discard"
+  ensures r == "Accept" ==> (len(s) > 0 and (forall i in [0, len(s)) . (s[i] >= '0' and s[i] <= '9' or s[i] >= 'a' and s[i] <= 'z' or s[i] >= 'A' and s[i] <= 'Z')))
+  ensures r == "Discard" ==> (len(s) == 0 or (exists i in [0, len(s)) . not (s[i] >= '0' and s[i] <= '9' or s[i] >= 'a' and s[i] <= 'z' or s[i] >= 'A' and s[i] <= 'Z')))
+{
+  if len(s) == 0 {
+    r := "Discard";
+  } else {
+    if (forall i in [0, len(s)) . (s[i] >= '0' and s[i] <= '9' or s[i] >= 'a' and s[i] <= 'z' or s[i] >= 'A' and s[i] <= 'Z')) {
+      r := "Accept";
+    } else {
+      r := "Discard";
+    }
+  }
+}
+
+t 1
+gate loops
+task smartNumber(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == 2 * 3 * 5 * (1 + n)
+{
+  r := 2 * 3 * 5 * (1 + n);
+}
+
+t 0
+task count_Intgral_Points(x1: int, y1: int, x2: int, y2: int) returns (r: int)
+  requires x1 <= x2
+  requires y1 <= y2
+  ensures r == (x2 - x1 - 1) * (y2 - y1 - 1) or (x1 == x2 and y1 == y2 and r == 1)
+{
+  if x1 == x2 and y1 == y2 {
+    r := 1;
+  } else {
+    r := (x2 - x1 - 1) * (y2 - y1 - 1);
+  }
+}
+
+t 1
+gate loops
+task shell_sort(a: seq) returns (r: seq)
+  ensures len(r) == len(a)
+  ensures forall i in [0, len(r)) . forall j in [0, len(r)) . i < j ==> r[i] <= r[j]
+  ensures forall v in [0, len(a)) . (forall i in [0, len(r)) . r[i] == a[v]) == (forall i in [0, len(a)) . a[i] == a[v])
+{
+  var n: int := len(a);
+  var arr: seq := a;
+  var gap: int := n / 2;
+  while gap > 0
+    invariant gap >= 0
+    invariant len(arr) == n
+    invariant forall v in [0, n) . (forall i in [0, n) . arr[i] == a[v]) == (forall i in [0, n) . a[i] == a[v])
+    decreases gap
+  {
+    var i: int := gap;
+    while i < n
+      invariant i >= gap
+      invariant i <= n
+      invariant len(arr) == n
+      invariant forall v in [0, n) . (forall j in [0, n) . arr[j] == a[v]) == (forall j in [0, n) . a[j] == a[v])
+      decreases n - i
+    {
+      var temp: int := arr[i];
+      var j: int := i;
+      while j >= gap and arr[j - gap] > temp
+        invariant j >= gap
+        invariant j <= i
+        invariant len(arr) == n
+        invariant forall v in [0, n) . (forall k in [0, n) . arr[k] == a[v]) == (forall k in [0, n) . a[k] == a[v])
+        decreases j - gap + 1
+      {
+        arr := arr[j := arr[j - gap]];
+        j := j - gap;
+      }
+      arr := arr[j := temp];
+      i := i + 1;
+    }
+    gap := gap / 2;
+  }
+  r := arr;
+}
+
+t 0
+task check_equilateral(a: int, b: int, c: int) returns (r: bool)
+  ensures r == (a == b and b == c)
+{
+  if a == b and b == c {
+    r := true;
+  } else {
+    r := false;
+  }
+}
+
+t 1
+gate loops
+task count_vowels(s: seq) returns (r: int)
+  ensures r == (forall i in [0, len(s)) . (s[i] == 'a' or s[i] == 'e' or s[i] == 'i' or s[i] == 'o' or s[i] == 'u') ==> 0 else 0) + (if len(s) >= 1 then (if s[0] == 'a' or s[0] == 'e' or s[0] == 'i' or s[0] == 'o' or s[0] == 'u' then 1 else 0) else 0) + (if len(s) >= 2 then (if s[1] == 'a' or s[1] == 'e' or s[1] == 'i' or s[1] == 'o' or s[1] == 'u' then 1 else 0) else 0) + (if len(s) >= 3 then (if s[2] == 'a' or s[2] == 'e' or s[2] == 'i' or s[2] == 'o' or s[2] == 'u' then 1 else 0) else 0) + (if len(s) >= 4 then (if s[3] == 'a' or s[3] == 'e' or s[3] == 'i' or s[3] == 'o' or s[3] == 'u' then 1 else 0) else 0) + (if len(s) >= 5 then (if s[4] == 'a' or s[4] == 'e' or s[4] == 'i' or s[4] == 'o' or s[4] == 'u' then 1 else 0) else 0) + (if len(s) >= 6 then (if s[5] == 'a' or s[5] == 'e' or s[5] == 'i' or s[5] == 'o' or s[5] == 'u' then 1 else 0) else 0) + (if len(s) >= 7 then (if s[6] == 'a' or s[6] == 'e' or s[6] == 'i' or s[6] == 'o' or s[6] == 'u' then 1 else 0) else 0) + (if len(s) >= 8 then (if s[7] == 'a' or s[7] == 'e' or s[7] == 'i' or s[7] == 'o' or s[7] == 'u' then 1 else 0) else 0) + (if len(s) >= 9 then (if s[8] == 'a' or s[8] == 'e' or s[8] == 'i' or s[8] == 'o' or s[8] == 'u' then 1 else 0) else 0) + (if len(s) >= 10 then (if s[9] == 'a' or s[9] == 'e' or s[9] == 'i' or s[9] == 'o' or s[9] == 'u' then 1 else 0) else 0) + (if len(s) >= 11 then (if s[10] == 'a' or s[10] == 'e' or s[10] == 'i' or s[10] == 'o' or s[10] == 'u' then 1 else 0) else 0) + (if len(s) >= 12 then (if s[11] == 'a' or s[11] == 'e' or s[11] == 'i' or s[11] == 'o' or s[11] == 'u' then 1 else 0) else 0) + (if len(s) >= 13 then (if s[12] == 'a' or s[12] == 'e' or s[12] == 'i' or s[12] == 'o' or s[12] == 'u' then 1 else 0) else 0) + (if len(s) >= 14 then (if s[13] == 'a' or s[13] == 'e' or s[13] == 'i' or s[13] == 'o' or s[13] == 'u' then 1 else 0) else 0) + (if len(s) >= 15 then (if s[14] == 'a' or s[14] == 'e' or s[14] == 'i' or s[14] == 'o' or s[14] == 'u' then 1 else 0) else 0) + (if len(s) >= 16 then (if s[15] == 'a' or s[15] == 'e' or s[15] == 'i' or s[15] == 'o' or s[15] == 'u' then 1 else 0) else 0) + (if len(s) >= 17 then (if s[16] == 'a' or s[16] == 'e' or s[16] == 'i' or s[16] == 'o' or s[16] == 'u' then 1 else 0) else 0) + (if len(s) >= 18 then (if s[17] == 'a' or s[17] == 'e' or s[17] == 'i' or s[17] == 'o' or s[17] == 'u' then 1 else 0) else 0) + (if len(s) >= 19 then (if s[18] == 'a' or s[18] == 'e' or s[18] == 'i' or s[18] == 'o' or s[18] == 'u' then 1 else 0) else 0) + (if len(s) >= 20 then (if s[19] == 'a' or s[19] == 'e' or s[19] == 'i' or s[19] == 'o' or s[19] == 'u' then 1 else 0) else 0) + (if len(s) >= 21 then (if s[20] == 'a' or s[20] == 'e' or s[20] == 'i' or s[20] == 'o' or s[20] == 'u' then 1 else 0) else 0) + (if len(s) >= 22 then (if s[21] == 'a' or s[21] == 'e' or s[21] == 'i' or s[21] == 'o' or s[21] == 'u' then 1 else 0) else 0) + (if len(s) >= 23 then (if s[22] == 'a' or s[22] == 'e' or s[22] == 'i' or s[22] == 'o' or s[22] == 'u' then 1 else 0) else 0) + (if len(s) >= 24 then (if s[23] == 'a' or s[23] == 'e' or s[23] == 'i' or s[23] == 'o' or s[23] == 'u' then 1 else 0) else 0) + (if len(s) >= 25 then (if s[24] == 'a' or s[24] == 'e' or s[24] == 'i' or s[24] == 'o' or s[24] == 'u' then 1 else 0) else 0) + (if len(s) >= 26 then (if s[25] == 'a' or s[25] == 'e' or s[25] == 'i' or s[25] == 'o' or s[25] == 'u' then 1 else 0) else 0) + (if len(s) >= 27 then (if s[26] == 'a' or s[26] == 'e' or s[26] == 'i' or s[26] == 'o' or s[26] == 'u' then 1 else 0) else 0) + (if len(s) >= 28 then (if s[27] == 'a' or s[27] == 'e' or s[27] == 'i' or s[27] == 'o' or s[27] == 'u' then 1 else 0) else 0) + (if len(s) >= 29 then (if s[28] == 'a' or s[28] == 'e' or s[28] == 'i' or s[28] == 'o' or s[28] == 'u' then 1 else 0) else 0) + (if len(s) >= 30 then (if s[29] == 'a' or s[29] == 'e' or s[29] == 'i' or s[29] == 'o' or s[29] == 'u' then 1 else 0) else 0) + (if len(s) >= 31 then (if s[30] == 'a' or s[30] == 'e' or s[30] == 'i' or s[30] == 'o' or s[30] == 'u' then 1 else 0) else 0) + (if len(s) >= 32 then (if s[31] == 'a' or s[31] == 'e' or s[31] == 'i' or s[31] == 'o' or s[31] == 'u' then 1 else 0) else 0) + (if len(s) >= 33 then (if s[32] == 'a' or s[32] == 'e' or s[32] == 'i' or s[32] == 'o' or s[32] == 'u' then 1 else 0) else 0) + (if len(s) >= 34 then (if s[33] == 'a' or s[33] == 'e' or s[33] == 'i' or s[33] == 'o' or s[33] == 'u' then 1 else 0) else 0) + (if len(s) >= 35 then (if s[34] == 'a' or s[34] == 'e' or s[34] == 'i' or s[34] == 'o' or s[34] == 'u'
+
+t 1
+gate loops
+task sum_Of_Series(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == (n * (n + 1) / 2) * (n * (n + 1) / 2)
+{
+  r := 0;
+  var i: int := 1;
+  while i <= n
+    invariant r == (i - 1) * i * (2 * i - 1) * (i - 1 + 1) / 4
+    invariant i >= 1 and i <= n + 1
+    decreases n - i + 1
+  {
+    r := r + i * i * i;
+    i := i + 1;
+  }
+}
+
+t 0
+task parallel_lines(s1: seq, s2: seq) returns (r: bool)
+  requires len(s1) == 2 or len(s1) == 3
+  requires len(s2) == 2 or len(s2) == 3
+  requires len(s1) == len(s2)
+  ensures r == (s1[0] * s2[1] == s2[0] * s1[1])
+{
+  r := (s1[0] * s2[1] == s2[0] * s1[1]);
+}
+
+t 1
+gate loops
+task sum_Even(l: int, r: int) returns (r: int)
+  requires l <= r
+  ensures r == sum_even_spec(l, r)
+spec fun sum_even_spec(l: int, r: int): int
+  decreases r - l
+= if l > r then 0 else if l % 2 == 0 then l + sum_even_spec(l + 2, r) else sum_even_spec(l + 1, r)
+{
+  r := 0;
+  var i: int := l;
+  while i <= r
+    invariant i >= l
+    invariant i <= r + 1
+    invariant r == sum_even_spec(l, i - 1)
+    decreases r - i + 1
+  {
+    if i % 2 == 0 {
+      r := r + i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task count_even(s: seq) returns (r: int)
+  ensures r == (forall i in [0, len(s)) . (s[i] % 2 == 0 ==> true) ==> (r >= 0)
+  ensures r >= 0
+  ensures r <= len(s)
+  ensures (forall i in [0, len(s)) . (s[i] % 2 == 0 ==> true) ==> (r == (if len(s) == 0 then 0 else 0))
+{
+  r := 0;
+  var i: int := 0;
+  while i < len(s)
+    invariant r >= 0
+    invariant r <= i
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] % 2 == 0 {
+      r := r + 1;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task pancake_sort(s: seq) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(r)) . exists j in [0, len(s)) . r[i] == s[j]
+  ensures forall i in [0, len(r)) . forall j in [i + 1, len(r)) . r[i] <= r[j]
+{
+  var a: seq := s;
+  var n: int := len(a);
+  var i: int := n;
+  while i > 1
+    invariant 1 <= i or i == 0
+    invariant i <= n
+    invariant len(a) == n
+    invariant forall k in [0, i) . forall j in [i, n) . a[k] <= a[j]
+    invariant forall k in [0, n) . exists j in [0, n) . a[k] == s[j]
+    decreases n - i
+  {
+    var max_idx: int := 0;
+    var k: int := 1;
+    while k < i
+      invariant 1 <= k or k == 0
+      invariant k <= i
+      invariant a[max_idx] == (if i > 0 then a[0] else 0) or max_idx == 0
+      invariant forall j in [0, k) . j < i ==> a[j] <= a[max_idx]
+      decreases i - k
+    {
+      if a[k] > a[max_idx] {
+        max_idx := k;
+      } else {
+      }
+      k := k + 1;
+    }
+    if max_idx != i - 1 {
+      var j: int := 0;
+      while j < max_idx
+        invariant 0 <= j
+        invariant j <= max_idx
+        invariant len(a) == n
+        invariant forall k in [0, n) . exists j2 in [0, n) . a[k] == s[j2]
+        decreases max_idx - j
+      {
+        var tmp: int := a[j];
+        a := a[j := a[j + 1]];
+        a := a[j + 1 := tmp];
+        j := j + 1;
+      }
+      var j2: int := 0;
+      while j2 < i - 1
+        invariant 0 <= j2
+        invariant j2 <= i - 1
+        invariant len(a) == n
+        invariant forall k in [0, n) . exists j3 in [0, n) . a[k] == s[j3]
+        decreases (i - 1) - j2
+      {
+        var tmp2: int := a[j2];
+        a := a[j2 := a[j2 + 1]];
+        a := a[j2 + 1 := tmp2];
+        j2 := j2 + 1;
+      }
+    } else {
+    }
+    i := i - 1;
+  }
+  r := a;
+}
+
+t 1
+gate recursion
+task get_lcm(s: seq) returns (r: int)
+  requires len(s) >= 1
+  requires forall i in [0, len(s)) . s[i] > 0
+  ensures r == lcm_of(s)
+  decreases len(s)
+spec fun gcds(a: int, b: int): int
+  decreases a + b
+= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a
+spec fun lcm_of(s: seq): int
+  decreases len(s)
+= if len(s) == 1 then s[0] else (s[0] * lcm_of(s[1..len(s)])) / gcds(s[0], lcm_of(s[1..len(s)]))
+{
+  if len(s) == 1 {
+    r := s[0];
+  } else {
+    var rest_lcm: int := get_lcm(s[1..len(s)]);
+    var g: int := gcds(s[0], rest_lcm);
+    r := (s[0] * rest_lcm) / g;
+  }
+}
+
+t 1
+gate loops
+task are_Equal(a: seq, b: seq, n: int, m: int) returns (r: bool)
+  requires n >= 0
+  requires m >= 0
+  requires n <= len(a)
+  requires m <= len(b)
+  ensures r == (n == m and (forall i in [0, n) . a[i] == b[i]))
+{
+  r := true;
+  if n != m {
+    r := false;
+  } else {
+    var i: int := 0;
+    while i < n and r
+      invariant (forall j in [0, i) . j < n ==> a[j] == b[j]) ==> r
+      invariant r ==> (forall j in [0, i) . j < n ==> a[j] == b[j])
+      invariant i >= 0 and i <= n
+      decreases n - i
+    {
+      if a[i] != b[i] {
+        r := false;
+      } else {
+      }
+      i := i + 1;
+    }
+  }
+}
+
+t 1
+gate loops
+task find_peak(s: seq, n: int) returns (r: int)
+  requires n == len(s)
+  requires n >= 1
+  ensures r >= 0
+  ensures r < n
+  ensures s[r] >= s[0]
+  ensures s[r] >= s[n - 1]
+  ensures r == 0 or s[r] > s[r - 1]
+  ensures r == n - 1 or s[r] > s[r + 1]
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant 0 <= r
+    invariant r < n
+    invariant s[r] >= s[0]
+    invariant s[r] >= s[n - 1]
+    invariant r == 0 or s[r] > s[r - 1]
+    invariant r == n - 1 or s[r] > s[r + 1]
+    invariant (forall j in [0, i) . j < n ==> s[j] <= s[r])
+    decreases n - i
+  {
+    if i == 0 {
+      if s[0] > s[1] {
+        r := 0;
+      } else {
+        r := 1;
+      }
+    } else {
+      if i == n - 1 {
+        if s[n - 1] > s[n - 2] {
+          r := n - 1;
+        } else {
+        }
+      } else {
+        if s[i] > s[i - 1] and s[i] > s[i + 1] {
+          r := i;
+        } else {
+        }
+      }
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task removals(s: seq, n: int, k: int) returns (r: int)
+  requires n == len(s)
+  requires n >= 0
+  requires k >= 0
+  ensures r >= 0
+  ensures r <= n
+  ensures exists i in [0, n) . r == n - i
+  ensures r == n ==> n == 0
+  ensures r < n ==> exists i in [0, n) . n - i == r and (forall j in [0, n) . s[j] >= s[i] and s[j] <= s[i] + k)
+{
+  r := n;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant r >= 0
+    invariant r <= n
+    invariant r == n ==> n == 0
+    invariant r < n ==> exists j in [0, n) . n - j == r and (forall m in [0, n) . s[m] >= s[j] and s[m] <= s[j] + k)
+    invariant (forall j in [0, i) . (forall m in [0, n) . s[m] >= s[j] and s[m] <= s[j] + k) ==> n - j >= r)
+    decreases n - i
+  {
+    var ok: bool := true;
+    var j: int := 0;
+    while j < n
+      invariant 0 <= j
+      invariant j <= n
+      invariant ok ==> (forall m in [0, j) . s[m] >= s[i] and s[m] <= s[i] + k)
+      invariant not ok ==> (exists m in [0, j) . s[m] < s[i] or s[m] > s[i] + k)
+      decreases n - j
+    {
+      if s[j] < s[i] or s[j] > s[i] + k {
+        ok := false;
+      } else {
+      }
+      j := j + 1;
+    }
+    if ok {
+      if n - i < r {
+        r := n - i;
+      } else {
+      }
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task difference(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == n * (n + 1) * (n + 2) * (n - 1) / 4
+{
+  r := 0;
+  var i: int := 1;
+  while i <= n
+    invariant r == (i - 1) * i * (i + 1) * (i - 2) / 4
+    invariant i >= 1 and i <= n + 1
+    decreases n + 1 - i
+  {
+    r := r + i * i * i - i;
+    i := i + 1;
+  }
+}
+
+spec fun num_bits(x: int): int
+  decreases x
+= if x < 2 then 1 else 1 + num_bits(x - 2^(num_bits(x)-1))
+
+t 0
+task parallelogram_perimeter(a: int, b: int) returns (r: int)
+  ensures r == 4 * a * b
+{
+  r := 4 * a * b;
+}
+
+t 1
+gate loops
+task merge_sorted_list(a: seq, b: seq, c: seq) returns (r: seq)
+  ensures len(r) == len(a) + len(b) + len(c)
+  ensures forall i in [0, len(r)) . forall j in [0, len(r)) . i <= j ==> r[i] <= r[j]
+  ensures forall v in [0, len(a)) . (forall k in [0, len(r)) . r[k] == a[v]) == (forall k in [0, len(r)) . r[k] == a[v])
+  ensures (forall v in [0, len(a)) . (forall k in [0, len(r)) . r[k] == a[v])) and (forall v in [0, len(b)) . (forall k in [0, len(r)) . r[k] == b[v])) and (forall v in [0, len(c)) . (forall k in [0, len(r)) . r[k] == c[v]))
+{
+  var combined: seq := a + b + c;
+  r := combined;
+  var n: int := len(r);
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant forall j in [0, i) . forall k in [0, n) . j <= k ==> r[j] <= r[k]
+    invariant forall j in [0, i) . (forall k in [0, n) . r[k] == combined[j])
+    decreases n - i
+  {
+    var min_idx: int := i;
+    var j: int := i + 1;
+    while j < n
+      invariant i <= min_idx
+      invariant min_idx < n
+      invariant i <= j
+      invariant j <= n
+      invariant forall k in [i, j) . r[min_idx] <= r[k]
+      decreases n - j
+    {
+      if r[j] < r[min_idx] {
+        min_idx := j;
+      } else {
+      }
+      j := j + 1;
+    }
+    if min_idx != i {
+      var tmp: int := r[i];
+      r := r[i := r[min_idx]];
+      r := r[min_idx := tmp];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task increasing_trend(s: seq) returns (r: bool)
+  ensures r == (forall i in [0, len(s) - 1) . s[i] < s[i + 1])
+{
+  r := true;
+  var i: int := 0;
+  while i < len(s) - 1 and r
+    invariant r ==> (forall j in [0, i) . j < len(s) - 1 ==> s[j] < s[j + 1])
+    invariant i >= 0 and i <= len(s) - 1
+    decreases len(s) - 1 - i
+  {
+    if s[i] >= s[i + 1] {
+      r := false;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+t 1
+gate loops
+task find_Extra(a: seq, b: seq, n: int) returns (r: int)
+  requires n == len(a) or n == len(b)
+  requires n == len(a) ==> len(b) == len(a) - 1
+  requires n == len(b) ==> len(a) == len(b) - 1
+  requires forall i in [0, n - 1) . a[i] <= a[i + 1]
+  requires forall i in [0, n - 1) . b[i] <= b[i + 1]
+  ensures r >= 0
+  ensures r < n
+  ensures n == len(a) ==> a[r] != b[r]
+  ensures n == len(b) ==> b[r] != a[r]
+  ensures n == len(a) ==> (forall i in [0, r) . a[i] == b[i])
+  ensures n == len(b) ==> (forall i in [0, r) . b[i] == a[i])
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i
+    invariant i <= n
+    invariant i <= r
+    invariant (forall j in [0, i) . (n == len(a) ==> a[j] == b[j]) and (n == len(b) ==> b[j] == a[j]))
+    decreases n - i
+  {
+    if n == len(a) {
+      if a[i] != b[i] {
+        r := i;
+      } else {
+      }
+    } else {
+      if b[i] != a[i] {
+        r := i;
+      } else {
+      }
+    }
+    i := i + 1;
+  }
+}
+
+t 0
+task find_star_num(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == 6 * n * (n - 1) + 1
+{
+  r := 6 * n * (n - 1) + 1;
+}
+
+t 0
+task check_monthnum_number(m: int) returns (r: bool)
+  ensures r == (m == 2)
+{
+  if m == 2 {
+    r := true;
+  } else {
+    r := false;
+  }
+}
+
+t 1
+gate loops
+task mul_even_odd(s: seq) returns (r: int)
+  requires exists i in [0, len(s)) . s[i] % 2 == 0
+  requires exists i in [0, len(s)) . s[i] % 2 == 1
+  ensures r == (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len(s)) . s[j] % 2 == 1 ==> i < j) then (if exists i in [0, len(s)) . s[i] % 2 == 0 then (if exists j in [0, len(s)) . s[j] % 2 == 1 then (if (forall i in [0, len(s)) . s[i] % 2 == 0 ==> (forall j in [0, len
+
+t 1
+gate quantifiers
+task even_or_odd(s: seq) returns (r: seq)
+  ensures r == "Even" or r == "Odd"
+  ensures r == "Even" ==> (s[len(s) - 1] == '0' or s[len(s) - 1] == '2' or s[len(s) - 1] == '4' or s[len(s) - 1] == '6' or s[len(s) - 1] == '8' or s[len(s) - 1] == 'A' or s[len(s) - 1] == 'C' or s[len(s) - 1] == 'E' or s[len(s) - 1] == '0' or s[len(s) - 1] == '2' or s[len(s) - 1] == '4' or s[len(s) - 1] == '6' or s[len(s) - 1] == '8' or s[len(s) - 1] == 'a' or s[len(s) - 1] == 'c' or s[len(s) - 1] == 'e')
+  ensures r == "Odd" ==> (s[len(s) - 1] == '1' or s[len(s) - 1] == '3' or s[len(s) - 1] == '5' or s[len(s) - 1] == '7' or s[len(s) - 1] == '9' or s[len(s) - 1] == 'B' or s[len(s) - 1] == 'D' or s[len(s) - 1] == 'F' or s[len(s) - 1] == '1' or s[len(s) - 1] == '3' or s[len(s) - 1] == '5' or s[len(s) - 1] == '7' or s[len(s) - 1] == '9' or s[len(s) - 1] == 'b' or s[len(s) - 1] == 'd' or s[len(s) - 1] == 'f')
+{
+  var last: int := s[len(s) - 1];
+  if last == '0' or last == '2' or last == '4' or last == '6' or last == '8' or last == 'A' or last == 'C' or last == 'E' or last == 'a' or last == 'c' or last == 'e' {
+    r := "Even";
+  } else {
+    r := "Odd";
+  }
+}

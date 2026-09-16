@@ -1,0 +1,22 @@
+{
+ "task_id": 138,
+ "fn": "is_Sum_Of_Powers_Of_Two",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the given number can be represented as sum of non-zero powers of 2 or not.\nSignature: is_Sum_Of_Powers_Of_Two(int) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_732__fistar_num(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}\n```",
+ "done_reason": "length"
+}

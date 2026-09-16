@@ -1,0 +1,612 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_392__get_max_sum",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "f",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "f",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 6
+       }
+      ]
+     },
+     "then": {
+      "var": "n"
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "op": "+",
+              "args": [
+               {
+                "call": {
+                 "fun": "f",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "op": "-",
+                     "args": [
+                      {
+                       "op": "-",
+                       "args": [
+                        {
+                         "op": "-",
+                         "args": [
+                          {
+                           "var": "n"
+                          },
+                          {
+                           "var": "n"
+                          }
+                         ]
+                        },
+                        {
+                         "var": "n"
+                        }
+                       ]
+                      },
+                      {
+                       "var": "n"
+                      }
+                     ]
+                    },
+                    {
+                     "var": "n"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               },
+               {
+                "call": {
+                 "fun": "f",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "op": "-",
+                     "args": [
+                      {
+                       "op": "-",
+                       "args": [
+                        {
+                         "var": "n"
+                        },
+                        {
+                         "var": "n"
+                        }
+                       ]
+                      },
+                      {
+                       "var": "n"
+                      }
+                     ]
+                    },
+                    {
+                     "var": "n"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             {
+              "call": {
+               "fun": "f",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "var": "n"
+                    }
+                   ]
+                  },
+                  {
+                   "var": "n"
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "f",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "var": "n"
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "var": "n"
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "call": {
+               "fun": "f",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "op": "-",
+                     "args": [
+                      {
+                       "op": "-",
+                       "args": [
+                        {
+                         "var": "n"
+                        },
+                        {
+                         "var": "n"
+                        }
+                       ]
+                      },
+                      {
+                       "var": "n"
+                      }
+                     ]
+                    },
+                    {
+                     "var": "n"
+                    }
+                   ]
+                  },
+                  {
+                   "var": "n"
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "call": {
+               "fun": "f",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "op": "-",
+                     "args": [
+                      {
+                       "var": "n"
+                      },
+                      {
+                       "var": "n"
+                      }
+                     ]
+                    },
+                    {
+                     "var": "n"
+                    }
+                   ]
+                  },
+                  {
+                   "var": "n"
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "call": {
+             "fun": "f",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "var": "n"
+                  }
+                 ]
+                },
+                {
+                 "var": "n"
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "f",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "var": "n"
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "var": "n"
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 6
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "n"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "var": {
+       "name": "a",
+       "type": "int",
+       "init": {
+        "call": {
+         "fun": "mbpp_392__get_max_sum",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "op": "-",
+                 "args": [
+                  {
+                   "var": "n"
+                  },
+                  {
+                   "var": "n"
+                  }
+                 ]
+                },
+                {
+                 "var": "n"
+                }
+               ]
+              },
+              {
+               "var": "n"
+              }
+             ]
+            },
+            {
+             "var": "n"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "b",
+       "type": "int",
+       "init": {
+        "call": {
+         "fun": "mbpp_392__get_max_sum",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "var": "n"
+                }
+               ]
+              },
+              {
+               "var": "n"
+              }
+             ]
+            },
+            {
+             "var": "n"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "c",
+       "type": "int",
+       "init": {
+        "call": {
+         "fun": "mbpp_392__get_max_sum",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "var": "n"
+              }
+             ]
+            },
+            {
+             "var": "n"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "d",
+       "type": "int",
+       "init": {
+        "call": {
+         "fun": "mbpp_392__get_max_sum",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "var": "n"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "s",
+       "type": "int",
+       "init": {
+        "op": "+",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "+",
+            "args": [
+             {
+              "var": "a"
+             },
+             {
+              "var": "b"
+             }
+            ]
+           },
+           {
+            "var": "c"
+           }
+          ]
+         },
+         {
+          "var": "d"
+         }
+        ]
+       }
+      }
+     },
+     {
+      "if": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "s"
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "n"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,109 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_336__check_monthnum",
+ "params": [
+  {
+   "name": "month",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "month"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 70
+        },
+        {
+         "int": 101
+        },
+        {
+         "int": 98
+        },
+        {
+         "int": 114
+        },
+        {
+         "int": 117
+        },
+        {
+         "int": 97
+        },
+        {
+         "int": 114
+        },
+        {
+         "int": 121
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "month"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 70
+        },
+        {
+         "int": 101
+        },
+        {
+         "int": 98
+        },
+        {
+         "int": 114
+        },
+        {
+         "int": 117
+        },
+        {
+         "int": 97
+        },
+        {
+         "int": 114
+        },
+        {
+         "int": 121
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

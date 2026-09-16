@@ -1,0 +1,385 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_45__get_gcd",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "gcd_seq",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "gcd_pair",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "b",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "a"
+     },
+     {
+      "var": "b"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "var": "b"
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<=",
+        "args": [
+         {
+          "var": "b"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "var": "a"
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": ">",
+          "args": [
+           {
+            "var": "a"
+           },
+           {
+            "var": "b"
+           }
+          ]
+         },
+         "then": {
+          "call": {
+           "fun": "gcd_pair",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "a"
+              },
+              {
+               "var": "b"
+              }
+             ]
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         },
+         "else": {
+          "ite": {
+           "cond": {
+            "op": ">",
+            "args": [
+             {
+              "var": "b"
+             },
+             {
+              "var": "a"
+             }
+            ]
+           },
+           "then": {
+            "call": {
+             "fun": "gcd_pair",
+             "args": [
+              {
+               "var": "a"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "b"
+                },
+                {
+                 "var": "a"
+                }
+               ]
+              }
+             ]
+            }
+           },
+           "else": {
+            "var": "a"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "gcd_seq",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "op": "at",
+      "args": [
+       {
+        "var": "s"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "else": {
+      "call": {
+       "fun": "gcd_pair",
+       "args": [
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "int": 0
+          }
+         ]
+        },
+        {
+         "call": {
+          "fun": "gcd_seq",
+          "args": [
+           {
+            "op": "slice",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 1
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "len",
+  "args": [
+   {
+    "var": "s"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "at",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "int": 0
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "call": {
+         "fun": "gcd_pair",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          {
+           "call": {
+            "fun": "mbpp_45__get_gcd",
+            "args": [
+             {
+              "op": "slice",
+              "args": [
+               {
+                "var": "s"
+               },
+               {
+                "int": 1
+               },
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "s"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

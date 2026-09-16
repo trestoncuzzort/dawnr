@@ -1,0 +1,509 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_520__get_lcm",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    "body": {
+     "op": ">",
+     "args": [
+      {
+       "op": "at",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "lcm_of",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "gcds",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "b",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "a"
+     },
+     {
+      "var": "b"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "var": "b"
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<=",
+        "args": [
+         {
+          "var": "b"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "var": "a"
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": ">",
+          "args": [
+           {
+            "var": "a"
+           },
+           {
+            "var": "b"
+           }
+          ]
+         },
+         "then": {
+          "call": {
+           "fun": "gcds",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "a"
+              },
+              {
+               "var": "b"
+              }
+             ]
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         },
+         "else": {
+          "ite": {
+           "cond": {
+            "op": ">",
+            "args": [
+             {
+              "var": "b"
+             },
+             {
+              "var": "a"
+             }
+            ]
+           },
+           "then": {
+            "call": {
+             "fun": "gcds",
+             "args": [
+              {
+               "var": "a"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "b"
+                },
+                {
+                 "var": "a"
+                }
+               ]
+              }
+             ]
+            }
+           },
+           "else": {
+            "var": "a"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "lcm_of",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "op": "at",
+      "args": [
+       {
+        "var": "s"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "else": {
+      "op": "div",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "lcm_of",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "int": 1
+              },
+              {
+               "op": "len",
+               "args": [
+                {
+                 "var": "s"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       },
+       {
+        "call": {
+         "fun": "gcds",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          {
+           "call": {
+            "fun": "lcm_of",
+            "args": [
+             {
+              "op": "slice",
+              "args": [
+               {
+                "var": "s"
+               },
+               {
+                "int": 1
+               },
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "s"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "len",
+  "args": [
+   {
+    "var": "s"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "at",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "int": 0
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "var": {
+       "name": "rest_lcm",
+       "type": "int",
+       "init": {
+        "call": {
+         "fun": "mbpp_520__get_lcm",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 1
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "g",
+       "type": "int",
+       "init": {
+        "call": {
+         "fun": "gcds",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 0
+            }
+           ]
+          },
+          {
+           "var": "rest_lcm"
+          }
+         ]
+        }
+       }
+      }
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "op": "div",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             }
+            ]
+           },
+           {
+            "var": "rest_lcm"
+           }
+          ]
+         },
+         {
+          "var": "g"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

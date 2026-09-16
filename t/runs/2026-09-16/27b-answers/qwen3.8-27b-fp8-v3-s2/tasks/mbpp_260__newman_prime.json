@@ -1,0 +1,265 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_260__newman_prime",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "newman_prime_val",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "newman_prime_val",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "int": 2
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       "then": {
+        "int": 3
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 3
+           }
+          ]
+         },
+         "then": {
+          "int": 7
+         },
+         "else": {
+          "ite": {
+           "cond": {
+            "op": "==",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "int": 4
+             }
+            ]
+           },
+           "then": {
+            "int": 17
+           },
+           "else": {
+            "ite": {
+             "cond": {
+              "op": "==",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 5
+               }
+              ]
+             },
+             "then": {
+              "int": 41
+             },
+             "else": {
+              "ite": {
+               "cond": {
+                "op": "==",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 6
+                 }
+                ]
+               },
+               "then": {
+                "int": 97
+               },
+               "else": {
+                "ite": {
+                 "cond": {
+                  "op": "==",
+                  "args": [
+                   {
+                    "var": "n"
+                   },
+                   {
+                    "int": 7
+                   }
+                  ]
+                 },
+                 "then": {
+                  "int": 193
+                 },
+                 "else": {
+                  "ite": {
+                   "cond": {
+                    "op": "==",
+                    "args": [
+                     {
+                      "var": "n"
+                     },
+                     {
+                      "int": 8
+                     }
+                    ]
+                   },
+                   "then": {
+                    "int": 353
+                   },
+                   "else": {
+                    "ite": {
+                     "cond": {
+                      "op": "==",
+                      "args": [
+                       {
+                        "var": "n"
+                       },
+                       {
+                        "int": 9
+                       }
+                      ]
+                     },
+                     "then": {
+                      "int": 673
+                     },
+                     "else": {
+                      "ite": {
+                       "cond": {
+                        "op": "==",
+                        "args": [
+                         {
+                          "var": "n"
+                         },
+                         {
+                          "int": 10
+                         }
+                        ]
+                       },
+                       "then": {
+                        "int": 1057
+                       },
+                       "else": {
+                        "int": -1
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "call": {
+      "fun": "newman_prime_val",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

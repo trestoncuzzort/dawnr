@@ -1,0 +1,22 @@
+{
+ "task_id": 4,
+ "fn": "heap_queue_largest",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the largest integers from a given list of numbers using heap queue algorithm.\nSignature: heap_queue_largest(seq, int) -> seq\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_542__sub_list(s: seq, c: int) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * s[k]\n    decreases len(s) - i\n  {\n    r := r + [s[i] * s[i]];\n    i := i + 1;\n  }\n}\n```",
+ "done_reason": "length"
+}

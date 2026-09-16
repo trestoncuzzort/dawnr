@@ -1,0 +1,76 @@
+{
+ "t": 0,
+ "name": "mbpp_654__rectangle_perimeter",
+ "params": [
+  {
+   "name": "width",
+   "type": "int"
+  },
+  {
+   "name": "height",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "var": "width"
+        },
+        {
+         "var": "height"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "var": "width"
+        },
+        {
+         "var": "height"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

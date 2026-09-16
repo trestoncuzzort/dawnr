@@ -1,0 +1,22 @@
+{
+ "task_id": 269,
+ "fn": "ascii_value",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the ascii value of a character.\nSignature: ascii_value(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 0\ntask mbpp_59__surface_Area(a: int, l: int) returns (r: int)\n  ensures r == a * a + 2 * a * l\n{\n  r := a * a + 2 * a * l;\n}\n```",
+ "done_reason": "length"
+}

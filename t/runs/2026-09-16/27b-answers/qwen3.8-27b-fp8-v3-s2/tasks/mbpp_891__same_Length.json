@@ -1,0 +1,101 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_891__same_Length",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "tostr",
+         "args": [
+          {
+           "var": "a"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "tostr",
+         "args": [
+          {
+           "var": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "tostr",
+         "args": [
+          {
+           "var": "a"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "tostr",
+         "args": [
+          {
+           "var": "b"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

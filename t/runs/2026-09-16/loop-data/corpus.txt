@@ -1,0 +1,4585 @@
+Problem: Write a function to find squares of individual elements in a list using lambda function.
+Signature: square_nums(seq) -> seq
+t 1
+gate loops
+task mbpp_8__square_nums(s: seq) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i
+    invariant forall k in [0, i) . r[k] == s[k] * s[k]
+    decreases len(s) - i
+  {
+    r := r + [s[i] * s[i]];
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to find the perimeter of a square.
+Signature: square_perimeter(int) -> int
+t 0
+task mbpp_17__square_perimeter(side: int) returns (r: int)
+  ensures r == 4 * side
+{
+  r := 4 * side;
+}
+
+
+Problem: Write a function to find the n-th rectangular number.
+Signature: find_rect_num(int) -> int
+t 0
+task mbpp_35__find_rect_num(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == n * (n + 1)
+{
+  r := n * (n + 1);
+}
+
+
+Problem: Write a function to caluclate area of a parallelogram.
+Signature: parallelogram_area(int, int) -> int
+t 0
+task mbpp_52__parallelogram_area(base: int, height: int) returns (r: int)
+  ensures r == base * height
+{
+  r := base * height;
+}
+
+
+Problem: Write a function to find the nth octagonal number.
+Signature: is_octagonal(int) -> int
+t 0
+task mbpp_59__is_octagonal(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == 3 * n * n - 2 * n
+{
+  r := 3 * n * n - 2 * n;
+}
+
+
+Problem: Write a function to find the closest smaller number than n.
+Signature: closest_num(int) -> int
+t 0
+task mbpp_89__closest_num(n: int) returns (r: int)
+  ensures r == n - 1
+{
+  r := n - 1;
+}
+
+
+Problem: Write a python function to find the perimeter of a cylinder.
+Signature: perimeter(int, int) -> int
+t 0
+task mbpp_112__perimeter(a: int, b: int) returns (r: int)
+  ensures r == 2 * (a + b)
+{
+  r := 2 * (a + b);
+}
+
+
+Problem: Write a function to find the nth hexagonal number.
+Signature: hexagonal_num(int) -> int
+t 0
+task mbpp_135__hexagonal_num(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == n * (2 * n - 1)
+{
+  r := n * (2 * n - 1);
+}
+
+
+Problem: Write a function to find the perimeter of a pentagon.
+Signature: perimeter_pentagon(int) -> int
+t 0
+task mbpp_171__perimeter_pentagon(side: int) returns (r: int)
+  ensures r == 5 * side
+{
+  r := 5 * side;
+}
+
+
+Problem: Write a function to find the perimeter of a triangle.
+Signature: perimeter_triangle(int, int, int) -> int
+t 0
+task mbpp_176__perimeter_triangle(a: int, b: int, c: int) returns (r: int)
+  ensures r == a + b + c
+{
+  r := a + b + c;
+}
+
+
+Problem: Write a python function to count the number of integral co-ordinates that lie inside a square.
+Signature: count_Intgral_Points(int, int, int, int) -> int
+t 0
+task mbpp_190__count_Intgral_Points(x1: int, y1: int, x2: int, y2: int) returns (r: int)
+  requires x1 <= x2
+  requires y1 <= y2
+  ensures r == (x2 - x1 - 1) * (y2 - y1 - 1) or x1 == x2 and y1 == y2 and r == 1
+{
+  if x1 == x2 and y1 == y2 {
+    r := 1;
+  } else {
+    r := (x2 - x1 - 1) * (y2 - y1 - 1);
+  }
+}
+
+
+Problem: Write a python function to find the first position of an element in a sorted array.
+Signature: first(seq, int, int) -> int
+t 1
+gate loops
+task mbpp_195__first(s: seq, x: int, n: int) returns (r: int)
+  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [0, r) . i < len(s) ==> s[i] != x)
+  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)
+{
+  r := -1;
+  var i: int := 0;
+  while i < len(s) and r == -1
+    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)
+    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] == x {
+      r := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to find minimum of three numbers.
+Signature: min_of_three(int, int, int) -> int
+t 0
+task mbpp_227__min_of_three(a: int, b: int, c: int) returns (r: int)
+  ensures r <= a
+  ensures r <= b
+  ensures r <= c
+  ensures r == a or r == b or r == c
+{
+  if a <= b {
+    if a <= c {
+      r := a;
+    } else {
+      r := c;
+    }
+  } else {
+    if b <= c {
+      r := b;
+    } else {
+      r := c;
+    }
+  }
+}
+
+
+Problem: Write a function to replace blank spaces with any character in a string.
+Signature: replace_blank(seq, int) -> seq
+t 1
+gate loops
+task mbpp_230__replace_blank(s: seq, c: int) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . if s[i] == 32 then r[i] == c else r[i] == s[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i
+    invariant forall k in [0, i) . if s[k] == 32 then r[k] == c else r[k] == s[k]
+    decreases len(s) - i
+  {
+    if s[i] == 32 {
+      r := r + [c];
+    } else {
+      r := r + [s[i]];
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to find the volume of a cube.
+Signature: volume_cube(int) -> int
+t 0
+task mbpp_234__volume_cube(s: int) returns (r: int)
+  ensures r == s * s * s
+{
+  r := s * s * s;
+}
+
+
+Problem: Write a function to calculate a dog's age in dog's years.
+Signature: dog_age(int) -> int
+t 0
+task mbpp_264__dog_age(n: int) returns (r: int)
+  ensures r == 4 * n + 13
+{
+  r := 4 * n + 13;
+}
+
+
+Problem: Write a function to find the lateral surface area of a cube.
+Signature: lateralsurface_cube(int) -> int
+t 0
+task mbpp_266__lateralsurface_cube(s: int) returns (r: int)
+  ensures r == 4 * s * s
+{
+  r := 4 * s * s;
+}
+
+
+Problem: Write a function to find the n'th star number.
+Signature: find_star_num(int) -> int
+t 0
+task mbpp_268__find_star_num(n: int) returns (r: int)
+  requires n >= 1
+  ensures r == 6 * n * (n - 1) + 1
+{
+  r := 6 * n * (n - 1) + 1;
+}
+
+
+Problem: Write a function to find the nth decagonal number.
+Signature: is_num_decagonal(int) -> int
+t 0
+task mbpp_279__is_num_decagonal(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == n * (4 * n - 3)
+{
+  r := n * (4 * n - 3);
+}
+
+
+Problem: Write a function to substaract two lists using map and lambda function.
+Signature: sub_list(seq, seq) -> seq
+t 1
+gate loops
+task mbpp_282__sub_list(a: seq, b: seq) returns (r: seq)
+  requires len(a) == len(b)
+  ensures len(r) == len(a)
+  ensures forall i in [0, len(a)) . r[i] == a[i] - b[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(a)
+    invariant 0 <= i
+    invariant i <= len(a)
+    invariant len(r) == i
+    invariant forall k in [0, i) . r[k] == a[k] - b[k]
+    decreases len(a) - i
+  {
+    r := r + [a[i] - b[i]];
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a python function to find the maximum of two numbers.
+Signature: maximum(int, int) -> int
+t 0
+task mbpp_309__maximum(x: int, y: int) returns (r: int)
+  ensures r >= x
+  ensures r >= y
+  ensures r == x or r == y
+{
+  if x >= y {
+    r := x;
+  } else {
+    r := y;
+  }
+}
+
+
+Problem: Write a function to find the index of the last occurrence of a given number in a sorted array.
+Signature: find_last_occurrence(seq, int) -> int
+t 1
+gate loops
+task mbpp_316__find_last_occurrence(s: seq, x: int) returns (r: int)
+  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [r + 1, len(s)) . s[i] != x)
+  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)
+{
+  r := -1;
+  var i: int := 0;
+  while i < len(s)
+    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)
+    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [r + 1, i) . j < len(s) ==> s[j] != x)
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] == x {
+      r := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to find t-nth term of arithemetic progression.
+Signature: tn_ap(int, int, int) -> int
+t 0
+task mbpp_354__tn_ap(a: int, n: int, d: int) returns (r: int)
+  requires n >= 1
+  ensures r == a + (n - 1) * d
+{
+  r := a + (n - 1) * d;
+}
+
+
+Problem: Write a function to find the third angle of a triangle using two angles.
+Signature: find_angle(int, int) -> int
+t 0
+task mbpp_356__find_angle(a: int, b: int) returns (r: int)
+  requires a > 0
+  requires b > 0
+  requires a + b < 180
+  ensures r == 180 - a - b
+{
+  r := 180 - a - b;
+}
+
+
+Problem: Write a function to find the lateral surface area of cuboid
+Signature: lateralsurface_cuboid(int, int, int) -> int
+t 0
+task mbpp_369__lateralsurface_cuboid(l: int, w: int, h: int) returns (r: int)
+  ensures r == 2 * (l + w) * h
+{
+  r := 2 * (l + w) * h;
+}
+
+
+Problem: Write a function to find the volume of a cuboid.
+Signature: volume_cuboid(int, int, int) -> int
+t 0
+task mbpp_373__volume_cuboid(l: int, w: int, h: int) returns (r: int)
+  ensures r == l * w * h
+{
+  r := l * w * h;
+}
+
+
+Problem: Write a function to find the surface area of a cuboid.
+Signature: surfacearea_cuboid(int, int, int) -> int
+t 0
+task mbpp_379__surfacearea_cuboid(l: int, w: int, h: int) returns (r: int)
+  ensures r == 2 * (l * w + l * h + w * h)
+{
+  r := 2 * (l * w + l * h + w * h);
+}
+
+
+Problem: Write a python function to find the minimum of two numbers.
+Signature: minimum(int, int) -> int
+t 0
+task mbpp_404__minimum(x: int, y: int) returns (r: int)
+  ensures r <= x
+  ensures r <= y
+  ensures r == x or r == y
+{
+  if x <= y {
+    r := x;
+  } else {
+    r := y;
+  }
+}
+
+
+Problem: Write a function to find the surface area of a cube.
+Signature: surfacearea_cube(int) -> int
+t 0
+task mbpp_441__surfacearea_cube(s: int) returns (r: int)
+  ensures r == 6 * s * s
+{
+  r := 6 * s * s;
+}
+
+
+Problem: Write a function to find the area of a rectangle.
+Signature: rectangle_area(int, int) -> int
+t 0
+task mbpp_458__rectangle_area(length: int, width: int) returns (r: int)
+  ensures r == length * width
+{
+  r := length * width;
+}
+
+
+Problem: Write a python function to find gcd of two positive integers.
+Signature: gcd(int, int) -> int
+t 1
+gate recursion
+task mbpp_498__gcd(a: int, b: int) returns (r: int)
+  requires a > 0
+  requires b > 0
+  ensures r == gcds(a, b)
+  decreases a + b
+spec fun gcds(a: int, b: int): int
+  decreases a + b
+= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a
+{
+  if a == 0 {
+    r := b;
+  } else {
+    if b == 0 {
+      r := a;
+    } else {
+      if a > b {
+        r := mbpp_498__gcd(a - b, b);
+      } else {
+        if b > a {
+          r := mbpp_498__gcd(a, b - a);
+        } else {
+          r := a;
+        }
+      }
+    }
+  }
+}
+
+
+Problem: Write a function to find the diameter of a circle.
+Signature: diameter_circle(int) -> int
+t 0
+task mbpp_499__diameter_circle(radius: int) returns (r: int)
+  ensures r == 2 * radius
+{
+  r := 2 * radius;
+}
+
+
+Problem: Write a python function to find the average of odd numbers till a given odd number.
+Signature: average_Odd(int) -> int
+t 1
+gate loops
+task mbpp_509__average_Odd(n: int) returns (r: int)
+  requires n >= 1
+  requires n % 2 == 1
+  ensures 2 * r == n + 1
+{
+  r := (n + 1) / 2;
+}
+
+
+Problem: Write a function to replace all occurrences of spaces, commas, or dots with a colon in the given string by using regex.
+Signature: fill_spaces(seq) -> seq
+t 1
+gate loops
+task mbpp_542__fill_spaces(s: seq) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . s[i] == 32 or s[i] == 44 or s[i] == 46 ==> r[i] == 58
+  ensures forall i in [0, len(s)) . not (s[i] == 32 or s[i] == 44 or s[i] == 46) ==> r[i] == s[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i
+    invariant forall k in [0, i) . s[k] == 32 or s[k] == 44 or s[k] == 46 ==> r[k] == 58
+    invariant forall k in [0, i) . not (s[k] == 32 or s[k] == 44 or s[k] == 46) ==> r[k] == s[k]
+    decreases len(s) - i
+  {
+    if s[i] == 32 or s[i] == 44 or s[i] == 46 {
+      r := r + [58];
+    } else {
+      r := r + [s[i]];
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a python function to find the surface area of the square pyramid.
+Signature: surface_Area(int, int) -> int
+t 0
+task mbpp_581__surface_Area(a: int, l: int) returns (r: int)
+  ensures r == a * a + 2 * a * l
+{
+  r := a * a + 2 * a * l;
+}
+
+
+Problem: Write a python function to interchange the first and last elements in a list.
+Signature: swap_List(seq) -> seq
+t 1
+gate quantifiers
+task mbpp_591__swap_List(s: seq) returns (r: seq)
+  requires len(s) >= 2
+  ensures len(r) == len(s)
+  ensures r[0] == s[len(s) - 1]
+  ensures r[len(s) - 1] == s[0]
+  ensures forall i in [1, len(s) - 1) . r[i] == s[i]
+{
+  r := s;
+  r := r[0 := s[len(s) - 1]];
+  r := r[len(s) - 1 := s[0]];
+}
+
+
+Problem: Write a python function to interchange first and last elements in a given list.
+Signature: swap_List(seq) -> seq
+t 1
+gate quantifiers
+task mbpp_625__swap_List(s: seq) returns (r: seq)
+  requires len(s) >= 2
+  ensures len(r) == len(s)
+  ensures r[0] == s[len(s) - 1]
+  ensures r[len(s) - 1] == s[0]
+  ensures forall i in [1, len(s) - 1) . r[i] == s[i]
+{
+  r := s;
+  r := r[0 := s[len(s) - 1]];
+  r := r[len(s) - 1 := s[0]];
+}
+
+
+Problem: Write a function to replace whitespaces with an underscore and vice versa in a given string by using regex.
+Signature: replace_spaces(seq) -> seq
+t 1
+gate loops
+task mbpp_631__replace_spaces(s: seq) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . (s[i] == 32 ==> r[i] == 95) and (s[i] == 95 ==> r[i] == 32) and (s[i] != 32 and s[i] != 95 ==> r[i] == s[i])
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i
+    invariant forall k in [0, i) . (s[k] == 32 ==> r[k] == 95) and (s[k] == 95 ==> r[k] == 32) and (s[k] != 32 and s[k] != 95 ==> r[k] == s[k])
+    decreases len(s) - i
+  {
+    if s[i] == 32 {
+      r := r + [95];
+    } else {
+      if s[i] == 95 {
+        r := r + [32];
+      } else {
+        r := r + [s[i]];
+      }
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to find the perimeter of a rectangle.
+Signature: rectangle_perimeter(int, int) -> int
+t 0
+task mbpp_654__rectangle_perimeter(a: int, b: int) returns (r: int)
+  ensures r == 2 * (a + b)
+{
+  r := 2 * (a + b);
+}
+
+
+Problem: Write a function to find the perimeter of a rombus.
+Signature: rombus_perimeter(int) -> int
+t 0
+task mbpp_716__rombus_perimeter(side: int) returns (r: int)
+  requires side >= 0
+  ensures r == 4 * side
+{
+  r := 4 * side;
+}
+
+
+Problem: Write a function to sum elements in two lists.
+Signature: sum_list(seq, seq) -> seq
+t 1
+gate loops
+task mbpp_728__sum_list(a: seq, b: seq) returns (r: seq)
+  requires len(a) == len(b)
+  ensures len(r) == len(a)
+  ensures forall i in [0, len(a)) . r[i] == a[i] + b[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(a)
+    invariant 0 <= i
+    invariant i <= len(a)
+    invariant len(r) == i
+    invariant forall k in [0, i) . r[k] == a[k] + b[k]
+    decreases len(a) - i
+  {
+    r := r + [a[i] + b[i]];
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to replace all occurrences of spaces, commas, or dots with a colon.
+Signature: replace_specialchar(seq) -> seq
+t 1
+gate loops
+task mbpp_732__replace_specialchar(s: seq) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . s[i] == 32 or s[i] == 44 or s[i] == 46 ==> r[i] == 58
+  ensures forall i in [0, len(s)) . not (s[i] == 32 or s[i] == 44 or s[i] == 46) ==> r[i] == s[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i
+    invariant forall k in [0, i) . s[k] == 32 or s[k] == 44 or s[k] == 46 ==> r[k] == 58
+    invariant forall k in [0, i) . not (s[k] == 32 or s[k] == 44 or s[k] == 46) ==> r[k] == s[k]
+    decreases len(s) - i
+  {
+    if s[i] == 32 or s[i] == 44 or s[i] == 46 {
+      r := r + [58];
+    } else {
+      r := r + [s[i]];
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to find the index of the first occurrence of a given number in a sorted array.
+Signature: find_first_occurrence(seq, int) -> int
+t 1
+gate loops
+task mbpp_733__find_first_occurrence(s: seq, x: int) returns (r: int)
+  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [0, r) . i < len(s) ==> s[i] != x)
+  ensures r == -1 ==> (forall i in [0, len(s)) . i < len(s) ==> s[i] != x)
+{
+  r := -1;
+  var i: int := 0;
+  while i < len(s) and r == -1
+    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)
+    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] == x {
+      r := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to calculate the perimeter of a regular polygon.
+Signature: perimeter_polygon(int, int) -> int
+t 0
+task mbpp_789__perimeter_polygon(n: int, s: int) returns (r: int)
+  requires n >= 3
+  requires s >= 0
+  ensures r == n * s
+{
+  r := n * s;
+}
+
+
+Problem: Write a function to print n-times a list using map function.
+Signature: ntimes_list(seq, int) -> seq
+t 1
+gate loops
+task mbpp_865__ntimes_list(s: seq, n: int) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall i in [0, len(s)) . r[i] == s[i] * n
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) == i
+    invariant forall j in [0, i) . r[j] == s[j] * n
+    decreases len(s) - i
+  {
+    r := r + [s[i] * n];
+    i := i + 1;
+  }
+}
+
+
+Problem: Write a function to solve the fibonacci sequence using recursion.
+Signature: fibonacci(int) -> int
+t 1
+gate recursion
+task mbpp_873__fibonacci(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == fibs(n)
+  decreases n
+spec fun fibs(n: int): int
+  decreases n
+= if n <= 1 then n else fibs(n - 1) + fibs(n - 2)
+{
+  if n <= 1 {
+    r := n;
+  } else {
+    var a: int := mbpp_873__fibonacci(n - 1);
+    var b: int := mbpp_873__fibonacci(n - 2);
+    r := a + b;
+  }
+}
+
+
+Problem: Write a function to find maximum of two numbers.
+Signature: max_of_two(int, int) -> int
+t 0
+task mbpp_924__max_of_two(x: int, y: int) returns (r: int)
+  ensures r >= x
+  ensures r >= y
+  ensures r == x or r == y
+{
+  if x >= y {
+    r := x;
+  } else {
+    r := y;
+  }
+}
+
+
+t 1
+task clover_abs__abs(x: int) returns (y: int)
+  ensures x >= 0 ==> x == y
+  ensures x < 0 ==> x + y == 0
+{
+  if x < 0 {
+    y := -x;
+  } else {
+    y := x;
+  }
+}
+
+
+t 1
+gate loops
+task clover_array_product__arrayProduct(a: seq, b: seq) returns (c: seq)
+  requires len(a) == len(b)
+  ensures len(c) == len(a)
+  ensures len(c) == len(a)
+  ensures forall i in [0, len(a)) . a[i] * b[i] == c[i]
+{
+  c := seq(len(a), 0);
+  var i_v: int := 0;
+  while i_v < len(a)
+    invariant len(c) == len(a)
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant forall j in [0, i_v) . a[j] * b[j] == c[j]
+    decreases len(a) - i_v
+  {
+    c := c[i_v := a[i_v] * b[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+gate loops
+task clover_array_sum__arraySum(a: seq, b: seq) returns (c: seq)
+  requires len(a) == len(b)
+  ensures len(c) == len(a)
+  ensures len(c) == len(a)
+  ensures forall i in [0, len(a)) . a[i] + b[i] == c[i]
+{
+  c := seq(len(a), 0);
+  var i_v: int := 0;
+  while i_v < len(a)
+    invariant len(c) == len(a)
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant forall j in [0, i_v) . a[j] + b[j] == c[j]
+    decreases len(a) - i_v
+  {
+    c := c[i_v := a[i_v] + b[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task clover_avg__computeAvg(a: int, b: int) returns (avg: int)
+  ensures avg == (a + b) / 2
+{
+  avg := (a + b) / 2;
+}
+
+
+t 1
+gate loops
+task clover_cal_sum__sum(n: int) returns (s: int)
+  requires n >= 0
+  ensures s == n * (n + 1) / 2
+{
+  var n_v: int := 0;
+  s := 0;
+  while n_v != n
+    invariant 0 <= n_v and n_v <= n
+    invariant s == n_v * (n_v + 1) / 2
+    decreases if n_v <= n then n - n_v else n_v - n
+  {
+    n_v := n_v + 1;
+    s := s + n_v;
+  }
+}
+
+
+t 1
+gate loops
+task clover_double_array_elements__double_array_elements(s: seq) returns (s_out: seq)
+  ensures len(s_out) == len(s)
+  ensures forall i in [0, len(s_out)) . s_out[i] == 2 * s[i]
+{
+  s_out := s;
+  var i_v: int := 0;
+  while i_v < len(s_out)
+    invariant len(s_out) == len(s)
+    invariant 0 <= i_v and i_v <= len(s_out)
+    invariant forall x in [i_v, len(s_out)) . s_out[x] == s[x]
+    invariant forall x_v in [0, i_v) . s_out[x_v] == 2 * s[x_v]
+    decreases len(s_out) - i_v
+  {
+    s_out := s_out[i_v := 2 * s_out[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task clover_double_quadruple__doubleQuadruple(x: int) returns (r: (int, int))
+  ensures r.0 == 2 * x
+  ensures r.1 == 4 * x
+{
+  var a: int := 0;
+  var b: int := 0;
+  a := 2 * x;
+  b := 2 * a;
+  r := (a, b);
+}
+
+
+t 1
+gate loops
+task clover_find__find(a: seq, key: int) returns (index: int)
+  ensures -(1) <= index
+  ensures index < len(a)
+  ensures index != -(1) ==> a[index] == key and (forall i in [0, index) . a[i] != key)
+  ensures index == -(1) ==> (forall i_v in [0, len(a)) . a[i_v] != key)
+{
+  index := 0;
+  while index < len(a)
+    invariant 0 <= index and index <= len(a)
+    invariant forall i_v2 in [0, index) . a[i_v2] != key
+    decreases len(a) - index
+  {
+    if a[index] == key {
+      return index;
+    } else {
+    }
+    index := index + 1;
+  }
+  if index >= len(a) {
+    index := -(1);
+  } else {
+  }
+}
+
+
+t 1
+task clover_is_even__computeIsEven(x: int) returns (is_even: bool)
+  ensures (x % 2 == 0) == is_even
+{
+  is_even := false;
+  if x % 2 == 0 {
+    is_even := true;
+  } else {
+  }
+}
+
+
+t 1
+gate loops
+task clover_linear_search1__linearSearch(a: seq, e: int) returns (n: int)
+  ensures 0 <= n
+  ensures n <= len(a)
+  ensures n == len(a) or a[n] == e
+  ensures forall i in [0, n) . e != a[i]
+{
+  n := 0;
+  while n != len(a)
+    invariant 0 <= n and n <= len(a)
+    invariant forall i_v in [0, n) . e != a[i_v]
+    decreases if n <= len(a) then len(a) - n else n - len(a)
+  {
+    if e == a[n] {
+      return n;
+    } else {
+    }
+    n := n + 1;
+  }
+}
+
+
+t 1
+gate loops
+task clover_min_array__minArray(a: seq) returns (r: int)
+  requires len(a) > 0
+  ensures forall i in [0, len(a)) . r <= a[i]
+  ensures exists i_v in [0, len(a)) . r == a[i_v]
+{
+  r := a[0];
+  var i_v2: int := 1;
+  while i_v2 < len(a)
+    invariant 0 <= i_v2 and i_v2 <= len(a)
+    invariant forall x in [0, i_v2) . r <= a[x]
+    invariant exists x_v in [0, i_v2) . r == a[x_v]
+    decreases len(a) - i_v2
+  {
+    if r > a[i_v2] {
+      r := a[i_v2];
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+task clover_min_of_two__min(x: int, y: int) returns (z: int)
+  ensures x <= y ==> z == x
+  ensures x > y ==> z == y
+{
+  if x < y {
+    z := x;
+  } else {
+    z := y;
+  }
+}
+
+
+t 1
+task clover_multi_return__multipleReturns(x: int, y: int) returns (r: (int, int))
+  ensures r.0 == x + y
+  ensures r.1 == x - y
+{
+  var more: int := 0;
+  var less: int := 0;
+  more := x + y;
+  less := x - y;
+  r := (more, less);
+}
+
+
+t 1
+gate loops
+task clover_replace__replace(arr: seq, k: int) returns (arr_out: seq)
+  ensures len(arr_out) == len(arr)
+  ensures forall i in [0, len(arr_out)) . arr[i] > k ==> arr_out[i] == -(1)
+  ensures forall i_v in [0, len(arr_out)) . arr[i_v] <= k ==> arr_out[i_v] == arr[i_v]
+{
+  arr_out := arr;
+  var i_v2: int := 0;
+  while i_v2 < len(arr_out)
+    invariant len(arr_out) == len(arr)
+    invariant 0 <= i_v2 and i_v2 <= len(arr_out)
+    invariant forall j in [0, i_v2) . arr[j] > k ==> arr_out[j] == -(1)
+    invariant forall j_v in [0, i_v2) . arr[j_v] <= k ==> arr_out[j_v] == arr[j_v]
+    invariant forall j_v2 in [i_v2, len(arr_out)) . arr[j_v2] == arr_out[j_v2]
+    decreases len(arr_out) - i_v2
+  {
+    if arr_out[i_v2] > k {
+      arr_out := arr_out[i_v2 := -(1)];
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+task clover_return_seven__m(x: int) returns (seven: int)
+  ensures seven == 7
+{
+  seven := 7;
+}
+
+
+t 1
+task clover_swap__swap(x: int, y: int) returns (r: (int, int))
+  ensures r.0 == y
+  ensures r.1 == x
+{
+  var x_v: int := 0;
+  var y_v: int := 0;
+  var tmp0: int := x;
+  var tmp1: int := y;
+  x_v := tmp0;
+  y_v := tmp1;
+  var tmp: int := x_v;
+  x_v := y_v;
+  y_v := tmp;
+  r := (x_v, y_v);
+}
+
+
+t 1
+task clover_swap_arith__swapArithmetic(x: int, y: int) returns (r: (int, int))
+  ensures r.0 == y
+  ensures r.1 == x
+{
+  var x_v: int := 0;
+  var y_v: int := 0;
+  var tmp0: int := x;
+  var tmp1: int := y;
+  x_v := tmp0;
+  y_v := tmp1;
+  x_v := y_v - x_v;
+  y_v := y_v - x_v;
+  x_v := y_v + x_v;
+  r := (x_v, y_v);
+}
+
+
+t 1
+task clover_swap_in_array__swap(arr: seq, i: int, j: int) returns (arr_out: seq)
+  requires 0 <= i and i < len(arr)
+  requires 0 <= j and j < len(arr)
+  ensures len(arr_out) == len(arr)
+  ensures arr_out[i] == arr[j]
+  ensures arr_out[j] == arr[i]
+  ensures forall k in [0, len(arr_out)) . k != i and k != j ==> arr_out[k] == arr[k]
+{
+  arr_out := arr;
+  var tmp: int := arr_out[i];
+  arr_out := arr_out[i := arr_out[j]];
+  arr_out := arr_out[j := tmp];
+}
+
+
+t 1
+task clover_swap_sim__swapSimultaneous(x: int, y: int) returns (r: (int, int))
+  ensures r.0 == y
+  ensures r.1 == x
+{
+  var x_v: int := 0;
+  var y_v: int := 0;
+  var tmp0: int := x;
+  var tmp1: int := y;
+  x_v := tmp0;
+  y_v := tmp1;
+  var tmp0_v: int := y_v;
+  var tmp1_v: int := x_v;
+  x_v := tmp0_v;
+  y_v := tmp1_v;
+  r := (x_v, y_v);
+}
+
+
+t 1
+task clover_test_array__testArrayElements(a: seq, j: int) returns (a_out: seq)
+  requires j >= 0
+  requires 0 <= j
+  requires j < len(a)
+  ensures len(a_out) == len(a)
+  ensures a_out[j] == 60
+  ensures forall k in [0, len(a_out)) . k != j ==> a_out[k] == a[k]
+{
+  a_out := a;
+  a_out := a_out[j := 60];
+}
+
+
+t 1
+task clover_triple__triple(x: int) returns (r: int)
+  ensures r == 3 * x
+{
+  r := x * 3;
+}
+
+
+t 1
+task clover_triple3__triple(x: int) returns (r: int)
+  ensures r == 3 * x
+{
+  if x == 0 {
+    r := 0;
+  } else {
+    var y: int := 2 * x;
+    r := x + y;
+  }
+}
+
+
+t 1
+task clover_triple4__triple(x: int) returns (r: int)
+  ensures r == 3 * x
+{
+  var y: int := x * 2;
+  r := y + x;
+}
+
+
+t 1
+gate loops
+task dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot1(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 0
+  ensures r * r <= n and n < (r + 1) * (r + 1)
+{
+  r := 0;
+  while (r + 1) * (r + 1) <= n
+    invariant r >= 0 and r * r <= n
+    decreases n - r * r
+  {
+    r := r + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mfirstMaximum(v: seq) returns (i: int)
+  requires len(v) > 0
+  ensures 0 <= i
+  ensures i < len(v)
+  ensures forall k in [0, len(v)) . v[i] >= v[k]
+  ensures forall l in [0, i) . v[i] > v[l]
+{
+  var j: int := 1;
+  i := 0;
+  while j < len(v)
+    invariant 0 <= j and j <= len(v)
+    invariant 0 <= i and i < j
+    invariant forall k_v in [0, j) . v[i] >= v[k_v]
+    invariant forall k_v2 in [0, i) . v[i] > v[k_v2]
+    decreases len(v) - j
+  {
+    if v[j] > v[i] {
+      i := j;
+    } else {
+    }
+    j := j + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1(v: seq) returns (i: int)
+  requires len(v) > 0
+  ensures 0 <= i
+  ensures i < len(v)
+  ensures forall k in [0, len(v)) . v[i] >= v[k]
+{
+  var j: int := 1;
+  i := 0;
+  while j < len(v)
+    invariant 0 <= j and j <= len(v)
+    invariant 0 <= i and i < j
+    invariant forall k_v in [0, j) . v[i] >= v[k_v]
+    decreases len(v) - j
+  {
+    if v[j] > v[i] {
+      i := j;
+    } else {
+    }
+    j := j + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax(a: seq) returns (i: int)
+  requires len(a) > 0
+  ensures 0 <= i
+  ensures i < len(a)
+  ensures forall k in [0, len(a)) . a[k] <= a[i]
+{
+  i := 0;
+  var index: int := 1;
+  while index < len(a)
+    invariant 0 < index and index <= len(a)
+    invariant 0 <= i and i < index
+    invariant forall k_v in [0, index) . a[k_v] <= a[i]
+    decreases len(a) - index
+  {
+    if a[index] > a[i] {
+      i := index;
+    } else {
+    }
+    index := index + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafnyexercises_tmp_tmpd6qyevja_part1_q1__addArrays(a: seq, b: seq) returns (c: seq)
+  requires len(a) == len(b)
+  ensures len(c) == len(a)
+  ensures len(b) == len(c)
+  ensures forall i in [0, len(c)) . c[i] == a[i] + b[i]
+{
+  c := seq(len(a), 0);
+  var j: int := 0;
+  while j < len(a)
+    invariant len(c) == len(a)
+    invariant 0 <= j and j <= len(c)
+    invariant forall i_v in [0, j) . c[i_v] == a[i_v] + b[i_v]
+    decreases len(a) - j
+  {
+    c := c[j := a[j] + b[j]];
+    j := j + 1;
+  }
+}
+
+
+t 1
+task dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum(x: int, y: int) returns (r: (int, int))
+  ensures r.0 == x + y
+  ensures r.1 == x or r.1 == y
+  ensures x <= r.1
+  ensures y <= r.1
+{
+  var s: int := 0;
+  var m: int := 0;
+  s := x + y;
+  if x > y {
+    m := x;
+  } else {
+    if y > x {
+      m := y;
+    } else {
+      m := x;
+    }
+  }
+  r := (s, m);
+}
+
+
+t 1
+task dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_week5_computepower__calcPower(n: int) returns (p: int)
+  requires n >= 0
+  ensures p >= 0
+  ensures p == 2 * n
+{
+  p := 2 * n;
+}
+
+
+t 1
+task dafny_programs_tmp_tmp99966ew4_mymax__max(a: int, b: int) returns (c: int)
+  ensures c >= a
+  ensures c >= b
+{
+  if a < b {
+    c := b;
+  } else {
+    c := a;
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__computePower(n: int) returns (y: int)
+  requires n >= 0
+  ensures y >= 0
+  ensures y == power(n)
+spec fun power(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 1 else 2 * power(n_v - 1) else 0
+{
+  y := 1;
+  var x: int := 0;
+  while x != n
+    invariant 0 <= x and x <= n
+    invariant y == power(x)
+    invariant y >= 0
+    decreases n - x
+  {
+    var tmp0: int := x + 1;
+    var tmp1: int := y + y;
+    x := tmp0;
+    y := tmp1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__cube(n: int) returns (c: int)
+  requires n >= 0
+  ensures c >= 0
+  ensures c == n * n * n
+{
+  c := 0;
+  var i: int := 0;
+  var k: int := 1;
+  var m: int := 6;
+  while i != n
+    invariant 0 <= i and i <= n
+    invariant c == i * i * i
+    invariant k == 3 * i * i + 3 * i + 1
+    invariant m == 6 * i + 6
+    invariant c >= 0
+    decreases if i <= n then n - i else i - n
+  {
+    var tmp0: int := c + k;
+    var tmp1: int := k + m;
+    var tmp2: int := m + 6;
+    c := tmp0;
+    k := tmp1;
+    m := tmp2;
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_computepower__computePower(n: int) returns (y: int)
+  requires n >= 0
+  ensures y >= 0
+  ensures y == power(n)
+spec fun power(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 1 else 2 * power(n_v - 1) else 0
+{
+  y := 1;
+  var x: int := 0;
+  while x != n
+    invariant 0 <= x and x <= n
+    invariant y == power(x)
+    invariant y >= 0
+    decreases n - x
+  {
+    var tmp0: int := x + 1;
+    var tmp1: int := y + y;
+    x := tmp0;
+    y := tmp1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_cube__cube(n: int) returns (c: int)
+  requires n >= 0
+  ensures c >= 0
+  ensures c == n * n * n
+{
+  c := 0;
+  var i: int := 0;
+  var k: int := 1;
+  var m: int := 6;
+  while i != n
+    invariant 0 <= i and i <= n
+    invariant c == i * i * i
+    invariant k == 3 * i * i + 3 * i + 1
+    invariant m == 6 * i + 6
+    invariant c >= 0
+    decreases if i <= n then n - i else i - n
+  {
+    var tmp0: int := c + k;
+    var tmp1: int := k + m;
+    var tmp2: int := m + 6;
+    c := tmp0;
+    k := tmp1;
+    m := tmp2;
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v(x: int) returns (r: (int, int))
+  requires x > 0
+  ensures r.0 == 2 * x
+{
+  var j: int := 0;
+  var i: int := 0;
+  i := 0;
+  j := 0;
+  while i < x
+    invariant 0 <= i and i <= x
+    invariant j == 2 * i
+    decreases x - i
+  {
+    j := j + 2;
+    i := i + 1;
+  }
+  r := (j, i);
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v(n: int, k: int) returns (k_out: int)
+  requires n > 0
+  requires k > n
+  ensures k_out >= 0
+{
+  k_out := k;
+  var j: int := 0;
+  while j < n
+    invariant 0 <= j and j <= n
+    invariant k_out == k - j
+    decreases n - j
+  {
+    j := j + 1;
+    k_out := k_out - 1;
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_verify_tmp_tmphq7j0row_generated_code_computepower__computePower(n: int) returns (p: int)
+  requires n >= 0
+  ensures p >= 0
+  ensures p == power(n)
+spec fun power(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 1 else 2 * power(n_v - 1) else 0
+{
+  p := 1;
+  var i: int := 0;
+  while i != n
+    invariant (0 <= i and i <= n) and p == power(i)
+    invariant p >= 0
+    decreases if i <= n then n - i else i - n
+  {
+    i := i + 1;
+    p := p * 2;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum(a: seq) returns (m: int)
+  requires len(a) > 0
+  ensures exists i in [0, len(a)) . m == a[i]
+  ensures forall i_v in [0, len(a)) . m <= a[i_v]
+{
+  var n: int := 0;
+  m := a[0];
+  while n != len(a)
+    invariant 0 <= n and n <= len(a)
+    invariant exists i_v2 in [0, len(a)) . m == a[i_v2]
+    invariant forall i_v3 in [0, n) . m <= a[i_v3]
+    decreases if n <= len(a) then len(a) - n else n - len(a)
+  {
+    if a[n] < m {
+      m := a[n];
+    } else {
+    }
+    n := n + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_verify_tmp_tmphq7j0row_test_cases_function__triple_p(x: int) returns (r: int)
+  ensures average(r, 3 * x) == 3 * x
+  ensures r == 3 * x
+spec fun average(a: int, b: int): int
+  decreases a + b
+= (a + b) / 2
+{
+  r := 3 * x;
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions(x: int) returns (r: int)
+  ensures r == 3 * x
+{
+  r := 3 * x;
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_ghost__doubleQuadruple(x: int) returns (r: (int, int))
+  ensures r.0 == 2 * x
+  ensures r.1 == 4 * x
+{
+  var a: int := 0;
+  var b: int := 0;
+  a := 2 * x;
+  b := 2 * a;
+  r := (a, b);
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m() returns (r: int)
+  ensures r == 29
+{
+  r := 29;
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod(x: int) returns (y: int)
+  requires 10 <= x
+  ensures 25 <= y
+{
+  var a: int := 0;
+  var b: int := 0;
+  a := x + 3;
+  if x < 20 {
+    b := 32 - x;
+  } else {
+    b := 16;
+  }
+  y := a + b;
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_index__index(n: int) returns (i: int)
+  requires 1 <= n
+  ensures 0 <= i
+  ensures i < n
+{
+  i := n / 2;
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum(x: int, y: int) returns (r: (int, int))
+  ensures r.0 == x + y
+  ensures r.1 == (if x >= y then x else y)
+{
+  var s: int := 0;
+  var m: int := 0;
+  s := x + y;
+  if x >= y {
+    m := x;
+  } else {
+    m := y;
+  }
+  r := (s, m);
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_index__min(x: int, y: int) returns (m: int)
+  ensures m <= x
+  ensures m <= y
+  ensures m == x or m == y
+{
+  if x >= y {
+    m := y;
+  } else {
+    m := x;
+  }
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_index__reconstructFromMaxSum(s: int, m: int) returns (r: (int, int))
+  requires s <= 2 * m
+  ensures s == r.0 + r.1
+  ensures m == r.0 or m == r.1
+  ensures r.0 <= m
+  ensures r.1 <= m
+{
+  var x: int := 0;
+  var y: int := 0;
+  x := m;
+  y := s - m;
+  r := (x, y);
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater(n: int) returns (i: int)
+  requires 0 <= n
+  ensures i == 0
+{
+  i := n;
+  while 0 < i
+    invariant 0 <= i and i <= n
+    decreases i
+  {
+    i := i - 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual(n: int) returns (i: int)
+  requires 0 <= n
+  ensures i == 0
+{
+  i := n;
+  while i != 0
+    invariant 0 <= i and i <= n
+    decreases i
+  {
+    i := i - 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess(n: int) returns (i: int)
+  requires 0 <= n
+  ensures i == n
+{
+  i := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    decreases n - i
+  {
+    i := i + 1;
+  }
+}
+
+
+t 1
+task dafny_verify_tmp_tmphq7j0row_test_cases_triple__tripleConditions(x: int) returns (r: int)
+  requires x % 2 == 0
+  ensures r == 3 * x
+{
+  var y: int := x / 2;
+  r := 6 * y;
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v(x: int) returns (r: (int, int))
+  requires x > 0
+  ensures r.0 == 2 * x
+{
+  var j: int := 0;
+  var i: int := 0;
+  i := 0;
+  j := 0;
+  while i < x
+    invariant 0 <= i and i <= x
+    invariant j == 2 * i
+    decreases x - i
+  {
+    j := j + 2;
+    i := i + 1;
+  }
+  r := (j, i);
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v(n: int, k: int) returns (k_out: int)
+  requires n > 0
+  requires k > n
+  ensures k_out >= 0
+{
+  k_out := k;
+  var j: int := 0;
+  while j < n
+    invariant 0 <= j and j <= n
+    invariant j + k_out == k
+    decreases n - j
+  {
+    j := j + 1;
+    k_out := k_out - 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_min__min(a: seq, n: int) returns (min_v: int)
+  requires 0 < n
+  requires n <= len(a)
+  ensures exists i in [0, n) . a[i] == min_v
+  ensures forall i_v in [0, n) . a[i_v] >= min_v
+{
+  var i_v2: int := 0;
+  min_v := a[0];
+  i_v2 := 1;
+  while i_v2 < n
+    invariant i_v2 <= n
+    invariant exists j in [0, i_v2) . a[j] == min_v
+    invariant forall j_v in [0, i_v2) . a[j_v] >= min_v
+    decreases n - i_v2
+  {
+    if a[i_v2] < min_v {
+      min_v := a[i_v2];
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_square__square(n: int) returns (r: int)
+  requires 0 <= n
+  ensures r == n * n
+{
+  var x: int := 0;
+  var i: int := 0;
+  r := 0;
+  i := 0;
+  x := 1;
+  while i < n
+    invariant i <= n
+    invariant r == i * i
+    invariant x == 2 * i + 1
+    decreases n - i
+  {
+    r := r + x;
+    x := x + 2;
+    i := i + 1;
+  }
+}
+
+
+t 1
+task dafny_tmp_tmp0wu8wmfr_tests_f1a__f() returns (r: int)
+  ensures r <= 0
+{
+  r := 0;
+}
+
+
+t 1
+task dafny_tmp_tmp0wu8wmfr_tests_f1a__mid(p: int, q: int) returns (m: int)
+  requires p <= q
+  ensures p <= m
+  ensures m <= q
+  ensures m - p <= q - m
+  ensures 0 <= q - m - (m - p)
+  ensures q - m - (m - p) <= 1
+{
+  m := (p + q) / 2;
+}
+
+
+t 1
+gate recursion
+task dafny_tmp_tmp0wu8wmfr_tests_sumintsloop__sumIntsLoop(n: int) returns (s: int)
+  requires n >= 0
+  ensures s == sumInts(n)
+  ensures s == n * (n + 1) / 2
+spec fun sumInts(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 0 else sumInts(n_v - 1) + n_v else 0
+{
+  s := 0;
+  var k: int := 0;
+  while k != n
+    invariant 0 <= k and k <= n
+    invariant s == sumInts(k)
+    invariant s == k * (k + 1) / 2
+    decreases n - k
+  {
+    k := k + 1;
+    s := s + k;
+  }
+}
+
+
+t 1
+task dafny_tmp_tmpj88zq5zt_2_kontrakte_max__max(a: seq, b: seq, i: int, j: int) returns (m: int)
+  requires 0 <= i
+  requires i < len(a)
+  requires 0 <= j
+  requires j < len(b)
+  ensures a[i] > b[j] ==> m == a[i]
+  ensures a[i] <= b[j] ==> m == b[j]
+{
+  if a[i] > b[j] {
+    m := a[i];
+  } else {
+    m := b[j];
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_tmp_tmpmvs2dmry_slowmax__slow_max(a: int, b: int) returns (z: int)
+  requires a >= 0
+  requires b >= 0
+  ensures z >= 0
+  ensures z == max(a, b)
+spec fun max(x: int, y: int): int
+  decreases x + y
+= if x >= 0 and y >= 0 then if x < y then y else x else 0
+{
+  z := 0;
+  var x_v: int := a;
+  var y_v: int := b;
+  while z < x_v and z < y_v
+    invariant x_v >= 0
+    invariant y_v >= 0
+    invariant z == a - x_v and z == b - y_v
+    invariant a - x_v == b - y_v
+    invariant z >= 0
+    decreases x_v + y_v
+  {
+    z := z + 1;
+    x_v := x_v - 1;
+    y_v := y_v - 1;
+  }
+  if x_v <= y_v {
+    z := b;
+  } else {
+    z := a;
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_tmp_tmpmvs2dmry_examples1__abs(x: int) returns (y: int)
+  ensures y >= 0
+  ensures x >= 0 ==> x == y
+  ensures x < 0 ==> -x == y
+  ensures y == abs_v(x)
+spec fun abs_v(x_v: int): int
+  decreases x_v
+= if x_v > 0 then x_v else -x_v
+{
+  if x < 0 {
+    y := -x;
+  } else {
+    y := x;
+  }
+}
+
+
+t 1
+task dafny_tmp_tmpmvs2dmry_examples1__max(x: int, y: int) returns (a: int)
+  ensures a == x or a == y
+  ensures x > y ==> a == x
+  ensures x <= y ==> a == y
+{
+  if x > y {
+    a := x;
+  } else {
+    a := y;
+  }
+}
+
+
+t 1
+task dafny_tmp_tmpmvs2dmry_examples1__multiReturn(x: int, y: int) returns (r: (int, int))
+  requires y >= 0
+  ensures r.1 <= x
+  ensures x <= r.0
+{
+  var more: int := 0;
+  var less: int := 0;
+  more := x + y;
+  less := x - y;
+  r := (more, less);
+}
+
+
+t 1
+gate loops
+task dafny_tmp_tmpmvs2dmry_examples2__add_by_inc(x: int, y: int) returns (z: int)
+  requires x >= 0
+  requires y >= 0
+  ensures z >= 0
+  ensures z == x + y
+{
+  z := x;
+  var i: int := 0;
+  while i < y
+    invariant 0 <= i and i <= y
+    invariant z == x + i
+    invariant z >= 0
+    decreases y - i
+  {
+    z := z + 1;
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_tmp_tmpv_d3qi10_2_min__minArray(a: seq) returns (m: int)
+  requires len(a) > 0
+  ensures forall k in [0, len(a)) . m <= a[k]
+  ensures exists k_v in [0, len(a)) . m == a[k_v]
+{
+  m := a[0];
+  var i: int := 1;
+  while i < len(a)
+    invariant 0 <= i and i <= len(a)
+    invariant forall k_v2 in [0, i) . m <= a[k_v2]
+    invariant exists k_v3 in [0, i) . m == a[k_v3]
+    decreases len(a) - i
+  {
+    if a[i] < m {
+      m := a[i];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_tmp_tmpv_d3qi10_2_min__minMethod(a: int, b: int) returns (c: int)
+  ensures c <= a
+  ensures c <= b
+  ensures c == a or c == b
+  ensures c == min(a, b)
+spec fun min(a_v: int, b_v: int): int
+  decreases a_v + b_v
+= if a_v < b_v then a_v else b_v
+{
+  if a < b {
+    c := a;
+  } else {
+    c := b;
+  }
+}
+
+
+t 1
+gate loops
+task final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray(a: seq) returns (a_out: seq)
+  requires len(a) > 0
+  ensures len(a_out) == len(a)
+  ensures forall i in [0, len(a_out)) . a_out[i] == a[i] + 1
+{
+  a_out := a;
+  var j: int := 0;
+  while j < len(a_out)
+    invariant len(a_out) == len(a)
+    invariant 0 <= j and j <= len(a_out)
+    invariant forall i_v in [j, len(a_out)) . a_out[i_v] == a[i_v]
+    invariant forall i_v2 in [0, j) . a_out[i_v2] == a[i_v2] + 1
+    decreases len(a_out) - j
+  {
+    a_out := a_out[j := a_out[j] + 1];
+    j := j + 1;
+  }
+}
+
+
+t 1
+gate loops
+task final_project_dafny_tmp_tmpmcywuqox_attempts_insertion_sort_normal__lookForMin(a: seq, i: int) returns (m: int)
+  requires 0 <= i
+  requires i < len(a)
+  ensures i <= m
+  ensures m < len(a)
+  ensures forall k in [i, len(a)) . a[k] >= a[m]
+{
+  var j: int := i;
+  m := i;
+  while j < len(a)
+    invariant i <= j and j <= len(a)
+    invariant i <= m and m < len(a)
+    invariant forall k_v in [i, j) . a[k_v] >= a[m]
+    decreases len(a) - j
+  {
+    if a[j] < a[m] {
+      m := j;
+    } else {
+    }
+    j := j + 1;
+  }
+}
+
+
+t 1
+task final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn(x: int) returns (y: int)
+  ensures y != 0
+{
+  if x == 0 {
+    y := x + 1;
+  } else {
+    y := -x;
+  }
+}
+
+
+t 1
+gate loops
+task formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare(a: int) returns (x: int)
+  requires a >= 1
+  ensures x == a * a
+{
+  var y: int := 1;
+  x := 1;
+  while y < a
+    invariant 1 <= y and y <= a
+    invariant y * y == x
+    decreases a - y
+  {
+    y := y + 1;
+    x := x + 2 * y - 1;
+  }
+}
+
+
+t 1
+gate loops
+task formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare2(a: int) returns (x: int)
+  requires a >= 1
+  ensures x == a * a
+{
+  var y: int := 1;
+  x := 1;
+  while y < a
+    invariant 1 <= y and y <= a
+    invariant x == y * y
+    decreases a - y
+  {
+    y := y + 1;
+    x := x + 2 * y - 1;
+  }
+}
+
+
+t 1
+gate loops
+task formalmethods_tmp_tmpvda2r3_o_dafny_invariants_ex1__mult(x: int, y: int) returns (r: int)
+  requires x >= 0
+  requires y >= 0
+  ensures r >= 0
+  ensures r == x * y
+{
+  var m: int := x;
+  var n: int := y;
+  r := 0;
+  while m > 0
+    invariant m * n + r == x * y
+    invariant m >= 0
+    invariant r >= 0
+    decreases m - 0
+  {
+    r := r + n;
+    m := m - 1;
+  }
+}
+
+
+t 1
+gate loops
+task m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_countandreturn__countToAndReturnN(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == n
+{
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    decreases n - i
+  {
+    i := i + 1;
+  }
+  r := i;
+}
+
+
+t 1
+gate recursion
+task m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum(n: int) returns (s: int)
+  requires n >= 0
+  ensures s >= 0
+  ensures s == sum(n)
+spec fun sum(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 0 else n_v + sum(n_v - 1) else 0
+{
+  s := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant s == sum(i)
+    invariant s >= 0
+    decreases n - i
+  {
+    s := s + i + 1;
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre(a: int) returns (c: int)
+  requires a >= 0
+  ensures c >= 0
+  ensures c == a * a
+{
+  var i: int := 0;
+  c := 0;
+  while i != a
+    invariant 0 <= i and i <= a
+    invariant c == i * i
+    invariant c >= 0
+    decreases a - i
+  {
+    c := c + 2 * i + 1;
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_8_sum__sum(n: int) returns (s: int)
+  requires n >= 0
+  ensures s >= 0
+  ensures s == calcSum(n + 1)
+spec fun calcSum(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then n_v * (n_v - 1) / 2 else 0
+{
+  s := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant s == calcSum(i + 1)
+    invariant s >= 0
+    decreases n - i
+  {
+    i := i + 1;
+    s := s + i;
+  }
+}
+
+
+t 1
+gate recursion
+task mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 0
+  ensures r == r_v(n)
+spec fun r_v(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 0 else if r_v(n_v - 1) > n_v then r_v(n_v - 1) - n_v else r_v(n_v - 1) + n_v else 0
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant r == r_v(i)
+    invariant r >= 0
+    decreases n - i
+  {
+    i := i + 1;
+    if r > i {
+      r := r - i;
+    } else {
+      r := r + i;
+    }
+  }
+}
+
+
+t 1
+gate loops
+task metodos_formais_tmp_tmpbez22nnn_aula_2_ex1__mult(x: int, y: int) returns (r: int)
+  requires x >= 0
+  requires y >= 0
+  ensures r >= 0
+  ensures r == x * y
+{
+  var m: int := x;
+  var n: int := y;
+  r := 0;
+  while m > 0
+    invariant m >= 0
+    invariant m * n + r == x * y
+    invariant r >= 0
+    decreases m - 0
+  {
+    r := r + n;
+    m := m - 1;
+  }
+}
+
+
+t 1
+gate loops
+task metodos_formais_tmp_tmpql2hwcsh_invariantes_multiplicador__mult(x: int, y: int) returns (r: int)
+  requires x >= 0
+  requires y >= 0
+  ensures r >= 0
+  ensures r == x * y
+{
+  var m: int := x;
+  var n: int := y;
+  r := 0;
+  while m > 0
+    invariant m >= 0
+    invariant m * n + r == x * y
+    invariant r >= 0
+    decreases m - 0
+  {
+    r := r + n;
+    m := m - 1;
+  }
+}
+
+
+t 1
+gate recursion
+task prog_fun_solutions_tmp_tmp7_gmnz5f_extra_pow__pow(a: int, n: int) returns (y: int)
+  requires a >= 0
+  requires n >= 0
+  ensures y >= 0
+  ensures y == pow_v(a, n)
+spec fun pow_v(a_v: int, e: int): int
+  decreases e
+= if e >= 0 then if e == 0 then 1 else a_v * pow_v(a_v, e - 1) else 0
+{
+  var x: int := 1;
+  var k: int := 0;
+  while k < n
+    invariant x == pow_v(a, k)
+    invariant 0 <= k and k <= n
+    invariant x >= 0
+    invariant k >= 0
+    decreases n - k
+  {
+    x := a * x;
+    k := k + 1;
+  }
+  y := x;
+}
+
+
+t 1
+gate recursion
+task prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum(n: int) returns (s: int)
+  requires n >= 0
+  ensures s == sum_v(n)
+spec fun sum_v(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 0 else n_v + sum_v(n_v - 1) else 0
+{
+  var x: int := 0;
+  var y: int := 1;
+  var k: int := n;
+  while k > 0
+    invariant sum_v(n) == x + y * sum_v(k)
+    invariant 0 <= k and k <= n
+    invariant x >= 0
+    invariant k >= 0
+    decreases k
+  {
+    x := x + y * k;
+    k := k - 1;
+  }
+  s := x;
+}
+
+
+t 1
+task prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p2__problem2(p: int, q: int, x: int, y: int) returns (r: (int, int))
+  requires p == 2 * x + y
+  requires q == x + 3
+  ensures r.0 == x
+  ensures r.1 == y
+{
+  var r_v: int := 0;
+  var s: int := 0;
+  var tmp0: int := p;
+  var tmp1: int := q;
+  r_v := tmp0;
+  s := tmp1;
+  r_v := r_v - 2 * s + 6;
+  s := s - 3;
+  var tmp0_v: int := s;
+  var tmp1_v: int := r_v;
+  r_v := tmp0_v;
+  s := tmp1_v;
+  r := (r_v, s);
+}
+
+
+t 1
+task prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p3__problem3(m: int, x: int) returns (r: int)
+  requires x >= 0
+  requires 2 * m == 1 - x or m == x + 3
+  ensures r == x
+{
+  r := m;
+  if 1 - 2 * r >= 0 {
+    r := 2 * r;
+    r := -r + 1;
+  } else {
+    r := r - 3;
+  }
+}
+
+
+t 1
+gate loops
+task program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo(y: int, x: int) returns (z: int)
+  requires 0 <= y
+  ensures z == x * y
+{
+  var a: int := 0;
+  z := 0;
+  while a != y
+    invariant 0 <= a and a <= y
+    invariant z == a * x
+    decreases y - a
+  {
+    z := z + x;
+    a := a + 1;
+  }
+}
+
+
+t 1
+gate loops
+task program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one__add_by_one(x: int, y: int) returns (r: int)
+  requires y >= 0
+  ensures r == x + y
+{
+  var i: int := 0;
+  r := x;
+  while i < y
+    invariant i <= y
+    invariant r == x + i
+    decreases y - i
+  {
+    r := r + 1;
+    i := i + 1;
+  }
+}
+
+
+t 1
+task program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one(x: int) returns (r: int)
+  requires x >= 0
+  ensures r == x + 1
+{
+  r := x + 1;
+}
+
+
+t 1
+gate recursion
+task program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 0
+  ensures r == sum_up_to(n)
+spec fun sum_up_to(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 0 else sum_up_to(n_v - 1) + 1 else 0
+{
+  var i: int := 0;
+  r := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant r == sum_up_to(i)
+    invariant r >= 0
+    decreases n - i
+  {
+    r := r + 1;
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_04_hoangkim_ex_04_hoangkim__sumOdds(n: int) returns (sum: int)
+  requires n >= 0
+  requires n > 0
+  ensures sum >= 0
+  ensures sum == n * n
+{
+  sum := 1;
+  var i: int := 0;
+  while i < n - 1
+    invariant 0 <= i and i < n
+    invariant sum == (i + 1) * (i + 1)
+    invariant sum >= 0
+    decreases n - 1 - i
+  {
+    i := i + 1;
+    sum := sum + 2 * i + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI(m: int, n: int) returns (g: int)
+  requires m > 0
+  requires n > 0
+  ensures g == gcd(m, n)
+spec fun gcd(m_v: int, n_v: int): int
+  decreases m_v + n_v
+= if m_v >= 0 and n_v >= 0 and (m_v > 0 and n_v > 0) then if m_v == n_v then m_v else if m_v > n_v then gcd(m_v - n_v, n_v) else gcd(m_v, n_v - m_v) else 0
+{
+  var x: int := 0;
+  g := m;
+  x := n;
+  while g != x
+    invariant x > 0
+    invariant g > 0
+    invariant gcd(g, x) == gcd(m, n)
+    decreases x + g
+  {
+    if g > x {
+      g := g - x;
+    } else {
+      x := x - g;
+    }
+  }
+}
+
+
+t 1
+gate recursion
+task programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI(m: int, n: int) returns (d: int)
+  requires m > 0
+  requires n > 0
+  ensures d == gcd(m, n)
+spec fun gcd(x: int, y: int): int
+  decreases x + y
+= if x > 0 and y > 0 then if x == y then x else if x > y then gcd(x - y, y) else gcd(x, y - x) else 0
+{
+  var x_v: int := m;
+  var y_v: int := n;
+  d := 1;
+  while x_v != y_v
+    invariant x_v > 0 and y_v > 0
+    invariant gcd(x_v, y_v) == gcd(m, n)
+    decreases x_v + y_v
+  {
+    if x_v > y_v {
+      x_v := x_v - y_v;
+    } else {
+      y_v := y_v - x_v;
+    }
+  }
+  d := x_v;
+}
+
+
+t 1
+gate recursion
+task programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI(m: int, n: int) returns (d: int)
+  requires m > 0
+  requires n > 0
+  ensures d == gcd(m, n)
+spec fun gcd(x: int, y: int): int
+  decreases x + y
+= if x > 0 and y > 0 then if x == y then x else if x > y then gcd(x - y, y) else gcd(x, y - x) else 0
+{
+  var x_v: int := 0;
+  d := m;
+  x_v := n;
+  while d != x_v
+    invariant x_v > 0
+    invariant d > 0
+    invariant gcd(d, x_v) == gcd(m, n)
+    decreases x_v + d
+  {
+    if d > x_v {
+      d := d - x_v;
+    } else {
+      x_v := x_v - d;
+    }
+  }
+}
+
+
+t 1
+gate loops
+task programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__findMin(a: seq, lo: int) returns (minIdx: int)
+  requires lo >= 0
+  requires len(a) > 0
+  requires lo < len(a)
+  ensures minIdx >= 0
+  ensures lo <= minIdx
+  ensures minIdx < len(a)
+  ensures forall x in [lo, len(a)) . a[minIdx] <= a[x]
+{
+  var j: int := lo;
+  minIdx := lo;
+  while j < len(a)
+    invariant lo <= j and j <= len(a)
+    invariant lo <= minIdx and minIdx < len(a)
+    invariant forall k in [lo, j) . a[k] >= a[minIdx]
+    invariant minIdx >= 0
+    decreases len(a) - j
+  {
+    if a[j] < a[minIdx] {
+      minIdx := j;
+    } else {
+    }
+    j := j + 1;
+  }
+}
+
+
+t 1
+task programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap(a: seq, i: int, j: int) returns (a_out: seq)
+  requires i >= 0
+  requires j >= 0
+  requires len(a) > 0
+  requires i < len(a)
+  requires j < len(a)
+  ensures len(a_out) == len(a)
+  ensures a_out[i] == a[j]
+  ensures a_out[j] == a[i]
+{
+  a_out := a;
+  var tmp0: int := a_out[j];
+  var tmp1: int := a_out[i];
+  a_out := a_out[i := tmp0];
+  a_out := a_out[j := tmp1];
+}
+
+
+t 1
+gate loops
+task programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss(n: int) returns (sum: int)
+  requires n >= 0
+  ensures sum == n * (n + 1) / 2
+{
+  sum := 0;
+  var i: int := 0;
+  while i < n
+    invariant sum == i * (i + 1) / 2
+    invariant i <= n
+    decreases n - i
+  {
+    i := i + 1;
+    sum := sum + i;
+  }
+}
+
+
+t 1
+gate loops
+task seng2011_tmp_tmpgk5jq85q_p2__absIt(s: seq) returns (s_out: seq)
+  ensures len(s_out) == len(s)
+  ensures forall x in [0, len(s_out)) . s[x] < 0 ==> s_out[x] == -s[x]
+  ensures forall x_v in [0, len(s_out)) . s[x_v] >= 0 ==> s_out[x_v] == s[x_v]
+{
+  s_out := s;
+  var i: int := 0;
+  while i < len(s_out)
+    invariant len(s_out) == len(s)
+    invariant 0 <= i and i <= len(s_out)
+    invariant forall k in [0, i) . s[k] < 0 ==> s_out[k] == -s[k]
+    invariant forall k_v in [0, i) . s[k_v] >= 0 ==> s_out[k_v] == s[k_v]
+    invariant forall k_v2 in [i, len(s_out)) . s[k_v2] == s_out[k_v2]
+    decreases len(s_out) - i
+  {
+    if s_out[i] < 0 {
+      s_out := s_out[i := -s_out[i]];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+task software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m3(x: int, y: int) returns (z: bool)
+  ensures z ==> x == y
+{
+  if x == y {
+    z := true;
+  } else {
+    z := false;
+  }
+}
+
+
+t 1
+task software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__max(a: int, b: int) returns (z: int)
+  requires true
+  ensures z >= a or z >= b
+{
+  if a > b {
+    z := a;
+  } else {
+    z := b;
+  }
+}
+
+
+t 1
+gate loops
+task tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it(a: int, b: int) returns (r: (int, int))
+  requires a >= 0
+  requires b > 0
+  ensures a == b * r.0 + r.1
+  ensures 0 <= r.1 and r.1 < b
+{
+  var c: int := 0;
+  var r_v: int := 0;
+  c := 0;
+  r_v := a;
+  while r_v >= b
+    invariant a == b * c + r_v and r_v >= 0 and b > 0
+    decreases r_v
+  {
+    c := c + 1;
+    r_v := r_v - b;
+  }
+  r := (c, r_v);
+}
+
+
+t 1
+gate loops
+task workshop_tmp_tmp0cu11bdq_lecture_answers_triangle_number__triangleNumber(n: int) returns (t_v: int)
+  requires n >= 0
+  ensures t_v == n * (n + 1) / 2
+{
+  t_v := 0;
+  var n_v: int := 0;
+  while n_v < n
+    invariant 0 <= n_v and n_v <= n
+    invariant t_v == n_v * (n_v + 1) / 2
+    decreases n - n_v
+  {
+    n_v := n_v + 1;
+    t_v := t_v + n_v;
+  }
+}
+
+
+t 1
+task bbfny_tmp_tmpw4m0jvl0_enjoying__max(a: int, b: int) returns (c: int)
+  ensures a <= c
+  ensures b <= c
+  ensures a == c or b == c
+{
+  if a > b {
+    c := a;
+  } else {
+    c := b;
+  }
+}
+
+
+t 1
+task bbfny_tmp_tmpw4m0jvl0_enjoying__multipleReturns(x: int, y: int) returns (r: (int, int))
+  requires 0 < y
+  ensures r.1 < x
+  ensures x < r.0
+{
+  var more: int := 0;
+  var less: int := 0;
+  more := x + y;
+  less := x - y;
+  r := (more, less);
+}
+
+
+t 1
+task cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne(x: int) returns (y: int)
+  requires x >= 0
+  ensures y > 0
+{
+  y := x + 1;
+}
+
+
+t 1
+gate loops
+task cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse(a: seq) returns (aRev: seq)
+  ensures len(aRev) == len(a)
+  ensures len(aRev) == len(a)
+  ensures forall i in [0, len(a)) . a[i] == aRev[len(aRev) - i - 1]
+{
+  aRev := seq(len(a), 0);
+  var i_v: int := 0;
+  while i_v < len(a)
+    invariant len(aRev) == len(a)
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant forall j in [0, i_v) . aRev[j] == a[len(a) - j - 1]
+    decreases len(a) - i_v
+  {
+    aRev := aRev[i_v := a[len(a) - i_v - 1]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1(x: int, y: int, z: int) returns (m: int)
+  requires true
+  ensures m <= x
+  ensures m <= y
+  ensures m <= z
+{
+  if z < y {
+    if z < x {
+      m := z;
+    } else {
+      m := x;
+    }
+  } else {
+    m := y;
+    if x < y {
+      m := x;
+    } else {
+    }
+  }
+}
+
+
+t 1
+task cs245_verification_tmp_tmp0h_nxhqp_assignments_simple__simple(y: int) returns (x: int)
+  requires y == 6
+  ensures x == 7
+{
+  x := y + 1;
+}
+
+
+t 1
+task cs357_tmp_tmpn4fsvwzs_lab7_question2__two(x: int) returns (y: int)
+  ensures y == x + 1
+{
+  var a: int := x + 1;
+  if a - 1 == 0 {
+    y := 1;
+  } else {
+    y := a;
+  }
+}
+
+
+t 1
+gate loops
+task dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__incrementArray(a: seq) returns (a_out: seq)
+  ensures len(a_out) == len(a)
+  ensures forall i in [0, len(a_out)) . a_out[i] == a[i] + 1
+{
+  a_out := a;
+  var n: int := 0;
+  while n != len(a_out)
+    invariant len(a_out) == len(a)
+    invariant 0 <= n and n <= len(a_out)
+    invariant forall i_v in [0, n) . a_out[i_v] == a[i_v] + 1
+    invariant forall i_v2 in [n, len(a_out)) . a_out[i_v2] == a[i_v2]
+    decreases if n <= len(a_out) then len(a_out) - n else n - len(a_out)
+  {
+    a_out := a_out[n := a_out[n] + 1];
+    n := n + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_exercise_tmp_tmpouftptir_maxarray__maxArray(a: seq) returns (max: int)
+  requires len(a) > 0
+  ensures forall i in [0, len(a)) . a[i] <= max
+  ensures exists i_v in [0, len(a)) . a[i_v] == max
+{
+  var i_v2: int := 1;
+  max := a[0];
+  while i_v2 < len(a)
+    invariant 0 <= i_v2 and i_v2 <= len(a)
+    invariant forall j in [0, i_v2) . a[j] <= max
+    invariant exists j_v in [0, i_v2) . a[j_v] == max
+    invariant i_v2 >= 0
+    decreases len(a) - i_v2
+  {
+    if a[i_v2] > max {
+      max := a[i_v2];
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes(a: seq) returns (a_out: seq)
+  ensures len(a_out) == len(a)
+  ensures forall i in [0, len(a_out)) . a_out[i] == i * i * i
+{
+  a_out := a;
+  var n: int := 0;
+  var c: int := 0;
+  var k: int := 1;
+  var m: int := 6;
+  while n < len(a_out)
+    invariant len(a_out) == len(a)
+    invariant 0 <= n and n <= len(a_out)
+    invariant forall i_v in [0, n) . a_out[i_v] == i_v * i_v * i_v
+    invariant c == n * n * n
+    invariant k == 3 * n * n + 3 * n + 1
+    invariant m == 6 * n + 6
+    decreases len(a_out) - n
+  {
+    a_out := a_out[n := c];
+    c := c + k;
+    k := k + m;
+    m := m + 6;
+    n := n + 1;
+  }
+}
+
+
+t 1
+task dafny_learn_tmp_tmpn94ir40q_r01_assertions__abs(x: int) returns (y: int)
+  ensures 0 <= y
+  ensures x < 0 ==> y == -x
+  ensures x >= 0 ==> y == x
+{
+  if x < 0 {
+    y := -x;
+  } else {
+    y := x;
+  }
+}
+
+
+t 1
+task dafny_learn_tmp_tmpn94ir40q_r01_assertions__max(a: int, b: int) returns (c: int)
+  ensures c >= a
+  ensures c >= b
+{
+  c := a;
+  if b > c {
+    c := b;
+  } else {
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_learn_tmp_tmpn94ir40q_r01_functions__abs(x: int) returns (y: int)
+  ensures abs_v(x) == y
+spec fun abs_v(x_v: int): int
+  decreases x_v
+= if x_v < 0 then -x_v else x_v
+{
+  if x < 0 {
+    y := -x;
+  } else {
+    y := x;
+  }
+}
+
+
+t 1
+gate recursion
+task dafny_learn_tmp_tmpn94ir40q_r01_functions__testDouble(val: int) returns (val2: int)
+  ensures val2 == double(val)
+spec fun double(val_v: int): int
+  decreases val_v
+= 2 * val_v
+{
+  val2 := 2 * val;
+}
+
+
+t 1
+gate recursion
+task dafny_programs_tmp_tmpcwodh6qh_src_factorial__factorial(n: int) returns (res: int)
+  requires n >= 0
+  ensures res >= 0
+  ensures res == fact(n)
+spec fun fact(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 1 else n_v * fact(n_v - 1) else 0
+{
+  var i: int := 1;
+  res := 1;
+  while i < n + 1
+    invariant 0 < i and i <= n + 1
+    invariant res == fact(i - 1)
+    invariant res >= 0
+    decreases n + 1 - i
+  {
+    res := i * res;
+    i := i + 1;
+  }
+}
+
+
+t 1
+task dafny_programs_tmp_tmpcwodh6qh_src_max__max(a: int, b: int) returns (c: int)
+  ensures a >= b ==> c == a
+  ensures b >= a ==> c == b
+{
+  if a > b {
+    c := a;
+  } else {
+    c := b;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_101__kthElement(arr: seq, k: int) returns (result: int)
+  requires 1 <= k
+  requires k <= len(arr)
+  ensures result == arr[k - 1]
+{
+  result := arr[k - 1];
+}
+
+
+t 1
+task dafny_synthesis_task_id_127__multiply(a: int, b: int) returns (result: int)
+  ensures result == a * b
+{
+  result := a * b;
+}
+
+
+t 1
+task dafny_synthesis_task_id_135__nthHexagonalNumber(n: int) returns (hexNum: int)
+  requires n >= 0
+  ensures hexNum == n * (2 * n - 1)
+{
+  hexNum := n * (2 * n - 1);
+}
+
+
+t 1
+task dafny_synthesis_task_id_14__triangularPrismVolume(base: int, height: int, length: int) returns (volume: int)
+  requires base > 0
+  requires height > 0
+  requires length > 0
+  ensures volume == base * height * length / 2
+{
+  volume := base * height * length / 2;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_145__maxDifference(a: seq) returns (diff: int)
+  requires len(a) > 1
+  ensures forall i in [0, len(a)) . forall j in [0, len(a)) . a[i] - a[j] <= diff
+{
+  var minVal: int := a[0];
+  var maxVal: int := a[0];
+  var h: int := len(a);
+  var i_v: int := 1;
+  while i_v < h
+    invariant 1 <= i_v
+    invariant i_v <= h
+    invariant 1 <= i_v and i_v <= len(a)
+    invariant minVal <= maxVal
+    invariant forall k in [0, i_v) . minVal <= a[k] and a[k] <= maxVal
+    decreases h - i_v
+  {
+    if a[i_v] < minVal {
+      minVal := a[i_v];
+    } else {
+      if a[i_v] > maxVal {
+        maxVal := a[i_v];
+      } else {
+      }
+    }
+    i_v := i_v + 1;
+  }
+  diff := maxVal - minVal;
+}
+
+
+t 1
+task dafny_synthesis_task_id_17__squarePerimeter(side: int) returns (perimeter: int)
+  requires side > 0
+  ensures perimeter == 4 * side
+{
+  perimeter := 4 * side;
+}
+
+
+t 1
+task dafny_synthesis_task_id_171__pentagonPerimeter(side: int) returns (perimeter: int)
+  requires side > 0
+  ensures perimeter == 5 * side
+{
+  perimeter := 5 * side;
+}
+
+
+t 1
+task dafny_synthesis_task_id_227__minOfThree(a: int, b: int, c: int) returns (min: int)
+  ensures min <= a
+  ensures min <= b
+  ensures min <= c
+  ensures min == a or min == b or min == c
+{
+  if a <= b and a <= c {
+    min := a;
+  } else {
+    if b <= a and b <= c {
+      min := b;
+    } else {
+      min := c;
+    }
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_234__cubeVolume(size: int) returns (volume: int)
+  requires size > 0
+  ensures volume == size * size * size
+{
+  volume := size * size * size;
+}
+
+
+t 1
+task dafny_synthesis_task_id_238__countNonEmptySubstrings(s: seq) returns (count: int)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  ensures count >= 0
+  ensures count == len(s) * (len(s) + 1) / 2
+{
+  count := len(s) * (len(s) + 1) / 2;
+}
+
+
+t 1
+task dafny_synthesis_task_id_242__countCharacters(s: seq) returns (count: int)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  ensures count >= 0
+  ensures count == len(s)
+{
+  count := len(s);
+}
+
+
+t 1
+task dafny_synthesis_task_id_257__swap(a: int, b: int) returns (result: seq)
+  ensures len(result) == 2
+  ensures result[0] == b
+  ensures result[1] == a
+{
+  result := [b, a];
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_261__elementWiseDivision(a: seq, b: seq) returns (result: seq)
+  requires len(a) == len(b)
+  requires forall i in [0, len(b)) . b[i] != 0
+  ensures len(result) == len(a)
+  ensures forall i_v in [0, len(result)) . result[i_v] == a[i_v] / b[i_v]
+{
+  result := [];
+  var i_v2: int := 0;
+  while i_v2 < len(a)
+    invariant 0 <= i_v2 and i_v2 <= len(a)
+    invariant len(result) == i_v2
+    invariant forall k in [0, i_v2) . result[k] == a[k] / b[k]
+    decreases len(a) - i_v2
+  {
+    result := result + [a[i_v2] / b[i_v2]];
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_264__dogYears(humanYears: int) returns (dogYears_v: int)
+  requires humanYears >= 0
+  ensures dogYears_v == 7 * humanYears
+{
+  dogYears_v := 7 * humanYears;
+}
+
+
+t 1
+task dafny_synthesis_task_id_266__lateralSurfaceArea(size: int) returns (area: int)
+  requires size > 0
+  ensures area == 4 * size * size
+{
+  area := 4 * size * size;
+}
+
+
+t 1
+task dafny_synthesis_task_id_268__starNumber(n: int) returns (star: int)
+  requires n >= 0
+  ensures star == 6 * n * (n - 1) + 1
+{
+  star := 6 * n * (n - 1) + 1;
+}
+
+
+t 1
+task dafny_synthesis_task_id_269__asciiValue(c: int) returns (ascii: int)
+  requires c >= 0 and c <= 1114111
+  ensures ascii == c
+{
+  ascii := c;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_273__subtractSequences(a: seq, b: seq) returns (result: seq)
+  requires len(a) == len(b)
+  ensures len(result) == len(a)
+  ensures forall i in [0, len(result)) . result[i] == a[i] - b[i]
+{
+  result := [];
+  var i_v: int := 0;
+  while i_v < len(a)
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant len(result) == i_v
+    invariant forall k in [0, i_v) . result[k] == a[k] - b[k]
+    decreases len(a) - i_v
+  {
+    result := result + [a[i_v] - b[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_279__nthDecagonalNumber(n: int) returns (decagonal: int)
+  requires n >= 0
+  ensures decagonal == 4 * n * n - 3 * n
+{
+  decagonal := 4 * n * n - 3 * n;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_282__elementWiseSubtraction(a: seq, b: seq) returns (result: seq)
+  requires len(a) == len(b)
+  ensures len(result) == len(a)
+  ensures len(result) == len(a)
+  ensures forall i in [0, len(result)) . result[i] == a[i] - b[i]
+{
+  result := seq(len(a), 0);
+  var i_v: int := 0;
+  while i_v < len(a)
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant len(result) == len(a)
+    invariant forall k in [0, i_v) . result[k] == a[k] - b[k]
+    decreases len(a) - i_v
+  {
+    result := result[i_v := a[i_v] - b[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_292__quotient(a: int, b: int) returns (result: int)
+  requires b != 0
+  ensures result == a / b
+{
+  result := a / b;
+}
+
+
+t 1
+task dafny_synthesis_task_id_304__elementAtIndexAfterRotation(l: seq, n: int, index: int) returns (element: int)
+  requires n >= 0
+  requires 0 <= index
+  requires index < len(l)
+  ensures element == l[(index - n + len(l)) % len(l)]
+{
+  element := l[(index - n + len(l)) % len(l)];
+}
+
+
+t 1
+task dafny_synthesis_task_id_309__max(a: int, b: int) returns (maxValue: int)
+  ensures maxValue == a or maxValue == b
+  ensures maxValue >= a
+  ensures maxValue >= b
+{
+  if a >= b {
+    maxValue := a;
+  } else {
+    maxValue := b;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_396__startAndEndWithSameChar(s: seq) returns (result: bool)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires len(s) > 0
+  ensures result == (s[0] == s[len(s) - 1])
+{
+  result := s[0] == s[len(s) - 1];
+}
+
+
+t 1
+task dafny_synthesis_task_id_397__medianOfThree(a: int, b: int, c: int) returns (median: int)
+  ensures median == a or median == b or median == c
+  ensures median >= a and median <= b or median >= b and median <= a or median >= a and median <= c or median >= c and median <= a or median >= b and median <= c or median >= c and median <= b
+{
+  if a <= b and b <= c or c <= b and b <= a {
+    median := b;
+  } else {
+    if b <= a and a <= c or c <= a and a <= b {
+      median := a;
+    } else {
+      median := c;
+    }
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_404__min(a: int, b: int) returns (minValue: int)
+  ensures minValue == a or minValue == b
+  ensures minValue <= a
+  ensures minValue <= b
+{
+  if a <= b {
+    minValue := a;
+  } else {
+    minValue := b;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_406__isOdd(n: int) returns (result: bool)
+  ensures result == (n % 2 == 1)
+{
+  result := n % 2 == 1;
+}
+
+
+t 1
+task dafny_synthesis_task_id_432__medianLength(a: int, b: int) returns (median: int)
+  requires a > 0
+  requires b > 0
+  ensures median == (a + b) / 2
+{
+  median := (a + b) / 2;
+}
+
+
+t 1
+task dafny_synthesis_task_id_435__lastDigit(n: int) returns (d: int)
+  requires n >= 0
+  ensures 0 <= d
+  ensures d < 10
+  ensures n % 10 == d
+{
+  d := n % 10;
+}
+
+
+t 1
+task dafny_synthesis_task_id_441__cubeSurfaceArea(size: int) returns (area: int)
+  requires size > 0
+  ensures area == 6 * size * size
+{
+  area := 6 * size * size;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_445__multiplyElements(a: seq, b: seq) returns (result: seq)
+  requires len(a) == len(b)
+  ensures len(result) == len(a)
+  ensures forall i in [0, len(result)) . result[i] == a[i] * b[i]
+{
+  result := [];
+  var i_v: int := 0;
+  while i_v < len(a)
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant len(result) == i_v
+    invariant forall k in [0, i_v) . result[k] == a[k] * b[k]
+    decreases len(a) - i_v
+  {
+    result := result + [a[i_v] * b[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_452__calculateLoss(costPrice: int, sellingPrice: int) returns (loss: int)
+  requires costPrice >= 0
+  requires sellingPrice >= 0
+  ensures costPrice > sellingPrice ==> loss == costPrice - sellingPrice
+  ensures costPrice <= sellingPrice ==> loss == 0
+{
+  if costPrice > sellingPrice {
+    loss := costPrice - sellingPrice;
+  } else {
+    loss := 0;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_458__rectangleArea(length: int, width: int) returns (area: int)
+  requires length > 0
+  requires width > 0
+  ensures area == length * width
+{
+  area := length * width;
+}
+
+
+t 1
+task dafny_synthesis_task_id_58__hasOppositeSign(a: int, b: int) returns (result: bool)
+  ensures result == (a < 0 and b > 0 or a > 0 and b < 0)
+{
+  result := a < 0 and b > 0 or a > 0 and b < 0;
+}
+
+
+t 1
+task dafny_synthesis_task_id_581__squarePyramidSurfaceArea(baseEdge: int, height: int) returns (area: int)
+  requires baseEdge > 0
+  requires height > 0
+  ensures area == baseEdge * baseEdge + 2 * baseEdge * height
+{
+  area := baseEdge * baseEdge + 2 * baseEdge * height;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_587__arrayToSeq(a: seq) returns (s: seq)
+  ensures len(s) == len(a)
+  ensures forall i in [0, len(a)) . s[i] == a[i]
+{
+  s := [];
+  var h: int := len(a);
+  var i_v: int := 0;
+  while i_v < h
+    invariant 0 <= i_v
+    invariant i_v <= h
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant len(s) == i_v
+    invariant forall j in [0, i_v) . s[j] == a[j]
+    decreases h - i_v
+  {
+    s := s + [a[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_59__nthOctagonalNumber(n: int) returns (octagonalNumber: int)
+  requires n >= 0
+  ensures octagonalNumber == n * (3 * n - 2)
+{
+  octagonalNumber := n * (3 * n - 2);
+}
+
+
+t 1
+task dafny_synthesis_task_id_591__swapFirstAndLast(a: seq) returns (a_out: seq)
+  requires len(a) > 0
+  ensures len(a_out) == len(a)
+  ensures a_out[0] == a[len(a_out) - 1]
+  ensures a_out[len(a_out) - 1] == a[0]
+  ensures forall k in [1, len(a_out) - 1) . a_out[k] == a[k]
+{
+  a_out := a;
+  var temp: int := a_out[0];
+  a_out := a_out[0 := a_out[len(a_out) - 1]];
+  a_out := a_out[len(a_out) - 1 := temp];
+}
+
+
+t 1
+task dafny_synthesis_task_id_600__isEven(n: int) returns (result: bool)
+  ensures result == (n % 2 == 0)
+{
+  result := n % 2 == 0;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_616__elementWiseModulo(a: seq, b: seq) returns (result: seq)
+  requires len(a) == len(b)
+  requires forall i in [0, len(b)) . b[i] != 0
+  ensures len(result) == len(a)
+  ensures len(result) == len(a)
+  ensures forall i_v in [0, len(result)) . result[i_v] == a[i_v] % b[i_v]
+{
+  result := seq(len(a), 0);
+  var i_v2: int := 0;
+  while i_v2 < len(a)
+    invariant 0 <= i_v2 and i_v2 <= len(a)
+    invariant len(result) == len(a)
+    invariant forall k in [0, i_v2) . result[k] == a[k] % b[k]
+    decreases len(a) - i_v2
+  {
+    result := result[i_v2 := a[i_v2] % b[i_v2]];
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_618__elementWiseDivide(a: seq, b: seq) returns (result: seq)
+  requires len(a) == len(b)
+  requires forall i in [0, len(b)) . b[i] != 0
+  ensures len(result) == len(a)
+  ensures forall i_v in [0, len(result)) . result[i_v] == a[i_v] / b[i_v]
+{
+  result := [];
+  var h: int := len(a);
+  var i_v2: int := 0;
+  while i_v2 < h
+    invariant 0 <= i_v2
+    invariant i_v2 <= h
+    invariant 0 <= i_v2 and i_v2 <= len(a)
+    invariant len(result) == i_v2
+    invariant forall k in [0, i_v2) . result[k] == a[k] / b[k]
+    decreases h - i_v2
+  {
+    result := result + [a[i_v2] / b[i_v2]];
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_62__findSmallest(s: seq) returns (min: int)
+  requires len(s) > 0
+  ensures forall i in [0, len(s)) . min <= s[i]
+  ensures exists i_v in [0, len(s)) . min == s[i_v]
+{
+  min := s[0];
+  var h: int := len(s);
+  var i_v2: int := 1;
+  while i_v2 < h
+    invariant 1 <= i_v2
+    invariant i_v2 <= h
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant forall k in [0, i_v2) . min <= s[k]
+    invariant exists k_v in [0, i_v2) . min == s[k_v]
+    decreases h - i_v2
+  {
+    if s[i_v2] < min {
+      min := s[i_v2];
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_622__findMedian(a: seq, b: seq) returns (median: int)
+  requires len(a) == len(b)
+  requires len(a) > 0
+  requires forall i in [0, len(a) - 1) . a[i] <= a[i + 1]
+  requires forall i_v in [0, len(b) - 1) . b[i_v] <= b[i_v + 1]
+  ensures median == (if len(a) % 2 == 0 then (a[len(a) / 2 - 1] + b[0]) / 2 else a[len(a) / 2])
+{
+  if len(a) % 2 == 0 {
+    median := (a[len(a) / 2 - 1] + b[0]) / 2;
+  } else {
+    median := a[len(a) / 2];
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_625__swapFirstAndLast(a: seq) returns (a_out: seq)
+  requires len(a) > 0
+  ensures len(a_out) == len(a)
+  ensures a_out[0] == a[len(a_out) - 1]
+  ensures a_out[len(a_out) - 1] == a[0]
+  ensures forall k in [1, len(a_out) - 1) . a_out[k] == a[k]
+{
+  a_out := a;
+  var tmp: int := a_out[0];
+  a_out := a_out[0 := a_out[len(a_out) - 1]];
+  a_out := a_out[len(a_out) - 1 := tmp];
+}
+
+
+t 1
+task dafny_synthesis_task_id_626__areaOfLargestTriangleInSemicircle(radius: int) returns (area: int)
+  requires radius > 0
+  ensures area == radius * radius
+{
+  area := radius * radius;
+}
+
+
+t 1
+task dafny_synthesis_task_id_637__isBreakEven(costPrice: int, sellingPrice: int) returns (result: bool)
+  requires costPrice >= 0
+  requires sellingPrice >= 0
+  ensures result == (costPrice == sellingPrice)
+{
+  result := costPrice == sellingPrice;
+}
+
+
+t 1
+task dafny_synthesis_task_id_641__nthNonagonalNumber(n: int) returns (number: int)
+  requires n >= 0
+  ensures number == n * (7 * n - 5) / 2
+{
+  number := n * (7 * n - 5) / 2;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_728__addLists(a: seq, b: seq) returns (result: seq)
+  requires len(a) == len(b)
+  ensures len(result) == len(a)
+  ensures forall i in [0, len(result)) . result[i] == a[i] + b[i]
+{
+  result := [];
+  var h: int := len(a);
+  var i_v: int := 0;
+  while i_v < h
+    invariant 0 <= i_v
+    invariant i_v <= h
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant len(result) == i_v
+    invariant forall k in [0, i_v) . result[k] == a[k] + b[k]
+    decreases h - i_v
+  {
+    result := result + [a[i_v] + b[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_762__isMonthWith30Days(month: int) returns (result: bool)
+  requires 1 <= month
+  requires month <= 12
+  ensures result == (month == 4 or month == 6 or month == 9 or month == 11)
+{
+  result := month == 4 or month == 6 or month == 9 or month == 11;
+}
+
+
+t 1
+task dafny_synthesis_task_id_77__isDivisibleBy11(n: int) returns (result: bool)
+  ensures result == (n % 11 == 0)
+{
+  result := n % 11 == 0;
+}
+
+
+t 1
+task dafny_synthesis_task_id_79__isLengthOdd(s: seq) returns (result: bool)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  ensures result == (len(s) % 2 == 1)
+{
+  result := len(s) % 2 == 1;
+}
+
+
+t 1
+task dafny_synthesis_task_id_792__countLists(lists: seq<seq>) returns (count: int)
+  ensures count >= 0
+  ensures count == len(lists)
+{
+  count := len(lists);
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_8__squareElements(a: seq) returns (squared: seq)
+  ensures len(squared) == len(a)
+  ensures len(squared) == len(a)
+  ensures forall i in [0, len(a)) . squared[i] == a[i] * a[i]
+{
+  squared := seq(len(a), 0);
+  var h: int := len(a);
+  var i_v: int := 0;
+  while i_v < h
+    invariant 0 <= i_v
+    invariant i_v <= h
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant len(squared) == len(a)
+    invariant forall k in [0, i_v) . squared[k] == a[k] * a[k]
+    decreases h - i_v
+  {
+    squared := squared[i_v := a[i_v] * a[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_80__tetrahedralNumber(n: int) returns (t_v: int)
+  requires n >= 0
+  ensures t_v == n * (n + 1) * (n + 2) / 6
+{
+  t_v := n * (n + 1) * (n + 2) / 6;
+}
+
+
+t 1
+task dafny_synthesis_task_id_801__countEqualNumbers(a: int, b: int, c: int) returns (count: int)
+  ensures count >= 0
+  ensures count <= 3
+  ensures (count == 3) == (a == b and b == c)
+  ensures (count == 2) == (a == b and b != c or a != b and b == c or a == c and b != c)
+  ensures (count == 1) == (a != b and b != c and a != c)
+{
+  count := 1;
+  if a == b {
+    count := count + 1;
+  } else {
+  }
+  if a == c {
+    count := count + 1;
+  } else {
+  }
+  if a != b and b == c {
+    count := count + 1;
+  } else {
+  }
+}
+
+
+t 1
+task dafny_synthesis_task_id_89__closestSmaller(n: int) returns (m: int)
+  requires n > 0
+  ensures m + 1 == n
+{
+  m := n - 1;
+}
+
+
+t 1
+gate loops
+task dafny_synthesis_task_id_95__smallestListLength(s: seq<seq>) returns (v: int)
+  requires len(s) > 0
+  ensures forall i in [0, len(s)) . v <= len(s[i])
+  ensures exists i_v in [0, len(s)) . v == len(s[i_v])
+{
+  v := len(s[0]);
+  var h: int := len(s);
+  var i_v2: int := 1;
+  while i_v2 < h
+    invariant 1 <= i_v2
+    invariant i_v2 <= h
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant forall k in [0, i_v2) . v <= len(s[k])
+    invariant exists k_v in [0, i_v2) . v == len(s[k_v])
+    decreases h - i_v2
+  {
+    if len(s[i_v2]) < v {
+      v := len(s[i_v2]);
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+task dafny_workout_tmp_tmp0abkw6f8_starter_ex01__max(a: int, b: int) returns (c: int)
+  ensures c >= a
+  ensures c >= b
+  ensures c == a or c == b
+{
+  if a >= b {
+    c := a;
+  } else {
+    c := b;
+  }
+}
+
+
+t 1
+task dafny_workout_tmp_tmp0abkw6f8_starter_ex02__abs(x: int) returns (y: int)
+  requires x < 0
+  ensures 0 < y
+  ensures y == -x
+{
+  y := -x;
+}
+
+
+t 1
+task dafny_workout_tmp_tmp0abkw6f8_starter_ex03__abs(x: int) returns (y: int)
+  requires x == -(1)
+  ensures 0 <= y
+  ensures 0 <= x ==> y == x
+  ensures x < 0 ==> y == -x
+{
+  y := x + 2;
+}
+
+
+t 1
+gate loops
+task dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax(a: seq) returns (max_idx: int)
+  requires len(a) > 0
+  ensures max_idx >= 0
+  ensures 0 <= max_idx
+  ensures max_idx < len(a)
+  ensures forall j in [0, len(a)) . a[max_idx] >= a[j]
+{
+  max_idx := 0;
+  var i: int := 1;
+  while i < len(a)
+    invariant 1 <= i and i <= len(a)
+    invariant 0 <= max_idx and max_idx < i
+    invariant forall j_v in [0, i) . a[max_idx] >= a[j_v]
+    invariant max_idx >= 0
+    invariant i >= 0
+    decreases len(a) - i
+  {
+    if a[i] > a[max_idx] {
+      max_idx := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__divMod1(a: int, b: int) returns (r: (int, int))
+  requires b > 0
+  requires a >= 0
+  ensures a == b * r.0 + r.1
+  ensures 0 <= r.1 and r.1 < b
+{
+  var q: int := 0;
+  var r_v: int := 0;
+  q := 0;
+  r_v := a;
+  while r_v >= b
+    invariant r_v >= 0
+    invariant a == b * q + r_v
+    decreases r_v
+  {
+    r_v := r_v - b;
+    q := q + 1;
+  }
+  r := (q, r_v);
+}
+
+
+t 1
+task formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns(i: int, k: int) returns (k_p: int)
+  requires k == i * i
+  ensures k_p == (i + 1) * (i + 1)
+{
+  k_p := k + 2 * i + 1;
+}
+
+
+t 1
+task formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__allow42(x: int, y: int) returns (r: (int, bool))
+  ensures y != 42 ==> r.0 == x / (42 - y) and r.1 == false
+  ensures y == 42 ==> r.0 == 0 and r.1 == true
+{
+  var z: int := 0;
+  var err: bool := false;
+  if y != 42 {
+    z := x / (42 - y);
+    return (z, false);
+  } else {
+  }
+  var tmp0: int := 0;
+  var tmp1: bool := true;
+  z := tmp0;
+  err := tmp1;
+  r := (z, err);
+}
+
+
+t 1
+task formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__forbid42(x: int, y: int) returns (z: int)
+  requires y != 42
+  ensures z == x / (42 - y)
+{
+  z := x / (42 - y);
+}
+
+
+t 1
+gate loops
+task laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise12__findMax(a: seq) returns (i: int)
+  requires 0 < len(a)
+  ensures 0 <= i
+  ensures i < len(a)
+  ensures forall k in [0, len(a)) . a[k] <= a[i]
+{
+  var j: int := 0;
+  var max: int := a[0];
+  i := 1;
+  while i < len(a)
+    invariant 1 <= i and i <= len(a)
+    invariant forall k_v in [0, i) . max >= a[k_v]
+    invariant 0 <= j and j < len(a)
+    invariant a[j] == max
+    decreases len(a) - i
+  {
+    if max < a[i] {
+      max := a[i];
+      j := i;
+    } else {
+    }
+    i := i + 1;
+  }
+  i := j;
+}
+
+
+t 1
+gate recursion
+task nitwit_tmp_tmplm098gxz_nit__max_nit(b: int) returns (nmax: int)
+  requires b >= 0
+  requires valid_base(b)
+  ensures nmax >= 0
+  ensures nitness(b, nmax)
+  ensures is_max_nit(b, nmax)
+spec fun valid_base(b_v: int): bool
+  decreases b_v
+= if b_v >= 0 then b_v >= 2 else false
+spec fun nitness(b_v2: int, n: int): bool
+  decreases b_v2 + n
+= if b_v2 >= 0 and n >= 0 and valid_base(b_v2) then 0 <= n and n < b_v2 else false
+spec fun is_max_nit(b_v3: int, q: int): bool
+  decreases b_v3 + q
+= if b_v3 >= 0 and q >= 0 then q == b_v3 - 1 else false
+{
+  nmax := b - 1;
+}
+
+
+t 1
+gate loops
+task se2011_tmp_tmp71eb82zt_ass1_ex4__eval(x: int) returns (r: int)
+  requires x >= 0
+  ensures r == x * x
+{
+  var y: int := x;
+  var z: int := 0;
+  while y > 0
+    invariant (0 <= y and y <= x) and z == x * (x - y)
+    decreases y
+  {
+    z := z + x;
+    y := y - 1;
+  }
+  r := z;
+}
+
+
+t 1
+task se2011_tmp_tmp71eb82zt_ass1_ex6__ceiling7(n: int) returns (k: int)
+  requires n >= 0
+  requires n >= 0
+  ensures k >= 0
+  ensures k == n - n % 7
+{
+  k := n - n % 7;
+}
+
+
+t 1
+gate loops
+task software_analysis_tmp_tmpmt6bo9sf_ss__find_min_index(a: seq, s: int, e: int) returns (min_i: int)
+  requires len(a) > 0
+  requires 0 <= s
+  requires s < len(a)
+  requires e <= len(a)
+  requires e > s
+  ensures min_i >= s
+  ensures min_i < e
+  ensures forall k in [s, e) . a[min_i] <= a[k]
+{
+  min_i := s;
+  var i: int := s;
+  while i < e
+    invariant s <= i and i <= e
+    invariant s <= min_i and min_i < e
+    invariant forall k_v in [s, i) . a[min_i] <= a[k_v]
+    decreases e - i
+  {
+    if a[i] <= a[min_i] {
+      min_i := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+task stunning_palm_tree_tmp_tmpr84c2iwh_ch1__min(x: int, y: int) returns (r: int)
+  ensures r <= x
+  ensures r <= y
+  ensures r == x or r == y
+{
+  if x <= y {
+    r := x;
+  } else {
+    r := y;
+  }
+}
+
+
+t 1
+task stunning_palm_tree_tmp_tmpr84c2iwh_ch1__minUnderSpec(x: int, y: int) returns (r: int)
+  ensures r <= x
+  ensures r <= y
+{
+  if x <= y {
+    r := x - 1;
+  } else {
+    r := y - 1;
+  }
+}
+
+
+t 1
+task stunning_palm_tree_tmp_tmpr84c2iwh_ch1__reconstructFromMaxSum(s: int, m: int) returns (r: (int, int))
+  requires s - m <= m
+  ensures s == r.0 + r.1
+  ensures m == r.1 or m == r.0
+  ensures r.0 <= m
+  ensures r.1 <= m
+{
+  var x: int := 0;
+  var y: int := 0;
+  x := m;
+  y := s - m;
+  r := (x, y);
+}
+
+
+t 1
+gate recursion
+task stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple_p(x: int) returns (r: int)
+  ensures average(2 * r, 6 * x) == 6 * x
+spec fun average(a: int, b: int): int
+  decreases a + b
+= (a + b) / 2
+{
+  r := x + x + x;
+}
+
+
+t 1
+task stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple(x: int) returns (r: int)
+  ensures r == 3 * x
+{
+  var y: int := 2 * x;
+  r := y + x;
+}
+
+
+t 1
+gate recursion
+task t1_mf_tmp_tmpi_sqie4j_exemplos_introducao_ex4__fatorial(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 0
+  ensures r == fat(n)
+spec fun fat(n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 1 else n_v * fat(n_v - 1) else 0
+{
+  r := 1;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant r == fat(i)
+    invariant r >= 0
+    decreases n - i
+  {
+    i := i + 1;
+    r := r * i;
+  }
+}
+
+
+t 0
+task abs(x: int) returns (r: int)
+  ensures r >= 0
+  ensures r == x or r == -x
+{
+  if x < 0 {
+    r := -x;
+  } else {
+    r := x;
+  }
+}
+
+
+t 1
+gate quantifiers
+task all_nonneg(s: seq) returns (r: bool)
+  ensures r == (forall i in [0, len(s)) . s[i] >= 0)
+{
+  r := true;
+  var i: int := 0;
+  while i < len(s)
+    invariant r == (forall j in [0, i) . j < len(s) ==> s[j] >= 0)
+    invariant i >= 0
+    decreases len(s) - i
+  {
+    if s[i] < 0 {
+      r := false;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate quantifiers
+task contains(s: seq, x: int) returns (r: bool)
+  ensures r == (exists i in [0, len(s)) . s[i] == x)
+{
+  r := false;
+  var i: int := 0;
+  while i < len(s)
+    invariant r == (exists j in [0, i) . j < len(s) and s[j] == x)
+    invariant i >= 0
+    decreases len(s) - i
+  {
+    if s[i] == x {
+      r := true;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task count_matches(s: seq, x: int) returns (r: int)
+  ensures r == count(s, x, len(s))
+spec fun count(s: seq, x: int, n: int): int
+  decreases n
+= if n <= 0 or n > len(s) then 0 else count(s, x, n - 1) + (if s[n - 1] == x then 1 else 0)
+{
+  r := 0;
+  var i: int := 0;
+  while i < len(s)
+    invariant r == count(s, x, i)
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] == x {
+      r := r + 1;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task digit_sum(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == dsum(n)
+spec fun dsum(n: int): int
+  decreases n
+= if n <= 0 then 0 else n % 10 + dsum(n / 10)
+{
+  r := 0;
+  var m: int := n;
+  while m > 0
+    invariant m >= 0
+    invariant r + dsum(m) == dsum(n)
+    decreases m
+  {
+    r := r + m % 10;
+    m := m / 10;
+  }
+}
+
+
+t 1
+task divmod_pair(x: int, y: int) returns (r: (int, int))
+  requires y > 0
+  ensures r.0 * y + r.1 == x
+  ensures 0 <= r.1
+  ensures r.1 < y
+{
+  r := (x / y, x % y);
+}
+
+
+t 1
+gate recursion
+task factorial(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == fact(n)
+  decreases n
+spec fun fact(n: int): int
+  decreases n
+= if n <= 0 then 1 else n * fact(n - 1)
+{
+  if n == 0 {
+    r := 1;
+  } else {
+    r := n * factorial(n - 1);
+  }
+}
+
+
+t 1
+gate recursion
+task fib(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == fibs(n)
+  decreases n
+spec fun fibs(n: int): int
+  decreases n
+= if n <= 0 then 0 else if n == 1 then 1 else fibs(n - 1) + fibs(n - 2)
+{
+  if n == 0 {
+    r := 0;
+  } else {
+    if n == 1 {
+      r := 1;
+    } else {
+      r := fib(n - 1) + fib(n - 2);
+    }
+  }
+}
+
+
+t 1
+gate loops
+task filter_pos(s: seq) returns (r: seq)
+  ensures len(r) <= len(s)
+  ensures forall k in [0, len(r)) . r[k] > 0
+{
+  r := [];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i
+    invariant i <= len(s)
+    invariant len(r) <= i
+    invariant forall k in [0, len(r)) . r[k] > 0
+    decreases len(s) - i
+  {
+    if s[i] > 0 {
+      r := r + [s[i]];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task first_even(s: seq) returns (r: int)
+  ensures r == -1 or r >= 0 and r < len(s) and s[r] % 2 == 0
+  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] % 2 != 0)
+  ensures r != -1 ==> (forall i in [0, r) . s[i] % 2 != 0)
+{
+  var i: int := 0;
+  while i < len(s)
+    invariant i >= 0 and i <= len(s)
+    invariant forall j in [0, i) . s[j] % 2 != 0
+    decreases len(s) - i
+  {
+    if s[i] % 2 == 0 {
+      return i;
+    } else {
+    }
+    i := i + 1;
+  }
+  r := -1;
+}
+
+
+t 1
+gate recursion
+task gcd(a: int, b: int) returns (r: int)
+  requires a >= 0
+  requires b >= 0
+  ensures r == gcds(a, b)
+  decreases a + b
+spec fun gcds(a: int, b: int): int
+  decreases a + b
+= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a
+{
+  if a == 0 {
+    r := b;
+  } else {
+    if b == 0 {
+      r := a;
+    } else {
+      if a > b {
+        r := gcd(a - b, b);
+      } else {
+        if b > a {
+          r := gcd(a, b - a);
+        } else {
+          r := a;
+        }
+      }
+    }
+  }
+}
+
+
+t 1
+gate loops
+task is_prime(n: int) returns (r: bool)
+  requires n >= 2
+  ensures r == (forall d in [2, n) . n % d != 0)
+{
+  var d: int := 2;
+  while d < n
+    invariant d >= 2 and d <= n
+    invariant forall k in [2, d) . n % k != 0
+    decreases n - d
+  {
+    if n % d == 0 {
+      return false;
+    } else {
+    }
+    d := d + 1;
+  }
+  r := true;
+}
+
+
+t 1
+gate loops
+task linear_search(s: seq, x: int) returns (r: int)
+  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x
+  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)
+  ensures r != -1 ==> (forall i in [0, r) . i < len(s) ==> s[i] != x)
+{
+  r := -1;
+  var i: int := 0;
+  while i < len(s) and r == -1
+    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)
+    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)
+    invariant i >= 0 and i <= len(s)
+    decreases len(s) - i
+  {
+    if s[i] == x {
+      r := i;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 0
+task max(x: int, y: int) returns (r: int)
+  ensures r >= x
+  ensures r >= y
+  ensures r == x or r == y
+{
+  if x >= y {
+    r := x;
+  } else {
+    r := y;
+  }
+}
+
+
+t 1
+task probe_names_dafny(function: int, method: int) returns (r: int)
+  ensures r >= function
+  ensures r >= method
+  ensures r == function or r == method
+{
+  var predicate: int := function;
+  if predicate >= method {
+    r := predicate;
+  } else {
+    r := method;
+  }
+}
+
+
+t 1
+task probe_names_framac(char: int, integer: int) returns (r: int)
+  ensures r >= char
+  ensures r >= integer
+  ensures r == char or r == integer
+{
+  var assigns: int := char;
+  if assigns >= integer {
+    r := assigns;
+  } else {
+    r := integer;
+  }
+}
+
+
+t 1
+task probe_names_fstar(let: int, match: int) returns (r: int)
+  ensures r >= let
+  ensures r >= match
+  ensures r == let or r == match
+{
+  var type: int := let;
+  if type >= match {
+    r := type;
+  } else {
+    r := match;
+  }
+}
+
+
+t 1
+task probe_names_lean(theorem: int, have: int) returns (r: int)
+  ensures r >= theorem
+  ensures r >= have
+  ensures r == theorem or r == have
+{
+  var match: int := theorem;
+  if match >= have {
+    r := match;
+  } else {
+    r := have;
+  }
+}
+
+
+t 1
+task probe_names_rocq(fix: int, measure: int) returns (r: int)
+  ensures r >= fix
+  ensures r >= measure
+  ensures r == fix or r == measure
+{
+  var cofix: int := fix;
+  if cofix >= measure {
+    r := cofix;
+  } else {
+    r := measure;
+  }
+}
+
+
+t 1
+task probe_names_spark(begin: int, loop: int) returns (r: int)
+  ensures r >= begin
+  ensures r >= loop
+  ensures r == begin or r == loop
+{
+  var package: int := begin;
+  if package >= loop {
+    r := package;
+  } else {
+    r := loop;
+  }
+}
+
+
+t 1
+task probe_names_upper(Left: int, Right: int) returns (r: int)
+  ensures r >= Left
+  ensures r >= Right
+  ensures r == Left or r == Right
+{
+  var Tmp: int := Left;
+  if Tmp >= Right {
+    r := Tmp;
+  } else {
+    r := Right;
+  }
+}
+
+
+t 1
+task probe_names_verus(proof: int, ghost: int) returns (r: int)
+  ensures r >= proof
+  ensures r >= ghost
+  ensures r == proof or r == ghost
+{
+  var exec: int := proof;
+  if exec >= ghost {
+    r := exec;
+  } else {
+    r := ghost;
+  }
+}
+
+
+t 1
+task remainder(x: int, y: int) returns (r: int)
+  requires y != 0
+  ensures x == x / y * y + r
+  ensures r >= 0
+  ensures r < y or r < -y
+{
+  r := x % y;
+}
+
+
+t 1
+gate loops
+task reverse(s: seq) returns (r: seq)
+  ensures len(r) == len(s)
+  ensures forall k in [0, len(s)) . r[k] == s[len(s) - 1 - k]
+{
+  r := seq(len(s), 0);
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i and i <= len(s)
+    invariant len(r) == len(s)
+    invariant forall k in [0, i) . r[k] == s[len(s) - 1 - k]
+    decreases len(s) - i
+  {
+    r := r[i := s[len(s) - 1 - i]];
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task row_max_len(m: seq<seq>) returns (r: int)
+  requires len(m) > 0
+  ensures forall k in [0, len(m)) . len(m[k]) <= r
+  ensures exists k in [0, len(m)) . len(m[k]) == r
+{
+  r := len(m[0]);
+  var i: int := 1;
+  while i < len(m)
+    invariant forall j in [0, i) . j < len(m) ==> len(m[j]) <= r
+    invariant exists j in [0, i) . j < len(m) and len(m[j]) == r
+    invariant i >= 1
+    decreases len(m) - i
+  {
+    if len(m[i]) > r {
+      r := len(m[i]);
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate quantifiers
+task seq_max(s: seq) returns (r: int)
+  requires len(s) > 0
+  ensures forall i in [0, len(s)) . r >= s[i]
+  ensures exists i in [0, len(s)) . r == s[i]
+{
+  r := s[0];
+  var i: int := 1;
+  while i < len(s)
+    invariant forall j in [0, i) . j < len(s) ==> r >= s[j]
+    invariant exists j in [0, i) . j < len(s) and r == s[j]
+    invariant i >= 1
+    decreases len(s) - i
+  {
+    if s[i] > r {
+      r := s[i];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task sum_upto(n: int) returns (r: int)
+  requires n >= 0
+  ensures 2 * r == n * (n + 1)
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant 2 * r == i * (i + 1)
+    invariant i >= 0 and i <= n
+    decreases n - i
+  {
+    i := i + 1;
+    r := r + i;
+  }
+}
+
+
+t 1
+gate quantifiers
+task swap(s: seq, i: int, j: int) returns (r: seq)
+  requires 0 <= i and i < len(s)
+  requires 0 <= j and j < len(s)
+  ensures len(r) == len(s)
+  ensures r[i] == s[j]
+  ensures r[j] == s[i]
+  ensures forall k in [0, len(s)) . k != i and k != j ==> r[k] == s[k]
+{
+  var tmp: int := s[i];
+  r := s[i := s[j]];
+  r := r[j := tmp];
+}
+
+
+t 1
+gate loops
+task tail(s: seq) returns (r: seq)
+  requires len(s) > 0
+  ensures len(r) == len(s) - 1
+  ensures forall k in [0, len(r)) . r[k] == s[k + 1]
+{
+  r := s[1..len(s)];
+}
+
+
+t 1
+task word_count(s: seq) returns (r: int)
+  ensures r == len(s.split())
+{
+  var t2: seq := s[0..len(s)];
+  r := len(t2.split());
+}
+

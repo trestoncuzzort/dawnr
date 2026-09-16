@@ -1,0 +1,519 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_36__find_Nth_Digit",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "var": "b"
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": ">=",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": "<=",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 9
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "power",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "or",
+      "args": [
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "power"
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "int": 10
+           },
+           {
+            "op": "*",
+            "args": [
+             {
+              "int": 10
+             },
+             {
+              "var": "i"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 0
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "power",
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "power"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "var": {
+    "name": "num",
+    "type": "int",
+    "init": {
+     "op": "*",
+     "args": [
+      {
+       "var": "power"
+      },
+      {
+       "var": "a"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "q",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "rem",
+    "type": "int",
+    "init": {
+     "var": "num"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "rem"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "q"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "rem"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "num"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "q"
+           },
+           {
+            "var": "b"
+           }
+          ]
+         },
+         {
+          "var": "rem"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "rem"
+    },
+    "body": [
+     {
+      "assign": [
+       "q",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "q"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "rem",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "rem"
+         },
+         {
+          "var": "b"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "var": {
+    "name": "digit",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "qrem",
+    "type": "int",
+    "init": {
+     "var": "q"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "qrem"
+      },
+      {
+       "int": 10
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "digit"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "qrem"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "q"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "digit"
+           },
+           {
+            "int": 10
+           }
+          ]
+         },
+         {
+          "var": "qrem"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "qrem"
+    },
+    "body": [
+     {
+      "assign": [
+       "digit",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "digit"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "qrem",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "qrem"
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "var": "qrem"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "task_id": 325,
+ "fn": "get_Min_Squares",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the minimum number of squares whose sum is equal to a given number.\nSignature: get_Min_Squares(int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate quantifiers\ntask mbpp_8__sum_num(s: seq) returns (r: int)\n  requires len(s) > 0\n  ensures forall i in [0, len(s)) . r >= s[i]\n  ensures exists i in [0, len(s)) . r == s[i]\n{\n  r := s[0];\n  var i: int := 1;\n  while i < len(s)\n    invariant forall j in [0, i) . j < len(s) ==> r >= s[j]\n    invariant exists j in [0, i) . j < len(s) and r == s[j]\n    invariant i >= 1\n    decreases len(s) - i\n  {\n    if s[i] > r {\n      r := s[i];\n    } else {\n    }\n    i := i + 1;\n  }\n}\n```",
+ "done_reason": "length"
+}

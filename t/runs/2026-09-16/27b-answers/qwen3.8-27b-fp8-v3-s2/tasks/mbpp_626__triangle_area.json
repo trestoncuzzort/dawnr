@@ -1,0 +1,56 @@
+{
+ "t": 0,
+ "name": "mbpp_626__triangle_area",
+ "params": [
+  {
+   "name": "x",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "var": "x"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "var": "x"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

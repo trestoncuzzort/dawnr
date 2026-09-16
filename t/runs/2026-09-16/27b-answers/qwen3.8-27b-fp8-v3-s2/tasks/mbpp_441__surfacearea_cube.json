@@ -1,0 +1,84 @@
+{
+ "t": 0,
+ "name": "mbpp_441__surfacearea_cube",
+ "params": [
+  {
+   "name": "x",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "x"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 6
+        },
+        {
+         "var": "x"
+        }
+       ]
+      },
+      {
+       "var": "x"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "int": 6
+        },
+        {
+         "var": "x"
+        }
+       ]
+      },
+      {
+       "var": "x"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

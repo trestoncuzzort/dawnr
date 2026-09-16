@@ -1,0 +1,22 @@
+{
+ "task_id": 786,
+ "fn": "right_insertion",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a function to locate the right insertion point for a specified value in sorted order.\nSignature: right_insertion(seq, int) -> int\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_195__rectangle_area(length: int, width: int) returns (r: int)\n  ensures r == length * width\n{\n  r := length * width;\n}\n```",
+ "done_reason": "length"
+}

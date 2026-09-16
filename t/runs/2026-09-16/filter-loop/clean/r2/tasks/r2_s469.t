@@ -1,0 +1,8 @@
+t 1
+task r2_s469(m: int, n: int) returns (d: int)
+  requires m > 0
+  ensures d < 10
+  ensures n % 10 == d
+{
+  d := n % 10;
+}

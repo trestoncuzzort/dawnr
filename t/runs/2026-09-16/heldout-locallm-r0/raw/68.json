@@ -1,0 +1,22 @@
+{
+ "task_id": 68,
+ "fn": "is_Monotonic",
+ "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "digest": "4891136 params",
+ "pool_version": "v3",
+ "prompt_version": "locallm-head",
+ "options": {
+  "temperature": 0.5,
+  "top_k": 20,
+  "chars": 1200,
+  "seed": 1
+ },
+ "messages": [
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the given array is monotonic or not.\nSignature: is_Monotonic(seq) -> bool\n"
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask mbpp_732__find_first_occurrence(s: seq, x: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [0, r) . i < len(s) ==> s[i] != x)\n  ensures r == -1 ==> (forall i in [0, len(s)) . i < len(s) ==> s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}\n```",
+ "done_reason": "length"
+}
