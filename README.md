@@ -21,7 +21,7 @@ Seven verdicts on one program catch what one verifier cannot: a mistranslation, 
 |---|---|---|
 | Committed tasks that verify, with the twin refuted, in all seven verifiers | 30 of 34 | [`t/AGREEMENT.md`](t/AGREEMENT.md) |
 | Conformance probes each verifier must pass | 457 of 462 | [`t/CONFORMANCE.md`](t/CONFORMANCE.md) |
-| Dafny programs from DafnyBench translated into t by the lifter and graded | 326 tasks from 785 programs, 182 of 326 in all seven | [`t/COVERAGE-lifted-785.md`](t/COVERAGE-lifted-785.md) |
+| Dafny programs from DafnyBench translated into t by the lifter and graded | 326 tasks from 785 programs, 192 of 326 in all seven | [`t/COVERAGE-lifted-785.md`](t/COVERAGE-lifted-785.md) |
 | The 164 LLM-written DafnyBench programs (MBPP-DFY) | 99 of 164 translate, 57 of 164 in all seven | [`t/COVERAGE-mbpp-dfy-lifter.md`](t/COVERAGE-mbpp-dfy-lifter.md) |
 | DafnyBench programs within t's current language | 334 of 643 gradable | [`t/COVERAGE-dafnybench.md`](t/COVERAGE-dafnybench.md) |
 | Natural-language programming problems with tests, the corpus t aims at | 24,748 problems, 772 of 4,239 function-shaped ones within t's language | [`nl/`](nl/), [`t/COVERAGE-nl.md`](t/COVERAGE-nl.md) |
@@ -29,7 +29,7 @@ Seven verdicts on one program catch what one verifier cannot: a mistranslation, 
 | A 27B model writing t tasks from MBPP problems, thinking off | 143 of 368 well formed, 44 verify with a refuted twin in all seven and pass the tests (the 7B managed 4) | [`t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md`](t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md) |
 | tup 0.1 | boots from its own disk to a login prompt under QEMU in 20 to 45 seconds depending on the host, witnessed on macOS, Ubuntu and Windows by someone other than the author | [`tup/receipts/`](tup/receipts/) |
 
-Numbers above are from 2026-09-15. When a number moves, the record moves with it.
+Numbers above are from 2026-09-16. When a number moves, the record moves with it.
 
 ## The verifiers
 

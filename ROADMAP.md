@@ -2,7 +2,7 @@
 
 This is the plan for t and tup: what is done, what is next, and what 1.0 means. Every item has a finish line a third person can check. There are no dates. The dated engineering log behind this page, with every measurement and the reasoning, is [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md); the numbers here are copied from it and from the tables it cites.
 
-Numbers on this page are as of 2026-09-15.
+Numbers on this page are as of 2026-09-16.
 
 ## Words used below
 
@@ -61,7 +61,7 @@ Done. `.t` files are the input ([`t/tasks/`](t/tasks/)); parse and well-formedne
 
 **16.1 The lifter, the sweep, the spec experiment.** Done. The lifter translates DafnyBench programs into t and checks each translation by lemma and by a differential run ([`t/LIFTER-DESIGN.md`](t/LIFTER-DESIGN.md), 35 recorded decisions in [`t/LIFTER-DECISIONS.md`](t/LIFTER-DECISIONS.md)). The sweep grades every lifted task in every verifier ([`t/COVERAGE-lifted-785.md`](t/COVERAGE-lifted-785.md)). The spec experiment asks a model to write a t task from a problem statement and grades the answer with all seven verifiers and the problem's tests ([`t/SPEC-EXPERIMENT-mbpp.md`](t/SPEC-EXPERIMENT-mbpp.md)). One script reproduces all three from scratch ([`t/reproduce.sh`](t/reproduce.sh)).
 
-**16.2 MBPP-DFY to half.** Open, at 57 of 82. The count has moved 5, 34, 48, 53, 56, 45, 54, 56, 57 across the sweeps since 2026-09-06; the drop to 45 was the cost of a stricter twin rule (a refuted twin must be a program whose output differs at a verifier-confirmed input), and the rows have been earned back since. What blocks the remaining rows, by name: a membership invariant over a growing sequence that Verus, Lean and F\* do not yet prove; a Frama-C size bound that must come from a loop invariant; a Rocq bound lemma for recursive specification functions; then the lifter rules 13.1 names. The next sweep after each fix says the number.
+**16.2 MBPP-DFY to half.** Open, at 57 of 82. The count has moved 5, 34, 48, 53, 56, 45, 54, 56, 57, 57 across the sweeps since 2026-09-06 (the wider lifted corpus went 182 to 192 of 326 on the last one); the drop to 45 was the cost of a stricter twin rule (a refuted twin must be a program whose output differs at a verifier-confirmed input), and the rows have been earned back since. What blocks the remaining rows, by name: a membership invariant over a growing sequence that Verus, Lean and F\* do not yet prove; a Frama-C size bound that must come from a loop invariant; a Rocq bound lemma for recursive specification functions; then the lifter rules 13.1 names. The next sweep after each fix says the number.
 
 **16.3 The next corpora.** Open. HumanEval and MBPP bodies from nl/ through the same pipeline. Done when a second coverage table, in the same format, exists over a second corpus.
 
