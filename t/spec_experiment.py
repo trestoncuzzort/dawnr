@@ -810,6 +810,11 @@ def run_point(task: dict, point: dict) -> dict:
         return {"verdict": "undefined", "why": str(u)[:120]}
     except (interp.Budget, RecursionError) as b:
         return {"verdict": "budget", "why": str(b)[:120]}
+    except (TypeError, ValueError, KeyError, IndexError, AttributeError) as c:
+        # 2026-09-16: a locallm answer that check_wf admitted multiplied a seq by
+        # a pair and crashed the whole stage; a crash on one candidate is that
+        # candidate failing, recorded with the interpreter's message
+        return {"verdict": "crash", "why": f"{type(c).__name__}: {c}"[:120]}
     ekind, eval_ = point["expected"]
     if got is None:
         return {"verdict": "undefined", "why": "no path assigned the return"}
@@ -843,7 +848,7 @@ def cmd_tests(args) -> int:
             overall = "pass"
         elif any(v in ("arity", "type") for v in verdicts):
             overall = "signature"
-        elif any(v == "fail" for v in verdicts):
+        elif any(v in ("fail", "crash") for v in verdicts):
             overall = "fail"
         elif any(v == "requires-excluded" for v in verdicts):
             overall = "requires-excluded"
