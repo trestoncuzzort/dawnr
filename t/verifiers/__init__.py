@@ -83,6 +83,48 @@ def sha256_file(p: Path) -> str:
     return h.hexdigest()
 
 
+# Process groups run_tree has started and not yet collected. start_new_session
+# detaches a prover from its driver's process group, so a driver killed from
+# outside (a stopped agent, a closed tmux session, SIGTERM) left its prover
+# running with nobody to kill it: 2026-09-16, six orphaned rocqworker
+# processes (/tmp/t-rocq-* scratch dirs, parent systemd) had run 24 to 44
+# hours and held about 290 GB of memory between them. The driver now kills
+# every live group at interpreter exit and on SIGTERM or SIGHUP, then takes
+# the signal's default action. SIGKILL of the driver still cannot be caught.
+_LIVE_GROUPS: set[int] = set()
+
+
+def _kill_live_groups() -> None:
+    import signal
+    for pg in list(_LIVE_GROUPS):
+        try:
+            os.killpg(pg, signal.SIGKILL)
+        except OSError:
+            pass
+
+
+def _kill_live_groups_and_die(signum, frame) -> None:
+    import signal
+    _kill_live_groups()
+    signal.signal(signum, signal.SIG_DFL)
+    os.kill(os.getpid(), signum)
+
+
+def _install_group_reaper() -> None:
+    import atexit
+    import signal
+    atexit.register(_kill_live_groups)
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        try:
+            if signal.getsignal(sig) is signal.SIG_DFL:
+                signal.signal(sig, _kill_live_groups_and_die)
+        except ValueError:      # not the main thread: atexit still holds
+            pass
+
+
+_install_group_reaper()
+
+
 def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
              text=False, **kw):
     """subprocess.run for a prover that forks. The child starts its own
@@ -100,6 +142,7 @@ def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
         stdout=subprocess.PIPE if capture_output else None,
         stderr=subprocess.PIPE if capture_output else None,
         text=text, **kw)
+    _LIVE_GROUPS.add(proc.pid)
     try:
         out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -109,6 +152,8 @@ def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
             pass
         proc.communicate()
         raise
+    finally:
+        _LIVE_GROUPS.discard(proc.pid)
     return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
 
 
