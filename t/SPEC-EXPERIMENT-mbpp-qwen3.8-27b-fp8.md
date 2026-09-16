@@ -206,7 +206,7 @@ MBPP-DFY subset: 67 pool problems are MBPP-DFY problems (ROADMAP 16.2's family);
 | 739 | mbpp_739__find_Index | 0 | pass | unproved / refuted | unproved / refuted | timeout / refuted | refuted / refuted | abstain / abstain | abstain / abstain | unproved / refuted |
 | 752 | mbpp_752__jacobsthal_num | 0 | pass | unproved / unproved | unproved / refuted | unproved / refuted | vacuous / vacuous | unproved / unproved | unproved / unproved | unproved / refuted |
 | 770 | mbpp_770__odd_Num_Sum | 0 | pass | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| 777 | mbpp_777__find_Sum | 0 | pass | unproved / unproved | unproved / unproved | timeout / refuted | abstain / abstain | unproved / unproved | abstain / abstain | malformed / malformed |
+| 777 | mbpp_777__find_Sum | 0 | pass | unproved / unproved | unproved / unproved | timeout / refuted | abstain / abstain | unproved / unproved | abstain / abstain | unproved / refuted |
 | 786 | mbpp_786__right_insertion | 6 | pass | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
 | 789 | mbpp_789__perimeter_polygon | 7 | pass | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | 793 | mbpp_793__last | 7 | requires-excluded | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -217,7 +217,7 @@ MBPP-DFY subset: 67 pool problems are MBPP-DFY problems (ROADMAP 16.2's family);
 | 837 | mbpp_837__cube_Sum | 7 | pass | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | 845 | mbpp_845__find_Digits | 0 | pass | unproved / refuted | unproved / refuted | timeout / refuted | refuted / refuted | abstain / abstain | abstain / abstain | unproved / refuted |
 | 873 | mbpp_873__fibonacci | 7 | pass | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| 876 | mbpp_876__lcm | 0 | fail | refuted / refuted | refuted / refuted | refuted / refuted | timeout / refuted | timeout / unproved | refuted / refuted | refuted / refuted |
+| 876 | mbpp_876__lcm | 0 | fail | refuted / refuted | refuted / refuted | refuted / refuted | timeout / refuted | refuted / unproved (FLAKED) | refuted / refuted | refuted / refuted |
 | 882 | mbpp_882__parallelogram_perimeter | 7 | pass | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | 890 | mbpp_890__find_Extra | 6 | pass | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / refuted | verified / refuted |
 | 891 | mbpp_891__same_Length | 0 | fail | refuted / refuted | refuted / refuted | timeout / timeout | vacuous / vacuous | abstain / abstain | abstain / abstain | refuted / refuted |
