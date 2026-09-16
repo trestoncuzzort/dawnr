@@ -51,3 +51,13 @@ Everything the loop needs is on GitHub (`https://github.com/trestoncuzzort/tup.g
 - `t/runs/2026-09-16/`: the data and scripts of the first measurements, including every model locallm built.
 
 The next measurement that matters is the size-matched comparison on held-out problems with tests. It needs more problem examples in the clean pool, which is what generation on the desktop is for.
+
+## Running the lab app on the Mac
+
+`t/lab.py` is one dark window with two tabs: Live checks (every check as it runs, in plain words) and Test a model (pick a model locallm built, choose the checks, press Run).
+
+1. Python 3.10 or newer with Tk. The python.org installer includes Tk. With Homebrew: `brew install python python-tk`.
+2. For model tests, a virtual environment with torch: `python3 -m venv ~/.venv-t && ~/.venv-t/bin/pip install torch`.
+3. From the repository root: `~/.venv-t/bin/python t/lab.py`.
+
+The models locallm built on 2026-09-16 are in `t/runs/2026-09-16/` (Git LFS; run `git lfs pull` after cloning) and show up in the model list. The readable, rules and new checks work with Python alone. A "Proven by" check needs that checker installed; Dafny is the one to install first. The Live checks tab fills in whenever `t/run_par.py` runs with `T_WATCH` set, which the Test tab does by itself.
