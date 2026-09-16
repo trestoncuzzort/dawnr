@@ -603,7 +603,7 @@ def cmd_generate(args) -> int:
     ids = sorted(P)
     if args.limit:
         ids = ids[:args.limit]
-    options = {"temperature": 0, "seed": args.seed, "num_ctx": args.num_ctx,
+    options = {"temperature": args.temperature, "seed": args.seed, "num_ctx": args.num_ctx,
                "num_predict": args.num_predict}
     digest = model_digest(args.host, args.model)
     todo = [tid for tid in ids if not (d / "raw" / f"{tid}.json").exists()]
@@ -1059,6 +1059,10 @@ def main(argv=None) -> int:
             p.add_argument("--num-predict", type=int, default=1024)
             p.add_argument("--timeout", type=float, default=600.0)
             p.add_argument("--jobs", type=int, default=1)
+            p.add_argument("--temperature", type=float, default=0.0,
+                            help="0 (default, the frozen experiments) or a sampling "
+                                 "temperature for several answers per problem, one "
+                                 "--seed and --tag per answer set")
             p.add_argument("--tag", default="",
                             help="record directory under out/spec-experiment "
                                  "when it differs from the served model name "
