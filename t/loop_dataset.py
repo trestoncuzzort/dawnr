@@ -661,7 +661,8 @@ def run_from_samples(args) -> int:
     train_ids = set(split.get("train_ids", split.get("used_task_ids", [])))
     eval_ids = set(split.get("eval_ids", split.get("heldout_task_ids", [])))
 
-    pool = spec_experiment.pool()
+    # the split names its pool (split-v3.json, 2026-09-16); older splits are v1
+    pool = spec_experiment.pool(split.get("pool", "v1"))
     min_kernels = args.min_kernels
 
     passk = {"train": {"problems": 0, "wellformed": 0, "tests_pass": 0, "positive": 0},
