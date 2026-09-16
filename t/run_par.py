@@ -54,6 +54,24 @@ BACKENDS = [
 ]
 
 
+def _watch_event(**ev) -> None:
+    """One JSON line per cell start and end, appended to the file named by
+    T_WATCH (unset: nothing is written). t/watch_gui.py reads the file and
+    opens one window per running cell. A single short write in append mode,
+    so concurrent workers do not interleave lines. Added 2026-09-16."""
+    path = os.environ.get("T_WATCH")
+    if not path:
+        return
+    import json
+    import time
+    ev.update(pid=os.getpid(), t=time.time())
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(ev) + "\n")
+    except OSError:
+        pass
+
+
 def _run_cell(bname: str, task_name: str, suffix: str, op: str, flake_n: int = 3):
     # Re-imported per call: correct under spawn (fresh interpreter, no
     # inherited module object); a sys.modules hit under fork, used below.
@@ -63,7 +81,15 @@ def _run_cell(bname: str, task_name: str, suffix: str, op: str, flake_n: int = 3
     backend = importlib.import_module(f"verifiers.{bname}")
     real = harness.OUT / f"{task_name}.{suffix}"
     twin = harness.OUT / f"{task_name}_twin.{suffix}"
-    (r_real, a1), (r_twin, a2) = cell_pair(backend.verify, real, twin, flake_n)
+    _watch_event(ev="start", task=task_name, kernel=bname, op=op)
+    try:
+        (r_real, a1), (r_twin, a2) = cell_pair(backend.verify, real, twin, flake_n)
+    except BaseException as e:
+        _watch_event(ev="end", task=task_name, kernel=bname, real="error",
+                     twin=type(e).__name__, agree=False)
+        raise
+    _watch_event(ev="end", task=task_name, kernel=bname, real=str(r_real.outcome),
+                 twin=str(r_twin.outcome), agree=bool(a1 and a2))
     return task_name, bname, op, (r_real.outcome, r_twin.outcome, a1 and a2)
 
 
