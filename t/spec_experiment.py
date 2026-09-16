@@ -598,7 +598,7 @@ def model_digest(host: str, model: str) -> str:
 # ollama would serialize them). Records are per problem, written whole, and
 # identical in shape to a sequential run; temperature 0 with a fixed seed.
 def cmd_generate(args) -> int:
-    d = outdir(args.model)
+    d = outdir(args.tag or args.model)
     P = pool(args.pool)
     ids = sorted(P)
     if args.limit:
@@ -1059,6 +1059,11 @@ def main(argv=None) -> int:
             p.add_argument("--num-predict", type=int, default=1024)
             p.add_argument("--timeout", type=float, default=600.0)
             p.add_argument("--jobs", type=int, default=1)
+            p.add_argument("--tag", default="",
+                            help="record directory under out/spec-experiment "
+                                 "when it differs from the served model name "
+                                 "(a second pool for the same model); later "
+                                 "stages take it as --model")
         if name == "table":
             p.add_argument("--out", default=str(HERE / "SPEC-EXPERIMENT-mbpp.md"))
     args = ap.parse_args(argv)
