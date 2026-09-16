@@ -11,7 +11,7 @@ the file named by T_WATCH, and this tab lists the running cells with their
 live prover processes and memory (read from /proc) and the finished cells
 with their verdicts, green for verified / refuted and red otherwise.
 
-Test a model. Pick any locallm model directory (a ckpt.pt beside a
+Test a model. Pick any model directory locallm wrote (a ckpt.pt beside a
 tokenizer.json), a prompt, how many samples and how they are drawn, then
 tick the checks to apply to every sample:
 
