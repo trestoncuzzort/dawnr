@@ -298,6 +298,9 @@ def main() -> int:
                     help="directory for lowered sources and kernel logs (default t/out)")
     ap.add_argument("--table", type=Path, default=HERE / "AGREEMENT.md",
                     help="where the agreement table is written (default t/AGREEMENT.md)")
+    ap.add_argument("--kernels", default="",
+                    help="comma-separated subset of the seven kernels to grade "
+                         "(default all); the table shows only these columns")
     args = ap.parse_args()
     jobs_arg = args.jobs
     harness.OUT = args.out
@@ -309,6 +312,10 @@ def main() -> int:
     # the task named clover_abs__abs, measured 2026-09-06). lower_and_dispatch
     # builds the rows skeleton itself, from the same `tasks` list.
     cols, present = probe_backends()
+    if args.kernels:
+        keep = {k.strip() for k in args.kernels.split(",") if k.strip()}
+        cols = [(b, v) for b, v in cols if b in keep]
+        present = [p for p in present if p[0] in keep]
     rows, wits, all_ok = lower_and_dispatch(tasks, present, jobs_arg)
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
     MIN_KERNELS = int(os.environ.get("T_MIN_KERNELS", "2"))
