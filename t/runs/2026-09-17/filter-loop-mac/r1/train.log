@@ -1,0 +1,45 @@
+lr: 3.00e-03 (auto, width-scaled from n_embd=256; pass --lr to override)
+corpus: 101,122 chars | vocab 82 | device mps
+model: 3.18M params | 4L 4H 256D
+step     0 | train 4.4221 | val 4.4200 | lr 4.00e-05 | 1s
+step   250 | train 0.8154 | val 0.9467 | lr 2.90e-03 | 10s
+step   500 | train 0.4700 | val 0.7303 | lr 2.45e-03 | 17s
+step   750 | train 0.2975 | val 0.6705 | lr 1.76e-03 | 24s
+step  1000 | train 0.2047 | val 0.6766 | lr 1.04e-03 | 30s
+step  1250 | train 0.1558 | val 0.6957 | lr 5.00e-04 | 37s
+step  1499 | train 0.1345 | val 0.7049 | lr 3.00e-04 | 44s
+
+saved model + tokenizer to /Users/juliangarcia/tup/t/out/loop-filter-mac/r1/model/
+
+--- how does that compare to a model that cannot learn? ---
+  pure guessing (every character equally likely)       6.358 bits/char    82.00 choices
+  knowing only which letters are common                4.648 bits/char    25.07 choices
+  a lookup table on the previous 2 characters          2.312 bits/char     4.97 choices
+  YOUR MODEL                                           1.018 bits/char     2.02 choices
+  Beating pure guessing is easy — the lookup table above does most of it for free.
+  Of what the lookup table could NOT do, your model did 74%. That part needed learning.
+recorded to runs.jsonl  (python runlog.py to review)
+
+--- sample from your model ---
+
+  ensures r >= x
+  ensures r >= y
+  ensures r >= y
+  ensures r == x or r == y
+{
+  if x <= y {
+    r := x;
+  } else {
+    r := y;
+  }
+}
+
+t 1
+task dafny_synthesis_task_id_2782___swapFirstAndLast(a: seq) returns (a_out: seq)
+  requires len(a) > 0
+  ensures len(a_out) == len(a)
+  ensures forall i in [0, len(a_out)) . a_out[i] == a[i] + 1 == a[i]
+{
+  a_out := a;
+  var i: int := 0;
+  while j < len(a_out

@@ -1,0 +1,5 @@
+start 2026-09-17T00:43:42Z python=Python 3.12.14 device=mps
+source: 269 blocks, 94501 chars, 259 parse
+round 0: corpus 269 docs; samples 500, parsed 341, well-formed 125, novel 112
+round 0: clean in all seven 35, in at least one 37; clean share of samples 35/500; clean pool 35
+round 1: corpus 304 docs; samples 500, parsed 390, well-formed 227, novel 166

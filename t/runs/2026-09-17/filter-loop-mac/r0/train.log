@@ -1,0 +1,48 @@
+lr: 3.00e-03 (auto, width-scaled from n_embd=256; pass --lr to override)
+corpus: 94,769 chars | vocab 82 | device mps
+model: 3.18M params | 4L 4H 256D
+step     0 | train 4.4203 | val 4.4227 | lr 4.00e-05 | 0s
+step   250 | train 0.8488 | val 1.0033 | lr 2.90e-03 | 7s
+step   500 | train 0.4798 | val 0.6687 | lr 2.45e-03 | 14s
+step   750 | train 0.3073 | val 0.5699 | lr 1.76e-03 | 21s
+step  1000 | train 0.2112 | val 0.5394 | lr 1.04e-03 | 28s
+step  1250 | train 0.1556 | val 0.5395 | lr 5.00e-04 | 34s
+step  1499 | train 0.1342 | val 0.5506 | lr 3.00e-04 | 41s
+
+saved model + tokenizer to /Users/juliangarcia/tup/t/out/loop-filter-mac/r0/model/
+
+--- how does that compare to a model that cannot learn? ---
+  pure guessing (every character equally likely)       6.358 bits/char    82.00 choices
+  knowing only which letters are common                4.716 bits/char    26.29 choices
+  a lookup table on the previous 2 characters          2.461 bits/char     5.51 choices
+  YOUR MODEL                                           0.794 bits/char     1.73 choices
+  Beating pure guessing is easy — the lookup table above does most of it for free.
+  Of what the lookup table could NOT do, your model did 84%. That part needed learning.
+recorded to runs.jsonl  (python runlog.py to review)
+
+--- sample from your model ---
+
+  ensures res == 3 * x
+spec fun average(a: int, b: int): int
+  decreases r a + b
+= 0
+  decreases a + x
+= if a <= y then x else if a >= y then gcds(a, b) else a
+{
+  if a <= y {
+    r := x;
+  } else {
+    z := y;
+  }
+}
+
+t 1
+task dafny_synthesis_task_id_619___multiply(a: int, b: int) returns (result: int)
+  requires b >= 0
+  ensures result == a / b
+{
+  result := (a / b);
+}
+
+t 1
+task dafny_synthesis_t

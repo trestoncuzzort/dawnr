@@ -22,7 +22,14 @@ PATH = ("{h}/.cargo/bin:{h}/.opam/default/bin:{h}/.elan/bin:{h}/.local/fstar/fst
         "{h}/.local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin:{h}/.local/verus/verus-x86-linux:").format(h=Path.home())
 
 def key(task):
+    # The program with its name, format version and gate erased: none of the
+    # three changes what the kernels check. Until 2026-09-17 the version
+    # stayed in the key, so a sample written as `t 1` never matched a `t 0`
+    # corpus document it copied exactly (the 27B answers are `t 0`); recounted
+    # on 2026-09-16's committed rounds, 17 of clean r0's 46 and 26 of r1's 57
+    # were such copies (t/runs/2026-09-17/README.md).
     t = se.rename_task(__import__("copy").deepcopy(task), "x_task")
+    t.pop("gate", None); t["t"] = 1
     return surface.canon(t)
 
 def split_docs(text):

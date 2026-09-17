@@ -184,8 +184,13 @@ def entry(parent, var, app, width=None):
 # --------------------------------------------------------------- t checks --
 
 def task_key(task: dict) -> str:
-    """The program with its name erased (rename_task edits in place, so a copy)."""
-    return surface.canon(se.rename_task(copy.deepcopy(task), "x_task"))
+    """The program with its name, format version and gate erased (rename_task
+    edits in place, so a copy). None of the three changes what the kernels
+    check; keeping the version let a `t 1` sample copy a `t 0` corpus task
+    unseen (loop_filter.key, 2026-09-17)."""
+    t = se.rename_task(copy.deepcopy(task), "x_task")
+    t.pop("gate", None); t["t"] = 1
+    return surface.canon(t)
 
 
 def first_task(text: str):

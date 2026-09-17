@@ -9,3 +9,5 @@ The data behind the paragraphs dated 2026-09-16 in `internal/ROADMAP-LOG.md`, ke
 - `logs/`: the run logs.
 
 Headline: at the same data size, 46 of 500 programs were clean from the clean corpus against 3 from raw output. The clean loop reached 57 at round 1.
+
+2026-09-17: those counts include exact copies of corpus tasks the copy check missed (it compared the format version, and the 27B answers are `t 0` while samples are `t 1`). With copies removed: 29 against 1, and 31 at round 1 (`t/runs/2026-09-17/README.md`).

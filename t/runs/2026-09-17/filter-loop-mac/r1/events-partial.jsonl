@@ -1,0 +1,1398 @@
+{"ev": "start", "task": "r1_s101", "kernel": "dafny", "op": "compare-flip", "pid": 64484, "t": 1789608325.181141}
+{"ev": "start", "task": "r1_s102", "kernel": "dafny", "op": "off-by-one#1", "pid": 64485, "t": 1789608325.181718}
+{"ev": "end", "task": "r1_s102", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608327.21859}
+{"ev": "start", "task": "r1_s103", "kernel": "dafny", "op": "wrong-var#2", "pid": 64485, "t": 1789608327.218972}
+{"ev": "end", "task": "r1_s101", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608327.3625689}
+{"ev": "start", "task": "r1_s104", "kernel": "dafny", "op": "wrong-constant", "pid": 64484, "t": 1789608327.363008}
+{"ev": "end", "task": "r1_s103", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608329.187274}
+{"ev": "start", "task": "r1_s105", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608329.1876101}
+{"ev": "end", "task": "r1_s104", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608329.267806}
+{"ev": "start", "task": "r1_s109", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608329.268121}
+{"ev": "end", "task": "r1_s105", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608331.2713559}
+{"ev": "end", "task": "r1_s109", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608331.2714071}
+{"ev": "start", "task": "r1_s112", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608331.271643}
+{"ev": "start", "task": "r1_s113", "kernel": "dafny", "op": "compare-flip", "pid": 64484, "t": 1789608331.2716858}
+{"ev": "end", "task": "r1_s112", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608333.35241}
+{"ev": "start", "task": "r1_s115", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608333.352721}
+{"ev": "end", "task": "r1_s113", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608333.354374}
+{"ev": "start", "task": "r1_s12", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608333.354592}
+{"ev": "end", "task": "r1_s115", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608335.264374}
+{"ev": "start", "task": "r1_s124", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608335.264658}
+{"ev": "end", "task": "r1_s12", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608335.3429592}
+{"ev": "start", "task": "r1_s129", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608335.343283}
+{"ev": "end", "task": "r1_s124", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608337.0646122}
+{"ev": "start", "task": "r1_s130", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608337.06492}
+{"ev": "end", "task": "r1_s129", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608337.1331341}
+{"ev": "start", "task": "r1_s134", "kernel": "dafny", "op": "wrong-var", "pid": 64484, "t": 1789608337.133452}
+{"ev": "end", "task": "r1_s134", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608339.7771049}
+{"ev": "start", "task": "r1_s140", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608339.77738}
+{"ev": "end", "task": "r1_s130", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608339.815171}
+{"ev": "start", "task": "r1_s142", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608339.81549}
+{"ev": "end", "task": "r1_s142", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608341.9824169}
+{"ev": "start", "task": "r1_s145", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608341.982749}
+{"ev": "end", "task": "r1_s140", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608342.118069}
+{"ev": "start", "task": "r1_s146", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608342.11836}
+{"ev": "end", "task": "r1_s145", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608343.757154}
+{"ev": "start", "task": "r1_s147", "kernel": "dafny", "op": "wrong-var", "pid": 64485, "t": 1789608343.757462}
+{"ev": "end", "task": "r1_s146", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608343.857414}
+{"ev": "start", "task": "r1_s150", "kernel": "dafny", "op": "wrong-operator", "pid": 64484, "t": 1789608343.8577862}
+{"ev": "end", "task": "r1_s147", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608346.4372869}
+{"ev": "start", "task": "r1_s151", "kernel": "dafny", "op": "negate-cond", "pid": 64485, "t": 1789608346.4379342}
+{"ev": "end", "task": "r1_s150", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608346.4640498}
+{"ev": "start", "task": "r1_s152", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608346.464828}
+{"ev": "end", "task": "r1_s151", "kernel": "dafny", "real": "unproved", "twin": "unproved", "agree": true, "pid": 64485, "t": 1789608347.86011}
+{"ev": "start", "task": "r1_s153", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608347.8604228}
+{"ev": "end", "task": "r1_s152", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608348.859008}
+{"ev": "start", "task": "r1_s156", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608348.859385}
+{"ev": "end", "task": "r1_s153", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608350.2957911}
+{"ev": "start", "task": "r1_s158", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608350.296097}
+{"ev": "end", "task": "r1_s156", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608351.0437272}
+{"ev": "start", "task": "r1_s165", "kernel": "dafny", "op": "negate-cond", "pid": 64484, "t": 1789608351.044072}
+{"ev": "end", "task": "r1_s158", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608352.2488818}
+{"ev": "start", "task": "r1_s167", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608352.249185}
+{"ev": "end", "task": "r1_s165", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608353.3869948}
+{"ev": "start", "task": "r1_s168", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608353.387306}
+{"ev": "end", "task": "r1_s167", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608354.058773}
+{"ev": "start", "task": "r1_s171", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608354.0591161}
+{"ev": "end", "task": "r1_s168", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608355.524488}
+{"ev": "start", "task": "r1_s175", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608355.524788}
+{"ev": "end", "task": "r1_s171", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608356.42463}
+{"ev": "start", "task": "r1_s179", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608356.424931}
+{"ev": "end", "task": "r1_s175", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608357.393864}
+{"ev": "start", "task": "r1_s180", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608357.39416}
+{"ev": "end", "task": "r1_s179", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608358.034611}
+{"ev": "start", "task": "r1_s183", "kernel": "dafny", "op": "compare-flip", "pid": 64485, "t": 1789608358.034941}
+{"ev": "end", "task": "r1_s180", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608359.3929842}
+{"ev": "start", "task": "r1_s188", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608359.393279}
+{"ev": "end", "task": "r1_s183", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608359.800433}
+{"ev": "start", "task": "r1_s19", "kernel": "dafny", "op": "wrong-var", "pid": 64485, "t": 1789608359.800761}
+{"ev": "end", "task": "r1_s19", "kernel": "dafny", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64485, "t": 1789608360.556711}
+{"ev": "start", "task": "r1_s196", "kernel": "dafny", "op": "compare-flip", "pid": 64485, "t": 1789608360.557}
+{"ev": "end", "task": "r1_s188", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608361.499934}
+{"ev": "start", "task": "r1_s201", "kernel": "dafny", "op": "wrong-constant", "pid": 64484, "t": 1789608361.500266}
+{"ev": "end", "task": "r1_s196", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608362.761067}
+{"ev": "start", "task": "r1_s203", "kernel": "dafny", "op": "off-by-one#1", "pid": 64485, "t": 1789608362.7613661}
+{"ev": "end", "task": "r1_s201", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608363.39194}
+{"ev": "start", "task": "r1_s206", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608363.392263}
+{"ev": "end", "task": "r1_s203", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608364.548065}
+{"ev": "start", "task": "r1_s207", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608364.548414}
+{"ev": "end", "task": "r1_s206", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608365.17859}
+{"ev": "start", "task": "r1_s210", "kernel": "dafny", "op": "off-by-one#1", "pid": 64484, "t": 1789608365.178951}
+{"ev": "end", "task": "r1_s207", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608366.351362}
+{"ev": "start", "task": "r1_s211", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608366.35167}
+{"ev": "end", "task": "r1_s210", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608366.926347}
+{"ev": "start", "task": "r1_s215", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608366.926807}
+{"ev": "end", "task": "r1_s211", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608368.289978}
+{"ev": "start", "task": "r1_s217", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608368.290275}
+{"ev": "end", "task": "r1_s215", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608368.764735}
+{"ev": "start", "task": "r1_s22", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608368.765122}
+{"ev": "end", "task": "r1_s217", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608370.139895}
+{"ev": "start", "task": "r1_s221", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608370.1402829}
+{"ev": "end", "task": "r1_s22", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608370.529535}
+{"ev": "start", "task": "r1_s227", "kernel": "dafny", "op": "wrong-constant", "pid": 64484, "t": 1789608370.5298612}
+{"ev": "end", "task": "r1_s221", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608372.151476}
+{"ev": "start", "task": "r1_s228", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608372.1518002}
+{"ev": "end", "task": "r1_s227", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608372.399225}
+{"ev": "start", "task": "r1_s230", "kernel": "dafny", "op": "wrong-var", "pid": 64484, "t": 1789608372.399521}
+{"ev": "end", "task": "r1_s228", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608373.938209}
+{"ev": "start", "task": "r1_s232", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608373.938522}
+{"ev": "end", "task": "r1_s230", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608374.120168}
+{"ev": "start", "task": "r1_s235", "kernel": "dafny", "op": "compare-flip", "pid": 64484, "t": 1789608374.120487}
+{"ev": "end", "task": "r1_s232", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608375.557746}
+{"ev": "start", "task": "r1_s236", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608375.5580611}
+{"ev": "end", "task": "r1_s235", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608375.989619}
+{"ev": "start", "task": "r1_s237", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608375.989917}
+{"ev": "end", "task": "r1_s236", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608377.475716}
+{"ev": "start", "task": "r1_s238", "kernel": "dafny", "op": "off-by-one#4", "pid": 64485, "t": 1789608377.4765508}
+{"ev": "end", "task": "r1_s237", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608378.596381}
+{"ev": "start", "task": "r1_s24", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608378.596684}
+{"ev": "end", "task": "r1_s238", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608380.6579351}
+{"ev": "start", "task": "r1_s243", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608380.658417}
+{"ev": "end", "task": "r1_s24", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608381.480387}
+{"ev": "start", "task": "r1_s255", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608381.483181}
+{"ev": "end", "task": "r1_s243", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608383.57306}
+{"ev": "start", "task": "r1_s257", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608383.573385}
+{"ev": "end", "task": "r1_s255", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608384.366634}
+{"ev": "start", "task": "r1_s258", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608384.3672152}
+{"ev": "end", "task": "r1_s257", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608386.137912}
+{"ev": "start", "task": "r1_s26", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608386.138209}
+{"ev": "end", "task": "r1_s258", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608387.053858}
+{"ev": "start", "task": "r1_s260", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608387.054218}
+{"ev": "end", "task": "r1_s26", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608388.103165}
+{"ev": "start", "task": "r1_s262", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608388.1035259}
+{"ev": "end", "task": "r1_s260", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608388.75901}
+{"ev": "start", "task": "r1_s263", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608388.759312}
+{"ev": "end", "task": "r1_s262", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608390.177105}
+{"ev": "start", "task": "r1_s265", "kernel": "dafny", "op": "negate-cond", "pid": 64485, "t": 1789608390.177502}
+{"ev": "end", "task": "r1_s263", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608390.8105412}
+{"ev": "start", "task": "r1_s268", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608390.810944}
+{"ev": "end", "task": "r1_s265", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608392.618666}
+{"ev": "start", "task": "r1_s273", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608392.619008}
+{"ev": "end", "task": "r1_s268", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608393.1346529}
+{"ev": "start", "task": "r1_s275", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608393.135011}
+{"ev": "end", "task": "r1_s273", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608394.791647}
+{"ev": "start", "task": "r1_s28", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608394.791976}
+{"ev": "end", "task": "r1_s275", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608395.4095092}
+{"ev": "start", "task": "r1_s285", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608395.409792}
+{"ev": "end", "task": "r1_s28", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608396.969224}
+{"ev": "start", "task": "r1_s288", "kernel": "dafny", "op": "off-by-one+nonrefuting", "pid": 64485, "t": 1789608396.9695659}
+{"ev": "end", "task": "r1_s285", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608397.46336}
+{"ev": "start", "task": "r1_s292", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608397.4636722}
+{"ev": "end", "task": "r1_s288", "kernel": "dafny", "real": "verified", "twin": "verified", "agree": true, "pid": 64485, "t": 1789608397.862217}
+{"ev": "start", "task": "r1_s293", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608397.862505}
+{"ev": "end", "task": "r1_s292", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608399.163028}
+{"ev": "start", "task": "r1_s294", "kernel": "dafny", "op": "off-by-one#1", "pid": 64484, "t": 1789608399.163338}
+{"ev": "end", "task": "r1_s293", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608399.555557}
+{"ev": "start", "task": "r1_s298", "kernel": "dafny", "op": "off-by-one#2", "pid": 64485, "t": 1789608399.555875}
+{"ev": "end", "task": "r1_s294", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608401.1788852}
+{"ev": "start", "task": "r1_s299", "kernel": "dafny", "op": "off-by-one#1", "pid": 64484, "t": 1789608401.1792169}
+{"ev": "end", "task": "r1_s298", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608401.879411}
+{"ev": "start", "task": "r1_s30", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608401.879829}
+{"ev": "end", "task": "r1_s30", "kernel": "dafny", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64485, "t": 1789608402.393535}
+{"ev": "start", "task": "r1_s303", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608402.393847}
+{"ev": "end", "task": "r1_s299", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608403.012106}
+{"ev": "start", "task": "r1_s31", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608403.012453}
+{"ev": "end", "task": "r1_s303", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608404.306436}
+{"ev": "start", "task": "r1_s33", "kernel": "dafny", "op": "off-by-one#1", "pid": 64485, "t": 1789608404.306747}
+{"ev": "end", "task": "r1_s31", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608404.668355}
+{"ev": "start", "task": "r1_s333", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608404.668684}
+{"ev": "end", "task": "r1_s33", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608405.948689}
+{"ev": "start", "task": "r1_s337", "kernel": "dafny", "op": "wrong-var#2", "pid": 64485, "t": 1789608405.9490051}
+{"ev": "end", "task": "r1_s333", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608406.2781188}
+{"ev": "start", "task": "r1_s338", "kernel": "dafny", "op": "off-by-one#2", "pid": 64484, "t": 1789608406.2784052}
+{"ev": "end", "task": "r1_s337", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608407.9031858}
+{"ev": "start", "task": "r1_s34", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608407.90349}
+{"ev": "end", "task": "r1_s338", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608408.1311738}
+{"ev": "start", "task": "r1_s341", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608408.1315022}
+{"ev": "end", "task": "r1_s34", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608409.562609}
+{"ev": "start", "task": "r1_s342", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608409.562957}
+{"ev": "end", "task": "r1_s341", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608409.713993}
+{"ev": "start", "task": "r1_s343", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608409.714366}
+{"ev": "end", "task": "r1_s342", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608411.7549062}
+{"ev": "start", "task": "r1_s345", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608411.755223}
+{"ev": "end", "task": "r1_s343", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608412.1315}
+{"ev": "start", "task": "r1_s346", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608412.131883}
+{"ev": "end", "task": "r1_s345", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608414.394763}
+{"ev": "start", "task": "r1_s347", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608414.395123}
+{"ev": "end", "task": "r1_s346", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608414.633139}
+{"ev": "start", "task": "r1_s348", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608414.633467}
+{"ev": "end", "task": "r1_s348", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608417.173868}
+{"ev": "start", "task": "r1_s35", "kernel": "dafny", "op": "wrong-var+nonrefuting", "pid": 64484, "t": 1789608417.1743748}
+{"ev": "end", "task": "r1_s347", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608417.404196}
+{"ev": "start", "task": "r1_s357", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608417.404505}
+{"ev": "end", "task": "r1_s357", "kernel": "dafny", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64485, "t": 1789608418.016771}
+{"ev": "start", "task": "r1_s361", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608418.017328}
+{"ev": "end", "task": "r1_s35", "kernel": "dafny", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789608419.2289112}
+{"ev": "start", "task": "r1_s365", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608419.229239}
+{"ev": "end", "task": "r1_s361", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608420.024502}
+{"ev": "start", "task": "r1_s368", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608420.024862}
+{"ev": "end", "task": "r1_s365", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608421.521597}
+{"ev": "start", "task": "r1_s37", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608421.521983}
+{"ev": "end", "task": "r1_s368", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608422.6494322}
+{"ev": "start", "task": "r1_s373", "kernel": "dafny", "op": "compare-flip", "pid": 64485, "t": 1789608422.649759}
+{"ev": "end", "task": "r1_s37", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608423.3896372}
+{"ev": "start", "task": "r1_s38", "kernel": "dafny", "op": "wrong-constant#1", "pid": 64484, "t": 1789608423.390013}
+{"ev": "end", "task": "r1_s373", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608424.3439329}
+{"ev": "start", "task": "r1_s380", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608424.3442519}
+{"ev": "end", "task": "r1_s38", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608424.9387121}
+{"ev": "start", "task": "r1_s388", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608424.939109}
+{"ev": "end", "task": "r1_s380", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608426.1300611}
+{"ev": "start", "task": "r1_s39", "kernel": "dafny", "op": "wrong-var", "pid": 64485, "t": 1789608426.130599}
+{"ev": "end", "task": "r1_s388", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608426.753199}
+{"ev": "start", "task": "r1_s390", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608426.7534878}
+{"ev": "end", "task": "r1_s39", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608427.881092}
+{"ev": "start", "task": "r1_s392", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608427.881419}
+{"ev": "end", "task": "r1_s390", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608428.835756}
+{"ev": "start", "task": "r1_s393", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608428.8361979}
+{"ev": "end", "task": "r1_s392", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608430.182537}
+{"ev": "start", "task": "r1_s394", "kernel": "dafny", "op": "wrong-constant", "pid": 64485, "t": 1789608430.18301}
+{"ev": "end", "task": "r1_s393", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608431.272952}
+{"ev": "start", "task": "r1_s396", "kernel": "dafny", "op": "wrong-var#3", "pid": 64484, "t": 1789608431.273302}
+{"ev": "end", "task": "r1_s394", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608432.0325491}
+{"ev": "start", "task": "r1_s397", "kernel": "dafny", "op": "wrong-var#3", "pid": 64485, "t": 1789608432.0328882}
+{"ev": "end", "task": "r1_s396", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608433.574016}
+{"ev": "start", "task": "r1_s402", "kernel": "dafny", "op": "compare-flip", "pid": 64484, "t": 1789608433.5742688}
+{"ev": "end", "task": "r1_s397", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608434.403605}
+{"ev": "start", "task": "r1_s404", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608434.403923}
+{"ev": "end", "task": "r1_s402", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608435.823394}
+{"ev": "start", "task": "r1_s407", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608435.823755}
+{"ev": "end", "task": "r1_s404", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608436.226938}
+{"ev": "start", "task": "r1_s41", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608436.227238}
+{"ev": "end", "task": "r1_s407", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608437.763387}
+{"ev": "start", "task": "r1_s411", "kernel": "dafny", "op": "compare-flip", "pid": 64484, "t": 1789608437.7637188}
+{"ev": "end", "task": "r1_s41", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608438.204353}
+{"ev": "start", "task": "r1_s412", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608438.204658}
+{"ev": "end", "task": "r1_s411", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608440.11946}
+{"ev": "start", "task": "r1_s416", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608440.1198}
+{"ev": "end", "task": "r1_s412", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608440.401001}
+{"ev": "start", "task": "r1_s419", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608440.401301}
+{"ev": "end", "task": "r1_s416", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608442.054663}
+{"ev": "start", "task": "r1_s421", "kernel": "dafny", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789608442.054979}
+{"ev": "end", "task": "r1_s419", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608442.3594801}
+{"ev": "start", "task": "r1_s424", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608442.3597739}
+{"ev": "end", "task": "r1_s421", "kernel": "dafny", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789608443.91941}
+{"ev": "start", "task": "r1_s425", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608443.91983}
+{"ev": "end", "task": "r1_s424", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608444.243606}
+{"ev": "start", "task": "r1_s428", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608444.244035}
+{"ev": "end", "task": "r1_s428", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608446.333059}
+{"ev": "start", "task": "r1_s43", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608446.333385}
+{"ev": "end", "task": "r1_s425", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608446.3682292}
+{"ev": "start", "task": "r1_s432", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608446.368829}
+{"ev": "end", "task": "r1_s432", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608448.828005}
+{"ev": "start", "task": "r1_s434", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608448.8283808}
+{"ev": "end", "task": "r1_s43", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608449.187575}
+{"ev": "start", "task": "r1_s435", "kernel": "dafny", "op": "wrong-constant", "pid": 64485, "t": 1789608449.187871}
+{"ev": "end", "task": "r1_s434", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608450.721592}
+{"ev": "start", "task": "r1_s441", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608450.721914}
+{"ev": "end", "task": "r1_s435", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608451.112054}
+{"ev": "start", "task": "r1_s449", "kernel": "dafny", "op": "off-by-one+nonrefuting", "pid": 64485, "t": 1789608451.112355}
+{"ev": "end", "task": "r1_s441", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608452.576732}
+{"ev": "start", "task": "r1_s45", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608452.577055}
+{"ev": "end", "task": "r1_s449", "kernel": "dafny", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64485, "t": 1789608452.959021}
+{"ev": "start", "task": "r1_s450", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608452.959306}
+{"ev": "end", "task": "r1_s45", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608455.1560168}
+{"ev": "start", "task": "r1_s452", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608455.1563299}
+{"ev": "end", "task": "r1_s450", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608455.776047}
+{"ev": "start", "task": "r1_s456", "kernel": "dafny", "op": "compare-flip", "pid": 64485, "t": 1789608455.776408}
+{"ev": "end", "task": "r1_s452", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608457.310169}
+{"ev": "start", "task": "r1_s458", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608457.3104682}
+{"ev": "end", "task": "r1_s456", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608457.9023218}
+{"ev": "start", "task": "r1_s459", "kernel": "dafny", "op": "wrong-var", "pid": 64485, "t": 1789608457.9026618}
+{"ev": "end", "task": "r1_s458", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608459.309342}
+{"ev": "start", "task": "r1_s46", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608459.309637}
+{"ev": "end", "task": "r1_s459", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608459.687198}
+{"ev": "start", "task": "r1_s461", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608459.687546}
+{"ev": "end", "task": "r1_s46", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608461.399458}
+{"ev": "start", "task": "r1_s466", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608461.399903}
+{"ev": "end", "task": "r1_s461", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608461.676524}
+{"ev": "start", "task": "r1_s468", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608461.676929}
+{"ev": "end", "task": "r1_s466", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608463.573791}
+{"ev": "start", "task": "r1_s471", "kernel": "dafny", "op": "wrong-var", "pid": 64484, "t": 1789608463.5741088}
+{"ev": "end", "task": "r1_s468", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608463.9605691}
+{"ev": "start", "task": "r1_s483", "kernel": "dafny", "op": "wrong-var", "pid": 64485, "t": 1789608463.960893}
+{"ev": "end", "task": "r1_s471", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608465.888163}
+{"ev": "start", "task": "r1_s487", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608465.888559}
+{"ev": "end", "task": "r1_s483", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608466.177661}
+{"ev": "start", "task": "r1_s493", "kernel": "dafny", "op": "wrong-var", "pid": 64485, "t": 1789608466.1779652}
+{"ev": "end", "task": "r1_s487", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608467.857093}
+{"ev": "start", "task": "r1_s494", "kernel": "dafny", "op": "off-by-one#1", "pid": 64484, "t": 1789608467.857439}
+{"ev": "end", "task": "r1_s493", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608468.082952}
+{"ev": "start", "task": "r1_s496", "kernel": "dafny", "op": "wrong-var", "pid": 64485, "t": 1789608468.083241}
+{"ev": "end", "task": "r1_s494", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608469.654714}
+{"ev": "start", "task": "r1_s52", "kernel": "dafny", "op": "wrong-operator#2", "pid": 64484, "t": 1789608469.655009}
+{"ev": "end", "task": "r1_s496", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608469.967652}
+{"ev": "start", "task": "r1_s53", "kernel": "dafny", "op": "wrong-constant", "pid": 64485, "t": 1789608469.968004}
+{"ev": "end", "task": "r1_s52", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608472.012434}
+{"ev": "start", "task": "r1_s56", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608472.012785}
+{"ev": "end", "task": "r1_s53", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608472.170902}
+{"ev": "start", "task": "r1_s59", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608472.1712651}
+{"ev": "end", "task": "r1_s56", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608473.700354}
+{"ev": "start", "task": "r1_s6", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608473.700662}
+{"ev": "end", "task": "r1_s59", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608473.979798}
+{"ev": "start", "task": "r1_s62", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608473.980067}
+{"ev": "end", "task": "r1_s6", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608475.472863}
+{"ev": "start", "task": "r1_s64", "kernel": "dafny", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789608475.473164}
+{"ev": "end", "task": "r1_s62", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608476.089448}
+{"ev": "start", "task": "r1_s67", "kernel": "dafny", "op": "collapse-if", "pid": 64485, "t": 1789608476.089934}
+{"ev": "end", "task": "r1_s64", "kernel": "dafny", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789608477.350158}
+{"ev": "start", "task": "r1_s68", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608477.350465}
+{"ev": "end", "task": "r1_s67", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608478.544532}
+{"ev": "start", "task": "r1_s7", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608478.5448372}
+{"ev": "end", "task": "r1_s68", "kernel": "dafny", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608479.3447108}
+{"ev": "start", "task": "r1_s70", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608479.345134}
+{"ev": "end", "task": "r1_s7", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608480.137337}
+{"ev": "start", "task": "r1_s75", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608480.137652}
+{"ev": "end", "task": "r1_s70", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608480.7427871}
+{"ev": "start", "task": "r1_s79", "kernel": "dafny", "op": "off-by-one#2", "pid": 64484, "t": 1789608480.743239}
+{"ev": "end", "task": "r1_s75", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608482.081224}
+{"ev": "start", "task": "r1_s8", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608482.0815659}
+{"ev": "end", "task": "r1_s79", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608483.012836}
+{"ev": "start", "task": "r1_s82", "kernel": "dafny", "op": "wrong-constant#1", "pid": 64484, "t": 1789608483.0131478}
+{"ev": "end", "task": "r1_s8", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608484.12943}
+{"ev": "start", "task": "r1_s83", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608484.129759}
+{"ev": "end", "task": "r1_s82", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608485.047762}
+{"ev": "start", "task": "r1_s84", "kernel": "dafny", "op": "off-by-one", "pid": 64484, "t": 1789608485.04822}
+{"ev": "end", "task": "r1_s83", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608486.377524}
+{"ev": "start", "task": "r1_s85", "kernel": "dafny", "op": "wrong-constant", "pid": 64485, "t": 1789608486.377842}
+{"ev": "end", "task": "r1_s84", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608487.609924}
+{"ev": "start", "task": "r1_s86", "kernel": "dafny", "op": "off-by-one#1", "pid": 64484, "t": 1789608487.6103811}
+{"ev": "end", "task": "r1_s85", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608488.484826}
+{"ev": "start", "task": "r1_s87", "kernel": "dafny", "op": "off-by-one", "pid": 64485, "t": 1789608488.485205}
+{"ev": "end", "task": "r1_s86", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608489.884942}
+{"ev": "start", "task": "r1_s90", "kernel": "dafny", "op": "collapse-if", "pid": 64484, "t": 1789608489.8852549}
+{"ev": "end", "task": "r1_s87", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608490.7206578}
+{"ev": "start", "task": "r1_s91", "kernel": "dafny", "op": "compare-flip", "pid": 64485, "t": 1789608490.720963}
+{"ev": "end", "task": "r1_s90", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608492.327988}
+{"ev": "start", "task": "r1_s92", "kernel": "dafny", "op": "off-by-one#1", "pid": 64484, "t": 1789608492.328257}
+{"ev": "end", "task": "r1_s91", "kernel": "dafny", "real": "unproved", "twin": "unproved", "agree": true, "pid": 64485, "t": 1789608492.9894028}
+{"ev": "start", "task": "r1_s97", "kernel": "dafny", "op": "wrong-constant", "pid": 64485, "t": 1789608492.989687}
+{"ev": "end", "task": "r1_s92", "kernel": "dafny", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608494.3824818}
+{"ev": "start", "task": "r1_s101", "kernel": "verus", "op": "compare-flip", "pid": 64484, "t": 1789608494.382796}
+{"ev": "end", "task": "r1_s97", "kernel": "dafny", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608495.218784}
+{"ev": "start", "task": "r1_s102", "kernel": "verus", "op": "off-by-one#1", "pid": 64485, "t": 1789608495.219164}
+{"ev": "end", "task": "r1_s102", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608496.535483}
+{"ev": "start", "task": "r1_s103", "kernel": "verus", "op": "wrong-var#2", "pid": 64485, "t": 1789608496.5359502}
+{"ev": "end", "task": "r1_s101", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608496.6041222}
+{"ev": "start", "task": "r1_s104", "kernel": "verus", "op": "wrong-constant", "pid": 64484, "t": 1789608496.6044412}
+{"ev": "end", "task": "r1_s103", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608497.440786}
+{"ev": "start", "task": "r1_s105", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608497.4411469}
+{"ev": "end", "task": "r1_s104", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608497.488624}
+{"ev": "start", "task": "r1_s109", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608497.488959}
+{"ev": "end", "task": "r1_s105", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608498.188411}
+{"ev": "start", "task": "r1_s112", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608498.188779}
+{"ev": "end", "task": "r1_s109", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608498.2432761}
+{"ev": "start", "task": "r1_s113", "kernel": "verus", "op": "compare-flip", "pid": 64484, "t": 1789608498.2435782}
+{"ev": "end", "task": "r1_s112", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608498.986086}
+{"ev": "start", "task": "r1_s115", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608498.986645}
+{"ev": "end", "task": "r1_s113", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608499.045716}
+{"ev": "start", "task": "r1_s12", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608499.046093}
+{"ev": "end", "task": "r1_s115", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608499.703156}
+{"ev": "start", "task": "r1_s124", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608499.703488}
+{"ev": "end", "task": "r1_s12", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608499.78569}
+{"ev": "start", "task": "r1_s129", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608499.785989}
+{"ev": "end", "task": "r1_s124", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608500.397847}
+{"ev": "start", "task": "r1_s130", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608500.398193}
+{"ev": "end", "task": "r1_s129", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608500.459104}
+{"ev": "start", "task": "r1_s134", "kernel": "verus", "op": "wrong-var", "pid": 64484, "t": 1789608500.459414}
+{"ev": "end", "task": "r1_s130", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608501.208684}
+{"ev": "start", "task": "r1_s140", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608501.208961}
+{"ev": "end", "task": "r1_s134", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608501.2591958}
+{"ev": "start", "task": "r1_s142", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608501.259489}
+{"ev": "end", "task": "r1_s142", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608501.944798}
+{"ev": "start", "task": "r1_s145", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608501.945081}
+{"ev": "end", "task": "r1_s140", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608501.972457}
+{"ev": "start", "task": "r1_s146", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608501.972748}
+{"ev": "end", "task": "r1_s145", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608502.7521322}
+{"ev": "start", "task": "r1_s147", "kernel": "verus", "op": "wrong-var", "pid": 64484, "t": 1789608502.752932}
+{"ev": "end", "task": "r1_s146", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608502.7879539}
+{"ev": "start", "task": "r1_s150", "kernel": "verus", "op": "wrong-operator", "pid": 64485, "t": 1789608502.7882838}
+{"ev": "end", "task": "r1_s147", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608503.46704}
+{"ev": "start", "task": "r1_s151", "kernel": "verus", "op": "negate-cond", "pid": 64484, "t": 1789608503.4673789}
+{"ev": "end", "task": "r1_s150", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608503.485419}
+{"ev": "start", "task": "r1_s152", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608503.4859068}
+{"ev": "end", "task": "r1_s151", "kernel": "verus", "real": "unproved", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789608503.861891}
+{"ev": "start", "task": "r1_s153", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608503.862219}
+{"ev": "end", "task": "r1_s152", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608504.263541}
+{"ev": "start", "task": "r1_s156", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608504.263864}
+{"ev": "end", "task": "r1_s153", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608504.65044}
+{"ev": "start", "task": "r1_s158", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608504.6508029}
+{"ev": "end", "task": "r1_s156", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608505.097335}
+{"ev": "start", "task": "r1_s165", "kernel": "verus", "op": "negate-cond", "pid": 64485, "t": 1789608505.097646}
+{"ev": "end", "task": "r1_s158", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608505.4244952}
+{"ev": "start", "task": "r1_s167", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608505.424844}
+{"ev": "end", "task": "r1_s165", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608505.888899}
+{"ev": "start", "task": "r1_s168", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608505.8892128}
+{"ev": "end", "task": "r1_s167", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608506.189769}
+{"ev": "start", "task": "r1_s171", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608506.190186}
+{"ev": "end", "task": "r1_s168", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608506.609238}
+{"ev": "start", "task": "r1_s175", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608506.609548}
+{"ev": "end", "task": "r1_s171", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608506.913385}
+{"ev": "start", "task": "r1_s179", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608506.9137049}
+{"ev": "end", "task": "r1_s175", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608507.360527}
+{"ev": "start", "task": "r1_s180", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608507.360848}
+{"ev": "end", "task": "r1_s179", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608507.613694}
+{"ev": "start", "task": "r1_s183", "kernel": "verus", "op": "compare-flip", "pid": 64484, "t": 1789608507.614076}
+{"ev": "end", "task": "r1_s180", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608508.037112}
+{"ev": "start", "task": "r1_s188", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608508.037417}
+{"ev": "end", "task": "r1_s183", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608508.287458}
+{"ev": "start", "task": "r1_s19", "kernel": "verus", "op": "wrong-var", "pid": 64484, "t": 1789608508.287839}
+{"ev": "end", "task": "r1_s19", "kernel": "verus", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64484, "t": 1789608508.4284868}
+{"ev": "start", "task": "r1_s196", "kernel": "verus", "op": "compare-flip", "pid": 64484, "t": 1789608508.428789}
+{"ev": "end", "task": "r1_s188", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608508.695392}
+{"ev": "start", "task": "r1_s201", "kernel": "verus", "op": "wrong-constant", "pid": 64485, "t": 1789608508.69572}
+{"ev": "end", "task": "r1_s196", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608509.164345}
+{"ev": "start", "task": "r1_s203", "kernel": "verus", "op": "off-by-one#1", "pid": 64484, "t": 1789608509.164651}
+{"ev": "end", "task": "r1_s201", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608509.421968}
+{"ev": "start", "task": "r1_s206", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608509.422275}
+{"ev": "end", "task": "r1_s203", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608509.8838558}
+{"ev": "start", "task": "r1_s207", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608509.884156}
+{"ev": "end", "task": "r1_s206", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608510.1764748}
+{"ev": "start", "task": "r1_s210", "kernel": "verus", "op": "off-by-one#1", "pid": 64485, "t": 1789608510.176824}
+{"ev": "end", "task": "r1_s207", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608510.624473}
+{"ev": "start", "task": "r1_s211", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608510.624775}
+{"ev": "end", "task": "r1_s210", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608510.836763}
+{"ev": "start", "task": "r1_s215", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608510.837066}
+{"ev": "end", "task": "r1_s211", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608511.320937}
+{"ev": "start", "task": "r1_s217", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608511.321275}
+{"ev": "end", "task": "r1_s215", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608511.501878}
+{"ev": "start", "task": "r1_s22", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608511.502305}
+{"ev": "end", "task": "r1_s217", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608512.0106728}
+{"ev": "start", "task": "r1_s221", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608512.0110772}
+{"ev": "end", "task": "r1_s22", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608512.147477}
+{"ev": "start", "task": "r1_s227", "kernel": "verus", "op": "wrong-constant", "pid": 64485, "t": 1789608512.147841}
+{"ev": "end", "task": "r1_s221", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608512.7971442}
+{"ev": "start", "task": "r1_s228", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608512.797471}
+{"ev": "end", "task": "r1_s227", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608512.965776}
+{"ev": "start", "task": "r1_s230", "kernel": "verus", "op": "wrong-var", "pid": 64485, "t": 1789608512.966144}
+{"ev": "end", "task": "r1_s228", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608513.5955}
+{"ev": "start", "task": "r1_s232", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608513.5958788}
+{"ev": "end", "task": "r1_s230", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608513.74289}
+{"ev": "start", "task": "r1_s235", "kernel": "verus", "op": "compare-flip", "pid": 64485, "t": 1789608513.7431989}
+{"ev": "end", "task": "r1_s232", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608514.3326888}
+{"ev": "start", "task": "r1_s236", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608514.333219}
+{"ev": "end", "task": "r1_s235", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608514.5685508}
+{"ev": "start", "task": "r1_s237", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608514.568941}
+{"ev": "end", "task": "r1_s236", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608515.004035}
+{"ev": "start", "task": "r1_s238", "kernel": "verus", "op": "off-by-one#4", "pid": 64484, "t": 1789608515.004349}
+{"ev": "end", "task": "r1_s237", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608515.2406}
+{"ev": "start", "task": "r1_s24", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608515.2409348}
+{"ev": "end", "task": "r1_s238", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608515.719609}
+{"ev": "start", "task": "r1_s243", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608515.719926}
+{"ev": "end", "task": "r1_s24", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608515.9161139}
+{"ev": "start", "task": "r1_s255", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608515.9165199}
+{"ev": "end", "task": "r1_s243", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608516.422923}
+{"ev": "start", "task": "r1_s257", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608516.42326}
+{"ev": "end", "task": "r1_s255", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608516.663025}
+{"ev": "start", "task": "r1_s258", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608516.663429}
+{"ev": "end", "task": "r1_s257", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608517.1550741}
+{"ev": "start", "task": "r1_s26", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608517.155478}
+{"ev": "end", "task": "r1_s258", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608517.366239}
+{"ev": "start", "task": "r1_s260", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608517.3665862}
+{"ev": "end", "task": "r1_s26", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608517.8192692}
+{"ev": "start", "task": "r1_s262", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608517.819606}
+{"ev": "end", "task": "r1_s260", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608517.981208}
+{"ev": "start", "task": "r1_s263", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608517.9815302}
+{"ev": "end", "task": "r1_s262", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608518.4703538}
+{"ev": "start", "task": "r1_s265", "kernel": "verus", "op": "negate-cond", "pid": 64484, "t": 1789608518.470731}
+{"ev": "end", "task": "r1_s263", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608518.715845}
+{"ev": "start", "task": "r1_s268", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608518.716322}
+{"ev": "end", "task": "r1_s265", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608519.2398562}
+{"ev": "start", "task": "r1_s273", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608519.2401779}
+{"ev": "end", "task": "r1_s268", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608519.389688}
+{"ev": "start", "task": "r1_s275", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608519.3900669}
+{"ev": "end", "task": "r1_s273", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608519.9006588}
+{"ev": "start", "task": "r1_s28", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608519.901091}
+{"ev": "end", "task": "r1_s275", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608520.069175}
+{"ev": "start", "task": "r1_s285", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608520.069483}
+{"ev": "end", "task": "r1_s28", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608520.558729}
+{"ev": "start", "task": "r1_s288", "kernel": "verus", "op": "off-by-one+nonrefuting", "pid": 64484, "t": 1789608520.559082}
+{"ev": "end", "task": "r1_s285", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608520.7412522}
+{"ev": "start", "task": "r1_s292", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608520.741581}
+{"ev": "end", "task": "r1_s288", "kernel": "verus", "real": "verified", "twin": "verified", "agree": true, "pid": 64484, "t": 1789608521.2819898}
+{"ev": "start", "task": "r1_s293", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608521.282335}
+{"ev": "end", "task": "r1_s292", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608521.478304}
+{"ev": "start", "task": "r1_s294", "kernel": "verus", "op": "off-by-one#1", "pid": 64485, "t": 1789608521.4786198}
+{"ev": "end", "task": "r1_s293", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608522.008953}
+{"ev": "start", "task": "r1_s298", "kernel": "verus", "op": "off-by-one#2", "pid": 64484, "t": 1789608522.009398}
+{"ev": "end", "task": "r1_s294", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608522.21573}
+{"ev": "start", "task": "r1_s299", "kernel": "verus", "op": "off-by-one#1", "pid": 64485, "t": 1789608522.216096}
+{"ev": "end", "task": "r1_s298", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608522.7532532}
+{"ev": "start", "task": "r1_s30", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608522.753674}
+{"ev": "end", "task": "r1_s30", "kernel": "verus", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64484, "t": 1789608522.924493}
+{"ev": "start", "task": "r1_s303", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608522.924834}
+{"ev": "end", "task": "r1_s299", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608522.967289}
+{"ev": "start", "task": "r1_s31", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608522.967625}
+{"ev": "end", "task": "r1_s303", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608523.594639}
+{"ev": "start", "task": "r1_s33", "kernel": "verus", "op": "off-by-one#1", "pid": 64484, "t": 1789608523.5949461}
+{"ev": "end", "task": "r1_s31", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608523.637642}
+{"ev": "start", "task": "r1_s333", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608523.6379688}
+{"ev": "end", "task": "r1_s33", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608524.3094752}
+{"ev": "start", "task": "r1_s337", "kernel": "verus", "op": "wrong-var#2", "pid": 64484, "t": 1789608524.30984}
+{"ev": "end", "task": "r1_s333", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608524.376914}
+{"ev": "start", "task": "r1_s338", "kernel": "verus", "op": "off-by-one#2", "pid": 64485, "t": 1789608524.3773282}
+{"ev": "end", "task": "r1_s337", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608525.029975}
+{"ev": "start", "task": "r1_s34", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608525.030407}
+{"ev": "end", "task": "r1_s338", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608525.1013892}
+{"ev": "start", "task": "r1_s341", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608525.101696}
+{"ev": "end", "task": "r1_s34", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608525.751349}
+{"ev": "start", "task": "r1_s342", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608525.751681}
+{"ev": "end", "task": "r1_s341", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608525.8138082}
+{"ev": "start", "task": "r1_s343", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608525.814167}
+{"ev": "end", "task": "r1_s342", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608526.4414961}
+{"ev": "start", "task": "r1_s345", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608526.441853}
+{"ev": "end", "task": "r1_s343", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608526.555021}
+{"ev": "start", "task": "r1_s346", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608526.5553129}
+{"ev": "end", "task": "r1_s345", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608527.1554592}
+{"ev": "start", "task": "r1_s347", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608527.155833}
+{"ev": "end", "task": "r1_s346", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608527.311716}
+{"ev": "start", "task": "r1_s348", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608527.312023}
+{"ev": "end", "task": "r1_s347", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608527.952218}
+{"ev": "start", "task": "r1_s35", "kernel": "verus", "op": "wrong-var+nonrefuting", "pid": 64484, "t": 1789608527.952568}
+{"ev": "end", "task": "r1_s348", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608528.037927}
+{"ev": "start", "task": "r1_s357", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608528.038267}
+{"ev": "end", "task": "r1_s357", "kernel": "verus", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64485, "t": 1789608528.182179}
+{"ev": "start", "task": "r1_s361", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608528.182493}
+{"ev": "end", "task": "r1_s35", "kernel": "verus", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789608528.580009}
+{"ev": "start", "task": "r1_s365", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608528.580307}
+{"ev": "end", "task": "r1_s361", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608528.82913}
+{"ev": "start", "task": "r1_s368", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608528.829555}
+{"ev": "end", "task": "r1_s365", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608529.444293}
+{"ev": "start", "task": "r1_s37", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608529.444684}
+{"ev": "end", "task": "r1_s368", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608529.655288}
+{"ev": "start", "task": "r1_s373", "kernel": "verus", "op": "compare-flip", "pid": 64485, "t": 1789608529.6557078}
+{"ev": "end", "task": "r1_s37", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608530.242252}
+{"ev": "start", "task": "r1_s38", "kernel": "verus", "op": "wrong-constant#1", "pid": 64484, "t": 1789608530.242558}
+{"ev": "end", "task": "r1_s373", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608530.571906}
+{"ev": "start", "task": "r1_s380", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608530.572242}
+{"ev": "end", "task": "r1_s38", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608531.069686}
+{"ev": "start", "task": "r1_s388", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608531.070037}
+{"ev": "end", "task": "r1_s380", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608531.3868039}
+{"ev": "start", "task": "r1_s39", "kernel": "verus", "op": "wrong-var", "pid": 64485, "t": 1789608531.3871539}
+{"ev": "end", "task": "r1_s388", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608531.782349}
+{"ev": "start", "task": "r1_s390", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608531.782689}
+{"ev": "end", "task": "r1_s39", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608532.052541}
+{"ev": "start", "task": "r1_s392", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608532.052938}
+{"ev": "end", "task": "r1_s390", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608532.5606349}
+{"ev": "start", "task": "r1_s393", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608532.560964}
+{"ev": "end", "task": "r1_s392", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608532.9339032}
+{"ev": "start", "task": "r1_s394", "kernel": "verus", "op": "wrong-constant", "pid": 64485, "t": 1789608532.9342651}
+{"ev": "end", "task": "r1_s393", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608533.320561}
+{"ev": "start", "task": "r1_s396", "kernel": "verus", "op": "wrong-var#3", "pid": 64484, "t": 1789608533.320987}
+{"ev": "end", "task": "r1_s394", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608533.617022}
+{"ev": "start", "task": "r1_s397", "kernel": "verus", "op": "wrong-var#3", "pid": 64485, "t": 1789608533.617422}
+{"ev": "end", "task": "r1_s396", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608534.062693}
+{"ev": "start", "task": "r1_s402", "kernel": "verus", "op": "compare-flip", "pid": 64484, "t": 1789608534.062984}
+{"ev": "end", "task": "r1_s397", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608534.386334}
+{"ev": "start", "task": "r1_s404", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608534.386709}
+{"ev": "end", "task": "r1_s402", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608534.932995}
+{"ev": "start", "task": "r1_s407", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608534.933475}
+{"ev": "end", "task": "r1_s404", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608535.170749}
+{"ev": "start", "task": "r1_s41", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608535.171107}
+{"ev": "end", "task": "r1_s407", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608535.604487}
+{"ev": "start", "task": "r1_s411", "kernel": "verus", "op": "compare-flip", "pid": 64484, "t": 1789608535.6048691}
+{"ev": "end", "task": "r1_s41", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608535.8480482}
+{"ev": "start", "task": "r1_s412", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608535.848417}
+{"ev": "end", "task": "r1_s411", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608536.447944}
+{"ev": "start", "task": "r1_s416", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608536.448359}
+{"ev": "end", "task": "r1_s412", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608536.629758}
+{"ev": "start", "task": "r1_s419", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608536.630095}
+{"ev": "end", "task": "r1_s416", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608537.254302}
+{"ev": "start", "task": "r1_s421", "kernel": "verus", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789608537.254684}
+{"ev": "end", "task": "r1_s419", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608537.408829}
+{"ev": "start", "task": "r1_s424", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608537.409191}
+{"ev": "end", "task": "r1_s421", "kernel": "verus", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789608537.953353}
+{"ev": "start", "task": "r1_s425", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608537.953711}
+{"ev": "end", "task": "r1_s424", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608538.155951}
+{"ev": "start", "task": "r1_s428", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608538.156687}
+{"ev": "end", "task": "r1_s425", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608538.822287}
+{"ev": "start", "task": "r1_s43", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608538.8227358}
+{"ev": "end", "task": "r1_s428", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608538.96544}
+{"ev": "start", "task": "r1_s432", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608538.965792}
+{"ev": "end", "task": "r1_s43", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608539.665594}
+{"ev": "start", "task": "r1_s434", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608539.6659358}
+{"ev": "end", "task": "r1_s432", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608539.724015}
+{"ev": "start", "task": "r1_s435", "kernel": "verus", "op": "wrong-constant", "pid": 64485, "t": 1789608539.7243352}
+{"ev": "end", "task": "r1_s434", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608540.401023}
+{"ev": "start", "task": "r1_s441", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608540.401409}
+{"ev": "end", "task": "r1_s435", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608540.4508789}
+{"ev": "start", "task": "r1_s449", "kernel": "verus", "op": "off-by-one+nonrefuting", "pid": 64485, "t": 1789608540.4513018}
+{"ev": "end", "task": "r1_s441", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608541.072644}
+{"ev": "start", "task": "r1_s45", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608541.072982}
+{"ev": "end", "task": "r1_s449", "kernel": "verus", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64485, "t": 1789608541.131304}
+{"ev": "start", "task": "r1_s450", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608541.1316822}
+{"ev": "end", "task": "r1_s45", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608541.757896}
+{"ev": "start", "task": "r1_s452", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608541.7582002}
+{"ev": "end", "task": "r1_s450", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608541.843464}
+{"ev": "start", "task": "r1_s456", "kernel": "verus", "op": "compare-flip", "pid": 64485, "t": 1789608541.843804}
+{"ev": "end", "task": "r1_s452", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608542.4699168}
+{"ev": "start", "task": "r1_s458", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608542.470247}
+{"ev": "end", "task": "r1_s456", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608542.576274}
+{"ev": "start", "task": "r1_s459", "kernel": "verus", "op": "wrong-var", "pid": 64485, "t": 1789608542.5766668}
+{"ev": "end", "task": "r1_s458", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608543.227641}
+{"ev": "start", "task": "r1_s46", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608543.2279491}
+{"ev": "end", "task": "r1_s459", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608543.242102}
+{"ev": "start", "task": "r1_s461", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608543.2424488}
+{"ev": "end", "task": "r1_s46", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608543.894793}
+{"ev": "start", "task": "r1_s466", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608543.895179}
+{"ev": "end", "task": "r1_s461", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608543.925463}
+{"ev": "start", "task": "r1_s468", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608543.925848}
+{"ev": "end", "task": "r1_s466", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608544.635873}
+{"ev": "start", "task": "r1_s471", "kernel": "verus", "op": "wrong-var", "pid": 64484, "t": 1789608544.636205}
+{"ev": "end", "task": "r1_s468", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608544.66883}
+{"ev": "start", "task": "r1_s483", "kernel": "verus", "op": "wrong-var", "pid": 64485, "t": 1789608544.669116}
+{"ev": "end", "task": "r1_s471", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608545.458517}
+{"ev": "start", "task": "r1_s487", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608545.458865}
+{"ev": "end", "task": "r1_s483", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608545.516434}
+{"ev": "start", "task": "r1_s493", "kernel": "verus", "op": "wrong-var", "pid": 64485, "t": 1789608545.5167282}
+{"ev": "end", "task": "r1_s487", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608546.219098}
+{"ev": "start", "task": "r1_s494", "kernel": "verus", "op": "off-by-one#1", "pid": 64484, "t": 1789608546.219473}
+{"ev": "end", "task": "r1_s493", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608546.264562}
+{"ev": "start", "task": "r1_s496", "kernel": "verus", "op": "wrong-var", "pid": 64485, "t": 1789608546.264937}
+{"ev": "end", "task": "r1_s494", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608546.8748548}
+{"ev": "start", "task": "r1_s52", "kernel": "verus", "op": "wrong-operator#2", "pid": 64484, "t": 1789608546.875343}
+{"ev": "end", "task": "r1_s496", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608546.959145}
+{"ev": "start", "task": "r1_s53", "kernel": "verus", "op": "wrong-constant", "pid": 64485, "t": 1789608546.9594681}
+{"ev": "end", "task": "r1_s52", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608547.664952}
+{"ev": "start", "task": "r1_s56", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608547.665331}
+{"ev": "end", "task": "r1_s53", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608547.7439349}
+{"ev": "start", "task": "r1_s59", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608547.744494}
+{"ev": "end", "task": "r1_s56", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608548.433856}
+{"ev": "start", "task": "r1_s6", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608548.434266}
+{"ev": "end", "task": "r1_s59", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608548.528089}
+{"ev": "start", "task": "r1_s62", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608548.5283751}
+{"ev": "end", "task": "r1_s6", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608549.204266}
+{"ev": "start", "task": "r1_s64", "kernel": "verus", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789608549.2046552}
+{"ev": "end", "task": "r1_s62", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608549.388063}
+{"ev": "start", "task": "r1_s67", "kernel": "verus", "op": "collapse-if", "pid": 64485, "t": 1789608549.388574}
+{"ev": "end", "task": "r1_s64", "kernel": "verus", "real": "refuted", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789608549.83497}
+{"ev": "start", "task": "r1_s68", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608549.835263}
+{"ev": "end", "task": "r1_s67", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608550.073099}
+{"ev": "start", "task": "r1_s7", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608550.07341}
+{"ev": "end", "task": "r1_s68", "kernel": "verus", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608550.564269}
+{"ev": "start", "task": "r1_s70", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608550.5646012}
+{"ev": "end", "task": "r1_s7", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608550.7203798}
+{"ev": "start", "task": "r1_s75", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608550.720703}
+{"ev": "end", "task": "r1_s70", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608551.2522209}
+{"ev": "start", "task": "r1_s79", "kernel": "verus", "op": "off-by-one#2", "pid": 64484, "t": 1789608551.252671}
+{"ev": "end", "task": "r1_s75", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608551.440038}
+{"ev": "start", "task": "r1_s8", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608551.4404879}
+{"ev": "end", "task": "r1_s79", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608552.064272}
+{"ev": "start", "task": "r1_s82", "kernel": "verus", "op": "wrong-constant#1", "pid": 64484, "t": 1789608552.0646431}
+{"ev": "end", "task": "r1_s8", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608552.246536}
+{"ev": "start", "task": "r1_s83", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608552.2469041}
+{"ev": "end", "task": "r1_s82", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608552.802093}
+{"ev": "start", "task": "r1_s84", "kernel": "verus", "op": "off-by-one", "pid": 64484, "t": 1789608552.8024352}
+{"ev": "end", "task": "r1_s83", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608553.014295}
+{"ev": "start", "task": "r1_s85", "kernel": "verus", "op": "wrong-constant", "pid": 64485, "t": 1789608553.014657}
+{"ev": "end", "task": "r1_s84", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608553.671242}
+{"ev": "start", "task": "r1_s86", "kernel": "verus", "op": "off-by-one#1", "pid": 64484, "t": 1789608553.671581}
+{"ev": "end", "task": "r1_s85", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608553.813102}
+{"ev": "start", "task": "r1_s87", "kernel": "verus", "op": "off-by-one", "pid": 64485, "t": 1789608553.813654}
+{"ev": "end", "task": "r1_s86", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608554.457859}
+{"ev": "start", "task": "r1_s90", "kernel": "verus", "op": "collapse-if", "pid": 64484, "t": 1789608554.458421}
+{"ev": "end", "task": "r1_s87", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608554.6865878}
+{"ev": "start", "task": "r1_s91", "kernel": "verus", "op": "compare-flip", "pid": 64485, "t": 1789608554.686931}
+{"ev": "end", "task": "r1_s90", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608555.326208}
+{"ev": "start", "task": "r1_s92", "kernel": "verus", "op": "off-by-one#1", "pid": 64484, "t": 1789608555.326599}
+{"ev": "end", "task": "r1_s91", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608555.504082}
+{"ev": "start", "task": "r1_s97", "kernel": "verus", "op": "wrong-constant", "pid": 64485, "t": 1789608555.504378}
+{"ev": "end", "task": "r1_s92", "kernel": "verus", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608556.098885}
+{"ev": "start", "task": "r1_s101", "kernel": "spark", "op": "compare-flip", "pid": 64484, "t": 1789608556.0996852}
+{"ev": "end", "task": "r1_s97", "kernel": "verus", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608556.2380302}
+{"ev": "start", "task": "r1_s102", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789608556.238323}
+{"ev": "end", "task": "r1_s102", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608559.402606}
+{"ev": "start", "task": "r1_s103", "kernel": "spark", "op": "wrong-var#2", "pid": 64485, "t": 1789608559.402928}
+{"ev": "end", "task": "r1_s103", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608564.2736168}
+{"ev": "start", "task": "r1_s104", "kernel": "spark", "op": "wrong-constant", "pid": 64485, "t": 1789608564.273969}
+{"ev": "end", "task": "r1_s104", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608567.98706}
+{"ev": "start", "task": "r1_s105", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608567.987471}
+{"ev": "end", "task": "r1_s105", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608571.316803}
+{"ev": "start", "task": "r1_s109", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608571.317117}
+{"ev": "end", "task": "r1_s109", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608574.173552}
+{"ev": "start", "task": "r1_s112", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608574.174714}
+{"ev": "end", "task": "r1_s112", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608577.983855}
+{"ev": "start", "task": "r1_s113", "kernel": "spark", "op": "compare-flip", "pid": 64485, "t": 1789608577.984247}
+{"ev": "end", "task": "r1_s113", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608583.875458}
+{"ev": "start", "task": "r1_s115", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608583.875783}
+{"ev": "end", "task": "r1_s101", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608584.367244}
+{"ev": "start", "task": "r1_s12", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608584.367573}
+{"ev": "end", "task": "r1_s115", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608586.4552588}
+{"ev": "start", "task": "r1_s124", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608586.455594}
+{"ev": "end", "task": "r1_s124", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608589.174547}
+{"ev": "start", "task": "r1_s129", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608589.1749032}
+{"ev": "end", "task": "r1_s129", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608592.78996}
+{"ev": "start", "task": "r1_s130", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608592.790367}
+{"ev": "end", "task": "r1_s130", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608596.7803462}
+{"ev": "start", "task": "r1_s134", "kernel": "spark", "op": "wrong-var", "pid": 64485, "t": 1789608596.780673}
+{"ev": "end", "task": "r1_s134", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608598.874889}
+{"ev": "start", "task": "r1_s140", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608598.875293}
+{"ev": "end", "task": "r1_s12", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608603.932514}
+{"ev": "start", "task": "r1_s142", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608603.932899}
+{"ev": "end", "task": "r1_s142", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608606.930254}
+{"ev": "start", "task": "r1_s145", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608606.930562}
+{"ev": "end", "task": "r1_s145", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608610.163131}
+{"ev": "start", "task": "r1_s146", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608610.163577}
+{"ev": "end", "task": "r1_s146", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608613.9421399}
+{"ev": "start", "task": "r1_s147", "kernel": "spark", "op": "wrong-var", "pid": 64484, "t": 1789608613.94293}
+{"ev": "end", "task": "r1_s147", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608617.2068648}
+{"ev": "start", "task": "r1_s150", "kernel": "spark", "op": "wrong-operator", "pid": 64484, "t": 1789608617.2071428}
+{"ev": "end", "task": "r1_s140", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608618.7336938}
+{"ev": "start", "task": "r1_s152", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608618.734061}
+{"ev": "end", "task": "r1_s150", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608619.173433}
+{"ev": "start", "task": "r1_s153", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608619.173729}
+{"ev": "end", "task": "r1_s152", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608621.336431}
+{"ev": "start", "task": "r1_s156", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608621.33675}
+{"ev": "end", "task": "r1_s153", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608621.7803159}
+{"ev": "start", "task": "r1_s158", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608621.7805839}
+{"ev": "end", "task": "r1_s158", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608624.2940512}
+{"ev": "start", "task": "r1_s165", "kernel": "spark", "op": "negate-cond", "pid": 64484, "t": 1789608624.294382}
+{"ev": "end", "task": "r1_s156", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608626.711027}
+{"ev": "start", "task": "r1_s167", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608626.7114}
+{"ev": "end", "task": "r1_s167", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608649.049172}
+{"ev": "start", "task": "r1_s168", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608649.0495548}
+{"ev": "end", "task": "r1_s168", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608651.494862}
+{"ev": "start", "task": "r1_s171", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608651.495254}
+{"ev": "end", "task": "r1_s165", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608662.732746}
+{"ev": "start", "task": "r1_s175", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608662.733153}
+{"ev": "end", "task": "r1_s171", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608669.990538}
+{"ev": "start", "task": "r1_s179", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608669.990852}
+{"ev": "end", "task": "r1_s179", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608673.473639}
+{"ev": "start", "task": "r1_s180", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608673.473939}
+{"ev": "end", "task": "r1_s180", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608676.237615}
+{"ev": "start", "task": "r1_s183", "kernel": "spark", "op": "compare-flip", "pid": 64485, "t": 1789608676.237917}
+{"ev": "end", "task": "r1_s183", "kernel": "spark", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608679.942018}
+{"ev": "start", "task": "r1_s188", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608679.942365}
+{"ev": "end", "task": "r1_s188", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608682.141936}
+{"ev": "start", "task": "r1_s19", "kernel": "spark", "op": "wrong-var", "pid": 64485, "t": 1789608682.1422458}
+{"ev": "end", "task": "r1_s19", "kernel": "spark", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64485, "t": 1789608682.8065212}
+{"ev": "start", "task": "r1_s196", "kernel": "spark", "op": "compare-flip", "pid": 64485, "t": 1789608682.8069172}
+{"ev": "end", "task": "r1_s175", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608685.889812}
+{"ev": "start", "task": "r1_s201", "kernel": "spark", "op": "wrong-constant", "pid": 64484, "t": 1789608685.890155}
+{"ev": "end", "task": "r1_s196", "kernel": "spark", "real": "vacuous", "twin": "vacuous", "agree": true, "pid": 64485, "t": 1789608687.150431}
+{"ev": "start", "task": "r1_s203", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789608687.151051}
+{"ev": "end", "task": "r1_s203", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608690.065315}
+{"ev": "start", "task": "r1_s206", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608690.065653}
+{"ev": "end", "task": "r1_s206", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608693.0168939}
+{"ev": "start", "task": "r1_s207", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608693.017198}
+{"ev": "end", "task": "r1_s207", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608696.355903}
+{"ev": "start", "task": "r1_s210", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789608696.3563578}
+{"ev": "end", "task": "r1_s210", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608700.0984771}
+{"ev": "start", "task": "r1_s211", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608700.098782}
+{"ev": "end", "task": "r1_s211", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608702.658978}
+{"ev": "start", "task": "r1_s215", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608702.659294}
+{"ev": "end", "task": "r1_s215", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608705.646524}
+{"ev": "start", "task": "r1_s217", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608705.64683}
+{"ev": "end", "task": "r1_s217", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608707.960225}
+{"ev": "start", "task": "r1_s22", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608707.96066}
+{"ev": "end", "task": "r1_s201", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608707.966431}
+{"ev": "start", "task": "r1_s221", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608707.966677}
+{"ev": "end", "task": "r1_s221", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608710.170816}
+{"ev": "start", "task": "r1_s227", "kernel": "spark", "op": "wrong-constant", "pid": 64484, "t": 1789608710.171277}
+{"ev": "end", "task": "r1_s22", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608711.460342}
+{"ev": "start", "task": "r1_s228", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608711.4606552}
+{"ev": "end", "task": "r1_s227", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608712.385277}
+{"ev": "start", "task": "r1_s230", "kernel": "spark", "op": "wrong-var", "pid": 64484, "t": 1789608712.385618}
+{"ev": "end", "task": "r1_s230", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608716.4547882}
+{"ev": "start", "task": "r1_s232", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608716.4557152}
+{"ev": "end", "task": "r1_s228", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608716.8125582}
+{"ev": "start", "task": "r1_s235", "kernel": "spark", "op": "compare-flip", "pid": 64485, "t": 1789608716.812829}
+{"ev": "end", "task": "r1_s232", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608721.314132}
+{"ev": "start", "task": "r1_s236", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608721.314502}
+{"ev": "end", "task": "r1_s236", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608725.601215}
+{"ev": "start", "task": "r1_s237", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608725.601544}
+{"ev": "end", "task": "r1_s237", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608730.58447}
+{"ev": "start", "task": "r1_s238", "kernel": "spark", "op": "off-by-one#4", "pid": 64484, "t": 1789608730.584817}
+{"ev": "end", "task": "r1_s238", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608736.781706}
+{"ev": "start", "task": "r1_s24", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608736.782018}
+{"ev": "end", "task": "r1_s235", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608737.916092}
+{"ev": "start", "task": "r1_s243", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608737.916522}
+{"ev": "end", "task": "r1_s24", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608740.90902}
+{"ev": "start", "task": "r1_s255", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608740.912377}
+{"ev": "end", "task": "r1_s243", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608741.394332}
+{"ev": "start", "task": "r1_s257", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608741.395158}
+{"ev": "end", "task": "r1_s255", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608744.6254752}
+{"ev": "start", "task": "r1_s258", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608744.625804}
+{"ev": "end", "task": "r1_s257", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608744.922164}
+{"ev": "start", "task": "r1_s26", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608744.922576}
+{"ev": "end", "task": "r1_s258", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608747.584924}
+{"ev": "start", "task": "r1_s260", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608747.585322}
+{"ev": "end", "task": "r1_s26", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608748.7132428}
+{"ev": "start", "task": "r1_s262", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608748.713537}
+{"ev": "end", "task": "r1_s260", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608750.7220411}
+{"ev": "start", "task": "r1_s263", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608750.722403}
+{"ev": "end", "task": "r1_s263", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608755.0110521}
+{"ev": "start", "task": "r1_s265", "kernel": "spark", "op": "negate-cond", "pid": 64484, "t": 1789608755.011402}
+{"ev": "end", "task": "r1_s262", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608755.444983}
+{"ev": "start", "task": "r1_s268", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608755.445293}
+{"ev": "end", "task": "r1_s268", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608759.028822}
+{"ev": "start", "task": "r1_s273", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608759.0291772}
+{"ev": "end", "task": "r1_s273", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608762.767044}
+{"ev": "start", "task": "r1_s275", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608762.7676558}
+{"ev": "end", "task": "r1_s275", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608765.242504}
+{"ev": "start", "task": "r1_s28", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608765.2428842}
+{"ev": "end", "task": "r1_s28", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608769.0929742}
+{"ev": "start", "task": "r1_s285", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608769.0935712}
+{"ev": "end", "task": "r1_s285", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608772.421728}
+{"ev": "start", "task": "r1_s288", "kernel": "spark", "op": "off-by-one+nonrefuting", "pid": 64485, "t": 1789608772.422123}
+{"ev": "end", "task": "r1_s288", "kernel": "spark", "real": "verified", "twin": "verified", "agree": true, "pid": 64485, "t": 1789608775.313405}
+{"ev": "start", "task": "r1_s292", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608775.313749}
+{"ev": "end", "task": "r1_s292", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608777.6562629}
+{"ev": "start", "task": "r1_s293", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608777.6565702}
+{"ev": "end", "task": "r1_s293", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608779.807956}
+{"ev": "start", "task": "r1_s294", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789608779.808384}
+{"ev": "end", "task": "r1_s265", "kernel": "spark", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608781.211434}
+{"ev": "start", "task": "r1_s298", "kernel": "spark", "op": "off-by-one#2", "pid": 64484, "t": 1789608781.211761}
+{"ev": "end", "task": "r1_s294", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608781.6661172}
+{"ev": "start", "task": "r1_s299", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789608781.666398}
+{"ev": "end", "task": "r1_s298", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608784.5327601}
+{"ev": "start", "task": "r1_s30", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608784.533123}
+{"ev": "end", "task": "r1_s299", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608784.6310148}
+{"ev": "start", "task": "r1_s303", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608784.631351}
+{"ev": "end", "task": "r1_s30", "kernel": "spark", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64484, "t": 1789608785.377886}
+{"ev": "start", "task": "r1_s31", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608785.378199}
+{"ev": "end", "task": "r1_s303", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608787.245256}
+{"ev": "start", "task": "r1_s33", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789608787.245733}
+{"ev": "end", "task": "r1_s31", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608788.6719968}
+{"ev": "start", "task": "r1_s333", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608788.6723359}
+{"ev": "end", "task": "r1_s33", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608790.382634}
+{"ev": "start", "task": "r1_s337", "kernel": "spark", "op": "wrong-var#2", "pid": 64485, "t": 1789608790.3829818}
+{"ev": "end", "task": "r1_s333", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608790.9917219}
+{"ev": "start", "task": "r1_s338", "kernel": "spark", "op": "off-by-one#2", "pid": 64484, "t": 1789608790.992084}
+{"ev": "end", "task": "r1_s337", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608793.001834}
+{"ev": "start", "task": "r1_s34", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608793.00216}
+{"ev": "end", "task": "r1_s338", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608793.493633}
+{"ev": "start", "task": "r1_s341", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608793.4939232}
+{"ev": "end", "task": "r1_s34", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608795.9916239}
+{"ev": "start", "task": "r1_s342", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608795.991934}
+{"ev": "end", "task": "r1_s341", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608797.2290702}
+{"ev": "start", "task": "r1_s343", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608797.229446}
+{"ev": "end", "task": "r1_s342", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608798.202803}
+{"ev": "start", "task": "r1_s345", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608798.203273}
+{"ev": "end", "task": "r1_s343", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608800.6999922}
+{"ev": "start", "task": "r1_s346", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608800.7004201}
+{"ev": "end", "task": "r1_s345", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608800.719588}
+{"ev": "start", "task": "r1_s347", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608800.719867}
+{"ev": "end", "task": "r1_s346", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608803.8465111}
+{"ev": "start", "task": "r1_s348", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608803.8468668}
+{"ev": "end", "task": "r1_s348", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608807.209167}
+{"ev": "start", "task": "r1_s35", "kernel": "spark", "op": "wrong-var+nonrefuting", "pid": 64484, "t": 1789608807.209619}
+{"ev": "end", "task": "r1_s35", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608810.135377}
+{"ev": "start", "task": "r1_s357", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608810.135697}
+{"ev": "end", "task": "r1_s357", "kernel": "spark", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64484, "t": 1789608811.109393}
+{"ev": "start", "task": "r1_s361", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608811.109835}
+{"ev": "end", "task": "r1_s361", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608814.2079601}
+{"ev": "start", "task": "r1_s365", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608814.208395}
+{"ev": "end", "task": "r1_s347", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608820.053748}
+{"ev": "start", "task": "r1_s368", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608820.054143}
+{"ev": "end", "task": "r1_s368", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608842.375437}
+{"ev": "start", "task": "r1_s37", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608842.375768}
+{"ev": "end", "task": "r1_s365", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608842.8513322}
+{"ev": "start", "task": "r1_s373", "kernel": "spark", "op": "compare-flip", "pid": 64484, "t": 1789608842.851709}
+{"ev": "end", "task": "r1_s37", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608845.069269}
+{"ev": "start", "task": "r1_s38", "kernel": "spark", "op": "wrong-constant#1", "pid": 64485, "t": 1789608845.0696461}
+{"ev": "end", "task": "r1_s38", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608869.194005}
+{"ev": "start", "task": "r1_s380", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608869.1943738}
+{"ev": "end", "task": "r1_s373", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608869.6683168}
+{"ev": "start", "task": "r1_s388", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608869.6687381}
+{"ev": "end", "task": "r1_s380", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608871.898925}
+{"ev": "start", "task": "r1_s39", "kernel": "spark", "op": "wrong-var", "pid": 64485, "t": 1789608871.899327}
+{"ev": "end", "task": "r1_s388", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608873.4885042}
+{"ev": "start", "task": "r1_s390", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608873.48879}
+{"ev": "end", "task": "r1_s39", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608875.15626}
+{"ev": "start", "task": "r1_s392", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608875.1567638}
+{"ev": "end", "task": "r1_s390", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608876.372406}
+{"ev": "start", "task": "r1_s393", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608876.372768}
+{"ev": "end", "task": "r1_s393", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608898.546894}
+{"ev": "start", "task": "r1_s394", "kernel": "spark", "op": "wrong-constant", "pid": 64484, "t": 1789608898.5472488}
+{"ev": "end", "task": "r1_s392", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608901.751803}
+{"ev": "start", "task": "r1_s396", "kernel": "spark", "op": "wrong-var#3", "pid": 64485, "t": 1789608901.752177}
+{"ev": "end", "task": "r1_s396", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608905.221739}
+{"ev": "start", "task": "r1_s397", "kernel": "spark", "op": "wrong-var#3", "pid": 64485, "t": 1789608905.222181}
+{"ev": "end", "task": "r1_s397", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608908.293854}
+{"ev": "start", "task": "r1_s402", "kernel": "spark", "op": "compare-flip", "pid": 64485, "t": 1789608908.294463}
+{"ev": "end", "task": "r1_s394", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608922.8391502}
+{"ev": "start", "task": "r1_s404", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608922.839524}
+{"ev": "end", "task": "r1_s404", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608925.3554718}
+{"ev": "start", "task": "r1_s407", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608925.3558028}
+{"ev": "end", "task": "r1_s402", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608925.632886}
+{"ev": "start", "task": "r1_s41", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608925.633282}
+{"ev": "end", "task": "r1_s41", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608928.239756}
+{"ev": "start", "task": "r1_s411", "kernel": "spark", "op": "compare-flip", "pid": 64485, "t": 1789608928.2400482}
+{"ev": "end", "task": "r1_s407", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608928.595926}
+{"ev": "start", "task": "r1_s412", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608928.5962791}
+{"ev": "end", "task": "r1_s412", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608932.2853398}
+{"ev": "start", "task": "r1_s416", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608932.285769}
+{"ev": "end", "task": "r1_s416", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608935.7141628}
+{"ev": "start", "task": "r1_s419", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608935.714578}
+{"ev": "end", "task": "r1_s419", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608939.014407}
+{"ev": "start", "task": "r1_s421", "kernel": "spark", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789608939.014783}
+{"ev": "end", "task": "r1_s421", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608941.825975}
+{"ev": "start", "task": "r1_s424", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608941.826333}
+{"ev": "end", "task": "r1_s424", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608946.207497}
+{"ev": "start", "task": "r1_s425", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608946.207886}
+{"ev": "end", "task": "r1_s411", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608956.439583}
+{"ev": "start", "task": "r1_s428", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789608956.4400709}
+{"ev": "end", "task": "r1_s428", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608959.1815}
+{"ev": "start", "task": "r1_s43", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608959.181845}
+{"ev": "end", "task": "r1_s425", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608974.313699}
+{"ev": "start", "task": "r1_s432", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608974.314195}
+{"ev": "end", "task": "r1_s432", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608977.445249}
+{"ev": "start", "task": "r1_s434", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789608977.4456031}
+{"ev": "end", "task": "r1_s43", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608978.012639}
+{"ev": "start", "task": "r1_s435", "kernel": "spark", "op": "wrong-constant", "pid": 64485, "t": 1789608978.012964}
+{"ev": "end", "task": "r1_s435", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608980.095176}
+{"ev": "start", "task": "r1_s441", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608980.09548}
+{"ev": "end", "task": "r1_s434", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608980.705954}
+{"ev": "start", "task": "r1_s449", "kernel": "spark", "op": "off-by-one+nonrefuting", "pid": 64484, "t": 1789608980.70649}
+{"ev": "end", "task": "r1_s449", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608983.145733}
+{"ev": "start", "task": "r1_s45", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608983.146126}
+{"ev": "end", "task": "r1_s441", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789608983.3966799}
+{"ev": "start", "task": "r1_s450", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789608983.3970182}
+{"ev": "end", "task": "r1_s45", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608985.5749109}
+{"ev": "start", "task": "r1_s452", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608985.575312}
+{"ev": "end", "task": "r1_s452", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608988.859721}
+{"ev": "start", "task": "r1_s456", "kernel": "spark", "op": "compare-flip", "pid": 64484, "t": 1789608988.86023}
+{"ev": "end", "task": "r1_s456", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789608992.153315}
+{"ev": "start", "task": "r1_s458", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789608992.153686}
+{"ev": "end", "task": "r1_s450", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609004.589514}
+{"ev": "start", "task": "r1_s459", "kernel": "spark", "op": "wrong-var", "pid": 64485, "t": 1789609004.5898979}
+{"ev": "end", "task": "r1_s459", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609008.4588952}
+{"ev": "start", "task": "r1_s46", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609008.45924}
+{"ev": "end", "task": "r1_s46", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609011.634292}
+{"ev": "start", "task": "r1_s461", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609011.634636}
+{"ev": "end", "task": "r1_s461", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609013.55834}
+{"ev": "start", "task": "r1_s466", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609013.5586581}
+{"ev": "end", "task": "r1_s466", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609016.0407171}
+{"ev": "start", "task": "r1_s468", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609016.041009}
+{"ev": "end", "task": "r1_s458", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609017.277605}
+{"ev": "start", "task": "r1_s471", "kernel": "spark", "op": "wrong-var", "pid": 64484, "t": 1789609017.277924}
+{"ev": "end", "task": "r1_s468", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609019.357151}
+{"ev": "start", "task": "r1_s483", "kernel": "spark", "op": "wrong-var", "pid": 64485, "t": 1789609019.3575108}
+{"ev": "end", "task": "r1_s471", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609020.486739}
+{"ev": "start", "task": "r1_s487", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789609020.487067}
+{"ev": "end", "task": "r1_s483", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609022.460166}
+{"ev": "start", "task": "r1_s493", "kernel": "spark", "op": "wrong-var", "pid": 64485, "t": 1789609022.4604878}
+{"ev": "end", "task": "r1_s487", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609022.7894452}
+{"ev": "start", "task": "r1_s494", "kernel": "spark", "op": "off-by-one#1", "pid": 64484, "t": 1789609022.789768}
+{"ev": "end", "task": "r1_s493", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609025.794379}
+{"ev": "start", "task": "r1_s496", "kernel": "spark", "op": "wrong-var", "pid": 64485, "t": 1789609025.7948182}
+{"ev": "end", "task": "r1_s494", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609026.077653}
+{"ev": "start", "task": "r1_s52", "kernel": "spark", "op": "wrong-operator#2", "pid": 64484, "t": 1789609026.078084}
+{"ev": "end", "task": "r1_s496", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609027.837076}
+{"ev": "start", "task": "r1_s53", "kernel": "spark", "op": "wrong-constant", "pid": 64485, "t": 1789609027.837448}
+{"ev": "end", "task": "r1_s53", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609031.092702}
+{"ev": "start", "task": "r1_s56", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789609031.0930629}
+{"ev": "end", "task": "r1_s52", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609032.733283}
+{"ev": "start", "task": "r1_s59", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789609032.733602}
+{"ev": "end", "task": "r1_s56", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609034.9248252}
+{"ev": "start", "task": "r1_s6", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609034.925185}
+{"ev": "end", "task": "r1_s6", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609038.80897}
+{"ev": "start", "task": "r1_s62", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789609038.809314}
+{"ev": "end", "task": "r1_s59", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609047.277643}
+{"ev": "start", "task": "r1_s64", "kernel": "spark", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789609047.277994}
+{"ev": "end", "task": "r1_s64", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609049.718764}
+{"ev": "start", "task": "r1_s67", "kernel": "spark", "op": "collapse-if", "pid": 64484, "t": 1789609049.719052}
+{"ev": "end", "task": "r1_s62", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609059.93767}
+{"ev": "start", "task": "r1_s68", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789609059.9380548}
+{"ev": "end", "task": "r1_s68", "kernel": "spark", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609079.3518531}
+{"ev": "start", "task": "r1_s7", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609079.352298}
+{"ev": "end", "task": "r1_s7", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609082.140081}
+{"ev": "start", "task": "r1_s70", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609082.1403892}
+{"ev": "end", "task": "r1_s70", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609085.140717}
+{"ev": "start", "task": "r1_s75", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609085.1410189}
+{"ev": "end", "task": "r1_s75", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609087.2427928}
+{"ev": "start", "task": "r1_s79", "kernel": "spark", "op": "off-by-one#2", "pid": 64485, "t": 1789609087.24308}
+{"ev": "end", "task": "r1_s79", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609089.394314}
+{"ev": "start", "task": "r1_s8", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609089.395329}
+{"ev": "end", "task": "r1_s8", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609091.6894321}
+{"ev": "start", "task": "r1_s82", "kernel": "spark", "op": "wrong-constant#1", "pid": 64485, "t": 1789609091.68973}
+{"ev": "end", "task": "r1_s82", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609093.898879}
+{"ev": "start", "task": "r1_s83", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609093.899245}
+{"ev": "end", "task": "r1_s83", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609095.947257}
+{"ev": "start", "task": "r1_s84", "kernel": "spark", "op": "off-by-one", "pid": 64485, "t": 1789609095.947548}
+{"ev": "end", "task": "r1_s67", "kernel": "spark", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609097.90748}
+{"ev": "start", "task": "r1_s85", "kernel": "spark", "op": "wrong-constant", "pid": 64484, "t": 1789609097.907764}
+{"ev": "end", "task": "r1_s84", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609098.660893}
+{"ev": "start", "task": "r1_s86", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789609098.6611998}
+{"ev": "end", "task": "r1_s85", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609100.5761049}
+{"ev": "start", "task": "r1_s87", "kernel": "spark", "op": "off-by-one", "pid": 64484, "t": 1789609100.57643}
+{"ev": "end", "task": "r1_s86", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609101.45336}
+{"ev": "start", "task": "r1_s90", "kernel": "spark", "op": "collapse-if", "pid": 64485, "t": 1789609101.4536488}
+{"ev": "end", "task": "r1_s87", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609124.461052}
+{"ev": "start", "task": "r1_s91", "kernel": "spark", "op": "compare-flip", "pid": 64484, "t": 1789609124.461378}
+{"ev": "end", "task": "r1_s90", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609126.090867}
+{"ev": "start", "task": "r1_s92", "kernel": "spark", "op": "off-by-one#1", "pid": 64485, "t": 1789609126.091233}
+{"ev": "end", "task": "r1_s92", "kernel": "spark", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609129.053375}
+{"ev": "start", "task": "r1_s97", "kernel": "spark", "op": "wrong-constant", "pid": 64485, "t": 1789609129.0537028}
+{"ev": "end", "task": "r1_s97", "kernel": "spark", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609133.9163399}
+{"ev": "start", "task": "r1_s101", "kernel": "framac", "op": "compare-flip", "pid": 64485, "t": 1789609133.916671}
+{"ev": "end", "task": "r1_s101", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609140.410984}
+{"ev": "start", "task": "r1_s102", "kernel": "framac", "op": "off-by-one#1", "pid": 64485, "t": 1789609140.4113011}
+{"ev": "end", "task": "r1_s91", "kernel": "spark", "real": "unproved", "twin": "unproved", "agree": true, "pid": 64484, "t": 1789609140.9896169}
+{"ev": "start", "task": "r1_s103", "kernel": "framac", "op": "wrong-var#2", "pid": 64484, "t": 1789609140.989922}
+{"ev": "end", "task": "r1_s103", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609142.959214}
+{"ev": "start", "task": "r1_s104", "kernel": "framac", "op": "wrong-constant", "pid": 64484, "t": 1789609142.959528}
+{"ev": "end", "task": "r1_s102", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609143.4146402}
+{"ev": "start", "task": "r1_s105", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609143.414976}
+{"ev": "end", "task": "r1_s104", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609144.302603}
+{"ev": "start", "task": "r1_s109", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609144.303234}
+{"ev": "end", "task": "r1_s105", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609145.1161048}
+{"ev": "start", "task": "r1_s112", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609145.116391}
+{"ev": "end", "task": "r1_s109", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609146.331757}
+{"ev": "start", "task": "r1_s113", "kernel": "framac", "op": "compare-flip", "pid": 64484, "t": 1789609146.332344}
+{"ev": "end", "task": "r1_s112", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609146.6951501}
+{"ev": "start", "task": "r1_s115", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609146.695443}
+{"ev": "end", "task": "r1_s115", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609148.89626}
+{"ev": "start", "task": "r1_s12", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609148.896868}
+{"ev": "end", "task": "r1_s113", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609152.626834}
+{"ev": "start", "task": "r1_s124", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609152.627826}
+{"ev": "end", "task": "r1_s124", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609156.301812}
+{"ev": "start", "task": "r1_s129", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609156.302455}
+{"ev": "end", "task": "r1_s129", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609158.339495}
+{"ev": "start", "task": "r1_s130", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609158.340396}
+{"ev": "end", "task": "r1_s130", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609160.690611}
+{"ev": "start", "task": "r1_s134", "kernel": "framac", "op": "wrong-var", "pid": 64484, "t": 1789609160.690965}
+{"ev": "end", "task": "r1_s12", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609164.180309}
+{"ev": "start", "task": "r1_s140", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609164.180607}
+{"ev": "end", "task": "r1_s134", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609164.5434701}
+{"ev": "start", "task": "r1_s142", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609164.543788}
+{"ev": "end", "task": "r1_s142", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609168.194508}
+{"ev": "start", "task": "r1_s145", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609168.1951401}
+{"ev": "end", "task": "r1_s145", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609171.616777}
+{"ev": "start", "task": "r1_s146", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609171.6173592}
+{"ev": "end", "task": "r1_s146", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609173.695071}
+{"ev": "start", "task": "r1_s147", "kernel": "framac", "op": "wrong-var", "pid": 64484, "t": 1789609173.6953752}
+{"ev": "end", "task": "r1_s147", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609175.01614}
+{"ev": "start", "task": "r1_s150", "kernel": "framac", "op": "wrong-operator", "pid": 64484, "t": 1789609175.016482}
+{"ev": "end", "task": "r1_s140", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609175.999607}
+{"ev": "start", "task": "r1_s151", "kernel": "framac", "op": "negate-cond", "pid": 64485, "t": 1789609175.999936}
+{"ev": "end", "task": "r1_s150", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609176.146981}
+{"ev": "start", "task": "r1_s152", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609176.1473548}
+{"ev": "end", "task": "r1_s152", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609179.5578198}
+{"ev": "start", "task": "r1_s153", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609179.5584488}
+{"ev": "end", "task": "r1_s151", "kernel": "framac", "real": "timeout", "twin": "timeout", "agree": true, "pid": 64485, "t": 1789609183.329383}
+{"ev": "start", "task": "r1_s156", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609183.329737}
+{"ev": "end", "task": "r1_s153", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609183.9529521}
+{"ev": "start", "task": "r1_s158", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609183.9532459}
+{"ev": "end", "task": "r1_s158", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609185.487492}
+{"ev": "start", "task": "r1_s165", "kernel": "framac", "op": "negate-cond", "pid": 64484, "t": 1789609185.4878201}
+{"ev": "end", "task": "r1_s156", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609186.019958}
+{"ev": "start", "task": "r1_s167", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609186.020297}
+{"ev": "end", "task": "r1_s167", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609193.678569}
+{"ev": "start", "task": "r1_s168", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609193.679206}
+{"ev": "end", "task": "r1_s168", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609197.199073}
+{"ev": "start", "task": "r1_s171", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609197.199728}
+{"ev": "end", "task": "r1_s165", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609198.260911}
+{"ev": "start", "task": "r1_s175", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609198.261495}
+{"ev": "end", "task": "r1_s171", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609206.1059918}
+{"ev": "start", "task": "r1_s179", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609206.106352}
+{"ev": "end", "task": "r1_s175", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609207.182705}
+{"ev": "start", "task": "r1_s180", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609207.183054}
+{"ev": "end", "task": "r1_s179", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609207.523797}
+{"ev": "start", "task": "r1_s183", "kernel": "framac", "op": "compare-flip", "pid": 64485, "t": 1789609207.524072}
+{"ev": "end", "task": "r1_s183", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609209.3943932}
+{"ev": "start", "task": "r1_s188", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609209.394676}
+{"ev": "end", "task": "r1_s180", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609209.899611}
+{"ev": "start", "task": "r1_s19", "kernel": "framac", "op": "wrong-var", "pid": 64484, "t": 1789609209.89987}
+{"ev": "end", "task": "r1_s19", "kernel": "framac", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64484, "t": 1789609210.5821178}
+{"ev": "start", "task": "r1_s196", "kernel": "framac", "op": "compare-flip", "pid": 64484, "t": 1789609210.582913}
+{"ev": "end", "task": "r1_s188", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609211.158154}
+{"ev": "start", "task": "r1_s201", "kernel": "framac", "op": "wrong-constant", "pid": 64485, "t": 1789609211.158459}
+{"ev": "end", "task": "r1_s196", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609213.317945}
+{"ev": "start", "task": "r1_s203", "kernel": "framac", "op": "off-by-one#1", "pid": 64484, "t": 1789609213.318319}
+{"ev": "end", "task": "r1_s203", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609214.890738}
+{"ev": "start", "task": "r1_s206", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609214.891341}
+{"ev": "end", "task": "r1_s206", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609217.895781}
+{"ev": "start", "task": "r1_s207", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609217.8965812}
+{"ev": "end", "task": "r1_s207", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609219.482296}
+{"ev": "start", "task": "r1_s210", "kernel": "framac", "op": "off-by-one#1", "pid": 64484, "t": 1789609219.4825559}
+{"ev": "end", "task": "r1_s201", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609220.008131}
+{"ev": "start", "task": "r1_s211", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609220.008415}
+{"ev": "end", "task": "r1_s211", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609221.690347}
+{"ev": "start", "task": "r1_s215", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609221.6905978}
+{"ev": "end", "task": "r1_s210", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609222.2788422}
+{"ev": "start", "task": "r1_s217", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609222.279116}
+{"ev": "end", "task": "r1_s215", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609223.1952178}
+{"ev": "start", "task": "r1_s22", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609223.1958258}
+{"ev": "end", "task": "r1_s217", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609224.3832588}
+{"ev": "start", "task": "r1_s221", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609224.3835819}
+{"ev": "end", "task": "r1_s221", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609226.4996932}
+{"ev": "start", "task": "r1_s227", "kernel": "framac", "op": "wrong-constant", "pid": 64484, "t": 1789609226.50002}
+{"ev": "end", "task": "r1_s227", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609228.16273}
+{"ev": "start", "task": "r1_s228", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609228.163008}
+{"ev": "end", "task": "r1_s22", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609228.5328279}
+{"ev": "start", "task": "r1_s230", "kernel": "framac", "op": "wrong-var", "pid": 64485, "t": 1789609228.533109}
+{"ev": "end", "task": "r1_s228", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609230.6382642}
+{"ev": "start", "task": "r1_s232", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609230.6386628}
+{"ev": "end", "task": "r1_s230", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609232.327614}
+{"ev": "start", "task": "r1_s235", "kernel": "framac", "op": "compare-flip", "pid": 64485, "t": 1789609232.3279018}
+{"ev": "end", "task": "r1_s232", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609232.3684852}
+{"ev": "start", "task": "r1_s236", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609232.368775}
+{"ev": "end", "task": "r1_s236", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609234.686197}
+{"ev": "start", "task": "r1_s237", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609234.687087}
+{"ev": "end", "task": "r1_s237", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609241.982135}
+{"ev": "start", "task": "r1_s238", "kernel": "framac", "op": "off-by-one#4", "pid": 64484, "t": 1789609241.982765}
+{"ev": "end", "task": "r1_s238", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609245.753469}
+{"ev": "start", "task": "r1_s24", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609245.754234}
+{"ev": "end", "task": "r1_s24", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609247.781725}
+{"ev": "start", "task": "r1_s243", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609247.78203}
+{"ev": "end", "task": "r1_s235", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609248.211311}
+{"ev": "start", "task": "r1_s255", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609248.211566}
+{"ev": "end", "task": "r1_s243", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609249.743576}
+{"ev": "start", "task": "r1_s257", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609249.743972}
+{"ev": "end", "task": "r1_s255", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609250.163824}
+{"ev": "start", "task": "r1_s258", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609250.164086}
+{"ev": "end", "task": "r1_s257", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609252.082947}
+{"ev": "start", "task": "r1_s26", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609252.083209}
+{"ev": "end", "task": "r1_s258", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609252.17435}
+{"ev": "start", "task": "r1_s260", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609252.174613}
+{"ev": "end", "task": "r1_s26", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609253.3771698}
+{"ev": "start", "task": "r1_s262", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609253.377446}
+{"ev": "end", "task": "r1_s260", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609253.536555}
+{"ev": "start", "task": "r1_s263", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609253.536863}
+{"ev": "end", "task": "r1_s262", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609255.699117}
+{"ev": "start", "task": "r1_s265", "kernel": "framac", "op": "negate-cond", "pid": 64484, "t": 1789609255.699352}
+{"ev": "end", "task": "r1_s263", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609256.6247501}
+{"ev": "start", "task": "r1_s268", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609256.625314}
+{"ev": "end", "task": "r1_s268", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609259.900851}
+{"ev": "start", "task": "r1_s273", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609259.901354}
+{"ev": "end", "task": "r1_s273", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609262.153822}
+{"ev": "start", "task": "r1_s275", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609262.154437}
+{"ev": "end", "task": "r1_s275", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609265.356504}
+{"ev": "start", "task": "r1_s28", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609265.356807}
+{"ev": "end", "task": "r1_s265", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609265.807897}
+{"ev": "start", "task": "r1_s285", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609265.808186}
+{"ev": "end", "task": "r1_s285", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609267.643063}
+{"ev": "start", "task": "r1_s288", "kernel": "framac", "op": "off-by-one+nonrefuting", "pid": 64484, "t": 1789609267.6433122}
+{"ev": "end", "task": "r1_s28", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609269.938657}
+{"ev": "start", "task": "r1_s292", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609269.938912}
+{"ev": "end", "task": "r1_s288", "kernel": "framac", "real": "verified", "twin": "verified", "agree": true, "pid": 64484, "t": 1789609270.0332851}
+{"ev": "start", "task": "r1_s293", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609270.033605}
+{"ev": "end", "task": "r1_s293", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609272.802644}
+{"ev": "start", "task": "r1_s294", "kernel": "framac", "op": "off-by-one#1", "pid": 64484, "t": 1789609272.8029718}
+{"ev": "end", "task": "r1_s292", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609273.646703}
+{"ev": "start", "task": "r1_s298", "kernel": "framac", "op": "off-by-one#2", "pid": 64485, "t": 1789609273.647031}
+{"ev": "end", "task": "r1_s294", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609275.413514}
+{"ev": "start", "task": "r1_s299", "kernel": "framac", "op": "off-by-one#1", "pid": 64484, "t": 1789609275.41381}
+{"ev": "end", "task": "r1_s298", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609275.939219}
+{"ev": "start", "task": "r1_s30", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609275.93958}
+{"ev": "end", "task": "r1_s30", "kernel": "framac", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64485, "t": 1789609276.573269}
+{"ev": "start", "task": "r1_s303", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609276.573913}
+{"ev": "end", "task": "r1_s299", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609277.330007}
+{"ev": "start", "task": "r1_s31", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609277.330817}
+{"ev": "end", "task": "r1_s303", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609278.684588}
+{"ev": "start", "task": "r1_s33", "kernel": "framac", "op": "off-by-one#1", "pid": 64485, "t": 1789609278.684872}
+{"ev": "end", "task": "r1_s33", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609280.313676}
+{"ev": "start", "task": "r1_s333", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609280.314066}
+{"ev": "end", "task": "r1_s333", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609282.042235}
+{"ev": "start", "task": "r1_s337", "kernel": "framac", "op": "wrong-var#2", "pid": 64485, "t": 1789609282.0425642}
+{"ev": "end", "task": "r1_s337", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609285.01573}
+{"ev": "start", "task": "r1_s338", "kernel": "framac", "op": "off-by-one#2", "pid": 64485, "t": 1789609285.016057}
+{"ev": "end", "task": "r1_s338", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609286.715245}
+{"ev": "start", "task": "r1_s34", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609286.715664}
+{"ev": "end", "task": "r1_s34", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609288.703072}
+{"ev": "start", "task": "r1_s341", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609288.703438}
+{"ev": "end", "task": "r1_s31", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609291.168368}
+{"ev": "start", "task": "r1_s342", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609291.1687338}
+{"ev": "end", "task": "r1_s341", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609292.006994}
+{"ev": "start", "task": "r1_s343", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609292.007309}
+{"ev": "end", "task": "r1_s342", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609292.705773}
+{"ev": "start", "task": "r1_s345", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609292.706316}
+{"ev": "end", "task": "r1_s343", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609294.127378}
+{"ev": "start", "task": "r1_s346", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609294.127876}
+{"ev": "end", "task": "r1_s345", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609294.4983401}
+{"ev": "start", "task": "r1_s347", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609294.498637}
+{"ev": "end", "task": "r1_s346", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609296.473587}
+{"ev": "start", "task": "r1_s348", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609296.474226}
+{"ev": "end", "task": "r1_s348", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609301.5830772}
+{"ev": "start", "task": "r1_s35", "kernel": "framac", "op": "wrong-var+nonrefuting", "pid": 64485, "t": 1789609301.584512}
+{"ev": "end", "task": "r1_s35", "kernel": "framac", "real": "refuted", "twin": "timeout", "agree": true, "pid": 64485, "t": 1789609303.786169}
+{"ev": "start", "task": "r1_s357", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609303.786473}
+{"ev": "end", "task": "r1_s347", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609304.1426969}
+{"ev": "start", "task": "r1_s361", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609304.1429892}
+{"ev": "end", "task": "r1_s357", "kernel": "framac", "real": "malformed", "twin": "malformed", "agree": true, "pid": 64485, "t": 1789609304.2495959}
+{"ev": "start", "task": "r1_s365", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609304.249892}
+{"ev": "end", "task": "r1_s361", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609306.8974771}
+{"ev": "start", "task": "r1_s368", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609306.898162}
+{"ev": "end", "task": "r1_s365", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609317.179172}
+{"ev": "start", "task": "r1_s37", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609317.179483}
+{"ev": "end", "task": "r1_s368", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609317.376833}
+{"ev": "start", "task": "r1_s373", "kernel": "framac", "op": "compare-flip", "pid": 64484, "t": 1789609317.377283}
+{"ev": "end", "task": "r1_s37", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609321.938483}
+{"ev": "start", "task": "r1_s38", "kernel": "framac", "op": "wrong-constant#1", "pid": 64485, "t": 1789609321.93887}
+{"ev": "end", "task": "r1_s38", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609330.450866}
+{"ev": "start", "task": "r1_s380", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609330.451178}
+{"ev": "end", "task": "r1_s373", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609331.553965}
+{"ev": "start", "task": "r1_s388", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609331.555999}
+{"ev": "end", "task": "r1_s380", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609332.326934}
+{"ev": "start", "task": "r1_s39", "kernel": "framac", "op": "wrong-var", "pid": 64485, "t": 1789609332.327276}
+{"ev": "end", "task": "r1_s388", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609333.278531}
+{"ev": "start", "task": "r1_s390", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609333.27885}
+{"ev": "end", "task": "r1_s39", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609333.9166}
+{"ev": "start", "task": "r1_s392", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609333.916873}
+{"ev": "end", "task": "r1_s390", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609334.775945}
+{"ev": "start", "task": "r1_s393", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609334.776236}
+{"ev": "end", "task": "r1_s392", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609342.276869}
+{"ev": "start", "task": "r1_s394", "kernel": "framac", "op": "wrong-constant", "pid": 64485, "t": 1789609342.277528}
+{"ev": "end", "task": "r1_s394", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609347.92503}
+{"ev": "start", "task": "r1_s396", "kernel": "framac", "op": "wrong-var#3", "pid": 64485, "t": 1789609347.925327}
+{"ev": "end", "task": "r1_s393", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609349.981743}
+{"ev": "start", "task": "r1_s397", "kernel": "framac", "op": "wrong-var#3", "pid": 64484, "t": 1789609349.982141}
+{"ev": "end", "task": "r1_s397", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609351.8725498}
+{"ev": "start", "task": "r1_s402", "kernel": "framac", "op": "compare-flip", "pid": 64484, "t": 1789609351.8728561}
+{"ev": "end", "task": "r1_s396", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609351.93025}
+{"ev": "start", "task": "r1_s404", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609351.930589}
+{"ev": "end", "task": "r1_s404", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609354.204583}
+{"ev": "start", "task": "r1_s407", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609354.205204}
+{"ev": "end", "task": "r1_s407", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609356.468195}
+{"ev": "start", "task": "r1_s41", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609356.468801}
+{"ev": "end", "task": "r1_s41", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609359.654448}
+{"ev": "start", "task": "r1_s411", "kernel": "framac", "op": "compare-flip", "pid": 64485, "t": 1789609359.654825}
+{"ev": "end", "task": "r1_s402", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609359.827172}
+{"ev": "start", "task": "r1_s412", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609359.827494}
+{"ev": "end", "task": "r1_s412", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609362.608767}
+{"ev": "start", "task": "r1_s416", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609362.609356}
+{"ev": "end", "task": "r1_s416", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609366.690012}
+{"ev": "start", "task": "r1_s419", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609366.690649}
+{"ev": "end", "task": "r1_s419", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609369.5509372}
+{"ev": "start", "task": "r1_s421", "kernel": "framac", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789609369.5516238}
+{"ev": "end", "task": "r1_s411", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609372.41683}
+{"ev": "start", "task": "r1_s424", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609372.417185}
+{"ev": "end", "task": "r1_s421", "kernel": "framac", "real": "refuted", "twin": "timeout", "agree": true, "pid": 64484, "t": 1789609372.880716}
+{"ev": "start", "task": "r1_s425", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609372.881272}
+{"ev": "end", "task": "r1_s424", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609374.998094}
+{"ev": "start", "task": "r1_s428", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609374.9984589}
+{"ev": "end", "task": "r1_s425", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609377.192367}
+{"ev": "start", "task": "r1_s43", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609377.192658}
+{"ev": "end", "task": "r1_s428", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609377.5418072}
+{"ev": "start", "task": "r1_s432", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609377.542132}
+{"ev": "end", "task": "r1_s432", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609380.821791}
+{"ev": "start", "task": "r1_s434", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609380.8224509}
+{"ev": "end", "task": "r1_s43", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609386.399936}
+{"ev": "start", "task": "r1_s435", "kernel": "framac", "op": "wrong-constant", "pid": 64484, "t": 1789609386.400213}
+{"ev": "end", "task": "r1_s434", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609387.618894}
+{"ev": "start", "task": "r1_s441", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609387.621194}
+{"ev": "end", "task": "r1_s435", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609388.3003678}
+{"ev": "start", "task": "r1_s449", "kernel": "framac", "op": "off-by-one+nonrefuting", "pid": 64484, "t": 1789609388.3006341}
+{"ev": "end", "task": "r1_s441", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609389.957609}
+{"ev": "start", "task": "r1_s45", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609389.958147}
+{"ev": "end", "task": "r1_s449", "kernel": "framac", "real": "refuted", "twin": "timeout", "agree": true, "pid": 64484, "t": 1789609390.465045}
+{"ev": "start", "task": "r1_s450", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609390.465337}
+{"ev": "end", "task": "r1_s45", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609394.117953}
+{"ev": "start", "task": "r1_s452", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609394.118538}
+{"ev": "end", "task": "r1_s452", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609397.2253041}
+{"ev": "start", "task": "r1_s456", "kernel": "framac", "op": "compare-flip", "pid": 64485, "t": 1789609397.225913}
+{"ev": "end", "task": "r1_s456", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609400.1358771}
+{"ev": "start", "task": "r1_s458", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609400.136574}
+{"ev": "end", "task": "r1_s450", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609403.02674}
+{"ev": "start", "task": "r1_s459", "kernel": "framac", "op": "wrong-var", "pid": 64484, "t": 1789609403.027097}
+{"ev": "end", "task": "r1_s458", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609404.175912}
+{"ev": "start", "task": "r1_s46", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609404.17616}
+{"ev": "end", "task": "r1_s459", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609404.365821}
+{"ev": "start", "task": "r1_s461", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609404.3661282}
+{"ev": "end", "task": "r1_s46", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609405.583978}
+{"ev": "start", "task": "r1_s466", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609405.584716}
+{"ev": "end", "task": "r1_s466", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609407.2152388}
+{"ev": "start", "task": "r1_s468", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609407.215588}
+{"ev": "end", "task": "r1_s461", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609407.30691}
+{"ev": "start", "task": "r1_s471", "kernel": "framac", "op": "wrong-var", "pid": 64484, "t": 1789609407.307195}
+{"ev": "end", "task": "r1_s468", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609409.673058}
+{"ev": "start", "task": "r1_s483", "kernel": "framac", "op": "wrong-var", "pid": 64485, "t": 1789609409.673683}
+{"ev": "end", "task": "r1_s471", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609412.0478148}
+{"ev": "start", "task": "r1_s487", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609412.04813}
+{"ev": "end", "task": "r1_s483", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609412.918071}
+{"ev": "start", "task": "r1_s493", "kernel": "framac", "op": "wrong-var", "pid": 64485, "t": 1789609412.918904}
+{"ev": "end", "task": "r1_s493", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609414.293628}
+{"ev": "start", "task": "r1_s494", "kernel": "framac", "op": "off-by-one#1", "pid": 64485, "t": 1789609414.293922}
+{"ev": "end", "task": "r1_s487", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609414.724724}
+{"ev": "start", "task": "r1_s496", "kernel": "framac", "op": "wrong-var", "pid": 64484, "t": 1789609414.725013}
+{"ev": "end", "task": "r1_s494", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609416.5437381}
+{"ev": "start", "task": "r1_s52", "kernel": "framac", "op": "wrong-operator#2", "pid": 64485, "t": 1789609416.54405}
+{"ev": "end", "task": "r1_s496", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609419.819731}
+{"ev": "start", "task": "r1_s53", "kernel": "framac", "op": "wrong-constant", "pid": 64484, "t": 1789609419.820222}
+{"ev": "end", "task": "r1_s53", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609423.063169}
+{"ev": "start", "task": "r1_s56", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609423.0638232}
+{"ev": "end", "task": "r1_s56", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609425.120878}
+{"ev": "start", "task": "r1_s59", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609425.121191}
+{"ev": "end", "task": "r1_s52", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609427.075167}
+{"ev": "start", "task": "r1_s6", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609427.0756009}
+{"ev": "end", "task": "r1_s6", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609428.422046}
+{"ev": "start", "task": "r1_s62", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609428.422656}
+{"ev": "end", "task": "r1_s59", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609432.5697331}
+{"ev": "start", "task": "r1_s64", "kernel": "framac", "op": "collapse-if+nonrefuting", "pid": 64484, "t": 1789609432.5703611}
+{"ev": "end", "task": "r1_s64", "kernel": "framac", "real": "refuted", "twin": "timeout", "agree": true, "pid": 64484, "t": 1789609437.018358}
+{"ev": "start", "task": "r1_s67", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609437.018739}
+{"ev": "end", "task": "r1_s62", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609442.792033}
+{"ev": "start", "task": "r1_s68", "kernel": "framac", "op": "collapse-if", "pid": 64485, "t": 1789609442.792434}
+{"ev": "end", "task": "r1_s67", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609446.527018}
+{"ev": "start", "task": "r1_s7", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609446.527597}
+{"ev": "end", "task": "r1_s7", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609448.979787}
+{"ev": "start", "task": "r1_s70", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609448.9802291}
+{"ev": "end", "task": "r1_s70", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609451.048448}
+{"ev": "start", "task": "r1_s75", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609451.049209}
+{"ev": "end", "task": "r1_s75", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609453.703732}
+{"ev": "start", "task": "r1_s79", "kernel": "framac", "op": "off-by-one#2", "pid": 64484, "t": 1789609453.704349}
+{"ev": "end", "task": "r1_s79", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609455.668133}
+{"ev": "start", "task": "r1_s8", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609455.668475}
+{"ev": "end", "task": "r1_s8", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609458.855649}
+{"ev": "start", "task": "r1_s82", "kernel": "framac", "op": "wrong-constant#1", "pid": 64484, "t": 1789609458.8560908}
+{"ev": "end", "task": "r1_s68", "kernel": "framac", "real": "timeout", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609459.83859}
+{"ev": "start", "task": "r1_s83", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609459.839945}
+{"ev": "end", "task": "r1_s82", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609460.707555}
+{"ev": "start", "task": "r1_s84", "kernel": "framac", "op": "off-by-one", "pid": 64484, "t": 1789609460.784371}
+{"ev": "end", "task": "r1_s83", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609461.47983}
+{"ev": "start", "task": "r1_s85", "kernel": "framac", "op": "wrong-constant", "pid": 64485, "t": 1789609461.480105}
+{"ev": "end", "task": "r1_s84", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609464.664392}
+{"ev": "start", "task": "r1_s86", "kernel": "framac", "op": "off-by-one#1", "pid": 64484, "t": 1789609464.6646578}
+{"ev": "end", "task": "r1_s85", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609465.271919}
+{"ev": "start", "task": "r1_s87", "kernel": "framac", "op": "off-by-one", "pid": 64485, "t": 1789609465.2722392}
+{"ev": "end", "task": "r1_s86", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609466.890778}
+{"ev": "start", "task": "r1_s90", "kernel": "framac", "op": "collapse-if", "pid": 64484, "t": 1789609466.891469}
+{"ev": "end", "task": "r1_s87", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609473.282184}
+{"ev": "start", "task": "r1_s91", "kernel": "framac", "op": "compare-flip", "pid": 64485, "t": 1789609473.28255}
+{"ev": "end", "task": "r1_s90", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609478.025405}
+{"ev": "start", "task": "r1_s92", "kernel": "framac", "op": "off-by-one#1", "pid": 64484, "t": 1789609478.025774}
+{"ev": "end", "task": "r1_s92", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609481.316923}
+{"ev": "start", "task": "r1_s97", "kernel": "framac", "op": "wrong-constant", "pid": 64484, "t": 1789609481.317307}
+{"ev": "end", "task": "r1_s97", "kernel": "framac", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609485.3885481}
+{"ev": "start", "task": "r1_s101", "kernel": "lean", "op": "compare-flip", "pid": 64484, "t": 1789609485.38887}
+{"ev": "end", "task": "r1_s101", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609489.3913841}
+{"ev": "start", "task": "r1_s102", "kernel": "lean", "op": "off-by-one#1", "pid": 64484, "t": 1789609489.3917398}
+{"ev": "end", "task": "r1_s102", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609489.7982888}
+{"ev": "start", "task": "r1_s103", "kernel": "lean", "op": "wrong-var#2", "pid": 64484, "t": 1789609489.798775}
+{"ev": "end", "task": "r1_s103", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609490.183268}
+{"ev": "start", "task": "r1_s104", "kernel": "lean", "op": "wrong-constant", "pid": 64484, "t": 1789609490.183585}
+{"ev": "end", "task": "r1_s91", "kernel": "framac", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609490.188234}
+{"ev": "start", "task": "r1_s105", "kernel": "lean", "op": "collapse-if", "pid": 64485, "t": 1789609490.1884868}
+{"ev": "end", "task": "r1_s104", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609490.921706}
+{"ev": "start", "task": "r1_s109", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609490.922032}
+{"ev": "end", "task": "r1_s105", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609490.923376}
+{"ev": "start", "task": "r1_s112", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609490.923601}
+{"ev": "end", "task": "r1_s112", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609491.656358}
+{"ev": "start", "task": "r1_s113", "kernel": "lean", "op": "compare-flip", "pid": 64485, "t": 1789609491.656673}
+{"ev": "end", "task": "r1_s109", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609491.658459}
+{"ev": "start", "task": "r1_s115", "kernel": "lean", "op": "collapse-if", "pid": 64484, "t": 1789609491.65869}
+{"ev": "end", "task": "r1_s115", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609492.383167}
+{"ev": "start", "task": "r1_s12", "kernel": "lean", "op": "collapse-if", "pid": 64484, "t": 1789609492.383567}
+{"ev": "end", "task": "r1_s113", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609492.431801}
+{"ev": "start", "task": "r1_s124", "kernel": "lean", "op": "collapse-if", "pid": 64485, "t": 1789609492.432152}
+{"ev": "end", "task": "r1_s124", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609493.1185422}
+{"ev": "start", "task": "r1_s129", "kernel": "lean", "op": "collapse-if", "pid": 64485, "t": 1789609493.1189928}
+{"ev": "end", "task": "r1_s12", "kernel": "lean", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609493.385237}
+{"ev": "start", "task": "r1_s130", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609493.385571}
+{"ev": "end", "task": "r1_s129", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609493.517399}
+{"ev": "start", "task": "r1_s134", "kernel": "lean", "op": "wrong-var", "pid": 64485, "t": 1789609493.517706}
+{"ev": "end", "task": "r1_s130", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609493.943073}
+{"ev": "start", "task": "r1_s140", "kernel": "lean", "op": "collapse-if", "pid": 64484, "t": 1789609493.9434052}
+{"ev": "end", "task": "r1_s134", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609494.005821}
+{"ev": "start", "task": "r1_s142", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609494.00612}
+{"ev": "end", "task": "r1_s142", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609494.861721}
+{"ev": "start", "task": "r1_s145", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609494.8626828}
+{"ev": "end", "task": "r1_s145", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609495.328118}
+{"ev": "start", "task": "r1_s146", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609495.328403}
+{"ev": "end", "task": "r1_s140", "kernel": "lean", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609495.428272}
+{"ev": "start", "task": "r1_s147", "kernel": "lean", "op": "wrong-var", "pid": 64484, "t": 1789609495.428597}
+{"ev": "end", "task": "r1_s146", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609495.8335328}
+{"ev": "start", "task": "r1_s150", "kernel": "lean", "op": "wrong-operator", "pid": 64485, "t": 1789609495.83388}
+{"ev": "end", "task": "r1_s147", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609495.9318311}
+{"ev": "start", "task": "r1_s152", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609495.93217}
+{"ev": "end", "task": "r1_s150", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609496.4089558}
+{"ev": "start", "task": "r1_s153", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609496.409321}
+{"ev": "end", "task": "r1_s152", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609496.490216}
+{"ev": "start", "task": "r1_s156", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609496.490688}
+{"ev": "end", "task": "r1_s153", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609497.076386}
+{"ev": "start", "task": "r1_s158", "kernel": "lean", "op": "collapse-if", "pid": 64485, "t": 1789609497.076731}
+{"ev": "end", "task": "r1_s156", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609497.093963}
+{"ev": "start", "task": "r1_s165", "kernel": "lean", "op": "negate-cond", "pid": 64484, "t": 1789609497.094263}
+{"ev": "end", "task": "r1_s158", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609497.7460868}
+{"ev": "start", "task": "r1_s167", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609497.746455}
+{"ev": "end", "task": "r1_s165", "kernel": "lean", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609497.954166}
+{"ev": "start", "task": "r1_s168", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609497.9545212}
+{"ev": "end", "task": "r1_s167", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609498.236727}
+{"ev": "start", "task": "r1_s171", "kernel": "lean", "op": "collapse-if", "pid": 64485, "t": 1789609498.237066}
+{"ev": "end", "task": "r1_s168", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609498.355636}
+{"ev": "start", "task": "r1_s175", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609498.355946}
+{"ev": "end", "task": "r1_s175", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609499.211915}
+{"ev": "start", "task": "r1_s179", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609499.212267}
+{"ev": "end", "task": "r1_s171", "kernel": "lean", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609499.21613}
+{"ev": "start", "task": "r1_s180", "kernel": "lean", "op": "collapse-if", "pid": 64485, "t": 1789609499.2163641}
+{"ev": "end", "task": "r1_s179", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609499.95508}
+{"ev": "start", "task": "r1_s183", "kernel": "lean", "op": "compare-flip", "pid": 64484, "t": 1789609499.955403}
+{"ev": "end", "task": "r1_s180", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609499.9569652}
+{"ev": "start", "task": "r1_s188", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609499.957223}
+{"ev": "end", "task": "r1_s188", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609500.8039172}
+{"ev": "start", "task": "r1_s19", "kernel": "lean", "op": "wrong-var", "pid": 64485, "t": 1789609500.8042738}
+{"ev": "end", "task": "r1_s183", "kernel": "lean", "real": "unproved", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609500.830923}
+{"ev": "start", "task": "r1_s196", "kernel": "lean", "op": "compare-flip", "pid": 64484, "t": 1789609500.831292}
+{"ev": "end", "task": "r1_s19", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609501.5551841}
+{"ev": "start", "task": "r1_s201", "kernel": "lean", "op": "wrong-constant", "pid": 64485, "t": 1789609501.555535}
+{"ev": "end", "task": "r1_s196", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609501.6871989}
+{"ev": "start", "task": "r1_s203", "kernel": "lean", "op": "off-by-one#1", "pid": 64484, "t": 1789609501.687507}
+{"ev": "end", "task": "r1_s201", "kernel": "lean", "real": "verified", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609502.171767}
+{"ev": "start", "task": "r1_s206", "kernel": "lean", "op": "off-by-one", "pid": 64485, "t": 1789609502.172096}
+{"ev": "end", "task": "r1_s203", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609502.201215}
+{"ev": "start", "task": "r1_s207", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609502.20151}
+{"ev": "end", "task": "r1_s206", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64485, "t": 1789609502.8617868}
+{"ev": "start", "task": "r1_s210", "kernel": "lean", "op": "off-by-one#1", "pid": 64485, "t": 1789609502.862099}
+{"ev": "end", "task": "r1_s207", "kernel": "lean", "real": "refuted", "twin": "refuted", "agree": true, "pid": 64484, "t": 1789609502.869628}
+{"ev": "start", "task": "r1_s211", "kernel": "lean", "op": "off-by-one", "pid": 64484, "t": 1789609502.8699148}
