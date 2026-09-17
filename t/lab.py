@@ -140,13 +140,6 @@ STEPS = [
      f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
     ("grade-growth", "Grade new problems and model", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_TAGS}",
      f"for T in {GROWTH_TAGS}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
-    ("repair-growth", "Repair those too", "Needs Ollama started. One repair round on the new answer sets.",
-     f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T-fix1/grade-in ] && continue; [ -s {SE}/$T/kernels.md ] || continue; "
-     f"python3 t/repair.py {SE}/$T || exit 1; done",
-     f"n=0; for T in {GROWTH_TAGS}; do [ -s {SE}/$T/kernels.md ] || continue; n=$((n+1)); "
-     f"[ -d {SE}/$T-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]", "gpu"),
-    ("grade-growth-repair", "Grade those repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_FIX}",
-     f"for T in {GROWTH_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("pool", "Build the clean pool", "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out "
      "problems unchanged, plus HumanEval as training problems). Good: many more problems than the 47 of r3.",
      f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} --split t/out/loop/split-v4.json --min-kernels 7 "
@@ -184,9 +177,9 @@ NEEDS = {
     "generate": ["pull", "data"], "grade": ["generate"], "repair": ["grade", "pull"],
     # a grading step takes whatever answer sets exist and skips the rest, so it waits on nothing
     "grade-repair": [], "grade-growth": [], "grade-growth-repair": [],
-    "more-problems": ["pull", "data"], "repair-growth": ["grade-growth", "pull"],
+    "more-problems": ["pull", "data"],
     "phi": ["data", "packages"], "base": ["data", "packages"],
-    "pool": ["grade", "grade-repair", "grade-growth", "grade-growth-repair"], "train": ["pool"],
+    "pool": ["grade", "grade-repair", "grade-growth"], "train": ["pool"],
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
 }
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")

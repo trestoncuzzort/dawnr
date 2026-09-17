@@ -96,22 +96,6 @@
   "lab"
  ],
  [
-  "repair-growth",
-  "Repair those too",
-  "Needs Ollama started. One repair round on the new answer sets.",
-  "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -d t/out/spec-experiment/$T-fix1/grade-in ] && continue; [ -s t/out/spec-experiment/$T/kernels.md ] || continue; python3 t/repair.py t/out/spec-experiment/$T || exit 1; done",
-  "n=0; for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -s t/out/spec-experiment/$T/kernels.md ] || continue; n=$((n+1)); [ -d t/out/spec-experiment/$T-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]",
-  "gpu"
- ],
- [
-  "grade-growth-repair",
-  "Grade those repairs",
-  "On the lab workstation.",
-  "bash t/grade_lab.sh tags qwen2.5-coder-14b-he-s1-fix1 qwen2.5-coder-14b-he-s2-fix1 qwen2.5-coder-14b-he-s3-fix1 qwen2.5-coder-14b-he-s4-fix1 qwen2.5-coder-14b-he-s5-fix1 qwen2.5-coder-14b-he-s6-fix1 qwen2.5-coder-14b-he-s7-fix1 qwen2.5-coder-14b-he-s8-fix1 deepseek-coder-v2-16b-v4-s1-fix1 deepseek-coder-v2-16b-v4-s2-fix1",
-  "for T in qwen2.5-coder-14b-he-s1-fix1 qwen2.5-coder-14b-he-s2-fix1 qwen2.5-coder-14b-he-s3-fix1 qwen2.5-coder-14b-he-s4-fix1 qwen2.5-coder-14b-he-s5-fix1 qwen2.5-coder-14b-he-s6-fix1 qwen2.5-coder-14b-he-s7-fix1 qwen2.5-coder-14b-he-s8-fix1 deepseek-coder-v2-16b-v4-s1-fix1 deepseek-coder-v2-16b-v4-s2-fix1; do [ -s t/out/spec-experiment/$T/kernels.md ] || exit 1; done",
-  "lab"
- ],
- [
   "pool",
   "Build the clean pool",
   "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out problems unchanged, plus HumanEval as training problems). Good: many more problems than the 47 of r3.",
