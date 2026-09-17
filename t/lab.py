@@ -177,6 +177,16 @@ STEPS = [
      "test -s t/out/score-r4.md", ""),
 ]
 STEPS_DEFAULT = STEPS
+# What must be finished before a step can start. t/autopilot.py reads this; a key missing here has no
+# prerequisites. Not a schedule: the orchestrator and a person may still run a step whenever they like.
+NEEDS = {
+    "data": ["packages"], "ollama-serve": ["ollama-install"], "pull": ["ollama-serve"], "run-all": ["data"],
+    "generate": ["pull", "data"], "grade": ["generate"], "repair": ["grade", "pull"], "grade-repair": ["repair"],
+    "more-problems": ["pull", "data"], "grade-growth": ["more-problems"], "repair-growth": ["grade-growth", "pull"],
+    "grade-growth-repair": ["repair-growth"], "phi": ["data", "packages"], "base": ["data", "packages"],
+    "pool": ["grade", "grade-repair", "grade-growth", "grade-growth-repair"], "train": ["pool"],
+    "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
+}
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")
 STEPS_FILE = HERE / "steps.json"
 
@@ -1018,6 +1028,8 @@ class Lab:
         Button(row, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
                filled=False).pack(side="left")
         Button(row, "Reload steps", self.reload_steps, BLUE, self, filled=False).pack(side="left", padx=8)
+        self.show_done = tk.BooleanVar(value=False)
+        Chip(row, "Show finished steps", self.show_done, self).pack(side="left", padx=8)
         self.step_hint = tk.Label(row, text="Pick a step.", bg=CARD, fg=FAINT, font=self.f_small)
         self.step_hint.pack(side="left", padx=12)
         c = self.card(page, "Output", "last lines of the chosen step's log", fill="both", expand=True)
@@ -1264,6 +1276,7 @@ class Lab:
 
     def refresh_steps(self):
         live = {k: (t, st) for k, t, st in self.running_steps()}
+        finished = 0
         for key, title, *_r in STEPS:
             job, state, tag = self.jobs.get(key), self.step_state.get(key, ""), "muted"
             if key in live:
@@ -1281,6 +1294,17 @@ class Lab:
             vals = list(self.steps.item(key, "values"))
             vals[0], vals[2] = state or "not yet", self.step_prog.get(key, "")
             self.steps.item(key, values=vals, tags=(tag,))
+            # a finished step is out of the way unless asked for: what is left to do is the useful list
+            hide = state == "done" and key not in live and not self.show_done.get()
+            finished += state == "done"
+            if hide and self.steps.exists(key):
+                self.steps.detach(key)
+            elif not hide:
+                order = [k for k, *_x in STEPS]
+                self.steps.move(key, "", order.index(key))
+        self.step_hint.configure(text=(f"{finished} of {len(STEPS)} steps finished and hidden; the chip shows them"
+                                       if finished and not self.show_done.get() else
+                                       f"{finished} of {len(STEPS)} steps finished"), fg=FAINT)
         if live:
             names = ", ".join(f"{t} ({int(time.time() - st) // 60} min)" for t, st in live.values())
             self.run_line.configure(text=f"Data run:  {names}")

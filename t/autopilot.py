@@ -35,7 +35,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from lab import EVENTS, KERNEL_PATH, RUNS, SPEC_EXP, STEPS, TUP   # noqa: E402
+from lab import EVENTS, KERNEL_PATH, NEEDS, RUNS, SPEC_EXP, STEPS, TUP   # noqa: E402
 
 LOGS = RUNS / "logs"
 ALERTS = RUNS / "ALERTS.md"
@@ -81,6 +81,14 @@ def tail_log(key: str, n: int = 8) -> str:
         return "\n".join(lines[-n:])
     except OSError:
         return ""
+
+
+def log_age(key: str) -> float | None:
+    """Seconds since this step's log last grew, or None when it has no log."""
+    try:
+        return time.time() - (LOGS / f"{key}.log").stat().st_mtime
+    except OSError:
+        return None
 
 
 def pid_of(key: str) -> int | None:
@@ -133,13 +141,34 @@ def candidates(m: dict, steps: list[dict], attempts: dict) -> list[dict]:
         return out
     if m["lab"] == "down":
         out.append({"action": "vpn-connect", "why": "the lab workstation is unreachable, so no grading can run"})
+    # a step that claims to be running but has produced nothing for half an hour: say so rather than wait forever
+    for s in steps:
+        if s["running"] and s["step"] not in ("run-all", "ollama-serve"):
+            age = log_age(s["step"])
+            if age is not None and age > 1800:
+                out.append({"action": f"alert-stall:{s['step']}",
+                            "why": f"{s['title']} has been running with nothing written to its log for "
+                                   f"{int(age // 60)} minutes"})
+    if not any(s["running"] for s in steps) and not all(s["done"] for s in steps):
+        out.append({"action": "restart-orchestrator",
+                    "why": "nothing is running and the run is unfinished, so the orchestrator should drive again"})
     stale = [p for p in SPEC_EXP.glob("*/.grading") if not any(s["running"] for s in steps if "grade" in s["step"])]
     if stale:
         out.append({"action": "clear-claims", "why": f"{len(stale)} answer set(s) marked as being graded with no grader running"})
+    state_by_key = {s["step"]: s for s in steps}
     for s in steps:
-        if s["done"] or s["running"] or attempts.get(s["step"], 0) >= MAX_ATTEMPTS:
+        # run-all is the orchestrator (restart-orchestrator does that), ollama-serve is start-ollama's job
+        if s["step"] in ("run-all", "ollama-serve") or s["done"] or s["running"]:
+            continue
+        if attempts.get(s["step"], 0) >= MAX_ATTEMPTS:
+            continue
+        # order, from lab.py's NEEDS: a step whose prerequisites are unfinished would only fail
+        unmet = [n for n in NEEDS.get(s["step"], []) if not state_by_key.get(n, {}).get("done")]
+        if unmet:
             continue
         need = s["uses"]
+        # one step per resource, always: one on the graphics card, one on the lab workstation's cores, one here.
+        # The lab workstation is shared with other people, so a second checker run there is never a candidate.
         if need in busy or (need == "gpu" and "gpu" in busy):
             continue
         if need == "lab" and m["lab"] != "up":
@@ -248,6 +277,10 @@ def act(action: str, why: str, model: str, dry: bool, attempts: dict, restarts: 
             sh("pkill -f '^ollama serve'")
             time.sleep(10)
         return
+    if action.startswith("alert-stall:"):
+        key = action.split(":", 1)[1]
+        alert(key, why or f"{key} appears stalled", read_failure(model, key))
+        return
     if action == "clear-claims":
         for claim in SPEC_EXP.glob("*/.grading"):
             if not dry:
@@ -280,7 +313,7 @@ def act(action: str, why: str, model: str, dry: bool, attempts: dict, restarts: 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--model", default="qwen2.5:3b", help="an Ollama model small enough to share the card")
-    ap.add_argument("--every", type=int, default=180)
+    ap.add_argument("--every", type=int, default=60)
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
