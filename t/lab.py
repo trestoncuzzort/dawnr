@@ -1038,6 +1038,20 @@ class Lab:
             for w in (box, body, head, name, desc, prog):
                 w.bind("<Button-1>", lambda _e, k=key: self.select_step(k))
 
+    def scroll_by(self, pixels: float):
+        """A wheel notch moves a target, which scroll_ease glides towards: smooth instead of jumping by rows."""
+        if self.pages["Collect data"].winfo_ismapped():
+            span = max(1, self.box_area.winfo_height() - self.scroll_canvas.winfo_height())
+            self.scroll_to = min(1.0, max(0.0, self.scroll_to + pixels / span))
+
+    def scroll_ease(self):
+        at = self.scroll_canvas.yview()[0]
+        if abs(self.scroll_to - at) > 0.0008:
+            self.scroll_canvas.yview_moveto(at + (self.scroll_to - at) * 0.22)
+        else:
+            self.scroll_to = at
+        self.root.after(16, self.scroll_ease)
+
     def select_step(self, key: str):
         self.sel_key = key
         self.show_log()
@@ -1074,9 +1088,11 @@ class Lab:
         window = canvas.create_window((0, 0), window=self.box_area, anchor="nw")
         self.box_area.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda e: canvas.itemconfigure(window, width=e.width))
-        canvas.bind_all("<Button-4>", lambda _e: canvas.yview_scroll(-2, "units"))
-        canvas.bind_all("<Button-5>", lambda _e: canvas.yview_scroll(2, "units"))
-        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-2 if e.delta > 0 else 2, "units"))
+        self.scroll_canvas, self.scroll_to = canvas, 0.0
+        canvas.bind_all("<Button-4>", lambda _e: self.scroll_by(-120))
+        canvas.bind_all("<Button-5>", lambda _e: self.scroll_by(120))
+        canvas.bind_all("<MouseWheel>", lambda e: self.scroll_by(-e.delta))
+        self.root.after(16, self.scroll_ease)
         self.build_boxes()
 
         c = self.card(page, "Output", "last lines of the chosen step's log", fill="x", pady=(10, 0))
