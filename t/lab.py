@@ -1464,6 +1464,7 @@ class Lab:
             self.run_line.configure(text="Data run:  nothing running")
             self.run_tail.configure(text="")
             self.run_bar.delete("all")
+        self.show_log()                      # the Output box tails the chosen step's log, live
         if not once:
             self.root.after(2000, self.refresh_steps)
 
@@ -1504,12 +1505,16 @@ class Lab:
     def show_log(self):
         log = RUNS / "logs" / f"{self.sel_key}.log"
         try:
-            tail = "".join(log.read_text(errors="replace").replace("\r", "\n").splitlines(True)[-60:])
+            tail = "".join(log.read_text(errors="replace").replace("\r", "\n").splitlines(True)[-200:])
         except OSError:
             tail = "No log yet. Press Run on this step."
+        if self.log_text.get("1.0", "end").strip() == tail.strip():
+            return
+        at_end = self.log_text.yview()[1] > 0.999       # leave the view alone when it has been scrolled up
         self.log_text.delete("1.0", "end")
         self.log_text.insert("end", tail)
-        self.log_text.see("end")
+        if at_end:
+            self.log_text.see("end")
 
 
 def main() -> int:
