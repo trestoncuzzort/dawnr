@@ -184,6 +184,17 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
             # every other platform's for the same text (measured 2026-09-02:
             # abs.dfy 9147e4af… on Windows vs 9fe1e7e8… everywhere else,
             # equal after CRLF->LF). One newline choice, every host.
+            # A LOWERING THAT EXPLODES IS NOT A VERDICT. Measured 2026-09-17 on the lab workstation: an answer
+            # chaining 26 string `replace` calls lowered to Rocq as a 27.7 GB source, twice, which filled 52 GB
+            # of a shared disk and wedged the run. A source past the cap is recorded and skipped, never run.
+            cap = int(os.environ.get("T_MAX_SOURCE_MB", "64")) * 1024 * 1024
+            if max(len(real_src), len(twin_src)) > cap:
+                mb = max(len(real_src), len(twin_src)) / 1024 / 1024
+                rows[name][bname] = ("lower-too-big", "lower-too-big", True)
+                all_ok = False
+                print(f"  {name} x {bname}: LOWER-TOO-BIG {mb:.0f} MB, over the "
+                      f"{cap / 1024 / 1024:.0f} MB cap (T_MAX_SOURCE_MB); not run", flush=True)
+                continue
             (harness.OUT / f"{name}.{suffix}").write_text(real_src, encoding="utf-8", newline="\n")
             (harness.OUT / f"{name}_twin.{suffix}").write_text(twin_src, encoding="utf-8", newline="\n")
             pending.append((bname, name, suffix, op))
