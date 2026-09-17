@@ -1402,8 +1402,43 @@ class Lab:
             tags = graded[key]
             done_n = sum(1 for t in tags if (SPEC_EXP / t / "kernels.md").exists())
             waiting = sum(1 for t in tags if (SPEC_EXP / t / "grade-in").is_dir()) or len(tags)
-            return f"{done_n} of {waiting} answer sets", done_n / waiting
+            part, part_text = 0.0, ""
+            here = [st for k, _t, st in self.running_steps() if k == key]
+            if here:                           # the set being graded now, cell by cell, so the bar keeps moving
+                tag, tasks = self.grading_now(key)
+                if tag:
+                    total = tasks * len(KERNELS)
+                    # the step's own lines, one per cell: a cell that abstains runs no checker and sends no
+                    # event, and seed 7's Rocq column is mostly abstains (nested loops), so events alone stall
+                    done_c = self.cells_printed(key)
+                    part = min(1.0, done_c / total) if total else 0.0
+                    part_text = f"; {tag.split('-')[-1]} at {min(done_c, total)} of {total} cells"
+            return (f"{done_n} of {waiting} answer sets{part_text}",
+                    min(1.0, (done_n + part) / waiting))
         return "", None
+
+    def cells_printed(self, key: str) -> int:
+        """Cells the running step has reported since it last said which answer set it is on."""
+        try:
+            lines = (RUNS / "logs" / f"{key}.log").read_text(errors="replace").splitlines()
+        except OSError:
+            return 0
+        start = max((i for i, l in enumerate(lines) if re.match(r"== \S+: \d+ tasks", l)), default=0)
+        return sum(1 for l in lines[start:] if re.match(r"  \S+ x \S+", l))
+
+    def grading_now(self, key: str) -> tuple:
+        """(tag, task count) of the answer set a grading step is working on, from its log's own line."""
+        try:
+            lines = (RUNS / "logs" / f"{key}.log").read_text(errors="replace").splitlines()
+        except OSError:
+            return "", 0
+        for line in reversed(lines):
+            m = re.match(r"== (\S+): (\d+) tasks", line)
+            if m:
+                if f"== {m.group(1)}: kernels.md back" in "\n".join(lines[-40:]):
+                    return "", 0
+                return m.group(1), int(m.group(2))
+        return "", 0
 
     def refresh_steps(self, once: bool = False):
         live = {k: (t, st) for k, t, st in self.running_steps()}
