@@ -181,9 +181,11 @@ STEPS_DEFAULT = STEPS
 # prerequisites. Not a schedule: the orchestrator and a person may still run a step whenever they like.
 NEEDS = {
     "data": ["packages"], "ollama-serve": ["ollama-install"], "pull": ["ollama-serve"], "run-all": ["data"],
-    "generate": ["pull", "data"], "grade": ["generate"], "repair": ["grade", "pull"], "grade-repair": ["repair"],
-    "more-problems": ["pull", "data"], "grade-growth": ["more-problems"], "repair-growth": ["grade-growth", "pull"],
-    "grade-growth-repair": ["repair-growth"], "phi": ["data", "packages"], "base": ["data", "packages"],
+    "generate": ["pull", "data"], "grade": ["generate"], "repair": ["grade", "pull"],
+    # a grading step takes whatever answer sets exist and skips the rest, so it waits on nothing
+    "grade-repair": [], "grade-growth": [], "grade-growth-repair": [],
+    "more-problems": ["pull", "data"], "repair-growth": ["grade-growth", "pull"],
+    "phi": ["data", "packages"], "base": ["data", "packages"],
     "pool": ["grade", "grade-repair", "grade-growth", "grade-growth-repair"], "train": ["pool"],
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
 }
