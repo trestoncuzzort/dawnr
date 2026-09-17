@@ -1299,11 +1299,13 @@ class Lab:
         if key in live:
             self.step_hint.configure(text=f"{title} is already running.", fg=RED)
             return
-        # one step at a time, whatever it uses: the run is easier to read and nothing competes for memory
-        busy = [t for k, t, *_r in STEPS if k in live and k not in ("ollama-serve", "run-all")]
+        # one step per machine: this desktop can work while the lab workstation grades, but never two here
+        # or two there
+        where = "the lab workstation" if uses == "lab" else "this desktop"
+        busy = [t for k, t, _w, _c, _ck, u, *_n in [s[:6] + (None,) for s in STEPS]
+                if k in live and k not in ("ollama-serve", "run-all") and (u == "lab") == (uses == "lab")]
         if busy:
-            self.step_hint.configure(text=f"Wait: {', '.join(busy)} is still running. Stop it first to run this.",
-                                     fg=RED)
+            self.step_hint.configure(text=f"Wait: {', '.join(busy)} is using {where}.", fg=RED)
             return
         unmet = [self.title_of(n) for n in NEEDS.get(key, []) if self.step_state.get(n) != "done"]
         if unmet:
