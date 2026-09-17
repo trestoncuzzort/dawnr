@@ -36,15 +36,7 @@
   "Download qwen2.5-coder:14b",
   "About 9 GB. Needs Ollama started.",
   "ollama pull qwen2.5-coder:14b",
-  "ollama list 2>/dev/null | grep -q 'qwen2.5-coder:14b'",
-  ""
- ],
- [
-  "run-all",
-  "Run everything",
-  "Chains every step below to the score without waiting for you: finishes answer writing, stops Ollama, grades on the lab and here, runs Phi-4-mini and the base model meanwhile, then pool, training, locallm, held-out grading, score. Desktop notifications when Phi starts and when it ends.",
-  "python3 t/run_everything.py",
-  "test -s t/out/score-r4.md",
+  "test -e \"${OLLAMA_MODELS:-/data/ollama}/manifests/registry.ollama.ai/library/qwen2.5-coder/14b\" || ollama list 2>/dev/null | grep -q 'qwen2.5-coder:14b'",
   ""
  ],
  [

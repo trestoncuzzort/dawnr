@@ -85,3 +85,9 @@
 - 2026-09-17 14:55 the monitor was set to 2560x1080 at scale 1.0 (from 3440x1440 at 1.33) so the RDP stream fits the MacBook without overscan.
 - 2026-09-17 15:25 autopilot check: it ran clean but only ever chose to wait (the orchestrator was driving), so its decisions were tested against a simulated state instead. Two faults found and fixed: it offered to train the student, sample it and build a locallm model although the clean pool does not exist yet (lab.py now carries NEEDS, the prerequisites of each step, and a step whose prerequisites are unfinished is never a candidate), and it had no way to restart a stopped orchestrator or to notice a stalled step (both are actions now: a step running with nothing written to its log for half an hour raises an alert with the local model's reading). run-all and ollama-serve are no longer offered as plain steps, since restart-orchestrator and start-ollama do those.
 - 2026-09-17 15:25 Collect data hides a step once it is finished, with a chip to show them again and a line saying how many are hidden, so the table is what is left to do.
+- 2026-09-17 15:19 run_everything: end `grade`: exit 1, not done
+- 2026-09-17 15:19 run_everything: `grade` failed twice; see logs/grade.log
+- 2026-09-17 15:19 run_everything: grading did not finish every seed after two rounds
+- 2026-09-17 15:19 run_everything: start `grade-heldout` (Grade held-out answers), attempt 1
+- 2026-09-17 15:20 start `grade`: `bash t/grade_lab.sh seeds` (log `logs/grade.log`)
+- 2026-09-17 15:21 t lab has an AI tab: the autopilot (state, what it may do, its last decisions, start and stop) and the orchestrator (state, its log, Run everything and stop) live there, with the alerts below them; Run everything is no longer a row among the data steps. The Download step's done test now looks for the model on disk instead of asking the stopped Ollama server, so a finished pull no longer reads as missing.

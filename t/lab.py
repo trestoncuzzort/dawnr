@@ -97,11 +97,9 @@ STEPS = [
      "so nothing spills into the 14 GB of RAM.", "OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 exec ollama serve",
      "curl -sf http://127.0.0.1:11434/ >/dev/null", ""),
     ("pull", "Download qwen2.5-coder:14b", "About 9 GB. Needs Ollama started.", "ollama pull qwen2.5-coder:14b",
+     # on disk, not through the server: a pulled model stays pulled while Ollama is stopped for a GPU step
+     'test -e "${OLLAMA_MODELS:-/data/ollama}/manifests/registry.ollama.ai/library/qwen2.5-coder/14b" || '
      "ollama list 2>/dev/null | grep -q 'qwen2.5-coder:14b'", ""),
-    ("run-all", "Run everything", "Chains every step below to the score without waiting for you: finishes answer "
-     "writing, stops Ollama, grades on the lab and here, runs Phi-4-mini and the base model meanwhile, then pool, "
-     "training, locallm, held-out grading, score. Desktop notifications when Phi starts and when it ends.",
-     "python3 t/run_everything.py", "test -s t/out/score-r4.md", ""),
     ("generate", "Write answers, 8 seeds", "Hours. Seed 1 at temperature 0, seeds 2 to 8 at 0.7. A finished seed is "
      "skipped, so Stop and Run again resumes. Good: each seed puts tasks in grade-in/.",
      f"for S in 1 2 3 4 5 6 7 8; do T={GEN}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
@@ -474,7 +472,7 @@ class Lab:
         self.pages, self.tab_buttons = {}, {}
         body = tk.Frame(root, bg=BG)
         body.pack(fill="both", expand=True, padx=22, pady=(0, 18))
-        for name in ("Live checks", "Test a model", "Collect data", "Results"):
+        for name in ("Live checks", "Test a model", "Collect data", "Results", "AI"):
             b = tk.Label(tabs, text=name, cursor="hand2", padx=18, pady=7, font=self.f_bold)
             b.pack(side="left", padx=(0, 8))
             b.bind("<Button-1>", lambda _e, n=name: self.show_page(n))
@@ -486,6 +484,7 @@ class Lab:
         self.build_test(self.pages["Test a model"])
         self.build_collect(self.pages["Collect data"])
         self.build_results(self.pages["Results"])
+        self.build_ai(self.pages["AI"])
         self.show_page("Live checks")
         root.after(300, self.poll_events)
         root.after(1000, self.tick)
@@ -1049,6 +1048,73 @@ class Lab:
                filled=False).pack(side="right", padx=8, pady=6)
         threading.Thread(target=self.check_steps, daemon=True).start()
         self.root.after(1000, self.refresh_steps)
+
+    # -- AI ---------------------------------------------------------------------------
+    def build_ai(self, page):
+        """The two things that run the run: the orchestrator (a fixed plan) and the autopilot (a local model
+        choosing the next legal step every minute). Both live here rather than among the data steps."""
+        c = self.card(page, "Autopilot", "t/autopilot.py, the systemd user service t-autopilot")
+        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
+            "Every minute it reads each step and the machine, works out which actions are legal (the resource is "
+            "free, Ollama is up, the lab workstation answers, the step is not done and its prerequisites are), and "
+            "a small local model picks one. An illegal answer, or no Ollama, falls back to the rules. It cannot run "
+            "a step twice, share a resource, touch git, delete data or change the experiment.")).pack(fill="x")
+        row = tk.Frame(c, bg=CARD)
+        row.pack(fill="x", pady=8)
+        self.ai_state = tk.Label(row, text="", bg=CARD, fg=TEXT, font=self.f_bold)
+        self.ai_state.pack(side="left")
+        Button(row, "Start", lambda: self.unit("start", "t-autopilot"), GREEN, self).pack(side="right")
+        Button(row, "Stop", lambda: self.unit("stop", "t-autopilot"), RED, self, filled=False).pack(side="right", padx=8)
+        self.ai_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=8, wrap="none")
+        self.ai_log.pack(fill="x")
+
+        c = self.card(page, "Orchestrator", "t/run_everything.py: the fixed plan, start to score")
+        row = tk.Frame(c, bg=CARD)
+        row.pack(fill="x", pady=(0, 8))
+        self.orch_state = tk.Label(row, text="", bg=CARD, fg=TEXT, font=self.f_bold)
+        self.orch_state.pack(side="left")
+        Button(row, "Run everything", self.start_orchestrator, GREEN, self).pack(side="right")
+        Button(row, "Stop", lambda: self.unit("stop", "t-run-all"), RED, self, filled=False).pack(side="right", padx=8)
+        self.orch_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=6, wrap="none")
+        self.orch_log.pack(fill="x")
+
+        c = self.card(page, "Alerts", "what the autopilot could not fix: t/runs/<date>/ALERTS.md", fill="both",
+                      expand=True)
+        self.alert_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=10, wrap="word")
+        self.alert_text.pack(fill="both", expand=True)
+        self.root.after(2000, self.tick_ai)
+
+    @staticmethod
+    def unit(verb: str, name: str):
+        subprocess.Popen(["systemctl", "--user", verb, name])
+
+    def start_orchestrator(self):
+        (RUNS / "logs").mkdir(parents=True, exist_ok=True)
+        subprocess.Popen(["bash", "-lc",
+                          "systemctl --user reset-failed t-run-all 2>/dev/null; systemd-run --user --unit=t-run-all "
+                          f"--working-directory={TUP} -p StandardOutput=append:{RUNS}/logs/run-all.log "
+                          f"-p StandardError=append:{RUNS}/logs/run-all.log --setenv=HOME=$HOME --setenv=DISPLAY=:0 "
+                          "/usr/bin/python3 t/run_everything.py"], cwd=TUP)
+
+    def tick_ai(self):
+        def active(name):
+            return subprocess.run(["systemctl", "--user", "is-active", name],
+                                  capture_output=True, text=True).stdout.strip()
+        for label, name, colorful in ((self.ai_state, "t-autopilot", True), (self.orch_state, "t-run-all", True)):
+            st = active(name)
+            label.configure(text=f"●  {st}", fg=GREEN if st == "active" else FAINT)
+        for widget, path, n in ((self.ai_log, RUNS.parent / "autopilot.log", 12),
+                                (self.orch_log, RUNS / "logs" / "run-all.log", 8),
+                                (self.alert_text, RUNS / "ALERTS.md", 60)):
+            try:
+                text = "\n".join(path.read_text(errors="replace").splitlines()[-n:]) or "nothing yet"
+            except OSError:
+                text = "nothing yet"
+            if widget.get("1.0", "end").strip() != text.strip():
+                widget.delete("1.0", "end")
+                widget.insert("end", text)
+                widget.see("end")
+        self.root.after(5000, self.tick_ai)
 
     # -- Results ---------------------------------------------------------------------
     def build_results(self, page):
