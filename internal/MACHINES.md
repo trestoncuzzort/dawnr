@@ -8,7 +8,7 @@ Where the project runs from 2026-09-17 on, and what each machine is for. Numbers
 |---|---|---|---|---|
 | The lab workstation | 502 GB | 4 x RTX 6000 Ada, 48 GB each, shared with other users | 120 threads | All seven kernels installed. Work stopped 2026-09-16 at the lab's request. |
 | Home desktop | to measure | RTX 4080, 16 GB | to measure | New. Kernels to install. |
-| MacBook Pro, M3 Max | 36 GB unified | Apple M3 Max GPU (Metal, PyTorch MPS) | 14 cores in the 36 GB configuration | New. Kernels to install. |
+| MacBook Pro, M3 Max | 36 GB unified | Apple M3 Max GPU (Metal, PyTorch MPS) | 14 cores in the 36 GB configuration | All seven kernels installed 2026-09-16; the committed matrix reads 30 of 34, every cell as the Dell's (`t/WITNESS-2026-09-16-macos-m3max.md`). |
 
 ## What each machine is for
 
@@ -40,7 +40,7 @@ Versions on the lab workstation (from `t/AGREEMENT.md`), the reference for every
 | rocq | 9.2 |
 | fstar | 2026.08.30 |
 
-Which of the seven install natively on macOS arm64 and on the desktop's OS is not yet checked. An install counts when `python3 t/run_par.py` on the committed tasks matches `t/AGREEMENT.md` (30 of 34 in all seven).
+All seven install natively on macOS arm64 (`t/RUN-ON-MACOS.md`, the 2026-09-16 section for what differs on a Mac with Xcode 27); the desktop's OS is not yet checked. An install counts when `python3 t/run_par.py` on the committed tasks matches `t/AGREEMENT.md` (30 of 34 in all seven); the MacBook Pro did on 2026-09-16 at `--jobs 8`, with one SPARK load timeout re-measured alone.
 
 ## Picking up the loop
 

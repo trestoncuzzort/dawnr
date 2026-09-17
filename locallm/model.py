@@ -45,13 +45,20 @@ class CausalSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
-        if self.flash:
+        # Apple's MPS backend has no fused attention with dropout (torch 2.14:
+        # "scaled_dot_product_attention for MPS does not support dropout"), so
+        # a training step on a Mac takes the plain path; same math, no fusion.
+        fused = self.flash and not (x.device.type == "mps" and self.training and self.dropout > 0)
+        if fused:
             y = F.scaled_dot_product_attention(
                 q, k, v, is_causal=True,
                 dropout_p=self.dropout if self.training else 0.0)
         else:
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-            att = att.masked_fill(self.mask[:, :, :T, :T] == 0, float("-inf"))
+            mask = getattr(self, "mask", None)
+            if mask is None:
+                mask = torch.tril(torch.ones(T, T, dtype=torch.bool, device=x.device)).view(1, 1, T, T)
+            att = att.masked_fill(mask[:, :, :T, :T] == 0, float("-inf"))
             y = self.attn_dropout(F.softmax(att, dim=-1)) @ v
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         return self.resid_dropout(self.c_proj(y))

@@ -128,3 +128,133 @@ and architecture, which kernels you installed and from which assets, what
 `run_par.py` printed for present and absent kernels, and the final agreement
 line. Drop it in `t/` as `WITNESS-<date>-macos.md`. Claims here become true
 the moment someone writes down that they happened.
+
+## A second Mac, 2026-09-16: M3 Max, 14 cores, 36 GB, Xcode 27
+
+    macOS 26.6.2 build 25G83, Apple M3 Max (10 performance + 4 efficiency
+    cores), 36 GB, Xcode 27.0 (27A266a), Apple clang 21.0.0
+    Python 3.12.10 via uv at ~/.local/bin/python3.12 for the drivers
+
+The table above still holds, with four deviations, each measured before it
+was written down. The witness is `WITNESS-2026-09-16-macos-m3max.md`.
+
+| Kernel | Resolved at | What differed from the 2026-09-06 route |
+|---|---|---|
+| Dafny 4.11.0 | `~/.local/dafny/dafny` | `brew install dafny` puts no z3 in its Cellar and takes whatever `z3` is on PATH (5.1.0 that day), while Dafny 4.11.0 expects its own 4.12.1. The release zip `dafny-4.11.0-arm64-macos-13.zip` (tag v4.11.0) unpacked to `~/.local/dafny` bundles z3 4.12.1 and reports the Dell's exact string, `4.11.0+fcb2042d6d04...`. The brew copy was uninstalled so PATH does not shadow the glob. |
+| Verus 0.2026.08.30.b432e82 | `~/.local/verus/verus-arm64-macos/verus` | The zip alone prints `verus needs a rustup installation`. rustup from sh.rustup.rs with `--no-modify-path --default-toolchain none`, then `rustup toolchain install 1.97.1-aarch64-apple-darwin` (the version the launcher names), and `~/.cargo/bin` on PATH: the launcher looks for `rustup` there and fails without it, so `. "$HOME/.cargo/env"` went into `~/.zshenv`. |
+| GNATprove FSF 16.1.0 | `~/.local/gnatprove/gnatprove-aarch64-darwin-16.1.0-1/bin/gnatprove` | none; the `.sha256` beside the tarball matched. |
+| Frama-C 33.0, alt-ergo 2.4.3-free, why3 1.8.2 | `~/.opam/default/bin/frama-c` | see below: OCaml compiled by this Xcode crashes, so the switch runs on Homebrew's OCaml bottle. |
+| Lean 4.33.1 | `/opt/homebrew/bin/lean` | `brew install elan-init` puts elan's proxies on PATH, so discovery's second tier catches `lean` before the `.elan/bin/lean` glob; both run the same toolchain (`elan-init -y --no-modify-path --default-toolchain leanprover/lean4:v4.33.1`). |
+| Rocq 9.2 | `/opt/homebrew/bin/coqc` | none. |
+| F* 2026.08.30 | `~/.local/fstar/fstar/bin/fstar.exe` | none. |
+
+**OCaml built by opam under Xcode 27 segfaults in `Unix.pipe`.** With
+`opam init --compiler=ocaml-base-compiler.4.14.4` (the Dell's compiler) the
+compiler builds and `print_endline` works, but a three-line program calling
+`Unix.pipe ()` dies with `EXC_BAD_ACCESS, KERN_INVALID_ADDRESS at 0x0` inside
+`unix_pipe`, native and bytecode alike, so `ocamlbuild` dies the first time
+it spawns a command and `topkg` (needed by `bos`, needed by `yaml`, needed by
+`frama-c`) never builds. `ocaml-base-compiler.5.3.0` built here fails the same
+test. Homebrew's `ocaml` 5.5.0 bottle (built elsewhere) passes it, and so does
+the F* release (OCaml 5.3.0, built on the F* CI). The route that worked:
+
+```bash
+brew install opam ocaml autoconf automake graphviz pkgconf zlib
+opam init -y --no-setup --bare
+opam switch create default --packages=ocaml-system      # brew's 5.5.0
+export LIBRARY_PATH=/opt/homebrew/lib CPATH=/opt/homebrew/include   # zarith's -lgmp
+export CAML_LD_LIBRARY_PATH=$HOME/.opam/default/lib/stublibs        # why3.byte's dllcamlzip
+export PKG_CONFIG_PATH=/opt/homebrew/opt/zlib/lib/pkgconfig
+opam install -y --confirm-level=unsafe-yes frama-c.33.0 alt-ergo-free.2.4.3 why3.1.8.2
+```
+
+The three exports are what `opam env` does not do for a system-compiler
+switch on this box: without `LIBRARY_PATH` alt-ergo's link ends in
+`___gmpz_* ... symbol(s) not found for architecture arm64`, and without
+`CAML_LD_LIBRARY_PATH` why3 stops at `dllcamlzip.so: No such file or
+directory`. `frama-c -version` reads `33.0 (Arsenic)` and `alt-ergo
+--version` reads `2.4.3-free`, the pins. `~/.opam/default/bin` is on PATH from
+`~/.zshenv` so WP finds `alt-ergo`, the same line `reproduce.sh` exports.
+Whether the crash is Xcode 27's clang or the macOS 26 SDK is not known; what
+is known is that two locally compiled OCaml versions fail the same
+three-line test and two prebuilt ones pass it.
+
+**why3 does not recognise `2.4.3-free`, and WP then runs the wrong driver.**
+why3 1.8.2's `provers-detection-data.conf` has an entry for Alt-Ergo
+2.4.0 to 2.4.3 with the native `alt_ergo` driver, but its `version_regexp`
+is `^\([0-9.]+\)$` and `alt-ergo --version` prints `2.4.3-free`, so
+`why3 config detect` reports `Prover Alt-Ergo version  is not recognized`
+and WP, with no `~/.why3.conf`, lists `Prover Alt-Ergo [Alt-Ergo:]
+(alt-ergo) (counter-examples)`: an empty version and the SMT-LIB driver
+meant for 2.5 and later. Most goals still prove that way. The ones that do
+not are every goal that uses a polymorphic `define-fun` (`eqmem`, `memcpy`:
+the seq-returning tasks `filter_pos`, `reverse`, `swap`, `tail`), where
+2.4.3's psmt2 frontend answers `Syntax error` at the body of the definition
+and WP records the goal as `Failed`, which `verifiers/framac.py` reads, by
+its doctrine, as `tool_error / tool_error`. The first matrix on this Mac read
+exactly those four cells that way (run 1 in the witness). The fix is to tell
+why3 the version yourself:
+
+```bash
+why3 config detect          # writes ~/.why3.conf with nothing for alt-ergo
+cat >> ~/.why3.conf <<'CONF'
+
+[prover]
+command = "/Users/<you>/.opam/default/bin/alt-ergo --timelimit %.t %f"
+command_steps = "/Users/<you>/.opam/default/bin/alt-ergo --steps-bound=%S %f"
+driver = "alt_ergo"
+editor = "altgr-ergo"
+in_place = false
+interactive = false
+name = "Alt-Ergo"
+shortcut = "alt-ergo"
+version = "2.4.3"
+CONF
+frama-c -wp-list-provers    # now: Prover Alt-Ergo 2.4.3 [Alt-Ergo:2.4.3] (alt-ergo)
+```
+
+After that `filter_pos` reads verified with the twin refuted through the
+adapter. Whether the Dell and the 2026-09-06 Mac carry such a file, or an
+alt-ergo whose `--version` prints a bare `2.4.3`, is not recorded; on a fresh
+install of `alt-ergo-free.2.4.3` from today's opam repository this step is
+needed, and `-wp-list-provers` is the one-line check that tells you which
+driver WP is about to use.
+
+**The lab app.** `t/lab.py` needs a Python whose Tk initialises. uv's 3.12.10
+ships tkinter and Tcl/Tk 8.6 but `Tk()` dies with `Can't find a usable
+init.tcl` unless `TCL_LIBRARY` and `TK_LIBRARY` point into its own `lib/`.
+Homebrew's `python@3.12` (3.12.14) with `python-tk@3.12` (Tk 9.0) needs
+nothing, registers as the app "Python" on the desktop, and is what
+`internal/MACHINES.md` describes, so the venv is built on it:
+
+```bash
+brew install python@3.12 python-tk@3.12
+/opt/homebrew/bin/python3.12 -m venv ~/.venv-t && ~/.venv-t/bin/pip install torch
+PATH=$HOME/.opam/default/bin:$HOME/.cargo/bin:$PATH ~/.venv-t/bin/python t/lab.py
+```
+
+torch 2.14.0 on that venv reports Metal (`torch.backends.mps.is_available()`
+is True). `lab.py`'s `KERNEL_PATH` names the Linux Verus and GNATprove
+directories, which do not exist here and do no harm: both kernels are found
+by the adapters' globs, and the two PATH entries that matter on this Mac
+(`.cargo/bin` for rustup, `.opam/default/bin` for alt-ergo) are in the list.
+With the matrix running under `T_WATCH=~/.cache/t-watch/events.jsonl` (the
+app's default), the Live checks tab showed each cell as it started and ended.
+
+**Two more lines for the loop on a Mac.** `locallm/model.py` now takes the
+plain attention path when training with dropout on MPS, because torch 2.14's
+fused kernel there raises `scaled_dot_product_attention for MPS does not
+support dropout` (same math, no fusion; the first `t/loop_filter.py` round
+died on it). And `t/loop_filter.py` resolves `--work` to an absolute path,
+because it runs `locallm/train.py` from `locallm/` and a relative work
+directory was read from the wrong place. With both, round 0 trains on the
+M3 Max's GPU (the bench: 26.6 ms per step on the default preset, 2,000 steps
+in 53 s).
+
+Two things that were not the machine: the network lost DNS for a few minutes
+mid-install (`curl: (6) Could not resolve host` for github.com, opam.ocaml.org,
+releases.lean-lang.org), which aborted two opam runs and one elan download,
+and every one of them succeeded on a plain retry; and `git clone` without
+`git-lfs` installed stops half way through checkout (`git-lfs: command not
+found`, the tree missing `t/` and `tup/`), so `brew install git-lfs` comes
+first.

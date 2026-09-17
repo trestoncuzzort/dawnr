@@ -53,12 +53,16 @@
 export PATH=$HOME/.cargo/bin:$HOME/.opam/default/bin:$PATH
 
 set -u
-cd /home/tmcuzzort/tup/t || exit 1
+cd "$(dirname "$0")" || exit 1
 
 DIFF_COUNT=0
-CORPUS=/home/tmcuzzort/tup/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth
-NL_CENSUS_JSON_DIR=$HOME/tup/t-corpora/nl-census
-LIFT_CENSUS_JSON=/home/tmcuzzort/tup/t-corpora/lifter-design-2026-09-05/census.json
+# The corpora live where corpora.py looks: $T_CORPORA if set, else <repo>/t-corpora.
+# Exported so every python3 below resolves the same checkout (2026-09-16: the
+# path was the lab workstation's home, which no other machine has).
+export T_CORPORA=${T_CORPORA:-$(cd .. && pwd)/t-corpora}
+CORPUS=$T_CORPORA/DafnyBench/DafnyBench/dataset/ground_truth
+NL_CENSUS_JSON_DIR=$T_CORPORA/nl-census
+LIFT_CENSUS_JSON=$T_CORPORA/lifter-design-2026-09-05/census.json
 
 stage_start() { echo "=== stage: $1 ==="; STAGE_T0=$(date +%s); }
 stage_end() { local t1; t1=$(date +%s); echo "=== stage: $1 done in $((t1 - STAGE_T0))s ==="; }

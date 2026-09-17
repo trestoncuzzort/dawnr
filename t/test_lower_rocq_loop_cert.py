@@ -197,7 +197,7 @@ class ReverseLoopCertTest(unittest.TestCase):
 
 
 _LUCID_JSON = Path(
-    "/home/tmcuzzort/tup/t/out/lifted-tasks/"
+    Path(__file__).resolve().parent / "out" / "lifted-tasks" /
     "dafny-synthesis_task_id_603.LucidNumbers.json")
 
 
@@ -264,7 +264,7 @@ class LucidNumbersPerConjunctTest(unittest.TestCase):
 
 
 _TESTDOUBLE_JSON = Path(
-    "/home/tmcuzzort/tup/t/out/lifted-tasks/"
+    Path(__file__).resolve().parent / "out" / "lifted-tasks" /
     "dafny-learn_tmp_tmpn94ir40q_R01_functions.TestDouble.json")
 
 
@@ -418,7 +418,7 @@ class GradedVerdictTest(unittest.TestCase):
 
 
 _EXTRA_SUM_JSON = Path(
-    "/home/tmcuzzort/tup/t/out/lifted-tasks/"
+    Path(__file__).resolve().parent / "out" / "lifted-tasks" /
     "Prog-Fun-Solutions_tmp_tmp7_gmnz5f_extra_sum.Sum.json")
 
 

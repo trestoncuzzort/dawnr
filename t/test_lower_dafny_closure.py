@@ -32,7 +32,7 @@ from pathlib import Path
 
 import lower_dafny
 
-LIFTED_DIR = Path("/home/tmcuzzort/tup/t/out/lifted-tasks")
+LIFTED_DIR = Path(__file__).resolve().parent / "out" / "lifted-tasks"
 
 # (lifted-tasks file stem, predicate name) for the five sweep-r25 rows.
 CLOSURE_ROWS = [

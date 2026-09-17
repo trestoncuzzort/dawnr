@@ -63,7 +63,7 @@ def main():
     ap.add_argument("--jobs", type=int, default=16)
     ap.add_argument("--work", default=str(T / "out" / "loop-filter"))
     a = ap.parse_args()
-    W = Path(a.work); W.mkdir(parents=True, exist_ok=True)
+    W = Path(a.work).resolve(); W.mkdir(parents=True, exist_ok=True)   # absolute: train() runs locallm/train.py from locallm/
     src = []
     for d in a.source:
         for f in sorted(Path(d, "raw").glob("*.json")):

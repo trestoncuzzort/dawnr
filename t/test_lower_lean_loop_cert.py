@@ -440,8 +440,13 @@ class DomainHypothesisLoopValueCertificateKernelTest(unittest.TestCase):
             "src = lower_lean.lower(task, twin, w)\n"
             "print('OK' if 't_refutation_certificate' in src else 'NOCERT')\n"
         ) % (HERE, task_path)
+        # `ulimit -v` is Linux; macOS rejects it ("cannot modify limit: Invalid
+        # argument", 2026-09-16), so there the replay runs unbounded and only
+        # the exit code and OK line are checked.
+        import sys as _sys
+        limit = "" if _sys.platform == "darwin" else "ulimit -v 4194304 && "
         proc = subprocess.run(
-            ["bash", "-c", "ulimit -v 4194304 && exec python3 -c \"$0\"", code],
+            ["bash", "-c", limit + "exec python3 -c \"$0\"", code],
             capture_output=True, text=True, timeout=60)
         self.assertEqual(proc.returncode, 0, proc.stderr[-800:])
         self.assertIn("OK", proc.stdout, proc.stdout)
