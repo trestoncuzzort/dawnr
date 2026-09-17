@@ -65,6 +65,11 @@ def clean_rows(table: Path) -> set[str]:
 def cmd_corpus(a) -> int:
     pool = se.pool(a.pool)
     docs, n_sft, n_lift, n_committed = [], 0, 0, 0
+    if a.base:
+        # an existing corpus (e.g. t/runs/2026-09-16/loop-data/corpus.txt, which
+        # already holds the lifted and committed tasks) under the new answers
+        text = Path(a.base).read_text(encoding="utf-8")
+        docs += [d.strip() + "\n" for d in re.split(r"\n\s*\n(?=Problem: |t \d)", text) if d.strip()]
     for sft in a.sft:
         for line in Path(sft).read_text(encoding="utf-8").splitlines():
             r = json.loads(line)
@@ -86,10 +91,16 @@ def cmd_corpus(a) -> int:
             if task.get("name") in keep:
                 docs.append(surface.print_task(task).strip() + "\n")
                 n_committed += 1
+    seen, unique = set(), []
+    for d in docs:               # the base corpus may already hold the same answers
+        if d not in seen:
+            seen.add(d)
+            unique.append(d)
+    docs = unique
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n\n".join(docs) + "\n", encoding="utf-8")
-    print(f"corpus {out}: {len(docs)} documents ({n_sft} problem answers, {n_lift} lifted, "
+    print(f"corpus {out}: {len(docs)} documents (base {a.base or 'none'}, {n_sft} problem answers, {n_lift} lifted, "
           f"{n_committed} committed), {out.stat().st_size} bytes")
     return 0
 
@@ -143,6 +154,7 @@ def main() -> int:
     p.add_argument("--sft", nargs="*", default=[])
     p.add_argument("--pool", default="v3")
     p.add_argument("--lifted", action="store_true", help="add the lifted and committed tasks that read all seven")
+    p.add_argument("--base", default="", help="start from this corpus file (documents split at blank lines)")
     p.add_argument("--out", default=str(OUT / "corpus.txt"))
     p = sub.add_parser("train")
     p.add_argument("--corpus", default=str(OUT / "corpus.txt"))
