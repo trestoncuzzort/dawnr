@@ -65,6 +65,15 @@ GEN = "qwen2.5-coder-14b-v3-s"
 HELDOUT = "phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4"
 POOL_TAGS = "qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 " + " ".join(f"{GEN}{i}" for i in range(1, 9))
 EVAL = "--pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt"
+GEN2 = "deepseek-coder-v2:16b"      # a second generator family, for answers the first one does not write
+GEN2_TAG = "deepseek-coder-v2-16b-v4-s"
+HE = "qwen2.5-coder-14b-he-s"       # the first generator on pool v4's HumanEval problems
+QWEN_FIX = " ".join(f"{GEN}{i}-fix1" for i in range(1, 9))
+GROWTH_TAGS = " ".join([f"{HE}{i}" for i in range(1, 9)] + [f"{GEN2_TAG}{i}" for i in (1, 2)])
+GROWTH_FIX = " ".join(f"{t}-fix1" for t in GROWTH_TAGS.split())
+# every answer set whose clean answers train a model: the 27B's, then everything this run wrote
+SAMPLE_TAGS = ("$(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 "
+               "qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null)")
 # (key, title, what it does and what good looks like, command, done when this succeeds, uses: gpu/cpu/sudo/"")
 STEPS = [
     ("packages", "Python packages", "Installs the training libraries into ~/.venv-t.",
@@ -111,9 +120,38 @@ STEPS = [
     ("grade-home", "Grade here too", "Optional, alongside Grade the answers: this machine grades from the last "
      "finished seed backwards (6 jobs) while the lab works forwards; neither takes a seed the other has.",
      "bash t/grade_home.sh", f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "cpu"),
-    ("pool", "Build the clean pool", "Keeps answers that pass tests and all seven. Good: sft-r4.jsonl is much bigger "
-     "than the 47 problems of r3.",
-     f"python3 t/loop_dataset.py --from-samples {POOL_TAGS} --split t/out/loop/split-v3.json --min-kernels 7 "
+    ("repair", "Repair the proofs", "Needs Ollama started. Sends each answer that passes its tests but is not clean "
+     "back to the model with the checkers' verdicts (t/repair.py): proof repairs keep the specification, spec repairs "
+     "keep the signature and requires. New answer sets <seed>-fix1.",
+     f"for T in {QWEN_FIX}; do S=${{T%-fix1}}; [ -d {SE}/$T/grade-in ] && continue; [ -s {SE}/$S/kernels.md ] || continue; "
+     f"python3 t/repair.py {SE}/$S || exit 1; done",
+     f"for T in {QWEN_FIX}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
+    ("grade-repair", "Grade the repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {QWEN_FIX}",
+     f"for T in {QWEN_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
+    ("more-problems", "New problems and a second model", "Needs Ollama started. The 88 HumanEval problems of pool v4 "
+     f"(8 answer sets, as for MBPP), then {GEN2} over all 737 problems (seed 1 at temperature 0, seed 2 at 0.7).",
+     f"for S in 1 2 3 4 5 6 7 8; do T={HE}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
+     "python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v4 --min-id 100000 --prompt v3 "
+     "--seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && "
+     "python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && "
+     f"python3 t/pool_pick.py $D || exit 1; done && ollama pull {GEN2} && "
+     f"for S in 1 2; do T={GEN2_TAG}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
+     f"python3 t/spec_experiment.py generate --model {GEN2} --tag $T --pool v4 --prompt v3 "
+     "--seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && "
+     "python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && "
+     "python3 t/pool_pick.py $D || exit 1; done",
+     f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
+    ("grade-growth", "Grade new problems and model", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_TAGS}",
+     f"for T in {GROWTH_TAGS}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
+    ("repair-growth", "Repair those too", "Needs Ollama started. One repair round on the new answer sets.",
+     f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T-fix1/grade-in ] && continue; [ -s {SE}/$T/kernels.md ] || continue; "
+     f"python3 t/repair.py {SE}/$T || exit 1; done",
+     f"for T in {GROWTH_FIX}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
+    ("grade-growth-repair", "Grade those repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_FIX}",
+     f"for T in {GROWTH_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
+    ("pool", "Build the clean pool", "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out "
+     "problems unchanged, plus HumanEval as training problems). Good: many more problems than the 47 of r3.",
+     f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} --split t/out/loop/split-v4.json --min-kernels 7 "
      "--out-suffix r4 && wc -l t/out/loop/sft-r4.jsonl t/out/loop/pairs-r4.jsonl",
      "test -s t/out/loop/sft-r4.jsonl", ""),
     ("phi", "Phi-4-mini answers", "The model to beat, in bf16, on the 232 held-out problems. If it fails, go back to "
@@ -140,7 +178,35 @@ STEPS = [
      f"python3 t/score_heldout.py qwen3.8-27b-fp8-v3 {HELDOUT} locallm-r0 | tee t/out/score-r4.md",
      "test -s t/out/score-r4.md", ""),
 ]
+STEPS_DEFAULT = STEPS
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")
+STEPS_FILE = HERE / "steps.json"
+
+
+def load_steps() -> list:
+    """The Collect data steps. t/steps.json wins when it is there, so a step can be added, reordered or its
+    command changed without touching this file; the list above is written out as the starting point the first
+    time t lab runs. One entry: [key, title, what it does, shell command, test that says it is done, uses]
+    where uses is "" (anything), "gpu" (the graphics card), "cpu" (this machine's cores) or "lab" (the lab
+    workstation over SSH). Press Reload steps after editing. Progress counting is by key; a new key with no
+    rule shows none."""
+    try:
+        got = json.loads(STEPS_FILE.read_text(encoding="utf-8"))
+        rows = [tuple(r[:6]) for r in got if isinstance(r, list) and len(r) >= 6]
+        if rows:
+            return rows
+    except (OSError, ValueError):
+        pass
+    try:
+        STEPS_FILE.write_text(json.dumps([list(s) for s in STEPS_DEFAULT], indent=1) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+    return list(STEPS_DEFAULT)
+
+
+SPEC_EXP = HERE / "out" / "spec-experiment"
+STEPS = load_steps()
+STEPS_TITLE = [(s[0], s[1]) for s in STEPS]
 
 # dark palette: three accents, everything else greys
 BG, SURFACE, CARD, LINE = "#0b0e14", "#121620", "#181d29", "#262d3d"
@@ -376,9 +442,11 @@ class Lab:
         self.counts = {"done": 0, "proven": 0, "not": 0}
         self.samples: dict[str, str] = {}
         self.end_times: list[float] = []     # every finished check's time, for the data run's progress bar
+        self.end_pairs: list[tuple[float, str]] = []   # (time, task) for the same, to count one answer set's own
         try:                                 # earlier checks too, so a reopened window keeps a running bar right
-            self.end_times = [json.loads(l).get("t", 0) for l in EVENTS.read_text(errors="replace").splitlines()
-                              if '"ev": "end"' in l]
+            self.end_pairs = [(json.loads(l).get("t", 0), json.loads(l).get("task", ""))
+                              for l in EVENTS.read_text(errors="replace").splitlines() if '"ev": "end"' in l]
+            self.end_times = [t for t, _ in self.end_pairs]
         except (OSError, ValueError):
             pass
 
@@ -398,7 +466,7 @@ class Lab:
         self.pages, self.tab_buttons = {}, {}
         body = tk.Frame(root, bg=BG)
         body.pack(fill="both", expand=True, padx=22, pady=(0, 18))
-        for name in ("Live checks", "Test a model", "Collect data"):
+        for name in ("Live checks", "Test a model", "Collect data", "Results"):
             b = tk.Label(tabs, text=name, cursor="hand2", padx=18, pady=7, font=self.f_bold)
             b.pack(side="left", padx=(0, 8))
             b.bind("<Button-1>", lambda _e, n=name: self.show_page(n))
@@ -409,6 +477,7 @@ class Lab:
                filled=False).pack(side="right", padx=(0, 16))
         self.build_test(self.pages["Test a model"])
         self.build_collect(self.pages["Collect data"])
+        self.build_results(self.pages["Results"])
         self.show_page("Live checks")
         root.after(300, self.poll_events)
         root.after(1000, self.tick)
@@ -559,6 +628,7 @@ class Lab:
                         sym, word, sentence, color = verdict(ev.get("real"), ev.get("twin"))
                         self.counts["done"] += 1
                         self.end_times.append(ev.get("t", time.time()))
+                        self.end_pairs.append((ev.get("t", time.time()), ev.get("task", "")))
                         self.counts["proven"] += word == "Proven"
                         self.counts["not"] += color == RED
                         self.done.insert("", 0, tags=(self.tag(color),), values=(
@@ -777,7 +847,9 @@ class Lab:
         try:
             while True:
                 kind, payload = self.q.get_nowait()
-                if kind == "status":
+                if kind == "results":
+                    self.show_results(*payload)
+                elif kind == "status":
                     self.status.configure(text=payload, fg=MUTED)
                 elif kind == "row":
                     iid, values, text, clean = payload
@@ -917,20 +989,29 @@ class Lab:
         self.q.put(("row", (name, values, text, self.passes(r, s))))
 
     # -- Collect data ----------------------------------------------------------------
+    def reload_steps(self):
+        """Re-read t/steps.json and rebuild the table, so a step added by hand appears without a restart."""
+        STEPS[:] = load_steps()
+        self.steps.delete(*self.steps.get_children())
+        for i, (key, title, what, _cmd, _check, uses) in enumerate(STEPS, 1):
+            self.steps.insert("", "end", iid=key, values=("not yet", f"{i}. {title}", "", uses, what))
+        self.step_hint.configure(text=f"{len(STEPS)} steps read from t/steps.json.", fg=MUTED)
+
     def build_collect(self, page):
         self.jobs: dict[str, subprocess.Popen] = {}
         self.step_state: dict[str, str] = {}
+        self.step_prog: dict[str, str] = {}
         (RUNS / "logs").mkdir(parents=True, exist_ok=True)
-        c = self.card(page, "Collect data", "one step at a time, top to bottom; logs and notes go to " +
+        c = self.card(page, "Collect data", "steps from t/steps.json; logs and notes go to " +
                       str(RUNS.relative_to(TUP)))
         tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
             "Each step runs in the background and keeps going if this window closes. A step reads done when its "
             "output exists. One gpu step and one cpu step can run together; checkers then use 6 jobs instead of 12.")
                  ).pack(fill="x", pady=(0, 8))
-        self.steps = self.table(c, [("state", "State", 110), ("step", "Step", 230), ("uses", "Uses", 60),
-                                    ("what", "What it does", 800)], 9)
+        self.steps = self.table(c, [("state", "State", 110), ("step", "Step", 230), ("prog", "Progress", 150),
+                                    ("uses", "Uses", 55), ("what", "What it does", 700)], 9)
         for i, (key, title, what, _cmd, _check, uses) in enumerate(STEPS, 1):
-            self.steps.insert("", "end", iid=key, values=("", f"{i}. {title}", uses, what))
+            self.steps.insert("", "end", iid=key, values=("", f"{i}. {title}", "", uses, what))
         self.steps.bind("<<TreeviewSelect>>", lambda _e: self.show_log())
         row = tk.Frame(c, bg=CARD)
         row.pack(fill="x", pady=8)
@@ -938,6 +1019,7 @@ class Lab:
         Button(row, "Stop", self.stop_step, RED, self, filled=False).pack(side="left", padx=8)
         Button(row, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
                filled=False).pack(side="left")
+        Button(row, "Reload steps", self.reload_steps, BLUE, self, filled=False).pack(side="left", padx=8)
         self.step_hint = tk.Label(row, text="Pick a step.", bg=CARD, fg=FAINT, font=self.f_small)
         self.step_hint.pack(side="left", padx=12)
         c = self.card(page, "Output", "last lines of the chosen step's log", fill="both", expand=True)
@@ -957,6 +1039,105 @@ class Lab:
                filled=False).pack(side="right", padx=8, pady=6)
         threading.Thread(target=self.check_steps, daemon=True).start()
         self.root.after(1000, self.refresh_steps)
+
+    # -- Results ---------------------------------------------------------------------
+    def build_results(self, page):
+        c = self.card(page, "Answer sets", "counted from tests.json and kernels.md, refreshed every 30 seconds")
+        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
+            "Clean: the tests pass and all seven checkers proved it with the broken copy caught. Proven but wrong: "
+            "all seven proved it and the tests fail, which is the number that must stay small. Problems: distinct "
+            "problems with a clean answer.")).pack(fill="x", pady=(0, 8))
+        self.res_table = self.table(c, [("set", "Answer set", 320), ("graded", "Graded", 80), ("clean", "Clean", 70),
+                                      ("wrong", "Proven but wrong", 130), ("problems", "Problems", 90),
+                                      ("passed", "Tests pass", 100), ("tasks", "Well formed", 100)], 12)
+        c = self.card(page, "Pool and score", fill="both", expand=True)
+        self.results_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="word")
+        self.results_text.pack(fill="both", expand=True)
+        threading.Thread(target=self.results_loop, daemon=True).start()
+
+    @staticmethod
+    def count_set(d: Path) -> dict:
+        """One answer set: well-formed answers, tests passed, clean in all seven, proven but wrong, problems."""
+        r = {"tasks": 0, "passed": 0, "graded": 0, "clean": 0, "wrong": 0, "problems": set()}
+        try:
+            ext = json.loads((d / "extract.json").read_text(errors="replace"))
+            r["tasks"] = sum(1 for e in ext.values() if e.get("stage") == "task")
+        except (OSError, ValueError):
+            pass
+        passing = set()
+        try:
+            tests = json.loads((d / "tests.json").read_text(errors="replace"))
+            for v in tests.values():
+                if v.get("overall") == "pass":
+                    passing.add(v.get("name"))
+            r["passed"] = len(passing)
+        except (OSError, ValueError):
+            pass
+        cols, rows = [], {}
+        try:
+            for line in (d / "kernels.md").read_text(errors="replace").splitlines():
+                if not line.startswith("|"):
+                    continue
+                cells = [x.strip() for x in line.strip().strip("|").split("|")]
+                if cells[0] == "task":
+                    cols = cells[1:]
+                elif cols and len(cells) == len(cols) + 1 and set(cells[0]) - {"-"}:
+                    rows[cells[0]] = dict(zip(cols, cells[1:]))
+        except OSError:
+            pass
+        r["graded"] = len(rows)
+        for name, row in rows.items():
+            if len(cols) < len(KERNELS) or not all(row.get(k, "").startswith("verified / refuted") for k in KERNELS):
+                continue
+            if name in passing:
+                r["clean"] += 1
+                r["problems"].add(name.split("__")[0])
+            elif r["passed"]:
+                r["wrong"] += 1
+        return r
+
+    def results_loop(self):
+        while True:
+            sets, totals, problems = [], {k: 0 for k in ("tasks", "passed", "graded", "clean", "wrong")}, set()
+            for d in sorted(SPEC_EXP.glob("*")) if SPEC_EXP.is_dir() else []:
+                if not d.is_dir():
+                    continue
+                r = self.count_set(d)
+                if not any(r[k] for k in ("tasks", "graded")):
+                    continue
+                sets.append((d.name, r))
+                problems |= r["problems"]
+                for k in totals:
+                    totals[k] += r[k]
+            lines = []
+            for f, label in (("out/loop/sft-r4.jsonl", "clean answers in the new pool (sft-r4.jsonl)"),
+                             ("out/loop/pairs-r4.jsonl", "answer/broken-copy pairs (pairs-r4.jsonl)"),
+                             ("out/loop/sft-r3-27b.jsonl", "the earlier pool (sft-r3-27b.jsonl)")):
+                path = HERE / f
+                if path.exists():
+                    lines.append(f"{sum(1 for _ in open(path)):>6}  {label}")
+            for f in ("out/score-r4.md", "out/AGREEMENT-lab.md"):
+                path = HERE / f
+                if path.exists():
+                    lines.append("")
+                    lines.append(f"{f}, written {time.strftime('%H:%M', time.localtime(path.stat().st_mtime))}:")
+                    lines.append(path.read_text(errors="replace").strip()[:4000])
+            self.q.put(("results", (sets, totals, len(problems), "\n".join(lines) or "Nothing built yet.")))
+            time.sleep(30)
+
+    def show_results(self, sets, totals, n_problems, text):
+        self.res_table.delete(*self.res_table.get_children())
+        for name, r in sets:
+            tag = "green" if r["clean"] else ("red" if r["wrong"] else "muted")
+            self.res_table.insert("", "end", tags=(tag,), values=(
+                name, r["graded"] or "", r["clean"] or "", r["wrong"] or "", len(r["problems"]) or "",
+                r["passed"] or "", r["tasks"] or ""))
+        self.res_table.insert("", "end", tags=("blue",), values=(
+            f"all {len(sets)} answer sets", totals["graded"], totals["clean"], totals["wrong"], n_problems,
+            totals["passed"], totals["tasks"]))
+        if self.results_text.get("1.0", "end").strip() != text.strip():
+            self.results_text.delete("1.0", "end")
+            self.results_text.insert("end", text)
 
     def selected_step(self):
         sel = self.steps.selection()
@@ -1040,7 +1221,48 @@ class Lab:
             for key, *_r, check, _u in STEPS:
                 ok = subprocess.run(["bash", "-lc", check], cwd=TUP, capture_output=True, env=self.step_env()).returncode == 0
                 self.step_state[key] = "done" if ok else ""
+                self.step_prog[key] = self.progress_of(key)
             time.sleep(10)
+
+    @staticmethod
+    def answers(tag: str) -> int:
+        try:
+            return sum(1 for _ in (SPEC_EXP / tag / "raw").glob("*.json"))
+        except OSError:
+            return 0
+
+    def progress_of(self, key: str) -> str:
+        """What a step has produced so far, counted from the files themselves: answers written of the problems
+        asked, or answer sets graded of the ones waiting."""
+        heldout = {"phi": ("phi4-mini-v3", 232), "base": ("qwen15b-base-v3", 232),
+                   "student": ("student-r4-v3", 232), "locallm": ("locallm-r4", 232)}
+        if key in heldout:
+            tag, total = heldout[key]
+            return f"{self.answers(tag)} of {total} answers"
+        if key == "generate":
+            per = [self.answers(f"{GEN}{i}") for i in range(1, 9)]
+            whole = sum(1 for n in per if n >= 649)   # a seed is finished when all 649 problems have a reply
+            return ("all 8 seeds written" if whole == 8 else
+                    f"{sum(per)} of {8 * 649} answers, seed {whole + 1}")
+        if key == "more-problems":
+            he = sum(self.answers(f"{HE}{i}") for i in range(1, 9))
+            ds = sum(self.answers(f"{GEN2_TAG}{i}") for i in (1, 2))
+            return f"{he} of {8 * 88} HumanEval, {ds} of {2 * 737} second model"
+        if key in ("repair", "repair-growth"):
+            tags = QWEN_FIX.split() if key == "repair" else GROWTH_FIX.split()
+            return f"{sum(self.answers(t) for t in tags)} answers repaired"
+        graded = {"grade": QWEN_FIX.split(), "grade-repair": QWEN_FIX.split(),
+                  "grade-growth": GROWTH_TAGS.split(), "grade-growth-repair": GROWTH_FIX.split(),
+                  "grade-heldout": HELDOUT.split()}
+        if key == "grade":
+            tags = [f"{GEN}{i}" for i in range(1, 9)]
+        elif key in graded:
+            tags = graded[key]
+        else:
+            return ""
+        done_n = sum(1 for t in tags if (SPEC_EXP / t / "kernels.md").exists())
+        waiting = sum(1 for t in tags if (SPEC_EXP / t / "grade-in").is_dir())
+        return f"{done_n} of {waiting or len(tags)} answer sets"
 
     def refresh_steps(self):
         live = {k: (t, st) for k, t, st in self.running_steps()}
@@ -1058,17 +1280,22 @@ class Lab:
                 state, tag = f"failed ({job.returncode})", "red"
             if state == "done":
                 tag = "green"
-            self.steps.item(key, values=(state or "not yet", *self.steps.item(key, "values")[1:]), tags=(tag,))
+            vals = list(self.steps.item(key, "values"))
+            vals[0], vals[2] = state or "not yet", self.step_prog.get(key, "")
+            self.steps.item(key, values=vals, tags=(tag,))
         if live:
             names = ", ".join(f"{t} ({int(time.time() - st) // 60} min)" for t, st in live.values())
             self.run_line.configure(text=f"Data run:  {names}")
             shown = next((k for k in ("grade", "grade-heldout", "matrix", "generate") if k in live), next(iter(live)))
+            self.run_line.configure(text=f"Data run:  {names}")
             try:
                 last = [l for l in (RUNS / "logs" / f"{shown}.log").read_text(errors="replace")
                         .replace("\r", "\n").splitlines() if l.strip()][-1]
             except (OSError, IndexError):
                 last = ""
-            shown = next((k for k in ("grade", "grade-heldout", "matrix", "generate") if k in live), next(iter(live)))
+            shown = next((k for k in ("grade", "grade-repair", "grade-growth", "grade-growth-repair", "grade-heldout",
+                                      "matrix", "phi", "base", "student", "locallm", "repair", "more-problems",
+                                      "generate") if k in live), next(iter(live)))
             self.draw_progress(shown, live[shown][1], last)
         else:
             self.run_bar.delete("all")
@@ -1083,6 +1310,14 @@ class Lab:
         log (grade_lab.sh prints '== <tag>: N tasks'), the finished checks from live events since the step started,
         less the checks of answer sets this run already brought back."""
         text, frac = last[:140], None
+        prog = self.step_prog.get(key, "")
+        m_ans = re.match(r"(\d+) of (\d+) answers", prog)
+        if m_ans:                            # a generation step: answers written of problems asked
+            a, b = int(m_ans.group(1)), int(m_ans.group(2))
+            self.run_tail.configure(text=f"{dict(STEPS_TITLE).get(key, key)}: {prog}    {last[:70]}")
+            self.run_bar.delete("all")
+            self.run_bar.create_rectangle(0, 0, int(260 * min(1.0, a / b if b else 0)), 10, fill=GREEN, width=0)
+            return
         try:
             lines = (RUNS / "logs" / f"{key}.log").read_text(errors="replace").splitlines()
             for line in reversed(lines):
@@ -1092,7 +1327,13 @@ class Lab:
                     run = lines[max(i for i, l in enumerate(lines) if l.startswith("###")):]
                     earlier = sum(int(n) * len(KERNELS) for tag, n in re.findall(r"== (\S+): (\d+) tasks", "\n".join(run))
                                   if f"== {tag}: kernels.md back" in run)
-                    done = max(0, sum(1 for t in self.end_times if t >= started) - earlier)
+                    # only this answer set's own tasks: another job (the committed matrix) may be checking too
+                    try:
+                        mine = {q.stem for q in (SPEC_EXP / m.group(1) / "grade-in").glob("*.json")}
+                    except OSError:
+                        mine = set()
+                    done = sum(1 for t, name in self.end_pairs if t >= started and (not mine or name in mine))
+                    done = max(0, done - earlier)
                     frac = min(1.0, done / total) if total else None
                     text = (f"{m.group(1)}: {done} of {total} checks" if done else
                             f"{m.group(1)}: translating {m.group(2)} tasks for the seven checkers, checks start after")

@@ -114,7 +114,8 @@ def outdir(model: str) -> Path:
 
 # ------------------------------------------------------------------ pool --
 
-POOL_VERSIONS = ("v1", "v2", "v3")
+POOL_VERSIONS = ("v1", "v2", "v3", "v4")
+HUMANEVAL_BASE = 100000     # pool v4: HumanEval/<n> is task id 100000 + n, clear of every MBPP id
 
 
 def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
@@ -139,13 +140,13 @@ def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
     solution, which this tuple alone cannot express, so `pool()`/
     `pool_report()` read `version == "v3"` directly for that half rather
     than folding it in here."""
-    if version == "v3":
+    if version in ("v3", "v4"):
         return True, ("int", "bool", "seq", "seq-of-seq")
     if version == "v2":
         return True, ("int", "bool", "seq")
     if version == "v1":
         return False, ("int", "bool")
-    raise ValueError("pool version must be v1, v2 or v3, got %r" % version)
+    raise ValueError("pool version must be v1, v2, v3 or v4, got %r" % version)
 
 
 def pool(version: str = "v1") -> dict[int, dict]:
@@ -165,6 +166,8 @@ def pool(version: str = "v1") -> dict[int, dict]:
     refused assertion is out, and the refusal reasons are counted in
     `pool_report`."""
     strings, allowed = _pool_settings(version)
+    if version == "v4":
+        return {**pool("v3"), **humaneval_pool()}
     nested = version == "v3"
     recs = mbpp_dfy.mbpp_records()
     out = {}
@@ -184,6 +187,47 @@ def pool(version: str = "v1") -> dict[int, dict]:
             if not mbpp_dfy.string_lib_v1_only(r.get("code", ""), fn):
                 continue
         out[tid] = {"rec": r, "points": pts, "fn": fn}
+    return out
+
+
+def humaneval_pool() -> dict[int, dict]:
+    """Pool v4's addition (2026-09-17): the HumanEval problems whose `check` is nothing but
+    `assert candidate(...) == ...` lines that parse under pool v3's reading, keyed HUMANEVAL_BASE + n.
+    A problem with any other kind of check line (abs(...) < 1e-6, a loop, a helper) is out, so no test is
+    silently dropped. The record carries MBPP's field names (`text`, `test_list`, `code`) so build_prompt and
+    the v3 string-library rule read it unchanged. Training on these problems means a model's HumanEval score
+    is no longer a held-out measurement; the held-out set of this project stays split-v3's MBPP problems."""
+    import gzip
+    path = mbpp_dfy.NL_DATA / "humaneval.jsonl.gz"
+    if not path.exists():
+        return {}
+    allowed = _pool_settings("v4")[1]
+    out = {}
+    with gzip.open(path, "rt", encoding="utf-8") as f:
+        recs = [json.loads(line) for line in f if line.strip()]
+    for r in recs:
+        ep = r["entry_point"]
+        body = r["test"].split("def check(candidate):", 1)
+        if len(body) != 2:
+            continue
+        lines = [l.strip() for l in body[1].splitlines() if l.strip() and not l.strip().startswith("#")]
+        if not lines or not all(l.startswith("assert candidate(") for l in lines):
+            continue
+        asserts = [re.sub(r",\s*(\"[^\"]*\"|'[^']*')\s*$", "", l).replace("candidate(", ep + "(", 1)
+                   for l in lines]
+        pts = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True) for a in asserts]
+        if not all(p["ok"] for p in pts) or not all(p["expected"][0] in allowed for p in pts):
+            continue
+        if {p["fn"] for p in pts} != {ep}:
+            continue
+        code = r["prompt"] + r["canonical_solution"]
+        if any(p["expected"][0] == "seq-of-seq" or any(x[0] == "seq-of-seq" for x in p["args"]) for p in pts):
+            if not mbpp_dfy.string_lib_v1_only(code, ep):
+                continue
+        n = int(r["task_id"].split("/")[1])
+        rec = {"task_id": HUMANEVAL_BASE + n, "text": r["prompt"].strip(), "test_list": asserts, "code": code,
+               "source": r["task_id"]}
+        out[HUMANEVAL_BASE + n] = {"rec": rec, "points": pts, "fn": ep}
     return out
 
 
@@ -600,7 +644,7 @@ def model_digest(host: str, model: str) -> str:
 def cmd_generate(args) -> int:
     d = outdir(args.tag or args.model)
     P = pool(args.pool)
-    ids = sorted(P)
+    ids = [i for i in sorted(P) if i >= getattr(args, "min_id", 0)]
     if args.limit:
         ids = ids[:args.limit]
     options = {"temperature": args.temperature, "seed": args.seed, "num_ctx": args.num_ctx,
@@ -718,9 +762,10 @@ def cmd_extract(args) -> int:
             results[tid] = entry
             continue
         entry["model_name"] = task.get("name")
-        name = f"mbpp_{tid}__{rec['fn']}"
+        prefix = f"he_{int(tid) - HUMANEVAL_BASE}" if int(tid) >= HUMANEVAL_BASE else f"mbpp_{tid}"
+        name = f"{prefix}__{rec['fn']}"
         if not fuzz_lower.NAME_RE.match(name):
-            name = f"mbpp_{tid}"
+            name = prefix
         task = rename_task(task, name)
         try:
             errs = fuzz_lower.check_wf(task)
@@ -1059,6 +1104,8 @@ def main(argv=None) -> int:
                                  "few-shot tasks)")
             p.add_argument("--host", default="127.0.0.1:11434")
             p.add_argument("--limit", type=int, default=0)
+            p.add_argument("--min-id", type=int, default=0,
+                           help="only problems with this task id or above (pool v4's HumanEval problems: 100000)")
             p.add_argument("--seed", type=int, default=1)
             p.add_argument("--num-ctx", type=int, default=8192)
             p.add_argument("--num-predict", type=int, default=1024)

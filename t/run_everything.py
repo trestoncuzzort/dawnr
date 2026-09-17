@@ -4,10 +4,13 @@
 Uses the steps of t/lab.py's Collect data tab (same commands, same logs, same pid files, so t lab shows
 every step running) and chains them:
 
-  1. wait for answer writing to finish (start it if it is not running), then stop Ollama
-  2. at once:  grading on the lab workstation and on this machine (8 jobs; seeds claimed, never twice)
-               Phi-4-mini answers, then the small base answers, on the GPU; then their held-out grading
-  3. when every seed is graded: clean pool, train the student, student answers, locallm model
+  1. wait for answer writing to finish (start it if it is not running)
+  2. two chains at once, so neither machine waits:
+     GPU (this machine): Phi-4-mini answers; Ollama: repairs of every seed, the HumanEval problems, a second
+       generator; the small base answers; a repair round on the new answer sets
+     lab workstation: the seeds, then each new answer set as soon as it is written, then Phi's and the base
+       model's held-out answers
+  3. clean pool over split-v4, train the student, student answers, locallm model
   4. held-out grading for the rest, then the score
 
 A failed step is retried once; if it fails again, run_everything writes why to NOTES-home.md, sends a desktop
@@ -94,10 +97,13 @@ def run(key: str, env_extra: dict | None = None, need_done: bool = True, retries
 
 def stop_ollama():
     pid = pid_of("ollama-serve")
+    running = bool(pid) or subprocess.run(["pgrep", "-f", "^ollama serve"], capture_output=True).returncode == 0
     if pid:
         os.killpg(pid, signal.SIGTERM)
     subprocess.run(["pkill", "-f", "^ollama serve"], capture_output=True)
-    note("Ollama stopped: answer writing is finished, its memory goes to grading and the GPU steps")
+    if running:
+        note("Ollama stopped: the GPU goes to the next step")
+        time.sleep(10)
 
 
 def grading():
@@ -124,39 +130,73 @@ def grading():
     return False
 
 
-def gpu_baselines():
+def start_ollama() -> bool:
+    if not done("ollama-serve"):
+        threading.Thread(target=run, args=("ollama-serve",), kwargs={"need_done": False, "retries": 0},
+                         daemon=True).start()
+        for _ in range(60):
+            if done("ollama-serve"):
+                break
+            time.sleep(5)
+    return done("ollama-serve")
+
+
+def wait_done(key: str, poll: int = 60) -> bool:
+    """Wait until another thread's step is done, or has stopped for good."""
+    while not done(key):
+        if key in failed:
+            return False
+        time.sleep(poll)
+    return True
+
+
+def gpu_chain():
+    """Everything that needs the 4080, one at a time, ordered so the lab workstation always has work."""
     notify("Phi-4-mini is starting: its answers to the 232 held-out problems, in bf16.")
     note("Phi-4-mini answers starting (the model to beat)")
     if run("phi"):
-        notify("Phi-4-mini answers are written. Small base answers next.")
-    run("base")
-    run("grade-heldout", need_done=False)     # grades whichever held-out sets exist so far
+        notify("Phi-4-mini answers are written. Growing the pool next.")
+    if start_ollama():
+        run("repair")                       # the lab grades these while new answers are written
+        run("more-problems")
+    else:
+        failed.append("ollama-serve")
+        note("Ollama did not start; repairs and new answers skipped")
+    stop_ollama()
+    run("base")                             # while the lab grades the new answers
+    if wait_done("grade-growth") and start_ollama():
+        run("repair-growth")
+    stop_ollama()
+
+
+def lab_chain():
+    """Everything the lab workstation grades, each set as soon as the GPU has written it."""
+    grading()
+    for source, grade in (("repair", "grade-repair"), ("more-problems", "grade-growth"),
+                          ("repair-growth", "grade-growth-repair")):
+        if wait_done(source):
+            run(grade)
+    run("grade-heldout", need_done=False)   # Phi's and the base model's, while training runs
 
 
 def main() -> int:
-    note("started")
+    note("started (growth plan: repairs, HumanEval problems, a second generator)")
     wait_idle("generate")
     if not done("generate"):
-        if not done("ollama-serve"):
-            threading.Thread(target=run, args=("ollama-serve",), kwargs={"need_done": False, "retries": 0},
-                             daemon=True).start()
-            for _ in range(60):
-                if done("ollama-serve"):
-                    break
-                time.sleep(5)
+        start_ollama()
         if not run("generate"):
             notify("Answer writing failed twice; run_everything stopped.")
             return 1
     stop_ollama()
 
-    g = threading.Thread(target=grading)
-    b = threading.Thread(target=gpu_baselines)
+    g = threading.Thread(target=gpu_chain)
+    l = threading.Thread(target=lab_chain)
     g.start()
-    b.start()
-    b.join()
+    l.start()
     g.join()
+    l.join()
 
-    if "grade" not in failed and run("pool"):
+    if run("pool"):
         if run("train"):
             run("student")
         run("locallm")

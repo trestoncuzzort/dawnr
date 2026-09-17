@@ -1,10 +1,14 @@
 #!/bin/bash
 # Grade this machine's answer sets on the lab workstation (CPU only), 2026-09-17.
 #   bash t/grade_lab.sh seeds     every qwen2.5-coder-14b seed's grade-in/ not yet graded
+#   bash t/grade_lab.sh tags T1 T2 ...  those answer sets' grade-in/ (repairs, other generators)
 #   bash t/grade_lab.sh heldout   the held-out answer sets' tasks/ (extract and tests run here first)
 # Copies the tasks over, runs run_par.py there, copies kernels.md back. Checker events stream
 # into this machine's T_WATCH so t lab's Live checks shows them. Needs the the VPN and key login.
 set -u
+# the whole script is one function, read in full before it runs: editing this file while a job
+# runs cannot change what that job does
+main() {
 LAB=${T_LAB:-tmcuzzort@the-lab-workstation}
 JOBS=${T_LAB_JOBS:-16}             # the lab workstation is shared: 12 to 16
 SE=t/out/spec-experiment
@@ -23,7 +27,7 @@ $SSH "$LAB" "mkdir -p ~/.cache/t-watch ~/tup-grade && touch ~/$REMOTE_EV && cd ~
 if [ -n "${T_WATCH:-}" ]; then
   mkdir -p "$(dirname "$T_WATCH")"
   # remote pids mean nothing here, so drop them before t lab reads the line
-  $SSH "$LAB" "tail -n0 -F ~/$REMOTE_EV" | sed -u 's/"pid": [0-9]*, //' >> "$T_WATCH" &
+  $SSH "$LAB" "tail -n0 -F ~/$REMOTE_EV" | stdbuf -oL -eL sed -u "s/\"pid\": [0-9]*, //" >> "$T_WATCH" &
   trap 'kill %1 2>/dev/null' EXIT
 fi
 
@@ -42,14 +46,17 @@ grade() {  # tag, folder name inside the tag
 }
 
 case "${1:-seeds}" in
+  tags)    shift; for T in "$@"; do grade "$T" grade-in || exit 1; done ;;
   matrix)  echo "== committed-tasks: $(ls t/tasks/*.t | wc -l) tasks to the lab workstation"
            $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --out ~/tup-grade/matrix --table ~/tup-grade/AGREEMENT-lab.md'"
            rsync -a "$LAB:tup-grade/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
   seeds)   for S in 1 2 3 4 5 6 7 8; do grade qwen2.5-coder-14b-v3-s$S grade-in || exit 1; done ;;
   heldout) for T in phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4; do
              [ -d "$SE/$T/raw" ] || { echo "== $T: no answers yet, skipped"; continue; }
-             [ -d "$SE/$T/tasks" ] || { python3 t/spec_experiment.py extract --model $T --pool v3 &&
+             [ -n "$(ls "$SE/$T/tasks"/*.json 2>/dev/null)" ] || { python3 t/spec_experiment.py extract --model $T --pool v3 &&
                                         python3 t/spec_experiment.py tests --model $T --pool v3; } || exit 1
              grade $T tasks || exit 1
            done ;;
 esac
+}
+main "$@"; exit $?

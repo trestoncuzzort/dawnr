@@ -50,3 +50,27 @@
 - 2026-09-17 12:10 run_everything: start `grade` (Grade the answers), attempt 1
 - 2026-09-17 12:10 run_everything: Phi-4-mini answers starting (the model to beat)
 - 2026-09-17 12:10 run_everything: start `phi` (Phi-4-mini answers), attempt 1
+- 2026-09-17 12:25 start `ollama-serve`: `OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 exec ollama serve` (log `logs/ollama-serve.log`)
+- 2026-09-17 12:25 start `matrix`: `bash t/grade_lab.sh matrix` (log `logs/matrix.log`)
+- 2026-09-17 12:32 end `matrix`: exit 2 after 7 min
+- 2026-09-17 12:45 Check the checkers on the lab workstation: 30 of 34 in all seven, the same as t/AGREEMENT.md (t/out/AGREEMENT-lab.md). The step read exit 2 only because grade_lab.sh was edited while it ran and bash read the changed file after the table; grade_lab.sh and grade_home.sh are now one function read in full before running.
+- 2026-09-17 12:47 run_everything: end `phi`: exit 0, ok
+- 2026-09-17 12:47 run_everything: start `base` (Small base answers), attempt 1
+- 2026-09-17 12:49 start `matrix`: `bash t/grade_lab.sh matrix` (log `logs/matrix.log`)
+- 2026-09-17 12:55 end `matrix`: exit 0 after 5 min
+- 2026-09-17 13:02 run_everything: end `base`: exit 0, ok
+- 2026-09-17 13:02 run_everything: start `grade-heldout` (Grade held-out answers), attempt 1
+- 2026-09-17 13:02 run_everything: end `grade-heldout`: exit 1, not done
+- 2026-09-17 13:02 run_everything: start `grade-heldout` (Grade held-out answers), attempt 2
+- 2026-09-17 13:02 run_everything: end `grade-heldout`: exit 1, not done
+- 2026-09-17 13:02 run_everything: `grade-heldout` failed twice; see logs/grade-heldout.log
+- 2026-09-17 13:33 start `matrix`: `bash t/grade_lab.sh matrix` (log `logs/matrix.log`)
+- 2026-09-17 13:38 end `matrix`: exit 0 after 5 min
+- 2026-09-17 13:45 run_everything: end `grade`: exit 1, not done
+- 2026-09-17 13:45 run_everything: `grade` failed twice; see logs/grade.log
+- 2026-09-17 13:45 run_everything: start `grade` (Grade the answers), attempt 1
+- 2026-09-17 14:44 stopped `ollama-serve` by hand
+- 2026-09-17 14:44 end `ollama-serve`: exit 0 after 139 min
+- 2026-09-17 14:45 start `matrix`: `bash t/grade_lab.sh matrix` (log `logs/matrix.log`)
+- 2026-09-17 15:05 t lab grew three ways so the run can be read without asking anyone: a Progress column on Collect data (answers written of problems asked, answer sets graded of those waiting, read from the files); a Results tab (every answer set's graded, clean, proven but wrong, distinct problems, tests passed, well formed, plus the pool sizes and the score and matrix tables when they exist); and the steps themselves now come from t/steps.json, with a Reload steps button, so a step can be added or changed without editing t/lab.py.
+- 2026-09-17 15:05 the lab event stream was block-buffered through sed, so Live checks looked frozen for 40 minutes while the lab workstation was grading normally; grade_lab.sh now pipes through stdbuf -oL.
