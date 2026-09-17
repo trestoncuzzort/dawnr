@@ -7,7 +7,7 @@ Where the project runs from 2026-09-17 on, and what each machine is for. Numbers
 | Machine | Memory | GPU | CPU | Status |
 |---|---|---|---|---|
 | The lab workstation | 502 GB | 4 x RTX 6000 Ada, 48 GB each, shared with other users | 120 threads | All seven kernels installed. Work stopped 2026-09-16 at the lab's request. |
-| Home desktop | to measure | RTX 4080, 16 GB | to measure | New. Kernels to install. |
+| Home desktop | to measure | RTX 4080, 16 GB | to measure | Lubuntu, minimal installation, native (2026-09-17). Kernels to install; setup in `internal/HANDOFF-2026-09-17-rtx4080.md`. |
 | MacBook Pro, M3 Max | 36 GB unified | Apple M3 Max GPU (Metal, PyTorch MPS) | 14 cores in the 36 GB configuration | All seven kernels installed 2026-09-16; the committed matrix reads 30 of 34, every cell as the Dell's (`t/WITNESS-2026-09-16-macos-m3max.md`). |
 
 ## What each machine is for
