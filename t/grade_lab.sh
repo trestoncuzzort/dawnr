@@ -10,8 +10,16 @@ set -u
 # runs cannot change what that job does
 main() {
 LAB=${T_LAB:-tmcuzzort@the-lab-workstation}
-JOBS=${T_LAB_JOBS:-16}             # the lab workstation is shared: 12 to 16
+# The lab workstation has 120 threads and its CPUs are ours; only its GPUs are off limits. gnatprove runs one
+# core per cell and SPARK is 44 percent of all proof time, so cells, not threads, are the limit: with 16 cells
+# only 16 cores worked. Cells are cheap in memory (z3 and one prover each), so the default is most of the
+# machine; Frama-C spawns 4 provers per cell of its own (verifiers/framac.py PAR), which is why this is not 120.
+JOBS=${T_LAB_JOBS:-64}
 SE=t/out/spec-experiment
+# The lab workstation has 502 GB of memory and a 252 GB RAM disk. Grading is small-file work (a lowered source
+# per cell, a gnatprove work tree, why3 session files), so the whole working set lives in RAM and only
+# kernels.md comes back. T_LAB_WORK=~/tup-grade puts it on disk again.
+WORK=${T_LAB_WORK:-/dev/shm/tup-grade}
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=30"
 REMOTE_EV='.cache/t-watch/home-grade.jsonl'
 
@@ -23,7 +31,7 @@ if ! $SSH "$LAB" true 2>/dev/null; then
   $SSH "$LAB" true || { echo "still cannot reach $LAB after 10 minutes"; exit 1; }
   echo "connected"
 fi
-$SSH "$LAB" "mkdir -p ~/.cache/t-watch ~/tup-grade && touch ~/$REMOTE_EV && cd ~/tup && git pull -q --ff-only || true"
+$SSH "$LAB" "mkdir -p ~/.cache/t-watch $WORK && touch ~/$REMOTE_EV && cd ~/tup && git pull -q --ff-only || true"
 if [ -n "${T_WATCH:-}" ]; then
   mkdir -p "$(dirname "$T_WATCH")"
   # remote pids mean nothing here, so drop them before t lab reads the line
@@ -38,9 +46,9 @@ grade() {  # tag, folder name inside the tag
   mkdir "$D/.grading" 2>/dev/null || { echo "== $T: being graded elsewhere, skipped"; return 0; }
   trap "rmdir '$D/.grading' 2>/dev/null; kill %1 2>/dev/null" EXIT
   echo "== $T: $(ls "$D/$SUB" | wc -l) tasks to the lab workstation"
-  $SSH "$LAB" "mkdir -p ~/tup-grade/$T" && rsync -a --delete "$D/$SUB/" "$LAB:tup-grade/$T/$SUB/" || return 1
-  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --tasks ~/tup-grade/$T/$SUB --out ~/tup-grade/$T/kernels --table ~/tup-grade/$T/kernels.md'"
-  rsync -a "$LAB:tup-grade/$T/kernels.md" "$D/kernels.md" || return 1
+  $SSH "$LAB" "mkdir -p $WORK/$T" && rsync -a --delete "$D/$SUB/" "$LAB:$WORK/$T/$SUB/" || return 1
+  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md'"
+  rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" || return 1
   echo "== $T: kernels.md back"
   rmdir "$D/.grading" 2>/dev/null
 }
@@ -48,8 +56,8 @@ grade() {  # tag, folder name inside the tag
 case "${1:-seeds}" in
   tags)    shift; for T in "$@"; do grade "$T" grade-in || exit 1; done ;;
   matrix)  echo "== committed-tasks: $(ls t/tasks/*.t | wc -l) tasks to the lab workstation"
-           $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --out ~/tup-grade/matrix --table ~/tup-grade/AGREEMENT-lab.md'"
-           rsync -a "$LAB:tup-grade/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
+           $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'"
+           rsync -a "$LAB:$WORK/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
   seeds)   for S in 1 2 3 4 5 6 7 8; do grade qwen2.5-coder-14b-v3-s$S grade-in || exit 1; done ;;
   heldout) for T in phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4; do
              [ -d "$SE/$T/raw" ] || { echo "== $T: no answers yet, skipped"; continue; }
