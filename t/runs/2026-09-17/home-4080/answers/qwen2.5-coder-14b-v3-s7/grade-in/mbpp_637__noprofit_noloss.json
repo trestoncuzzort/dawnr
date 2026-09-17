@@ -1,0 +1,60 @@
+{
+ "t": 0,
+ "name": "mbpp_637__noprofit_noloss",
+ "params": [
+  {
+   "name": "cost_price",
+   "type": "int"
+  },
+  {
+   "name": "selling_price",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "cost_price"
+      },
+      {
+       "var": "selling_price"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "cost_price"
+      },
+      {
+       "var": "selling_price"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,292 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_385__get_perrin",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "get_perrin_helper",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "get_perrin_helper",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 3
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": {
+        "int": 0
+       },
+       "else": {
+        "ite": {
+         "cond": {
+          "op": "==",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         "then": {
+          "int": 2
+         },
+         "else": {
+          "op": "+",
+          "args": [
+           {
+            "call": {
+             "fun": "get_perrin_helper",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 2
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "call": {
+             "fun": "get_perrin_helper",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 3
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 3
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 0
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "==",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 2
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "int": 2
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "assign": [
+             "r",
+             {
+              "op": "+",
+              "args": [
+               {
+                "call": {
+                 "fun": "mbpp_385__get_perrin",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "int": 2
+                    }
+                   ]
+                  }
+                 ]
+                }
+               },
+               {
+                "call": {
+                 "fun": "mbpp_385__get_perrin",
+                 "args": [
+                  {
+                   "op": "-",
+                   "args": [
+                    {
+                     "var": "n"
+                    },
+                    {
+                     "int": 3
+                    }
+                   ]
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

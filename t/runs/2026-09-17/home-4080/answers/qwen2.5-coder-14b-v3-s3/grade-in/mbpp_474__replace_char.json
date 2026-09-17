@@ -1,0 +1,90 @@
+{
+ "t": 1,
+ "name": "mbpp_474__replace_char",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "old",
+   "type": "int"
+  },
+  {
+   "name": "new",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "old"
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "new"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "old"
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "new"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

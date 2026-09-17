@@ -1,0 +1,243 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_506__permutation_coefficient",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "k",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "k"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "k"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "p",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "var": "k"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "p",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "-",
+    "args": [
+     {
+      "var": "n"
+     },
+     {
+      "var": "k"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "k"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "*",
+      "args": [
+       {
+        "call": {
+         "fun": "p",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "k"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "-",
+  "args": [
+   {
+    "var": "n"
+   },
+   {
+    "var": "k"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "k"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "mbpp_506__permutation_coefficient",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "k"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

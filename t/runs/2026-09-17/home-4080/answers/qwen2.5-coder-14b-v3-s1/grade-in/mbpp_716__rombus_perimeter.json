@@ -1,0 +1,68 @@
+{
+ "t": 0,
+ "name": "mbpp_716__rombus_perimeter",
+ "params": [
+  {
+   "name": "side",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "side"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "var": "side"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "var": "side"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

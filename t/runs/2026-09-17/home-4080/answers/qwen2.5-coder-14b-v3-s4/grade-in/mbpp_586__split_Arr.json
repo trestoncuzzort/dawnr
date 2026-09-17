@@ -1,0 +1,153 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_586__split_Arr",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "k",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": ">=",
+     "args": [
+      {
+       "var": "k"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "k"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "k"
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "int": 0
+        },
+        {
+         "var": "k"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "var": "k"
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "int": 0
+        },
+        {
+         "var": "k"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

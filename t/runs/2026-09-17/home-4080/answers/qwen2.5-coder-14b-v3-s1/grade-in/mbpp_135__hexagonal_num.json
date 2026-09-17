@@ -1,0 +1,100 @@
+{
+ "t": 0,
+ "name": "mbpp_135__hexagonal_num",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 2
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 2
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

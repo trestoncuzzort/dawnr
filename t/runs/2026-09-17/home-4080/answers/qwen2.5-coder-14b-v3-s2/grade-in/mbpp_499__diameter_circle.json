@@ -1,0 +1,68 @@
+{
+ "t": 0,
+ "name": "mbpp_499__diameter_circle",
+ "params": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "d",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "d"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "var": "r"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "d",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "var": "r"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

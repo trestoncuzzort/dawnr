@@ -1,0 +1,52 @@
+{
+ "t": 1,
+ "name": "mbpp_118__string_to_list",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": {
+    "seq": "seq"
+   }
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "split",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "split",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

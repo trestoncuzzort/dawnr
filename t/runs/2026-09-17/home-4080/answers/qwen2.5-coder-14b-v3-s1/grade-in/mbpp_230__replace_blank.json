@@ -1,0 +1,86 @@
+{
+ "t": 1,
+ "name": "mbpp_230__replace_blank",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "c",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 32
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 32
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

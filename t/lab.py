@@ -84,10 +84,15 @@ STEPS = [
      "curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama",
      "command -v ollama", "sudo"),
     ("ollama-serve", "Start Ollama", "Keeps running in the background, also after this window closes. Models live in "
-     "/data/ollama.", "OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 exec ollama serve",
+     "/data/ollama. Flash attention and an 8-bit KV cache keep 4 parallel answers inside the 16 GB card, "
+     "so nothing spills into the 14 GB of RAM.", "OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 exec ollama serve",
      "curl -sf http://127.0.0.1:11434/ >/dev/null", ""),
     ("pull", "Download qwen2.5-coder:14b", "About 9 GB. Needs Ollama started.", "ollama pull qwen2.5-coder:14b",
      "ollama list 2>/dev/null | grep -q 'qwen2.5-coder:14b'", ""),
+    ("run-all", "Run everything", "Chains every step below to the score without waiting for you: finishes answer "
+     "writing, stops Ollama, grades on the lab and here, runs Phi-4-mini and the base model meanwhile, then pool, "
+     "training, locallm, held-out grading, score. Desktop notifications when Phi starts and when it ends.",
+     "python3 t/run_everything.py", "test -s t/out/score-r4.md", ""),
     ("generate", "Write answers, 8 seeds", "Hours. Seed 1 at temperature 0, seeds 2 to 8 at 0.7. A finished seed is "
      "skipped, so Stop and Run again resumes. Good: each seed puts tasks in grade-in/.",
      f"for S in 1 2 3 4 5 6 7 8; do T={GEN}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
@@ -96,14 +101,16 @@ STEPS = [
      "python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && "
      "python3 t/pool_pick.py $D && ls $D/grade-in | wc -l || exit 1; done",
      f"for S in 1 2 3 4 5 6 7 8; do [ -d {SE}/{GEN}$S/grade-in ] || exit 1; done", "gpu"),
-    ("matrix", "Check the checkers", "Install the seven first (t/RUN-ON-LINUX.md; Antigravity can do it). Good: 30 of 34 "
-     "in all seven, as in t/AGREEMENT.md. Watch it on Live checks.",
-     "python3 t/run_par.py --jobs 12 --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md",
-     "test -s t/out/AGREEMENT-home.md", "cpu"),
-    ("grade", "Grade the answers", "Runs the seven checkers on every seed's grade-in/. Skips seeds already graded.",
-     f"for S in 1 2 3 4 5 6 7 8; do D={SE}/{GEN}$S; [ -d $D/grade-in ] || continue; [ -s $D/kernels.md ] && continue; "
-     "echo \"== seed $S\"; python3 t/run_par.py --jobs 12 --tasks $D/grade-in --out $D/kernels --table $D/kernels.md || exit 1; done",
-     f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "cpu"),
+    ("matrix", "Check the checkers", "On the lab workstation, where all grading runs: regrades the 34 committed tasks. "
+     "Good: 30 of 34 in all seven, as in t/AGREEMENT.md. Table comes back to t/out/AGREEMENT-lab.md.",
+     "bash t/grade_lab.sh matrix", "test -s t/out/AGREEMENT-lab.md", "lab"),
+    ("grade", "Grade the answers", "On the lab workstation (120 threads, CPU only, 16 jobs): sends each finished "
+     "seed's grade-in/, brings kernels.md back, checks show on Live checks. Opens the VPN by itself if it is down; sign in "
+     "there. Skips graded seeds, so Run again after more seeds finish.", "bash t/grade_lab.sh seeds",
+     f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "lab"),
+    ("grade-home", "Grade here too", "Optional, alongside Grade the answers: this machine grades from the last "
+     "finished seed backwards (6 jobs) while the lab works forwards; neither takes a seed the other has.",
+     "bash t/grade_home.sh", f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "cpu"),
     ("pool", "Build the clean pool", "Keeps answers that pass tests and all seven. Good: sft-r4.jsonl is much bigger "
      "than the 47 problems of r3.",
      f"python3 t/loop_dataset.py --from-samples {POOL_TAGS} --split t/out/loop/split-v3.json --min-kernels 7 "
@@ -126,11 +133,9 @@ STEPS = [
      f"--out t/out/loop-locallm/corpus-r4.txt && {PY} t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt "
      f"--model t/out/loop-locallm/model-r4 && {PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
      f"test -d {SE}/locallm-r4/raw", "gpu"),
-    ("grade-heldout", "Grade held-out answers", "Every extracted task this time, so proven but wrong can be counted.",
-     f"for T in {HELDOUT}; do D={SE}/$T; [ -s $D/kernels.md ] && continue; echo \"== $T\"; "
-     "python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && "
-     "python3 t/run_par.py --jobs 12 --tasks $D/tasks --out $D/kernels --table $D/kernels.md || exit 1; done",
-     f"for T in {HELDOUT}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "cpu"),
+    ("grade-heldout", "Grade held-out answers", "Every extracted task this time, so proven but wrong can be "
+     "counted. Extract and tests run here, the checkers on the lab workstation.", "bash t/grade_lab.sh heldout",
+     f"for T in {HELDOUT}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("score", "Score against Phi", "The result. Saved to t/out/score-r4.md. Take it to Claude.",
      f"python3 t/score_heldout.py qwen3.8-27b-fp8-v3 {HELDOUT} locallm-r0 | tee t/out/score-r4.md",
      "test -s t/out/score-r4.md", ""),
@@ -365,10 +370,17 @@ class Lab:
 
         self.q: queue.Queue = queue.Queue()
         self.stop_flag = threading.Event()
+        EVENTS.parent.mkdir(parents=True, exist_ok=True)   # run_par.py drops events silently when the folder is missing
         self.offset = EVENTS.stat().st_size if EVENTS.exists() else 0
         self.running: dict[tuple[str, str], dict] = {}
         self.counts = {"done": 0, "proven": 0, "not": 0}
         self.samples: dict[str, str] = {}
+        self.end_times: list[float] = []     # every finished check's time, for the data run's progress bar
+        try:                                 # earlier checks too, so a reopened window keeps a running bar right
+            self.end_times = [json.loads(l).get("t", 0) for l in EVENTS.read_text(errors="replace").splitlines()
+                              if '"ev": "end"' in l]
+        except (OSError, ValueError):
+            pass
 
         head = tk.Frame(root, bg=BG)
         head.pack(fill="x", padx=22, pady=(18, 6))
@@ -546,6 +558,7 @@ class Lab:
                         self.running.pop(key, None)
                         sym, word, sentence, color = verdict(ev.get("real"), ev.get("twin"))
                         self.counts["done"] += 1
+                        self.end_times.append(ev.get("t", time.time()))
                         self.counts["proven"] += word == "Proven"
                         self.counts["not"] += color == RED
                         self.done.insert("", 0, tags=(self.tag(color),), values=(
@@ -912,7 +925,7 @@ class Lab:
                       str(RUNS.relative_to(TUP)))
         tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
             "Each step runs in the background and keeps going if this window closes. A step reads done when its "
-            "output exists. With 14 GB of memory, run one gpu step at a time and keep cpu steps apart from them.")
+            "output exists. One gpu step and one cpu step can run together; checkers then use 6 jobs instead of 12.")
                  ).pack(fill="x", pady=(0, 8))
         self.steps = self.table(c, [("state", "State", 110), ("step", "Step", 230), ("uses", "Uses", 60),
                                     ("what", "What it does", 800)], 9)
@@ -930,6 +943,18 @@ class Lab:
         c = self.card(page, "Output", "last lines of the chosen step's log", fill="both", expand=True)
         self.log_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="none")
         self.log_text.pack(fill="both", expand=True)
+        live = self.pages["Live checks"]
+        strip = tk.Frame(live, bg=CARD, highlightthickness=1, highlightbackground=LINE)
+        strip.pack(fill="x", pady=(0, 12), before=live.winfo_children()[0])
+        tk.Frame(strip, bg=GREEN, width=3).pack(side="left", fill="y")
+        self.run_line = tk.Label(strip, text="", bg=CARD, fg=TEXT, font=self.f_bold, anchor="w", padx=14, pady=8)
+        self.run_line.pack(side="left")
+        self.run_bar = tk.Canvas(strip, bg=SURFACE, height=10, width=260, highlightthickness=0)
+        self.run_bar.pack(side="left", padx=(0, 12))
+        self.run_tail = tk.Label(strip, text="", bg=CARD, fg=MUTED, font=self.f_mono, anchor="w")
+        self.run_tail.pack(side="left", fill="x", expand=True)
+        Button(strip, "Open Collect data", lambda: self.show_page("Collect data"), BLUE, self,
+               filled=False).pack(side="right", padx=8, pady=6)
         threading.Thread(target=self.check_steps, daemon=True).start()
         self.root.after(1000, self.refresh_steps)
 
@@ -949,36 +974,66 @@ class Lab:
         if not st:
             return
         key, title, _what, cmd, _check, uses = st
-        if key in self.jobs and self.jobs[key].poll() is None:
+        live = {k for k, *_r in self.running_steps()}
+        if key in live:
             self.step_hint.configure(text=f"{title} is already running.", fg=RED)
             return
-        busy = [t for k, t, *_r, u in STEPS if u in ("gpu", "cpu") and k in self.jobs and self.jobs[k].poll() is None]
-        if uses in ("gpu", "cpu") and busy:
+        # one gpu step and one cpu step may run together; checkers then get half the cores to spare memory
+        busy = [t for k, t, *_r, u in STEPS if u == uses and u in ("gpu", "cpu") and k in live]
+        gpu_busy = any(u == "gpu" and k in live for k, *_r, u in STEPS)
+        if busy:
             self.step_hint.configure(text=f"Wait: {', '.join(busy)} is running and memory is tight.", fg=RED)
             return
         log = RUNS / "logs" / f"{key}.log"
         self.note(f"start `{key}`: `{cmd}` (log `logs/{key}.log`)")
         if uses == "sudo":
+            # sudo asks for the password in the terminal it opens
+            script = RUNS / "logs" / f"{key}.sh"
+            script.write_text(f"#!/bin/bash\ncd {shlex.quote(str(TUP))}\nsudo -v\n"
+                              f"( {cmd} ) 2>&1 | tee -a {shlex.quote(str(log))}\nread -p 'Enter to close'\n")
+            script.chmod(0o755)
             term = "ptyxis" if subprocess.run(["which", "ptyxis"], capture_output=True).returncode == 0 else "x-terminal-emulator"
-            wrapped = f"cd {shlex.quote(str(TUP))} && ( {cmd} ) 2>&1 | tee -a {shlex.quote(str(log))}; read -p 'Enter to close'"
-            subprocess.Popen([term, "-x", "bash", "-lc", wrapped] if term == "ptyxis" else [term, "-e", "bash", "-lc", wrapped])
+            subprocess.Popen([term, "-x", str(script)] if term == "ptyxis" else [term, "-e", str(script)])
             self.step_hint.configure(text=f"{title} opened in a terminal.", fg=MUTED)
             return
         out = open(log, "a")
         out.write(f"\n### {time.strftime('%Y-%m-%d %H:%M:%S')} {cmd}\n")
         out.flush()
         self.jobs[key] = subprocess.Popen(["bash", "-lc", cmd], cwd=TUP, stdout=out, stderr=subprocess.STDOUT,
-                                          stdin=subprocess.DEVNULL, env=self.step_env(), start_new_session=True)
+                                          stdin=subprocess.DEVNULL, start_new_session=True,
+                                          env=dict(self.step_env(), T_JOBS="6" if uses == "cpu" and gpu_busy else "12"))
         self.jobs[key].started = time.time()
+        (RUNS / "logs" / f"{key}.pid").write_text(f"{self.jobs[key].pid} {self.jobs[key].started}")
+        if uses == "cpu":
+            self.show_page("Live checks")
         self.step_hint.configure(text=f"{title} started.", fg=MUTED)
+
+    def running_steps(self):
+        """(key, title, started) for every step with a live process, including ones started before this window."""
+        out = []
+        for key, title, *_r in STEPS:
+            job = self.jobs.get(key)
+            if job:
+                if job.poll() is None:
+                    out.append((key, title, job.started))
+                continue
+            try:
+                pid, started = (RUNS / "logs" / f"{key}.pid").read_text().split()
+                os.kill(int(pid), 0)
+                out.append((key, title, float(started)))
+            except (OSError, ValueError):
+                pass
+        return out
 
     def stop_step(self):
         st = self.selected_step()
-        job = st and self.jobs.get(st[0])
-        if job and job.poll() is None:
-            import signal
-            os.killpg(job.pid, signal.SIGTERM)
-            self.note(f"stopped `{st[0]}` by hand")
+        if not st or st[0] not in [k for k, *_r in self.running_steps()]:
+            return
+        import signal
+        job = self.jobs.get(st[0])
+        pid = job.pid if job else int((RUNS / "logs" / f"{st[0]}.pid").read_text().split()[0])
+        os.killpg(pid, signal.SIGTERM)
+        self.note(f"stopped `{st[0]}` by hand")
 
     def check_steps(self):
         while True:
@@ -988,10 +1043,11 @@ class Lab:
             time.sleep(10)
 
     def refresh_steps(self):
+        live = {k: (t, st) for k, t, st in self.running_steps()}
         for key, title, *_r in STEPS:
             job, state, tag = self.jobs.get(key), self.step_state.get(key, ""), "muted"
-            if job and job.poll() is None:
-                state, tag = f"running {int(time.time() - job.started) // 60} min", "blue"
+            if key in live:
+                state, tag = f"running {int(time.time() - live[key][1]) // 60} min", "blue"
             elif job and not getattr(job, "noted", False):
                 job.noted = True
                 mins = int(time.time() - job.started) // 60
@@ -1003,9 +1059,50 @@ class Lab:
             if state == "done":
                 tag = "green"
             self.steps.item(key, values=(state or "not yet", *self.steps.item(key, "values")[1:]), tags=(tag,))
+        if live:
+            names = ", ".join(f"{t} ({int(time.time() - st) // 60} min)" for t, st in live.values())
+            self.run_line.configure(text=f"Data run:  {names}")
+            shown = next((k for k in ("grade", "grade-heldout", "matrix", "generate") if k in live), next(iter(live)))
+            try:
+                last = [l for l in (RUNS / "logs" / f"{shown}.log").read_text(errors="replace")
+                        .replace("\r", "\n").splitlines() if l.strip()][-1]
+            except (OSError, IndexError):
+                last = ""
+            shown = next((k for k in ("grade", "grade-heldout", "matrix", "generate") if k in live), next(iter(live)))
+            self.draw_progress(shown, live[shown][1], last)
+        else:
+            self.run_bar.delete("all")
+            self.run_line.configure(text="Data run:  nothing running")
+            self.run_tail.configure(text="")
         if str(self.root.focus_get() or "") != str(self.log_text):
             self.show_log()
         self.root.after(2000, self.refresh_steps)
+
+    def draw_progress(self, key, started, last):
+        """Checks finished in the current answer set out of its tasks x 7 kernels: the task count from the step's
+        log (grade_lab.sh prints '== <tag>: N tasks'), the finished checks from live events since the step started,
+        less the checks of answer sets this run already brought back."""
+        text, frac = last[:140], None
+        try:
+            lines = (RUNS / "logs" / f"{key}.log").read_text(errors="replace").splitlines()
+            for line in reversed(lines):
+                m = re.match(r"== (\S+): (\d+) tasks", line)
+                if m:
+                    total = int(m.group(2)) * len(KERNELS)
+                    run = lines[max(i for i, l in enumerate(lines) if l.startswith("###")):]
+                    earlier = sum(int(n) * len(KERNELS) for tag, n in re.findall(r"== (\S+): (\d+) tasks", "\n".join(run))
+                                  if f"== {tag}: kernels.md back" in run)
+                    done = max(0, sum(1 for t in self.end_times if t >= started) - earlier)
+                    frac = min(1.0, done / total) if total else None
+                    text = (f"{m.group(1)}: {done} of {total} checks" if done else
+                            f"{m.group(1)}: translating {m.group(2)} tasks for the seven checkers, checks start after")
+                    break
+        except OSError:
+            pass
+        self.run_tail.configure(text=text)
+        self.run_bar.delete("all")
+        if frac is not None:
+            self.run_bar.create_rectangle(0, 0, int(260 * frac), 10, fill=GREEN, width=0)
 
     def show_log(self):
         st = self.selected_step()

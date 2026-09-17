@@ -1,0 +1,270 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_804__is_Product_Even",
+ "params": [
+  {
+   "name": "numbers",
+   "type": "seq"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "exists": {
+      "var": "i",
+      "lo": {
+       "int": 0
+      },
+      "hi": {
+       "var": "n"
+      },
+      "body": {
+       "op": "==",
+       "args": [
+        {
+         "op": "mod",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "numbers"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          },
+          {
+           "int": 2
+          }
+         ]
+        },
+        {
+         "int": 0
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "bool": false
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": "<",
+       "args": [
+        {
+         "var": "i"
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "not",
+       "args": [
+        {
+         "var": "r"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "var": "n"
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "exists": {
+         "var": "j",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "==",
+          "args": [
+           {
+            "op": "mod",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "numbers"
+               },
+               {
+                "var": "j"
+               }
+              ]
+             },
+             {
+              "int": 2
+             }
+            ]
+           },
+           {
+            "int": 0
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "numbers"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "bool": true
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

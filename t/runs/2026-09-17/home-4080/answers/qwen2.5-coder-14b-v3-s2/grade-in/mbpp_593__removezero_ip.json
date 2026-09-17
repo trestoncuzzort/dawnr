@@ -1,0 +1,240 @@
+{
+ "t": 1,
+ "name": "mbpp_593__removezero_ip",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        },
+        {
+         "int": 48
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        },
+        {
+         "int": 48
+        },
+        {
+         "int": 48
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        },
+        {
+         "int": 48
+        },
+        {
+         "int": 48
+        },
+        {
+         "int": 48
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        },
+        {
+         "int": 48
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        },
+        {
+         "int": 48
+        },
+        {
+         "int": 48
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        },
+        {
+         "int": 48
+        },
+        {
+         "int": 48
+        },
+        {
+         "int": 48
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,474 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_9__find_Rotations",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "var": "r"
+    },
+    "body": {
+     "op": "==",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "slice",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "var": "i"
+          },
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "slice",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "int": 0
+          },
+          {
+           "var": "i"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "var": "r"
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    "body": {
+     "op": "!=",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "slice",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "var": "i"
+          },
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "slice",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "int": 0
+          },
+          {
+           "var": "i"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": "<",
+       "args": [
+        {
+         "var": "i"
+        },
+        {
+         "op": "-",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "!=",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "var": "r"
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 0
+            },
+            {
+             "var": "r"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "forall": {
+       "var": "j",
+       "lo": {
+        "int": 0
+       },
+       "hi": {
+        "var": "r"
+       },
+       "body": {
+        "op": "==",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "slice",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "var": "j"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "slice",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             },
+             {
+              "var": "j"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      }
+     },
+     {
+      "forall": {
+       "var": "j",
+       "lo": {
+        "var": "r"
+       },
+       "hi": {
+        "var": "i"
+       },
+       "body": {
+        "op": "!=",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "op": "+",
+          "args": [
+           {
+            "op": "slice",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "var": "j"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "s"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "slice",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             },
+             {
+              "var": "j"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

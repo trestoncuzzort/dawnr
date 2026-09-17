@@ -1,0 +1,202 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_873__fibonacci",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "fibs",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "fibs",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "<=",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "var": "n"
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "call": {
+         "fun": "fibs",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "call": {
+         "fun": "fibs",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "n"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "call": {
+           "fun": "mbpp_873__fibonacci",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "call": {
+           "fun": "mbpp_873__fibonacci",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 2
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

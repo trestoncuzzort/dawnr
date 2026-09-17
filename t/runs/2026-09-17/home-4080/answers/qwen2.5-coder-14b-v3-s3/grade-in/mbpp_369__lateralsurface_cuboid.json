@@ -1,0 +1,130 @@
+{
+ "t": 0,
+ "name": "mbpp_369__lateralsurface_cuboid",
+ "params": [
+  {
+   "name": "l",
+   "type": "int"
+  },
+  {
+   "name": "w",
+   "type": "int"
+  },
+  {
+   "name": "h",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "l"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "w"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "h"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "h"
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "l"
+          },
+          {
+           "var": "w"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "h"
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "l"
+          },
+          {
+           "var": "w"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

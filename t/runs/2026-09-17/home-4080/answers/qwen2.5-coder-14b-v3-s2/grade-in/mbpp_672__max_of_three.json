@@ -1,0 +1,194 @@
+{
+ "t": 0,
+ "name": "mbpp_672__max_of_three",
+ "params": [
+  {
+   "name": "x",
+   "type": "int"
+  },
+  {
+   "name": "y",
+   "type": "int"
+  },
+  {
+   "name": "z",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "x"
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "y"
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "z"
+    }
+   ]
+  },
+  {
+   "op": "or",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "x"
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "y"
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "z"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "x"
+        },
+        {
+         "var": "y"
+        }
+       ]
+      },
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "x"
+        },
+        {
+         "var": "z"
+        }
+       ]
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "x"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "and",
+        "args": [
+         {
+          "op": ">=",
+          "args": [
+           {
+            "var": "y"
+           },
+           {
+            "var": "x"
+           }
+          ]
+         },
+         {
+          "op": ">=",
+          "args": [
+           {
+            "var": "y"
+           },
+           {
+            "var": "z"
+           }
+          ]
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "y"
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "z"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

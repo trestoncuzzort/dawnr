@@ -1,0 +1,299 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_99__decimal_to_binary",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "tostr",
+     "args": [
+      {
+       "var": "n"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "seq",
+        "args": [
+         {
+          "int": 48
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "var": {
+       "name": "binary",
+       "type": "seq",
+       "init": {
+        "op": "seq",
+        "args": []
+       }
+      }
+     },
+     {
+      "var": {
+       "name": "num",
+       "type": "int",
+       "init": {
+        "var": "n"
+       }
+      }
+     },
+     {
+      "while": {
+       "cond": {
+        "op": ">",
+        "args": [
+         {
+          "var": "num"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "invariants": [
+        {
+         "op": ">=",
+         "args": [
+          {
+           "var": "num"
+          },
+          {
+           "int": 0
+          }
+         ]
+        },
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "binary"
+            }
+           ]
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "op": "len",
+             "args": [
+              {
+               "op": "tostr",
+               "args": [
+                {
+                 "var": "n"
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "op": "tostr",
+               "args": [
+                {
+                 "var": "num"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "forall": {
+          "var": "i",
+          "lo": {
+           "int": 0
+          },
+          "hi": {
+           "op": "len",
+           "args": [
+            {
+             "var": "binary"
+            }
+           ]
+          },
+          "body": {
+           "op": "or",
+           "args": [
+            {
+             "op": "==",
+             "args": [
+              {
+               "op": "at",
+               "args": [
+                {
+                 "var": "binary"
+                },
+                {
+                 "var": "i"
+                }
+               ]
+              },
+              {
+               "int": 48
+              }
+             ]
+            },
+            {
+             "op": "==",
+             "args": [
+              {
+               "op": "at",
+               "args": [
+                {
+                 "var": "binary"
+                },
+                {
+                 "var": "i"
+                }
+               ]
+              },
+              {
+               "int": 49
+              }
+             ]
+            }
+           ]
+          }
+         }
+        }
+       ],
+       "decreases": {
+        "var": "num"
+       },
+       "body": [
+        {
+         "var": {
+          "name": "remainder",
+          "type": "int",
+          "init": {
+           "op": "mod",
+           "args": [
+            {
+             "var": "num"
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         }
+        },
+        {
+         "assign": [
+          "binary",
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "tostr",
+             "args": [
+              {
+               "var": "remainder"
+              }
+             ]
+            },
+            {
+             "var": "binary"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "assign": [
+          "num",
+          {
+           "op": "div",
+           "args": [
+            {
+             "var": "num"
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "r",
+       {
+        "var": "binary"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

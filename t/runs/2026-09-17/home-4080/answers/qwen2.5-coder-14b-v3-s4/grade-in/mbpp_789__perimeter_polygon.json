@@ -1,0 +1,83 @@
+{
+ "t": 0,
+ "name": "mbpp_789__perimeter_polygon",
+ "params": [
+  {
+   "name": "sides",
+   "type": "int"
+  },
+  {
+   "name": "length",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "sides"
+    },
+    {
+     "int": 3
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "length"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "sides"
+      },
+      {
+       "var": "length"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "sides"
+      },
+      {
+       "var": "length"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

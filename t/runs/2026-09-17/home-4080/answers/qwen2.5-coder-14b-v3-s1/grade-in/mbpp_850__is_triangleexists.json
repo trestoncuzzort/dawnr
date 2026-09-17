@@ -1,0 +1,130 @@
+{
+ "t": 0,
+ "name": "mbpp_850__is_triangleexists",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  },
+  {
+   "name": "c",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "c"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        },
+        {
+         "var": "c"
+        }
+       ]
+      },
+      {
+       "int": 180
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        },
+        {
+         "var": "c"
+        }
+       ]
+      },
+      {
+       "int": 180
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

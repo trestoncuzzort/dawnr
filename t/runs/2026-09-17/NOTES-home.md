@@ -1,3 +1,52 @@
 # Notes 2026-09-17 (RTX 4080)
 
 - Continuing `torch` install in `~/.venv-t`.
+- 2026-09-17 02:14 start `ollama-install`: `curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama` (log `logs/ollama-install.log`)
+- 2026-09-17 02:14 start `ollama-install`: `curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama` (log `logs/ollama-install.log`)
+- 2026-09-17 02:16 start `ollama-install`: `curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama` (log `logs/ollama-install.log`)
+- 2026-09-17 02:16 start `ollama-serve`: `OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 exec ollama serve` (log `logs/ollama-serve.log`)
+- 2026-09-17 02:16 start `pull`: `ollama pull qwen2.5-coder:14b` (log `logs/pull.log`)
+- 2026-09-17 02:18 end `pull`: exit 0 after 1 min
+- 2026-09-17 02:20 start `generate`: `for S in 1 2 3 4 5 6 7 8; do T=qwen2.5-coder-14b-v3-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; echo "== seed $S"; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v3 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && python3 t/pool_pick.py $D && ls $D/grade-in | wc -l || exit 1; done` (log `logs/generate.log`)
+- 2026-09-17 02:39 start `ollama-serve`: `OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 exec ollama serve` (log `logs/ollama-serve.log`)
+- 2026-09-17 02:40 `generate` seed 1 stopped at 257 of 649: kernel OOM killed llama-server (about 8 GB resident; the KV cache for 4 x 8192 context spilled from the 4080 into RAM, 512 MB swap). Fix: 16 GB swap at /data/swapfile; ollama serve now runs with OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 (answers from here on use an 8-bit KV cache). Generation resumes from the existing raw/ files.
+- 2026-09-17 02:40 end `ollama-serve`: exit 0 after 0 min
+- 2026-09-17 02:41 start `ollama-serve`: `OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 exec ollama serve` (log `logs/ollama-serve.log`)
+- 2026-09-17 02:41 start `generate`: `for S in 1 2 3 4 5 6 7 8; do T=qwen2.5-coder-14b-v3-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; echo "== seed $S"; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v3 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && python3 t/pool_pick.py $D && ls $D/grade-in | wc -l || exit 1; done` (log `logs/generate.log`)
+- Installed 7 checkers from t/RUN-ON-LINUX.md: Dafny, Verus, GNATprove, F*, Lean, Rust toolchain.
+- Fix applied: Ran `sudo apt install -y autoconf graphviz` to provide missing dependencies for Frama-C/Rocq opam installation.
+- 2026-09-17 02:46 start `matrix`: `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
+- 2026-09-17 02:58 end `matrix`: exit 1 after 12 min
+- 2026-09-17 03:11 start `matrix`: `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
+- 2026-09-17 03:14 matrix fixes: Verus malformed on every task (rust toolchain 1.97.1 missing; installed with rustup). Frama-C tool_error on filter_pos, reverse, swap, tail: why3 did not recognise alt-ergo 2.4.3-free, the RUN-ON-MACOS.md ~/.why3.conf entry added with Linux paths; swap now verified with its twin refuted. Rerun the matrix.
+- 2026-09-17 03:23 end `matrix`: exit 1 after 12 min
+- 2026-09-17 03:31 start `matrix`: `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
+- 2026-09-17 03:32 matrix run 2 (03:11) read 6 kernels: Dafny not found because the release zip was unpacked one level deep (~/.local/dafny/dafny/dafny); moved so ~/.local/dafny/dafny is the binary. That run's table still shows Verus malformed (it started before the toolchain fix). run_par exits 1 whenever any task disagrees, and the committed matrix has 4 such tasks, so exit 1 alone is not a failure; read the table.
+- 2026-09-17 03:32 end `matrix`: exit -15 after 1 min
+- 2026-09-17 03:35 start `matrix` (started by Claude after the Dafny, Verus and Frama-C fixes): `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
+- 2026-09-17 03:54 start `grade-lab`: `bash t/grade_lab.sh seeds` (started by Claude; seeds 1-5 have 110, 61, 62, 65, 63 tasks in grade-in) (log `logs/grade-lab.log`)
+- 2026-09-17 04:02 start `matrix`: `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
+- 2026-09-17 04:08 grading split: t/grade_lab.sh (lab workstation, seeds forwards) and t/grade_home.sh (this machine, seeds backwards, 6 jobs); each claims a seed with <tag>/.grading. A stale .grading folder (a killed run) must be removed by hand before that seed is graded.
+- 2026-09-17 04:08 start `ollama-install`: `curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama` (log `logs/ollama-install.log`)
+- 2026-09-17 04:14 run_all: started
+- 2026-09-17 04:15 start `matrix`: `bash t/grade_lab.sh matrix` (log `logs/matrix.log`)
+- 2026-09-17 04:26 start `matrix`: `bash t/grade_lab.sh matrix` (log `logs/matrix.log`)
+- 2026-09-17 04:32 end `matrix`: exit 0 after 6 min
+- 2026-09-17 04:38 run_all: Ollama stopped: answer writing is finished, its memory goes to grading and the GPU steps
+- 2026-09-17 04:38 run_all: Phi-4-mini answers starting (the model to beat)
+- 2026-09-17 04:38 run_all: start `phi` (Phi-4-mini answers), attempt 1
+- 2026-09-17 06:49 run_all: start `grade-home` (Grade here too), attempt 1
+- 2026-09-17 06:49 run_all: start `grade` (Grade the answers), attempt 1
+- 2026-09-17 07:11 run_all: end `grade-home`: exit 1, not done
+- 2026-09-17 07:11 run_all: `grade-home` failed twice; see logs/grade-home.log
+- 2026-09-17 07:29 run_all: end `grade`: exit 1, not done
+- 2026-09-17 07:29 run_all: `grade` failed twice; see logs/grade.log
+- 2026-09-17 07:29 run_all: start `grade` (Grade the answers), attempt 1
+- 2026-09-17 07:29 run_all: start `grade-home` (Grade here too), attempt 1
+- 2026-09-17 07:29 run_all: end `grade`: exit 0, ok
+- 2026-09-17 12:10 overnight: at 07:32 the OOM killer ended run_all (python3 at 12.3 GB resident; Phi-4-mini generation at 190 of 232 and local grading of seed 7 at 8 jobs were running together), so its whole unit stopped. Before that: all 8 seeds written; seeds 1-6 graded on the lab workstation, seed 8 here; clean in all seven: 34, 13, 15, 13, 12, 7, (7 ungraded), 2 = 96 answers over 50 distinct problems, 8 of them held-out problems (excluded from training by the split). Two fixes: grade_home.sh no longer treats run_par's normal exit 1 (any disagreement) as failure; run_everything grades on the lab workstation only. Stale seed-7 claim removed. Resumed as run_everything.py (Phi resumes from its 190 saved answers).
+- 2026-09-17 12:10 run_everything: started
+- 2026-09-17 12:10 run_everything: Ollama stopped: answer writing is finished, its memory goes to grading and the GPU steps
+- 2026-09-17 12:10 run_everything: start `grade` (Grade the answers), attempt 1
+- 2026-09-17 12:10 run_everything: Phi-4-mini answers starting (the model to beat)
+- 2026-09-17 12:10 run_everything: start `phi` (Phi-4-mini answers), attempt 1

@@ -1,0 +1,185 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_292__find",
+ "params": [
+  {
+   "name": "dividend",
+   "type": "int"
+  },
+  {
+   "name": "divisor",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "quotient",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "!=",
+   "args": [
+    {
+     "var": "divisor"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "quotient"
+      },
+      {
+       "var": "divisor"
+      }
+     ]
+    },
+    {
+     "var": "dividend"
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "op": "*",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "var": "quotient"
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "var": "divisor"
+      }
+     ]
+    },
+    {
+     "var": "dividend"
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "quotient",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "remainder",
+    "type": "int",
+    "init": {
+     "var": "dividend"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">=",
+     "args": [
+      {
+       "var": "remainder"
+      },
+      {
+       "var": "divisor"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "quotient"
+         },
+         {
+          "var": "divisor"
+         }
+        ]
+       },
+       {
+        "var": "dividend"
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "remainder"
+       },
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "remainder"
+    },
+    "body": [
+     {
+      "assign": [
+       "remainder",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "remainder"
+         },
+         {
+          "var": "divisor"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "quotient",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "quotient"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

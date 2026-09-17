@@ -1,0 +1,194 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_388__highest_Power_of_2",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "op": "+",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "hi": {
+     "var": "n"
+    },
+    "body": {
+     "op": "!=",
+     "args": [
+      {
+       "op": "mod",
+       "args": [
+        {
+         "var": "i"
+        },
+        {
+         "int": 2
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "*",
+           "args": [
+            {
+             "call": {
+              "fun": "mbpp_388__highest_Power_of_2",
+              "args": [
+               {
+                "op": "div",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 2
+                 }
+                ]
+               }
+              ]
+             }
+            },
+            {
+             "int": 2
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "call": {
+            "fun": "mbpp_388__highest_Power_of_2",
+            "args": [
+             {
+              "op": "-",
+              "args": [
+               {
+                "var": "n"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

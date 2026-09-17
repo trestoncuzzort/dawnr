@@ -117,3 +117,6 @@ t/unsloth_compiled_cache/
 # nl/: APPS and CodeContests are not shipped (problem statements under the judges' copyright); fetched locally, verified by nl/scripts/verify_manifest.py
 nl/data/apps_raw_*.jsonl.gz
 nl/data/codecontests_*.jsonl.gz
+# t lab's per-step process files and generated sudo scripts
+t/runs/*/logs/*.pid
+t/runs/*/logs/*.sh

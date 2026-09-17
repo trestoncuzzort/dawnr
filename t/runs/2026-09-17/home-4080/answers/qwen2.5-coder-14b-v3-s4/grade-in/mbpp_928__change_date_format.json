@@ -1,0 +1,314 @@
+{
+ "t": 1,
+ "name": "mbpp_928__change_date_format",
+ "params": [
+  {
+   "name": "date",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "date"
+              },
+              {
+               "int": 8
+              },
+              {
+               "int": 10
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 45
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "date"
+            },
+            {
+             "int": 5
+            },
+            {
+             "int": 7
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 45
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "date"
+        },
+        {
+         "int": 0
+        },
+        {
+         "int": 4
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "date"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "body": {
+     "op": "==",
+     "args": [
+      {
+       "op": "at",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "op": "at",
+       "args": [
+        {
+         "var": "date"
+        },
+        {
+         "ite": {
+          "cond": {
+           "op": "<",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "int": 3
+            }
+           ]
+          },
+          "then": {
+           "op": "+",
+           "args": [
+            {
+             "int": 8
+            },
+            {
+             "var": "i"
+            }
+           ]
+          },
+          "else": {
+           "ite": {
+            "cond": {
+             "op": "<",
+             "args": [
+              {
+               "var": "i"
+              },
+              {
+               "int": 6
+              }
+             ]
+            },
+            "then": {
+             "op": "+",
+             "args": [
+              {
+               "int": 2
+              },
+              {
+               "var": "i"
+              }
+             ]
+            },
+            "else": {
+             "op": "-",
+             "args": [
+              {
+               "var": "i"
+              },
+              {
+               "int": 6
+              }
+             ]
+            }
+           }
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "date"
+              },
+              {
+               "int": 8
+              },
+              {
+               "int": 10
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 45
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "date"
+            },
+            {
+             "int": 5
+            },
+            {
+             "int": 7
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 45
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "date"
+        },
+        {
+         "int": 0
+        },
+        {
+         "int": 4
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

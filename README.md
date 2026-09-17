@@ -1,81 +1,87 @@
-# tup
+# locallm
 
-Two things live in this repository.
+Small language models built from scratch on your own machine, trained only on code that seven independent proof systems agree is correct.
 
-- **t** is a small specification language. A t program states what a function must do, and seven independent proof systems check that it does.
-- **tup** is a Linux distribution built from source with a receipt for every step, so the machine that runs the proofs is itself accounted for.
+The industry bet is scale: more parameters, more tokens, more scraped code. locallm bets the other way. Keep a training example only when it passes its tests, is proven against its specification by seven proof systems, and has a deliberately broken copy of itself caught by all seven. Then ask whether a small model built from that data does more per parameter than a model built from raw data, and than small open models such as Microsoft's Phi-4-mini.
 
-Everything claimed below was measured by a script in this repository, and each number links to the file that records it.
+Every number below was measured by a script in this repository, and links to the file that records it. Where the answer is not in yet, this page says so.
 
-## t in one minute
-
-A t task is a function with a typed signature, preconditions, postconditions, and a body. The task is translated mechanically to seven verifiers, and each one checks it on its own: Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq and F\*. t proves nothing itself; every verdict comes from a verifier with a long public record.
-
-Every task also gets a deliberately broken copy, called its twin. A task counts only when the real program verifies and the twin is refuted, and a refutation means the verifier accepted a proof that the specification fails at a concrete input. A specification that cannot tell the real program from its twin is rejected as vacuous.
-
-Seven verdicts on one program catch what one verifier cannot: a mistranslation, a specification with no content, or a verifier that quietly gave up.
-
-## What is measured today
-
-| Claim | Number | Record |
-|---|---|---|
-| Committed tasks that verify, with the twin refuted, in all seven verifiers | 30 of 34 | [`t/AGREEMENT.md`](t/AGREEMENT.md) |
-| Conformance probes each verifier must pass | 457 of 462 | [`t/CONFORMANCE.md`](t/CONFORMANCE.md) |
-| Dafny programs from DafnyBench translated into t by the lifter and graded | 326 tasks from 785 programs, 192 of 326 in all seven | [`t/COVERAGE-lifted-785.md`](t/COVERAGE-lifted-785.md) |
-| The 164 LLM-written DafnyBench programs (MBPP-DFY) | 99 of 164 translate, 57 of 164 in all seven | [`t/COVERAGE-mbpp-dfy-lifter.md`](t/COVERAGE-mbpp-dfy-lifter.md) |
-| DafnyBench programs within t's current language | 334 of 643 gradable | [`t/COVERAGE-dafnybench.md`](t/COVERAGE-dafnybench.md) |
-| Natural-language programming problems with tests, the corpus t aims at | 24,748 problems, 772 of 4,239 function-shaped ones within t's language | [`nl/`](nl/), [`t/COVERAGE-nl.md`](t/COVERAGE-nl.md) |
-| A 1.5B model trained on the twins it refuted | on 161 held-out problems, answers verified with a refuted twin went from 9 to 15 after two rounds (12 to 16 with three samples each); test passes did not move | [`t/LOOP-CURVE.md`](t/LOOP-CURVE.md) |
-| A 27B model writing t tasks from MBPP problems, thinking off | 143 of 368 well formed, 44 verify with a refuted twin in all seven and pass the tests (the 7B managed 4); on the larger 649-problem pool with strings, 57 | [`t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md`](t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md) |
-| tup 0.1 | boots from its own disk to a login prompt under QEMU in 20 to 45 seconds depending on the host, witnessed on macOS, Ubuntu and Windows by someone other than the author | [`tup/receipts/`](tup/receipts/) |
-
-Numbers above are from 2026-09-16. When a number moves, the record moves with it.
-
-## The verifiers
-
-| Verifier | Version | Built on |
-|---|---|---|
-| Dafny | 4.11.0 | .NET, Z3 |
-| Verus | 0.2026.08.30 | Rust, Z3 |
-| SPARK (GNATprove) | FSF 16.1.0 | Ada, Why3, Z3 |
-| Frama-C | 33.0 | C with ACSL, Alt-Ergo |
-| Lean 4 | 4.33.1 | kernel-checked proof terms |
-| Rocq | 9.2 | kernel-checked proof terms |
-| F\* | 2026.08.30 | Z3 |
-
-All seven run without root on Linux and macOS; five run natively on Windows and all seven under WSL2 ([`t/RUN-ON-LINUX.md`](t/RUN-ON-LINUX.md), [`t/RUN-ON-MACOS.md`](t/RUN-ON-MACOS.md), [`t/RUN-ON-WINDOWS.md`](t/RUN-ON-WINDOWS.md)).
-
-## Try it
-
-1. Install two or more of the verifiers; the install notes above list versions and paths.
-2. Read [`t/TUTORIAL.md`](t/TUTORIAL.md) and the tasks in [`t/tasks/`](t/tasks/).
-3. Run the matrix and the tests:
+## The pipeline
 
 ```
-cd t
-python3 run_par.py --jobs 8
-bash reproduce.sh --tests
+problems in English, with tests (nl/, 24,748; a pool of 649, 232 of them held out)
+  -> a generator model writes a specified program for each          spec_experiment.py generate
+  -> keep only programs that pass their tests and copy nothing seen   spec_experiment.py tests, pool_pick.py
+  -> prove each in Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq, F*     run_par.py
+     and require all seven to refute a deliberately broken twin
+  -> the clean pool                                                  loop_dataset.py
+  -> build a model from it: locallm from scratch, or a 1.5B student   loop_locallm.py, loop_train.py
+  -> score every model on the 232 held-out problems                   score_heldout.py
 ```
 
-The first command regrades every committed task in every verifier it finds and rewrites `AGREEMENT.md`. The suite refuses to conclude from fewer than two verifiers.
+A held-out answer counts as **clean** only when its tests pass and all seven proofs hold with the twin refuted. An answer that all seven prove but whose tests fail is counted separately, as **proven but wrong**: the proofs show the code meets its specification, not that the specification says what the problem asked. Held-out problems never enter a training set; `split-v3.json` fixes the split and never changes.
 
-## How the parts fit
+## Results so far
+
+| What was measured | Result | Record |
+|---|---|---|
+| The same 3.2M-parameter locallm model, built from filtered data against raw data of the same size: new programs clean in all seven, of 500 written | **29 against 1** | [`t/runs/2026-09-17/`](t/runs/2026-09-17/) |
+| The same loop, rerun on an M3 Max MacBook instead of the lab workstation | round 0: 25 clean and new | [`t/runs/2026-09-17/`](t/runs/2026-09-17/) |
+| A 1.5B model (Qwen2.5-Coder) trained on the twins it refuted, 161 held-out problems | verified answers with a refuted twin: 9 to 15 after two rounds; test passes did not move | [`t/LOOP-CURVE.md`](t/LOOP-CURVE.md) |
+| Qwen3.8-27B-FP8, temperature 0, on the 232 held-out problems | 12 clean, 7 proven but wrong | [`t/score_heldout.py`](t/score_heldout.py) |
+| A locallm model built from the clean corpus, on the 232 held-out problems | **0 clean**, 188 proven but wrong | [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) |
+
+**What the last row means.** The clean pool held 47 problem examples, so the model recited verified tasks it had memorized (151 exact copies) instead of solving new problems. The clean programs the filter loop writes are mostly short, loop-free near-copies of corpus tasks. Filtering works; the pool is too small. Growing it is the current work.
+
+**A correction.** The copy check kept each task's format version, so exact copies of corpus tasks counted as new. The filtered-against-raw result was first recorded as 46 against 3; recounted, it is 29 against 1. The direction held and the effect was a third smaller. The recount is the number.
+
+## In progress: against Phi-4-mini
+
+No result yet (2026-09-17). On one RTX 4080:
+1. qwen2.5-coder:14b (Ollama, 4-bit) writes eight answer sets over the 649-problem pool (answers to held-out problems never reach training); after pool picking, the first five hold 110, 61, 62, 65 and 63 test-passing, non-copy programs to grade.
+2. The seven proof systems grade them, split between the lab workstation's CPUs and the desktop.
+3. From the clean answers: a new clean pool, a locallm model and a fine-tuned 1.5B student.
+4. Phi-4-mini (bf16), the untrained 1.5B, the student and locallm each answer the 232 held-out problems, and `score_heldout.py` counts clean and proven but wrong for each, next to its parameter count.
+
+The table goes here when it exists, whichever way it comes out.
+
+## New since 2026-09-16
+
+- **The filter loop.** locallm rebuilds its model each round from every clean program found so far, and the new model writes the next round ([`t/loop_filter.py`](t/loop_filter.py), [`t/loop_locallm.py`](t/loop_locallm.py)).
+- **A held-out benchmark with a wrong-answer column.** [`t/score_heldout.py`](t/score_heldout.py) reports tasks, tests passed, clean, and proven but wrong per answer set, over a split that never changes.
+- **Only gradable answers reach the checkers.** [`t/pool_pick.py`](t/pool_pick.py) sends a proof system only answers that pass their tests and copy nothing already in the pool.
+- **Local generators.** Answer sets from models served by Ollama on a 16 GB consumer GPU, not only the 27B on datacenter GPUs.
+- **t lab** ([`t/lab.py`](t/lab.py)): one window with every proof check live as it runs, a tester for locallm models, and a Collect data tab that runs the whole pipeline one button per step, logged and resumable.
+- **Grading across machines.** [`t/grade_lab.sh`](t/grade_lab.sh) sends answer sets to a many-core workstation over SSH and streams its checks back into t lab; [`t/grade_home.sh`](t/grade_home.sh) grades on the local CPU at the same time, and neither takes a set the other has claimed.
+- **Unattended runs.** [`t/run_everything.py`](t/run_everything.py) chains generation, grading, the baselines, the pool, training and scoring, retries a failed step once, and notifies when Phi-4-mini starts and when the run ends.
+- **Three machines reproduce the proof matrix.** The seven proof systems install without root on Linux (native and WSL2) and macOS; an M3 Max MacBook reproduced the committed matrix cell for cell (30 of 34 tasks in all seven, [`t/WITNESS-2026-09-16-macos-m3max.md`](t/WITNESS-2026-09-16-macos-m3max.md)).
+
+## Run it
+
+```
+python3 t/lab.py                 # Collect data: every step as a button, in order
+python3 t/run_everything.py      # or the rest of the run, unattended
+```
+
+Setup (the NVIDIA driver, the Python environment, Ollama and the seven proof systems at pinned versions) is in [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) and [`t/RUN-ON-LINUX.md`](t/RUN-ON-LINUX.md).
+
+## What is in the repository
 
 | Path | What it is |
 |---|---|
-| [`t/`](t/) | the language, its seven translations, the verifier adapters, the lifter from Dafny, and the tables |
-| [`tup/`](tup/) | the distribution's build driver, overrides and receipts |
+| [`locallm/`](locallm/) | the model builder: a transformer trained from random weights on your own hardware |
+| [`t/`](t/) | the filter: a small specification language translated into the seven proof systems (30 of 34 committed tasks agree in all seven, [`t/AGREEMENT.md`](t/AGREEMENT.md)), and every pipeline script above |
 | [`nl/`](nl/) | 24,748 natural-language programming problems with tests, from four public sources |
-| [`forge/`](forge/) | the training pipeline that grades a model by the twins it refutes |
-| [`locallm/`](locallm/) | a character-level model trained from scratch on your own machine |
-| [`ROADMAP.md`](ROADMAP.md) | what is done, what is next, and the bar for 1.0 |
-| [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md) | the dated engineering log behind the roadmap, kept for the record |
+| [`forge/`](forge/) | the earlier training pipeline that grades a model by the twins it refutes |
+| [`tup/`](tup/) | a Linux distribution built from source with a receipt per step, so the machine running the proofs is accounted for |
+| [`internal/`](internal/) | handoffs, the machine plan, the dated engineering log |
 
 ## Limits, stated plainly
 
-- t is small on purpose: integers, booleans, sequences, pairs, strings as character sequences, loops with invariants, recursive specification functions, early return. No heap, no floats, no concurrency.
-- Four adapters (Verus, SPARK, Frama-C, F\*) are not hardened against hostile input. The committed tasks do not exercise those holes, and the holes are listed rather than hidden.
-- tup is witnessed, not verified. It records what was built from which bytes, in what order. It proves nothing about the kernel or libc. It is arm64 today; the x86_64 build is pending.
+- No model built here has beaten Phi-4-mini. That comparison is running.
+- The clean pool is small, and the clean programs are short and close to their corpus. More pool, not more rounds, is what moves held-out results.
+- A proof covers the specification, not the intent. That is why tests are a separate gate and proven but wrong is its own column.
+- t covers integers, booleans, sequences, pairs, strings as character sequences, loops with invariants and recursive specification functions. No heap, no floats, no concurrency.
 
 ## License
 

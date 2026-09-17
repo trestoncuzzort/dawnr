@@ -1,0 +1,204 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_33__decimal_To_Binary",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "decimal_To_Binarys",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "decimal_To_Binarys",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "decimal_To_Binarys",
+           "args": [
+            {
+             "op": "div",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 2
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       {
+        "op": "mod",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "call": {
+             "fun": "mbpp_33__decimal_To_Binary",
+             "args": [
+              {
+               "op": "div",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 2
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "int": 10
+           }
+          ]
+         },
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 2
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,248 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_47__compute_Last_Digit",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "last_digit_factorial_division",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "var": "b"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "last_digit_factorial_division",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "b",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "-",
+    "args": [
+     {
+      "var": "b"
+     },
+     {
+      "var": "a"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "var": "b"
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "op": "mod",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "call": {
+           "fun": "last_digit_factorial_division",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "b"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "b"
+           },
+           {
+            "int": 10
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "int": 10
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "-",
+  "args": [
+   {
+    "var": "b"
+   },
+   {
+    "var": "a"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "var": "b"
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "mod",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "call": {
+             "fun": "mbpp_47__compute_Last_Digit",
+             "args": [
+              {
+               "var": "a"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "b"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "op": "mod",
+            "args": [
+             {
+              "var": "b"
+             },
+             {
+              "int": 10
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

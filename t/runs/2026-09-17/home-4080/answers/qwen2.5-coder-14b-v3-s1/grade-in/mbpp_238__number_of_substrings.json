@@ -1,0 +1,108 @@
+{
+ "t": 1,
+ "name": "mbpp_238__number_of_substrings",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "div",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "div",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        },
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

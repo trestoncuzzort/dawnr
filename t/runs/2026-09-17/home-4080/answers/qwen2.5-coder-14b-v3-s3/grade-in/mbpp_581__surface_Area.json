@@ -1,0 +1,131 @@
+{
+ "t": 0,
+ "name": "mbpp_581__surface_Area",
+ "params": [
+  {
+   "name": "base",
+   "type": "int"
+  },
+  {
+   "name": "slant_height",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "base"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "slant_height"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "base"
+        },
+        {
+         "var": "base"
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 2
+          },
+          {
+           "var": "base"
+          }
+         ]
+        },
+        {
+         "var": "slant_height"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "base"
+        },
+        {
+         "var": "base"
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 2
+          },
+          {
+           "var": "base"
+          }
+         ]
+        },
+        {
+         "var": "slant_height"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

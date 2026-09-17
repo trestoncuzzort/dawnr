@@ -1,0 +1,337 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_329__neg_count",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "count_negatives",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "count_negatives",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "int": 1
+         },
+         {
+          "call": {
+           "fun": "count_negatives",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "int": 1
+              },
+              {
+               "op": "len",
+               "args": [
+                {
+                 "var": "s"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "count_negatives",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 1
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "int": 0
+       },
+       {
+        "var": "i"
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "call": {
+         "fun": "count_negatives",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 0
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "<",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "i"
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

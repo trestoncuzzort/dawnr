@@ -1,0 +1,56 @@
+{
+ "t": 0,
+ "name": "mbpp_820__check_monthnum_number",
+ "params": [
+  {
+   "name": "month",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "month"
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "month"
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

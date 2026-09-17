@@ -1,0 +1,182 @@
+{
+ "t": 1,
+ "name": "mbpp_732__replace_specialchar",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "op": "replace",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 32
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 58
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 44
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 58
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 58
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 32
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 58
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 44
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 58
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 46
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 58
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

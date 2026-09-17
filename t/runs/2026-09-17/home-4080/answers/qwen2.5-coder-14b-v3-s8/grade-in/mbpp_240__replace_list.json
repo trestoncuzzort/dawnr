@@ -1,0 +1,108 @@
+{
+ "t": 1,
+ "name": "mbpp_240__replace_list",
+ "params": [
+  {
+   "name": "s1",
+   "type": "seq"
+  },
+  {
+   "name": "s2",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s1"
+        },
+        {
+         "int": 0
+        },
+        {
+         "op": "-",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s1"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "var": "s2"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s1"
+        },
+        {
+         "int": 0
+        },
+        {
+         "op": "-",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s1"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "var": "s2"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,188 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_566__sum_digits",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "sumds",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "sumds",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "op": "mod",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 10
+         }
+        ]
+       },
+       {
+        "call": {
+         "fun": "sumds",
+         "args": [
+          {
+           "op": "div",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 10
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 0
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 10
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "mbpp_566__sum_digits",
+           "args": [
+            {
+             "op": "div",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 10
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,366 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_69__is_sublist",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  },
+  {
+   "name": "sub",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "sub"
+      }
+     ]
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "exists": {
+      "var": "i",
+      "lo": {
+       "int": 0
+      },
+      "hi": {
+       "op": "+",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          },
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "sub"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      "body": {
+       "op": "==",
+       "args": [
+        {
+         "op": "slice",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "var": "i"
+          },
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "i"
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "sub"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "var": "sub"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "bool": false
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        },
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "sub"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "op": "len",
+            "args": [
+             {
+              "var": "s"
+             }
+            ]
+           },
+           {
+            "op": "len",
+            "args": [
+             {
+              "var": "sub"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "exists": {
+         "var": "j",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "==",
+          "args": [
+           {
+            "op": "slice",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "var": "j"
+             },
+             {
+              "op": "+",
+              "args": [
+               {
+                "var": "j"
+               },
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "sub"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "var": "sub"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "slice",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "var": "i"
+           },
+           {
+            "op": "+",
+            "args": [
+             {
+              "var": "i"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "sub"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "var": "sub"
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "bool": true
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

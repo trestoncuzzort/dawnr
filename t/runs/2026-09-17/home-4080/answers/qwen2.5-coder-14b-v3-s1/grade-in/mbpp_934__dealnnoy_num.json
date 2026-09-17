@@ -1,0 +1,365 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_934__dealnnoy_num",
+ "params": [
+  {
+   "name": "m",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "m"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "dealnnoy",
+      "args": [
+       {
+        "var": "m"
+       },
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "dealnnoy",
+   "params": [
+    {
+     "name": "m",
+     "type": "int"
+    },
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "m"
+     },
+     {
+      "var": "n"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "m"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "int": 1
+       },
+       "else": {
+        "op": "+",
+        "args": [
+         {
+          "op": "+",
+          "args": [
+           {
+            "call": {
+             "fun": "dealnnoy",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "m"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              },
+              {
+               "var": "n"
+              }
+             ]
+            }
+           },
+           {
+            "call": {
+             "fun": "dealnnoy",
+             "args": [
+              {
+               "var": "m"
+              },
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "call": {
+           "fun": "dealnnoy",
+           "args": [
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "m"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "m"
+   },
+   {
+    "var": "n"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "m"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 1
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "+",
+             "args": [
+              {
+               "call": {
+                "fun": "mbpp_934__dealnnoy_num",
+                "args": [
+                 {
+                  "op": "-",
+                  "args": [
+                   {
+                    "var": "m"
+                   },
+                   {
+                    "int": 1
+                   }
+                  ]
+                 },
+                 {
+                  "var": "n"
+                 }
+                ]
+               }
+              },
+              {
+               "call": {
+                "fun": "mbpp_934__dealnnoy_num",
+                "args": [
+                 {
+                  "var": "m"
+                 },
+                 {
+                  "op": "-",
+                  "args": [
+                   {
+                    "var": "n"
+                   },
+                   {
+                    "int": 1
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            },
+            {
+             "call": {
+              "fun": "mbpp_934__dealnnoy_num",
+              "args": [
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "var": "m"
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               },
+               {
+                "op": "-",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               }
+              ]
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

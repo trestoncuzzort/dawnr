@@ -1,0 +1,222 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_491__sum_gp",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r_sum",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r_sum"
+    },
+    {
+     "call": {
+      "fun": "sum_gps",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "var": "n"
+       },
+       {
+        "var": "r"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "sum_gps",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "n",
+     "type": "int"
+    },
+    {
+     "name": "r",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "n"
+       },
+       {
+        "int": 1
+       }
+      ]
+     },
+     "then": {
+      "var": "a"
+     },
+     "else": {
+      "op": "+",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "call": {
+         "fun": "sum_gps",
+         "args": [
+          {
+           "op": "*",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "var": "r"
+            }
+           ]
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 1
+            }
+           ]
+          },
+          {
+           "var": "r"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r_sum",
+       {
+        "var": "a"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r_sum",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "call": {
+           "fun": "mbpp_491__sum_gp",
+           "args": [
+            {
+             "op": "*",
+             "args": [
+              {
+               "var": "a"
+              },
+              {
+               "var": "r"
+              }
+             ]
+            },
+            {
+             "op": "-",
+             "args": [
+              {
+               "var": "n"
+              },
+              {
+               "int": 1
+              }
+             ]
+            },
+            {
+             "var": "r"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

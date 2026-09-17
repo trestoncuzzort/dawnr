@@ -1,0 +1,204 @@
+{
+ "t": 1,
+ "name": "mbpp_818__lower_ctr",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "count_lowercase",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "count_lowercase",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "and",
+        "args": [
+         {
+          "op": ">=",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             }
+            ]
+           },
+           {
+            "int": 97
+           }
+          ]
+         },
+         {
+          "op": "<=",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             }
+            ]
+           },
+           {
+            "int": 122
+           }
+          ]
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "int": 1
+         },
+         {
+          "call": {
+           "fun": "count_lowercase",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "int": 1
+              },
+              {
+               "op": "len",
+               "args": [
+                {
+                 "var": "s"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "count_lowercase",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 1
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "call": {
+      "fun": "count_lowercase",
+      "args": [
+       {
+        "var": "s"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

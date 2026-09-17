@@ -1,0 +1,207 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_66__pos_count",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "call": {
+        "fun": "count_non_positives",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "count_non_positives",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "<=",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "s"
+           },
+           {
+            "int": 0
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "int": 1
+         },
+         {
+          "call": {
+           "fun": "count_non_positives",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "int": 1
+              },
+              {
+               "op": "len",
+               "args": [
+                {
+                 "var": "s"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "count_non_positives",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 1
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "call": {
+        "fun": "count_non_positives",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

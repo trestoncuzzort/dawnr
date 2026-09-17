@@ -1,0 +1,109 @@
+{
+ "t": 1,
+ "name": "mbpp_897__is_Word_Present",
+ "params": [
+  {
+   "name": "sentence",
+   "type": "seq"
+  },
+  {
+   "name": "word",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "sentence"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "word"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "!=",
+     "args": [
+      {
+       "op": "find",
+       "args": [
+        {
+         "var": "sentence"
+        },
+        {
+         "var": "word"
+        }
+       ]
+      },
+      {
+       "int": -1
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "!=",
+     "args": [
+      {
+       "op": "find",
+       "args": [
+        {
+         "var": "sentence"
+        },
+        {
+         "var": "word"
+        }
+       ]
+      },
+      {
+       "int": -1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,164 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_199__highest_Power_of_2",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 2
+      }
+     ]
+    },
+    {
+     "var": "n"
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "var": "n"
+       }
+      ]
+     },
+     {
+      "op": ">",
+      "args": [
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       {
+        "var": "n"
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "*",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "div",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

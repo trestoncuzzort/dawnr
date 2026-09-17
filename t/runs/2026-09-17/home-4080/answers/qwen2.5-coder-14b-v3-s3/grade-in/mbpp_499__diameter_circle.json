@@ -1,0 +1,56 @@
+{
+ "t": 0,
+ "name": "mbpp_499__diameter_circle",
+ "params": [
+  {
+   "name": "radius",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "diameter",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "diameter"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "var": "radius"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "diameter",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "var": "radius"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

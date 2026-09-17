@@ -1,0 +1,252 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_3__is_not_prime",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 2
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "not",
+     "args": [
+      {
+       "forall": {
+        "var": "d",
+        "lo": {
+         "int": 2
+        },
+        "hi": {
+         "var": "n"
+        },
+        "body": {
+         "op": "!=",
+         "args": [
+          {
+           "op": "mod",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "var": "d"
+            }
+           ]
+          },
+          {
+           "int": 0
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "bool": false
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "d",
+    "type": "int",
+    "init": {
+     "int": 2
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": "<",
+       "args": [
+        {
+         "var": "d"
+        },
+        {
+         "var": "n"
+        }
+       ]
+      },
+      {
+       "op": "not",
+       "args": [
+        {
+         "var": "r"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "and",
+      "args": [
+       {
+        "op": ">=",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       {
+        "op": "<=",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "var": "n"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "forall": {
+         "var": "i",
+         "lo": {
+          "int": 2
+         },
+         "hi": {
+          "var": "d"
+         },
+         "body": {
+          "op": "!=",
+          "args": [
+           {
+            "op": "mod",
+            "args": [
+             {
+              "var": "n"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "int": 0
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "d"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "var": "d"
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "bool": true
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "d",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "d"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

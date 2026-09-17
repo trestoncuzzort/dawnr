@@ -1,0 +1,96 @@
+{
+ "t": 0,
+ "name": "mbpp_51__check_equilateral",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  },
+  {
+   "name": "c",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "a"
+        },
+        {
+         "var": "b"
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "and",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "a"
+        },
+        {
+         "var": "b"
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "var": "c"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

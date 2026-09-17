@@ -15,7 +15,7 @@ locallm builds small models from scratch, and t filters what they learn from. Th
 - Repo at `~/tup`. `git lfs pull` done.
 - `~/.venv-t` created, torch install in progress (cu128 has a cp314 wheel: torch 2.11.0). Verify with
   `~/.venv-t/bin/python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"`.
-- Ryzen 9 7900X (24 threads) but only 14 GB RAM. Never run generation, Phi-4-mini loading or training, and grading together; grading alone may use `--jobs 12`, alongside anything else `--jobs 4`. If memory runs out, stop the checkers first.
+- Ryzen 9 7900X (24 threads) but only 14 GB RAM. 16 GB swap at /data/swapfile. Collect data allows one gpu step plus one cpu step (checkers drop to 6 jobs then). If memory runs out, stop the checkers first.
 - Second SSD mounted at `/data` (ext4, in fstab). `~/.profile` sets `OLLAMA_MODELS=/data/ollama` and `HF_HOME=/data/huggingface`; the Ollama Serve launcher also sets `OLLAMA_MODELS`. Ollama's installer starts its own system service (other user, other model folder, same port): run `sudo systemctl disable --now ollama` right after installing, then use the launcher.
 - Not done yet: `t/out` data copy and the 12 and 0 check (plan section 1), Ollama, the seven checkers.
 - Dock and desktop launchers: tup Terminal, t Lab (`~/.local/bin/tup-lab`), Ollama Serve (`~/.local/bin/tup-ollama`), GPU Monitor, tup Handoff.

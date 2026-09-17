@@ -1,0 +1,267 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_663__find_max_val",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "x",
+   "type": "int"
+  },
+  {
+   "name": "y",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "x"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": ">=",
+     "args": [
+      {
+       "var": "y"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "y"
+      },
+      {
+       "var": "x"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "mod",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "x"
+      }
+     ]
+    },
+    {
+     "var": "y"
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "k",
+    "lo": {
+     "op": "+",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "hi": {
+     "op": "+",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    "body": {
+     "op": "!=",
+     "args": [
+      {
+       "op": "mod",
+       "args": [
+        {
+         "var": "k"
+        },
+        {
+         "var": "x"
+        }
+       ]
+      },
+      {
+       "var": "y"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": ">=",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "int": 0
+        }
+       ]
+      },
+      {
+       "op": "!=",
+       "args": [
+        {
+         "op": "mod",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "var": "x"
+          }
+         ]
+        },
+        {
+         "var": "y"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "var": "n"
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "!=",
+      "args": [
+       {
+        "op": "mod",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "var": "x"
+         }
+        ]
+       },
+       {
+        "var": "y"
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "r"
+    },
+    "body": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

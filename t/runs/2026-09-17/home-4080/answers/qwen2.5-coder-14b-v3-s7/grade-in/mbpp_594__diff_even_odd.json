@@ -1,0 +1,346 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_594__diff_even_odd",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "call": {
+        "fun": "first_even",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      },
+      {
+       "call": {
+        "fun": "first_odd",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": ">=",
+     "args": [
+      {
+       "call": {
+        "fun": "first_even",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": ">=",
+     "args": [
+      {
+       "call": {
+        "fun": "first_odd",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      },
+      {
+       "int": 0
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "first_even",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": -1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "op": "at",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "first_even",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 1
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "first_odd",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": -1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "!=",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "op": "at",
+        "args": [
+         {
+          "var": "s"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "first_odd",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 1
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "call": {
+        "fun": "first_even",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      },
+      {
+       "call": {
+        "fun": "first_odd",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,297 @@
+{
+ "t": 1,
+ "gate": "quantifiers",
+ "name": "mbpp_427__change_date_format",
+ "params": [
+  {
+   "name": "date",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "date"
+      }
+     ]
+    },
+    {
+     "int": 10
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "date"
+      },
+      {
+       "int": 4
+      }
+     ]
+    },
+    {
+     "int": 45
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "date"
+      },
+      {
+       "int": 7
+      }
+     ]
+    },
+    {
+     "int": 45
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 0
+      },
+      {
+       "int": 1
+      }
+     ]
+    },
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "date"
+      },
+      {
+       "int": 8
+      },
+      {
+       "int": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 3
+      },
+      {
+       "int": 4
+      }
+     ]
+    },
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "date"
+      },
+      {
+       "int": 5
+      },
+      {
+       "int": 7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 6
+      },
+      {
+       "int": 9
+      }
+     ]
+    },
+    {
+     "op": "slice",
+     "args": [
+      {
+       "var": "date"
+      },
+      {
+       "int": 0
+      },
+      {
+       "int": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 2
+      }
+     ]
+    },
+    {
+     "int": 45
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "at",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 5
+      }
+     ]
+    },
+    {
+     "int": 45
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "+",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "date"
+              },
+              {
+               "int": 8
+              },
+              {
+               "int": 10
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 45
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "date"
+            },
+            {
+             "int": 5
+            },
+            {
+             "int": 7
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 45
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "date"
+        },
+        {
+         "int": 0
+        },
+        {
+         "int": 4
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

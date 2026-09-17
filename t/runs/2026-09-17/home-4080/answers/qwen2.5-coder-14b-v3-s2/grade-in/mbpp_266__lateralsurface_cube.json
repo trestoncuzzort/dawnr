@@ -1,0 +1,84 @@
+{
+ "t": 0,
+ "name": "mbpp_266__lateralsurface_cube",
+ "params": [
+  {
+   "name": "side",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "side"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "side"
+        },
+        {
+         "var": "side"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 4
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "var": "side"
+        },
+        {
+         "var": "side"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

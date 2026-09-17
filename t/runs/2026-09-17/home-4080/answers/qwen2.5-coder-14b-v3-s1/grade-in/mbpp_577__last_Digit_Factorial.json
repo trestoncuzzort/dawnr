@@ -1,0 +1,276 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_577__last_Digit_Factorial",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "last_digit_factorial",
+      "args": [
+       {
+        "var": "n"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "last_digit_factorial",
+   "params": [
+    {
+     "name": "n",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "var": "n"
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "or",
+      "args": [
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     "then": {
+      "int": 1
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": ">=",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 5
+         }
+        ]
+       },
+       "then": {
+        "int": 0
+       },
+       "else": {
+        "op": "mod",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "call": {
+             "fun": "last_digit_factorial",
+             "args": [
+              {
+               "op": "-",
+               "args": [
+                {
+                 "var": "n"
+                },
+                {
+                 "int": 1
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "int": 10
+         }
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "var": "n"
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "int": 1
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "n"
+         },
+         {
+          "int": 1
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "int": 1
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": ">=",
+           "args": [
+            {
+             "var": "n"
+            },
+            {
+             "int": 5
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "int": 0
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "assign": [
+             "r",
+             {
+              "op": "mod",
+              "args": [
+               {
+                "op": "*",
+                "args": [
+                 {
+                  "var": "n"
+                 },
+                 {
+                  "call": {
+                   "fun": "mbpp_577__last_Digit_Factorial",
+                   "args": [
+                    {
+                     "op": "-",
+                     "args": [
+                      {
+                       "var": "n"
+                      },
+                      {
+                       "int": 1
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 }
+                ]
+               },
+               {
+                "int": 10
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,84 @@
+{
+ "t": 1,
+ "name": "mbpp_800__remove_all_spaces",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "strip",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 32
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": []
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "strip",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 32
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": []
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

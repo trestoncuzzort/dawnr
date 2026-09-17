@@ -1,0 +1,924 @@
+{
+ "t": 1,
+ "name": "mbpp_478__remove_lowercase",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "op": "replace",
+         "args": [
+          {
+           "op": "replace",
+           "args": [
+            {
+             "op": "replace",
+             "args": [
+              {
+               "op": "replace",
+               "args": [
+                {
+                 "op": "replace",
+                 "args": [
+                  {
+                   "op": "replace",
+                   "args": [
+                    {
+                     "op": "replace",
+                     "args": [
+                      {
+                       "op": "replace",
+                       "args": [
+                        {
+                         "op": "replace",
+                         "args": [
+                          {
+                           "op": "replace",
+                           "args": [
+                            {
+                             "op": "replace",
+                             "args": [
+                              {
+                               "op": "replace",
+                               "args": [
+                                {
+                                 "op": "replace",
+                                 "args": [
+                                  {
+                                   "op": "replace",
+                                   "args": [
+                                    {
+                                     "op": "replace",
+                                     "args": [
+                                      {
+                                       "op": "replace",
+                                       "args": [
+                                        {
+                                         "op": "replace",
+                                         "args": [
+                                          {
+                                           "op": "replace",
+                                           "args": [
+                                            {
+                                             "op": "replace",
+                                             "args": [
+                                              {
+                                               "op": "replace",
+                                               "args": [
+                                                {
+                                                 "op": "replace",
+                                                 "args": [
+                                                  {
+                                                   "op": "replace",
+                                                   "args": [
+                                                    {
+                                                     "op": "replace",
+                                                     "args": [
+                                                      {
+                                                       "op": "replace",
+                                                       "args": [
+                                                        {
+                                                         "var": "s"
+                                                        },
+                                                        {
+                                                         "op": "seq",
+                                                         "args": [
+                                                          {
+                                                           "int": 97
+                                                          }
+                                                         ]
+                                                        },
+                                                        {
+                                                         "op": "seq",
+                                                         "args": []
+                                                        }
+                                                       ]
+                                                      },
+                                                      {
+                                                       "op": "seq",
+                                                       "args": [
+                                                        {
+                                                         "int": 98
+                                                        }
+                                                       ]
+                                                      },
+                                                      {
+                                                       "op": "seq",
+                                                       "args": []
+                                                      }
+                                                     ]
+                                                    },
+                                                    {
+                                                     "op": "seq",
+                                                     "args": [
+                                                      {
+                                                       "int": 99
+                                                      }
+                                                     ]
+                                                    },
+                                                    {
+                                                     "op": "seq",
+                                                     "args": []
+                                                    }
+                                                   ]
+                                                  },
+                                                  {
+                                                   "op": "seq",
+                                                   "args": [
+                                                    {
+                                                     "int": 100
+                                                    }
+                                                   ]
+                                                  },
+                                                  {
+                                                   "op": "seq",
+                                                   "args": []
+                                                  }
+                                                 ]
+                                                },
+                                                {
+                                                 "op": "seq",
+                                                 "args": [
+                                                  {
+                                                   "int": 101
+                                                  }
+                                                 ]
+                                                },
+                                                {
+                                                 "op": "seq",
+                                                 "args": []
+                                                }
+                                               ]
+                                              },
+                                              {
+                                               "op": "seq",
+                                               "args": [
+                                                {
+                                                 "int": 102
+                                                }
+                                               ]
+                                              },
+                                              {
+                                               "op": "seq",
+                                               "args": []
+                                              }
+                                             ]
+                                            },
+                                            {
+                                             "op": "seq",
+                                             "args": [
+                                              {
+                                               "int": 103
+                                              }
+                                             ]
+                                            },
+                                            {
+                                             "op": "seq",
+                                             "args": []
+                                            }
+                                           ]
+                                          },
+                                          {
+                                           "op": "seq",
+                                           "args": [
+                                            {
+                                             "int": 104
+                                            }
+                                           ]
+                                          },
+                                          {
+                                           "op": "seq",
+                                           "args": []
+                                          }
+                                         ]
+                                        },
+                                        {
+                                         "op": "seq",
+                                         "args": [
+                                          {
+                                           "int": 105
+                                          }
+                                         ]
+                                        },
+                                        {
+                                         "op": "seq",
+                                         "args": []
+                                        }
+                                       ]
+                                      },
+                                      {
+                                       "op": "seq",
+                                       "args": [
+                                        {
+                                         "int": 106
+                                        }
+                                       ]
+                                      },
+                                      {
+                                       "op": "seq",
+                                       "args": []
+                                      }
+                                     ]
+                                    },
+                                    {
+                                     "op": "seq",
+                                     "args": [
+                                      {
+                                       "int": 107
+                                      }
+                                     ]
+                                    },
+                                    {
+                                     "op": "seq",
+                                     "args": []
+                                    }
+                                   ]
+                                  },
+                                  {
+                                   "op": "seq",
+                                   "args": [
+                                    {
+                                     "int": 108
+                                    }
+                                   ]
+                                  },
+                                  {
+                                   "op": "seq",
+                                   "args": []
+                                  }
+                                 ]
+                                },
+                                {
+                                 "op": "seq",
+                                 "args": [
+                                  {
+                                   "int": 109
+                                  }
+                                 ]
+                                },
+                                {
+                                 "op": "seq",
+                                 "args": []
+                                }
+                               ]
+                              },
+                              {
+                               "op": "seq",
+                               "args": [
+                                {
+                                 "int": 110
+                                }
+                               ]
+                              },
+                              {
+                               "op": "seq",
+                               "args": []
+                              }
+                             ]
+                            },
+                            {
+                             "op": "seq",
+                             "args": [
+                              {
+                               "int": 111
+                              }
+                             ]
+                            },
+                            {
+                             "op": "seq",
+                             "args": []
+                            }
+                           ]
+                          },
+                          {
+                           "op": "seq",
+                           "args": [
+                            {
+                             "int": 112
+                            }
+                           ]
+                          },
+                          {
+                           "op": "seq",
+                           "args": []
+                          }
+                         ]
+                        },
+                        {
+                         "op": "seq",
+                         "args": [
+                          {
+                           "int": 113
+                          }
+                         ]
+                        },
+                        {
+                         "op": "seq",
+                         "args": []
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 114
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": []
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 115
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": []
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 116
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": []
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 117
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": []
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 118
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": []
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 119
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": []
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 120
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": []
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 121
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": []
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 122
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": []
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "op": "replace",
+         "args": [
+          {
+           "op": "replace",
+           "args": [
+            {
+             "op": "replace",
+             "args": [
+              {
+               "op": "replace",
+               "args": [
+                {
+                 "op": "replace",
+                 "args": [
+                  {
+                   "op": "replace",
+                   "args": [
+                    {
+                     "op": "replace",
+                     "args": [
+                      {
+                       "op": "replace",
+                       "args": [
+                        {
+                         "op": "replace",
+                         "args": [
+                          {
+                           "op": "replace",
+                           "args": [
+                            {
+                             "op": "replace",
+                             "args": [
+                              {
+                               "op": "replace",
+                               "args": [
+                                {
+                                 "op": "replace",
+                                 "args": [
+                                  {
+                                   "op": "replace",
+                                   "args": [
+                                    {
+                                     "op": "replace",
+                                     "args": [
+                                      {
+                                       "op": "replace",
+                                       "args": [
+                                        {
+                                         "op": "replace",
+                                         "args": [
+                                          {
+                                           "op": "replace",
+                                           "args": [
+                                            {
+                                             "op": "replace",
+                                             "args": [
+                                              {
+                                               "op": "replace",
+                                               "args": [
+                                                {
+                                                 "op": "replace",
+                                                 "args": [
+                                                  {
+                                                   "op": "replace",
+                                                   "args": [
+                                                    {
+                                                     "op": "replace",
+                                                     "args": [
+                                                      {
+                                                       "op": "replace",
+                                                       "args": [
+                                                        {
+                                                         "var": "s"
+                                                        },
+                                                        {
+                                                         "op": "seq",
+                                                         "args": [
+                                                          {
+                                                           "int": 97
+                                                          }
+                                                         ]
+                                                        },
+                                                        {
+                                                         "op": "seq",
+                                                         "args": []
+                                                        }
+                                                       ]
+                                                      },
+                                                      {
+                                                       "op": "seq",
+                                                       "args": [
+                                                        {
+                                                         "int": 98
+                                                        }
+                                                       ]
+                                                      },
+                                                      {
+                                                       "op": "seq",
+                                                       "args": []
+                                                      }
+                                                     ]
+                                                    },
+                                                    {
+                                                     "op": "seq",
+                                                     "args": [
+                                                      {
+                                                       "int": 99
+                                                      }
+                                                     ]
+                                                    },
+                                                    {
+                                                     "op": "seq",
+                                                     "args": []
+                                                    }
+                                                   ]
+                                                  },
+                                                  {
+                                                   "op": "seq",
+                                                   "args": [
+                                                    {
+                                                     "int": 100
+                                                    }
+                                                   ]
+                                                  },
+                                                  {
+                                                   "op": "seq",
+                                                   "args": []
+                                                  }
+                                                 ]
+                                                },
+                                                {
+                                                 "op": "seq",
+                                                 "args": [
+                                                  {
+                                                   "int": 101
+                                                  }
+                                                 ]
+                                                },
+                                                {
+                                                 "op": "seq",
+                                                 "args": []
+                                                }
+                                               ]
+                                              },
+                                              {
+                                               "op": "seq",
+                                               "args": [
+                                                {
+                                                 "int": 102
+                                                }
+                                               ]
+                                              },
+                                              {
+                                               "op": "seq",
+                                               "args": []
+                                              }
+                                             ]
+                                            },
+                                            {
+                                             "op": "seq",
+                                             "args": [
+                                              {
+                                               "int": 103
+                                              }
+                                             ]
+                                            },
+                                            {
+                                             "op": "seq",
+                                             "args": []
+                                            }
+                                           ]
+                                          },
+                                          {
+                                           "op": "seq",
+                                           "args": [
+                                            {
+                                             "int": 104
+                                            }
+                                           ]
+                                          },
+                                          {
+                                           "op": "seq",
+                                           "args": []
+                                          }
+                                         ]
+                                        },
+                                        {
+                                         "op": "seq",
+                                         "args": [
+                                          {
+                                           "int": 105
+                                          }
+                                         ]
+                                        },
+                                        {
+                                         "op": "seq",
+                                         "args": []
+                                        }
+                                       ]
+                                      },
+                                      {
+                                       "op": "seq",
+                                       "args": [
+                                        {
+                                         "int": 106
+                                        }
+                                       ]
+                                      },
+                                      {
+                                       "op": "seq",
+                                       "args": []
+                                      }
+                                     ]
+                                    },
+                                    {
+                                     "op": "seq",
+                                     "args": [
+                                      {
+                                       "int": 107
+                                      }
+                                     ]
+                                    },
+                                    {
+                                     "op": "seq",
+                                     "args": []
+                                    }
+                                   ]
+                                  },
+                                  {
+                                   "op": "seq",
+                                   "args": [
+                                    {
+                                     "int": 108
+                                    }
+                                   ]
+                                  },
+                                  {
+                                   "op": "seq",
+                                   "args": []
+                                  }
+                                 ]
+                                },
+                                {
+                                 "op": "seq",
+                                 "args": [
+                                  {
+                                   "int": 109
+                                  }
+                                 ]
+                                },
+                                {
+                                 "op": "seq",
+                                 "args": []
+                                }
+                               ]
+                              },
+                              {
+                               "op": "seq",
+                               "args": [
+                                {
+                                 "int": 110
+                                }
+                               ]
+                              },
+                              {
+                               "op": "seq",
+                               "args": []
+                              }
+                             ]
+                            },
+                            {
+                             "op": "seq",
+                             "args": [
+                              {
+                               "int": 111
+                              }
+                             ]
+                            },
+                            {
+                             "op": "seq",
+                             "args": []
+                            }
+                           ]
+                          },
+                          {
+                           "op": "seq",
+                           "args": [
+                            {
+                             "int": 112
+                            }
+                           ]
+                          },
+                          {
+                           "op": "seq",
+                           "args": []
+                          }
+                         ]
+                        },
+                        {
+                         "op": "seq",
+                         "args": [
+                          {
+                           "int": 113
+                          }
+                         ]
+                        },
+                        {
+                         "op": "seq",
+                         "args": []
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 114
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": []
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 115
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": []
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 116
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": []
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 117
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": []
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 118
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": []
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 119
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": []
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 120
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": []
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 121
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": []
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 122
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": []
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
