@@ -141,3 +141,11 @@
 - 2026-09-17 17:25 the autopilot is deleted at the user's request: t/autopilot.py and its service are gone, its card is off the AI tab, and the steps are pressed by hand from Collect data with ~/Desktop/RUN-STEPS.md as the order. The orchestrator (t/run_everything.py) remains for an unattended run. Its 3B model was also costing the graphics card: even on the processor it was work the run did not need.
 - 2026-09-17 17:13 start `grade`: `bash t/grade_lab.sh seeds` (log `logs/grade.log`)
 - 2026-09-17 17:30 the repair rounds' done tests passed when there was nothing yet to repair (no graded source set makes the loop body never run), so Repair those too read done and would have been skipped once the new answer sets were graded. Both tests now also require at least one graded source. The desktop file's numbering was rewritten to t lab's own step numbers, with a line saying a gap means finished steps are hidden.
+- 2026-09-17 17:20 start `grade`: `bash t/grade_lab.sh seeds` (log `logs/grade.log`)
+- 2026-09-17 17:20 end `grade`: exit 1 after 0 min
+- 2026-09-17 17:26 start `grade`: `bash t/grade_lab.sh seeds` (log `logs/grade.log`)
+- 2026-09-17 17:26 end `grade`: exit 0 after 0 min
+- 2026-09-17 17:26 start `grade`: `bash t/grade_lab.sh seeds` (log `logs/grade.log`)
+- 2026-09-17 17:26 end `grade`: exit 0 after 0 min
+- 2026-09-17 17:28 one step at a time from here, at the user's request: t lab now refuses to start a step while any other step is running (it was one per machine before). Step 11's deepseek generation was stopped at 221 of 737 answers and step 8's seed 7 attempt killed with its lock; both resume where they stopped. Step 10, grading the 110 repaired answers, is the one running.
+- 2026-09-17 17:26 the repair loop does not work: seed 1's 22 repaired answers came back 0 clean. Against their originals, 4 improved, 8 got worse and 10 were unchanged in how many kernels agree, and 16 of 22 are now blocked by all seven (unproved in Verus 15, Dafny 13, Lean 11, Rocq 9; SPARK timeouts 15). A 14B model given the seven verdicts writes worse proofs, not better ones, which is a finding about where the bottleneck is rather than a bug. The remaining repair sets are being graded so the claim rests on all 110.

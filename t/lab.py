@@ -1286,10 +1286,10 @@ class Lab:
         if key in live:
             self.step_hint.configure(text=f"{title} is already running.", fg=RED)
             return
-        # one step per resource: one on the graphics card, one on this machine's cores, one on the lab workstation
-        busy = [t for k, t, _w, _c, _ck, u in [s[:6] for s in STEPS] if u == uses and u and k in live]
+        # one step at a time, whatever it uses: the run is easier to read and nothing competes for memory
+        busy = [t for k, t, *_r in STEPS if k in live and k not in ("ollama-serve", "run-all")]
         if busy:
-            self.step_hint.configure(text=f"Wait: {', '.join(busy)} has the {self.USES_WORDS.get(uses, uses)}.",
+            self.step_hint.configure(text=f"Wait: {', '.join(busy)} is still running. Stop it first to run this.",
                                      fg=RED)
             return
         unmet = [self.title_of(n) for n in NEEDS.get(key, []) if self.step_state.get(n) != "done"]
