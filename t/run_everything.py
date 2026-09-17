@@ -117,7 +117,6 @@ def grading():
             t.start()
         for t in threads:
             t.join()
-        wait_idle("grade-home")
         if done("grade"):
             return True
         # a killed run leaves its claim behind; with no grader running, every claim is stale

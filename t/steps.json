@@ -66,18 +66,10 @@
  [
   "grade",
   "Grade the answers",
-  "On the lab workstation (120 threads, CPU only, 16 jobs): sends each finished seed's grade-in/, brings kernels.md back, checks show on Live checks. Opens the VPN by itself if it is down; sign in there. Skips graded seeds, so Run again after more seeds finish.",
+  "On the lab workstation (120 threads, CPU only, 16 jobs; every checker run of this project goes there): sends each finished seed's grade-in/, brings kernels.md back, checks show on Live checks. Opens the VPN by itself if it is down; sign in there. Skips graded seeds, so Run again after more seeds finish.",
   "bash t/grade_lab.sh seeds",
   "for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || exit 1; done",
   "lab"
- ],
- [
-  "grade-home",
-  "Grade here too",
-  "Optional, alongside Grade the answers: this machine grades from the last finished seed backwards (6 jobs) while the lab works forwards; neither takes a seed the other has.",
-  "bash t/grade_home.sh",
-  "for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || exit 1; done",
-  "cpu"
  ],
  [
   "repair",

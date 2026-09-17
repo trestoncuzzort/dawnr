@@ -113,13 +113,11 @@ STEPS = [
     ("matrix", "Check the checkers", "On the lab workstation, where all grading runs: regrades the 34 committed tasks. "
      "Good: 30 of 34 in all seven, as in t/AGREEMENT.md. Table comes back to t/out/AGREEMENT-lab.md.",
      "bash t/grade_lab.sh matrix", "test -s t/out/AGREEMENT-lab.md", "lab"),
-    ("grade", "Grade the answers", "On the lab workstation (120 threads, CPU only, 16 jobs): sends each finished "
+    ("grade", "Grade the answers", "On the lab workstation (120 threads, CPU only, 16 jobs; every checker run of "
+     "this project goes there): sends each finished "
      "seed's grade-in/, brings kernels.md back, checks show on Live checks. Opens the VPN by itself if it is down; sign in "
      "there. Skips graded seeds, so Run again after more seeds finish.", "bash t/grade_lab.sh seeds",
      f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "lab"),
-    ("grade-home", "Grade here too", "Optional, alongside Grade the answers: this machine grades from the last "
-     "finished seed backwards (6 jobs) while the lab works forwards; neither takes a seed the other has.",
-     "bash t/grade_home.sh", f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "cpu"),
     ("repair", "Repair the proofs", "Needs Ollama started. Sends each answer that passes its tests but is not clean "
      "back to the model with the checkers' verdicts (t/repair.py): proof repairs keep the specification, spec repairs "
      "keep the signature and requires. New answer sets <seed>-fix1.",
