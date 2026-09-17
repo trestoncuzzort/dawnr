@@ -334,6 +334,10 @@ def main() -> int:
                       read_failure(a.model, key))
         cands = candidates(m, steps, attempts)
         action, why = ask_model(a.model, m, steps, cands) if m["ollama"] == "up" else ("", "")
+        # the model may not choose idleness while the machine is idle and something is ready to run
+        if action == "wait" and len(cands) > 1 and not any(s["running"] for s in steps):
+            log("model chose to wait with the machine idle; taking the first candidate instead")
+            action = ""
         if not action:
             action, why = cands[0]["action"], cands[0]["why"] + " (chosen by the rules, not the model)"
         act(action, why, a.model, a.dry_run, attempts, restarts)
