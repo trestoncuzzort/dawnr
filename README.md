@@ -4,7 +4,9 @@ Small language models built from scratch on your own machine, trained only on co
 
 The industry bet is scale: more parameters, more tokens, more scraped code. locallm bets the other way. Keep a training example only when it passes its tests, is proven against its specification by seven proof systems, and has a deliberately broken copy of itself caught by all seven. Then ask whether a small model built from that data does more per parameter than a model built from raw data, and than small open models such as Microsoft's Phi-4-mini.
 
-Every number below was measured by a script in this repository, and links to the file that records it. Where the answer is not in yet, this page says so.
+Every number below was measured by a script in this repository, and links to the file that records it. Where the answer is not in yet, this page says so, and where a number of this project's own was wrong, the correction is on this page rather than in its history.
+
+**What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column and why the tests are a separate gate. No model built here has beaten Phi-4-mini; that comparison is running.
 
 ## The pipeline
 
@@ -30,23 +32,29 @@ A held-out answer counts as **clean** only when its tests pass and all seven pro
 | A 1.5B model (Qwen2.5-Coder) trained on the twins it refuted, 161 held-out problems | verified answers with a refuted twin: 9 to 15 after two rounds; test passes did not move | [`t/LOOP-CURVE.md`](t/LOOP-CURVE.md) |
 | Qwen3.8-27B-FP8, temperature 0, on the 232 held-out problems | 12 clean, 7 proven but wrong | [`t/score_heldout.py`](t/score_heldout.py) |
 | A locallm model built from the clean corpus, on the 232 held-out problems | **0 clean**, 188 proven but wrong | [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) |
+| Phi-4-mini (3.8B, bf16), the model to beat, on the same 232 problems | 12 answers well formed, 6 passing their tests, **3 clean**, 1 proven but wrong | [`t/runs/2026-09-17/home-4080/score-baselines-1527.md`](t/runs/2026-09-17/home-4080/score-baselines-1527.md) |
+| The untrained 1.5B (Qwen2.5-Coder), same problems | 39 well formed, 13 passing, **3 clean**, 8 proven but wrong | the same file |
+| Asking the generator to repair its own unproven answers, given the seven verdicts | seed 1: 22 repaired answers graded, **0 clean**; against their originals 4 improved, 8 got worse, 10 unchanged | [`t/runs/2026-09-17/NOTES-home.md`](t/runs/2026-09-17/NOTES-home.md) |
 
-**What the last row means.** The clean pool held 47 problem examples, so the model recited verified tasks it had memorized (151 exact copies) instead of solving new problems. The clean programs the filter loop writes are mostly short, loop-free near-copies of corpus tasks. Filtering works; the pool is too small. Growing it is the current work.
+**Phi's 3 of 232 is a low bar, and it is low for a reason.** Phi-4-mini has never seen t, so most of its answers do not parse as a t task at all. Beating it at writing t is a weaker claim than beating it at Python, and this page will say so next to whatever number the comparison produces.
 
-**A correction.** The copy check kept each task's format version, so exact copies of corpus tasks counted as new. The filtered-against-raw result was first recorded as 46 against 3; recounted, it is 29 against 1. The direction held and the effect was a third smaller. The recount is the number.
+**What the locallm row means.** The clean pool held 47 problem examples, so the model recited verified tasks it had memorized (151 exact copies) instead of solving new problems. The clean programs the filter loop writes are mostly short, loop-free near-copies of corpus tasks. Filtering works; the pool is too small. Growing it is the current work.
+
+**Two corrections, kept here on purpose.** The copy check kept each task's format version, so exact copies of corpus tasks counted as new: the filtered-against-raw result was first recorded as 46 against 3 and is 29 against 1 recounted, the direction holding and the effect a third smaller. And the repair idea above, which looked obvious, does not work: a 14B model handed seven verdicts writes worse proofs more often than better ones. Both are measurements this project made against itself.
 
 ## In progress: against Phi-4-mini
 
 No result yet (2026-09-17). On one RTX 4080:
 1. qwen2.5-coder:14b (Ollama, 4-bit) writes eight answer sets over the 649-problem pool (answers to held-out problems never reach training); after pool picking, the first five hold 110, 61, 62, 65 and 63 test-passing, non-copy programs to grade.
 2. The seven proof systems grade them, split between the lab workstation's CPUs and the desktop.
-3. From the clean answers: a new clean pool, a locallm model and a fine-tuned 1.5B student.
+3. From the clean answers: a new clean pool, a locallm model built from scratch (about 3.2M parameters, not 1.5B) and a 1.5B student, which is Qwen2.5-Coder fine-tuned with QLoRA and DPO, not trained from scratch.
 4. Phi-4-mini (bf16), the untrained 1.5B, the student and locallm each answer the 232 held-out problems, and `score_heldout.py` counts clean and proven but wrong for each, next to its parameter count.
 
-The table goes here when it exists, whichever way it comes out.
+The pool stands at 203 clean answers over 76 distinct problems, against the 47 problems the previous pool held. The table goes here when it exists, whichever way it comes out.
 
 ## New since 2026-09-16
 
+- **What caps the corpus, measured.** Of 463 test-passing answers graded in one day, 96 were clean in all seven, 10 were blocked only by a lowering that cannot express them, and 150 carried at least one abstain: nested loops in Rocq and F* and Lean, a sequence return whose length no parameter determines, string-library members not lowered yet. The plan that follows from those counts is [`ROADMAP.md`](ROADMAP.md) WS-20.
 - **The filter loop.** locallm rebuilds its model each round from every clean program found so far, and the new model writes the next round ([`t/loop_filter.py`](t/loop_filter.py), [`t/loop_locallm.py`](t/loop_locallm.py)).
 - **A held-out benchmark with a wrong-answer column.** [`t/score_heldout.py`](t/score_heldout.py) reports tasks, tests passed, clean, and proven but wrong per answer set, over a split that never changes.
 - **Only gradable answers reach the checkers.** [`t/pool_pick.py`](t/pool_pick.py) sends a proof system only answers that pass their tests and copy nothing already in the pool.
