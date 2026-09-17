@@ -121,7 +121,8 @@ STEPS = [
      "keep the signature and requires. New answer sets <seed>-fix1.",
      f"for T in {QWEN_FIX}; do S=${{T%-fix1}}; [ -d {SE}/$T/grade-in ] && continue; [ -s {SE}/$S/kernels.md ] || continue; "
      f"python3 t/repair.py {SE}/$S || exit 1; done",
-     f"for T in {QWEN_FIX}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
+     f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || continue; "
+     f"[ -d {SE}/{GEN}$S-fix1/grade-in ] || exit 1; done", "gpu"),
     ("grade-repair", "Grade the repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {QWEN_FIX}",
      f"for T in {QWEN_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("more-problems", "New problems and a second model", "Needs Ollama started. The 88 HumanEval problems of pool v4 "
@@ -142,7 +143,8 @@ STEPS = [
     ("repair-growth", "Repair those too", "Needs Ollama started. One repair round on the new answer sets.",
      f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T-fix1/grade-in ] && continue; [ -s {SE}/$T/kernels.md ] || continue; "
      f"python3 t/repair.py {SE}/$T || exit 1; done",
-     f"for T in {GROWTH_FIX}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
+     f"for T in {GROWTH_TAGS}; do [ -s {SE}/$T/kernels.md ] || continue; "
+     f"[ -d {SE}/$T-fix1/grade-in ] || exit 1; done", "gpu"),
     ("grade-growth-repair", "Grade those repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_FIX}",
      f"for T in {GROWTH_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("pool", "Build the clean pool", "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out "
@@ -159,14 +161,14 @@ STEPS = [
      f"test $(ls {SE}/qwen15b-base-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("train", "Train the student", "The 1.5B trained on the clean pool.",
      f"{PY} t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --out t/out/loop/adapter-r4",
-     "test -d t/out/loop/adapter-r4", "gpu"),
+     "test -s t/out/loop/adapter-r4/adapter_model.safetensors", "gpu"),
     ("student", "Student answers", "", f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-v3 {EVAL}",
      f"test $(ls {SE}/student-r4-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("locallm", "Build a locallm model", "From scratch, on the clean pool, then its held-out answers.",
      "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl "
      f"--out t/out/loop-locallm/corpus-r4.txt && {PY} t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt "
      f"--model t/out/loop-locallm/model-r4 && {PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
-     f"test -d {SE}/locallm-r4/raw", "gpu"),
+     f"test $(ls {SE}/locallm-r4/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("grade-heldout", "Grade held-out answers", "Every extracted task this time, so proven but wrong can be "
      "counted. Extract and tests run here, the checkers on the lab workstation.", "bash t/grade_lab.sh heldout",
      f"for T in {HELDOUT}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),

@@ -92,3 +92,41 @@
 - 2026-09-17 15:20 start `grade`: `bash t/grade_lab.sh seeds` (log `logs/grade.log`)
 - 2026-09-17 15:21 t lab has an AI tab: the autopilot (state, what it may do, its last decisions, start and stop) and the orchestrator (state, its log, Run everything and stop) live there, with the alerts below them; Run everything is no longer a row among the data steps. The Download step's done test now looks for the model on disk instead of asking the stopped Ollama server, so a finished pull no longer reads as missing.
 - 2026-09-17 15:25 Collect data redrawn: one box per step instead of a table row, each with a percentage bar (answers written of problems asked, answer sets graded of those waiting, held-out answers of 232), its own Run button, a green edge and green wash while it runs and none when it is stopped, a blue outline for the one whose log is shown, and the list scrolls. A box hides itself when the step is done unless Show finished is on. A step refuses to start when another step already has its resource or when its prerequisites (lab.py's NEEDS) are unfinished, and says which.
+- 2026-09-17 15:27 run_everything: end `grade-heldout`: exit 0, not done
+- 2026-09-17 15:27 run_everything: start `grade-heldout` (Grade held-out answers), attempt 2
+- 2026-09-17 15:27 run_everything: end `grade-heldout`: exit 0, not done
+- 2026-09-17 15:27 run_everything: `grade-heldout` failed twice; see logs/grade-heldout.log
+- 2026-09-17 15:27 run_everything: start `score` (Score against Phi), attempt 1
+- 2026-09-17 15:27 run_everything: end `score`: exit 0, ok
+- 2026-09-17 15:27 run_everything: finished; failed: grade-heldout, grade, grade, grade, grade-heldout
+- 2026-09-17 15:28 the 12:10 orchestrator ended: it wrote a first score table with the baselines only (kept as t/out/score-r4-partial-1527.md and t/runs/2026-09-17/home-4080/score-baselines-1527.md). Phi-4-mini (bf16) reads 12 of 232 answers well formed, 6 passing their tests, 3 clean in all seven and 1 proven but wrong; the untrained 1.5B reads 39 well formed, 13 passing, 3 clean, 8 proven but wrong; the 27B 12 clean; locallm-r0 0 clean and 188 proven but wrong. So the bar a trained model has to clear on this benchmark is 3 clean, and Phi writes t badly because it has never seen it, which is worth saying whenever this number is quoted.
+- 2026-09-17 15:29 every desktop notification is recorded to t/runs/notifications.log by the systemd user service t-notify-log (dbus-monitor on org.freedesktop.Notifications, identical text written once), so nothing the run announces is lost.
+- 2026-09-17 15:30 orchestrator restarted with the growth plan (t/run_everything.py: repairs, the HumanEval problems, the second generator, then the pool, the student, locallm and the score); the handover watcher is no longer needed and was stopped.
+- 2026-09-17 15:30 run_everything: started (growth plan: repairs, HumanEval problems, a second generator)
+- 2026-09-17 15:30 run_everything: Phi-4-mini answers starting (the model to beat)
+- 2026-09-17 15:30 run_everything: start `ollama-serve` (Start Ollama), attempt 1
+- 2026-09-17 15:30 run_everything: start `repair` (Repair the proofs), attempt 1
+- 2026-09-17 15:30 run_everything: end `repair`: exit 1, not done
+- 2026-09-17 15:30 run_everything: start `repair` (Repair the proofs), attempt 2
+- 2026-09-17 15:30 run_everything: end `repair`: exit 1, not done
+- 2026-09-17 15:30 run_everything: `repair` failed twice; see logs/repair.log
+- 2026-09-17 15:30 run_everything: start `more-problems` (New problems and a second model), attempt 1
+- 2026-09-17 15:30 run_everything: end `more-problems`: exit 1, not done
+- 2026-09-17 15:30 run_everything: start `more-problems` (New problems and a second model), attempt 2
+- 2026-09-17 15:30 run_everything: end `more-problems`: exit 1, not done
+- 2026-09-17 15:30 run_everything: `more-problems` failed twice; see logs/more-problems.log
+- 2026-09-17 15:30 run_everything: end `ollama-serve`: exit 0, ok
+- 2026-09-17 15:30 run_everything: Ollama stopped: the GPU goes to the next step
+- 2026-09-17 15:39 the growth steps failed at once with HTTP 500 from Ollama: /usr/local/lib/ollama/llama-server was missing, because the Install Ollama step ran twice at 04:08 and left a partial tree (generation had worked earlier on the binary that install replaced). Reinstalled from ollama.com, Ollama's own system service disabled again, served with the same flash-attention and 8-bit KV settings; qwen2.5-coder:14b answers (10.8 GB on the card) and qwen2.5:3b pulled for the autopilot. The empty answer-set folders those failures left were removed so the steps start clean.
+- 2026-09-17 15:40 run_everything: started (growth plan: repairs, HumanEval problems, a second generator)
+- 2026-09-17 15:40 run_everything: Ollama stopped: the GPU goes to the next step
+- 2026-09-17 15:41 run_everything: Phi-4-mini answers starting (the model to beat)
+- 2026-09-17 15:41 run_everything: start `ollama-serve` (Start Ollama), attempt 1
+- 2026-09-17 15:41 run_everything: start `repair` (Repair the proofs), attempt 1
+- 2026-09-17 15:52 run_everything: end `repair`: exit 0, not done
+- 2026-09-17 15:52 run_everything: start `repair` (Repair the proofs), attempt 2
+- 2026-09-17 15:52 run_everything: end `repair`: exit 0, not done
+- 2026-09-17 15:52 run_everything: `repair` failed twice; see logs/repair.log
+- 2026-09-17 15:52 run_everything: start `more-problems` (New problems and a second model), attempt 1
+- 2026-09-17 16:07 run_everything: start `grade` (Grade the answers), attempt 1
+- 2026-09-17 16:25 the repair round did its work and was still recorded as failed: 367 answers were retried and 110 repaired answers pass their tests and are new (s1 22, s2 13, s3 16, s4 15, s5 17, s6 15, s8 12; 3 replies dropped for changing the specification), but the step's done test demanded a repair set for all eight seeds and seed 7 is still being graded, so it can have none yet. The test now asks only for the seeds that have a kernels.md. Two more tests fixed: Build a locallm model read done because an empty folder from the failed 15:27 attempt existed (it now counts 232 answers, and the empty folder is gone), and Train the student now looks for the adapter file rather than its folder.

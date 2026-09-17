@@ -68,7 +68,7 @@
   "Repair the proofs",
   "Needs Ollama started. Sends each answer that passes its tests but is not clean back to the model with the checkers' verdicts (t/repair.py): proof repairs keep the specification, spec repairs keep the signature and requires. New answer sets <seed>-fix1.",
   "for T in qwen2.5-coder-14b-v3-s1-fix1 qwen2.5-coder-14b-v3-s2-fix1 qwen2.5-coder-14b-v3-s3-fix1 qwen2.5-coder-14b-v3-s4-fix1 qwen2.5-coder-14b-v3-s5-fix1 qwen2.5-coder-14b-v3-s6-fix1 qwen2.5-coder-14b-v3-s7-fix1 qwen2.5-coder-14b-v3-s8-fix1; do S=${T%-fix1}; [ -d t/out/spec-experiment/$T/grade-in ] && continue; [ -s t/out/spec-experiment/$S/kernels.md ] || continue; python3 t/repair.py t/out/spec-experiment/$S || exit 1; done",
-  "for T in qwen2.5-coder-14b-v3-s1-fix1 qwen2.5-coder-14b-v3-s2-fix1 qwen2.5-coder-14b-v3-s3-fix1 qwen2.5-coder-14b-v3-s4-fix1 qwen2.5-coder-14b-v3-s5-fix1 qwen2.5-coder-14b-v3-s6-fix1 qwen2.5-coder-14b-v3-s7-fix1 qwen2.5-coder-14b-v3-s8-fix1; do [ -d t/out/spec-experiment/$T/grade-in ] || exit 1; done",
+  "for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || continue; [ -d t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S-fix1/grade-in ] || exit 1; done",
   "gpu"
  ],
  [
@@ -100,7 +100,7 @@
   "Repair those too",
   "Needs Ollama started. One repair round on the new answer sets.",
   "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -d t/out/spec-experiment/$T-fix1/grade-in ] && continue; [ -s t/out/spec-experiment/$T/kernels.md ] || continue; python3 t/repair.py t/out/spec-experiment/$T || exit 1; done",
-  "for T in qwen2.5-coder-14b-he-s1-fix1 qwen2.5-coder-14b-he-s2-fix1 qwen2.5-coder-14b-he-s3-fix1 qwen2.5-coder-14b-he-s4-fix1 qwen2.5-coder-14b-he-s5-fix1 qwen2.5-coder-14b-he-s6-fix1 qwen2.5-coder-14b-he-s7-fix1 qwen2.5-coder-14b-he-s8-fix1 deepseek-coder-v2-16b-v4-s1-fix1 deepseek-coder-v2-16b-v4-s2-fix1; do [ -d t/out/spec-experiment/$T/grade-in ] || exit 1; done",
+  "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -s t/out/spec-experiment/$T/kernels.md ] || continue; [ -d t/out/spec-experiment/$T-fix1/grade-in ] || exit 1; done",
   "gpu"
  ],
  [
@@ -140,7 +140,7 @@
   "Train the student",
   "The 1.5B trained on the clean pool.",
   "~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --out t/out/loop/adapter-r4",
-  "test -d t/out/loop/adapter-r4",
+  "test -s t/out/loop/adapter-r4/adapter_model.safetensors",
   "gpu"
  ],
  [
@@ -156,7 +156,7 @@
   "Build a locallm model",
   "From scratch, on the clean pool, then its held-out answers.",
   "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl --out t/out/loop-locallm/corpus-r4.txt && ~/.venv-t/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt --model t/out/loop-locallm/model-r4 && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
-  "test -d t/out/spec-experiment/locallm-r4/raw",
+  "test $(ls t/out/spec-experiment/locallm-r4/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
  [
