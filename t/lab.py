@@ -1118,22 +1118,11 @@ class Lab:
     def build_ai(self, page):
         """The two things that run the run: the orchestrator (a fixed plan) and the autopilot (a local model
         choosing the next legal step every minute). Both live here rather than among the data steps."""
-        c = self.card(page, "Autopilot", "t/autopilot.py, the systemd user service t-autopilot")
+        c = self.card(page, "Orchestrator", "t/run_everything.py: the fixed plan, start to score, unattended")
         tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
-            "Every minute it reads each step and the machine, works out which actions are legal (the resource is "
-            "free, Ollama is up, the lab workstation answers, the step is not done and its prerequisites are), and "
-            "a small local model picks one. An illegal answer, or no Ollama, falls back to the rules. It cannot run "
-            "a step twice, share a resource, touch git, delete data or change the experiment.")).pack(fill="x")
-        row = tk.Frame(c, bg=CARD)
-        row.pack(fill="x", pady=8)
-        self.ai_state = tk.Label(row, text="", bg=CARD, fg=TEXT, font=self.f_bold)
-        self.ai_state.pack(side="left")
-        Button(row, "Start", lambda: self.unit("start", "t-autopilot"), GREEN, self).pack(side="right")
-        Button(row, "Stop", lambda: self.unit("stop", "t-autopilot"), RED, self, filled=False).pack(side="right", padx=8)
-        self.ai_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=8, wrap="none")
-        self.ai_log.pack(fill="x")
-
-        c = self.card(page, "Orchestrator", "t/run_everything.py: the fixed plan, start to score")
+            "Runs the steps of Collect data in order without asking: it waits for each one, retries a failed step "
+            "once, writes what it did to NOTES-home.md and raises an alert it cannot fix. Press the steps by hand "
+            "instead whenever you would rather drive.")).pack(fill="x", pady=(0, 6))
         row = tk.Frame(c, bg=CARD)
         row.pack(fill="x", pady=(0, 8))
         self.orch_state = tk.Label(row, text="", bg=CARD, fg=TEXT, font=self.f_bold)
@@ -1165,11 +1154,9 @@ class Lab:
         def active(name):
             return subprocess.run(["systemctl", "--user", "is-active", name],
                                   capture_output=True, text=True).stdout.strip()
-        for label, name, colorful in ((self.ai_state, "t-autopilot", True), (self.orch_state, "t-run-all", True)):
-            st = active(name)
-            label.configure(text=f"●  {st}", fg=GREEN if st == "active" else FAINT)
-        for widget, path, n in ((self.ai_log, RUNS.parent / "autopilot.log", 12),
-                                (self.orch_log, RUNS / "logs" / "run-all.log", 8),
+        st = active("t-run-all")
+        self.orch_state.configure(text=f"●  {st}", fg=GREEN if st == "active" else FAINT)
+        for widget, path, n in ((self.orch_log, RUNS / "logs" / "run-all.log", 8),
                                 (self.alert_text, RUNS / "ALERTS.md", 60)):
             try:
                 text = "\n".join(path.read_text(errors="replace").splitlines()[-n:]) or "nothing yet"
