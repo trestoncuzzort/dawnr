@@ -996,43 +996,91 @@ class Lab:
         self.q.put(("row", (name, values, text, self.passes(r, s))))
 
     # -- Collect data ----------------------------------------------------------------
+    USES_WORDS = {"gpu": "graphics card", "cpu": "cores here", "lab": "lab workstation"}
+
     def reload_steps(self):
-        """Re-read t/steps.json and rebuild the table, so a step added by hand appears without a restart."""
+        """Re-read t/steps.json and rebuild the boxes, so a step added by hand appears without a restart."""
         STEPS[:] = load_steps()
-        self.steps.delete(*self.steps.get_children())
-        for i, (key, title, what, _cmd, _check, uses) in enumerate(STEPS, 1):
-            self.steps.insert("", "end", iid=key, values=("not yet", f"{i}. {title}", "", uses, what))
-        self.step_hint.configure(text=f"{len(STEPS)} steps read from t/steps.json.", fg=MUTED)
+        for w in list(self.box_area.winfo_children()):
+            w.destroy()
+        self.boxes = {}
+        self.build_boxes()
+        self.step_hint.configure(text=f"{len(STEPS)} steps from t/steps.json", fg=FAINT)
+
+    def build_boxes(self):
+        """One box per step: what it is, a bar with its percentage, its own Run button. Green while it runs."""
+        for i, (key, title, what, _cmd, _check, uses) in enumerate([s[:6] for s in STEPS], 1):
+            box = tk.Frame(self.box_area, bg=CARD, highlightthickness=2, highlightbackground=LINE)
+            box.pack(fill="x", pady=(0, 8))
+            edge = tk.Frame(box, bg=LINE, width=4)
+            edge.pack(side="left", fill="y")
+            body = tk.Frame(box, bg=CARD)
+            body.pack(side="left", fill="both", expand=True, padx=12, pady=10)
+            head = tk.Frame(body, bg=CARD)
+            head.pack(fill="x")
+            name = tk.Label(head, text=f"{i}.  {title}", bg=CARD, fg=TEXT, font=self.f_h2)
+            name.pack(side="left")
+            state = tk.Label(head, text="not yet", bg=CARD, fg=FAINT, font=self.f_bold)
+            state.pack(side="right")
+            Button(head, "Run", lambda k=key: self.run_step(k), GREEN, self).pack(side="right", padx=10)
+            where = self.USES_WORDS.get(uses, "")
+            tk.Label(head, text=f"on the {where}" if where else "", bg=CARD, fg=MUTED,
+                     font=self.f_small).pack(side="right", padx=8)
+            bar = tk.Canvas(body, bg=SURFACE, height=8, highlightthickness=0)
+            bar.pack(fill="x", pady=(8, 4))
+            prog = tk.Label(body, text="", bg=CARD, fg=MUTED, font=self.f_small, anchor="w")
+            prog.pack(fill="x")
+            desc = tk.Label(body, text=what, bg=CARD, fg=FAINT, font=self.f_small, justify="left", anchor="w",
+                            wraplength=1100)
+            desc.pack(fill="x", pady=(2, 0))
+            self.boxes[key] = {"box": box, "edge": edge, "state": state, "bar": bar, "prog": prog,
+                               "paint": [box, body, head, name, state, prog, desc]}
+            for w in (box, body, head, name, desc, prog):
+                w.bind("<Button-1>", lambda _e, k=key: self.select_step(k))
+
+    def select_step(self, key: str):
+        self.sel_key = key
+        self.show_log()
+        self.refresh_steps(once=True)
 
     def build_collect(self, page):
         self.jobs: dict[str, subprocess.Popen] = {}
         self.step_state: dict[str, str] = {}
-        self.step_prog: dict[str, str] = {}
+        self.step_prog: dict[str, tuple] = {}
+        self.boxes: dict[str, dict] = {}
+        self.sel_key = STEPS[0][0]
         (RUNS / "logs").mkdir(parents=True, exist_ok=True)
-        c = self.card(page, "Collect data", "steps from t/steps.json; logs and notes go to " +
-                      str(RUNS.relative_to(TUP)))
-        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
-            "Each step runs in the background and keeps going if this window closes. A step reads done when its "
-            "output exists. One gpu step and one cpu step can run together; checkers then use 6 jobs instead of 12.")
-                 ).pack(fill="x", pady=(0, 8))
-        self.steps = self.table(c, [("state", "State", 110), ("step", "Step", 230), ("prog", "Progress", 150),
-                                    ("uses", "Uses", 55), ("what", "What it does", 700)], 9)
-        for i, (key, title, what, _cmd, _check, uses) in enumerate(STEPS, 1):
-            self.steps.insert("", "end", iid=key, values=("", f"{i}. {title}", "", uses, what))
-        self.steps.bind("<<TreeviewSelect>>", lambda _e: self.show_log())
-        row = tk.Frame(c, bg=CARD)
-        row.pack(fill="x", pady=8)
-        Button(row, "Run", self.run_step, GREEN, self).pack(side="left")
-        Button(row, "Stop", self.stop_step, RED, self, filled=False).pack(side="left", padx=8)
-        Button(row, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
-               filled=False).pack(side="left")
-        Button(row, "Reload steps", self.reload_steps, BLUE, self, filled=False).pack(side="left", padx=8)
-        self.show_done = tk.BooleanVar(value=False)
-        Chip(row, "Show finished steps", self.show_done, self).pack(side="left", padx=8)
-        self.step_hint = tk.Label(row, text="Pick a step.", bg=CARD, fg=FAINT, font=self.f_small)
+        head = tk.Frame(page, bg=BG)
+        head.pack(fill="x")
+        tk.Label(head, text="Collect data", bg=BG, fg=TEXT, font=self.f_h2).pack(side="left")
+        self.step_hint = tk.Label(head, text="", bg=BG, fg=FAINT, font=self.f_small)
         self.step_hint.pack(side="left", padx=12)
-        c = self.card(page, "Output", "last lines of the chosen step's log", fill="both", expand=True)
-        self.log_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="none")
+        Button(head, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
+               filled=False).pack(side="right")
+        Button(head, "Reload steps", self.reload_steps, BLUE, self, filled=False).pack(side="right", padx=8)
+        self.show_done = tk.BooleanVar(value=False)
+        Chip(head, "Show finished", self.show_done, self, command=lambda: self.refresh_steps(once=True)).pack(
+            side="right", padx=8)
+        Button(head, "Stop", lambda: self.stop_step(self.sel_key), RED, self, filled=False).pack(side="right", padx=8)
+
+        holder = tk.Frame(page, bg=BG)          # scrollable: there are more steps than fit on a screen
+        holder.pack(fill="both", expand=True, pady=(10, 0))
+        canvas = tk.Canvas(holder, bg=BG, highlightthickness=0)
+        sbar = ttk.Scrollbar(holder, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=sbar.set)
+        sbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        self.box_area = tk.Frame(canvas, bg=BG)
+        window = canvas.create_window((0, 0), window=self.box_area, anchor="nw")
+        self.box_area.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>", lambda e: canvas.itemconfigure(window, width=e.width))
+        canvas.bind_all("<Button-4>", lambda _e: canvas.yview_scroll(-2, "units"))
+        canvas.bind_all("<Button-5>", lambda _e: canvas.yview_scroll(2, "units"))
+        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-2 if e.delta > 0 else 2, "units"))
+        self.build_boxes()
+
+        c = self.card(page, "Output", "last lines of the chosen step's log", fill="x", pady=(10, 0))
+        self.log_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=9, wrap="none")
         self.log_text.pack(fill="both", expand=True)
         live = self.pages["Live checks"]
         strip = tk.Frame(live, bg=CARD, highlightthickness=1, highlightbackground=LINE)
@@ -1048,7 +1096,6 @@ class Lab:
                filled=False).pack(side="right", padx=8, pady=6)
         threading.Thread(target=self.check_steps, daemon=True).start()
         self.root.after(1000, self.refresh_steps)
-
     # -- AI ---------------------------------------------------------------------------
     def build_ai(self, page):
         """The two things that run the run: the orchestrator (a fixed plan) and the autopilot (a local model
@@ -1215,10 +1262,6 @@ class Lab:
             self.results_text.delete("1.0", "end")
             self.results_text.insert("end", text)
 
-    def selected_step(self):
-        sel = self.steps.selection()
-        return next((st for st in STEPS if sel and st[0] == sel[0]), None)
-
     def step_env(self):
         return dict(os.environ, PATH=KERNEL_PATH + os.pathsep + os.environ.get("PATH", ""), T_WATCH=str(EVENTS))
 
@@ -1226,44 +1269,55 @@ class Lab:
         with open(RUNS / "NOTES-home.md", "a") as f:
             f.write(f"- {time.strftime('%Y-%m-%d %H:%M')} {line}\n")
 
-    def run_step(self):
-        st = self.selected_step()
-        if not st:
+    def title_of(self, key: str) -> str:
+        return next((s[1] for s in STEPS if s[0] == key), key)
+
+    def run_step(self, key: str):
+        st = next((s for s in STEPS if s[0] == key), None)
+        if st is None:
             return
-        key, title, _what, cmd, _check, uses = st
+        _key, title, _what, cmd, _check, uses = st[:6]
         live = {k for k, *_r in self.running_steps()}
         if key in live:
             self.step_hint.configure(text=f"{title} is already running.", fg=RED)
             return
-        # one gpu step and one cpu step may run together; checkers then get half the cores to spare memory
-        busy = [t for k, t, *_r, u in STEPS if u == uses and u in ("gpu", "cpu") and k in live]
-        gpu_busy = any(u == "gpu" and k in live for k, *_r, u in STEPS)
+        # one step per resource: one on the graphics card, one on this machine's cores, one on the lab workstation
+        busy = [t for k, t, _w, _c, _ck, u in [s[:6] for s in STEPS] if u == uses and u and k in live]
         if busy:
-            self.step_hint.configure(text=f"Wait: {', '.join(busy)} is running and memory is tight.", fg=RED)
+            self.step_hint.configure(text=f"Wait: {', '.join(busy)} has the {self.USES_WORDS.get(uses, uses)}.",
+                                     fg=RED)
+            return
+        unmet = [self.title_of(n) for n in NEEDS.get(key, []) if self.step_state.get(n) != "done"]
+        if unmet:
+            self.step_hint.configure(text=f"{title} needs {', '.join(unmet)} first.", fg=RED)
             return
         log = RUNS / "logs" / f"{key}.log"
         self.note(f"start `{key}`: `{cmd}` (log `logs/{key}.log`)")
         if uses == "sudo":
-            # sudo asks for the password in the terminal it opens
             script = RUNS / "logs" / f"{key}.sh"
             script.write_text(f"#!/bin/bash\ncd {shlex.quote(str(TUP))}\nsudo -v\n"
                               f"( {cmd} ) 2>&1 | tee -a {shlex.quote(str(log))}\nread -p 'Enter to close'\n")
             script.chmod(0o755)
-            term = "ptyxis" if subprocess.run(["which", "ptyxis"], capture_output=True).returncode == 0 else "x-terminal-emulator"
+            term = "ptyxis" if subprocess.run(["which", "ptyxis"], capture_output=True).returncode == 0 \
+                else "x-terminal-emulator"
             subprocess.Popen([term, "-x", str(script)] if term == "ptyxis" else [term, "-e", str(script)])
             self.step_hint.configure(text=f"{title} opened in a terminal.", fg=MUTED)
             return
         out = open(log, "a")
         out.write(f"\n### {time.strftime('%Y-%m-%d %H:%M:%S')} {cmd}\n")
         out.flush()
-        self.jobs[key] = subprocess.Popen(["bash", "-lc", cmd], cwd=TUP, stdout=out, stderr=subprocess.STDOUT,
-                                          stdin=subprocess.DEVNULL, start_new_session=True,
-                                          env=dict(self.step_env(), T_JOBS="6" if uses == "cpu" and gpu_busy else "12"))
+        gpu_busy = any(u == "gpu" and k in live for k, _t, _w, _c, _ck, u in [s[:6] for s in STEPS])
+        self.jobs[key] = subprocess.Popen(
+            ["bash", "-lc", cmd], cwd=TUP, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+            start_new_session=True,
+            env=dict(self.step_env(), T_JOBS="6" if uses == "cpu" and gpu_busy else "12"))
         self.jobs[key].started = time.time()
         (RUNS / "logs" / f"{key}.pid").write_text(f"{self.jobs[key].pid} {self.jobs[key].started}")
-        if uses == "cpu":
+        self.sel_key = key
+        self.step_hint.configure(text=f"{title} started.", fg=GREEN)
+        if uses == "lab":
             self.show_page("Live checks")
-        self.step_hint.configure(text=f"{title} started.", fg=MUTED)
+        self.refresh_steps(once=True)
 
     def running_steps(self):
         """(key, title, started) for every step with a live process, including ones started before this window."""
@@ -1282,20 +1336,22 @@ class Lab:
                 pass
         return out
 
-    def stop_step(self):
-        st = self.selected_step()
-        if not st or st[0] not in [k for k, *_r in self.running_steps()]:
+    def stop_step(self, key: str):
+        if key not in [k for k, *_r in self.running_steps()]:
+            self.step_hint.configure(text=f"{self.title_of(key)} is not running.", fg=FAINT)
             return
         import signal
-        job = self.jobs.get(st[0])
-        pid = job.pid if job else int((RUNS / "logs" / f"{st[0]}.pid").read_text().split()[0])
+        job = self.jobs.get(key)
+        pid = job.pid if job else int((RUNS / "logs" / f"{key}.pid").read_text().split()[0])
         os.killpg(pid, signal.SIGTERM)
-        self.note(f"stopped `{st[0]}` by hand")
+        self.note(f"stopped `{key}` by hand")
+        self.step_hint.configure(text=f"{self.title_of(key)} stopped.", fg=RED)
 
     def check_steps(self):
         while True:
-            for key, *_r, check, _u in STEPS:
-                ok = subprocess.run(["bash", "-lc", check], cwd=TUP, capture_output=True, env=self.step_env()).returncode == 0
+            for key, _t, _w, _c, check, _u in [s[:6] for s in STEPS]:
+                ok = subprocess.run(["bash", "-lc", check], cwd=TUP, capture_output=True,
+                                    env=self.step_env()).returncode == 0
                 self.step_state[key] = "done" if ok else ""
                 self.step_prog[key] = self.progress_of(key)
             time.sleep(10)
@@ -1307,115 +1363,118 @@ class Lab:
         except OSError:
             return 0
 
-    def progress_of(self, key: str) -> str:
-        """What a step has produced so far, counted from the files themselves: answers written of the problems
-        asked, or answer sets graded of the ones waiting."""
+    def progress_of(self, key: str) -> tuple:
+        """(what it has produced so far, how far along from 0 to 1), counted from the files themselves."""
         heldout = {"phi": ("phi4-mini-v3", 232), "base": ("qwen15b-base-v3", 232),
                    "student": ("student-r4-v3", 232), "locallm": ("locallm-r4", 232)}
         if key in heldout:
             tag, total = heldout[key]
-            return f"{self.answers(tag)} of {total} answers"
+            n = self.answers(tag)
+            return f"{n} of {total} answers", n / total
         if key == "generate":
             per = [self.answers(f"{GEN}{i}") for i in range(1, 9)]
-            whole = sum(1 for n in per if n >= 649)   # a seed is finished when all 649 problems have a reply
-            return ("all 8 seeds written" if whole == 8 else
-                    f"{sum(per)} of {8 * 649} answers, seed {whole + 1}")
+            whole = sum(1 for n in per if n >= 649)
+            total = 8 * 649
+            return (("all 8 seeds written" if whole == 8 else
+                     f"{sum(per)} of {total} answers, seed {whole + 1}"), sum(per) / total)
         if key == "more-problems":
-            he = sum(self.answers(f"{HE}{i}") for i in range(1, 9))
-            ds = sum(self.answers(f"{GEN2_TAG}{i}") for i in (1, 2))
-            return f"{he} of {8 * 88} HumanEval, {ds} of {2 * 737} second model"
+            he, ds = [self.answers(f"{HE}{i}") for i in range(1, 9)], [self.answers(f"{GEN2_TAG}{i}") for i in (1, 2)]
+            total = 8 * 88 + 2 * 737
+            return (f"{sum(he)} of {8 * 88} HumanEval, {sum(ds)} of {2 * 737} second model",
+                    (sum(he) + sum(ds)) / total)
         if key in ("repair", "repair-growth"):
             tags = QWEN_FIX.split() if key == "repair" else GROWTH_FIX.split()
-            return f"{sum(self.answers(t) for t in tags)} answers repaired"
-        graded = {"grade": QWEN_FIX.split(), "grade-repair": QWEN_FIX.split(),
+            n = sum(self.answers(t) for t in tags)
+            return f"{n} answers repaired", (1.0 if self.step_state.get(key) == "done" else None) if not n else None
+        graded = {"grade": [f"{GEN}{i}" for i in range(1, 9)], "grade-repair": QWEN_FIX.split(),
                   "grade-growth": GROWTH_TAGS.split(), "grade-growth-repair": GROWTH_FIX.split(),
                   "grade-heldout": HELDOUT.split()}
-        if key == "grade":
-            tags = [f"{GEN}{i}" for i in range(1, 9)]
-        elif key in graded:
+        if key in graded:
             tags = graded[key]
-        else:
-            return ""
-        done_n = sum(1 for t in tags if (SPEC_EXP / t / "kernels.md").exists())
-        waiting = sum(1 for t in tags if (SPEC_EXP / t / "grade-in").is_dir())
-        return f"{done_n} of {waiting or len(tags)} answer sets"
+            done_n = sum(1 for t in tags if (SPEC_EXP / t / "kernels.md").exists())
+            waiting = sum(1 for t in tags if (SPEC_EXP / t / "grade-in").is_dir()) or len(tags)
+            return f"{done_n} of {waiting} answer sets", done_n / waiting
+        return "", None
 
-    def refresh_steps(self):
+    def refresh_steps(self, once: bool = False):
         live = {k: (t, st) for k, t, st in self.running_steps()}
         finished = 0
         for key, title, *_r in STEPS:
-            job, state, tag = self.jobs.get(key), self.step_state.get(key, ""), "muted"
+            b = self.boxes.get(key)
+            if b is None:
+                continue
+            job, state, color = self.jobs.get(key), self.step_state.get(key, ""), FAINT
             if key in live:
-                state, tag = f"running {int(time.time() - live[key][1]) // 60} min", "blue"
+                state, color = f"running {int(time.time() - live[key][1]) // 60} min", GREEN
             elif job and not getattr(job, "noted", False):
                 job.noted = True
-                mins = int(time.time() - job.started) // 60
-                self.note(f"end `{key}`: exit {job.returncode} after {mins} min")
-                if job.returncode:
-                    state, tag = f"failed ({job.returncode})", "red"
-            elif job and job.returncode:
-                state, tag = f"failed ({job.returncode})", "red"
+                self.note(f"end `{key}`: exit {job.returncode} after {int(time.time() - job.started) // 60} min")
             if state == "done":
-                tag = "green"
-            vals = list(self.steps.item(key, "values"))
-            vals[0], vals[2] = state or "not yet", self.step_prog.get(key, "")
-            self.steps.item(key, values=vals, tags=(tag,))
-            # a finished step is out of the way unless asked for: what is left to do is the useful list
-            hide = state == "done" and key not in live and not self.show_done.get()
-            finished += state == "done"
-            if hide and self.steps.exists(key):
-                self.steps.detach(key)
-            elif not hide:
-                order = [k for k, *_x in STEPS]
-                self.steps.move(key, "", order.index(key))
-        self.step_hint.configure(text=(f"{finished} of {len(STEPS)} steps finished and hidden; the chip shows them"
-                                       if finished and not self.show_done.get() else
-                                       f"{finished} of {len(STEPS)} steps finished"), fg=FAINT)
+                state, color, finished = "done", GREEN, finished + 1
+            elif job is not None and job.poll() not in (None, 0) and key not in live:
+                state, color = f"failed ({job.returncode})", RED
+            prog, frac = self.step_prog.get(key, ("", None))
+            if state == "done" and frac is None:
+                frac = 1.0
+            b["state"].configure(text=state or "not yet", fg=color)
+            b["prog"].configure(text=(f"{prog}   {frac * 100:.0f}%" if frac is not None and prog else
+                                      prog or (f"{frac * 100:.0f}%" if frac is not None else "")))
+            bar, w = b["bar"], max(1, b["bar"].winfo_width())
+            bar.delete("all")
+            if frac is not None:
+                bar.create_rectangle(0, 0, int(w * min(1.0, max(0.0, frac))), 8,
+                                     fill=GREEN if key in live or state == "done" else BLUE, width=0)
+            running = key in live
+            b["edge"].configure(bg=GREEN if running else (LINE if state != "done" else GREEN_DIM))
+            bg = GREEN_DIM if running else CARD
+            b["box"].configure(highlightbackground=GREEN if running else
+                               (BLUE if key == self.sel_key else LINE))
+            for w2 in b["paint"]:
+                w2.configure(bg=bg)
+            hide = state == "done" and not running and not self.show_done.get()
+            if hide:
+                b["box"].pack_forget()
+            elif not b["box"].winfo_ismapped():
+                b["box"].pack(fill="x", pady=(0, 8))
+        self.step_hint.configure(
+            text=(f"{finished} of {len(STEPS)} steps finished and hidden" if finished and not self.show_done.get()
+                  else f"{finished} of {len(STEPS)} steps finished"), fg=FAINT)
         if live:
             names = ", ".join(f"{t} ({int(time.time() - st) // 60} min)" for t, st in live.values())
             self.run_line.configure(text=f"Data run:  {names}")
-            shown = next((k for k in ("grade", "grade-heldout", "matrix", "generate") if k in live), next(iter(live)))
-            self.run_line.configure(text=f"Data run:  {names}")
+            shown = next((k for k in ("grade", "grade-repair", "grade-growth", "grade-growth-repair",
+                                      "grade-heldout", "matrix", "phi", "base", "student", "locallm", "repair",
+                                      "more-problems", "generate") if k in live), next(iter(live)))
             try:
                 last = [l for l in (RUNS / "logs" / f"{shown}.log").read_text(errors="replace")
                         .replace("\r", "\n").splitlines() if l.strip()][-1]
             except (OSError, IndexError):
                 last = ""
-            shown = next((k for k in ("grade", "grade-repair", "grade-growth", "grade-growth-repair", "grade-heldout",
-                                      "matrix", "phi", "base", "student", "locallm", "repair", "more-problems",
-                                      "generate") if k in live), next(iter(live)))
             self.draw_progress(shown, live[shown][1], last)
         else:
-            self.run_bar.delete("all")
             self.run_line.configure(text="Data run:  nothing running")
             self.run_tail.configure(text="")
-        if str(self.root.focus_get() or "") != str(self.log_text):
-            self.show_log()
-        self.root.after(2000, self.refresh_steps)
+            self.run_bar.delete("all")
+        if not once:
+            self.root.after(2000, self.refresh_steps)
 
     def draw_progress(self, key, started, last):
-        """Checks finished in the current answer set out of its tasks x 7 kernels: the task count from the step's
-        log (grade_lab.sh prints '== <tag>: N tasks'), the finished checks from live events since the step started,
-        less the checks of answer sets this run already brought back."""
-        text, frac = last[:140], None
-        prog = self.step_prog.get(key, "")
-        m_ans = re.match(r"(\d+) of (\d+) answers", prog)
-        if m_ans:                            # a generation step: answers written of problems asked
-            a, b = int(m_ans.group(1)), int(m_ans.group(2))
-            self.run_tail.configure(text=f"{dict(STEPS_TITLE).get(key, key)}: {prog}    {last[:70]}")
-            self.run_bar.delete("all")
-            self.run_bar.create_rectangle(0, 0, int(260 * min(1.0, a / b if b else 0)), 10, fill=GREEN, width=0)
-            return
-        try:
-            lines = (RUNS / "logs" / f"{key}.log").read_text(errors="replace").splitlines()
-            for line in reversed(lines):
-                m = re.match(r"== (\S+): (\d+) tasks", line)
-                if m:
+        """The Live checks strip: the running step's own count when it has one, else checks finished of the
+        answer set being graded (the log's '== <tag>: N tasks' line), less the sets already brought back."""
+        prog, frac = self.step_prog.get(key, ("", None))
+        text = f"{self.title_of(key)}: {prog}    {last[:70]}" if prog else last[:140]
+        if frac is None:
+            try:
+                lines = (RUNS / "logs" / f"{key}.log").read_text(errors="replace").splitlines()
+                for line in reversed(lines):
+                    m = re.match(r"== (\S+): (\d+) tasks", line)
+                    if not m:
+                        continue
                     total = int(m.group(2)) * len(KERNELS)
                     run = lines[max(i for i, l in enumerate(lines) if l.startswith("###")):]
-                    earlier = sum(int(n) * len(KERNELS) for tag, n in re.findall(r"== (\S+): (\d+) tasks", "\n".join(run))
+                    earlier = sum(int(n) * len(KERNELS)
+                                  for tag, n in re.findall(r"== (\S+): (\d+) tasks", "\n".join(run))
                                   if f"== {tag}: kernels.md back" in run)
-                    # only this answer set's own tasks: another job (the committed matrix) may be checking too
                     try:
                         mine = {q.stem for q in (SPEC_EXP / m.group(1) / "grade-in").glob("*.json")}
                     except OSError:
@@ -1424,24 +1483,21 @@ class Lab:
                     done = max(0, done - earlier)
                     frac = min(1.0, done / total) if total else None
                     text = (f"{m.group(1)}: {done} of {total} checks" if done else
-                            f"{m.group(1)}: translating {m.group(2)} tasks for the seven checkers, checks start after")
+                            f"{m.group(1)}: translating {m.group(2)} tasks for the seven checkers")
                     break
-        except OSError:
-            pass
+            except OSError:
+                pass
         self.run_tail.configure(text=text)
         self.run_bar.delete("all")
         if frac is not None:
             self.run_bar.create_rectangle(0, 0, int(260 * frac), 10, fill=GREEN, width=0)
 
     def show_log(self):
-        st = self.selected_step()
-        if not st:
-            return
-        log = RUNS / "logs" / f"{st[0]}.log"
+        log = RUNS / "logs" / f"{self.sel_key}.log"
         try:
             tail = "".join(log.read_text(errors="replace").replace("\r", "\n").splitlines(True)[-60:])
         except OSError:
-            tail = "No log yet. Press Run."
+            tail = "No log yet. Press Run on this step."
         self.log_text.delete("1.0", "end")
         self.log_text.insert("end", tail)
         self.log_text.see("end")
