@@ -262,7 +262,9 @@ def act(action: str, why: str, model: str, dry: bool, attempts: dict, restarts: 
         return
     if action == "start-ollama":
         if not dry:
-            start_step("ollama-serve", dry)
+            if sh("systemctl --user list-unit-files t-ollama.service >/dev/null 2>&1 && "
+                  "systemctl --user start t-ollama").returncode != 0:
+                start_step("ollama-serve", dry)
             for _ in range(24):
                 time.sleep(5)
                 if sh("curl -sf http://127.0.0.1:11434/ >/dev/null").returncode == 0:
@@ -271,6 +273,7 @@ def act(action: str, why: str, model: str, dry: bool, attempts: dict, restarts: 
         return
     if action == "stop-ollama":
         if not dry:
+            sh("systemctl --user stop t-ollama 2>/dev/null")     # the service, when Ollama runs as one
             pid = pid_of("ollama-serve")
             if pid:
                 os.killpg(pid, signal.SIGTERM)
