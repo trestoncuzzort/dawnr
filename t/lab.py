@@ -1552,10 +1552,23 @@ class Lab:
         if frac is not None:
             self.run_bar.create_rectangle(0, 0, int(260 * frac), 10, fill=GREEN, width=0)
 
+    ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b[()][A-B0-9]")
+
     def show_log(self):
         log = RUNS / "logs" / f"{self.sel_key}.log"
         try:
-            tail = "".join(log.read_text(errors="replace").replace("\r", "\n").splitlines(True)[-200:])
+            text = self.ANSI.sub("", log.read_text(errors="replace"))
+            # a download's progress bar redraws one line with carriage returns: keep what it ended up saying
+            lines = [l.split("\r")[-1].rstrip() for l in text.splitlines()]
+            keep, last = [], None
+            for l in lines:
+                head = l.split(":")[0][:40]
+                if l.strip() and head == last and "%" in l:      # the same bar, drawn again
+                    keep[-1] = l
+                    continue
+                keep.append(l)
+                last = head if "%" in l else None
+            tail = "\n".join(keep[-200:])
         except OSError:
             tail = "No log yet. Press Run on this step."
         if self.log_text.get("1.0", "end").strip() == tail.strip():
