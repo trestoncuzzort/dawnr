@@ -92,12 +92,17 @@ def log_age(key: str) -> float | None:
 
 
 def pid_of(key: str) -> int | None:
+    """The step's live process, or None. The pid file alone is not enough: a dead step's number can belong to
+    something else by now, and a step that looked alive was never run again (2026-09-17)."""
     try:
         pid = int((LOGS / f"{key}.pid").read_text().split()[0])
         os.kill(pid, 0)
-        return pid
+        cmd = Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="replace").replace("\0", " ")
     except (OSError, ValueError, IndexError):
         return None
+    want = next((s[3] for s in STEPS if s[0] == key), "")
+    first = next((w for w in want.split() if "/" in w or w.endswith(".py") or w.endswith(".sh")), "")
+    return pid if (first and first in cmd) or key in cmd else None
 
 
 def done(key: str, check: str) -> bool:
@@ -135,24 +140,26 @@ def state() -> tuple[dict, list[dict]]:
 def candidates(m: dict, steps: list[dict], attempts: dict) -> list[dict]:
     """Every action that is legal right now, most useful first. The model chooses from this and nothing else."""
     out = []
-    busy = {s["uses"] for s in steps if s["running"]}
+    # Ollama's server and the orchestrator are not work: they hold no resource and idleness is not "busy"
+    working = [s for s in steps if s["running"] and s["step"] not in ("ollama-serve", "run-all")]
+    busy = {s["uses"] for s in working}
     if m["orchestrator"] == "active" or m["handover"] == "active":
         out.append({"action": "wait", "why": "the orchestrator is driving the run"})
         return out
     if m["lab"] == "down":
         out.append({"action": "vpn-connect", "why": "the lab workstation is unreachable, so no grading can run"})
     # a step that claims to be running but has produced nothing for half an hour: say so rather than wait forever
-    for s in steps:
-        if s["running"] and s["step"] not in ("run-all", "ollama-serve"):
+    for s in working:
+        if True:
             age = log_age(s["step"])
             if age is not None and age > 1800:
                 out.append({"action": f"alert-stall:{s['step']}",
                             "why": f"{s['title']} has been running with nothing written to its log for "
                                    f"{int(age // 60)} minutes"})
-    if not any(s["running"] for s in steps) and not all(s["done"] for s in steps):
+    if not working and not all(s["done"] for s in steps):
         out.append({"action": "restart-orchestrator",
                     "why": "nothing is running and the run is unfinished, so the orchestrator should drive again"})
-    stale = [p for p in SPEC_EXP.glob("*/.grading") if not any(s["running"] for s in steps if "grade" in s["step"])]
+    stale = [p for p in SPEC_EXP.glob("*/.grading") if not any("grade" in s["step"] for s in working)]
     if stale:
         out.append({"action": "clear-claims", "why": f"{len(stale)} answer set(s) marked as being graded with no grader running"})
     state_by_key = {s["step"]: s for s in steps}
@@ -199,7 +206,7 @@ def ask_model(model: str, m: dict, steps: list[dict], cands: list[dict]) -> tupl
     user = json.dumps({"machine": m, "steps": steps, "legal_actions": [c["action"] for c in cands],
                        "notes": [c["why"] for c in cands]}, indent=1)[:12000]
     body = {"model": model, "stream": False, "format": "json", "keep_alive": "30s",
-            "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 200},
+            "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 200, "num_gpu": 0},
             "messages": [{"role": "system", "content": sys_msg}, {"role": "user", "content": user}]}
     try:
         req = urllib.request.Request("http://127.0.0.1:11434/api/chat", data=json.dumps(body).encode(),
@@ -219,7 +226,7 @@ def ask_model(model: str, m: dict, steps: list[dict], cands: list[dict]) -> tupl
 def read_failure(model: str, step: str) -> str:
     """A plain-language reading of a failing step's log, for ALERTS.md. Never a command to run."""
     body = {"model": model, "stream": False, "keep_alive": "30s",
-            "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 300},
+            "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 300, "num_gpu": 0},
             "messages": [{"role": "system", "content":
                           "You read one failing log from a data pipeline. In at most four sentences: what failed, "
                           "the most likely cause, and what a person should check. No commands, no guessing at "
@@ -335,7 +342,8 @@ def main() -> int:
         cands = candidates(m, steps, attempts)
         action, why = ask_model(a.model, m, steps, cands) if m["ollama"] == "up" else ("", "")
         # the model may not choose idleness while the machine is idle and something is ready to run
-        if action == "wait" and len(cands) > 1 and not any(s["running"] for s in steps):
+        idle = not [s for s in steps if s["running"] and s["step"] not in ("ollama-serve", "run-all")]
+        if action == "wait" and len(cands) > 1 and idle:
             log("model chose to wait with the machine idle; taking the first candidate instead")
             action = ""
         if not action:

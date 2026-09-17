@@ -1346,10 +1346,14 @@ class Lab:
                 if job.poll() is None:
                     out.append((key, title, job.started))
                 continue
-            try:
+            try:                     # the pid file alone lies: a dead step's number may belong to something else
                 pid, started = (RUNS / "logs" / f"{key}.pid").read_text().split()
                 os.kill(int(pid), 0)
-                out.append((key, title, float(started)))
+                cmd = Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="replace").replace("\0", " ")
+                want = next((s[3] for s in STEPS if s[0] == key), "")
+                first = next((w for w in want.split() if "/" in w or w.endswith(".py") or w.endswith(".sh")), "")
+                if (first and first in cmd) or key in cmd:
+                    out.append((key, title, float(started)))
             except (OSError, ValueError):
                 pass
         return out
