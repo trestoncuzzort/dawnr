@@ -58,6 +58,85 @@ KERNEL_PATH = os.pathsep.join(str(Path.home() / p) for p in (
     ".cargo/bin", ".opam/default/bin", ".elan/bin", ".local/fstar/fstar/bin",
     ".local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin", ".local/verus/verus-x86-linux"))
 
+# the data run of internal/HANDOFF-2026-09-17-rtx4080.md, one button per step; commands run from the repo root
+PY = "~/.venv-t/bin/python"
+SE = "t/out/spec-experiment"
+GEN = "qwen2.5-coder-14b-v3-s"
+HELDOUT = "phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4"
+POOL_TAGS = "qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 " + " ".join(f"{GEN}{i}" for i in range(1, 9))
+EVAL = "--pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt"
+# (key, title, what it does and what good looks like, command, done when this succeeds, uses: gpu/cpu/sudo/"")
+STEPS = [
+    ("packages", "Python packages", "Installs the training libraries into ~/.venv-t.",
+     f"{PY} -m pip install transformers peft trl datasets accelerate bitsandbytes safetensors",
+     f"{PY} -c 'import transformers, peft, trl, datasets, accelerate, bitsandbytes'", ""),
+    ("data", "Committed data", "Copies the 2026-09-16 answers and split into t/out. Good: the score table's clean "
+     "column reads 12 and 0.",
+     "mkdir -p t/out/spec-experiment t/out/loop && cp -r t/runs/2026-09-16/27b-answers/* t/out/spec-experiment/ && "
+     "cp -r t/runs/2026-09-16/heldout-locallm-r0 t/out/spec-experiment/locallm-r0 && "
+     "cp t/runs/2026-09-16/loop-data/{split-v3.json,sft-r3-27b.jsonl,pairs-r3-27b.jsonl} t/out/loop/ && "
+     "python3 -c \"import json; print('\\n'.join(map(str, json.load(open('t/out/loop/split-v3.json'))['eval_ids'])))\" "
+     "> t/out/loop/eval-ids.txt && python3 t/score_heldout.py qwen3.8-27b-fp8-v3 locallm-r0 && "
+     "for T in qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2; do python3 t/pool_pick.py t/out/spec-experiment/$T; done",
+     "test -s t/out/loop/eval-ids.txt && test -s t/out/pool-keys.txt", ""),
+    ("ollama-install", "Install Ollama", "Opens a terminal because it asks for your password. Turns off Ollama's own "
+     "service afterwards so the next step owns the port.",
+     "curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama",
+     "command -v ollama", "sudo"),
+    ("ollama-serve", "Start Ollama", "Keeps running in the background, also after this window closes. Models live in "
+     "/data/ollama.", "OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 exec ollama serve",
+     "curl -sf http://127.0.0.1:11434/ >/dev/null", ""),
+    ("pull", "Download qwen2.5-coder:14b", "About 9 GB. Needs Ollama started.", "ollama pull qwen2.5-coder:14b",
+     "ollama list 2>/dev/null | grep -q 'qwen2.5-coder:14b'", ""),
+    ("generate", "Write answers, 8 seeds", "Hours. Seed 1 at temperature 0, seeds 2 to 8 at 0.7. A finished seed is "
+     "skipped, so Stop and Run again resumes. Good: each seed puts tasks in grade-in/.",
+     f"for S in 1 2 3 4 5 6 7 8; do T={GEN}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
+     "echo \"== seed $S\"; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v3 --prompt v3 "
+     "--seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && "
+     "python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && "
+     "python3 t/pool_pick.py $D && ls $D/grade-in | wc -l || exit 1; done",
+     f"for S in 1 2 3 4 5 6 7 8; do [ -d {SE}/{GEN}$S/grade-in ] || exit 1; done", "gpu"),
+    ("matrix", "Check the checkers", "Install the seven first (t/RUN-ON-LINUX.md; Antigravity can do it). Good: 30 of 34 "
+     "in all seven, as in t/AGREEMENT.md. Watch it on Live checks.",
+     "python3 t/run_par.py --jobs 12 --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md",
+     "test -s t/out/AGREEMENT-home.md", "cpu"),
+    ("grade", "Grade the answers", "Runs the seven checkers on every seed's grade-in/. Skips seeds already graded.",
+     f"for S in 1 2 3 4 5 6 7 8; do D={SE}/{GEN}$S; [ -d $D/grade-in ] || continue; [ -s $D/kernels.md ] && continue; "
+     "echo \"== seed $S\"; python3 t/run_par.py --jobs 12 --tasks $D/grade-in --out $D/kernels --table $D/kernels.md || exit 1; done",
+     f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "cpu"),
+    ("pool", "Build the clean pool", "Keeps answers that pass tests and all seven. Good: sft-r4.jsonl is much bigger "
+     "than the 47 problems of r3.",
+     f"python3 t/loop_dataset.py --from-samples {POOL_TAGS} --split t/out/loop/split-v3.json --min-kernels 7 "
+     "--out-suffix r4 && wc -l t/out/loop/sft-r4.jsonl t/out/loop/pairs-r4.jsonl",
+     "test -s t/out/loop/sft-r4.jsonl", ""),
+    ("phi", "Phi-4-mini answers", "The model to beat, in bf16, on the 232 held-out problems. If it fails, go back to "
+     "Claude before using a 4-bit Phi.",
+     f"{PY} t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-v3 {EVAL} --max-new 3072",
+     f"test $(ls {SE}/phi4-mini-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("base", "Small base answers", "The untrained 1.5B, the starting point of the student.",
+     f"{PY} t/loop_generate.py --adapter none --tag qwen15b-base-v3 {EVAL}",
+     f"test $(ls {SE}/qwen15b-base-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("train", "Train the student", "The 1.5B trained on the clean pool.",
+     f"{PY} t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --out t/out/loop/adapter-r4",
+     "test -d t/out/loop/adapter-r4", "gpu"),
+    ("student", "Student answers", "", f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-v3 {EVAL}",
+     f"test $(ls {SE}/student-r4-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("locallm", "Build a locallm model", "From scratch, on the clean pool, then its held-out answers.",
+     "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl "
+     f"--out t/out/loop-locallm/corpus-r4.txt && {PY} t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt "
+     f"--model t/out/loop-locallm/model-r4 && {PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
+     f"test -d {SE}/locallm-r4/raw", "gpu"),
+    ("grade-heldout", "Grade held-out answers", "Every extracted task this time, so proven but wrong can be counted.",
+     f"for T in {HELDOUT}; do D={SE}/$T; [ -s $D/kernels.md ] && continue; echo \"== $T\"; "
+     "python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && "
+     "python3 t/run_par.py --jobs 12 --tasks $D/tasks --out $D/kernels --table $D/kernels.md || exit 1; done",
+     f"for T in {HELDOUT}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "cpu"),
+    ("score", "Score against Phi", "The result. Saved to t/out/score-r4.md. Take it to Claude.",
+     f"python3 t/score_heldout.py qwen3.8-27b-fp8-v3 {HELDOUT} locallm-r0 | tee t/out/score-r4.md",
+     "test -s t/out/score-r4.md", ""),
+]
+RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")
+
 # dark palette: three accents, everything else greys
 BG, SURFACE, CARD, LINE = "#0b0e14", "#121620", "#181d29", "#262d3d"
 TEXT, MUTED, FAINT = "#e7eaf0", "#98a2b3", "#5d6678"
@@ -307,7 +386,7 @@ class Lab:
         self.pages, self.tab_buttons = {}, {}
         body = tk.Frame(root, bg=BG)
         body.pack(fill="both", expand=True, padx=22, pady=(0, 18))
-        for name in ("Live checks", "Test a model"):
+        for name in ("Live checks", "Test a model", "Collect data"):
             b = tk.Label(tabs, text=name, cursor="hand2", padx=18, pady=7, font=self.f_bold)
             b.pack(side="left", padx=(0, 8))
             b.bind("<Button-1>", lambda _e, n=name: self.show_page(n))
@@ -317,6 +396,7 @@ class Lab:
         Button(self.follow_btn_parent, "Follow a loop run", self.follow_loop, BLUE, self,
                filled=False).pack(side="right", padx=(0, 16))
         self.build_test(self.pages["Test a model"])
+        self.build_collect(self.pages["Collect data"])
         self.show_page("Live checks")
         root.after(300, self.poll_events)
         root.after(1000, self.tick)
@@ -822,6 +902,123 @@ class Lab:
         values = (label, i + 1, mark(r["parse"]), mark(r["wf"]), mark(r["novel"]), *cells, mark(r["custom"]),
                   mark(self.passes(r, s)))
         self.q.put(("row", (name, values, text, self.passes(r, s))))
+
+    # -- Collect data ----------------------------------------------------------------
+    def build_collect(self, page):
+        self.jobs: dict[str, subprocess.Popen] = {}
+        self.step_state: dict[str, str] = {}
+        (RUNS / "logs").mkdir(parents=True, exist_ok=True)
+        c = self.card(page, "Collect data", "one step at a time, top to bottom; logs and notes go to " +
+                      str(RUNS.relative_to(TUP)))
+        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
+            "Each step runs in the background and keeps going if this window closes. A step reads done when its "
+            "output exists. With 14 GB of memory, run one gpu step at a time and keep cpu steps apart from them.")
+                 ).pack(fill="x", pady=(0, 8))
+        self.steps = self.table(c, [("state", "State", 110), ("step", "Step", 230), ("uses", "Uses", 60),
+                                    ("what", "What it does", 800)], 9)
+        for i, (key, title, what, _cmd, _check, uses) in enumerate(STEPS, 1):
+            self.steps.insert("", "end", iid=key, values=("", f"{i}. {title}", uses, what))
+        self.steps.bind("<<TreeviewSelect>>", lambda _e: self.show_log())
+        row = tk.Frame(c, bg=CARD)
+        row.pack(fill="x", pady=8)
+        Button(row, "Run", self.run_step, GREEN, self).pack(side="left")
+        Button(row, "Stop", self.stop_step, RED, self, filled=False).pack(side="left", padx=8)
+        Button(row, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
+               filled=False).pack(side="left")
+        self.step_hint = tk.Label(row, text="Pick a step.", bg=CARD, fg=FAINT, font=self.f_small)
+        self.step_hint.pack(side="left", padx=12)
+        c = self.card(page, "Output", "last lines of the chosen step's log", fill="both", expand=True)
+        self.log_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="none")
+        self.log_text.pack(fill="both", expand=True)
+        threading.Thread(target=self.check_steps, daemon=True).start()
+        self.root.after(1000, self.refresh_steps)
+
+    def selected_step(self):
+        sel = self.steps.selection()
+        return next((st for st in STEPS if sel and st[0] == sel[0]), None)
+
+    def step_env(self):
+        return dict(os.environ, PATH=KERNEL_PATH + os.pathsep + os.environ.get("PATH", ""), T_WATCH=str(EVENTS))
+
+    def note(self, line):
+        with open(RUNS / "NOTES-home.md", "a") as f:
+            f.write(f"- {time.strftime('%Y-%m-%d %H:%M')} {line}\n")
+
+    def run_step(self):
+        st = self.selected_step()
+        if not st:
+            return
+        key, title, _what, cmd, _check, uses = st
+        if key in self.jobs and self.jobs[key].poll() is None:
+            self.step_hint.configure(text=f"{title} is already running.", fg=RED)
+            return
+        busy = [t for k, t, *_r, u in STEPS if u in ("gpu", "cpu") and k in self.jobs and self.jobs[k].poll() is None]
+        if uses in ("gpu", "cpu") and busy:
+            self.step_hint.configure(text=f"Wait: {', '.join(busy)} is running and memory is tight.", fg=RED)
+            return
+        log = RUNS / "logs" / f"{key}.log"
+        self.note(f"start `{key}`: `{cmd}` (log `logs/{key}.log`)")
+        if uses == "sudo":
+            term = "ptyxis" if subprocess.run(["which", "ptyxis"], capture_output=True).returncode == 0 else "x-terminal-emulator"
+            wrapped = f"cd {shlex.quote(str(TUP))} && ( {cmd} ) 2>&1 | tee -a {shlex.quote(str(log))}; read -p 'Enter to close'"
+            subprocess.Popen([term, "-x", "bash", "-lc", wrapped] if term == "ptyxis" else [term, "-e", "bash", "-lc", wrapped])
+            self.step_hint.configure(text=f"{title} opened in a terminal.", fg=MUTED)
+            return
+        out = open(log, "a")
+        out.write(f"\n### {time.strftime('%Y-%m-%d %H:%M:%S')} {cmd}\n")
+        out.flush()
+        self.jobs[key] = subprocess.Popen(["bash", "-lc", cmd], cwd=TUP, stdout=out, stderr=subprocess.STDOUT,
+                                          stdin=subprocess.DEVNULL, env=self.step_env(), start_new_session=True)
+        self.jobs[key].started = time.time()
+        self.step_hint.configure(text=f"{title} started.", fg=MUTED)
+
+    def stop_step(self):
+        st = self.selected_step()
+        job = st and self.jobs.get(st[0])
+        if job and job.poll() is None:
+            import signal
+            os.killpg(job.pid, signal.SIGTERM)
+            self.note(f"stopped `{st[0]}` by hand")
+
+    def check_steps(self):
+        while True:
+            for key, *_r, check, _u in STEPS:
+                ok = subprocess.run(["bash", "-lc", check], cwd=TUP, capture_output=True, env=self.step_env()).returncode == 0
+                self.step_state[key] = "done" if ok else ""
+            time.sleep(10)
+
+    def refresh_steps(self):
+        for key, title, *_r in STEPS:
+            job, state, tag = self.jobs.get(key), self.step_state.get(key, ""), "muted"
+            if job and job.poll() is None:
+                state, tag = f"running {int(time.time() - job.started) // 60} min", "blue"
+            elif job and not getattr(job, "noted", False):
+                job.noted = True
+                mins = int(time.time() - job.started) // 60
+                self.note(f"end `{key}`: exit {job.returncode} after {mins} min")
+                if job.returncode:
+                    state, tag = f"failed ({job.returncode})", "red"
+            elif job and job.returncode:
+                state, tag = f"failed ({job.returncode})", "red"
+            if state == "done":
+                tag = "green"
+            self.steps.item(key, values=(state or "not yet", *self.steps.item(key, "values")[1:]), tags=(tag,))
+        if str(self.root.focus_get() or "") != str(self.log_text):
+            self.show_log()
+        self.root.after(2000, self.refresh_steps)
+
+    def show_log(self):
+        st = self.selected_step()
+        if not st:
+            return
+        log = RUNS / "logs" / f"{st[0]}.log"
+        try:
+            tail = "".join(log.read_text(errors="replace").replace("\r", "\n").splitlines(True)[-60:])
+        except OSError:
+            tail = "No log yet. Press Run."
+        self.log_text.delete("1.0", "end")
+        self.log_text.insert("end", tail)
+        self.log_text.see("end")
 
 
 def main() -> int:
