@@ -121,8 +121,8 @@ STEPS = [
      "keep the signature and requires. New answer sets <seed>-fix1.",
      f"for T in {QWEN_FIX}; do S=${{T%-fix1}}; [ -d {SE}/$T/grade-in ] && continue; [ -s {SE}/$S/kernels.md ] || continue; "
      f"python3 t/repair.py {SE}/$S || exit 1; done",
-     f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || continue; "
-     f"[ -d {SE}/{GEN}$S-fix1/grade-in ] || exit 1; done", "gpu"),
+     f"n=0; for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || continue; n=$((n+1)); "
+     f"[ -d {SE}/{GEN}$S-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]", "gpu"),
     ("grade-repair", "Grade the repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {QWEN_FIX}",
      f"for T in {QWEN_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("more-problems", "New problems and a second model", "Needs Ollama started. The 88 HumanEval problems of pool v4 "
@@ -143,8 +143,8 @@ STEPS = [
     ("repair-growth", "Repair those too", "Needs Ollama started. One repair round on the new answer sets.",
      f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T-fix1/grade-in ] && continue; [ -s {SE}/$T/kernels.md ] || continue; "
      f"python3 t/repair.py {SE}/$T || exit 1; done",
-     f"for T in {GROWTH_TAGS}; do [ -s {SE}/$T/kernels.md ] || continue; "
-     f"[ -d {SE}/$T-fix1/grade-in ] || exit 1; done", "gpu"),
+     f"n=0; for T in {GROWTH_TAGS}; do [ -s {SE}/$T/kernels.md ] || continue; n=$((n+1)); "
+     f"[ -d {SE}/$T-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]", "gpu"),
     ("grade-growth-repair", "Grade those repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_FIX}",
      f"for T in {GROWTH_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("pool", "Build the clean pool", "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out "

@@ -68,7 +68,7 @@
   "Repair the proofs",
   "Needs Ollama started. Sends each answer that passes its tests but is not clean back to the model with the checkers' verdicts (t/repair.py): proof repairs keep the specification, spec repairs keep the signature and requires. New answer sets <seed>-fix1.",
   "for T in qwen2.5-coder-14b-v3-s1-fix1 qwen2.5-coder-14b-v3-s2-fix1 qwen2.5-coder-14b-v3-s3-fix1 qwen2.5-coder-14b-v3-s4-fix1 qwen2.5-coder-14b-v3-s5-fix1 qwen2.5-coder-14b-v3-s6-fix1 qwen2.5-coder-14b-v3-s7-fix1 qwen2.5-coder-14b-v3-s8-fix1; do S=${T%-fix1}; [ -d t/out/spec-experiment/$T/grade-in ] && continue; [ -s t/out/spec-experiment/$S/kernels.md ] || continue; python3 t/repair.py t/out/spec-experiment/$S || exit 1; done",
-  "for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || continue; [ -d t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S-fix1/grade-in ] || exit 1; done",
+  "n=0; for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || continue; n=$((n+1)); [ -d t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]",
   "gpu"
  ],
  [
@@ -100,7 +100,7 @@
   "Repair those too",
   "Needs Ollama started. One repair round on the new answer sets.",
   "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -d t/out/spec-experiment/$T-fix1/grade-in ] && continue; [ -s t/out/spec-experiment/$T/kernels.md ] || continue; python3 t/repair.py t/out/spec-experiment/$T || exit 1; done",
-  "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -s t/out/spec-experiment/$T/kernels.md ] || continue; [ -d t/out/spec-experiment/$T-fix1/grade-in ] || exit 1; done",
+  "n=0; for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -s t/out/spec-experiment/$T/kernels.md ] || continue; n=$((n+1)); [ -d t/out/spec-experiment/$T-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]",
   "gpu"
  ],
  [
