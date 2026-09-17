@@ -213,6 +213,7 @@ def load_steps() -> list:
 
 
 SPEC_EXP = HERE / "out" / "spec-experiment"
+GEOMETRY = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "t-lab" / "geometry"
 STEPS = load_steps()
 STEPS_TITLE = [(s[0], s[1]) for s in STEPS]
 
@@ -1059,6 +1060,17 @@ class Lab:
         self.show_log()
         self.refresh_steps(once=True)
 
+    def restart_app(self):
+        """Reload t lab's own code in place, keeping the window where it is: the geometry is written to
+        GEOMETRY and read back on start, so a refresh after an edit costs no repositioning."""
+        try:
+            GEOMETRY.parent.mkdir(parents=True, exist_ok=True)
+            GEOMETRY.write_text(self.root.winfo_geometry())
+        except OSError:
+            pass
+        self.root.destroy()
+        os.execv(sys.executable, [sys.executable, str(HERE / "lab.py")])
+
     def build_collect(self, page):
         self.jobs: dict[str, subprocess.Popen] = {}
         self.step_state: dict[str, str] = {}
@@ -1074,6 +1086,7 @@ class Lab:
         Button(head, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
                filled=False).pack(side="right")
         Button(head, "Reload steps", self.reload_steps, BLUE, self, filled=False).pack(side="right", padx=8)
+        Button(head, "Refresh t lab", self.restart_app, BLUE, self, filled=False).pack(side="right", padx=8)
         self.show_done = tk.BooleanVar(value=False)
         Chip(head, "Show finished", self.show_done, self, command=lambda: self.refresh_steps(once=True)).pack(
             side="right", padx=8)
@@ -1562,7 +1575,10 @@ def main() -> int:
     root = tk.Tk()
     root.title("t lab")
     w, h = min(1400, root.winfo_screenwidth() - 20), min(900, root.winfo_screenheight() - 60)
-    root.geometry(f"{w}x{h}+10+30")
+    try:                                  # where it was left, so Refresh t lab does not move the window
+        root.geometry(GEOMETRY.read_text().strip())
+    except (OSError, tk.TclError):
+        root.geometry(f"{w}x{h}+10+30")
     root.minsize(1000, 700)
     Lab(root)
     root.mainloop()
