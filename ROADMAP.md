@@ -30,6 +30,7 @@ Two halves. Both must hold before the tag.
 | WS-17 the release | install pages written for three operating systems; second-person clause, the tag, and going public open |
 | WS-18 the training loop | built and measured twice at 1.5B; a local 27B now supplies positives (44 of 368 in all seven with tests passing) |
 | WS-19 the frontier moves | moves 1, 4 and 6 done; move 2 has a local 27B on the lab workstation; 3 and 7 next |
+| WS-20 what caps the corpus | chosen 2026-09-17 from the run's abstains: nested-loop lowering for Lean, Rocq and F\*, then more problem sources, then the twins and witnesses as an artifact; none started |
 
 ## WS-13: the language
 
@@ -88,6 +89,36 @@ Seven moves chosen from a survey of the field ([`t/FRONTIER-2026.md`](t/FRONTIER
 5. **The construct line.** The order of 13.1.
 6. **The twin ladder as a completeness measurement.** Done ([`t/LADDER-COMPLETENESS.md`](t/LADDER-COMPLETENESS.md)).
 7. **The preregistered reward ablation.** Waits: one verifier against seven with a refuted twin, declared before it is run.
+
+## WS-20: what caps the corpus, chosen 2026-09-17
+
+Measured on this day's run: 463 answers passed their tests and 96 were clean in all seven; 10 were blocked only
+by a lowering that cannot express them; 150 carried at least one abstain. The abstains name their reason, and
+the reasons are nested loops (Rocq 37, Lean 37 plus 14 for a second top-level loop, F* 33), a sequence return
+whose length no parameter determines (44), and string-library members not lowered yet. Three moves follow from
+that, in this order.
+
+1. **Nested-loop lowering for Lean, Rocq and F\*.** Until it exists the corpus cannot hold a real algorithm: any
+   program with a loop inside a loop, or two loops in a body, abstains in three of the seven and can never be
+   clean. This caps the corpus's worth more than its volume does, which is why it comes first even though only
+   10 answers today were blocked by an abstain alone: the 96 clean answers are short and loop-shallow *because*
+   nothing else can pass. The work is proof synthesis for nested invariants (an inner loop's invariant under the
+   outer one's, and a decreases for each), not a translation gap. Dafny, Verus, SPARK and Frama-C already take
+   them, so the measurement to open the move with is how many of the corpus's nested-loop programs those four
+   already prove: that is the upper bound the three have to reach.
+2. **More problem sources.** Pool v4 is 737 problems (MBPP 649 plus 88 HumanEval whose `check` parses), and
+   split-v4 leaves 505 for training. `nl/` already holds 24,748 problems, of which 4,239 are function-shaped and
+   772 read as inside t's fragment; APPS and CodeContests are not downloaded on the desktop that runs the loop.
+   Admitting the function-shaped ones with parseable input and output raises the ceiling from about 505 training
+   problems to thousands. The gate is a test reader per source, not new language features, and the held-out
+   split must stay exactly split-v3's 232 MBPP problems so every earlier number keeps its meaning.
+3. **The twins and witnesses as a first-class artifact.** Every clean task carries a deliberately broken copy and
+   a concrete input at which the copy breaks its own specification, refuted by all seven. Nobody else ships that:
+   a pile of verified programs can be had from any corpus, but a program *paired with a near-miss and the input
+   that separates them, with seven independent refutations on record*, is the part with no substitute. Today it is
+   a by-product inside `kernels.md` and the loop's pair files. It becomes an artifact: one file per task with the
+   real program, the twin, the operator that made it, the witness, and the seven verdicts, with its own README,
+   count and licence line, published and versioned like `AGREEMENT.md`.
 
 ## Closed and kept for the record
 
