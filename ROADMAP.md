@@ -76,7 +76,7 @@ Done. `.t` files are the input ([`t/tasks/`](t/tasks/)); parse and well-formedne
 
 ## WS-18: the training loop
 
-A model writes a t task from a problem statement; the verifiers grade it; the refuted twin with its witness input is the bug it trains on. Built and measured twice with a 1.5B model ([`t/LOOP-CURVE.md`](t/LOOP-CURVE.md)): on 161 held-out problems, answers that verify with a refuted twin went from 9 to 15 after two rounds, and the share of answers that fail to parse did not move. Paused until a model that can read a verifier's error is in the loop (WS-19, move 2). The next hurdle is that parse wall: constrained decoding or a repair pass.
+A model writes a t task from a problem statement; the verifiers grade it; the refuted twin with its witness input is the bug it trains on. Built and measured twice with a 1.5B model ([`t/LOOP-CURVE.md`](t/LOOP-CURVE.md)): on 161 held-out problems, answers that verify with a refuted twin went from 9 to 15 after two rounds, and the share of answers that fail to parse did not move. Paused until a model that can read a verifier's error is in the loop (WS-19, move 2). The next hurdle is that parse wall, and as of 2026-09-18 it is measured rather than guessed at ([`t/FUNNEL-2026-09-18.md`](t/FUNNEL-2026-09-18.md)): it loses more answers than every other gate together. Of the two ways out named here, the repair pass has since been measured and does not work, so the wall is WS-21.
 
 ## WS-19: the frontier moves
 
@@ -127,6 +127,52 @@ that, in this order.
    a by-product inside `kernels.md` and the loop's pair files. It becomes an artifact: one file per task with the
    real program, the twin, the operator that made it, the witness, and the seven verdicts, with its own README,
    count and licence line, published and versioned like `AGREEMENT.md`.
+
+## WS-21: the parse wall, chosen 2026-09-18
+
+[`t/funnel.py`](t/funnel.py) walked 14,130 replies from every model this project has run, through each gate an
+answer must pass before it can become a training example. The numbers decide the order of what follows.
+
+| models | replies | parse | well formed | tests pass |
+|---|---|---|---|---|
+| stock, prompted | 13,434 | 38% | 23% | 17% |
+| the fine-tuned student | 232 | 32% | 16% | 5% |
+| locallm, trained on t from scratch | 464 | 98% | 88% | <1% |
+
+Two findings, and the second is the uncomfortable one.
+
+**The syntax gate loses more answers than every other gate together.** Sixty-two percent of a prompted stock
+model's replies never reach a proof system at all, because they are not t. The provers are not the bottleneck
+and never were; the notation is. The tokens the parser found where it wanted something else say the same thing
+plainly: `spec` (a spec function written after the task rather than before it), `if` and `forall` in expression
+positions the grammar does not allow, and `^`, `|`, `&`, `?`, `/` -- operators t does not have.
+
+**Training on t moves that gate and nothing else.** locallm, built from random numbers on t's own corpus, writes
+t the parser accepts 98 percent of the time, and 2 of its 464 answers pass the problem's own tests. It has the
+notation and not the problem. The fine-tuned student parses 32 percent, which is where the untrained 1.5B
+already was, so its QLoRA and DPO rounds moved neither end. A round that adds more answers of the same kind
+will not change any of these three rows, which is why round 4 tied Phi-4-mini at 3 of 232 instead of beating it.
+
+Three moves follow, in this order.
+
+1. **A grammar the generator decodes against.** The lab workstation's vLLM (0.29, xgrammar 0.2.6) accepts a
+   grammar per request (`structured_outputs.grammar`), so a model can be made unable to emit anything the
+   parser would refuse. The work is a GBNF for t's surface syntax, and the test that it is the *same* language
+   is mechanical: every committed task and every answer that parses today must be accepted by the grammar, and
+   nothing the parser refuses may be. The prize is the 62 percent, but only if constraining a model does not
+   simply turn it into locallm -- syntactically perfect and semantically empty -- which is exactly what the
+   measurement below is for, and why the number that decides this is the clean count and not the parse rate.
+   Preregistered in [`t/PREREG-2026-09-18-constrained.md`](t/PREREG-2026-09-18-constrained.md).
+2. **The prompt fixes that need no grammar.** Three of the four most common refusals are orthography, not
+   ability: spec functions written after the task, chained comparisons, and `/` for integer division. If a
+   prompt change moves the parse rate on a held-out sample, it costs one generation run and is worth having
+   whether or not move 1 lands. Measured the same way, against the same sample.
+3. **Whether anything can hold both ends.** The gap between locallm's row and the stock row is the whole
+   distance to a higher clean count: one model has the notation, the others have the problem, and no model here
+   has both. Once move 1 removes the syntax gate, the question is answered directly -- a constrained stock model
+   has locallm's notation by construction, so its test-pass rate is the first honest measurement of whether the
+   semantics were ever the limit. If it is, the pool's job changes from teaching syntax to teaching proof, and
+   [`t/loop_train.py`](t/loop_train.py)'s objective changes with it.
 
 ## Closed and kept for the record
 
