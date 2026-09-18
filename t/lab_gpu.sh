@@ -24,8 +24,9 @@ JOBS=${T_LAB_GEN_JOBS:-16}
 
 case "${1:-status}" in
 
-start)
-  $SSH "$LAB" "mkdir -p ~/lab-gpu && cd ~/tup && git pull -q --ff-only || true"
+serve|start)
+  WHAT=${1:-serve}
+  $SSH "$LAB" "mkdir -p ~/lab-gpu && cd ~/tup && git fetch -q origin && git reset -q --hard origin/main || true"
   echo "== serving $MODEL on the four cards (tensor parallel), port $PORT"
   # vLLM's FP8 path compiles kernels, so it needs a CUDA toolkit; this machine has none in /usr/local, but the
   # venv ships one inside the nvidia wheels (2026-09-18)
@@ -47,6 +48,10 @@ start)
   done
   $SSH "$LAB" "curl -sf http://127.0.0.1:$PORT/v1/models >/dev/null" || {
     echo "the server did not come up; its log:"; $SSH "$LAB" "tail -20 ~/lab-gpu/vllm.log"; exit 1; }
+  # `serve` stops here: the server is up and nothing is being generated, which is what the constrained arm
+  # wants (it sends its own requests, with the grammar). `start` also answers the APPS problems, as it did
+  # when that was the only thing the cards were for.
+  [ "$WHAT" = serve ] && { echo "== the server is up on port $PORT; nothing is generating"; exit 0; }
   echo "== answering the APPS problems as $TAG"
   $SSH "$LAB" "cd ~/tup && setsid nohup python3 t/spec_experiment.py generate --model '$MODEL' --tag '$TAG' \
       --pool v5 --ids-file t/out/loop/apps-upper.txt --prompt v3 --seed 1 --temperature 0 --num-predict 2048 \
