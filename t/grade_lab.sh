@@ -86,7 +86,11 @@ case "${1:-seeds}" in
            $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'"
            rsync -a "$LAB:$WORK/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
   seeds)   par $(for S in 1 2 3 4 5 6 7 8; do echo qwen2.5-coder-14b-v3-s$S; done) ;;
-  heldout) for T in phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4; do
+  heldout) shift 2>/dev/null || true
+           # a held-out set has no grade-in/: nothing is pre-filtered, every answer is graded, which is what
+           # makes it a measurement of the model rather than of the filter. Named tags may follow, so a later
+           # round grades its own two sets without this list being edited (2026-09-18).
+           for T in "${@:-phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4}"; do
              [ -d "$SE/$T/raw" ] || { echo "== $T: no answers yet, skipped"; continue; }
              [ -n "$(ls "$SE/$T/tasks"/*.json 2>/dev/null)" ] || { python3 t/spec_experiment.py extract --model $T --pool v3 &&
                                         python3 t/spec_experiment.py tests --model $T --pool v3; } || exit 1

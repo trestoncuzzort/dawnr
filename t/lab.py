@@ -230,11 +230,32 @@ STEPS = [
     ("r5-grade-heldout", "Round 5: grade held-out", "On the lab workstation.",
      "for T in student-r5-v3 locallm-r5; do [ -d t/out/spec-experiment/$T/raw ] || continue; "
      "python3 t/spec_experiment.py extract --model $T --pool v3 && "
-     "python3 t/spec_experiment.py tests --model $T --pool v3; done && bash t/grade_lab.sh tags student-r5-v3 locallm-r5",
+     "python3 t/spec_experiment.py tests --model $T --pool v3; done && bash t/grade_lab.sh heldout student-r5-v3 locallm-r5",
      f"test -s {SE}/student-r5-v3/kernels.md", "lab"),
     ("r5-score", "Round 5: score", "The round 5 row next to round 4 and Phi.",
      "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4 "
      "student-r5-v3 locallm-r5 | tee t/out/score-r5.md", "test -s t/out/score-r5.md", ""),
+    # WS-21, the parse wall. The funnel measured that 62 percent of a stock model's replies never reach a
+    # prover because they are not t; these three are the answer to that, in the order the preregistration
+    # fixes (t/PREREG-2026-09-18-constrained.md).
+    ("funnel", "Where answers die", "Walks every answer set from the model's reply to a clean training "
+     "example and counts the survivors at each gate. Writes t/FUNNEL-2026-09-18.md. Cheap, and worth "
+     "re-running after a round so the picture is the current one.",
+     "python3 t/funnel.py", "test -s t/FUNNEL-2026-09-18.md", ""),
+    ("grammar", "Is the grammar the notation?",
+     "t/t.gbnf is t's own syntax as a grammar a generator can decode against. This proves it accepts exactly "
+     "what the parser accepts, in both directions, on the lab workstation because it needs xgrammar. The "
+     "preregistration forbids generating a constrained answer until this passes.",
+     "L=$(grep '^T_LAB=' t/lab-workstation.conf | cut -d= -f2) && "
+     "ssh -o BatchMode=yes $L \"cd ~/tup && git fetch -q origin && git reset -q --hard origin/main && "
+     "~/.venv-vllm/bin/python t/grammar_check.py --refused 600\" | tee t/out/grammar-check.txt",
+     "grep -q 'agree on every program tested' t/out/grammar-check.txt", "lab"),
+    ("constrained", "Answers the parser cannot refuse",
+     "The constrained arm: the same 1,133 problems, model, prompt, temperature and seed as the control set, "
+     "with t's grammar sent on every request so the model cannot write anything the parser would refuse. "
+     "Needs the lab workstation's cards, which are the operator's to lend.",
+     "bash t/lab_gpu.sh constrained",
+     "test -d t/out/spec-experiment/qwen3-coder-30b-apps-g1/raw", "gen"),
     ("score", "Score against Phi", "The result. Saved to t/out/score-r4.md.",
      f"python3 t/score_heldout.py qwen3.8-27b-fp8-v3 {HELDOUT} locallm-r0 | tee t/out/score-r4.md",
      "test -s t/out/score-r4.md", ""),
@@ -253,6 +274,7 @@ NEEDS = {
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
     "r5-pool": ["grade"], "r5-locallm": ["r5-pool"], "r5-train": ["r5-pool"],
     "r5-student": ["r5-train"], "r5-grade-heldout": ["r5-student"], "r5-score": ["r5-grade-heldout"],
+    "constrained": ["grammar"],
 }
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")
 STEPS_FILE = HERE / "steps.json"
