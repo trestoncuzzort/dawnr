@@ -205,10 +205,11 @@ STEPS = [
      "wc -l t/out/loop/sft-r5.jsonl t/out/loop/pairs-r5.jsonl",
      "test -s t/out/loop/sft-r5.jsonl", ""),
     ("r5-locallm", "Round 5: a bigger locallm", "From scratch on the round 5 pool, with more capacity and more "
-     "steps than r4 (8 layers, 512 wide, 6000 steps), then its held-out answers.",
+     "steps than r4 (8 layers, 512 wide across 8 heads, 6000 steps), then its held-out answers.",
      "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl "
      f"--out t/out/loop-locallm/corpus-r5.txt && {PY} t/loop_locallm.py train "
      "--corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 "
+     "--heads 8 "
      f"--steps 6000 && {PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
      f"test $(ls {SE}/locallm-r5/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("r5-train", "Round 5: train the student again", "The same 1.5B, now with the round 5 pairs, which include "

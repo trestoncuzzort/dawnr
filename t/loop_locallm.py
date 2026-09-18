@@ -106,6 +106,12 @@ def cmd_corpus(a) -> int:
 
 
 def cmd_train(a) -> int:
+    if a.width % a.heads:
+        # locallm/model.py asserts this several frames down, where the message is the word AssertionError and
+        # nothing else; a width of 512 with the default 6 heads spent a step of t lab saying that (2026-09-18)
+        ok = [h for h in (2, 4, 8, 16) if a.width % h == 0]
+        raise SystemExit(f"a width of {a.width} does not divide into {a.heads} heads; "
+                         f"pass --heads {max(ok) if ok else 1} or another divisor of {a.width}")
     cmd = [sys.executable, "train.py", "--data", str(Path(a.corpus).resolve()), "--out", str(Path(a.model).resolve()),
            "--steps", str(a.steps), "--block-size", str(a.block), "--n-layer", str(a.layers),
            "--n-head", str(a.heads), "--n-embd", str(a.width), "--batch-size", str(a.batch), "--seed", str(a.seed)]

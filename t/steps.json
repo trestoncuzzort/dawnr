@@ -170,8 +170,8 @@
  [
   "r5-locallm",
   "Round 5: a bigger locallm",
-  "From scratch on the round 5 pool, with more capacity and more steps than r4 (8 layers, 512 wide, 6000 steps), then its held-out answers.",
-  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl --out t/out/loop-locallm/corpus-r5.txt && ~/.venv-t/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 --steps 6000 && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
+  "From scratch on the round 5 pool, with more capacity and more steps than r4 (8 layers, 512 wide across 8 heads, 6000 steps), then its held-out answers.",
+  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl --out t/out/loop-locallm/corpus-r5.txt && ~/.venv-t/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 --heads 8 --steps 6000 && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
   "test $(ls t/out/spec-experiment/locallm-r5/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
