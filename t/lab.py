@@ -1532,6 +1532,11 @@ class Lab:
             total = 8 * 649
             return (("all 8 seeds written" if whole == 8 else
                      f"{sum(per)} of {total} answers, seed {whole + 1}"), sum(per) / total)
+        if key == "apps":
+            here = sum(self.answers(f"qwen2.5-coder-14b-apps-s{i}") for i in (1, 2))
+            there = self.answers("qwen3-coder-30b-apps-s1")
+            total = 2 * 1133 + 1133          # this desktop's two seeds of its half, the lab's one of the other
+            return (f"{here} of 2266 here, {there} of 1133 on the lab", (here + there) / total)
         if key == "more-problems":
             he, ds = [self.answers(f"{HE}{i}") for i in range(1, 9)], [self.answers(f"{GEN2_TAG}{i}") for i in (1, 2)]
             total = 8 * 88 + 2 * 737
