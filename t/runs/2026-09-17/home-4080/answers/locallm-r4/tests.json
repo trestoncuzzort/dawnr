@@ -1,0 +1,5186 @@
+{
+ "3": {
+  "name": "mbpp_3__is_not_prime",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 8,
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": 40,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": 140,
+    "expected": true
+   }
+  ]
+ },
+ "4": {
+  "name": "mbpp_4__heap_queue_largest",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   }
+  ]
+ },
+ "6": {
+  "name": "mbpp_6__differ_At_One_Bit_Pos",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "10": {
+  "name": "mbpp_10__small_nnum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   }
+  ]
+ },
+ "18": {
+  "name": "mbpp_18__remove_dirty_chars",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "20": {
+  "name": "mbpp_20__is_woodall",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "24": {
+  "name": "mbpp_24__binary_to_decimal",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 39700,
+    "expected": 4
+   },
+   {
+    "verdict": "fail",
+    "got": 4085451,
+    "expected": 11
+   },
+   {
+    "verdict": "fail",
+    "got": 4849690345501,
+    "expected": 109
+   }
+  ]
+ },
+ "32": {
+  "name": "mbpp_32__max_Prime_Factors",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "34": {
+  "name": "mbpp_34__find_missing",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "38": {
+  "name": "mbpp_38__div_even_odd",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": 4
+   },
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": 2
+   },
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": 10
+   }
+  ]
+ },
+ "39": {
+  "name": "mbpp_39__rearange_string",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     97,
+     98
+    ],
+    "expected": [
+     97,
+     98,
+     97
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     97,
+     98,
+     98
+    ],
+    "expected": [
+     97,
+     98,
+     97,
+     98
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     98,
+     99,
+     99,
+     100,
+     100
+    ],
+    "expected": [
+     99,
+     100,
+     97,
+     98,
+     99,
+     100
+    ]
+   }
+  ]
+ },
+ "45": {
+  "name": "mbpp_45__get_gcd",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "47": {
+  "name": "mbpp_47__compute_Last_Digit",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 20,
+    "expected": 2
+   },
+   {
+    "verdict": "fail",
+    "got": 132,
+    "expected": 6
+   },
+   {
+    "verdict": "fail",
+    "got": 5,
+    "expected": 2
+   }
+  ]
+ },
+ "51": {
+  "name": "mbpp_51__check_equilateral",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 4 params"
+   }
+  ]
+ },
+ "53": {
+  "name": "mbpp_53__check_Equality",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "56": {
+  "name": "mbpp_56__check",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "60": {
+  "name": "mbpp_60__max_len_sub",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   }
+  ]
+ },
+ "66": {
+  "name": "mbpp_66__pos_count",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "68": {
+  "name": "mbpp_68__is_Monotonic",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": false
+   }
+  ]
+ },
+ "72": {
+  "name": "mbpp_72__dif_Square",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "74": {
+  "name": "mbpp_74__is_samepatterns",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "78": {
+  "name": "mbpp_78__count_With_Odd_SetBits",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 30,
+    "expected": 3
+   },
+   {
+    "verdict": "fail",
+    "got": 110,
+    "expected": 5
+   },
+   {
+    "verdict": "fail",
+    "got": 240,
+    "expected": 8
+   }
+  ]
+ },
+ "86": {
+  "name": "mbpp_86__centered_hexagonal_number",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 190,
+    "expected": 271
+   },
+   {
+    "verdict": "fail",
+    "got": 6,
+    "expected": 7
+   },
+   {
+    "verdict": "fail",
+    "got": 153,
+    "expected": 217
+   }
+  ]
+ },
+ "91": {
+  "name": "mbpp_91__find_substring",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "96": {
+  "name": "mbpp_96__divisor",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 73,
+    "expected": 4
+   },
+   {
+    "verdict": "fail",
+    "got": 61,
+    "expected": 6
+   },
+   {
+    "verdict": "fail",
+    "got": 49,
+    "expected": 3
+   }
+  ]
+ },
+ "103": {
+  "name": "mbpp_103__eulerian_num",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "108": {
+  "name": "mbpp_108__merge_sorted_list",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "119": {
+  "name": "mbpp_119__search",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "125": {
+  "name": "mbpp_125__find_length",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "126": {
+  "name": "mbpp_126__sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "a is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "a is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "a is seq, test passes int"
+   }
+  ]
+ },
+ "138": {
+  "name": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 55,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": 13,
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": 377,
+    "expected": true
+   }
+  ]
+ },
+ "141": {
+  "name": "mbpp_141__pancake_sort",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "side is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "side is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "side is int, test passes seq"
+   }
+  ]
+ },
+ "144": {
+  "name": "mbpp_144__sum_Pairs",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "149": {
+  "name": "mbpp_149__longest_subseq_with_diff_one",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   }
+  ]
+ },
+ "151": {
+  "name": "mbpp_151__is_coprime",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "158": {
+  "name": "mbpp_158__min_Ops",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   }
+  ]
+ },
+ "161": {
+  "name": "mbpp_161__remove_elements",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "164": {
+  "name": "mbpp_164__areEquivalent",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "167": {
+  "name": "mbpp_167__next_Power_Of_2",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   }
+  ]
+ },
+ "169": {
+  "name": "mbpp_169__get_pell",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "175": {
+  "name": "mbpp_175__is_valid_parenthese",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "side is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "side is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "side is int, test passes seq"
+   }
+  ]
+ },
+ "179": {
+  "name": "mbpp_179__is_num_keith",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   }
+  ]
+ },
+ "184": {
+  "name": "mbpp_184__greater_specificnum",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": false
+   }
+  ]
+ },
+ "187": {
+  "name": "mbpp_187__longest_common_subsequence",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   }
+  ]
+ },
+ "189": {
+  "name": "mbpp_189__first_Missing_Positive",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "194": {
+  "name": "mbpp_194__octal_To_Decimal",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 24,
+    "expected": 21
+   },
+   {
+    "verdict": "fail",
+    "got": 29,
+    "expected": 24
+   },
+   {
+    "verdict": "fail",
+    "got": 39,
+    "expected": 32
+   }
+  ]
+ },
+ "201": {
+  "name": "mbpp_201__chkList",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     [
+      111,
+      110,
+      101
+     ],
+     [
+      111,
+      110,
+      101
+     ],
+     [
+      111,
+      110,
+      101
+     ]
+    ],
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     [
+      84,
+      104,
+      114,
+      101,
+      101
+     ],
+     [
+      84,
+      119,
+      111
+     ],
+     [
+      111,
+      110,
+      101
+     ]
+    ],
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     [
+      68,
+      106,
+      97,
+      110,
+      103,
+      111
+     ],
+     [
+      112,
+      121,
+      116,
+      104,
+      111,
+      110
+     ],
+     [
+      98,
+      105,
+      103,
+      100,
+      97,
+      116,
+      97
+     ]
+    ],
+    "expected": false
+   }
+  ]
+ },
+ "203": {
+  "name": "mbpp_203__hamming_Distance",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "208": {
+  "name": "mbpp_208__is_decimal",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "212": {
+  "name": "mbpp_212__fourth_Power_Sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "220": {
+  "name": "mbpp_220__replace_max_specialchar",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "221": {
+  "name": "mbpp_221__first_even",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   }
+  ]
+ },
+ "224": {
+  "name": "mbpp_224__count_Set_Bits",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   }
+  ]
+ },
+ "232": {
+  "name": "mbpp_232__larg_nnum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   }
+  ]
+ },
+ "235": {
+  "name": "mbpp_235__even_bit_set_number",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 190,
+    "expected": 10
+   },
+   {
+    "verdict": "fail",
+    "got": 780,
+    "expected": 30
+   },
+   {
+    "verdict": "fail",
+    "got": 1770,
+    "expected": 30
+   }
+  ]
+ },
+ "239": {
+  "name": "mbpp_239__get_total_number_of_sequences",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 40,
+    "expected": 4
+   },
+   {
+    "verdict": "fail",
+    "got": 10,
+    "expected": 6
+   },
+   {
+    "verdict": "fail",
+    "got": 48,
+    "expected": 84
+   }
+  ]
+ },
+ "245": {
+  "name": "mbpp_245__max_sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   }
+  ]
+ },
+ "247": {
+  "name": "mbpp_247__lps",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "258": {
+  "name": "mbpp_258__count_odd",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "269": {
+  "name": "mbpp_269__ascii_value",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "271": {
+  "name": "mbpp_271__even_Power_Sum",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 6,
+    "expected": 1056
+   },
+   {
+    "verdict": "fail",
+    "got": 15,
+    "expected": 8832
+   },
+   {
+    "verdict": "fail",
+    "got": 1,
+    "expected": 32
+   }
+  ]
+ },
+ "275": {
+  "name": "mbpp_275__get_Position",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   }
+  ]
+ },
+ "283": {
+  "name": "mbpp_283__validate",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "287": {
+  "name": "mbpp_287__square_Sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "289": {
+  "name": "mbpp_289__odd_Days",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 413,
+    "expected": 5
+   },
+   {
+    "verdict": "fail",
+    "got": 213,
+    "expected": 6
+   },
+   {
+    "verdict": "fail",
+    "got": 313,
+    "expected": 2
+   }
+  ]
+ },
+ "295": {
+  "name": "mbpp_295__sum_div",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 232,
+    "expected": 7
+   },
+   {
+    "verdict": "fail",
+    "got": 540,
+    "expected": 16
+   },
+   {
+    "verdict": "fail",
+    "got": 175,
+    "expected": 1
+   }
+  ]
+ },
+ "302": {
+  "name": "mbpp_302__set_Bit_Number",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 5,
+    "expected": 4
+   },
+   {
+    "verdict": "fail",
+    "got": 9,
+    "expected": 8
+   },
+   {
+    "verdict": "fail",
+    "got": 17,
+    "expected": 16
+   }
+  ]
+ },
+ "306": {
+  "name": "mbpp_306__max_sum_increasing_subseq",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   }
+  ]
+ },
+ "308": {
+  "name": "mbpp_308__large_product",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   }
+  ]
+ },
+ "313": {
+  "name": "mbpp_313__pos_nos",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "318": {
+  "name": "mbpp_318__max_volume",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "325": {
+  "name": "mbpp_325__get_Min_Squares",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   }
+  ]
+ },
+ "329": {
+  "name": "mbpp_329__neg_count",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 15,
+    "expected": 4
+   },
+   {
+    "verdict": "fail",
+    "got": 6,
+    "expected": 0
+   },
+   {
+    "verdict": "fail",
+    "got": 15,
+    "expected": 2
+   }
+  ]
+ },
+ "330": {
+  "name": "mbpp_330__find_char",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "334": {
+  "name": "mbpp_334__check_Validity",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "339": {
+  "name": "mbpp_339__find_Divisor",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   }
+  ]
+ },
+ "344": {
+  "name": "mbpp_344__count_Odd_Squares",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   }
+  ]
+ },
+ "345": {
+  "name": "mbpp_345__diff_consecutivenums",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "347": {
+  "name": "mbpp_347__count_Squares",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   }
+  ]
+ },
+ "351": {
+  "name": "mbpp_351__first_Element",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": 0
+   },
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": 1
+   },
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": 2
+   }
+  ]
+ },
+ "355": {
+  "name": "mbpp_355__count_Rectangles",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "358": {
+  "name": "mbpp_358__moddiv_list",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     3,
+     3,
+     3
+    ],
+    "expected": [
+     0,
+     1,
+     0
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     2,
+     -2
+    ],
+    "expected": [
+     0,
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     40,
+     50
+    ],
+    "expected": [
+     40,
+     50
+    ]
+   }
+  ]
+ },
+ "362": {
+  "name": "mbpp_362__max_occurrences",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "366": {
+  "name": "mbpp_366__adjacent_num_product",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "374": {
+  "name": "mbpp_374__permute_string",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "375": {
+  "name": "mbpp_375__round_num",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 47220,
+    "expected": 4720
+   },
+   {
+    "verdict": "fail",
+    "got": 5555,
+    "expected": 1110
+   },
+   {
+    "verdict": "fail",
+    "got": 438,
+    "expected": 218
+   }
+  ]
+ },
+ "383": {
+  "name": "mbpp_383__even_bit_toggle_number",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "387": {
+  "name": "mbpp_387__even_or_odd",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "402": {
+  "name": "mbpp_402__ncr_modp",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "411": {
+  "name": "mbpp_411__snake_to_camel",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     9409,
+     12100,
+     10000,
+     12996,
+     12321,
+     11025,
+     10000,
+     9025,
+     13456,
+     13924
+    ],
+    "expected": [
+     65,
+     110,
+     100,
+     114,
+     111,
+     105,
+     100,
+     84,
+     118
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     10609,
+     12321,
+     12321,
+     10609,
+     11664,
+     10201,
+     9025,
+     12544,
+     11025,
+     14400,
+     10201,
+     11664
+    ],
+    "expected": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     80,
+     105,
+     120,
+     101,
+     108
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     9409,
+     12544,
+     12544,
+     11664,
+     10201,
+     9025,
+     14161,
+     9409,
+     13456,
+     9801,
+     10816
+    ],
+    "expected": [
+     65,
+     112,
+     112,
+     108,
+     101,
+     87,
+     97,
+     116,
+     99,
+     104
+    ]
+   }
+  ]
+ },
+ "420": {
+  "name": "mbpp_420__cube_Sum",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 8,
+    "expected": 72
+   },
+   {
+    "verdict": "fail",
+    "got": 27,
+    "expected": 288
+   },
+   {
+    "verdict": "fail",
+    "got": 64,
+    "expected": 800
+   }
+  ]
+ },
+ "428": {
+  "name": "mbpp_428__shell_sort",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "436": {
+  "name": "mbpp_436__neg_nos",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 10,
+    "expected": -1
+   },
+   {
+    "verdict": "fail",
+    "got": 10,
+    "expected": -1
+   },
+   {
+    "verdict": "fail",
+    "got": 10,
+    "expected": -7
+   }
+  ]
+ },
+ "443": {
+  "name": "mbpp_443__largest_neg",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   }
+  ]
+ },
+ "447": {
+  "name": "mbpp_447__cube_nums",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     1,
+     4,
+     9,
+     16,
+     25,
+     36,
+     49,
+     64,
+     81,
+     100
+    ],
+    "expected": [
+     1,
+     8,
+     27,
+     64,
+     125,
+     216,
+     343,
+     512,
+     729,
+     1000
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     100,
+     400,
+     900
+    ],
+    "expected": [
+     1000,
+     8000,
+     27000
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     144,
+     225
+    ],
+    "expected": [
+     1728,
+     3375
+    ]
+   }
+  ]
+ },
+ "454": {
+  "name": "mbpp_454__text_match_wordz",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     122,
+     58
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     120,
+     121,
+     122,
+     58
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     58,
+     58,
+     108,
+     97,
+     110,
+     103,
+     58,
+     58,
+     58
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   }
+  ]
+ },
+ "463": {
+  "name": "mbpp_463__max_subarray_product",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     0,
+     1,
+     8,
+     27,
+     64,
+     125,
+     216
+    ],
+    "expected": 112
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     0,
+     1,
+     8,
+     27,
+     64
+    ],
+    "expected": 180
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     0,
+     1,
+     8,
+     27,
+     64
+    ],
+    "expected": 80
+   }
+  ]
+ },
+ "467": {
+  "name": "mbpp_467__decimal_to_Octal",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 110,
+    "expected": 12
+   },
+   {
+    "verdict": "fail",
+    "got": 6,
+    "expected": 2
+   },
+   {
+    "verdict": "fail",
+    "got": 1122,
+    "expected": 41
+   }
+  ]
+ },
+ "469": {
+  "name": "mbpp_469__max_profit",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "x is int, test passes seq"
+   }
+  ]
+ },
+ "472": {
+  "name": "mbpp_472__check_Consecutive",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "474": {
+  "name": "mbpp_474__replace_char",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   }
+  ]
+ },
+ "479": {
+  "name": "mbpp_479__first_Digit",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "482": {
+  "name": "mbpp_482__match",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "483": {
+  "name": "mbpp_483__first_Factorial_Divisible_Number",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 110,
+    "expected": 5
+   },
+   {
+    "verdict": "fail",
+    "got": 240,
+    "expected": 5
+   },
+   {
+    "verdict": "fail",
+    "got": 30,
+    "expected": 4
+   }
+  ]
+ },
+ "489": {
+  "name": "mbpp_489__frequency_Of_Largest",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   }
+  ]
+ },
+ "492": {
+  "name": "mbpp_492__binary_search",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "502": {
+  "name": "mbpp_502__find",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "503": {
+  "name": "mbpp_503__add_consecutive_nums",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": [
+     2,
+     4,
+     7,
+     8,
+     9,
+     11,
+     13
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": [
+     9,
+     13,
+     17,
+     15,
+     16
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": [
+     3,
+     5,
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19
+    ]
+   }
+  ]
+ },
+ "506": {
+  "name": "mbpp_506__permutation_coefficient",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 140,
+    "expected": 90
+   },
+   {
+    "verdict": "fail",
+    "got": 160,
+    "expected": 720
+   },
+   {
+    "verdict": "fail",
+    "got": 120,
+    "expected": 10
+   }
+  ]
+ },
+ "510": {
+  "name": "mbpp_510__no_of_subsequences",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "515": {
+  "name": "mbpp_515__modular_sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "516": {
+  "name": "mbpp_516__radix_sort",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     15,
+     79,
+     25,
+     68,
+     37
+    ],
+    "expected": [
+     15,
+     25,
+     37,
+     68,
+     79
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     9,
+     11,
+     8,
+     7,
+     3,
+     2
+    ],
+    "expected": [
+     2,
+     3,
+     7,
+     8,
+     9,
+     11
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     36,
+     12,
+     24,
+     26,
+     29
+    ],
+    "expected": [
+     12,
+     24,
+     26,
+     29,
+     36
+    ]
+   }
+  ]
+ },
+ "518": {
+  "name": "mbpp_518__sqrt_root",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 16,
+    "expected": 2
+   },
+   {
+    "verdict": "fail",
+    "got": 64,
+    "expected": 4
+   },
+   {
+    "verdict": "fail",
+    "got": 1600,
+    "expected": 20
+   }
+  ]
+ },
+ "521": {
+  "name": "mbpp_521__check_isosceles",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   }
+  ]
+ },
+ "524": {
+  "name": "mbpp_524__max_sum_increasing_subsequence",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   }
+  ]
+ },
+ "531": {
+  "name": "mbpp_531__min_coins",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 1 params"
+   }
+  ]
+ },
+ "536": {
+  "name": "mbpp_536__nth_items",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     2,
+     4,
+     6,
+     8,
+     10,
+     12,
+     14,
+     16,
+     18
+    ],
+    "expected": [
+     1,
+     3,
+     5,
+     7,
+     9
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     30,
+     45,
+     57,
+     51,
+     48,
+     54
+    ],
+    "expected": [
+     10,
+     17
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     56,
+     64,
+     76,
+     60,
+     68
+    ],
+    "expected": [
+     14,
+     17
+    ]
+   }
+  ]
+ },
+ "541": {
+  "name": "mbpp_541__check_abundant",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   }
+  ]
+ },
+ "545": {
+  "name": "mbpp_545__toggle_F_and_L_bits",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "548": {
+  "name": "mbpp_548__longest_increasing_subsequence",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   }
+  ]
+ },
+ "550": {
+  "name": "mbpp_550__find_Max",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "552": {
+  "name": "mbpp_552__Seq_Linear",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     10,
+     2,
+     4,
+     6,
+     8,
+     0
+    ],
+    "expected": [
+     76,
+     105,
+     110,
+     101,
+     97,
+     114,
+     32,
+     83,
+     101,
+     113,
+     117,
+     101,
+     110,
+     99,
+     101
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     3,
+     2,
+     1
+    ],
+    "expected": [
+     76,
+     105,
+     110,
+     101,
+     97,
+     114,
+     32,
+     83,
+     101,
+     113,
+     117,
+     101,
+     110,
+     99,
+     101
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     2,
+     5,
+     1
+    ],
+    "expected": [
+     78,
+     111,
+     110,
+     32,
+     76,
+     105,
+     110,
+     101,
+     97,
+     114,
+     32,
+     83,
+     101,
+     113,
+     117,
+     101,
+     110,
+     99,
+     101
+    ]
+   }
+  ]
+ },
+ "556": {
+  "name": "mbpp_556__find_Odd_Pair",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 0,
+    "expected": 6
+   },
+   {
+    "verdict": "fail",
+    "got": 0,
+    "expected": 12
+   },
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   }
+  ]
+ },
+ "559": {
+  "name": "mbpp_559__max_sub_array_sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "b is seq, test passes int"
+   }
+  ]
+ },
+ "565": {
+  "name": "mbpp_565__split",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "566": {
+  "name": "mbpp_566__sum_digits",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 475065,
+    "expected": 12
+   },
+   {
+    "verdict": "fail",
+    "got": 540,
+    "expected": 3
+   },
+   {
+    "verdict": "fail",
+    "got": 37345,
+    "expected": 16
+   }
+  ]
+ },
+ "575": {
+  "name": "mbpp_575__count_no",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "requires-excluded"
+   },
+   {
+    "verdict": "fail",
+    "got": 0,
+    "expected": 11
+   },
+   {
+    "verdict": "requires-excluded"
+   }
+  ]
+ },
+ "584": {
+  "name": "mbpp_584__find_adverbs",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "592": {
+  "name": "mbpp_592__sum_Of_product",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "593": {
+  "name": "mbpp_593__removezero_ip",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     50,
+     49,
+     54,
+     48,
+     56,
+     48,
+     57,
+     52,
+     49,
+     57,
+     54
+    ],
+    "expected": [
+     50,
+     49,
+     54,
+     46,
+     56,
+     46,
+     57,
+     52,
+     46,
+     49,
+     57,
+     54
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     49,
+     50,
+     48,
+     49,
+     48,
+     50,
+     52
+    ],
+    "expected": [
+     49,
+     50,
+     46,
+     49,
+     46,
+     50,
+     52
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     50,
+     49,
+     54,
+     48,
+     56,
+     48,
+     57,
+     52,
+     48,
+     49,
+     57,
+     54
+    ],
+    "expected": [
+     50,
+     49,
+     54,
+     46,
+     56,
+     46,
+     57,
+     52,
+     46,
+     49,
+     57,
+     54
+    ]
+   }
+  ]
+ },
+ "597": {
+  "name": "mbpp_597__find_kth",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "5 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "5 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "5 args for 3 params"
+   }
+  ]
+ },
+ "604": {
+  "name": "mbpp_604__reverse_words",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     95,
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109
+    ],
+    "expected": [
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109,
+     32,
+     112,
+     121,
+     116,
+     104,
+     111,
+     110
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     106,
+     97,
+     118,
+     97,
+     95,
+     108,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101
+    ],
+    "expected": [
+     108,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101,
+     32,
+     106,
+     97,
+     118,
+     97
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     105,
+     110,
+     100,
+     105,
+     97,
+     110,
+     95,
+     109,
+     97,
+     110
+    ],
+    "expected": [
+     109,
+     97,
+     110,
+     32,
+     105,
+     110,
+     100,
+     105,
+     97,
+     110
+    ]
+   }
+  ]
+ },
+ "605": {
+  "name": "mbpp_605__prime_num",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 233,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": 13,
+    "expected": true
+   },
+   {
+    "verdict": "requires-excluded"
+   }
+  ]
+ },
+ "609": {
+  "name": "mbpp_609__floor_Min",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 10,
+    "expected": 15
+   },
+   {
+    "verdict": "fail",
+    "got": 1,
+    "expected": 0
+   },
+   {
+    "verdict": "pass",
+    "got": 9,
+    "expected": 9
+   }
+  ]
+ },
+ "623": {
+  "name": "mbpp_623__nth_nums",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     2,
+     4,
+     6,
+     8,
+     10,
+     12,
+     14,
+     16,
+     18,
+     20
+    ],
+    "expected": [
+     1,
+     4,
+     9,
+     16,
+     25,
+     36,
+     49,
+     64,
+     81,
+     100
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     30,
+     60,
+     90
+    ],
+    "expected": [
+     1000,
+     8000,
+     27000
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     60,
+     75
+    ],
+    "expected": [
+     248832,
+     759375
+    ]
+   }
+  ]
+ },
+ "626": {
+  "name": "mbpp_626__triangle_area",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "629": {
+  "name": "mbpp_629__Split",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "636": {
+  "name": "mbpp_636__Check_Solution",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 8,
+    "expected": [
+     89,
+     101,
+     115
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": -32,
+    "expected": [
+     89,
+     101,
+     115
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": 22,
+    "expected": [
+     78,
+     111
+    ]
+   }
+  ]
+ },
+ "638": {
+  "name": "mbpp_638__wind_chill",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   }
+  ]
+ },
+ "656": {
+  "name": "mbpp_656__find_Min_Sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "658": {
+  "name": "mbpp_658__max_occurrences",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "663": {
+  "name": "mbpp_663__find_max_val",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "665": {
+  "name": "mbpp_665__move_last",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "669": {
+  "name": "mbpp_669__check_IP",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "670": {
+  "name": "mbpp_670__decreasing_trend",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "672": {
+  "name": "mbpp_672__max_of_three",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "675": {
+  "name": "mbpp_675__sum_nums",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 2 params"
+   }
+  ]
+ },
+ "680": {
+  "name": "mbpp_680__increasing_trend",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": true
+   }
+  ]
+ },
+ "682": {
+  "name": "mbpp_682__mul_list",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     5,
+     7,
+     9
+    ],
+    "expected": [
+     4,
+     10,
+     18
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     4,
+     6
+    ],
+    "expected": [
+     3,
+     8
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     140,
+     190
+    ],
+    "expected": [
+     4500,
+     8400
+    ]
+   }
+  ]
+ },
+ "683": {
+  "name": "mbpp_683__sum_Square",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "687": {
+  "name": "mbpp_687__recur_gcd",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 3,
+    "expected": 3
+   }
+  ]
+ },
+ "692": {
+  "name": "mbpp_692__last_Two_Digits",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "699": {
+  "name": "mbpp_699__min_Swaps",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     98,
+     98,
+     97,
+     97
+    ],
+    "expected": 1
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     98,
+     97,
+     97
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     80,
+     111,
+     115,
+     115,
+     105,
+     98,
+     108,
+     101
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     97,
+     97,
+     97,
+     97,
+     96,
+     97
+    ],
+    "expected": 3
+   }
+  ]
+ },
+ "701": {
+  "name": "mbpp_701__equilibrium_index",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "706": {
+  "name": "mbpp_706__is_subset",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "4 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "4 args for 1 params"
+   }
+  ]
+ },
+ "711": {
+  "name": "mbpp_711__product_Equal",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "719": {
+  "name": "mbpp_719__text_match",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     99
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     100,
+     99
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     98,
+     98,
+     97
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   }
+  ]
+ },
+ "723": {
+  "name": "mbpp_723__count_same_pair",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   }
+  ]
+ },
+ "729": {
+  "name": "mbpp_729__add_list",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     -3,
+     -3,
+     -3
+    ],
+    "expected": [
+     5,
+     7,
+     9
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     -2,
+     -2
+    ],
+    "expected": [
+     4,
+     6
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     -40,
+     -50
+    ],
+    "expected": [
+     60,
+     90
+    ]
+   }
+  ]
+ },
+ "734": {
+  "name": "mbpp_734__sum_Of_Subarray_Prod",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   }
+  ]
+ },
+ "736": {
+  "name": "mbpp_736__left_insertion",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "741": {
+  "name": "mbpp_741__all_Characters_Same",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "748": {
+  "name": "mbpp_748__capital_words_spaces",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     80,
+     121,
+     116,
+     104,
+     111,
+     110
+    ],
+    "expected": [
+     80,
+     121,
+     116,
+     104,
+     111,
+     110
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     80,
+     121,
+     116,
+     104,
+     111,
+     110,
+     80,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109,
+     109,
+     105,
+     110,
+     103,
+     69,
+     120,
+     97,
+     109,
+     112,
+     108,
+     101,
+     115
+    ],
+    "expected": [
+     80,
+     121,
+     116,
+     104,
+     111,
+     110,
+     32,
+     80,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109,
+     109,
+     105,
+     110,
+     103,
+     32,
+     69,
+     120,
+     97,
+     109,
+     112,
+     108,
+     101,
+     115
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     71,
+     101,
+     116,
+     82,
+     101,
+     97,
+     100,
+     121,
+     84,
+     111,
+     66,
+     101,
+     67,
+     111,
+     100,
+     105,
+     110,
+     103,
+     70,
+     114,
+     101,
+     97,
+     107
+    ],
+    "expected": [
+     71,
+     101,
+     116,
+     32,
+     82,
+     101,
+     97,
+     100,
+     121,
+     32,
+     84,
+     111,
+     32,
+     66,
+     101,
+     32,
+     67,
+     111,
+     100,
+     105,
+     110,
+     103,
+     32,
+     70,
+     114,
+     101,
+     97,
+     107
+    ]
+   }
+  ]
+ },
+ "751": {
+  "name": "mbpp_751__check_min_heap",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "757": {
+  "name": "mbpp_757__count_reverse_pairs",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     [
+      106,
+      117,
+      108,
+      105,
+      97
+     ],
+     [
+      98,
+      101,
+      115,
+      116
+     ],
+     [
+      116,
+      115,
+      101,
+      98
+     ],
+     [
+      102,
+      111,
+      114
+     ],
+     [
+      97,
+      105,
+      108,
+      117,
+      106
+     ]
+    ],
+    "expected": 50
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     [
+      103,
+      101,
+      101,
+      107,
+      115
+     ],
+     [
+      98,
+      101,
+      115,
+      116
+     ],
+     [
+      102,
+      111,
+      114
+     ],
+     [
+      115,
+      107,
+      101,
+      101,
+      103
+     ]
+    ],
+    "expected": 49
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     [
+      109,
+      97,
+      107,
+      101,
+      115
+     ],
+     [
+      98,
+      101,
+      115,
+      116
+     ],
+     [
+      115,
+      101,
+      107,
+      97,
+      109
+     ],
+     [
+      102,
+      111,
+      114
+     ],
+     [
+      114,
+      111,
+      102
+     ]
+    ],
+    "expected": 50
+   }
+  ]
+ },
+ "765": {
+  "name": "mbpp_765__is_polite",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "768": {
+  "name": "mbpp_768__check_Odd_Parity",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "769": {
+  "name": "mbpp_769__Diff",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "requires-excluded"
+   },
+   {
+    "verdict": "requires-excluded"
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     -5,
+     -5,
+     2
+    ],
+    "expected": [
+     2,
+     3,
+     6,
+     7
+    ]
+   }
+  ]
+ },
+ "775": {
+  "name": "mbpp_775__odd_position",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "776": {
+  "name": "mbpp_776__count_vowels",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     115,
+     101,
+     115,
+     116,
+     105,
+     110,
+     115,
+     116,
+     97,
+     114,
+     101,
+     101,
+     108,
+     98
+    ],
+    "expected": 7
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     100,
+     97,
+     114,
+     116,
+     111,
+     102,
+     116,
+     104,
+     101,
+     106,
+     111,
+     117,
+     114,
+     110,
+     101,
+     121,
+     105,
+     115,
+     116,
+     104,
+     101,
+     101,
+     110,
+     112
+    ],
+    "expected": 12
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     101,
+     109,
+     97,
+     122,
+     111,
+     110,
+     112,
+     114,
+     105,
+     109,
+     97
+    ],
+    "expected": 5
+   }
+  ]
+ },
+ "782": {
+  "name": "mbpp_782__Odd_Length_Sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   }
+  ]
+ },
+ "786": {
+  "name": "mbpp_786__right_insertion",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "length is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "length is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "length is int, test passes seq"
+   }
+  ]
+ },
+ "793": {
+  "name": "mbpp_793__last",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 0,
+    "expected": 0
+   },
+   {
+    "verdict": "fail",
+    "got": 0,
+    "expected": 2
+   },
+   {
+    "verdict": "requires-excluded"
+   }
+  ]
+ },
+ "798": {
+  "name": "mbpp_798___sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "800": {
+  "name": "mbpp_800__remove_all_spaces",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109
+    ],
+    "expected": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109,
+     109,
+     105,
+     110,
+     103,
+     108,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101
+    ],
+    "expected": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109,
+     109,
+     105,
+     110,
+     103,
+     108,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109
+    ],
+    "expected": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109
+    ]
+   }
+  ]
+ },
+ "802": {
+  "name": "mbpp_802__count_Rotation",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 4 params"
+   }
+  ]
+ },
+ "804": {
+  "name": "mbpp_804__is_Product_Even",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "813": {
+  "name": "mbpp_813__string_length",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   }
+  ]
+ },
+ "822": {
+  "name": "mbpp_822__pass_validity",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     12544,
+     9409,
+     13225,
+     13225,
+     14161,
+     12321,
+     12996,
+     10000
+    ],
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     6400,
+     9409,
+     13225,
+     13225,
+     14161,
+     12321,
+     12996,
+     10000,
+     4096,
+     2401,
+     2304
+    ],
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     12544,
+     9409,
+     13225,
+     13225,
+     14161,
+     12321,
+     12996,
+     10000,
+     4096,
+     2401,
+     2304
+    ],
+    "expected": false
+   }
+  ]
+ },
+ "826": {
+  "name": "mbpp_826__check_Type_Of_Triangle",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 4 params"
+   }
+  ]
+ },
+ "831": {
+  "name": "mbpp_831__count_Pairs",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "837": {
+  "name": "mbpp_837__cube_Sum",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 8,
+    "expected": 28
+   },
+   {
+    "verdict": "fail",
+    "got": 27,
+    "expected": 153
+   },
+   {
+    "verdict": "fail",
+    "got": 64,
+    "expected": 496
+   }
+  ]
+ },
+ "840": {
+  "name": "mbpp_840__Check_Solution",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "842": {
+  "name": "mbpp_842__get_odd_occurence",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "a is int, test passes seq"
+   }
+  ]
+ },
+ "846": {
+  "name": "mbpp_846__find_platform",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "3 args for 2 params"
+   }
+  ]
+ },
+ "849": {
+  "name": "mbpp_849__Sum",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "853": {
+  "name": "mbpp_853__sum_of_odd_Factors",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 3 params"
+   }
+  ]
+ },
+ "856": {
+  "name": "mbpp_856__find_Min_Swaps",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "860": {
+  "name": "mbpp_860__check_alphanumeric",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   }
+  ]
+ },
+ "866": {
+  "name": "mbpp_866__check_monthnumb",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   }
+  ]
+ },
+ "867": {
+  "name": "mbpp_867__min_Num",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "876": {
+  "name": "mbpp_876__lcm",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   }
+  ]
+ },
+ "877": {
+  "name": "mbpp_877__sort_String",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     9801,
+     9604,
+     9409
+    ],
+    "expected": [
+     97,
+     98,
+     99
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     10000,
+     9409,
+     13456,
+     9409
+    ],
+    "expected": [
+     97,
+     97,
+     100,
+     116
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     14884,
+     14400,
+     14641
+    ],
+    "expected": [
+     120,
+     121,
+     122
+    ]
+   }
+  ]
+ },
+ "882": {
+  "name": "mbpp_882__parallelogram_perimeter",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 200,
+    "expected": 400
+   },
+   {
+    "verdict": "fail",
+    "got": 300,
+    "expected": 600
+   },
+   {
+    "verdict": "fail",
+    "got": 72,
+    "expected": 144
+   }
+  ]
+ },
+ "885": {
+  "name": "mbpp_885__is_Isomorphic",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "887": {
+  "name": "mbpp_887__is_odd",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "891": {
+  "name": "mbpp_891__same_Length",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ },
+ "899": {
+  "name": "mbpp_899__check",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": 3,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": -1,
+    "expected": true
+   }
+  ]
+ },
+ "900": {
+  "name": "mbpp_900__match_num",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "903": {
+  "name": "mbpp_903__count_Unset_Bits",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 4 params"
+   }
+  ]
+ },
+ "908": {
+  "name": "mbpp_908__find_fixed_point",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "911": {
+  "name": "mbpp_911__maximum_product",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   },
+   {
+    "verdict": "type",
+    "why": "n is int, test passes seq"
+   }
+  ]
+ },
+ "914": {
+  "name": "mbpp_914__is_Two_Alter",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     98,
+     98,
+     97,
+     97
+    ],
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     97,
+     97,
+     97,
+     97
+    ],
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     122,
+     121,
+     120
+    ],
+    "expected": false
+   }
+  ]
+ },
+ "919": {
+  "name": "mbpp_919__multiply_list",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "928": {
+  "name": "mbpp_928__change_date_format",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "937": {
+  "name": "mbpp_937__max_char",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "947": {
+  "name": "mbpp_947__len_log",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "1 args for 2 params"
+   }
+  ]
+ },
+ "970": {
+  "name": "mbpp_970__min_of_two",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 3 params"
+   }
+  ]
+ },
+ "973": {
+  "name": "mbpp_973__left_rotate",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   },
+   {
+    "verdict": "arity",
+    "why": "2 args for 1 params"
+   }
+  ]
+ }
+}
