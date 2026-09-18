@@ -138,7 +138,7 @@ STEPS = [
      "--out-suffix r4 && wc -l t/out/loop/sft-r4.jsonl t/out/loop/pairs-r4.jsonl",
      "test -s t/out/loop/sft-r4.jsonl", ""),
     ("phi", "Phi-4-mini answers", "The model to beat, in bf16, on the 232 held-out problems. If it fails, go back to "
-     "Claude before using a 4-bit Phi.",
+     "deciding, before using a 4-bit Phi.",
      f"{PY} t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-v3 {EVAL} --max-new 3072",
      f"test $(ls {SE}/phi4-mini-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("base", "Small base answers", "The untrained 1.5B, the starting point of the student.",
@@ -160,7 +160,7 @@ STEPS = [
     ("grade-heldout", "Grade held-out answers", "Every extracted task this time, so proven but wrong can be "
      "counted. Extract and tests run here, the checkers on the lab workstation.", "bash t/grade_lab.sh heldout",
      f"for T in {HELDOUT}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
-    ("score", "Score against Phi", "The result. Saved to t/out/score-r4.md. Take it to Claude.",
+    ("score", "Score against Phi", "The result. Saved to t/out/score-r4.md.",
      f"python3 t/score_heldout.py qwen3.8-27b-fp8-v3 {HELDOUT} locallm-r0 | tee t/out/score-r4.md",
      "test -s t/out/score-r4.md", ""),
 ]

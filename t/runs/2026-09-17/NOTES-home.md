@@ -23,8 +23,8 @@
 - 2026-09-17 03:31 start `matrix`: `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
 - 2026-09-17 03:32 matrix run 2 (03:11) read 6 kernels: Dafny not found because the release zip was unpacked one level deep (~/.local/dafny/dafny/dafny); moved so ~/.local/dafny/dafny is the binary. That run's table still shows Verus malformed (it started before the toolchain fix). run_par exits 1 whenever any task disagrees, and the committed matrix has 4 such tasks, so exit 1 alone is not a failure; read the table.
 - 2026-09-17 03:32 end `matrix`: exit -15 after 1 min
-- 2026-09-17 03:35 start `matrix` (started by Claude after the Dafny, Verus and Frama-C fixes): `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
-- 2026-09-17 03:54 start `grade-lab`: `bash t/grade_lab.sh seeds` (started by Claude; seeds 1-5 have 110, 61, 62, 65, 63 tasks in grade-in) (log `logs/grade-lab.log`)
+- 2026-09-17 03:35 start `matrix` (started by hand after the Dafny, Verus and Frama-C fixes): `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
+- 2026-09-17 03:54 start `grade-lab`: `bash t/grade_lab.sh seeds` (started by hand; seeds 1-5 have 110, 61, 62, 65, 63 tasks in grade-in) (log `logs/grade-lab.log`)
 - 2026-09-17 04:02 start `matrix`: `python3 t/run_par.py --jobs ${T_JOBS:-12} --out /tmp/matrix --table t/out/AGREEMENT-home.md && cat t/out/AGREEMENT-home.md` (log `logs/matrix.log`)
 - 2026-09-17 04:08 grading split: t/grade_lab.sh (lab workstation, seeds forwards) and t/grade_home.sh (this machine, seeds backwards, 6 jobs); each claims a seed with <tag>/.grading. A stale .grading folder (a killed run) must be removed by hand before that seed is graded.
 - 2026-09-17 04:08 start `ollama-install`: `curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama` (log `logs/ollama-install.log`)
@@ -136,7 +136,7 @@
 - 2026-09-17 16:59 autopilot: started `more-problems`
 - 2026-09-17 17:05 autopilot: started `grade`
 - 2026-09-17 17:06 autopilot: started `grade`
-- 2026-09-17 17:15 a stale process file made the grading step look alive, so neither t lab nor the autopilot would start it again; both now check that the process behind a step's pid file is really that step before calling it running. ~/Desktop/RUN-STEPS.md written: the order of the steps, what each is for, how to watch them, the copy-and-paste fix for the lab workstation hang, and when to come back to Claude.
+- 2026-09-17 17:15 a stale process file made the grading step look alive, so neither t lab nor the autopilot would start it again; both now check that the process behind a step's pid file is really that step before calling it running. ~/Desktop/RUN-STEPS.md written: the order of the steps, what each is for, how to watch them, the copy-and-paste fix for the lab workstation hang, and when to come back to the operator.
 - 2026-09-17 17:09 autopilot switched off and disabled at the user's request (t-autopilot; t/autopilot.py stays in the repository). The steps are pressed by hand from Collect data, with ~/Desktop/RUN-STEPS.md as the order; the orchestrator (t/run_everything.py, the AI tab) is still there for an unattended run.
 - 2026-09-17 17:25 the autopilot is deleted at the user's request: t/autopilot.py and its service are gone, its card is off the AI tab, and the steps are pressed by hand from Collect data with ~/Desktop/RUN-STEPS.md as the order. The orchestrator (t/run_everything.py) remains for an unattended run. Its 3B model was also costing the graphics card: even on the processor it was work the run did not need.
 - 2026-09-17 17:13 start `grade`: `bash t/grade_lab.sh seeds` (log `logs/grade.log`)

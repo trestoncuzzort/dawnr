@@ -1,4 +1,4 @@
-# Handoff for Antigravity, 2026-09-17: running the RTX 4080 data run
+# Handoff for an assistant, 2026-09-17: running the RTX 4080 data run
 
 You are helping run `internal/HANDOFF-2026-09-17-rtx4080.md` on the desktop. That file is the plan, and this file is the machine state plus how to help. Read the plan's sections 1 to 6 before acting. Do not redesign the experiment: judgement calls go back to the operator.
 
@@ -34,10 +34,10 @@ locallm builds small models from scratch, and t filters what they learn from. Th
 ## How to help
 
 - Give one command block at a time and say what a good result looks like.
-- When something fails, read the last lines of the log and fix the environment (missing apt package, PATH, version). Do not edit t's Python scripts, prompts, pool, split or thresholds. Changes to those are Claude's call.
+- When something fails, read the last lines of the log and fix the environment (missing apt package, PATH, version). Do not edit t's Python scripts, prompts, pool, split or thresholds. Changes to those are the operator's call.
 - Python 3.14 is newer than the lab workstation's. If a pip package has no 3.14 wheel, suggest `uv` or a 3.12 venv, and note it in the run log.
-- Keep a running log in `~/tup/t/runs/<date>/NOTES-home.md`: each command, how long it took, the counts it printed, and any fix applied. Claude reads this file when the user comes back, so nothing has to be re-explained.
-- Committing: commit and push `t/lab.py` (the Collect data tab), this file and `t/runs/<date>/NOTES-home.md` and `t/runs/<date>/logs/`. Do it now as one commit, and again with the results the way plan section 6 lays them out. Run `git status` first and never add `t/out/`, `kernels/` folders or adapters. Commit only after the operator confirms the message; end it with a line naming Antigravity as co-author.
+- Keep a running log in `~/tup/t/runs/<date>/NOTES-home.md`: each command, how long it took, the counts it printed, and any fix applied. the operator reads this file when the user comes back, so nothing has to be re-explained.
+- Committing: commit and push `t/lab.py` (the Collect data tab), this file and `t/runs/<date>/NOTES-home.md` and `t/runs/<date>/logs/`. Do it now as one commit, and again with the results the way plan section 6 lays them out. Run `git status` first and never add `t/out/`, `kernels/` folders or adapters. Commit only after the operator confirms the message; end it with a line naming an assistant as co-author.
 
 ## Stop and ask the operator when
 

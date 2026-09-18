@@ -90,7 +90,7 @@
  [
   "phi",
   "Phi-4-mini answers",
-  "The model to beat, in bf16, on the 232 held-out problems. If it fails, go back to Claude before using a 4-bit Phi.",
+  "The model to beat, in bf16, on the 232 held-out problems. If it fails, go back to deciding, before using a 4-bit Phi.",
   "~/.venv-t/bin/python t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --max-new 3072",
   "test $(ls t/out/spec-experiment/phi4-mini-v3/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
@@ -138,7 +138,7 @@
  [
   "score",
   "Score against Phi",
-  "The result. Saved to t/out/score-r4.md. Take it to Claude.",
+  "The result. Saved to t/out/score-r4.md.",
   "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4 locallm-r0 | tee t/out/score-r4.md",
   "test -s t/out/score-r4.md",
   ""
