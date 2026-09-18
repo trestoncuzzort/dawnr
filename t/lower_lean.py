@@ -29,7 +29,18 @@ BODY SHAPE by one rule, identically for every task:
               the dependent requires-proof argument across arithmetic
               normalization: gcd's `a - b` leaf never met its induction
               hypothesis.)
-  LOOP       (body contains one top-level while): the loop becomes a
+  LOOPS      (any other arrangement of loops: a loop inside a loop, two
+              or more loops in one body, or both -- 2026-09-18, ROADMAP
+              WS-20 move 1): every loop becomes a function returning the
+              TUPLE of the state variables its own body assigns, and its
+              spec lemma says "the loop's own invariants in, the
+              invariants AND the negated guard out, at that tuple". An
+              enclosing body continues from the tuple's projections and
+              gets the inner loop's effect only through that lemma,
+              instantiated at the call site with its entry obligations
+              discharged. See `lower_loops_general` below, which owns the
+              whole path; the single-loop shape below is untouched by it.
+  LOOP       (body contains one top-level while, and no other): the loop becomes a
               tail-recursive function over the mutable state; the invariants
               become hypotheses of a recursive helper theorem, and the induction
               hypothesis is literally the invariant list. Guard-true steps
@@ -58,9 +69,13 @@ seq_max's `∃ j ∈ [0,1)` at r = s[0]).
 Every file ends with `#print axioms` per theorem; the adapter audits the list.
 
 ABSTAIN policy: shapes this lowering cannot express honestly raise
-NotImplementedError with the reason (multiple/nested loops, a loop plus
-self-recursion, quantifiers in computational position). A recorded absence,
-never a faked proof.
+NotImplementedError with the reason (a loop plus self-recursion, a loop
+inside an `if` branch, a loop after or around an early `return` on the
+nested/multiple-loop path, a nested loop with no invariant of its own,
+quantifiers in computational position). A recorded absence, never a faked
+proof. Nested and multiple loops were on that list until 2026-09-18 and
+are not any more -- see "NESTED AND MULTIPLE LOOPS" below, and the shape
+list `lower_loops_general`'s own section still names as open.
 
 THE REFUTATION CERTIFICATE (2026-09-02, certificate protocol shared by all
 columns): when lowering a TWIN with a measured witness, one extra theorem
@@ -2366,9 +2381,87 @@ pre-existing named gap, not attempted further:
   clock TIMEOUT under that contention is not distinguishable here from a
   genuine heartbeat exhaustion without a dedicated, uncontended
   `set_option trace.grind.ematch true` probe this session did not reach
-  before its own time budget closed; named open rather than guessed."""
+  before its own time budget closed; named open rather than guessed.
+
+NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20 move 1, the move's
+own first item: "nested-loop lowering for Lean, Rocq and F*"). Before this
+day a loop inside a loop, or two loops in one body, read ABSTAIN in this
+column -- from two different places with two different messages, which is
+itself worth recording: `lower`'s own `deep_while` scan only looked inside
+the body's NON-`while` statements, so a loop nested in the top-level loop
+was invisible to it and fell through to `sym`'s `while` case instead
+("nested / multiple loops are not lowered for lean"). `lower` now
+dispatches on `_count_whiles`, a count of every `while` anywhere.
+
+WHAT LOWERS NOW, measured on t/tasks/has_duplicate.t (the canonical case:
+a `while` inside a `while`, each with its own stated invariants and
+`decreases`) and on three scratch tasks built for the shapes the committed
+corpus does not yet hold, each cross-checked against dafny in the same
+run:
+  - a loop inside a loop: has_duplicate, lean ABSTAIN -> real VERIFIED /
+    twin REFUTED (collapse-if, witness s=[0,1]); dafny reads the same.
+  - two loops in one body (`two_loops`, r counted twice to 2n): real
+    VERIFIED / twin REFUTED, FULL AGREEMENT with dafny.
+  - three loops nested three deep (`tri`): same, FULL AGREEMENT.
+  - two sibling loops inside a loop (`sib`): same, FULL AGREEMENT.
+Regression: all 34 previously-committed tasks re-run through lean
+(`run_par.py --jobs 4 --tasks t/tasks --kernels lean`) read exactly their
+t/AGREEMENT.md cell, count_vowels' `unproved / unproved` included; the 793
+twin-ladder rungs of those tasks lower with zero hard failures. Every
+single-top-level-loop task still goes through `lower_loop`, whose text is
+untouched, so none of their real `.lean` files changed by a byte.
+
+THE THREE THINGS GRIND COULD NOT DO, each measured on the bare goal in
+isolation before any of them was written into this file (they are the
+substance of the move: the ROADMAP calls this "proof synthesis for nested
+invariants", and that is what it turned out to be, not a translation gap):
+  1. `grind` cannot prove `P -> Q` from a hypothesis `P -> Q` when `Q` is
+     a doubly-nested `exists` over Int with an `s[i]!` body. It negates
+     the goal, skolemizes both witnesses into the context with every side
+     condition present, and never fires the instantiation that closes it.
+     `assumption` closes it in one step, and an enclosing loop's own
+     invariant IS, verbatim, one conjunct of the nested loop's exit facts
+     in has_duplicate. Hence `assumption` in `_nl_closer`.
+  2. An invariant that ASSERTS an existential has to be ESTABLISHED at the
+     step that makes it true, and the witnesses are the two loop counters
+     -- nothing in the goal points at them. `lower_loop`'s pre-existing
+     one-level heuristic (`exact <lo, by grind>`, the range's lower
+     endpoint) does not reach it. Hence the witness cascade, generalized
+     to the invariant's own existential depth and to every Int name in
+     scope as a candidate.
+  3. `simp_all` SUCCEEDS WITHOUT CLOSING. `first` then stops at it, the
+     goal reaches the end of the proof unsolved, Lean records `sorryAx`,
+     and verifiers/lean.py demotes the file -- which is honest, and also
+     exactly the wrong answer for a goal a later alternative proves.
+     `; done` turns it back into a closing tactic. The same bug was then
+     found in `_closer()`'s own bare `simp` alternative, on the twin's
+     certificate, and fixed the same way -- that one predates this wave
+     and was latent: it needs a goal `decide` cannot reduce (a well-
+     founded-recursive `{name}_t`) and a `simp` that makes partial
+     progress, which a nested-loop twin's certificate is the first shape
+     here to produce.
+
+AND ONE THING `first` COULD NOT DO, which is worth its own line because it
+is not a tactic weakness but an elaborator rule: an error inside a NESTED
+`by` is RECOVERED (logged, the term completed with `sorryAx`), not raised
+as a tactic failure. `_enum`'s one-alternative-per-enumerated-value
+dispatch is built out of `exact absurd h (by ...)` terms, so `first` sees
+the FIRST alternative succeed on every branch and never reaches the
+others. Measured on has_duplicate's own twin at s=[0,1]: the j=0 branch's
+refutation (its false conjunct is `0 < 0`) was applied to the j=1 branch,
+where the false conjunct is the other one. The fix is not to make `first`
+backtrack -- it cannot -- but to give every branch a branch-INDEPENDENT
+first shot inside a single `by` over leaf tactics, where `first` does
+backtrack honestly: `_refute`'s `and` case now tries `self._closer()` on
+the whole ground conjunction before decomposing it, and `decide` refutes
+`0 < 1 and [0,1][0]! = [0,1][1]!` outright. STILL OPEN, named: an
+enumerated branch whose ground body `_closer()` cannot refute, and whose
+own alternative is not the first one, is still swallowed. Nothing in the
+committed corpus reaches it, and the honest cost when something does is a
+lost certificate (unproved), never a false REFUTED."""
 from __future__ import annotations
 
+import itertools
 import sys
 from pathlib import Path
 
@@ -2424,6 +2517,14 @@ CERT_NAME = "t_refutation_certificate"         # the contract with the adapter
 MAX_ENUM = 16     # ground quantifier enumeration cap; witness domains are
                   # small (interp ladders), so past this the generic closers
                   # get their chance and a miss honestly reads unproved
+MAX_NL_WITNESS_ALTS = 24  # 2026-09-18 (ROADMAP WS-20 move 1): the cap on
+                  # existential-witness candidate tuples tried per goal on
+                  # the nested/multiple-loop path (`_nl_closer`). Each is a
+                  # `refine ... <;> grind` inside a `first`, so a wrong one
+                  # costs a failed elaboration and nothing else; the cap is
+                  # there so a loop with four Int names in scope and a
+                  # three-deep existential cannot turn one goal into 64
+                  # grind calls. Past it the goal honestly reads unproved.
 MAX_UNDEF_UNROLL = 256   # 2026-09-14 (lean-cert): the concrete unroll cap
                   # for `_cert_undefined_loop`'s while-body replay, matching
                   # lower_framac.py's own `MAX_CERT_STMTS` -- a witness
@@ -2486,6 +2587,20 @@ def loop_assigned(body: list) -> set:
         elif "while" in s:
             out |= loop_assigned(s["while"]["body"])
     return out
+
+
+def _count_whiles(x) -> int:
+    """Every `while` anywhere in a statement tree (2026-09-18, ROADMAP
+    WS-20 move 1). `lower()` dispatches on this rather than on the old
+    top-level-only scan: a loop nested inside the single top-level loop is
+    invisible to that scan, which is why has_duplicate's abstain came from
+    `sym` with a different message than `lower`'s own."""
+    if isinstance(x, dict):
+        return ((1 if "while" in x else 0)
+                + sum(_count_whiles(v) for v in x.values()))
+    if isinstance(x, list):
+        return sum(_count_whiles(v) for v in x)
+    return 0
 
 
 # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item): dafny-
@@ -2669,6 +2784,28 @@ class Lower:
         _collect_names(body, self.used)
         self.fresh_n = 0
         self.hyp_n = 0
+        # NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20 move 1):
+        # all inert unless `lower_loops_general` (below) turns the path on.
+        # `_nl_active` is what `sym`'s own `while` case reads, and it is
+        # turned back OFF the moment the body walk finishes, so anything
+        # that re-walks a body afterwards (a certificate replay) meets the
+        # same honest NotImplementedError it met before this wave rather
+        # than emitting a loop function into nowhere.
+        self._nl_active = False
+        self._nl_used = False
+        self._nl_out: list[str] = []
+        self._nl_thms: list = []
+        self._nl_info: dict = {}
+        self._nl_names: dict = {}
+        self._nl_fn_names: list[str] = []
+        self._nl_scope: list = []
+        self._nl_local_decls: list = []
+        self._nl_ctx: list = []
+        self._nl_pending: list[str] = []
+        self._nl_binder_names: set = set()
+        self._nl_cand_names: list[str] = []
+        self._nl_pnames = ""
+        self._nl_wf_k = 0
         # SPEC.md "The string library (v1)" (2026-09-11): does this task
         # (spec or body, real or twin) call any of the 17 members. Gates
         # emit_strlib_helpers() below and the grind hint list, exactly
@@ -3457,7 +3594,8 @@ class Lower:
     # ---------- statements ----------
 
     def sym(self, stmts: list, env: dict, types: dict,
-            keys: list[str], returned: str = "False") -> tuple[dict, list, str]:
+            keys: list[str], returned: str = "False",
+            in_branch: bool = False) -> tuple[dict, list, str]:
         """Forward symbolic execution of a loop-free statement list.
         Returns (updated env over `keys`, definedness obligations each
         already guarded by its path condition, `returned`).
@@ -3499,16 +3637,26 @@ class Lower:
             elif "var" in s:
                 d = s["var"]
                 types[d["name"]] = d["type"]
+                if self._nl_active:
+                    self._nl_local_decls.append((d["name"], d["type"]))
                 obs.append(guard(self.dcond(d["init"], env, types)))
                 env[d["name"]] = self.term(d["init"], env, types)
             elif "if" in s:
                 c = s["if"]
                 obs.append(guard(self.dcond(c["cond"], env, types)))
                 cp = self.prop(c["cond"], env, types)
+                # NESTED AND MULTIPLE LOOPS (2026-09-18): a `var`
+                # declared inside a branch is scoped to that branch, so
+                # the running scope list a nested loop reads is truncated
+                # back after both arms -- otherwise a later top-level
+                # loop would take a binder for a name that does not
+                # exist at its own call site.
+                mark = len(self._nl_local_decls)
                 env_t, obs_t, ret_t = self.sym(c["then"], env, types, keys,
-                                               returned)
+                                               returned, in_branch=True)
                 env_e, obs_e, ret_e = self.sym(c["else"], env, types, keys,
-                                               returned)
+                                               returned, in_branch=True)
+                del self._nl_local_decls[mark:]
                 obs += [f"({cp} → {o})" for o in obs_t if o is not None]
                 obs += [f"(¬{cp} → {o})" for o in obs_e if o is not None]
                 for k in set(env_t) | set(env_e):
@@ -3523,8 +3671,31 @@ class Lower:
                 else:
                     returned = f"(({cp} → {ret_t}) ∧ (¬{cp} → {ret_e}))"
             elif "while" in s:
-                raise NotImplementedError(
-                    "nested / multiple loops are not lowered for lean")
+                # NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20
+                # move 1): `_nl_active` is set only by
+                # `lower_loops_general` below, and only for the shapes
+                # that used to reach this `raise` -- a single top-level
+                # loop still goes through `lower_loop` with this path
+                # switched off, so its output is byte-identical. The two
+                # guards below are abstains, not silent fall-throughs:
+                # a loop inside a branch would need its path condition
+                # carried into the loop's own context and its tuple
+                # merged at the join, and a loop after an early `return`
+                # would need the return's path condition threaded into
+                # the loop's state -- neither is built, and guessing at
+                # either risks a wrong verdict, which this file never
+                # trades for coverage.
+                if not self._nl_active:
+                    raise NotImplementedError(
+                        "nested / multiple loops are not lowered for lean")
+                if in_branch:
+                    raise NotImplementedError(
+                        "a loop inside a branch is not lowered for lean")
+                if returned != "False":
+                    raise NotImplementedError(
+                        "a loop after an early `return` is not lowered "
+                        "for lean")
+                env.update(self._nested_loop(s["while"], env, types))
             else:
                 raise NotImplementedError(f"statement {list(s)} unknown")
         return env, [o for o in obs if o is not None], returned
@@ -5932,12 +6103,21 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
         body = self.body
         n_while = sum(1 for s in body if "while" in s)
-        deep_while = self._has([s for s in body if "while" not in s],
-                               "while")
-        if n_while > 1 or deep_while:
-            raise NotImplementedError(
-                "only a single top-level loop is lowered for lean")
-        if n_while == 1:
+        n_all = _count_whiles(body)
+        # NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20 move 1):
+        # this `raise` was the whole of the move. The test is by COUNT,
+        # not by the old `deep_while` scan, because that scan looked only
+        # inside the body's non-`while` statements and so never saw a loop
+        # nested inside the top-level one at all -- has_duplicate reached
+        # `sym`'s own `while` case instead, and abstained there. Exactly
+        # one loop, at the top level, still goes to `lower_loop` unchanged.
+        if n_all > 1 or (n_all == 1 and n_while == 0):
+            if self._self_calls(body):
+                raise NotImplementedError(
+                    "a loop combined with self-recursion is not lowered "
+                    "for lean")
+            main = self.lower_loops_general(wf_k)
+        elif n_while == 1:
             if self._self_calls(body):
                 raise NotImplementedError(
                     "a loop combined with self-recursion is not lowered "
@@ -7296,6 +7476,484 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         thms.append((f"{self.name}_t_spec", "the contract"))
         return "\n".join(out), thms
 
+    # ---------- NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20
+    # move 1) ----------
+    #
+    # WHY A SECOND LOOP PATH AND NOT A GENERALIZED `lower_loop`. The shape
+    # above returns the TASK'S RETURN TYPE from `{name}_t_loop` and folds
+    # the statements after the loop into its own guard-false branch; that
+    # is only expressible when the loop is the whole of the body's control
+    # flow, which is exactly why it abstained ("only a single top-level
+    # loop", and `sym`'s own "nested / multiple loops") on anything else.
+    # A loop that is one statement AMONG others -- an inner loop whose exit
+    # hands control back to the outer body, or the first of two loops in a
+    # row -- has to hand back the STATE, not the answer. So every loop on
+    # this path lowers to a function returning the TUPLE of the state
+    # variables its own body assigns, in scope order, and the enclosing
+    # body continues from that tuple's projections. `lower_loop` is left
+    # untouched and still takes every single-top-level-loop task, so all 34
+    # committed tasks keep their exact prior output, byte for byte (checked
+    # by `python3 -m t.lower_lean`-shaped regeneration of every tasks/*.t
+    # before and after this wave: zero diff outside has_duplicate).
+    #
+    # THE THREE PIECES PER LOOP, all of them kernel obligations, none
+    # assumed:
+    #   def   {name}_t_loop{k} (params) (scope...) : T1 × ... × Tn
+    #         tail-recursive over the scope, `termination_by (dec+1).toNat`
+    #         exactly as the single-loop shape's own measure (the same +1
+    #         `.toNat`-floor fix, same `decreasing_by`).
+    #   spec  {name}_t_loop{k}_spec: from the loop's OWN invariants at the
+    #         entry state, the invariants AND the negated guard hold at the
+    #         returned tuple. That conjunction is the loop's postcondition,
+    #         and it is what an enclosing body gets to use -- the standard
+    #         Floyd rule, proved here by the same induction `lower_loop`
+    #         already uses (`rw [eq_def]; split;` recurse / exit).
+    #   wf    one theorem per definedness obligation SPEC.md's D() calculus
+    #         owes at this loop's program points (invariants, guard,
+    #         decreases, body), under exactly the context SPEC.md grants.
+    #
+    # TWO TRAPS, BOTH NAMED BY THE OTHER COLUMNS' OWN FIXES OF 2026-09-18
+    # (lower_verus.py::_ro_defining_facts, lower_spark.py::_certify_calls)
+    # and both avoided here BY CONSTRUCTION rather than by a later patch:
+    #
+    # (1) THE READ-ONLY DEFINING FACT. `var j := i + 1;` before an inner
+    # loop gives `j = i + 1` -- true at the inner loop's ENTRY and false at
+    # every later inner-loop-head state, because the inner loop assigns
+    # `j`. An inner theorem quantifies `j` over ALL states, so carrying
+    # that equation as a hypothesis would make the theorem say strictly
+    # less than the obligation it is supposed to discharge: a definedness
+    # goal could then "prove" for a state the program actually reaches
+    # with a different `j`. `_nl_ctx_keep` therefore drops any inherited
+    # context fact naming a variable the inner loop ASSIGNS, and any fact
+    # naming a variable the enclosing body already MODIFIED before the
+    # loop (its entry value is no longer the outer loop head's). What
+    # survives is only what is invariant across the whole inner loop.
+    # Conjunctions are split first (`_nl_split_and`), so `i < len(s) and
+    # not r` contributes its `i < len(s)` half and drops its `not r` half
+    # rather than being lost whole.
+    #
+    # (2) CERTIFYING ONLY THE OUTER LOOP'S CALLS. The enclosing loop's own
+    # preservation step must know what the inner loop achieved, and the
+    # only honest source is the inner loop's spec INSTANTIATED AT THE CALL
+    # SITE: `have _hnest{k} := {inner}_spec params <entry args> (by ...)
+    # ...`, whose `(by ...)` arguments are the inner invariants AT ENTRY,
+    # proved from the outer invariants and the outer guard. Every nested
+    # loop in a body gets one, in source order; none is skipped, so no
+    # inner loop's effect is ever assumed without its entry obligations
+    # being discharged first.
+    #
+    # WHAT THIS PATH STILL ABSTAINS ON, by name (each raises
+    # NotImplementedError, which run_par.py routes to ABSTAIN -- a recorded
+    # absence, never a faked proof):
+    #   - a loop inside an `if` branch: the loop's context would have to
+    #     carry the branch's path condition, and the enclosing body's join
+    #     would have to merge two different tuples; not built.
+    #   - a loop after an early `return`, or a `return` inside a loop body
+    #     on this path: `lower_loop`'s own `_hr` dependent-if answer does
+    #     not compose with a tuple-returning loop, and guessing here would
+    #     risk a wrong verdict.
+    #   - a loop with no invariant of its own, or that assigns nothing in
+    #     scope: there is no postcondition to hand the enclosing body.
+    #   - a loop combined with self-recursion, as on the single-loop path.
+    # KNOWN-OPEN, NOT GATED (it reads `unproved`, never `verified`): an
+    # outer `decreases` whose measure mentions a variable an inner loop
+    # assigns. Lean's termination elaborator sees only the guard at that
+    # point, the inner call is opaque to `omega`, the obligation fails,
+    # Lean records `sorryAx`, and the audit in verifiers/lean.py demotes
+    # the file -- the honest outcome, so it is left measured rather than
+    # pre-judged by a syntactic gate that might also exclude measures the
+    # guard alone does bound.
+
+    @staticmethod
+    def _nl_split_and(e):
+        """A spec expression as its top-level `and` conjuncts. Used so an
+        inherited context fact can be kept in part (see trap (1))."""
+        if isinstance(e, dict) and e.get("op") == "and":
+            out = []
+            for a in e["args"]:
+                out += Lower._nl_split_and(a)
+            return out
+        return [e]
+
+    def _nl_ctx_items(self, exprs: list, types: dict) -> list:
+        """(lean text, names it reads) per conjunct, the form context
+        facts are carried in so `_nl_ctx_keep` can filter them."""
+        items = []
+        for e in exprs:
+            for c in self._nl_split_and(e):
+                ns: set = set()
+                _collect_names(c, ns)
+                items.append((self.prop(c, {}, types), frozenset(ns)))
+        return items
+
+    @staticmethod
+    def _nl_ctx_keep(items: list, blocked: set) -> list:
+        return [t for t, ns in items if not (ns & blocked)]
+
+    @staticmethod
+    def _nl_proj(call: str, k: int, n: int) -> str:
+        """The k-th of n components of a right-nested Lean product."""
+        if n == 1:
+            return call
+        t = call
+        for _ in range(k):
+            t = f"({t}).2"
+        return t if k == n - 1 else f"({t}).1"
+
+    def _nl_exists_spine(self, e):
+        """How many existentials a stated invariant opens, once its
+        leading implication (`r ==> exists ...`, has_duplicate's own
+        shape) is stepped through. 0 when it opens none."""
+        d = 0
+        while isinstance(e, dict):
+            if "exists" in e:
+                d += 1
+                e = e["exists"]["body"]
+            elif e.get("op") == "implies":
+                e = e["args"][1]
+            else:
+                break
+        return d
+
+    def _nl_closer(self, invs: list, types: dict, cands: list) -> str:
+        """The per-goal closer every proof on this path uses.
+
+        `self._gr()` first, so any goal the single-loop path would already
+        have closed closes here identically. Then two generic alternatives
+        and one derived one, each MEASURED necessary on has_duplicate
+        (2026-09-18, lean 4.33.1, scratch probes reduced to the bare goal
+        before any of them was written into this file):
+
+        `assumption` -- an enclosing loop's own invariant can be, verbatim,
+        one conjunct of a nested loop's exit facts (has_duplicate's `r ==>
+        exists a, exists b, ...` is stated identically on both loops), and
+        `grind` FAILS to prove `P -> Q` from a hypothesis `P -> Q` when `Q`
+        is a doubly-nested `exists` over Int with a `s[i]!` body -- measured
+        in isolation: the goal is negated, both witnesses are skolemized
+        into the context with every side condition present, and the
+        instantiation that closes it never fires. `assumption` closes it in
+        one step.
+
+        `(intros; simp_all)` -- the same goal shape when the hypothesis is
+        not literally syntactically equal but reachable by simplification;
+        measured to close the isolated probe where `intro` + `grind` and
+        `have := H h` + `grind` both fail.
+
+        the existential-witness cascade -- an invariant that ASSERTS an
+        existential (`r ==> exists a in [0,len) . exists b ...`) has to be
+        ESTABLISHED at the step that makes `r` true, and `grind` cannot
+        invent the pair: it is `(i, j)`, the two loop counters, and nothing
+        in the goal points at them. `lower_loop` above already carries the
+        one-level version of this idea (`exact <lo, by grind>`, the range's
+        lower endpoint, for `seq_max`); this generalizes it to the depth
+        the invariant actually states and to every Int name in scope as a
+        candidate, since a nested loop's witness is a counter, not an
+        endpoint. Each alternative is a `refine` whose holes are closed by
+        `grind`, so a wrong candidate fails inside `first` and costs
+        nothing; a right one is still a kernel-checked proof term, so this
+        can lose a proof, never fake one."""
+        alts = [self._gr(), "assumption"]
+        depths = sorted({self._nl_exists_spine(iv) for iv in invs} - {0})
+        if depths and cands:
+            for d in depths:
+                pats = []
+                for combo in itertools.product(cands, repeat=d):
+                    slots = []
+                    for wtn in combo:
+                        slots += [wtn, "?_", "?_"]
+                    slots.append("?_")
+                    pats.append("⟨" + ", ".join(slots) + "⟩")
+                for p in pats[:MAX_NL_WITNESS_ALTS]:
+                    alts.append(f"(refine {p} <;> {self._gr()})")
+                for p in pats[:MAX_NL_WITNESS_ALTS]:
+                    alts.append(f"(intros; refine {p} <;> {self._gr()})")
+        # `; done` is not decoration. MEASURED (2026-09-18, on
+        # has_duplicate's own inner-loop `hinv4` goal): `simp_all` is the
+        # one alternative here that can SUCCEED WITHOUT CLOSING -- it
+        # reports progress for rewriting the context, `first` accepts that
+        # as the winning alternative and stops trying the others, and the
+        # goal reaches the end of the proof unsolved, where Lean records
+        # `sorryAx` and the audit demotes the file. `done` turns it back
+        # into a closing tactic, so a partial simplification fails the
+        # alternative and `first` moves on, exactly as a failed `grind`
+        # already does. Every other alternative in this list closes its
+        # goal or fails outright.
+        alts.append("(intros; simp_all; done)")
+        return "(first | " + " | ".join(alts) + ")"
+
+    def _nl_name_walk(self, stmts: list, counter: list) -> None:
+        for s in stmts:
+            if "while" in s:
+                counter[0] += 1
+                k = counter[0]
+                self._nl_names[id(s["while"])] = (
+                    f"{self.name}_t_loop" if k == 1
+                    else f"{self.name}_t_loop{k}")
+                self._nl_name_walk(s["while"]["body"], counter)
+            elif "if" in s:
+                self._nl_name_walk(s["if"]["then"], counter)
+                self._nl_name_walk(s["if"]["else"], counter)
+
+    def _nested_loop(self, w: dict, env: dict, types: dict) -> dict:
+        """`sym`'s `while` case on this path: emit the loop's function,
+        spec and wf theorems (once per syntactic loop), record the `have`
+        the enclosing proof needs, and return the state updates the
+        enclosing body continues from (the tuple's projections)."""
+        scope_nt = list(self._nl_scope) + list(self._nl_local_decls)
+        # THE READ-ONLY DEFINING FACT, trap (1) above: a name this loop
+        # assigns, or one the enclosing body has already rewritten before
+        # reaching the loop (`env[v] != v`), cannot appear in an inherited
+        # context fact -- the fact is about the enclosing loop head, the
+        # theorem quantifies over every state of THIS loop.
+        blocked = set(loop_assigned(w["body"]))
+        blocked |= {v for v, _ in scope_nt if env.get(v, v) != v}
+        info = self._emit_loop(w, scope_nt, blocked, types)
+        args = []
+        for v, ty in scope_nt:
+            if v in env:
+                args.append(env[v])
+            elif v in self._nl_binder_names:
+                args.append(v)
+            else:
+                z = self._loop_zero(ty)
+                if z is None:
+                    raise NotImplementedError(
+                        f"state var {v!r} uninitialized before the loop")
+                args.append(z)
+        call = "(" + " ".join(
+            [info["name"]] + self._nl_pnames.split() + args) + ")"
+        # THE INNER LOOP'S ENTRY OBLIGATIONS, trap (2) above: one proof per
+        # stated invariant, at the call site's own state, discharged from
+        # whatever the enclosing proof has in scope. Never assumed.
+        entry_closer = self._nl_closer(info["invs"], types,
+                                       self._nl_cand_names)
+        pfs = "".join(f" (by {entry_closer})" for _ in info["invs"])
+        hv = f"_hnest{len(self._nl_pending) + 1}"
+        self._nl_pending.append(
+            "have " + hv + " := " + " ".join(
+                [f"{info['name']}_spec"] + self._nl_pnames.split() + args)
+            + pfs)
+        n = len(info["asg"])
+        return {v: self._nl_proj(call, k, n)
+                for k, v in enumerate(info["asg"])}
+
+    def _emit_loop(self, w: dict, scope_nt: list, blocked: set,
+                   types: dict) -> dict:
+        key = id(w)
+        if key in self._nl_info:
+            return self._nl_info[key]
+        name = self._nl_names[key]
+        types = dict(types)
+        for v, t in scope_nt:
+            types[v] = t
+        snames = [v for v, _ in scope_nt]
+        asg = [v for v in snames if v in loop_assigned(w["body"])]
+        if not asg:
+            raise NotImplementedError(
+                f"a loop assigning no variable in scope is not lowered "
+                f"for lean")
+        if self._self_calls(w["body"]):
+            raise NotImplementedError(
+                "a loop combined with self-recursion is not lowered for lean")
+        invs = list(w.get("invariants", []))
+        if not invs:
+            raise NotImplementedError(
+                "a nested or multiple loop with no invariant is not "
+                "lowered for lean")
+        inv_props = [self.prop(iv, {}, types) for iv in invs]
+        guard_p = self.prop(w["cond"], {}, types)
+        guard_d = self.dcond(w["cond"], {}, types)
+        dec_d = self.dcond(w["decreases"], {}, types)
+        ctx_keep = self._nl_ctx_keep(self._nl_ctx, blocked)
+
+        # walk the body: nested loops inside are emitted by this same
+        # method, through `sym`'s own `while` case, so the emission order
+        # is innermost-first and every `def` precedes its uses.
+        saved = (self._nl_scope, self._nl_ctx, self._nl_pending,
+                 self._nl_local_decls, self._nl_binder_names,
+                 self._nl_cand_names)
+        self._nl_scope = list(scope_nt)
+        # what a loop nested INSIDE this one may inherit: whatever this
+        # loop inherited and still holds of it, plus this loop's own
+        # invariants and guard. `_nl_ctx_keep` filters again, per inner
+        # loop, against that inner loop's own assigned set (trap (1)).
+        self._nl_ctx = [(t, ns) for t, ns in saved[1]
+                        if not (ns & blocked)] \
+            + self._nl_ctx_items([*invs, w["cond"]], types)
+        self._nl_local_decls = []
+        self._nl_pending = []
+        self._nl_binder_names = set(self._nl_pnames.split()) | set(snames)
+        self._nl_cand_names = [v for v in self._nl_pnames.split()
+                               if self.types.get(v) == "int"] + \
+                              [v for v, t in scope_nt if t == "int"]
+        env_b, obs_body, ret_cond = self.sym(w["body"], {}, types, snames)
+        haves = self._nl_pending
+        (self._nl_scope, self._nl_ctx, self._nl_pending,
+         self._nl_local_decls, self._nl_binder_names,
+         self._nl_cand_names) = saved
+        if ret_cond != "False":
+            raise NotImplementedError(
+                "an early `return` inside a nested or multiple-loop body "
+                "is not lowered for lean")
+
+        params_nt = [(p["name"], p["type"]) for p in self.task["params"]]
+        pb = self.binders(params_nt)
+        sb = self.binders(scope_nt)
+        n = len(asg)
+        asg_ty = dict(scope_nt)
+        tuple_ty = " × ".join(self.lean_type(asg_ty[v]) for v in asg)
+        base = asg[0] if n == 1 else "(" + ", ".join(asg) + ")"
+        rec_args = " ".join(env_b.get(v, v) for v in snames)
+        dec = self.term(w["decreases"], {}, types)
+        dec1 = f"(({dec}) + 1)"
+        dec_needed = self._dec_needs_seq_bridge(w["decreases"], env_b)
+        out = [f"def {name} {pb} {sb} : {tuple_ty} :=\n"
+               f"  if _hg : {guard_p} then\n"
+               f"    {name} {self._nl_pnames} {rec_args}\n"
+               f"  else {base}\n"
+               f"termination_by ({dec1}).toNat\n"
+               + self._dec(dec_needed)]
+
+        # the definedness obligations SPEC.md's D() calculus owes at this
+        # loop's own program points, under exactly the context it grants:
+        # `requires` (always valid -- params never move), whatever survived
+        # `_nl_ctx_keep` of the enclosing loops' invariants and guards, and
+        # this loop's own invariants (and guard, where SPEC.md grants it).
+        pre_hyps = self.pre_props()
+        wfs = []
+        for i, iv in enumerate(invs):
+            d = self.dcond(iv, {}, types)
+            if d is not None:
+                wfs.append((pre_hyps + ctx_keep + inv_props[:i], d,
+                            f"definedness of invariant {i + 1} of {name}",
+                            [iv]))
+        if guard_d is not None:
+            wfs.append((pre_hyps + ctx_keep + inv_props, guard_d,
+                        f"definedness of the guard of {name}", [w["cond"]]))
+        if dec_d is not None:
+            wfs.append((pre_hyps + ctx_keep + inv_props + [guard_p], dec_d,
+                        f"definedness of the decreases of {name}",
+                        [w["decreases"]]))
+        ob = self._conj(obs_body)
+        if ob is not None:
+            wfs.append((pre_hyps + ctx_keep + inv_props + [guard_p], ob,
+                        f"definedness of the body of {name}", [w["body"]]))
+        thms = []
+        for hyps, obg, why, src in wfs:
+            self._nl_wf_k += 1
+            chain = "".join(f"{h} → " for h in hyps)
+            gr_nodes = src if (self.seq_mut or self.seq_new) else None
+            tname = f"{self.name}_t_wf{self._nl_wf_k}"
+            out.append(f"theorem {tname} {pb} {sb} :\n"
+                       f"    {chain}{obg} := by\n"
+                       f"  {self._gr(gr_nodes, {}, types)}\n")
+            thms.append((tname, why))
+
+        # the spec: the loop's own invariants in, the invariants AND the
+        # negated guard out, at the tuple the function returns. That
+        # conjunction is the loop's postcondition and the only thing an
+        # enclosing body is ever allowed to use about it.
+        call = f"({name} {self._nl_pnames} {' '.join(snames)})"
+        post_env = {v: self._nl_proj(call, k, n) for k, v in enumerate(asg)}
+        concl = [self.prop(iv, post_env, types) for iv in invs]
+        concl.append(f"(¬{self.prop(w['cond'], post_env, types)})")
+        hinvs = "".join(f"\n    (hinv{i + 1} : {p})"
+                        for i, p in enumerate(inv_props))
+        n_top_ifs = sum(1 for s in w["body"] if "if" in s)
+        split_tac = ("repeat (all_goals split)" if n_top_ifs >= 2
+                     else "repeat split")
+        cands = [v for v in self._nl_pnames.split()
+                 if self.types.get(v) == "int"] + \
+                [v for v, t in scope_nt if t == "int"]
+        closer = self._nl_closer(invs, types, cands)
+        have_block = "".join(f"    {h}\n" for h in haves)
+        out.append(
+            f"theorem {name}_spec {pb} {sb}{hinvs} :\n"
+            f"    " + "\n    ∧ ".join(concl) + " := by\n"
+            f"  rw [{name}.eq_def]\n"
+            f"  split\n"
+            f"  · \n" + have_block
+            + f"    {split_tac}\n"
+            f"    all_goals (first | (apply {name}_spec <;> {closer}) "
+            f"| {closer})\n"
+            f"  · {closer}\n"
+            f"termination_by ({dec1}).toNat\n"
+            + self._dec(dec_needed))
+        thms.append((f"{name}_spec",
+                     "invariants -> invariants and not guard, by induction "
+                     "on the loop"))
+        info = {"name": name, "asg": asg, "invs": invs, "scope": scope_nt}
+        self._nl_info[key] = info
+        self._nl_out += out
+        self._nl_thms += thms
+        self._nl_fn_names.append(name)
+        return info
+
+    def lower_loops_general(self, wf_k: int) -> tuple[str, list]:
+        """The whole task body, with loops anywhere at statement level."""
+        self._nl_active = True
+        self._nl_used = True
+        self._nl_wf_k = wf_k
+        self._nl_name_walk(self.body, [0])
+        params_nt = [(p["name"], p["type"]) for p in self.task["params"]]
+        pb = self.binders(params_nt)
+        self._nl_pnames = " ".join(n for n, _ in params_nt)
+        types = dict(self.types)
+        state = [self.ret] + [s["var"]["name"] for s in self.body
+                              if "var" in s]
+        # at the TOP level the only binders are the params: every local
+        # (and the return name) is substituted by `sym`, so the return
+        # name needs a seed exactly the way `lower_loop`'s own prefix does
+        # when the body's first write to it is inside the loop.
+        env0 = {}
+        z = self._loop_zero(self.rett)
+        if z is not None:
+            env0[self.ret] = z
+        self._nl_scope = [(self.ret, self.rett)]
+        self._nl_local_decls = []
+        self._nl_ctx = []
+        self._nl_pending = []
+        self._nl_binder_names = set(self._nl_pnames.split())
+        self._nl_cand_names = [v for v in self._nl_pnames.split()
+                               if self.types.get(v) == "int"]
+        env, obs_body, _ret = self.sym(self.body, env0, types, state)
+        haves = self._nl_pending
+        self._nl_active = False
+        if self.ret not in env:
+            raise NotImplementedError(
+                "a path that assigns nothing is not lowered for lean")
+        out = list(self._nl_out)
+        thms = list(self._nl_thms)
+        out.append(f"def {self.name}_t {pb} : "
+                   f"{self.lean_type(self.rett)} :=\n"
+                   f"  {env[self.ret]}\n")
+        pre_hyps = self.pre_props()
+        ob = self._conj(obs_body)
+        if ob is not None:
+            self._nl_wf_k += 1
+            chain = "".join(f"{h} → " for h in pre_hyps)
+            tname = f"{self.name}_t_wf{self._nl_wf_k}"
+            gr_nodes = self.body if (self.seq_mut or self.seq_new) else None
+            out.append(f"theorem {tname} {pb} :\n"
+                       f"    {chain}{ob} := by\n"
+                       f"  {self._gr(gr_nodes, {}, types)}\n")
+            thms.append((tname, "definedness outside the loops"))
+        has_pre = bool(pre_hyps)
+        hpre_thm = f" (hpre : {self.pre_conj()})" if has_pre else ""
+        applied = f"({self.name}_t {self._nl_pnames})"
+        all_invs = [iv for info in self._nl_info.values()
+                    for iv in info["invs"]]
+        closer = self._nl_closer(all_invs, types, self._nl_cand_names)
+        have_block = "".join(f"  {h}\n" for h in haves)
+        out.append(
+            f"theorem {self.name}_t_spec {pb}{hpre_thm} :\n"
+            f"    {self.post_conj(applied)} := by\n"
+            f"  unfold {self.name}_t\n"
+            + have_block
+            + f"  {closer}\n")
+        thms.append((f"{self.name}_t_spec", "the contract"))
+        return "\n".join(out), thms
+
     # ---------- the refutation certificate (twin lowering only) ----------
     # Ground proof generation: _prove(e) returns a one-line tactic proving
     # prop(e) at the witness, _refute(e) one proving its negation. Interp
@@ -7307,8 +7965,24 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
     # the adapter mints UNPROVED, the honest price.
 
     def _closer(self) -> str:
+        # `; done` on the bare `simp` alternative (2026-09-18, ROADMAP
+        # WS-20 move 1, measured on has_duplicate's own collapse-if twin).
+        # `decide`, `omega`, `simp; omega` and `grind` all either close
+        # their goal or fail, so `first` moves past them honestly; a bare
+        # `simp` does NOT -- it reports success for merely rewriting, and
+        # `first` then stops at an alternative that left the goal open.
+        # Measured shape: the certificate's own outer `¬(ensures1 ∧
+        # ensures2)`, where `decide` cannot reduce a well-founded-
+        # recursive `{name}_t` at all, `simp [{name}_t, ...]` unfolded the
+        # loop nest and normalized the conjunction down to ensures2's
+        # surviving `∀ i j, [0,1][i]! ≠ [0,1][j]!` and stopped there, and
+        # the file carried `sorryAx` into `t_refutation_certificate`
+        # (unproved, where the following alternative proves it outright).
+        # Strictly a fix: an alternative that does not close its goal was
+        # never a proof, and `done` only turns that non-proof into a
+        # failure the very next alternative gets to answer.
         fl = self.cert_fns
-        return (f"(first | decide | omega | simp [{fl}] | "
+        return (f"(first | decide | omega | (simp [{fl}]; done) | "
                 f"(simp [{fl}]; omega) | grind [{fl}])")
 
     def _cev(self, e: dict, venv: dict):
@@ -7519,8 +8193,34 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                 if self._cev(a, venv) is False:
                     proj = ".2" * j + (".1" if j < len(args) - 1 else "")
                     r = self._refute(a, tenv, venv, types)
-                    return (f"(intro {h}; exact absurd {h}{proj} "
-                            f"(by {r}))")
+                    # THE SWALLOWED ALTERNATIVE (2026-09-18, ROADMAP WS-20
+                    # move 1, found on has_duplicate's own collapse-if
+                    # twin at s=[0,1]). `_enum` above dispatches one
+                    # alternative per enumerated value with `first | A |
+                    # B`, and the alternatives are `exact absurd h (by
+                    # ...)` terms. MEASURED: an error inside a NESTED `by`
+                    # is RECOVERED by the elaborator (logged, the term
+                    # completed with `sorryAx`), not raised as a tactic
+                    # failure -- so `first` sees alternative A SUCCEED on
+                    # every branch, never reaches B, and the file carries
+                    # `sorryAx` into `t_refutation_certificate`, which
+                    # verifiers/lean.py demotes to unproved. The one
+                    # place a `first` here does backtrack honestly is
+                    # INSIDE a single `by` over leaf tactics, which is
+                    # exactly what `self._closer()` is, so the fix is to
+                    # give every branch a branch-INDEPENDENT first shot:
+                    # the whole conjunction is ground at the witness, and
+                    # `decide` refutes `0 < 1 ∧ [0,1][0]! = [0,1][1]!`
+                    # directly (measured), so the same alternative closes
+                    # every enumerated branch and the dispatch never has
+                    # to discriminate. ADDITIVE and sound in both
+                    # directions: `{g}` is a kernel-checked proof of the
+                    # same `¬(...)` the decomposition below would build,
+                    # and when it fails it fails as a plain tactic, so the
+                    # pre-existing projection path is reached exactly as
+                    # before.
+                    return (f"(first | {g} | (intro {h}; exact absurd "
+                            f"{h}{proj} (by {r})))")
             return g
         if op == "or":
             args = e["args"]
@@ -7919,7 +8619,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return None      # "no value": nothing ground to instantiate
         self.cert_funs = interp.funs_of(self.task, self.body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
-        if any("while" in s for s in self.body):
+        if self._nl_used:
+            # NESTED AND MULTIPLE LOOPS (2026-09-18): every loop function
+            # the general path emitted, so `simp [...]`/`grind [...]` can
+            # unfold the whole nest down to a ground value at the witness
+            # (measured on has_duplicate's own collapse-if twin, s=[0,1]:
+            # `simp [hd_t, hd_t_loop, hd_t_loop2]` evaluates it; `decide`
+            # alone cannot, well-founded recursion does not reduce).
+            fns += list(self._nl_fn_names)
+        elif any("while" in s for s in self.body):
             fns.append(f"{self.name}_t_loop")
         self.cert_fns = ", ".join(fns)
         params = self.task["params"]
@@ -7940,7 +8648,16 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # proof argument threaded here too, exactly when `_t`'s own
         # definition carries the parameter to fill.
         loop_w = next((s["while"] for s in self.body if "while" in s), None)
-        loop_needs = loop_w is not None and self._loop_needs_domain_hyp(loop_w)
+        # `_nl_used`: the general path never threads THE DOMAIN
+        # HYPOTHESIS into `{name}_t` (its loop functions take no `hpre`
+        # and no `hinv`), so `_loop_needs_domain_hyp`'s answer is not
+        # about the code actually emitted here; asking it anyway would
+        # send this witness to `_cert_value_loop`, whose replay calls
+        # `sym` on a body whose nested `while` now raises (the path is
+        # switched off after emission), and cost the certificate for
+        # nothing.
+        loop_needs = (loop_w is not None and not self._nl_used
+                      and self._loop_needs_domain_hyp(loop_w))
         # 2026-09-14 (lean-loopcert2, ROADMAP 16.2's value-witness-through-
         # domain-hypothesis-loop item): a "value"-kind witness through a
         # loop whose termination genuinely needs THE DOMAIN HYPOTHESIS
