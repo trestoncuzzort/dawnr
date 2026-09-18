@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-09-15 20:29Z
+# t cross-kernel agreement, 2026-09-18 14:25Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 
@@ -16,8 +16,9 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | filter_pos | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | first_even | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | gcd | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| has_duplicate | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | is_prime | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| linear_search | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| linear_search | verified / refuted | verified / refuted | verified / refuted (FLAKED) | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | min_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
 | probe_names_dafny | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -56,12 +57,12 @@ Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `ab
 
 | kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
 |---|---|---|---|
+| spark | 1 | 2 | linear_search |
 | framac | 1 | 2 | swap_rows |
 | rocq | 1 | 0 | min_max |
 | dafny | 0 | 0 | (none) |
 | verus | 0 | 1 | (none) |
-| spark | 0 | 2 | (none) |
 | lean | 0 | 1 | (none) |
 | fstar | 0 | 2 | (none) |
 
-Of the 2 tasks in six, 1 is framac alone, 1 is rocq alone.
+Of the 3 tasks in six, 1 is spark alone, 1 is framac alone, 1 is rocq alone.
