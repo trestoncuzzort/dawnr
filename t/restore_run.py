@@ -74,6 +74,11 @@ def main() -> int:
         if src.exists() and (a.force or not (OUT / "loop" / name).exists()):
             shutil.copy2(src, OUT / "loop" / name)
 
+    # the run's own outputs that live directly in t/out: the copy-check keys and the checker table
+    for name in ("pool-keys.txt", "AGREEMENT-lab.md"):
+        if (run / name).exists() and (a.force or not (OUT / name).exists()):
+            shutil.copy2(run / name, OUT / name)
+
     split = OUT / "loop" / "split-v3.json"
     if split.exists():
         ids = json.loads(split.read_text())["eval_ids"]
