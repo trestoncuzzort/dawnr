@@ -170,6 +170,16 @@ Three moves follow, in this order.
    simply turn it into locallm -- syntactically perfect and semantically empty -- which is exactly what the
    measurement below is for, and why the number that decides this is the clean count and not the parse rate.
    Preregistered in [`t/PREREG-2026-09-18-constrained.md`](t/PREREG-2026-09-18-constrained.md).
+
+   Built and checked, 2026-09-18: [`t/t.gbnf`](t/t.gbnf) is the notation as a grammar, with its identifier
+   rules generated from `surface.KEYWORDS` by [`t/make_grammar.py`](t/make_grammar.py) because GBNF has no way
+   to say "a word that is not a keyword". [`t/grammar_check.py`](t/grammar_check.py) proves the two directions
+   the preregistration demands: all 2,121 programs the parser accepts are accepted in canonical form, all 2,087
+   are accepted as the models actually wrote them, and 590 of 590 replies the parser refuses are refused.
+   `spec_experiment.py generate --grammar` sends it, and `bash t/lab_gpu.sh constrained` runs the arm. What is
+   left is the generation itself, which needs a GPU: Ollama ships xgrammar but does not expose it (measured --
+   a grammar of `"yes" | "no"` is ignored and the reply is `Yes`), and this desktop has no CUDA toolkit to
+   build one that does, so the arm waits on the lab workstation's cards.
 2. **The prompt fixes that need no grammar.** Three of the four most common refusals are orthography, not
    ability: spec functions written after the task, chained comparisons, and `/` for integer division. If a
    prompt change moves the parse rate on a held-out sample, it costs one generation run and is worth having
