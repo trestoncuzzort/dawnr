@@ -29,7 +29,7 @@ Two halves. Both must hold before the tag.
 | WS-16 the claims | 16.1 done; 16.2 at 57 of 82; 16.3 open |
 | WS-17 the release | install pages written for three operating systems; public since 2026-09-17; second-person clause and the tag open |
 | WS-18 the training loop | round 4 measured on 232 held-out problems 2026-09-17: the student ties Phi-4-mini at 3 clean with 1.5B against 3.8B, training on 55 problems moved it none, locallm from scratch went 0 to 2 with 204 proven but wrong; round 5 (the models' own failures on training problems as negatives) is set up |
-| WS-19 the frontier moves | moves 1, 4 and 6 done; move 2 has a local 27B on the lab workstation; 3 and 7 next |
+| WS-19 the frontier moves | moves 1, 4, 6 and 7 done (7 went against the framing, see below); move 2 has a local 27B; move 3 next |
 | WS-20 what caps the corpus | chosen 2026-09-17 from the run's abstains: nested-loop lowering for Lean, Rocq and F\*, then more problem sources, then the twins and witnesses as an artifact; none started |
 
 ## WS-13: the language
@@ -88,7 +88,7 @@ Seven moves chosen from a survey of the field ([`t/FRONTIER-2026.md`](t/FRONTIER
 4. **The bottleneck column on the sweep.** Done. Every table names which verifier alone blocks each row ([`t/blockers.py`](t/blockers.py)); working those rows took one sweep from 60 to 136 of 277 in a night.
 5. **The construct line.** The order of 13.1.
 6. **The twin ladder as a completeness measurement.** Done ([`t/LADDER-COMPLETENESS.md`](t/LADDER-COMPLETENESS.md)).
-7. **The preregistered reward ablation.** Waits: one verifier against seven with a refuted twin, declared before it is run.
+7. **The preregistered reward ablation.** Done, 2026-09-17, and it went against the project's own framing. Declared in [`t/PREREG-2026-09-17-ablation.md`](t/PREREG-2026-09-17-ablation.md), measured by [`t/ablation.py`](t/ablation.py), reported in [`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md). On answers to training problems one prover admits wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage, which fails the declared bar of a fivefold reduction. On answers to held-out problems, where the model writes its own specification, every gate admits about 97 percent wrong and the tests catch what no proof gate does. The claim that survives is tests and proofs together. `pool_pick.py --control` now sends failing answers to the checkers as well, so every later round can measure this instead of inferring it.
 
 ## WS-20: what caps the corpus, chosen 2026-09-17
 
