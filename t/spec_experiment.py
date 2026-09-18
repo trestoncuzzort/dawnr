@@ -76,6 +76,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import concurrent.futures
 import threading
 import re
@@ -713,7 +714,26 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
 
 # -------------------------------------------------------------- generate --
 
-def chat(host: str, model: str, messages: list[dict], options: dict, timeout: float) -> dict:
+def chat(host: str, model: str, messages: list[dict], options: dict, timeout: float, api: str = "ollama") -> dict:
+    """One reply, from Ollama's own API or from an OpenAI-shaped one (vLLM, 2026-09-18). The reply is returned
+    in Ollama's shape either way, so every caller and every raw record keeps the same fields."""
+    if api == "openai":
+        body = {"model": model, "stream": False, "messages": messages,
+                "temperature": options.get("temperature", 0),
+                "max_tokens": options.get("num_predict", 1024),
+                "seed": options.get("seed")}
+        req = urllib.request.Request(f"http://{host}/v1/chat/completions",
+                                     data=json.dumps(body).encode("utf-8"),
+                                     headers={"Content-Type": "application/json",
+                                              "Authorization": "Bearer " + os.environ.get("T_API_KEY", "none")})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            d = json.loads(resp.read().decode("utf-8"))
+        ch = (d.get("choices") or [{}])[0]
+        usage = d.get("usage") or {}
+        return {"message": {"content": (ch.get("message") or {}).get("content", "")},
+                "prompt_eval_count": usage.get("prompt_tokens"),
+                "eval_count": usage.get("completion_tokens"),
+                "done_reason": ch.get("finish_reason")}
     body = {"model": model, "stream": False, "messages": messages, "options": options}
     req = urllib.request.Request(f"http://{host}/api/chat", data=json.dumps(body).encode("utf-8"),
                                  headers={"Content-Type": "application/json"})
@@ -755,7 +775,7 @@ def cmd_generate(args) -> int:
         messages = build_prompt(P[tid], args.prompt)
         t0 = time.monotonic()
         try:
-            resp = chat(args.host, args.model, messages, options, args.timeout)
+            resp = chat(args.host, args.model, messages, options, args.timeout, getattr(args, "api", "ollama"))
         except (urllib.error.URLError, OSError) as e:
             print(f"generate: task {tid}: no answer from {args.host}: {e}", file=sys.stderr)
             with lock:
@@ -1200,6 +1220,8 @@ def main(argv=None) -> int:
                                  "library's notation and two more "
                                  "few-shot tasks)")
             p.add_argument("--host", default="127.0.0.1:11434")
+            p.add_argument("--api", choices=("ollama", "openai"), default="ollama",
+                           help="openai: an OpenAI-shaped server such as vLLM, at --host/v1/chat/completions")
             p.add_argument("--limit", type=int, default=0)
             p.add_argument("--min-id", type=int, default=0,
                            help="only problems with this task id or above (pool v4's HumanEval problems: 100000)")
