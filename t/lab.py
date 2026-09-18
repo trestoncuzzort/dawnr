@@ -928,7 +928,9 @@ class Lab:
         try:
             while True:
                 kind, payload = self.q.get_nowait()
-                if kind == "results":
+                if kind == "labgpu":
+                    self.show_lab_gpu(payload)
+                elif kind == "results":
                     self.show_results(*payload)
                 elif kind == "status":
                     self.status.configure(text=payload, fg=MUTED)
@@ -1216,6 +1218,24 @@ class Lab:
         self.orch_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=6, wrap="none")
         self.orch_log.pack(fill="x")
 
+        c = self.card(page, "The lab workstation's GPUs", "t/lab_gpu.sh: a second generator on four shared cards")
+        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
+            "A 30B coder model served by vLLM across the four cards, answering its half of the problems while "
+            "this desktop answers the other half. The cards belong to other people: Stop kills the server and "
+            "the generation within seconds and loses nothing, because every answer is written as it arrives.")
+                 ).pack(fill="x", pady=(0, 6))
+        row = tk.Frame(c, bg=CARD)
+        row.pack(fill="x", pady=(0, 8))
+        self.gpu_state = tk.Label(row, text="", bg=CARD, fg=FAINT, font=self.f_bold)
+        self.gpu_state.pack(side="left")
+        Button(row, "Stop", lambda: self.lab_gpu("stop"), RED, self).pack(side="right")
+        Button(row, "Start", lambda: self.lab_gpu("start"), GREEN, self, filled=False).pack(side="right", padx=8)
+        Button(row, "Fetch answers", lambda: self.lab_gpu("fetch"), BLUE, self,
+               filled=False).pack(side="right", padx=8)
+        self.gpu_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=7, wrap="none")
+        self.gpu_log.pack(fill="x")
+        threading.Thread(target=self.lab_gpu_watch, daemon=True).start()
+
         c = self.card(page, "Alerts", "what the autopilot could not fix: t/runs/<date>/ALERTS.md", fill="both",
                       expand=True)
         self.alert_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=10, wrap="word")
@@ -1233,6 +1253,46 @@ class Lab:
                           f"--working-directory={TUP} -p StandardOutput=append:{RUNS}/logs/run-all.log "
                           f"-p StandardError=append:{RUNS}/logs/run-all.log --setenv=HOME=$HOME --setenv=DISPLAY=:0 "
                           "/usr/bin/python3 t/run_everything.py"], cwd=TUP)
+
+    def lab_gpu(self, verb: str):
+        """Start, stop or fetch the lab workstation's generation. Stop runs in the foreground of its own thread
+        so it cannot be queued behind anything: when the cards' owners ask, it goes now."""
+        log = RUNS / "logs" / "lab-gpu.log"
+        RUNS.joinpath("logs").mkdir(parents=True, exist_ok=True)
+
+        def run():
+            with open(log, "a") as out:
+                out.write(f"\n### {time.strftime('%Y-%m-%d %H:%M:%S')} lab_gpu.sh {verb}\n")
+                out.flush()
+                subprocess.run(["bash", "t/lab_gpu.sh", verb], cwd=TUP, stdout=out, stderr=subprocess.STDOUT,
+                               env=self.step_env())
+            self.note(f"lab GPUs: {verb}")
+        threading.Thread(target=run, daemon=True).start()
+        self.gpu_state.configure(text=f"●  {verb} sent", fg=BLUE)
+
+    def lab_gpu_watch(self):
+        while True:
+            try:
+                p = subprocess.run(["bash", "t/lab_gpu.sh", "status"], cwd=TUP, capture_output=True, text=True,
+                                   timeout=60, env=self.step_env())
+                self.q.put(("labgpu", p.stdout.strip() or p.stderr.strip()))
+            except (OSError, subprocess.SubprocessError) as e:
+                self.q.put(("labgpu", f"status failed: {e}"))
+            time.sleep(20)
+
+    def show_lab_gpu(self, text: str):
+        ours = [l for l in text.splitlines() if "vllm serve" in l or "spec_experiment" in l]
+        answers = ""
+        lines = text.splitlines()
+        for i, l in enumerate(lines):
+            if l.startswith("-- answers:") and i + 1 < len(lines):
+                answers = lines[i + 1].strip()
+        self.gpu_state.configure(
+            text=f"●  running, {answers} answers" if ours else "●  not running",
+            fg=GREEN if ours else FAINT)
+        if self.gpu_log.get("1.0", "end").strip() != text.strip():
+            self.gpu_log.delete("1.0", "end")
+            self.gpu_log.insert("end", text)
 
     def tick_ai(self):
         def active(name):
