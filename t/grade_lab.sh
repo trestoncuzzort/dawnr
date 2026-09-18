@@ -4,7 +4,8 @@
 #   bash t/grade_lab.sh tags T1 T2 ...  those answer sets' grade-in/ (repairs, other generators)
 #   bash t/grade_lab.sh heldout   the held-out answer sets' tasks/ (extract and tests run here first)
 # Copies the tasks over, runs run_par.py there, copies kernels.md back. Checker events stream
-# into this machine's T_WATCH so t lab's Live checks shows them. Needs the the VPN and key login.
+# into this machine's T_WATCH so t lab's Live checks shows them. Needs key login, and the VPN when the
+# workstation is only reachable through one (T_VPN_CMD).
 set -u
 # the whole script is one function, read in full before it runs: editing this file while a job
 # runs cannot change what that job does
@@ -28,9 +29,9 @@ SSH="ssh -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=30"
 REMOTE_EV='.cache/t-watch/home-grade.jsonl'
 
 if ! $SSH "$LAB" true 2>/dev/null; then
-  # no VPN: open the the VPN window (sign in and approve Duo there) and wait up to 10 minutes
-  echo "lab workstation not reachable: opening the VPN, sign in there"
-  pgrep -x openconnect >/dev/null || DISPLAY=${DISPLAY:-:0} setsid ptyxis --new-window -T "the VPN" -x "$HOME/.local/bin/vpn-connect" >/dev/null 2>&1 &
+  # unreachable: run T_VPN_CMD, if one is set, and wait up to 10 minutes for the workstation to answer
+  echo "lab workstation not reachable${T_VPN_CMD:+, running T_VPN_CMD}"
+  [ -n "${T_VPN_CMD:-}" ] && setsid sh -c "$T_VPN_CMD" >/dev/null 2>&1 &
   for i in $(seq 1 120); do sleep 5; $SSH "$LAB" true 2>/dev/null && break; done
   $SSH "$LAB" true || { echo "still cannot reach $LAB after 10 minutes"; exit 1; }
   echo "connected"

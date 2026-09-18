@@ -113,8 +113,8 @@ STEPS = [
      "bash t/grade_lab.sh matrix", "test -s t/out/AGREEMENT-lab.md", "lab"),
     ("grade", "Grade the answers", "On the lab workstation (120 threads, CPU only, 16 jobs; every checker run of "
      "this project goes there): sends each finished "
-     "seed's grade-in/, brings kernels.md back, checks show on Live checks. Opens the VPN by itself if it is down; sign in "
-     "there. Skips graded seeds, so Run again after more seeds finish.", "bash t/grade_lab.sh seeds",
+     "seed's grade-in/, brings kernels.md back, checks show on Live checks. Runs T_VPN_CMD first when the "
+     "workstation needs a VPN. Skips graded seeds, so Run again after more seeds finish.", "bash t/grade_lab.sh seeds",
      f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "lab"),
     ("more-problems", "New problems and a second model", "Needs Ollama started. The 88 HumanEval problems of pool v4 "
      f"(8 answer sets, as for MBPP), then {GEN2} over all 737 problems (seed 1 at temperature 0, seed 2 at 0.7).",
@@ -145,7 +145,10 @@ STEPS = [
      f"{PY} t/loop_generate.py --adapter none --tag qwen15b-base-v3 {EVAL}",
      f"test $(ls {SE}/qwen15b-base-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("train", "Train the student", "The 1.5B trained on the clean pool.",
-     f"{PY} t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --out t/out/loop/adapter-r4",
+     # --max-len 4608: the prompt alone is about 3,100 tokens (the few-shot grammar) and the default 1024
+     # dropped every pair as fully truncated, so the preference phase got nothing (2026-09-17)
+     f"{PY} t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first "
+     "--max-len 4608 --out t/out/loop/adapter-r4",
      "test -s t/out/loop/adapter-r4/adapter_model.safetensors", "gpu"),
     ("student", "Student answers", "", f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-v3 {EVAL}",
      f"test $(ls {SE}/student-r4-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),

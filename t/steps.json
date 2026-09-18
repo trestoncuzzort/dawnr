@@ -58,7 +58,7 @@
  [
   "grade",
   "Grade the answers",
-  "On the lab workstation (120 threads, CPU only, 16 jobs; every checker run of this project goes there): sends each finished seed's grade-in/, brings kernels.md back, checks show on Live checks. Opens the VPN by itself if it is down; sign in there. Skips graded seeds, so Run again after more seeds finish.",
+  "On the lab workstation (120 threads, CPU only, 16 jobs; every checker run of this project goes there): sends each finished seed's grade-in/, brings kernels.md back, checks show on Live checks. Runs T_VPN_CMD first when the workstation needs a VPN. Skips graded seeds, so Run again after more seeds finish.",
   "bash t/grade_lab.sh seeds",
   "for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || exit 1; done",
   "lab"
@@ -107,7 +107,7 @@
   "train",
   "Train the student",
   "The 1.5B trained on the clean pool.",
-  "~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --out t/out/loop/adapter-r4",
+  "~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --max-len 4608 --out t/out/loop/adapter-r4",
   "test -s t/out/loop/adapter-r4/adapter_model.safetensors",
   "gpu"
  ],
