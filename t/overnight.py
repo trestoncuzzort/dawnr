@@ -194,7 +194,11 @@ class Runner:
                 for key in self.ready():
                     self.start(key)
             self.write_report()
-            if not self.running and not self.ready():
+            # a step someone started by hand is work in flight too: on 2026-09-18 this runner stopped in its
+            # first minute because the only thing running was a training job it had not started itself, and
+            # every step left was waiting on that job's machine
+            others = [k for k, *_ in STEPS if k not in self.running and not done(k) and already_running(k)]
+            if not self.running and not others and not self.ready():
                 print("nothing runnable left", flush=True)
                 break
             time.sleep(self.poll)
