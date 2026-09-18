@@ -718,11 +718,15 @@ def chat(host: str, model: str, messages: list[dict], options: dict, timeout: fl
     """One reply, from Ollama's own API or from an OpenAI-shaped one (vLLM, 2026-09-18). The reply is returned
     in Ollama's shape either way, so every caller and every raw record keeps the same fields."""
     if api == "openai":
+        # host may be a bare host:port (a local vLLM) or a full base URL (a hosted API, 2026-09-18):
+        #   --api openai --host https://api.openai.com/v1 --model <name>, with the key in T_API_KEY
+        base = host if host.startswith(("http://", "https://")) else f"http://{host}/v1"
         body = {"model": model, "stream": False, "messages": messages,
                 "temperature": options.get("temperature", 0),
-                "max_tokens": options.get("num_predict", 1024),
-                "seed": options.get("seed")}
-        req = urllib.request.Request(f"http://{host}/v1/chat/completions",
+                "max_tokens": options.get("num_predict", 1024)}
+        if options.get("seed") is not None:
+            body["seed"] = options["seed"]
+        req = urllib.request.Request(base.rstrip("/") + "/chat/completions",
                                      data=json.dumps(body).encode("utf-8"),
                                      headers={"Content-Type": "application/json",
                                               "Authorization": "Bearer " + os.environ.get("T_API_KEY", "none")})
