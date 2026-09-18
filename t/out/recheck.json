@@ -1,0 +1,15 @@
+{
+ "rechecked": [
+  {
+   "tag": "qwen3-coder-30b-apps-s2",
+   "task": "apps_3271__arr",
+   "kernel": "spark",
+   "was": "FLAKED under the sweep",
+   "alone": "verified / refuted",
+   "agrees_with": "dafny",
+   "how": "python3 t/grade.py --tasks <that task alone> --kernels spark,dafny --flake 3 --jobs 2",
+   "when": "2026-09-18",
+   "why": "gnatprove under 32 concurrent cells starves its own wall clock; lower_spark.py's own notes call a sweep-load spark cell provisional until re-verified alone"
+  }
+ ]
+}

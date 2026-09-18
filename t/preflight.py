@@ -108,17 +108,33 @@ def clean_rows(tag_dir: Path) -> dict:
             if tests.get(n) == "pass" and all(r.get(k, "").startswith("verified / refuted") for k in KERNELS)}
 
 
+def rechecked() -> set:
+    """Cells re-verified alone and recorded in t/out/recheck.json. A FLAKED mark means the sweep disagreed with
+    itself under load, not that the cell is unstable: lower_spark.py's own notes call a spark cell graded at
+    high concurrency provisional until it is re-run alone. A re-check is only worth anything if it is written
+    down with how it was run, so this reads that file rather than letting anyone edit a verdict by hand."""
+    try:
+        rows = json.loads((OUT / "recheck.json").read_text()).get("rechecked", [])
+    except (OSError, ValueError):
+        return set()
+    return {(r["tag"], r["task"], r["kernel"]) for r in rows
+            if r.get("alone", "").startswith("verified / refuted")}
+
+
 def check_flakes() -> bool:
+    ok_alone = rechecked()
     flaked, timeouts, total = [], [], 0
     for d in sorted(p for p in SE.glob("*") if (p / "kernels.md").exists()):
         for name, row in clean_rows(d).items():
             total += 1
             for k in KERNELS:
                 cell = row.get(k, "")
-                if "FLAKED" in cell:
+                if "FLAKED" in cell and (d.name, name, k) not in ok_alone:
                     flaked.append(f"{d.name}/{name} {k}")
                 if "timeout" in cell:
                     timeouts.append(f"{d.name}/{name} {k}")
+    if ok_alone:
+        print(f"  [note] {len(ok_alone)} cell(s) re-verified alone, recorded in out/recheck.json")
     ok = say(not flaked, f"no clean answer rests on a flaked cell ({total} clean)",
              "" if not flaked else f"{len(flaked)}: {flaked[:3]}")
     return say(not timeouts, "no clean answer rests on a timeout",
