@@ -117,11 +117,12 @@ STEPS = [
     ("matrix", "Check the checkers", "On the lab workstation, where all grading runs: regrades the 34 committed tasks. "
      "Good: 30 of 34 in all seven, as in t/AGREEMENT.md. Table comes back to t/out/AGREEMENT-lab.md.",
      "bash t/grade_lab.sh matrix", "test -s t/out/AGREEMENT-lab.md", "lab"),
-    ("grade", "Grade the answers", "On the lab workstation (120 threads, CPU only, 16 jobs; every checker run of "
-     "this project goes there): sends each finished "
-     "seed's grade-in/, brings kernels.md back, checks show on Live checks. Runs T_VPN_CMD first when the "
-     "workstation needs a VPN. Skips graded seeds, so Run again after more seeds finish.", "bash t/grade_lab.sh seeds",
-     f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "lab"),
+    ("grade", "Grade what is ungraded", "Every answer set with tasks waiting and no table yet, in one "
+     "pass on the lab workstation (four sets at a time, work in RAM). A new answer set needs no new step: "
+     "it is graded because it is there. Checks show on Live checks.",
+     "bash t/grade_lab.sh pending",
+     f"! ls -d {SE}/*/grade-in >/dev/null 2>&1 || ! (cd {SE} && for d in */; do t=${{d%/}}; "
+     "[ -d \"$t/grade-in\" ] || continue; [ -s \"$t/kernels.md\" ] || exit 0; done; exit 1)", "lab"),
     ("more-problems", "New problems and a second model", "Needs Ollama started. The 88 HumanEval problems of pool v4 "
      f"(8 answer sets, as for MBPP), then {GEN2} over all 737 problems (seed 1 at temperature 0, seed 2 at 0.7).",
      f"for S in 1 2 3 4 5 6 7 8; do T={HE}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
@@ -135,9 +136,6 @@ STEPS = [
      "python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && "
      "python3 t/pool_pick.py $D --control 25 || exit 1; done",
      f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
-    ("grade-growth", "Grade new problems and model", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_TAGS}",
-     f"n=0; for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || continue; n=$((n+1)); "
-     f"[ -s {SE}/$T/kernels.md ] || exit 1; done; [ $n -gt 0 ]", "lab"),
     ("spec-check", "Check the specifications", "The gate the provers do not give: each accepted answer's ensures "
      "against the problem's own solution, on arguments shaped like the problem's own examples. A disagreement is "
      "an answer that passed its tests, all seven proofs and a refuted twin and still does not say what the "
@@ -175,9 +173,10 @@ STEPS = [
     # graded, and what they get wrong there (proven but wrong, or tests failing) becomes the rejected side of the
     # next preference set. Held-out problems are never touched: their failures cannot be used at all.
     ("apps", "APPS problems, the pool's ceiling", "The 2,266 APPS problems whose own examples t can express, "
-     "answered by qwen2.5-coder:14b (2 seeds) and deepseek-coder-v2:16b (1 seed). This is the move that adds "
-     "problems rather than more answers to the ones already held: pool v5 is 3,003 problems, 2,771 of them "
-     "training, the held-out 232 unchanged.",
+     "answered on whichever machine has a generator: this desktop through Ollama, the lab workstation through "
+     "vLLM on its four cards (the AI tab starts and stops that one). This is the move that adds problems rather "
+     "than more answers to the ones already held: pool v5 is 3,003 problems, 2,771 of them training, the "
+     "held-out 232 unchanged.",
      "for S in 1 2; do T=qwen2.5-coder-14b-apps-s$S; D=" + SE + "/$T; [ -d $D/grade-in ] && continue; "
      "TEMP=0.7; [ $S = 1 ] && TEMP=0; "
      "python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v5 --min-id 200000 "
@@ -193,10 +192,6 @@ STEPS = [
      "python3 t/pool_pick.py $D --control 25; }",
      "for T in qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1; do "
      f"[ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
-    ("apps-grade", "Grade the APPS answers", "On the lab workstation.",
-     "bash t/grade_lab.sh tags qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1",
-     "for T in qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1; do "
-     f"[ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("r5-answers", "Round 5: answer the training problems", "The student and locallm answer the 417 training "
      "problems, so their own failures can be graded and used. Held-out problems are not touched.",
      f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 "
@@ -204,13 +199,6 @@ STEPS = [
      f"{PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4-train "
      "--ids-file t/out/loop/train-ids.txt || true",
      f"test $(ls {SE}/student-r4-train/raw 2>/dev/null | wc -l) -ge 417", "gpu"),
-    ("r5-grade", "Round 5: grade those", "Extract, test and grade the training answers on the lab workstation: "
-     "the clean ones join the pool, the proven-but-wrong ones become negatives.",
-     "for T in student-r4-train locallm-r4-train; do [ -d t/out/spec-experiment/$T/raw ] || continue; "
-     "python3 t/spec_experiment.py extract --model $T --pool v3 && "
-     "python3 t/spec_experiment.py tests --model $T --pool v3 && "
-     "python3 t/pool_pick.py t/out/spec-experiment/$T --control 25; done && bash t/grade_lab.sh tags student-r4-train locallm-r4-train",
-     f"test -s {SE}/student-r4-train/kernels.md", "lab"),
     ("r5-pool", "Round 5: pool and pairs", "Rebuilds the pool with the new clean answers and the new negatives.",
      f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} student-r4-train locallm-r4-train "
      "--split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r5 && "
@@ -253,9 +241,9 @@ NEEDS = {
     "grade-growth": [],
     "more-problems": ["pull", "data"],
     "phi": ["data", "packages"], "base": ["data", "packages"],
-    "spec-check": ["grade"], "pool": ["grade", "grade-growth", "spec-check"], "train": ["pool"],
+    "spec-check": ["grade"], "pool": ["grade", "spec-check"], "train": ["pool"],
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
-    "apps-grade": [], "r5-grade": ["r5-answers"], "r5-pool": ["r5-grade"], "r5-locallm": ["r5-pool"], "r5-train": ["r5-pool"],
+    "r5-pool": ["grade"], "r5-locallm": ["r5-pool"], "r5-train": ["r5-pool"],
     "r5-student": ["r5-train"], "r5-grade-heldout": ["r5-student"], "r5-score": ["r5-grade-heldout"],
 }
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")
@@ -1284,6 +1272,10 @@ class Lab:
         for line in text.splitlines():
             if line.strip().isdigit():
                 self.lab_answers = int(line.strip())
+        gen = "spec_experiment.py generate" in text
+        if gen and not getattr(self, "lab_generating", False):
+            self.lab_since = time.time()
+        self.lab_generating = gen
         ours = [l for l in text.splitlines() if "vllm serve" in l or "spec_experiment" in l]
         answers = ""
         lines = text.splitlines()
@@ -1474,8 +1466,11 @@ class Lab:
         self.refresh_steps(once=True)
 
     def running_steps(self):
-        """(key, title, started) for every step with a live process, including ones started before this window."""
+        """(key, title, started) for every step with a live process, including ones started before this window
+        and, for the generation steps, one running on the lab workstation (2026-09-18)."""
         out = []
+        if getattr(self, "lab_generating", False):
+            out.append(("apps", "APPS problems, the pool's ceiling", getattr(self, "lab_since", time.time())))
         for key, title, *_r in STEPS:
             job = self.jobs.get(key)
             if job:
@@ -1535,6 +1530,17 @@ class Lab:
             total = 8 * 649
             return (("all 8 seeds written" if whole == 8 else
                      f"{sum(per)} of {total} answers, seed {whole + 1}"), sum(per) / total)
+        if key == "grade":
+            sets = [d for d in SPEC_EXP.glob("*") if (d / "grade-in").is_dir()]
+            done_n = sum(1 for d in sets if (d / "kernels.md").exists())
+            return (f"{done_n} of {len(sets)} answer sets graded", done_n / len(sets) if sets else None)
+        if key == "spec-check":
+            try:
+                n = json.loads((HERE / "out" / "spec-disagree.json").read_text())
+                return (f"{n['checked']} answers checked, {len(n['disagree'])} disagree",
+                        1.0 if self.step_state.get(key) == "done" else None)
+            except (OSError, ValueError, KeyError):
+                return "", None
         if key == "apps":
             # the lab workstation's answers live on the lab workstation: its count comes from the status the
             # GPU card's watcher reads every twenty seconds, not from this disk (2026-09-18)

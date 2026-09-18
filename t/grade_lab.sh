@@ -69,6 +69,12 @@ grade() {  # tag, folder name inside the tag
 }
 
 case "${1:-seeds}" in
+  # 2026-09-18: one mode instead of a step per round. Every answer set that has tasks worth grading and no
+  # table yet, in one pass: a new set is picked up without anyone editing a list of tags.
+  pending) mapfile -t pend < <(cd "$SE" && for d in */; do t=${d%/}; \
+             [ -d "$t/grade-in" ] || continue; [ -s "$t/kernels.md" ] && continue; echo "$t"; done)
+           [ ${#pend[@]} -eq 0 ] && { echo "== nothing to grade"; exit 0; }
+           echo "== ${#pend[@]} answer sets to grade: ${pend[*]}"; par "${pend[@]}" ;;
   tags)    shift; par "$@" ;;
   matrix)  echo "== committed-tasks: $(ls t/tasks/*.t | wc -l) tasks to the lab workstation"
            $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'"
