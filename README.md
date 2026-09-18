@@ -72,7 +72,7 @@ The pool stands at 203 clean answers over 76 distinct problems, against the 47 p
 - **Only gradable answers reach the checkers.** [`t/pool_pick.py`](t/pool_pick.py) sends a proof system only answers that pass their tests and copy nothing already in the pool.
 - **Local generators.** Answer sets from models served by Ollama on a 16 GB consumer GPU, not only the 27B on datacenter GPUs.
 - **t lab** ([`t/lab.py`](t/lab.py)): one window with every proof check live as it runs, a tester for locallm models, and a Collect data tab that runs the whole pipeline one button per step, logged and resumable.
-- **Grading across machines.** [`t/grade_lab.sh`](t/grade_lab.sh) sends answer sets to a many-core workstation over SSH and streams its checks back into t lab; [`t/grade_home.sh`](t/grade_home.sh) grades on the local CPU at the same time, and neither takes a set the other has claimed.
+- **Grading across machines.** [`t/grade_lab.sh`](t/grade_lab.sh) sends answer sets to a many-core workstation over SSH and streams its checks back into t lab; answer sets are claimed, so two machines never grade the same one.
 - **Unattended runs.** [`t/run_everything.py`](t/run_everything.py) chains generation, grading, the baselines, the pool, training and scoring, retries a failed step once, and notifies when Phi-4-mini starts and when the run ends.
 - **Three machines reproduce the proof matrix.** The seven proof systems install without root on Linux (native and WSL2) and macOS; an M3 Max MacBook reproduced the committed matrix cell for cell (30 of 34 tasks in all seven, [`t/WITNESS-2026-09-16-macos-m3max.md`](t/WITNESS-2026-09-16-macos-m3max.md)).
 

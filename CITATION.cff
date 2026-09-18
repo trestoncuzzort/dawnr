@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: "locallm: small language models trained only on code seven proof systems agree is correct"
+message: "If you refer to this work, cite it as below."
+type: software
+authors:
+  - family-names: Cuzzort
+    given-names: Treston Malachi
+repository-code: "https://github.com/trestoncuzzort/locallm"
+abstract: >-
+  A pipeline that keeps a generated program as training data only when it passes its tests, is proven against
+  its specification by Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq and F*, and has a deliberately broken copy of
+  itself refuted by all seven at a concrete input. Includes the t specification language and its seven
+  lowerings, the grading harness, the measured coverage and agreement tables, and tup, a Linux distribution
+  built from source with a receipt for every step.
+keywords:
+  - formal verification
+  - synthetic data
+  - program synthesis
+  - small language models
+license-url: "https://github.com/trestoncuzzort/locallm/blob/main/LICENSE"
