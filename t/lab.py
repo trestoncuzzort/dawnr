@@ -215,8 +215,13 @@ STEPS = [
      f"test $(ls {SE}/locallm-r5/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("r5-train", "Round 5: train the student again", "The same 1.5B, now with the round 5 pairs, which include "
      "the model's own proven-but-wrong answers as the rejected side.",
-     f"{PY} t/loop_train.py --sft t/out/loop/sft-r5.jsonl --pairs t/out/loop/pairs-r5.jsonl --sft-first "
-     "--max-len 4608 --out t/out/loop/adapter-r5",
+     # 2026-09-18: 4,608 put DPO out of memory on this 16 GB card once APPS problems entered the pool -- TRL
+     # computes a per-token entropy over the full-vocabulary logits for logging, unconditionally, and that is
+     # the tensor that tips it. Measured over the 489 round 5 pairs: the longest prompt and answer together is
+     # 3,322 Qwen tokens, so a 3,584 window keeps every pair and pays for nothing beyond them.
+     f"PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True {PY} t/loop_train.py --sft t/out/loop/sft-r5.jsonl "
+     "--pairs t/out/loop/pairs-r5.jsonl --sft-first "
+     "--max-len 3584 --out t/out/loop/adapter-r5",
      "test -s t/out/loop/adapter-r5/adapter_model.safetensors", "gpu"),
     ("r5-student", "Round 5: student answers", "",
      f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r5 --tag student-r5-v3 {EVAL}",
