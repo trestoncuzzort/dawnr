@@ -1,0 +1,105 @@
+# t's surface notation as a grammar a generator can decode against (2026-09-18, WS-21).
+#
+# GBNF/EBNF, for xgrammar -- the backend vLLM uses for `structured_outputs.grammar`. A model decoding against
+# this cannot emit anything t/surface.py's lexer and parser would refuse, which is the 62 percent of replies
+# t/FUNNEL-2026-09-18.md measured dying at that gate.
+#
+# This file is not the definition of t. t/SYNTAX.md and t/surface.py are, and this only has to agree with them:
+# t/grammar_check.py proves the agreement mechanically in both directions, and no arm of
+# t/PREREG-2026-09-18-constrained.md may run until it does.
+#
+# Whitespace. Every keyword here is followed by at least one space, because in all 3,207 programs the parser
+# has ever accepted the only keywords ever written against a symbol are `len(`, `tostr(` and `seq(`, which are
+# written as such below. That keeps the grammar from admitting `xandy`, which this file's alternation would
+# otherwise read as `x and y` while the lexer reads one identifier.
+#
+# Known over-acceptance, and why it is left: `id` matches keywords, so this grammar admits `var if : int := 0`,
+# which the parser refuses -- GBNF has no negative lookahead to say "a word that is not a keyword". It cannot
+# turn a refused reply into an accepted one, only an accepted reply into a refused one, and no reply in the
+# 6,603 the parser has refused does it. t/grammar_check.py reports it rather than hiding it.
+
+root ::= ws task ws
+
+task ::= "t" sp ver sp gatepart "task" sp id ws params ws "returns" ws "(" ws id ws ":" ws type ws ")" clauses specfuns ws block
+ver ::= "0" | "1"
+gatepart ::= "" | "gate" sp id sp
+clauses ::= clause*
+clause ::= ws ("requires" | "ensures" | "decreases") sp expr
+specfuns ::= specfun*
+specfun ::= ws "spec" sp "fun" sp id ws params ws ":" ws ("int" | "bool") ws "decreases" sp expr ws "=" ws expr
+
+params ::= "(" ws paramlist ws ")"
+paramlist ::= "" | param (ws "," ws param)*
+param ::= id ws ":" ws type
+
+# int | bool | seq | seq<seq> | (T1, T2); a pair's sides are base types, never a pair of pairs
+type ::= base | "seq" ws "<" ws "seq" ws ">" | "(" ws base ws "," ws base ws ")"
+base ::= "int" | "bool" | "seq"
+
+block ::= "{" ws stmts "}"
+stmts ::= (stmt ws)*
+stmt ::= "return" sp expr semi
+       | "var" sp id ws ":" ws type ws ":=" ws expr semi
+       | "if" sp expr ws block ws "else" ws block
+       | "while" sp expr invariants ws "decreases" sp expr ws block
+       | id ws ":=" ws expr semi
+invariants ::= (ws "invariant" sp expr)*
+semi ::= ws ";" | ""
+
+# Expressions, lowest binding first, exactly t/surface.py's ladder. Quantifiers and if/then/else run to the
+# right as far as they can, which is why they sit above implies rather than beside the atoms.
+expr ::= quant | ite | implies
+quant ::= ("forall" | "exists") sp id sp "in" sp "[" ws expr ws "," ws expr ws ")" ws "." ws expr
+ite ::= "if" sp expr sp "then" sp expr sp "else" sp expr
+implies ::= disj (ws "==>" ws (quant | ite | implies))?
+disj ::= conj (sp "or" sp conj)*
+conj ::= neg (sp "and" sp neg)*
+neg ::= "not" sp neg | cmp
+# comparisons do not chain: at most one, and never a second beside it
+cmp ::= sum (ws cmpop ws sum)?
+cmpop ::= "==" | "!=" | "<=" | ">=" | "<" | ">"
+sum ::= prod (ws sumop ws prod)*
+sumop ::= "+" | "-"
+prod ::= unary (ws prodop ws unary)*
+prodop ::= "*" | "/" | "%"
+unary ::= "-" ws unary | postfix
+postfix ::= atom posts
+posts ::= (ws post)*
+post ::= "[" ws ".." ws expr ws "]"
+       | "[" ws expr ws ".." ws expr ws "]"
+       | "[" ws expr ws ".." ws "]"
+       | "[" ws expr ws ":=" ws expr ws "]"
+       | "[" ws expr ws "]"
+       | "." ("0" | "1")
+       | "." strmember ws "(" ws args ws ")"
+strmember ::= "split" | "join" | "count" | "find" | "startswith" | "endswith" | "replace"
+            | "strip" | "lstrip" | "rstrip" | "lower" | "upper"
+            | "isdigit" | "isalpha" | "isupper" | "islower"
+
+atom ::= nat
+       | charlit
+       | strlit
+       | "true"
+       | "false"
+       | "len" ws "(" ws expr ws ")"
+       | "seq" ws "(" ws expr ws "," ws expr ws ")"
+       | "tostr" ws "(" ws expr ws ")"
+       | "(" ws expr ws "," ws expr ws ")"
+       | "(" ws expr ws ")"
+       | "[" ws args ws "]"
+       | id ws "(" ws args ws ")"
+       | id
+args ::= "" | expr (ws "," ws expr)*
+
+id ::= [A-Za-z] [A-Za-z0-9_]*
+nat ::= [0-9]+
+
+charlit ::= "'" charbody "'"
+charbody ::= [^'\\\r\n] | esc
+strlit ::= "\"" strbody "\""
+strbody ::= ([^"\\\r\n] | esc)*
+esc ::= "\\" ("n" | "t" | "r" | "0" | "'" | "\"" | "\\") | "\\u{" hex+ "}"
+hex ::= [0-9a-fA-F]
+
+ws ::= [ \t\r\n]*
+sp ::= [ \t\r\n]+
