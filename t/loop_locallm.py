@@ -121,7 +121,12 @@ def cmd_generate(a) -> int:
     import checkpoint
     split = json.loads(Path(a.split).read_text(encoding="utf-8"))
     pool = se.pool(split.get("pool", "v1"))
-    ids = sorted(int(i) for i in split["eval_ids"])
+    # which problems to answer: the split's held-out ids by default, or the ones named in --ids-file, so the
+    # model can answer TRAINING problems and have its own failures graded and fed back (2026-09-17)
+    which = "train_ids" if getattr(a, "train", False) else "eval_ids"
+    ids = sorted(int(i) for i in split[which])
+    if getattr(a, "ids_file", ""):
+        ids = sorted(int(x) for x in Path(a.ids_file).read_text().split())
     d = se.outdir(a.tag)
     model, tok, _ = checkpoint.load_checkpoint(a.model)
     params = sum(p.numel() for p in model.parameters())
@@ -169,6 +174,8 @@ def main() -> int:
     p = sub.add_parser("generate")
     p.add_argument("--model", default=str(OUT / "model"))
     p.add_argument("--tag", required=True)
+    p.add_argument("--ids-file", default="", help="answer only these task ids, one per line")
+    p.add_argument("--train", action="store_true", help="answer the split's training problems, not its held-out ones")
     p.add_argument("--split", default=str(HERE / "out" / "loop" / "split-v3.json"))
     p.add_argument("--chars", type=int, default=1200)
     p.add_argument("--temperature", type=float, default=0.5)

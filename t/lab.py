@@ -160,6 +160,51 @@ STEPS = [
     ("grade-heldout", "Grade held-out answers", "Every extracted task this time, so proven but wrong can be "
      "counted. Extract and tests run here, the checkers on the lab workstation.", "bash t/grade_lab.sh heldout",
      f"for T in {HELDOUT}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
+    # Round 5: the loop feeding on its own failures. The models answer the TRAINING problems, those answers are
+    # graded, and what they get wrong there (proven but wrong, or tests failing) becomes the rejected side of the
+    # next preference set. Held-out problems are never touched: their failures cannot be used at all.
+    ("r5-answers", "Round 5: answer the training problems", "The student and locallm answer the 417 training "
+     "problems, so their own failures can be graded and used. Held-out problems are not touched.",
+     f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 "
+     "--ids-file t/out/loop/train-ids.txt && "
+     f"{PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4-train "
+     "--ids-file t/out/loop/train-ids.txt || true",
+     f"test $(ls {SE}/student-r4-train/raw 2>/dev/null | wc -l) -ge 417", "gpu"),
+    ("r5-grade", "Round 5: grade those", "Extract, test and grade the training answers on the lab workstation: "
+     "the clean ones join the pool, the proven-but-wrong ones become negatives.",
+     "for T in student-r4-train locallm-r4-train; do [ -d t/out/spec-experiment/$T/raw ] || continue; "
+     "python3 t/spec_experiment.py extract --model $T --pool v3 && "
+     "python3 t/spec_experiment.py tests --model $T --pool v3 && "
+     "python3 t/pool_pick.py t/out/spec-experiment/$T; done && bash t/grade_lab.sh tags student-r4-train locallm-r4-train",
+     f"test -s {SE}/student-r4-train/kernels.md", "lab"),
+    ("r5-pool", "Round 5: pool and pairs", "Rebuilds the pool with the new clean answers and the new negatives.",
+     f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} student-r4-train locallm-r4-train "
+     "--split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r5 && "
+     "wc -l t/out/loop/sft-r5.jsonl t/out/loop/pairs-r5.jsonl",
+     "test -s t/out/loop/sft-r5.jsonl", ""),
+    ("r5-locallm", "Round 5: a bigger locallm", "From scratch on the round 5 pool, with more capacity and more "
+     "steps than r4 (8 layers, 512 wide, 6000 steps), then its held-out answers.",
+     "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl "
+     f"--out t/out/loop-locallm/corpus-r5.txt && {PY} t/loop_locallm.py train "
+     "--corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 "
+     f"--steps 6000 && {PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
+     f"test $(ls {SE}/locallm-r5/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("r5-train", "Round 5: train the student again", "The same 1.5B, now with the round 5 pairs, which include "
+     "the model's own proven-but-wrong answers as the rejected side.",
+     f"{PY} t/loop_train.py --sft t/out/loop/sft-r5.jsonl --pairs t/out/loop/pairs-r5.jsonl --sft-first "
+     "--max-len 4608 --out t/out/loop/adapter-r5",
+     "test -s t/out/loop/adapter-r5/adapter_model.safetensors", "gpu"),
+    ("r5-student", "Round 5: student answers", "",
+     f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r5 --tag student-r5-v3 {EVAL}",
+     f"test $(ls {SE}/student-r5-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("r5-grade-heldout", "Round 5: grade held-out", "On the lab workstation.",
+     "for T in student-r5-v3 locallm-r5; do [ -d t/out/spec-experiment/$T/raw ] || continue; "
+     "python3 t/spec_experiment.py extract --model $T --pool v3 && "
+     "python3 t/spec_experiment.py tests --model $T --pool v3; done && bash t/grade_lab.sh tags student-r5-v3 locallm-r5",
+     f"test -s {SE}/student-r5-v3/kernels.md", "lab"),
+    ("r5-score", "Round 5: score", "The round 5 row next to round 4 and Phi.",
+     "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4 "
+     "student-r5-v3 locallm-r5 | tee t/out/score-r5.md", "test -s t/out/score-r5.md", ""),
     ("score", "Score against Phi", "The result. Saved to t/out/score-r4.md.",
      f"python3 t/score_heldout.py qwen3.8-27b-fp8-v3 {HELDOUT} locallm-r0 | tee t/out/score-r4.md",
      "test -s t/out/score-r4.md", ""),
@@ -176,6 +221,8 @@ NEEDS = {
     "phi": ["data", "packages"], "base": ["data", "packages"],
     "pool": ["grade", "grade-growth"], "train": ["pool"],
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
+    "r5-grade": ["r5-answers"], "r5-pool": ["r5-grade"], "r5-locallm": ["r5-pool"], "r5-train": ["r5-pool"],
+    "r5-student": ["r5-train"], "r5-grade-heldout": ["r5-student"], "r5-score": ["r5-grade-heldout"],
 }
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")
 STEPS_FILE = HERE / "steps.json"
