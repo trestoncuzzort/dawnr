@@ -1,0 +1,210 @@
+[
+ [
+  "packages",
+  "Python packages",
+  "Installs the training libraries into ~/.venv-t.",
+  "~/.venv-t/bin/python -m pip install transformers peft trl datasets accelerate bitsandbytes safetensors",
+  "~/.venv-t/bin/python -c 'import transformers, peft, trl, datasets, accelerate, bitsandbytes'",
+  ""
+ ],
+ [
+  "data",
+  "Committed data",
+  "Copies the 2026-09-16 answers and split into t/out. Good: the score table's clean column reads 12 and 0.",
+  "mkdir -p t/out/spec-experiment t/out/loop && cp -r t/runs/2026-09-16/27b-answers/* t/out/spec-experiment/ && cp -r t/runs/2026-09-16/heldout-locallm-r0 t/out/spec-experiment/locallm-r0 && cp t/runs/2026-09-16/loop-data/{split-v3.json,sft-r3-27b.jsonl,pairs-r3-27b.jsonl} t/out/loop/ && python3 -c \"import json; print('\\n'.join(map(str, json.load(open('t/out/loop/split-v3.json'))['eval_ids'])))\" > t/out/loop/eval-ids.txt && python3 t/score_heldout.py qwen3.8-27b-fp8-v3 locallm-r0 && for T in qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2; do python3 t/pool_pick.py t/out/spec-experiment/$T --control 25; done",
+  "test -s t/out/loop/eval-ids.txt && test -s t/out/pool-keys.txt",
+  ""
+ ],
+ [
+  "ollama-install",
+  "Install Ollama",
+  "Opens a terminal because it asks for your password. Turns off Ollama's own service afterwards so the next step owns the port.",
+  "curl -fsSL https://ollama.com/install.sh | sh && sudo systemctl disable --now ollama",
+  "command -v ollama",
+  "sudo"
+ ],
+ [
+  "ollama-serve",
+  "Start Ollama",
+  "Keeps running in the background, also after this window closes. Models live in /data/ollama. Flash attention and an 8-bit KV cache keep 4 parallel answers inside the 16 GB card, so nothing spills into the 14 GB of RAM.",
+  "OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama} OLLAMA_NUM_PARALLEL=4 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 exec ollama serve",
+  "curl -sf http://127.0.0.1:11434/ >/dev/null",
+  ""
+ ],
+ [
+  "pull",
+  "Download qwen2.5-coder:14b",
+  "About 9 GB. Needs Ollama started.",
+  "ollama pull qwen2.5-coder:14b",
+  "test -e \"${OLLAMA_MODELS:-/data/ollama}/manifests/registry.ollama.ai/library/qwen2.5-coder/14b\" || ollama list 2>/dev/null | grep -q 'qwen2.5-coder:14b'",
+  ""
+ ],
+ [
+  "generate",
+  "Write answers, 8 seeds",
+  "Hours. Seed 1 at temperature 0, seeds 2 to 8 at 0.7. A finished seed is skipped, so Stop and Run again resumes. Good: each seed puts tasks in grade-in/.",
+  "for S in 1 2 3 4 5 6 7 8; do T=qwen2.5-coder-14b-v3-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; echo \"== seed $S\"; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v3 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && python3 t/pool_pick.py $D --control 25 && ls $D/grade-in | wc -l || exit 1; done",
+  "for S in 1 2 3 4 5 6 7 8; do [ -d t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/grade-in ] || exit 1; done",
+  "gpu"
+ ],
+ [
+  "matrix",
+  "Check the checkers",
+  "On the lab workstation, where all grading runs: regrades the 34 committed tasks. Good: 30 of 34 in all seven, as in t/AGREEMENT.md. Table comes back to t/out/AGREEMENT-lab.md.",
+  "bash t/grade_lab.sh matrix",
+  "test -s t/out/AGREEMENT-lab.md",
+  "lab"
+ ],
+ [
+  "grade",
+  "Grade the answers",
+  "On the lab workstation (120 threads, CPU only, 16 jobs; every checker run of this project goes there): sends each finished seed's grade-in/, brings kernels.md back, checks show on Live checks. Runs T_VPN_CMD first when the workstation needs a VPN. Skips graded seeds, so Run again after more seeds finish.",
+  "bash t/grade_lab.sh seeds",
+  "for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || exit 1; done",
+  "lab"
+ ],
+ [
+  "more-problems",
+  "New problems and a second model",
+  "Needs Ollama started. The 88 HumanEval problems of pool v4 (8 answer sets, as for MBPP), then deepseek-coder-v2:16b over all 737 problems (seed 1 at temperature 0, seed 2 at 0.7).",
+  "for S in 1 2 3 4 5 6 7 8; do T=qwen2.5-coder-14b-he-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v4 --min-id 100000 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && python3 t/pool_pick.py $D --control 25 || exit 1; done && ollama pull deepseek-coder-v2:16b && for S in 1 2; do T=deepseek-coder-v2-16b-v4-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; python3 t/spec_experiment.py generate --model deepseek-coder-v2:16b --tag $T --pool v4 --prompt v3 --seed $S --temperature $TEMP --num-ctx 6144 --num-predict 2048 --timeout 1800 --jobs 2 && python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && python3 t/pool_pick.py $D --control 25 || exit 1; done",
+  "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -d t/out/spec-experiment/$T/grade-in ] || exit 1; done",
+  "gpu"
+ ],
+ [
+  "grade-growth",
+  "Grade new problems and model",
+  "On the lab workstation.",
+  "bash t/grade_lab.sh tags qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2",
+  "n=0; for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -d t/out/spec-experiment/$T/grade-in ] || continue; n=$((n+1)); [ -s t/out/spec-experiment/$T/kernels.md ] || exit 1; done; [ $n -gt 0 ]",
+  "lab"
+ ],
+ [
+  "pool",
+  "Build the clean pool",
+  "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out problems unchanged, plus HumanEval as training problems). Good: many more problems than the 47 of r3.",
+  "python3 t/loop_dataset.py --from-samples $(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null) --split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r4 && wc -l t/out/loop/sft-r4.jsonl t/out/loop/pairs-r4.jsonl",
+  "test -s t/out/loop/sft-r4.jsonl",
+  ""
+ ],
+ [
+  "phi",
+  "Phi-4-mini answers",
+  "The model to beat, in bf16, on the 232 held-out problems. If it fails, go back to deciding, before using a 4-bit Phi.",
+  "~/.venv-t/bin/python t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --max-new 3072",
+  "test $(ls t/out/spec-experiment/phi4-mini-v3/raw 2>/dev/null | wc -l) -ge 232",
+  "gpu"
+ ],
+ [
+  "base",
+  "Small base answers",
+  "The untrained 1.5B, the starting point of the student.",
+  "~/.venv-t/bin/python t/loop_generate.py --adapter none --tag qwen15b-base-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
+  "test $(ls t/out/spec-experiment/qwen15b-base-v3/raw 2>/dev/null | wc -l) -ge 232",
+  "gpu"
+ ],
+ [
+  "train",
+  "Train the student",
+  "The 1.5B trained on the clean pool.",
+  "~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --max-len 4608 --out t/out/loop/adapter-r4",
+  "test -s t/out/loop/adapter-r4/adapter_model.safetensors",
+  "gpu"
+ ],
+ [
+  "student",
+  "Student answers",
+  "",
+  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
+  "test $(ls t/out/spec-experiment/student-r4-v3/raw 2>/dev/null | wc -l) -ge 232",
+  "gpu"
+ ],
+ [
+  "locallm",
+  "Build a locallm model",
+  "From scratch, on the clean pool, then its held-out answers.",
+  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl --out t/out/loop-locallm/corpus-r4.txt && ~/.venv-t/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt --model t/out/loop-locallm/model-r4 && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
+  "test $(ls t/out/spec-experiment/locallm-r4/raw 2>/dev/null | wc -l) -ge 232",
+  "gpu"
+ ],
+ [
+  "grade-heldout",
+  "Grade held-out answers",
+  "Every extracted task this time, so proven but wrong can be counted. Extract and tests run here, the checkers on the lab workstation.",
+  "bash t/grade_lab.sh heldout",
+  "for T in phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4; do [ -s t/out/spec-experiment/$T/kernels.md ] || exit 1; done",
+  "lab"
+ ],
+ [
+  "r5-answers",
+  "Round 5: answer the training problems",
+  "The student and locallm answer the 417 training problems, so their own failures can be graded and used. Held-out problems are not touched.",
+  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 --ids-file t/out/loop/train-ids.txt && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4-train --ids-file t/out/loop/train-ids.txt || true",
+  "test $(ls t/out/spec-experiment/student-r4-train/raw 2>/dev/null | wc -l) -ge 417",
+  "gpu"
+ ],
+ [
+  "r5-grade",
+  "Round 5: grade those",
+  "Extract, test and grade the training answers on the lab workstation: the clean ones join the pool, the proven-but-wrong ones become negatives.",
+  "for T in student-r4-train locallm-r4-train; do [ -d t/out/spec-experiment/$T/raw ] || continue; python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && python3 t/pool_pick.py t/out/spec-experiment/$T --control 25; done && bash t/grade_lab.sh tags student-r4-train locallm-r4-train",
+  "test -s t/out/spec-experiment/student-r4-train/kernels.md",
+  "lab"
+ ],
+ [
+  "r5-pool",
+  "Round 5: pool and pairs",
+  "Rebuilds the pool with the new clean answers and the new negatives.",
+  "python3 t/loop_dataset.py --from-samples $(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null) student-r4-train locallm-r4-train --split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r5 && wc -l t/out/loop/sft-r5.jsonl t/out/loop/pairs-r5.jsonl",
+  "test -s t/out/loop/sft-r5.jsonl",
+  ""
+ ],
+ [
+  "r5-locallm",
+  "Round 5: a bigger locallm",
+  "From scratch on the round 5 pool, with more capacity and more steps than r4 (8 layers, 512 wide, 6000 steps), then its held-out answers.",
+  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl --out t/out/loop-locallm/corpus-r5.txt && ~/.venv-t/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 --steps 6000 && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
+  "test $(ls t/out/spec-experiment/locallm-r5/raw 2>/dev/null | wc -l) -ge 232",
+  "gpu"
+ ],
+ [
+  "r5-train",
+  "Round 5: train the student again",
+  "The same 1.5B, now with the round 5 pairs, which include the model's own proven-but-wrong answers as the rejected side.",
+  "~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r5.jsonl --pairs t/out/loop/pairs-r5.jsonl --sft-first --max-len 4608 --out t/out/loop/adapter-r5",
+  "test -s t/out/loop/adapter-r5/adapter_model.safetensors",
+  "gpu"
+ ],
+ [
+  "r5-student",
+  "Round 5: student answers",
+  "",
+  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r5 --tag student-r5-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
+  "test $(ls t/out/spec-experiment/student-r5-v3/raw 2>/dev/null | wc -l) -ge 232",
+  "gpu"
+ ],
+ [
+  "r5-grade-heldout",
+  "Round 5: grade held-out",
+  "On the lab workstation.",
+  "for T in student-r5-v3 locallm-r5; do [ -d t/out/spec-experiment/$T/raw ] || continue; python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3; done && bash t/grade_lab.sh tags student-r5-v3 locallm-r5",
+  "test -s t/out/spec-experiment/student-r5-v3/kernels.md",
+  "lab"
+ ],
+ [
+  "r5-score",
+  "Round 5: score",
+  "The round 5 row next to round 4 and Phi.",
+  "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4 student-r5-v3 locallm-r5 | tee t/out/score-r5.md",
+  "test -s t/out/score-r5.md",
+  ""
+ ],
+ [
+  "score",
+  "Score against Phi",
+  "The result. Saved to t/out/score-r4.md.",
+  "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4 locallm-r0 | tee t/out/score-r4.md",
+  "test -s t/out/score-r4.md",
+  ""
+ ]
+]

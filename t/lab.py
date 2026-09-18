@@ -86,7 +86,7 @@ STEPS = [
      "cp t/runs/2026-09-16/loop-data/{split-v3.json,sft-r3-27b.jsonl,pairs-r3-27b.jsonl} t/out/loop/ && "
      "python3 -c \"import json; print('\\n'.join(map(str, json.load(open('t/out/loop/split-v3.json'))['eval_ids'])))\" "
      "> t/out/loop/eval-ids.txt && python3 t/score_heldout.py qwen3.8-27b-fp8-v3 locallm-r0 && "
-     "for T in qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2; do python3 t/pool_pick.py t/out/spec-experiment/$T; done",
+     "for T in qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2; do python3 t/pool_pick.py t/out/spec-experiment/$T --control 25; done",
      "test -s t/out/loop/eval-ids.txt && test -s t/out/pool-keys.txt", ""),
     ("ollama-install", "Install Ollama", "Opens a terminal because it asks for your password. Turns off Ollama's own "
      "service afterwards so the next step owns the port.",
@@ -106,7 +106,7 @@ STEPS = [
      "echo \"== seed $S\"; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v3 --prompt v3 "
      "--seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && "
      "python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && "
-     "python3 t/pool_pick.py $D && ls $D/grade-in | wc -l || exit 1; done",
+     "python3 t/pool_pick.py $D --control 25 && ls $D/grade-in | wc -l || exit 1; done",
      f"for S in 1 2 3 4 5 6 7 8; do [ -d {SE}/{GEN}$S/grade-in ] || exit 1; done", "gpu"),
     ("matrix", "Check the checkers", "On the lab workstation, where all grading runs: regrades the 34 committed tasks. "
      "Good: 30 of 34 in all seven, as in t/AGREEMENT.md. Table comes back to t/out/AGREEMENT-lab.md.",
@@ -122,12 +122,12 @@ STEPS = [
      "python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v4 --min-id 100000 --prompt v3 "
      "--seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && "
      "python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && "
-     f"python3 t/pool_pick.py $D || exit 1; done && ollama pull {GEN2} && "
+     f"python3 t/pool_pick.py $D --control 25 || exit 1; done && ollama pull {GEN2} && "
      f"for S in 1 2; do T={GEN2_TAG}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
      f"python3 t/spec_experiment.py generate --model {GEN2} --tag $T --pool v4 --prompt v3 "
      "--seed $S --temperature $TEMP --num-ctx 6144 --num-predict 2048 --timeout 1800 --jobs 2 && "
      "python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && "
-     "python3 t/pool_pick.py $D || exit 1; done",
+     "python3 t/pool_pick.py $D --control 25 || exit 1; done",
      f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
     ("grade-growth", "Grade new problems and model", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_TAGS}",
      f"n=0; for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || continue; n=$((n+1)); "
@@ -175,7 +175,7 @@ STEPS = [
      "for T in student-r4-train locallm-r4-train; do [ -d t/out/spec-experiment/$T/raw ] || continue; "
      "python3 t/spec_experiment.py extract --model $T --pool v3 && "
      "python3 t/spec_experiment.py tests --model $T --pool v3 && "
-     "python3 t/pool_pick.py t/out/spec-experiment/$T; done && bash t/grade_lab.sh tags student-r4-train locallm-r4-train",
+     "python3 t/pool_pick.py t/out/spec-experiment/$T --control 25; done && bash t/grade_lab.sh tags student-r4-train locallm-r4-train",
      f"test -s {SE}/student-r4-train/kernels.md", "lab"),
     ("r5-pool", "Round 5: pool and pairs", "Rebuilds the pool with the new clean answers and the new negatives.",
      f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} student-r4-train locallm-r4-train "

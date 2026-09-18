@@ -8,6 +8,11 @@ Each gate is applied to the answers already graded in this repository, so nothin
 one prover or seven, with the deliberately broken twin required or ignored. The tests decide what is wrong, and
 they are in no gate, so an answer a gate admits whose tests fail is a false accept.
 
+Rounds before 2026-09-18 graded only answers that already passed their tests (t/pool_pick.py sends the checkers
+nothing else), which removes every false accept before a gate can admit one. Those sets are reported separately
+and their rates mean nothing. From 2026-09-18 pool_pick.py also sends a control sample of answers that fail,
+recorded in each set's control.json, so every round can measure this.
+
 Standard library only. The table it prints is the table it writes.
 """
 

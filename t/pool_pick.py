@@ -48,6 +48,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("tag_dir", type=Path)
     ap.add_argument("--keys", type=Path, default=HERE / "out" / "pool-keys.txt")
+    ap.add_argument("--control", type=int, default=0,
+                    help="also send this many answers that FAIL their tests, so the round can measure how often "
+                         "a proof gate admits a wrong answer (t/ablation.py). They are marked in control.json "
+                         "and loop_dataset.py never trains on them.")
     a = ap.parse_args()
     d = a.tag_dir
     tests = json.loads((d / "tests.json").read_text(encoding="utf-8"))
@@ -70,11 +74,23 @@ def main() -> int:
         new_keys.append(k)
         shutil.copy(src, out / src.name)
         picked += 1
+    # the control sample: without answers that fail their tests, a false-accept rate cannot be measured at all,
+    # and every round before 2026-09-18 graded only test-passing answers (see t/ABLATION-2026-09-17.md)
+    control = []
+    if a.control:
+        failing = sorted(v["name"] for v in tests.values()
+                         if v.get("overall") in ("fail", "undefined") and (d / "tasks" / f"{v['name']}.json").exists())
+        step = max(1, len(failing) // a.control) if failing else 1
+        for name in failing[::step][:a.control]:
+            shutil.copy(d / "tasks" / f"{name}.json", out / f"{name}.json")
+            control.append(name)
+        (d / "control.json").write_text(json.dumps({"control": control}, indent=1), encoding="utf-8")
     a.keys.parent.mkdir(parents=True, exist_ok=True)
     with open(a.keys, "a", encoding="utf-8") as f:
         for k in new_keys:
             f.write(k + "\n")
-    print(f"{d.name}: {len(tests)} tasks, {passing} pass their tests, {picked} new -> {out}")
+    print(f"{d.name}: {len(tests)} tasks, {passing} pass their tests, {picked} new"
+          + (f", plus {len(control)} failing as a control sample" if control else "") + f" -> {out}")
     return 0
 
 
