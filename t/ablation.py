@@ -86,7 +86,9 @@ def main() -> int:
     a = ap.parse_args()
     secs = prover_seconds(a.events)
 
-    groups = {"training-problem answer sets": [], "held-out answer sets": []}
+    groups = {"training-problem answer sets, graded in full": [],
+              "training-problem answer sets, pre-filtered to test-passing answers (rates not measurable)": [],
+              "held-out answer sets, graded in full": []}
     for d in sorted(p for p in a.dir.glob("*") if p.is_dir()):
         rows = cells(d / "kernels.md")
         if not rows:
@@ -95,7 +97,19 @@ def main() -> int:
             tests = {v.get("name"): v.get("overall") for v in json.loads((d / "tests.json").read_text()).values()}
         except (OSError, ValueError):
             continue
-        which = "held-out answer sets" if d.name in HELD_OUT_TAGS else "training-problem answer sets"
+        # A set whose grade-in/ exists was pre-filtered to answers that already pass their tests, so its
+        # false-accept rate is not measurable: the filter removed the false accepts before the checkers saw them.
+        # Only sets graded in full say anything about what a gate admits wrongly (2026-09-17).
+        # measurable only when the set contains answers that fail their tests: pool_pick sends the checkers
+        # only test-passing answers, which removes every false accept before a gate can admit one
+        passing = sum(1 for n in rows if tests.get(n) == "pass")
+        full = len(rows) > passing
+        if d.name in HELD_OUT_TAGS:
+            which = "held-out answer sets, graded in full"
+        elif full:
+            which = "training-problem answer sets, graded in full"
+        else:
+            which = "training-problem answer sets, pre-filtered to test-passing answers (rates not measurable)"
         for name, v in rows.items():
             groups[which].append((name, v, tests.get(name) == "pass", secs.get(name, 0.0)))
 

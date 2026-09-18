@@ -1,0 +1,28 @@
+locallm, t and tup
+Copyright (c) 2026 Treston Malachi Cuzzort. All rights reserved except as granted in LICENSE.
+
+WHAT YOU MAY DO WITHOUT ASKING
+  Research and education: read it, run it, reproduce it, extend it, teach with it, publish what you measure.
+  Cite this repository when you do.
+
+WHAT NEEDS WRITTEN PERMISSION FIRST
+  Any commercial use, including use inside a product, a service or a deployment.
+  Training, fine-tuning, distilling or evaluating a model for anything commercial, whether from this code or
+  from the corpora, twins, witnesses, grading tables, training sets, preference pairs or model weights that
+  this repository contains or produces.
+  Redistributing any of that data or those weights under different terms.
+
+COMMERCIAL LICENSING
+  Contact the copyright holder through the GitHub account that owns this repository
+  (https://github.com/trestoncuzzort). State what you want to use and how.
+
+PROVENANCE
+  SHA256SUMS holds a hash of every file of the Work at the version it names, and SHA256SUMS.sig is a signature
+  over that list. To check a copy against this repository:
+
+      ssh-keygen -Y verify -f AUTHORS.allowed -I treston -n file -s SHA256SUMS.sig < SHA256SUMS
+      sha256sum -c SHA256SUMS
+
+THIRD-PARTY MATERIAL
+  The problem corpora under nl/, the packages tup builds from, the software inside a built image and the seven
+  verifiers are not part of the Work and keep their own licenses. See LICENSE section 7.

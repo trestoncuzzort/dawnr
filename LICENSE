@@ -1,5 +1,5 @@
 Research Use License for tup and t
-Version 1.0, 2026-09-15
+Version 1.1, 2026-09-18
 
 Copyright (c) 2026 Treston Malachi Cuzzort. All rights reserved except as
 granted below.
@@ -10,7 +10,11 @@ granted below.
 holder: the t language, its translations to each verifier, the verifier
 adapters, the lifter, the instruments, the tables and the documents; the tup
 build driver, its overrides, receipts and release scripts; the forge and
-locallm code; and every other original file in this repository.
+locallm code; and every other original file in this repository. The Work also
+includes what this repository produces and records: the generated task
+corpora, the twins and their witnesses, the grading tables, the training sets
+and preference pairs under t/runs/ and t/out/, and the model weights built
+from them.
 
 "Third-Party Material" means anything in this repository, or produced by it,
 that is not the copyright holder's: the problem corpora under nl/ and their
@@ -51,7 +55,20 @@ Any use that is not Research Use is not licensed. That includes commercial
 use of any kind; use in or as a product or service; operational or
 production deployment; and training, fine-tuning or evaluating a model for a
 commercial product or service using the Work or data the Work produces. For
-any such use, obtain written permission from the copyright holder first.
+any such use, obtain written permission from the copyright holder first
+(the contact is in NOTICE).
+
+(a) Training data. Using the Work, or any corpus, twin, witness, table,
+    training set or preference pair it contains or produces, as training,
+    fine-tuning, distillation or evaluation data for any model outside
+    Research Use requires written permission. Research Use of that data must
+    cite this repository and must not redistribute the data under other
+    terms.
+(b) No patent license. No patent rights are granted by this license, by
+    implication or otherwise.
+(c) No removal of notices. The copyright notice, this license and the
+    provenance files (NOTICE, SHA256SUMS and its signature) must not be
+    removed from a copy or a derivative.
 
 5. Termination
 
@@ -75,7 +92,20 @@ here. The packages tup builds from, and the software inside a built image,
 carry their own licenses, recorded in the receipts. The seven verifiers are
 separate programs under their own licenses and are not part of the Work.
 
-8. Earlier license of locallm/
+8. Provenance
+
+SHA256SUMS lists a hash for every file of the Work at the version it names,
+and SHA256SUMS.sig is a signature over that list made with the copyright
+holder's key (verify with ssh-keygen -Y verify, see NOTICE). They record what
+this repository contained and when, so a copy can be compared against it.
+
+9. Commercial license
+
+A commercial license, including use in a product, a service, a deployment or
+model training outside Research Use, is available from the copyright holder.
+The contact is in NOTICE.
+
+10. Earlier license of locallm/
 
 Before 2026-09-15 the locallm/ directory was offered under the MIT License.
 A copy obtained under that license before that date keeps it. From this

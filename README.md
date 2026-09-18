@@ -18,7 +18,10 @@ Every number below was measured by a script in this repository, and links to the
 - **The day-by-day record**, including every failure: [`t/runs/`](t/runs/) and
   [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md).
 - **What comes next and why:** [`ROADMAP.md`](ROADMAP.md), WS-20.
-- **Licence:** research and education only, see [`LICENSE`](LICENSE).
+- **Licence:** research and education only, see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Commercial use,
+  and training a model on this work or on the data it produces outside research, need written permission.
+  [`SHA256SUMS`](SHA256SUMS) with [`SHA256SUMS.sig`](SHA256SUMS.sig) records what this repository contained and
+  when, signed, so a copy can be checked against it.
 
 ## The pipeline
 
