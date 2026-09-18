@@ -205,6 +205,23 @@ def main() -> int:
             lines.append(f"- `{tag}/{name}`: ensures[{r['ensures']}] false at `{r['args']}`, "
                          f"the problem's solution answers `{r['reference_said']!r}`")
     a.out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # machine-readable, so loop_dataset.py can keep these out of a pool and preflight.py can count them
+    # the program itself, not only its name: two tags can answer the same problem, and only the answer whose
+    # specification disagrees must be kept out of a pool (2026-09-18)
+    import surface
+    disagree, texts = [], {}
+    for tag, name, r in rows:
+        if r["status"] != "disagrees":
+            continue
+        disagree.append(f"{tag}/{name}")
+        try:
+            texts[f"{tag}/{name}"] = surface.print_task(
+                harness.load(root / tag / "tasks" / f"{name}.json")).strip()
+        except (OSError, ValueError):
+            pass
+    (HERE / "out" / "spec-disagree.json").write_text(
+        json.dumps({"checked": sum(tally.values()), "disagree": disagree, "programs": texts}, indent=1),
+        encoding="utf-8")
     print(f"written to {a.out.relative_to(HERE.parent)}")
     return 0
 

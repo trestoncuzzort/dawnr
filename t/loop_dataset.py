@@ -476,9 +476,23 @@ def dedup_wellformed(samples: list[dict]) -> list[dict]:
     return out
 
 
+# Answers whose specification disagrees with the problem's own solution (t/spec_check.py, 2026-09-18). They
+# passed their tests, all seven proofs and a refuted twin, and they still do not say what the problem asked, so
+# they are not training data. Rebuilt by spec_check.py; an absent file excludes nothing.
+def _spec_disagree() -> set:
+    try:
+        return set(json.loads((HERE / "out" / "spec-disagree.json").read_text())["disagree"])
+    except (OSError, ValueError, KeyError):
+        return set()
+
+
+SPEC_DISAGREE = _spec_disagree()
+
+
 def positives_of(samples: list[dict], min_kernels: int) -> list[dict]:
     return [s for s in samples
-            if s["wellformed"] and s["tests_pass"] and s["kernel_count"] >= min_kernels]
+            if s["wellformed"] and s["tests_pass"] and s["kernel_count"] >= min_kernels
+            and f"{s['tag']}/{s['name']}" not in SPEC_DISAGREE]
 
 
 def negatives_for_positive(pos: dict, samples: list[dict]) -> list[dict]:

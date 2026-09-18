@@ -1,5 +1,13 @@
 [
  [
+  "preflight",
+  "Check before running",
+  "Everything that could make a round's numbers wrong, checked first: the seven checkers present at the versions AGREEMENT.md was measured with, no held-out problem in the training set, nothing counted clean resting on a flake or a timeout, no answer in the pool whose specification disagrees with its problem, unique copy-check keys, room on both disks. Run it before every round; it says what to fix.",
+  "python3 t/preflight.py",
+  "python3 t/preflight.py >/dev/null 2>&1",
+  ""
+ ],
+ [
   "packages",
   "Python packages",
   "Installs the training libraries into ~/.venv-t.",

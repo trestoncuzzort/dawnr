@@ -76,6 +76,12 @@ SAMPLE_TAGS = ("$(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-
                "qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null)")
 # (key, title, what it does and what good looks like, command, done when this succeeds, uses: gpu/cpu/sudo/"")
 STEPS = [
+    ("preflight", "Check before running", "Everything that could make a round's numbers wrong, checked first: "
+     "the seven checkers present at the versions AGREEMENT.md was measured with, no held-out problem in the "
+     "training set, nothing counted clean resting on a flake or a timeout, no answer in the pool whose "
+     "specification disagrees with its problem, unique copy-check keys, room on both disks. Run it before "
+     "every round; it says what to fix.",
+     "python3 t/preflight.py", "python3 t/preflight.py >/dev/null 2>&1", ""),
     ("packages", "Python packages", "Installs the training libraries into ~/.venv-t.",
      f"{PY} -m pip install transformers peft trl datasets accelerate bitsandbytes safetensors",
      f"{PY} -c 'import transformers, peft, trl, datasets, accelerate, bitsandbytes'", ""),

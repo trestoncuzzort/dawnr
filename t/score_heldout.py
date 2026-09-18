@@ -43,8 +43,17 @@ def score(tag: str, eval_ids: set[int]) -> dict:
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8")) if (d / "extract.json").exists() else {}
     tests = json.loads((d / "tests.json").read_text(encoding="utf-8")) if (d / "tests.json").exists() else {}
     cols, cells = (se.parse_kernel_table(d / "kernels.md") if (d / "kernels.md").exists() else ([], {}))
+    # 2026-09-18: an answer can pass its tests and all seven proofs and still hold a specification that
+    # disagrees with the problem's own solution on other inputs (t/spec_check.py). Those are counted apart,
+    # and "clean, spec checked" is clean minus them: the honest column once the specification is checked too.
+    try:
+        disagree = {x.split("/", 1)[1] for x in
+                    json.loads((HERE / "out" / "spec-disagree.json").read_text())["disagree"]
+                    if x.split("/", 1)[0] == tag}
+    except (OSError, ValueError, KeyError, IndexError):
+        disagree = set()
     r = {"tag": tag, "eval": len(eval_ids), "answered": 0, "task": 0, "tests pass": 0, "graded": 0,
-         "clean": 0, "wrong but proven": 0, "kernels": len(cols)}
+         "clean": 0, "spec disagrees": 0, "clean, spec checked": 0, "wrong but proven": 0, "kernels": len(cols)}
     for tid in eval_ids:
         if tid in raw:
             r["answered"] += 1
@@ -59,7 +68,11 @@ def score(tag: str, eval_ids: set[int]) -> dict:
             continue
         r["graded"] += 1
         proven = bool(cols) and all(row.get(c) == CLEAN for c in cols)
+        name = t.get("name") or e.get("name") or ""
+        bad_spec = name in disagree
         r["clean"] += proven and passed
+        r["spec disagrees"] += bool(proven and passed and bad_spec)
+        r["clean, spec checked"] += bool(proven and passed and not bad_spec)
         r["wrong but proven"] += proven and not passed
     return r
 
@@ -70,7 +83,8 @@ def main() -> int:
     ap.add_argument("tags", nargs="+")
     a = ap.parse_args()
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
-    heads = ["tag", "kernels", "eval", "answered", "task", "tests pass", "graded", "clean", "wrong but proven"]
+    heads = ["tag", "kernels", "eval", "answered", "task", "tests pass", "graded", "clean", "spec disagrees",
+             "clean, spec checked", "wrong but proven"]
     print("| " + " | ".join(heads) + " |")
     print("|" + "---|" * len(heads))
     for tag in a.tags:
