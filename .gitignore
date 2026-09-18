@@ -120,3 +120,6 @@ nl/data/codecontests_*.jsonl.gz
 # t lab's per-step process files and generated sudo scripts
 t/runs/*/logs/*.pid
 t/runs/*/logs/*.sh
+
+# the machine that grades, which is nobody else's business
+t/lab-workstation.conf

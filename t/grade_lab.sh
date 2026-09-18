@@ -9,7 +9,10 @@ set -u
 # the whole script is one function, read in full before it runs: editing this file while a job
 # runs cannot change what that job does
 main() {
-LAB=${T_LAB:-tmcuzzort@the-lab-workstation}
+# Set T_LAB to user@host of a machine with the seven checkers installed and key login from here, or put the
+# line T_LAB=user@host in t/lab-workstation.conf (which git ignores).
+[ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
+LAB=${T_LAB:?set T_LAB=user@host, or write it into t/lab-workstation.conf}
 # The lab workstation has 120 threads and its CPUs are ours; only its GPUs are off limits. gnatprove runs one
 # core per cell and SPARK is 44 percent of all proof time, so cells, not threads, are the limit: with 16 cells
 # only 16 cores worked. Cells are cheap in memory (z3 and one prover each), so the default is most of the

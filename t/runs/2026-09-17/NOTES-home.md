@@ -169,3 +169,4 @@
 - 2026-09-17 20:43 start `pool`: `python3 t/loop_dataset.py --from-samples $(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null) --split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r4 && wc -l t/out/loop/sft-r4.jsonl t/out/loop/pairs-r4.jsonl` (log `logs/pool.log`)
 - 2026-09-17 20:44 end `pool`: exit 0 after 0 min
 - 2026-09-17 20:45 start `train`: `~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --out t/out/loop/adapter-r4` (log `logs/train.log`)
+- 2026-09-17 21:38 start `student`: `~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt` (log `logs/student.log`)
