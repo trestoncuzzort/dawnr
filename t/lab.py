@@ -273,6 +273,15 @@ def load_steps() -> list:
 
 SPEC_EXP = HERE / "out" / "spec-experiment"
 GEOMETRY = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "t-lab" / "geometry"
+# the files a fix lands in; when one moves, the window reloads itself (Lab.watch_own_code)
+WATCHED = (Path(__file__).resolve(), Path(__file__).resolve().parent / "steps.json")
+
+
+def mtime(p: Path) -> float:
+    try:
+        return p.stat().st_mtime
+    except OSError:
+        return 0.0
 STEPS = load_steps()
 STEPS_TITLE = [(s[0], s[1]) for s in STEPS]
 
@@ -487,8 +496,9 @@ def memory_mb(root_pid: int) -> float | None:
 # ------------------------------------------------------------------- app --
 
 class Lab:
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, start_page: str = "Live checks"):
         self.root = root
+        self.start_page = start_page
         sans = pick_font(root, ["Inter", "SF Pro Text", "Helvetica Neue", "Segoe UI", "Cantarell", "Ubuntu",
                                 "Noto Sans", "DejaVu Sans"], "TkDefaultFont")
         mono = pick_font(root, ["JetBrains Mono", "SF Mono", "Menlo", "Consolas", "DejaVu Sans Mono"], "TkFixedFont")
@@ -547,10 +557,12 @@ class Lab:
         self.build_collect(self.pages["Collect data"])
         self.build_results(self.pages["Results"])
         self.build_ai(self.pages["AI"])
-        self.show_page("Live checks")
+        self.show_page(self.start_page if self.start_page in self.pages else "Live checks")
         root.after(300, self.poll_events)
         root.after(1000, self.tick)
         root.after(200, self.drain)
+        self.watched = {p: mtime(p) for p in WATCHED}
+        root.after(2000, self.watch_own_code)
 
     # -- look ------------------------------------------------------------------
     def style_tables(self):
@@ -1124,16 +1136,32 @@ class Lab:
         self.show_log()
         self.refresh_steps(once=True)
 
+    def watch_own_code(self):
+        """Reload when t lab's own code is fixed, so a window left open overnight is never stale.
+
+        A fix lands here as a git pull or an edit to t/lab.py or t/steps.json while the window is up, and until
+        2026-09-18 the window kept showing the state it was built with until someone pressed Refresh -- which
+        reads as a second bug. A changed file is taken twice, two seconds apart, so a half-written file is not
+        read as a new version, and nothing reloads while a step is being started or a log is open in a dialog."""
+        now = {p: mtime(p) for p in WATCHED}
+        moved = [p for p in WATCHED if now[p] != self.watched[p]]
+        if moved and all(now[p] == mtime(p) for p in moved) and not self.root.grab_current():
+            self.restart_app()
+            return
+        self.watched = now
+        self.root.after(2000, self.watch_own_code)
+
     def restart_app(self):
         """Reload t lab's own code in place, keeping the window where it is: the geometry is written to
-        GEOMETRY and read back on start, so a refresh after an edit costs no repositioning."""
+        GEOMETRY and read back on start, so a refresh after an edit costs no repositioning. It comes back on
+        Collect data, which is the page the runs are driven from."""
         try:
             GEOMETRY.parent.mkdir(parents=True, exist_ok=True)
             GEOMETRY.write_text(self.root.winfo_geometry())
         except OSError:
             pass
         self.root.destroy()
-        os.execv(sys.executable, [sys.executable, str(HERE / "lab.py")])
+        os.execv(sys.executable, [sys.executable, str(HERE / "lab.py"), "--page", "Collect data"])
 
     def build_collect(self, page):
         self.jobs: dict[str, subprocess.Popen] = {}
@@ -1737,6 +1765,9 @@ def main() -> int:
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except (AttributeError, OSError):
             pass
+    page = "Live checks"
+    if "--page" in sys.argv[1:]:
+        page = sys.argv[sys.argv.index("--page") + 1]
     root = tk.Tk()
     root.title("t lab")
     w, h = min(1400, root.winfo_screenwidth() - 20), min(900, root.winfo_screenheight() - 60)
@@ -1745,7 +1776,7 @@ def main() -> int:
     except (OSError, tk.TclError):
         root.geometry(f"{w}x{h}+10+30")
     root.minsize(1000, 700)
-    Lab(root)
+    Lab(root, start_page=page)
     root.mainloop()
     return 0
 
