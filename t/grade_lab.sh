@@ -18,7 +18,13 @@ LAB=${T_LAB:?set T_LAB=user@host, or write it into t/lab-workstation.conf}
 # core per cell and SPARK is 44 percent of all proof time, so cells, not threads, are the limit: with 16 cells
 # only 16 cores worked. Cells are cheap in memory (z3 and one prover each), so the default is most of the
 # machine; Frama-C spawns 4 provers per cell of its own (verifiers/framac.py PAR), which is why this is not 120.
-JOBS=${T_LAB_JOBS:-64}              # cells at once, over all the answer sets being graded together
+# 2026-09-18, measured on the APPS sets: 64 cells drew 216 of this machine's 120 cores and the load average
+# sat at 2.1x the core count, because a SPARK cell is not one core -- gnatprove keeps a gnatwhy3 tree alive, and
+# those sets are loop-heavy, so a cell averages 3.4 cores. Oversubscription is not merely slow: the wall-clock
+# backstop in verifiers/spark.py then fires on cells that would prove alone, and a timeout is not a verdict
+# (t/preflight.py refuses any clean answer resting on one). 32 cells is about 110 cores, which leaves the other
+# users of a shared machine a little room as well.
+JOBS=${T_LAB_JOBS:-32}              # cells at once, over all the answer sets being graded together
 SETS=${T_LAB_SETS:-4}               # answer sets at once: one small set cannot keep 120 threads busy
 SE=t/out/spec-experiment
 # The lab workstation has 502 GB of memory and a 252 GB RAM disk. Grading is small-file work (a lowered source
