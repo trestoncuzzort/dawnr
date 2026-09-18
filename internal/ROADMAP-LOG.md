@@ -1722,10 +1722,49 @@ Measured and fixed since, 2026-09-17 and 2026-09-18:
   problem; `loop_dataset.py` keeps them out of a pool and
   `score_heldout.py` counts them in their own column.
 
-DONE WHEN: the three abstaining kernels take a nested loop (1); a second
-corpus has a coverage table in the same format (2, and v5 is that corpus
-once graded); a differential check has refuted or failed to refute every
-currently clean answer (3); the twins ship as their own artifact (4).
+2026-09-18, move 1 closed for three of the four: Lean, Rocq and F* all take
+`t/tasks/has_duplicate.t`, a while inside a while with its own invariants and
+decreases on each, which is now a committed task rather than a scratch file on
+the grading machine. Each was built the same way and each was checked the same
+way before it was believed: the task itself, the generated source read for the
+tokens that would make a proof vacuous, and the kernel's whole column against
+AGREEMENT.md.
+
+- **F\***: every loop at every depth is the `let rec` over its own state it
+  always was; the inner helper's entry obligation is discharged at the call
+  site in the outer body from the outer invariants and the guard. Three deep
+  and chains of any length lower. 34 of 34 cells unchanged, older tasks
+  relower byte-identical.
+- **Lean**: a loop becomes a function returning the tuple of the state its own
+  body assigns, with a spec lemma saying its invariants in, its invariants and
+  the negated guard out. Inherited facts are filtered against the inner loop's
+  assigned set -- the trap Verus hit that morning. 34 of 34 unchanged. It also
+  found a live honesty defect: `simp_all` can succeed without closing a goal,
+  so `first` stopped there, the goal reached the end unsolved and Lean
+  discharged it with `sorryAx`; a lowering that proved nothing could have read
+  as verified. The same shape was latent on the twin certificate. Both chains
+  now end in `done`, and no past verdict moved.
+- **Rocq**: one Fixpoint and one spec Lemma per loop, the inner result bound
+  once with a single `let` pattern rather than a projection per slot, which
+  keeps the source linear in loop count rather than slots to the power of
+  depth -- 68 KB against the 64 MB cap that exists because a chained-replace
+  lowering once reached 27.7 GB. 34 of 34 read their exact cell, min_max
+  included.
+
+So `has_duplicate` reads **6 of 7**: Dafny, Verus, SPARK, Lean, F* and Rocq
+verified with the twin refuted, and Frama-C times out on the real program while
+refuting the twin. That timeout is what is left of move 1.
+
+Each lowering still abstains by name on shapes it cannot express -- a loop
+under a conditional in all three, a `return` inside a nested loop in Rocq and
+F*, an invariant-drop twin on a general body in Rocq -- and a lost flip was
+preferred to a faked one every time.
+
+DONE WHEN: the three abstaining kernels take a nested loop (1, done for three;
+Frama-C's timeout remains); a second corpus has a coverage table in the same
+format (2, and v5 is that corpus once graded); a differential check has refuted
+or failed to refute every currently clean answer (3); the twins ship as their
+own artifact (4).
 
 ## WS-21: the parse wall (opened 2026-09-18)
 
