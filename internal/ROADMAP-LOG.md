@@ -1761,6 +1761,22 @@ record because both are the kind that sound free:
   slices and `%` since some sets were extracted, yields 1 well-formed task
   out of 8,464.
 
+Nor is the answer to grow t. Asked directly of the 7,406 refused replies
+(2026-09-18): 1,373, 18.5 percent, write a spec function after the task
+rather than before the body, which is ordering and not expressiveness --
+the AST is identical -- and moving them where t wants them leaves 193
+parsing and 118 well formed, 1.6 percent of the wall. Comments are 2
+percent. `let ... in` is 8 percent of replies but is a `var` statement or
+a spec fun in t already; `&&` and `||`, `?:` and list comprehensions are
+under 1 percent each and all three are sugar for something t has; `^` is
+3 percent and is a recursive spec fun. Dict and set literals, the two
+things t genuinely has no answer for, appear in none of them. So no single
+construct is worth a gate under 10.4: each rescues one or two percent,
+they co-occur, and a reply that reaches for one usually fails three other
+ways in the same block. Growing the fragment would buy a few percent and
+cost seven lowerings and a twin operator per construct, while the
+constraint buys all of it at once by making the shapes unwritable.
+
 So the generator is the only place left to fix it. `t/t.gbnf` is the
 notation as a grammar; its identifier rules are generated from
 `surface.KEYWORDS` by `t/make_grammar.py`, because GBNF has no negative
