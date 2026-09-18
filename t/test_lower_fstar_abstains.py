@@ -69,22 +69,17 @@ class FindWhilesTest(unittest.TestCase):
         self.assertEqual(segs[1], ([], w2))
         self.assertEqual(suffix, [])
 
-    def test_three_loops_segment_but_the_chain_lowering_still_abstains(self):
-        # `find_whiles` itself has no loop-count limit (it only splits);
-        # the "more than one loop" ABSTAIN for 3+ loops is `gen_loop_chain`'s
-        # own refusal (restricted to exactly the measured two-loop shape),
-        # exercised the way `lower()` actually reaches it.
+    def test_three_loops_segment_and_the_chain_lowering_takes_them(self):
+        # 2026-09-18 (ROADMAP WS-20 move 1): `gen_loop_chain`'s
+        # `len(segs) != 2` cap is lifted -- it was a refusal to claim more
+        # than the shape measured in 2026-09-12, not a limit of the fold
+        # over `segs`. Three loops now emit three helpers; see
+        # `ThreeLoopChainTest` below for the end-to-end render.
         w = {"cond": {"bool": True}, "body": [], "invariants": [],
              "decreases": {"int": 0}}
         body = [{"while": w}, {"while": w}, {"while": w}]
         segs, suffix = lf.find_whiles(body)
         self.assertEqual(len(segs), 3)
-        task = {"t": 1, "name": "three_loop_probe", "params": [],
-                "returns": [{"name": "r", "type": "int"}],
-                "requires": [], "ensures": []}
-        with self.assertRaises(NotImplementedError) as ctx:
-            lf.gen_loop_chain(lf.Ctx(task), task, segs, suffix)
-        self.assertIn("more than one loop per body", str(ctx.exception))
 
     def test_loop_under_conditional_still_abstains(self):
         w = {"cond": {"bool": True}, "body": [], "invariants": [],
@@ -95,14 +90,30 @@ class FindWhilesTest(unittest.TestCase):
             lf.find_whiles(body)
         self.assertIn("under a conditional", str(ctx.exception))
 
-    def test_nested_loop_still_abstains(self):
+    def test_loop_under_conditional_inside_a_loop_body_abstains(self):
+        # The one placement refusal that survives 2026-09-18, now checked
+        # one level down: `_check_nestable` walks a loop body too, so a
+        # nested loop sitting under an `if` is still a named ABSTAIN and
+        # never a guess. See `_check_nestable`'s docstring for why.
+        deep = {"cond": {"bool": True}, "body": [], "invariants": [],
+                "decreases": {"int": 0}}
+        outer = {"cond": {"bool": True},
+                 "body": [{"if": {"cond": {"bool": True},
+                                  "then": [{"while": deep}], "else": []}}],
+                 "invariants": [], "decreases": {"int": 0}}
+        with self.assertRaises(NotImplementedError) as ctx:
+            lf.find_whiles([{"while": outer}])
+        self.assertIn("under a conditional", str(ctx.exception))
+
+    def test_nested_loop_no_longer_abstains_at_split_time(self):
         inner = {"cond": {"bool": True}, "body": [], "invariants": [],
                  "decreases": {"int": 0}}
         outer = {"cond": {"bool": True}, "body": [{"while": inner}],
                  "invariants": [], "decreases": {"int": 0}}
-        with self.assertRaises(NotImplementedError) as ctx:
-            lf.find_whiles([{"while": outer}])
-        self.assertIn("nested loops", str(ctx.exception))
+        segs, suffix = lf.find_whiles([{"while": outer}])
+        self.assertEqual(len(segs), 1)
+        self.assertIs(segs[0][1], outer)
+        self.assertEqual(suffix, [])
 
 
 class ExprFreeVarsTest(unittest.TestCase):
@@ -182,6 +193,133 @@ class GenLoopChainTest(unittest.TestCase):
         # functions called independently of one another.
         self.assertIn("chain_probe_loop0 s k", out)
         self.assertIn("chain_probe_loop1 s k", out)
+
+
+class NestedLoopTest(unittest.TestCase):
+    """NESTED LOOPS (2026-09-18, ROADMAP WS-20 move 1): has_duplicate's own
+    shape -- a `while` in a `while`, each with its own invariants and its
+    own decreases -- plus the two refusals that survive it."""
+
+    def _nested_task(self, inner_body=None, outer_tail=None):
+        inner = {
+            "cond": {"op": "<", "args": [{"var": "j"}, {"var": "n"}]},
+            "invariants": [{"op": "<=", "args": [{"int": 0}, {"var": "j"}]}],
+            "decreases": {"op": "-", "args": [{"var": "n"}, {"var": "j"}]},
+            "body": inner_body if inner_body is not None else [
+                {"assign": ["r", {"op": "+", "args": [{"var": "r"},
+                                                      {"int": 1}]}]},
+                {"assign": ["j", {"op": "+", "args": [{"var": "j"},
+                                                      {"int": 1}]}]},
+            ],
+        }
+        outer = {
+            "cond": {"op": "<", "args": [{"var": "i"}, {"var": "n"}]},
+            "invariants": [{"op": "<=", "args": [{"int": 0}, {"var": "i"}]}],
+            "decreases": {"op": "-", "args": [{"var": "n"}, {"var": "i"}]},
+            "body": [
+                {"var": {"name": "j", "type": "int", "init": {"int": 0}}},
+                {"while": inner},
+            ] + (outer_tail if outer_tail is not None else []) + [
+                {"assign": ["i", {"op": "+", "args": [{"var": "i"},
+                                                      {"int": 1}]}]},
+            ],
+        }
+        task = {
+            "t": 1, "name": "nest_probe",
+            "params": [{"name": "n", "type": "int"}],
+            "returns": [{"name": "r", "type": "int"}],
+            "requires": [{"op": "<=", "args": [{"int": 0}, {"var": "n"}]}],
+            "ensures": [{"op": "<=", "args": [{"int": 0}, {"var": "r"}]}],
+        }
+        body = [
+            {"assign": ["r", {"int": 0}]},
+            {"var": {"name": "i", "type": "int", "init": {"int": 0}}},
+            {"while": outer},
+        ]
+        return task, body
+
+    def test_nested_body_emits_the_inner_helper_first_and_calls_it(self):
+        task, body = self._nested_task()
+        out = lf.lower(task, body)
+        # Two recursive helpers, the inner one DEFINED FIRST (F* has no
+        # forward declarations for `let`).
+        self.assertIn("let rec nest_probe_inner ", out)
+        self.assertIn("let rec nest_probe_loop ", out)
+        self.assertLess(out.index("let rec nest_probe_inner "),
+                        out.index("let rec nest_probe_loop "))
+        # The inner loop's call is let-bound inside the OUTER loop's step,
+        # binding exactly what the inner loop assigns (`r` and `j`).
+        self.assertIn("let (r, j) = nest_probe_inner n i r 0 in", out)
+        # The inner loop's OWN invariant is its requires, so the call site
+        # owes the kernel a real establishment proof -- nothing assumed.
+        self.assertIn("(requires ((0 <= n) /\\ (0 <= j)))", out)
+        # The property the fstar backend's zero-obligation rule rests on.
+        self.assertIn("t_contract_obligation", out)
+        # Never a dodge.
+        for banned in ("admit", "assume", "magic", "sorry"):
+            self.assertNotIn(banned, out)
+
+    def test_return_inside_the_inner_loop_abstains_by_name(self):
+        task, body = self._nested_task(inner_body=[
+            {"if": {"cond": {"op": "<", "args": [{"var": "j"}, {"int": 3}]},
+                    "then": [{"return": ["r", {"int": 7}]}],
+                    "else": []}},
+            {"assign": ["j", {"op": "+", "args": [{"var": "j"},
+                                                  {"int": 1}]}]},
+        ])
+        with self.assertRaises(NotImplementedError) as ctx:
+            lf.lower(task, body)
+        self.assertIn("`return` inside a nested loop", str(ctx.exception))
+
+    def test_return_in_the_outer_loop_of_a_nest_still_lowers(self):
+        # The `either` encoding is unchanged for the loop that OWNS the
+        # early exit; only an inner loop's own return is refused.
+        task, body = self._nested_task(outer_tail=[
+            {"if": {"cond": {"op": "<", "args": [{"int": 100}, {"var": "r"}]},
+                    "then": [{"return": ["r", {"int": 5}]}],
+                    "else": []}},
+        ])
+        out = lf.lower(task, body)
+        self.assertIn("either int", out)
+        self.assertIn("let (r, j) = nest_probe_inner n i r 0 in", out)
+
+
+class ThreeLoopChainTest(unittest.TestCase):
+    """The two-loop cap on `gen_loop_chain` is lifted (2026-09-18): three
+    sequential loops emit three helpers, chained through the same
+    let-binding the two-loop case already used."""
+
+    def test_three_sequential_loops_emit_three_helpers(self):
+        def mk(var):
+            return {
+                "cond": {"op": "<", "args": [{"var": var}, {"var": "n"}]},
+                "invariants": [{"op": "<=", "args": [{"int": 0},
+                                                     {"var": var}]}],
+                "decreases": {"op": "-", "args": [{"var": "n"},
+                                                  {"var": var}]},
+                "body": [
+                    {"assign": ["r", {"op": "+", "args": [{"var": "r"},
+                                                          {"int": 1}]}]},
+                    {"assign": [var, {"op": "+", "args": [{"var": var},
+                                                          {"int": 1}]}]},
+                ],
+            }
+        task = {
+            "t": 1, "name": "chain3_probe",
+            "params": [{"name": "n", "type": "int"}],
+            "returns": [{"name": "r", "type": "int"}],
+            "requires": [{"op": "<=", "args": [{"int": 0}, {"var": "n"}]}],
+            "ensures": [{"op": "<=", "args": [{"int": 0}, {"var": "r"}]}],
+        }
+        body = [{"assign": ["r", {"int": 0}]}]
+        for var in ("i", "j", "k"):
+            body.append({"var": {"name": var, "type": "int",
+                                 "init": {"int": 0}}})
+            body.append({"while": mk(var)})
+        out = lf.lower(task, body)
+        for k in range(3):
+            self.assertIn(f"let rec chain3_probe_loop{k} ", out)
+        self.assertIn("t_contract_obligation", out)
 
 
 class QuantHelperTest(unittest.TestCase):

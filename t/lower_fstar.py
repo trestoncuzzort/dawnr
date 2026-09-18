@@ -187,7 +187,8 @@ shapes"). The three structural ABSTAINs named in the 2026-09-11 entry above
      loop's own final state into the next's initial one, restricted to
      exactly two loops (three or more still raise the same "more than one
      loop per body" NotImplementedError as before). See `find_whiles` and
-     `gen_loop_chain`.
+     `gen_loop_chain`. [SUPERSEDED 2026-09-18, that entry's items 1-2: the
+     two-loop cap is lifted and "non-nested" is no longer a condition.]
   3. A QUANTIFIER IN COMPUTATIONAL POSITION, NON-LITERAL BOUND
      (anyValueExists, 414): `bx`'s existing LITERAL-BOUND UNROLL (above)
      still only fires when both ends of the range are literals; the
@@ -780,9 +781,16 @@ body, and a value computed under a branch stays under that branch's guard.
 ABSTAINS (NotImplementedError, recorded and never faked): a quantifier in
 computational position whose bounds are not both bare integer literals in
 the task's own source (`_lit_int`; a literal-bounded one unrolls instead,
-see the DEFINEDNESS FAMILY V1DEF REPRODUCTION note below); more than one
-loop, nested loops, a loop under a conditional, or a loop plus self-
-recursion in one body; a pair position (`px`) holding anything but a
+see the DEFINEDNESS FAMILY V1DEF REPRODUCTION note below); a loop under
+a conditional at any depth (`_check_nestable`, which states exactly why
+the call's entry obligation would land at the wrong program point), a
+`return` inside a loop that is itself nested or chained (`_plain_loop`,
+which states why the `either` encoding does not reach that far), a loop
+in the same straight-line list AFTER a conditional that returns
+(`exec_flow`'s own `lb is None` refusal), or a loop plus self-recursion
+in one body -- but NOT, since 2026-09-18, nested loops or any number of
+sequential ones, both of which now lower (see that dated note below); a
+pair position (`px`) holding anything but a
 variable or a `{"op": "pair", ...}` node -- no `ite`, no `call`, no seq/
 fst/snd op builds a pair (SPEC.md "Pairs", 2026-09-10), and this is also
 what keeps a still-uncovered shape of the shared refutation certificate
@@ -1438,6 +1446,69 @@ raised fuel/ifuel/rlimit):
      itself: the 412/426/436/554/629 rows are untouched by this session,
      their timeout unrelabeled. No fifth lever was attempted; this
      remains the item's open gap, named exactly as measured.
+
+2026-09-18 (ROADMAP WS-20 move 1: "make the F* lowering handle nested and
+multiple loops instead of abstaining"). t/tasks/has_duplicate.t -- a
+`while` inside a `while`, each with its own `invariant` lines and its own
+`decreases` written in the source -- read `ABSTAIN: fstar lowering: nested
+loops are not lowered yet` while dafny, verus, spark and framac already
+took it. Two shapes close, one placement refusal stays, and the section
+comment above `_fbind`/`_NestedLoops`/`_plain_loop` carries the reasoning;
+the measured results:
+
+  1. NESTED LOOPS, ANY DEPTH. `find_whiles` no longer refuses a while
+     inside a while's body; `exec_flow`, when rendering a loop BODY, hands
+     each `while` it finds there to a `_NestedLoops` builder, which emits
+     the inner loop through `_plain_loop` as its own `let rec` (defined
+     FIRST -- F* has no forward declarations for `let`) and splices a `let
+     <its state vars> = <the call> in` line in front of the enclosing
+     loop's own step term. Nothing about the encoding is new: every loop,
+     inner or outer, is the same recursive function over its own state
+     that a single loop has always been, with the task's own invariants as
+     `requires`/`ensures` and the task's own `decreases` (plus this file's
+     long-standing `+1` shift for F*'s stricter `<<`). The inner helper's
+     `requires` is discharged AT the call site, inside the outer body,
+     from the outer invariants and the outer guard -- a real solver
+     obligation at the right program point, nothing assumed, no invariant
+     added, weakened or dropped.
+  2. ANY NUMBER OF SEQUENTIAL LOOPS. `gen_loop_chain`'s `len(segs) != 2`
+     refusal (2026-09-12, item 2 of that entry, now superseded) was a
+     refusal to claim more than the one shape then measured, not a limit
+     of its code: the function was already written as a fold over `segs`.
+     The cap is lifted and the general chain measured. A chained loop may
+     now also nest, since both paths emit through the one `_plain_loop`.
+  3. STILL ABSTAINS, by name, and why (each stated at its own site): a
+     loop under a conditional at ANY depth (`_check_nestable`: the call's
+     `let` would have to be hoisted out of the arm that guards it, so its
+     entry obligation would be asked where the loop does not run); a
+     `return` inside a nested or chained loop (`_plain_loop`: the `either`
+     encoding short-circuits ONE function, and here it would have to
+     short-circuit every enclosing loop too); a loop standing after a
+     conditional that returns, in the same list (`exec_flow`, same
+     reason one level down). A `return` in the OUTER loop of a nest is
+     fine and lowers (the `either` encoding is unchanged there).
+
+  MEASURED (F* 2026.08.30, this box, `--z3rlimit 50`):
+    * has_duplicate: `abstain` -> `verified / refuted` (real 272 solver-
+      discharged obligations; twin `collapse-if`, witness s=[0,1] -> real
+      False / twin True, REFUTED through the shared certificate, never
+      through Error 19).
+    * Shape probes, each lowered and run end to end through `run_par.py
+      --kernels fstar`: three sequential loops `verified / refuted`;
+      three-deep nesting `verified / refuted`; a nested loop inside a
+      two-loop chain `verified / refuted`; a nested loop whose OUTER body
+      early-exits `verified`; a loop under a conditional inside a loop
+      body `abstain` (by name); a `return` inside the INNER loop
+      `abstain` (by name); a loop after a returning conditional `abstain`
+      (by name).
+    * REGRESSION BAR, checked before anything was measured: all 34
+      previously-committed t/tasks/*.t relower BYTE-IDENTICAL, real body
+      and twin body alike, through `tlib.lower(task, "fstar",
+      twin_body=...)`. `_fbind`'s identity-skip and `_plain_loop`'s
+      extraction from `gen_loop_chain` were written to make that true
+      rather than to be tidy. Full-suite fstar column re-measured at
+      `--jobs 4` against t/AGREEMENT.md: see the run recorded in this
+      session's report.
 
 Stdlib only, same reason as dataset_gate.py.
 """
@@ -3117,7 +3188,19 @@ def _early_exit_witness_hint(cx: "Ctx", task: dict, defs: dict, fact_ast,
 
 
 def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
-              wctx: dict | None = None, known: tuple = ()):
+              wctx: dict | None = None, known: tuple = (),
+              lb: "None | _NestedLoops" = None):
+    """`lb` (NESTED LOOPS, 2026-09-18, ROADMAP WS-20 move 1) is the nested-
+    loop builder the caller wants a `while` in THIS straight-line list
+    lowered through: `_plain_loop`/`gen_loop` pass one when they render a
+    loop BODY, and it is deliberately NOT forwarded into an `if` arm, nor
+    into the continuation after an `if` that returns on one arm -- both of
+    those sit under a condition, and `_check_nestable`'s own docstring says
+    why a call whose `requires` would be discharged at the wrong program
+    point is refused rather than guessed. `lb is None` everywhere else (a
+    loop's prefix and suffix, `gen_fun`'s straight-line body), where
+    `find_whiles` has already split every top-level while out, so the
+    refusal below is unreachable on those paths and costs nothing."""
     env = dict(env)
     for idx, s in enumerate(stmts):
         if "return" in s:
@@ -3192,7 +3275,24 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
                 else f"(if {rc_if} then {rv_if} else {rv_rest})"
             return rest_env, overall_rc, overall_rv
         elif "while" in s:
-            raise AssertionError("while must be split out before exec")
+            # NESTED LOOPS (2026-09-18, ROADMAP WS-20 move 1). Before this
+            # pass no `while` could reach here at all: `find_whiles` split
+            # every top-level one out and refused every nested one, so this
+            # arm was an `AssertionError` guarding an impossible state. A
+            # loop BODY is now rendered through this same function with `lb`
+            # set, so a while directly inside a loop body lands here and is
+            # lowered to its own recursive helper plus one `let`-bound call
+            # (`_plain_loop`), with `env` picking up the helper's own state
+            # names for everything the inner loop assigns. `lb is None` is
+            # still the shapes named in this function's docstring, now an
+            # honest NotImplementedError (an abstain the row can name, per
+            # t/harness.py's reading) rather than an AssertionError that
+            # would have surfaced as an unnamed LOWER-ERROR.
+            if lb is None:
+                raise NotImplementedError(
+                    "fstar lowering: a loop under a conditional, or after a "
+                    "conditional that returns, is not lowered yet")
+            env.update(lb(s["while"], env, local))
         else:
             raise ValueError(f"t -> fstar: no statement {list(s)!r}")
     return env, "false", dummy
@@ -3238,7 +3338,16 @@ def loop_assigned(body: list) -> set:
 def find_while(body: list):
     """(prefix, while, suffix) for exactly one top-level while and none
     nested; (body, None, []) when no while at all. Same refusals as the
-    Rocq lowering: a shape it cannot express is an ABSTAIN, not a guess."""
+    Rocq lowering: a shape it cannot express is an ABSTAIN, not a guess.
+
+    NOT ON THE LOWERING PATH since 2026-09-12: `lower()` calls `find_whiles`
+    (below), and the two refusals this function still raises -- "more than
+    one loop per body", "nested loops" -- are NO LONGER this file's policy
+    (2026-09-18, ROADMAP WS-20 move 1: both shapes lower now). It is kept
+    because the single-loop split it computes is the reference `find_whiles`
+    is tested against, and because `test_divisor_bound.py` reaches for a
+    task's one loop node through it. Read `find_whiles` for what the file
+    actually refuses."""
     def any_while(stmts):
         for s in stmts:
             if "while" in s:
@@ -3267,6 +3376,51 @@ def find_while(body: list):
     return body[:k], w, body[k + 1:]
 
 
+def _any_while(stmts: list) -> bool:
+    """True when any statement in this straight-line list, or in either arm
+    of any `if` it contains, is a while. Deliberately does NOT look inside a
+    while's own body: the caller that cares about nesting (`_check_nestable`
+    below) recurses itself, one loop at a time, so that a nested loop and a
+    loop under a conditional stay two DIFFERENT findings with two different
+    messages rather than one merged "there is a loop in here somewhere"."""
+    for s in stmts:
+        if "while" in s:
+            return True
+        if "if" in s and (_any_while(s["if"]["then"])
+                          or _any_while(s["if"]["else"])):
+            return True
+    return False
+
+
+def _check_nestable(stmts: list) -> None:
+    """NESTED LOOPS (2026-09-18, ROADMAP WS-20 move 1). Raises the named
+    ABSTAIN for the ONE loop-placement shape this file still cannot express
+    -- a loop under a conditional -- at ANY depth inside a loop body, and
+    returns quietly for a loop directly in a loop body, which
+    `_NestedLoops`/`_plain_loop` below now lower.
+
+    WHY a loop under a conditional is still refused, stated here so the
+    refusal is not mistaken for laziness: this lowering turns each loop into
+    a recursive function whose CALL is spliced into the enclosing term at a
+    fixed point (`_plain_loop`'s `bind`, a `let ... = <call> in` line hoisted
+    to the front of the enclosing loop's `then` branch). A call sitting
+    under an `if` is only reached on one arm, so hoisting its `let` would
+    evaluate -- and, more to the point, would have to DISCHARGE the callee's
+    `requires`, this loop's own invariants at entry -- on the arm that never
+    runs it. Lowering it honestly means building the enclosing term as a
+    real two-armed `if` whose arms are different terms rather than one
+    merged environment, which `exec_flow`'s environment-merge model does not
+    do. An abstain by name beats a call whose entry obligation is asked at
+    the wrong program point."""
+    for s in stmts:
+        if "if" in s and (_any_while(s["if"]["then"])
+                          or _any_while(s["if"]["else"])):
+            raise NotImplementedError(
+                "fstar lowering: a loop under a conditional is not lowered yet")
+        if "while" in s:
+            _check_nestable(s["while"]["body"])
+
+
 def find_whiles(body: list):
     """MULTIPLE SEQUENTIAL LOOPS (2026-09-12, ROADMAP 16.2 fstar item, the
     abstained shapes; measured on dafny-synthesis removeElement, task 610:
@@ -3274,10 +3428,18 @@ def find_whiles(body: list):
     independent loop shifting `s[k+1..)` into the rest of `v` -- SEQUENTIAL
     composition, never nested, never under a conditional). `find_while`'s
     own single-loop shape is exactly `len(segs) == 1` here (byte-identical
-    prefix/while/suffix split for every previously-committed task, since
-    this function raises the SAME two refusals `find_while` already had --
-    a loop under a conditional, a loop nested inside another loop's body --
-    before ever looking at how many top-level whiles there are).
+    prefix/while/suffix split for every previously-committed task).
+
+    NESTED LOOPS (2026-09-18, ROADMAP WS-20 move 1): the "nested loops are
+    not lowered yet" refusal this function used to raise for ANY while
+    inside a while's body is gone -- `_plain_loop` below emits one recursive
+    helper per loop, innermost first, and splices the inner loop's call into
+    the outer loop's own step, so nesting is now a property of the emitted
+    term rather than a shape to refuse. `_check_nestable` keeps the one
+    placement refusal that survives (a loop under a conditional, at any
+    depth), and it is checked here, at split time, so the message reaches
+    the row before any code is generated -- exactly where the old nested
+    refusal lived.
 
     Returns `(segs, suffix)`: `segs` is a list of `(prefix, while)` pairs,
     one per top-level while in body order (`prefix` is the straight-line
@@ -3285,14 +3447,7 @@ def find_whiles(body: list):
     every while after the first); `suffix` is whatever follows the LAST
     while. `segs == []` means no loop at all (the caller falls back to
     `gen_fun`)."""
-    def any_while(stmts):
-        for s in stmts:
-            if "while" in s:
-                return True
-            if "if" in s and (any_while(s["if"]["then"])
-                              or any_while(s["if"]["else"])):
-                return True
-        return False
+    any_while = _any_while
 
     for s in body:
         if "if" in s and (any_while(s["if"]["then"])
@@ -3306,9 +3461,7 @@ def find_whiles(body: list):
     start = 0
     for k in idxs:
         w = body[k]["while"]
-        if any_while(w["body"]):
-            raise NotImplementedError(
-                "fstar lowering: nested loops are not lowered yet")
+        _check_nestable(w["body"])
         segs.append((body[start:k], w))
         start = k + 1
     return segs, body[start:]
@@ -3892,6 +4045,210 @@ def _converse_invariant(task: dict, w: dict):
     return None
 
 
+# --------------------------------------------------------------------------
+# NESTED AND CHAINED LOOPS (2026-09-18, ROADMAP WS-20 move 1)
+# --------------------------------------------------------------------------
+# Until this pass the fstar column could lower exactly one loop per body,
+# plus (since 2026-09-12) a chain of exactly two sequential ones through
+# `gen_loop_chain`, and abstained by name on everything else -- the file's
+# own ABSTAIN note read "more than one loop, nested loops, a loop under a
+# conditional, or a loop plus self-recursion in one body". Dafny, Verus,
+# SPARK and Frama-C already take t/tasks/has_duplicate.t, a `while` inside a
+# `while`, each with its own invariants and its own `decreases` written in
+# the source; this section is what lets F* take it too.
+#
+# THE ENCODING, in one line: every loop, at every depth, becomes exactly the
+# same object it already became when there was only one of them -- a `let
+# rec` over the loop's own state variables, `requires` the task's `requires`
+# and the loop's own invariants, `ensures` those invariants and the negated
+# guard, `decreases` the loop's own measure. Nesting is then nothing but
+# WHERE the call goes: the inner loop's helper is defined first (F* has no
+# forward declarations for `let`), and its call is `let`-bound at the point
+# in the OUTER loop's body where the inner `while` stands, so the outer
+# loop's recursive step reads the state the inner loop returned.
+#
+# WHAT IS PROVED, and what is therefore NOT weakened. The inner helper's
+# `requires` is the inner loop's own invariants, so the call site inside the
+# outer body owes F* an ESTABLISHMENT proof of them from the outer
+# invariants and the outer guard -- a real solver obligation, at the right
+# program point, discharged or not by Z3 with nothing assumed. The inner
+# helper's `ensures` gives the outer body the inner invariants and the
+# negated inner guard at the point the inner loop exits, which is exactly
+# what the source's own invariants say and no more. The outer loop's
+# preservation VC then has to get from there to the outer invariant at the
+# next step. Nothing here adds, drops, weakens or rewrites a single
+# `invariant`, `ensures`, `requires` or `decreases` the task states; no
+# `admit`, `assume` or goal-dodging `Lemma` is emitted (the verifier's own
+# banned-token scan would read any of those as VACUOUS anyway), and the
+# emitted file still contains `t_contract_obligation`, so the ZERO-solver-
+# obligations property `verifiers/fstar.py` mints MALFORMED on is untouched:
+# a nested-loop file carries strictly MORE obligations than a single-loop
+# one, never fewer.
+#
+# WHAT STILL ABSTAINS is named in `_check_nestable` (a loop under a
+# conditional, at any depth) and in `_plain_loop` (a `return` inside a loop
+# that is itself nested or chained -- see its own note).
+
+
+def _fbind(fvars: list, env: dict) -> str:
+    """The `let <frame var> = <its current term> in` run that precedes a
+    loop helper's call. Identity bindings are skipped: at a chain's entry
+    level every frame variable carries a real defining term (its `var`
+    declaration's initialiser), so this is byte-identical to the inline
+    join it replaces for every previously-committed task, but inside a LOOP
+    BODY a frame variable is usually already an ambient binder with nothing
+    to rebind, and `let i = i in` there is noise at best and a shadowing
+    diagnostic at worst."""
+    return "".join(f"let {v} = {env[v]} in\n  " for v in fvars
+                   if env.get(v, v) != v)
+
+
+class _NestedLoops:
+    """The collector `exec_flow` hands a `while` it finds inside a loop
+    body. One instance per loop body being rendered; `defs` accumulates the
+    top-level F* definitions the inner loops need (innermost first, in the
+    order they must be emitted), and `binds` the `let ... = <call> in` lines
+    that must be spliced, in body order, in front of whatever the enclosing
+    loop's step term turns out to be.
+
+    Recursion is unbounded in depth on purpose: an inner loop's own body is
+    rendered by the same `_plain_loop` with its own fresh `_NestedLoops`, so
+    a three-deep nest is the two-deep case applied twice and needs no new
+    code. Nothing here is specific to two levels."""
+
+    def __init__(self, cx: "Ctx", task: dict, pb: str, pargs: str,
+                 reqs: list, dummy0: str):
+        self.cx = cx
+        self.task = task
+        self.pb = pb
+        self.pargs = pargs
+        self.reqs = reqs
+        self.dummy0 = dummy0
+        self.defs: list[str] = []
+        self.binds: list[str] = []
+
+    def __call__(self, w: dict, env: dict, local: dict) -> dict:
+        cx, task = self.cx, self.task
+        ret = task["returns"][0]["name"]
+        # Every mutable in scope at this point is a candidate state/frame
+        # variable for the inner loop: the task's own return, plus every
+        # local declared by the enclosing loop's prefix (already in `local`
+        # when the body started) and every local the enclosing body itself
+        # declared before this `while` (`exec_flow` put those in the same
+        # dict as it walked). `has_duplicate`'s inner loop reads `i` (outer
+        # counter, a frame variable here) and assigns `j` and `r`.
+        mvars = [ret] + list(local.keys())
+        lname = cx.fresh_named(f"{task['name']}_inner")
+        defs, bind, svars = _plain_loop(
+            cx, task, w, env, local, self.reqs, self.pb, self.pargs,
+            lname, mvars, self.dummy0,
+            "fstar lowering: a `return` inside a nested loop is not "
+            "lowered yet")
+        self.defs.extend(defs)
+        self.binds.append(bind)
+        # After the call, every variable the inner loop assigned reads as
+        # the name the `let` pattern just bound -- the same shape
+        # `gen_loop_chain` already uses to thread one loop's final state
+        # into the next one's prefix.
+        return {v: v for v in svars}
+
+    def wrap(self, term: str, indent: str = "    ") -> str:
+        """`term` with this body's inner-loop calls bound in front of it.
+        No binds (no nested loop) returns `term` unchanged, byte for byte,
+        which is every previously-committed task."""
+        if not self.binds:
+            return term
+        pre = "".join(f"{b}\n{indent}" for b in self.binds)
+        return f"({pre}{term})"
+
+
+def _plain_loop(cx: "Ctx", task: dict, w: dict, env: dict, local: dict,
+                reqs: list, pb: str, pargs: str, lname: str, mvars: list,
+                dummy0: str, ret_msg: str):
+    """One loop with NO `return` in its body, emitted as a recursive helper
+    over `mvars`, the mutables in scope where it stands. Returns `(defs,
+    bind, svars)`: `defs` is the list of top-level definitions to emit, any
+    loop nested in this one's body FIRST and this loop's own `let rec` last;
+    `bind` is the `let ... = <call> in` line the caller splices in front of
+    whatever follows; `svars` is what the call binds.
+
+    This is `gen_loop_chain`'s own per-segment code, lifted out unchanged so
+    that a chained loop and a nested loop are emitted by ONE function rather
+    than two that could drift apart. The single-loop `gen_loop` keeps its
+    own copy, because it carries machinery this one deliberately does not:
+    early exit (`either`-encoded), the divisor-bound lemma, the converse
+    membership invariant and the early-exit witness hint.
+
+    A `return` in this loop's body is refused with `ret_msg`. WHY, unchanged
+    from `gen_loop_chain`'s own 2026-09-12 note and now also the reason a
+    NESTED loop cannot early-exit: `gen_loop` encodes a returning loop as
+    `either <ret> <state>`, and the caller matches on it. Here the caller is
+    the enclosing loop's own step term (or the next link in a chain), so the
+    return would have to short-circuit the REST OF THE ENCLOSING LOOP and
+    every level above it, not just this helper -- a genuine extension of the
+    `either` encoding, not a rearrangement of it. Abstain by name."""
+    hav = loop_assigned(w["body"])
+    svars = [v for v in mvars if v in hav]
+    fvars = [v for v in mvars if v not in hav]
+    if not svars:
+        raise NotImplementedError(
+            "fstar lowering: loop body assigns nothing in scope")
+    stys = {v: (local.get(v) or cx.tys[v]) for v in mvars}
+    guard_b = cx.bx(w["cond"], {}, local)
+    guard_p = cx.prop(w["cond"], {}, local)
+    invs = [cx.prop(e, {}, local) for e in w.get("invariants", [])]
+    # FRAME-VARIABLE DEFINITION, exactly `gen_loop`'s own (see its note): a
+    # variable this loop never assigns but whose defining equation from the
+    # enclosing scope the recursion would otherwise lose. Never a task
+    # invariant, never a restatement of one, and proved like any other
+    # invariant -- a false one costs an unprovable call site, never a free
+    # pass.
+    for v in fvars:
+        if _tystr(stys[v]) != "int":
+            continue
+        init_expr = env.get(v)
+        if init_expr is not None and init_expr != v:
+            invs.append(f"({v} == {init_expr})")
+    dec_shift = 2 if _has_ite(w["decreases"]) else 1
+    dec = f"(({cx.zx(w['decreases'], {}, local)}) + {dec_shift})"
+    nest = _NestedLoops(cx, task, pb, pargs, reqs, dummy0)
+    step_env, body_rc, _body_rv = exec_flow(cx, w["body"], {}, dict(local),
+                                            dummy0, lb=nest)
+    if body_rc != "false":
+        raise NotImplementedError(ret_msg)
+    step = " ".join(step_env.get(v, v) for v in svars)
+    fb = "".join(f" ({v}:{_tystr(stys[v])})" for v in fvars)
+    fargs = "".join(f" {v}" for v in fvars)
+    sb = " ".join(f"({v}:{_tystr(stys[v])})" for v in svars)
+    post = _conj(invs + [f"(~ {guard_p})"])
+    if len(svars) == 1:
+        state_ty = _pty(stys[svars[0]])
+        state_out = svars[0]
+        loop_ens = f"(fun {svars[0]} -> {post})"
+        bind_pat = f"let {svars[0]}"
+    else:
+        state_ty = "(" + " & ".join(_statecomp(stys[v]) for v in svars) + ")"
+        state_out = "(" + ", ".join(svars) + ")"
+        ob = cx.fresh()
+        loop_ens = (f"(fun {ob} -> let ({', '.join(svars)}) = {ob} in "
+                    f"{post})")
+        bind_pat = f"let ({', '.join(svars)})"
+    init = " ".join(env.get(v, v) for v in svars)
+    fbind = _fbind(fvars, env)
+    then = nest.wrap(f"{lname} {pargs}{fargs} {step}", "       ")
+    defs = list(nest.defs)
+    defs.append(f"let rec {lname} {pb}{fb} {sb}\n"
+                f"  : Pure {state_ty}\n"
+                f"    (requires {_conj(reqs + invs)})\n"
+                f"    (ensures {loop_ens})\n"
+                f"    (decreases {dec})\n"
+                f"= if {guard_b}\n"
+                f"  then {then}\n"
+                f"  else {state_out}\n")
+    bind = f"{fbind}{bind_pat} = {lname} {pargs}{fargs} {init} in"
+    return defs, bind, svars
+
+
 def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
              suffix: list) -> str:
     name = task["name"]
@@ -4152,8 +4509,18 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     loop_defs = {k: v for k, v in _resolve_var_defs(prefix).items()
                 if k not in hav}
     loop_wctx = {"task": task, "defs": loop_defs}
+    # NESTED LOOPS (2026-09-18, ROADMAP WS-20 move 1): `nest` collects one
+    # recursive helper plus one `let`-bound call per `while` found directly
+    # in THIS loop's body, at any depth (an inner loop's own body is
+    # rendered the same way, recursively, by `_plain_loop`). It is empty for
+    # every loop with no nested one -- every previously-committed task --
+    # so `nest.defs` contributes nothing to the emitted file and
+    # `nest.wrap` returns its argument byte for byte, which is why the
+    # three `return`s below are unchanged text on that path.
+    nest = _NestedLoops(cx, task, pb, pargs, reqs, dummy)
     step_env, body_rc, body_rv = exec_flow(cx, w["body"], {}, dict(local),
-                                           dummy, loop_wctx)
+                                           dummy, loop_wctx, lb=nest)
+    nest_defs = "".join(f"{d}\n" for d in nest.defs)
     step = " ".join(step_env.get(v, v) for v in svars)
     env_post = exec_straight(cx, suffix, {}, dict(local))
     result = env_post.get(ret, ret)
@@ -4192,13 +4559,14 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
         entry_body = f"{fbind}{bind} = {lname} {pargs}{fargs} {init} in\n  {result}"
         if pre_rc != "false":
             entry_body = f"if {pre_rc} then {pre_rv} else (\n  {entry_body})"
-        return (f"let rec {lname} {pb}{fb} {sb}\n"
+        return (f"{nest_defs}"
+                f"let rec {lname} {pb}{fb} {sb}\n"
                 f"  : Pure {state_ty}\n"
                 f"    (requires {_conj(reqs + invs)})\n"
                 f"    (ensures {loop_ens})\n"
                 f"    (decreases {dec})\n"
                 f"= if {guard_b}\n"
-                f"  then {lname} {pargs}{fargs} {step}\n"
+                f"  then {nest.wrap(f'{lname} {pargs}{fargs} {step}', '       ')}\n"
                 f"  else {state_out}\n"
                 f"\n"
                 f"let {name} {pb}\n"
@@ -4236,7 +4604,15 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     loop_ens = (f"(fun res -> match res with "
                 f"| Inl {rvar} -> ({ens} {rvar}) "
                 f"| Inr {state_out} -> {post})")
-    then_branch = f"(if {body_rc} then Inl {body_rv} else {lname} {pargs}{fargs} {step})"
+    # NESTED LOOPS (2026-09-18): the inner-loop `let`s wrap the WHOLE
+    # `if body_rc ...` outcome term, not just the recursive-call arm --
+    # `body_rc`/`body_rv` (the early-exit condition and the returned value)
+    # are themselves computed from the environment the inner loop produced,
+    # so they must be inside its bindings. `nest.wrap` is the identity when
+    # this body has no nested loop, so the text is unchanged there.
+    then_branch = nest.wrap(
+        f"(if {body_rc} then Inl {body_rv} else {lname} {pargs}{fargs} {step})",
+        "       ")
     else_branch = f"Inr {state_out}"
     wvar = cx.fresh()
     divisor_defs = ""
@@ -4252,7 +4628,8 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
                   f"  | Inr {state_out} -> {exit_expr}")
     if pre_rc != "false":
         entry_body = f"if {pre_rc} then {pre_rv} else (\n  {entry_body})"
-    return (f"{divisor_defs}"
+    return (f"{nest_defs}"
+            f"{divisor_defs}"
             f"let rec {lname} {pb}{fb} {sb}\n"
             f"  : Pure {outcome_ty}\n"
             f"    (requires {_conj(reqs + invs)})\n"
@@ -4294,10 +4671,28 @@ def gen_loop_chain(cx: Ctx, task: dict, segs: list, suffix: list) -> str:
 
     MEASURED (out/agent-fstar-2/removeElement, F* 2026.08.30, `t/grade.py`
     at flake 3): real ABSTAIN -> verified, twin (an invariant-drop probe)
-    verified -> refuted, matching dafny (verified/refuted)."""
-    if len(segs) != 2:
+    verified -> refuted, matching dafny (verified/refuted).
+
+    2026-09-18 (ROADMAP WS-20 move 1), TWO CHANGES:
+
+    * THE TWO-LOOP CAP IS GONE. The `len(segs) != 2` refusal above was not
+      a limit of the encoding -- the loop below was already written over
+      `segs`, one segment at a time, threading each loop's final state into
+      the next through `env` -- it was a refusal to claim more than the one
+      shape that had been measured. Three loops in a row is the two-loop
+      case applied twice with nothing new in it, and `_plain_loop` (shared
+      with the NESTED path now) is the one place any of it is emitted, so
+      the honest thing is to lower the general chain and say so. Measured
+      before committing: see the module docstring's 2026-09-18 entry.
+
+    * SEGMENTS MAY NEST. `_plain_loop` renders each segment's body through
+      `exec_flow` with a `_NestedLoops` builder, so a loop in a CHAIN may
+      itself contain loops. Nothing in this function knows about that; it
+      only splices whatever definitions `_plain_loop` hands back, inner
+      ones first, in front of its own."""
+    if len(segs) < 2:
         raise NotImplementedError(
-            "fstar lowering: more than one loop per body is not lowered yet")
+            "fstar lowering: gen_loop_chain needs two or more loops")
     name = task["name"]
     ret = task["returns"][0]["name"]
     ret_t = task["returns"][0]["type"]
@@ -4326,58 +4721,20 @@ def gen_loop_chain(cx: Ctx, task: dict, segs: list, suffix: list) -> str:
         # loop, threaded through the second with no re-declaration at
         # all).
         mvars = [ret] + list(local.keys())
-        hav = loop_assigned(w["body"])
-        svars = [v for v in mvars if v in hav]
-        fvars = [v for v in mvars if v not in hav]
-        if not svars:
-            raise NotImplementedError(
-                "fstar lowering: loop body assigns nothing in scope")
-        stys = {v: (local.get(v) or cx.tys[v]) for v in mvars}
         lname = cx.fresh_named(f"{name}_loop{seg_idx}")
-        guard_b = cx.bx(w["cond"], {}, local)
-        guard_p = cx.prop(w["cond"], {}, local)
-        invs = [cx.prop(e, {}, local) for e in w.get("invariants", [])]
-        for v in fvars:
-            if _tystr(stys[v]) != "int":
-                continue
-            init_expr = env.get(v)
-            if init_expr is not None and init_expr != v:
-                invs.append(f"({v} == {init_expr})")
-        dec_shift = 2 if _has_ite(w["decreases"]) else 1
-        dec = f"(({cx.zx(w['decreases'], {}, local)}) + {dec_shift})"
-        step_env, body_rc, _body_rv = exec_flow(cx, w["body"], {}, dict(local), dummy0)
-        if body_rc != "false":
-            raise NotImplementedError(
-                "fstar lowering: a `return` inside a loop of a multi-loop "
-                "body is not lowered yet")
-        step = " ".join(step_env.get(v, v) for v in svars)
-        fb = "".join(f" ({v}:{_tystr(stys[v])})" for v in fvars)
-        fargs = "".join(f" {v}" for v in fvars)
-        sb = " ".join(f"({v}:{_tystr(stys[v])})" for v in svars)
-        post = _conj(invs + [f"(~ {guard_p})"])
-        if len(svars) == 1:
-            state_ty = _pty(stys[svars[0]])
-            state_out = svars[0]
-            loop_ens = f"(fun {svars[0]} -> {post})"
-            bind = f"let {svars[0]}"
-        else:
-            state_ty = "(" + " & ".join(_statecomp(stys[v]) for v in svars) + ")"
-            state_out = "(" + ", ".join(svars) + ")"
-            ob = cx.fresh()
-            loop_ens = (f"(fun {ob} -> let ({', '.join(svars)}) = {ob} in "
-                        f"{post})")
-            bind = f"let ({', '.join(svars)})"
-        init = " ".join(env.get(v, v) for v in svars)
-        fbind = "".join(f"let {v} = {env.get(v, v)} in\n  " for v in fvars)
-        defs.append(f"let rec {lname} {pb}{fb} {sb}\n"
-                    f"  : Pure {state_ty}\n"
-                    f"    (requires {_conj(reqs + invs)})\n"
-                    f"    (ensures {loop_ens})\n"
-                    f"    (decreases {dec})\n"
-                    f"= if {guard_b}\n"
-                    f"  then {lname} {pargs}{fargs} {step}\n"
-                    f"  else {state_out}\n")
-        calls.append(f"{fbind}{bind} = {lname} {pargs}{fargs} {init} in")
+        # `_plain_loop` (2026-09-18) is this block's own former body, lifted
+        # out verbatim so the NESTED path emits the identical thing. The
+        # only behavioural difference at this call site is that a `while`
+        # inside `w["body"]` is now lowered instead of refused; the emitted
+        # text for a chain of flat loops is byte-identical (checked against
+        # the committed tasks' relowered sources and the removeElement-shaped
+        # unit test).
+        seg_defs, call, svars = _plain_loop(
+            cx, task, w, env, local, reqs, pb, pargs, lname, mvars, dummy0,
+            "fstar lowering: a `return` inside a loop of a multi-loop "
+            "body is not lowered yet")
+        defs.extend(seg_defs)
+        calls.append(call)
         # Threading the loop's own final state into what follows (the next
         # segment's prefix, or the suffix below): every state variable now
         # reads as itself, bound by the `let` just emitted -- exactly the
@@ -5020,13 +5377,16 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
 
     # MULTIPLE SEQUENTIAL LOOPS (2026-09-12, ROADMAP 16.2 fstar item, the
     # abstained shapes): `find_whiles` generalises `find_while` to any
-    # number of top-level, non-nested, not-under-a-conditional while
-    # loops in a row -- `segs` has exactly one entry for every
-    # previously-supported task (byte-identical prefix/while/suffix split,
-    # `gen_loop` unchanged below), and `len(segs) > 1` is the new,
-    # `gen_loop_chain` path (restricted to exactly two loops, the measured
-    # shape; three or more still raises the same "more than one loop per
-    # body" NotImplementedError `find_while` always raised).
+    # number of top-level, not-under-a-conditional while loops in a row --
+    # `segs` has exactly one entry for every previously-supported task
+    # (byte-identical prefix/while/suffix split, `gen_loop` unchanged
+    # below), and `len(segs) > 1` is the `gen_loop_chain` path.
+    # 2026-09-18 (ROADMAP WS-20 move 1): the chain is no longer capped at
+    # two loops, and neither path requires a flat body any more -- a loop
+    # at either end of this `if` may contain loops, which `_plain_loop`
+    # emits recursively. The only loop-placement shape still refused here
+    # is the one `find_whiles`/`_check_nestable` raise on: a loop under a
+    # conditional.
     segs, suffix = find_whiles(r_body)
     if segs and has_self_call(r_body, name):
         raise NotImplementedError(
