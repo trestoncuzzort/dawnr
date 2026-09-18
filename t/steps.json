@@ -179,7 +179,7 @@
   "r5-train",
   "Round 5: train the student again",
   "The same 1.5B, now with the round 5 pairs, which include the model's own proven-but-wrong answers as the rejected side.",
-  "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True ~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r5.jsonl --pairs t/out/loop/pairs-r5.jsonl --sft-first --max-len 3584 --out t/out/loop/adapter-r5",
+  "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True ~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r5.jsonl --pairs t/out/loop/pairs-r5.jsonl --sft-first --max-len 3072 --out t/out/loop/adapter-r5",
   "test -s t/out/loop/adapter-r5/adapter_model.safetensors",
   "gpu"
  ],

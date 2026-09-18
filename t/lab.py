@@ -215,13 +215,14 @@ STEPS = [
      f"test $(ls {SE}/locallm-r5/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("r5-train", "Round 5: train the student again", "The same 1.5B, now with the round 5 pairs, which include "
      "the model's own proven-but-wrong answers as the rejected side.",
-     # 2026-09-18: 4,608 put DPO out of memory on this 16 GB card once APPS problems entered the pool -- TRL
-     # computes a per-token entropy over the full-vocabulary logits for logging, unconditionally, and that is
-     # the tensor that tips it. Measured over the 489 round 5 pairs: the longest prompt and answer together is
-     # 3,322 Qwen tokens, so a 3,584 window keeps every pair and pays for nothing beyond them.
+     # 2026-09-18: 4,608 put DPO out of memory on this 16 GB card once APPS problems entered the pool, and so
+     # did 3,584 and 3,328. trl 1.13 dropped use_logits_to_keep, which was this file's whole memory strategy,
+     # so the policy forward now builds full-window full-vocabulary logits for chosen and rejected at once --
+     # 1.84 GiB in bf16, with 1.83 GiB free. Probed on the card rather than reasoned about: 3,072 trains and
+     # keeps 482 of the 489 pairs, 2,560 trains but keeps 45, which is round 4's silent-drop trap again.
      f"PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True {PY} t/loop_train.py --sft t/out/loop/sft-r5.jsonl "
      "--pairs t/out/loop/pairs-r5.jsonl --sft-first "
-     "--max-len 3584 --out t/out/loop/adapter-r5",
+     "--max-len 3072 --out t/out/loop/adapter-r5",
      "test -s t/out/loop/adapter-r5/adapter_model.safetensors", "gpu"),
     ("r5-student", "Round 5: student answers", "",
      f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r5 --tag student-r5-v3 {EVAL}",

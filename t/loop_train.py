@@ -84,18 +84,26 @@ def pick_gpu(explicit: int | None) -> tuple[int, dict[int, int]]:
 
 def _kwargs_for(cls, wanted: dict) -> dict:
     """Filter `wanted` down to the constructor's actual parameters, so this
-    file does not hardcode one trl version's kwarg names. Silently dropping
-    an unsupported key here is fine: every dropped key is a value that
-    matched the file's own default anyway, chosen defensively because the
-    exact trl version was not known when this was written (the training
-    venv was still being built)."""
+    file does not hardcode one trl version's kwarg names.
+
+    It says what it dropped. The original note here said silent dropping was fine because every dropped key
+    matched a default anyway; that stopped being true when trl reached 1.13 and removed `use_logits_to_keep`,
+    which was not a default but this file's whole memory strategy -- logits for the completion tokens only.
+    It vanished without a word and DPO went back to full-window, full-vocabulary logits, which is what put the
+    round 5 student out of memory on a 16 GB card (2026-09-18). A dropped key is now printed, so the next
+    version that removes a guarantee says so."""
     try:
         params = inspect.signature(cls.__init__).parameters
     except (TypeError, ValueError):
         return dict(wanted)
     if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
         return dict(wanted)
-    return {k: v for k, v in wanted.items() if k in params}
+    kept = {k: v for k, v in wanted.items() if k in params}
+    dropped = [k for k in wanted if k not in kept]
+    if dropped:
+        print(f"note: {cls.__name__} in this version takes none of {', '.join(sorted(dropped))}; "
+              f"whatever those asked for is not in force")
+    return kept
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -244,6 +252,19 @@ def main() -> int:
         sft_trainer = SFTTrainer(**_kwargs_for(SFTTrainer, sft_trainer_kwargs))
         sft_trainer.train()
         print("SFT warm-up done")
+        # The warm-up's trainer holds its optimiser state, its gradient buffers and its accelerator on the same
+        # card DPO is about to use. Left alive they cost about as much as the DPO step itself, and on 2026-09-18
+        # that was the difference between a step and CUDA out of memory at a 76 MB allocation with 88 MB free
+        # (measured: the failure did not move when the window went from 4,608 tokens to 3,584, so the window was
+        # never what filled the card).
+        import gc
+        sft_trainer.model = None
+        del sft_trainer, sft_ds
+        gc.collect()
+        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            print(f"after the warm-up: {torch.cuda.memory_allocated()/2**30:.1f} GiB still held, "
+                  f"{torch.cuda.memory_reserved()/2**30:.1f} GiB reserved")
 
     # --------------------------------------------------------------- DPO
     print(f"building DPO dataset from {args.pairs}")
@@ -266,6 +287,16 @@ def main() -> int:
         logging_steps=1, max_length=args.max_len,
         max_prompt_length=max(args.max_len - 512, args.max_len // 2),
         use_logits_to_keep=True,
+        # trl 1.13 has neither of the two above; what it does have is a reference pass computed once, up front,
+        # instead of beside the policy's own graph, which is the larger of the two costs on a 16 GB card
+        precompute_ref_log_probs=True,
+        # the activations of a 3,300-token pair, recomputed rather than kept: the card is 200 MB short of the
+        # 1.84 GiB logits tensor without this, measured 2026-09-18
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        # every pair is padded to max_length otherwise, and the median pair is 2,895 tokens against a 3,328
+        # window, so a fifth of the logits tensor is padding the card pays bf16 for
+        padding_free=True,
         report_to=[])
     dpo_cfg = DPOConfig(**_kwargs_for(DPOConfig, dpo_wanted))
 
