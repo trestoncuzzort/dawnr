@@ -30,7 +30,13 @@ start)
   # vLLM's FP8 path compiles kernels, so it needs a CUDA toolkit; this machine has none in /usr/local, but the
   # venv ships one inside the nvidia wheels (2026-09-18)
   CUDA_HOME_REMOTE='$HOME/.venv-vllm/lib/python3.12/site-packages/nvidia/cu13'
+  # and the linker needs the runtime beside it: FlashInfer compiles a sampling kernel at startup and links
+  # -lcudart, which lives only in the venv here. The sampler's JIT is switched off as well, so a first run does
+  # not depend on a compiler at all.
   $SSH "$LAB" "cd ~/tup && CUDA_HOME=$CUDA_HOME_REMOTE PATH=$CUDA_HOME_REMOTE/bin:\$PATH \
+      LIBRARY_PATH=$CUDA_HOME_REMOTE/lib:\${LIBRARY_PATH:-} \
+      LD_LIBRARY_PATH=$CUDA_HOME_REMOTE/lib:\${LD_LIBRARY_PATH:-} \
+      VLLM_USE_FLASHINFER_SAMPLER=0 \
       setsid nohup ~/.venv-vllm/bin/vllm serve '$MODEL' \
       --tensor-parallel-size 4 --gpu-memory-utilization $FRACTION --max-model-len 8192 \
       --port $PORT > ~/lab-gpu/vllm.log 2>&1 < /dev/null & echo started"
