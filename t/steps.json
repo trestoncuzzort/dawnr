@@ -152,6 +152,22 @@
   "lab"
  ],
  [
+  "apps",
+  "APPS problems, the pool's ceiling",
+  "The 2,266 APPS problems whose own examples t can express, answered by qwen2.5-coder:14b (2 seeds) and deepseek-coder-v2:16b (1 seed). This is the move that adds problems rather than more answers to the ones already held: pool v5 is 3,003 problems, 2,771 of them training, the held-out 232 unchanged.",
+  "for S in 1 2; do T=qwen2.5-coder-14b-apps-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v5 --min-id 200000 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 2048 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v5 && python3 t/spec_experiment.py tests --model $T --pool v5 && python3 t/pool_pick.py $D --control 25 || exit 1; done && T=deepseek-coder-v2-16b-apps-s1; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] || { python3 t/spec_experiment.py generate --model deepseek-coder-v2:16b --tag $T --pool v5 --min-id 200000 --prompt v3 --seed 1 --temperature 0 --num-ctx 6144 --num-predict 2048 --timeout 1800 --jobs 2 && python3 t/spec_experiment.py extract --model $T --pool v5 && python3 t/spec_experiment.py tests --model $T --pool v5 && python3 t/pool_pick.py $D --control 25; }",
+  "for T in qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1; do [ -d t/out/spec-experiment/$T/grade-in ] || exit 1; done",
+  "gpu"
+ ],
+ [
+  "apps-grade",
+  "Grade the APPS answers",
+  "On the lab workstation.",
+  "bash t/grade_lab.sh tags qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1",
+  "for T in qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1; do [ -s t/out/spec-experiment/$T/kernels.md ] || exit 1; done",
+  "lab"
+ ],
+ [
   "r5-answers",
   "Round 5: answer the training problems",
   "The student and locallm answer the 417 training problems, so their own failures can be graded and used. Held-out problems are not touched.",

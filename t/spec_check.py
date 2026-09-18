@@ -94,7 +94,14 @@ def reference(rec: dict, fn: str):
     code = rec.get("code") or ""
     if not code.strip():
         return None
+    # the corpus's own solutions assume the imports their site had: APPS solutions are LeetCode-shaped and
+    # annotate with List and Dict, MBPP's use math and collections (2026-09-18)
     g: dict = {"__builtins__": __builtins__}
+    try:
+        exec("import math, collections, itertools, functools, re, heapq, bisect, string\n"
+             "from typing import List, Dict, Tuple, Set, Optional, Any\n", g)
+    except Exception:                                           # noqa: BLE001
+        pass
     try:
         exec(compile(code, f"<{fn}>", "exec"), g)                # noqa: S102  (corpus reference solution)
     except Exception:                                           # noqa: BLE001

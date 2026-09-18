@@ -114,7 +114,8 @@ def outdir(model: str) -> Path:
 
 # ------------------------------------------------------------------ pool --
 
-POOL_VERSIONS = ("v1", "v2", "v3", "v4")
+POOL_VERSIONS = ("v1", "v2", "v3", "v4", "v5")
+APPS_BASE = 200000      # pool v5: an APPS record is task id 200000 + its own id, clear of MBPP and HumanEval
 HUMANEVAL_BASE = 100000     # pool v4: HumanEval/<n> is task id 100000 + n, clear of every MBPP id
 
 
@@ -140,7 +141,7 @@ def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
     solution, which this tuple alone cannot express, so `pool()`/
     `pool_report()` read `version == "v3"` directly for that half rather
     than folding it in here."""
-    if version in ("v3", "v4"):
+    if version in ("v3", "v4", "v5"):
         return True, ("int", "bool", "seq", "seq-of-seq")
     if version == "v2":
         return True, ("int", "bool", "seq")
@@ -166,6 +167,8 @@ def pool(version: str = "v1") -> dict[int, dict]:
     refused assertion is out, and the refusal reasons are counted in
     `pool_report`."""
     strings, allowed = _pool_settings(version)
+    if version == "v5":
+        return {**pool("v4"), **apps_pool()}
     if version == "v4":
         return {**pool("v3"), **humaneval_pool()}
     nested = version == "v3"
@@ -228,6 +231,99 @@ def humaneval_pool() -> dict[int, dict]:
         rec = {"task_id": HUMANEVAL_BASE + n, "text": r["prompt"].strip(), "test_list": asserts, "code": code,
                "source": r["task_id"]}
         out[HUMANEVAL_BASE + n] = {"rec": rec, "points": pts, "fn": ep}
+    return out
+
+
+def _apps_kind(v):
+    """The t kind of a value from an APPS input_output record, or None when t has no reading for it."""
+    if isinstance(v, bool):
+        return "bool"
+    if isinstance(v, int):
+        return "int"
+    if isinstance(v, str):
+        return "seq"                                            # a string is a seq of code points (SPEC.md)
+    if isinstance(v, list):
+        if not v:
+            return "seq"
+        kinds = {_apps_kind(x) for x in v}
+        if kinds == {"int"} or kinds == {"bool"}:
+            return "seq"
+        if kinds <= {"seq"} and all(isinstance(x, (str, list)) for x in v):
+            return "seq-of-seq"
+    return None
+
+
+def _apps_value(v):
+    """That value as t sees it: a string is its code points, a list is a tuple."""
+    if isinstance(v, str):
+        return [ord(c) for c in v]
+    if isinstance(v, list):
+        return [_apps_value(x) for x in v]
+    return v
+
+
+def apps_pool(limit: int = 0) -> dict[int, dict]:
+    """Pool v5's addition (2026-09-18): the APPS problems that name the function to call (`fn_name`) and whose
+    recorded inputs and outputs are all readable as t values. Keyed APPS_BASE + the record's own id, named
+    apps_<id>__<fn>. The reference solution is the record's first solution, wrapped when it is the LeetCode
+    `class Solution` shape so that calling the function by name works, which t/spec_check.py needs.
+
+    APPS problems are competition problems: most will fall outside t's language, and that is the point of
+    grading them. Nothing here admits a problem whose own examples t cannot express."""
+    import gzip
+    path = mbpp_dfy.NL_DATA / "apps_raw_train.jsonl.gz"
+    if not path.exists():
+        return {}
+    allowed = _pool_settings("v5")[1]
+    out: dict[int, dict] = {}
+    with gzip.open(path, "rt", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            try:
+                io = json.loads(r.get("input_output") or "{}")
+            except ValueError:
+                continue
+            fn = io.get("fn_name")
+            ins, outs = io.get("inputs") or [], io.get("outputs") or []
+            if not fn or not ins or not outs or not re.fullmatch(r"[A-Za-z_]\w*", fn):
+                continue
+            points, ok = [], True
+            for args, expected in list(zip(ins, outs))[:8]:
+                if not isinstance(args, list):
+                    ok = False
+                    break
+                exp = expected[0] if isinstance(expected, list) and len(expected) == 1 else expected
+                kinds = [_apps_kind(a) for a in args] + [_apps_kind(exp)]
+                if any(k is None for k in kinds) or kinds[-1] not in allowed:
+                    ok = False
+                    break
+                points.append({"ok": True, "fn": fn,
+                               "args": [[_apps_kind(a), _apps_value(a)] for a in args],
+                               "expected": [_apps_kind(exp), _apps_value(exp)]})
+            if not ok or not points:
+                continue
+            if len({tuple(k for k, _v in p["args"]) for p in points}) != 1:
+                continue                                        # the examples disagree about the signature
+            try:
+                sols = json.loads(r.get("solutions") or "[]")
+            except ValueError:
+                sols = []
+            code = sols[0] if sols else ""
+            if "class Solution" in code:
+                code += f"\n\n\ndef {fn}(*a, **k):\n    return Solution().{fn}(*a, **k)\n"
+            tid = APPS_BASE + int(r["id"]) if str(r.get("id", "")).isdigit() else None
+            if tid is None or tid in out:
+                continue
+            tests = [f"assert {fn}({', '.join(json.dumps(a) for a in args)}) == {json.dumps(exp)}"
+                     for args, exp in [(i, (o[0] if isinstance(o, list) and len(o) == 1 else o))
+                                       for i, o in list(zip(ins, outs))[:3]]]
+            out[tid] = {"rec": {"task_id": tid, "text": (r.get("question") or "").strip(),
+                                "code": code, "test_list": tests, "source": f"APPS/{r['id']}"},
+                        "points": points, "fn": fn}
+            if limit and len(out) >= limit:
+                break
     return out
 
 
@@ -762,7 +858,8 @@ def cmd_extract(args) -> int:
             results[tid] = entry
             continue
         entry["model_name"] = task.get("name")
-        prefix = f"he_{int(tid) - HUMANEVAL_BASE}" if int(tid) >= HUMANEVAL_BASE else f"mbpp_{tid}"
+        prefix = (f"apps_{int(tid) - APPS_BASE}" if int(tid) >= APPS_BASE else
+                  f"he_{int(tid) - HUMANEVAL_BASE}" if int(tid) >= HUMANEVAL_BASE else f"mbpp_{tid}")
         name = f"{prefix}__{rec['fn']}"
         if not fuzz_lower.NAME_RE.match(name):
             name = prefix
