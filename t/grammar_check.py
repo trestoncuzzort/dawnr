@@ -12,8 +12,10 @@ t/PREREG-2026-09-18-constrained.md forbids either arm running until they do:
      the canonical form; and over the raw reply text of those same answers, which is what a model actually
      writes -- spacing, line breaks and all.
   2. Everything the parser refuses, the grammar refuses. Measured over a sample of the replies recorded with
-     stage "parse" in each set's extract.json. A grammar looser than the parser would move an answer from
-     refused to refused-later, which is not the thing being bought.
+     stage "parse" in each set's extract.json, re-parsed here by today's parser rather than trusted: a stage
+     recorded in August was recorded against a parser that had no slices and no `%`, and three of the first
+     four disagreements found this way were replies the parser has since learned to accept. A grammar looser
+     than the parser would move an answer from refused to refused-later, which is not the thing being bought.
 
 Needs xgrammar (the backend vLLM decodes with), so it runs where vLLM is installed: on the lab workstation,
 `~/.venv-vllm/bin/python t/grammar_check.py`. Everything else here is standard library.
@@ -117,15 +119,23 @@ def main() -> int:
     random.Random(a.seed).shuffle(pool)
     if a.refused:
         pool = pool[:a.refused]
-    loose = []
+    loose, stale, tested = [], 0, 0
     for d, tid in pool:
         try:
             block = se.find_block(json.loads((d / "raw" / f"{tid}.json").read_text())["reply"]) or ""
         except (OSError, ValueError, KeyError):
             continue
+        try:
+            surface.parse(block)
+            stale += 1                  # today's parser accepts it; the recorded stage predates a change
+            continue
+        except Exception:                                       # noqa: BLE001
+            pass
+        tested += 1
         if accepts(g, block):
             loose.append(f"{d.name}/{tid}")
-    print(f"   {len(pool) - len(loose)} of {len(pool)} refused replies are refused by the grammar too")
+    print(f"   {tested - len(loose)} of {tested} refused replies are refused by the grammar too"
+          + (f" ({stale} of the sample are stale records the parser now accepts)" if stale else ""))
     for p in (loose if a.verbose else loose[:5]):
         print(f"     ACCEPTED BY THE GRAMMAR BUT NOT THE PARSER: {p}")
 
