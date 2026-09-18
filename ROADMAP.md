@@ -27,8 +27,8 @@ Two halves. Both must hold before the tag.
 | WS-14 the notation | done |
 | WS-15 the editors | library, cache and language server done; VS Code built, walk-through not yet run by a second person; Visual Studio open |
 | WS-16 the claims | 16.1 done; 16.2 at 57 of 82; 16.3 open |
-| WS-17 the release | install pages written for three operating systems; second-person clause, the tag, and going public open |
-| WS-18 the training loop | built and measured twice at 1.5B; a local 27B now supplies positives (44 of 368 in all seven with tests passing) |
+| WS-17 the release | install pages written for three operating systems; public since 2026-09-17; second-person clause and the tag open |
+| WS-18 the training loop | round 4 measured on 232 held-out problems 2026-09-17: the student ties Phi-4-mini at 3 clean with 1.5B against 3.8B, training on 55 problems moved it none, locallm from scratch went 0 to 2 with 204 proven but wrong; round 5 (the models' own failures on training problems as negatives) is set up |
 | WS-19 the frontier moves | moves 1, 4 and 6 done; move 2 has a local 27B on the lab workstation; 3 and 7 next |
 | WS-20 what caps the corpus | chosen 2026-09-17 from the run's abstains: nested-loop lowering for Lean, Rocq and F\*, then more problem sources, then the twins and witnesses as an artifact; none started |
 
