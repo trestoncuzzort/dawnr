@@ -132,6 +132,11 @@ STEPS = [
     ("grade-growth", "Grade new problems and model", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_TAGS}",
      f"n=0; for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || continue; n=$((n+1)); "
      f"[ -s {SE}/$T/kernels.md ] || exit 1; done; [ $n -gt 0 ]", "lab"),
+    ("spec-check", "Check the specifications", "The gate the provers do not give: each accepted answer's ensures "
+     "against the problem's own solution, on arguments shaped like the problem's own examples. A disagreement is "
+     "an answer that passed its tests, all seven proofs and a refuted twin and still does not say what the "
+     "problem asked. Writes t/SPEC-CHECK-2026-09-18.md.",
+     "python3 t/spec_check.py --n 100 --pool v4", "test -s t/SPEC-CHECK-2026-09-18.md", ""),
     ("pool", "Build the clean pool", "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out "
      "problems unchanged, plus HumanEval as training problems). Good: many more problems than the 47 of r3.",
      f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} --split t/out/loop/split-v4.json --min-kernels 7 "
@@ -219,7 +224,7 @@ NEEDS = {
     "grade-growth": [],
     "more-problems": ["pull", "data"],
     "phi": ["data", "packages"], "base": ["data", "packages"],
-    "pool": ["grade", "grade-growth"], "train": ["pool"],
+    "spec-check": ["grade"], "pool": ["grade", "grade-growth", "spec-check"], "train": ["pool"],
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
     "r5-grade": ["r5-answers"], "r5-pool": ["r5-grade"], "r5-locallm": ["r5-pool"], "r5-train": ["r5-pool"],
     "r5-student": ["r5-train"], "r5-grade-heldout": ["r5-student"], "r5-score": ["r5-grade-heldout"],
