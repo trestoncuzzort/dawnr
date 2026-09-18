@@ -726,6 +726,11 @@ def chat(host: str, model: str, messages: list[dict], options: dict, timeout: fl
                 "max_tokens": options.get("num_predict", 1024)}
         if options.get("seed") is not None:
             body["seed"] = options["seed"]
+        if options.get("grammar"):
+            # WS-21: decode against t's own grammar, so the reply cannot be something the parser would refuse.
+            # vLLM passes this to xgrammar; the reply is then the task alone, with no prose and no code fence,
+            # which is why find_block() has to take a bare task as well (2026-09-18).
+            body["structured_outputs"] = {"grammar": options["grammar"]}
         req = urllib.request.Request(base.rstrip("/") + "/chat/completions",
                                      data=json.dumps(body).encode("utf-8"),
                                      headers={"Content-Type": "application/json",
@@ -774,6 +779,15 @@ def cmd_generate(args) -> int:
         ids = ids[:args.limit]
     options = {"temperature": args.temperature, "seed": args.seed, "num_ctx": args.num_ctx,
                "num_predict": args.num_predict}
+    if getattr(args, "grammar", ""):
+        gpath = Path(args.grammar)
+        # the comments are ours, not xgrammar's
+        options["grammar"] = "\n".join(line for line in gpath.read_text(encoding="utf-8").splitlines()
+                                       if not line.lstrip().startswith("#"))
+        options["grammar_sha256"] = hashlib.sha256(options["grammar"].encode("utf-8")).hexdigest()[:16]
+        if getattr(args, "api", "ollama") != "openai":
+            print("generate: --grammar needs --api openai (vLLM); ignoring it", file=sys.stderr)
+            options.pop("grammar")
     digest = model_digest(args.host, args.model)
     todo = [tid for tid in ids if not (d / "raw" / f"{tid}.json").exists()]
     state = {"asked": 0, "done": len(ids) - len(todo), "failed": []}
@@ -1233,6 +1247,9 @@ def main(argv=None) -> int:
                            help="openai: an OpenAI-shaped server such as vLLM, at --host/v1/chat/completions")
             p.add_argument("--limit", type=int, default=0)
             p.add_argument("--ids-file", default="", help="answer only the task ids in this file, one per line")
+            p.add_argument("--grammar", default="",
+                           help="decode against this grammar (t/t.gbnf), so the reply cannot be something the "
+                                "parser would refuse; needs --api openai (WS-21)")
             p.add_argument("--min-id", type=int, default=0,
                            help="only problems with this task id or above (pool v4's HumanEval problems: 100000)")
             p.add_argument("--seed", type=int, default=1)
