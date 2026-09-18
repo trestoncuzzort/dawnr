@@ -30,7 +30,7 @@ Two halves. Both must hold before the tag.
 | WS-17 the release | install pages written for three operating systems; public since 2026-09-17; second-person clause and the tag open |
 | WS-18 the training loop | round 4 measured on 232 held-out problems 2026-09-17: the student ties Phi-4-mini at 3 clean with 1.5B against 3.8B, training on 55 problems moved it none, locallm from scratch went 0 to 2 with 204 proven but wrong; round 5 (the models' own failures on training problems as negatives) is set up |
 | WS-19 the frontier moves | moves 1, 4, 6 and 7 done (7 went against the framing, see below); move 2 has a local 27B; move 3 next |
-| WS-20 what caps the corpus | chosen 2026-09-17 from the run's abstains: nested-loop lowering for Lean, Rocq and F\*, then more problem sources, then the twins and witnesses as an artifact; none started |
+| WS-20 what caps the corpus | chosen 2026-09-17 from the run's abstains: nested-loop lowering for Lean, Rocq and F\*, then more problem sources, then test quality (added after the ablation), then the twins and witnesses as an artifact |
 
 ## WS-13: the language
 
@@ -112,7 +112,15 @@ that, in this order.
    Admitting the function-shaped ones with parseable input and output raises the ceiling from about 505 training
    problems to thousands. The gate is a test reader per source, not new language features, and the held-out
    split must stay exactly split-v3's 232 MBPP problems so every earlier number keeps its meaning.
-3. **The twins and witnesses as a first-class artifact.** Every clean task carries a deliberately broken copy and
+3. **Test quality, added 2026-09-18 after the ablation.** The ablation measured every proof gate admitting about
+   97 percent wrong answers on held-out problems, where the model writes its own specification, and the tests
+   catching what no proof gate did. The tests are therefore on the critical path and they are thin: MBPP gives
+   about three assertions a problem. The move is to strengthen the one gate that demonstrably works: property
+   checks over the specification's own preconditions, and differential testing of each accepted answer against
+   the problem's reference solution on random inputs inside the precondition. The measurement that opens it is
+   how many currently clean answers a differential check refutes; anything it refutes was a false accept that
+   the seven provers and the twin rule both missed.
+4. **The twins and witnesses as a first-class artifact.** Every clean task carries a deliberately broken copy and
    a concrete input at which the copy breaks its own specification, refuted by all seven. Nobody else ships that:
    a pile of verified programs can be had from any corpus, but a program *paired with a near-miss and the input
    that separates them, with seven independent refutations on record*, is the part with no substitute. Today it is
