@@ -1281,6 +1281,9 @@ class Lab:
             time.sleep(20)
 
     def show_lab_gpu(self, text: str):
+        for line in text.splitlines():
+            if line.strip().isdigit():
+                self.lab_answers = int(line.strip())
         ours = [l for l in text.splitlines() if "vllm serve" in l or "spec_experiment" in l]
         answers = ""
         lines = text.splitlines()
@@ -1533,10 +1536,12 @@ class Lab:
             return (("all 8 seeds written" if whole == 8 else
                      f"{sum(per)} of {total} answers, seed {whole + 1}"), sum(per) / total)
         if key == "apps":
+            # the lab workstation's answers live on the lab workstation: its count comes from the status the
+            # GPU card's watcher reads every twenty seconds, not from this disk (2026-09-18)
             here = sum(self.answers(f"qwen2.5-coder-14b-apps-s{i}") for i in (1, 2))
-            there = self.answers("qwen3-coder-30b-apps-s1")
-            total = 2 * 1133 + 1133          # this desktop's two seeds of its half, the lab's one of the other
-            return (f"{here} of 2266 here, {there} of 1133 on the lab", (here + there) / total)
+            there = getattr(self, "lab_answers", 0)
+            total = 2266 + 2266
+            return (f"{here} answered here, {there} on the lab workstation", min(1.0, (here + there) / total))
         if key == "more-problems":
             he, ds = [self.answers(f"{HE}{i}") for i in range(1, 9)], [self.answers(f"{GEN2_TAG}{i}") for i in (1, 2)]
             total = 8 * 88 + 2 * 737

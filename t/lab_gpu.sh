@@ -64,7 +64,7 @@ stop)
 status)
   $SSH "$LAB" "echo '-- ours:'; pgrep -fa 'vllm serve|spec_experiment.py generate' | cut -c1-80; \
      echo '-- cards:'; nvidia-smi --query-gpu=index,memory.used,memory.total,utilization.gpu --format=csv,noheader; \
-     echo '-- answers:'; ls ~/tup/t/out/spec-experiment/$TAG/raw 2>/dev/null | wc -l; \
+     echo '-- answers:'; ls ~/tup/t/out/spec-experiment/qwen3-coder-30b-apps-s*/raw 2>/dev/null | grep -c json; \
      tail -2 ~/lab-gpu/generate.log 2>/dev/null | cut -c1-100"
   ;;
 
