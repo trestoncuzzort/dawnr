@@ -116,15 +116,6 @@ STEPS = [
      "seed's grade-in/, brings kernels.md back, checks show on Live checks. Opens the VPN by itself if it is down; sign in "
      "there. Skips graded seeds, so Run again after more seeds finish.", "bash t/grade_lab.sh seeds",
      f"for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || exit 1; done", "lab"),
-    ("repair", "Repair the proofs", "Needs Ollama started. Sends each answer that passes its tests but is not clean "
-     "back to the model with the checkers' verdicts (t/repair.py): proof repairs keep the specification, spec repairs "
-     "keep the signature and requires. New answer sets <seed>-fix1.",
-     f"for T in {QWEN_FIX}; do S=${{T%-fix1}}; [ -d {SE}/$T/grade-in ] && continue; [ -s {SE}/$S/kernels.md ] || continue; "
-     f"python3 t/repair.py {SE}/$S || exit 1; done",
-     f"n=0; for S in 1 2 3 4 5 6 7 8; do [ -s {SE}/{GEN}$S/kernels.md ] || continue; n=$((n+1)); "
-     f"[ -d {SE}/{GEN}$S-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]", "gpu"),
-    ("grade-repair", "Grade the repairs", "On the lab workstation.", f"bash t/grade_lab.sh tags {QWEN_FIX}",
-     f"for T in {QWEN_FIX}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
     ("more-problems", "New problems and a second model", "Needs Ollama started. The 88 HumanEval problems of pool v4 "
      f"(8 answer sets, as for MBPP), then {GEN2} over all 737 problems (seed 1 at temperature 0, seed 2 at 0.7).",
      f"for S in 1 2 3 4 5 6 7 8; do T={HE}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
@@ -139,7 +130,8 @@ STEPS = [
      "python3 t/pool_pick.py $D || exit 1; done",
      f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
     ("grade-growth", "Grade new problems and model", "On the lab workstation.", f"bash t/grade_lab.sh tags {GROWTH_TAGS}",
-     f"for T in {GROWTH_TAGS}; do [ -s {SE}/$T/kernels.md ] || exit 1; done", "lab"),
+     f"n=0; for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || continue; n=$((n+1)); "
+     f"[ -s {SE}/$T/kernels.md ] || exit 1; done; [ $n -gt 0 ]", "lab"),
     ("pool", "Build the clean pool", "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out "
      "problems unchanged, plus HumanEval as training problems). Good: many more problems than the 47 of r3.",
      f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} --split t/out/loop/split-v4.json --min-kernels 7 "
@@ -174,12 +166,12 @@ STEPS_DEFAULT = STEPS
 # prerequisites. Not a schedule: the orchestrator and a person may still run a step whenever they like.
 NEEDS = {
     "data": ["packages"], "ollama-serve": ["ollama-install"], "pull": ["ollama-serve"], "run-all": ["data"],
-    "generate": ["pull", "data"], "grade": ["generate"], "repair": ["grade", "pull"],
+    "generate": ["pull", "data"], "grade": ["generate"],
     # a grading step takes whatever answer sets exist and skips the rest, so it waits on nothing
-    "grade-repair": [], "grade-growth": [], "grade-growth-repair": [],
+    "grade-growth": [],
     "more-problems": ["pull", "data"],
     "phi": ["data", "packages"], "base": ["data", "packages"],
-    "pool": ["grade", "grade-repair", "grade-growth"], "train": ["pool"],
+    "pool": ["grade", "grade-growth"], "train": ["pool"],
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
 }
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")

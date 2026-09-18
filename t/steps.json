@@ -64,22 +64,6 @@
   "lab"
  ],
  [
-  "repair",
-  "Repair the proofs",
-  "Needs Ollama started. Sends each answer that passes its tests but is not clean back to the model with the checkers' verdicts (t/repair.py): proof repairs keep the specification, spec repairs keep the signature and requires. New answer sets <seed>-fix1.",
-  "for T in qwen2.5-coder-14b-v3-s1-fix1 qwen2.5-coder-14b-v3-s2-fix1 qwen2.5-coder-14b-v3-s3-fix1 qwen2.5-coder-14b-v3-s4-fix1 qwen2.5-coder-14b-v3-s5-fix1 qwen2.5-coder-14b-v3-s6-fix1 qwen2.5-coder-14b-v3-s7-fix1 qwen2.5-coder-14b-v3-s8-fix1; do S=${T%-fix1}; [ -d t/out/spec-experiment/$T/grade-in ] && continue; [ -s t/out/spec-experiment/$S/kernels.md ] || continue; python3 t/repair.py t/out/spec-experiment/$S || exit 1; done",
-  "n=0; for S in 1 2 3 4 5 6 7 8; do [ -s t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/kernels.md ] || continue; n=$((n+1)); [ -d t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S-fix1/grade-in ] || exit 1; done; [ $n -gt 0 ]",
-  "gpu"
- ],
- [
-  "grade-repair",
-  "Grade the repairs",
-  "On the lab workstation.",
-  "bash t/grade_lab.sh tags qwen2.5-coder-14b-v3-s1-fix1 qwen2.5-coder-14b-v3-s2-fix1 qwen2.5-coder-14b-v3-s3-fix1 qwen2.5-coder-14b-v3-s4-fix1 qwen2.5-coder-14b-v3-s5-fix1 qwen2.5-coder-14b-v3-s6-fix1 qwen2.5-coder-14b-v3-s7-fix1 qwen2.5-coder-14b-v3-s8-fix1",
-  "for T in qwen2.5-coder-14b-v3-s1-fix1 qwen2.5-coder-14b-v3-s2-fix1 qwen2.5-coder-14b-v3-s3-fix1 qwen2.5-coder-14b-v3-s4-fix1 qwen2.5-coder-14b-v3-s5-fix1 qwen2.5-coder-14b-v3-s6-fix1 qwen2.5-coder-14b-v3-s7-fix1 qwen2.5-coder-14b-v3-s8-fix1; do [ -s t/out/spec-experiment/$T/kernels.md ] || exit 1; done",
-  "lab"
- ],
- [
   "more-problems",
   "New problems and a second model",
   "Needs Ollama started. The 88 HumanEval problems of pool v4 (8 answer sets, as for MBPP), then deepseek-coder-v2:16b over all 737 problems (seed 1 at temperature 0, seed 2 at 0.7).",
@@ -92,7 +76,7 @@
   "Grade new problems and model",
   "On the lab workstation.",
   "bash t/grade_lab.sh tags qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2",
-  "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -s t/out/spec-experiment/$T/kernels.md ] || exit 1; done",
+  "n=0; for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -d t/out/spec-experiment/$T/grade-in ] || continue; n=$((n+1)); [ -s t/out/spec-experiment/$T/kernels.md ] || exit 1; done; [ $n -gt 0 ]",
   "lab"
  ],
  [
