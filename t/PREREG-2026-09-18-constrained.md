@@ -71,3 +71,38 @@ outcomes apart rather than merely ranking them.
 - A grammar that accepts more than the parser (check 2 above).
 - Grading the two arms at different job counts: SPARK's wall-clock backstop fires under load, and a timeout is
   not a verdict ([`t/preflight.py`](preflight.py) refuses a clean answer that rests on one).
+
+## Amendment, 2026-09-18, written before any constrained answer was graded
+
+Constrained decoding is 35 times slower per answer on this server, measured
+rather than estimated: 0.9 s unconstrained, 32 s with the grammar's identifier
+rules replaced by one loose rule, 37 s with the grammar as written. The cost is
+the grammar itself, not its size -- the generated keyword trie accounts for 14
+percent of it. Concurrency does not recover it (16 jobs and 32 jobs both give
+about 40 to 55 answers an hour, and the four cards sit at zero percent while it
+runs), because the per-token mask is computed on the engine's own path.
+
+The full 1,133-problem arm is therefore about a day of four shared GPUs that
+are lent to this project, not owned by it. Two things change, and both are
+fixed here before any constrained answer has been extracted, tested or graded:
+
+1. **The sample is a prefix.** The arm answers the same 1,133 problems in task
+   id order and may be stopped whenever the cards are wanted back. The
+   comparison is made over the ids *both* arms answered, so any stopping point
+   is a matched sample and none of it is chosen after seeing an outcome.
+
+2. **The primary outcome moves from clean answers to answers that pass their
+   own tests.** The control arm produced 16 clean answers over 1,133 problems,
+   1.4 percent; at a few hundred problems the clean counts of the two arms
+   cannot be told apart by any rule, and a rule that cannot decide is not a
+   preregistration. Test-passing answers are 10 percent of the control's
+   problems, which a few hundred can separate. The clean counts are still
+   reported beside them, and the decision rule's thresholds -- 1.5 times better
+   to adopt, fewer to reject, between the two to call it inconclusive -- apply
+   unchanged to the new primary outcome.
+
+The reason this remains worth running at that price is metric 4, unchanged:
+the test-pass rate among answers that parse is what tells apart "the model
+wrote good programs in the wrong notation" from "the model wrote bad
+programs", and only the constrained arm can measure it without the syntax gate
+in the way.
