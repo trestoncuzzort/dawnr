@@ -95,6 +95,72 @@ def wanted(tag_dirs: list[Path], n: int = 14) -> list[tuple[int, str]]:
     return [(c, t) for t, c in tok.most_common(n)]
 
 
+def strip_comments(src: str) -> str:
+    """Whatever follows // or # outside a literal, dropped. t has no comments on purpose -- a comment has no
+    AST node, so it could not survive print(parse(text)) -- but a model that annotates its program has not
+    written a different program, and this asks how much of the parse wall is only that."""
+    out = []
+    for line in src.splitlines():
+        quote, cut, i = None, None, 0
+        while i < len(line):
+            c = line[i]
+            if quote:
+                if c == "\\":
+                    i += 2
+                    continue
+                if c == quote:
+                    quote = None
+            elif c in "'\"":
+                quote = c
+            elif c == "#" or line[i:i + 2] == "//":
+                cut = i
+                break
+            i += 1
+        out.append(line[:cut] if cut is not None else line)
+    return "\n".join(out)
+
+
+def c_spellings(src: str) -> str:
+    """`&&` and `||` read as `and` and `or`: the same operators, spelled the way C spells them."""
+    return re.sub(r"\|\|", " or ", re.sub(r"&&", " and ", src))
+
+
+def rescue(tag_dirs: list[Path]) -> tuple[int, list[tuple[str, int]]]:
+    """How many refused replies a more tolerant reader would accept, layer by layer. If this number were
+    large, the parse wall would be orthography and the fix would be a preprocessor over answers already
+    generated -- no regeneration, no grammar, no new language."""
+    import spec_experiment as se
+    import surface
+    layers = [("comments dropped", strip_comments),
+              ("and && and || read as and/or", lambda s: c_spellings(strip_comments(s)))]
+    got = collections.Counter()
+    refused = 0
+    for d in tag_dirs:
+        try:
+            ex = json.loads((d / "extract.json").read_text())
+        except (OSError, ValueError):
+            continue
+        for tid, v in ex.items():
+            if v.get("stage") != "parse":
+                continue
+            raw = d / "raw" / f"{tid}.json"
+            if not raw.exists():
+                continue
+            refused += 1
+            try:
+                block = se.find_block(json.loads(raw.read_text())["reply"]) or ""
+            except (OSError, ValueError, KeyError):
+                continue
+            for name, f in layers:
+                try:
+                    surface.parse(f(block))
+                except Exception:                               # noqa: BLE001
+                    continue
+                got[name] += 1
+                break
+    return refused, [(n, got[n]) for n, _f in layers]
+
+
 def pct(a: int, b: int) -> str:
     if not b:
         return "-"
@@ -160,7 +226,20 @@ def main() -> int:
               "What the parser found where it wanted something else, over every set:", ""]
     for c, t in wanted(dirs):
         lines.append(f"- `{t}` -- {c}")
-    lines += ["", "## What the refusals say, per set", ""]
+    refused, layers = rescue(dirs)
+    lines += ["", "## Is the wall orthography?", "",
+              "The cheapest imaginable fix would be a more tolerant reader: the answers are already generated,",
+              "so anything a preprocessor can rescue costs one re-extraction and no GPU at all. Measured over",
+              f"the {refused} replies the parser refused whose raw reply is still on this machine:", ""]
+    for name, got in layers:
+        lines.append(f"- with {name}: {got} more parse ({pct(got, refused)})")
+    lines += ["",
+              "So it is not orthography. The refusals are structural -- `let x := e in ...`, list",
+              "comprehensions, `?:`, `^` for powers, a spec function written after the task it serves -- and a",
+              "reader cannot be made tolerant enough without becoming a different language. That closes the",
+              "cheap door and leaves the generator: a model that decodes against t's grammar cannot write any",
+              "of them in the first place (WS-21).", "",
+              "## What the refusals say, per set", ""]
     for d in dirs:
         rs = reasons(d)
         if not rs:

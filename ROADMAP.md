@@ -144,8 +144,15 @@ Two findings, and the second is the uncomfortable one.
 **The syntax gate loses more answers than every other gate together.** Sixty-two percent of a prompted stock
 model's replies never reach a proof system at all, because they are not t. The provers are not the bottleneck
 and never were; the notation is. The tokens the parser found where it wanted something else say the same thing
-plainly: `spec` (a spec function written after the task rather than before it), `if` and `forall` in expression
-positions the grammar does not allow, and `^`, `|`, `&`, `?`, `/` -- operators t does not have.
+plainly: `spec` (a spec function written after the task it serves, rather than before the body), `if` and
+`forall` in positions the grammar does not allow, `let x := e in ...`, list comprehensions, `?:`, `&&` and `||`
+for `and` and `or`, `^` for powers, and `//` comments, which t has never had because a comment carries no AST
+node and could not survive `print(parse(text))`.
+
+The cheap fix was tested first and does not work. A tolerant reader -- comments dropped, `&&` and `||` read as
+`and` and `or` -- rescues 119 of the 6,603 refused replies on this machine, 2 percent, and the second layer
+adds 3. The refusals are structural, not orthographic, so no preprocessor over answers already generated will
+open this. That leaves the generator.
 
 **Training on t moves that gate and nothing else.** locallm, built from random numbers on t's own corpus, writes
 t the parser accepts 98 percent of the time, and 2 of its 464 answers pass the problem's own tests. It has the
