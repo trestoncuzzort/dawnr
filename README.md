@@ -8,6 +8,18 @@ Every number below was measured by a script in this repository, and links to the
 
 **What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column and why the tests are a separate gate. No model built here has beaten Phi-4-mini; that comparison is running.
 
+## Start here
+
+- **What is measured, and what is not:** the tables below, and the limits at the end of this page.
+- **Run it yourself:** `python3 t/restore_run.py` puts the last run's data where the tools expect it, then
+  `python3 t/lab.py` opens the window that drives the pipeline; the setup notes are
+  [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) and
+  [`t/RUN-ON-LINUX.md`](t/RUN-ON-LINUX.md).
+- **The day-by-day record**, including every failure: [`t/runs/`](t/runs/) and
+  [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md).
+- **What comes next and why:** [`ROADMAP.md`](ROADMAP.md), WS-20.
+- **Licence:** research and education only, see [`LICENSE`](LICENSE).
+
 ## The pipeline
 
 ```
