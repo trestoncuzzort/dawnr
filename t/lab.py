@@ -206,7 +206,8 @@ STEPS = [
      "test -s t/out/loop/sft-r5.jsonl", ""),
     ("r5-locallm", "Round 5: a bigger locallm", "From scratch on the round 5 pool, with more capacity and more "
      "steps than r4 (8 layers, 512 wide across 8 heads, 6000 steps), then its held-out answers.",
-     "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl "
+     "python3 t/loop_locallm.py corpus --pool v5 --base t/runs/2026-09-16/loop-data/corpus.txt "
+     "--sft t/out/loop/sft-r5.jsonl "
      f"--out t/out/loop-locallm/corpus-r5.txt && {PY} t/loop_locallm.py train "
      "--corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 "
      "--heads 8 "
