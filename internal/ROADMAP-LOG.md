@@ -1683,6 +1683,112 @@ outside the box; moves 3 and 4 each have a measured row; 5 closes on
 12.7's line; 7 has its two arms declared and run once. No 1.5B training
 round runs before move 2.
 
+## WS-20: what caps the corpus (opened 2026-09-17)
+
+The day's run gave the cap its numbers: 463 answers passed their tests and
+96 were clean in all seven; 10 were blocked only by a lowering that cannot
+express them; 150 carried at least one abstain, and the abstains name their
+reason -- nested loops (Rocq 37, Lean 37 plus 14 for a second top-level
+loop, F* 33), a sequence return whose length no parameter determines (44),
+string-library members not lowered. The four moves are in ROADMAP.md.
+
+Measured and fixed since, 2026-09-17 and 2026-09-18:
+
+- Nested loops, the measurement that had to open move 1: of the corpus's
+  113 nested-loop answers only 3 had ever verified anywhere, so the upper
+  bound the three abstaining kernels have to reach was not 96 but almost
+  nothing, and two of the four that were said to take them did not. Verus
+  kept a read-only defining fact for a name the inner loop assigns
+  (`lower_verus._ro_defining_facts` now drops facts for anything assigned
+  anywhere in the body); SPARK certified only the outer loop's calls
+  (`lower_spark._certify_calls` rewrites the inner ones inside clones). A
+  hand-written nested task now passes 3 of 7 where it passed 0.
+- Move 2, more problem sources: pool v4 (737) became pool v5 (3,003) by
+  admitting the 2,266 APPS problems that name a function and whose own
+  examples read as t values (`spec_experiment.apps_pool`). The held-out
+  split is still split-v3's 232 MBPP ids, so every earlier number keeps
+  its meaning. The lab workstation's four cards answered all of them
+  through vLLM in two seeds; 2,262 of 2,266 have an answer.
+- The ceiling of move 2 is now known and it is low. The APPS *test* split
+  yields 37 more usable problems (the rest are stdin/stdout, not named
+  functions), and widening the value kinds t admits would buy at most 353
+  more, mostly floats and dicts. MBPP, HumanEval and APPS together are
+  about 3,000 problems and that is the corpus, so problem count stops
+  being the lever here.
+- Move 3, test quality, has its instrument: `t/spec_check.py` evaluates an
+  accepted answer's `ensures` against the problem's own solution on draws
+  shaped like the problem's own examples. Five answers that had passed
+  their tests, all seven proofs and a refuted twin disagree with their
+  problem; `loop_dataset.py` keeps them out of a pool and
+  `score_heldout.py` counts them in their own column.
+
+DONE WHEN: the three abstaining kernels take a nested loop (1); a second
+corpus has a coverage table in the same format (2, and v5 is that corpus
+once graded); a differential check has refuted or failed to refute every
+currently clean answer (3); the twins ship as their own artifact (4).
+
+## WS-21: the parse wall (opened 2026-09-18)
+
+WS-19 move 2 ended with two alternatives, a grammar-constrained decoder
+and a model that can read an error, and the second still waits on model
+access. This opens the first, but only after measuring what the wall
+actually is, because every earlier statement about it was a share of one
+model's replies and not a funnel.
+
+`t/funnel.py` walks every answer set from the reply to a clean training
+example. Over 14,130 replies: a prompted stock model writes something the
+parser accepts 38 percent of the time, well formed 23, passing its own
+tests 17. The syntax gate loses more than every other gate together.
+
+The second number is the one that changes what the loop is for. locallm,
+trained on t's corpus from random numbers, parses 98 percent and 2 of its
+464 answers pass their problems' tests: it has the notation and not the
+problem. The fine-tuned student parses 32 percent, which is where the
+untrained 1.5B already was, so a QLoRA and DPO round on the pool moved
+neither end. That is why round 4 tied Phi-4-mini at 3 of 232 rather than
+beating it, and it says a round that adds more answers of the same kind
+will not move any of the three rows.
+
+Two cheaper fixes were tried first and both are dead, which is worth the
+record because both are the kind that sound free:
+
+- A tolerant reader over answers already generated -- comments dropped,
+  `&&` and `||` read as `and` and `or` -- rescues 119 of 6,603 refused
+  replies, two percent, and the second layer adds 3. The refusals are
+  structural: `let x := e in ...`, list comprehensions, `?:`, `^`, a spec
+  function written after the task it serves.
+- Re-extracting every old answer with today's parser, which has learned
+  slices and `%` since some sets were extracted, yields 1 well-formed task
+  out of 8,464.
+
+So the generator is the only place left to fix it. `t/t.gbnf` is the
+notation as a grammar; its identifier rules are generated from
+`surface.KEYWORDS` by `t/make_grammar.py`, because GBNF has no negative
+lookahead and a hand-written `[A-Za-z][A-Za-z0-9_]*` admits `int` as a
+variable name -- one refused reply in 200 did exactly that.
+`t/grammar_check.py` holds the two directions: 2,121 of 2,121 accepted
+programs accepted in canonical form, 2,087 of 2,087 as the models wrote
+them, 590 of 590 refused replies refused (re-parsed today, since 10 of 600
+were stale records the parser now accepts).
+
+The arms are declared before any constrained answer exists, in
+`t/PREREG-2026-09-18-constrained.md`: the same 1,133 problems, model,
+prompt, temperature and seed as `qwen3-coder-30b-apps-s1`, differing only
+in the constraint, and the outcome that decides it is clean answers rather
+than parse rate -- parse rate is guaranteed by construction, and locallm
+is what a model with the notation and none of the problem looks like.
+
+Blocked on a card, not on code. `spec_experiment.py generate --grammar`
+sends the grammar and `bash t/lab_gpu.sh constrained` runs the arm; Ollama
+bundles xgrammar but does not expose it (a `"yes" | "no"` grammar is
+ignored and the reply is `Yes`), and this desktop has no CUDA toolkit to
+build a server that does. The lab workstation's cards are not ours to use
+until the operator says so.
+
+DONE WHEN: both arms are generated and graded at the same 32 cells, and
+the preregistration's rule is applied to their clean counts in public,
+whichever way it falls.
+
 ## The road to 1.0 (opened 2026-09-05)
 
 WS-12 is the next six sessions. This is everything after them, to the two
