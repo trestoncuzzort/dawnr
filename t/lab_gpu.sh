@@ -62,6 +62,32 @@ status)
      tail -2 ~/lab-gpu/generate.log 2>/dev/null | cut -c1-100"
   ;;
 
+takeover)
+  # Hand the lab workstation every problem this desktop has not answered yet, and stop generating here. Every
+  # answer is its own file, so nothing is half done: what is on disk stays, the rest moves.
+  python3 - "$TAG" <<'PY'
+import json, sys
+from pathlib import Path
+here = Path("t/out/spec-experiment")
+want = {int(x) for x in Path("t/out/loop/apps-ids.txt").read_text().split()}
+have = set()
+for d in here.glob("*apps*"):
+    have |= {int(p.stem) for p in (d / "raw").glob("*.json") if p.stem.isdigit()}
+left = sorted(want - have)
+Path("t/out/loop/apps-left.txt").write_text("\n".join(str(i) for i in left) + "\n")
+print(f"{len(left)} problems have no answer yet, of {len(want)}")
+PY
+  rsync -a t/out/loop/apps-left.txt "$LAB:tup/t/out/loop/"
+  pkill -f "spec_experiment.py generate --model qwen2.5-coder" 2>/dev/null
+  systemctl --user stop t-gen 2>/dev/null
+  echo "== this desktop has stopped generating"
+  $SSH "$LAB" "pkill -f 'spec_experiment.py generate'; sleep 2; cd ~/tup && setsid nohup python3 \
+      t/spec_experiment.py generate --model '$MODEL' --tag '$TAG' --pool v5 \
+      --ids-file t/out/loop/apps-left.txt --prompt v3 --seed 1 --temperature 0 --num-predict 2048 \
+      --host 127.0.0.1:$PORT --api openai --timeout 1800 --jobs $JOBS \
+      >> ~/lab-gpu/generate.log 2>&1 < /dev/null & echo 'the lab workstation has the rest'"
+  ;;
+
 fetch)
   mkdir -p "t/out/spec-experiment/$TAG"
   rsync -a "$LAB:tup/t/out/spec-experiment/$TAG/" "t/out/spec-experiment/$TAG/"
