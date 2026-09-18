@@ -5658,12 +5658,17 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
             # just below): anything else falls back to the plain F(args)
             # goal above, unchanged from before this session.
             loops = _cert_loops(body)
-            if (final is not None and len(loops) == 1
-                    and len(L.loop_certs) == 1 and args):
-                loop_name = next(iter(L.loop_certs))
-                cert_block = L.loop_certs[loop_name]
-                f_cert_body = re.sub(rf'\b{re.escape(loop_name)}\b',
-                                     f"{loop_name}_Cert", final)
+            # 2026-09-18: a twin with nested loops has more than one stashed clone, and the single-loop
+            # restriction sent it back to the contracted functions, whose Pre a twin cannot satisfy: the cell
+            # read unproved on a VC_PRECONDITION rather than refuting (t/nested/has_duplicate.t). Every clone is
+            # emitted, inner first, which is the order they were lowered in and the order Ada needs.
+            if (final is not None and len(loops) >= 1
+                    and len(L.loop_certs) == len(loops) and args):
+                cert_block = "\n".join(L.loop_certs[nm] for nm in L.loop_certs)
+                f_cert_body = final
+                for nm in L.loop_certs:
+                    f_cert_body = re.sub(rf'\b{re.escape(nm)}\b(?!_Cert)',
+                                         f"{nm}_Cert", f_cert_body)
                 plist_c = "; ".join(
                     f"{cap(p['name'])} : {ada_type(p['type'])}"
                     for p in task["params"])
