@@ -53,7 +53,7 @@
   "Hours. Seed 1 at temperature 0, seeds 2 to 8 at 0.7. A finished seed is skipped, so Stop and Run again resumes. Good: each seed puts tasks in grade-in/.",
   "for S in 1 2 3 4 5 6 7 8; do T=qwen2.5-coder-14b-v3-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; echo \"== seed $S\"; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v3 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && python3 t/pool_pick.py $D --control 25 && ls $D/grade-in | wc -l || exit 1; done",
   "for S in 1 2 3 4 5 6 7 8; do [ -d t/out/spec-experiment/qwen2.5-coder-14b-v3-s$S/grade-in ] || exit 1; done",
-  "gpu"
+  "gen"
  ],
  [
   "matrix",
@@ -77,7 +77,7 @@
   "Needs Ollama started. The 88 HumanEval problems of pool v4 (8 answer sets, as for MBPP), then deepseek-coder-v2:16b over all 737 problems (seed 1 at temperature 0, seed 2 at 0.7).",
   "for S in 1 2 3 4 5 6 7 8; do T=qwen2.5-coder-14b-he-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v4 --min-id 100000 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && python3 t/pool_pick.py $D --control 25 || exit 1; done && ollama pull deepseek-coder-v2:16b && for S in 1 2; do T=deepseek-coder-v2-16b-v4-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; python3 t/spec_experiment.py generate --model deepseek-coder-v2:16b --tag $T --pool v4 --prompt v3 --seed $S --temperature $TEMP --num-ctx 6144 --num-predict 2048 --timeout 1800 --jobs 2 && python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && python3 t/pool_pick.py $D --control 25 || exit 1; done",
   "for T in qwen2.5-coder-14b-he-s1 qwen2.5-coder-14b-he-s2 qwen2.5-coder-14b-he-s3 qwen2.5-coder-14b-he-s4 qwen2.5-coder-14b-he-s5 qwen2.5-coder-14b-he-s6 qwen2.5-coder-14b-he-s7 qwen2.5-coder-14b-he-s8 deepseek-coder-v2-16b-v4-s1 deepseek-coder-v2-16b-v4-s2; do [ -d t/out/spec-experiment/$T/grade-in ] || exit 1; done",
-  "gpu"
+  "gen"
  ],
  [
   "spec-check",
@@ -149,7 +149,7 @@
   "The 2,266 APPS problems whose own examples t can express, answered on whichever machine has a generator: this desktop through Ollama, the lab workstation through vLLM on its four cards (the AI tab starts and stops that one). This is the move that adds problems rather than more answers to the ones already held: pool v5 is 3,003 problems, 2,771 of them training, the held-out 232 unchanged.",
   "for S in 1 2; do T=qwen2.5-coder-14b-apps-s$S; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; python3 t/spec_experiment.py generate --model qwen2.5-coder:14b --tag $T --pool v5 --min-id 200000 --prompt v3 --seed $S --temperature $TEMP --num-ctx 8192 --num-predict 2048 --timeout 1800 --jobs 4 && python3 t/spec_experiment.py extract --model $T --pool v5 && python3 t/spec_experiment.py tests --model $T --pool v5 && python3 t/pool_pick.py $D --control 25 || exit 1; done && T=deepseek-coder-v2-16b-apps-s1; D=t/out/spec-experiment/$T; [ -d $D/grade-in ] || { python3 t/spec_experiment.py generate --model deepseek-coder-v2:16b --tag $T --pool v5 --min-id 200000 --prompt v3 --seed 1 --temperature 0 --num-ctx 6144 --num-predict 2048 --timeout 1800 --jobs 2 && python3 t/spec_experiment.py extract --model $T --pool v5 && python3 t/spec_experiment.py tests --model $T --pool v5 && python3 t/pool_pick.py $D --control 25; }",
   "for T in qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1; do [ -d t/out/spec-experiment/$T/grade-in ] || exit 1; done",
-  "gpu"
+  "gen"
  ],
  [
   "r5-answers",

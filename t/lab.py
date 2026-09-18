@@ -113,7 +113,7 @@ STEPS = [
      "--seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && "
      "python3 t/spec_experiment.py extract --model $T --pool v3 && python3 t/spec_experiment.py tests --model $T --pool v3 && "
      "python3 t/pool_pick.py $D --control 25 && ls $D/grade-in | wc -l || exit 1; done",
-     f"for S in 1 2 3 4 5 6 7 8; do [ -d {SE}/{GEN}$S/grade-in ] || exit 1; done", "gpu"),
+     f"for S in 1 2 3 4 5 6 7 8; do [ -d {SE}/{GEN}$S/grade-in ] || exit 1; done", "gen"),
     ("matrix", "Check the checkers", "On the lab workstation, where all grading runs: regrades the 34 committed tasks. "
      "Good: 30 of 34 in all seven, as in t/AGREEMENT.md. Table comes back to t/out/AGREEMENT-lab.md.",
      "bash t/grade_lab.sh matrix", "test -s t/out/AGREEMENT-lab.md", "lab"),
@@ -135,7 +135,7 @@ STEPS = [
      "--seed $S --temperature $TEMP --num-ctx 6144 --num-predict 2048 --timeout 1800 --jobs 2 && "
      "python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && "
      "python3 t/pool_pick.py $D --control 25 || exit 1; done",
-     f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
+     f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gen"),
     ("spec-check", "Check the specifications", "The gate the provers do not give: each accepted answer's ensures "
      "against the problem's own solution, on arguments shaped like the problem's own examples. A disagreement is "
      "an answer that passed its tests, all seven proofs and a refuted twin and still does not say what the "
@@ -191,7 +191,7 @@ STEPS = [
      "python3 t/spec_experiment.py tests --model $T --pool v5 && "
      "python3 t/pool_pick.py $D --control 25; }",
      "for T in qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1; do "
-     f"[ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
+     f"[ -d {SE}/$T/grade-in ] || exit 1; done", "gen"),
     ("r5-answers", "Round 5: answer the training problems", "The student and locallm answer the 417 training "
      "problems, so their own failures can be graded and used. Held-out problems are not touched.",
      f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 "
@@ -1060,7 +1060,10 @@ class Lab:
         self.q.put(("row", (name, values, text, self.passes(r, s))))
 
     # -- Collect data ----------------------------------------------------------------
-    USES_WORDS = {"gpu": "graphics card", "cpu": "cores here", "lab": "lab workstation"}
+    # "gen" is a generator, which may be this card through Ollama or the lab workstation's four through vLLM
+    # (the AI tab starts that one), so it is not the same slot as training, which only this card can do.
+    USES_WORDS = {"gpu": "graphics card", "cpu": "cores here", "lab": "lab workstation",
+                  "gen": "a generator, here or on the lab"}
 
     def reload_steps(self):
         """Re-read t/steps.json and rebuild the boxes, so a step added by hand appears without a restart."""
