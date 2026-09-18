@@ -73,7 +73,7 @@ GROWTH_TAGS = " ".join([f"{HE}{i}" for i in range(1, 9)] + [f"{GEN2_TAG}{i}" for
 GROWTH_FIX = " ".join(f"{t}-fix1" for t in GROWTH_TAGS.split())
 # every answer set whose clean answers train a model: the 27B's, then everything this run wrote
 SAMPLE_TAGS = ("$(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 "
-               "qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null)")
+               "qwen2.5-coder-14b-* qwen3-coder-30b-* deepseek-coder-v2-16b-* 2>/dev/null)")
 # (key, title, what it does and what good looks like, command, done when this succeeds, uses: gpu/cpu/sudo/"")
 STEPS = [
     ("preflight", "Check before running", "Everything that could make a round's numbers wrong, checked first: "
@@ -201,7 +201,7 @@ STEPS = [
      f"test $(ls {SE}/student-r4-train/raw 2>/dev/null | wc -l) -ge 417", "gpu"),
     ("r5-pool", "Round 5: pool and pairs", "Rebuilds the pool with the new clean answers and the new negatives.",
      f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} student-r4-train locallm-r4-train "
-     "--split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r5 && "
+     "--split t/out/loop/split-v5.json --min-kernels 7 --out-suffix r5 && "
      "wc -l t/out/loop/sft-r5.jsonl t/out/loop/pairs-r5.jsonl",
      "test -s t/out/loop/sft-r5.jsonl", ""),
     ("r5-locallm", "Round 5: a bigger locallm", "From scratch on the round 5 pool, with more capacity and more "

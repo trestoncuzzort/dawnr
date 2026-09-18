@@ -91,7 +91,7 @@
   "pool",
   "Build the clean pool",
   "Every answer set that is not a held-out one, over split-v4 (split-v3's held-out problems unchanged, plus HumanEval as training problems). Good: many more problems than the 47 of r3.",
-  "python3 t/loop_dataset.py --from-samples $(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null) --split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r4 && wc -l t/out/loop/sft-r4.jsonl t/out/loop/pairs-r4.jsonl",
+  "python3 t/loop_dataset.py --from-samples $(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* qwen3-coder-30b-* deepseek-coder-v2-16b-* 2>/dev/null) --split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r4 && wc -l t/out/loop/sft-r4.jsonl t/out/loop/pairs-r4.jsonl",
   "test -s t/out/loop/sft-r4.jsonl",
   ""
  ],
@@ -163,7 +163,7 @@
   "r5-pool",
   "Round 5: pool and pairs",
   "Rebuilds the pool with the new clean answers and the new negatives.",
-  "python3 t/loop_dataset.py --from-samples $(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* deepseek-coder-v2-16b-* 2>/dev/null) student-r4-train locallm-r4-train --split t/out/loop/split-v4.json --min-kernels 7 --out-suffix r5 && wc -l t/out/loop/sft-r5.jsonl t/out/loop/pairs-r5.jsonl",
+  "python3 t/loop_dataset.py --from-samples $(cd t/out/spec-experiment && ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* qwen3-coder-30b-* deepseek-coder-v2-16b-* 2>/dev/null) student-r4-train locallm-r4-train --split t/out/loop/split-v5.json --min-kernels 7 --out-suffix r5 && wc -l t/out/loop/sft-r5.jsonl t/out/loop/pairs-r5.jsonl",
   "test -s t/out/loop/sft-r5.jsonl",
   ""
  ],
