@@ -4931,23 +4931,32 @@ class Lower:
         # anything: the two blocks can disagree only if this file's own
         # string literals do, not because of a second, independent read
         # of the loop.
+        # 2026-09-18 (nested loops): the clone renames its OWN recursion, but a loop whose body contains
+        # another loop calls that inner loop's CONTRACTED function, whose Pre the twin cannot satisfy: the
+        # certificate then reads UNPROVED on a VC_PRECONDITION instead of refuting anything (measured on
+        # t/nested/has_duplicate.t). Inside the clone every already-lowered loop call goes to its own clone.
+        def _certify_calls(text: str) -> str:
+            for inner in self.loop_certs:
+                text = re.sub(rf"\b{re.escape(inner)}\b(?!_Cert)", f"{inner}_Cert", text)
+            return text
+
         def _cert_body(nm: str, tn: str) -> str:
             if body_has_return:
-                esc_fields_c = ", ".join(f"{cap(v)} => {benv[v]}"
+                esc_fields_c = ", ".join(f"{cap(v)} => {_certify_calls(benv[v])}"
                                          for v in mut)
                 base_case_c = (f"{tn}'({agg}, Esc => False, "
                               f"Ret => {cap(ret_name)})")
                 recurse_or_escape_c = (
-                    f"(if {besc}\n"
+                    f"(if {_certify_calls(besc)}\n"
                     f"         then {tn}'({esc_fields_c}, Esc => True, "
-                    f"Ret => {bval})\n"
-                    f"         else {nm} ({', '.join(rec_args)}))")
-                return (f"(if {cond}\n"
+                    f"Ret => {_certify_calls(bval)})\n"
+                    f"         else {nm} ({', '.join(_certify_calls(x) for x in rec_args)}))")
+                return (f"(if {_certify_calls(cond)}\n"
                        f"        then {recurse_or_escape_c}\n"
                        f"        else {base_case_c})")
-            return (f"(if {cond}\n"
-                   f"        then {nm} ({', '.join(rec_args)})\n"
-                   f"        else {tn}'({agg}))")
+            return (f"(if {_certify_calls(cond)}\n"
+                   f"        then {nm} ({', '.join(_certify_calls(x) for x in rec_args)})\n"
+                   f"        else {tn}'({_certify_calls(agg)}))")
         cert_name, cert_tname = f"{name}_Cert", f"{tname}_Cert"
         cert_sig = f"function {cert_name} ({'; '.join(plist)}) return " \
                    f"{cert_tname}"
