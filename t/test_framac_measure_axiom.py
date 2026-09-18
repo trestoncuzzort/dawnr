@@ -105,7 +105,11 @@ def committed_recursive_tasks_are_byte_identical():
     never merely through having a spec_fun."""
     taskdir = HERE / "tasks"
     names = sorted(p.stem for p in taskdir.glob("*.t"))
-    assert len(names) == 34, len(names)
+    # 35 since 2026-09-18: has_duplicate.t, the nested-`while` task
+    # (ROADMAP WS-20 move 1), joined the committed set. The count is
+    # pinned so a task appearing without this test seeing it is a
+    # failure, not a silent shrink of what "every committed task" means.
+    assert len(names) == 35, len(names)
     checked_a_spec_fun_task = False
     for name in names:
         task = tasks_io.load_task(taskdir / f"{name}.t")

@@ -132,7 +132,7 @@ def the_other_five_seq_cells_are_unmoved():
 
 @test
 def committed_tasks_are_unaffected():
-    """The 34 committed tasks under t/tasks: none declares a nested seq at
+    """The 35 committed tasks under t/tasks: none declares a nested seq at
     all, so none reaches `pred()`'s seq `==` branch on a row-extracted
     (non-bare-variable) operand -- this pass's edit is a no-op for every
     one of them, confirmed by lowering each and counting exactly the same
@@ -141,7 +141,7 @@ def committed_tasks_are_unaffected():
     swap_rows) already records."""
     taskdir = HERE / "tasks"
     names = sorted(p.stem for p in taskdir.glob("*.t"))
-    assert len(names) == 34, len(names)
+    assert len(names) == 35, len(names)
     lowered, abstained = 0, 0
     for name in names:
         task = tasks_io.load_task(taskdir / f"{name}.t")
@@ -151,7 +151,7 @@ def committed_tasks_are_unaffected():
             abstained += 1
         else:
             lowered += 1
-    assert (lowered, abstained) == (31, 3), (lowered, abstained)
+    assert (lowered, abstained) == (32, 3), (lowered, abstained)
 
 
 def main() -> int:

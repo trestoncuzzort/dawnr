@@ -171,6 +171,72 @@ def frame_fact_scoped_to_the_statement_list_declaring_it():
 
 
 @test
+def frame_fact_not_claimed_inside_an_enclosing_loop_that_writes_it():
+    """THE NESTED-LOOP FRAME-FACT BUG (2026-09-18, ROADMAP WS-20 move 1),
+    on the committed task it was measured on. has_duplicate.t declares
+    `var i := 0;` in the function prefix; the OUTER `while` assigns `i`,
+    the INNER one does not. Before the fix the inner loop inherited the
+    un-pruned prefix and emitted `loop invariant i == 0;` -- true only on
+    the outer loop's first iteration, and WP's own per-goal report named
+    its `_established` goal as the ONE unproved goal of 39 ([Stepout],
+    alt-ergo spending its whole step budget on a goal with no proof),
+    which is what made the framac cell read `timeout` while the other six
+    kernels verified. The prefix handed to a loop BODY now drops every
+    name that loop assigns."""
+    import tasks_io                              # noqa: PLC0415
+    task = tasks_io.load_task(HERE / "tasks" / "has_duplicate.t")
+    src = lower_framac.lower(task, task["body"])
+    assert "loop invariant i == 0;" not in src, src
+    # The task's own invariants are untouched: the fix removes an
+    # invented fact, never one the task stated.
+    assert "loop invariant ((i >= 0) && (i <= s_n));" in src, src
+    assert "loop invariant ((i >= 0) && (i < s_n));" in src, src
+
+
+@test
+def frame_fact_dropped_after_a_loop_that_writes_the_name():
+    """Same fact, the other direction: a LATER `while` in the same
+    statement list must not claim `i == 0` either, once an earlier loop
+    in that list has written `i`. The second loop must count on a
+    DIFFERENT variable (`m`), or it would assign `i` itself and the
+    emitter's own `pn not in hit` gate would skip the fact anyway --
+    which is exactly the pre-fix behaviour this test has to distinguish
+    itself from."""
+    task = json.loads(json.dumps(_SYNTH_TASK))   # deep copy
+    len_a = {"args": [{"var": "a"}], "op": "len"}
+    task["body"].insert(3, {"var": {"name": "m", "type": "int",
+                                    "init": {"int": 0}}})
+    task["body"].insert(4, {"while": {
+        "cond": {"args": [{"var": "m"}, {"var": "h"}], "op": "<"},
+        "decreases": {"args": [{"var": "h"}, {"var": "m"}], "op": "-"},
+        "invariants": [{"args": [{"var": "m"}, len_a], "op": "<="}],
+        "body": [{"assign": ["m", {"args": [{"var": "m"}, {"int": 1}],
+                                   "op": "+"}]}],
+    }})
+    src = lower_framac.lower(task, task["body"])
+    assert "loop invariant i == 0;" not in src, src
+    # `h` is still never written by either loop, so its fact survives:
+    # the prune is targeted at written names, not a blanket retreat.
+    assert "loop invariant h == a_n;" in src, src
+
+
+@test
+def frame_fact_dropped_after_an_if_branch_writes_the_name():
+    """A write nested inside an `if` BRANCH kills the fact for every
+    statement after the `if`, although only the branch's own recursive
+    `stmts()` call saw the `assign`. Write `h` in the then-branch and the
+    following loop must no longer claim `h == a_n`."""
+    task = json.loads(json.dumps(_SYNTH_TASK))
+    task["body"].insert(2, {"if": {
+        "cond": {"args": [{"var": "h"}, {"int": 0}], "op": ">"},
+        "then": [{"assign": ["h", {"args": [{"var": "h"}, {"int": 1}],
+                                   "op": "-"}]}],
+        "else": []}})
+    src = lower_framac.lower(task, task["body"])
+    assert "loop invariant h == a_n;" not in src, src
+
+
+@test
 def capacity_bare_assign_uses_source_length_not_target_capacity():
     """appendArrayToSeq's own shape, measured on the real sweep task when
     present, else a self-contained regression check on the mechanism:

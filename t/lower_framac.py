@@ -6068,7 +6068,14 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
     # becomes a fact about the loop it is declared in). A name is dropped
     # from `_prefix` the moment this same list reassigns it (`assign`),
     # so only a name that is TRULY never written again carries a fact
-    # forward. At a `while`, every surviving name not in that loop's own
+    # forward. CORRECTED 2026-09-18 (see the `while` and `if` cases
+    # below): "this same list reassigns it" was too narrow, because a
+    # write nested one level down -- inside an enclosing `while` body or
+    # an `if` branch -- is seen only by that RECURSIVE call, whose
+    # `dict(prefix)` copy is thrown away, so the fact used to survive its
+    # own refutation. Both nesting cases now pop the written names, which
+    # is what makes the fact "TRULY never written again" true as stated.
+    # At a `while`, every surviving name not in that loop's own
     # `assigned_names` hit-set gets `loop invariant {name} == {its own
     # defining expression, rendered now}` -- ADDITIVE ONLY: a TRUE
     # equality (the prefix's own straight-line computation, unchanged by
@@ -6320,6 +6327,21 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             out += stmts(c["else"], ctx, task_name, indent + "  ",
                         dict(prefix))
             out.append(f"{indent}}}")
+            # THE FRAME-FACT WRITE-THROUGH (2026-09-18, WS-20 move 1,
+            # same family as the `while` case below): a branch that
+            # reassigns a prefix name kills that name's defining
+            # equality for everything AFTER the `if`, and only the
+            # recursive call for that branch saw the `assign` that pops
+            # it -- its `dict(prefix)` copy is discarded here, so
+            # without this the fact survives the write. Nothing in the
+            # committed corpus reached it (no task reassigns a prefix
+            # scalar inside an `if` and then loops on it), so this is
+            # the write-through stated before a task needs it, not a
+            # repair of a measured wrong verdict. Both branches, because
+            # a fact must hold on EVERY path to the loop head.
+            for br in (c["then"], c["else"]):
+                for n in assigned_names(br, ctx.seq_len)[0]:
+                    prefix.pop(n, None)
         elif "while" in s:
             w = s["while"]
             # WHILE-GUARD DEFINEDNESS, added 2026-09-09 (the eighth sweep's
@@ -6422,9 +6444,51 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                        f"({cexpr(w['cond'], ctx.env, ctx.funs, task_name)}) "
                        f"{{")
             out += guard_ats_body
+            # THE NESTED-LOOP FRAME-FACT BUG (2026-09-18, ROADMAP WS-20
+            # move 1). The prefix copy handed to the loop BODY must drop
+            # every name this loop assigns, and so must this list's own
+            # copy for everything after the loop. Both directions are the
+            # same fact: `{pn} == {pinit}` is a straight-line fact about
+            # the state BEFORE the loop, and the moment the loop writes
+            # `pn` it stops holding, at the loop head of any inner loop
+            # and at any later loop in this list alike.
+            #
+            # MEASURED on has_duplicate.t, the nested `while` task, which
+            # is where this surfaced: `var i := 0;` sits in the function
+            # prefix, the OUTER loop assigns `i`, and the INNER loop does
+            # not -- so the `pn not in hit` test below, applied to the
+            # inner loop against an un-pruned prefix, emitted `loop
+            # invariant i == 0;` on the inner loop. That is FALSE from the
+            # outer loop's second iteration on. WP's own per-goal report
+            # (-wp-report-json) named it as the ONE unproved goal of 39:
+            # typed_nat_has_duplicate_t_loop_invariant_8_established,
+            # [Stepout], alt-ergo burning all 20 000 steps on a goal that
+            # has no proof, while every other goal -- both `ensures`, all
+            # 7 real invariants either way, both `assert`s, all 4 assigns
+            # parts, the variants and all 8 smoke tests -- was already
+            # valid, the slowest of them in 8ms. So the framac column's
+            # `timeout` on this task was never proof difficulty: it was
+            # this lowering asking the prover to prove something untrue.
+            # With the prune: `Proved goals: 37 / 37` (two fewer goals
+            # because the false invariant's own established/preserved
+            # pair is gone), slowest alt-ergo goal 11ms, and the cell
+            # reads real=verified twin=refuted. The WALL is ~9.6s either
+            # way and always was: it is the smoke family burning
+            # -wp-smoke-timeout, not the stepout, which ran alongside it
+            # -- so raising -wp-steps or -wp-timeout would have bought
+            # nothing here, only a longer wall on a false goal.
+            #
+            # `hit` (this loop's own assignment targets, recursive) is
+            # exactly the set `loop assigns` already frames and the same
+            # set the invariant emitter above skips; reusing it keeps the
+            # two sides of the frame from drifting apart. Subtractive
+            # only: it can turn a proof into a non-proof, never the
+            # reverse.
             out += stmts(w["body"], ctx, task_name, indent + "  ",
-                        dict(prefix))
+                        {k: v for k, v in prefix.items() if k not in hit})
             out.append(f"{indent}}}")
+            for n in hit:
+                prefix.pop(n, None)
         else:
             raise ValueError(f"t has no statement {s!r}")
     return out
