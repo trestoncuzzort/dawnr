@@ -763,6 +763,17 @@ def run_from_samples(args) -> int:
                               "source": p.get("source"), "task_id": p.get("task_id"),
                               "task": p.get("task")}
     sft = sorted(sft_seen.values(), key=lambda s: (s["task_id"], s["source"], s["task"]))
+    # A row's prompt is the recorded messages in that answer's raw/<id>.json, and an answer graded on the lab
+    # workstation has its raw file there, not here. Five such rows went into sft-r5 on 2026-09-18 with a null
+    # prompt and killed the student's training three minutes in, inside a chat template, saying only "None has
+    # no element 0". A dataset that cannot be trained on is worse than a smaller one, and worse still is one
+    # that says nothing about what it dropped.
+    noprompt = [s for s in sft if not s.get("prompt")]
+    if noprompt:
+        where = ", ".join(sorted({str(s.get("source")) for s in noprompt}))
+        raise SystemExit(f"{len(noprompt)} of {len(sft)} answers have no recorded prompt, from: {where}\n"
+                         f"their raw/<id>.json is missing here -- fetch it from the machine that generated "
+                         f"them (rsync the tag's raw/ directory) and run this again")
 
     suffix = args.out_suffix
     (OUT / f"pairs-{suffix}.jsonl").write_text(
