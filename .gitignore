@@ -123,3 +123,9 @@ t/runs/*/logs/*.sh
 
 # the machine that grades, which is nobody else's business
 t/lab-workstation.conf
+
+# personal drafts that live beside the work, never in it
+MARKET_REALITY.md
+RESPONSE_TO_CLAUDE.md
+generate_pitch.py
+send_pitch.py

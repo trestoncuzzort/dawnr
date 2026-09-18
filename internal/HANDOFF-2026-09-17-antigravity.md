@@ -1,6 +1,6 @@
 # Handoff for Antigravity, 2026-09-17: running the RTX 4080 data run
 
-You are helping the user run `internal/HANDOFF-2026-09-17-rtx4080.md` on their home desktop. That file is the plan, and this file is the machine state plus how to help. Read the plan's sections 1 to 6 before acting. Do not redesign the experiment: the user returns to Claude for judgement calls.
+You are helping run `internal/HANDOFF-2026-09-17-rtx4080.md` on the desktop. That file is the plan, and this file is the machine state plus how to help. Read the plan's sections 1 to 6 before acting. Do not redesign the experiment: judgement calls go back to the operator.
 
 ## The goal in one paragraph
 
@@ -22,7 +22,7 @@ locallm builds small models from scratch, and t filters what they learn from. Th
 
 ## The Collect data tab (use this, not pasted commands)
 
-`t/lab.py` (the t Lab launcher) has a Collect data tab with every step of the plan as a row: pick a row, press Run, read the output below. A row turns done when its output files exist, so the tab is the source of truth for where the run stands. Each run is logged to `t/runs/<date>/logs/<step>.log`, and start, end, exit code and minutes are appended to `t/runs/<date>/NOTES-home.md`. Jobs run in the background and survive closing the window; Stop kills a job, and Generate and Grade skip seeds already finished, so Run again resumes. Your job: when a row reads failed, read its log, fix the environment, and tell the user to press Run again. Add a line to NOTES-home.md for each fix. The one row it cannot do alone is installing the seven checkers (before Check the checkers): do that with the user from `t/RUN-ON-LINUX.md`.
+`t/lab.py` (the t Lab launcher) has a Collect data tab with every step of the plan as a row: pick a row, press Run, read the output below. A row turns done when its output files exist, so the tab is the source of truth for where the run stands. Each run is logged to `t/runs/<date>/logs/<step>.log`, and start, end, exit code and minutes are appended to `t/runs/<date>/NOTES-home.md`. Jobs run in the background and survive closing the window; Stop kills a job, and Generate and Grade skip seeds already finished, so Run again resumes. Your job: when a row reads failed, read its log, fix the environment, and press Run again. Add a line to NOTES-home.md for each fix. The one row it cannot do alone is installing the seven checkers (before Check the checkers): do that with the user from `t/RUN-ON-LINUX.md`.
 
 ## Order of work
 
@@ -33,13 +33,13 @@ locallm builds small models from scratch, and t filters what they learn from. Th
 
 ## How to help
 
-- Give the user one command block at a time and say what a good result looks like.
+- Give one command block at a time and say what a good result looks like.
 - When something fails, read the last lines of the log and fix the environment (missing apt package, PATH, version). Do not edit t's Python scripts, prompts, pool, split or thresholds. Changes to those are Claude's call.
-- Python 3.14 is newer than the lab workstation's. If a pip package has no 3.14 wheel, suggest `uv` or a 3.12 venv, and note it for the user.
-- Keep a running log in `~/tup/t/runs/<date>/NOTES-home.md`: each command, how long it took, the counts it printed, and any fix applied. Claude reads this file when the user comes back, so it saves them re-explaining.
-- Committing: the user has asked you to commit and push `t/lab.py` (the Collect data tab), this file and `t/runs/<date>/NOTES-home.md` and `t/runs/<date>/logs/`. Do it now as one commit, and again with the results the way plan section 6 lays them out. Run `git status` first and never add `t/out/`, `kernels/` folders or adapters. Commit only after the user confirms the message; end it with a line naming Antigravity as co-author.
+- Python 3.14 is newer than the lab workstation's. If a pip package has no 3.14 wheel, suggest `uv` or a 3.12 venv, and note it in the run log.
+- Keep a running log in `~/tup/t/runs/<date>/NOTES-home.md`: each command, how long it took, the counts it printed, and any fix applied. Claude reads this file when the user comes back, so nothing has to be re-explained.
+- Committing: commit and push `t/lab.py` (the Collect data tab), this file and `t/runs/<date>/NOTES-home.md` and `t/runs/<date>/logs/`. Do it now as one commit, and again with the results the way plan section 6 lays them out. Run `git status` first and never add `t/out/`, `kernels/` folders or adapters. Commit only after the operator confirms the message; end it with a line naming Antigravity as co-author.
 
-## Stop and send the user back to Claude when
+## Stop and ask the operator when
 
 - A count looks wrong (for example the 12 and 0 check fails, a seed yields almost nothing in `grade-in/`, or the checker matrix is not 30 of 34).
 - The next step would change the experiment: a different model, prompt, temperature, pool, split or training setting.
