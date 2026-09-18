@@ -125,7 +125,7 @@ STEPS = [
      f"python3 t/pool_pick.py $D || exit 1; done && ollama pull {GEN2} && "
      f"for S in 1 2; do T={GEN2_TAG}$S; D={SE}/$T; [ -d $D/grade-in ] && continue; TEMP=0.7; [ $S = 1 ] && TEMP=0; "
      f"python3 t/spec_experiment.py generate --model {GEN2} --tag $T --pool v4 --prompt v3 "
-     "--seed $S --temperature $TEMP --num-ctx 8192 --num-predict 3072 --timeout 1800 --jobs 4 && "
+     "--seed $S --temperature $TEMP --num-ctx 6144 --num-predict 2048 --timeout 1800 --jobs 2 && "
      "python3 t/spec_experiment.py extract --model $T --pool v4 && python3 t/spec_experiment.py tests --model $T --pool v4 && "
      "python3 t/pool_pick.py $D || exit 1; done",
      f"for T in {GROWTH_TAGS}; do [ -d {SE}/$T/grade-in ] || exit 1; done", "gpu"),
