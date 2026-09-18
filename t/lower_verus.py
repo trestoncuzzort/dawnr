@@ -1875,8 +1875,8 @@ def _is_ground(e) -> bool:
     return True
 
 
-def _ro_defining_facts(ro: list[str], local_inits: dict[str, dict]
-                        ) -> list[dict]:
+def _ro_defining_facts(ro: list[str], local_inits: dict[str, dict],
+                        assigned_anywhere: set[str] | None = None) -> list[dict]:
     """2026-09-11 (ROADMAP 16.2, see `loop()`'s own note at the call
     site). For every name in `ro` (a loop helper's read-only parameters)
     that is a body-local `var` rather than a task param, and whose OWN
@@ -1886,12 +1886,25 @@ def _ro_defining_facts(ro: list[str], local_inits: dict[str, dict]
     contains a local's initializer's own dependencies before the local
     itself in `scope`'s iteration order (a `var` cannot reference a name
     not yet declared), so this needs no fixpoint/ordering care -- one
-    pass over `ro` suffices."""
+    pass over `ro` suffices.
+
+    2026-09-18: read-only FOR THIS LOOP is not the same as never reassigned.
+    An inner loop does not touch the outer loop's counter, so `i` arrived in
+    `ro` and its initializer's fact `i == 0` went into the inner helper's
+    `requires`, which is false on every outer iteration after the first:
+    Verus reported "precondition not satisfied" and run_par read the cell as
+    MALFORMED (measured on a hand-written nested-loop task, has_duplicate,
+    which Dafny verifies with its twin refuted). `assigned_anywhere` is every
+    name assigned anywhere in the task's body, and a name in it gets no
+    defining fact, however read-only this one loop is. The eight cells the
+    facts were introduced for are unaffected: their names are computed once
+    and never reassigned."""
     facts = []
     ro_set = set(ro)
+    stale = assigned_anywhere or set()
     for n in ro:
         init = local_inits.get(n)
-        if init is not None and _only_params(init, ro_set):
+        if init is not None and n not in stale and _only_params(init, ro_set):
             facts.append({"op": "==", "args": [{"var": n}, init]})
     return facts
 
@@ -4091,7 +4104,10 @@ class _V1:
         assigned = _assigned(w["body"]) - _declared(w["body"])
         state = [n for n in scope if scope[n][1] and n in assigned]
         ro = [n for n in scope if n not in state]
-        ro_facts = _ro_defining_facts(ro, self.local_inits)
+        # every name the whole task body assigns, not just this loop's: an enclosing loop's counter is
+        # read-only here and still changes between calls (see _ro_defining_facts, 2026-09-18)
+        ro_facts = _ro_defining_facts(ro, self.local_inits,
+                                      _assigned(self.task.get("body", [])) - _declared([]))
 
         # invariant k may assume invariants 1..k-1 (SPEC.md definedness),
         # and, 2026-09-11 (ROADMAP 16.2, same cause as req_clauses below),
