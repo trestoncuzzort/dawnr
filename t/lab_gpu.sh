@@ -27,9 +27,13 @@ case "${1:-status}" in
 start)
   $SSH "$LAB" "mkdir -p ~/lab-gpu && cd ~/tup && git pull -q --ff-only || true"
   echo "== serving $MODEL on the four cards (tensor parallel), port $PORT"
-  $SSH "$LAB" "cd ~/tup && setsid nohup ~/.venv-vllm/bin/vllm serve '$MODEL' \
+  # vLLM's FP8 path compiles kernels, so it needs a CUDA toolkit; this machine has none in /usr/local, but the
+  # venv ships one inside the nvidia wheels (2026-09-18)
+  CUDA_HOME_REMOTE='$HOME/.venv-vllm/lib/python3.12/site-packages/nvidia/cu13'
+  $SSH "$LAB" "cd ~/tup && CUDA_HOME=$CUDA_HOME_REMOTE PATH=$CUDA_HOME_REMOTE/bin:\$PATH \
+      setsid nohup ~/.venv-vllm/bin/vllm serve '$MODEL' \
       --tensor-parallel-size 4 --gpu-memory-utilization $FRACTION --max-model-len 8192 \
-      --port $PORT --disable-log-requests > ~/lab-gpu/vllm.log 2>&1 < /dev/null & echo started"
+      --port $PORT > ~/lab-gpu/vllm.log 2>&1 < /dev/null & echo started"
   echo "== waiting for the server (a first load reads 31 GB from disk)"
   for _ in $(seq 1 120); do
     sleep 10
