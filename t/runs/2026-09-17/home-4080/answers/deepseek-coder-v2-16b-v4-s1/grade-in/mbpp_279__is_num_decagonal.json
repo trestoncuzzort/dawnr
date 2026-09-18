@@ -1,0 +1,88 @@
+{
+ "t": 0,
+ "name": "mbpp_279__is_num_decagonal",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 4
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "int": 3
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "int": 4
+          },
+          {
+           "var": "n"
+          }
+         ]
+        },
+        {
+         "int": 3
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,36 @@
+answer set                                asked    wf  tests  graded  clean  asked/clean  gen s/clean  proof s/clean
+qwen3.8-27b-fp8-v3                          649   323    237     323     57         11.4        227.0         1986.3
+qwen3.8-27b-fp8                             368   143    116     143     44          8.4        373.4          720.7
+qwen2.5-coder-14b-v3-s1                     649   170    129     110     34         19.1        124.2         3284.9
+deepseek-coder-v2-16b-v4-s1                 737    75     51      36     18         40.9       1962.5          795.6
+qwen2.5-coder-14b-v3-s3                     649   158    114      62     15         43.3        264.0         4357.4
+qwen2.5-coder-14b-v3-s2                     649   148    109      61     13         49.9        291.0         5422.2
+qwen2.5-coder-14b-v3-s4                     649   160    118      65     13         49.9        257.1         6282.1
+qwen2.5-coder-14b-v3-s5                     649   156    107      63     12         54.1        320.8         4849.6
+qwen2.5-coder-14b-v3-s7                     649   167    123      57      8         81.1        464.7        12606.6
+qwen2.5-coder-14b-v3-s6                     649   154    122      59      7         92.7        503.8        11327.6
+deepseek-coder-v2-16b-v4-s2                 737    59     42      13      4        184.2        392.6         3473.0
+phi4-mini-v3                                232    12      6      12      3         77.3       4085.9          786.8
+qwen15b-base-v3                             232    39     13      39      3         77.3        218.1         6898.1
+qwen2.5-coder-14b-he-s1                      88    13      9       7      2         44.0        321.3         1772.5
+qwen2.5-coder-14b-v3-s6-fix1                 52    47     46      15      2         26.0        139.8        10788.0
+qwen2.5-coder-14b-v3-s8                     649   169    122      43      2        324.5       1598.1        32455.2
+qwen2.5-coder-14b-he-s4                      88    14     10       7      1         88.0        622.7         3086.3
+locallm-r0                                  232   199      0     199      0          0.0          0.0            0.0
+qwen2.5-coder-14b-he-s2                      88    11      8       4      0          0.0          0.0            0.0
+qwen2.5-coder-14b-he-s3                      88    14      9       6      0          0.0          0.0            0.0
+qwen2.5-coder-14b-he-s5                      88    12      8       4      0          0.0          0.0            0.0
+qwen2.5-coder-14b-he-s6                      88    18     11       4      0          0.0          0.0            0.0
+qwen2.5-coder-14b-he-s7                      88    12      9       4      0          0.0          0.0            0.0
+qwen2.5-coder-14b-he-s8                      88    12      7       2      0          0.0          0.0            0.0
+qwen2.5-coder-14b-v3-s1-fix1                 76    67     63      22      0          0.0          0.0            0.0
+qwen2.5-coder-14b-v3-s2-fix1                 48    45     44      13      0          0.0          0.0            0.0
+qwen2.5-coder-14b-v3-s3-fix1                 47    40     39      16      0          0.0          0.0            0.0
+qwen2.5-coder-14b-v3-s4-fix1                 52    44     43      15      0          0.0          0.0            0.0
+qwen2.5-coder-14b-v3-s5-fix1                 51    43     43      17      0          0.0          0.0            0.0
+qwen2.5-coder-14b-v3-s8-fix1                 41    34     34      12      0          0.0          0.0            0.0
+qwen3.8-27b-fp8-v3-s2                       649   271    197       0      0          0.0          0.0            0.0
+
+10099 generations, 2829 well formed, 1989 passing their tests, 1433 graded, 238 clean over 80 distinct problems.
+Per accepted example: 42.4 generations, 560 s of generation, 4522 s of proof (75 min).
+Generation is 37.0 h and proof 299.0 h in total, as measured; proof seconds are wall time per cell, and cells run in parallel, so the clock time is lower.

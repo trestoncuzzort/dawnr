@@ -1,0 +1,112 @@
+{
+ "t": 0,
+ "name": "mbpp_369__lateralsurface_cuboid",
+ "params": [
+  {
+   "name": "l",
+   "type": "int"
+  },
+  {
+   "name": "w",
+   "type": "int"
+  },
+  {
+   "name": "h",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "l"
+          },
+          {
+           "var": "h"
+          }
+         ]
+        },
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "w"
+          },
+          {
+           "var": "h"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "int": 2
+      },
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "l"
+          },
+          {
+           "var": "h"
+          }
+         ]
+        },
+        {
+         "op": "*",
+         "args": [
+          {
+           "var": "w"
+          },
+          {
+           "var": "h"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

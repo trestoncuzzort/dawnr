@@ -1,0 +1,2374 @@
+{
+ "11": {
+  "name": "mbpp_11__remove_Occ",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     104,
+     101,
+     111
+    ],
+    "expected": [
+     104,
+     101,
+     111
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     98,
+     99,
+     100
+    ],
+    "expected": [
+     98,
+     99,
+     100
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     72
+    ],
+    "expected": 72
+   }
+  ]
+ },
+ "17": {
+  "name": "mbpp_17__square_perimeter",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 40,
+    "expected": 40
+   },
+   {
+    "verdict": "pass",
+    "got": 20,
+    "expected": 20
+   },
+   {
+    "verdict": "pass",
+    "got": 16,
+    "expected": 16
+   }
+  ]
+ },
+ "35": {
+  "name": "mbpp_35__find_rect_num",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 20,
+    "expected": 20
+   },
+   {
+    "verdict": "pass",
+    "got": 30,
+    "expected": 30
+   },
+   {
+    "verdict": "pass",
+    "got": 42,
+    "expected": 42
+   }
+  ]
+ },
+ "52": {
+  "name": "mbpp_52__parallelogram_area",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 200,
+    "expected": 200
+   },
+   {
+    "verdict": "pass",
+    "got": 300,
+    "expected": 300
+   },
+   {
+    "verdict": "pass",
+    "got": 72,
+    "expected": 72
+   }
+  ]
+ },
+ "59": {
+  "name": "mbpp_59__is_octagonal",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 65,
+    "expected": 65
+   },
+   {
+    "verdict": "pass",
+    "got": 280,
+    "expected": 280
+   },
+   {
+    "verdict": "pass",
+    "got": 645,
+    "expected": 645
+   }
+  ]
+ },
+ "86": {
+  "name": "mbpp_86__centered_hexagonal_number",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 191,
+    "expected": 271
+   },
+   {
+    "verdict": "pass",
+    "got": 7,
+    "expected": 7
+   },
+   {
+    "verdict": "fail",
+    "got": 154,
+    "expected": 217
+   }
+  ]
+ },
+ "89": {
+  "name": "mbpp_89__closest_num",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 10,
+    "expected": 10
+   },
+   {
+    "verdict": "pass",
+    "got": 6,
+    "expected": 6
+   },
+   {
+    "verdict": "pass",
+    "got": 11,
+    "expected": 11
+   }
+  ]
+ },
+ "102": {
+  "name": "mbpp_102__snake_to_camel",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     80,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109
+    ],
+    "expected": [
+     80,
+     121,
+     116,
+     104,
+     111,
+     110,
+     80,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     112,
+     121,
+     116,
+     104,
+     111,
+     110,
+     76,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101
+    ],
+    "expected": [
+     80,
+     121,
+     116,
+     104,
+     111,
+     110,
+     76,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     112,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109,
+     109,
+     105,
+     110,
+     103,
+     76,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101
+    ],
+    "expected": [
+     80,
+     114,
+     111,
+     103,
+     114,
+     97,
+     109,
+     109,
+     105,
+     110,
+     103,
+     76,
+     97,
+     110,
+     103,
+     117,
+     97,
+     103,
+     101
+    ]
+   }
+  ]
+ },
+ "112": {
+  "name": "mbpp_112__perimeter",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 12,
+    "expected": 12
+   },
+   {
+    "verdict": "pass",
+    "got": 6,
+    "expected": 6
+   },
+   {
+    "verdict": "pass",
+    "got": 8,
+    "expected": 8
+   }
+  ]
+ },
+ "118": {
+  "name": "mbpp_118__string_to_list",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     [
+      112,
+      121,
+      116,
+      104,
+      111,
+      110
+     ],
+     [
+      112,
+      114,
+      111,
+      103,
+      114,
+      97,
+      109,
+      109,
+      105,
+      110,
+      103
+     ]
+    ],
+    "expected": [
+     [
+      112,
+      121,
+      116,
+      104,
+      111,
+      110
+     ],
+     [
+      112,
+      114,
+      111,
+      103,
+      114,
+      97,
+      109,
+      109,
+      105,
+      110,
+      103
+     ]
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     [
+      108,
+      105,
+      115,
+      116,
+      115
+     ],
+     [
+      116,
+      117,
+      112,
+      108,
+      101,
+      115
+     ],
+     [
+      115,
+      116,
+      114,
+      105,
+      110,
+      103,
+      115
+     ]
+    ],
+    "expected": [
+     [
+      108,
+      105,
+      115,
+      116,
+      115
+     ],
+     [
+      116,
+      117,
+      112,
+      108,
+      101,
+      115
+     ],
+     [
+      115,
+      116,
+      114,
+      105,
+      110,
+      103,
+      115
+     ]
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     [
+      119,
+      114,
+      105,
+      116,
+      101
+     ],
+     [
+      97
+     ],
+     [
+      112,
+      114,
+      111,
+      103,
+      114,
+      97,
+      109
+     ]
+    ],
+    "expected": [
+     [
+      119,
+      114,
+      105,
+      116,
+      101
+     ],
+     [
+      97
+     ],
+     [
+      112,
+      114,
+      111,
+      103,
+      114,
+      97,
+      109
+     ]
+    ]
+   }
+  ]
+ },
+ "135": {
+  "name": "mbpp_135__hexagonal_num",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 190,
+    "expected": 190
+   },
+   {
+    "verdict": "pass",
+    "got": 45,
+    "expected": 45
+   },
+   {
+    "verdict": "pass",
+    "got": 91,
+    "expected": 91
+   }
+  ]
+ },
+ "171": {
+  "name": "mbpp_171__perimeter_pentagon",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 25,
+    "expected": 25
+   },
+   {
+    "verdict": "pass",
+    "got": 50,
+    "expected": 50
+   },
+   {
+    "verdict": "pass",
+    "got": 75,
+    "expected": 75
+   }
+  ]
+ },
+ "176": {
+  "name": "mbpp_176__perimeter_triangle",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 60,
+    "expected": 60
+   },
+   {
+    "verdict": "pass",
+    "got": 12,
+    "expected": 12
+   },
+   {
+    "verdict": "pass",
+    "got": 105,
+    "expected": 105
+   }
+  ]
+ },
+ "227": {
+  "name": "mbpp_227__min_of_three",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 0,
+    "expected": 0
+   },
+   {
+    "verdict": "pass",
+    "got": 15,
+    "expected": 15
+   },
+   {
+    "verdict": "pass",
+    "got": -30,
+    "expected": -30
+   }
+  ]
+ },
+ "234": {
+  "name": "mbpp_234__volume_cube",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 27,
+    "expected": 27
+   },
+   {
+    "verdict": "pass",
+    "got": 8,
+    "expected": 8
+   },
+   {
+    "verdict": "pass",
+    "got": 125,
+    "expected": 125
+   }
+  ]
+ },
+ "238": {
+  "name": "mbpp_238__number_of_substrings",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 6,
+    "expected": 6
+   },
+   {
+    "verdict": "pass",
+    "got": 10,
+    "expected": 10
+   },
+   {
+    "verdict": "pass",
+    "got": 15,
+    "expected": 15
+   }
+  ]
+ },
+ "268": {
+  "name": "mbpp_268__find_star_num",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 145,
+    "expected": 37
+   },
+   {
+    "verdict": "fail",
+    "got": 289,
+    "expected": 73
+   },
+   {
+    "verdict": "fail",
+    "got": 481,
+    "expected": 121
+   }
+  ]
+ },
+ "279": {
+  "name": "mbpp_279__is_num_decagonal",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 27,
+    "expected": 27
+   },
+   {
+    "verdict": "pass",
+    "got": 175,
+    "expected": 175
+   },
+   {
+    "verdict": "pass",
+    "got": 370,
+    "expected": 370
+   }
+  ]
+ },
+ "309": {
+  "name": "mbpp_309__maximum",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 10,
+    "expected": 10
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   },
+   {
+    "verdict": "pass",
+    "got": 9,
+    "expected": 9
+   }
+  ]
+ },
+ "328": {
+  "name": "mbpp_328__rotate_left",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2,
+     3
+    ],
+    "expected": [
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2
+    ],
+    "expected": [
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "expected": [
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "345": {
+  "name": "mbpp_345__diff_consecutivenums",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     0,
+     2,
+     1,
+     0,
+     1,
+     1,
+     1
+    ],
+    "expected": [
+     0,
+     2,
+     1,
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     3,
+     1,
+     -3,
+     4
+    ],
+    "expected": [
+     1,
+     3,
+     1,
+     -3,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     2
+    ],
+    "expected": [
+     1,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "354": {
+  "name": "mbpp_354__tn_ap",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 6,
+    "expected": 9
+   },
+   {
+    "verdict": "fail",
+    "got": 20,
+    "expected": 22
+   },
+   {
+    "verdict": "fail",
+    "got": 17,
+    "expected": 16
+   }
+  ]
+ },
+ "355": {
+  "name": "mbpp_355__count_Rectangles",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 4,
+    "expected": 8
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 0,
+    "expected": 0
+   }
+  ]
+ },
+ "356": {
+  "name": "mbpp_356__find_angle",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 44,
+    "expected": 44
+   },
+   {
+    "verdict": "pass",
+    "got": 40,
+    "expected": 40
+   },
+   {
+    "verdict": "pass",
+    "got": 90,
+    "expected": 90
+   }
+  ]
+ },
+ "369": {
+  "name": "mbpp_369__lateralsurface_cuboid",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 156,
+    "expected": 156
+   },
+   {
+    "verdict": "pass",
+    "got": 320,
+    "expected": 320
+   },
+   {
+    "verdict": "pass",
+    "got": 1800,
+    "expected": 1800
+   }
+  ]
+ },
+ "379": {
+  "name": "mbpp_379__surfacearea_cuboid",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 22,
+    "expected": 22
+   },
+   {
+    "verdict": "pass",
+    "got": 286,
+    "expected": 286
+   },
+   {
+    "verdict": "pass",
+    "got": 1350,
+    "expected": 1350
+   }
+  ]
+ },
+ "382": {
+  "name": "mbpp_382__find_rotation_count",
+  "overall": "undefined",
+  "points": [
+   {
+    "verdict": "budget",
+    "why": "loop cap"
+   },
+   {
+    "verdict": "budget",
+    "why": "loop cap"
+   },
+   {
+    "verdict": "budget",
+    "why": "loop cap"
+   }
+  ]
+ },
+ "385": {
+  "name": "mbpp_385__get_perrin",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 12,
+    "expected": 12
+   },
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   },
+   {
+    "verdict": "pass",
+    "got": 5,
+    "expected": 5
+   }
+  ]
+ },
+ "396": {
+  "name": "mbpp_396__check_char",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     86,
+     97,
+     108,
+     105,
+     100
+    ],
+    "expected": [
+     86,
+     97,
+     108,
+     105,
+     100
+    ]
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     73,
+     110,
+     118,
+     97,
+     108,
+     105,
+     100
+    ],
+    "expected": [
+     73,
+     110,
+     118,
+     97,
+     108,
+     105,
+     100
+    ]
+   }
+  ]
+ },
+ "404": {
+  "name": "mbpp_404__minimum",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": -5,
+    "expected": -5
+   },
+   {
+    "verdict": "pass",
+    "got": 0,
+    "expected": 0
+   }
+  ]
+ },
+ "430": {
+  "name": "mbpp_430__parabola_directrix",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": -31,
+    "expected": -198
+   },
+   {
+    "verdict": "fail",
+    "got": -80,
+    "expected": -2336
+   },
+   {
+    "verdict": "fail",
+    "got": -32,
+    "expected": -130
+   }
+  ]
+ },
+ "447": {
+  "name": "mbpp_447__cube_nums",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     8,
+     27,
+     64,
+     125,
+     216,
+     343,
+     512,
+     729,
+     1000
+    ],
+    "expected": [
+     1,
+     8,
+     27,
+     64,
+     125,
+     216,
+     343,
+     512,
+     729,
+     1000
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1000,
+     8000,
+     27000
+    ],
+    "expected": [
+     1000,
+     8000,
+     27000
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1728,
+     3375
+    ],
+    "expected": [
+     1728,
+     3375
+    ]
+   }
+  ]
+ },
+ "451": {
+  "name": "mbpp_451__remove_whitespaces",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     32,
+     32,
+     32,
+     32,
+     70,
+     108,
+     117,
+     116,
+     116,
+     101,
+     114
+    ],
+    "expected": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     70,
+     108,
+     117,
+     116,
+     116,
+     101,
+     114
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     32,
+     32,
+     32,
+     32,
+     68,
+     97,
+     114,
+     116
+    ],
+    "expected": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     68,
+     97,
+     114,
+     116
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     105,
+     79,
+     83,
+     32,
+     32,
+     32,
+     32,
+     83,
+     119,
+     105,
+     102,
+     116
+    ],
+    "expected": [
+     105,
+     79,
+     83,
+     83,
+     119,
+     105,
+     102,
+     116
+    ]
+   }
+  ]
+ },
+ "458": {
+  "name": "mbpp_458__rectangle_area",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 200,
+    "expected": 200
+   },
+   {
+    "verdict": "pass",
+    "got": 50,
+    "expected": 50
+   },
+   {
+    "verdict": "pass",
+    "got": 8,
+    "expected": 8
+   }
+  ]
+ },
+ "499": {
+  "name": "mbpp_499__diameter_circle",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 20,
+    "expected": 20
+   },
+   {
+    "verdict": "pass",
+    "got": 80,
+    "expected": 80
+   },
+   {
+    "verdict": "pass",
+    "got": 30,
+    "expected": 30
+   }
+  ]
+ },
+ "503": {
+  "name": "mbpp_503__add_consecutive_nums",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     4,
+     7,
+     8,
+     9,
+     11,
+     13
+    ],
+    "expected": [
+     2,
+     4,
+     7,
+     8,
+     9,
+     11,
+     13
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     9,
+     13,
+     17,
+     15,
+     16
+    ],
+    "expected": [
+     9,
+     13,
+     17,
+     15,
+     16
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     3,
+     5,
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19
+    ],
+    "expected": [
+     3,
+     5,
+     7,
+     9,
+     11,
+     13,
+     15,
+     17,
+     19
+    ]
+   }
+  ]
+ },
+ "586": {
+  "name": "mbpp_586__split_Arr",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     5,
+     6,
+     52,
+     36,
+     12,
+     10
+    ],
+    "expected": [
+     5,
+     6,
+     52,
+     36,
+     12,
+     10
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     3,
+     4,
+     1
+    ],
+    "expected": [
+     2,
+     3,
+     4,
+     1
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     3,
+     4,
+     5,
+     6,
+     7,
+     0,
+     1,
+     2
+    ],
+    "expected": [
+     3,
+     4,
+     5,
+     6,
+     7,
+     0,
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "626": {
+  "name": "mbpp_626__triangle_area",
+  "overall": "requires-excluded",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 0,
+    "expected": 0
+   },
+   {
+    "verdict": "requires-excluded"
+   },
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   }
+  ]
+ },
+ "643": {
+  "name": "mbpp_643__text_match_wordz_middle",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   }
+  ]
+ },
+ "654": {
+  "name": "mbpp_654__rectangle_perimeter",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 60,
+    "expected": 60
+   },
+   {
+    "verdict": "pass",
+    "got": 30,
+    "expected": 30
+   },
+   {
+    "verdict": "pass",
+    "got": 12,
+    "expected": 12
+   }
+  ]
+ },
+ "672": {
+  "name": "mbpp_672__max_of_three",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 30,
+    "expected": 30
+   },
+   {
+    "verdict": "pass",
+    "got": 55,
+    "expected": 55
+   },
+   {
+    "verdict": "pass",
+    "got": 49,
+    "expected": 49
+   }
+  ]
+ },
+ "676": {
+  "name": "mbpp_676__remove_extra_char",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     65,
+     110,
+     100,
+     114,
+     111,
+     105,
+     100,
+     49,
+     50
+    ],
+    "expected": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     65,
+     110,
+     100,
+     114,
+     111,
+     105,
+     100,
+     49,
+     50
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     70,
+     108,
+     117,
+     116,
+     116,
+     101,
+     114,
+     51,
+     54
+    ],
+    "expected": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     70,
+     108,
+     117,
+     116,
+     116,
+     101,
+     114,
+     51,
+     54
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     70,
+     105,
+     114,
+     101,
+     98,
+     97,
+     115,
+     101,
+     52,
+     55,
+     56
+    ],
+    "expected": [
+     71,
+     111,
+     111,
+     103,
+     108,
+     101,
+     70,
+     105,
+     114,
+     101,
+     98,
+     97,
+     115,
+     101,
+     52,
+     55,
+     56
+    ]
+   }
+  ]
+ },
+ "690": {
+  "name": "mbpp_690__mul_consecutive_nums",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     3,
+     12,
+     16,
+     20,
+     30,
+     42
+    ],
+    "expected": [
+     1,
+     3,
+     12,
+     16,
+     20,
+     30,
+     42
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     20,
+     40,
+     72,
+     54,
+     60
+    ],
+    "expected": [
+     20,
+     40,
+     72,
+     54,
+     60
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     6,
+     12,
+     20,
+     30,
+     42,
+     56,
+     72,
+     90
+    ],
+    "expected": [
+     2,
+     6,
+     12,
+     20,
+     30,
+     42,
+     56,
+     72,
+     90
+    ]
+   }
+  ]
+ },
+ "716": {
+  "name": "mbpp_716__rombus_perimeter",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 40,
+    "expected": 40
+   },
+   {
+    "verdict": "pass",
+    "got": 20,
+    "expected": 20
+   },
+   {
+    "verdict": "pass",
+    "got": 16,
+    "expected": 16
+   }
+  ]
+ },
+ "730": {
+  "name": "mbpp_730__consecutive_duplicates",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     4
+    ],
+    "expected": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     10,
+     15,
+     19,
+     18,
+     17,
+     26,
+     17,
+     18,
+     10
+    ],
+    "expected": [
+     10,
+     15,
+     19,
+     18,
+     17,
+     26,
+     17,
+     18,
+     10
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     97,
+     98,
+     99,
+     100
+    ],
+    "expected": [
+     97,
+     98,
+     99,
+     100
+    ]
+   }
+  ]
+ },
+ "743": {
+  "name": "mbpp_743__rotate_right",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     8,
+     9,
+     10,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "expected": [
+     8,
+     9,
+     10,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     9,
+     10,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ],
+    "expected": [
+     9,
+     10,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "expected": [
+     6,
+     7,
+     8,
+     9,
+     10,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ]
+   }
+  ]
+ },
+ "789": {
+  "name": "mbpp_789__perimeter_polygon",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 80,
+    "expected": 80
+   },
+   {
+    "verdict": "pass",
+    "got": 150,
+    "expected": 150
+   },
+   {
+    "verdict": "pass",
+    "got": 63,
+    "expected": 63
+   }
+  ]
+ },
+ "790": {
+  "name": "mbpp_790__even_position",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "817": {
+  "name": "mbpp_817__div_of_nums",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     19,
+     65,
+     57,
+     39,
+     152,
+     190
+    ],
+    "expected": [
+     19,
+     65,
+     57,
+     39,
+     152,
+     190
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     5,
+     8,
+     10
+    ],
+    "expected": [
+     2,
+     5,
+     8,
+     10
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     10,
+     15,
+     20
+    ],
+    "expected": [
+     10,
+     15,
+     20
+    ]
+   }
+  ]
+ },
+ "850": {
+  "name": "mbpp_850__is_triangleexists",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "873": {
+  "name": "mbpp_873__fibonacci",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 13,
+    "expected": 13
+   },
+   {
+    "verdict": "pass",
+    "got": 21,
+    "expected": 21
+   },
+   {
+    "verdict": "pass",
+    "got": 34,
+    "expected": 34
+   }
+  ]
+ },
+ "882": {
+  "name": "mbpp_882__parallelogram_perimeter",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 60,
+    "expected": 400
+   },
+   {
+    "verdict": "fail",
+    "got": 70,
+    "expected": 600
+   },
+   {
+    "verdict": "fail",
+    "got": 34,
+    "expected": 144
+   }
+  ]
+ },
+ "908": {
+  "name": "mbpp_908__find_fixed_point",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 3,
+    "expected": 3
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   },
+   {
+    "verdict": "pass",
+    "got": 0,
+    "expected": 0
+   }
+  ]
+ },
+ "917": {
+  "name": "mbpp_917__text_uppercase_lowercase",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     65,
+     97
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   }
+  ]
+ },
+ "924": {
+  "name": "mbpp_924__max_of_two",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 20,
+    "expected": 20
+   },
+   {
+    "verdict": "pass",
+    "got": 19,
+    "expected": 19
+   },
+   {
+    "verdict": "pass",
+    "got": -10,
+    "expected": -10
+   }
+  ]
+ },
+ "943": {
+  "name": "mbpp_943__combine_lists",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10
+    ],
+    "expected": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     1,
+     2,
+     3,
+     5,
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     5,
+     5,
+     6,
+     7,
+     8,
+     9,
+     11
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     1,
+     2,
+     3,
+     4,
+     6
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     4,
+     6,
+     7
+    ]
+   }
+  ]
+ },
+ "970": {
+  "name": "mbpp_970__min_of_two",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 10,
+    "expected": 10
+   },
+   {
+    "verdict": "pass",
+    "got": 15,
+    "expected": 15
+   },
+   {
+    "verdict": "pass",
+    "got": -20,
+    "expected": -20
+   }
+  ]
+ },
+ "100041": {
+  "name": "he_41__car_race_collision",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": 9,
+    "expected": 9
+   },
+   {
+    "verdict": "pass",
+    "got": 16,
+    "expected": 16
+   },
+   {
+    "verdict": "pass",
+    "got": 64,
+    "expected": 64
+   },
+   {
+    "verdict": "pass",
+    "got": 100,
+    "expected": 100
+   }
+  ]
+ },
+ "100062": {
+  "name": "he_62__derivative",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     4,
+     12,
+     20
+    ],
+    "expected": [
+     1,
+     4,
+     12,
+     20
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     6
+    ],
+    "expected": [
+     2,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     2
+    ],
+    "expected": [
+     2,
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     2,
+     0,
+     16
+    ],
+    "expected": [
+     2,
+     2,
+     0,
+     16
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   }
+  ]
+ }
+}

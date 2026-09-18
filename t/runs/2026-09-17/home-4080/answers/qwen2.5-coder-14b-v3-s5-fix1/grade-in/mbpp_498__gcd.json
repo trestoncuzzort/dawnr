@@ -1,0 +1,228 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "mbpp_498__gcd",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "mod",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "mod",
+     "args": [
+      {
+       "var": "b"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "gcds",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "b",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "a"
+     },
+     {
+      "var": "b"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "b"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "var": "a"
+     },
+     "else": {
+      "call": {
+       "fun": "gcds",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "op": "mod",
+         "args": [
+          {
+           "var": "a"
+          },
+          {
+           "var": "b"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "a"
+   },
+   {
+    "var": "b"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "b"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "a"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "assign": [
+       "r",
+       {
+        "call": {
+         "fun": "mbpp_498__gcd",
+         "args": [
+          {
+           "var": "b"
+          },
+          {
+           "op": "mod",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

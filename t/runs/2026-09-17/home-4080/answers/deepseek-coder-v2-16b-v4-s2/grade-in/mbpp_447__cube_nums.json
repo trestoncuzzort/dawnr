@@ -1,0 +1,338 @@
+{
+ "t": 1,
+ "name": "mbpp_447__cube_nums",
+ "params": [
+  {
+   "name": "nums",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "cubes",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "cubes"
+      }
+     ]
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "nums"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "nums"
+      }
+     ]
+    },
+    "body": {
+     "op": "==",
+     "args": [
+      {
+       "op": "at",
+       "args": [
+        {
+         "var": "cubes"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "op": "*",
+       "args": [
+        {
+         "op": "*",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "nums"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          },
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "nums"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "nums"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "cubes",
+    {
+     "op": "seq",
+     "args": []
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "nums"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "cubes"
+         }
+        ]
+       },
+       {
+        "var": "i"
+       }
+      ]
+     },
+     {
+      "forall": {
+       "var": "j",
+       "lo": {
+        "int": 0
+       },
+       "hi": {
+        "var": "i"
+       },
+       "body": {
+        "op": "==",
+        "args": [
+         {
+          "op": "at",
+          "args": [
+           {
+            "var": "cubes"
+           },
+           {
+            "var": "j"
+           }
+          ]
+         },
+         {
+          "op": "*",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "nums"
+               },
+               {
+                "var": "j"
+               }
+              ]
+             },
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "nums"
+               },
+               {
+                "var": "j"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "nums"
+             },
+             {
+              "var": "j"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "nums"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "cubes",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "cubes"
+         },
+         {
+          "op": "seq",
+          "args": [
+           {
+            "op": "*",
+            "args": [
+             {
+              "op": "*",
+              "args": [
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "nums"
+                 },
+                 {
+                  "var": "i"
+                 }
+                ]
+               },
+               {
+                "op": "at",
+                "args": [
+                 {
+                  "var": "nums"
+                 },
+                 {
+                  "var": "i"
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "nums"
+               },
+               {
+                "var": "i"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

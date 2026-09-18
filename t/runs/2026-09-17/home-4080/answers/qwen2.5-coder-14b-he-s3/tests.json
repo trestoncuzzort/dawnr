@@ -1,0 +1,595 @@
+{
+ "100013": {
+  "name": "he_13__greatest_common_divisor",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 5,
+    "expected": 5
+   },
+   {
+    "verdict": "pass",
+    "got": 7,
+    "expected": 7
+   },
+   {
+    "verdict": "pass",
+    "got": 12,
+    "expected": 12
+   }
+  ]
+ },
+ "100024": {
+  "name": "he_24__largest_divisor",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "fail",
+    "got": 2,
+    "expected": 5
+   },
+   {
+    "verdict": "fail",
+    "got": 2,
+    "expected": 50
+   },
+   {
+    "verdict": "pass",
+    "got": 7,
+    "expected": 7
+   }
+  ]
+ },
+ "100030": {
+  "name": "he_30__get_positive",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     4,
+     5,
+     6
+    ],
+    "expected": [
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     5,
+     3,
+     2,
+     3,
+     3,
+     9,
+     123,
+     1
+    ],
+    "expected": [
+     5,
+     3,
+     2,
+     3,
+     3,
+     9,
+     123,
+     1
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   },
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   }
+  ]
+ },
+ "100041": {
+  "name": "he_41__car_race_collision",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": 9,
+    "expected": 9
+   },
+   {
+    "verdict": "pass",
+    "got": 16,
+    "expected": 16
+   },
+   {
+    "verdict": "pass",
+    "got": 64,
+    "expected": 64
+   },
+   {
+    "verdict": "pass",
+    "got": 100,
+    "expected": 100
+   }
+  ]
+ },
+ "100042": {
+  "name": "he_42__incr_list",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     4,
+     3,
+     2
+    ],
+    "expected": [
+     4,
+     3,
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     6,
+     3,
+     6,
+     3,
+     4,
+     4,
+     10,
+     1,
+     124
+    ],
+    "expected": [
+     6,
+     3,
+     6,
+     3,
+     4,
+     4,
+     10,
+     1,
+     124
+    ]
+   }
+  ]
+ },
+ "100048": {
+  "name": "he_48__is_palindrome",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "100049": {
+  "name": "he_49__modp",
+  "overall": "undefined",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 3,
+    "expected": 3
+   },
+   {
+    "verdict": "budget",
+    "why": "self-call depth"
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 8,
+    "expected": 8
+   },
+   {
+    "verdict": "budget",
+    "why": "self-call depth"
+   },
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": 3,
+    "expected": 3
+   }
+  ]
+ },
+ "100051": {
+  "name": "he_51__remove_vowels",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     98,
+     99,
+     100,
+     102,
+     10,
+     103,
+     104,
+     106,
+     107,
+     108,
+     109
+    ],
+    "expected": [
+     98,
+     99,
+     100,
+     102,
+     10,
+     103,
+     104,
+     106,
+     107,
+     108,
+     109
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     102,
+     100,
+     99,
+     98
+    ],
+    "expected": [
+     102,
+     100,
+     99,
+     98
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     99,
+     66
+    ],
+    "expected": [
+     99,
+     66
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     99,
+     66
+    ],
+    "expected": [
+     99,
+     66
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     121,
+     98,
+     99,
+     100
+    ],
+    "expected": [
+     121,
+     98,
+     99,
+     100
+    ]
+   }
+  ]
+ },
+ "100055": {
+  "name": "he_55__fib",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 55,
+    "expected": 55
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 21,
+    "expected": 21
+   },
+   {
+    "verdict": "pass",
+    "got": 89,
+    "expected": 89
+   },
+   {
+    "verdict": "pass",
+    "got": 144,
+    "expected": 144
+   }
+  ]
+ },
+ "100060": {
+  "name": "he_60__sum_to_n",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 21,
+    "expected": 21
+   },
+   {
+    "verdict": "pass",
+    "got": 66,
+    "expected": 66
+   },
+   {
+    "verdict": "pass",
+    "got": 465,
+    "expected": 465
+   },
+   {
+    "verdict": "pass",
+    "got": 5050,
+    "expected": 5050
+   }
+  ]
+ },
+ "100062": {
+  "name": "he_62__derivative",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     4,
+     12,
+     20
+    ],
+    "expected": [
+     1,
+     4,
+     12,
+     20
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     6
+    ],
+    "expected": [
+     2,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     2
+    ],
+    "expected": [
+     2,
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     2,
+     0,
+     16
+    ],
+    "expected": [
+     2,
+     2,
+     0,
+     16
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   }
+  ]
+ },
+ "100102": {
+  "name": "he_102__choose_num",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 12,
+    "expected": 14
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   },
+   {
+    "verdict": "budget",
+    "why": "loop cap"
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   },
+   {
+    "verdict": "fail",
+    "got": 6,
+    "expected": 28
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   },
+   {
+    "verdict": "pass",
+    "got": 546,
+    "expected": 546
+   }
+  ]
+ },
+ "100135": {
+  "name": "he_135__can_arrange",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 3,
+    "expected": 3
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   },
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   },
+   {
+    "verdict": "fail",
+    "got": 2,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": -1,
+    "expected": -1
+   }
+  ]
+ },
+ "100139": {
+  "name": "he_139__special_factorial",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 576,
+    "expected": 288
+   },
+   {
+    "verdict": "fail",
+    "got": 1658880,
+    "expected": 34560
+   },
+   {
+    "verdict": "fail",
+    "got": 1908360529573854283038720000,
+    "expected": 125411328000
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   }
+  ]
+ }
+}

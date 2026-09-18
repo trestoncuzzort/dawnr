@@ -29,3 +29,23 @@ Clean here means the task passed its tests, was not a copy, and reads `verified 
 ## Not done yet
 
 Phi-4-mini's held-out answers (190 of 232 written when this was recorded), the small base answers, the clean pool, the student, the locallm model, held-out grading and the score. `t/run_everything.py` is running them; the score table lands in this folder when it exists.
+
+## Where the day ended
+
+| | |
+|---|---|
+| Generations, all models | 10,099 |
+| Well formed t tasks | 2,829 |
+| Passing their tests | 1,989 |
+| Graded in all seven | 1,433 |
+| **Clean** | **238, over 80 distinct problems** |
+| The training pool it makes | `loop-data/sft-r4.jsonl`, 55 examples over 55 problems (47 before), with 368 answer/broken-copy pairs |
+
+Per accepted example: 42.4 generations, 560 s of generation, 4,522 s of proof (cells run in parallel, so the clock time is far lower). `t/yield.py` prints this table; `yield-2026-09-17.txt` is the run of it that these numbers come from.
+
+Two results of the day worth more than the counts:
+
+- **Self-repair does not work.** 110 answers that passed their tests but were not clean went back to the model with the seven verdicts: 2 came back clean, 1.8 percent, against about 21 percent for fresh samples from the same model. On seed 1, 4 improved and 8 got worse.
+- **The pool grew by 8 problems, not by hundreds.** A day of generation across two model families added 10 problems (2 from HumanEval) and many more solutions to problems already held. What caps the corpus is what the lowerings can express, not how much is generated: nested loops abstain in Rocq, Lean and F\*. That is ROADMAP WS-20.
+
+Machine notes for anyone repeating this: the lab workstation grades at 64 cells over 4 answer sets at once with its working set on a RAM disk, and Ollama must run without flash attention and without an 8-bit KV cache, which together cost 17 to 30 times the speed on a mixture-of-experts model.

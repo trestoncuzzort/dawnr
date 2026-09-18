@@ -1,0 +1,911 @@
+{
+ "100003": {
+  "task_id": 100003,
+  "fn": "below_zero",
+  "reply_tokens": 228,
+  "done_reason": "stop",
+  "block_sha256": "a2ff18a5ad34403b",
+  "stage": "parse",
+  "why": "<string>:13:45: expected ']', found 'for' [Expr]"
+ },
+ "100005": {
+  "task_id": 100005,
+  "fn": "intersperse",
+  "reply_tokens": 255,
+  "done_reason": "stop",
+  "block_sha256": "f370a0ec443596b5",
+  "stage": "parse",
+  "why": "<string>:4:88: '/' does not start an expression [Expr]"
+ },
+ "100006": {
+  "task_id": 100006,
+  "fn": "parse_nested_parens",
+  "reply_tokens": 268,
+  "done_reason": "stop",
+  "block_sha256": "57af8f6808d9b985",
+  "stage": "parse",
+  "why": "<string>:20:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100007": {
+  "task_id": 100007,
+  "fn": "filter_by_substring",
+  "reply_tokens": 223,
+  "done_reason": "stop",
+  "block_sha256": "9d7c6dad6742a730",
+  "stage": "parse",
+  "why": "<string>:4:42: expected '{', found 'contains' [Stmt]"
+ },
+ "100009": {
+  "task_id": 100009,
+  "fn": "rolling_max",
+  "reply_tokens": 212,
+  "done_reason": "stop",
+  "block_sha256": "c31a9700de770ebd",
+  "stage": "parse",
+  "why": "<string>:23:7: expected 'else', found 'r' [Stmt]"
+ },
+ "100010": {
+  "task_id": 100010,
+  "fn": "make_palindrome",
+  "reply_tokens": 198,
+  "done_reason": "stop",
+  "block_sha256": "0493803df5976247",
+  "stage": "parse",
+  "why": "<string>:4:22: ':' does not start an expression [Expr]"
+ },
+ "100011": {
+  "task_id": 100011,
+  "fn": "string_xor",
+  "reply_tokens": 359,
+  "done_reason": "stop",
+  "block_sha256": "7f478d30cddc3be1",
+  "model_name": "string_xor",
+  "stage": "task",
+  "name": "he_11__string_xor",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "100013": {
+  "task_id": 100013,
+  "fn": "greatest_common_divisor",
+  "reply_tokens": 221,
+  "done_reason": "stop",
+  "block_sha256": "95bbb3025a2cd02e",
+  "model_name": "greatest_common_divisor",
+  "stage": "task",
+  "name": "he_13__greatest_common_divisor",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": true
+ },
+ "100014": {
+  "task_id": 100014,
+  "fn": "all_prefixes",
+  "reply_tokens": 151,
+  "done_reason": "stop",
+  "block_sha256": "6bd85bf16de5176e",
+  "model_name": "all_prefixes",
+  "stage": "wf",
+  "why": "== wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != app"
+ },
+ "100015": {
+  "task_id": 100015,
+  "fn": "string_sequence",
+  "reply_tokens": 144,
+  "done_reason": "stop",
+  "block_sha256": "7685a0089254bbb8",
+  "stage": "parse",
+  "why": "<string>:7:29: 'seq' is not one of int bool [Type]"
+ },
+ "100017": {
+  "task_id": 100017,
+  "fn": "parse_music",
+  "reply_tokens": 359,
+  "done_reason": "stop",
+  "block_sha256": "6ed61f54704425f7",
+  "stage": "parse",
+  "why": "<string>:6:38: 'seq' is not one of int bool [Type]"
+ },
+ "100018": {
+  "task_id": 100018,
+  "fn": "how_many_times",
+  "reply_tokens": 216,
+  "done_reason": "stop",
+  "block_sha256": "4de7b657737d77af",
+  "stage": "parse",
+  "why": "<string>:17:5: expected 'else', found 'i' [Stmt]"
+ },
+ "100019": {
+  "task_id": 100019,
+  "fn": "sort_numbers",
+  "reply_tokens": 980,
+  "done_reason": "stop",
+  "block_sha256": "3567f9fa75c2cf97",
+  "stage": "parse",
+  "why": "<string>:65:7: unexpected character '_' [Id]"
+ },
+ "100023": {
+  "task_id": 100023,
+  "fn": "strlen",
+  "reply_tokens": 36,
+  "done_reason": "stop",
+  "block_sha256": "ab7ec693b3010214",
+  "model_name": "strlen",
+  "stage": "wf",
+  "why": "v0 has int only [SPEC: v0 has int only]; operator 'len' not in v0 [SPEC: an operator must be in the declared version's operator set]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or tw"
+ },
+ "100024": {
+  "task_id": 100024,
+  "fn": "largest_divisor",
+  "reply_tokens": 173,
+  "done_reason": "stop",
+  "block_sha256": "a72297d00196c674",
+  "model_name": "largest_divisor",
+  "stage": "task",
+  "name": "he_24__largest_divisor",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "100026": {
+  "task_id": 100026,
+  "fn": "remove_duplicates",
+  "reply_tokens": 443,
+  "done_reason": "stop",
+  "block_sha256": "50806b99f9113407",
+  "stage": "parse",
+  "why": "<string>:26:5: expected 'else', found 'i' [Stmt]"
+ },
+ "100027": {
+  "task_id": 100027,
+  "fn": "flip_case",
+  "reply_tokens": 476,
+  "done_reason": "stop",
+  "block_sha256": "ca21f046da559e9d",
+  "model_name": "flip_case",
+  "stage": "wf",
+  "why": "- over non-int [SPEC: + - * neg div mod are int-only]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]"
+ },
+ "100028": {
+  "task_id": 100028,
+  "fn": "concatenate",
+  "reply_tokens": 156,
+  "done_reason": "stop",
+  "block_sha256": "db5a0236176aa7b9",
+  "stage": "parse",
+  "why": "<string>:4:106: expected ']', found 'for' [Expr]"
+ },
+ "100029": {
+  "task_id": 100029,
+  "fn": "filter_by_prefix",
+  "reply_tokens": 420,
+  "done_reason": "stop",
+  "block_sha256": "cc4c601ff56f9d0c",
+  "stage": "parse",
+  "why": "<string>:7:50: expected ']', found 'for' [Expr]"
+ },
+ "100030": {
+  "task_id": 100030,
+  "fn": "get_positive",
+  "reply_tokens": 226,
+  "done_reason": "stop",
+  "block_sha256": "f093eae3b8621d2e",
+  "stage": "parse",
+  "why": "<string>:24:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100034": {
+  "task_id": 100034,
+  "fn": "unique",
+  "reply_tokens": 540,
+  "done_reason": "stop",
+  "block_sha256": "1f5d1584d8a0f3bb",
+  "stage": "parse",
+  "why": "<string>:49:8: expected ':=', found '[' [Stmt]"
+ },
+ "100035": {
+  "task_id": 100035,
+  "fn": "max_element",
+  "reply_tokens": 192,
+  "done_reason": "stop",
+  "block_sha256": "4f003fbc9471d41c",
+  "stage": "parse",
+  "why": "<string>:8:3: expected 'decreases', found 'requires' [SpecFun]"
+ },
+ "100036": {
+  "task_id": 100036,
+  "fn": "fizz_buzz",
+  "reply_tokens": 298,
+  "done_reason": "stop",
+  "block_sha256": "2818c55989133761",
+  "stage": "parse",
+  "why": "<string>:37:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100039": {
+  "task_id": 100039,
+  "fn": "prime_fib",
+  "reply_tokens": 410,
+  "done_reason": "stop",
+  "block_sha256": "42f7da34327e055b",
+  "stage": "parse",
+  "why": "<string>:3:1: expected 'task', found 'gate' [Task]"
+ },
+ "100040": {
+  "task_id": 100040,
+  "fn": "triples_sum_to_zero",
+  "reply_tokens": 431,
+  "done_reason": "stop",
+  "block_sha256": "c65f7f10dfe9c45c",
+  "stage": "parse",
+  "why": "<string>:29:9: expected 'else', found 'k' [Stmt]"
+ },
+ "100041": {
+  "task_id": 100041,
+  "fn": "car_race_collision",
+  "reply_tokens": 47,
+  "done_reason": "stop",
+  "block_sha256": "3ce92d93573e8dae",
+  "model_name": "car_race_collision",
+  "stage": "task",
+  "name": "he_41__car_race_collision",
+  "t": 0,
+  "gate": null,
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false
+ },
+ "100042": {
+  "task_id": 100042,
+  "fn": "incr_list",
+  "reply_tokens": 156,
+  "done_reason": "stop",
+  "block_sha256": "eed4ca4192beb6a4",
+  "model_name": "incr_list",
+  "stage": "task",
+  "name": "he_42__incr_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "100043": {
+  "task_id": 100043,
+  "fn": "pairs_sum_to_zero",
+  "reply_tokens": 278,
+  "done_reason": "stop",
+  "block_sha256": "23ac42b3765890d8",
+  "model_name": "pairs_sum_to_zero",
+  "stage": "wf",
+  "why": "bound var i shadows a name in scope [SPEC: a bound variable must not collide with a name already in scope (Gate 1 scope rule)]; bound var i shadows a name in scope [SPEC: a bound variable must not collide with a name already in scope (Gate 1 scope rule)]; bound var j shadows a name in scope [SPEC: a"
+ },
+ "100046": {
+  "task_id": 100046,
+  "fn": "fib4",
+  "reply_tokens": 343,
+  "done_reason": "stop",
+  "block_sha256": "cc3f690c8f75031e",
+  "model_name": "fib4",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+ },
+ "100048": {
+  "task_id": 100048,
+  "fn": "is_palindrome",
+  "reply_tokens": 239,
+  "done_reason": "stop",
+  "block_sha256": "91b331a2356c2e24",
+  "stage": "parse",
+  "why": "<string>:17:5: expected 'else', found 'i' [Stmt]"
+ },
+ "100049": {
+  "task_id": 100049,
+  "fn": "modp",
+  "reply_tokens": 176,
+  "done_reason": "stop",
+  "block_sha256": "e9a26332a80c1ec2",
+  "stage": "parse",
+  "why": "<string>:8:3: expected 'decreases', found 'requires' [SpecFun]"
+ },
+ "100051": {
+  "task_id": 100051,
+  "fn": "remove_vowels",
+  "reply_tokens": 193,
+  "done_reason": "stop",
+  "block_sha256": "f47f14ab447ec0b2",
+  "stage": "parse",
+  "why": "<string>:5:3: 'spec' does not start a statement [Stmt]"
+ },
+ "100054": {
+  "task_id": 100054,
+  "fn": "same_chars",
+  "reply_tokens": 111,
+  "done_reason": "stop",
+  "block_sha256": "c19f7b4ad5998389",
+  "model_name": "same_chars",
+  "stage": "task",
+  "name": "he_54__same_chars",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 0,
+  "selfcall": false
+ },
+ "100055": {
+  "task_id": 100055,
+  "fn": "fib",
+  "reply_tokens": 137,
+  "done_reason": "stop",
+  "block_sha256": "74cdfa1b17f99c63",
+  "model_name": "fib",
+  "stage": "task",
+  "name": "he_55__fib",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": true
+ },
+ "100057": {
+  "task_id": 100057,
+  "fn": "monotonic",
+  "reply_tokens": 253,
+  "done_reason": "stop",
+  "block_sha256": "68193f580faa0da4",
+  "stage": "parse",
+  "why": "<string>:21:7: expected 'else', found 'if' [Stmt]"
+ },
+ "100058": {
+  "task_id": 100058,
+  "fn": "common",
+  "reply_tokens": 860,
+  "done_reason": "stop",
+  "block_sha256": "693ade776dc59177",
+  "stage": "parse",
+  "why": "<string>:4:23: expected '[', found 'r' [Expr]"
+ },
+ "100059": {
+  "task_id": 100059,
+  "fn": "largest_prime_factor",
+  "reply_tokens": 181,
+  "done_reason": "stop",
+  "block_sha256": "29dab1e5fec4b724",
+  "model_name": "largest_prime_factor",
+  "stage": "wf",
+  "why": "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]"
+ },
+ "100060": {
+  "task_id": 100060,
+  "fn": "sum_to_n",
+  "reply_tokens": 129,
+  "done_reason": "stop",
+  "block_sha256": "67b966ee429e55c0",
+  "stage": "parse",
+  "why": "<string>:5:31: '/' does not start an expression [Expr]"
+ },
+ "100062": {
+  "task_id": 100062,
+  "fn": "derivative",
+  "reply_tokens": 189,
+  "done_reason": "stop",
+  "block_sha256": "c4a84a1c58c44256",
+  "model_name": "derivative",
+  "stage": "task",
+  "name": "he_62__derivative",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "100063": {
+  "task_id": 100063,
+  "fn": "fibfib",
+  "reply_tokens": 234,
+  "done_reason": "stop",
+  "block_sha256": "1a1cc79a55957a49",
+  "model_name": "fibfib",
+  "stage": "wf",
+  "why": "call of unknown fun he_63__fibfib [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]; e"
+ },
+ "100065": {
+  "task_id": 100065,
+  "fn": "circular_shift",
+  "reply_tokens": 248,
+  "done_reason": "stop",
+  "block_sha256": "be741baf48a512d6",
+  "stage": "parse",
+  "why": "<string>:6:64: expected ']', found ':' [Expr]"
+ },
+ "100067": {
+  "task_id": 100067,
+  "fn": "fruit_distribution",
+  "reply_tokens": 378,
+  "done_reason": "stop",
+  "block_sha256": "af47629764dfd9d8",
+  "stage": "parse",
+  "why": "<string>:11:5: 'var' does not start an expression [Expr]"
+ },
+ "100069": {
+  "task_id": 100069,
+  "fn": "search",
+  "reply_tokens": 226,
+  "done_reason": "stop",
+  "block_sha256": "a859db732f686782",
+  "stage": "parse",
+  "why": "<string>:5:23: expected '[', found 'lst' [Expr]"
+ },
+ "100073": {
+  "task_id": 100073,
+  "fn": "smallest_change",
+  "reply_tokens": 236,
+  "done_reason": "stop",
+  "block_sha256": "dd7cb3d3b41f9bd3",
+  "stage": "parse",
+  "why": "<string>:16:5: expected 'else', found 'i' [Stmt]"
+ },
+ "100076": {
+  "task_id": 100076,
+  "fn": "is_simple_power",
+  "reply_tokens": 226,
+  "done_reason": "stop",
+  "block_sha256": "943d2b01d8d0a267",
+  "stage": "parse",
+  "why": "<string>:5:64: '*' does not start an expression [Expr]"
+ },
+ "100077": {
+  "task_id": 100077,
+  "fn": "iscube",
+  "reply_tokens": 184,
+  "done_reason": "stop",
+  "block_sha256": "5b5a7c22b3afe8f2",
+  "model_name": "iscube",
+  "stage": "wf",
+  "why": "call of unknown fun abs [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; neg over non-int [SPEC: + - * neg div mod are int-only]; call of unknown fun abs [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; + over non-int [SPEC: + - * neg div mod are int-onl"
+ },
+ "100078": {
+  "task_id": 100078,
+  "fn": "hex_key",
+  "reply_tokens": 231,
+  "done_reason": "stop",
+  "block_sha256": "39da47a7bd346e3a",
+  "stage": "parse",
+  "why": "<string>:21:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100080": {
+  "task_id": 100080,
+  "fn": "is_happy",
+  "reply_tokens": 282,
+  "done_reason": "stop",
+  "block_sha256": "c4485258a0f8adbd",
+  "stage": "parse",
+  "why": "<string>:20:7: expected 'else', found 'i' [Stmt]"
+ },
+ "100082": {
+  "task_id": 100082,
+  "fn": "prime_length",
+  "reply_tokens": 309,
+  "done_reason": "stop",
+  "block_sha256": "6a442edffaed17c5",
+  "stage": "parse",
+  "why": "<string>:10:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100085": {
+  "task_id": 100085,
+  "fn": "add",
+  "reply_tokens": 217,
+  "done_reason": "stop",
+  "block_sha256": "7c2b53d0a9d28733",
+  "model_name": "add",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+ },
+ "100089": {
+  "task_id": 100089,
+  "fn": "encrypt",
+  "reply_tokens": 161,
+  "done_reason": "stop",
+  "block_sha256": "b9d2ab2dfb9c95da",
+  "stage": "parse",
+  "why": "<string>:8:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100093": {
+  "task_id": 100093,
+  "fn": "encode",
+  "reply_tokens": 286,
+  "done_reason": "stop",
+  "block_sha256": "b6645ae116c154f3",
+  "stage": "parse",
+  "why": "<string>:8:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100094": {
+  "task_id": 100094,
+  "fn": "skjkasdkd",
+  "reply_tokens": 355,
+  "done_reason": "stop",
+  "block_sha256": "e5704834e9a3d5bf",
+  "stage": "parse",
+  "why": "<string>:18:5: expected 'else', found 'i' [Stmt]"
+ },
+ "100096": {
+  "task_id": 100096,
+  "fn": "count_up_to",
+  "reply_tokens": 206,
+  "done_reason": "stop",
+  "block_sha256": "2171b3f792a135b9",
+  "stage": "parse",
+  "why": "<string>:7:32: 'seq' is not one of int bool [Type]"
+ },
+ "100097": {
+  "task_id": 100097,
+  "fn": "multiply",
+  "reply_tokens": 64,
+  "done_reason": "stop",
+  "block_sha256": "a82ee89cf372d352",
+  "model_name": "multiply",
+  "stage": "wf",
+  "why": "operator 'mod' not in v0 [SPEC: an operator must be in the declared version's operator set]; operator 'mod' not in v0 [SPEC: an operator must be in the declared version's operator set]; * over non-int [SPEC: + - * neg div mod are int-only]; operator 'mod' not in v0 [SPEC: an operator must be in the "
+ },
+ "100099": {
+  "task_id": 100099,
+  "fn": "closest_integer",
+  "reply_tokens": 664,
+  "done_reason": "stop",
+  "block_sha256": "bf44c7d64a11dfaa",
+  "stage": "parse",
+  "why": "<string>:36:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100102": {
+  "task_id": 100102,
+  "fn": "choose_num",
+  "reply_tokens": 216,
+  "done_reason": "stop",
+  "block_sha256": "722248b7102c3f23",
+  "stage": "parse",
+  "why": "<string>:7:41: expected ')', found ']' [Expr]"
+ },
+ "100103": {
+  "task_id": 100103,
+  "fn": "rounded_avg",
+  "reply_tokens": 311,
+  "done_reason": "stop",
+  "block_sha256": "3856a7efcfdc2140",
+  "stage": "parse",
+  "why": "<string>:7:27: expected ')', found 'avg' [Expr]"
+ },
+ "100106": {
+  "task_id": 100106,
+  "fn": "f",
+  "reply_tokens": 265,
+  "done_reason": "stop",
+  "block_sha256": "87b890a46d71fe3c",
+  "stage": "parse",
+  "why": "<string>:24:1: expected 'eof', found 'spec' [Task]"
+ },
+ "100109": {
+  "task_id": 100109,
+  "fn": "move_one_ball",
+  "reply_tokens": 249,
+  "done_reason": "stop",
+  "block_sha256": "553ea2c9f72cdd27",
+  "stage": "parse",
+  "why": "<string>:6:34: 'exists' does not start an expression [Expr]"
+ },
+ "100110": {
+  "task_id": 100110,
+  "fn": "exchange",
+  "reply_tokens": 238,
+  "done_reason": "stop",
+  "block_sha256": "095e71aeed850c97",
+  "model_name": "exchange",
+  "stage": "task",
+  "name": "he_110__exchange",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "100114": {
+  "task_id": 100114,
+  "fn": "minSubArraySum",
+  "reply_tokens": 259,
+  "done_reason": "stop",
+  "block_sha256": "de1d6b16a8130ca3",
+  "stage": "parse",
+  "why": "<string>:8:3: expected 'decreases', found 'requires' [SpecFun]"
+ },
+ "100117": {
+  "task_id": 100117,
+  "fn": "select_words",
+  "reply_tokens": 505,
+  "done_reason": "stop",
+  "block_sha256": "68f358534aa6b4e8",
+  "stage": "parse",
+  "why": "<string>:3:1: expected 'task', found 'gate' [Task]"
+ },
+ "100119": {
+  "task_id": 100119,
+  "fn": "match_parens",
+  "reply_tokens": 341,
+  "done_reason": "stop",
+  "block_sha256": "a7cccbc9c314b108",
+  "model_name": "match_parens",
+  "stage": "wf",
+  "why": "call of unknown fun is_balanced_helper [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; ite branches differ: bool vs None [SPEC: ite branches must have the same type]"
+ },
+ "100120": {
+  "task_id": 100120,
+  "fn": "maximum",
+  "reply_tokens": 132,
+  "done_reason": "stop",
+  "block_sha256": "a747e121afcd01f0",
+  "stage": "parse",
+  "why": "<string>:8:56: expected '{', found 'in' [Stmt]"
+ },
+ "100121": {
+  "task_id": 100121,
+  "fn": "solution",
+  "reply_tokens": 196,
+  "done_reason": "stop",
+  "block_sha256": "be9c588af9a9e688",
+  "stage": "parse",
+  "why": "<string>:5:28: expected ']', found 'for' [Expr]"
+ },
+ "100122": {
+  "task_id": 100122,
+  "fn": "add_elements",
+  "reply_tokens": 253,
+  "done_reason": "stop",
+  "block_sha256": "e59f7d5269abc488",
+  "stage": "parse",
+  "why": "<string>:9:3: expected 'decreases', found 'requires' [SpecFun]"
+ },
+ "100123": {
+  "task_id": 100123,
+  "fn": "get_odd_collatz",
+  "reply_tokens": 267,
+  "done_reason": "stop",
+  "block_sha256": "89d9ee2c7cad538f",
+  "stage": "parse",
+  "why": "<string>:23:5: expected 'else', found 'if' [Stmt]"
+ },
+ "100124": {
+  "task_id": 100124,
+  "fn": "valid_date",
+  "reply_tokens": 943,
+  "done_reason": "stop",
+  "block_sha256": "72d3ba8baac7f4c1",
+  "stage": "parse",
+  "why": "<string>:32:1: expected ')', found '{' [Expr]"
+ },
+ "100125": {
+  "task_id": 100125,
+  "fn": "split_words",
+  "reply_tokens": 251,
+  "done_reason": "stop",
+  "block_sha256": "61a9a6334160828a",
+  "stage": "parse",
+  "why": "<string>:22:9: expected 'else', found 'i' [Stmt]"
+ },
+ "100126": {
+  "task_id": 100126,
+  "fn": "is_sorted",
+  "reply_tokens": 365,
+  "done_reason": "stop",
+  "block_sha256": "efd7401bbc1a7146",
+  "stage": "parse",
+  "why": "<string>:5:1: expected ')', found '{' [Expr]"
+ },
+ "100131": {
+  "task_id": 100131,
+  "fn": "digits",
+  "reply_tokens": 293,
+  "done_reason": "stop",
+  "block_sha256": "acfcf4e3092550e3",
+  "stage": "parse",
+  "why": "<string>:6:53: expected '.', found ')' [Expr]"
+ },
+ "100132": {
+  "task_id": 100132,
+  "fn": "is_nested",
+  "reply_tokens": 528,
+  "done_reason": "stop",
+  "block_sha256": "97e190819e61b872",
+  "stage": "parse",
+  "why": "<string>:34:13: expected 'else', found 'k' [Stmt]"
+ },
+ "100135": {
+  "task_id": 100135,
+  "fn": "can_arrange",
+  "reply_tokens": 219,
+  "done_reason": "stop",
+  "block_sha256": "197a31c9352cd273",
+  "model_name": "can_arrange",
+  "stage": "task",
+  "name": "he_135__can_arrange",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "100138": {
+  "task_id": 100138,
+  "fn": "is_equal_to_sum_even",
+  "reply_tokens": 76,
+  "done_reason": "stop",
+  "block_sha256": "6891b805ddf536d4",
+  "model_name": "is_equal_to_sum_even",
+  "stage": "wf",
+  "why": "operator 'mod' not in v0 [SPEC: an operator must be in the declared version's operator set]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]; operator 'mod'"
+ },
+ "100139": {
+  "task_id": 100139,
+  "fn": "special_factorial",
+  "reply_tokens": 147,
+  "done_reason": "stop",
+  "block_sha256": "00383eb1388883d9",
+  "model_name": "special_factorial",
+  "stage": "wf",
+  "why": "call of unknown fun factorial [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; * over non-int [SPEC: + - * neg div mod are int-only]"
+ },
+ "100140": {
+  "task_id": 100140,
+  "fn": "fix_spaces",
+  "reply_tokens": 58,
+  "done_reason": "stop",
+  "block_sha256": "b79e8cf28af91b23",
+  "model_name": "fix_spaces",
+  "stage": "task",
+  "name": "he_140__fix_spaces",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "100141": {
+  "task_id": 100141,
+  "fn": "file_name_check",
+  "reply_tokens": 879,
+  "done_reason": "stop",
+  "block_sha256": "98cf43636f301cc0",
+  "stage": "parse",
+  "why": "<string>:8:34: expected ']', found 'for' [Expr]"
+ },
+ "100142": {
+  "task_id": 100142,
+  "fn": "sum_squares",
+  "reply_tokens": 289,
+  "done_reason": "stop",
+  "block_sha256": "a1ece36fab3a3946",
+  "stage": "parse",
+  "why": "<string>:15:12: expected '{', found 'if' [Stmt]"
+ },
+ "100143": {
+  "task_id": 100143,
+  "fn": "words_in_sentence",
+  "reply_tokens": 266,
+  "done_reason": "stop",
+  "block_sha256": "1a9104dde7e46376",
+  "stage": "parse",
+  "why": "<string>:3:1: expected 'task', found 'gate' [Task]"
+ },
+ "100144": {
+  "task_id": 100144,
+  "fn": "simplify",
+  "reply_tokens": 251,
+  "done_reason": "stop",
+  "block_sha256": "02359b569ab4d60f",
+  "stage": "parse",
+  "why": "<string>:6:46: comparisons do not chain; parenthesise [What the notation refuses]"
+ },
+ "100146": {
+  "task_id": 100146,
+  "fn": "specialFilter",
+  "reply_tokens": 368,
+  "done_reason": "stop",
+  "block_sha256": "dbe309083bcfa7e7",
+  "stage": "parse",
+  "why": "<string>:19:29: 'seq' is not one of int bool [Type]"
+ },
+ "100147": {
+  "task_id": 100147,
+  "fn": "get_max_triples",
+  "reply_tokens": 254,
+  "done_reason": "stop",
+  "block_sha256": "040c5bd3b5755b74",
+  "stage": "parse",
+  "why": "<string>:10:7: expected '{', found 'a1' [Stmt]"
+ },
+ "100149": {
+  "task_id": 100149,
+  "fn": "sorted_list_sum",
+  "reply_tokens": 352,
+  "done_reason": "stop",
+  "block_sha256": "103e45eda790e0aa",
+  "stage": "parse",
+  "why": "<string>:3:1: expected 'task', found 'gate' [Task]"
+ },
+ "100150": {
+  "task_id": 100150,
+  "fn": "x_or_y",
+  "reply_tokens": 174,
+  "done_reason": "stop",
+  "block_sha256": "d2fcd86384521594",
+  "stage": "parse",
+  "why": "<string>:3:1: expected 'task', found 'gate' [Task]"
+ },
+ "100153": {
+  "task_id": 100153,
+  "fn": "Strongest_Extension",
+  "reply_tokens": 411,
+  "done_reason": "stop",
+  "block_sha256": "c2be61f36ca582c7",
+  "stage": "parse",
+  "why": "<string>:6:53: 'seq' is not one of int bool [Type]"
+ },
+ "100157": {
+  "task_id": 100157,
+  "fn": "right_angle_triangle",
+  "reply_tokens": 158,
+  "done_reason": "stop",
+  "block_sha256": "a116b4c85ae7ebd8",
+  "model_name": "right_angle_triangle",
+  "stage": "wf",
+  "why": "bool literal in a v0 task [SPEC: the bool literal is a v1 construct (Gate 1)]; bool literal in a v0 task [SPEC: the bool literal is a v1 construct (Gate 1)]; bool literal in a v0 task [SPEC: the bool literal is a v1 construct (Gate 1)]; bool literal in a v0 task [SPEC: the bool literal is a v1 const"
+ },
+ "100161": {
+  "task_id": 100161,
+  "fn": "solve",
+  "reply_tokens": 451,
+  "done_reason": "stop",
+  "block_sha256": "66c737410ddbda86",
+  "stage": "parse",
+  "why": "<string>:13:51: 'seq' is not one of int bool [Type]"
+ }
+}

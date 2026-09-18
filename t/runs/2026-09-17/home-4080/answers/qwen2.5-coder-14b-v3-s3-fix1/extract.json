@@ -1,0 +1,831 @@
+{
+ "3": {
+  "task_id": 3,
+  "fn": "is_not_prime",
+  "reply_tokens": 146,
+  "done_reason": "stop",
+  "block_sha256": "0ed93fedf1359e44",
+  "model_name": "is_not_prime",
+  "stage": "task",
+  "name": "mbpp_3__is_not_prime",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "9": {
+  "task_id": 9,
+  "fn": "find_Rotations",
+  "reply_tokens": 223,
+  "done_reason": "stop",
+  "block_sha256": "de1a44f15b8ac11a",
+  "model_name": "find_Rotations",
+  "stage": "wf",
+  "why": "bound var i shadows a name in scope [SPEC: a bound variable must not collide with a name already in scope (Gate 1 scope rule)]"
+ },
+ "28": {
+  "task_id": 28,
+  "fn": "binomial_Coeff",
+  "reply_tokens": 248,
+  "done_reason": "stop",
+  "block_sha256": "c20ba56401b3f4da",
+  "model_name": "binomial_Coeff",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+ },
+ "93": {
+  "task_id": 93,
+  "fn": "power",
+  "reply_tokens": 122,
+  "done_reason": "stop",
+  "block_sha256": "9067ce0c340a5a0d",
+  "model_name": "power",
+  "stage": "task",
+  "name": "mbpp_93__power",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": true
+ },
+ "201": {
+  "task_id": 201,
+  "fn": "chkList",
+  "reply_tokens": 204,
+  "done_reason": "stop",
+  "block_sha256": "7faadcbc7a40e6ab",
+  "model_name": "chkList",
+  "stage": "task",
+  "name": "mbpp_201__chkList",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "221": {
+  "task_id": 221,
+  "fn": "first_even",
+  "reply_tokens": 200,
+  "done_reason": "stop",
+  "block_sha256": "b98797af1d367f16",
+  "model_name": "first_even",
+  "stage": "task",
+  "name": "mbpp_221__first_even",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "249": {
+  "task_id": 249,
+  "fn": "intersection_array",
+  "reply_tokens": 492,
+  "done_reason": "stop",
+  "block_sha256": "6fbdb33dab312761",
+  "model_name": "intersection_array",
+  "stage": "task",
+  "name": "mbpp_249__intersection_array",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "337": {
+  "task_id": 337,
+  "fn": "text_match_word",
+  "reply_tokens": 445,
+  "done_reason": "stop",
+  "block_sha256": "f245e271f170ffff",
+  "model_name": "text_match_word",
+  "stage": "task",
+  "name": "mbpp_337__text_match_word",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "345": {
+  "task_id": 345,
+  "fn": "diff_consecutivenums",
+  "reply_tokens": 194,
+  "done_reason": "stop",
+  "block_sha256": "25654f2e373131e2",
+  "model_name": "diff_consecutivenums",
+  "stage": "task",
+  "name": "mbpp_345__diff_consecutivenums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "352": {
+  "task_id": 352,
+  "fn": "unique_Characters",
+  "reply_tokens": 246,
+  "done_reason": "stop",
+  "block_sha256": "5b42e562a6857ed1",
+  "model_name": "unique_Characters",
+  "stage": "task",
+  "name": "mbpp_352__unique_Characters",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "378": {
+  "task_id": 378,
+  "fn": "move_first",
+  "reply_tokens": 97,
+  "done_reason": "stop",
+  "block_sha256": "10df199a93cffda5",
+  "model_name": "move_first",
+  "stage": "task",
+  "name": "mbpp_378__move_first",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "385": {
+  "task_id": 385,
+  "fn": "get_perrin",
+  "reply_tokens": 188,
+  "done_reason": "stop",
+  "block_sha256": "41c60820edc2dc49",
+  "model_name": "get_perrin",
+  "stage": "task",
+  "name": "mbpp_385__get_perrin",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": true
+ },
+ "412": {
+  "task_id": 412,
+  "fn": "remove_odd",
+  "reply_tokens": 247,
+  "done_reason": "stop",
+  "block_sha256": "22ba466af511032a",
+  "model_name": "remove_odd",
+  "stage": "task",
+  "name": "mbpp_412__remove_odd",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "472": {
+  "task_id": 472,
+  "fn": "check_Consecutive",
+  "reply_tokens": 176,
+  "done_reason": "stop",
+  "block_sha256": "959eed603de25934",
+  "model_name": "check_Consecutive",
+  "stage": "task",
+  "name": "mbpp_472__check_Consecutive",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "474": {
+  "task_id": 474,
+  "fn": "replace_char",
+  "reply_tokens": 175,
+  "done_reason": "stop",
+  "block_sha256": "1b0e5bba83a0e0c8",
+  "model_name": "replace_char",
+  "stage": "task",
+  "name": "mbpp_474__replace_char",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "503": {
+  "task_id": 503,
+  "fn": "add_consecutive_nums",
+  "reply_tokens": 192,
+  "done_reason": "stop",
+  "block_sha256": "9f51ff01bb9f60a6",
+  "model_name": "add_consecutive_nums",
+  "stage": "task",
+  "name": "mbpp_503__add_consecutive_nums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "505": {
+  "task_id": 505,
+  "fn": "re_order",
+  "reply_tokens": 409,
+  "done_reason": "stop",
+  "block_sha256": "35d5fe0a0dc94bab",
+  "model_name": "re_order",
+  "stage": "spec-changed",
+  "name": "mbpp_505__re_order",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false,
+  "why": "requires, signature or an original ensures was changed"
+ },
+ "517": {
+  "task_id": 517,
+  "fn": "largest_pos",
+  "reply_tokens": 211,
+  "done_reason": "stop",
+  "block_sha256": "59f76e45e576808b",
+  "model_name": "largest_pos",
+  "stage": "task",
+  "name": "mbpp_517__largest_pos",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "518": {
+  "task_id": 518,
+  "fn": "sqrt_root",
+  "reply_tokens": 132,
+  "done_reason": "stop",
+  "block_sha256": "2347cbb544b32896",
+  "model_name": "sqrt_root",
+  "stage": "task",
+  "name": "mbpp_518__sqrt_root",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "557": {
+  "task_id": 557,
+  "fn": "toggle_string",
+  "reply_tokens": 335,
+  "done_reason": "stop",
+  "block_sha256": "1bdc6047506cfa4c",
+  "model_name": "toggle_string",
+  "stage": "task",
+  "name": "mbpp_557__toggle_string",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "567": {
+  "task_id": 567,
+  "fn": "issort_list",
+  "reply_tokens": 168,
+  "done_reason": "stop",
+  "block_sha256": "cb3c4da1c5be5457",
+  "model_name": "issort_list",
+  "stage": "task",
+  "name": "mbpp_567__issort_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "586": {
+  "task_id": 586,
+  "fn": "split_Arr",
+  "reply_tokens": 210,
+  "done_reason": "stop",
+  "block_sha256": "6a451d887b34e227",
+  "model_name": "split_Arr",
+  "stage": "task",
+  "name": "mbpp_586__split_Arr",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 2,
+  "selfcall": false
+ },
+ "632": {
+  "task_id": 632,
+  "fn": "move_zero",
+  "reply_tokens": 337,
+  "done_reason": "stop",
+  "block_sha256": "137dc8c6ebe6083b",
+  "model_name": "move_zero",
+  "stage": "spec-changed",
+  "name": "mbpp_632__move_zero",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false,
+  "why": "requires, signature or an original ensures was changed"
+ },
+ "663": {
+  "task_id": 663,
+  "fn": "find_max_val",
+  "reply_tokens": 141,
+  "done_reason": "stop",
+  "block_sha256": "9b006194e3577cad",
+  "model_name": "find_max_val",
+  "stage": "task",
+  "name": "mbpp_663__find_max_val",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "668": {
+  "task_id": 668,
+  "fn": "replace",
+  "reply_tokens": 231,
+  "done_reason": "stop",
+  "block_sha256": "7adab0a2174ba848",
+  "model_name": "replace",
+  "stage": "task",
+  "name": "mbpp_668__replace",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "680": {
+  "task_id": 680,
+  "fn": "increasing_trend",
+  "reply_tokens": 168,
+  "done_reason": "stop",
+  "block_sha256": "e8c88ded8b15e79d",
+  "model_name": "increasing_trend",
+  "stage": "task",
+  "name": "mbpp_680__increasing_trend",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "690": {
+  "task_id": 690,
+  "fn": "mul_consecutive_nums",
+  "reply_tokens": 192,
+  "done_reason": "stop",
+  "block_sha256": "4e33e3fd4134b0f3",
+  "model_name": "mul_consecutive_nums",
+  "stage": "task",
+  "name": "mbpp_690__mul_consecutive_nums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "693": {
+  "task_id": 693,
+  "fn": "remove_multiple_spaces",
+  "reply_tokens": 254,
+  "done_reason": "stop",
+  "block_sha256": "5a75987edf19f3a7",
+  "model_name": "remove_multiple_spaces",
+  "stage": "task",
+  "name": "mbpp_693__remove_multiple_spaces",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "706": {
+  "task_id": 706,
+  "fn": "is_subset",
+  "reply_tokens": 280,
+  "done_reason": "stop",
+  "block_sha256": "52eb70be85f041ba",
+  "model_name": "is_subset",
+  "stage": "task",
+  "name": "mbpp_706__is_subset",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "int",
+   "seq",
+   "int"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "719": {
+  "task_id": 719,
+  "fn": "text_match",
+  "reply_tokens": 364,
+  "done_reason": "stop",
+  "block_sha256": "6a8eb3438998f60b",
+  "stage": "parse",
+  "why": "<string>:21:12: expected '{', found 'if' [Stmt]"
+ },
+ "736": {
+  "task_id": 736,
+  "fn": "left_insertion",
+  "reply_tokens": 227,
+  "done_reason": "stop",
+  "block_sha256": "c051d6935fc010c8",
+  "model_name": "left_insertion",
+  "stage": "task",
+  "name": "mbpp_736__left_insertion",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "737": {
+  "task_id": 737,
+  "fn": "check_str",
+  "reply_tokens": 344,
+  "done_reason": "stop",
+  "block_sha256": "e67deee66b28e4a4",
+  "model_name": "check_str",
+  "stage": "task",
+  "name": "mbpp_737__check_str",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "741": {
+  "task_id": 741,
+  "fn": "all_Characters_Same",
+  "reply_tokens": 196,
+  "done_reason": "stop",
+  "block_sha256": "079699186d5c8f3c",
+  "model_name": "all_Characters_Same",
+  "stage": "task",
+  "name": "mbpp_741__all_Characters_Same",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "754": {
+  "task_id": 754,
+  "fn": "extract_index_list",
+  "reply_tokens": 244,
+  "done_reason": "stop",
+  "block_sha256": "76c435520d03ba4e",
+  "model_name": "extract_index_list",
+  "stage": "task",
+  "name": "mbpp_754__extract_index_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "786": {
+  "task_id": 786,
+  "fn": "right_insertion",
+  "reply_tokens": 196,
+  "done_reason": "stop",
+  "block_sha256": "3a77b1316eabd04d",
+  "model_name": "right_insertion",
+  "stage": "task",
+  "name": "mbpp_786__right_insertion",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "787": {
+  "task_id": 787,
+  "fn": "text_match_three",
+  "reply_tokens": 427,
+  "done_reason": "stop",
+  "block_sha256": "b7aeeb9542555911",
+  "model_name": "text_match_three",
+  "stage": "task",
+  "name": "mbpp_787__text_match_three",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "800": {
+  "task_id": 800,
+  "fn": "remove_all_spaces",
+  "reply_tokens": 145,
+  "done_reason": "stop",
+  "block_sha256": "ecb041e7ae50d224",
+  "model_name": "remove_all_spaces",
+  "stage": "task",
+  "name": "mbpp_800__remove_all_spaces",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "802": {
+  "task_id": 802,
+  "fn": "count_Rotation",
+  "reply_tokens": 207,
+  "done_reason": "stop",
+  "block_sha256": "efd510605169d43d",
+  "model_name": "count_Rotation",
+  "stage": "task",
+  "name": "mbpp_802__count_Rotation",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "817": {
+  "task_id": 817,
+  "fn": "div_of_nums",
+  "reply_tokens": 339,
+  "done_reason": "stop",
+  "block_sha256": "5797687a68004cde",
+  "model_name": "div_of_nums",
+  "stage": "task",
+  "name": "mbpp_817__div_of_nums",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "int",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "824": {
+  "task_id": 824,
+  "fn": "remove_even",
+  "reply_tokens": 247,
+  "done_reason": "stop",
+  "block_sha256": "1876315daf1fb554",
+  "model_name": "remove_even",
+  "stage": "task",
+  "name": "mbpp_824__remove_even",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "866": {
+  "task_id": 866,
+  "fn": "check_monthnumb",
+  "reply_tokens": 226,
+  "done_reason": "stop",
+  "block_sha256": "57a9e31d84c7d51a",
+  "model_name": "check_monthnumb",
+  "stage": "wf",
+  "why": "local months_with_31_days init type mismatch [SPEC: assign's expression type must match the target's declared type]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the sa"
+ },
+ "871": {
+  "task_id": 871,
+  "fn": "are_Rotations",
+  "reply_tokens": 263,
+  "done_reason": "stop",
+  "block_sha256": "ebc5e52a9452d739",
+  "model_name": "are_Rotations",
+  "stage": "task",
+  "name": "mbpp_871__are_Rotations",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "897": {
+  "task_id": 897,
+  "fn": "is_Word_Present",
+  "reply_tokens": 177,
+  "done_reason": "stop",
+  "block_sha256": "cc3d140c0ed705d8",
+  "model_name": "is_Word_Present",
+  "stage": "task",
+  "name": "mbpp_897__is_Word_Present",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "908": {
+  "task_id": 908,
+  "fn": "find_fixed_point",
+  "reply_tokens": 253,
+  "done_reason": "stop",
+  "block_sha256": "86305dc2ef201c93",
+  "stage": "parse",
+  "why": "<string>:5:30: comparisons do not chain; parenthesise [What the notation refuses]"
+ },
+ "943": {
+  "task_id": 943,
+  "fn": "combine_lists",
+  "reply_tokens": 792,
+  "done_reason": "stop",
+  "block_sha256": "e5f2b6f870934880",
+  "model_name": "combine_lists",
+  "stage": "task",
+  "name": "mbpp_943__combine_lists",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 3,
+  "selfcall": false
+ },
+ "944": {
+  "task_id": 944,
+  "fn": "num_position",
+  "reply_tokens": 288,
+  "done_reason": "stop",
+  "block_sha256": "05752687f9a60501",
+  "model_name": "num_position",
+  "stage": "task",
+  "name": "mbpp_944__num_position",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "973": {
+  "task_id": 973,
+  "fn": "left_rotate",
+  "reply_tokens": 139,
+  "done_reason": "stop",
+  "block_sha256": "86369b5f5c732a4b",
+  "model_name": "left_rotate",
+  "stage": "task",
+  "name": "mbpp_973__left_rotate",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ }
+}

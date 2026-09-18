@@ -1,0 +1,60 @@
+{
+ "t": 0,
+ "name": "mbpp_458__rectangle_area",
+ "params": [
+  {
+   "name": "width",
+   "type": "int"
+  },
+  {
+   "name": "height",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "area",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "area"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "width"
+      },
+      {
+       "var": "height"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "area",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "width"
+      },
+      {
+       "var": "height"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

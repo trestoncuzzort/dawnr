@@ -1,0 +1,1125 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "he_17__parse_music",
+ "params": [
+  {
+   "name": "music_string",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "div",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "split",
+         "args": [
+          {
+           "var": "music_string"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "int": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "body": {
+     "op": "or",
+     "args": [
+      {
+       "op": "==",
+       "args": [
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "int": 4
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "int": 2
+        }
+       ]
+      },
+      {
+       "op": "==",
+       "args": [
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "body": {
+     "op": "or",
+     "args": [
+      {
+       "op": "and",
+       "args": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "music_string"
+            },
+            {
+             "op": "*",
+             "args": [
+              {
+               "int": 2
+              },
+              {
+               "var": "i"
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "int": 111
+          }
+         ]
+        },
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          },
+          {
+           "int": 4
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "and",
+       "args": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "music_string"
+            },
+            {
+             "op": "*",
+             "args": [
+              {
+               "int": 2
+              },
+              {
+               "var": "i"
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "int": 46
+          }
+         ]
+        },
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "music_string"
+            },
+            {
+             "op": "+",
+             "args": [
+              {
+               "op": "*",
+               "args": [
+                {
+                 "int": 2
+                },
+                {
+                 "var": "i"
+                }
+               ]
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "int": 124
+          }
+         ]
+        },
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "and",
+       "args": [
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "music_string"
+            },
+            {
+             "op": "*",
+             "args": [
+              {
+               "int": 2
+              },
+              {
+               "var": "i"
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "int": 111
+          }
+         ]
+        },
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "music_string"
+            },
+            {
+             "op": "+",
+             "args": [
+              {
+               "op": "*",
+               "args": [
+                {
+                 "int": 2
+                },
+                {
+                 "var": "i"
+                }
+               ]
+              },
+              {
+               "int": 1
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "int": 124
+          }
+         ]
+        },
+        {
+         "op": "==",
+         "args": [
+          {
+           "op": "at",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "var": "i"
+            }
+           ]
+          },
+          {
+           "int": 2
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "seq",
+     "args": []
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "music_string"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "int": 0
+       },
+       {
+        "var": "i"
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "music_string"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "r"
+         }
+        ]
+       },
+       {
+        "op": "div",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "forall": {
+       "var": "j",
+       "lo": {
+        "int": 0
+       },
+       "hi": {
+        "op": "len",
+        "args": [
+         {
+          "var": "r"
+         }
+        ]
+       },
+       "body": {
+        "op": "or",
+        "args": [
+         {
+          "op": "==",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "r"
+             },
+             {
+              "var": "j"
+             }
+            ]
+           },
+           {
+            "int": 4
+           }
+          ]
+         },
+         {
+          "op": "==",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "r"
+             },
+             {
+              "var": "j"
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "op": "==",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "r"
+             },
+             {
+              "var": "j"
+             }
+            ]
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       }
+      }
+     },
+     {
+      "forall": {
+       "var": "j",
+       "lo": {
+        "int": 0
+       },
+       "hi": {
+        "op": "len",
+        "args": [
+         {
+          "var": "r"
+         }
+        ]
+       },
+       "body": {
+        "op": "or",
+        "args": [
+         {
+          "op": "and",
+          "args": [
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "music_string"
+               },
+               {
+                "op": "*",
+                "args": [
+                 {
+                  "int": 2
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "int": 111
+             }
+            ]
+           },
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "r"
+               },
+               {
+                "var": "j"
+               }
+              ]
+             },
+             {
+              "int": 4
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "op": "and",
+          "args": [
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "music_string"
+               },
+               {
+                "op": "*",
+                "args": [
+                 {
+                  "int": 2
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "int": 46
+             }
+            ]
+           },
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "music_string"
+               },
+               {
+                "op": "+",
+                "args": [
+                 {
+                  "op": "*",
+                  "args": [
+                   {
+                    "int": 2
+                   },
+                   {
+                    "var": "j"
+                   }
+                  ]
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "int": 124
+             }
+            ]
+           },
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "r"
+               },
+               {
+                "var": "j"
+               }
+              ]
+             },
+             {
+              "int": 1
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "op": "and",
+          "args": [
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "music_string"
+               },
+               {
+                "op": "*",
+                "args": [
+                 {
+                  "int": 2
+                 },
+                 {
+                  "var": "j"
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "int": 111
+             }
+            ]
+           },
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "music_string"
+               },
+               {
+                "op": "+",
+                "args": [
+                 {
+                  "op": "*",
+                  "args": [
+                   {
+                    "int": 2
+                   },
+                   {
+                    "var": "j"
+                   }
+                  ]
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "int": 124
+             }
+            ]
+           },
+           {
+            "op": "==",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "r"
+               },
+               {
+                "var": "j"
+               }
+              ]
+             },
+             {
+              "int": 2
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "music_string"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "and",
+        "args": [
+         {
+          "op": "==",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "music_string"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "int": 111
+           }
+          ]
+         },
+         {
+          "op": "or",
+          "args": [
+           {
+            "op": ">=",
+            "args": [
+             {
+              "op": "+",
+              "args": [
+               {
+                "var": "i"
+               },
+               {
+                "int": 1
+               }
+              ]
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "music_string"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "op": "!=",
+            "args": [
+             {
+              "op": "at",
+              "args": [
+               {
+                "var": "music_string"
+               },
+               {
+                "op": "+",
+                "args": [
+                 {
+                  "var": "i"
+                 },
+                 {
+                  "int": 1
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "int": 124
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 4
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "if": {
+          "cond": {
+           "op": "and",
+           "args": [
+            {
+             "op": "==",
+             "args": [
+              {
+               "op": "at",
+               "args": [
+                {
+                 "var": "music_string"
+                },
+                {
+                 "var": "i"
+                }
+               ]
+              },
+              {
+               "int": 111
+              }
+             ]
+            },
+            {
+             "op": "==",
+             "args": [
+              {
+               "op": "at",
+               "args": [
+                {
+                 "var": "music_string"
+                },
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "i"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "int": 124
+              }
+             ]
+            }
+           ]
+          },
+          "then": [
+           {
+            "assign": [
+             "r",
+             {
+              "op": "+",
+              "args": [
+               {
+                "var": "r"
+               },
+               {
+                "op": "seq",
+                "args": [
+                 {
+                  "int": 2
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "assign": [
+             "i",
+             {
+              "op": "+",
+              "args": [
+               {
+                "var": "i"
+               },
+               {
+                "int": 1
+               }
+              ]
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "if": {
+             "cond": {
+              "op": "and",
+              "args": [
+               {
+                "op": "==",
+                "args": [
+                 {
+                  "op": "at",
+                  "args": [
+                   {
+                    "var": "music_string"
+                   },
+                   {
+                    "var": "i"
+                   }
+                  ]
+                 },
+                 {
+                  "int": 46
+                 }
+                ]
+               },
+               {
+                "op": "==",
+                "args": [
+                 {
+                  "op": "at",
+                  "args": [
+                   {
+                    "var": "music_string"
+                   },
+                   {
+                    "op": "+",
+                    "args": [
+                     {
+                      "var": "i"
+                     },
+                     {
+                      "int": 1
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "int": 124
+                 }
+                ]
+               }
+              ]
+             },
+             "then": [
+              {
+               "assign": [
+                "r",
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "r"
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 1
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "assign": [
+                "i",
+                {
+                 "op": "+",
+                 "args": [
+                  {
+                   "var": "i"
+                  },
+                  {
+                   "int": 1
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             "else": []
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

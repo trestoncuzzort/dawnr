@@ -1,0 +1,191 @@
+{
+ "t": 1,
+ "name": "mbpp_378__move_first",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "seq",
+       "args": [
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "s"
+          },
+          {
+           "op": "-",
+           "args": [
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            },
+            {
+             "int": 1
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "slice",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "int": 0
+        },
+        {
+         "op": "-",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "first",
+    "type": "seq",
+    "init": {
+     "op": "seq",
+     "args": [
+      {
+       "op": "at",
+       "args": [
+        {
+         "var": "s"
+        },
+        {
+         "op": "-",
+         "args": [
+          {
+           "op": "len",
+           "args": [
+            {
+             "var": "s"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "rest",
+    "type": "seq",
+    "init": {
+     "op": "slice",
+     "args": [
+      {
+       "var": "s"
+      },
+      {
+       "int": 0
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "var": "first"
+      },
+      {
+       "var": "rest"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

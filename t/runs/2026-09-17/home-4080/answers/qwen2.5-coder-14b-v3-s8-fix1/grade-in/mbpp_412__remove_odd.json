@@ -1,0 +1,479 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "mbpp_412__remove_odd",
+ "params": [
+  {
+   "name": "numbers",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "body": {
+     "op": "==",
+     "args": [
+      {
+       "op": "mod",
+       "args": [
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        },
+        {
+         "int": 2
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "call": {
+      "fun": "count_even",
+      "args": [
+       {
+        "var": "numbers"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "count_even",
+   "params": [
+    {
+     "name": "s",
+     "type": "seq"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "len",
+    "args": [
+     {
+      "var": "s"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "s"
+         }
+        ]
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "int": 0
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "s"
+             },
+             {
+              "int": 0
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "op": "+",
+        "args": [
+         {
+          "int": 1
+         },
+         {
+          "call": {
+           "fun": "count_even",
+           "args": [
+            {
+             "op": "slice",
+             "args": [
+              {
+               "var": "s"
+              },
+              {
+               "int": 1
+              },
+              {
+               "op": "len",
+               "args": [
+                {
+                 "var": "s"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "else": {
+        "call": {
+         "fun": "count_even",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "s"
+            },
+            {
+             "int": 1
+            },
+            {
+             "op": "len",
+             "args": [
+              {
+               "var": "s"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "seq",
+     "args": []
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "numbers"
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<=",
+      "args": [
+       {
+        "int": 0
+       },
+       {
+        "var": "i"
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "numbers"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "r"
+         }
+        ]
+       },
+       {
+        "var": "i"
+       }
+      ]
+     },
+     {
+      "forall": {
+       "var": "j",
+       "lo": {
+        "int": 0
+       },
+       "hi": {
+        "op": "len",
+        "args": [
+         {
+          "var": "r"
+         }
+        ]
+       },
+       "body": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "r"
+             },
+             {
+              "var": "j"
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       }
+      }
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "var": "r"
+         }
+        ]
+       },
+       {
+        "call": {
+         "fun": "count_even",
+         "args": [
+          {
+           "op": "slice",
+           "args": [
+            {
+             "var": "numbers"
+            },
+            {
+             "int": 0
+            },
+            {
+             "var": "i"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "numbers"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "op": "at",
+            "args": [
+             {
+              "var": "numbers"
+             },
+             {
+              "var": "i"
+             }
+            ]
+           },
+           {
+            "int": 2
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "op": "+",
+           "args": [
+            {
+             "var": "r"
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "op": "at",
+               "args": [
+                {
+                 "var": "numbers"
+                },
+                {
+                 "var": "i"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

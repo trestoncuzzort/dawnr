@@ -1,0 +1,56 @@
+{
+ "t": 0,
+ "name": "mbpp_171__perimeter_pentagon",
+ "params": [
+  {
+   "name": "side_length",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "perimeter",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "perimeter"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "side_length"
+      },
+      {
+       "int": 5
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "perimeter",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "side_length"
+      },
+      {
+       "int": 5
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

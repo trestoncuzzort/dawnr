@@ -1,0 +1,99 @@
+{
+ "t": 0,
+ "name": "mbpp_356__find_angle",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "int": 180
+        },
+        {
+         "var": "a"
+        }
+       ]
+      },
+      {
+       "var": "b"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "int": 180
+        },
+        {
+         "var": "a"
+        }
+       ]
+      },
+      {
+       "var": "b"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

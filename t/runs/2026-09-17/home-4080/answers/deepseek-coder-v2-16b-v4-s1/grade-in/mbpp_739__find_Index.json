@@ -1,0 +1,239 @@
+{
+ "t": 1,
+ "name": "mbpp_739__find_Index",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "or",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 4
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 14
+      }
+     ]
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 45
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 1
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "triangular",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "tostr",
+         "args": [
+          {
+           "var": "triangular"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "op": "len",
+        "args": [
+         {
+          "op": "tostr",
+          "args": [
+           {
+            "var": "triangular"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "var": "n"
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "op": "div",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "i"
+           },
+           {
+            "op": "+",
+            "args": [
+             {
+              "var": "i"
+             },
+             {
+              "int": 1
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "int": 2
+         }
+        ]
+       },
+       {
+        "var": "triangular"
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "tostr",
+         "args": [
+          {
+           "var": "triangular"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    "body": [
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "assign": [
+       "triangular",
+       {
+        "op": "div",
+        "args": [
+         {
+          "op": "*",
+          "args": [
+           {
+            "var": "i"
+           },
+           {
+            "op": "+",
+            "args": [
+             {
+              "var": "i"
+             },
+             {
+              "int": 1
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "int": 2
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "var": "i"
+    }
+   ]
+  }
+ ]
+}

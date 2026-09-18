@@ -1,0 +1,137 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "he_140__fix_spaces",
+ "params": [
+  {
+   "name": "text",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "var": "text"
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 32
+          },
+          {
+           "int": 32
+          },
+          {
+           "int": 32
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 45
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 32
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 95
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "var": "text"
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 32
+          },
+          {
+           "int": 32
+          },
+          {
+           "int": 32
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 45
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 32
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 95
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

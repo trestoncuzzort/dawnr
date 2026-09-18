@@ -1,0 +1,873 @@
+{
+ "3": {
+  "task_id": 3,
+  "fn": "is_not_prime",
+  "reply_tokens": 153,
+  "done_reason": "stop",
+  "block_sha256": "8d70baea228bb3a1",
+  "model_name": "is_not_prime",
+  "stage": "task",
+  "name": "mbpp_3__is_not_prime",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "19": {
+  "task_id": 19,
+  "fn": "test_duplicate",
+  "reply_tokens": 341,
+  "done_reason": "stop",
+  "block_sha256": "61ed03ff961d6693",
+  "model_name": "test_duplicate",
+  "stage": "task",
+  "name": "mbpp_19__test_duplicate",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "21": {
+  "task_id": 21,
+  "fn": "multiples_of_num",
+  "reply_tokens": 161,
+  "done_reason": "stop",
+  "block_sha256": "7794dfc5a149e7f3",
+  "model_name": "multiples_of_num",
+  "stage": "task",
+  "name": "mbpp_21__multiples_of_num",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "41": {
+  "task_id": 41,
+  "fn": "filter_evennumbers",
+  "reply_tokens": 265,
+  "done_reason": "stop",
+  "block_sha256": "99125945faa3d130",
+  "model_name": "filter_evennumbers",
+  "stage": "task",
+  "name": "mbpp_41__filter_evennumbers",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "46": {
+  "task_id": 46,
+  "fn": "test_distinct",
+  "reply_tokens": 292,
+  "done_reason": "stop",
+  "block_sha256": "bd929e94f52013a4",
+  "model_name": "test_distinct",
+  "stage": "task",
+  "name": "mbpp_46__test_distinct",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "62": {
+  "task_id": 62,
+  "fn": "smallest_num",
+  "reply_tokens": 149,
+  "done_reason": "stop",
+  "block_sha256": "ff9d12aa300978ce",
+  "model_name": "smallest_num",
+  "stage": "wf",
+  "why": "call of unknown fun min [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]; == wants two ints, two bools, two seqs, two nested seqs, or two pairs of the same type [SPEC: == and != apply to two ints, two bools, two seqs, two nested seqs, or two pairs of the same type]; call of unk"
+ },
+ "161": {
+  "task_id": 161,
+  "fn": "remove_elements",
+  "reply_tokens": 413,
+  "done_reason": "stop",
+  "block_sha256": "c75105f47ebc63b1",
+  "model_name": "remove_elements",
+  "stage": "task",
+  "name": "mbpp_161__remove_elements",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 2,
+  "selfcall": false
+ },
+ "169": {
+  "task_id": 169,
+  "fn": "get_pell",
+  "reply_tokens": 159,
+  "done_reason": "stop",
+  "block_sha256": "4aae633f493a370e",
+  "model_name": "get_pell",
+  "stage": "task",
+  "name": "mbpp_169__get_pell",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": true
+ },
+ "201": {
+  "task_id": 201,
+  "fn": "chkList",
+  "reply_tokens": 380,
+  "done_reason": "stop",
+  "block_sha256": "25b33f610083c0a1",
+  "model_name": "chkList",
+  "stage": "task",
+  "name": "mbpp_201__chkList",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "240": {
+  "task_id": 240,
+  "fn": "replace_list",
+  "reply_tokens": 123,
+  "done_reason": "stop",
+  "block_sha256": "7d6619d0595de53c",
+  "model_name": "replace_list",
+  "stage": "task",
+  "name": "mbpp_240__replace_list",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 0,
+  "selfcall": false
+ },
+ "281": {
+  "task_id": 281,
+  "fn": "all_unique",
+  "reply_tokens": 218,
+  "done_reason": "stop",
+  "block_sha256": "1963e7399f2d43d4",
+  "model_name": "all_unique",
+  "stage": "task",
+  "name": "mbpp_281__all_unique",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "316": {
+  "task_id": 316,
+  "fn": "find_last_occurrence",
+  "reply_tokens": 229,
+  "done_reason": "stop",
+  "block_sha256": "1e890644d21b5486",
+  "model_name": "find_last_occurrence",
+  "stage": "task",
+  "name": "mbpp_316__find_last_occurrence",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "329": {
+  "task_id": 329,
+  "fn": "neg_count",
+  "reply_tokens": 185,
+  "done_reason": "stop",
+  "block_sha256": "9013d27f7c727f3b",
+  "model_name": "neg_count",
+  "stage": "task",
+  "name": "mbpp_329__neg_count",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "345": {
+  "task_id": 345,
+  "fn": "diff_consecutivenums",
+  "reply_tokens": 177,
+  "done_reason": "stop",
+  "block_sha256": "c8b6152aa21073c1",
+  "model_name": "diff_consecutivenums",
+  "stage": "task",
+  "name": "mbpp_345__diff_consecutivenums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "385": {
+  "task_id": 385,
+  "fn": "get_perrin",
+  "reply_tokens": 196,
+  "done_reason": "stop",
+  "block_sha256": "02473c7470a32038",
+  "model_name": "get_perrin",
+  "stage": "task",
+  "name": "mbpp_385__get_perrin",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": true
+ },
+ "414": {
+  "task_id": 414,
+  "fn": "overlapping",
+  "reply_tokens": 265,
+  "done_reason": "stop",
+  "block_sha256": "7833c358a27fafcd",
+  "model_name": "overlapping",
+  "stage": "task",
+  "name": "mbpp_414__overlapping",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "426": {
+  "task_id": 426,
+  "fn": "filter_oddnumbers",
+  "reply_tokens": 240,
+  "done_reason": "stop",
+  "block_sha256": "376632f8d5700b4c",
+  "model_name": "filter_oddnumbers",
+  "stage": "task",
+  "name": "mbpp_426__filter_oddnumbers",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "466": {
+  "task_id": 466,
+  "fn": "find_peak",
+  "reply_tokens": 190,
+  "done_reason": "stop",
+  "block_sha256": "3e25c7904fdd20ab",
+  "model_name": "find_peak",
+  "stage": "task",
+  "name": "mbpp_466__find_peak",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "503": {
+  "task_id": 503,
+  "fn": "add_consecutive_nums",
+  "reply_tokens": 193,
+  "done_reason": "stop",
+  "block_sha256": "70b33c4203d1aefb",
+  "model_name": "add_consecutive_nums",
+  "stage": "task",
+  "name": "mbpp_503__add_consecutive_nums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "506": {
+  "task_id": 506,
+  "fn": "permutation_coefficient",
+  "reply_tokens": 179,
+  "done_reason": "stop",
+  "block_sha256": "251d83cb7c198a47",
+  "model_name": "permutation_coefficient",
+  "stage": "wf",
+  "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+ },
+ "509": {
+  "task_id": 509,
+  "fn": "average_Odd",
+  "reply_tokens": 181,
+  "done_reason": "stop",
+  "block_sha256": "474713e32f77471f",
+  "model_name": "average_Odd",
+  "stage": "task",
+  "name": "mbpp_509__average_Odd",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "517": {
+  "task_id": 517,
+  "fn": "largest_pos",
+  "reply_tokens": 211,
+  "done_reason": "stop",
+  "block_sha256": "fe1f72fa65b577d1",
+  "model_name": "largest_pos",
+  "stage": "task",
+  "name": "mbpp_517__largest_pos",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "518": {
+  "task_id": 518,
+  "fn": "sqrt_root",
+  "reply_tokens": 114,
+  "done_reason": "stop",
+  "block_sha256": "f34d89519aba7190",
+  "model_name": "sqrt_root",
+  "stage": "task",
+  "name": "mbpp_518__sqrt_root",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "525": {
+  "task_id": 525,
+  "fn": "parallel_lines",
+  "reply_tokens": 262,
+  "done_reason": "stop",
+  "block_sha256": "576c8fc31a57510a",
+  "model_name": "parallel_lines",
+  "stage": "task",
+  "name": "mbpp_525__parallel_lines",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "567": {
+  "task_id": 567,
+  "fn": "issort_list",
+  "reply_tokens": 162,
+  "done_reason": "stop",
+  "block_sha256": "c884934d60c12900",
+  "model_name": "issort_list",
+  "stage": "task",
+  "name": "mbpp_567__issort_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "593": {
+  "task_id": 593,
+  "fn": "removezero_ip",
+  "reply_tokens": 242,
+  "done_reason": "stop",
+  "block_sha256": "c881f9726fd704d4",
+  "model_name": "removezero_ip",
+  "stage": "task",
+  "name": "mbpp_593__removezero_ip",
+  "t": 1,
+  "gate": null,
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "594": {
+  "task_id": 594,
+  "fn": "diff_even_odd",
+  "reply_tokens": 188,
+  "done_reason": "stop",
+  "block_sha256": "7f2c841fb47b5d1f",
+  "model_name": "diff_even_odd",
+  "stage": "spec-changed",
+  "name": "mbpp_594__diff_even_odd",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": false,
+  "why": "requires, signature or an original ensures was changed"
+ },
+ "629": {
+  "task_id": 629,
+  "fn": "Split",
+  "reply_tokens": 311,
+  "done_reason": "stop",
+  "block_sha256": "981e7df6e04aa7a7",
+  "model_name": "Split",
+  "stage": "task",
+  "name": "mbpp_629__Split",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "663": {
+  "task_id": 663,
+  "fn": "find_max_val",
+  "reply_tokens": 152,
+  "done_reason": "stop",
+  "block_sha256": "3f0124de14b8005d",
+  "model_name": "find_max_val",
+  "stage": "task",
+  "name": "mbpp_663__find_max_val",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "664": {
+  "task_id": 664,
+  "fn": "average_Even",
+  "reply_tokens": 183,
+  "done_reason": "stop",
+  "block_sha256": "a6406c022dcc59a6",
+  "model_name": "average_Even",
+  "stage": "task",
+  "name": "mbpp_664__average_Even",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "668": {
+  "task_id": 668,
+  "fn": "replace",
+  "reply_tokens": 188,
+  "done_reason": "stop",
+  "block_sha256": "160a579c5ea0a101",
+  "model_name": "replace",
+  "stage": "task",
+  "name": "mbpp_668__replace",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "680": {
+  "task_id": 680,
+  "fn": "increasing_trend",
+  "reply_tokens": 151,
+  "done_reason": "stop",
+  "block_sha256": "fcf9920dd5bec3dc",
+  "model_name": "increasing_trend",
+  "stage": "task",
+  "name": "mbpp_680__increasing_trend",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "690": {
+  "task_id": 690,
+  "fn": "mul_consecutive_nums",
+  "reply_tokens": 193,
+  "done_reason": "stop",
+  "block_sha256": "43447b07a45d3da9",
+  "model_name": "mul_consecutive_nums",
+  "stage": "task",
+  "name": "mbpp_690__mul_consecutive_nums",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "730": {
+  "task_id": 730,
+  "fn": "consecutive_duplicates",
+  "reply_tokens": 211,
+  "done_reason": "stop",
+  "block_sha256": "27ed7733046c19a0",
+  "model_name": "consecutive_duplicates",
+  "stage": "task",
+  "name": "mbpp_730__consecutive_duplicates",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "741": {
+  "task_id": 741,
+  "fn": "all_Characters_Same",
+  "reply_tokens": 236,
+  "done_reason": "stop",
+  "block_sha256": "69197e373e47eeee",
+  "model_name": "all_Characters_Same",
+  "stage": "task",
+  "name": "mbpp_741__all_Characters_Same",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 2,
+  "selfcall": false
+ },
+ "754": {
+  "task_id": 754,
+  "fn": "extract_index_list",
+  "reply_tokens": 249,
+  "done_reason": "stop",
+  "block_sha256": "8b9ef73b4a3d880a",
+  "model_name": "extract_index_list",
+  "stage": "task",
+  "name": "mbpp_754__extract_index_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq",
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "775": {
+  "task_id": 775,
+  "fn": "odd_position",
+  "reply_tokens": 179,
+  "done_reason": "stop",
+  "block_sha256": "b4b25ebc76408e1d",
+  "model_name": "odd_position",
+  "stage": "task",
+  "name": "mbpp_775__odd_position",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "786": {
+  "task_id": 786,
+  "fn": "right_insertion",
+  "reply_tokens": 237,
+  "done_reason": "stop",
+  "block_sha256": "4fde45c0af0254ba",
+  "model_name": "right_insertion",
+  "stage": "task",
+  "name": "mbpp_786__right_insertion",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "804": {
+  "task_id": 804,
+  "fn": "is_Product_Even",
+  "reply_tokens": 165,
+  "done_reason": "stop",
+  "block_sha256": "de42a6255a59ea8c",
+  "model_name": "is_Product_Even",
+  "stage": "task",
+  "name": "mbpp_804__is_Product_Even",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "810": {
+  "task_id": 810,
+  "fn": "count_variable",
+  "reply_tokens": 507,
+  "done_reason": "stop",
+  "block_sha256": "876ad60850e0fe9f",
+  "model_name": "count_variable",
+  "stage": "task",
+  "name": "mbpp_810__count_variable",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "int",
+   "int",
+   "int",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 4,
+  "selfcall": false
+ },
+ "815": {
+  "task_id": 815,
+  "fn": "sort_by_dnf",
+  "reply_tokens": 388,
+  "done_reason": "stop",
+  "block_sha256": "105f6fa191c4dcd8",
+  "model_name": "sort_by_dnf",
+  "stage": "task",
+  "name": "mbpp_815__sort_by_dnf",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "824": {
+  "task_id": 824,
+  "fn": "remove_even",
+  "reply_tokens": 211,
+  "done_reason": "stop",
+  "block_sha256": "5bfc1d02158a7f06",
+  "model_name": "remove_even",
+  "stage": "task",
+  "name": "mbpp_824__remove_even",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "852": {
+  "task_id": 852,
+  "fn": "remove_negs",
+  "reply_tokens": 260,
+  "done_reason": "stop",
+  "block_sha256": "12d34f2ea757ab4e",
+  "model_name": "remove_negs",
+  "stage": "task",
+  "name": "mbpp_852__remove_negs",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "865": {
+  "task_id": 865,
+  "fn": "ntimes_list",
+  "reply_tokens": 185,
+  "done_reason": "stop",
+  "block_sha256": "ab1cef4c617a0034",
+  "model_name": "ntimes_list",
+  "stage": "task",
+  "name": "mbpp_865__ntimes_list",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "seq",
+  "loops": 1,
+  "selfcall": false
+ },
+ "870": {
+  "task_id": 870,
+  "fn": "sum_positivenum",
+  "reply_tokens": 190,
+  "done_reason": "stop",
+  "block_sha256": "6932271a25f30920",
+  "model_name": "sum_positivenum",
+  "stage": "task",
+  "name": "mbpp_870__sum_positivenum",
+  "t": 1,
+  "gate": "quantifiers",
+  "params": [
+   "seq"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "885": {
+  "task_id": 885,
+  "fn": "is_Isomorphic",
+  "reply_tokens": 198,
+  "done_reason": "stop",
+  "block_sha256": "d5f501a57024fddc",
+  "model_name": "is_Isomorphic",
+  "stage": "task",
+  "name": "mbpp_885__is_Isomorphic",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "seq"
+  ],
+  "returns": "bool",
+  "loops": 1,
+  "selfcall": false
+ },
+ "908": {
+  "task_id": 908,
+  "fn": "find_fixed_point",
+  "reply_tokens": 208,
+  "done_reason": "stop",
+  "block_sha256": "3d2b8ae740db9621",
+  "model_name": "find_fixed_point",
+  "stage": "task",
+  "name": "mbpp_908__find_fixed_point",
+  "t": 1,
+  "gate": "loops",
+  "params": [
+   "seq",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 1,
+  "selfcall": false
+ },
+ "934": {
+  "task_id": 934,
+  "fn": "dealnnoy_num",
+  "reply_tokens": 227,
+  "done_reason": "stop",
+  "block_sha256": "c84515348d1f68f3",
+  "model_name": "dealnnoy_num",
+  "stage": "task",
+  "name": "mbpp_934__dealnnoy_num",
+  "t": 1,
+  "gate": "recursion",
+  "params": [
+   "int",
+   "int"
+  ],
+  "returns": "int",
+  "loops": 0,
+  "selfcall": true
+ }
+}

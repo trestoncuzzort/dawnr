@@ -1,0 +1,329 @@
+{
+ "20": {
+  "name": "mbpp_20__is_woodall",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "51": {
+  "name": "mbpp_51__check_equilateral",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "86": {
+  "name": "mbpp_86__centered_hexagonal_number",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 271,
+    "expected": 271
+   },
+   {
+    "verdict": "pass",
+    "got": 7,
+    "expected": 7
+   },
+   {
+    "verdict": "pass",
+    "got": 217,
+    "expected": 217
+   }
+  ]
+ },
+ "208": {
+  "name": "mbpp_208__is_decimal",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": false,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "269": {
+  "name": "mbpp_269__ascii_value",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 65,
+    "expected": 65
+   },
+   {
+    "verdict": "pass",
+    "got": 82,
+    "expected": 82
+   },
+   {
+    "verdict": "pass",
+    "got": 83,
+    "expected": 83
+   }
+  ]
+ },
+ "334": {
+  "name": "mbpp_334__check_Validity",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "345": {
+  "name": "mbpp_345__diff_consecutivenums",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     0,
+     2,
+     1,
+     0,
+     1,
+     1,
+     1
+    ],
+    "expected": [
+     0,
+     2,
+     1,
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     3,
+     1,
+     -3,
+     4
+    ],
+    "expected": [
+     1,
+     3,
+     1,
+     -3,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     2
+    ],
+    "expected": [
+     1,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "355": {
+  "name": "mbpp_355__count_Rectangles",
+  "overall": "undefined",
+  "points": [
+   {
+    "verdict": "undefined",
+    "why": "r read before assignment"
+   },
+   {
+    "verdict": "undefined",
+    "why": "r read before assignment"
+   },
+   {
+    "verdict": "undefined",
+    "why": "r read before assignment"
+   }
+  ]
+ },
+ "626": {
+  "name": "mbpp_626__triangle_area",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 0,
+    "expected": 0
+   },
+   {
+    "verdict": "requires-excluded"
+   },
+   {
+    "verdict": "fail",
+    "got": 1,
+    "expected": 4
+   }
+  ]
+ },
+ "719": {
+  "name": "mbpp_719__text_match",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     99
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "requires-excluded"
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     98,
+     98,
+     97
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   }
+  ]
+ },
+ "882": {
+  "name": "mbpp_882__parallelogram_perimeter",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": 60,
+    "expected": 400
+   },
+   {
+    "verdict": "fail",
+    "got": 70,
+    "expected": 600
+   },
+   {
+    "verdict": "fail",
+    "got": 34,
+    "expected": 144
+   }
+  ]
+ },
+ "900": {
+  "name": "mbpp_900__match_num",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": true,
+    "expected": false
+   },
+   {
+    "verdict": "requires-excluded"
+   }
+  ]
+ }
+}

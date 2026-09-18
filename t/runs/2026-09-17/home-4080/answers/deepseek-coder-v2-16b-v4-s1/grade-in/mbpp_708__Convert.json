@@ -1,0 +1,150 @@
+{
+ "t": 1,
+ "name": "mbpp_708__Convert",
+ "params": [
+  {
+   "name": "s",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": {
+    "seq": "seq"
+   }
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "op": "len",
+     "args": [
+      {
+       "op": "split",
+       "args": [
+        {
+         "var": "s"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "body": {
+     "op": ">",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "op": "at",
+         "args": [
+          {
+           "var": "r"
+          },
+          {
+           "var": "i"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "int": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "forall": {
+    "var": "i",
+    "lo": {
+     "int": 0
+    },
+    "hi": {
+     "op": "len",
+     "args": [
+      {
+       "var": "r"
+      }
+     ]
+    },
+    "body": {
+     "op": "==",
+     "args": [
+      {
+       "op": "at",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "var": "i"
+        }
+       ]
+      },
+      {
+       "op": "at",
+       "args": [
+        {
+         "op": "split",
+         "args": [
+          {
+           "var": "s"
+          }
+         ]
+        },
+        {
+         "var": "i"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "split",
+     "args": [
+      {
+       "var": "s"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

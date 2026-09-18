@@ -1,0 +1,863 @@
+{
+ "100013": {
+  "name": "he_13__greatest_common_divisor",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 5,
+    "expected": 5
+   },
+   {
+    "verdict": "pass",
+    "got": 7,
+    "expected": 7
+   },
+   {
+    "verdict": "pass",
+    "got": 12,
+    "expected": 12
+   }
+  ]
+ },
+ "100017": {
+  "name": "he_17__parse_music",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     4,
+     4,
+     4,
+     4
+    ],
+    "expected": [
+     4,
+     4,
+     4,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "expected": [
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     2,
+     1,
+     1,
+     4,
+     4,
+     4,
+     4
+    ],
+    "expected": [
+     2,
+     2,
+     1,
+     1,
+     4,
+     4,
+     4,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     1,
+     2,
+     1,
+     4,
+     2,
+     4,
+     2
+    ],
+    "expected": [
+     2,
+     1,
+     2,
+     1,
+     4,
+     2,
+     4,
+     2
+    ]
+   }
+  ]
+ },
+ "100024": {
+  "name": "he_24__largest_divisor",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 5,
+    "expected": 5
+   },
+   {
+    "verdict": "pass",
+    "got": 50,
+    "expected": 50
+   },
+   {
+    "verdict": "pass",
+    "got": 7,
+    "expected": 7
+   }
+  ]
+ },
+ "100041": {
+  "name": "he_41__car_race_collision",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": 9,
+    "expected": 9
+   },
+   {
+    "verdict": "pass",
+    "got": 16,
+    "expected": 16
+   },
+   {
+    "verdict": "pass",
+    "got": 64,
+    "expected": 64
+   },
+   {
+    "verdict": "pass",
+    "got": 100,
+    "expected": 100
+   }
+  ]
+ },
+ "100042": {
+  "name": "he_42__incr_list",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     4,
+     3,
+     2
+    ],
+    "expected": [
+     4,
+     3,
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     6,
+     3,
+     6,
+     3,
+     4,
+     4,
+     10,
+     1,
+     124
+    ],
+    "expected": [
+     6,
+     3,
+     6,
+     3,
+     4,
+     4,
+     10,
+     1,
+     124
+    ]
+   }
+  ]
+ },
+ "100048": {
+  "name": "he_48__is_palindrome",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "100054": {
+  "name": "he_54__same_chars",
+  "overall": "fail",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "fail",
+    "got": true,
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": true,
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": true,
+    "expected": false
+   },
+   {
+    "verdict": "fail",
+    "got": true,
+    "expected": false
+   }
+  ]
+ },
+ "100055": {
+  "name": "he_55__fib",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 55,
+    "expected": 55
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 21,
+    "expected": 21
+   },
+   {
+    "verdict": "pass",
+    "got": 89,
+    "expected": 89
+   },
+   {
+    "verdict": "pass",
+    "got": 144,
+    "expected": 144
+   }
+  ]
+ },
+ "100062": {
+  "name": "he_62__derivative",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     4,
+     12,
+     20
+    ],
+    "expected": [
+     1,
+     4,
+     12,
+     20
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     6
+    ],
+    "expected": [
+     2,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     2
+    ],
+    "expected": [
+     2,
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     2,
+     0,
+     16
+    ],
+    "expected": [
+     2,
+     2,
+     0,
+     16
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [],
+    "expected": []
+   }
+  ]
+ },
+ "100080": {
+  "name": "he_80__is_happy",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "100089": {
+  "name": "he_89__encrypt",
+  "overall": "signature",
+  "points": [
+   {
+    "verdict": "fail",
+    "got": [
+     112,
+     113
+    ],
+    "expected": [
+     108,
+     109
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     105,
+     97,
+     108,
+     110,
+     111,
+     112,
+     114,
+     115,
+     116
+    ],
+    "expected": [
+     101,
+     119,
+     104,
+     106,
+     107,
+     108,
+     110,
+     111,
+     112
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     111,
+     110
+    ],
+    "expected": [
+     107,
+     106
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     109,
+     98
+    ],
+    "expected": [
+     105,
+     120
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     110,
+     105,
+     109,
+     101,
+     110,
+     105,
+     101,
+     109,
+     110,
+     105,
+     109,
+     101,
+     111
+    ],
+    "expected": [
+     106,
+     101,
+     105,
+     97,
+     106,
+     101,
+     97,
+     105,
+     106,
+     101,
+     105,
+     97,
+     107
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     112,
+     109,
+     116,
+     116,
+     119,
+     117,
+     103,
+     110,
+     122,
+     113,
+     109,
+     118,
+     108
+    ],
+    "expected": [
+     108,
+     105,
+     112,
+     112,
+     115,
+     113,
+     99,
+     106,
+     118,
+     109,
+     105,
+     114,
+     104
+    ]
+   },
+   {
+    "verdict": "fail",
+    "got": [
+     108,
+     102,
+     104,
+     108,
+     116,
+     117,
+     118,
+     113,
+     116,
+     110,
+     99,
+     112,
+     117,
+     113,
+     116,
+     99,
+     110,
+     112,
+     116,
+     113,
+     112,
+     99,
+     110,
+     118,
+     117,
+     116,
+     113,
+     117,
+     118,
+     99,
+     110,
+     112,
+     116,
+     113,
+     117,
+     118,
+     99,
+     110,
+     112,
+     110,
+     99,
+     107,
+     99,
+     110,
+     112
+    ],
+    "expected": [
+     104,
+     98,
+     100,
+     104,
+     112,
+     113,
+     114,
+     109,
+     112,
+     106,
+     121,
+     108,
+     113,
+     109,
+     112,
+     121,
+     106,
+     108,
+     112,
+     109,
+     108,
+     121,
+     106,
+     114,
+     113,
+     112,
+     109,
+     113,
+     114,
+     121,
+     106,
+     108,
+     112,
+     109,
+     113,
+     114,
+     121,
+     106,
+     108,
+     106,
+     121,
+     103,
+     121,
+     106,
+     108
+    ]
+   },
+   {
+    "verdict": "type",
+    "why": "s is seq, test passes int"
+   }
+  ]
+ },
+ "100140": {
+  "name": "he_140__fix_spaces",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     69,
+     120,
+     97,
+     109,
+     112,
+     108,
+     101
+    ],
+    "expected": [
+     69,
+     120,
+     97,
+     109,
+     112,
+     108,
+     101
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     77,
+     117,
+     100,
+     97,
+     115,
+     105,
+     114,
+     95,
+     72,
+     97,
+     110,
+     105,
+     102,
+     95
+    ],
+    "expected": [
+     77,
+     117,
+     100,
+     97,
+     115,
+     105,
+     114,
+     95,
+     72,
+     97,
+     110,
+     105,
+     102,
+     95
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     89,
+     101,
+     108,
+     108,
+     111,
+     119,
+     95,
+     89,
+     101,
+     108,
+     108,
+     111,
+     119,
+     95,
+     95,
+     68,
+     105,
+     114,
+     116,
+     121,
+     95,
+     95,
+     70,
+     101,
+     108,
+     108,
+     111,
+     119
+    ],
+    "expected": [
+     89,
+     101,
+     108,
+     108,
+     111,
+     119,
+     95,
+     89,
+     101,
+     108,
+     108,
+     111,
+     119,
+     95,
+     95,
+     68,
+     105,
+     114,
+     116,
+     121,
+     95,
+     95,
+     70,
+     101,
+     108,
+     108,
+     111,
+     119
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     69,
+     120,
+     97,
+     45,
+     109,
+     112,
+     108,
+     101
+    ],
+    "expected": [
+     69,
+     120,
+     97,
+     45,
+     109,
+     112,
+     108,
+     101
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     45,
+     69,
+     120,
+     97,
+     95,
+     49,
+     95,
+     50,
+     95,
+     50,
+     95,
+     109,
+     112,
+     108,
+     101
+    ],
+    "expected": [
+     45,
+     69,
+     120,
+     97,
+     95,
+     49,
+     95,
+     50,
+     95,
+     50,
+     95,
+     109,
+     112,
+     108,
+     101
+    ]
+   }
+  ]
+ }
+}

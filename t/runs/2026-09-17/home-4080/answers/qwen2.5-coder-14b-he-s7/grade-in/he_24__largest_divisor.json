@@ -1,0 +1,196 @@
+{
+ "t": 1,
+ "gate": "loops",
+ "name": "he_24__largest_divisor",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "<",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "n"
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "op": "mod",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "r"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "and",
+     "args": [
+      {
+       "op": ">",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "int": 0
+        }
+       ]
+      },
+      {
+       "op": "!=",
+       "args": [
+        {
+         "op": "mod",
+         "args": [
+          {
+           "var": "n"
+          },
+          {
+           "var": "r"
+          }
+         ]
+        },
+        {
+         "int": 0
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": "<",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "var": "n"
+       }
+      ]
+     },
+     {
+      "op": "implies",
+      "args": [
+       {
+        "op": "==",
+        "args": [
+         {
+          "op": "mod",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "var": "r"
+           }
+          ]
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       {
+        "op": "==",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "op": "-",
+          "args": [
+           {
+            "var": "n"
+           },
+           {
+            "int": 1
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "r"
+    },
+    "body": [
+     {
+      "assign": [
+       "r",
+       {
+        "op": "-",
+        "args": [
+         {
+          "var": "r"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

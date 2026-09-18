@@ -1,0 +1,323 @@
+{
+ "t": 1,
+ "name": "mbpp_897__is_Word_Present",
+ "params": [
+  {
+   "name": "sentence",
+   "type": "seq"
+  },
+  {
+   "name": "word",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "sentence"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "op": "len",
+     "args": [
+      {
+       "var": "word"
+      }
+     ]
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "!=",
+     "args": [
+      {
+       "op": "find",
+       "args": [
+        {
+         "var": "sentence"
+        },
+        {
+         "var": "word"
+        }
+       ]
+      },
+      {
+       "int": -1
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "bool": false
+    }
+   ]
+  },
+  {
+   "var": {
+    "name": "i",
+    "type": "int",
+    "init": {
+     "int": 0
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": "<=",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "-",
+       "args": [
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "sentence"
+          }
+         ]
+        },
+        {
+         "op": "len",
+         "args": [
+          {
+           "var": "word"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "<=",
+      "args": [
+       {
+        "var": "i"
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "op": "-",
+          "args": [
+           {
+            "op": "len",
+            "args": [
+             {
+              "var": "sentence"
+             }
+            ]
+           },
+           {
+            "op": "len",
+            "args": [
+             {
+              "var": "word"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "forall": {
+         "var": "j",
+         "lo": {
+          "int": 0
+         },
+         "hi": {
+          "var": "i"
+         },
+         "body": {
+          "op": "!=",
+          "args": [
+           {
+            "op": "slice",
+            "args": [
+             {
+              "var": "sentence"
+             },
+             {
+              "var": "j"
+             },
+             {
+              "op": "+",
+              "args": [
+               {
+                "var": "j"
+               },
+               {
+                "op": "len",
+                "args": [
+                 {
+                  "var": "word"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "var": "word"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "op": "-",
+     "args": [
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "sentence"
+        }
+       ]
+      },
+      {
+       "var": "i"
+      }
+     ]
+    },
+    "body": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "op": "slice",
+          "args": [
+           {
+            "var": "sentence"
+           },
+           {
+            "var": "i"
+           },
+           {
+            "op": "+",
+            "args": [
+             {
+              "var": "i"
+             },
+             {
+              "op": "len",
+              "args": [
+               {
+                "var": "word"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "var": "word"
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "bool": true
+          }
+         ]
+        }
+       ],
+       "else": []
+      }
+     },
+     {
+      "assign": [
+       "i",
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "i"
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

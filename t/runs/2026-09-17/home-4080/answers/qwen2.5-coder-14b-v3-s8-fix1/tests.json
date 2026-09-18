@@ -1,0 +1,1494 @@
+{
+ "19": {
+  "name": "mbpp_19__test_duplicate",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "41": {
+  "name": "mbpp_41__filter_evennumbers",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ],
+    "expected": [
+     2,
+     4,
+     6,
+     8,
+     10
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     10,
+     20,
+     84
+    ],
+    "expected": [
+     10,
+     20,
+     84
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     8,
+     6,
+     4
+    ],
+    "expected": [
+     8,
+     6,
+     4
+    ]
+   }
+  ]
+ },
+ "46": {
+  "name": "mbpp_46__test_distinct",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "159": {
+  "name": "mbpp_159__month_season",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     119,
+     105,
+     110,
+     116,
+     101,
+     114
+    ],
+    "expected": [
+     119,
+     105,
+     110,
+     116,
+     101,
+     114
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     97,
+     117,
+     116,
+     117,
+     109,
+     110
+    ],
+    "expected": [
+     97,
+     117,
+     116,
+     117,
+     109,
+     110
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     115,
+     112,
+     114,
+     105,
+     110,
+     103
+    ],
+    "expected": [
+     115,
+     112,
+     114,
+     105,
+     110,
+     103
+    ]
+   }
+  ]
+ },
+ "192": {
+  "name": "mbpp_192__check_String",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "201": {
+  "name": "mbpp_201__chkList",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "240": {
+  "name": "mbpp_240__replace_list",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     3,
+     5,
+     7,
+     9,
+     2,
+     4,
+     6,
+     8
+    ],
+    "expected": [
+     1,
+     3,
+     5,
+     7,
+     9,
+     2,
+     4,
+     6,
+     8
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     [
+      114,
+      101,
+      100
+     ],
+     [
+      98,
+      108,
+      117,
+      101
+     ],
+     [
+      121,
+      101,
+      108,
+      108,
+      111,
+      119
+     ]
+    ],
+    "expected": [
+     [
+      114,
+      101,
+      100
+     ],
+     [
+      98,
+      108,
+      117,
+      101
+     ],
+     [
+      121,
+      101,
+      108,
+      108,
+      111,
+      119
+     ]
+    ]
+   }
+  ]
+ },
+ "281": {
+  "name": "mbpp_281__all_unique",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "285": {
+  "name": "mbpp_285__text_match_two_three",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   }
+  ]
+ },
+ "345": {
+  "name": "mbpp_345__diff_consecutivenums",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     0,
+     2,
+     1,
+     0,
+     1,
+     1,
+     1
+    ],
+    "expected": [
+     0,
+     2,
+     1,
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     3,
+     1,
+     -3,
+     4
+    ],
+    "expected": [
+     1,
+     3,
+     1,
+     -3,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     2
+    ],
+    "expected": [
+     1,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "352": {
+  "name": "mbpp_352__unique_Characters",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "356": {
+  "name": "mbpp_356__find_angle",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 44,
+    "expected": 44
+   },
+   {
+    "verdict": "pass",
+    "got": 40,
+    "expected": 40
+   },
+   {
+    "verdict": "pass",
+    "got": 90,
+    "expected": 90
+   }
+  ]
+ },
+ "378": {
+  "name": "mbpp_378__move_first",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     4,
+     1,
+     2,
+     3
+    ],
+    "expected": [
+     4,
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     3,
+     0,
+     1,
+     2
+    ],
+    "expected": [
+     3,
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     9,
+     8,
+     7
+    ],
+    "expected": [
+     1,
+     9,
+     8,
+     7
+    ]
+   }
+  ]
+ },
+ "412": {
+  "name": "mbpp_412__remove_odd",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     2
+    ],
+    "expected": [
+     2
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     4,
+     6
+    ],
+    "expected": [
+     2,
+     4,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     10,
+     20
+    ],
+    "expected": [
+     10,
+     20
+    ]
+   }
+  ]
+ },
+ "414": {
+  "name": "mbpp_414__overlapping",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "472": {
+  "name": "mbpp_472__check_Consecutive",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "517": {
+  "name": "mbpp_517__largest_pos",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": 6,
+    "expected": 6
+   },
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   }
+  ]
+ },
+ "629": {
+  "name": "mbpp_629__Split",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     4
+    ],
+    "expected": [
+     2,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     4,
+     6,
+     8,
+     0
+    ],
+    "expected": [
+     4,
+     6,
+     8,
+     0
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     8,
+     12
+    ],
+    "expected": [
+     8,
+     12
+    ]
+   }
+  ]
+ },
+ "632": {
+  "name": "mbpp_632__move_zero",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     2,
+     3,
+     4,
+     0,
+     0
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     4,
+     0,
+     0
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     3,
+     2,
+     4,
+     5,
+     0,
+     0,
+     0,
+     0
+    ],
+    "expected": [
+     2,
+     3,
+     2,
+     4,
+     5,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     1,
+     1,
+     0,
+     0
+    ],
+    "expected": [
+     1,
+     1,
+     1,
+     0,
+     0
+    ]
+   }
+  ]
+ },
+ "644": {
+  "name": "mbpp_644__reverse_Array_Upto_K",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     4,
+     3,
+     2,
+     1,
+     5,
+     6
+    ],
+    "expected": [
+     4,
+     3,
+     2,
+     1,
+     5,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     5,
+     4,
+     6,
+     7
+    ],
+    "expected": [
+     5,
+     4,
+     6,
+     7
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     7,
+     8,
+     9,
+     6,
+     5
+    ],
+    "expected": [
+     7,
+     8,
+     9,
+     6,
+     5
+    ]
+   }
+  ]
+ },
+ "666": {
+  "name": "mbpp_666__count_char",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   },
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   }
+  ]
+ },
+ "668": {
+  "name": "mbpp_668__replace",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     112,
+     101,
+     112
+    ],
+    "expected": [
+     112,
+     101,
+     112
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     71,
+     114,
+     101,
+     107
+    ],
+    "expected": [
+     71,
+     114,
+     101,
+     107
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     77,
+     111,
+     110
+    ],
+    "expected": [
+     77,
+     111,
+     110
+    ]
+   }
+  ]
+ },
+ "680": {
+  "name": "mbpp_680__increasing_trend",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   }
+  ]
+ },
+ "706": {
+  "name": "mbpp_706__is_subset",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": true,
+    "expected": true
+   },
+   {
+    "verdict": "pass",
+    "got": false,
+    "expected": false
+   }
+  ]
+ },
+ "730": {
+  "name": "mbpp_730__consecutive_duplicates",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     4
+    ],
+    "expected": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     4
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     10,
+     15,
+     19,
+     18,
+     17,
+     26,
+     17,
+     18,
+     10
+    ],
+    "expected": [
+     10,
+     15,
+     19,
+     18,
+     17,
+     26,
+     17,
+     18,
+     10
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     97,
+     98,
+     99,
+     100
+    ],
+    "expected": [
+     97,
+     98,
+     99,
+     100
+    ]
+   }
+  ]
+ },
+ "736": {
+  "name": "mbpp_736__left_insertion",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   },
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   }
+  ]
+ },
+ "754": {
+  "name": "mbpp_754__extract_index_list",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     7
+    ],
+    "expected": [
+     1,
+     7
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     6
+    ],
+    "expected": [
+     1,
+     6
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     5
+    ],
+    "expected": [
+     1,
+     5
+    ]
+   }
+  ]
+ },
+ "794": {
+  "name": "mbpp_794__text_starta_endb",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ],
+    "expected": [
+     70,
+     111,
+     117,
+     110,
+     100,
+     32,
+     97,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     33
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ],
+    "expected": [
+     78,
+     111,
+     116,
+     32,
+     109,
+     97,
+     116,
+     99,
+     104,
+     101,
+     100,
+     33
+    ]
+   }
+  ]
+ },
+ "802": {
+  "name": "mbpp_802__count_Rotation",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 1,
+    "expected": 1
+   },
+   {
+    "verdict": "pass",
+    "got": 2,
+    "expected": 2
+   },
+   {
+    "verdict": "pass",
+    "got": 3,
+    "expected": 3
+   }
+  ]
+ },
+ "824": {
+  "name": "mbpp_824__remove_even",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     3,
+     5
+    ],
+    "expected": [
+     1,
+     3,
+     5
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     5,
+     7
+    ],
+    "expected": [
+     5,
+     7
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     3
+    ],
+    "expected": [
+     1,
+     3
+    ]
+   }
+  ]
+ },
+ "825": {
+  "name": "mbpp_825__access_elements",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     4,
+     9
+    ],
+    "expected": [
+     2,
+     4,
+     9
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     2,
+     3
+    ],
+    "expected": [
+     2,
+     3
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     0
+    ],
+    "expected": [
+     1,
+     0
+    ]
+   }
+  ]
+ },
+ "890": {
+  "name": "mbpp_890__find_Extra",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": 3,
+    "expected": 3
+   },
+   {
+    "verdict": "pass",
+    "got": 4,
+    "expected": 4
+   },
+   {
+    "verdict": "pass",
+    "got": 5,
+    "expected": 5
+   }
+  ]
+ },
+ "928": {
+  "name": "mbpp_928__change_date_format",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     48,
+     50,
+     45,
+     48,
+     49,
+     45,
+     50,
+     48,
+     50,
+     54
+    ],
+    "expected": [
+     48,
+     50,
+     45,
+     48,
+     49,
+     45,
+     50,
+     48,
+     50,
+     54
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     48,
+     52,
+     45,
+     48,
+     49,
+     45,
+     50,
+     48,
+     50,
+     49
+    ],
+    "expected": [
+     48,
+     52,
+     45,
+     48,
+     49,
+     45,
+     50,
+     48,
+     50,
+     49
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     48,
+     54,
+     45,
+     48,
+     54,
+     45,
+     50,
+     48,
+     51,
+     48
+    ],
+    "expected": [
+     48,
+     54,
+     45,
+     48,
+     54,
+     45,
+     50,
+     48,
+     51,
+     48
+    ]
+   }
+  ]
+ },
+ "943": {
+  "name": "mbpp_943__combine_lists",
+  "overall": "pass",
+  "points": [
+   {
+    "verdict": "pass",
+    "got": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ],
+    "expected": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     2,
+     3,
+     5,
+     5,
+     6,
+     7,
+     8,
+     9,
+     11
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     5,
+     5,
+     6,
+     7,
+     8,
+     9,
+     11
+    ]
+   },
+   {
+    "verdict": "pass",
+    "got": [
+     1,
+     2,
+     3,
+     4,
+     6,
+     7
+    ],
+    "expected": [
+     1,
+     2,
+     3,
+     4,
+     6,
+     7
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,56 @@
+{
+ "t": 0,
+ "name": "he_41__car_race_collision",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "*",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

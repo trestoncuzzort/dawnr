@@ -1,0 +1,380 @@
+{
+ "t": 1,
+ "name": "he_51__remove_vowels",
+ "params": [
+  {
+   "name": "text",
+   "type": "seq"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "seq"
+  }
+ ],
+ "requires": [],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "op": "replace",
+         "args": [
+          {
+           "op": "replace",
+           "args": [
+            {
+             "op": "replace",
+             "args": [
+              {
+               "op": "replace",
+               "args": [
+                {
+                 "op": "replace",
+                 "args": [
+                  {
+                   "op": "replace",
+                   "args": [
+                    {
+                     "op": "replace",
+                     "args": [
+                      {
+                       "op": "replace",
+                       "args": [
+                        {
+                         "var": "text"
+                        },
+                        {
+                         "op": "seq",
+                         "args": [
+                          {
+                           "int": 97
+                          }
+                         ]
+                        },
+                        {
+                         "op": "seq",
+                         "args": []
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 101
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": []
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 105
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": []
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 111
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": []
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 117
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": []
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 65
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": []
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 69
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": []
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 73
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": []
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 79
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": []
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 85
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": []
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "replace",
+     "args": [
+      {
+       "op": "replace",
+       "args": [
+        {
+         "op": "replace",
+         "args": [
+          {
+           "op": "replace",
+           "args": [
+            {
+             "op": "replace",
+             "args": [
+              {
+               "op": "replace",
+               "args": [
+                {
+                 "op": "replace",
+                 "args": [
+                  {
+                   "op": "replace",
+                   "args": [
+                    {
+                     "op": "replace",
+                     "args": [
+                      {
+                       "op": "replace",
+                       "args": [
+                        {
+                         "var": "text"
+                        },
+                        {
+                         "op": "seq",
+                         "args": [
+                          {
+                           "int": 97
+                          }
+                         ]
+                        },
+                        {
+                         "op": "seq",
+                         "args": []
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": [
+                        {
+                         "int": 101
+                        }
+                       ]
+                      },
+                      {
+                       "op": "seq",
+                       "args": []
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": [
+                      {
+                       "int": 105
+                      }
+                     ]
+                    },
+                    {
+                     "op": "seq",
+                     "args": []
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": [
+                    {
+                     "int": 111
+                    }
+                   ]
+                  },
+                  {
+                   "op": "seq",
+                   "args": []
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": [
+                  {
+                   "int": 117
+                  }
+                 ]
+                },
+                {
+                 "op": "seq",
+                 "args": []
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": [
+                {
+                 "int": 65
+                }
+               ]
+              },
+              {
+               "op": "seq",
+               "args": []
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": [
+              {
+               "int": 69
+              }
+             ]
+            },
+            {
+             "op": "seq",
+             "args": []
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": [
+            {
+             "int": 73
+            }
+           ]
+          },
+          {
+           "op": "seq",
+           "args": []
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": [
+          {
+           "int": 79
+          }
+         ]
+        },
+        {
+         "op": "seq",
+         "args": []
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": [
+        {
+         "int": 85
+        }
+       ]
+      },
+      {
+       "op": "seq",
+       "args": []
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

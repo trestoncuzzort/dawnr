@@ -1,0 +1,245 @@
+{
+ "t": 1,
+ "gate": "recursion",
+ "name": "he_13__greatest_common_divisor",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "call": {
+      "fun": "gcds",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "var": "b"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "spec_funs": [
+  {
+   "name": "gcds",
+   "params": [
+    {
+     "name": "a",
+     "type": "int"
+    },
+    {
+     "name": "b",
+     "type": "int"
+    }
+   ],
+   "result": "int",
+   "decreases": {
+    "op": "+",
+    "args": [
+     {
+      "var": "a"
+     },
+     {
+      "var": "b"
+     }
+    ]
+   },
+   "body": {
+    "ite": {
+     "cond": {
+      "op": "==",
+      "args": [
+       {
+        "var": "a"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     "then": {
+      "var": "b"
+     },
+     "else": {
+      "ite": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "b"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": {
+        "var": "a"
+       },
+       "else": {
+        "call": {
+         "fun": "gcds",
+         "args": [
+          {
+           "var": "b"
+          },
+          {
+           "op": "mod",
+           "args": [
+            {
+             "var": "a"
+            },
+            {
+             "var": "b"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ],
+ "decreases": {
+  "op": "+",
+  "args": [
+   {
+    "var": "a"
+   },
+   {
+    "var": "b"
+   }
+  ]
+ },
+ "body": [
+  {
+   "if": {
+    "cond": {
+     "op": "==",
+     "args": [
+      {
+       "var": "a"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "then": [
+     {
+      "assign": [
+       "r",
+       {
+        "var": "b"
+       }
+      ]
+     }
+    ],
+    "else": [
+     {
+      "if": {
+       "cond": {
+        "op": "==",
+        "args": [
+         {
+          "var": "b"
+         },
+         {
+          "int": 0
+         }
+        ]
+       },
+       "then": [
+        {
+         "assign": [
+          "r",
+          {
+           "var": "a"
+          }
+         ]
+        }
+       ],
+       "else": [
+        {
+         "assign": [
+          "r",
+          {
+           "call": {
+            "fun": "he_13__greatest_common_divisor",
+            "args": [
+             {
+              "var": "b"
+             },
+             {
+              "op": "mod",
+              "args": [
+               {
+                "var": "a"
+               },
+               {
+                "var": "b"
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}
