@@ -94,6 +94,27 @@ PY
       >> ~/lab-gpu/generate.log 2>&1 < /dev/null & echo 'the lab workstation has the rest'"
   ;;
 
+constrained)
+  # The constrained arm of t/PREREG-2026-09-18-constrained.md: the same 1,133 problems, the same model, prompt,
+  # temperature and seed as qwen3-coder-30b-apps-s1, with t's grammar sent on every request so the model cannot
+  # write anything the parser would refuse. Nothing else differs, which is the whole design of the comparison.
+  # Five problems first: if the grammar is not being honoured, five replies say so and 1,133 would only cost an
+  # hour to say the same.
+  GTAG=${T_LAB_GRAMMAR_TAG:-qwen3-coder-30b-apps-g1}
+  $SSH "$LAB" "curl -sf http://127.0.0.1:$PORT/v1/models >/dev/null" || {
+    echo "the server is not up; run 'bash t/lab_gpu.sh start' first (it also starts generating; stop that)"; exit 1; }
+  echo "== five problems first, as a check that the grammar is honoured"
+  $SSH "$LAB" "cd ~/tup && python3 t/spec_experiment.py generate --model '$MODEL' --tag '$GTAG-probe' \
+      --pool v5 --ids-file t/out/loop/apps-upper.txt --limit 5 --prompt v3 --seed 1 --temperature 0 \
+      --num-predict 2048 --host 127.0.0.1:$PORT --api openai --grammar t/t.gbnf --timeout 1800 --jobs 5 2>&1 | tail -3
+    python3 t/spec_experiment.py extract --model '$GTAG-probe' --pool v5 2>&1 | tail -1"
+  echo "== if that reads 5 task, the grammar is being honoured; answering all 1,133 as $GTAG"
+  $SSH "$LAB" "cd ~/tup && setsid nohup python3 t/spec_experiment.py generate --model '$MODEL' --tag '$GTAG' \
+      --pool v5 --ids-file t/out/loop/apps-upper.txt --prompt v3 --seed 1 --temperature 0 --num-predict 2048 \
+      --host 127.0.0.1:$PORT --api openai --grammar t/t.gbnf --timeout 1800 --jobs $JOBS \
+      > ~/lab-gpu/constrained.log 2>&1 < /dev/null & echo started"
+  ;;
+
 fetch)
   mkdir -p "t/out/spec-experiment/$TAG"
   rsync -a "$LAB:tup/t/out/spec-experiment/$TAG/" "t/out/spec-experiment/$TAG/"
