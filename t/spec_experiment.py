@@ -761,6 +761,11 @@ def cmd_generate(args) -> int:
     d = outdir(args.tag or args.model)
     P = pool(args.pool)
     ids = [i for i in sorted(P) if i >= getattr(args, "min_id", 0)]
+    # 2026-09-18: two machines answer the same pool, each taking its own half, so the work is split rather than
+    # duplicated (t/lab_gpu.sh gives the lab workstation the upper half)
+    if getattr(args, "ids_file", ""):
+        want = {int(x) for x in Path(args.ids_file).read_text().split()}
+        ids = [i for i in ids if i in want]
     if args.limit:
         ids = ids[:args.limit]
     options = {"temperature": args.temperature, "seed": args.seed, "num_ctx": args.num_ctx,
@@ -1223,6 +1228,7 @@ def main(argv=None) -> int:
             p.add_argument("--api", choices=("ollama", "openai"), default="ollama",
                            help="openai: an OpenAI-shaped server such as vLLM, at --host/v1/chat/completions")
             p.add_argument("--limit", type=int, default=0)
+            p.add_argument("--ids-file", default="", help="answer only the task ids in this file, one per line")
             p.add_argument("--min-id", type=int, default=0,
                            help="only problems with this task id or above (pool v4's HumanEval problems: 100000)")
             p.add_argument("--seed", type=int, default=1)

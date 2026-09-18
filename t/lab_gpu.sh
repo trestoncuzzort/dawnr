@@ -39,7 +39,7 @@ start)
     echo "the server did not come up; its log:"; $SSH "$LAB" "tail -20 ~/lab-gpu/vllm.log"; exit 1; }
   echo "== answering the APPS problems as $TAG"
   $SSH "$LAB" "cd ~/tup && setsid nohup python3 t/spec_experiment.py generate --model '$MODEL' --tag '$TAG' \
-      --pool v5 --min-id 200000 --prompt v3 --seed 1 --temperature 0 --num-predict 2048 \
+      --pool v5 --ids-file t/out/loop/apps-upper.txt --prompt v3 --seed 1 --temperature 0 --num-predict 2048 \
       --host 127.0.0.1:$PORT --api openai --timeout 1800 --jobs $JOBS \
       > ~/lab-gpu/generate.log 2>&1 < /dev/null & echo started"
   ;;
