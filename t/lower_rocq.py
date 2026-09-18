@@ -2653,6 +2653,99 @@ touching the generation pipeline).
   that used to pick `POST_SF_NIA if _has_nonlinear_mul(...) else
   POST_SF` directly), `test_lower_rocq_loop_cert.py` (two new test
   classes, no existing case edited).
+
+  NESTED AND MULTIPLE LOOPS, 2026-09-18 (ROADMAP WS-20 move 1). Until
+  today `find_while` refused two shapes outright -- "more than one loop
+  per body is not lowered yet" and "nested loops are not lowered yet" --
+  and `t/tasks/has_duplicate.t`, a `while` inside a `while` with its own
+  `invariant` lines and its own `decreases` on each, read ABSTAIN while
+  Dafny, Verus, SPARK and Frama-C all took it. Both shapes now lower,
+  through a SEPARATE path (`gen_loops`/`_loops_def`, whose own dated
+  section carries the design): whenever `find_while` still succeeds --
+  exactly one top-level loop, nothing nested -- `gen_loop` runs
+  untouched, which is the regression bar this change accepted and met.
+
+  THE MODEL. One `Fixpoint` and one `_spec` Lemma PER LOOP,
+  `{task}_loop{k}` in pre-order, an inner loop being a plain top-level
+  Fixpoint the outer one CALLS. Nothing is inlined and nothing is
+  unrolled: a loop's state is every live variable at its entry (so it is
+  closed over nothing), the call site binds the result once through
+  `let '(...) := ... in` rather than one `fst`/`snd` projection per slot
+  (which would multiply the source by slots^depth -- this file's own
+  27.7 GB scar, and `run_par.py`'s 64 MB `T_MAX_SOURCE_MB` cap, argue
+  for the `let`), and the emitted source grows LINEARLY in the loop
+  count. MEASURED: has_duplicate's real lowering is 66 KB, the
+  three-deep synthetic nest 61 KB.
+
+  THE ONE GENUINELY NEW PROOF STEP is handing the enclosing loop's
+  induction step the called loop's own `_spec` at the call site -- a
+  `try (match goal with | |- context [ {task}_loop1 ... ] => destruct
+  ...; assert the inner invariants at the entry state by t_dis; pose
+  proof its spec end)` block. Four things it took measurement to get
+  right, each written up where it is emitted: the `match goal` (a
+  literally spelled call term breaks the moment `destruct r` substitutes
+  a bool state var away), the `try` (the same text runs in every branch
+  `t_sweep` made, and the call is simply absent in the exit ones), the
+  placement AFTER `t_sweep` (the inner invariants need the OUTER guard),
+  and `cbn beta iota zeta` (the `let` is a match; the one-slot case is a
+  real let).
+
+  FOUR THINGS THE GENERIC ENGINE COULD NOT DO, each measured as a
+  90-second-plus non-finish on ONE subgoal and each fixed by a directed
+  step emitted only on this path (so no other task gains a byte):
+  (1) the exit-state variables are junk in the induction step and made
+  `t_go`'s existential arm enumerate them as witnesses -- cleared;
+  (2) an exit branch re-derived a whole invariant conjunction it already
+  had verbatim -- `repeat split; first [ assumption | ... ]`;
+  (3) an existential invariant freshly true on one branch had to be
+  WITNESSED, not searched for -- `t_gwit` peels it with evars and lets
+  the equation conjunct pick the instantiation by `eassumption`;
+  (4) the enclosing invariant that grows by one index across the inner
+  loop -- `t_gstep`, which forward-resolves implications in place
+  (`t_split1` case-splits them, and a dozen implications is 2^12
+  branches), substitutes the frame equations, and takes ONE integer
+  trichotomy. A conjunctive guard also needed its exit fact restated in
+  one-sided form (`~ (A /\\ B)` is useless to a saturation engine whose
+  implication rules want a leaf-provable antecedent).
+
+  WHAT STAYS AN ABSTAIN, BY NAME. A `return` anywhere in a body that also
+  has nested or multiple loops (composing `gen_loop`'s two-outcome early
+  exit OUT of a called loop is a second design, unbuilt); a loop under a
+  conditional (`find_while`'s own pre-existing refusal, now checked at
+  every depth rather than only the top level); an invariant-drop
+  (`exit`/`preservation`) twin witness on a general-shape body, which
+  falls back to the ordinary lowering and reads UNPROVED rather than
+  REFUTED -- a lost flip, never a faked one.
+
+  MEASURED, this date, this box. `has_duplicate`: before, ABSTAIN on
+  both sides ("rocq lowering: nested loops are not lowered yet"); after,
+  real=VERIFIED (`Closed under the global context`, 8 s idle) and
+  twin=REFUTED (1.6 s), via `run_par.py --jobs 1 --kernels rocq` and
+  directly through `verifiers.rocq.verify`. Two synthetic probes added
+  to `test_lower_rocq.py` for the shapes has_duplicate does not cover --
+  two SEQUENTIAL loops in one body, and a THREE-deep nest -- both
+  compile; the three-deep one is what found the frame-substitution bug
+  (`_DECOMP`'s own note: a middle loop whose body leaves the outer index
+  alone cannot even `apply` its own IH until the rebound names are
+  `subst`ed, which has_duplicate could never expose because its outer
+  body assigns every slot it has). REGRESSION BAR: every committed task
+  relowered with this file and with the pre-change file, real and twin,
+  and BYTE-COMPARED -- 33 of 34 byte-identical, the 34th being
+  has_duplicate itself (an exception before, a file now). `run_par.py
+  --jobs 4 --tasks t/tasks --kernels rocq`: every cell reads
+  AGREEMENT.md's own rocq cell, `min_max` included (still
+  timeout/refuted, the same pre-existing flaky real named on
+  2026-09-10/11/wave-P/ROCQ-SOLE), plus the new has_duplicate row at
+  verified/refuted. `python3 -m unittest test_lower_rocq`: 23 of 23
+  green with coqc on PATH.
+
+  Files touched: `lower_rocq.py` (`find_while`'s two raises, `lower_v1`
+  and `_try_cert_v1`'s dispatch, and the new "NESTED AND MULTIPLE LOOPS"
+  section: `_GeneralLoops`, `_any_while_deep`, `_check_no_loop_under_if`,
+  `_and_parts`, `_segments`, `_declared`, `_GWIT`, `_DECOMP`,
+  `_LoopGen`, `_general_pieces`, `_general_defs`, `gen_loops`,
+  `_loops_def`), `test_lower_rocq.py` (one new test class, no existing
+  case edited).
 """
 from __future__ import annotations
 
@@ -5869,14 +5962,22 @@ def find_while(body: list):
                 "rocq lowering: a loop under a conditional is not lowered yet")
     if not idxs:
         return body, None, []
+    # 2026-09-18 (ROADMAP WS-20 move 1): the two shapes below used to be
+    # flat refusals ("more than one loop per body is not lowered yet",
+    # "nested loops are not lowered yet") and are now handed to the general
+    # path (`gen_loops`/`_loops_def`, see its own dated section) through
+    # `_GeneralLoops`. Everything this function still RETURNS is unchanged,
+    # so a task with exactly one flat loop lowers through `gen_loop` byte
+    # for byte as before.
     if len(idxs) > 1:
-        raise NotImplementedError(
-            "rocq lowering: more than one loop per body is not lowered yet")
+        raise _GeneralLoops(
+            "rocq lowering: more than one loop per body needs the general "
+            "loop path")
     k = idxs[0]
     w = body[k]["while"]
     if any_while(w["body"]):
-        raise NotImplementedError(
-            "rocq lowering: nested loops are not lowered yet")
+        raise _GeneralLoops(
+            "rocq lowering: nested loops need the general loop path")
     return body[:k], w, body[k + 1:]
 
 
@@ -7030,9 +7131,20 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
     ret_t = task["returns"][0]["type"]
     pb, pargs = param_binders(cx)
 
-    prefix, w, suffix = find_while(body)
+    # 2026-09-18 (ROADMAP WS-20 move 1): `find_while` now SIGNALS the two
+    # shapes it used to refuse (a loop nested in a loop, two or more loops
+    # in one body) instead of abstaining on them, and the general path
+    # below takes them. A task with exactly one flat loop still goes to
+    # `gen_loop`, unchanged, and any OTHER NotImplementedError (a loop
+    # under a conditional) still propagates as the abstain it always was.
+    general = False
+    prefix = w = suffix = None
+    try:
+        prefix, w, suffix = find_while(body)
+    except _GeneralLoops:
+        general = True
     selfrec = has_self_call(body, name)
-    if w is not None and selfrec:
+    if (w is not None or general) and selfrec:
         raise NotImplementedError(
             "rocq lowering: a body that both loops and self-recurses is not "
             "lowered yet")
@@ -7057,7 +7169,9 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
     parts.append(emit_def_lemmas(cx, name, ens_obls, extra_binders=rb,
                                  counter=counter))
 
-    if w is not None:
+    if general:
+        parts.append(gen_loops(cx, body, counter))
+    elif w is not None:
         parts.append(gen_loop(cx, prefix, w, suffix, counter))
     elif selfrec:
         parts.append(gen_rec(cx, body))
@@ -7705,6 +7819,854 @@ Proof.
   {bool_destruct_p}t_dis_ext.
 Qed.
 """
+
+
+# --------------------------------------------------------------------------
+# NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20 move 1)
+# --------------------------------------------------------------------------
+#
+# WHAT THIS SECTION IS. Until this date `find_while` refused two shapes
+# outright -- "more than one loop per body" and "nested loops" -- and
+# `has_duplicate` (the committed nested-loop task, a `while` inside a
+# `while`, each with its OWN `invariant` lines and its OWN `decreases`)
+# read ABSTAIN while Dafny, Verus, SPARK and Frama-C all took it. This
+# section builds those two shapes. It is a SEPARATE path, not a rewrite of
+# `gen_loop`: whenever `find_while` still succeeds (exactly one top-level
+# loop, nothing nested), `gen_loop` runs unchanged and every task built
+# before today lowers BYTE-IDENTICALLY, which is the only regression bar
+# this file has ever accepted for a change this size.
+#
+# THE MODEL, and why it is the one Rocq forces. Rocq has no `while`; a loop
+# is a fuel-indexed `Fixpoint` over the loop's own state tuple plus a
+# separate induction Lemma that carries the invariants across one
+# iteration (`gen_loop`, above, is the single-loop instance of exactly
+# this). The generalisation is therefore mechanical and, importantly,
+# COMPOSITIONAL:
+#
+#   * ONE Fixpoint AND ONE `_spec` Lemma PER LOOP, named `{task}_loop{k}`
+#     / `{task}_loop{k}_spec`, `k` a pre-order index. Nothing is inlined
+#     and nothing is unrolled -- the one hazard this file's own history
+#     names by size (a chained-replace lowering that expanded to 27.7 GB
+#     and filled a shared disk; `run_par.py`'s 64 MB `T_MAX_SOURCE_MB`
+#     cap is its scar). Source grows LINEARLY in the number of loops.
+#
+#   * A LOOP'S STATE IS EVERY LIVE VARIABLE AT ITS ENTRY, not only the
+#     ones it assigns: the return, every local declared in an enclosing
+#     block, and (for an inner loop) the enclosing loop's own state. That
+#     is what makes an inner loop a plain top-level Fixpoint the outer one
+#     can CALL -- it is closed over nothing. The frame rule then gives the
+#     caller back, for free, an equation per state slot the inner body
+#     never assigns (`i' = i`), which is exactly the fact the outer
+#     invariant proof needs to relate the inner loop's exit state to the
+#     state the outer iteration started in (MEASURED: has_duplicate's
+#     outer `decreases` obligation, `len(s) - (i+1) < fuel`, is
+#     unprovable without it).
+#
+#   * THE CALL SITE IS A `let`, NEVER A PROJECTION. The inner loop's
+#     result is bound once, `let '(a, b, c) := {task}_loop1 ... in ...`,
+#     and the outer step terms read the binders. The obvious alternative
+#     -- one `fst`/`snd` projection per slot -- repeats the whole call
+#     term once per slot, so a depth-d nest multiplies the source by
+#     (slots)^d. With `let` the term appears exactly once at every depth.
+#     This is the size discipline the 27.7 GB note above demands.
+#
+# THE PROOF, and the one genuinely new step. A loop whose body contains no
+# loop proves exactly as it always has (`induction fuel`, `cbn`,
+# `t_sweep`, then `apply IH; t_side` or the base-case `inversion`). A loop
+# whose body CALLS another loop cannot: after `cbn [{task}_loop0]` the
+# goal contains an opaque application of `{task}_loop1`, and `t_side` has
+# no fact about it at all, so the induction step's invariant obligations
+# are unprovable. The fix is to hand the enclosing proof the inner loop's
+# OWN spec, at the point of the call, before `apply IH`:
+#
+#     try (match goal with
+#          | |- context [ {task}_loop1 (S (Z.to_nat ?d)) s s_len ?a0 ?a1 ?a2 ] =>
+#              destruct (...) as [[x y] z] eqn:t_le1;
+#              cbn beta iota zeta;
+#              assert (t_hf1 : <inner decreases at a0 a1 a2>
+#                              < Z.of_nat (S (Z.to_nat d))) by lia;
+#              assert (t_hi1_1 : <inner invariant 1 at a0 a1 a2>) by t_dis;
+#              ...
+#              pose proof ({task}_loop1_spec ... ) as t_ho1;
+#              clear ...
+#          end);
+#
+# Four decisions in there, each measured or argued:
+#
+#   (1) `match goal with ... context [...]` rather than writing the call
+#       term out literally. By the time the prologue runs, `t_sweep` and
+#       the bool-state `destruct` (`_bool_state_assigned`, above) have
+#       already SUBSTITUTED into that term -- has_duplicate's own `r` is a
+#       bool loop state var assigned in the body, so `destruct r` replaces
+#       it by the literal `true`/`false` and CLEARS `r`, and a literally
+#       spelled `..._loop1 ... r i (i + 1)` then fails with "The reference
+#       r was not found" (MEASURED: this was the first shape tried). The
+#       `context` pattern matches whatever the branch actually holds.
+#       Only the FUEL and the STATE arguments are pattern variables; the
+#       params are spelled by name, since a param is never substituted
+#       (nothing destructs or rewrites one here) and spelling them keeps
+#       the pattern honest about arity.
+#
+#   (2) `try (...)`, because the same tactic text runs in EVERY branch
+#       `t_sweep` produced, and the call term is simply absent in the
+#       fuel-`O` branch and in the guard-false branch (the `if` reduced
+#       away). `try` is safe in the honesty sense that matters here: it
+#       can only ever FAIL TO ADD a hypothesis. If it skips a branch that
+#       needed it, `apply IH; t_side` fails, the base-case alternative
+#       fails, and the emitted `fail 1 "unsolved t verification
+#       condition"` makes coqc report exactly that -- an UNPROVED reading,
+#       never a wrong VERIFIED.
+#
+#   (3) The inner invariants are asserted `by t_dis` at the ENTRY state,
+#       from the enclosing invariants plus the enclosing guard. This is
+#       the same "assert the invariant holds where the loop starts" step
+#       `gen_loop`'s own final Theorem already does (`ini_asserts`), only
+#       one level in. It is why the prologue must come AFTER `t_sweep`:
+#       has_duplicate's inner `invariant i >= 0 and i < len(s)` needs the
+#       OUTER guard `i < len(s)`, which only exists as a hypothesis once
+#       `t_sweep` has case-split it.
+#
+#   (4) `cbn beta iota zeta` right after the `destruct`. `let '(a,b) := e
+#       in body` is a `match` on `e`, so once `destruct` has replaced `e`
+#       by a literal tuple the match is an iota-redex; the one-slot case
+#       is a real `let`, hence `zeta`. No `delta` -- unfolding a constant
+#       here would undo the `cbn [{task}_loop{k}]` discipline the whole
+#       induction rests on (`gen_loop`'s own dated note on `simpl` vs
+#       whitelisted delta, 2026-09-08, fz_v1loop_007).
+#
+# WHAT STAYS AN ABSTAIN HERE, BY NAME. (a) A `return` anywhere in a body
+# that also has nested or multiple loops: `gen_loop`'s early-exit
+# encoding turns a loop's result into a `(state, returned?)` pair and its
+# conclusion into a disjunction, and composing that through a CALLED loop
+# (whose own early exit would have to propagate out through the caller's
+# state tuple) is a second, separate design this session did not build.
+# Refused by name below rather than emitted wrong. (b) A loop under a
+# conditional -- `find_while`'s own pre-existing refusal, unchanged, and
+# now checked at every depth rather than only the top level. (c) An
+# invariant-drop (`exit`/`preservation`) witness on a general-shape body:
+# `_loop_cert` is written against one `while` node and is left alone, so
+# such a twin falls back to the ordinary lowering and reads UNPROVED
+# rather than REFUTED -- a lost flip, never a faked one.
+
+
+class _GeneralLoops(NotImplementedError):
+    """`find_while`'s signal that this body is one of the two shapes it
+    used to refuse outright (a loop nested in a loop, or two or more loops
+    in one body) and that the general path in this section should take it.
+
+    A `NotImplementedError` SUBCLASS on purpose: every caller that only
+    ever caught the base class -- the harness's own ABSTAIN print,
+    `_try_cert_v1`'s broad `except` -- keeps its exact old behaviour for
+    any shape this section does not in fact handle, so a gap here still
+    surfaces as an honest abstain instead of a crash."""
+
+
+def _any_while_deep(stmts: list) -> bool:
+    """True iff `stmts` contains a `while` at any depth, through `if` AND
+    through an enclosing `while` body (`find_while`'s own local helper
+    only ever looked through `if`, since it had already refused nesting)."""
+    for s in stmts:
+        if "while" in s:
+            return True
+        if "if" in s and (_any_while_deep(s["if"]["then"])
+                          or _any_while_deep(s["if"]["else"])):
+            return True
+    return False
+
+
+def _check_no_loop_under_if(stmts: list) -> None:
+    """`find_while`'s "a loop under a conditional" refusal, re-checked at
+    EVERY depth. The general path admits a loop inside a loop BODY, so the
+    original top-level-only check would have let a loop inside an `if`
+    inside a loop body through silently -- and `exec_straight`'s own `if`
+    case raises a bare AssertionError on a `while`, a crash rather than
+    the named abstain this file owes."""
+    for s in stmts:
+        if "if" in s:
+            for br in (s["if"]["then"], s["if"]["else"]):
+                if _any_while_deep(br):
+                    raise NotImplementedError(
+                        "rocq lowering: a loop under a conditional is not "
+                        "lowered yet")
+        elif "while" in s:
+            _check_no_loop_under_if(s["while"]["body"])
+
+
+def _and_parts(e) -> list:
+    """The top-level `and` conjuncts of a t condition, flattened."""
+    if isinstance(e, dict) and e.get("op") == "and":
+        out: list = []
+        for a in e["args"]:
+            out += _and_parts(a)
+        return out
+    return [e]
+
+
+def _segments(stmts: list) -> list:
+    """Split a block into [(straight statements, the `while` that ends
+    them), ..., (trailing straight statements, None)]. One top-level loop
+    gives exactly `find_while`'s own (prefix, w, suffix)."""
+    segs, cur = [], []
+    for s in stmts:
+        if "while" in s:
+            segs.append((cur, s["while"]))
+            cur = []
+        else:
+            cur.append(s)
+    segs.append((cur, None))
+    return segs
+
+
+def _declared(stmts: list) -> list:
+    """Locals a straight-line segment declares, in source order, checked
+    through `if` because `exec_straight` records those in the SAME flat
+    `local`/`env` (t has no block scope below the statement list)."""
+    out = []
+    for s in stmts:
+        if "var" in s:
+            out.append(_ck(s["var"]["name"]))
+        elif "if" in s:
+            out += _declared(s["if"]["then"]) + _declared(s["if"]["else"])
+    return out
+
+
+# EXISTENTIAL INVARIANTS AND THE WITNESS THE STATE ALREADY HOLDS
+# (2026-09-18, has_duplicate, MEASURED). One obligation in the induction
+# step of has_duplicate's INNER loop is `r ==> exists a, exists b, a < b /\
+# s a = s b`, freshly TRUE on the branch that just set `r`, so it cannot be
+# carried over from a hypothesis the way every other conjunct can: the
+# witnesses have to be produced. PRELUDE's own `t_go` does have an
+# existential arm, but it enumerates "0, then every Z variable in scope"
+# at EVERY quantifier level and runs the full `t_base` saturation at every
+# node, so a two-level existential over a five-variable context is a
+# search this goal never came out of (MEASURED: that single subgoal alone
+# was still running past 45 s, with every other subgoal of the same branch
+# closing in under a second).
+#
+# `t_gwit` is the directed alternative, and its whole idea is that the
+# witness is not something to SEARCH for: the branch that made the
+# existential true also put the fact that makes it true in the context
+# (`e : s i = s j`, from `t_sweep`'s own case split). So: peel the
+# quantifiers with EVARS rather than guesses (`eexists`), split the
+# conjunction, and let the ONE equation-shaped conjunct pick the
+# instantiation by unifying against that hypothesis; every remaining
+# conjunct is then a ground arithmetic side condition `lia` closes from
+# the invariants already in scope. Four decisions, each measured:
+#
+#   * `lazymatch goal with |- exists _, _ => eexists end`, NOT a bare
+#     `eexists`. Coq's `exists`/`eexists` applies to ANY inductive type
+#     with a single constructor, and `eq` is one: a bare `eexists` on the
+#     goal `s ?a = s ?b` fires `eq_refl`, unifies `?b := ?a`, and closes
+#     it -- leaving `?a < ?a` behind, unprovable, with the real witnesses
+#     never bound (MEASURED, exactly this, first attempt).
+#   * `eassumption`, NOT `assumption`, for that equation. `assumption`
+#     does not instantiate the goal's own evars, so it simply fails on
+#     `s ?a = s ?b` with `s i = s j` right there in the context
+#     (MEASURED, second attempt: the pass fell through and a later `lia`
+#     then bound both evars to 0).
+#   * that first pass is GUARDED to equation/disequation goals. An
+#     unguarded `eassumption` over `0 <= ?a` would happily unify it with
+#     `0 <= s_len` (`len_hyps`' own hypothesis, in scope for every seq
+#     task) and bind the witness to the wrong variable.
+#   * the passes run in sequence over ALL goals, which is what lets the
+#     instantiation propagate: Ltac's `;` finishes a pass on every goal
+#     before the next pass starts, so by the time `lia` runs the evars
+#     the equation pass bound are ground.
+#
+# THE ENCLOSING LOOP'S OWN STEP, `t_gstep` (same date, same task, also
+# MEASURED). The other half of the outer induction step is the invariant
+# that has to GROW by one index across the inner loop: has_duplicate's
+# `not r ==> forall a in [0, i). forall b in [0, len(s)). a < b ==> s[a] !=
+# s[b]`, re-proved at `i + 1` from the inner loop's exit facts. `t_base`
+# does not get there either -- worse, it does not come BACK: its own
+# `t_split1` case-splits every implication hypothesis whose antecedent
+# `lia` can decide, and this context has a dozen of them, so the goal
+# count doubles per step (MEASURED: `t_base; t_leaf` alone on this single
+# subgoal was still running past 90 s, as were `t_dis` and `t_go` at
+# depths 2 and 3). The proof it is failing to find is four steps long, and
+# all four are deterministic or nearly so:
+#
+#   `t_gfwd`  resolve, in place, every implication hypothesis whose
+#             antecedent is immediately available (`assumption` for the
+#             guard facts the branch just introduced, `discriminate` for
+#             the `false <> true` an unset bool flag leaves). This is
+#             `t_split1`'s job WITHOUT its case split: `specialize`
+#             rewrites the hypothesis rather than duplicating the goal, so
+#             a dozen implications cost a dozen steps, not 2^12 branches.
+#             This is what turns the called loop's `<state var> = <outer
+#             var>` frame equation and its de Morgan `<flag> <> true -> ~
+#             (<index> < len)` into the plain arithmetic facts the rest
+#             needs (MEASURED: 1 s, and the resulting context is small
+#             enough to read).
+#   `subst`   use those frame equations: the inner loop's exit index IS
+#             the outer loop's index, and every hypothesis should say so.
+#   `t_gclose` close by one hypothesis plus `lia` -- `eapply H; lia` is
+#             `t_go`'s own "apply a hypothesis" arm with the recursive
+#             SEARCH replaced by `lia`, which is all these goals need once
+#             the context is normalised.
+#   `t_gsplit2` and, if that is not enough, ONE integer trichotomy between
+#             two variables already in scope (`a < i \/ a = i \/ i < a`),
+#             each branch closed by `t_gclose`. That is exactly the
+#             "either this index was already covered, or it is the new
+#             one" case an extending loop invariant always turns on, and
+#             `multimatch` simply tries the variable pairs until one
+#             works, with every branch discharged or the pair abandoned.
+#             MEASURED: 2 s on the subgoal nothing else finished.
+#
+# Emitted ONLY by the general path (this section builds both into its own
+# chunk list, never into `header()`'s PRELUDE), so no task outside it
+# gains a byte. Both are tried strictly AFTER `assumption` and `lia` and
+# strictly BEFORE `t_side`, so they cost a goal those already close
+# nothing, and a goal neither can close falls through to exactly the
+# `t_side` that would have run anyway.
+# SPLITTING THE CALLED LOOP'S OWN CONCLUSION, AT THE CALL SITE
+# (2026-09-18, has_duplicate, MEASURED). A `_spec`'s conclusion is ONE
+# right-nested conjunction of every invariant, the negated guard, the
+# de Morgan one-sided forms and the frame equations. Posed whole, the only
+# way to reach a single conjunct is through `t_base`'s own `H : _ /\ _ =>
+# destruct H` -- which happens INSIDE `t_go`'s search, after `t_side`'s
+# cheap `assumption` has already failed. The enclosing loop's own
+# invariant-preservation subgoal for the SAME existential invariant is then
+# literally one of those conjuncts, and it went from "closed by
+# `assumption` in one step" to "re-derived by search" purely because the
+# conjunction had not been opened yet (MEASURED: that subgoal alone was
+# still running past 60 s; with the hypothesis split it closes instantly).
+# `decompose [and]` right after the `pose proof` costs a loop with a
+# one-conjunct conclusion nothing (`try`'d, and there is nothing to split).
+#
+# AND THE FRAME EQUATIONS MUST BE SUBSTITUTED, NOT MERELY AVAILABLE
+# (2026-09-18, a three-deep synthetic nest, MEASURED). A loop's frame
+# conjunct is `v' = v`, spelled with the loop's OWN input binder. In
+# `gen_loop`'s single-loop world a framed slot's step term IS that binder,
+# syntactically, so the induction step's `apply IH` unifies `v' = v` with
+# itself. Through a CALLED loop it is not: every slot comes back rebound
+# to the `let`'s own name, so the goal asks for `i' = i` while `IH`
+# offers `i' = t_q2_i` -- equal by the inner loop's own frame fact, but
+# not to unification, and `apply IH` FAILS OUTRIGHT (MEASURED: exactly
+# this, in the middle loop of a three-deep nest whose body leaves the
+# outermost index alone; has_duplicate never exposed it because its outer
+# body assigns every slot it has, leaving `frame` empty). One `subst`
+# per rebound name, right after the split, identifies the two and the
+# apply goes through.
+#
+# `subst {rebound names}`, never a blanket `subst`: a bare `subst` will
+# eliminate WHICHEVER side of an equation it likes, and at the final
+# Theorem a chain of two top-level loops spells the first loop's own exit
+# names in the SECOND loop's `destruct` -- a blanket `subst` there ate
+# `t_q0_r` and left "The variable t_q0_r was not found in the current
+# environment" (MEASURED, the two-sequential-loops probe). Naming the
+# `t_q{k}_*` binders explicitly substitutes exactly the names this call
+# introduced, in the one direction that helps, and cannot touch a param
+# or an enclosing binder; the final Theorem passes no names at all, since
+# it has no `apply IH` to unify and its closing `t_dis` reads the
+# equations from the context perfectly well.
+_DECOMP = ("{ind}try (decompose [and] t_ho{idx});\n"
+           "{ind}try (clear t_ho{idx});\n")
+
+_GWIT = r"""Ltac t_gwit :=
+  intros;
+  repeat first [ lazymatch goal with |- exists _, _ => eexists end
+               | apply conj ];
+  try (solve [ lazymatch goal with
+               | |- _ = _ => eassumption
+               | |- _ <> _ => eassumption
+               end ]);
+  try (solve [ assumption ]);
+  try (solve [ reflexivity ]);
+  try (solve [ lia ]).
+
+(* t_gstep: the ONE step an inner loop's exit facts have to make for the
+   enclosing loop's invariant to survive an iteration, done directly
+   instead of searched for. See lower_rocq.py's own dated note. *)
+Ltac t_gfwd :=
+  repeat match goal with
+  | H : ?A -> ?B |- _ =>
+      let D := fresh "D" in
+      assert (D : A) by (first [ assumption | discriminate | reflexivity | lia ]);
+      specialize (H D); clear D
+  end.
+
+Ltac t_gclose :=
+  first [ assumption
+        | solve [ lia ]
+        | multimatch goal with
+          | H : _ |- _ => solve [ eapply H; lia ]
+          end ].
+
+Ltac t_gsplit2 :=
+  multimatch goal with
+  | x : Z, y : Z |- _ =>
+      tryif (constr_eq x y) then fail else idtac;
+      let D := fresh "D" in
+      assert (D : x < y \/ x = y \/ y < x) by lia;
+      destruct D as [D|[D|D]]; subst; solve [ t_gclose ]
+  end.
+
+Ltac t_gstep :=
+  intros; t_gfwd; subst;
+  first [ solve [ t_gclose ] | t_gsplit2 ].
+"""
+
+
+class _LoopGen:
+    """The general (nested / multiple) loop lowering; see this section's
+    own dated note above for the model and the proof shape.
+
+    `lemmas=False` builds the Fixpoints ONLY, with definedness collection
+    off -- the certificate path's own need (`_loops_def`, below), the same
+    split `_loop_def` already is for `gen_loop`."""
+
+    def __init__(self, cx: Ctx, counter: list, lemmas: bool = True):
+        self.cx = cx
+        self.task = cx.task
+        self.name = cx.task["name"]
+        self.counter = counter
+        self.lemmas = lemmas
+        self.chunks: list[str] = []      # Fixpoints/Lemmas, emission order
+        self.k = 0                       # pre-order loop index
+        self.need_gwit = False           # any loop lemma uses `t_gwit`
+        self.reqs = [cx.prop(e, {}) for e in cx.task.get("requires", [])]
+        self.lens = len_hyps(cx)
+
+    # ---- one block ------------------------------------------------------
+    def block(self, stmts, env, local, live, binders, ctx):
+        """Compile one statement block. Returns
+        (env, live, binders, ctx, calls, lets), where `calls` describes the
+        loops at THIS level (for the enclosing proof) and `lets` are the
+        `let '(...) := ... in ` wrappers its result expression needs."""
+        calls, lets = [], []
+        for straight, w in _segments(stmts):
+            if straight:
+                obls: list = []
+                env = exec_straight(self.cx, straight, env, local,
+                                    list(ctx) if self.lemmas else None,
+                                    [], obls)
+                live = live + [v for v in _declared(straight)
+                               if v in env and v not in live]
+                if self.lemmas and obls:
+                    self.chunks.append(emit_def_lemmas(
+                        self.cx, self.name, obls,
+                        extra_binders=" ".join(binders),
+                        counter=self.counter))
+            if w is None:
+                break
+            call = self.loop(w, env, local, live, binders, ctx, straight)
+            calls.append(call)
+            lets.append(call["let"])
+            env, binders, ctx = call["env"], call["binders"], call["ctx"]
+        return env, live, binders, ctx, calls, lets
+
+    # ---- one loop -------------------------------------------------------
+    def loop(self, w, env, local, live, binders, ctx, prev_straight):
+        cx = self.cx
+        idx = self.k
+        self.k += 1
+        fixn = f"{self.name}_loop{idx}"
+        specn = f"{fixn}_spec"
+        pb, pargs = param_binders(cx)
+
+        stys = {v: (local.get(v) or cx.tys[v]) for v in live}
+        svars_x, slot_ty = seq_slots(live, stys)
+        id_env = {v: v for v in svars_x}
+        sb_list = [f"({v} : {slot_ty[v]})" for v in svars_x]
+        sb = " ".join(sb_list)
+        body_assigned = loop_assigned(w["body"])
+
+        # ROADMAP 16.2's own synthetic "a prefix-declared int local the
+        # body never touches still equals its initialiser" invariant
+        # (gen_loop, above, has the full story and the measurement), kept
+        # here so a lifted task with that shape does not lose it merely by
+        # gaining a second loop. One addition: the initialiser's own free
+        # variables must ALSO be untouched by the body, which `gen_loop`
+        # could take for granted (its prefix ran before the only loop)
+        # and this path cannot (a second loop's "prefix" may name a
+        # variable the FIRST loop already moved). A synthetic invariant
+        # that is false costs only honesty-safe failure -- it is asserted
+        # at the entry state by `t_dis` like every other one, so a wrong
+        # one makes the proof FAIL, never succeed wrongly -- but there is
+        # no reason to emit one known to be false.
+        extra_invs = [
+            {"op": "==", "args": [{"var": s["var"]["name"]}, s["var"]["init"]]}
+            for s in prev_straight
+            if "var" in s and s["var"].get("type") == "int"
+            and s["var"]["name"] not in body_assigned
+            and not (_fv(s["var"]["init"], set()) & body_assigned)]
+        invariants_ast = list(w.get("invariants", [])) + extra_invs
+
+        guard_b = cx.bx(w["cond"], id_env, local)
+        guard_p = cx.prop(w["cond"], id_env, local)
+        dec = cx.zx(w["decreases"], id_env, local)
+        invs = [cx.prop(e, id_env, local) for e in invariants_ast]
+
+        obls: list = []
+        inv_ctx = list(self.reqs)
+        if self.lemmas:
+            # the same widening gen_loop applies for a string-library task
+            # (every invariant of a loop holds SIMULTANEOUSLY, so a
+            # sibling listed later is still available); unchanged here.
+            def_ctx = list(self.reqs) + invs if _has_strlib(self.task) else None
+            for e in invariants_ast:
+                cx.defs(e,
+                        list(def_ctx) if def_ctx is not None else list(inv_ctx),
+                        [], obls, id_env, local)
+                inv_ctx.append(cx.prop(e, id_env, local))
+            cx.defs(w["cond"], list(inv_ctx), [], obls, id_env, local)
+            cx.defs(w["decreases"], list(inv_ctx), [], obls, id_env, local)
+        else:
+            inv_ctx = list(self.reqs) + invs
+
+        body_ctx = inv_ctx + [guard_p]
+        benv, _blive, _bb, _bc, bcalls, blets = self.block(
+            w["body"], dict(id_env), dict(local), list(live), list(sb_list),
+            list(body_ctx))
+        step_terms = " ".join(benv[v] for v in svars_x)
+
+        if self.lemmas and obls:
+            self.chunks.append(emit_def_lemmas(
+                cx, self.name, obls, extra_binders=sb, counter=self.counter))
+
+        tup_ty = "(" + " * ".join(
+            f"({slot_ty[v]})" if "->" in slot_ty[v] else slot_ty[v]
+            for v in svars_x) + ")%type"
+        tup = "(" + ", ".join(svars_x) + ")"
+        wrap = "".join(blets)
+        self.chunks.append(f"""Fixpoint {fixn} (fuel : nat) {pb} {sb} : {tup_ty} :=
+  match fuel with
+  | O => {tup}
+  | S fu =>
+      if {guard_b}
+      then ({wrap}{fixn} fu {pargs} {step_terms})
+      else {tup}
+  end.
+""")
+
+        # ---- the induction lemma ----
+        if self.lemmas:
+            primed = [v + "'" for v in svars_x]
+            tup_p = "(" + ", ".join(primed) + ")"
+            sb_p = " ".join(f"({v}' : {slot_ty[v]})" for v in svars_x)
+            penv = {v: v + "'" for v in svars_x}
+            invs_p = [cx.prop(e, penv, local) for e in invariants_ast]
+            guard_pp = cx.prop(w["cond"], penv, local)
+            frame = [v for v in svars_x
+                     if slot_owner(v, live) not in body_assigned]
+            # A CONJUNCTIVE GUARD'S EXIT FACT NEEDS ITS ONE-SIDED FORMS
+            # (2026-09-18, has_duplicate, MEASURED). `~ (A /\ B)` is the
+            # honest statement of "the guard was false at exit", and for
+            # every loop this file built before today the guard was a
+            # single comparison, so `~ guard` WAS `~ (i < n)` -- a fact
+            # `lia` reads directly. has_duplicate's guards are `i < len(s)
+            # and not r`, and the saturation engine can do nothing at all
+            # with `~ (A /\ B)`: `t_sat1`'s and `t_split1`'s only rules for
+            # an implication need its ANTECEDENT either leaf-provable or
+            # lia-decidable, and here the antecedent is the whole
+            # conjunction, whose second half is a bool disequality lia
+            # does not decide (MEASURED: the outer loop's own
+            # invariant-preservation subgoal needs `t_q1_j >= s_len`, which
+            # is exactly what `~ (t_q1_j < s_len /\ t_q1_r <> true)` plus
+            # `t_q1_r <> true` gives, and it never got there).
+            #
+            # So the conclusion also carries, per conjunct, the one-sided
+            # implication "all the OTHER conjuncts held, therefore this one
+            # did not". Each is a constructive consequence of `~ (A /\ B)`
+            # -- nothing is claimed that the negated guard does not already
+            # entail, and `~ guard` itself stays in the conclusion
+            # unchanged -- and each one's own antecedent is now a single
+            # conjunct, which is exactly the shape `t_sat1`'s "resolve an
+            # implication whose antecedent is leaf-provable" rule fires on
+            # (`t_q1_r <> true` is right there in the context by
+            # `assumption`). A one-conjunct guard adds nothing at all
+            # (`len(gparts) < 2`), so every simple guard keeps the exact
+            # conclusion it would have had.
+            gparts = _and_parts(w["cond"])
+            dm = []
+            if len(gparts) > 1:
+                gp = [cx.prop(e, penv, local) for e in gparts]
+                for k in range(len(gp)):
+                    ante = "".join(f"{gp[m]} -> " for m in range(len(gp))
+                                   if m != k)
+                    dm.append(f"({ante}(~ {gp[k]}))")
+            concl = " /\\ ".join(invs_p + [f"(~ {guard_pp})"] + dm
+                                 + [f"{v}' = {v}" for v in frame])
+            n_lens, n_reqs, n_invs = len(self.lens), len(self.reqs), len(invs)
+            hyp_names = ([f"Hl{k+1}" for k in range(n_lens)]
+                         + [f"Hreq{k+1}" for k in range(n_reqs)]
+                         + ["Hfuel"] + [f"Hinv{k+1}" for k in range(n_invs)])
+            lemma_hyps = "".join(f"  {h} ->\n" for h in self.lens + self.reqs)
+            inv_hyps = "".join(f"  {p} ->\n" for p in invs)
+            bool_assigned = _bool_state_assigned(live, stys, body_assigned)
+            bool_destruct = (" destruct " + ", ".join(bool_assigned) + ";"
+                             if bool_assigned else "")
+            prologue = "".join(self._inner_prologue(c) for c in bcalls)
+            # THE EXIT-STATE VARIABLES ARE JUNK IN THE INDUCTION STEP
+            # (MEASURED, 2026-09-18, has_duplicate's inner loop). `apply
+            # IH` consumes the loop equation itself by unification, so
+            # every subgoal it leaves is one of IH's own HYPOTHESES -- a
+            # length bound, a requires, the fuel bound, an invariant at
+            # the stepped state -- and not one of them mentions the exit
+            # state `r'`/`i'`/`j'`. Those variables are then unconstrained
+            # Z/bool names sitting in the context while `t_go`'s own
+            # existential arm enumerates "every Z variable in scope" as a
+            # candidate witness (PRELUDE, `t_go`: `multimatch goal with x
+            # : Z |- _ => exists x`), so each one buys a full failing
+            # subtree at every quantifier level. has_duplicate's inner
+            # invariant is `r ==> exists a, exists b, ...` -- TWO levels
+            # -- so two junk Z variables cost (5/3)^2 of the search rather
+            # than 5/3. Clearing them is free of any risk: `clear` cannot
+            # make a goal provable, only smaller, and each is `try`'d
+            # separately so a shape where one of them IS still mentioned
+            # simply keeps it.
+            clear_primed = "".join(f"try clear {v}; " for v in primed)
+            self.need_gwit = True
+            self.chunks.append(f"""Lemma {specn} :
+  forall (fuel : nat) {pb} {sb} {sb_p},
+{lemma_hyps}  {dec} < Z.of_nat fuel ->
+{inv_hyps}  {fixn} fuel {pargs} {' '.join(svars_x)} = {tup_p} ->
+  ({concl}).
+Proof.
+  induction fuel as [|fu IH];
+  intros {pargs} {' '.join(svars_x)} {' '.join(primed)} {' '.join(hyp_names)};
+  cbn [{fixn}];{bool_destruct} t_sweep;
+{prologue}  first [ solve [ apply IH; {clear_primed}
+                        first [ assumption | solve [ lia ]
+                              | solve [ t_gwit ] | solve [ t_gstep ]
+                              | t_side ] ]
+        | (* the EXIT branches (fuel ran out, or the guard is false): the
+             conclusion's own invariant conjuncts are, after `inversion`
+             substitutes the exit state away, LITERALLY the `Hinv{{k}}`
+             hypotheses, so splitting the conjunction first and trying
+             `assumption` on each part closes them in one step each.
+             Without the split, `t_dis` meets the whole conjunction at
+             once and re-derives every conjunct through `t_go`'s search,
+             which on an existential invariant means rebuilding a witness
+             it already has verbatim in the context -- MEASURED, 2026-09-18:
+             has_duplicate's inner loop left exactly this goal unsolved
+             past a 90 s probe, and closes in about a second with the
+             split. `t_dis` stays as the last alternative, so nothing a
+             bare `t_dis` already closed is lost. *)
+          (let Heq := fresh "Heq" in
+           intro Heq; inversion Heq; subst; try clear Heq;
+           repeat split; first [ assumption | reflexivity | t_dis ])
+        | fail 1 "unsolved t verification condition" ].
+Qed.
+""")
+
+        # ---- what the CALLER needs ----
+        exn = [f"t_q{idx}_{v}" for v in svars_x]
+        dec0 = cx.zx(w["decreases"], env, local)
+        init_terms = " ".join(env[v] for v in svars_x)
+        fuel0 = f"(S (Z.to_nat {dec0}))"
+        if len(exn) == 1:
+            let_txt = (f"let {exn[0]} := {fixn} {fuel0} {pargs} "
+                       f"{init_terms} in ")
+        else:
+            let_txt = (f"let '({', '.join(exn)}) := {fixn} {fuel0} {pargs} "
+                       f"{init_terms} in ")
+        exit_env = dict(env)
+        for j, v in enumerate(svars_x):
+            exit_env[v] = exn[j]
+        exit_ctx = (list(self.reqs)
+                    + [cx.prop(e, exit_env, local) for e in invariants_ast]
+                    + [f"(~ {cx.prop(w['cond'], exit_env, local)})"])
+        exit_binders = [f"({exn[j]} : {slot_ty[v]})"
+                        for j, v in enumerate(svars_x)]
+        return dict(
+            idx=idx, fixn=fixn, specn=specn, slots=svars_x, exn=exn,
+            n_invs=len(invariants_ast), dec0=dec0, fuel0=fuel0,
+            **{"let": let_txt},
+            init_terms=init_terms,
+            ini_props=[cx.prop(e, env, local) for e in invariants_ast],
+            dec_at=lambda sub: cx.zx(w["decreases"], sub, local),
+            invs_at=lambda sub: [cx.prop(e, sub, local)
+                                 for e in invariants_ast],
+            exit_bools=[exn[j] for j, v in enumerate(svars_x)
+                        if stys.get(v) == "bool" and v in body_assigned],
+            env=exit_env, binders=exit_binders, ctx=exit_ctx)
+
+    # ---- handing an inner loop's spec to its caller's proof --------------
+    def _hyp_args(self, c, keep: list) -> str:
+        return " ".join(
+            [f"Hl{k+1}" for k in range(len(self.lens))]
+            + [f"Hreq{k+1}" for k in range(len(self.reqs))] + keep)
+
+    def _inner_prologue(self, c) -> str:
+        """The `try (match goal ...)` block that gives the ENCLOSING loop's
+        induction step the inner loop's own `_spec` at the call site; see
+        this section's dated note, decisions (1)-(4)."""
+        idx = c["idx"]
+        _pb, pargs = param_binders(self.cx)
+        sa = [f"t_a{idx}_{j}" for j in range(len(c["slots"]))]
+        pat = " ".join(f"?{x}" for x in sa)
+        args = " ".join(sa)
+        fuel = f"(S (Z.to_nat t_d{idx}))"
+        sub = {v: sa[j] for j, v in enumerate(c["slots"])}
+        exn = c["exn"]
+        dpat = exn[0]
+        for v in exn[1:]:
+            dpat = f"[{dpat} {v}]"
+        hi = [f"t_hi{idx}_{k+1}" for k in range(c["n_invs"])]
+        asserts = "".join(
+            f"         assert ({hi[k]} : {p}) by t_dis;\n"
+            for k, p in enumerate(c["invs_at"](sub)))
+        if len(exn) == 1:
+            # a one-slot state's `let` is a plain let, and `destruct` on a
+            # bare name pattern needs a DISJUNCTIVE pattern once the type
+            # has more than one constructor (gen_loop's own 2026-09-10
+            # upWhileLess note); `remember` never case-splits, so it is
+            # correct at any constructor count, and its equation direction
+            # is the mirror of `destruct ... eqn:`, fixed by `symmetry`.
+            intro = (f"         remember ({c['fixn']} {fuel} {pargs} {args})\n"
+                     f"           as {exn[0]} eqn:t_le{idx};\n"
+                     f"         symmetry in t_le{idx};\n")
+        else:
+            intro = (f"         destruct ({c['fixn']} {fuel} {pargs} {args})\n"
+                     f"           as {dpat} eqn:t_le{idx};\n")
+        return f"""  try (match goal with
+       | |- context [ {c['fixn']} (S (Z.to_nat ?t_d{idx})) {pargs} {pat} ] =>
+{intro}         cbn beta iota zeta;
+         assert (t_hf{idx} : {c['dec_at'](sub)} < Z.of_nat {fuel}) by lia;
+{asserts}         pose proof ({c['specn']} {fuel} {pargs} {args} {' '.join(exn)}
+                     {self._hyp_args(c, [f"t_hf{idx}"] + hi + [f"t_le{idx}"])})
+           as t_ho{idx};
+{_DECOMP.format(idx=idx, ind='         ')}{''.join(f"         try (subst {v});{chr(10)}" for v in exn)}         clear t_le{idx} t_hf{idx}{''.join(' ' + h for h in hi)}
+       end);
+"""
+
+    def render_top(self, c) -> str:
+        """The same hand-off, at the final Theorem, where the loop's
+        arguments are concrete initial terms rather than whatever an
+        enclosing induction left in the goal -- so no `match goal` is
+        needed and the `destruct` can be spelled outright, exactly as
+        `gen_loop`'s own Theorem already spells its single one."""
+        idx = c["idx"]
+        _pb, pargs = param_binders(self.cx)
+        exn = c["exn"]
+        dpat = exn[0]
+        for v in exn[1:]:
+            dpat = f"[{dpat} {v}]"
+        call = f"{c['fixn']} {c['fuel0']} {pargs} {c['init_terms']}"
+        if len(exn) == 1:
+            intro = (f"  remember ({call})\n    as {exn[0]} eqn:t_le{idx}.\n"
+                     f"  symmetry in t_le{idx}.\n")
+        else:
+            intro = f"  destruct ({call})\n    as {dpat} eqn:t_le{idx}.\n"
+        hi = [f"t_hi{idx}_{k+1}" for k in range(c["n_invs"])]
+        asserts = "".join(f"  assert ({hi[k]} : {p}) by t_dis.\n"
+                          for k, p in enumerate(c["ini_props"]))
+        return (intro
+                + "  cbn beta iota zeta.\n"
+                + f"  assert (t_hf{idx} : {c['dec0']} < Z.of_nat "
+                  f"{c['fuel0']}) by lia.\n"
+                + asserts
+                + f"  pose proof ({c['specn']} {c['fuel0']} {pargs} "
+                  f"{c['init_terms']} {' '.join(exn)}\n"
+                  f"                {self._hyp_args(c, [f't_hf{idx}'] + hi + [f't_le{idx}'])})\n"
+                  f"    as t_ho{idx}.\n"
+                + _DECOMP.format(idx=idx, ind="  ").replace(";\n", ".\n")
+                + f"  clear t_hf{idx} t_le{idx}"
+                  f"{''.join(' ' + h for h in hi)}.\n")
+
+
+def _general_pieces(cx: Ctx, body: list, counter: list, lemmas: bool):
+    """Shared front half of `gen_loops` and `_loops_def`: the refusals,
+    then one `_LoopGen` pass over the whole body."""
+    task = cx.task
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    _check_no_loop_under_if(body)
+    if has_return(body):
+        # See this section's own note, "WHAT STAYS AN ABSTAIN HERE (a)":
+        # gen_loop's early-exit encoding is a (state, returned?) pair plus
+        # a disjunctive conclusion, and propagating one OUT of a called
+        # loop through its caller's state tuple is a separate design.
+        raise NotImplementedError(
+            "rocq lowering: a 'return' inside nested or multiple loops is "
+            "not lowered yet")
+    local: dict = {}
+    if ret_t == "seq":
+        env0 = {ret: "(fun _ : Z => 0)", ret + "_len": "0"}
+    elif isinstance(ret_t, dict) and "seq" in ret_t:
+        env0 = {ret: "(fun _ : Z => ((fun _ : Z => 0), 0))",
+                ret + "_len": "0"}
+    else:
+        env0 = {ret: default_term(ret_t)}
+    reqs = [cx.prop(e, {}) for e in task.get("requires", [])]
+    gen = _LoopGen(cx, counter, lemmas=lemmas)
+    env, _live, _binders, _ctx, calls, lets = gen.block(
+        body, env0, local, [ret], [], list(reqs))
+    return gen, env, calls, "".join(lets)
+
+
+def _general_defs(cx: Ctx, env: dict, wrap: str) -> tuple[str, str]:
+    """(`Definition {name}_t ...` text, the matching `unfold` line) for the
+    general path -- the same function/length SPLIT a seq or nested-seq
+    return already gets in `gen_plain`/`gen_loop`, only with the whole
+    chain of top-level loop `let`s in front of the result expression."""
+    task = cx.task
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    pb, _pargs = param_binders(cx)
+    if ret_t == "seq" or (isinstance(ret_t, dict) and "seq" in ret_t):
+        rt = "Z -> Z" if ret_t == "seq" else rty(ret_t)
+        return (f"Definition {name}_t {pb} : {rt} :=\n"
+                f"  {wrap}{env[ret]}.\n\n"
+                f"Definition {name}_t_len {pb} : Z :=\n"
+                f"  {wrap}{env[ret + '_len']}.\n",
+                f"unfold {name}_t, {name}_t_len.")
+    return (f"Definition {name}_t {pb} : {rty(ret_t)} :=\n"
+            f"  {wrap}{env[ret]}.\n",
+            f"unfold {name}_t.")
+
+
+def gen_loops(cx: Ctx, body: list, counter: list) -> str:
+    """The general path's whole code section: one Fixpoint + one `_spec`
+    Lemma per loop, the `{name}_t` Definition, and the final Theorem."""
+    task = cx.task
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    pb, pargs = param_binders(cx)
+    gen, env, calls, wrap = _general_pieces(cx, body, counter, lemmas=True)
+    def_lines, unfold_line = _general_defs(cx, env, wrap)
+    if ret_t == "seq" or (isinstance(ret_t, dict) and "seq" in ret_t):
+        ens = ensures_text(cx, {ret: f"({name}_t {pargs})",
+                                ret + "_len": f"({name}_t_len {pargs})"})
+    else:
+        ens = ensures_text(cx, f"({name}_t {pargs})")
+    lens_intro = " ".join(f"Hl{k+1}" for k in range(len(len_hyps(cx))))
+    reqs_intro = " ".join(f"Hreq{k+1}"
+                          for k in range(len(task.get("requires", []))))
+    pair_line = ("  cbn [fst snd].\n"
+                 if _has_pair(task) or _has_nested(task) else "")
+    pdestr = _pair_param_destruct(task)
+    exit_bools: list = []
+    for c in calls:
+        exit_bools += c["exit_bools"]
+    bool_destruct_p = ("destruct " + ", ".join(exit_bools) + "; "
+                       if exit_bools else "")
+    top = "".join(gen.render_top(c) for c in calls)
+    fa = f"forall {pb},\n" if pb else ""
+    theorem = f"""Theorem {name}_t_spec :
+  {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
+Proof.
+  intros {pargs} {lens_intro} {reqs_intro}.
+{pdestr}  {unfold_line}
+{top}{pair_line}  {bool_destruct_p}t_dis.
+Qed.
+"""
+    head = [_GWIT] if gen.need_gwit else []
+    return "\n".join(head + gen.chunks + [def_lines, theorem])
+
+
+def _loops_def(cx: Ctx, task: dict, body: list) -> str:
+    """The general path's Fixpoints + `{name}_t` Definition with NO lemmas
+    and definedness collection off -- `_loop_def`'s own role for
+    `gen_loop`, and all a value-witness certificate needs (it grounds the
+    whole computation by `cbv` at the witness's own literal arguments)."""
+    gen, env, _calls, wrap = _general_pieces(cx, body, [0], lemmas=False)
+    def_lines, _unfold = _general_defs(cx, env, wrap)
+    return "\n".join(gen.chunks + [def_lines])
 
 
 def gen_rec(cx: Ctx, body: list) -> str:
@@ -9659,9 +10621,24 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
         if wk not in ("value", "exit", "preservation", "undefined"):
             return None
         cx = Ctx(task)
-        prefix, w, suffix = find_while(body)
+        # 2026-09-18 (ROADMAP WS-20 move 1): a nested / multi-loop body
+        # reaches here as `_GeneralLoops`, and its VALUE witness gets the
+        # general path's own Fixpoints + Definition (`_loops_def`) -- all
+        # `_value_cert` needs, since it grounds the whole computation by
+        # `cbv` at the witness's literal arguments, one fuel-bounded
+        # Fixpoint call per loop and no induction anywhere. An
+        # invariant-drop (`exit`/`preservation`) witness still returns
+        # None here: `_loop_cert` is written against ONE `while` node, so
+        # such a twin falls back to the ordinary lowering and reads
+        # UNPROVED -- a lost flip, never a faked one.
+        general = False
+        prefix = w = suffix = None
+        try:
+            prefix, w, suffix = find_while(body)
+        except _GeneralLoops:
+            general = True
         selfrec = has_self_call(body, task["name"])
-        if w is not None and selfrec:
+        if (w is not None or general) and selfrec:
             return None
         chunk = None
         if wk == "undefined":
@@ -9671,7 +10648,9 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
                 return None
             chunk = _loop_cert(cx, task, prefix, w, suffix, witness)
         else:
-            if w is not None:
+            if general:
+                def_text = _loops_def(cx, task, body)
+            elif w is not None:
                 def_text, _ = _loop_def(cx, task, prefix, w, suffix)
             elif selfrec:
                 def_text = _rec_def(cx, task, body)

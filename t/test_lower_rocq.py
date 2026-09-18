@@ -409,5 +409,263 @@ class NoApplicableTacticIsUnprovedTest(unittest.TestCase):
         self.assertIn("No applicable tactic", r.error)
 
 
+class NestedAndMultipleLoops(unittest.TestCase):
+    """ROADMAP WS-20 move 1, 2026-09-18: the two loop shapes `find_while`
+    used to refuse outright -- a loop nested inside a loop, and two or
+    more loops in one body -- now lower through `gen_loops` (lower_rocq.py
+    has the design note). `has_duplicate` is the committed task this was
+    built for; it read `ABSTAIN: rocq lowering: nested loops are not
+    lowered yet` before, and real=verified / twin=refuted after (measured
+    directly, and in `run_par.py --kernels rocq` over `t/tasks`).
+
+    The two synthetic probes below are the shapes has_duplicate does NOT
+    cover and that measurement therefore has to add: two SEQUENTIAL loops
+    in one body, and a THREE-deep nest. The three-deep one is not
+    decoration -- it is the probe that found the frame-substitution bug
+    (`_DECOMP`'s own dated note: a middle loop whose body leaves the
+    outer index alone states `i' = i` in its conclusion while its own
+    induction hypothesis offers `i' = <the called loop's rebound name>`,
+    and `apply IH` could not unify the two until the rebound names are
+    `subst`ed). has_duplicate could never have found it: its outer body
+    assigns every state slot it has, so its frame list is empty."""
+
+    NESTED = """t 1
+gate loops
+task t_nest_probe(s: seq) returns (r: bool)
+  ensures r ==> (exists i in [0, len(s)) . exists j in [0, len(s)) . i < j and s[i] == s[j])
+{
+  r := false;
+  var i: int := 0;
+  while i < len(s) and not r
+    invariant i >= 0 and i <= len(s)
+    invariant r ==> (exists a in [0, len(s)) . exists b in [0, len(s)) . a < b and s[a] == s[b])
+    decreases len(s) - i
+  {
+    var j: int := i + 1;
+    while j < len(s) and not r
+      invariant i >= 0 and i < len(s)
+      invariant j >= i + 1 and j <= len(s)
+      invariant r ==> (exists a in [0, len(s)) . exists b in [0, len(s)) . a < b and s[a] == s[b])
+      decreases len(s) - j
+    {
+      if s[i] == s[j] {
+        r := true;
+      } else {
+      }
+      j := j + 1;
+    }
+    i := i + 1;
+  }
+}
+"""
+
+    TWO = """t 1
+gate loops
+task t_two_probe(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == 2 * n
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant i >= 0 and i <= n
+    invariant r == i
+    decreases n - i
+  {
+    r := r + 1;
+    i := i + 1;
+  }
+  var k: int := 0;
+  while k < n
+    invariant k >= 0 and k <= n
+    invariant r == n + k
+    decreases n - k
+  {
+    r := r + 1;
+    k := k + 1;
+  }
+}
+"""
+
+    TRIPLE = """t 1
+gate loops
+task t_triple_probe(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 0
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant i >= 0 and i <= n
+    invariant r >= 0
+    decreases n - i
+  {
+    var j: int := 0;
+    while j < n
+      invariant j >= 0 and j <= n
+      invariant r >= 0
+      decreases n - j
+    {
+      var k: int := 0;
+      while k < n
+        invariant k >= 0 and k <= n
+        invariant r >= 0
+        decreases n - k
+      {
+        r := r + 1;
+        k := k + 1;
+      }
+      j := j + 1;
+    }
+    i := i + 1;
+  }
+}
+"""
+
+    SINGLE = """t 1
+gate loops
+task t_single_probe(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == n
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant i >= 0 and i <= n
+    invariant r == i
+    decreases n - i
+  {
+    r := r + 1;
+    i := i + 1;
+  }
+}
+"""
+
+    @staticmethod
+    def _task(src: str) -> dict:
+        import tasks_io
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "probe.t"
+            p.write_text(src, encoding="utf-8")
+            return tasks_io.load_task(p)
+
+    def _lower(self, src: str) -> str:
+        task = self._task(src)
+        return lower_rocq.lower(task, task["body"])
+
+    # ---- the shapes that now lower -----------------------------------
+    def test_nested_emits_one_fixpoint_and_one_spec_per_loop(self):
+        out = self._lower(self.NESTED)
+        for k in (0, 1):
+            self.assertIn(f"Fixpoint t_nest_probe_loop{k} ", out)
+            self.assertIn(f"Lemma t_nest_probe_loop{k}_spec :", out)
+        self.assertNotIn("t_nest_probe_loop2", out)
+        # the inner loop is CALLED, once, through a `let` -- never
+        # inlined or unrolled (the 27.7 GB hazard this file's history
+        # names). One occurrence in the outer Fixpoint body, plus its own
+        # definition/lemma sites.
+        body = out.split("Fixpoint t_nest_probe_loop0 ")[1].split("end.")[0]
+        self.assertEqual(body.count("t_nest_probe_loop1 "), 1)
+        self.assertIn("let '(", body)
+
+    def test_two_sequential_loops_chain_their_lets(self):
+        out = self._lower(self.TWO)
+        for k in (0, 1):
+            self.assertIn(f"Fixpoint t_two_probe_loop{k} ", out)
+        defn = out.split("Definition t_two_probe_t ")[1].split(".\n\n")[0]
+        self.assertEqual(defn.count("t_two_probe_loop0 "), 1)
+        self.assertEqual(defn.count("t_two_probe_loop1 "), 1)
+
+    def test_three_deep_nest_lowers(self):
+        out = self._lower(self.TRIPLE)
+        for k in (0, 1, 2):
+            self.assertIn(f"Fixpoint t_triple_probe_loop{k} ", out)
+
+    def test_no_axioms_anywhere(self):
+        """`Admitted`, `admit` and axioms are forbidden outright: a
+        lowering that cannot express a shape abstains, it never leaves a
+        hole a kernel would read as a proof."""
+        for src in (self.NESTED, self.TWO, self.TRIPLE):
+            out = self._lower(src)
+            # substrings, not words: the PRELUDE's own prose contains
+            # "admits", so the check is on the TACTIC/COMMAND spellings.
+            for bad in ("Admitted", " admit.", " admit;", " admit ",
+                        "Axiom ", "Parameter ", "Hypothesis "):
+                self.assertNotIn(bad, out, bad)
+            self.assertIn("Print Assumptions ", out)
+
+    # ---- the shapes that still abstain, by name ----------------------
+    def test_return_inside_nested_loops_abstains(self):
+        """gen_loop's early exit turns a loop's result into a `(state,
+        returned?)` pair and its conclusion into a disjunction;
+        propagating one OUT of a CALLED loop through its caller's state
+        tuple is a second design this wave did not build, so it abstains
+        by name rather than emitting something that verifies."""
+        src = self.NESTED.replace("        r := true;", "        return true;")
+        self.assertIn("return true;", src)
+        with self.assertRaises(NotImplementedError) as cm:
+            self._lower(src)
+        self.assertIn("return", str(cm.exception))
+
+    def test_loop_under_a_conditional_still_abstains_at_depth(self):
+        """`find_while`'s own pre-existing refusal, now checked at every
+        depth rather than only the top level: the general path admits a
+        loop inside a loop BODY, so a loop inside an `if` inside a loop
+        body would otherwise have reached `exec_straight`'s bare
+        AssertionError -- a crash, not the named abstain this file owes."""
+        src = """t 1
+gate loops
+task t_ifloop_probe(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 0
+{
+  r := 0;
+  var i: int := 0;
+  while i < n
+    invariant i >= 0 and i <= n
+    invariant r >= 0
+    decreases n - i
+  {
+    if n > 0 {
+      var k: int := 0;
+      while k < n
+        invariant k >= 0 and k <= n
+        invariant r >= 0
+        decreases n - k
+      {
+        r := r + 1;
+        k := k + 1;
+      }
+    } else {
+    }
+    i := i + 1;
+  }
+}
+"""
+        task = self._task(src)
+        with self.assertRaises(NotImplementedError) as cm:
+            lower_rocq.lower(task, task["body"])
+        self.assertIn("conditional", str(cm.exception))
+
+    # ---- the path that must NOT have moved ---------------------------
+    def test_one_flat_loop_still_takes_the_old_path(self):
+        """A single top-level loop with nothing nested still goes through
+        `gen_loop`, whose Fixpoint is `{name}_loop`, unnumbered. This is
+        the whole regression bar for the change: every task committed
+        before 2026-09-18 lowers byte-identically, and the numbered
+        `_loop0` naming is the general path's own tell."""
+        out = self._lower(self.SINGLE)
+        self.assertIn("Fixpoint t_single_probe_loop (fuel : nat)", out)
+        self.assertNotIn("t_single_probe_loop0", out)
+        self.assertNotIn("Ltac t_gwit", out)
+
+    # ---- the only positive evidence this kernel accepts ---------------
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_coqc_accepts_all_three_shapes(self):
+        for src in (self.NESTED, self.TWO, self.TRIPLE):
+            ok, log = _compile(self._lower(src))
+            self.assertTrue(ok, log[-3000:])
+
+
 if __name__ == "__main__":
     unittest.main()
