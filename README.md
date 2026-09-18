@@ -34,7 +34,7 @@ A held-out answer counts as **clean** only when its tests pass and all seven pro
 | A locallm model built from the clean corpus, on the 232 held-out problems | **0 clean**, 188 proven but wrong | [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) |
 | Phi-4-mini (3.8B, bf16), the model to beat, on the same 232 problems | 12 answers well formed, 6 passing their tests, **3 clean**, 1 proven but wrong | [`t/runs/2026-09-17/home-4080/score-baselines-1527.md`](t/runs/2026-09-17/home-4080/score-baselines-1527.md) |
 | The untrained 1.5B (Qwen2.5-Coder), same problems | 39 well formed, 13 passing, **3 clean**, 8 proven but wrong | the same file |
-| Asking the generator to repair its own unproven answers, given the seven verdicts | seed 1: 22 repaired answers graded, **0 clean**; against their originals 4 improved, 8 got worse, 10 unchanged | [`t/runs/2026-09-17/NOTES-home.md`](t/runs/2026-09-17/NOTES-home.md) |
+| Asking the generator to repair its own unproven answers, given the seven verdicts | 110 repaired answers graded, **2 clean** (1.8 percent, against 21 percent for fresh samples from the same model); on seed 1, 4 improved, 8 got worse, 10 unchanged | [`t/runs/2026-09-17/NOTES-home.md`](t/runs/2026-09-17/NOTES-home.md) |
 
 **Phi's 3 of 232 is a low bar, and it is low for a reason.** Phi-4-mini has never seen t, so most of its answers do not parse as a t task at all. Beating it at writing t is a weaker claim than beating it at Python, and this page will say so next to whatever number the comparison produces.
 
