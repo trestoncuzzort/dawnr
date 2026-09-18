@@ -14,7 +14,8 @@ LAB=${T_LAB:-tmcuzzort@the-lab-workstation}
 # core per cell and SPARK is 44 percent of all proof time, so cells, not threads, are the limit: with 16 cells
 # only 16 cores worked. Cells are cheap in memory (z3 and one prover each), so the default is most of the
 # machine; Frama-C spawns 4 provers per cell of its own (verifiers/framac.py PAR), which is why this is not 120.
-JOBS=${T_LAB_JOBS:-64}
+JOBS=${T_LAB_JOBS:-64}              # cells at once, over all the answer sets being graded together
+SETS=${T_LAB_SETS:-4}               # answer sets at once: one small set cannot keep 120 threads busy
 SE=t/out/spec-experiment
 # The lab workstation has 502 GB of memory and a 252 GB RAM disk. Grading is small-file work (a lowered source
 # per cell, a gnatprove work tree, why3 session files), so the whole working set lives in RAM and only
@@ -39,6 +40,16 @@ if [ -n "${T_WATCH:-}" ]; then
   trap 'kill %1 2>/dev/null' EXIT
 fi
 
+par() {   # grade several answer sets at once, SETS of them, each with its share of the cells
+  local n=0 t
+  for t in "$@"; do
+    grade "$t" grade-in &
+    n=$((n + 1))
+    if [ "$n" -ge "$SETS" ]; then wait -n 2>/dev/null || wait; n=$((n - 1)); fi
+  done
+  wait
+}
+
 grade() {  # tag, folder name inside the tag
   local T=$1 SUB=$2 D=$SE/$1
   [ -d "$D/$SUB" ] || { echo "== $T: no $SUB/ yet, skipped"; return 0; }
@@ -47,18 +58,18 @@ grade() {  # tag, folder name inside the tag
   trap "rmdir '$D/.grading' 2>/dev/null; kill %1 2>/dev/null" EXIT
   echo "== $T: $(ls "$D/$SUB" | wc -l) tasks to the lab workstation"
   $SSH "$LAB" "mkdir -p $WORK/$T" && rsync -a --delete "$D/$SUB/" "$LAB:$WORK/$T/$SUB/" || return 1
-  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md'"
+  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md'"
   rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" || return 1
   echo "== $T: kernels.md back"
   rmdir "$D/.grading" 2>/dev/null
 }
 
 case "${1:-seeds}" in
-  tags)    shift; for T in "$@"; do grade "$T" grade-in || exit 1; done ;;
+  tags)    shift; par "$@" ;;
   matrix)  echo "== committed-tasks: $(ls t/tasks/*.t | wc -l) tasks to the lab workstation"
            $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'"
            rsync -a "$LAB:$WORK/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
-  seeds)   for S in 1 2 3 4 5 6 7 8; do grade qwen2.5-coder-14b-v3-s$S grade-in || exit 1; done ;;
+  seeds)   par $(for S in 1 2 3 4 5 6 7 8; do echo qwen2.5-coder-14b-v3-s$S; done) ;;
   heldout) for T in phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4; do
              [ -d "$SE/$T/raw" ] || { echo "== $T: no answers yet, skipped"; continue; }
              [ -n "$(ls "$SE/$T/tasks"/*.json 2>/dev/null)" ] || { python3 t/spec_experiment.py extract --model $T --pool v3 &&
