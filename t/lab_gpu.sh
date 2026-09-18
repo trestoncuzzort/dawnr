@@ -55,10 +55,19 @@ start)
   ;;
 
 stop)
-  $SSH "$LAB" "pkill -f 'spec_experiment.py generate' ; pkill -f 'vllm serve' ; sleep 3; \
-     pkill -9 -f 'vllm serve' 2>/dev/null; echo stopped; nvidia-smi --query-compute-apps=pid,used_memory \
-     --format=csv,noheader | head -6"
-  echo "our processes are gone; any rows above belong to other users"
+  # The patterns are bracketed ([v]llm) because the shell running them carries them in its own command line:
+  # a plain `pkill -f 'vllm serve'` matches that shell and kills the stop command halfway through, which on
+  # 2026-09-18 left the server and all four workers alive while this printed "stopped". It now kills, waits,
+  # kills harder, and then reports what is actually on the cards rather than what it tried to do.
+  $SSH "$LAB" "pkill -f '[s]pec_experiment.py generate'; pkill -f '[v]llm serve'; pkill -f '[V]LLM::'; sleep 5; \
+     pkill -9 -f '[v]llm serve' 2>/dev/null; pkill -9 -f '[V]LLM::' 2>/dev/null; sleep 2; \
+     left=\$(pgrep -u \$USER -f '[v]llm|[V]LLM::' | wc -l); \
+     echo \"ours still running: \$left\"; \
+     echo '-- memory we hold on the cards:'; \
+     for p in \$(nvidia-smi --query-compute-apps=pid --format=csv,noheader); do \
+       ps -o user= -p \$p 2>/dev/null | grep -q \"^\$USER\" && nvidia-smi --query-compute-apps=pid,used_memory \
+       --format=csv,noheader | grep \"^\$p,\"; done; true"
+  echo "anything not listed above belongs to other users and was left alone"
   ;;
 
 status)
