@@ -51,6 +51,21 @@ def audit_fixture(args):
 
 
 class StudyTests(unittest.TestCase):
+    def test_longer_cli_pins_horizon_and_warmup(self):
+        original = dict(study.CONFIG)
+        def inspect(args, stop):
+            self.assertEqual(4000, study.CONFIG["steps"])
+            self.assertEqual(200, study.CONFIG["warmup_steps"])
+            self.assertTrue(args.check_only)
+            return {"status": "ready", "arms": study.arms()}
+        try:
+            with patch.object(study, "study_lock"), patch.object(study, "run_study", side_effect=inspect):
+                self.assertEqual(0, study.main(["--corpus", ".", "--tokenizer-dir", ".",
+                                              "--out", ".", "--steps", "4000", "--check-only"]))
+        finally:
+            study.CONFIG.clear()
+            study.CONFIG.update(original)
+
     def test_acceptance_is_bound_to_exact_audit_tokenizer_and_raw_partitions(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(study, "tokenizer_identity", return_value="semantic-fingerprint"):
             args = arguments(Path(directory))

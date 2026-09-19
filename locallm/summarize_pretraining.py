@@ -115,7 +115,7 @@ def validate_identity(record, architecture, seed):
                           "bias": architecture == "gpt"}.items():
         require(model[key] == expected, f"pilot model setting differs: {key}")
     for key, expected in {"steps": STEPS, "batch_size": 8, "grad_accum": 1,
-                          "lr": 0.0003, "warmup_steps": 50, "bf16": True,
+                          "lr": 0.0003, "warmup_steps": STEPS // 20, "bf16": True,
                           "device": "cuda", "deterministic": True}.items():
         require(training[key] == expected, f"pilot training setting differs: {key}")
     integer(training["cpu_threads"], "CPU threads", 1)
@@ -199,7 +199,7 @@ def read_arm(directory, architecture, seed):
                   uncommitted_metric_rows=uncommitted)
     if status != "complete":
         return public, signature
-    require(completed == STEPS, "complete run has not reached the 1000-step endpoint")
+    require(completed == STEPS, "complete run has not reached the registered endpoint")
     require(all(step in rows for step in range(0, STEPS + 1, 100)),
             "one or more registered evaluation windows are missing")
     require(uncommitted == 0, "complete run has metrics beyond its committed endpoint")
@@ -345,11 +345,14 @@ def markdown(report):
 
 
 def main(argv=None):
+    global STEPS
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", action="append", default=[], metavar="ARCH:SEED=DIRECTORY")
+    parser.add_argument("--steps", type=int, choices=(1000, 4000), default=1000)
     parser.add_argument("--json", type=Path, dest="json_path")
     parser.add_argument("--markdown", type=Path, dest="markdown_path")
     args = parser.parse_args(argv)
+    STEPS = args.steps
     directories = {}
     for value in args.run:
         try:

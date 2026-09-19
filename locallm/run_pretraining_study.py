@@ -406,9 +406,13 @@ def main(argv=None):
     parser.add_argument("--corpus", required=True, type=Path)
     parser.add_argument("--tokenizer-dir", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--steps", type=int, choices=(1000, 4000), default=1000,
+                        help="registered horizon; 4000 selects the longer-training follow-up")
     parser.add_argument("--resume", action="store_true", help="explicitly continue the recorded study after checking its artifacts")
     parser.add_argument("--check-only", action="store_true", help="validate inputs and measured fit without creating a study or launching training")
     args = parser.parse_args(argv)
+    CONFIG["steps"] = args.steps
+    CONFIG["warmup_steps"] = args.steps // 20
     args.corpus, args.tokenizer_dir, args.out = (path.resolve() for path in (args.corpus, args.tokenizer_dir, args.out))
     stop = StopRequest()
     old_handlers = {sig: signal.signal(sig, stop.handler) for sig in (signal.SIGINT, signal.SIGTERM)}

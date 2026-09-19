@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import time
@@ -81,6 +82,54 @@ def newest_mtime(paths):
         except OSError:
             pass
     return max(times) if times else None
+
+
+def integrity_issues(output: Path, *, source_dir=HERE):
+    """Cross-check recorded evidence independently of the runner's status flags."""
+    ledger = read_json(output / "study.json")
+    issues = []
+    for name, expected in ledger["source_sha256"].items():
+        if Path(name).name != name:
+            issues.append("invalid_source_name")
+            continue
+        actual = hashlib.sha256((source_dir / name).read_bytes()).hexdigest()
+        if actual != expected:
+            issues.append("frozen_source_changed:" + name)
+    config = ledger["configuration"]
+    expected_tokens = 4 * config["batch_size"] * config["grad_accum"] * config["block_size"]
+    for arm in ledger["arms"]:
+        root = relative_file(output, arm["out"])
+        record_path, metrics_path = root / "run.json", root / "metrics.jsonl"
+        if record_path.exists():
+            record = read_json(record_path)
+            if record.get("tokens_per_step") != expected_tokens:
+                issues.append("token_budget_changed:" + arm["id"])
+            identity = record.get("identity", {})
+            if identity.get("tokenizer_fingerprint") != ledger["inputs"]["tokenizer_fingerprint"]:
+                issues.append("tokenizer_identity_changed:" + arm["id"])
+            data = identity.get("data", {})
+            for key, filename in (("train_sha256", "train.txt"), ("val_sha256", "validation.txt")):
+                if data.get(key) != ledger["inputs"]["corpus_artifacts"][filename]:
+                    issues.append("data_identity_changed:" + arm["id"])
+        if metrics_path.exists():
+            content = metrics_path.read_bytes()
+            # A live append may end mid-record. Recheck that tail next time.
+            lines = content.splitlines()
+            if content and not content.endswith(b"\n"):
+                lines = lines[:-1]
+            previous = -1
+            for line in lines:
+                row = json.loads(line)
+                step = row.get("step")
+                if type(step) is not int or step <= previous or step > config["steps"]:
+                    issues.append("invalid_metric_step:" + arm["id"])
+                    break
+                previous = step
+                for key in ("train_nats_per_token", "val_nats_per_token"):
+                    value = row.get(key)
+                    if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+                        issues.append("invalid_loss:" + arm["id"])
+    return sorted(set(issues))
 
 
 def inspect_study(output: Path, runner_pid: int, *, runner_start_ticks=None, stall_seconds=600,
@@ -166,9 +215,19 @@ def main(argv=None):
     parser.add_argument("--runner-start-ticks", type=int)
     parser.add_argument("--stall-seconds", type=float, default=600)
     parser.add_argument("--startup-grace-seconds", type=float, default=120)
+    parser.add_argument("--integrity", action="store_true", help="also audit frozen source and recorded training evidence")
     args = parser.parse_args(argv)
     result = inspect_study(args.out.resolve(), args.runner_pid, runner_start_ticks=args.runner_start_ticks,
                            stall_seconds=args.stall_seconds, startup_grace_seconds=args.startup_grace_seconds)
+    if args.integrity and (args.out / "study.json").exists():
+        try:
+            issues = integrity_issues(args.out.resolve())
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            issues = ["integrity_check_failed:" + type(error).__name__]
+        result["integrity"] = {"checked": True, "issues": issues}
+        if issues:
+            result.update(status="failed", event=True, reason="independent_integrity_check")
+            result["event_fingerprint"] = hashlib.sha256(json.dumps(issues).encode()).hexdigest()
     print(json.dumps(result, sort_keys=True))
     return 0
 

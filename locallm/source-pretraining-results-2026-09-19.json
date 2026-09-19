@@ -1,0 +1,637 @@
+{
+  "all_architecture_predictions_met": true,
+  "all_learning_predictions_met": true,
+  "arms": [
+    {
+      "architecture": "modern",
+      "checkpoint_endpoint_verified": true,
+      "completed_steps": 1000,
+      "evaluations": [
+        {
+          "step": 0,
+          "train_nats_per_token": 9.165810537338258,
+          "val_nats_per_token": 9.158410787582397
+        },
+        {
+          "step": 100,
+          "train_nats_per_token": 4.574717020988465,
+          "val_nats_per_token": 4.889622139930726
+        },
+        {
+          "step": 200,
+          "train_nats_per_token": 3.684177201986313,
+          "val_nats_per_token": 4.149380141496659
+        },
+        {
+          "step": 300,
+          "train_nats_per_token": 3.2102264642715457,
+          "val_nats_per_token": 3.740631896257401
+        },
+        {
+          "step": 400,
+          "train_nats_per_token": 2.867046242952347,
+          "val_nats_per_token": 3.44592342376709
+        },
+        {
+          "step": 500,
+          "train_nats_per_token": 2.615400046110153,
+          "val_nats_per_token": 3.2096151411533356
+        },
+        {
+          "step": 600,
+          "train_nats_per_token": 2.413840460777283,
+          "val_nats_per_token": 3.00064709186554
+        },
+        {
+          "step": 700,
+          "train_nats_per_token": 2.2513227254152297,
+          "val_nats_per_token": 2.820139074325562
+        },
+        {
+          "step": 800,
+          "train_nats_per_token": 2.1350925743579867,
+          "val_nats_per_token": 2.674744331836701
+        },
+        {
+          "step": 900,
+          "train_nats_per_token": 2.0507047533988954,
+          "val_nats_per_token": 2.5734196305274963
+        },
+        {
+          "step": 1000,
+          "train_nats_per_token": 2.0018308937549594,
+          "val_nats_per_token": 2.510538059473038
+        }
+      ],
+      "final_losses": {
+        "train_nats_per_token": 2.0018308937549594,
+        "val_nats_per_token": 2.510538059473038
+      },
+      "initial_losses": {
+        "train_nats_per_token": 9.165810537338258,
+        "val_nats_per_token": 9.158410787582397
+      },
+      "learning_prediction_met": true,
+      "measured_steps": 1000,
+      "measurement_scope": "whole_run",
+      "optimizer_seconds": 259.07255024346523,
+      "parameters": 91245312,
+      "peak_allocated_bytes_by_rank": [
+        11835685888,
+        11835685888,
+        11835685888,
+        11835685888
+      ],
+      "peak_reserved_bytes_by_rank": [
+        12773752832,
+        12773752832,
+        12773752832,
+        12773752832
+      ],
+      "recorded_losses_finite": true,
+      "seed": 1337,
+      "status": "complete",
+      "token_budget": 65536000,
+      "tokenizer_fingerprint": "f0cf41c06298459f0ee5a0b077df65c91797f51331aaeea7f1d31e4708f29004",
+      "train_sha256": "737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb",
+      "trained_tokens": 65536000,
+      "uncommitted_metric_rows": 0,
+      "val_sha256": "c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be",
+      "validation_loss_drop_fraction": 0.7258762335844339,
+      "wall_seconds": 286.41846903203987
+    },
+    {
+      "architecture": "gpt",
+      "checkpoint_endpoint_verified": true,
+      "completed_steps": 1000,
+      "evaluations": [
+        {
+          "step": 0,
+          "train_nats_per_token": 9.176747369766236,
+          "val_nats_per_token": 9.1768367767334
+        },
+        {
+          "step": 100,
+          "train_nats_per_token": 5.01056364774704,
+          "val_nats_per_token": 5.2221244215965275
+        },
+        {
+          "step": 200,
+          "train_nats_per_token": 4.499189531803132,
+          "val_nats_per_token": 4.757133913040161
+        },
+        {
+          "step": 300,
+          "train_nats_per_token": 4.206171125173569,
+          "val_nats_per_token": 4.528539717197418
+        },
+        {
+          "step": 400,
+          "train_nats_per_token": 3.8801680624485018,
+          "val_nats_per_token": 4.27087305188179
+        },
+        {
+          "step": 500,
+          "train_nats_per_token": 3.5542835116386415,
+          "val_nats_per_token": 4.0137743890285495
+        },
+        {
+          "step": 600,
+          "train_nats_per_token": 3.293654924631119,
+          "val_nats_per_token": 3.7954464972019197
+        },
+        {
+          "step": 700,
+          "train_nats_per_token": 3.09704504609108,
+          "val_nats_per_token": 3.623358976840973
+        },
+        {
+          "step": 800,
+          "train_nats_per_token": 2.952247935533524,
+          "val_nats_per_token": 3.49249102473259
+        },
+        {
+          "step": 900,
+          "train_nats_per_token": 2.8558565199375154,
+          "val_nats_per_token": 3.3940896630287174
+        },
+        {
+          "step": 1000,
+          "train_nats_per_token": 2.7913020074367525,
+          "val_nats_per_token": 3.327393448352814
+        }
+      ],
+      "final_losses": {
+        "train_nats_per_token": 2.7913020074367525,
+        "val_nats_per_token": 3.327393448352814
+      },
+      "initial_losses": {
+        "train_nats_per_token": 9.176747369766236,
+        "val_nats_per_token": 9.1768367767334
+      },
+      "learning_prediction_met": true,
+      "measured_steps": 1000,
+      "measurement_scope": "whole_run",
+      "optimizer_seconds": 216.10571562172845,
+      "parameters": 92920320,
+      "peak_allocated_bytes_by_rank": [
+        8884609024,
+        8884609024,
+        8884609024,
+        8884609024
+      ],
+      "peak_reserved_bytes_by_rank": [
+        9810477056,
+        9810477056,
+        9810477056,
+        9810477056
+      ],
+      "recorded_losses_finite": true,
+      "seed": 1337,
+      "status": "complete",
+      "token_budget": 65536000,
+      "tokenizer_fingerprint": "f0cf41c06298459f0ee5a0b077df65c91797f51331aaeea7f1d31e4708f29004",
+      "train_sha256": "737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb",
+      "trained_tokens": 65536000,
+      "uncommitted_metric_rows": 0,
+      "val_sha256": "c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be",
+      "validation_loss_drop_fraction": 0.637413900965422,
+      "wall_seconds": 241.09115932602435
+    },
+    {
+      "architecture": "modern",
+      "checkpoint_endpoint_verified": true,
+      "completed_steps": 1000,
+      "evaluations": [
+        {
+          "step": 0,
+          "train_nats_per_token": 9.138250398635865,
+          "val_nats_per_token": 9.155417251586915
+        },
+        {
+          "step": 100,
+          "train_nats_per_token": 4.584708833694458,
+          "val_nats_per_token": 4.912882518768311
+        },
+        {
+          "step": 200,
+          "train_nats_per_token": 3.6984042406082156,
+          "val_nats_per_token": 4.15007295012474
+        },
+        {
+          "step": 300,
+          "train_nats_per_token": 3.1823361814022064,
+          "val_nats_per_token": 3.7542490839958194
+        },
+        {
+          "step": 400,
+          "train_nats_per_token": 2.856450951099396,
+          "val_nats_per_token": 3.5074987292289737
+        },
+        {
+          "step": 500,
+          "train_nats_per_token": 2.599635267257691,
+          "val_nats_per_token": 3.2661689281463624
+        },
+        {
+          "step": 600,
+          "train_nats_per_token": 2.3909287571907045,
+          "val_nats_per_token": 3.0408596992492676
+        },
+        {
+          "step": 700,
+          "train_nats_per_token": 2.2276402592659,
+          "val_nats_per_token": 2.820953291654587
+        },
+        {
+          "step": 800,
+          "train_nats_per_token": 2.1005666851997375,
+          "val_nats_per_token": 2.6525478243827822
+        },
+        {
+          "step": 900,
+          "train_nats_per_token": 2.019775825738907,
+          "val_nats_per_token": 2.5438517421483997
+        },
+        {
+          "step": 1000,
+          "train_nats_per_token": 1.962858334183693,
+          "val_nats_per_token": 2.456950527429581
+        }
+      ],
+      "final_losses": {
+        "train_nats_per_token": 1.962858334183693,
+        "val_nats_per_token": 2.456950527429581
+      },
+      "initial_losses": {
+        "train_nats_per_token": 9.138250398635865,
+        "val_nats_per_token": 9.155417251586915
+      },
+      "learning_prediction_met": true,
+      "measured_steps": 1000,
+      "measurement_scope": "whole_run",
+      "optimizer_seconds": 258.22822170867585,
+      "parameters": 91245312,
+      "peak_allocated_bytes_by_rank": [
+        11835685888,
+        11835685888,
+        11835685888,
+        11835685888
+      ],
+      "peak_reserved_bytes_by_rank": [
+        12773752832,
+        12773752832,
+        12773752832,
+        12773752832
+      ],
+      "recorded_losses_finite": true,
+      "seed": 7,
+      "status": "complete",
+      "token_budget": 65536000,
+      "tokenizer_fingerprint": "f0cf41c06298459f0ee5a0b077df65c91797f51331aaeea7f1d31e4708f29004",
+      "train_sha256": "737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb",
+      "trained_tokens": 65536000,
+      "uncommitted_metric_rows": 0,
+      "val_sha256": "c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be",
+      "validation_loss_drop_fraction": 0.7316396992170164,
+      "wall_seconds": 285.2804212339688
+    },
+    {
+      "architecture": "gpt",
+      "checkpoint_endpoint_verified": true,
+      "completed_steps": 1000,
+      "evaluations": [
+        {
+          "step": 0,
+          "train_nats_per_token": 9.153881120681763,
+          "val_nats_per_token": 9.164816761016846
+        },
+        {
+          "step": 100,
+          "train_nats_per_token": 5.013988530635834,
+          "val_nats_per_token": 5.259918940067291
+        },
+        {
+          "step": 200,
+          "train_nats_per_token": 4.506891703605652,
+          "val_nats_per_token": 4.768003737926484
+        },
+        {
+          "step": 300,
+          "train_nats_per_token": 4.186823105812073,
+          "val_nats_per_token": 4.520133471488953
+        },
+        {
+          "step": 400,
+          "train_nats_per_token": 3.846117871999741,
+          "val_nats_per_token": 4.268489092588425
+        },
+        {
+          "step": 500,
+          "train_nats_per_token": 3.5286561250686646,
+          "val_nats_per_token": 4.028501850366593
+        },
+        {
+          "step": 600,
+          "train_nats_per_token": 3.2659062981605533,
+          "val_nats_per_token": 3.8039394259452823
+        },
+        {
+          "step": 700,
+          "train_nats_per_token": 3.08725768327713,
+          "val_nats_per_token": 3.63156795501709
+        },
+        {
+          "step": 800,
+          "train_nats_per_token": 2.9540078938007355,
+          "val_nats_per_token": 3.507758039236069
+        },
+        {
+          "step": 900,
+          "train_nats_per_token": 2.863861852884293,
+          "val_nats_per_token": 3.4257489085197452
+        },
+        {
+          "step": 1000,
+          "train_nats_per_token": 2.7977374851703645,
+          "val_nats_per_token": 3.3476865231990818
+        }
+      ],
+      "final_losses": {
+        "train_nats_per_token": 2.7977374851703645,
+        "val_nats_per_token": 3.3476865231990818
+      },
+      "initial_losses": {
+        "train_nats_per_token": 9.153881120681763,
+        "val_nats_per_token": 9.164816761016846
+      },
+      "learning_prediction_met": true,
+      "measured_steps": 1000,
+      "measurement_scope": "whole_run",
+      "optimizer_seconds": 215.98855252983049,
+      "parameters": 92920320,
+      "peak_allocated_bytes_by_rank": [
+        8884609024,
+        8884609024,
+        8884609024,
+        8884609024
+      ],
+      "peak_reserved_bytes_by_rank": [
+        9810477056,
+        9810477056,
+        9810477056,
+        9810477056
+      ],
+      "recorded_losses_finite": true,
+      "seed": 7,
+      "status": "complete",
+      "token_budget": 65536000,
+      "tokenizer_fingerprint": "f0cf41c06298459f0ee5a0b077df65c91797f51331aaeea7f1d31e4708f29004",
+      "train_sha256": "737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb",
+      "trained_tokens": 65536000,
+      "uncommitted_metric_rows": 0,
+      "val_sha256": "c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be",
+      "validation_loss_drop_fraction": 0.6347241182782085,
+      "wall_seconds": 241.0294971067924
+    },
+    {
+      "architecture": "modern",
+      "checkpoint_endpoint_verified": true,
+      "completed_steps": 1000,
+      "evaluations": [
+        {
+          "step": 0,
+          "train_nats_per_token": 9.133583307266235,
+          "val_nats_per_token": 9.173709726333618
+        },
+        {
+          "step": 100,
+          "train_nats_per_token": 4.564376425743103,
+          "val_nats_per_token": 4.897356152534485
+        },
+        {
+          "step": 200,
+          "train_nats_per_token": 3.6810725271701816,
+          "val_nats_per_token": 4.155879455804825
+        },
+        {
+          "step": 300,
+          "train_nats_per_token": 3.191524475812912,
+          "val_nats_per_token": 3.791005861759186
+        },
+        {
+          "step": 400,
+          "train_nats_per_token": 2.85457683801651,
+          "val_nats_per_token": 3.47175766825676
+        },
+        {
+          "step": 500,
+          "train_nats_per_token": 2.60271646976471,
+          "val_nats_per_token": 3.224524372816086
+        },
+        {
+          "step": 600,
+          "train_nats_per_token": 2.403562617301941,
+          "val_nats_per_token": 3.028038442134857
+        },
+        {
+          "step": 700,
+          "train_nats_per_token": 2.2181692600250247,
+          "val_nats_per_token": 2.8015695214271545
+        },
+        {
+          "step": 800,
+          "train_nats_per_token": 2.0911787539720534,
+          "val_nats_per_token": 2.607181817293167
+        },
+        {
+          "step": 900,
+          "train_nats_per_token": 2.0061911523342135,
+          "val_nats_per_token": 2.5077174186706546
+        },
+        {
+          "step": 1000,
+          "train_nats_per_token": 1.9496990323066712,
+          "val_nats_per_token": 2.4314592719078068
+        }
+      ],
+      "final_losses": {
+        "train_nats_per_token": 1.9496990323066712,
+        "val_nats_per_token": 2.4314592719078068
+      },
+      "initial_losses": {
+        "train_nats_per_token": 9.133583307266235,
+        "val_nats_per_token": 9.173709726333618
+      },
+      "learning_prediction_met": true,
+      "measured_steps": 1000,
+      "measurement_scope": "whole_run",
+      "optimizer_seconds": 258.9354261511471,
+      "parameters": 91245312,
+      "peak_allocated_bytes_by_rank": [
+        11835685888,
+        11835685888,
+        11835685888,
+        11835685888
+      ],
+      "peak_reserved_bytes_by_rank": [
+        12773752832,
+        12773752832,
+        12773752832,
+        12773752832
+      ],
+      "recorded_losses_finite": true,
+      "seed": 42,
+      "status": "complete",
+      "token_budget": 65536000,
+      "tokenizer_fingerprint": "f0cf41c06298459f0ee5a0b077df65c91797f51331aaeea7f1d31e4708f29004",
+      "train_sha256": "737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb",
+      "trained_tokens": 65536000,
+      "uncommitted_metric_rows": 0,
+      "val_sha256": "c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be",
+      "validation_loss_drop_fraction": 0.7349535417576845,
+      "wall_seconds": 286.28788954904303
+    },
+    {
+      "architecture": "gpt",
+      "checkpoint_endpoint_verified": true,
+      "completed_steps": 1000,
+      "evaluations": [
+        {
+          "step": 0,
+          "train_nats_per_token": 9.163481330871582,
+          "val_nats_per_token": 9.139937591552735
+        },
+        {
+          "step": 100,
+          "train_nats_per_token": 4.999972975254059,
+          "val_nats_per_token": 5.25975501537323
+        },
+        {
+          "step": 200,
+          "train_nats_per_token": 4.503199291229248,
+          "val_nats_per_token": 4.801777958869934
+        },
+        {
+          "step": 300,
+          "train_nats_per_token": 4.202264875173569,
+          "val_nats_per_token": 4.5494436621665955
+        },
+        {
+          "step": 400,
+          "train_nats_per_token": 3.8751040160655976,
+          "val_nats_per_token": 4.280039763450623
+        },
+        {
+          "step": 500,
+          "train_nats_per_token": 3.5851513147354126,
+          "val_nats_per_token": 4.053483319282532
+        },
+        {
+          "step": 600,
+          "train_nats_per_token": 3.333818602561951,
+          "val_nats_per_token": 3.8562942862510683
+        },
+        {
+          "step": 700,
+          "train_nats_per_token": 3.1290648877620697,
+          "val_nats_per_token": 3.6741802752017976
+        },
+        {
+          "step": 800,
+          "train_nats_per_token": 2.9945512115955353,
+          "val_nats_per_token": 3.5460074186325077
+        },
+        {
+          "step": 900,
+          "train_nats_per_token": 2.8998328745365143,
+          "val_nats_per_token": 3.463563483953476
+        },
+        {
+          "step": 1000,
+          "train_nats_per_token": 2.8392631113529205,
+          "val_nats_per_token": 3.4103400230407717
+        }
+      ],
+      "final_losses": {
+        "train_nats_per_token": 2.8392631113529205,
+        "val_nats_per_token": 3.4103400230407717
+      },
+      "initial_losses": {
+        "train_nats_per_token": 9.163481330871582,
+        "val_nats_per_token": 9.139937591552735
+      },
+      "learning_prediction_met": true,
+      "measured_steps": 1000,
+      "measurement_scope": "whole_run",
+      "optimizer_seconds": 216.91282168449834,
+      "parameters": 92920320,
+      "peak_allocated_bytes_by_rank": [
+        8884609024,
+        8884609024,
+        8884609024,
+        8884609024
+      ],
+      "peak_reserved_bytes_by_rank": [
+        9810477056,
+        9810477056,
+        9810477056,
+        9810477056
+      ],
+      "recorded_losses_finite": true,
+      "seed": 42,
+      "status": "complete",
+      "token_budget": 65536000,
+      "tokenizer_fingerprint": "f0cf41c06298459f0ee5a0b077df65c91797f51331aaeea7f1d31e4708f29004",
+      "train_sha256": "737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb",
+      "trained_tokens": 65536000,
+      "uncommitted_metric_rows": 0,
+      "val_sha256": "c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be",
+      "validation_loss_drop_fraction": 0.626874911466282,
+      "wall_seconds": 243.70502500003204
+    }
+  ],
+  "comparison_mismatches": [],
+  "completed_pairs": 3,
+  "endpoint_steps": 1000,
+  "input_errors": [],
+  "limitations": [
+    "This measures BPE token loss, not executable correctness, proof quality, or a Phi win.",
+    "Fixed validation windows are identified by partition/tokenizer hashes, evaluation seed/iterations, rank count, microbatch and context.",
+    "Matching trainer and optimizer source hashes pins unrecorded AdamW and gradient-clipping constants; their values are not independently stored in metadata.",
+    "Finite-loss evidence covers recorded evaluations; completed training relies on the trainer's per-update nonfinite guards.",
+    "Timing and peak memory cover only the final process segment after resume; run order is modern then GPT.",
+    "All planned seeds are displayed; missing, failed and invalid arms are not replaced by a best-seed result."
+  ],
+  "mean_completed_pair_improvement": 0.2662007840834253,
+  "overall_status": "complete",
+  "paired_results": [
+    {
+      "architecture_prediction_met": true,
+      "modern_relative_improvement": 0.24549407864109077,
+      "seed": 1337,
+      "status": "complete"
+    },
+    {
+      "architecture_prediction_met": true,
+      "modern_relative_improvement": 0.2660750908416314,
+      "seed": 7,
+      "status": "complete"
+    },
+    {
+      "architecture_prediction_met": true,
+      "modern_relative_improvement": 0.28703318276755363,
+      "seed": 42,
+      "status": "complete"
+    }
+  ],
+  "planned_seeds": [
+    1337,
+    7,
+    42
+  ],
+  "preregistration": "PREREG-source-pretrain-2026-09-19.md",
+  "replications_complete": true,
+  "schema": 1,
+  "tokens_per_arm": 65536000
+}

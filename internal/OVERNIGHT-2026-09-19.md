@@ -6,6 +6,24 @@ pushing updates to GitHub. Expansion is at a stopping point. Model work should
 resume only when a round completes, fails or stalls; use a lightweight process
 for waiting, and keep reports concise. The broader Phi goal is not achieved.
 
+Latest operator instruction: update GitHub only after a run is done. Batch
+results and tested changes at a terminal event, then start the next round and
+go quiet. Pause the active goal while waiting to prevent automatic model turns;
+the event watcher supplies the next authorized wake. Never mark the Phi goal
+complete merely to suppress polling.
+
+The initial six-arm study is complete; its result is in
+`locallm/FINDINGS-source-pretraining-2026-09-19.md`. The next registered study is
+`t/out/source-pretraining-longer-2026-09-19`, using `--steps 4000` for both runner
+and reporter and 200 warmup updates. See `locallm/PREREG-source-longer-2026-09-19.md`.
+Do not accidentally resume it with the default 1000-step schedule.
+
+Wake transport correction: an idle UI still owns its thread's writer lock.
+Never invoke a second `codex exec resume` for this open conversation. The
+watcher must deliver using native `codex queue`, preserve the returned queue ID,
+and distinguish enqueue acceptance from actual turn delivery. The old failed
+wake remains in private state; do not erase it to imply successful operation.
+
 The active study is `t/out/source-pretraining-2026-09-19` on the lab. Its source
 corpus and tokenizer are the corresponding `source-corpus-2026-09-19-v2` and
 `source-tokenizer-2026-09-19-v2` directories. Use the lab's `.venv-vllm` Python

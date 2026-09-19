@@ -1,11 +1,40 @@
 """CPU-only fixture tests for study wake conditions and process identity."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import tempfile
 import unittest
 
 import probe_pretraining_study as probe
+
+
+class IntegrityTests(unittest.TestCase):
+    def test_independent_checks_and_partial_live_append(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "model.py").write_text("original")
+            arm = root / "modern"
+            arm.mkdir()
+            ledger = {"source_sha256": {"model.py": hashlib.sha256(b"original").hexdigest()},
+                      "configuration": {"batch_size": 8, "grad_accum": 1, "block_size": 2048, "steps": 1000},
+                      "inputs": {"tokenizer_fingerprint": "tok", "corpus_artifacts": {"train.txt": "train", "validation.txt": "val"}},
+                      "arms": [{"id": "modern", "out": "modern"}]}
+            (root / "study.json").write_text(json.dumps(ledger))
+            record = {"tokens_per_step": 65536, "identity": {"tokenizer_fingerprint": "tok",
+                      "data": {"train_sha256": "train", "val_sha256": "val"}}}
+            (arm / "run.json").write_text(json.dumps(record))
+            metric = {"step": 0, "train_nats_per_token": 9.0, "val_nats_per_token": 9.0}
+            (arm / "metrics.jsonl").write_text(json.dumps(metric) + '\n{"step":')
+            self.assertEqual(probe.integrity_issues(root, source_dir=root), [])
+            (root / "model.py").write_text("changed")
+            record["tokens_per_step"] = 1
+            (arm / "run.json").write_text(json.dumps(record))
+            metric["val_nats_per_token"] = float("nan")
+            (arm / "metrics.jsonl").write_text(json.dumps(metric) + "\n" + json.dumps(metric) + "\n")
+            self.assertEqual(probe.integrity_issues(root, source_dir=root), [
+                "frozen_source_changed:model.py", "invalid_loss:modern",
+                "invalid_metric_step:modern", "token_budget_changed:modern"])
 
 
 class ProbeTests(unittest.TestCase):

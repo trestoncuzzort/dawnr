@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import torch
 
@@ -16,6 +17,18 @@ def digest(text):
 
 
 class PretrainingSummaryTests(unittest.TestCase):
+    def test_longer_horizon_requires_matching_warmup(self):
+        directory = self.arm("modern")
+        record = json.loads((directory / "run.json").read_text())
+        with patch.object(summary, "STEPS", 4000):
+            with self.assertRaisesRegex(summary.InvalidRun, "steps"):
+                summary.validate_identity(record, "modern", 1337)
+            record["identity"]["training"]["steps"] = 4000
+            with self.assertRaisesRegex(summary.InvalidRun, "warmup_steps"):
+                summary.validate_identity(record, "modern", 1337)
+            record["identity"]["training"]["warmup_steps"] = 200
+            summary.validate_identity(record, "modern", 1337)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
