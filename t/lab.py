@@ -1649,7 +1649,12 @@ class Lab:
     def progress_of(self, key: str) -> tuple:
         """(what it has produced so far, how far along from 0 to 1), counted from the files themselves."""
         heldout = {"phi": ("phi4-mini-v3", 232), "base": ("qwen15b-base-v3", 232),
-                   "student": ("student-r4-v3", 232), "locallm": ("locallm-r4", 232)}
+                   "student": ("student-r4-v3", 232), "locallm": ("locallm-r4", 232),
+                   # every later round's held-out generation counts the same way; without these rows the new
+                   # steps had a running light and no bar (2026-09-18)
+                   "r5-student": ("student-r5-v3", 232), "r5-locallm": ("locallm-r5", 232),
+                   "r6-student": ("student-r6-v3", 232), "r6-student-g": ("student-r6-g", 232),
+                   "phi-g": ("phi4-mini-g", 232)}
         if key in heldout:
             tag, total = heldout[key]
             n = self.answers(tag)
@@ -1689,7 +1694,10 @@ class Lab:
             return f"{n} answers repaired", (1.0 if self.step_state.get(key) == "done" else None) if not n else None
         graded = {"grade": [f"{GEN}{i}" for i in range(1, 9)], "grade-repair": QWEN_FIX.split(),
                   "grade-growth": GROWTH_TAGS.split(), "grade-growth-repair": GROWTH_FIX.split(),
-                  "grade-heldout": HELDOUT.split()}
+                  "grade-heldout": HELDOUT.split(),
+                  "r5-grade-heldout": ["student-r5-v3", "locallm-r5"],
+                  "r6-grade-heldout": ["student-r6-v3", "student-r6-g", "phi4-mini-g"],
+                  "constrained-grade": ["qwen3-coder-30b-apps-g1"]}
         if key in graded:
             tags = graded[key]
             done_n = sum(1 for t in tags if (SPEC_EXP / t / "kernels.md").exists())
@@ -1707,7 +1715,27 @@ class Lab:
                     part_text = f"; {tag.split('-')[-1]} at {min(done_c, total)} of {total} cells"
             return (f"{done_n} of {waiting} answer sets{part_text}",
                     min(1.0, (done_n + part) / waiting))
+        if key in ("train", "r5-train", "r6-train", "r5-locallm", "r6-locallm"):
+            # a training step's own progress bar, read back out of its log: transformers and locallm/train.py
+            # both print "<done>/<total>", so the window can show the same fraction the terminal would
+            return self.bar_from_log(key)
+        if key == "constrained":
+            n = self.answers("qwen3-coder-30b-apps-g1")
+            return (f"{n} of 1133 answers, on the lab workstation", min(1.0, n / 1133) if n else None)
         return "", None
+
+    def bar_from_log(self, key: str) -> tuple:
+        """The last "<done>/<total>" a step printed, as a fraction. Steps that run a training loop print one
+        of these a second; nothing else in the log looks like it, and the last one is the current one."""
+        try:
+            text = (RUNS / "logs" / f"{key}.log").read_text(errors="replace")
+        except OSError:
+            return "", None
+        hits = re.findall(r"(\d+)/(\d+) \[", text[-4000:])
+        if not hits:
+            return "", None
+        done, total = int(hits[-1][0]), int(hits[-1][1])
+        return (f"{done} of {total} steps", min(1.0, done / total) if total else None)
 
     def cells_printed(self, key: str) -> int:
         """Cells the running step has reported since it last said which answer set it is on."""
