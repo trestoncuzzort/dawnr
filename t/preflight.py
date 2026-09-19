@@ -82,10 +82,14 @@ def check_split(split_path: Path) -> bool:
         return say(False, "split readable", str(split_path))
     ev = {int(i) for i in split["eval_ids"]}
     ok = True
-    for name in ("sft-r4.jsonl", "pairs-r4.jsonl", "sft-r5.jsonl", "pairs-r5.jsonl"):
-        p = OUT / "loop" / name
-        if not p.exists():
-            continue
+    _ = ev
+    # every pool and pair file there is, not a list that has to be edited each round: round 6's files existed
+    # for a day without being leak-checked because they were not in the list (2026-09-19)
+    files = sorted((OUT / "loop").glob("sft-*.jsonl")) + sorted((OUT / "loop").glob("pairs-*.jsonl"))
+    if not files:
+        ok = say(False, "a pool to check", "no sft-*.jsonl or pairs-*.jsonl under out/loop")
+    for p in files:
+        name = p.name
         leaked = set()
         for line in p.read_text(errors="replace").splitlines():
             for tid in re.findall(r"mbpp_(\d+)", line):

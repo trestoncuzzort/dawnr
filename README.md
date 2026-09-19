@@ -108,6 +108,8 @@ Three rounds, three different data recipes — more problems, more answers, then
 - A proof covers the specification, not the intent. Hence the tests, the proven-but-wrong column and the specification check.
 - t covers integers, booleans, sequences, pairs, strings as character sequences, loops with invariants and recursive specification functions. No heap, no floats, no concurrency.
 - Phi's 3 of 232 is a low bar and it is low for a reason: Phi has never seen t, so most of its answers do not parse. Beating it at writing t is a weaker claim than beating it at Python, and this page says so next to the number.
+- The 232 held-out problems are MBPP, which every base model here was almost certainly pretrained on. The split protects against *this project's* training leaking into its own evaluation — it cannot protect against a base model having seen MBPP before we met it. That applies to every row equally, ours and Phi's, so the comparison stands while the absolute numbers are softer than they look.
+- The models are not the same size. DeepSeek-Prover-V2-7B is 7B against Phi-4-mini's 3.8B, so its 6 against 3 is not a per-parameter claim; what makes it interesting is the conversion rate, which is a property of what the model was trained on rather than how big it is.
 
 ## License
 
