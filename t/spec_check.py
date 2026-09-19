@@ -226,8 +226,24 @@ def main() -> int:
                 harness.load(root / tag / "tasks" / f"{name}.json")).strip()
         except (OSError, ValueError):
             pass
-    (HERE / "out" / "spec-disagree.json").write_text(
-        json.dumps({"checked": sum(tally.values()), "disagree": disagree, "programs": texts}, indent=1),
+    # Merge rather than overwrite, and record WHICH tags were checked. Without that list a reader cannot tell
+    # "this answer set was checked and nothing disagreed" from "nobody ever checked this answer set", and
+    # score_heldout.py was silently reading the second as the first: every tag absent from the disagreement
+    # list scored full marks in its "clean, spec checked" column, checked or not (2026-09-19).
+    out_path = HERE / "out" / "spec-disagree.json"
+    try:
+        prev = json.loads(out_path.read_text())
+    except (OSError, ValueError):
+        prev = {}
+    checked_tags = sorted(set(prev.get("tags", [])) | {t for t, _n, _r in rows})
+    keep = [x for x in prev.get("disagree", []) if x.split("/", 1)[0] not in {t for t, _n, _r in rows}]
+    keep_texts = {k: v for k, v in (prev.get("programs") or {}).items()
+                  if k.split("/", 1)[0] not in {t for t, _n, _r in rows}}
+    out_path.write_text(
+        json.dumps({"checked": int(prev.get("checked", 0)) + sum(tally.values()),
+                    "tags": checked_tags,
+                    "disagree": sorted(keep + disagree),
+                    "programs": {**keep_texts, **texts}}, indent=1),
         encoding="utf-8")
     print(f"written to {a.out.relative_to(HERE.parent)}")
     return 0

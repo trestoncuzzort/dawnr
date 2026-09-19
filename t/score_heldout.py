@@ -46,12 +46,15 @@ def score(tag: str, eval_ids: set[int]) -> dict:
     # 2026-09-18: an answer can pass its tests and all seven proofs and still hold a specification that
     # disagrees with the problem's own solution on other inputs (t/spec_check.py). Those are counted apart,
     # and "clean, spec checked" is clean minus them: the honest column once the specification is checked too.
+    # A tag nobody checked is not a tag with nothing wrong: spec_check.py records which tags it ran over, and
+    # an unchecked one gets no column rather than a free pass (2026-09-19).
+    checked, disagree = False, set()
     try:
-        disagree = {x.split("/", 1)[1] for x in
-                    json.loads((HERE / "out" / "spec-disagree.json").read_text())["disagree"]
-                    if x.split("/", 1)[0] == tag}
+        sd = json.loads((HERE / "out" / "spec-disagree.json").read_text())
+        checked = tag in set(sd.get("tags", []))
+        disagree = {x.split("/", 1)[1] for x in sd.get("disagree", []) if x.split("/", 1)[0] == tag}
     except (OSError, ValueError, KeyError, IndexError):
-        disagree = set()
+        pass
     r = {"tag": tag, "eval": len(eval_ids), "answered": 0, "task": 0, "tests pass": 0, "graded": 0,
          "clean": 0, "spec disagrees": 0, "clean, spec checked": 0, "wrong but proven": 0, "kernels": len(cols)}
     for tid in eval_ids:
@@ -74,6 +77,8 @@ def score(tag: str, eval_ids: set[int]) -> dict:
         r["spec disagrees"] += bool(proven and passed and bad_spec)
         r["clean, spec checked"] += bool(proven and passed and not bad_spec)
         r["wrong but proven"] += proven and not passed
+    if not checked:
+        r["spec disagrees"] = r["clean, spec checked"] = "not checked"
     return r
 
 
