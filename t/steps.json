@@ -310,5 +310,61 @@
   "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4 locallm-r0 | tee t/out/score-r4.md",
   "test -s t/out/score-r4.md",
   ""
+ ],
+ [
+  "r7-capacity",
+  "How large a locallm trains here",
+  "Runs real optimizer steps at 91M, 162M, 312M, 500M, 780M and 1.2B on the least contended lab card and reports what fits, its peak memory and its tokens per second. Measured 2026-09-19: 875M parameters train on one card with 16.4 GiB free, 270 times the 3.2M model on the scoreboard; 1.63B does not, because AdamW holds sixteen bytes per parameter. Read it before choosing a size.",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && CARD=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -t, -k2 -rn | head -1 | cut -d, -f1) && PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=$CARD ~/.venv-vllm/bin/python locallm/measure_capacity.py --gradient-checkpointing --batch-size 2 --block-size 512 --out t/out/capacity-2026-09-19.json' && rsync -a \"$T_LAB:~/tup/t/out/capacity-2026-09-19.json\" t/out/",
+  "test -s t/out/capacity-2026-09-19.json",
+  "lab"
+ ],
+ [
+  "r7-corpus",
+  "Round 7: the corpus a pretrained core learns from",
+  "Builds the specialization corpus on the lab: round 6's clean answers with their problem statements, plus the lifted and committed tasks. 280 documents, 102 KB, 58 problem answers. Small on purpose: this is what the filter produced, and it is the whole point of the comparison.",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && python3 t/loop_locallm.py corpus --pool v3 --lifted --sft t/out/loop/sft-r6.jsonl --out t/out/loop/corpus-r7-sft.txt'",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'test -s ~/tup/t/out/loop/corpus-r7-sft.txt'",
+  "lab"
+ ],
+ [
+  "r7-specialize",
+  "Round 7: specialize the pretrained 92M core",
+  "The missing path, added 2026-09-19: every locallm row on the scoreboard is a 3.2M model trained from random weights on 77 KB, because train.py can only start a model from scratch. This continues the 92M GPT core from the 4000-step study on the filtered t corpus, keeping its frozen tokenizer and weights. Thirty seconds; held-out corpus loss went 3.104 to 0.574. Loss is not the result -- the 232 are.",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && CARD=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -t, -k2 -rn | head -1 | cut -d, -f1) && PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=$CARD ~/.venv-vllm/bin/python locallm/continue_from_checkpoint.py --init t/out/source-pretraining-longer-2026-09-19/gpt-seed1337 --data t/out/loop/corpus-r7-sft.txt --out t/out/locallm-r7-92m --steps 300 --batch-size 8 --block-size 512 --lr 3e-5'",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'test -s ~/tup/t/out/locallm-r7-92m/ckpt.pt'",
+  "lab"
+ ],
+ [
+  "r7-answers",
+  "Round 7: the 92M core answers the 232",
+  "Greedy-sampled answers to the held-out problems from the specialized core, then copies the answer set back here so the ordinary extract, tests and grading path can read it. This is the first time a pretrained locallm has ever answered the held-out split.",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && CARD=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -t, -k2 -rn | head -1 | cut -d, -f1) && PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=$CARD ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/locallm-r7-92m --tag locallm-r7-92m --split t/out/loop/split-v5.json --tokens 1200' && mkdir -p t/out/spec-experiment && rsync -a \"$T_LAB:~/tup/t/out/spec-experiment/locallm-r7-92m\" t/out/spec-experiment/",
+  "test $(ls t/out/spec-experiment/locallm-r7-92m/raw 2>/dev/null | wc -l) -ge 232",
+  "lab"
+ ],
+ [
+  "r7-grade",
+  "Round 7: grade the 92M core's answers",
+  "Extracts the t programs, runs each problem's own tests, then sends what passed to the lab for all seven proof systems with the twin refuted. Hours, not minutes: SPARK alone is 21.88 s a cell.",
+  "python3 t/spec_experiment.py extract --model locallm-r7-92m --pool v5 && python3 t/spec_experiment.py tests --model locallm-r7-92m --pool v5 && bash t/grade_lab.sh heldout locallm-r7-92m",
+  "test -s t/out/spec-experiment/locallm-r7-92m/kernels.md",
+  "lab"
+ ],
+ [
+  "r7-score",
+  "Round 7: locallm against Phi",
+  "The table this project exists to produce, with the pretrained core's row in it: well formed, tests passing, clean, conversion, and what survives the specification check, against Phi-4-mini and every earlier locallm.",
+  "python3 t/score_heldout.py phi4-mini-v3 qwen15b-base-v3 locallm-r4 locallm-r5 locallm-r7-92m | tee t/out/score-r7.md",
+  "test -s t/out/score-r7.md",
+  ""
+ ],
+ [
+  "research-factorial",
+  "Research: what the supervision experiment found",
+  "Reprints the twelve-arm latent/execution factorial: every registered prediction falsified, and every correct answer sitting on a held-out task a shorter program already passed. Read-only; it re-reads the ledger on the lab and writes the table here.",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && ~/.venv-vllm/bin/python locallm/summarize_factorial.py --study t/out/factorial-2026-09-19 --markdown t/out/factorial-2026-09-19/summary.md' && rsync -a \"$T_LAB:~/tup/t/out/factorial-2026-09-19/summary.md\" t/out/factorial-summary.md",
+  "test -s t/out/factorial-summary.md",
+  "lab"
  ]
 ]
