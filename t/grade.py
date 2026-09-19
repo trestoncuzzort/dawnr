@@ -355,6 +355,7 @@ def write_outputs(out_dir: Path, cols, rows, wits, tasks, flake_n, wall_s,
         + ("FULL AGREEMENT." if all_ok else "DISAGREEMENT: see table.md and verdicts.json.")
     )
     (out_dir / "summary.txt").write_text(para + "\n", encoding="utf-8")
+    return verdicts
 
 
 # ------------------------------------------------------------------ main --
@@ -379,9 +380,26 @@ def cmd_tasks(args) -> int:
             if v.startswith("ABSENT"):
                 print(f"  {b}: {v}")
         return 2
-    write_outputs(args.out, cols, rows, wits, tasks, args.flake, wall_s, all_ok)
+    verdicts = write_outputs(args.out, cols, rows, wits, tasks, args.flake, wall_s, all_ok)
+    # ROADMAP 13.3 left this open by name on 2026-09-11: the twin rule decides `decorative` and `unsound`
+    # cells and the tables render them, but this summary counted neither, so a run whose twin a kernel could
+    # not tell from the real read as a plain disagreement. A decorative cell is a specification too weak to
+    # separate a program from its near-miss, and an unsound one is a kernel that failed to refute a twin the
+    # interpreter has a witness against -- the second is a kernel-bug signal and is worth naming out loud
+    # (2026-09-19).
+    kinds = {}
+    for task_name, rec in (verdicts.get("tasks") or {}).items():
+        for _kernel, cell in (rec.get("columns") or {}).items():
+            k = (cell or {}).get("kind")
+            if k:
+                kinds[k] = kinds.get(k, 0) + 1
+    extra = ""
+    if kinds:
+        extra = "; " + ", ".join(f"{n} {k}" for k, n in sorted(kinds.items()))
+        if kinds.get("unsound"):
+            extra += " (an unsound cell is a kernel that did not refute a twin the interpreter refutes)"
     print(f"\n{len(present_names)} kernels, {len(tasks)} tasks: "
-          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, see ' + str(args.out / 'table.md')}")
+          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, see ' + str(args.out / 'table.md')}{extra}")
     return 0 if all_ok else 1
 
 

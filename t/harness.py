@@ -887,8 +887,15 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
 
 
 def run_all(argv: list[str], lower, backend, suffix: str) -> int:
-    want = argv or sorted(p.stem for p in (HERE / "tasks").glob("*.json"))
+    """Every committed task through one lowering, standalone.
+
+    ROADMAP 14.1 made `.t` the input and moved every caller to tasks_io -- except these two, which kept
+    spelling `.json` and so found nothing at all once t/tasks held only `.t` files (named open in 14.1's own
+    entry on 2026-09-11, closed 2026-09-19). A name given on the command line is still taken as a stem, so
+    `python3 lower_dafny.py abs` keeps working, and a path is taken as a path."""
+    import tasks_io
+    files = ([Path(a) if Path(a).exists() else tasks_io.find(HERE / "tasks", Path(a).stem) for a in argv]
+             if argv else sorted(tasks_io.load_dir(HERE / "tasks")))
     print(f"t -> {backend.version()}")
-    ok = all(run_task(HERE / "tasks" / f"{w}.json", lower, backend, suffix)
-             for w in want)
+    ok = all(run_task(f, lower, backend, suffix) for f in files)
     return 0 if ok else 1
