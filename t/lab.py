@@ -1731,7 +1731,10 @@ class Lab:
             text = (RUNS / "logs" / f"{key}.log").read_text(errors="replace")
         except OSError:
             return "", None
-        hits = re.findall(r"(\d+)/(\d+) \[", text[-4000:])
+        # the training loop's own bar, not the dataset preparation ones that run before it: those carry a
+        # label ("Adding EOS to train dataset:  0%|..."), the training bar starts at its percentage. Without
+        # this the window read 87 of 87 and full while the model had not taken a step (2026-09-18).
+        hits = re.findall(r"(?m)^\s*\d+%\|[^|]*\|\s*(\d+)/(\d+) \[", text[-8000:].replace("\r", "\n"))
         if not hits:
             return "", None
         done, total = int(hits[-1][0]), int(hits[-1][1])
