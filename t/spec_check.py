@@ -21,8 +21,11 @@ Disagreements are reported with the input that shows them. The reference solutio
 from __future__ import annotations
 
 import argparse
+import datetime
+import hashlib
 import json
 import random
+import re
 import signal
 import sys
 from pathlib import Path
@@ -33,8 +36,33 @@ sys.path.insert(0, str(HERE))
 import harness                                                  # noqa: E402
 import interp                                                   # noqa: E402
 import spec_experiment as se                                    # noqa: E402
+import surface                                                 # noqa: E402
 
 KERNELS = ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
+
+
+def task_sha256(task: dict) -> str:
+    """Bind a check to the exact canonical program, including its specification."""
+    return hashlib.sha256(surface.print_task(task).strip().encode("utf-8")).hexdigest()
+
+
+def problem_id(name: str, extracted: dict) -> int | None:
+    """Recover the pool ID, keeping HumanEval and APPS separate from MBPP."""
+    ids = {int(tid) for tid, entry in extracted.items()
+           if str(tid).isdigit() and entry.get("name") == name}
+    if len(ids) > 1:
+        raise ValueError(f"ambiguous problem IDs for {name}: {sorted(ids)}")
+    match = re.fullmatch(r"(mbpp|he|apps)_(\d+)__.+", name)
+    named = None
+    if match:
+        named = int(match[2]) + {"mbpp": 0, "he": se.HUMANEVAL_BASE,
+                                 "apps": se.APPS_BASE}[match[1]]
+    if ids:
+        tid = next(iter(ids))
+        if named is not None and tid != named:
+            raise ValueError(f"extract ID {tid} disagrees with task name {name}")
+        return tid
+    return named
 
 
 class Timeout(Exception):
@@ -154,7 +182,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             return {"status": "disagrees", "ensures": bad[0], "args": args,
                     "reference_said": out, "agreed_before": agreed}
         agreed += 1
-    return {"status": "agrees", "draws": agreed}
+    return {"status": "agrees" if agreed else "no valid draws", "draws": agreed}
 
 
 def main() -> int:
@@ -166,6 +194,8 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", type=Path, default=HERE / "SPEC-CHECK-2026-09-18.md")
     a = ap.parse_args()
+    if a.n < 1:
+        ap.error("--n must be positive")
     pool = se.pool(a.pool)
     rnd = random.Random(a.seed)
     root = HERE / "out" / "spec-experiment"
@@ -174,6 +204,10 @@ def main() -> int:
     for tag in tags:
         d = root / tag
         cols, cells = se.parse_kernel_table(d / "kernels.md")
+        try:
+            extracted = json.loads((d / "extract.json").read_text())
+        except (OSError, ValueError):
+            extracted = {}
         try:
             tests = {v.get("name"): v.get("overall") for v in json.loads((d / "tests.json").read_text()).values()}
         except (OSError, ValueError):
@@ -187,11 +221,16 @@ def main() -> int:
             if not path.exists():
                 continue
             task = harness.load(path)
-            tid = name.split("__")[0].split("_", 1)[1]
-            entry = pool.get(int(tid)) if tid.isdigit() else None
-            if entry is None:
-                continue
-            r = check_task(task, entry, a.n, rnd)
+            try:
+                tid = problem_id(name, extracted)
+                entry = pool.get(tid)
+                r = (check_task(task, entry, a.n, rnd) if entry is not None
+                     else {"status": "problem not in pool"})
+            except ValueError as e:
+                tid = None
+                r = {"status": "problem mapping refused", "reason": str(e)}
+            r.update(task_id=tid, task_sha256=task_sha256(task), pool=a.pool,
+                     seed=a.seed, attempts=a.n)
             key = "agrees" if r["status"] == "agrees" else ("disagrees" if r["status"] == "disagrees" else "other")
             tally[key] += 1
             rows.append((tag, name, r))
@@ -215,7 +254,6 @@ def main() -> int:
     # machine-readable, so loop_dataset.py can keep these out of a pool and preflight.py can count them
     # the program itself, not only its name: two tags can answer the same problem, and only the answer whose
     # specification disagrees must be kept out of a pool (2026-09-18)
-    import surface
     disagree, texts = [], {}
     for tag, name, r in rows:
         if r["status"] != "disagrees":
@@ -235,16 +273,22 @@ def main() -> int:
         prev = json.loads(out_path.read_text())
     except (OSError, ValueError):
         prev = {}
-    checked_tags = sorted(set(prev.get("tags", [])) | {t for t, _n, _r in rows})
-    keep = [x for x in prev.get("disagree", []) if x.split("/", 1)[0] not in {t for t, _n, _r in rows}]
+    checked_tags = sorted(set(prev.get("tags", [])) | set(tags))
+    results = {f"{tag}/{name}": result for tag, name, result in rows}
+    keep = [x for x in prev.get("disagree", []) if x not in results]
     keep_texts = {k: v for k, v in (prev.get("programs") or {}).items()
-                  if k.split("/", 1)[0] not in {t for t, _n, _r in rows}}
-    out_path.write_text(
-        json.dumps({"checked": int(prev.get("checked", 0)) + sum(tally.values()),
-                    "tags": checked_tags,
-                    "disagree": sorted(keep + disagree),
-                    "programs": {**keep_texts, **texts}}, indent=1),
-        encoding="utf-8")
+                  if k not in results}
+    updated = {**prev, "checked": int(prev.get("checked", 0)) + sum(tally.values()),
+               "tags": checked_tags, "disagree": sorted(keep + disagree),
+               "programs": {**keep_texts, **texts},
+               "results": {**prev.get("results", {}), **results},
+               "runs": [*prev.get("runs", []),
+                        {"tags": tags, "pool": a.pool, "seed": a.seed, "attempts": a.n,
+                         "only": a.only, "counts": tally,
+                         "when": datetime.datetime.now(datetime.timezone.utc).isoformat()}]}
+    temp = out_path.with_suffix(".tmp")
+    temp.write_text(json.dumps(updated, indent=1) + "\n", encoding="utf-8")
+    temp.replace(out_path)
     print(f"written to {a.out.relative_to(HERE.parent)}")
     return 0
 

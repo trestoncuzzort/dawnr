@@ -8,7 +8,7 @@
 #
 # The cards are shared with other people and the standing rule is that our work stops when they ask. `stop` is
 # therefore the important command: it kills the server and the generation and leaves the cards as they were,
-# within seconds, and nothing is lost because every answer is written to its own file as it arrives.
+# within seconds. Answers persist per file; core training resumes from its last completed checkpoint.
 #
 # vLLM is told to use a fraction of each card that leaves the other users' memory untouched
 # (T_LAB_GPU_FRACTION, 0.26 of 48 GB, about 12.5 GB a card, against the 14 to 17 GB that were free).
@@ -21,12 +21,14 @@ TAG=${T_LAB_TAG:-qwen3-coder-30b-apps-s1}
 PORT=${T_LAB_PORT:-8077}
 FRACTION=${T_LAB_GPU_FRACTION:-0.26}
 JOBS=${T_LAB_GEN_JOBS:-16}
+# Brackets keep the remote shell carrying this pattern from matching its own command line.
+GPU_PROCESSES='[s]pec_experiment[.]py generate|[l]oop_generate[.]py([[:space:]]|$)|[l]oop_train[.]py([[:space:]]|$)|[t]rain_distributed[.]py([[:space:]]|$)|[l]ocallm/train[.]py([[:space:]]|$)|[v]llm serve|[V]LLM::'
 
 case "${1:-status}" in
 
 serve|start)
   WHAT=${1:-serve}
-  $SSH "$LAB" "mkdir -p ~/lab-gpu && cd ~/tup && git fetch -q origin && git reset -q --hard origin/main || true"
+  $SSH "$LAB" "mkdir -p ~/lab-gpu && test -d ~/tup" || exit $?
   echo "== serving $MODEL on the four cards (tensor parallel), port $PORT"
   # vLLM's FP8 path compiles kernels, so it needs a CUDA toolkit; this machine has none in /usr/local, but the
   # venv ships one inside the nvidia wheels (2026-09-18)
@@ -64,19 +66,22 @@ stop)
   # a plain `pkill -f 'vllm serve'` matches that shell and kills the stop command halfway through, which on
   # 2026-09-18 left the server and all four workers alive while this printed "stopped". It now kills, waits,
   # kills harder, and then reports what is actually on the cards rather than what it tried to do.
-  $SSH "$LAB" "pkill -f '[s]pec_experiment.py generate'; pkill -f '[v]llm serve'; pkill -f '[V]LLM::'; sleep 5; \
-     pkill -9 -f '[v]llm serve' 2>/dev/null; pkill -9 -f '[V]LLM::' 2>/dev/null; sleep 2; \
-     left=\$(pgrep -u \$USER -f '[v]llm|[V]LLM::' | wc -l); \
+  $SSH "$LAB" "uid=\$(id -u); pattern='$GPU_PROCESSES'; \
+     pkill -u \"\$uid\" -f \"\$pattern\" 2>/dev/null || true; sleep 5; \
+     pkill -9 -u \"\$uid\" -f \"\$pattern\" 2>/dev/null || true; sleep 2; \
+     left=\$(pgrep -u \"\$uid\" -fc \"\$pattern\" || true); \
      echo \"ours still running: \$left\"; \
      echo '-- memory we hold on the cards:'; \
-     for p in \$(nvidia-smi --query-compute-apps=pid --format=csv,noheader); do \
-       ps -o user= -p \$p 2>/dev/null | grep -q \"^\$USER\" && nvidia-smi --query-compute-apps=pid,used_memory \
-       --format=csv,noheader | grep \"^\$p,\"; done; true"
-  echo "anything not listed above belongs to other users and was left alone"
+     nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader | \
+       while IFS=, read -r p memory; do \
+         if ps -o uid= -p \"\$p\" 2>/dev/null | grep -Eq \"^[[:space:]]*\$uid[[:space:]]*\$\"; then \
+           printf '%s,%s\n' \"\$p\" \"\$memory\"; fi; done; \
+     test \"\$left\" -eq 0" || exit $?
+  echo "stopped this remote account's generation, training, and vLLM processes"
   ;;
 
 status)
-  $SSH "$LAB" "echo '-- ours:'; pgrep -fa 'vllm serve|spec_experiment.py generate' | cut -c1-80; \
+  $SSH "$LAB" "echo '-- ours:'; pgrep -u \$(id -u) -fa '$GPU_PROCESSES' | cut -c1-80; \
      echo '-- cards:'; nvidia-smi --query-gpu=index,memory.used,memory.total,utilization.gpu --format=csv,noheader; \
      echo '-- answers:'; ls ~/tup/t/out/spec-experiment/qwen3-coder-30b-apps-s*/raw 2>/dev/null | grep -c json; \
      tail -2 ~/lab-gpu/generate.log 2>/dev/null | cut -c1-100"
@@ -98,10 +103,11 @@ Path("t/out/loop/apps-left.txt").write_text("\n".join(str(i) for i in left) + "\
 print(f"{len(left)} problems have no answer yet, of {len(want)}")
 PY
   rsync -a t/out/loop/apps-left.txt "$LAB:tup/t/out/loop/"
-  pkill -f "spec_experiment.py generate --model qwen2.5-coder" 2>/dev/null
+  pkill -u "$(id -u)" -f '[s]pec_experiment[.]py generate --model qwen2[.]5-coder' 2>/dev/null
   systemctl --user stop t-gen 2>/dev/null
   echo "== this desktop has stopped generating"
-  $SSH "$LAB" "pkill -f 'spec_experiment.py generate'; sleep 2; cd ~/tup && setsid nohup python3 \
+  $SSH "$LAB" "pkill -u \$(id -u) -f '[s]pec_experiment[.]py generate' 2>/dev/null || true; sleep 2" || exit $?
+  $SSH "$LAB" "cd ~/tup && setsid nohup python3 \
       t/spec_experiment.py generate --model '$MODEL' --tag '$TAG' --pool v5 \
       --ids-file t/out/loop/apps-left.txt --prompt v3 --seed 1 --temperature 0 --num-predict 2048 \
       --host 127.0.0.1:$PORT --api openai --timeout 1800 --jobs $JOBS \

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""t/lab.py -- one dark window to watch the checks and to test the models
+"""t/lab.py -- one dark window to watch the checks and the models
 locallm builds, with every word explained (2026-09-16).
 
 locallm builds small AI models from scratch. The models write programs in
@@ -48,6 +48,7 @@ sys.path.insert(1, str(LOCALLM))
 import fuzz_lower                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 import surface                                                  # noqa: E402
+from lab_status import count_set as count_answer_set             # noqa: E402
 
 EVENTS = Path(os.environ.get("T_WATCH", Path.home() / ".cache" / "t-watch" / "events.jsonl"))
 SCRATCH = Path(os.environ.get("T_LAB_SCRATCH", Path.home() / ".cache" / "t-lab"))
@@ -376,7 +377,23 @@ def load_steps() -> list:
 SPEC_EXP = HERE / "out" / "spec-experiment"
 GEOMETRY = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "t-lab" / "geometry"
 # the files a fix lands in; when one moves, the window reloads itself (Lab.watch_own_code)
-WATCHED = (Path(__file__).resolve(), Path(__file__).resolve().parent / "steps.json")
+WATCHED = (Path(__file__).resolve(), HERE / "steps.json", HERE / "lab_status.py")
+
+
+def lab_target() -> str:
+    """Read the private connection setting without executing a shell configuration."""
+    target = os.environ.get("T_LAB", "")
+    if not target:
+        try:
+            for line in (HERE / "lab-workstation.conf").read_text().splitlines():
+                words = shlex.split(line, comments=True)
+                if words and words[0] == "export":
+                    words = words[1:]
+                if len(words) == 1 and words[0].startswith("T_LAB="):
+                    target = words[0].split("=", 1)[1]
+        except (OSError, ValueError):
+            pass
+    return target if target and not target.startswith("-") and not any(c.isspace() for c in target) else ""
 
 
 def mtime(p: Path) -> float:
@@ -400,13 +417,17 @@ CLEAN_RE = re.compile(r"round (\d+): clean in all seven (\d+)")
 
 # ------------------------------------------------------------ plain words --
 
-def verdict(real: str, twin: str) -> tuple[str, str, str, str]:
+def verdict(real: str, twin: str, agree: bool = True) -> tuple[str, str, str, str]:
     """(symbol, short word, one plain sentence, color) for one check."""
     real, twin = (real or "").strip(), (twin or "").strip()
+    if not agree:
+        return ("!", "Inconsistent", "Repeated checks disagreed; this is not a stable proof.", MUTED)
     if real == "verified" and twin == "refuted":
         return (YES, "Proven", "Proved the program keeps its promise, and caught the broken copy.", GREEN)
-    if real == "verified":
+    if real == "verified" and twin == "verified":
         return (NO, "Promise too weak", "It passed, but so did a broken copy, so the promise says too little.", RED)
+    if real == "verified":
+        return ("?", "Twin unresolved", "The program was proved, but catching the broken copy is unresolved.", MUTED)
     if real == "vacuous":
         return (NO, "Empty promise", "It passed only because its promise can never be tested.", RED)
     if real == "refuted":
@@ -601,6 +622,10 @@ class Lab:
     def __init__(self, root: tk.Tk, start_page: str = "Live checks"):
         self.root = root
         self.start_page = start_page
+        self.remote = lab_target()
+        self.lab_snapshot = None
+        self.lab_error = "Connecting to lab workstation"
+        self.lab_received = 0.0
         sans = pick_font(root, ["Inter", "SF Pro Text", "Helvetica Neue", "Segoe UI", "Cantarell", "Ubuntu",
                                 "Noto Sans", "DejaVu Sans"], "TkDefaultFont")
         mono = pick_font(root, ["JetBrains Mono", "SF Mono", "Menlo", "Consolas", "DejaVu Sans Mono"], "TkFixedFont")
@@ -624,6 +649,8 @@ class Lab:
         self.end_times: list[float] = []     # every finished check's time, for the data run's progress bar
         self.end_pairs: list[tuple[float, str]] = []   # (time, task) for the same, to count one answer set's own
         try:                                 # earlier checks too, so a reopened window keeps a running bar right
+            if self.remote:
+                raise OSError("events come from the lab workstation")
             self.end_pairs = [(json.loads(l).get("t", 0), json.loads(l).get("task", ""))
                               for l in EVENTS.read_text(errors="replace").splitlines() if '"ev": "end"' in l]
             self.end_times = [t for t, _ in self.end_pairs]
@@ -637,7 +664,7 @@ class Lab:
         self.pulse.pack(side="right")
         self.follow_btn_parent = head
         tk.Label(root, bg=BG, fg=MUTED, font=self.f_body, justify="left", anchor="w", wraplength=1300, text=(
-            "locallm builds small AI models from scratch. The models write programs. Seven independent checkers "
+            "Models write programs on the lab workstation. Seven independent checkers "
             "try to prove each program keeps its promise, and try to catch a deliberately broken copy of it. "
             "A program is clean only when all seven prove it and catch the broken copy.")).pack(fill="x", padx=22)
 
@@ -646,21 +673,27 @@ class Lab:
         self.pages, self.tab_buttons = {}, {}
         body = tk.Frame(root, bg=BG)
         body.pack(fill="both", expand=True, padx=22, pady=(0, 18))
-        for name in ("Live checks", "Test a model", "Collect data", "Results", "AI"):
+        names = ("Live checks", "Collect data", "Results", "AI") if self.remote else (
+            "Live checks", "Test a model", "Collect data", "Results", "AI")
+        for name in names:
             b = tk.Label(tabs, text=name, cursor="hand2", padx=18, pady=7, font=self.f_bold)
             b.pack(side="left", padx=(0, 8))
             b.bind("<Button-1>", lambda _e, n=name: self.show_page(n))
             self.tab_buttons[name] = b
             self.pages[name] = tk.Frame(body, bg=BG)
         self.build_live(self.pages["Live checks"])
-        Button(self.follow_btn_parent, "Follow a loop run", self.follow_loop, BLUE, self,
-               filled=False).pack(side="right", padx=(0, 16))
-        self.build_test(self.pages["Test a model"])
+        if not self.remote:
+            Button(self.follow_btn_parent, "Follow a loop run", self.follow_loop, BLUE, self,
+                   filled=False).pack(side="right", padx=(0, 16))
+            self.build_test(self.pages["Test a model"])
         self.build_collect(self.pages["Collect data"])
         self.build_results(self.pages["Results"])
         self.build_ai(self.pages["AI"])
         self.show_page(self.start_page if self.start_page in self.pages else "Live checks")
-        root.after(300, self.poll_events)
+        if self.remote:
+            threading.Thread(target=self.watch_lab, daemon=True).start()
+        else:
+            root.after(300, self.poll_events)
         root.after(1000, self.tick)
         root.after(200, self.drain)
         self.watched = {p: mtime(p) for p in WATCHED}
@@ -702,6 +735,9 @@ class Lab:
         for tag, color in (("green", GREEN), ("red", RED), ("muted", MUTED), ("blue", BLUE)):
             t.tag_configure(tag, foreground=color)
         t.pack(side="left", fill="both", expand=True)
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=t.yview)
+        scrollbar.pack(side="right", fill="y")
+        t.configure(yscrollcommand=scrollbar.set)
         return t
 
     @staticmethod
@@ -808,7 +844,7 @@ class Lab:
                         self.running[key] = ev
                     elif ev.get("ev") == "end":
                         self.running.pop(key, None)
-                        sym, word, sentence, color = verdict(ev.get("real"), ev.get("twin"))
+                        sym, word, sentence, color = verdict(ev.get("real"), ev.get("twin"), ev.get("agree", True))
                         self.counts["done"] += 1
                         self.end_times.append(ev.get("t", time.time()))
                         self.end_pairs.append((ev.get("t", time.time()), ev.get("task", "")))
@@ -827,14 +863,19 @@ class Lab:
         self.now.delete(*self.now.get_children())
         now = time.time()
         for (task, kernel), ev in sorted(self.running.items(), key=lambda kv: kv[1]["t"]):
-            mem = memory_mb(ev.get("pid", -1))
+            mem = None if self.remote else memory_mb(ev.get("pid", -1))
             self.now.insert("", "end", tags=("blue",), values=(
                 task, CHECKER.get(kernel, kernel), f"{now - ev['t']:.0f} s", "" if mem is None else f"{mem:.0f} MB"))
         for key, value in (("now", len(self.running)), ("proven", self.counts["proven"]),
                            ("not", self.counts["not"]), ("done", self.counts["done"])):
             self.tile[key].configure(text=str(value))
         busy = bool(self.running)
-        self.pulse.configure(text="●  checking" if busy else "●  idle", fg=BLUE if busy else FAINT)
+        if self.remote:
+            age = int(now - self.lab_received) if self.lab_received else 0
+            status = self.lab_error or f"Lab connected · updated {age}s ago"
+            self.pulse.configure(text=f"●  {status}", fg=RED if self.lab_error else GREEN)
+        else:
+            self.pulse.configure(text="●  checking" if busy else "●  idle", fg=BLUE if busy else FAINT)
         rows = {}
         if self.log_var.get():
             try:
@@ -1030,7 +1071,12 @@ class Lab:
         try:
             while True:
                 kind, payload = self.q.get_nowait()
-                if kind == "labgpu":
+                if kind == "lab_snapshot":
+                    self.show_lab_snapshot(payload)
+                elif kind == "lab_error":
+                    self.lab_error = payload
+                    self.remote_hint.configure(text=payload, fg=RED)
+                elif kind == "labgpu":
                     self.show_lab_gpu(payload)
                 elif kind == "results":
                     self.show_results(*payload)
@@ -1265,7 +1311,143 @@ class Lab:
         self.root.destroy()
         os.execv(sys.executable, [sys.executable, str(HERE / "lab.py"), "--page", "Collect data"])
 
+    def build_remote_collect(self, page):
+        self.remote_hint = tk.Label(page, text="Connecting to lab workstation…", bg=BG, fg=MUTED,
+                                    font=self.f_body, anchor="w")
+        self.remote_hint.pack(fill="x", pady=(0, 10))
+        c = self.card(page, "Running on the lab workstation", "select a row to read its output")
+        self.remote_runs = self.table(c, [("job", "Job", 320), ("kind", "Stage", 110),
+                                          ("progress", "Progress", 240), ("elapsed", "Elapsed", 90)], 6)
+        self.remote_runs.bind("<<TreeviewSelect>>", lambda _e: self.show_remote_log())
+        c = self.card(page, "Answer sets", "generation and grading counts from the lab")
+        self.remote_sets = self.table(c, [("tag", "Answer set", 340), ("answers", "Written", 90),
+                                          ("tasks", "Well formed", 100), ("passed", "Tests pass", 100),
+                                          ("graded", "Graded", 90), ("clean", "Clean", 90)], 6)
+        c = self.card(page, "Output", "updated with each lab snapshot", fill="both", expand=True)
+        self.log_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=8, wrap="word")
+        self.log_text.pack(fill="both", expand=True)
+        self.remote_run_rows = {}
+
+    def build_remote_ai(self, page):
+        c = self.card(page, "Lab workstation", "all generation, training and checks run here")
+        tk.Label(c, text="This window watches the run. Start pipeline steps from a terminal. "
+                        "Stop releases our GPU jobs when the cards are needed.",
+                 bg=CARD, fg=MUTED, font=self.f_body, wraplength=1100, justify="left").pack(anchor="w")
+        row = tk.Frame(c, bg=CARD)
+        row.pack(fill="x", pady=10)
+        self.gpu_state = tk.Label(row, text="Waiting for lab status", bg=CARD, fg=MUTED, font=self.f_bold)
+        self.gpu_state.pack(side="left")
+        Button(row, "Stop our GPU jobs", lambda: self.lab_gpu("stop"), RED, self).pack(side="right")
+        self.gpu_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="word")
+        self.gpu_log.pack(fill="both", expand=True)
+        c = self.card(page, "Status notes", fill="both", expand=True)
+        self.alert_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=8, wrap="word")
+        self.alert_text.pack(fill="both", expand=True)
+
+    def watch_lab(self):
+        """One bounded SSH read for all tabs; no Tk calls or pipeline commands in this thread."""
+        cursor = None
+        while True:
+            try:
+                args = ["python3", "t/lab_status.py"]
+                if cursor is not None:
+                    args.extend(["--events-cursor", json.dumps(cursor, separators=(",", ":"))])
+                p = subprocess.run(
+                    ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ServerAliveInterval=5",
+                     "-o", "ServerAliveCountMax=2", self.remote, "cd ~/tup && " + shlex.join(args)],
+                    capture_output=True, text=True, timeout=25)
+                if p.returncode:
+                    raise RuntimeError("Lab connection failed; retrying. Last snapshot is retained.")
+                snapshot = json.loads(p.stdout)
+                if snapshot.get("version") != 1:
+                    raise ValueError("Unexpected lab status format")
+                cursor = snapshot.get("events", {}).get("cursor")
+                self.q.put(("lab_snapshot", snapshot))
+            except (OSError, subprocess.SubprocessError, ValueError, RuntimeError):
+                self.q.put(("lab_error", "Lab unavailable; retrying. Last snapshot is retained."))
+            time.sleep(5)
+
+    @staticmethod
+    def replace_text(widget, text):
+        if widget.get("1.0", "end").strip() != text.strip():
+            at_end = widget.yview()[1] > 0.999
+            widget.delete("1.0", "end")
+            widget.insert("end", text)
+            if at_end:
+                widget.see("end")
+
+    def show_remote_log(self):
+        selection = self.remote_runs.selection()
+        row = self.remote_run_rows.get(selection[0], {}) if selection else {}
+        text = row.get("log") or "No output captured for this job yet."
+        if not self.remote_run_rows:
+            text = "No pipeline jobs are running on the lab workstation."
+        self.replace_text(self.log_text, text)
+
+    def show_lab_snapshot(self, snapshot):
+        self.lab_snapshot, self.lab_error, self.lab_received = snapshot, "", time.time()
+        runs = snapshot.get("runs", [])
+        self.remote_hint.configure(text=f"Lab connected · {len(runs)} running jobs · updates every 5 seconds", fg=GREEN)
+        selection = self.remote_runs.selection()
+        selected = selection[0] if selection else None
+        self.remote_runs.delete(*self.remote_runs.get_children())
+        self.remote_run_rows = {}
+        for run in runs:
+            key = str(run["pid"])
+            self.remote_run_rows[key] = run
+            progress = run.get("progress", "")
+            if isinstance(progress, (list, tuple)):
+                progress = progress[0]
+            elapsed = max(0, int(time.time() - run.get("started", time.time()))) // 60
+            self.remote_runs.insert("", "end", iid=key, tags=("green",), values=(
+                run.get("title") or run.get("tag") or run["key"], run.get("kind", ""), progress, f"{elapsed} min"))
+        if self.remote_run_rows:
+            self.remote_runs.selection_set(selected if selected in self.remote_run_rows else next(iter(self.remote_run_rows)))
+        self.show_remote_log()
+        results = snapshot.get("results", {})
+        sets = results.get("sets", [])
+        self.remote_sets.delete(*self.remote_sets.get_children())
+        active_tags = {r.get("tag") for r in runs}
+        ordered = sorted(sets, key=lambda item: (item[0] in active_tags, item[1].get("updated", 0)), reverse=True)
+        for tag, row in ordered:
+            self.remote_sets.insert("", "end", tags=("green" if tag in active_tags else "muted",), values=(
+                tag, row.get("answers", 0), row["tasks"], row["passed"], row["graded"], row["clean"]))
+        if results:
+            self.show_results(sets, results["totals"], results["n_problems"], results["text"])
+        events = snapshot.get("events", {})
+        self.running = {(ev.get("task", "?"), ev.get("kernel", "?")): ev for ev in events.get("active", [])}
+        for ev in events.get("items", []):
+            if ev.get("ev") != "end":
+                continue
+            sym, word, sentence, color = verdict(ev.get("real"), ev.get("twin"), ev.get("agree", True))
+            self.counts["done"] += 1
+            self.counts["proven"] += word == "Proven"
+            self.counts["not"] += color == RED
+            self.done.insert("", 0, tags=(self.tag(color),), values=(
+                time.strftime("%H:%M:%S", time.localtime(ev.get("t", time.time()))), ev.get("task", "?"),
+                CHECKER.get(ev.get("kernel"), ev.get("kernel", "?")), f"{sym}  {word}", sentence))
+        for extra in self.done.get_children()[300:]:
+            self.done.delete(extra)
+        gpu_runs = [r for r in runs if r.get("kind") in ("generate", "generation", "train", "training", "serve")]
+        self.gpu_state.configure(text=f"{len(gpu_runs)} GPU jobs running", fg=GREEN if gpu_runs else MUTED)
+        lines = []
+        for gpu in snapshot.get("gpus", []):
+            lines.append(f"GPU {gpu['index']}: {gpu['used_mb']} / {gpu['total_mb']} MB · {gpu['utilization']}% busy")
+        lines.extend("\n" + (r.get("title") or r.get("tag") or r["key"]) for r in gpu_runs)
+        self.replace_text(self.gpu_log, "\n".join(lines) or "GPU status unavailable")
+        notes = list(snapshot.get("warnings", []))
+        followup = snapshot.get("followup", {})
+        if followup:
+            notes.append("Follow-up processing: " + ("watching existing runs" if followup.get("alive") else "stopped"))
+            for tag, state in followup.get("tags", {}).items():
+                notes.append(f"{tag}: {state.get('state', 'unknown')} · {state.get('raw', '?')} / "
+                             f"{state.get('expected', '?')} answers")
+        self.replace_text(self.alert_text, "\n".join(notes) or "No status warnings.")
+
     def build_collect(self, page):
+        if self.remote:
+            self.build_remote_collect(page)
+            return
         self.jobs: dict[str, subprocess.Popen] = {}
         self.step_state: dict[str, str] = {}
         self.step_prog: dict[str, tuple] = {}
@@ -1323,6 +1505,9 @@ class Lab:
         self.root.after(1000, self.refresh_steps)
     # -- AI ---------------------------------------------------------------------------
     def build_ai(self, page):
+        if self.remote:
+            self.build_remote_ai(page)
+            return
         """The two things that run the run: the orchestrator (a fixed plan) and the autopilot (a local model
         choosing the next legal step every minute). Both live here rather than among the data steps."""
         c = self.card(page, "Orchestrator", "t/run_everything.py: the fixed plan, start to score, unattended")
@@ -1452,47 +1637,14 @@ class Lab:
         c = self.card(page, "Pool and score", fill="both", expand=True)
         self.results_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="word")
         self.results_text.pack(fill="both", expand=True)
-        threading.Thread(target=self.results_loop, daemon=True).start()
+        if not self.remote:
+            threading.Thread(target=self.results_loop, daemon=True).start()
 
     @staticmethod
     def count_set(d: Path) -> dict:
         """One answer set: well-formed answers, tests passed, clean in all seven, proven but wrong, problems."""
-        r = {"tasks": 0, "passed": 0, "graded": 0, "clean": 0, "wrong": 0, "problems": set()}
-        try:
-            ext = json.loads((d / "extract.json").read_text(errors="replace"))
-            r["tasks"] = sum(1 for e in ext.values() if e.get("stage") == "task")
-        except (OSError, ValueError):
-            pass
-        passing = set()
-        try:
-            tests = json.loads((d / "tests.json").read_text(errors="replace"))
-            for v in tests.values():
-                if v.get("overall") == "pass":
-                    passing.add(v.get("name"))
-            r["passed"] = len(passing)
-        except (OSError, ValueError):
-            pass
-        cols, rows = [], {}
-        try:
-            for line in (d / "kernels.md").read_text(errors="replace").splitlines():
-                if not line.startswith("|"):
-                    continue
-                cells = [x.strip() for x in line.strip().strip("|").split("|")]
-                if cells[0] == "task":
-                    cols = cells[1:]
-                elif cols and len(cells) == len(cols) + 1 and set(cells[0]) - {"-"}:
-                    rows[cells[0]] = dict(zip(cols, cells[1:]))
-        except OSError:
-            pass
-        r["graded"] = len(rows)
-        for name, row in rows.items():
-            if len(cols) < len(KERNELS) or not all(row.get(k, "").startswith("verified / refuted") for k in KERNELS):
-                continue
-            if name in passing:
-                r["clean"] += 1
-                r["problems"].add(name.split("__")[0])
-            elif r["passed"]:
-                r["wrong"] += 1
+        r = count_answer_set(d)
+        r["problems"] = set(r["problems"])
         return r
 
     def results_loop(self):
@@ -1860,7 +2012,7 @@ class Lab:
                     if not m:
                         continue
                     total = int(m.group(2)) * len(KERNELS)
-                    run = lines[max(i for i, l in enumerate(lines) if l.startswith("###")):]
+                    run = lines[max((i for i, l in enumerate(lines) if l.startswith("###")), default=0):]
                     earlier = sum(int(n) * len(KERNELS)
                                   for tag, n in re.findall(r"== (\S+): (\d+) tasks", "\n".join(run))
                                   if f"== {tag}: kernels.md back" in run)

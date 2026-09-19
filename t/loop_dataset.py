@@ -7,7 +7,9 @@ it give a signal worth training on. This module turns round 0's measurements
 into that signal: preference pairs (chosen task, rejected BUGGY task) and an
 SFT set of chosen tasks alone.
 
-Two positive sources, both gated the same way -- a task VERIFIES with a
+The argument-free mode reproduces the legacy round-1 gate, without current
+spec-check evidence. It is not an acceptance gate for new training data.
+Its two positive sources are gated the same way -- a task VERIFIES with a
 REFUTED twin in at least four of the seven kernels (parse_kernel_table's
 "verified / refuted" cell) AND passes every one of the problem's own MBPP
 tests:
@@ -52,10 +54,13 @@ in spec_experiment.py's own layout) instead of round 0 and the lifted tasks.
 Positives and negatives are graded per problem over the fixed train/eval
 split (out/loop/split.json); only the train split yields pairs, the eval
 split is graded and reported as a pass@K measurement of the sampler. See
-run_from_samples's docstring for the exact rules.
+run_from_samples's docstring for the exact rules. New positives require all
+seven named clean kernels and explicit spec agreement for the current task
+hash, problem ID and pool, with at least one valid draw. Imported pairs must
+pass the same checks and match a currently admissible negative.
 
     python3 loop_dataset.py --from-samples TAG0 TAG1 ... \\
-        --split out/loop/split.json --min-kernels 4 --out-suffix r2 \\
+        --split out/loop/split.json --min-kernels 7 --out-suffix r2 \\
         --include out/loop/pairs.jsonl
 """
 from __future__ import annotations
@@ -65,6 +70,7 @@ import copy
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -75,6 +81,7 @@ import harness          # noqa: E402
 import interp           # noqa: E402
 import mbpp_dfy         # noqa: E402
 import spec_experiment  # noqa: E402
+import spec_check       # noqa: E402
 import surface          # noqa: E402
 
 OUT = HERE / "out" / "loop"
@@ -240,6 +247,8 @@ def lifted_positives(pool: dict) -> tuple[list[dict], list[tuple]]:
 def run_default() -> int:
     """The original, argument-free round-1 build: round0-7b + lifted.
     Byte-identical to before --from-samples was added."""
+    print("Legacy round-1 reproduction: four-kernel gate, without current spec evidence; "
+          "this is not the gate for new training rounds.")
     OUT.mkdir(parents=True, exist_ok=True)
     pool = spec_experiment.pool()
 
@@ -452,6 +461,7 @@ def grade_sample(tagdata: dict, k: int, tid: int) -> dict | None:
             "text": fence(surface.print_task(task)),
             "tests_overall": overall, "tests_pass": overall == "pass",
             "kernel_count": kernels_verified_refuted(row, tagdata["cols"]),
+            "kernel_columns": tagdata["cols"], "kernel_row": row,
             "refuted_kernels": refuted_kernels(row, tagdata["cols"]),
         })
     else:
@@ -486,35 +496,108 @@ def dedup_wellformed(samples: list[dict]) -> list[dict]:
     return out
 
 
-# Answers whose specification disagrees with the problem's own solution (t/spec_check.py, 2026-09-18). They
-# passed their tests, all seven proofs and a refuted twin, and they still do not say what the problem asked, so
-# they are not training data. Rebuilt by spec_check.py; an absent file excludes nothing.
-def _spec_disagree() -> set:
+def load_spec_results() -> dict:
+    """Legacy tag membership and an absent disagreement are not evidence."""
+    path = HERE / "out" / "spec-disagree.json"
     try:
-        return set(json.loads((HERE / "out" / "spec-disagree.json").read_text())["disagree"])
-    except (OSError, ValueError, KeyError):
-        return set()
+        results = json.loads(path.read_text(encoding="utf-8")).get("results", {})
+    except FileNotFoundError:
+        return {}
+    if not isinstance(results, dict):
+        raise ValueError("spec-check results must be an object")
+    return results
 
 
-SPEC_DISAGREE = _spec_disagree()
+def positive_rejection(sample: dict, results: dict, pool_name: str | None = None) -> str | None:
+    """First failed gate, or None for a current, explicitly checked positive."""
+    if not sample["wellformed"]:
+        return "not-wellformed"
+    if not sample["tests_pass"]:
+        return "tests-not-passing"
+    columns = sample.get("kernel_columns", [])
+    if len(columns) != ALL_KERNELS or set(columns) != set(spec_check.KERNELS):
+        return "kernel-names-not-exact-seven"
+    if any(sample.get("kernel_row", {}).get(k) != "verified / refuted"
+           for k in spec_check.KERNELS):
+        return "kernels-not-clean-seven"
+    result = results.get(f"{sample['tag']}/{sample['name']}")
+    if not isinstance(result, dict):
+        return "spec-unchecked"
+    if result.get("status") != "agrees":
+        return "spec-not-agrees"
+    if type(result.get("draws")) is not int or result["draws"] <= 0:
+        return "spec-no-valid-draws"
+    if type(result.get("task_id")) is not int or result["task_id"] != sample["task_id"]:
+        return "spec-problem-mismatch"
+    if pool_name is not None and result.get("pool") != pool_name:
+        return "spec-pool-mismatch"
+    if result.get("task_sha256") != spec_check.task_sha256(sample["task"]):
+        return "spec-hash-missing-or-stale"
+    return None
 
 
-def positives_of(samples: list[dict], min_kernels: int) -> list[dict]:
-    return [s for s in samples
-            if s["wellformed"] and s["tests_pass"] and s["kernel_count"] >= min_kernels
-            and f"{s['tag']}/{s['name']}" not in SPEC_DISAGREE]
+def positives_of(samples: list[dict], min_kernels: int = ALL_KERNELS,
+                 results: dict | None = None, pool_name: str | None = None) -> list[dict]:
+    if min_kernels != ALL_KERNELS:
+        raise ValueError("new sample rounds require exactly the seven named kernels")
+    if results is None:
+        results = load_spec_results()
+    # Dedup after the evidence gate: an unchecked first copy must not hide a
+    # later checked copy of the same canonical program.
+    return dedup_wellformed([s for s in samples
+                            if positive_rejection(s, results, pool_name) is None])
 
 
-def negatives_for_positive(pos: dict, samples: list[dict]) -> list[dict]:
-    """Priority order, capped at 4 total (structurally, from the per-tier
-    caps below, never needs the extra slice at the end to bite):
+def validate_included_pairs(rows: list[dict], samples: dict, current_pairs: list[dict],
+                            tags: list[str], train_ids: set, eval_ids: set, pool: dict,
+                            results: dict, pool_name: str) -> tuple[list[dict], Counter]:
+    """Import only currently admissible pairs, using regenerated provenance."""
+    current = {(p["task_id"], p["chosen"], p["rejected"]): p for p in current_pairs}
+    accepted, rejected = [], Counter()
+    for row in rows:
+        tid, tag = row.get("task_id"), row.get("tag")
+        reason = None
+        if type(tid) is not int or tid not in train_ids or tid in eval_ids or tid not in pool:
+            reason = "include-not-train-pool-id"
+        elif not isinstance(tag, str) or tag not in tags:
+            reason = "include-tag-not-selected"
+        else:
+            sample = samples.get((tag, tid))
+            if sample is None:
+                reason = "include-sample-missing"
+            else:
+                failure = positive_rejection(sample, results, pool_name)
+                if failure:
+                    reason = "include-" + failure
+                elif row.get("task") != sample["name"] or row.get("chosen") != sample["text"]:
+                    reason = "include-program-mismatch"
+                elif not row.get("prompt") or not sample.get("prompt"):
+                    reason = "include-prompt-missing"
+                elif row["prompt"] != sample["prompt"]:
+                    reason = "include-prompt-mismatch"
+                elif not isinstance(row.get("rejected"), str) or (tid, row["chosen"], row["rejected"]) not in current:
+                    reason = "include-negative-not-current"
+        if reason:
+            rejected[reason] += 1
+        else:
+            # Imported metadata cannot replace the measured witness or verdict.
+            accepted.append(current[(tid, row["chosen"], row["rejected"])])
+    return accepted, rejected
+
+
+def negatives_for_positive(pos: dict, samples: list[dict], results: dict | None = None,
+                           pool_name: str | None = None) -> list[dict]:
+    """Priority order, with the per-tier caps below:
     (a) the positive's own twins (build_negatives, primary first, cap 2);
+        then test-passing unproved samples and current spec disagreements;
     (b) the problem's other well-formed samples that fail the tests, the
         ones that verified in some kernel column first, cap 2;
     (c) only when (b) found fewer than 2: samples that failed extract (do
         not parse or are not well-formed), the reply's fenced block
         verbatim, cap 1."""
     negs: list[dict] = []
+    if results is None:
+        results = load_spec_results()
 
     for body, op, w in build_negatives(pos["task"], max_neg=SAMPLES_MAX_TWINS):
         negs.append({"kind": f"twin:{op}", "operator": op,
@@ -535,8 +618,12 @@ def negatives_for_positive(pos: dict, samples: list[dict]) -> list[dict]:
 
     # (a3) the answer all seven proved whose specification disagrees with the problem's own solution
     for s in samples:
+        checked = results.get(f"{s['tag']}/{s.get('name')}", {})
         if (s["wellformed"] and s["text"] != pos["text"]
-                and f"{s['tag']}/{s.get('name')}" in SPEC_DISAGREE):
+                and isinstance(checked, dict) and checked.get("status") == "disagrees"
+                and type(checked.get("task_id")) is int and checked["task_id"] == s["task_id"]
+                and (pool_name is None or checked.get("pool") == pool_name)
+                and checked.get("task_sha256") == spec_check.task_sha256(s["task"])):
             negs.append({"kind": "spec-disagrees", "operator": None, "rejected": s["text"],
                          "witness": None, "neg_tag": s["tag"], "neg_sample_index": s["k"]})
             break
@@ -581,7 +668,8 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
                           hist: dict, kind_tally: dict, op_tally: dict, merged: list[dict],
                           pairs: list[dict], include_pairs: list[dict], sft: list[dict],
                           no_samples_train: list[int], no_positive_train: list[int],
-                          no_negatives_train: list[tuple]) -> None:
+                          no_negatives_train: list[tuple], gate_rejections: dict,
+                          include_accepted: list[dict], include_rejections: Counter) -> None:
     suffix = args.out_suffix
     lines = []
     L = lines.append
@@ -589,8 +677,10 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
     L("")
     L(f"Built by `loop_dataset.py --from-samples` from {len(tags)} sample tag(s): "
       + ", ".join(f"`{t}`" for t in tags) + ". The reward now includes the problem's "
-      f"own MBPP tests: a positive passes every test and verifies with a refuted twin "
-      f"in at least {args.min_kernels} of 7 kernels. Graded over the fixed split "
+      "own tests: a positive passes every test and has exactly the seven named "
+      "kernels marked `verified / refuted`, without flaked verdicts. A current "
+      "spec-check result must explicitly agree on at least one valid draw, with "
+      "the same canonical task hash, problem ID and pool. Graded over the fixed split "
       f"`{args.split}` (pool {len(pool)}: {len(split.get('train_ids', []))} train, "
       f"{len(split.get('eval_ids', []))} eval); only train-split positives produce "
       "pairs, the eval-split rows below measure the sampler, not training data.")
@@ -609,7 +699,25 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
     L("")
     L(f"Samples pairs before merge: {len(pairs)}. Include pairs read "
       f"(`{args.include or 'none given'}`): {len(include_pairs)}. "
+      f"Currently admissible include pairs: {len(include_accepted)}; rejected: "
+      f"{sum(include_rejections.values())}. "
       f"`sft-{suffix}.jsonl`: {len(sft)} distinct positives.")
+    L("")
+    L("Included pairs must match a selected tag's current program and recorded prompt, "
+      "pass the current positive gate, belong exclusively to the training split, and "
+      "match a currently regenerated admissible negative. Regenerated provenance is used.")
+    L("")
+    L("## Rejections by first failed gate")
+    L("")
+    L("Positive gates run before text deduplication; these are raw sample counts.")
+    L("")
+    L("| source | reason | count |")
+    L("|---|---|---:|")
+    for split_name, counts in sorted(gate_rejections.items()):
+        for reason, count in sorted(counts.items()):
+            L(f"| {split_name} samples | {reason} | {count} |")
+    for reason, count in sorted(include_rejections.items()):
+        L(f"| include | {reason} | {count} |")
     L("")
 
     L("## Negatives per kind (samples source only)")
@@ -636,8 +744,9 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
 
     L("## Histogram: tests pass x kernel count, over train-split well-formed samples")
     L("")
-    L("Deduplicated by printed t text across the K tags (step 1's dedup rule); this is "
-      "the bar (`--min-kernels`, currently %d) that step 2 checks against." % args.min_kernels)
+    L("Deduplicated by printed t text across the K tags for this diagnostic histogram. "
+      "Kernel counts alone are insufficient: positive acceptance also requires current "
+      "spec evidence, checked before positive deduplication.")
     L("")
     L("| tests | " + " | ".join(str(k) for k in range(8)) + " | total |")
     L("|---|" + "---:|" * 9)
@@ -687,16 +796,12 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
 
 
 def run_from_samples(args) -> int:
-    """Round 2+ from K sampled answers per problem, tests folded into the
-    reward. Per TRAIN-split problem: every well-formed sample is graded on
-    tests, kernels and its printed t text (deduplicated across tags by that
-    text). A POSITIVE passes every test and verifies with a refuted twin in
-    at least --min-kernels columns. Every positive gets up to 4 negatives in
-    priority order (see negatives_for_positive). EVAL-split problems are
-    graded the same way for a pass@K table but never produce pairs. Round
-    1's pairs.jsonl can be merged in with --include, deduplicated by
-    (task_id, chosen, rejected). Deterministic: sorted task_id iteration, no
-    randomness anywhere."""
+    """New rounds require seven named clean kernels and current hash-bound spec
+    agreement. Evidence is checked before positive text deduplication. Eval
+    problems are measured but never included; imported pairs face the same gate
+    and must match a currently regenerated admissible pair."""
+    if args.min_kernels != ALL_KERNELS:
+        raise ValueError("--from-samples requires --min-kernels 7; lower bars are legacy only")
     OUT.mkdir(parents=True, exist_ok=True)
     tags = args.from_samples
     tag_dirs = [load_tag_dir(t) for t in tags]
@@ -704,10 +809,21 @@ def run_from_samples(args) -> int:
     split = json.loads(Path(args.split).read_text(encoding="utf-8"))
     train_ids = set(split.get("train_ids", split.get("used_task_ids", [])))
     eval_ids = set(split.get("eval_ids", split.get("heldout_task_ids", [])))
+    if any(type(tid) is not int for tid in train_ids | eval_ids):
+        raise ValueError("split IDs must be integers")
+    if train_ids & eval_ids:
+        raise ValueError("train and eval splits overlap")
 
     # the split names its pool (split-v3.json, 2026-09-16); older splits are v1
-    pool = spec_experiment.pool(split.get("pool", "v1"))
+    pool_name = split.get("pool", "v1")
+    pool = spec_experiment.pool(pool_name)
     min_kernels = args.min_kernels
+    results = load_spec_results()
+    include_pairs = load_pairs_jsonl(Path(args.include)) if args.include else []
+    include_keys = {(row.get("tag"), row.get("task_id")) for row in include_pairs
+                    if isinstance(row.get("tag"), str) and type(row.get("task_id")) is int}
+    include_samples = {}
+    gate_rejections = {"train": Counter(), "eval": Counter()}
 
     passk = {"train": {"problems": 0, "wellformed": 0, "tests_pass": 0, "positive": 0},
              "eval": {"problems": 0, "wellformed": 0, "tests_pass": 0, "positive": 0}}
@@ -729,7 +845,13 @@ def run_from_samples(args) -> int:
 
         raw_samples = gather_samples(tag_dirs, tid)
         samples = dedup_wellformed(raw_samples)
-        positives = positives_of(samples, min_kernels)
+        positives = positives_of(raw_samples, min_kernels, results, pool_name)
+        for sample in raw_samples:
+            reason = positive_rejection(sample, results, pool_name)
+            if reason:
+                gate_rejections[split_name][reason] += 1
+            if (sample["tag"], tid) in include_keys:
+                include_samples[(sample["tag"], tid)] = sample
 
         b = passk[split_name]
         b["problems"] += 1
@@ -756,7 +878,7 @@ def run_from_samples(args) -> int:
             continue
 
         for pos in positives:
-            negs = negatives_for_positive(pos, samples)
+            negs = negatives_for_positive(pos, samples, results, pool_name)
             if not negs:
                 no_negatives_train.append((tid, pos["name"], pos["k"]))
                 continue
@@ -774,10 +896,11 @@ def run_from_samples(args) -> int:
                     "neg_tag": neg["neg_tag"], "neg_sample_index": neg["neg_sample_index"],
                 })
 
-    include_pairs = load_pairs_jsonl(Path(args.include)) if args.include else []
+    include_accepted, include_rejections = validate_included_pairs(
+        include_pairs, include_samples, pairs, tags, train_ids, eval_ids, pool, results, pool_name)
     merged: list[dict] = []
     seen_keys: set[tuple] = set()
-    for p in include_pairs + pairs:
+    for p in include_accepted + pairs:
         key = (p.get("task_id"), p.get("chosen"), p.get("rejected"))
         if key in seen_keys:
             continue
@@ -815,14 +938,17 @@ def run_from_samples(args) -> int:
 
     _write_dataset_r2_md(args, tags, split, pool, passk, hist, kind_tally, op_tally,
                           merged, pairs, include_pairs, sft, no_samples_train,
-                          no_positive_train, no_negatives_train)
+                          no_positive_train, no_negatives_train, gate_rejections,
+                          include_accepted, include_rejections)
 
     print(f"train: {passk['train']['problems']} problems, "
           f"{passk['train']['positive']} with a positive")
     print(f"eval:  {passk['eval']['problems']} problems, "
           f"{passk['eval']['positive']} with a positive")
-    print(f"samples pairs: {len(pairs)}  include pairs: {len(include_pairs)}  "
+    print(f"samples pairs: {len(pairs)}  include accepted/read: {len(include_accepted)}/{len(include_pairs)}  "
           f"merged (deduped): {len(merged)}")
+    print("sample gate rejections: " + json.dumps(gate_rejections, sort_keys=True))
+    print("include rejections: " + json.dumps(include_rejections, sort_keys=True))
     print(f"sft-{suffix}: {len(sft)}")
     print(f"kinds: {', '.join(f'{k}={v}' for k, v in sorted(kind_tally.items()))}")
     print(f"operators: {', '.join(f'{k}={v}' for k, v in sorted(op_tally.items()))}")
@@ -840,13 +966,13 @@ def main() -> int:
                           "(out/spec-experiment/<tag>/) instead of round0-7b + lifted")
     ap.add_argument("--split", default=str(OUT / "split.json"),
                      help="fixed train/eval split, e.g. out/loop/split.json")
-    ap.add_argument("--min-kernels", type=int, default=KERNEL_GATE,
-                     help="columns of 7 that must read verified/refuted (default 4)")
+    ap.add_argument("--min-kernels", type=int, default=ALL_KERNELS,
+                     help="new sample rounds require all seven named kernels (default 7)")
     ap.add_argument("--out-suffix", default="r2",
                      help="writes pairs-<suffix>.jsonl, sft-<suffix>.jsonl, DATASET-<suffix>.md")
     ap.add_argument("--include", default=None,
-                     help="a round's pairs.jsonl to merge in, deduplicated by "
-                          "(task_id, chosen, rejected)")
+                     help="prior pairs to revalidate against current evidence, prompts, "
+                          "train IDs and admissible negatives before deduplicating")
     args = ap.parse_args()
     if args.from_samples:
         return run_from_samples(args)

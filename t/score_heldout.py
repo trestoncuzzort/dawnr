@@ -11,9 +11,8 @@ split's eval_ids, the problems no training set may contain:
   task          the reply extracted to a well-formed t task
   tests pass    the task passes every one of the problem's tests
   graded        the task has a row in kernels.md
-  clean         tests pass AND verified / refuted in every kernel column
-                kernels.md has (the column count is printed; clean means
-                all seven only when all seven were graded)
+  clean         tests pass AND stable verified / refuted in all seven named
+                kernels; partial tables cannot contribute clean answers
   wrong but proven   verified / refuted in every column while failing its
                 tests: a proven program for the wrong problem, countable only
                 for failing tasks that were graded
@@ -35,6 +34,24 @@ sys.path.insert(0, str(HERE))
 import spec_experiment as se                                    # noqa: E402
 
 CLEAN = "verified / refuted"
+KERNELS = {"dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"}
+FAILING_TESTS = {"fail", "signature", "requires-excluded", "undefined"}
+
+
+def checked_spec(result: dict, task_file: Path) -> str | None:
+    """A set was checked only for the exact task contents its evidence describes."""
+    from spec_check import task_sha256
+    if result.get("status") not in {"agrees", "disagrees"}:
+        return None
+    if result.get("status") == "agrees" and result.get("draws", 0) <= 0:
+        return None
+    try:
+        task = json.loads(task_file.read_text(encoding="utf-8"))
+        if result.get("task_sha256") == task_sha256(task):
+            return result["status"]
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return None
 
 
 def score(tag: str, eval_ids: set[int]) -> dict:
@@ -43,20 +60,17 @@ def score(tag: str, eval_ids: set[int]) -> dict:
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8")) if (d / "extract.json").exists() else {}
     tests = json.loads((d / "tests.json").read_text(encoding="utf-8")) if (d / "tests.json").exists() else {}
     cols, cells = (se.parse_kernel_table(d / "kernels.md") if (d / "kernels.md").exists() else ([], {}))
-    # 2026-09-18: an answer can pass its tests and all seven proofs and still hold a specification that
-    # disagrees with the problem's own solution on other inputs (t/spec_check.py). Those are counted apart,
-    # and "clean, spec checked" is clean minus them: the honest column once the specification is checked too.
-    # A tag nobody checked is not a tag with nothing wrong: spec_check.py records which tags it ran over, and
-    # an unchecked one gets no column rather than a free pass (2026-09-19).
-    checked, disagree = False, set()
+    # Set-level provenance cannot prove that any particular answer was checked.
+    # Refusals, zero valid draws and evidence for an older task all stay unchecked.
+    spec_results = {}
     try:
         sd = json.loads((HERE / "out" / "spec-disagree.json").read_text())
-        checked = tag in set(sd.get("tags", []))
-        disagree = {x.split("/", 1)[1] for x in sd.get("disagree", []) if x.split("/", 1)[0] == tag}
+        spec_results = sd.get("results", {})
     except (OSError, ValueError, KeyError, IndexError):
         pass
     r = {"tag": tag, "eval": len(eval_ids), "answered": 0, "task": 0, "tests pass": 0, "graded": 0,
-         "clean": 0, "spec disagrees": 0, "clean, spec checked": 0, "wrong but proven": 0, "kernels": len(cols)}
+         "clean": 0, "spec disagrees": 0, "clean, spec checked": 0, "spec unchecked": 0,
+         "wrong but proven": 0, "kernels": len(cols)}
     for tid in eval_ids:
         if tid in raw:
             r["answered"] += 1
@@ -70,26 +84,21 @@ def score(tag: str, eval_ids: set[int]) -> dict:
         if not row:
             continue
         r["graded"] += 1
-        proven = bool(cols) and all(row.get(c) == CLEAN for c in cols)
+        proven = len(cols) == 7 and set(cols) == KERNELS and all(row.get(c) == CLEAN for c in KERNELS)
         name = t.get("name") or e.get("name") or ""
-        bad_spec = name in disagree
+        outcome = checked_spec(spec_results.get(f"{tag}/{name}", {}), d / "tasks" / f"{name}.json") \
+            if proven and passed else None
         r["clean"] += proven and passed
-        r["spec disagrees"] += bool(proven and passed and bad_spec)
-        r["clean, spec checked"] += bool(proven and passed and not bad_spec)
-        r["wrong but proven"] += proven and not passed
-    if not checked:
-        r["spec disagrees"] = r["clean, spec checked"] = "not checked"
+        r["spec disagrees"] += bool(proven and passed and outcome == "disagrees")
+        r["clean, spec checked"] += bool(proven and passed and outcome == "agrees")
+        r["spec unchecked"] += bool(proven and passed and outcome is None)
+        r["wrong but proven"] += proven and t.get("overall") in FAILING_TESTS
     # The gate this project loses at, as one number: of the answers that pass their own tests, how many the
     # seven can prove. Round 6's student converts 3 of 9 where Phi-4-mini converts 3 of 6 and a proof-trained
     # 7B converts 6 of 10, and that difference is the whole story of where the loop is stuck -- it belongs in
     # the table rather than in a paragraph someone has to recompute (2026-09-19).
     r["converts"] = (f"{r['clean']}/{r['tests pass']}"
                      + (f" ({100 * r['clean'] / r['tests pass']:.0f}%)" if r["tests pass"] else ""))
-    # A table graded with a subset of the checkers would report clean for agreement among however many columns
-    # it happens to hold, and the column count sits four columns away where a reader scanning for clean will
-    # not see it. Say it in the cell itself (2026-09-19).
-    if 0 < len(cols) < 7:
-        r["clean"] = f"{r['clean']} (only {len(cols)} kernels)"
     return r
 
 
@@ -100,7 +109,7 @@ def main() -> int:
     a = ap.parse_args()
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
     heads = ["tag", "kernels", "eval", "answered", "task", "tests pass", "graded", "clean", "converts",
-             "spec disagrees", "clean, spec checked", "wrong but proven"]
+             "spec disagrees", "clean, spec checked", "spec unchecked", "wrong but proven"]
     print("| " + " | ".join(heads) + " |")
     print("|" + "---|" * len(heads))
     for tag in a.tags:

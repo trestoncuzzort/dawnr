@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""loop_train.py -- QLoRA DPO on Qwen2.5-Coder-1.5B-Instruct, over the bugs
-loop_dataset.py built.
+"""loop_train.py -- QLoRA SFT and DPO on the base named by --model, over
+the examples and bugs loop_dataset.py built (default: Qwen2.5-Coder-1.5B).
 
 House pattern is forge/train_dpo.py (this repo's earlier DPO pipeline, for a
 different task): 4-bit base + a LoRA adapter over the attention and MLP
@@ -37,6 +37,7 @@ free VRAM at launch, unless --gpu pins one.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import inspect
 import json
 import os
@@ -44,6 +45,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from importlib import metadata
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
@@ -52,7 +54,12 @@ DEFAULT_SFT = HERE / "out" / "loop" / "sft.jsonl"
 DEFAULT_OUT = HERE / "out" / "loop" / "adapter"
 TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj",
                    "gate_proj", "up_proj", "down_proj"]
-MIN_FREE_MIB = 4096      # "about 3 to 4 GB" for the 1.5B in 4-bit; refuse below this
+MIN_FREE_MIB = 4096      # historical 1.5B admission floor, not a training-memory guarantee
+TOKENIZER_PROBES = (
+    "t 1 task f(x: int) returns (r: int)",
+    "t 1\ntask f(x: int) returns (r: int) {\n  r = x / 2\n}\n",
+    "if x <= 0 then [1, 2] else [x % 3]",
+)
 
 
 # ------------------------------------------------------------- GPU pick --
@@ -62,7 +69,7 @@ def free_vram_by_gpu() -> dict[int, int]:
     out = subprocess.run(
         ["nvidia-smi", "--query-gpu=index,memory.free",
          "--format=csv,noheader,nounits"],
-        capture_output=True, text=True, check=True)
+        capture_output=True, text=True, check=True, timeout=10)
     d = {}
     for line in out.stdout.strip().splitlines():
         idx, free = line.split(",")
@@ -75,9 +82,95 @@ def pick_gpu(explicit: int | None) -> tuple[int, dict[int, int]]:
     if not free:
         raise SystemExit("nvidia-smi reported no GPUs")
     if explicit is not None:
+        if explicit not in free:
+            raise ValueError(f"GPU {explicit} is not present in nvidia-smi's report")
         return explicit, free
     best = max(free, key=free.get)
     return best, free
+
+
+def require_gpu_space(gpu: int, free: dict[int, int], minimum: int) -> None:
+    """A pin chooses a card; it does not waive the same admission check."""
+    if minimum <= 0:
+        raise ValueError("--min-free-mib must be positive")
+    if gpu not in free or free[gpu] < minimum:
+        raise ValueError(f"GPU {gpu} has {free.get(gpu, 0)} MiB free, below --min-free-mib={minimum}")
+
+
+# ------------------------------------------------------------- tokenizer --
+
+def tokenizer_is_faithful(tokenizer) -> bool:
+    return all(tokenizer.decode(tokenizer(probe, add_special_tokens=False)["input_ids"],
+                                skip_special_tokens=True, clean_up_tokenization_spaces=False) == probe
+               for probe in TOKENIZER_PROBES)
+
+
+def repair_tokenizer(tokenizer, fallback):
+    """Use the model's actual tokenization graph when class detection destroys spaces."""
+    if not tokenizer_is_faithful(tokenizer):
+        print(f"{type(tokenizer).__name__} does not round-trip t; loading tokenizer.json directly", flush=True)
+        alternative = fallback()
+        for attr in ("eos_token", "pad_token", "bos_token", "unk_token", "additional_special_tokens"):
+            value = getattr(tokenizer, attr, None)
+            if value is not None and not getattr(alternative, attr, None):
+                setattr(alternative, attr, value)
+        alternative.chat_template = alternative.chat_template or tokenizer.chat_template
+        tokenizer = alternative
+    if not tokenizer_is_faithful(tokenizer):
+        raise ValueError("Tokenizer does not preserve t text; refusing to train")
+    if not tokenizer.chat_template:
+        raise ValueError("Tokenizer has no chat template; refusing to invent the training prompt")
+    if tokenizer.eos_token is None:
+        raise ValueError("Tokenizer has no EOS token")
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
+
+
+def load_tokenizer(model_name: str):
+    from transformers import AutoTokenizer, PreTrainedTokenizerFast
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    def fallback():
+        local = Path(model_name) / "tokenizer.json"
+        if local.is_file():
+            path = str(local)
+        else:
+            from huggingface_hub import hf_hub_download
+            path = hf_hub_download(model_name, "tokenizer.json",
+                                   revision=tokenizer.init_kwargs.get("_commit_hash"))
+        return PreTrainedTokenizerFast(tokenizer_file=path)
+
+    return repair_tokenizer(tokenizer, fallback)
+
+
+# -------------------------------------------------------------- records --
+
+def file_record(path: Path) -> dict:
+    return {"file": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
+def write_run_record(out_dir: Path, record: dict, stage: str, **updates) -> None:
+    record.update(updates, stage=stage, updated=time.time())
+    temporary = out_dir / "run.json.tmp"
+    temporary.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.replace(out_dir / "run.json")
+
+
+def persist_stage(trainer, tokenizer, destination: Path, stage: str, metrics: dict) -> None:
+    """Save the warm-up before DPO can fail, and record completed trainer steps/metrics."""
+    trainer.save_model(str(destination))
+    tokenizer.save_pretrained(str(destination))
+    trainer.save_state()
+    trainer.save_metrics(stage, metrics)
+
+
+def sft_length_kwargs(config_class, max_len: int) -> dict:
+    params = inspect.signature(config_class.__init__).parameters
+    for name in ("max_length", "max_seq_length"):
+        if name in params:
+            return {name: max_len}
+    raise ValueError("SFTConfig exposes no supported sequence-length setting")
 
 
 # --------------------------------------------------------------- dataset --
@@ -120,27 +213,49 @@ def render_prompt(tokenizer, messages: list[dict]) -> str:
         messages, tokenize=False, add_generation_prompt=True)
 
 
-def build_pair_dataset(tokenizer, path: Path, max_len: int):
+def build_pair_dataset(tokenizer, path: Path, max_len: int, counts: dict | None = None):
     from datasets import Dataset
     rows = load_jsonl(path)
     prompts, chosen, rejected = [], [], []
+    truncated = 0
     for r in rows:
+        if not all(isinstance(r.get(k), str) and r[k].strip() for k in ("chosen", "rejected")):
+            raise ValueError("A DPO pair has an empty chosen or rejected answer")
         p = render_prompt(tokenizer, r["prompt"])
+        if len(tokenizer(p, add_special_tokens=False)["input_ids"]) >= max_len:
+            continue  # TRL keep_start would remove every answer token.
+        truncated += any(len(tokenizer(p + r[k], add_special_tokens=False)["input_ids"]) > max_len
+                         for k in ("chosen", "rejected"))
         prompts.append(p)
         chosen.append(r["chosen"])
         rejected.append(r["rejected"])
     ds = Dataset.from_dict({"prompt": prompts, "chosen": chosen, "rejected": rejected})
+    if counts is not None:
+        counts.update(input=len(rows), kept=len(ds), no_answer_tokens=len(rows) - len(ds), partial_answers=truncated)
+    if not len(ds):
+        raise ValueError("No DPO pairs retain answer tokens at --max-len; increase the window")
     return ds
 
 
-def build_sft_dataset(tokenizer, path: Path):
+def build_sft_dataset(tokenizer, path: Path, max_len: int | None = None, counts: dict | None = None):
     from datasets import Dataset
     rows = load_jsonl(path)
     texts = []
     eos = tokenizer.eos_token or ""
+    truncated = 0
     for r in rows:
+        if not isinstance(r.get("chosen"), str) or not r["chosen"].strip():
+            raise ValueError("An SFT row has no assistant answer")
         p = render_prompt(tokenizer, r["prompt"])
-        texts.append(p + r["chosen"] + eos)
+        if max_len and len(tokenizer(p, add_special_tokens=False)["input_ids"]) >= max_len:
+            continue
+        text = p + r["chosen"] + ("" if r["chosen"].endswith(eos) else eos)
+        truncated += bool(max_len and len(tokenizer(text, add_special_tokens=False)["input_ids"]) > max_len)
+        texts.append(text)
+    if counts is not None:
+        counts.update(input=len(rows), kept=len(texts), no_answer_tokens=len(rows) - len(texts), partial_answers=truncated)
+    if not texts:
+        raise ValueError("No SFT examples retain answer tokens at --max-len; increase the window")
     return Dataset.from_dict({"text": texts})
 
 
@@ -161,12 +276,23 @@ def main() -> int:
     ap.add_argument("--batch", type=int, default=1)
     ap.add_argument("--grad-accum", type=int, default=4)
     ap.add_argument("--max-len", type=int, default=1024)
+    ap.add_argument("--seed", type=int, default=1, help="adapter initialization and trainer/data RNG seed")
+    ap.add_argument("--save-steps", type=int, default=25, help="save a resumable checkpoint every N optimizer steps")
     ap.add_argument("--gpu", type=int, default=None, help="pin a GPU index; default: most free VRAM")
-    ap.add_argument("--min-free-mib", type=int, default=MIN_FREE_MIB)
+    ap.add_argument("--min-free-mib", type=int, default=None,
+                    help="admission floor on the chosen GPU; required for a nondefault base model")
     ap.add_argument("--smoke", action="store_true", help="5 steps, batch 1, no --steps/--batch needed")
     ap.add_argument("--export", action="store_true",
                     help="after training: merge adapter into base (bf16), save, try GGUF")
     args = ap.parse_args()
+    if args.min_free_mib is None:
+        if args.model != DEFAULT_MODEL:
+            ap.error("set --min-free-mib for this base; the historical 1.5B floor is not a 7B memory estimate")
+        args.min_free_mib = MIN_FREE_MIB
+    if min(args.batch, args.grad_accum, args.max_len, args.save_steps, args.min_free_mib) <= 0:
+        ap.error("batch, grad-accum, max-len, save-steps and min-free-mib must be positive")
+    if args.steps is not None and args.steps <= 0:
+        ap.error("--steps must be positive")
 
     if args.smoke:
         args.steps = 5
@@ -175,13 +301,13 @@ def main() -> int:
         args.max_len = min(args.max_len, 256)   # box is shared; keep the smoke footprint small
 
     # --------------------------------------------------- GPU, before torch
-    gpu, free = pick_gpu(args.gpu)
-    print("free VRAM by GPU (MiB): " + ", ".join(f"{i}={m}" for i, m in sorted(free.items())))
-    if free.get(gpu, 0) < args.min_free_mib and args.gpu is None:
-        print(f"refusing to run: best card is GPU {gpu} with {free[gpu]} MiB free, "
-              f"below --min-free-mib={args.min_free_mib}. Not importing torch, not "
-              f"touching any GPU.")
+    try:
+        gpu, free = pick_gpu(args.gpu)
+        require_gpu_space(gpu, free, args.min_free_mib)
+    except (ValueError, OSError, subprocess.SubprocessError) as exc:
+        print(f"refusing to run: {exc}. Not importing torch or allocating GPU memory.")
         return 3
+    print("free VRAM by GPU (MiB): " + ", ".join(f"{i}={m}" for i, m in sorted(free.items())))
     print(f"selected GPU {gpu} ({free.get(gpu, '?')} MiB free)")
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
     # this box's other GPU users make free memory a moving target; reduce
@@ -191,29 +317,52 @@ def main() -> int:
 
     # ------------------------------------------------------- heavy imports
     import torch
-    from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                              BitsAndBytesConfig)
+    from transformers import AutoModelForCausalLM, BitsAndBytesConfig, set_seed
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
     from trl import DPOConfig, DPOTrainer
 
+    set_seed(args.seed)  # before model loading and LoRA initialization, not just Trainer construction
+    torch.cuda.init()
     dev = torch.device("cuda:0")   # index 0 WITHIN CUDA_VISIBLE_DEVICES
+    if not torch.cuda.is_bf16_supported():
+        raise ValueError("The selected GPU does not support this BF16 training recipe")
     torch.cuda.reset_peak_memory_stats(dev)
     t_start = time.monotonic()
 
     print(f"loading tokenizer + base model: {args.model}")
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = load_tokenizer(args.model)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dpo_counts, sft_counts = {}, {}
+    dpo_ds = build_pair_dataset(tokenizer, Path(args.pairs), args.max_len, dpo_counts)
+    sft_ds = build_sft_dataset(tokenizer, Path(args.sft), args.max_len, sft_counts) if args.sft_first else None
+    run_record = {
+        "schema": 1, "started": time.time(), "model": args.model, "seed": args.seed,
+        "source": file_record(Path(__file__)), "pairs": file_record(Path(args.pairs)),
+        "sft": file_record(Path(args.sft)) if args.sft_first else None,
+        "tokenizer": {"class": type(tokenizer).__name__, "roundtrip": True,
+                      "chat_template_sha256": hashlib.sha256(
+                          json.dumps(tokenizer.chat_template, sort_keys=True).encode()).hexdigest()},
+        "versions": {p: metadata.version(p) for p in
+                     ("torch", "transformers", "trl", "peft", "datasets", "bitsandbytes", "accelerate")},
+        "config": {k: getattr(args, k) for k in
+                   ("steps", "epochs", "lr", "batch", "grad_accum", "max_len", "save_steps", "sft_first")},
+        "lora": {"r": 16, "alpha": 16, "dropout": 0.0, "target_modules": TARGET_MODULES},
+        "gpu": {"index": gpu, "free_mib_at_admission": free[gpu], "minimum_free_mib": args.min_free_mib},
+        "dataset": {"sft": sft_counts, "dpo": dpo_counts},
+    }
+    write_run_record(out_dir, run_record, "loading")
+    print("training rows: " + json.dumps(run_record["dataset"], sort_keys=True))
 
     bnb = BitsAndBytesConfig(
         load_in_4bit=True, bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True)
     model = AutoModelForCausalLM.from_pretrained(
         args.model, quantization_config=bnb, device_map={"": 0},
-        torch_dtype=torch.bfloat16)
+        torch_dtype=torch.bfloat16, attn_implementation="sdpa")
     model = prepare_model_for_kbit_training(model)
 
-    lora = LoraConfig(r=16, lora_alpha=16, lora_dropout=0.0,
+    lora = LoraConfig(r=16, lora_alpha=16, lora_dropout=0.0, bias="none",
                       target_modules=TARGET_MODULES, task_type="CAUSAL_LM")
     model = get_peft_model(model, lora)
     model.print_trainable_parameters()
@@ -229,28 +378,34 @@ def main() -> int:
         # heading off here rather than by downgrading either package.
         model.warnings_issued = {}
 
-    out_dir = Path(args.out)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
     # ---------------------------------------------------- optional SFT warm-up
     if args.sft_first:
         from trl import SFTConfig, SFTTrainer
         sft_path = Path(args.sft)
         print(f"SFT warm-up on {sft_path}")
-        sft_ds = build_sft_dataset(tokenizer, sft_path)
         sft_wanted = dict(
             output_dir=str(out_dir / "sft-warmup"),
             per_device_train_batch_size=args.batch,
             gradient_accumulation_steps=args.grad_accum,
             num_train_epochs=1, learning_rate=args.lr, bf16=True,
             logging_steps=1, max_steps=(5 if args.smoke else -1),
-            dataset_text_field="text", max_seq_length=args.max_len,
+            dataset_text_field="text", **sft_length_kwargs(SFTConfig, args.max_len),
+            seed=args.seed, data_seed=args.seed,
+            save_strategy="steps", save_steps=args.save_steps, save_total_limit=2,
+            optim="paged_adamw_8bit", gradient_checkpointing=True,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
             report_to=[])
         sft_cfg = SFTConfig(**_kwargs_for(SFTConfig, sft_wanted))
         sft_trainer_kwargs = dict(model=model, args=sft_cfg, train_dataset=sft_ds,
                                   tokenizer=tokenizer, processing_class=tokenizer)
         sft_trainer = SFTTrainer(**_kwargs_for(SFTTrainer, sft_trainer_kwargs))
-        sft_trainer.train()
+        if not len(sft_trainer.train_dataset):
+            raise ValueError("SFT preprocessing retained no training examples")
+        sft_counts["trainer_rows"] = len(sft_trainer.train_dataset)
+        write_run_record(out_dir, run_record, "sft_running")
+        sft_result = sft_trainer.train()
+        persist_stage(sft_trainer, tokenizer, out_dir / "sft-warmup", "sft", sft_result.metrics)
+        write_run_record(out_dir, run_record, "sft_complete", sft_metrics=sft_result.metrics)
         print("SFT warm-up done")
         # The warm-up's trainer holds its optimiser state, its gradient buffers and its accelerator on the same
         # card DPO is about to use. Left alive they cost about as much as the DPO step itself, and on 2026-09-18
@@ -267,8 +422,6 @@ def main() -> int:
                   f"{torch.cuda.memory_reserved()/2**30:.1f} GiB reserved")
 
     # --------------------------------------------------------------- DPO
-    print(f"building DPO dataset from {args.pairs}")
-    dpo_ds = build_pair_dataset(tokenizer, Path(args.pairs), args.max_len)
     print(f"DPO pairs: {len(dpo_ds)}")
 
     dpo_wanted = dict(
@@ -276,37 +429,35 @@ def main() -> int:
         gradient_accumulation_steps=args.grad_accum, warmup_ratio=0.1,
         num_train_epochs=args.epochs, max_steps=(args.steps or -1),
         learning_rate=args.lr, beta=0.1, bf16=True, optim="paged_adamw_8bit",
-        # The recorded prompt (grammar, five examples, the problem) is about
-        # 1,600 Qwen tokens, so the prompt budget is the whole window minus
-        # 512 for the answer; a half-window prompt budget would truncate the
-        # grammar away. use_logits_to_keep computes logits for the
-        # completion tokens only: the full-window, full-vocabulary fp32
-        # logits (2048 x 152k x 4 bytes, twice for chosen and rejected) are
-        # what put the first run out of memory on a 4.8 GB slice of a
-        # shared card (measured 2026-09-09).
+        # The same prompt occupies different numbers of tokens in each base. Dataset counts above expose
+        # the answers a window loses; a Qwen-sized window cannot be assumed to fit the prover tokenizer.
         logging_steps=1, max_length=args.max_len,
-        max_prompt_length=max(args.max_len - 512, args.max_len // 2),
-        use_logits_to_keep=True,
-        # trl 1.13 has neither of the two above; what it does have is a reference pass computed once, up front,
-        # instead of beside the policy's own graph, which is the larger of the two costs on a 16 GB card
+        seed=args.seed, data_seed=args.seed,
+        save_strategy="steps", save_steps=args.save_steps, save_total_limit=2,
+        # TRL 1.13 computes full-window logits. Cache the frozen post-SFT adapter's reference pass once,
+        # before the policy's training graph exists, in batches of one pair.
         precompute_ref_log_probs=True,
+        precompute_ref_batch_size=1,
         # the activations of a 3,300-token pair, recomputed rather than kept: the card is 200 MB short of the
         # 1.84 GiB logits tensor without this, measured 2026-09-18
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
-        # every pair is padded to max_length otherwise, and the median pair is 2,895 tokens against a 3,328
-        # window, so a fifth of the logits tensor is padding the card pays bf16 for
-        padding_free=True,
+        # SDPA must see separate sequences. TRL's collator already pads only to the batch's longest pair;
+        # flattening with padding_free would need a FlashAttention implementation that respects boundaries.
+        padding_free=False,
         report_to=[])
     dpo_cfg = DPOConfig(**_kwargs_for(DPOConfig, dpo_wanted))
 
     dpo_trainer_kwargs = dict(model=model, args=dpo_cfg, train_dataset=dpo_ds,
-                              tokenizer=tokenizer, processing_class=tokenizer,
-                              max_length=args.max_len, max_prompt_length=args.max_len // 2)
+                              tokenizer=tokenizer, processing_class=tokenizer)
     trainer = DPOTrainer(**_kwargs_for(DPOTrainer, dpo_trainer_kwargs))
+    if not len(trainer.train_dataset):
+        raise ValueError("DPO preprocessing retained no training pairs")
+    dpo_counts["trainer_rows"] = len(trainer.train_dataset)
+    write_run_record(out_dir, run_record, "dpo_running")
 
     print(f"training: steps={args.steps} epochs={args.epochs} lr={args.lr} "
-          f"batch={args.batch} grad_accum={args.grad_accum} max_len={args.max_len}")
+          f"batch={args.batch} grad_accum={args.grad_accum} max_len={args.max_len} seed={args.seed}")
     result = trainer.train()
 
     wall = time.monotonic() - t_start
@@ -316,11 +467,16 @@ def main() -> int:
     print(f"wall time: {wall:.1f} s")
     print(f"GPU used: {gpu}")
 
-    trainer.save_model(str(out_dir))
-    tokenizer.save_pretrained(str(out_dir))
+    persist_stage(trainer, tokenizer, out_dir, "dpo", result.metrics)
+    write_run_record(out_dir, run_record, "complete", dpo_metrics=result.metrics,
+                     wall_seconds=wall, peak_vram_gb=peak)
     print(f"adapter saved to {out_dir}")
 
     if args.export:
+        import gc
+        del trainer, model, dpo_ds
+        gc.collect()
+        torch.cuda.empty_cache()
         export(args, out_dir)
     return 0
 
@@ -333,7 +489,7 @@ def export(args, adapter_dir: Path) -> None:
     Never fakes a GGUF: if the converter is missing, this says so and stops
     with the merged HF model already on disk."""
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM
     from peft import PeftModel
 
     merged_dir = adapter_dir.parent / (adapter_dir.name + "-merged")
@@ -344,7 +500,7 @@ def export(args, adapter_dir: Path) -> None:
     merged = merged.merge_and_unload()
     merged_dir.mkdir(parents=True, exist_ok=True)
     merged.save_pretrained(str(merged_dir), safe_serialization=True)
-    tok = AutoTokenizer.from_pretrained(args.model)
+    tok = load_tokenizer(str(adapter_dir))
     tok.save_pretrained(str(merged_dir))
     print(f"[export] merged bf16 model saved to {merged_dir}")
 
