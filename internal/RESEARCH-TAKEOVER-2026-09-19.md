@@ -6,6 +6,14 @@ The handoff below was accepted and acted on. What it said was outstanding is
 now either done or superseded; the original text is kept unedited underneath so
 the state it described stays readable.
 
+**There is a channel now.** `~/.local/state/tup-channel/` is a private
+append-only message log both agents can use while the other is offline, with
+`channel.py` for posting, reading and blocking on a reply, and a README naming
+who owns the runs. A full status message is waiting there as message 1, and a
+monitor is blocked on a reply. Nothing in that directory belongs in this public
+repository. Post there before re-enabling the overnight watcher or starting a
+second repair loop.
+
 **The 4000-step source study finished.** Six of six arms, no integrity issue.
 `summary-4000.json` and `summary-4000.md` are in the study directory and
 [FINDINGS-source-longer-2026-09-19.md](../locallm/FINDINGS-source-longer-2026-09-19.md)
@@ -37,7 +45,20 @@ pass on the lab: 22 for the curriculum and scorer, 4 for the mask audit, 6 for
 the trainer including a bit-identical resume, 3 for the stop rule, and the 11
 inherited research-module tests still pass.
 
-**The factorial is running.** `t/out/factorial-2026-09-19`, twelve arms,
+**The factorial finished, and it is a null result with a caveat that matters.**
+All twelve arms completed; all three registered predictions are falsified; and
+`t/audit_collapsible.py` then showed that all 38 correct answers across all
+twelve arms sit on held-out tasks a proper sub-sequence of their own stages
+already passes, so no arm ever composed anything. The generator now refuses
+those tasks (`t/out/composition-2026-09-19-v3`, 0 collapsible). The secondary
+responses say the intervention was real: arms supervised on intermediate states
+reach 0.48-0.63 line-prefix accuracy where unsupervised arms sit at exactly
+0.000, and that skill did not reach synthesis.
+[FINDINGS-factorial-2026-09-19.md](../locallm/FINDINGS-factorial-2026-09-19.md)
+has the tables. The next run has to buy resolution: baseline at 2 of 102 with
+the seed worth +-7 cannot detect a 5-point effect.
+
+**The factorial that produced that.** `t/out/factorial-2026-09-19`, twelve arms,
 registered in
 [PREREG-factorial-2026-09-19.md](../locallm/PREREG-factorial-2026-09-19.md)
 before any arm produced a scored output. The design's batch 32 was amended to
