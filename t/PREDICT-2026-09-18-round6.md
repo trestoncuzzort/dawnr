@@ -66,3 +66,34 @@ already: 39 well formed, 13 test-passing, 3 clean, 3 of 13 converting.
    eating the gain, which is the same wall every other change has hit.
 4. **If nothing moves**, the prompt was not the constraint and eleven days of a wrong sentence cost nothing,
    which would itself be worth knowing.
+
+### What prompt v4 actually did (2026-09-19, after the run)
+
+| | v3 | v4 |
+|---|---|---|
+| well formed | 39 | **34** |
+| test-passing | 13 | **11** |
+| clean | 3 | **5** |
+| converts | 3/13 (23%) | **5/11 (45%)** |
+| clean after the spec check | 2 | 4 |
+
+Prediction 1 was wrong: well-formed answers fell, 39 to 34, where 45 to 65 was
+predicted. Prediction 2 was wrong in the same direction: test-passing fell, 13
+to 11, where 18 to 30 was predicted. The reasoning behind both -- that naming
+the three commonest refusals and unbanning two operators would let more replies
+through the early gates -- simply did not happen.
+
+Prediction 3 held, and it is the one that matters: clean rose 3 to 5, and
+conversion nearly doubled, 23 percent to 45. The model wrote **fewer** answers
+and **more provable** ones. That is the first change measured in this project
+that moves conversion, the gate three rounds of data work could not move, and
+it moved it on the untrained base model with no training at all.
+
+Prediction 4 said that if nothing moved, eleven days of a wrong sentence cost
+nothing. Something moved, so the sentence did cost something -- but not in the
+direction the prediction reasoned about. Two readings are open and this sample
+cannot separate them: either telling the model it has division lets it write
+specifications it can actually satisfy, or naming the refusals pushes it to
+attempt fewer and simpler problems. The difference is 2 clean answers out of
+232, so neither is a claim yet; the way to settle it is v4 with the division
+sentence alone against v4 with the refusal rules alone.
