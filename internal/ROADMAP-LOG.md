@@ -1800,6 +1800,58 @@ that corpus once graded); a differential check has refuted or failed to refute
 every currently clean answer (3, DONE); the twins ship as their own artifact
 (4, DONE).
 
+## The answers one kernel from clean, triaged 2026-09-19
+
+`t/recheck_near.py` names them: an answer that passes its own tests and that
+six of the seven verified with the twin refuted, stopped by one kernel. There
+are **87**, which is a larger prize than any data change of the last three
+rounds produced -- the pool's whole clean count is 87 examples. Why that one
+kernel stopped, counted:
+
+    23  lean    unproved            13  spark   timeout
+    18  framac  abstain             12  framac  timeout
+     8  lean    timeout              3  verus   malformed
+     3  lean    twin unproved        2  verus   unproved
+     2  rocq    timeout              2  others
+
+Three separate causes hide under those words, and only measurement separates
+them. What was measured this day:
+
+- **Frama-C's `verified / timeout` rows are a prover limit, not a budget.**
+  The reading in `verifiers/framac.py` -- that a failing twin goal ends in
+  `[Timeout]` and that raising the wall buys nothing -- does not hold for
+  model answers: on `mbpp_503__add_consecutive_nums` the goal ends in
+  `[Stepout]`, the step limit, so the operative bound is the opposite knob
+  from the one the file discusses. Raising it does not help either: 20,000,
+  200,000 and 1,000,000 steps all give 26 of 28 goals, in 3, 15 and 35
+  seconds. Swapping alt-ergo for z3 is worse, 23 of 28. So the cell is
+  honest about the verdict and misleading about the cause, and these twelve
+  answers are beyond this prover on this encoding at any budget worth paying.
+  Re-running them alone confirms it: 6 to 8 seconds each, verdict unchanged.
+- **Lean's 26 `unproved` rows share one shape.** Of the 26 answers only Lean
+  could not prove, 21 have a `while`, 20 a `forall` invariant, 16 return a
+  `seq`, none has a nested loop, a slice, a spec function or a string-library
+  call. The shape is: a loop that builds a sequence by appending one element
+  an iteration, under a universally quantified invariant over its indices.
+  The append machinery this file already has (`_seq_append_read_script`,
+  `t_seq_append_get`, gated on `self.seq_new`) does fire on them -- the
+  helpers are emitted and `grind only [t_seq_append_get, ...]` is the closing
+  script -- and still fails. The goal it fails on is invariant preservation
+  after `r := r ++ [x]` where the invariant body is a nested if-then-else,
+  which is the one thing separating these from the append tasks that do
+  close. Named, scoped and not attempted: the next Lean move is case analysis
+  on an if-then-else *inside the invariant* before the append rewrite, the
+  way merged if-updates are already pre-`split` for the body.
+- **A timeout that is really load does exist, and it is rarer than hoped.**
+  Re-running the 41 timeout-shaped cells alone at flake 3 flipped one in the
+  first fifteen (`he_42__incr_list`, lean, `verified / timeout` to
+  `verified / refuted` in 2.0 s). Everything Frama-C held. Whatever flips is
+  recorded in `t/out/recheck.json`, which `t/preflight.py` reads, and no
+  kernels.md is edited.
+
+So of the 87, the cheap third is smaller than it looked, the Frama-C third is
+a real cost, and the Lean third is one named tactic gap worth a session.
+
 ## WS-21: the parse wall (opened 2026-09-18)
 
 WS-19 move 2 ended with two alternatives, a grammar-constrained decoder
