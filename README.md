@@ -6,6 +6,8 @@ The industry bet is scale: more parameters, more tokens, more scraped code. loca
 
 Every number below was measured by a script in this repository and links to the file that records it. Where a number of this project's own turned out wrong, the correction is on this page rather than in its history.
 
+**The model of record is locallm.** The comparison this project exists to settle is **locallm against Phi-4-mini**: a model trained here from random weights, on filtered data, against a small open model trained the usual way. The fine-tuned 1.5B student rows below are a second, borrowed-base experiment and not the claim. locallm is not fixed at the 3.2M of its round-4 and round-5 rows either: the core now trains at **91M parameters** on this hardware and its optimizer step is checked through **312M** ([locallm/CORE-2026-09-19.md](locallm/CORE-2026-09-19.md)). What has not yet happened is the run that puts a locallm of that size through this pipeline's data and scores it on the 232 held-out problems; until that exists, locallm's row on this page is a 3.2M model's row and is read that way.
+
 **Status, 2026-09-19.** Two negative results landed the same day, both measured against predictions written before the runs. The modern core's architecture advantage **reversed** at four times the training budget, and a preregistered four-cell experiment in execution and latent supervision produced **no synthesis gain at any seed**, while revealing that its own held-out tasks were passable without composing anything. Both are below, under [the owned core](#the-owned-core-trained-here-from-random-weights).
 
 **What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **No model trained here has beaten Phi-4-mini**: three rounds of the loop have produced 3 clean answers out of 232 each time, which is exactly Phi's score. Two models *run through* this pipeline do beat it, and neither was trained by us. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
@@ -48,11 +50,14 @@ Measured by [`t/score_heldout.py`](t/score_heldout.py); the full table is [`t/ou
 | student, round 5 | us | 42 | 11 | **3** | 27% | 2 |
 | student, round 6 | us | 36 | 9 | **3** | 33% | 2 |
 | student, round 6, decoding against t's grammar | us | 58 | 14 | **4** | 29% | 3 |
-| locallm, round 4 (3.2M, from scratch) | us | 209 | 2 | **2** | 100% | 2 |
-| locallm, round 5 | us | 198 | 2 | **2** | 100% | 2 |
+| **locallm, round 4 (3.2M, from scratch)** | us | 209 | 2 | **2** | 100% | 2 |
+| **locallm, round 5 (3.2M)** | us | 198 | 2 | **2** | 100% | 2 |
 
-**converts** is the share of test-passing answers the seven can prove, and it is where this project is stuck:
-our student writes three times Phi's well-formed answers and converts a third of them where Phi converts half.
+**converts** is the share of test-passing answers the seven can prove, and it is where this project is stuck.
+The two locallm rows are the ones that count, and they are 3.2M-parameter models: they write well-formed t
+almost every time (209 and 198 of 232) and pass the problems' tests twice, which is the notation without the
+problem. The 1.5B student rows sit beside them as a borrowed-base comparison; the student writes three times
+Phi's well-formed answers and converts a third of them where Phi converts half.
 
 Three rounds, three different data recipes — more problems, more answers, then preference pairs aimed at the exact gate the student loses at — and the clean count did not move. Round 6's predictions were written before it ran ([`t/PREDICT-2026-09-18-round6.md`](t/PREDICT-2026-09-18-round6.md)) and the one that mattered was wrong.
 

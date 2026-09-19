@@ -26,6 +26,14 @@ GRID = {"affine": [("affine", a, b) for a in (2, 3) for b in (-2, 1, 4)],
         "cap": [("cap", c) for c in (5, 12, 20)],
         "shift": [("shift", c) for c in (3, 7, 11)],
         "tri": [("tri", c) for c in (0, 4, 9)]}
+# A wider grid makes memorizing one stage a losing strategy: the contract in the
+# prompt is then the only thing that says which constants this task wants.
+WIDE_GRID = {"affine": [("affine", a, b) for a in (2, 3, 4, 5)
+                        for b in (-5, -3, -2, 1, 2, 4, 6)],
+             "cap": [("cap", c) for c in (4, 5, 8, 12, 15, 20, 24)],
+             "shift": [("shift", c) for c in (2, 3, 5, 7, 9, 11, 14)],
+             "tri": [("tri", c) for c in (0, 2, 4, 6, 9, 12, 15)]}
+GRIDS = {"small": GRID, "wide": WIDE_GRID}
 TRAIN_INPUTS = list(range(-6, 11))
 EXTRAPOLATION_INPUTS = list(range(-30, -19)) + list(range(18, 31))
 
@@ -188,8 +196,9 @@ def split_patterns(seed, held_pairs, depth_count):
     return splits
 
 
-def pattern_tasks(pattern, count, rng):
-    options = [tuple(stages) for stages in product(*[GRID[kind] for kind in pattern])]
+def pattern_tasks(pattern, count, rng, grid=None):
+    grid = grid or GRID
+    options = [tuple(stages) for stages in product(*[grid[kind] for kind in pattern])]
     rng.shuffle(options)
     return options[:count]
 
@@ -226,6 +235,8 @@ def main():
                         help="scored inputs per held-out task, per stratum")
     parser.add_argument("--max-events", type=int, default=240,
                         help="length cap applied identically to every arm")
+    parser.add_argument("--grid", choices=sorted(GRIDS), default="small",
+                        help="parameter grid the stages are drawn from")
     parser.add_argument("--keep-collapsible", action="store_true",
                         help="keep held-out tasks a proper sub-sequence of their own "
                              "stages already passes; the default drops them, because "
@@ -240,7 +251,8 @@ def main():
     names = set()
     for split, patterns in splits.items():
         for pattern in patterns:
-            for index, stages in enumerate(pattern_tasks(pattern, args.variants, rng)):
+            for index, stages in enumerate(pattern_tasks(pattern, args.variants, rng,
+                                                        GRIDS[args.grid])):
                 name = f"comp_{'_'.join(pattern)}_{index}"
                 if name in names:
                     raise AssertionError(f"duplicate task name {name}")
@@ -361,7 +373,8 @@ def main():
          str(Path(__file__).with_name("execution_trace.py"))),
         ("interpreter", str(Path(__file__).with_name("interp.py"))),
         ("surface", str(Path(__file__).with_name("surface.py"))))}
-    manifest = {"schema": SCHEMA, "seed": args.seed, "files": files, "producers": producers,
+    manifest = {"schema": SCHEMA, "seed": args.seed, "grid": args.grid,
+                "files": files, "producers": producers,
                 "counts": counts, "max_events": args.max_events,
                 "train_inputs": TRAIN_INPUTS, "extrapolation_inputs": EXTRAPOLATION_INPUTS,
                 "family_exclusion": {split: [list(pattern) for pattern in patterns]

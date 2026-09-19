@@ -84,6 +84,8 @@ def main():
     parser.add_argument("--init-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--seeds", type=int, nargs="+", default=[1337, 7, 42])
+    parser.add_argument("--arms", nargs="+", choices=ARMS, default=list(ARMS),
+                        help="a subset runs a diagnostic, not the registered factorial")
     parser.add_argument("--order-seed", type=int, default=20260919)
     parser.add_argument("--updates", type=int, default=1000)
     parser.add_argument("--batch-size", type=int, default=32)
@@ -103,7 +105,7 @@ def main():
         rng = random.Random(args.order_seed)
         blocks = []
         for seed in args.seeds:
-            order = list(ARMS)
+            order = [arm for arm in ARMS if arm in args.arms]
             rng.shuffle(order)
             blocks.append({"seed": seed, "order": order,
                            "arms": [{"id": f"{arm}-seed{seed}", "arm": arm, "seed": seed,
