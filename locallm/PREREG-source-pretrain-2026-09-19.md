@@ -81,3 +81,29 @@ stage must measure executable correctness on new held-out tasks and t's exact
 seven-kernel real/twin checks, then compare to an explicitly versioned Phi model
 under equal task requirements. Until those measurements exist, neither a loss
 drop nor a larger model is a Phi win.
+
+## Frozen launch configuration
+
+Recorded after capacity tests and manual data inspection, before the first
+training arm. Use corpus v2: 12,880 files, 181,200,765 source bytes, with
+48,798,892 training tokens and 10,355,041 validation tokens. The original corpus
+was rejected after its decoded windows exposed generated codec tables; v2
+removes 65 files and leaves the validation text unchanged. All ten v2 windows
+were read in full and accepted; both partitions round-trip exactly.
+
+- Train SHA-256: `737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb`
+- Validation SHA-256: `c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be`
+- Tokenizer file SHA-256: `f2d09c7a155474d2b34fdfc4ee38f1c0f3a9ed34ca1585053f1888661a617b5b`
+- Audit SHA-256: `f772ec9fa09a5b93461c240d17e8f5b0aa07bfdbdec205e7001d63f28cfa1d9a`
+
+The fixed batch is eight sequences per GPU on four GPUs, accumulation one,
+context 2048: 65,536 tokens per update and 65,536,000 tokens per arm. No gradient
+checkpointing; deterministic BF16 training with four CPU threads per rank.
+Capacity tests measured 11.90 GiB reserved per rank for the modern model;
+admission requires at least 13 GiB free per GPU. All three seeds (1337, 7, 42)
+are now planned, modern followed by GPT for each seed. Both architectures use
+12 layers, width 768 and 12 heads; modern has 91,245,312 parameters and GPT has
+92,920,320. Learning rate, dropout, warmup, horizon, and evaluation cadence
+remain as specified above. The study ledger binds the exact training source,
+runtime, corpus and tokenizer and preserves every attempt. A failure stops the
+sequence for diagnosis; recovery resumes a saved checkpoint where compatible.

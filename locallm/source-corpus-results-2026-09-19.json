@@ -1,0 +1,270 @@
+{
+  "builder": {
+    "script": "locallm/build_source_corpus.py",
+    "sha256": "e921c245578e65726ccb25912d786f21c56bb8cc3c6b7237b311c48e6a3d5459"
+  },
+  "contains_corpus_text": false,
+  "current_supervised_gate": {
+    "audit": {
+      "counts": {
+        "eval": {
+          "current_positive_problems": 0,
+          "current_positive_programs": 0,
+          "old_positive_problems": 16,
+          "old_positive_programs": 31,
+          "problems": 232,
+          "raw_samples": 3081
+        },
+        "train": {
+          "current_positive_problems": 0,
+          "current_positive_programs": 0,
+          "old_positive_problems": 94,
+          "old_positive_programs": 210,
+          "problems": 2771,
+          "raw_samples": 10519
+        }
+      },
+      "dataset_builder_sha256": "0e41c2c716debb447e43c8c72eac2bbb4aa994d6ce235c08f025fad3d2b73c9d",
+      "first_rejections": {
+        "eval": {
+          "kernels-not-clean-seven": 549,
+          "not-wellformed": 2275,
+          "spec-unchecked": 43,
+          "tests-not-passing": 214
+        },
+        "train": {
+          "kernels-not-clean-seven": 1480,
+          "not-wellformed": 8113,
+          "spec-unchecked": 277,
+          "tests-not-passing": 649
+        }
+      },
+      "no_datasets_or_negatives": true,
+      "old_positive_first_rejections": {
+        "eval": {
+          "spec-unchecked": 31
+        },
+        "train": {
+          "spec-unchecked": 210
+        }
+      },
+      "pool": "v5",
+      "seconds": 2.396,
+      "spec_evidence_sha256": "fc5ce6fdc7a2aa482190100e0fcdf38a7d4792a13c9ae2bc9336af86cf0bf566",
+      "split_sha256": "49103716b2eddf92ecdc811eb614f71eed8fb3804ab4ac849f9640a4c7f8693e",
+      "tags": [
+        "deepseek-coder-v2-16b-v4-s1",
+        "deepseek-coder-v2-16b-v4-s2",
+        "qwen2.5-coder-14b-apps-s1",
+        "qwen2.5-coder-14b-apps-s2",
+        "qwen2.5-coder-14b-he-s1",
+        "qwen2.5-coder-14b-he-s2",
+        "qwen2.5-coder-14b-he-s3",
+        "qwen2.5-coder-14b-he-s4",
+        "qwen2.5-coder-14b-he-s5",
+        "qwen2.5-coder-14b-he-s6",
+        "qwen2.5-coder-14b-he-s7",
+        "qwen2.5-coder-14b-he-s8",
+        "qwen2.5-coder-14b-v3-s1",
+        "qwen2.5-coder-14b-v3-s1-fix1",
+        "qwen2.5-coder-14b-v3-s2",
+        "qwen2.5-coder-14b-v3-s2-fix1",
+        "qwen2.5-coder-14b-v3-s3",
+        "qwen2.5-coder-14b-v3-s3-fix1",
+        "qwen2.5-coder-14b-v3-s4",
+        "qwen2.5-coder-14b-v3-s4-fix1",
+        "qwen2.5-coder-14b-v3-s5",
+        "qwen2.5-coder-14b-v3-s5-fix1",
+        "qwen2.5-coder-14b-v3-s6",
+        "qwen2.5-coder-14b-v3-s6-fix1",
+        "qwen2.5-coder-14b-v3-s7",
+        "qwen2.5-coder-14b-v3-s8",
+        "qwen2.5-coder-14b-v3-s8-fix1",
+        "qwen3-coder-30b-apps-g1",
+        "qwen3-coder-30b-apps-s1",
+        "qwen3-coder-30b-apps-s2",
+        "qwen3.8-27b-fp8",
+        "qwen3.8-27b-fp8-v3",
+        "qwen3.8-27b-fp8-v3-s2",
+        "student-r4-train",
+        "locallm-r4-train",
+        "prover-train"
+      ]
+    },
+    "interpretation": "Missing current hash-bound spec evidence, not measured semantic failure.",
+    "script": "t/loop_dataset.py"
+  },
+  "date": "2026-09-19",
+  "license_snapshot_count": 23,
+  "reproduction": {
+    "v1_full_build": {
+      "all_files_identical": true,
+      "files_checked": 29,
+      "workers": [
+        8,
+        4
+      ]
+    },
+    "v2_fixture_worker_counts": [
+      1,
+      4
+    ],
+    "v2_full_build_repeat_performed": false
+  },
+  "sources": {
+    "cpython": {
+      "revision": "1d0f1ad0aa7a933e8d03f855d9b5eed7e00e775d",
+      "scopes": [
+        {
+          "directory": "Lib",
+          "suffix": ".py"
+        },
+        {
+          "directory": "Doc",
+          "suffix": ".rst"
+        }
+      ],
+      "source_url": "https://github.com/python/cpython"
+    },
+    "mathlib4": {
+      "revision": "dec5b2b780537b6eaf7f5e5f000c12f7387fb24d",
+      "scopes": [
+        {
+          "directory": "Mathlib",
+          "suffix": ".lean"
+        }
+      ],
+      "source_url": "https://github.com/leanprover-community/mathlib4"
+    },
+    "rust": {
+      "revision": "971903d9aee24befd88423f42826c232e27c8190",
+      "scopes": [
+        {
+          "directory": "library",
+          "suffix": ".rs"
+        }
+      ],
+      "source_url": "https://github.com/rust-lang/rust"
+    }
+  },
+  "split": {
+    "duplicate_rule": "first selected source/path wins; global exact and normalized duplicate exclusion",
+    "normalization": "Unicode text splitlines, trailing line whitespace removed, outer whitespace stripped",
+    "requested_validation_fraction": 0.1,
+    "seed": 1337,
+    "split_rule": "sha256(seed + NUL + module family), one split per whole family"
+  },
+  "tests": {
+    "dataset_and_spec": {
+      "commands": [
+        "python3 -m unittest discover -s t -p test_loop_dataset.py",
+        "python3 -m unittest discover -s t -p test_spec_check.py"
+      ],
+      "passed": 13
+    },
+    "source_corpus": {
+      "command": "python3 -m unittest discover -s locallm -p test_source_corpus.py",
+      "passed": 8
+    }
+  },
+  "v1_rejection": {
+    "added_files": 0,
+    "changes_only_generated_headers": true,
+    "reason": "Decoded-window inspection found generated CPython codec tables missed by the header filter.",
+    "removed_generated_files": 65,
+    "removed_source_bytes": 1197737,
+    "v1_generated_header_exclusions": 43,
+    "v1_preserved": true,
+    "v2_generated_header_exclusions": 108,
+    "validation_bytes_unchanged": true
+  },
+  "v2_quality": {
+    "achieved_validation_byte_fraction": 0.1588776294625467,
+    "artifacts": {
+      "provenance.jsonl": "29ec349435fc024de276f9bfd3dfb26de80bc1ebdc3c2398267e6e7cb56699fa",
+      "sources-lock.json": "3ff94c17c957696a22e50c334b241d55ac38376779dab4a36d3fe3620ee5d454",
+      "train.txt": "737af894db2a6060a41ba903f3d8adf8f1197036653604047426458e9cb61ffb",
+      "validation.txt": "c73c6af8f3fcdbdefc93babcfa536cf81bc2eb818b3732a01bb191068e0c31be"
+    },
+    "cross_split_exact_overlap": 0,
+    "cross_split_group_overlap": 0,
+    "cross_split_normalized_overlap": 0,
+    "excluded": {
+      "benchmark-name-in-content": 13,
+      "empty": 21,
+      "exact-duplicate": 42,
+      "generated-header": 108,
+      "non-utf8": 3,
+      "test-fixture-data": 111,
+      "vendored-generated-or-fixture-directory": 6
+    },
+    "included_files": 12880,
+    "included_source_bytes": 181200765,
+    "selected_files": 13184,
+    "source_kinds": {
+      "code": {
+        "excluded_files": 99,
+        "included_files": 2320,
+        "selected_files": 2419,
+        "source_bytes": 40105764
+      },
+      "documentation": {
+        "excluded_files": 8,
+        "included_files": 551,
+        "selected_files": 559,
+        "source_bytes": 12787340
+      },
+      "proof": {
+        "excluded_files": 34,
+        "included_files": 8509,
+        "selected_files": 8543,
+        "source_bytes": 98300881
+      },
+      "test": {
+        "excluded_files": 163,
+        "included_files": 1500,
+        "selected_files": 1663,
+        "source_bytes": 30006780
+      }
+    },
+    "sources": {
+      "cpython": {
+        "excluded_files": 249,
+        "included_files": 2373,
+        "selected_files": 2622,
+        "source_bytes": 51587510
+      },
+      "mathlib4": {
+        "excluded_files": 34,
+        "included_files": 8509,
+        "selected_files": 8543,
+        "source_bytes": 98300881
+      },
+      "rust": {
+        "excluded_files": 21,
+        "included_files": 1998,
+        "selected_files": 2019,
+        "source_bytes": 31312374
+      }
+    },
+    "splits": {
+      "train": {
+        "chars": 148558997,
+        "corpus_bytes": 153093619,
+        "files": 11237,
+        "groups": 2028,
+        "lines": 3830648,
+        "source_bytes": 152412017
+      },
+      "validation": {
+        "chars": 28428159,
+        "corpus_bytes": 28886620,
+        "files": 1643,
+        "groups": 225,
+        "lines": 741878,
+        "source_bytes": 28788748
+      }
+    },
+    "truncated_files": 0
+  }
+}
