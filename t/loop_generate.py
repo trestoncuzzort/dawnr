@@ -410,7 +410,7 @@ def check_reply(reply: str, entry: dict) -> tuple[bool, str, str]:
 
 # ------------------------------------------------------------------ main --
 
-def grammar_processors(tokenizer, grammar_path: str, torch_mod):
+def grammar_processors(tokenizer, grammar_path: str, torch_mod, vocab_size: int | None = None):
     """A logits processor that lets only tokens t's grammar can still accept (WS-21, 2026-09-18).
 
     The measurement that asks for this: the round 5 student parsed 32 percent of the time, exactly where the
@@ -430,7 +430,11 @@ def grammar_processors(tokenizer, grammar_path: str, torch_mod):
     try:
         text = "\n".join(line for line in Path(grammar_path).read_text(encoding="utf-8").splitlines()
                          if not line.lstrip().startswith("#"))
-        info = xgr.TokenizerInfo.from_huggingface(tokenizer, vocab_size=len(tokenizer))
+        # The mask has to be as wide as the logits, not as wide as the tokenizer. Phi-4-mini's tokenizer holds
+        # 200,032 tokens and its logits 200,064, and xgrammar leaves anything past the mask UNMASKED -- so 32
+        # tokens could still be sampled and the reply would not be what the grammar promised. Measured
+        # 2026-09-18 from xgrammar's own warning; the model's own vocab_size is the right width.
+        info = xgr.TokenizerInfo.from_huggingface(tokenizer, vocab_size=vocab_size or len(tokenizer))
         compiled = xgr.GrammarCompiler(info).compile_grammar(xgr.Grammar.from_ebnf(text))
         print(f"loop_generate: decoding against {grammar_path}", flush=True)
         return lambda: [LogitsProcessor(compiled)]
@@ -608,7 +612,9 @@ def main() -> int:
         adapter_hash = adapter_digest(adapter_dir)
     model.eval()
     model.config.use_cache = True
-    make_procs = grammar_processors(tokenizer, args.grammar, torch) if args.grammar else None
+    make_procs = (grammar_processors(tokenizer, args.grammar, torch,
+                                     vocab_size=getattr(model.config, "vocab_size", None))
+                  if args.grammar else None)
 
     digest = (f"base={args.base} adapter={adapter_note} "
               f"adapter_digest={adapter_hash} torch={torch.__version__} "
