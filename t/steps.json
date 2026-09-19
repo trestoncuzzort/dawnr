@@ -11,8 +11,8 @@
   "packages",
   "Python packages",
   "Installs the training libraries into ~/.venv-t.",
-  "~/.venv-t/bin/python -m pip install transformers peft trl datasets accelerate bitsandbytes safetensors",
-  "~/.venv-t/bin/python -c 'import transformers, peft, trl, datasets, accelerate, bitsandbytes'",
+  "~/.venv-vllm/bin/python -m pip install transformers peft trl datasets accelerate bitsandbytes safetensors",
+  "~/.venv-vllm/bin/python -c 'import transformers, peft, trl, datasets, accelerate, bitsandbytes'",
   ""
  ],
  [
@@ -99,7 +99,7 @@
   "phi",
   "Phi-4-mini answers",
   "The model to beat, in bf16, on the 232 held-out problems. If it fails, go back to deciding, before using a 4-bit Phi.",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --max-new 3072",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --max-new 3072",
   "test $(ls t/out/spec-experiment/phi4-mini-v3/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -107,7 +107,7 @@
   "base",
   "Small base answers",
   "The untrained 1.5B, the starting point of the student.",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter none --tag qwen15b-base-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter none --tag qwen15b-base-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
   "test $(ls t/out/spec-experiment/qwen15b-base-v3/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -115,7 +115,7 @@
   "train",
   "Train the student",
   "The 1.5B trained on the clean pool.",
-  "~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --max-len 4608 --out t/out/loop/adapter-r4",
+  "~/.venv-vllm/bin/python t/loop_train.py --sft t/out/loop/sft-r4.jsonl --pairs t/out/loop/pairs-r4.jsonl --sft-first --max-len 4608 --out t/out/loop/adapter-r4",
   "test -s t/out/loop/adapter-r4/adapter_model.safetensors",
   "gpu"
  ],
@@ -123,7 +123,7 @@
   "student",
   "Student answers",
   "",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
   "test $(ls t/out/spec-experiment/student-r4-v3/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -131,7 +131,7 @@
   "locallm",
   "Build a locallm model",
   "From scratch, on the clean pool, then its held-out answers.",
-  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl --out t/out/loop-locallm/corpus-r4.txt && ~/.venv-t/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt --model t/out/loop-locallm/model-r4 && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
+  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl --out t/out/loop-locallm/corpus-r4.txt && ~/.venv-vllm/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt --model t/out/loop-locallm/model-r4 && ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
   "test $(ls t/out/spec-experiment/locallm-r4/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -155,7 +155,7 @@
   "r5-answers",
   "Round 5: answer the training problems",
   "The student and locallm answer the 417 training problems, so their own failures can be graded and used. Held-out problems are not touched.",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 --ids-file t/out/loop/train-ids.txt && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4-train --ids-file t/out/loop/train-ids.txt || true",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 --ids-file t/out/loop/train-ids.txt && ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4-train --ids-file t/out/loop/train-ids.txt || true",
   "test $(ls t/out/spec-experiment/student-r4-train/raw 2>/dev/null | wc -l) -ge 417",
   "gpu"
  ],
@@ -171,7 +171,7 @@
   "r5-locallm",
   "Round 5: a bigger locallm",
   "From scratch on the round 5 pool, with more capacity and more steps than r4 (8 layers, 512 wide across 8 heads, 6000 steps), then its held-out answers.",
-  "python3 t/loop_locallm.py corpus --pool v5 --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl --out t/out/loop-locallm/corpus-r5.txt && ~/.venv-t/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 --heads 8 --steps 6000 && ~/.venv-t/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
+  "python3 t/loop_locallm.py corpus --pool v5 --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl --out t/out/loop-locallm/corpus-r5.txt && ~/.venv-vllm/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 --heads 8 --steps 6000 && ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
   "test $(ls t/out/spec-experiment/locallm-r5/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -179,7 +179,7 @@
   "r5-train",
   "Round 5: train the student again",
   "The same 1.5B, now with the round 5 pairs, which include the model's own proven-but-wrong answers as the rejected side.",
-  "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True ~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r5.jsonl --pairs t/out/loop/pairs-r5.jsonl --sft-first --max-len 3072 --out t/out/loop/adapter-r5",
+  "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True ~/.venv-vllm/bin/python t/loop_train.py --sft t/out/loop/sft-r5.jsonl --pairs t/out/loop/pairs-r5.jsonl --sft-first --max-len 3072 --out t/out/loop/adapter-r5",
   "test -s t/out/loop/adapter-r5/adapter_model.safetensors",
   "gpu"
  ],
@@ -187,7 +187,7 @@
   "r5-student",
   "Round 5: student answers",
   "",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r5 --tag student-r5-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r5 --tag student-r5-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
   "test $(ls t/out/spec-experiment/student-r5-v3/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -219,7 +219,7 @@
   "r6-train",
   "Round 6: train the student",
   "The same 1.5B on the round 6 pairs.",
-  "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True ~/.venv-t/bin/python t/loop_train.py --sft t/out/loop/sft-r6.jsonl --pairs t/out/loop/pairs-r6.jsonl --sft-first --max-len 3072 --out t/out/loop/adapter-r6",
+  "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True ~/.venv-vllm/bin/python t/loop_train.py --sft t/out/loop/sft-r6.jsonl --pairs t/out/loop/pairs-r6.jsonl --sft-first --max-len 3072 --out t/out/loop/adapter-r6",
   "test -s t/out/loop/adapter-r6/adapter_model.safetensors",
   "gpu"
  ],
@@ -227,7 +227,7 @@
   "r6-student",
   "Round 6: student answers",
   "Held-out answers, unconstrained, so the round 4 and 5 rows stay comparable.",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r6 --tag student-r6-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r6 --tag student-r6-v3 --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt",
   "test $(ls t/out/spec-experiment/student-r6-v3/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -235,7 +235,7 @@
   "r6-student-g",
   "Round 6: student answers, under the grammar",
   "The same held-out problems with t's grammar on the decoder, so the model cannot write what the parser would refuse.",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r6 --tag student-r6-g --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --grammar t/t.gbnf",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r6 --tag student-r6-g --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --grammar t/t.gbnf",
   "test $(ls t/out/spec-experiment/student-r6-g/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -243,7 +243,7 @@
   "phi-g",
   "Phi-4-mini, under the same grammar",
   "Phi answering the same problems with the same constraint. Without this row a constrained student against an unconstrained Phi would be a comparison of two different experiments.",
-  "~/.venv-t/bin/python t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-g --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --max-new 3072 --grammar t/t.gbnf",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-g --pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --max-new 3072 --grammar t/t.gbnf",
   "test $(ls t/out/spec-experiment/phi4-mini-g/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],

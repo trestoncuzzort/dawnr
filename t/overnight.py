@@ -55,16 +55,40 @@ def resource(key: str) -> str:
     return "gpu" if uses in ("gpu", "gen") else uses
 
 
+def markers(key: str) -> tuple[str, str]:
+    """(the step's script, something that distinguishes it from every other step using that script).
+
+    Matching the script alone is not enough: a dozen steps run spec_experiment.py and half a dozen run
+    loop_generate.py, so one generation running made all of them read as running, and on 2026-09-18 this
+    reported `preflight` running while nothing was. The distinguishing part is whatever names the step's own
+    output -- its tag, its --out, its --out-suffix, its --model."""
+    cmd = STEP[key][3]
+    script = next((w for w in cmd.split() if w.endswith((".py", ".sh"))), "")
+    words = cmd.split()
+    mark = ""
+    for flag in ("--tag", "--out-suffix", "--out", "--model", "--adapter"):
+        if flag in words:
+            value = words[words.index(flag) + 1]
+            if not value.startswith("$"):                        # a shell variable names nothing on its own
+                mark = value
+                break
+    return script, mark
+
+
 def already_running(key: str) -> bool:
     """A step someone started by hand before this runner did. The pid file alone lies -- a dead step's number
-    may belong to something else by now -- so the process's own command line has to hold the step's script,
-    which is the check t lab makes (lab.Lab.running_steps)."""
-    want = STEP[key][3]
-    first = next((w for w in want.split() if w.endswith((".py", ".sh"))), "")
-    if not first:
+    may belong to something else by now -- so a live process has to carry both this step's script and the
+    thing that distinguishes it."""
+    script, mark = markers(key)
+    if not script:
         return False
-    return subprocess.run(["pgrep", "-f", first], stdout=subprocess.DEVNULL,
-                          stderr=subprocess.DEVNULL).returncode == 0
+    out = subprocess.run(["pgrep", "-af", script], capture_output=True, text=True)
+    if out.returncode != 0:
+        return False
+    lines = [l for l in out.stdout.splitlines() if script in l]
+    if mark:
+        lines = [l for l in lines if mark in l]
+    return bool(lines)
 
 
 def done(key: str) -> bool:

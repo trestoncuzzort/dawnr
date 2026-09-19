@@ -59,7 +59,10 @@ KERNEL_PATH = os.pathsep.join(str(Path.home() / p) for p in (
     ".local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin", ".local/verus/verus-x86-linux"))
 
 # the data run of internal/HANDOFF-2026-09-17-rtx4080.md, one button per step; commands run from the repo root
-PY = "~/.venv-t/bin/python"
+# The python that has torch, transformers, xgrammar, peft and bitsandbytes. Every step now runs on the lab
+# workstation (the operator's instruction, 2026-09-18), where that is ~/.venv-vllm; the desktop's ~/.venv-t is
+# left behind. These commands are the recipe a person runs there over ssh -- this window only watches.
+PY = os.environ.get("T_PY", "~/.venv-vllm/bin/python")
 SE = "t/out/spec-experiment"
 GEN = "qwen2.5-coder-14b-v3-s"
 HELDOUT = "phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4"
