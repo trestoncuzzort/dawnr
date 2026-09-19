@@ -530,6 +530,31 @@ def main() -> int:
 
     print(f"loading tokenizer + base model: {args.base}")
     tokenizer = AutoTokenizer.from_pretrained(args.base)
+    # A tokenizer that cannot return what it was given will not return what the model said either.
+    # DeepSeek-Prover-V2-7B loads as LlamaTokenizer under transformers 5.17 and drops every space on the way
+    # back -- 122 answers came out as "t1tasksmall_nnum(s:seq,n:int)" before this check existed (2026-09-18).
+    # The model's own tokenizer.json is fine; it is the class detection that is wrong, so try that file.
+    probe = "t 1 task f(x: int) returns (r: int)"
+    if tokenizer.decode(tokenizer(probe)["input_ids"], skip_special_tokens=True) != probe:
+        print(f"loop_generate: {type(tokenizer).__name__} does not round-trip this notation; "
+              f"trying the model's own tokenizer.json", flush=True)
+        try:
+            from transformers import PreTrainedTokenizerFast
+            from huggingface_hub import hf_hub_download
+            alt = PreTrainedTokenizerFast(tokenizer_file=hf_hub_download(args.base, "tokenizer.json"))
+            if alt.decode(alt(probe)["input_ids"], skip_special_tokens=True) == probe:
+                for attr in ("eos_token", "pad_token", "bos_token"):
+                    if getattr(alt, attr, None) is None and getattr(tokenizer, attr, None) is not None:
+                        setattr(alt, attr, getattr(tokenizer, attr))
+                alt.chat_template = alt.chat_template or tokenizer.chat_template
+                tokenizer = alt
+                print("loop_generate: using the model's tokenizer.json directly", flush=True)
+            else:
+                print("loop_generate: that does not round-trip either; answers from this model are suspect",
+                      flush=True)
+        except Exception as e:                                  # noqa: BLE001
+            print(f"loop_generate: no usable tokenizer.json ({e}); answers from this model are suspect",
+                  flush=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
