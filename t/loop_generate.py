@@ -149,30 +149,41 @@ def busy_by_gpu() -> dict[int, int]:
     return d
 
 
-def pick_gpu(explicit: int | None) -> tuple[int, dict[int, int]]:
-    """The card this run should take.
+def pick_gpu(explicit: int | None, need_mib: int = 6000) -> tuple[int, dict[int, int]]:
+    """The card this run should take: one with room for the model, and among those the least contended.
 
-    Free memory alone is the wrong question on a shared machine: on 2026-09-18 all four cards held another
-    user's tensor-parallel job, with free memory within 3 GB of each other and utilisation between 21 and 79
-    percent, and a run pinned to the busiest card answered at a third the rate of one on the quietest. So a
-    card needs room first -- enough for this model, which is what free memory decides -- and among the cards
-    that have room, the quietest wins."""
+    Two things decide it, both measured at launch rather than remembered.
+
+    **Room first.** A card whose free memory is under what this model needs is never chosen, however idle it
+    looks. `need_mib` is the caller's estimate; the default suits a 7B in 4-bit with its KV cache.
+
+    **Then contention.** Free memory alone does not settle it: on 2026-09-18 all four of the lab
+    workstation's cards held another user's tensor-parallel job, their free memory within 3 GB of each other
+    and their utilisation between 21 and 79 percent, and a run pinned to the busiest card answered at about a
+    third the rate of one on the quietest. So among the cards with room, the quietest wins and the choice is
+    printed with what it rejected, so a slow run can be explained afterwards.
+
+    What this deliberately does NOT do is encode which card belongs to whom. A fixed allotment was tried and
+    removed on 2026-09-19: the one written down had gone stale, and a picker that trusts a remembered
+    ownership claim over the machine in front of it will hand work to a full card and refuse an empty one.
+    Pin a card with `--gpu` when a human knows something the numbers do not.
+    """
     free = free_vram_by_gpu()
     if not free:
         raise SystemExit("nvidia-smi reported no GPUs")
     if explicit is not None:
         return explicit, free
     busy = busy_by_gpu()
-    if busy:
-        roomy = max(free.values())
-        # any card within 4 GB of the roomiest counts as having room; among those, take the least busy
-        candidates = [i for i, f in free.items() if f >= roomy - 4096]
-        best = min(candidates, key=lambda i: (busy.get(i, 0), -free[i]))
-        print(f"loop_generate: card {best} ({free[best]} MiB free, {busy.get(best, 0)}% busy); "
-              f"others: " + ", ".join(f"{i}:{free[i]}MiB/{busy.get(i, 0)}%"
-                                      for i in sorted(free) if i != best), flush=True)
+    roomy = {i: f for i, f in free.items() if f >= need_mib}
+    if not roomy:
+        best = max(free, key=free.get)
+        print(f"loop_generate: no card has the {need_mib} MiB this run wants; taking card {best} with "
+              f"{free[best]} MiB free and expecting it to be tight", flush=True)
         return best, free
-    best = max(free, key=free.get)
+    best = min(roomy, key=lambda i: (busy.get(i, 0), -free[i])) if busy else max(roomy, key=roomy.get)
+    others = ", ".join(f"{i}:{free[i]}MiB/{busy.get(i, 0)}%" for i in sorted(free) if i != best)
+    print(f"loop_generate: card {best} ({free[best]} MiB free, {busy.get(best, 0)}% busy)"
+          + (f"; others {others}" if others else ""), flush=True)
     return best, free
 
 
