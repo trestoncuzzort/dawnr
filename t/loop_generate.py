@@ -134,12 +134,44 @@ def free_vram_by_gpu() -> dict[int, int]:
     return d
 
 
+def busy_by_gpu() -> dict[int, int]:
+    """How hard each card is already working, 0 to 100."""
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index,utilization.gpu", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, check=True)
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    d = {}
+    for line in out.stdout.strip().splitlines():
+        idx, util = line.split(",")
+        d[int(idx.strip())] = int(util.strip())
+    return d
+
+
 def pick_gpu(explicit: int | None) -> tuple[int, dict[int, int]]:
+    """The card this run should take.
+
+    Free memory alone is the wrong question on a shared machine: on 2026-09-18 all four cards held another
+    user's tensor-parallel job, with free memory within 3 GB of each other and utilisation between 21 and 79
+    percent, and a run pinned to the busiest card answered at a third the rate of one on the quietest. So a
+    card needs room first -- enough for this model, which is what free memory decides -- and among the cards
+    that have room, the quietest wins."""
     free = free_vram_by_gpu()
     if not free:
         raise SystemExit("nvidia-smi reported no GPUs")
     if explicit is not None:
         return explicit, free
+    busy = busy_by_gpu()
+    if busy:
+        roomy = max(free.values())
+        # any card within 4 GB of the roomiest counts as having room; among those, take the least busy
+        candidates = [i for i, f in free.items() if f >= roomy - 4096]
+        best = min(candidates, key=lambda i: (busy.get(i, 0), -free[i]))
+        print(f"loop_generate: card {best} ({free[best]} MiB free, {busy.get(best, 0)}% busy); "
+              f"others: " + ", ".join(f"{i}:{free[i]}MiB/{busy.get(i, 0)}%"
+                                      for i in sorted(free) if i != best), flush=True)
+        return best, free
     best = max(free, key=free.get)
     return best, free
 
