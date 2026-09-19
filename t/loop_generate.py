@@ -599,7 +599,12 @@ def main() -> int:
             with torch.no_grad():
                 out = model.generate(
                     input_ids, attention_mask=attention_mask, max_new_tokens=args.max_new,
-                    do_sample=False, pad_token_id=tokenizer.pad_token_id, eos_token_id=eos_id)
+                    do_sample=False, pad_token_id=tokenizer.pad_token_id, eos_token_id=eos_id,
+                    # this is the path every held-out run takes (one sample, no repair), and it was the one
+                    # path --grammar did not reach on 2026-09-18: the constrained student came back with 158
+                    # parse failures against the unconstrained 159, which is what an unapplied constraint
+                    # looks like
+                    **({"logits_processor": make_procs()} if make_procs else {}))
             eval_s = time.monotonic() - t_gen0
 
             new_tokens = out[0][input_ids.shape[-1]:]
@@ -648,7 +653,8 @@ def main() -> int:
                     out_a = model.generate(
                         cur_input_ids, attention_mask=cur_attention_mask,
                         max_new_tokens=args.max_new, do_sample=False,
-                        pad_token_id=tokenizer.pad_token_id, eos_token_id=eos_id)
+                        pad_token_id=tokenizer.pad_token_id, eos_token_id=eos_id,
+                        **({"logits_processor": make_procs()} if make_procs else {}))
                 eval_s_total += time.monotonic() - t_gen0
                 new_tokens_a = out_a[0][cur_input_ids.shape[-1]:]
                 reply = tokenizer.decode(new_tokens_a, skip_special_tokens=True)
