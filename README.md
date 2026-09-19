@@ -36,17 +36,21 @@ A held-out answer is **clean** only when its tests pass and all seven proofs hol
 
 Measured by [`t/score_heldout.py`](t/score_heldout.py); the full table is [`t/out/score-r6.md`](t/out/score-r6.md).
 
-| model | who trained it | well formed | tests pass | **clean** | after the spec check |
-|---|---|---|---|---|---|
-| Qwen3.8-27B-FP8, prompted | not us | 116 | 81 | **12** | 11 |
-| DeepSeek-Prover-V2-7B, prompted | not us | 39 | 10 | **6** | 6 |
-| Phi-4-mini, 3.8B | not us | 12 | 6 | **3** | 2 |
-| Qwen2.5-Coder-1.5B, untrained | not us | 39 | 13 | **3** | 2 |
-| student, round 4 | us, QLoRA + DPO | 37 | 12 | **3** | 2 |
-| student, round 5 | us | 42 | 11 | **3** | 3 |
-| student, round 6 | us | 36 | 9 | **3** | 3 |
-| locallm, round 4 (3.2M, from scratch) | us | 209 | 2 | **2** | 2 |
-| locallm, round 5 | us | 198 | 2 | **2** | 2 |
+| model | who trained it | well formed | tests pass | **clean** | converts | after the spec check |
+|---|---|---|---|---|---|---|
+| Qwen3.8-27B-FP8, prompted | not us | 116 | 81 | **12** | 15% | 11 |
+| DeepSeek-Prover-V2-7B, prompted | not us | 39 | 10 | **6** | **60%** | 6 |
+| Phi-4-mini, 3.8B | not us | 12 | 6 | **3** | 50% | 2 |
+| Qwen2.5-Coder-1.5B, untrained | not us | 39 | 13 | **3** | 23% | 2 |
+| student, round 4 | us, QLoRA + DPO | 37 | 12 | **3** | 25% | 2 |
+| student, round 5 | us | 42 | 11 | **3** | 27% | 2 |
+| student, round 6 | us | 36 | 9 | **3** | 33% | 2 |
+| student, round 6, decoding against t's grammar | us | 58 | 14 | **4** | 29% | 3 |
+| locallm, round 4 (3.2M, from scratch) | us | 209 | 2 | **2** | 100% | 2 |
+| locallm, round 5 | us | 198 | 2 | **2** | 100% | 2 |
+
+**converts** is the share of test-passing answers the seven can prove, and it is where this project is stuck:
+our student writes three times Phi's well-formed answers and converts a third of them where Phi converts half.
 
 Three rounds, three different data recipes — more problems, more answers, then preference pairs aimed at the exact gate the student loses at — and the clean count did not move. Round 6's predictions were written before it ran ([`t/PREDICT-2026-09-18-round6.md`](t/PREDICT-2026-09-18-round6.md)) and the one that mattered was wrong.
 
@@ -74,6 +78,12 @@ Three rounds, three different data recipes — more problems, more answers, then
 - **Preflight.** [`t/preflight.py`](t/preflight.py) refuses to let a round start on a checker whose version cannot be read, a held-out problem in a training set, a clean answer resting on a flake or a timeout, or a specification that disagrees with its problem.
 
 ## Corrections this project made against itself
+
+- **A column said "checked" when nothing had checked it.** `score_heldout.py` counted an answer as
+  specification-checked whenever it was absent from the disagreement list, so an answer set nobody had run
+  `spec_check.py` over scored full marks. Round 5's student was reported here and in conversation as 3 clean
+  surviving the check against Phi's 2 — "one ahead". Checked properly it is **2 against 2**, a tie. The tool
+  now records which tags it checked and prints `not checked` for the rest.
 
 - The copy check kept each task's format version, so exact copies counted as new: the filtered-against-raw result was first recorded as 46 against 3 and is **29 against 1** recounted.
 - Repair looked obvious and does not work: a 14B model handed seven verdicts writes worse proofs more often than better ones.
