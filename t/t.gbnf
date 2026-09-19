@@ -1,8 +1,8 @@
 # t's surface notation as a grammar a generator can decode against (2026-09-18, WS-21).
 #
 # GBNF/EBNF, for xgrammar -- the backend vLLM uses for `structured_outputs.grammar`. A model decoding against
-# this cannot emit anything t/surface.py's lexer and parser would refuse, which is the 62 percent of replies
-# t/FUNNEL-2026-09-18.md measured dying at that gate.
+# this constrains structural syntax. Inline definitions additionally require source-level type/scope/
+# acyclicity checks; a context-free grammar cannot enforce those semantic conditions.
 #
 # This file is not the definition of t. t/SYNTAX.md and t/surface.py are, and this only has to agree with them:
 # t/grammar_check.py proves the agreement mechanically in both directions, and no arm of
@@ -24,8 +24,9 @@ ver ::= "0" | "1"
 gatepart ::= "" | "gate" sp id sp
 clauses ::= clause*
 clause ::= ws ("requires" | "ensures" | "decreases") sp expr
-specfuns ::= specfun*
+specfuns ::= (specfun | inlinefun)*
 specfun ::= ws "spec" sp "fun" sp id ws params ws ":" ws ("int" | "bool") ws "decreases" sp expr ws "=" ws expr
+inlinefun ::= ws "inline" sp "fun" sp id ws params ws ":" ws type ws "=" ws expr semi
 
 params ::= "(" ws paramlist ws ")"
 paramlist ::= "" | param (ws "," ws param)*

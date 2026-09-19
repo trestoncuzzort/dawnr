@@ -1,7 +1,8 @@
 # t: task format
 
-SPEC version 1.0-rc1, frozen for the 1.0 tag, 2026-09-11; t:0 frozen, t:1 a
-superset.
+SPEC version 1.0-rc1, 2026-09-11, with the typed inline surface extension
+of 2026-09-19 below; t:0 frozen, t:1 a superset. The extension changes no
+core AST forms or kernel semantics.
 
 A task is one JSON object. Every field is required unless marked optional.
 Two format versions exist. `"t": 0` is frozen: everything in the v0 section
@@ -20,6 +21,11 @@ syntax.
 An index, not a restatement: one or two sentences per semantic decision this
 file has taken since `t:0` froze, each pointing at the section that states
 it in full. ROADMAP 13.4's own list, in that order.
+
+- **Typed inline helpers (2026-09-19).** Acyclic expression definitions can
+  return every existing value type and expand hygienically into the checked
+  core. Their meaning is substitution, including short-circuit definedness;
+  see "Typed inline helpers (surface, v1)" below.
 
 - **Definedness and undefined witnesses.** `and`/`or`/`implies`/`ite` are
   non-strict (short-circuiting); `div`/`mod`/`at`/array indexing are
@@ -1099,3 +1105,59 @@ level deep ("Nested sequences", stated 2026-09-10): no third level, no seq
 of bools, no seq of pairs.
 These are gates to open with measurements, not omissions to apologize
 for.
+
+## Typed inline helpers (surface, v1)
+
+Added 2026-09-19. A declaration `inline fun f(p: T, ...): R = e`
+introduces a typed expression template in a t:1 source. It appears after the
+task clauses and before the task body; spec-function and inline declarations
+may be interleaved. Parameters and result use any existing t type. Parameter
+names must be unique. Helper names must be unique across the inline helpers,
+spec functions and task name. `inline` is a contextual word, not a new reserved
+identifier. t:0 admits no inline declarations.
+
+Each definition is checked in its parameter environment, with signatures of
+only earlier inline helpers. Every definition must be well-typed, whether or
+not it is called. Free task variables, recursion, forward helper references,
+and calls from a helper to a spec function or task are rejected. Task
+expressions and spec-function bodies and measures can call the declared
+helpers. Every call has exactly the declared argument count and types; an
+unused argument is still checked for scope and type errors.
+
+The meaning of `f(actuals)` is **capture-avoiding substitution** of the actual
+expressions for the formal parameters in `e`, after expanding earlier helpers.
+Quantifier binders are renamed to fresh identifiers before substitution.
+This is expression-template semantics, not evaluation of arguments before a
+function call: an actual expression used twice occurs twice, an unused actual
+has no runtime definedness obligation, and an actual under a short-circuit
+branch is evaluated only when that branch is selected. For example, with
+`inline fun keep(a: int): int = 7`, `keep(1 / 0)` means `7`, while
+`keep(true)` is ill-typed. With `inline fun id(a: int): int = a`, `id(1 / 0)`
+remains undefined. This distinction is the reason the declaration says `inline`.
+
+Helpers carry no assumed contracts, termination axioms, or separate proof
+claims. They add no preconditions, including at partial operators such as
+indexing and division: all existing definedness obligations apply to the
+expanded expression. An unused ill-defined helper body may be well-typed but
+has no separate totality claim; each use must meet its expanded obligations.
+After substitution the complete expanded task is checked by the ordinary
+well-formedness checker without helper signatures. The seven existing
+lowerings and the interpreter receive only that checked core AST. An
+unsupported expanded shape must still abstain by name.
+
+An empty expression declared or passed as `seq<seq>` is elaborated as the
+existing core expression `seq(0, [])` where necessary to retain its nested
+sequence type outside a contextual type position. This has the same empty
+value and adds no definedness condition. The implementation bounds expansion
+at 100,000 visited AST dictionary nodes across definition compilation and
+substitution; exceeding this bound is a named elaboration refusal, never a
+truncated program. Helpers are not a code-size or runtime performance promise.
+
+Canonical printing discards inline declarations and prints the expanded core,
+like the existing literal sugar. The required round trip compares expanded
+ASTs: `parse(print(parse(source))) == parse(source)`. A context-free constrained
+decoding grammar covers declaration structure; scope, type, acyclicity and
+expansion-size rules are checked during elaboration. See
+[test_inline_helpers.py](test_inline_helpers.py),
+[the preregistration](PREREG-inline-helpers-2026-09-19.md), and
+[the seven-kernel measurement](INLINE-HELPERS-2026-09-19.md).

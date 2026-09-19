@@ -341,6 +341,52 @@ along with the body and the flip would measure nothing.
 
 ## Scope
 
+### Typed inline helpers (surface, v1; 2026-09-19)
+
+After the task's clauses and before its body, declarations may mix existing
+`spec fun` definitions and the following expression helpers:
+
+```ebnf
+InlineFun ::= "inline" "fun" Id "(" Params ")" ":" Type "=" Expr ";"?
+```
+
+```
+t 1 task adjacent(x: int) returns (r: (int, seq))
+  ensures r.0 == x + 1
+  ensures r.1 == [x, x + 1]
+inline fun inc(a: int): int = a + 1
+inline fun singleton(a: int): seq = [a]
+inline fun adjacentPair(a: int): (int, seq) =
+  (inc(a), singleton(a) + singleton(inc(a)))
+{ r := adjacentPair(x); }
+```
+
+Parameters and results admit every current type, including `seq`, pairs and
+`seq<seq>`. Definitions see only their parameters and earlier inline helpers;
+they cannot call themselves, later helpers, spec functions, or the task.
+All definitions and call arguments are type-checked, including unused ones.
+Task expressions and spec-function definitions can use all declared helpers.
+Helper names are unique and distinct from the task and spec-function names.
+`inline` is contextual: an existing variable or task named `inline` stays valid.
+
+These are **expression templates with substitution semantics**. For example,
+`inline fun keep(a: int): int = 7` makes `keep(1 / 0)` equal to `7`, because
+the argument does not occur in the expanded expression. `keep(true)` still
+fails typing. `inline fun safe(ok: bool, a: int): int = if ok then a else 0`
+makes `safe(x > 0, 1 / x)` defined at zero. A used, unguarded partial expression
+retains its definedness obligation. Quantifier binders are renamed freshly so
+caller variables cannot be captured; no `requires` is added or weakened.
+
+`surface.parse` returns the expanded, well-formed core AST. The printer emits
+that expanded program, not the declarations: `parse(print(parse(source))) ==
+parse(source)`. As with string literal sugar, source spelling is not retained.
+The constrained grammar admits the structure; binding, typing and acyclicity
+are checked during elaboration. Unsupported expanded shapes remain unsupported
+by the same backends. See [the normative rules](SPEC.md#typed-inline-helpers-surface-v1)
+and [the preregistered probes](PREREG-inline-helpers-2026-09-19.md).
+
+### Core scope
+
 `requires` sees params. `ensures` sees params + returns. A body expression
 sees params, returns, and locals declared above it. Invariants see all of
 those. A quantifier's bound variable is fresh, scoped to its body, and may

@@ -523,8 +523,21 @@ def _self_calls(e, name) -> bool:
     return False
 
 
+def expression_type(expr: dict, variables: dict, functions: dict | None = None,
+                    expected=None, positions: dict | None = None,
+                    file: str = "<string>") -> tuple:
+    """Type an expression using the same rules as task checking.
+
+    Surface inline helpers use this before expansion, so unused definitions and
+    arguments cannot escape the ordinary scope and type rules.
+    """
+    errors = _Errs(positions, file)
+    result = _ty(expr, variables, functions or {}, 1, errors, set(), expected)
+    return result, errors
+
+
 def check_wf(task: dict, positions: dict | None = None,
-            file: str = "<string>") -> list:
+            file: str = "<string>", *, expression_funs: dict | None = None) -> list:
     """Well-formedness errors in `task` (SYNTAX.md's grammar plus SPEC.md's
     scope, typing and gate rules). With no `positions` argument (the default)
     the return is a list[str], each `"message [SPEC: rule]"`, byte-identical
@@ -537,7 +550,10 @@ def check_wf(task: dict, positions: dict | None = None,
     looking at when it found the problem (the innermost node it can
     attribute the error to), plus the same `.rule` key and `str()` message
     as the no-position form, now prefixed `file:line:col: `. An empty list
-    means `task` is well-formed, in either form."""
+    means `task` is well-formed, in either form. `expression_funs` is the
+    surface elaborator's temporary signature environment for inline calls;
+    it does not add definitions to the task or authorize new backend nodes.
+    The elaborator checks again without it after expansion."""
     errs = _Errs(positions, file)
     ver = task["t"]
     if not NAME_RE.match(task["name"]):
@@ -546,7 +562,8 @@ def check_wf(task: dict, positions: dict | None = None,
         _e(errs, task, "exactly one return value (SPEC.md v0 and v1)", "one-return")
     if not task["ensures"]:
         _e(errs, task, "ensures must be non-empty", "ensures-nonempty")
-    funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    funs = dict(expression_funs or {})
+    funs.update({f["name"]: f for f in task.get("spec_funs", [])})
     if ver == 0 and (funs or "decreases" in task or "gate" in task):
         _e(errs, task, "v1 field in a v0 task", "v0-frozen")
     penv = {p["name"]: p["type"] for p in task["params"]}
@@ -560,7 +577,8 @@ def check_wf(task: dict, positions: dict | None = None,
             _e(errs, r, f"return {r['name']} has an invalid type: {r['type']!r}", "valid-type")
     for i, f in enumerate(task.get("spec_funs", [])):
         fenv = {p["name"]: p["type"] for p in f["params"]}
-        earlier = {g["name"]: g for g in task["spec_funs"][:i]}
+        earlier = dict(expression_funs or {})
+        earlier.update({g["name"]: g for g in task["spec_funs"][:i]})
         earlier[f["name"]] = f              # self-recursion is allowed
         if _ty(f["decreases"], fenv, earlier, ver, errs, set()) != "int":
             _e(errs, f, f"spec_fun {f['name']} decreases is not int", "spec-fun-decreases-int")

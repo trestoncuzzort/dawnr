@@ -11,11 +11,14 @@ below.
 
 WHAT IT IS. Pure notation over the existing AST. Nothing here adds, removes
 or reinterprets a construct: the grammar is exactly SYNTAX.md's EBNF block,
-and every production maps to one JSON node. There is no construct the
+and each core production maps to a JSON node. There is no construct the
 notation can say that the JSON cannot already say, and none the JSON can say
 that the notation drops. `parse` is total on the printed language and partial
-elsewhere; it type-checks nothing, because typing is check_wf's job in
-fuzz_lower.py and the kernels' job after that. A surface syntax that quietly
+elsewhere. Since 2026-09-19, contextual `inline fun` definitions are checked
+by check_wf before hygienic expansion, including unused definitions and
+arguments; sources without helpers retain the existing parse-only behavior.
+Typing the expanded core remains check_wf's job in fuzz_lower.py and the
+kernels' job after that. A surface syntax that quietly
 accepted more than the AST would be a second, undocumented language.
 
 THE ROUND TRIP, measured (2026-09-04, this file's --check):
@@ -114,7 +117,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
 
     Program  ::= "t" NAT ("gate" Id)?
                  "task" Id "(" Params ")" "returns" "(" Id ":" Type ")"
-                 Clause* SpecFun* Block
+                 Clause* (SpecFun | InlineFun)* Block
     Clause   ::= "requires" Expr | "ensures" Expr | "decreases" Expr
     Params   ::= (Id ":" Type ("," Id ":" Type)*)?
     Type     ::= BaseType | "(" BaseType "," BaseType ")"  (* pair: v1, since 2026-09-10; no pair of pairs *)
@@ -122,6 +125,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
     BaseType ::= "int" | "bool" | "seq"
     SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" ("int"|"bool")
                  "decreases" Expr "=" Expr
+    InlineFun ::= "inline" "fun" Id "(" Params ")" ":" Type "=" Expr ";"?
     Block    ::= "{" Stmt* "}"
     Stmt     ::= Id ":=" Expr ";"?
                | "var" Id ":" Type ":=" Expr ";"?
@@ -449,7 +453,8 @@ class Parser:
     def __init__(self, src: str, file: str = "<string>", positions=None):
         self.ret_name = None      # set by program(); a bare stmt has no task
         self.file = file
-        self.positions = positions   # optional dict: id(node) -> (line, col)
+        # Keep source positions internally for inline-definition diagnostics too.
+        self.positions = positions if positions is not None else {}
         self.toks = lex(src, file)
         self.i = 0
         self.production = "Task"  # the SYNTAX.md production being parsed
@@ -573,9 +578,12 @@ class Parser:
         task["requires"] = requires
         task["ensures"] = ensures
 
-        funs = []
-        while self.at("kw", "spec"):
-            funs.append(self.spec_fun())
+        funs, helpers = [], []
+        while self.at("kw", "spec") or self.at_inline_fun():
+            if self.at("kw", "spec"):
+                funs.append(self.spec_fun())
+            else:
+                helpers.append(self.inline_fun())
         self.production = "Task"           # spec_fun() left it on "SpecFun"
         if funs:
             task["spec_funs"] = funs
@@ -584,7 +592,37 @@ class Parser:
         task["body"] = self.block()
         self.production = "Task"           # block()/stmt() left it on "Stmt"
         self.eat("eof")
-        return self.mark(start, task)
+        self.mark(start, task)
+        if helpers:
+            import expand_helpers
+            try:
+                task = expand_helpers.expand_task(task, helpers, self.positions, self.file)
+            except expand_helpers.ExpansionError as exc:
+                line, col = self.positions.get(id(exc.node), (start.line, start.col))
+                raise SurfaceError(str(exc), file=self.file, line=line, col=col,
+                                   production="InlineFun") from exc
+        return task
+
+    def at_inline_fun(self) -> bool:
+        # Contextual: existing programs may still name a variable/task `inline`.
+        return (self.at("id", "inline") and self.i + 1 < len(self.toks)
+                and self.toks[self.i + 1].kind == "kw"
+                and self.toks[self.i + 1].text == "fun")
+
+    def inline_fun(self) -> dict:
+        start = self.tok
+        self.production = "InlineFun"
+        self.eat("id", "inline")
+        self.eat("kw", "fun")
+        fn = {"name": self.name("InlineFun"), "params": self.params("InlineFun")}
+        self.eat("sym", ":")
+        fn["result"] = self.ptype()
+        self.production = "InlineFun"
+        self.eat("sym", "=")
+        fn["body"] = self.expr()
+        self.opt("sym", ";")
+        self.production = "InlineFun"
+        return self.mark(start, fn)
 
     def params(self, production: str) -> list:
         """`production` is the caller's own (Task for a task's own params,
