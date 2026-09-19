@@ -6,7 +6,7 @@ The industry bet is scale: more parameters, more tokens, more scraped code. loca
 
 Every number below was measured by a script in this repository and links to the file that records it. Where a number of this project's own turned out wrong, the correction is on this page rather than in its history.
 
-**The model of record is locallm.** The comparison this project exists to settle is **locallm against Phi-4-mini**: a model trained here from random weights, on filtered data, against a small open model trained the usual way. The fine-tuned 1.5B student rows below are a second, borrowed-base experiment and not the claim. locallm is not fixed at the 3.2M of its round-4 and round-5 rows either: 91M cores have been trained here, and optimizer steps have been measured to fit at **875M parameters** on one shared card ([locallm/FINDINGS-capacity-2026-09-19.md](locallm/FINDINGS-capacity-2026-09-19.md)). That is a statement about what steps and how fast, not a claim that size is what this project was missing. What has not yet happened is the run that puts a locallm of that size through this pipeline's data and scores it on the 232 held-out problems; until that exists, locallm's row on this page is a 3.2M model's row and is read that way.
+**The model of record is locallm.** The comparison this project exists to settle is **locallm against Phi-4-mini**: a model trained here from random weights, on filtered data, against a small open model trained the usual way. The fine-tuned 1.5B student rows below are a second, borrowed-base experiment and not the claim. locallm is not fixed at the 3.2M of its round-4 and round-5 rows either: 91M cores have been trained here, and optimizer steps have been measured to fit at **875M parameters** on one shared card ([locallm/FINDINGS-capacity-2026-09-19.md](locallm/FINDINGS-capacity-2026-09-19.md)). That is a statement about what steps and how fast, not a claim that size is what this project was missing. That run has now happened, and it went the wrong way: a 92M core pretrained on real source and specialized on the filtered t data scored **1 clean of 232**, below both 3.2M rows and below Phi ([locallm/FINDINGS-round7-2026-09-19.md](locallm/FINDINGS-round7-2026-09-19.md)).
 
 **Status, 2026-09-19.** Two negative results landed the same day, both measured against predictions written before the runs. The modern core's architecture advantage **reversed** at four times the training budget, and a preregistered four-cell experiment in execution and latent supervision produced **no synthesis gain at any seed**, while revealing that its own held-out tasks were passable without composing anything. Both are below, under [the owned core](#the-owned-core-trained-here-from-random-weights).
 
@@ -52,6 +52,8 @@ Measured by [`t/score_heldout.py`](t/score_heldout.py); the full table is [`t/ou
 | student, round 6, decoding against t's grammar | us | 58 | 14 | **4** | 29% | 3 |
 | **locallm, round 4 (3.2M, from scratch)** | us | 209 | 2 | **2** | 100% | 2 |
 | **locallm, round 5 (3.2M)** | us | 198 | 2 | **2** | 100% | 2 |
+| **locallm, round 7 (92M, pretrained then specialized)** | us | 136 | 1 | **1** | 1/1 | 1 |
+| Phi-4-mini, regraded 2026-09-19 beside round 7 | not us | 12 | 6 | **3** | 50% | 2 |
 
 **converts** is the share of test-passing answers the seven can prove, and it is where this project is stuck.
 The two locallm rows are the ones that count, and they are 3.2M-parameter models: they write well-formed t
@@ -178,6 +180,7 @@ what it was asked to teach, and that skill did not reach unaided synthesis.
 ## Limits, stated plainly
 
 - No model trained here has beaten Phi-4-mini. Three rounds have tied it at 3 of 232.
+- Pretraining the core did not help this pipeline. A 92M core pretrained on 46M tokens of real source and specialized on the filtered t data scored 1 clean of 232, wrote fewer well-formed answers than the 3.2M models, and produced 91 proven-but-wrong answers out of 136 well formed. The comparison moves size, tokenizer, corpus and recipe together, so it says the number did not improve and not which change is responsible.
 - The owned core's architecture choice is not settled in its favour: at 4000 updates the older GPT core beats the modern one at every seed, on loss, time and memory.
 - No auxiliary training objective tried here has improved program synthesis. Execution-state supervision improves execution-state prediction and does not transfer; latent prediction does neither at three seeds.
 - Token loss on a validation window predicts nothing about behaviour at this scale. The 45% loss cut that bought no usable completion is the second time in two days that a loss result and a behaviour result disagreed here.
