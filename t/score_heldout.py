@@ -79,6 +79,17 @@ def score(tag: str, eval_ids: set[int]) -> dict:
         r["wrong but proven"] += proven and not passed
     if not checked:
         r["spec disagrees"] = r["clean, spec checked"] = "not checked"
+    # The gate this project loses at, as one number: of the answers that pass their own tests, how many the
+    # seven can prove. Round 6's student converts 3 of 9 where Phi-4-mini converts 3 of 6 and a proof-trained
+    # 7B converts 6 of 10, and that difference is the whole story of where the loop is stuck -- it belongs in
+    # the table rather than in a paragraph someone has to recompute (2026-09-19).
+    r["converts"] = (f"{r['clean']}/{r['tests pass']}"
+                     + (f" ({100 * r['clean'] / r['tests pass']:.0f}%)" if r["tests pass"] else ""))
+    # A table graded with a subset of the checkers would report clean for agreement among however many columns
+    # it happens to hold, and the column count sits four columns away where a reader scanning for clean will
+    # not see it. Say it in the cell itself (2026-09-19).
+    if 0 < len(cols) < 7:
+        r["clean"] = f"{r['clean']} (only {len(cols)} kernels)"
     return r
 
 
@@ -88,8 +99,8 @@ def main() -> int:
     ap.add_argument("tags", nargs="+")
     a = ap.parse_args()
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
-    heads = ["tag", "kernels", "eval", "answered", "task", "tests pass", "graded", "clean", "spec disagrees",
-             "clean, spec checked", "wrong but proven"]
+    heads = ["tag", "kernels", "eval", "answered", "task", "tests pass", "graded", "clean", "converts",
+             "spec disagrees", "clean, spec checked", "wrong but proven"]
     print("| " + " | ".join(heads) + " |")
     print("|" + "---|" * len(heads))
     for tag in a.tags:
