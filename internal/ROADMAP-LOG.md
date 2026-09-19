@@ -1760,11 +1760,45 @@ under a conditional in all three, a `return` inside a nested loop in Rocq and
 F*, an invariant-drop twin on a general body in Rocq -- and a lost flip was
 preferred to a faked one every time.
 
-DONE WHEN: the three abstaining kernels take a nested loop (1, done for three;
-Frama-C's timeout remains); a second corpus has a coverage table in the same
-format (2, and v5 is that corpus once graded); a differential check has refuted
-or failed to refute every currently clean answer (3); the twins ship as their
-own artifact (4).
+2026-09-19, moves 3 and 4 closed, and move 1 finished the same day.
+
+- **Move 1 is done for all four.** Frama-C's timeout on `has_duplicate` was not
+  proof difficulty: WP's own per-goal report named one unproved goal of 39, and
+  it was a loop invariant this project's own lowering emitted, `i == 0` on the
+  inner loop, false from the outer loop's second iteration. Every real
+  obligation discharged in single-digit milliseconds. The cause was the
+  frame-fact prefix dropping a name only when the same statement list
+  reassigned it, so a write one level down was invisible. All seven now read
+  verified with the twin refuted, and `t/AGREEMENT.md` was regenerated from a
+  clean clone with none of its 238 existing cells moving.
+- **Move 3, test quality: measured over everything.** `t/spec_check.py` has now
+  been run over all 36 graded answer sets -- 650 clean answers, 200 random
+  draws each inside the task's own precondition, the problem's own solution
+  supplying the result. **13 disagree**: answers the tests passed, all seven
+  proved, and the twin rule accepted, whose specification does not say what the
+  problem asked. That is the false-accept rate the seven cannot see, about 2
+  percent of clean answers, and it is the measurement the move asked for. None
+  of the 13 is in the training pool (`t/preflight.py` compares by program text,
+  and `loop_dataset.py` keeps a disagreeing answer out of the positives), so
+  the pool is clean; every one of the 13 is a held-out answer, where the model
+  writes its own specification and nothing downstream would have caught it.
+  `score_heldout.py` now prints `not checked` rather than crediting a set
+  nobody checked -- it had been crediting three, and a claim of this project's
+  was wrong because of it.
+- **Move 4, the twins as an artifact: shipped.** `t/twins/` is 426 pairs over
+  90 programs and 13 twin operators, one file each with the real program, the
+  twin, the operator that made it, the witness input with what both answer
+  there, and the seven verdicts, plus an index, operator counts, provenance and
+  a licence line. A pair is written only when both halves are on the record --
+  verified in all seven and refuted in all seven -- so nothing rests on a
+  partial column. `t/twins_artifact.py --check` regenerates and compares, so a
+  stale artifact fails a test rather than misleads a reader.
+
+DONE WHEN: the three abstaining kernels take a nested loop (1, DONE for all
+four); a second corpus has a coverage table in the same format (2, and v5 is
+that corpus once graded); a differential check has refuted or failed to refute
+every currently clean answer (3, DONE); the twins ship as their own artifact
+(4, DONE).
 
 ## WS-21: the parse wall (opened 2026-09-18)
 

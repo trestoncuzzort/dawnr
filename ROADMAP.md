@@ -112,7 +112,13 @@ that, in this order.
    Admitting the function-shaped ones with parseable input and output raises the ceiling from about 505 training
    problems to thousands. The gate is a test reader per source, not new language features, and the held-out
    split must stay exactly split-v3's 232 MBPP problems so every earlier number keeps its meaning.
-3. **Test quality, added 2026-09-18 after the ablation.** The ablation measured every proof gate admitting about
+3. **Test quality. Measured 2026-09-19:** the differential check has now been run over all 36 graded answer
+   sets -- 650 clean answers, 200 draws each against the problem's own solution. **13 disagree**, about 2
+   percent: answers whose tests passed, whose seven proofs held and whose twin was refuted, and whose
+   specification still does not say what the problem asked. None is in the training pool; every one is a
+   held-out answer, where the model writes its own specification.
+
+   The original statement of the move: The ablation measured every proof gate admitting about
    97 percent wrong answers on held-out problems, where the model writes its own specification, and the tests
    catching what no proof gate did. The tests are therefore on the critical path and they are thin: MBPP gives
    about three assertions a problem. The move is to strengthen the one gate that demonstrably works: property
@@ -120,7 +126,12 @@ that, in this order.
    the problem's reference solution on random inputs inside the precondition. The measurement that opens it is
    how many currently clean answers a differential check refutes; anything it refutes was a false accept that
    the seven provers and the twin rule both missed.
-4. **The twins and witnesses as a first-class artifact.** Every clean task carries a deliberately broken copy and
+4. **The twins and witnesses as a first-class artifact. Done 2026-09-19:** [`t/twins/`](t/twins/) is 426 pairs
+   over 90 programs and 13 operators, each with the real program, the twin, the operator, the witness input and
+   what both answer there, and the seven verdicts, written only when both halves are on the record.
+   [`t/twins_artifact.py`](t/twins_artifact.py) regenerates it and `--check` fails on a stale one.
+
+   The original statement of the move: Every clean task carries a deliberately broken copy and
    a concrete input at which the copy breaks its own specification, refuted by all seven. Nobody else ships that:
    a pile of verified programs can be had from any corpus, but a program *paired with a near-miss and the input
    that separates them, with seven independent refutations on record*, is the part with no substitute. Today it is
