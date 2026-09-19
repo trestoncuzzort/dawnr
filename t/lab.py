@@ -1631,13 +1631,25 @@ class Lab:
         self.step_hint.configure(text=f"{self.title_of(key)} stopped.", fg=RED)
 
     def check_steps(self):
+        """What each step's state and bar are read from, in its own thread.
+
+        2026-09-18: this used to run all 39 done-tests every pass and then sleep ten seconds, so a bar moved
+        once every sixteen -- `packages` alone costs three seconds, and a done-test that shells out is not
+        free. A step that is done stays done (nothing here deletes its output), so those are re-checked once a
+        minute and the rest every pass, which puts a running step's bar within a couple of seconds of the
+        truth while costing less than the old loop did."""
+        pass_n = 0
         while True:
+            pass_n += 1
             for key, _t, _w, _c, check, _u in [s[:6] for s in STEPS]:
+                if self.step_state.get(key) == "done" and pass_n % 20:
+                    self.step_prog[key] = self.progress_of(key)
+                    continue
                 ok = subprocess.run(["bash", "-lc", check], cwd=TUP, capture_output=True,
                                     env=self.step_env()).returncode == 0
                 self.step_state[key] = "done" if ok else ""
                 self.step_prog[key] = self.progress_of(key)
-            time.sleep(10)
+            time.sleep(3)
 
     @staticmethod
     def answers(tag: str) -> int:
