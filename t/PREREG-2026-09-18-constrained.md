@@ -106,3 +106,14 @@ the test-pass rate among answers that parse is what tells apart "the model
 wrote good programs in the wrong notation" from "the model wrote bad
 programs", and only the constrained arm can measure it without the syntax gate
 in the way.
+
+### A second note, same day, still before grading
+
+The constrained arm times out on some problems where the unconstrained one did
+not: at 32 jobs and a 1,800 s request timeout, 117 of the first 323 attempts
+returned nothing. A problem the constraint could not finish is not a problem
+the constraint answered, so those count in the denominator and earn the
+constrained arm nothing. The comparison is over the problems the control arm
+answered, with a missing constrained answer treated as an answer that failed --
+not dropped, which would quietly select for the problems the constraint finds
+easy.
