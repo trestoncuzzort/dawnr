@@ -1991,7 +1991,7 @@ promoted from `seq_composed_update2`-only to `seq_composed_update2 or
 seq_new` (the same provably-equal-but-not-syntactically-equal-index leaf
 shows up on both shapes). Measured (`t/grade.py --kernels lean,dafny
 --flake 3` on the nine dafny_synthesis rows this item names, sourced
-from `/home/tmcuzzort/tup/t/out/lifted-tasks/`): 262 splitArray moves
+from `$HOME/tup/t/out/lifted-tasks/`): 262 splitArray moves
 lean real/twin from `unproved/refuted` to `verified/refuted` -- full
 agreement with dafny's own `verified/refuted`, unchanged. 106
 appendArrayToSeq, 240 replaceLastElement and 586 splitAndAppend stay
@@ -2458,7 +2458,80 @@ the whole ground conjunction before decomposing it, and `decide` refutes
 enumerated branch whose ground body `_closer()` cannot refute, and whose
 own alternative is not the first one, is still swallowed. Nothing in the
 committed corpus reaches it, and the honest cost when something does is a
-lost certificate (unproved), never a false REFUTED."""
+lost certificate (unproved), never a false REFUTED.
+
+2026-09-19 (lean-append1, ROADMAP 16.2). THE BUILD-A-SEQUENCE LOOP, the
+single shape behind most of this repository's `real=unproved, twin=
+refuted, six other kernels verified` answers: a loop that appends ONE
+element per iteration to the returned seq (`r := r + [f(s[i])]`) under a
+`forall` invariant over the result's own indices. `t/recheck_near.py
+--only unproved --kernels lean` listed 26 such cells; 15 of the 26 have
+that write shape, and every one of the 15 read `unproved` for the same
+two reasons, both closed here. The other 11 are different gaps and are
+named at the bottom of this note, untouched.
+
+(1) THE NESTED-IF SPLIT GAP (module level, `_if_in_branch`/`Lower.
+_split_tac`). `repeat split` iterates on the MAIN goal only, so a loop
+body written `if lower then .. else if upper then .. else ..` had its
+inner `if` left MERGED in the `isFalse` branch -- one top-level `if`, so
+the pre-existing count-based rule chose the weak form, and `repeat
+(all_goals split)` does not fix it either (measured: `all_goals split`
+fails the moment one sibling has nothing left, and `repeat` reverts the
+whole round). `repeat' split` recurses per goal. Gated on an `if` inside
+an `if`'s branch, so every previously-measured body keeps its exact prior
+text.
+
+(2) THE INVARIANT-APPLICATION LEAF, which 2026-09-14's own note above
+named OPEN and said belonged in `lower_loop`'s codegen "not in this
+shared per-site script" -- that is exactly where it now is
+(`_seq_append1_pres_script`, and its guard-false twin `_seq_append1_exit_
+script`). Two new ite-free corollaries of `t_seq_append_get` (`t_seq_
+append_get_lo`, `t_seq_append1_get`, `emit_seq_helpers`), a `by_cases` on
+`j < |r|` taken BEFORE any rewrite so each corollary applies
+unconditionally in its own branch, then `exact hinv{k} j _ _` on the low
+side and `subst`-then-`omega` (or `t_seq_index_congr` for an arithmetic
+index map) at the seam. Deterministic end to end -- no `grind` anywhere
+in it, which is what 2026-09-14 refused to bank on -- and it ends in
+`done`, so it cannot succeed without closing its goal.
+
+ORDERING, and a latent defect found by needing to: the new alternative
+sits AFTER `self._gr()` but BEFORE `_param_state_bridge_lines`'s bridge
+in `rec_closer`, because that bridge is `'; '.join(try have ...) + '; ' +
+grind` and Lean's `try` takes a tacticSEQ -- one unprovable `Int.
+mul_nonneg` makes the whole thing fall through to `skip`, which SUCCEEDS
+WITHOUT CLOSING THE GOAL, and `first` never reaches anything behind it
+(measured: the new script closed toggle_string's three preservation goals
+alone and none of them when appended after that bridge, byte-identical
+text both times). Diagnosed, not repaired: as the LAST alternative the
+bridge costs only the same honest `unsolved goals` a hard failure would,
+and fixing it would let its own second `grind` run on every goal the
+first one could not close -- an unmeasured heartbeat change across every
+loop task with two Int-typed variables, and not this item.
+
+MEASURED. `t/recheck_near.py --only unproved --kernels lean --flake 3`
+(this machine, lean 4.33.1, run alone): 16 of the 26 cells moved to
+`verified / refuted` -- mbpp_557 toggle_string (5 answer sets), mbpp_825
+access_elements (4), mbpp_412 remove_odd (2), mbpp_41
+filter_evennumbers, mbpp_824 remove_even, mbpp_852 remove_negs, mbpp_226
+odd_values_string, and mbpp_718 alternate_elements once its exit branch
+was closed too. (mbpp_62 smallest_num also moved, from `verified /
+unproved` to `verified / refuted`; its lowered source is byte-identical
+under this change -- verified directly by diffing `lower()`'s output
+against a pre-edit copy of this file -- so that one is a run-alone
+artifact of the original 32-concurrent sweep, not this fix.) REGRESSION
+BAR: `python3 t/run_par.py --jobs 3 --tasks t/tasks --kernels lean` reads
+all 35 cells identical to `t/AGREEMENT.md`'s lean column, count_vowels
+still `unproved / unproved` and every other cell `verified / refuted`;
+`filter_pos` is the ONLY committed task whose emitted source this change
+touches at all (diffed, real and twin, all 35 tasks), and it is still
+`verified / refuted` with axioms {propext, Classical.choice, Quot.sound}.
+
+STILL OPEN, by name, the 10 cells that held and why -- none of them is
+this shape: mbpp_913 end_num (5 cells) has no loop at all; apps_2415
+searchInsert and mbpp_890 find_Extra read `verified / unproved`, a TWIN
+gap (no refutation certificate), not a real gap; mbpp_736 left_insertion
+is `unproved / unproved`; mbpp_641 is_nonagonal is a scalar loop with no
+seq at all. Each needs its own measurement, not this one."""
 from __future__ import annotations
 
 import itertools
@@ -2601,6 +2674,89 @@ def _count_whiles(x) -> int:
     if isinstance(x, list):
         return sum(_count_whiles(v) for v in x)
     return 0
+
+
+# THE NESTED-IF SPLIT GAP (2026-09-19, ROADMAP 16.2, lean's own item).
+# `lower_loop`'s own `split_tac` had exactly two forms, both keyed off the
+# count of TOP-LEVEL `if` statements in the loop body: `repeat split` (0 or
+# 1) and `repeat (all_goals split)` (2 or more, min_max's own shape). A
+# body whose single top-level `if` carries ANOTHER `if` in its own `else`
+# -- the three-way classify-and-append idiom, `if lower then .. else if
+# upper then .. else ..`, which mbpp_557 toggle_string writes and which
+# nothing in `t/tasks` has at all -- is one top-level `if`, and so it took
+# the FIRST form; `repeat tac` iterates on
+# the MAIN goal only (this file's own 2026-09-10 note above measured the
+# same trap for two SEQUENTIAL ifs): the first `split` opens `isTrue`/
+# `isFalse`, `repeat` keeps re-splitting `isTrue` (nothing left there) and
+# NEVER revisits `isFalse`, whose own inner `if` is left merged. Measured
+# directly (mbpp_557 toggle_string, lean 4.33.1: the `isFalse` branch's
+# preservation goal still reads `(if 65 <= s[i] /\ s[i] <= 90 then r ++
+# [..] else r ++ [..])[j]!`, an un-split ite no append lemma can rewrite
+# under). `repeat (all_goals split)` does NOT fix this shape -- measured
+# too: `all_goals split` FAILS the moment ONE sibling goal has no ite left
+# (the `isTrue` branch, after round one), `repeat` reverts that whole
+# round, and the inner `if` stays merged exactly as before. `repeat'`
+# recurses into EVERY goal independently and leaves the ones it cannot
+# split alone, which is the actual shape of this obligation; it is already
+# used elsewhere in this file (`_seq_append_read_script`), so no new tactic
+# is introduced here. Gated on nesting, not swapped in wholesale: a body
+# with no `if` inside another `if`'s branches keeps its exact prior
+# `split_tac` text, byte-identical, so every task measured under either
+# prior form stays on it.
+def _if_in_branch(stmts) -> bool:
+    """True iff some `if` statement in `stmts` carries another `if`
+    statement inside one of its own branches, at any depth."""
+    if not isinstance(stmts, list):
+        return False
+    for s in stmts:
+        if not (isinstance(s, dict) and "if" in s):
+            continue
+        for br in (s["if"].get("then") or [], s["if"].get("else") or []):
+            if not isinstance(br, list):
+                continue
+            if any(isinstance(t, dict) and "if" in t for t in br):
+                return True
+            if _if_in_branch(br):
+                return True
+    return False
+
+
+# THE APPEND-ONE-ELEMENT LOOP (2026-09-19, ROADMAP 16.2, lean's own item):
+# every variable a statement tree assigns as `v := v + [e]` -- its OWN
+# current value with a ONE-element seq literal appended -- at any `if`
+# depth. This is the write shape of the build-a-sequence loop (`r := r +
+# [f(s[i])]`, one element per iteration under a `forall` invariant over
+# the result's own indices), and it is what `_seq_append1_pres_script`
+# below keys its per-site preservation proof off: the seam index is
+# provably `|v|` exactly, which is what makes the two ite-free corollaries
+# (`t_seq_append_get_lo`, `t_seq_append1_get`) applicable at all. A `v :=
+# v + t` appending a whole seq, or `v := u + [e]` appending to something
+# else, does not match and is left to the pre-existing machinery.
+def _append1_targets(stmts) -> set:
+    out: set = set()
+
+    def walk(x):
+        if isinstance(x, dict):
+            a = x.get("assign")
+            if (isinstance(a, list) and len(a) == 2
+                    and isinstance(a[0], str) and isinstance(a[1], dict)):
+                e = a[1]
+                args = e.get("args") or []
+                if (e.get("op") == "+" and len(args) == 2
+                        and isinstance(args[0], dict)
+                        and args[0].get("var") == a[0]
+                        and isinstance(args[1], dict)
+                        and args[1].get("op") == "seq"
+                        and len(args[1].get("args") or []) == 1):
+                    out.add(a[0])
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+
+    walk(stmts)
+    return out
 
 
 # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item): dafny-
@@ -2985,6 +3141,25 @@ class Lower:
                 self._divisor_bound_inv_idx = _plan["inv_index"] + 1
                 self._divisor_bound_bound_idx = (
                     len(_w.get("invariants", [])) + 1)
+        # THE APPEND-ONE-ELEMENT LOOP (2026-09-19, ROADMAP 16.2, lean's
+        # own item, and the close of "THE INVARIANT-APPLICATION LEAF"
+        # named open in `_seq_append_read_script` below): computed HERE,
+        # at __init__ time, for the same reason `_divisor_bound_plan`
+        # above is -- `lower()` calls `emit_seq_helpers()` (which must
+        # know whether to emit the two ite-free append corollaries the
+        # per-site script cites) BEFORE `lower_loop` runs. Both halves of
+        # the gate are required: a `v := v + [e]` write inside the loop
+        # (`_append1_targets`, module level) AND at least one `forall`
+        # invariant, because the script's whole low-index branch is
+        # `exact hinv{k} j _ _` -- with no quantified invariant to apply
+        # there is nothing for it to close and the lemmas would be dead
+        # text. False for every task lowered before this session that is
+        # not exactly this shape, so their emitted source stays byte-
+        # identical (measured: the full t/tasks suite, below).
+        self.seq_append1: set = set()
+        if _w is not None and self.seq_new:
+            if any("forall" in iv for iv in _w.get("invariants", [])):
+                self.seq_append1 = _append1_targets(_w["body"])
 
     # ---------- naming ----------
 
@@ -4864,6 +5039,13 @@ class Lower:
         # Python-side names into the tactic text at all, so the fix
         # belongs in `lower_loop`'s own codegen (the one call site that
         # DOES know them), not here.
+        # CLOSED 2026-09-19 (ROADMAP 16.2, lean's own item), exactly
+        # where this note said it belonged: `_seq_append1_pres_script`
+        # below is built by `lower_loop`, which knows both the `hinv{k}`
+        # names and which state variable the loop appends to, and it is
+        # deterministic end to end (`intro`/`by_cases`/`simp only` with
+        # `disch := omega`/`exact`/`subst`/`omega`, no `grind` anywhere,
+        # so no heartbeat gamble of the kind this note refused to bank).
         return (
             f"((repeat' (first | {open_step})) <;> "
             f"{len_norm} <;> "
@@ -4871,6 +5053,224 @@ class Lower:
             f"{rw_step} <;> (repeat' split) <;> first | trivial | rfl "
             "| omega | contradiction | (apply t_seq_index_congr; omega))"
         )
+
+    @staticmethod
+    def _split_tac(body: list) -> str:
+        """The merged-if-update splitter `lower_loop` puts in front of its
+        preservation steps, chosen by the loop body's OWN if-shape. Two of
+        the three forms predate this method and are unchanged:
+
+          `repeat split`             0 or 1 top-level `if` (the default)
+          `repeat (all_goals split)` 2 or more (SPEC.md "Pairs",
+                                     2026-09-10, min_max's two sequential
+                                     if-updates -- see that note above)
+          `repeat' split`            an `if` inside another `if`'s own
+                                     branch, at any depth (2026-09-19,
+                                     THE NESTED-IF SPLIT GAP, module
+                                     level above, where the measurement
+                                     and the reason the middle form does
+                                     NOT cover this case are recorded)
+
+        Nesting is tested FIRST because it is the strictly harder shape:
+        a body with both (two top-level ifs, one of them nested) needs
+        the per-goal recursion `repeat (all_goals split)` cannot give.
+        Factored into one place because `lower_loop` needs the identical
+        choice twice (`_t_loop`'s own per-invariant `have`, and
+        `_t_loop_spec`'s preservation step) and the two were already
+        duplicated copies of each other. `lower_loops_general`'s own
+        third copy is deliberately LEFT on the pre-existing two-form
+        rule: this session measured the nested shape only on the single-
+        top-level-loop path (no near-miss task has a nested loop at all),
+        and changing a path nothing here exercises would be an unmeasured
+        edit, not a fix."""
+        if _if_in_branch(body):
+            return "repeat' split"
+        if sum(1 for s in body if "if" in s) >= 2:
+            return "repeat (all_goals split)"
+        return "repeat split"
+
+    def _seq_append1_pres_script(self, state: list, types: dict,
+                                 invs: list) -> str | None:
+        """THE INVARIANT-APPLICATION LEAF, closed (2026-09-19, ROADMAP
+        16.2, lean's own item). `_seq_append_read_script` above named this
+        gap on 2026-09-14 and left it open: at `_t_loop_spec`'s own
+        preservation step, `r := r + [x]` under a `forall` invariant over
+        `r`'s indices leaves a goal that is provable ONLY by applying the
+        OLD invariant at the index -- never by index congruence (the two
+        sides are different lists), never by `omega` (it is a list read),
+        and only unreliably by `grind` (measured nondeterministic there,
+        which is why that note refused to bank it). `lower_loop` is the
+        one call site that knows the invariant's own `hinv{k}` name AND
+        which state variable the loop appends to, so the script is built
+        here and handed to `then_tac`'s per-goal closer as one more
+        `first` alternative, tried only after the pre-existing `self._gr
+        ()` has already failed -- additive by construction: a goal that
+        closed before closes on the same earlier alternative, byte-for-
+        byte, and `None` (so `lower_loop` emits its exact prior text)
+        unless `self.seq_append1` matched.
+
+        THE PROOF, and why each step is the one it is. The goal is
+        `forall j, 0 <= j -> j < |r ++ [x]| -> P(r ++ [x], j)` with
+        `hinv{k} : forall j, 0 <= j -> j < |r| -> P(r, j)` in scope and
+        `x` the just-appended element.
+          (1) `intro` the three binders -- the quantifier prefix
+              `prop()` emits for a `forall` invariant is always exactly
+              `∀ (b : Int), lo ≤ b → b < hi → body`, three binders, so
+              this arity is a property of the LOWERING, not of the task.
+          (2) normalize `|r ++ [x]|` to `|r| + 1` in EVERY hypothesis
+              (`List.length_append`/`_cons`/`_nil` -- the singleton pair
+              matters, `_append` alone leaves `[x].length` an opaque atom
+              omega cannot see through; the same measured fact THE
+              SINGLETON-LENGTH GAP above records for the disch tactic).
+              The goal itself carries no `.length`, so this only feeds
+              the two `omega`s below.
+          (3) `by_cases` on `j < |r|`. This is THE decision the whole
+              shape turns on -- and taking it EXPLICITLY, before any
+              rewrite, is what distinguishes this from
+              `_seq_append_read_script`'s approach of rewriting with the
+              ite-carrying `t_seq_append_get` and splitting AFTER: that
+              split duplicates the ENTIRE invariant body (a nested
+              if-then-else in the spec, hence a nested `∧`/`→` tree in
+              the goal) once per read occurrence, and the branch
+              conditions it leaves are about `j` and `|r|` while the
+              facts needed at the leaves are about the OLD `r`. Deciding
+              first means each corollary rewrite below is UNCONDITIONAL
+              in its branch and leaves no ite at all.
+          (4) low branch (`j < |r|`): rewrite every appended read back to
+              a read of the OLD `r` via `t_seq_append_get_lo`, whose own
+              two side conditions `disch := omega` discharges from the
+              `by_cases` hypothesis and the intro'd `0 ≤ j`. The result
+              is SYNTACTICALLY `P(r, j)`, so `exact hinv{k} j (by omega)
+              (by omega)` closes it -- no search, no matching, and the
+              `first` over every quantified invariant's index costs one
+              failed `exact` each for the wrong ones.
+          (5) high branch (`¬ j < |r|`): with (2)'s length fact, `j = |r|`
+              exactly, so `t_seq_append1_get` rewrites every appended
+              read to the appended VALUE `x` itself. What is left is a
+              propositional combination of linear constraints over list
+              reads -- which `omega` decides, treating each read as an
+              atom, PROVIDED the goal's own reads and the branch
+              hypothesis's reads are the SAME atom. They are not yet:
+              the goal reads `s[j]!` where the `if` the body split on
+              gave `s[i]!`. `subst` on `j = i` (proved by omega from
+              `|r| = i`, the length invariant every task of this shape
+              states) makes them one atom, and then `omega` alone closes
+              every leaf, including the vacuous branches where the
+              invariant's own nested `if` contradicts the body's. One
+              `subst` alternative per Int-typed variable in scope, tried
+              after a bare `omega` -- the loop counter is not identified
+              by name anywhere in this file, and guessing it from the
+              `decreases` would be a second, weaker detector for a choice
+              a short `first` makes for free. One more alternative last,
+              for an invariant body that maps the index through
+              arithmetic rather than reading it straight (`r[j] ==
+              s[2*j]`): there `subst` cannot make one atom of `s[i]!` and
+              `s[2*j]!` however the equation is oriented, and
+              `t_seq_index_congr` -- this file's existing
+              provably-but-not-syntactically-equal-index bridge -- is the
+              leaf. See THE INDEX-MAP SEAM, below.
+        Ends in `done`, per this file's standing rule: every alternative
+        inside must actually close its goal, never merely make progress
+        and leave the rest to Lean's own `sorryAx` recovery."""
+        if not self.seq_append1:
+            return None
+        tgts = [v for v in state if v in self.seq_append1]
+        qidx = [i + 1 for i, iv in enumerate(invs) if "forall" in iv]
+        if not tgts or not qidx:
+            return None
+        # `(by omega)` PARENTHESIZED, always (2026-09-19, measured on the
+        # first cut of this script): `have h : P := by omega; subst h;
+        # omega` parses as `have h : P := by (omega; subst h; omega)`, so
+        # the `subst` runs INSIDE the `have`'s own tactic block with no
+        # goals left ("No goals to be solved") and the outer goal is
+        # untouched -- THE HAVE-BINDING WORKAROUND's own trap (this
+        # file's 2026-09-10 note), re-met at a new call site.
+        ints = [v for v in state if types.get(v) == "int"]
+        ints += [p["name"] for p in self.task["params"]
+                 if p["type"] == "int" and p["name"] not in ints]
+        lo_alts = " | ".join(f"exact hinv{k} _tj (by omega) (by omega)"
+                             for k in qidx)
+        hi_alts = " | ".join(
+            ["omega"]
+            + [f"(have _tji : _tj = {v} := (by omega); "
+               f"subst _tji; omega)" for v in ints]
+            # THE INDEX-MAP SEAM (2026-09-19, measured on mbpp_718
+            # alternate_elements, which matched the gate and still held
+            # after the three alternatives above): an invariant whose
+            # body maps the result index through ARITHMETIC (`r[j] ==
+            # s[2*j]`, appending only on even `i`) leaves the seam goal
+            # `s[i]! = s[(2*j)]!` -- two reads of the SAME sequence at
+            # indices equal by `omega` (`|r| = (i+1)/2` and `j = |r|`
+            # give `2*j = i`) but never syntactically, and never made
+            # one atom by `subst`, since `2*j` is not `j`. That is
+            # exactly `t_seq_index_congr`'s leaf, already emitted for
+            # every `seq_new` task and already used this way by
+            # `_seq_append_read_script` above; `apply`-ing it leaves only
+            # its own `i = j` side condition for `omega`. Tried LAST, so
+            # a goal any earlier alternative closed is unaffected, and it
+            # fails immediately on an invariant body that is not a bare
+            # equality (toggle_string's nested implication tree).
+            + ["(apply t_seq_index_congr; omega)"])
+        per_var = [
+            "((intro _tj _tj0 _tjl) <;> "
+            "(try simp only [List.length_append, List.length_cons, "
+            "List.length_nil] at *) <;> "
+            f"(by_cases _tlo : _tj < (({v}).length : Int)) <;> "
+            "(first "
+            "| ((try simp (disch := omega) only [t_seq_append_get_lo]); "
+            f"(first | {lo_alts})) "
+            "| ((try simp (disch := omega) only [t_seq_append1_get]); "
+            f"(first | {hi_alts}))) <;> done)"
+            for v in tgts]
+        if len(per_var) == 1:
+            return per_var[0]
+        return "(first | " + " | ".join(per_var) + ")"
+
+    def _seq_append1_exit_script(self, invs: list) -> str | None:
+        """THE EXIT-BRANCH TWIN of the leaf above (2026-09-19, measured on
+        mbpp_718 alternate_elements at answer set qwen3.8-27b-fp8-v3,
+        which the preservation closer alone did not flip). `_t_loop_
+        spec`'s proof has TWO branches, and only one of them is a
+        recursive `apply`: the guard-false branch owes the task's own
+        `ensures` at the loop's returned value directly, from the
+        invariants and the negated guard. For the build-a-sequence shape
+        that obligation is the SAME `forall j, .. -> P(r, j)` the
+        invariant states -- no append at all, since the loop is over --
+        and the honest proof is one `exact hinv{k}`. Measured (lean
+        4.33.1, this file's own emitted 718: `case isFalse.right`, goal
+        `r[j]! = s[(2*j)]!`) that `exit_tac`'s pre-existing `self._gr()`
+        does NOT get there: `grind`'s own E-matching does not connect the
+        goal's bound `j < |r|` to the invariant's `j < i` across
+        `hinv3 : |r| = i` while ALSO carrying the `2*j` index map, and
+        `_seq_append_read_script`'s last alternative opens the ensures
+        conjunction, closes its length conjunct, and then hard-fails its
+        `apply t_seq_index_congr` on exactly this leaf -- so the whole
+        chain fails with the leaf untouched.
+
+        The script is deliberately SMALLER than the preservation one:
+        there is nothing to rewrite, so it only opens the conjunction and
+        the quantifier the way `_seq_append_read_script` already does
+        (`repeat' (first | apply And.intro | intro)`, this file's
+        standing opener) and offers one closer per leaf. `exact hinv{k} _
+        (by omega) (by omega)` passes the index as `_` on purpose: the
+        opener's `intro` leaves an INACCESSIBLE binder name that no
+        generated text can spell, and unification against the leaf's own
+        `r[?j]!` recovers it, with the two `by omega`s postponed until
+        after it is assigned. `omega` first for the length conjunct,
+        `rfl` for a syntactic one, and `t_seq_index_congr` last for the
+        same index-map seam THE INDEX-MAP SEAM above names. Ends in
+        `done`, and is offered only AFTER the pre-existing `exit_tac`, so
+        every task whose exit branch already closed is unaffected."""
+        if not self.seq_append1:
+            return None
+        qidx = [i + 1 for i, iv in enumerate(invs) if "forall" in iv]
+        if not qidx:
+            return None
+        alts = (["omega", "rfl"]
+                + [f"exact hinv{k} _ (by omega) (by omega)" for k in qidx]
+                + ["(apply t_seq_index_congr; omega)"])
+        return ("((repeat' (first | apply And.intro | intro)) <;> "
+                "(first | " + " | ".join(alts) + ") <;> done)")
 
     def _grind_base(self) -> str:
         """2026-09-14 (lean-closure): `grind{self.ga}` normally -- byte-
@@ -5615,6 +6015,66 @@ class Lower:
             "  have hb2 : (a.toNat + j.toNat) < s.length := by omega\n"
             "  have heq : a.toNat + j.toNat = (a + j).toNat := by omega\n"
             "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n")
+            if self.seq_append1:
+                # THE APPEND-ONE-ELEMENT LOOP (2026-09-19, ROADMAP 16.2,
+                # lean's own item). `t_seq_append_get` just above states
+                # the read-after-`++` fact with the branch still INSIDE
+                # its own conclusion (`if j < |l1| then .. else ..`), and
+                # this file has measured twice now (THE ITE-SPLIT GAP,
+                # `_seq_update2_script`; then `_seq_append_read_script`)
+                # that a cited fact carrying an un-split `ite` is what
+                # grind and simp both stall on. The answer there was the
+                # ite-free corollaries (`t_seq_update2_get_hi/_mid/_lo`);
+                # these two are the same answer for `++`, and they exist
+                # so that the preservation script below can rewrite under
+                # a `by_cases` it has ALREADY decided, with `disch :=
+                # omega` supplying each corollary's own side condition
+                # from the branch hypothesis in scope -- no `split` of a
+                # rewritten ite at all, hence nothing for the split to
+                # duplicate the rest of a nested invariant body across.
+                #   _lo  -- read strictly inside the OLD sequence: the
+                #           whole point is that the result is `l1[j]!`
+                #           SYNTACTICALLY, so the rewritten goal is
+                #           literally the loop invariant at the old
+                #           value, closable by `exact hinv{k} j _ _`.
+                #   _1   -- read exactly at the seam, stated for a
+                #           ONE-element right operand (`_append1_targets`
+                #           is the gate, so the operand always is one):
+                #           the result is the appended VALUE, with no
+                #           residual index arithmetic for omega to carry.
+                # Measured (p1/p3/p5 scratch probes, lean 4.33.1, core
+                # only, then the full pipeline): both compile clean,
+                # axioms {propext, Quot.sound}, and toggle_string's own
+                # `_t_loop_spec` closes with them where `grind only
+                # [t_seq_append_get, ...]` and `_seq_append_read_script`
+                # both left it open. Emitted only under `self.
+                # seq_append1`, so every other seq task's source is
+                # byte-identical.
+                parts.append(
+                "theorem t_seq_append_get_lo (l1 l2 : List Int) (j : Int)\n"
+                "    (hj : (0 : Int) ≤ j) "
+                "(hjl : j < ((l1.length : Int))) :\n"
+                "    (l1 ++ l2)[(j).toNat]! = l1[(j).toNat]! := by\n"
+                "  have hlen : (l1 ++ l2).length "
+                "= l1.length + l2.length :=\n"
+                "    List.length_append\n"
+                "  rw [t_seq_append_get l1 l2 j hj (by omega), "
+                "if_pos hjl]\n"
+                "\n"
+                "theorem t_seq_append1_get (l : List Int) (v : Int) "
+                "(j : Int)\n"
+                "    (hj : j = ((l.length : Int))) :\n"
+                "    (l ++ [v])[(j).toNat]! = v := by\n"
+                "  have hlen : (l ++ [v]).length = l.length + 1 := by\n"
+                "    rw [List.length_append, List.length_cons, "
+                "List.length_nil]\n"
+                "  have h0 : (0 : Int) ≤ j := by omega\n"
+                "  rw [t_seq_append_get l [v] j h0 (by omega),\n"
+                "      if_neg (by omega : ¬ j < ((l.length : Int)))]\n"
+                "  have hz : (j - ((l.length : Int))).toNat = 0 "
+                ":= by omega\n"
+                "  rw [hz]\n"
+                "  rfl\n")
             if self.nested:
                 # SPEC.md "Nested sequences (v1)": the row-typed twins of
                 # `t_seq_append_get`/`t_seq_slice_get`, element type
@@ -6084,6 +6544,20 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if self.seq_new:
             seq_thms += [("t_seq_append_get", "seq append-read bridge"),
                         ("t_seq_slice_get", "seq slice-read bridge")]
+            if self.seq_append1:
+                # THE APPEND-ONE-ELEMENT LOOP (2026-09-19): listed here
+                # so the file's OWN trailing audit block names them, the
+                # same as every other emitted bridge. The adapter's
+                # THEOREM_RE scan would pick them up regardless (it reads
+                # the source, not this list, which is exactly why no
+                # lemma can hide from the audit), but a bridge this file
+                # emits and does not print would be the only one, and
+                # the audit block is also what a human reads.
+                seq_thms += [("t_seq_append_get_lo",
+                             "ite-free append-read bridge, low index"),
+                            ("t_seq_append1_get",
+                             "ite-free append-read bridge, the seam of "
+                             "a one-element append")]
             if self.nested:
                 seq_thms += [("t_seq_append_get_row",
                              "nested seq append-read bridge"),
@@ -6800,9 +7274,11 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # substituted into an invariant's own Prop can carry the same
         # Lean `if`s a merged if-update produces, so the same guard
         # applies here, not just at the theorem.
-        n_top_ifs = sum(1 for s in w["body"] if "if" in s)
-        split_tac = ("repeat (all_goals split)" if n_top_ifs >= 2
-                    else "repeat split")
+        # 2026-09-19: the choice itself moved into `_split_tac` (above),
+        # which adds the nested-`if` form; this site and `_t_loop_spec`'s
+        # below were already byte-identical duplicates of each other and
+        # must stay so, which one method makes structural.
+        split_tac = self._split_tac(w["body"])
         # the entry-establishment proof, one per invariant, the same
         # existential-witness fallback `_t_spec`'s own `init_pfs` below
         # needs (measured on seq_max's own `∃ j ∈ [0,1)`, "Existential-
@@ -7379,11 +7855,49 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # FIRST, so a goal that already closed on it is byte-identically
         # unaffected; only a goal it could not close reaches the `try
         # have`s in scope for a second `self._gr()` attempt.
+        # THE INVARIANT-APPLICATION LEAF's own closer (2026-09-19,
+        # `_seq_append1_pres_script` above): wired in at the SAME place
+        # and for the same reason `_param_state_bridge_lines` was -- this
+        # per-goal closer is the only site whose goals are the loop's own
+        # per-invariant preservation obligations, and it is the only site
+        # with the `hinv{k}` names in scope. `self._gr()` stays FIRST, so
+        # every goal that already closed keeps closing on exactly the
+        # same alternative, byte-for-byte; `None` for any task outside
+        # the append-one-element shape leaves this whole expression at
+        # its exact prior text.
+        #
+        # ORDERED AHEAD OF THE PARAM/STATE BRIDGE, and that ordering is
+        # LOAD-BEARING, not cosmetic (2026-09-19, measured -- the new
+        # script closed toggle_string's three preservation goals when it
+        # was the ONLY alternative and closed NONE of them appended after
+        # the bridge, with byte-identical script text both times). The
+        # bridge alternative is `'; '.join(mb_lines) + '; ' + gr` where
+        # every `mb_line` is itself a `try have ...`, and Lean's `try`
+        # takes a tacticSEQ, not one tactic: `try h1; try h2; gr` is
+        # `first | (h1; first | (h2; gr) | skip) | skip`, so the moment
+        # ANY of those `Int.mul_nonneg` bridges is unprovable (the
+        # ordinary case -- most products of two loop variables are not
+        # provably non-negative) the enclosing `try` falls through to
+        # `skip`, and `skip` SUCCEEDS WITHOUT CLOSING THE GOAL. A `first`
+        # never reaches an alternative after one that succeeds, so
+        # anything placed behind this is dead text. That latent defect is
+        # left as it is rather than repaired here: as the LAST
+        # alternative it costs only the honest `unsolved goals` (UNPROVED)
+        # a hard failure would also give, and making it fail properly
+        # would let its own second `grind` actually run on every goal the
+        # first one could not close -- an unmeasured heartbeat change
+        # across every loop task with two Int-typed variables, which is
+        # not this session's item. Named here so the next session finds
+        # it already diagnosed.
         mb_lines = self._param_state_bridge_lines(state, types)
-        rec_closer = (
-            f"(first | {self._gr()} | "
-            f"({'; '.join(mb_lines)}; {self._gr()}))"
-            if mb_lines else self._gr())
+        pres_alt = self._seq_append1_pres_script(state, types, invs)
+        rc_alts = [self._gr()]
+        if pres_alt is not None:
+            rc_alts.append(pres_alt)
+        if mb_lines:
+            rc_alts.append(f"({'; '.join(mb_lines)}; {self._gr()})")
+        rec_closer = (self._gr() if len(rc_alts) == 1
+                      else "(first | " + " | ".join(rc_alts) + ")")
         then_tac = (
             f"all_goals (first | (apply {self.name}_t_loop_spec <;> "
             f"{rec_closer}) | {dite_else_tac if can_dite else self._gr()})"
@@ -7407,9 +7921,11 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # coupled two-scalar loop can trigger it with no pair in sight);
         # every task with zero or one keeps the exact prior `repeat
         # split` text, byte-identical.
-        n_top_ifs = sum(1 for s in w["body"] if "if" in s)
-        split_tac = ("repeat (all_goals split)" if n_top_ifs >= 2
-                    else "repeat split")
+        # 2026-09-19: this rule, plus the nested-`if` third form, now
+        # lives in `_split_tac` (above) -- the recomputation here was a
+        # duplicate of the one at the top of this function and stayed in
+        # step with it only by hand.
+        split_tac = self._split_tac(w["body"])
         # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, lean's own item):
         # the loop-spec's own EXIT branch (guard false: `w["cond"]`
         # itself, i.e. `i <= n/2`, does not hold, so the ANONYMOUS
@@ -7440,6 +7956,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                 f"first | ({exit_tac}) | (exact {bound_name} {n_text} "
                 f"{i_name} {self.ret} {quant_hinv} {bound_hinv} "
                 f"(by omega))")
+        # THE EXIT-BRANCH TWIN (2026-09-19, `_seq_append1_exit_script`
+        # above): appended the same additive way the divisor-bound
+        # `exact` just above is -- `first` tries everything that was here
+        # before, unchanged and in the same order, and reaches this only
+        # when all of it failed. `None` outside the append-one-element
+        # gate, so this line is a no-op for every other task.
+        exit_alt = self._seq_append1_exit_script(invs)
+        if exit_alt is not None:
+            exit_tac = f"first | ({exit_tac}) | {exit_alt}"
         out.append(
             f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs}"
             f"{hfrs} :\n"
