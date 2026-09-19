@@ -13,13 +13,13 @@ its proofs mean anything, because a parser and a printer that disagree prove
 things about a program nobody wrote. Measured by `python3 t/surface.py
 --check`:
 
-- `parse(print(t)) == t` on **1701 of 1701** tasks, compared as canonical
-  JSON. The corpus is the 23 committed tasks in `tasks/` plus
-  `fuzz_lower.build_corpus` over seeds 1 through 7, less the 21 that
-  `check_wf` rejects for carrying constructs t does not have, 1722 seen in
-  all. 1449 of the 1701 are distinct; the repeats are the hand-built probes,
+- `parse(print(t)) == t` on **1783 of 1783** tasks, compared as canonical
+  JSON. The corpus is the 35 committed tasks in `tasks/` plus
+  `fuzz_lower.build_corpus` over seeds 1 through 7, less the 23 that
+  `check_wf` rejects for carrying constructs t does not have, 1806 seen in
+  all. 1469 of the 1783 are distinct; the repeats are the hand-built probes,
   which recur once per seed.
-- `print(parse(text)) == text` on all 1701, so every task has exactly one
+- `print(parse(text)) == text` on all 1783, so every task has exactly one
   normal form in the notation.
 - The **22 examples on the `written:` lines of this page parse, unedited**,
   to the JSON they sit beside (some lines carry more than one, separated by

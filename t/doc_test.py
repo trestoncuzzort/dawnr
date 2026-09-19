@@ -419,6 +419,18 @@ def gather_facts():
     tutorial = _read("TUTORIAL.md")
     syntax = _read("SYNTAX.md")
 
+    # ROADMAP 14.5 left this open by name on 2026-09-11: the aggregate counts in SYNTAX.md's introduction were
+    # cross-checked only by `surface.py --check`, which the test stage runs and this file did not, so a count
+    # that drifted sat on the page unchallenged. One of them had: it said "the 23 committed tasks in tasks/"
+    # while tasks/ held 35 (2026-09-19). The corpus-wide round-trip numbers still belong to surface.py --check,
+    # which regenerates them; what this can own is every count of something on disk right now.
+    import tasks_io
+    committed = len(tasks_io.load_dir(HERE / "tasks"))
+    m = re.search(r"The corpus is the (\d+) committed tasks in", syntax)
+    facts.append((
+        "SYNTAX.md: \"the %s committed tasks in tasks/\"" % (m.group(1) if m else "?"),
+        int(m.group(1)) if m else None, committed, "SYNTAX.md"))
+
     # TUTORIAL lesson 0's claim about parsing: as of 2026-09-04 (SYNTAX.md
     # "since 2026-09-04 that tree also has a surface syntax") the notation
     # IS parsed by surface.py, so a claim that "nothing parses the pretty
