@@ -190,8 +190,13 @@ STEPS = [
      "python3 t/spec_experiment.py extract --model $T --pool v5 && "
      "python3 t/spec_experiment.py tests --model $T --pool v5 && "
      "python3 t/pool_pick.py $D --control 25; }",
-     "for T in qwen2.5-coder-14b-apps-s1 qwen2.5-coder-14b-apps-s2 deepseek-coder-v2-16b-apps-s1; do "
-     f"[ -d {SE}/$T/grade-in ] || exit 1; done", "gen"),
+     # 2026-09-18: this read not-done for a day after the work was finished, because it asked for three answer
+     # sets on THIS desktop and the problems were answered on the lab workstation instead, by the 30B through
+     # vLLM. What the step is for is that every APPS problem has an answer somewhere, so that is what it asks
+     # now: 2,200 of the pool's 2,266, counted over every APPS tag on this machine.
+     "python3 -c \"import json,glob,sys; "
+     "ids={int(k) for f in glob.glob('" + SE + "/*apps*/extract.json') for k in json.load(open(f))}; "
+     "print(len(ids),'APPS problems answered'); sys.exit(0 if len(ids)>=2200 else 1)\"", "gen"),
     ("r5-answers", "Round 5: answer the training problems", "The student and locallm answer the 417 training "
      "problems, so their own failures can be graded and used. Held-out problems are not touched.",
      f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 "
