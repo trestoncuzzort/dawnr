@@ -55,14 +55,26 @@ def main():
                                       - cells["execution"]["percent"] + base)
         blocks.append(summary)
     complete = [block for block in blocks if "differences" in block]
+    planned = len(ledger["blocks"])
+
+    def verdict(violates):
+        """An unfinished study decides nothing; one bad finished seed decides it."""
+        broken = [block["seed"] for block in complete if violates(block)]
+        if broken:
+            return {"status": "falsified", "violating_seeds": broken}
+        if len(complete) < planned:
+            return {"status": "pending", "seeds_complete": len(complete),
+                    "seeds_planned": planned}
+        return {"status": "held", "violating_seeds": []}
+
     predictions = {
-        "combined_beats_baseline_by_5_points_in_every_seed": bool(complete) and all(
-            block["differences"]["combined"] >= THRESHOLD for block in complete),
-        "combined_positive_in_every_seed": bool(complete) and all(
-            block["differences"]["combined"] > 0 for block in complete),
-        "interaction_positive_in_every_seed": bool(complete) and all(
-            block["interaction"] > 0 for block in complete),
-        "seeds_complete": len(complete), "seeds_planned": len(ledger["blocks"])}
+        "combined_beats_baseline_by_5_points_in_every_seed": verdict(
+            lambda block: block["differences"]["combined"] < THRESHOLD),
+        "combined_positive_in_every_seed": verdict(
+            lambda block: block["differences"]["combined"] <= 0),
+        "interaction_positive_in_every_seed": verdict(
+            lambda block: block["interaction"] <= 0),
+        "seeds_complete": len(complete), "seeds_planned": planned}
     report = {"study": str(args.study), "splits": args.splits, "blocks": blocks,
               "predictions": predictions, "incomplete_arms": incomplete}
     if args.json:
@@ -90,13 +102,21 @@ def main():
         d = block["differences"]
         lines.append(f"| {block['seed']} | {d['latent']:+.1f} | {d['execution']:+.1f} | "
                      f"{d['combined']:+.1f} | {block['interaction']:+.1f} |")
+    def phrase(key):
+        result = predictions[key]
+        if result["status"] == "pending":
+            return f"**undecided**, {result['seeds_complete']} of {result['seeds_planned']} seeds finished"
+        if result["status"] == "falsified":
+            return f"**falsified** at seed(s) {', '.join(str(s) for s in result['violating_seeds'])}"
+        return "**held**"
+
     lines += ["", "Registered predictions:", "",
               f"- combined beats baseline by at least {THRESHOLD:.0f} points in every seed: "
-              f"**{'held' if predictions['combined_beats_baseline_by_5_points_in_every_seed'] else 'falsified'}**",
+              f"{phrase('combined_beats_baseline_by_5_points_in_every_seed')}",
               f"- the paired combined difference is positive in every seed: "
-              f"**{'held' if predictions['combined_positive_in_every_seed'] else 'falsified'}**",
+              f"{phrase('combined_positive_in_every_seed')}",
               f"- the interaction is positive in every seed: "
-              f"**{'held' if predictions['interaction_positive_in_every_seed'] else 'falsified'}**",
+              f"{phrase('interaction_positive_in_every_seed')}",
               "", "Malformed, timed-out, over-budget and contract-altering answers are counted "
               "as failures in every cell. These are generated-task scores: no seven-verifier, "
               "twin or specification-agreement evidence is claimed here."]
