@@ -1743,14 +1743,21 @@ class Lab:
             text = (RUNS / "logs" / f"{key}.log").read_text(errors="replace")
         except OSError:
             return "", None
-        # the training loop's own bar, not the dataset preparation ones that run before it: those carry a
-        # label ("Adding EOS to train dataset:  0%|..."), the training bar starts at its percentage. Without
-        # this the window read 87 of 87 and full while the model had not taken a step (2026-09-18).
-        hits = re.findall(r"(?m)^\s*\d+%\|[^|]*\|\s*(\d+)/(\d+) \[", text[-8000:].replace("\r", "\n"))
-        if not hits:
-            return "", None
-        done, total = int(hits[-1][0]), int(hits[-1][1])
-        return (f"{done} of {total} steps", min(1.0, done / total) if total else None)
+        # A training step prints several bars in a row -- the dataset preparation, the reference log
+        # probabilities, then the training loop itself -- and only the last carries no label. Reading any bar
+        # and calling it the training would have shown 87 of 87 and full before the model took a step; reading
+        # only the unlabelled one leaves the window blank for the minutes the others take. So: the last bar,
+        # with its own label when it has one (2026-09-18).
+        lines = text[-8000:].replace("\r", "\n").splitlines()
+        for line in reversed(lines):
+            m = re.match(r"\s*(.*?)\s*\d+%\|[^|]*\|\s*(\d+)/(\d+) \[", line)
+            if not m:
+                continue
+            label, done, total = m.group(1).rstrip(":"), int(m.group(2)), int(m.group(3))
+            what = f"{label.lower()}: " if label else ""
+            return (f"{what}{done} of {total}" + ("" if label else " steps"),
+                    min(1.0, done / total) if total else None)
+        return "", None
 
     def cells_printed(self, key: str) -> int:
         """Cells the running step has reported since it last said which answer set it is on."""
