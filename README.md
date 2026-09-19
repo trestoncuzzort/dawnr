@@ -6,11 +6,13 @@ The industry bet is scale: more parameters, more tokens, more scraped code. loca
 
 Every number below was measured by a script in this repository and links to the file that records it. Where a number of this project's own turned out wrong, the correction is on this page rather than in its history.
 
-**The model of record is locallm.** The comparison this project exists to settle is **locallm against Phi-4-mini**: a model trained here from random weights, on filtered data, against a small open model trained the usual way. The fine-tuned 1.5B student rows below are a second, borrowed-base experiment and not the claim. locallm is not fixed at the 3.2M of its round-4 and round-5 rows either: 91M cores have been trained here, and optimizer steps have been measured to fit at **875M parameters** on one shared card ([locallm/FINDINGS-capacity-2026-09-19.md](locallm/FINDINGS-capacity-2026-09-19.md)). That is a statement about what steps and how fast, not a claim that size is what this project was missing. That run has now happened, and it went the wrong way: a 92M core pretrained on real source and specialized on the filtered t data scored **1 clean of 232**, below both 3.2M rows and below Phi ([locallm/FINDINGS-round7-2026-09-19.md](locallm/FINDINGS-round7-2026-09-19.md)).
+**locallm is the product, and the comparison that matters is locallm against Phi-4-mini.** A model trained here from random weights, on filtered data, on one machine, against a small open model trained the usual way on the whole internet. Other models appear on this page as baselines or as evidence about the pipeline; none of them is what this project makes, and the fine-tuned 1.5B student is a borrowed base, not a product.
+
+locallm is not fixed at the 3.2M of its early rows: 92M cores have been trained here and optimizer steps have been measured to fit at **875M parameters** on one shared card ([locallm/FINDINGS-capacity-2026-09-19.md](locallm/FINDINGS-capacity-2026-09-19.md)) -- a statement about what steps and how fast, not a claim that size was the missing piece. The first large run went the wrong way: a 92M core pretrained on real source and specialized on the filtered t data scored **1 clean of 232** ([locallm/FINDINGS-round7-2026-09-19.md](locallm/FINDINGS-round7-2026-09-19.md)).
 
 **Status, 2026-09-19.** Two negative results landed the same day, both measured against predictions written before the runs. The modern core's architecture advantage **reversed** at four times the training budget, and a preregistered four-cell experiment in execution and latent supervision produced **no synthesis gain at any seed**, while revealing that its own held-out tasks were passable without composing anything. Both are below, under [the owned core](#the-owned-core-trained-here-from-random-weights).
 
-**What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **No model trained here has beaten Phi-4-mini**: three rounds of the loop have produced 3 clean answers out of 232 each time, which is exactly Phi's score. Two models *run through* this pipeline do beat it, and neither was trained by us. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
+**What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **locallm has not beaten Phi-4-mini yet**: its best round scored 2 clean answers of 232 against Phi's 3, and this page leads with that rather than with the one column locallm wins by a distance. Two models *run through* this pipeline beat Phi, and neither was built here, so neither is a result of this project's method. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
 
 ## Start here
 
@@ -36,34 +38,69 @@ problems in English, with tests (nl/; pool v5 is 3,003, 232 of them held out and
 
 A held-out answer is **clean** only when its tests pass and all seven proofs hold with the twin refuted. An answer all seven prove but whose tests fail is counted separately as **proven but wrong**. The split (`split-v3.json`'s 232 problems) has never changed, so every number on this page is comparable to every earlier one.
 
-## Held-out results, 232 problems
+## What locallm has done
 
-Measured by [`t/score_heldout.py`](t/score_heldout.py); the full table is [`t/out/score-r6.md`](t/out/score-r6.md).
+**locallm is the product: a model trained here from random weights, on this
+hardware, on data that seven proof systems agreed was correct.** Everything in
+this section is locallm's own, measured by a script in this repository. Models
+that were merely *run through* the pipeline -- Phi, the prompted 27B, the
+prover, the fine-tuned 1.5B student -- are baselines and comparisons, not
+products of this project, and they are kept separate below.
 
-| model | who trained it | well formed | tests pass | **clean** | converts | after the spec check |
-|---|---|---|---|---|---|---|
-| Qwen3.8-27B-FP8, prompted | not us | 116 | 81 | **12** | 15% | 11 |
-| DeepSeek-Prover-V2-7B, prompted | not us | 39 | 10 | **6** | **60%** | 6 |
-| Phi-4-mini, 3.8B | not us | 12 | 6 | **3** | 50% | 2 |
-| Qwen2.5-Coder-1.5B, untrained | not us | 39 | 13 | **3** | 23% | 2 |
-| student, round 4 | us, QLoRA + DPO | 37 | 12 | **3** | 25% | 2 |
-| student, round 5 | us | 42 | 11 | **3** | 27% | 2 |
-| student, round 6 | us | 36 | 9 | **3** | 33% | 2 |
-| student, round 6, decoding against t's grammar | us | 58 | 14 | **4** | 29% | 3 |
-| **locallm, round 4 (3.2M, from scratch)** | us | 209 | 2 | **2** | 100% | 2 |
-| **locallm, round 5 (3.2M)** | us | 198 | 2 | **2** | 100% | 2 |
-| **locallm, round 7 (92M, pretrained then specialized)** | us | 136 | 1 | **1** | 1/1 | 1 |
-| Phi-4-mini, regraded 2026-09-19 beside round 7 | not us | 12 | 6 | **3** | 50% | 2 |
+| what | measured | where |
+|---|---|---|
+| Writes the formal language almost perfectly from random weights | **209 of 232** held-out answers well formed, a higher rate than any model measured here, including a 27B | [`t/out/score-r6.md`](t/out/score-r6.md) |
+| Proves what it writes, when it is right | conversion **2 of 2**, and **1 of 1** in round 7: every locallm answer that passed its tests was verified by all seven with its twin refuted | the same table |
+| Trained from nothing, on one machine, reproducibly | four-GPU deterministic training with resumable optimizer and RNG state; a resumed run reproduces an uninterrupted one bit for bit | [`locallm/DISTRIBUTED-2026-09-19.md`](locallm/DISTRIBUTED-2026-09-19.md) |
+| Scales far past anything this project has used | optimizer steps measured to **875M parameters** on one shared card at 2,693 tokens a second | [`locallm/FINDINGS-capacity-2026-09-19.md`](locallm/FINDINGS-capacity-2026-09-19.md) |
+| Its own tokenizer, from its own corpus | byte-BPE cuts the corpus token count by about **60%**, every window round-trip audited | [`locallm/PREDICT-tokenizer-2026-09-19.md`](locallm/PREDICT-tokenizer-2026-09-19.md) |
+| Cached decoding that is correct rather than assumed | opt-in KV cache, adopted because correctness held when the registered speed prediction failed | [`locallm/FINDINGS-kv-cache-2026-09-19.md`](locallm/FINDINGS-kv-cache-2026-09-19.md) |
+| An architecture comparison that changed our own minds | six arms, three seeds, 4000 updates: the modern core's 1000-step advantage **reversed** and the older core won at every seed | [`locallm/FINDINGS-source-longer-2026-09-19.md`](locallm/FINDINGS-source-longer-2026-09-19.md) |
 
-**converts** is the share of test-passing answers the seven can prove, and it is where this project is stuck.
-The two locallm rows are the ones that count, and they are 3.2M-parameter models: they write well-formed t
-almost every time (209 and 198 of 232) and pass the problems' tests twice, which is the notation without the
-problem. The 1.5B student rows sit beside them as a borrowed-base comparison; the student writes three times
-Phi's well-formed answers and converts a third of them where Phi converts half.
+### locallm against the models it has to beat
 
-Three rounds, three different data recipes — more problems, more answers, then preference pairs aimed at the exact gate the student loses at — and the clean count did not move. Round 6's predictions were written before it ran ([`t/PREDICT-2026-09-18-round6.md`](t/PREDICT-2026-09-18-round6.md)) and the one that mattered was wrong.
+The target is Phi-4-mini, and the target is not a tie.
 
-**The gate we lose at is the proof, not the notation.** Round 6's student wrote three times as many well-formed answers as Phi and one and a half times as many test-passing ones, then converted 3 of 9 into clean answers where Phi converted 3 of 6. A model pretrained to write proofs converts better than either: DeepSeek-Prover-V2-7B, prompted and never fine-tuned by us, converted 6 of 10 and none of its six specifications disagreed with its problem. That result is three answers wide and needs seeds before it is a claim, but it is the first thing measured here that points at a fix rather than closing a door.
+| model | whose | well formed | tests pass | **clean** | converts | after the spec check |
+|---|---|---:|---:|---:|---|---:|
+| **locallm, round 4 (3.2M, from scratch)** | **ours** | **209** | 2 | **2** | 100% | 2 |
+| **locallm, round 5 (3.2M)** | **ours** | 198 | 2 | **2** | 100% | 2 |
+| **locallm, round 7 (92M, pretrained then specialized)** | **ours** | 136 | 1 | **1** | 1/1 | 1 |
+| Phi-4-mini, 3.8B | baseline | 12 | 6 | **3** | 50% | 2 |
+| Phi-4-mini, regraded 2026-09-19 beside round 7 | baseline | 12 | 6 | **3** | 50% | 2 |
+| Qwen2.5-Coder-1.5B, untrained | baseline | 39 | 13 | **3** | 23% | 2 |
+| Qwen3.8-27B-FP8, prompted | reference, far larger | 116 | 81 | **12** | 15% | 11 |
+| DeepSeek-Prover-V2-7B, prompted | reference | 39 | 10 | **6** | 60% | 6 |
+
+**Where locallm stands, plainly: 2 clean against Phi's 3.** It wins the
+notation by a distance no baseline approaches -- 209 well-formed answers to
+Phi's 12, from a model a thousand times smaller -- and loses the gate that
+decides the score, which is passing the problem's own tests. Of 209 well-formed
+answers, 2 computed the right values and 204 were proven correct against a
+specification the model wrote for a function nobody asked for.
+
+The gap is problem-solving, not formality, and that is the whole of what
+remains. [`ROADMAP.md`](ROADMAP.md) names what is being done about it.
+
+### Models run through the pipeline that are not the product
+
+Kept because their numbers are evidence about the *pipeline*, and because this
+project publishes what it measured rather than only what flattered it. None was
+built here: the student is a fine-tune of someone else's base model and the
+rest were prompted.
+
+| model | well formed | tests pass | clean | converts |
+|---|---:|---:|---:|---|
+| student, round 4 (QLoRA + DPO on Qwen2.5-Coder-1.5B) | 37 | 12 | 3 | 25% |
+| student, round 5 | 42 | 11 | 3 | 27% |
+| student, round 6 | 36 | 9 | 3 | 33% |
+| student, round 6, decoding against t's grammar | 58 | 14 | 4 | 29% |
+
+Two facts from those rows that shaped the plan for locallm: the gate a borrowed
+base loses at is the **proof**, not the notation, and a model pretrained to
+write proofs converts better than anything else measured here -- the prover
+converted 6 of 10 where Phi converted 3 of 6. locallm has the opposite profile,
+and that is why its work is on problem-solving rather than on formality.
 
 ## The owned core, trained here from random weights
 

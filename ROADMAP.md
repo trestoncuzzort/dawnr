@@ -90,6 +90,36 @@ Seven moves chosen from a survey of the field ([`t/FRONTIER-2026.md`](t/FRONTIER
 6. **The twin ladder as a completeness measurement.** Done ([`t/LADDER-COMPLETENESS.md`](t/LADDER-COMPLETENESS.md)).
 7. **The preregistered reward ablation.** Done, 2026-09-17, and it went against the project's own framing. Declared in [`t/PREREG-2026-09-17-ablation.md`](t/PREREG-2026-09-17-ablation.md), measured by [`t/ablation.py`](t/ablation.py), reported in [`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md). On answers to training problems one prover admits wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage, which fails the declared bar of a fivefold reduction. On answers to held-out problems, where the model writes its own specification, every gate admits about 97 percent wrong and the tests catch what no proof gate does. The claim that survives is tests and proofs together. `pool_pick.py --control` now sends failing answers to the checkers as well, so every later round can measure this instead of inferring it.
 
+## WS-22: beating Phi with locallm, chosen 2026-09-19
+
+The only comparison this project exists to settle is locallm against
+Phi-4-mini on the 232 held-out problems, and the target is not a tie. Phi
+scores **3 clean**. locallm's best is **2**. This workstream is what closes
+that, in the order the measurements say to try it.
+
+**What the measurements already rule in and out.** locallm writes well-formed t
+at 209 of 232, seventeen times Phi's 12, and converts every answer it gets
+right: 2 of 2 and 1 of 1 verified by all seven with the twin refuted. Its
+bottleneck is one number -- **test-passing answers, 2 against Phi's 6**. At
+locallm's conversion rate, roughly 8 test-passing answers is 4 clean, which
+beats Phi; 12 is 6 clean, which doubles it. Nothing about the proof side needs
+to change.
+
+| step | what it does | the finish line |
+|---|---|---|
+| 22.1 | **Condition on the signature.** Round 7 threw away 55 of 136 well-formed answers writing a signature nobody asked for, because 222 of its 280 training documents were bare programs. Every document now carries the signature its own program declares. | signature failures below 20% of well-formed answers, from 40% ([`t/PREDICT-2026-09-19-round7b.md`](t/PREDICT-2026-09-19-round7b.md)) |
+| 22.2 | **Grow the pool with the best converter measured.** DeepSeek-Prover-V2-7B converts 6 of 10 against Phi's 3 of 6 and disagrees with no problem under the specification check. It answers the *training* problems; what survives tests and all seven becomes locallm's training data. | the clean pool passes 300 examples, from 87 ([`t/RUN-NEXT.md`](t/RUN-NEXT.md) is the recipe) |
+| 22.3 | **Train locallm at a size the data can support.** 312M steps at 7,396 tokens a second on one shared card and 875M fits; the corpus, not the card, is what picks the size. | a locallm trained on the grown pool scores at least 8 test-passing answers of 232 |
+| 22.4 | **Decode against t's own grammar.** Constrained decoding cut the student's parse failures from 159 to 44 and raised its clean count. locallm already parses at 90%, so this is aimed at the remaining malformed tail. | locallm's well-formed count is above 220 of 232 with no loss in tests passing |
+| 22.5 | **The win.** | **locallm scores 4 or more clean of 232 with its specifications checked, against Phi's 3 on the same evaluator graded the same day** |
+
+**The rule this workstream runs under.** Every round registers its predictions
+before it runs, and a baseline is regraded beside the new model by the same
+evaluator in the same session, because the machine that grades carries
+uncommitted changes. Round 7 established that discipline: Phi regraded that day
+reproduced its historical row exactly, which is the only reason its 3 and
+locallm's 1 could be compared at all.
+
 ## WS-20: what caps the corpus, chosen 2026-09-17
 
 Measured on this day's run: 463 answers passed their tests and 96 were clean in all seven; 10 were blocked only
