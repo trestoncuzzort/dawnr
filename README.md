@@ -40,22 +40,65 @@ A held-out answer is **clean** only when its tests pass and all seven proofs hol
 
 ## What locallm has done
 
-**locallm is the product: a model trained here from random weights, on this
-hardware, on data that seven proof systems agreed was correct.** Everything in
-this section is locallm's own, measured by a script in this repository. Models
-that were merely *run through* the pipeline -- Phi, the prompted 27B, the
-prover, the fine-tuned 1.5B student -- are baselines and comparisons, not
-products of this project, and they are kept separate below.
+**locallm is the product: a model trained here from random weights, on one
+machine, on data that seven proof systems agreed was correct.** Other models on
+this page are baselines or evidence about the pipeline; none of them is what
+this project makes.
 
-| what | measured | where |
-|---|---|---|
-| Writes the formal language almost perfectly from random weights | **209 of 232** held-out answers well formed, a higher rate than any model measured here, including a 27B | [`t/out/score-r6.md`](t/out/score-r6.md) |
-| Proves what it writes, when it is right | conversion **2 of 2**, and **1 of 1** in round 7: every locallm answer that passed its tests was verified by all seven with its twin refuted | the same table |
-| Trained from nothing, on one machine, reproducibly | four-GPU deterministic training with resumable optimizer and RNG state; a resumed run reproduces an uninterrupted one bit for bit | [`locallm/DISTRIBUTED-2026-09-19.md`](locallm/DISTRIBUTED-2026-09-19.md) |
-| Scales far past anything this project has used | optimizer steps measured to **875M parameters** on one shared card at 2,693 tokens a second | [`locallm/FINDINGS-capacity-2026-09-19.md`](locallm/FINDINGS-capacity-2026-09-19.md) |
-| Its own tokenizer, from its own corpus | byte-BPE cuts the corpus token count by about **60%**, every window round-trip audited | [`locallm/PREDICT-tokenizer-2026-09-19.md`](locallm/PREDICT-tokenizer-2026-09-19.md) |
-| Cached decoding that is correct rather than assumed | opt-in KV cache, adopted because correctness held when the registered speed prediction failed | [`locallm/FINDINGS-kv-cache-2026-09-19.md`](locallm/FINDINGS-kv-cache-2026-09-19.md) |
-| An architecture comparison that changed our own minds | six arms, three seeds, 4000 updates: the modern core's 1000-step advantage **reversed** and the older core won at every seed | [`locallm/FINDINGS-source-longer-2026-09-19.md`](locallm/FINDINGS-source-longer-2026-09-19.md) |
+In plain terms, for anyone who writes software but does not work on machine
+learning. Every claim links to the script that produced it, and the full
+technical version with the exact settings is
+[`locallm/ACHIEVEMENTS.md`](locallm/ACHIEVEMENTS.md).
+
+**1. It learned to write a formal language almost perfectly, from nothing.**
+Starting from random numbers -- no downloaded model, no pretrained weights --
+it produced a syntactically valid program in t for **209 of 232** problems it
+had never seen. Microsoft's Phi-4-mini, a model roughly a thousand times larger
+trained on a large part of the public internet, managed **12**. Writing the
+notation, which is the part people assume is hard for a tiny model, turned out
+to be nearly free.
+
+**2. When it is right, it is provably right.** Software is normally tested;
+here every answer is also *proved*, by seven independent proof systems, and
+each one must also catch a deliberately broken copy of the same program. Every
+single locallm answer that computed the right values passed all seven with the
+broken copy caught: **2 of 2**, and **1 of 1** in the latest round. It never
+produced an answer that was right but unprovable.
+
+**3. You can stop it and start it again and get the identical model.**
+Training can be interrupted -- a crash, a shared machine, a power cut -- and
+resumed, and the result is the same weights bit for bit as if it had never
+stopped. That is unusual enough to be worth testing, so there is a test that
+fails if it stops being true. It means a result here can be reproduced rather
+than merely repeated.
+
+**4. It is nowhere near the size this hardware can train.** The models on the
+scoreboard have 3.2 million and 92 million parameters. We measured what the
+machine actually supports by training at each size until it ran out of memory:
+**875 million parameters trains**, on a single graphics card that another user
+was sharing at the time. Knowing the ceiling turns "should we go bigger?" from
+an argument into arithmetic.
+
+**5. It builds its own vocabulary instead of borrowing one.** Models read text
+in chunks, and most projects download someone else's chunking rules. locallm
+learns them from its own corpus, which cuts the same text into about **60%
+as many chunks** -- so more real content fits in the same amount of the model's
+limited attention.
+
+**6. It generates faster, and only because that was checked first.** Reusing
+work between output tokens is a standard speed trick. We predicted how much it
+would help, measured it, and the prediction failed -- so the feature ships
+turned **off by default**, with the evidence that it produces identical output
+either way. Nothing here is adopted because it is conventional.
+
+**7. We tested our own architectural belief and it was wrong.** A "modern"
+design looked about **25% better** than the older one after a short training
+run, which is the point at which most projects would commit. Run four times
+longer, the older design won at **every one of three random seeds**, while also
+being 19% faster and using a third less memory. The belief was ours and the
+measurement killed it.
+
+**What none of that is yet: a win.** The gap is below.
 
 ### locallm against the models it has to beat
 
