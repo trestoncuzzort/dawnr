@@ -68,7 +68,12 @@ grade() {  # tag, folder name inside the tag
   trap "rmdir '$D/.grading' 2>/dev/null; kill %1 2>/dev/null" EXIT
   echo "== $T: $(ls "$D/$SUB" | wc -l) tasks to the lab workstation"
   $SSH "$LAB" "mkdir -p $WORK/$T" && rsync -a --delete "$D/$SUB/" "$LAB:$WORK/$T/$SUB/" || return 1
-  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md'"
+  # T_LAB_RUN_PAR passes flags through to the driver. It is empty by default, so
+  # every existing caller grades exactly as before. --no-cache is why it exists:
+  # run_par.py caches by default for a table written outside the committed path,
+  # and a comparison that claims one evaluator graded two answer sets in one
+  # session has to have run the kernels for both of them (2026-09-19).
+  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"
   rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" || return 1
   echo "== $T: kernels.md back"
   rmdir "$D/.grading" 2>/dev/null
