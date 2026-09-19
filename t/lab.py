@@ -1186,7 +1186,7 @@ class Lab:
         self.step_hint.configure(text=f"{len(STEPS)} steps from t/steps.json", fg=FAINT)
 
     def build_boxes(self):
-        """One box per step: what it is, a bar with its percentage, its own Run button. Green while it runs."""
+        """One box per step: what it is, how far along, and what it has produced. Green while it runs."""
         for i, (key, title, what, _cmd, _check, uses) in enumerate([s[:6] for s in STEPS], 1):
             box = tk.Frame(self.box_area, bg=CARD, highlightthickness=2, highlightbackground=LINE)
             box.pack(fill="x", pady=(0, 8))
@@ -1200,7 +1200,8 @@ class Lab:
             name.pack(side="left")
             state = tk.Label(head, text="not yet", bg=CARD, fg=FAINT, font=self.f_bold)
             state.pack(side="right")
-            Button(head, "Run", lambda k=key: self.run_step(k), GREEN, self).pack(side="right", padx=10)
+            # No Run button, 2026-09-18: the steps are driven from a terminal, and a button that starts a
+            # second copy of a step already running is a way to lose a night's work. This tab watches.
             where = self.USES_WORDS.get(uses, "")
             tk.Label(head, text=f"on the {where}" if where else "", bg=CARD, fg=MUTED,
                      font=self.f_small).pack(side="right", padx=8)
@@ -1331,7 +1332,6 @@ class Lab:
         row.pack(fill="x", pady=(0, 8))
         self.orch_state = tk.Label(row, text="", bg=CARD, fg=TEXT, font=self.f_bold)
         self.orch_state.pack(side="left")
-        Button(row, "Run everything", self.start_orchestrator, GREEN, self).pack(side="right")
         Button(row, "Stop", lambda: self.unit("stop", "t-run-all"), RED, self, filled=False).pack(side="right", padx=8)
         self.orch_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=6, wrap="none")
         self.orch_log.pack(fill="x")
@@ -1875,7 +1875,7 @@ class Lab:
                 last = head if "%" in l else None
             tail = "\n".join(keep[-200:])
         except OSError:
-            tail = "No log yet. Press Run on this step."
+            tail = "No log yet: this step has not run."
         if self.log_text.get("1.0", "end").strip() == tail.strip():
             return
         at_end = self.log_text.yview()[1] > 0.999       # leave the view alone when it has been scrolled up
