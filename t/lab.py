@@ -1171,8 +1171,8 @@ class Lab:
         self.q.put(("row", (name, values, text, self.passes(r, s))))
 
     # -- Collect data ----------------------------------------------------------------
-    # "gen" is a generator, which may be this card through Ollama or the lab workstation's four through vLLM
-    # (the AI tab starts that one), so it is not the same slot as training, which only this card can do.
+    # `uses` still says which machine a step occupies, because t/overnight.py will not start two steps that
+    # want the same one. The window does not print it: they all say the lab workstation now.
     USES_WORDS = {"gpu": "graphics card", "cpu": "cores here", "lab": "lab workstation",
                   "gen": "a generator, here or on the lab"}
 
@@ -1202,9 +1202,8 @@ class Lab:
             state.pack(side="right")
             # No Run button, 2026-09-18: the steps are driven from a terminal, and a button that starts a
             # second copy of a step already running is a way to lose a night's work. This tab watches.
-            where = self.USES_WORDS.get(uses, "")
-            tk.Label(head, text=f"on the {where}" if where else "", bg=CARD, fg=MUTED,
-                     font=self.f_small).pack(side="right", padx=8)
+            # No machine on the box, 2026-09-18: every step runs on the lab workstation now, so naming a
+            # machine said the same thing 39 times and said it wrongly whenever a step moved.
             bar = tk.Canvas(body, bg=SURFACE, height=8, highlightthickness=0)
             bar.pack(fill="x", pady=(8, 4))
             prog = tk.Label(body, text="", bg=CARD, fg=MUTED, font=self.f_small, anchor="w")
