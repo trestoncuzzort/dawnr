@@ -4,108 +4,100 @@ Small language models built from scratch on your own machine, trained only on co
 
 The industry bet is scale: more parameters, more tokens, more scraped code. locallm bets the other way. Keep a training example only when it passes its tests, is proven against its specification by seven proof systems, and has a deliberately broken copy of itself caught by all seven. Then ask whether a small model built from that data does more per parameter than a model built from raw data, and than small open models such as Microsoft's Phi-4-mini.
 
-Every number below was measured by a script in this repository, and links to the file that records it. Where the answer is not in yet, this page says so, and where a number of this project's own was wrong, the correction is on this page rather than in its history.
+Every number below was measured by a script in this repository and links to the file that records it. Where a number of this project's own turned out wrong, the correction is on this page rather than in its history.
 
-**What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column and why the tests are a separate gate. No model built here has beaten Phi-4-mini. And the seven checkers do less of the work than the name of this project suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured the gates against each other, and on answers to training problems one prover admits wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, while covering twice as many problems. On answers to held-out problems, where the model writes its own specification, every proof gate admits wrong answers about 97 percent of the time and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
+**What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **No model trained here has beaten Phi-4-mini**: three rounds of the loop have produced 3 clean answers out of 232 each time, which is exactly Phi's score. Two models *run through* this pipeline do beat it, and neither was trained by us. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
 
 ## Start here
 
 - **What is measured, and what is not:** the tables below, and the limits at the end of this page.
-- **Run it yourself:** `python3 t/restore_run.py` puts the last run's data where the tools expect it, then
-  `python3 t/lab.py` opens the window that drives the pipeline; the setup notes are
-  [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) and
-  [`t/RUN-ON-LINUX.md`](t/RUN-ON-LINUX.md).
-- **The day-by-day record**, including every failure: [`t/runs/`](t/runs/) and
-  [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md).
-- **What comes next and why:** [`ROADMAP.md`](ROADMAP.md), WS-20.
-- **Licence:** research and education only, see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Commercial use,
-  and training a model on this work or on the data it produces outside research, need written permission.
-  [`SHA256SUMS`](SHA256SUMS) with [`SHA256SUMS.sig`](SHA256SUMS.sig) records what this repository contained and
-  when, signed, so a copy can be checked against it.
+- **Run it yourself:** `python3 t/restore_run.py` puts the last run's data where the tools expect it; `python3 t/lab.py` opens a window that shows every step's state, progress and log. Setup is [`t/RUN-ON-LINUX.md`](t/RUN-ON-LINUX.md).
+- **The day-by-day record, including every failure:** [`t/runs/`](t/runs/) and [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md), which is the roadmap of record.
+- **What comes next and why:** [`ROADMAP.md`](ROADMAP.md), WS-20 and WS-21.
+- **Licence:** research and education only, see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
 ## The pipeline
 
 ```
-problems in English, with tests (nl/, 24,748; a pool of 649, 232 of them held out)
+problems in English, with tests (nl/; pool v5 is 3,003, 232 of them held out and never trained on)
   -> a generator model writes a specified program for each          spec_experiment.py generate
-  -> keep only programs that pass their tests and copy nothing seen   spec_experiment.py tests, pool_pick.py
-  -> prove each in Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq, F*     run_par.py
+  -> keep only programs that pass their tests and copy nothing seen  spec_experiment.py tests, pool_pick.py
+  -> prove each in Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq, F*    run_par.py
      and require all seven to refute a deliberately broken twin
+  -> check each accepted specification against the problem's own solution   spec_check.py
   -> the clean pool                                                  loop_dataset.py
-  -> build a model from it: locallm from scratch, or a 1.5B student   loop_locallm.py, loop_train.py
-  -> score every model on the 232 held-out problems                   score_heldout.py
+  -> build a model from it: locallm from scratch, or a 1.5B student  loop_locallm.py, loop_train.py
+  -> score every model on the 232 held-out problems                  score_heldout.py
 ```
 
-A held-out answer counts as **clean** only when its tests pass and all seven proofs hold with the twin refuted. An answer that all seven prove but whose tests fail is counted separately, as **proven but wrong**: the proofs show the code meets its specification, not that the specification says what the problem asked. Held-out problems never enter a training set; `split-v3.json` fixes the split and never changes.
+A held-out answer is **clean** only when its tests pass and all seven proofs hold with the twin refuted. An answer all seven prove but whose tests fail is counted separately as **proven but wrong**. The split (`split-v3.json`'s 232 problems) has never changed, so every number on this page is comparable to every earlier one.
 
-## Results so far
+## Held-out results, 232 problems
 
-| What was measured | Result | Record |
+Measured by [`t/score_heldout.py`](t/score_heldout.py); the full table is [`t/out/score-r6.md`](t/out/score-r6.md).
+
+| model | who trained it | well formed | tests pass | **clean** | after the spec check |
+|---|---|---|---|---|---|
+| Qwen3.8-27B-FP8, prompted | not us | 116 | 81 | **12** | 11 |
+| DeepSeek-Prover-V2-7B, prompted | not us | 39 | 10 | **6** | 6 |
+| Phi-4-mini, 3.8B | not us | 12 | 6 | **3** | 2 |
+| Qwen2.5-Coder-1.5B, untrained | not us | 39 | 13 | **3** | 2 |
+| student, round 4 | us, QLoRA + DPO | 37 | 12 | **3** | 2 |
+| student, round 5 | us | 42 | 11 | **3** | 3 |
+| student, round 6 | us | 36 | 9 | **3** | 3 |
+| locallm, round 4 (3.2M, from scratch) | us | 209 | 2 | **2** | 2 |
+| locallm, round 5 | us | 198 | 2 | **2** | 2 |
+
+Three rounds, three different data recipes — more problems, more answers, then preference pairs aimed at the exact gate the student loses at — and the clean count did not move. Round 6's predictions were written before it ran ([`t/PREDICT-2026-09-18-round6.md`](t/PREDICT-2026-09-18-round6.md)) and the one that mattered was wrong.
+
+**The gate we lose at is the proof, not the notation.** Round 6's student wrote three times as many well-formed answers as Phi and one and a half times as many test-passing ones, then converted 3 of 9 into clean answers where Phi converted 3 of 6. A model pretrained to write proofs converts better than either: DeepSeek-Prover-V2-7B, prompted and never fine-tuned by us, converted 6 of 10 and none of its six specifications disagreed with its problem. That result is three answers wide and needs seeds before it is a claim, but it is the first thing measured here that points at a fix rather than closing a door.
+
+## What has been ruled out, and what it cost to find out
+
+| Idea | Measured | Record |
 |---|---|---|
-| The same 3.2M-parameter locallm model, built from filtered data against raw data of the same size: new programs clean in all seven, of 500 written | **29 against 1** | [`t/runs/2026-09-17/`](t/runs/2026-09-17/) |
-| The same loop, rerun on an M3 Max MacBook instead of the lab workstation | round 0: 25 clean and new | [`t/runs/2026-09-17/`](t/runs/2026-09-17/) |
-| A 1.5B model (Qwen2.5-Coder) trained on the twins it refuted, 161 held-out problems | verified answers with a refuted twin: 9 to 15 after two rounds; test passes did not move | [`t/LOOP-CURVE.md`](t/LOOP-CURVE.md) |
-| Qwen3.8-27B-FP8, temperature 0, on the 232 held-out problems | 12 clean, 7 proven but wrong | [`t/score_heldout.py`](t/score_heldout.py) |
-| A locallm model built from the clean corpus, on the 232 held-out problems | **0 clean**, 188 proven but wrong | [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) |
-| Phi-4-mini (3.8B, bf16), the model to beat, on the same 232 problems | 12 answers well formed, 6 passing their tests, **3 clean**, 1 proven but wrong | [`t/runs/2026-09-17/home-4080/score-baselines-1527.md`](t/runs/2026-09-17/home-4080/score-baselines-1527.md) |
-| The untrained 1.5B (Qwen2.5-Coder), same problems | 39 well formed, 13 passing, **3 clean**, 8 proven but wrong | the same file |
-| The gates against each other, preregistered before the measurement: one prover, four, or all seven, with the twin required or ignored | on training-problem answers, false accepts 17.4 percent (Dafny alone) against 12.9 percent (all seven with the twin), at half the problem coverage; on held-out answers every gate admits about 97 percent wrong | [`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md), [`t/PREREG-2026-09-17-ablation.md`](t/PREREG-2026-09-17-ablation.md) |
-| Asking the generator to repair its own unproven answers, given the seven verdicts | 110 repaired answers graded, **2 clean** (1.8 percent, against 21 percent for fresh samples from the same model); on seed 1, 4 improved, 8 got worse, 10 unchanged | [`t/runs/2026-09-17/NOTES-home.md`](t/runs/2026-09-17/NOTES-home.md) |
+| More problems | the corpus is exhausted at about 3,000: APPS's test split yields 37 more, widening t's value kinds at most 353 | [`t/funnel.py`](t/funnel.py) |
+| More answers per problem | rounds 4 and 5 grew the pool 60 to 87 rows and moved the clean count by 0 | [`t/out/score-r6.md`](t/out/score-r6.md) |
+| Let the model repair its own unproven answers | 110 repaired answers, 2 clean (1.8 percent against 21 percent for fresh samples) | [`t/runs/2026-09-17/NOTES-home.md`](t/runs/2026-09-17/NOTES-home.md) |
+| A more tolerant reader (comments, `&&`, `\|\|`) | rescues 119 of 6,603 refused replies, 2 percent | [`t/FUNNEL-2026-09-18.md`](t/FUNNEL-2026-09-18.md) |
+| Growing t's syntax | the commonest refusal is a spec function written after the task, 18.5 percent of replies; moving them where t wants them rescues 1.6 percent | the same file |
+| Decoding against t's grammar | parsing answers doubled and test-passing answers rose 1.23x, below the 1.5x the preregistration required | [`t/out/CONSTRAINED-2026-09-18.md`](t/out/CONSTRAINED-2026-09-18.md) |
+| Preference pairs aimed at the proof gate | conversion 27 to 33 percent, clean count unchanged | [`t/PREDICT-2026-09-18-round6.md`](t/PREDICT-2026-09-18-round6.md) |
 
-**Phi's 3 of 232 is a low bar, and it is low for a reason.** Phi-4-mini has never seen t, so most of its answers do not parse as a t task at all. Beating it at writing t is a weaker claim than beating it at Python, and this page will say so next to whatever number the comparison produces.
+**Where the answers die.** Over 14,130 replies, a prompted stock model writes something t's parser accepts 38 percent of the time, so 62 percent never reach a proof system at all — more loss than every other gate together. locallm, trained on t from random weights, parses 98 percent and passes the problems' tests in 2 of 464 answers: it has the notation and not the problem. The fine-tuned student parses 32 percent, where the untrained 1.5B already sat.
 
-**What the locallm row means.** The clean pool held 47 problem examples, so the model recited verified tasks it had memorized (151 exact copies) instead of solving new problems. The clean programs the filter loop writes are mostly short, loop-free near-copies of corpus tasks. Filtering works; the pool is too small. Growing it is the current work.
+## The proof side
 
-**Two corrections, kept here on purpose.** The copy check kept each task's format version, so exact copies of corpus tasks counted as new: the filtered-against-raw result was first recorded as 46 against 3 and is 29 against 1 recounted, the direction holding and the effect a third smaller. And the repair idea above, which looked obvious, does not work: a 14B model handed seven verdicts writes worse proofs more often than better ones. Both are measurements this project made against itself.
+- **Seven systems, one matrix.** 35 committed tasks, 31 of them verified with the twin refuted in all seven ([`t/AGREEMENT.md`](t/AGREEMENT.md)), regenerated on a second machine from a clean clone with no cell moved.
+- **Nested loops, closed 2026-09-18.** A `while` inside a `while` was an abstain in Lean, Rocq and F\* and a timeout in Frama-C; all seven now verify it with its twin refuted. Two of those fixes were honesty defects rather than gaps: Lean could leave a goal unsolved that `sorryAx` then discharged, so a lowering that proved nothing could read as verified, and Frama-C was not slow at all — the lowering was emitting an invariant of its own that is false.
+- **A grammar that is the notation.** [`t/t.gbnf`](t/t.gbnf) is t's syntax as a grammar a generator can decode against, with its identifier rules generated from the lexer's keyword set; [`t/grammar_check.py`](t/grammar_check.py) proves it accepts all 4,208 programs the parser accepts and refuses 590 of 590 replies the parser refuses.
+- **Preflight.** [`t/preflight.py`](t/preflight.py) refuses to let a round start on a checker whose version cannot be read, a held-out problem in a training set, a clean answer resting on a flake or a timeout, or a specification that disagrees with its problem.
 
-## In progress: against Phi-4-mini
+## Corrections this project made against itself
 
-No result yet (2026-09-17). On one RTX 4080:
-1. qwen2.5-coder:14b (Ollama, 4-bit) writes eight answer sets over the 649-problem pool (answers to held-out problems never reach training); after pool picking, the first five hold 110, 61, 62, 65 and 63 test-passing, non-copy programs to grade.
-2. The seven proof systems grade them, split between the lab workstation's CPUs and the desktop.
-3. From the clean answers: a new clean pool, a locallm model built from scratch (about 3.2M parameters, not 1.5B) and a 1.5B student, which is Qwen2.5-Coder fine-tuned with QLoRA and DPO, not trained from scratch.
-4. Phi-4-mini (bf16), the untrained 1.5B, the student and locallm each answer the 232 held-out problems, and `score_heldout.py` counts clean and proven but wrong for each, next to its parameter count.
-
-The pool stands at 203 clean answers over 76 distinct problems, against the 47 problems the previous pool held. The table goes here when it exists, whichever way it comes out.
-
-## New since 2026-09-16
-
-- **What caps the corpus, measured.** Of 463 test-passing answers graded in one day, 96 were clean in all seven, 10 were blocked only by a lowering that cannot express them, and 150 carried at least one abstain: nested loops in Rocq and F* and Lean, a sequence return whose length no parameter determines, string-library members not lowered yet. The plan that follows from those counts is [`ROADMAP.md`](ROADMAP.md) WS-20.
-- **The filter loop.** locallm rebuilds its model each round from every clean program found so far, and the new model writes the next round ([`t/loop_filter.py`](t/loop_filter.py), [`t/loop_locallm.py`](t/loop_locallm.py)).
-- **A held-out benchmark with a wrong-answer column.** [`t/score_heldout.py`](t/score_heldout.py) reports tasks, tests passed, clean, and proven but wrong per answer set, over a split that never changes.
-- **Only gradable answers reach the checkers.** [`t/pool_pick.py`](t/pool_pick.py) sends a proof system only answers that pass their tests and copy nothing already in the pool.
-- **Local generators.** Answer sets from models served by Ollama on a 16 GB consumer GPU, not only the 27B on datacenter GPUs.
-- **t lab** ([`t/lab.py`](t/lab.py)): one window with every proof check live as it runs, a tester for locallm models, and a Collect data tab that runs the whole pipeline one button per step, logged and resumable.
-- **Grading across machines.** [`t/grade_lab.sh`](t/grade_lab.sh) sends answer sets to a many-core workstation over SSH and streams its checks back into t lab; answer sets are claimed, so two machines never grade the same one.
-- **Unattended runs.** [`t/run_everything.py`](t/run_everything.py) chains generation, grading, the baselines, the pool, training and scoring, retries a failed step once, and notifies when Phi-4-mini starts and when the run ends.
-- **Three machines reproduce the proof matrix.** The seven proof systems install without root on Linux (native and WSL2) and macOS; an M3 Max MacBook reproduced the committed matrix cell for cell (30 of 34 tasks in all seven, [`t/WITNESS-2026-09-16-macos-m3max.md`](t/WITNESS-2026-09-16-macos-m3max.md)).
-
-## Run it
-
-```
-python3 t/lab.py                 # Collect data: every step as a button, in order
-python3 t/run_everything.py      # or the rest of the run, unattended
-```
-
-Setup (the NVIDIA driver, the Python environment, Ollama and the seven proof systems at pinned versions) is in [`internal/HANDOFF-2026-09-17-rtx4080.md`](internal/HANDOFF-2026-09-17-rtx4080.md) and [`t/RUN-ON-LINUX.md`](t/RUN-ON-LINUX.md).
+- The copy check kept each task's format version, so exact copies counted as new: the filtered-against-raw result was first recorded as 46 against 3 and is **29 against 1** recounted.
+- Repair looked obvious and does not work: a 14B model handed seven verdicts writes worse proofs more often than better ones.
+- A `--grammar` flag reached three `model.generate` call sites and missed the one every held-out run takes, so a "constrained" run was not constrained. It was caught by its own numbers: 158 parse failures against the unconstrained run's 159.
+- DeepSeek-Prover-V2's tokenizer drops every space under transformers 5.17, turning sound answers into `t1tasksmall_nnum(...)`. The generator now round-trips a line of t through a tokenizer before trusting it.
 
 ## What is in the repository
 
 | Path | What it is |
 |---|---|
 | [`locallm/`](locallm/) | the model builder: a transformer trained from random weights on your own hardware |
-| [`t/`](t/) | the filter: a small specification language translated into the seven proof systems (30 of 34 committed tasks agree in all seven, [`t/AGREEMENT.md`](t/AGREEMENT.md)), and every pipeline script above |
-| [`nl/`](nl/) | 24,748 natural-language programming problems with tests, from four public sources |
+| [`t/`](t/) | the filter: a small specification language translated into seven proof systems, and every pipeline script above |
+| [`nl/`](nl/) | natural-language programming problems with tests, from four public sources |
 | [`forge/`](forge/) | the earlier training pipeline that grades a model by the twins it refutes |
-| [`tup/`](tup/) | a Linux distribution built from source with a receipt per step, so the machine running the proofs is accounted for |
-| [`internal/`](internal/) | handoffs, the machine plan, the dated engineering log |
+| [`tup/`](tup/) | a Linux distribution built from source with a receipt per step |
+| [`internal/`](internal/) | handoffs, the machine plan, the dated engineering log that is the roadmap of record |
 
 ## Limits, stated plainly
 
-- No model built here has beaten Phi-4-mini. That comparison is running.
-- The clean pool is small, and the clean programs are short and close to their corpus. More pool, not more rounds, is what moves held-out results.
-- A proof covers the specification, not the intent. That is why tests are a separate gate and proven but wrong is its own column.
+- No model trained here has beaten Phi-4-mini. Three rounds have tied it at 3 of 232.
+- The clean pool is small (87 examples) and the corpus that feeds it is exhausted, so the next move is a better generator or a better base model, not more rounds of the same shape.
+- A proof covers the specification, not the intent. Hence the tests, the proven-but-wrong column and the specification check.
 - t covers integers, booleans, sequences, pairs, strings as character sequences, loops with invariants and recursive specification functions. No heap, no floats, no concurrency.
+- Phi's 3 of 232 is a low bar and it is low for a reason: Phi has never seen t, so most of its answers do not parse. Beating it at writing t is a weaker claim than beating it at Python, and this page says so next to the number.
 
 ## License
 
