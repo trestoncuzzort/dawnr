@@ -1,0 +1,35 @@
+{
+ "id": "f42ed8ae51178f59",
+ "operator": "collapse-if",
+ "problem": 202465,
+ "program": "t 1\ngate recursion\ntask apps_2465__divisorGame(N: int) returns (r: bool)\n  requires N >= 1\n  requires N <= 1000\n  ensures r == (N % 2 == 0)\n{\n  if N == 1 {\n    r := false;\n  } else {\n    if N % 2 == 0 {\n      r := true;\n    } else {\n      r := false;\n    }\n  }\n}",
+ "task": "apps_2465__divisorGame",
+ "twin": "t 1\ngate recursion\ntask apps_2465__divisorGame(N: int) returns (r: bool)\n  requires N >= 1\n  requires N <= 1000\n  ensures r == (N % 2 == 0)\n{\n  r := false;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "N": 2,
+  "_ens": true,
+  "_kind": "value",
+  "_real": true,
+  "_twin": false
+ },
+ "witness_reads": "at N=2 the program answers true and the twin answers false",
+ "written_by": "qwen3-coder-30b-apps-s2"
+}

@@ -1,0 +1,35 @@
+{
+ "id": "ee94b6c8ad219814",
+ "operator": "compare-flip",
+ "problem": 202992,
+ "program": "t 1\ntask apps_2992__switcheroo(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . s[i] == 97 ==> r[i] == 98\n  ensures forall i in [0, len(s)) . s[i] == 98 ==> r[i] == 97\n  ensures forall i in [0, len(s)) . s[i] == 99 ==> r[i] == 99\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall j in [0, len(r)) . s[j] == 97 ==> r[j] == 98\n    invariant forall j in [0, len(r)) . s[j] == 98 ==> r[j] == 97\n    invariant forall j in [0, len(r)) . s[j] == 99 ==> r[j] == 99\n    decreases len(s) - i\n  {\n    if s[i] == 97 {\n      r := r + [98];\n    } else {\n      if s[i] == 98 {\n        r := r + [97];\n      } else {\n        r := r + [99];\n      }\n    }\n    i := i + 1;\n  }\n}",
+ "task": "apps_2992__switcheroo",
+ "twin": "t 1\ntask apps_2992__switcheroo(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . s[i] == 97 ==> r[i] == 98\n  ensures forall i in [0, len(s)) . s[i] == 98 ==> r[i] == 97\n  ensures forall i in [0, len(s)) . s[i] == 99 ==> r[i] == 99\n{\n  r := [];\n  var i: int := 0;\n  while i <= len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall j in [0, len(r)) . s[j] == 97 ==> r[j] == 98\n    invariant forall j in [0, len(r)) . s[j] == 98 ==> r[j] == 97\n    invariant forall j in [0, len(r)) . s[j] == 99 ==> r[j] == 99\n    decreases len(s) - i\n  {\n    if s[i] == 97 {\n      r := r + [98];\n    } else {\n      if s[i] == 98 {\n        r := r + [97];\n      } else {\n        r := r + [99];\n      }\n    }\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [],
+  "_twin": "at index 0 outside [0,0)",
+  "s": []
+ },
+ "witness_reads": "at s=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen2.5-coder-14b-apps-s1"
+}

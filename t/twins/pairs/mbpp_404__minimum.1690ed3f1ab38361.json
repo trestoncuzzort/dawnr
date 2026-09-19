@@ -1,0 +1,36 @@
+{
+ "id": "1690ed3f1ab38361",
+ "operator": "collapse-if",
+ "problem": 404,
+ "program": "t 0\ntask mbpp_404__minimum(x: int, y: int) returns (r: int)\n  ensures r <= x\n  ensures r <= y\n  ensures r == x or r == y\n{\n  if x <= y {\n    r := x;\n  } else {\n    r := y;\n  }\n}",
+ "task": "mbpp_404__minimum",
+ "twin": "t 0\ntask mbpp_404__minimum(x: int, y: int) returns (r: int)\n  ensures r <= x\n  ensures r <= y\n  ensures r == x or r == y\n{\n  r := x;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "x": 1,
+  "y": 0
+ },
+ "witness_reads": "at x=1, y=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8"
+}

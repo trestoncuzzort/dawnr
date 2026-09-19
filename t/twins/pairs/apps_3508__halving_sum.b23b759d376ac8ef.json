@@ -1,0 +1,35 @@
+{
+ "id": "b23b759d376ac8ef",
+ "operator": "off-by-one",
+ "problem": 203508,
+ "program": "t 1\ngate loops\ntask apps_3508__halving_sum(n: int) returns (r: int)\n  requires n > 0\n  ensures r == sum_halves(n)\nspec fun sum_halves(n: int): int\n  decreases n\n= if n <= 0 then 0 else n + sum_halves(n / 2)\n{\n  r := 0;\n  var current: int := n;\n  while current > 0\n    invariant r == sum_halves(n) - sum_halves(current)\n    invariant current >= 0\n    decreases current\n  {\n    r := r + current;\n    current := current / 2;\n  }\n}",
+ "task": "apps_3508__halving_sum",
+ "twin": "t 1\ngate loops\ntask apps_3508__halving_sum(n: int) returns (r: int)\n  requires n > 0\n  ensures r == sum_halves(n)\nspec fun sum_halves(n: int): int\n  decreases n\n= if n <= 0 then 0 else n + sum_halves(n / 2)\n{\n  r := 1;\n  var current: int := n;\n  while current > 0\n    invariant r == sum_halves(n) - sum_halves(current)\n    invariant current >= 0\n    decreases current\n  {\n    r := r + current;\n    current := current / 2;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 2,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 1 and the twin answers 2",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

@@ -1,0 +1,35 @@
+{
+ "id": "39aea9abf90238ee",
+ "operator": "off-by-one#1",
+ "problem": 268,
+ "program": "t 0\ntask mbpp_268__find_star_num(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 6 * n * (n - 1) + 1\n{\n  r := 6 * n * (n - 1) + 1;\n}",
+ "task": "mbpp_268__find_star_num",
+ "twin": "t 0\ntask mbpp_268__find_star_num(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 6 * n * (n - 1) + 1\n{\n  r := 5 * n * (n - 1) + 1;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 13,
+  "_twin": 11,
+  "n": 2
+ },
+ "witness_reads": "at n=2 the program answers 13 and the twin answers 11",
+ "written_by": "qwen3.8-27b-fp8"
+}

@@ -1,0 +1,38 @@
+{
+ "id": "8696dd07c470aefc",
+ "operator": "collapse-if",
+ "problem": 733,
+ "program": "t 1\ngate loops\ntask mbpp_733__find_first_occurrence(arr: seq, x: int) returns (r: int)\n  requires len(arr) >= 0\n  ensures r == -1 or r >= 0 and r < len(arr) and arr[r] == x\n  ensures r == -1 ==> (forall i in [0, len(arr)) . arr[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . arr[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(arr) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(arr) ==> arr[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(arr) and arr[r] == x and (forall j in [0, r) . j < len(arr) ==> arr[j] != x)\n    invariant i >= 0 and i <= len(arr)\n    decreases len(arr) - i\n  {\n    if arr[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_733__find_first_occurrence",
+ "twin": "t 1\ngate loops\ntask mbpp_733__find_first_occurrence(arr: seq, x: int) returns (r: int)\n  requires len(arr) >= 0\n  ensures r == -1 or r >= 0 and r < len(arr) and arr[r] == x\n  ensures r == -1 ==> (forall i in [0, len(arr)) . arr[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . arr[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(arr) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(arr) ==> arr[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(arr) and arr[r] == x and (forall j in [0, r) . j < len(arr) ==> arr[j] != x)\n    invariant i >= 0 and i <= len(arr)\n    decreases len(arr) - i\n  {\n    r := i;\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": -1,
+  "_twin": 0,
+  "arr": [
+   0
+  ],
+  "x": 1
+ },
+ "witness_reads": "at arr=[0], x=1 the program answers -1 and the twin answers 0",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}

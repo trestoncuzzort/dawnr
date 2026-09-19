@@ -1,0 +1,35 @@
+{
+ "id": "9232bf5a4869e627",
+ "operator": "collapse-if",
+ "problem": 203381,
+ "program": "t 0\ntask apps_3381__get_real_floor(n: int) returns (r: int)\n  ensures r == n - 1 or r == n - 2 or r == n\n  ensures n == 0 ==> r == 0\n  ensures n == 1 ==> r == 0\n  ensures n == 5 ==> r == 4\n  ensures n == 15 ==> r == 13\n  ensures n == -3 ==> r == -3\n{\n  if n < 0 {\n    r := n;\n  } else {\n    if n == 0 {\n      r := 0;\n    } else {\n      if n < 13 {\n        r := n - 1;\n      } else {\n        r := n - 2;\n      }\n    }\n  }\n}",
+ "task": "apps_3381__get_real_floor",
+ "twin": "t 0\ntask apps_3381__get_real_floor(n: int) returns (r: int)\n  ensures r == n - 1 or r == n - 2 or r == n\n  ensures n == 0 ==> r == 0\n  ensures n == 1 ==> r == 0\n  ensures n == 5 ==> r == 4\n  ensures n == 15 ==> r == 13\n  ensures n == -3 ==> r == -3\n{\n  r := n;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3-coder-30b-apps-g1"
+}

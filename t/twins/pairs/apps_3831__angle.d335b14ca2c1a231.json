@@ -1,0 +1,35 @@
+{
+ "id": "d335b14ca2c1a231",
+ "operator": "off-by-one#1",
+ "problem": 203831,
+ "program": "t 0\ntask apps_3831__angle(n: int) returns (r: int)\n  ensures r == (n - 2) * 180\n{\n  r := (n - 2) * 180;\n}",
+ "task": "apps_3831__angle",
+ "twin": "t 0\ntask apps_3831__angle(n: int) returns (r: int)\n  ensures r == (n - 2) * 180\n{\n  r := (n - 1) * 180;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": -360,
+  "_twin": -180,
+  "n": 0
+ },
+ "witness_reads": "at n=0 the program answers -360 and the twin answers -180",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

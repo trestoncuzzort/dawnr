@@ -1,0 +1,35 @@
+{
+ "id": "d9adee860a1d9ad3",
+ "operator": "collapse-if#1",
+ "problem": 960,
+ "program": "t 1\ngate recursion\ntask mbpp_960__get_noOfways(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == get_noOfwayss(n)\n  decreases n\nspec fun get_noOfwayss(n: int): int\n  decreases n\n= if n <= 0 then 0 else if n == 1 then 1 else get_noOfwayss(n - 1) + get_noOfwayss(n - 2)\n{\n  if n <= 0 {\n    r := 0;\n  } else {\n    if n == 1 {\n      r := 1;\n    } else {\n      r := mbpp_960__get_noOfways(n - 1) + mbpp_960__get_noOfways(n - 2);\n    }\n  }\n}",
+ "task": "mbpp_960__get_noOfways",
+ "twin": "t 1\ngate recursion\ntask mbpp_960__get_noOfways(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == get_noOfwayss(n)\n  decreases n\nspec fun get_noOfwayss(n: int): int\n  decreases n\n= if n <= 0 then 0 else if n == 1 then 1 else get_noOfwayss(n - 1) + get_noOfwayss(n - 2)\n{\n  if n <= 0 {\n    r := 0;\n  } else {\n    r := 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 1,
+  "n": 3
+ },
+ "witness_reads": "at n=3 the program answers 2 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-v3-s3"
+}

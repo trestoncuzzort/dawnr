@@ -1,0 +1,35 @@
+{
+ "id": "4403afd174724c32",
+ "operator": "collapse-if",
+ "problem": 203252,
+ "program": "t 1\ntask apps_3252__is_letter(s: seq) returns (r: bool)\n  ensures r == (len(s) == 1 and (s[0] >= 97 and s[0] <= 122 or s[0] >= 65 and s[0] <= 90))\n{\n  if len(s) == 1 {\n    if s[0] >= 97 and s[0] <= 122 {\n      r := true;\n    } else {\n      if s[0] >= 65 and s[0] <= 90 {\n        r := true;\n      } else {\n        r := false;\n      }\n    }\n  } else {\n    r := false;\n  }\n}",
+ "task": "apps_3252__is_letter",
+ "twin": "t 1\ntask apps_3252__is_letter(s: seq) returns (r: bool)\n  ensures r == (len(s) == 1 and (s[0] >= 97 and s[0] <= 122 or s[0] >= 65 and s[0] <= 90))\n{\n  if s[0] >= 97 and s[0] <= 122 {\n    r := true;\n  } else {\n    if s[0] >= 65 and s[0] <= 90 {\n      r := true;\n    } else {\n      r := false;\n    }\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": false,
+  "_twin": "at index 0 outside [0,0)",
+  "s": []
+ },
+ "witness_reads": "at s=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen3-coder-30b-apps-s2"
+}

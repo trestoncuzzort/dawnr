@@ -1,0 +1,35 @@
+{
+ "id": "c2d6f9bab3283752",
+ "operator": "off-by-one#1",
+ "problem": 204459,
+ "program": "t 0\ntask apps_4459__nth_even(n: int) returns (r: int)\n  ensures r == (n - 1) * 2\n{\n  r := (n - 1) * 2;\n}",
+ "task": "apps_4459__nth_even",
+ "twin": "t 0\ntask apps_4459__nth_even(n: int) returns (r: int)\n  ensures r == (n - 1) * 2\n{\n  r := (n - 0) * 2;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": -2,
+  "_twin": 0,
+  "n": 0
+ },
+ "witness_reads": "at n=0 the program answers -2 and the twin answers 0",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

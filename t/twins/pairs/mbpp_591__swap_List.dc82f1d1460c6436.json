@@ -1,0 +1,41 @@
+{
+ "id": "dc82f1d1460c6436",
+ "operator": "off-by-one#1",
+ "problem": 591,
+ "program": "t 1\ngate quantifiers\ntask mbpp_591__swap_List(s: seq) returns (r: seq)\n  requires len(s) >= 2\n  ensures len(r) == len(s)\n  ensures r[0] == s[len(s) - 1]\n  ensures r[len(s) - 1] == s[0]\n  ensures forall i in [1, len(s) - 1) . r[i] == s[i]\n{\n  r := s;\n  r := r[0 := s[len(s) - 1]];\n  r := r[len(s) - 1 := s[0]];\n}",
+ "task": "mbpp_591__swap_List",
+ "twin": "t 1\ngate quantifiers\ntask mbpp_591__swap_List(s: seq) returns (r: seq)\n  requires len(s) >= 2\n  ensures len(r) == len(s)\n  ensures r[0] == s[len(s) - 1]\n  ensures r[len(s) - 1] == s[0]\n  ensures forall i in [1, len(s) - 1) . r[i] == s[i]\n{\n  r := s;\n  r := r[0 + -1 := s[len(s) - 1]];\n  r := r[len(s) - 1 := s[0]];\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [
+   0,
+   0
+  ],
+  "_twin": "update index -1 outside [0,2)",
+  "s": [
+   0,
+   0
+  ]
+ },
+ "witness_reads": "at s=[0, 0] the twin breaks the specification the program keeps",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

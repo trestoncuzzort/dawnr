@@ -1,0 +1,35 @@
+{
+ "id": "0473ff904ea661d5",
+ "operator": "off-by-one",
+ "problem": 204280,
+ "program": "t 0\ntask apps_4280__area_largest_square(r: int) returns (area: int)\n  ensures area == 2 * r * r\n{\n  area := 2 * r * r;\n}",
+ "task": "apps_4280__area_largest_square",
+ "twin": "t 0\ntask apps_4280__area_largest_square(r: int) returns (area: int)\n  ensures area == 2 * r * r\n{\n  area := 3 * r * r;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 3,
+  "r": 1
+ },
+ "witness_reads": "at r=1 the program answers 2 and the twin answers 3",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

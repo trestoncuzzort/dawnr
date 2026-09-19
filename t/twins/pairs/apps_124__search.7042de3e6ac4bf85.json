@@ -1,0 +1,38 @@
+{
+ "id": "7042de3e6ac4bf85",
+ "operator": "negate-cond",
+ "problem": 200124,
+ "program": "t 1\ngate loops\ntask apps_124__search(nums: seq, target: int) returns (r: bool)\n  ensures r == (exists i in [0, len(nums)) . nums[i] == target)\n{\n  r := false;\n  var i: int := 0;\n  while i < len(nums)\n    invariant 0 <= i\n    invariant i <= len(nums)\n    invariant r == (exists j in [0, i) . nums[j] == target)\n    decreases len(nums) - i\n  {\n    if nums[i] == target {\n      r := true;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "apps_124__search",
+ "twin": "t 1\ngate loops\ntask apps_124__search(nums: seq, target: int) returns (r: bool)\n  ensures r == (exists i in [0, len(nums)) . nums[i] == target)\n{\n  r := false;\n  var i: int := 0;\n  while i < len(nums)\n    invariant 0 <= i\n    invariant i <= len(nums)\n    invariant r == (exists j in [0, i) . nums[j] == target)\n    decreases len(nums) - i\n  {\n    if nums[i] == target {\n    } else {\n      r := true;\n    }\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": true,
+  "_twin": false,
+  "nums": [
+   0
+  ],
+  "target": 0
+ },
+ "witness_reads": "at nums=[0], target=0 the program answers true and the twin answers false",
+ "written_by": "qwen2.5-coder-14b-apps-s1"
+}

@@ -1,0 +1,39 @@
+{
+ "id": "20487c780ce69020",
+ "operator": "boundary-swap",
+ "problem": 100042,
+ "program": "t 1\ngate loops\ntask he_42__incr_list(l: seq) returns (r: seq)\n  ensures len(r) == len(l)\n  ensures forall i in [0, len(l)) . r[i] == l[i] + 1\n{\n  r := [];\n  var i: int := 0;\n  while i < len(l)\n    invariant 0 <= i\n    invariant i <= len(l)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == l[j] + 1\n    decreases len(l) - i\n  {\n    r := r + [l[i] + 1];\n    i := i + 1;\n  }\n}",
+ "task": "he_42__incr_list",
+ "twin": "t 1\ngate loops\ntask he_42__incr_list(l: seq) returns (r: seq)\n  ensures len(r) == len(l)\n  ensures forall i in [0, len(l)) . r[i] == l[i] + 1\n{\n  r := [];\n  var i: int := 0;\n  while len(l) < i\n    invariant 0 <= i\n    invariant i <= len(l)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == l[j] + 1\n    decreases len(l) - i\n  {\n    r := r + [l[i] + 1];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [
+   1
+  ],
+  "_twin": [],
+  "l": [
+   0
+  ]
+ },
+ "witness_reads": "at l=[0] the program answers [1] and the twin answers []",
+ "written_by": "qwen2.5-coder-14b-he-s1"
+}

@@ -1,0 +1,35 @@
+{
+ "id": "3ed52dc43c89138e",
+ "operator": "boundary-swap",
+ "problem": 504,
+ "program": "t 1\ngate loops\ntask mbpp_504__sum_Of_Series(n: int) returns (r: int)\n  requires n >= 0\n  ensures 4 * r == n * n * (n + 1) * (n + 1)\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant 4 * r == i * i * (i + 1) * (i + 1)\n    invariant 0 <= i\n    invariant i <= n\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i * i * i;\n  }\n}",
+ "task": "mbpp_504__sum_Of_Series",
+ "twin": "t 1\ngate loops\ntask mbpp_504__sum_Of_Series(n: int) returns (r: int)\n  requires n >= 0\n  ensures 4 * r == n * n * (n + 1) * (n + 1)\n{\n  r := 0;\n  var i: int := 0;\n  while n < i\n    invariant 4 * r == i * i * (i + 1) * (i + 1)\n    invariant 0 <= i\n    invariant i <= n\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i * i * i;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 0,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 1 and the twin answers 0",
+ "written_by": "qwen3.8-27b-fp8-v3-s2"
+}

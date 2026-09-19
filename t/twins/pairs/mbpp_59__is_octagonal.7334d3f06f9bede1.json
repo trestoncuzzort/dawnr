@@ -1,0 +1,35 @@
+{
+ "id": "7334d3f06f9bede1",
+ "operator": "off-by-one",
+ "problem": 59,
+ "program": "t 0\ntask mbpp_59__is_octagonal(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 3 * n * n - 2 * n\n{\n  r := 3 * n * n - 2 * n;\n}",
+ "task": "mbpp_59__is_octagonal",
+ "twin": "t 0\ntask mbpp_59__is_octagonal(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 3 * n * n - 2 * n\n{\n  r := 4 * n * n - 2 * n;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 2,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 1 and the twin answers 2",
+ "written_by": "qwen3.8-27b-fp8"
+}

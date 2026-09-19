@@ -1,0 +1,39 @@
+{
+ "id": "1af57c04e13eec63",
+ "operator": "negate-cond",
+ "problem": 173,
+ "program": "t 1\ntask mbpp_173__remove_splchar(s: seq) returns (r: seq)\n  ensures forall i in [0, len(r)) . r[i] >= 97 and r[i] <= 122 or r[i] >= 48 and r[i] <= 57 or r[i] >= 65 and r[i] <= 90\n  ensures len(r) <= len(s)\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall k in [0, len(r)) . r[k] >= 97 and r[k] <= 122 or r[k] >= 48 and r[k] <= 57 or r[k] >= 65 and r[k] <= 90\n    decreases len(s) - i\n  {\n    if s[i] >= 97 and s[i] <= 122 or s[i] >= 48 and s[i] <= 57 or s[i] >= 65 and s[i] <= 90 {\n      r := r + [s[i]];\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_173__remove_splchar",
+ "twin": "t 1\ntask mbpp_173__remove_splchar(s: seq) returns (r: seq)\n  ensures forall i in [0, len(r)) . r[i] >= 97 and r[i] <= 122 or r[i] >= 48 and r[i] <= 57 or r[i] >= 65 and r[i] <= 90\n  ensures len(r) <= len(s)\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall k in [0, len(r)) . r[k] >= 97 and r[k] <= 122 or r[k] >= 48 and r[k] <= 57 or r[k] >= 65 and r[k] <= 90\n    decreases len(s) - i\n  {\n    if s[i] >= 97 and s[i] <= 122 or s[i] >= 48 and s[i] <= 57 or s[i] >= 65 and s[i] <= 90 {\n    } else {\n      r := r + [s[i]];\n    }\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [],
+  "_twin": [
+   0
+  ],
+  "s": [
+   0
+  ]
+ },
+ "witness_reads": "at s=[0] the program answers [] and the twin answers [0]",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

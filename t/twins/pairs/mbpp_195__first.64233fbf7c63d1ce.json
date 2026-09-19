@@ -1,0 +1,39 @@
+{
+ "id": "64233fbf7c63d1ce",
+ "operator": "negate-cond",
+ "problem": 195,
+ "program": "t 1\ngate loops\ntask mbpp_195__first(arr: seq, x: int, n: int) returns (r: int)\n  requires n >= 0\n  requires len(arr) >= n\n  ensures r == -1 or r >= 0 and r < n and arr[r] == x\n  ensures r == -1 ==> (forall i in [0, n) . arr[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . i < n ==> arr[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < n and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < n ==> arr[j] != x)\n    invariant r != -1 ==> r >= 0 and r < n and arr[r] == x and (forall j in [0, r) . j < n ==> arr[j] != x)\n    invariant i >= 0 and i <= n\n    decreases n - i\n  {\n    if arr[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_195__first",
+ "twin": "t 1\ngate loops\ntask mbpp_195__first(arr: seq, x: int, n: int) returns (r: int)\n  requires n >= 0\n  requires len(arr) >= n\n  ensures r == -1 or r >= 0 and r < n and arr[r] == x\n  ensures r == -1 ==> (forall i in [0, n) . arr[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . i < n ==> arr[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < n and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < n ==> arr[j] != x)\n    invariant r != -1 ==> r >= 0 and r < n and arr[r] == x and (forall j in [0, r) . j < n ==> arr[j] != x)\n    invariant i >= 0 and i <= n\n    decreases n - i\n  {\n    if arr[i] == x {\n    } else {\n      r := i;\n    }\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": -1,
+  "arr": [
+   0
+  ],
+  "n": 1,
+  "x": 0
+ },
+ "witness_reads": "at arr=[0], n=1, x=0 the program answers 0 and the twin answers -1",
+ "written_by": "qwen2.5-coder-14b-v3-s4"
+}

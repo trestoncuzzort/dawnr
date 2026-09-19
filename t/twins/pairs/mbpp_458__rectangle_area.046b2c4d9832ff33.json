@@ -1,0 +1,36 @@
+{
+ "id": "046b2c4d9832ff33",
+ "operator": "wrong-var",
+ "problem": 458,
+ "program": "t 0\ntask mbpp_458__rectangle_area(w: int, h: int) returns (r: int)\n  ensures r == w * h\n{\n  r := w * h;\n}",
+ "task": "mbpp_458__rectangle_area",
+ "twin": "t 0\ntask mbpp_458__rectangle_area(w: int, h: int) returns (r: int)\n  ensures r == w * h\n{\n  r := h * h;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "h": 1,
+  "w": 0
+ },
+ "witness_reads": "at h=1, w=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8"
+}

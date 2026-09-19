@@ -1,0 +1,35 @@
+{
+ "id": "2f55ae1e79d6e403",
+ "operator": "off-by-one#1",
+ "problem": 171,
+ "program": "t 0\ntask mbpp_171__perimeter_pentagon(side_length: int) returns (perimeter: int)\n  ensures perimeter == side_length * 5\n{\n  perimeter := side_length * 5;\n}",
+ "task": "mbpp_171__perimeter_pentagon",
+ "twin": "t 0\ntask mbpp_171__perimeter_pentagon(side_length: int) returns (perimeter: int)\n  ensures perimeter == side_length * 5\n{\n  perimeter := side_length * 4;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 5,
+  "_twin": 4,
+  "side_length": 1
+ },
+ "witness_reads": "at side_length=1 the program answers 5 and the twin answers 4",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

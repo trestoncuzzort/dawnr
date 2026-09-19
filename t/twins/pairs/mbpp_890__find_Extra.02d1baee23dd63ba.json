@@ -1,0 +1,39 @@
+{
+ "id": "02d1baee23dd63ba",
+ "operator": "wrong-constant",
+ "problem": 890,
+ "program": "t 1\ngate loops\ntask mbpp_890__find_Extra(a: seq, b: seq, n: int) returns (r: int)\n  requires n >= 0\n  requires n <= len(a)\n  requires n <= len(b)\n  requires len(a) == n + 1 or len(b) == n + 1\n  requires (forall i in [0, n) . a[i] == b[i]) or (forall i in [0, n) . a[i] == b[i])\n  ensures r == n\n  ensures r >= 0 and r < len(a) and r < len(b) or r == len(a) or r == len(b)\n{\n  r := n;\n}",
+ "task": "mbpp_890__find_Extra",
+ "twin": "t 1\ngate loops\ntask mbpp_890__find_Extra(a: seq, b: seq, n: int) returns (r: int)\n  requires n >= 0\n  requires n <= len(a)\n  requires n <= len(b)\n  requires len(a) == n + 1 or len(b) == n + 1\n  requires (forall i in [0, n) . a[i] == b[i]) or (forall i in [0, n) . a[i] == b[i])\n  ensures r == n\n  ensures r >= 0 and r < len(a) and r < len(b) or r == len(a) or r == len(b)\n{\n  r := n + 1;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "a": [],
+  "b": [
+   0
+  ],
+  "n": 0
+ },
+ "witness_reads": "at a=[], b=[0], n=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8-v3-s2"
+}

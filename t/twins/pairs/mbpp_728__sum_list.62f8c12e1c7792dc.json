@@ -1,0 +1,36 @@
+{
+ "id": "62f8c12e1c7792dc",
+ "operator": "compare-flip",
+ "problem": 728,
+ "program": "t 1\ngate loops\ntask mbpp_728__sum_list(a: seq, b: seq) returns (r: seq)\n  requires len(a) == len(b)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(a)) . r[i] == a[i] + b[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == a[k] + b[k]\n    decreases len(a) - i\n  {\n    r := r + [a[i] + b[i]];\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_728__sum_list",
+ "twin": "t 1\ngate loops\ntask mbpp_728__sum_list(a: seq, b: seq) returns (r: seq)\n  requires len(a) == len(b)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(a)) . r[i] == a[i] + b[i]\n{\n  r := [];\n  var i: int := 0;\n  while i <= len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == a[k] + b[k]\n    decreases len(a) - i\n  {\n    r := r + [a[i] + b[i]];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [],
+  "_twin": "at index 0 outside [0,0)",
+  "a": [],
+  "b": []
+ },
+ "witness_reads": "at a=[], b=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

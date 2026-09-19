@@ -1,0 +1,36 @@
+{
+ "id": "45f06537876a5418",
+ "operator": "compare-flip",
+ "problem": 202933,
+ "program": "t 1\ngate loops\ntask apps_2933__solve(nums: seq, div: int) returns (r: seq)\n  requires div > 0\n  ensures len(r) == len(nums)\n  ensures forall i in [0, len(nums)) . r[i] == nums[i] + nums[i] % div\n{\n  r := [];\n  var i: int := 0;\n  while i < len(nums)\n    invariant 0 <= i\n    invariant i <= len(nums)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == nums[j] + nums[j] % div\n    decreases len(nums) - i\n  {\n    r := r + [nums[i] + nums[i] % div];\n    i := i + 1;\n  }\n}",
+ "task": "apps_2933__solve",
+ "twin": "t 1\ngate loops\ntask apps_2933__solve(nums: seq, div: int) returns (r: seq)\n  requires div > 0\n  ensures len(r) == len(nums)\n  ensures forall i in [0, len(nums)) . r[i] == nums[i] + nums[i] % div\n{\n  r := [];\n  var i: int := 0;\n  while i <= len(nums)\n    invariant 0 <= i\n    invariant i <= len(nums)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == nums[j] + nums[j] % div\n    decreases len(nums) - i\n  {\n    r := r + [nums[i] + nums[i] % div];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [],
+  "_twin": "at index 0 outside [0,0)",
+  "div": 1,
+  "nums": []
+ },
+ "witness_reads": "at div=1, nums=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen2.5-coder-14b-apps-s1"
+}

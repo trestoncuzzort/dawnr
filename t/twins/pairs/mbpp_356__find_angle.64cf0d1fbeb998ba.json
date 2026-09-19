@@ -1,0 +1,36 @@
+{
+ "id": "64cf0d1fbeb998ba",
+ "operator": "off-by-one",
+ "problem": 356,
+ "program": "t 0\ntask mbpp_356__find_angle(a: int, b: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  requires a + b < 180\n  ensures r == 180 - a - b\n{\n  r := 180 - a - b;\n}",
+ "task": "mbpp_356__find_angle",
+ "twin": "t 0\ntask mbpp_356__find_angle(a: int, b: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  requires a + b < 180\n  ensures r == 180 - a - b\n{\n  r := 181 - a - b;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 178,
+  "_twin": 179,
+  "a": 1,
+  "b": 1
+ },
+ "witness_reads": "at a=1, b=1 the program answers 178 and the twin answers 179",
+ "written_by": "qwen3.8-27b-fp8"
+}

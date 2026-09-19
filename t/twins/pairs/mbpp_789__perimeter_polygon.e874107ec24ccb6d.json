@@ -1,0 +1,36 @@
+{
+ "id": "e874107ec24ccb6d",
+ "operator": "wrong-var",
+ "problem": 789,
+ "program": "t 0\ntask mbpp_789__perimeter_polygon(n: int, side_length: int) returns (r: int)\n  requires n > 0\n  requires side_length >= 0\n  ensures r == n * side_length\n{\n  r := n * side_length;\n}",
+ "task": "mbpp_789__perimeter_polygon",
+ "twin": "t 0\ntask mbpp_789__perimeter_polygon(n: int, side_length: int) returns (r: int)\n  requires n > 0\n  requires side_length >= 0\n  ensures r == n * side_length\n{\n  r := side_length * side_length;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 4,
+  "n": 1,
+  "side_length": 2
+ },
+ "witness_reads": "at n=1, side_length=2 the program answers 2 and the twin answers 4",
+ "written_by": "qwen2.5-coder-14b-v3-s2"
+}

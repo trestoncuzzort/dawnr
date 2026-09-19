@@ -1,0 +1,35 @@
+{
+ "id": "1dc985d0bab39101",
+ "operator": "wrong-constant",
+ "problem": 234,
+ "program": "t 0\ntask mbpp_234__volume_cube(s: int) returns (r: int)\n  ensures r == s * s * s\n{\n  r := s * s * s;\n}",
+ "task": "mbpp_234__volume_cube",
+ "twin": "t 0\ntask mbpp_234__volume_cube(s: int) returns (r: int)\n  ensures r == s * s * s\n{\n  r := s * s * s + 1;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "s": 0
+ },
+ "witness_reads": "at s=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8"
+}

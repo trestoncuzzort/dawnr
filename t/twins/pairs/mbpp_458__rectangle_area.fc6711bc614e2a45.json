@@ -1,0 +1,36 @@
+{
+ "id": "fc6711bc614e2a45",
+ "operator": "wrong-var",
+ "problem": 458,
+ "program": "t 0\ntask mbpp_458__rectangle_area(width: int, height: int) returns (area: int)\n  ensures area == width * height\n{\n  area := width * height;\n}",
+ "task": "mbpp_458__rectangle_area",
+ "twin": "t 0\ntask mbpp_458__rectangle_area(width: int, height: int) returns (area: int)\n  ensures area == width * height\n{\n  area := height * height;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "height": 1,
+  "width": 0
+ },
+ "witness_reads": "at height=1, width=0 the program answers 0 and the twin answers 1",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

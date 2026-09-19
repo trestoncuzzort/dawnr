@@ -1,0 +1,36 @@
+{
+ "id": "d6d213a001f390f0",
+ "operator": "wrong-var",
+ "problem": 458,
+ "program": "t 0\ntask mbpp_458__rectangle_area(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  ensures r == a * b\n{\n  r := a * b;\n}",
+ "task": "mbpp_458__rectangle_area",
+ "twin": "t 0\ntask mbpp_458__rectangle_area(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  ensures r == a * b\n{\n  r := b * b;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "a": 0,
+  "b": 1
+ },
+ "witness_reads": "at a=0, b=1 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8-v3-s2"
+}

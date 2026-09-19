@@ -1,0 +1,35 @@
+{
+ "id": "43f14da70f1a4e31",
+ "operator": "off-by-one",
+ "problem": 17,
+ "program": "t 0\ntask mbpp_17__square_perimeter(side: int) returns (r: int)\n  ensures r == 4 * side\n{\n  r := 4 * side;\n}",
+ "task": "mbpp_17__square_perimeter",
+ "twin": "t 0\ntask mbpp_17__square_perimeter(side: int) returns (r: int)\n  ensures r == 4 * side\n{\n  r := 5 * side;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 4,
+  "_twin": 5,
+  "side": 1
+ },
+ "witness_reads": "at side=1 the program answers 4 and the twin answers 5",
+ "written_by": "qwen3.8-27b-fp8"
+}

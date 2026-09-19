@@ -1,0 +1,36 @@
+{
+ "id": "33932c7bc8f33998",
+ "operator": "negate-cond",
+ "problem": 204367,
+ "program": "t 0\ntask apps_4367__area_or_perimeter(length: int, width: int) returns (r: int)\n  ensures length >= 0 and width >= 0 ==> length == width ==> r == length * width\n  ensures length >= 0 and width >= 0 ==> length != width ==> r == 2 * (length + width)\n{\n  if length == width {\n    r := length * width;\n  } else {\n    r := 2 * (length + width);\n  }\n}",
+ "task": "apps_4367__area_or_perimeter",
+ "twin": "t 0\ntask apps_4367__area_or_perimeter(length: int, width: int) returns (r: int)\n  ensures length >= 0 and width >= 0 ==> length == width ==> r == length * width\n  ensures length >= 0 and width >= 0 ==> length != width ==> r == 2 * (length + width)\n{\n  if length == width {\n    r := 2 * (length + width);\n  } else {\n    r := length * width;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 0,
+  "length": 0,
+  "width": 1
+ },
+ "witness_reads": "at length=0, width=1 the program answers 2 and the twin answers 0",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

@@ -1,0 +1,35 @@
+{
+ "id": "871d532c3a69c017",
+ "operator": "off-by-one",
+ "problem": 89,
+ "program": "t 0\ntask mbpp_89__closest_num(n: int) returns (r: int)\n  ensures r < n\n  ensures r == n - 1\n{\n  r := n - 1;\n}",
+ "task": "mbpp_89__closest_num",
+ "twin": "t 0\ntask mbpp_89__closest_num(n: int) returns (r: int)\n  ensures r < n\n  ensures r == n - 1\n{\n  r := n - 2;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": -1,
+  "_twin": -2,
+  "n": 0
+ },
+ "witness_reads": "at n=0 the program answers -1 and the twin answers -2",
+ "written_by": "qwen2.5-coder-14b-v3-s5"
+}

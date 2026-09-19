@@ -1,0 +1,37 @@
+{
+ "id": "1ae8850da6265b11",
+ "operator": "boundary-swap",
+ "problem": 238,
+ "program": "t 1\ntask mbpp_238__number_of_substrings(s: seq) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    r := r + i + 1;\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_238__number_of_substrings",
+ "twin": "t 1\ntask mbpp_238__number_of_substrings(s: seq) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while len(s) < i\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    r := r + i + 1;\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 0,
+  "s": [
+   0
+  ]
+ },
+ "witness_reads": "at s=[0] the program answers 1 and the twin answers 0",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

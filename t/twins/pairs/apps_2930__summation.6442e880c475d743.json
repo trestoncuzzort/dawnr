@@ -1,0 +1,35 @@
+{
+ "id": "6442e880c475d743",
+ "operator": "boundary-swap",
+ "problem": 202930,
+ "program": "t 1\ngate loops\ntask apps_2930__summation(num: int) returns (r: int)\n  requires num > 0\n  ensures r == num * (num + 1) / 2\n{\n  r := 0;\n  var i: int := 1;\n  while i <= num\n    invariant r == (i - 1) * i / 2\n    invariant i >= 1 and i <= num + 1\n    decreases num - i + 1\n  {\n    r := r + i;\n    i := i + 1;\n  }\n}",
+ "task": "apps_2930__summation",
+ "twin": "t 1\ngate loops\ntask apps_2930__summation(num: int) returns (r: int)\n  requires num > 0\n  ensures r == num * (num + 1) / 2\n{\n  r := 0;\n  var i: int := 1;\n  while num <= i\n    invariant r == (i - 1) * i / 2\n    invariant i >= 1 and i <= num + 1\n    decreases num - i + 1\n  {\n    r := r + i;\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 3,
+  "_twin": 0,
+  "num": 2
+ },
+ "witness_reads": "at num=2 the program answers 3 and the twin answers 0",
+ "written_by": "qwen3-coder-30b-apps-s2"
+}

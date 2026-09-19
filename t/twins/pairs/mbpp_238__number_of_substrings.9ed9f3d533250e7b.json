@@ -1,0 +1,35 @@
+{
+ "id": "9ed9f3d533250e7b",
+ "operator": "compare-flip",
+ "problem": 238,
+ "program": "t 1\ntask mbpp_238__number_of_substrings(s: seq) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  var n: int := len(s);\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= n\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+ "task": "mbpp_238__number_of_substrings",
+ "twin": "t 1\ntask mbpp_238__number_of_substrings(s: seq) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  var n: int := len(s);\n  r := 0;\n  var i: int := 0;\n  while i <= n\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= n\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "s": []
+ },
+ "witness_reads": "at s=[] the program answers 0 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-v3-s6-fix1"
+}

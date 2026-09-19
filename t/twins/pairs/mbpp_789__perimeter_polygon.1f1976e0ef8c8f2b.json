@@ -1,0 +1,36 @@
+{
+ "id": "1f1976e0ef8c8f2b",
+ "operator": "wrong-var#1",
+ "problem": 789,
+ "program": "t 0\ntask mbpp_789__perimeter_polygon(n: int, s: int) returns (r: int)\n  requires n > 0\n  requires s > 0\n  ensures r == n * s\n{\n  r := n * s;\n}",
+ "task": "mbpp_789__perimeter_polygon",
+ "twin": "t 0\ntask mbpp_789__perimeter_polygon(n: int, s: int) returns (r: int)\n  requires n > 0\n  requires s > 0\n  ensures r == n * s\n{\n  r := n * n;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 1,
+  "n": 1,
+  "s": 2
+ },
+ "witness_reads": "at n=1, s=2 the program answers 2 and the twin answers 1",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

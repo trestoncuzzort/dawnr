@@ -1,0 +1,35 @@
+{
+ "id": "9959c0d384ebb5f6",
+ "operator": "negate-cond",
+ "problem": 203876,
+ "program": "t 1\ngate loops\ntask apps_3876__find(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == sum_multiples_3_or_5(n)\nspec fun sum_multiples_3_or_5(n: int): int\n  decreases n\n= if n <= 0 then 0 else if n % 3 == 0 or n % 5 == 0 then n + sum_multiples_3_or_5(n - 1) else sum_multiples_3_or_5(n - 1)\n{\n  r := 0;\n  var i: int := 1;\n  while i <= n\n    invariant r == sum_multiples_3_or_5(i - 1)\n    invariant i >= 1 and i <= n + 1\n    decreases n - i + 1\n  {\n    if i % 3 == 0 or i % 5 == 0 {\n      r := r + i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "apps_3876__find",
+ "twin": "t 1\ngate loops\ntask apps_3876__find(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == sum_multiples_3_or_5(n)\nspec fun sum_multiples_3_or_5(n: int): int\n  decreases n\n= if n <= 0 then 0 else if n % 3 == 0 or n % 5 == 0 then n + sum_multiples_3_or_5(n - 1) else sum_multiples_3_or_5(n - 1)\n{\n  r := 0;\n  var i: int := 1;\n  while i <= n\n    invariant r == sum_multiples_3_or_5(i - 1)\n    invariant i >= 1 and i <= n + 1\n    decreases n - i + 1\n  {\n    if i % 3 == 0 or i % 5 == 0 {\n    } else {\n      r := r + i;\n    }\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

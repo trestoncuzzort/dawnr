@@ -1,0 +1,38 @@
+{
+ "id": "fd76c620b20a0e59",
+ "operator": "collapse-if",
+ "problem": 316,
+ "program": "t 1\ngate loops\ntask mbpp_316__find_last_occurrence(s: seq, x: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [r + 1, len(s)) . s[i] != x)\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [r + 1, i) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_316__find_last_occurrence",
+ "twin": "t 1\ngate loops\ntask mbpp_316__find_last_occurrence(s: seq, x: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [r + 1, len(s)) . s[i] != x)\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [r + 1, i) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    r := i;\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": -1,
+  "_twin": 0,
+  "s": [
+   0
+  ],
+  "x": 1
+ },
+ "witness_reads": "at s=[0], x=1 the program answers -1 and the twin answers 0",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

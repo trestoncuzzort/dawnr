@@ -1,0 +1,36 @@
+{
+ "id": "c1535b838330e4ef",
+ "operator": "off-by-one",
+ "problem": 581,
+ "program": "t 0\ntask mbpp_581__surface_Area(b: int, s: int) returns (r: int)\n  requires b > 0\n  requires s > 0\n  ensures r == b * b + 2 * b * s\n{\n  r := b * b + 2 * b * s;\n}",
+ "task": "mbpp_581__surface_Area",
+ "twin": "t 0\ntask mbpp_581__surface_Area(b: int, s: int) returns (r: int)\n  requires b > 0\n  requires s > 0\n  ensures r == b * b + 2 * b * s\n{\n  r := b * b + 3 * b * s;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 3,
+  "_twin": 4,
+  "b": 1,
+  "s": 1
+ },
+ "witness_reads": "at b=1, s=1 the program answers 3 and the twin answers 4",
+ "written_by": "qwen2.5-coder-14b-v3-s2"
+}

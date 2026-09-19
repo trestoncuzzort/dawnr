@@ -1,0 +1,35 @@
+{
+ "id": "ad1d7d926a326183",
+ "operator": "off-by-one",
+ "problem": 441,
+ "program": "t 0\ntask mbpp_441__surfacearea_cube(s: int) returns (r: int)\n  requires s >= 0\n  ensures r == 6 * s * s\n{\n  r := 6 * s * s;\n}",
+ "task": "mbpp_441__surfacearea_cube",
+ "twin": "t 0\ntask mbpp_441__surfacearea_cube(s: int) returns (r: int)\n  requires s >= 0\n  ensures r == 6 * s * s\n{\n  r := 7 * s * s;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 6,
+  "_twin": 7,
+  "s": 1
+ },
+ "witness_reads": "at s=1 the program answers 6 and the twin answers 7",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

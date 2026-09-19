@@ -1,0 +1,41 @@
+{
+ "id": "13fd4d7710317cd9",
+ "operator": "collapse-if",
+ "problem": 732,
+ "program": "t 1\ngate loops\ntask mbpp_732__replace_specialchar(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . s[i] == 32 or s[i] == 44 or s[i] == 46 ==> r[i] == 58\n  ensures forall i in [0, len(s)) . not (s[i] == 32 or s[i] == 44 or s[i] == 46) ==> r[i] == s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . s[k] == 32 or s[k] == 44 or s[k] == 46 ==> r[k] == 58\n    invariant forall k in [0, i) . not (s[k] == 32 or s[k] == 44 or s[k] == 46) ==> r[k] == s[k]\n    decreases len(s) - i\n  {\n    if s[i] == 32 or s[i] == 44 or s[i] == 46 {\n      r := r + [58];\n    } else {\n      r := r + [s[i]];\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_732__replace_specialchar",
+ "twin": "t 1\ngate loops\ntask mbpp_732__replace_specialchar(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . s[i] == 32 or s[i] == 44 or s[i] == 46 ==> r[i] == 58\n  ensures forall i in [0, len(s)) . not (s[i] == 32 or s[i] == 44 or s[i] == 46) ==> r[i] == s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . s[k] == 32 or s[k] == 44 or s[k] == 46 ==> r[k] == 58\n    invariant forall k in [0, i) . not (s[k] == 32 or s[k] == 44 or s[k] == 46) ==> r[k] == s[k]\n    decreases len(s) - i\n  {\n    r := r + [58];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [
+   0
+  ],
+  "_twin": [
+   58
+  ],
+  "s": [
+   0
+  ]
+ },
+ "witness_reads": "at s=[0] the program answers [0] and the twin answers [58]",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

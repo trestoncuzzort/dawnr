@@ -1,0 +1,36 @@
+{
+ "id": "1bb5182c084f7e60",
+ "operator": "wrong-var#1",
+ "problem": 52,
+ "program": "t 0\ntask mbpp_52__parallelogram_area(base: int, height: int) returns (area: int)\n  requires base >= 0\n  requires height >= 0\n  ensures area == base * height\n{\n  area := base * height;\n}",
+ "task": "mbpp_52__parallelogram_area",
+ "twin": "t 0\ntask mbpp_52__parallelogram_area(base: int, height: int) returns (area: int)\n  requires base >= 0\n  requires height >= 0\n  ensures area == base * height\n{\n  area := base * base;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "base": 1,
+  "height": 0
+ },
+ "witness_reads": "at base=1, height=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}

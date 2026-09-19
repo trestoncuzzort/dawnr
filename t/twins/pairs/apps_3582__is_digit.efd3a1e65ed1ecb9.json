@@ -1,0 +1,37 @@
+{
+ "id": "efd3a1e65ed1ecb9",
+ "operator": "collapse-if",
+ "problem": 203582,
+ "program": "t 1\ntask apps_3582__is_digit(s: seq) returns (r: bool)\n  ensures r == (len(s) == 1 and s[0] >= 48 and s[0] <= 57)\n{\n  if len(s) != 1 {\n    r := false;\n  } else {\n    if s[0] >= 48 and s[0] <= 57 {\n      r := true;\n    } else {\n      r := false;\n    }\n  }\n}",
+ "task": "apps_3582__is_digit",
+ "twin": "t 1\ntask apps_3582__is_digit(s: seq) returns (r: bool)\n  ensures r == (len(s) == 1 and s[0] >= 48 and s[0] <= 57)\n{\n  r := false;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": true,
+  "_twin": false,
+  "s": [
+   48
+  ]
+ },
+ "witness_reads": "at s=[48] the program answers true and the twin answers false",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

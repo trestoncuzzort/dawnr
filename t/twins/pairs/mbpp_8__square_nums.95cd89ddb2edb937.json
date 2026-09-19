@@ -1,0 +1,35 @@
+{
+ "id": "95cd89ddb2edb937",
+ "operator": "compare-flip",
+ "problem": 8,
+ "program": "t 1\ngate quantifiers\ntask mbpp_8__square_nums(s: seq) returns (r: seq)\n  requires forall i in [0, len(s)) . s[i] >= 0\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := seq(len(s), 0);\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == len(s)\n    invariant forall j in [0, i) . r[j] == s[j] * s[j]\n    decreases len(s) - i\n  {\n    r := r[i := s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_8__square_nums",
+ "twin": "t 1\ngate quantifiers\ntask mbpp_8__square_nums(s: seq) returns (r: seq)\n  requires forall i in [0, len(s)) . s[i] >= 0\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := seq(len(s), 0);\n  var i: int := 0;\n  while i <= len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == len(s)\n    invariant forall j in [0, i) . r[j] == s[j] * s[j]\n    decreases len(s) - i\n  {\n    r := r[i := s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [],
+  "_twin": "at index 0 outside [0,0)",
+  "s": []
+ },
+ "witness_reads": "at s=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen2.5-coder-14b-v3-s5"
+}

@@ -1,0 +1,42 @@
+{
+ "id": "351343605dbdddd3",
+ "operator": "boundary-swap",
+ "problem": 728,
+ "program": "t 1\ngate loops\ntask mbpp_728__sum_list(s1: seq, s2: seq) returns (r: seq)\n  requires len(s1) == len(s2)\n  ensures len(r) == len(s1)\n  ensures forall i in [0, len(s1)) . r[i] == s1[i] + s2[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s1)\n    invariant 0 <= i\n    invariant i <= len(s1)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == s1[j] + s2[j]\n    decreases len(s1) - i\n  {\n    r := r + [s1[i] + s2[i]];\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_728__sum_list",
+ "twin": "t 1\ngate loops\ntask mbpp_728__sum_list(s1: seq, s2: seq) returns (r: seq)\n  requires len(s1) == len(s2)\n  ensures len(r) == len(s1)\n  ensures forall i in [0, len(s1)) . r[i] == s1[i] + s2[i]\n{\n  r := [];\n  var i: int := 0;\n  while len(s1) < i\n    invariant 0 <= i\n    invariant i <= len(s1)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == s1[j] + s2[j]\n    decreases len(s1) - i\n  {\n    r := r + [s1[i] + s2[i]];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [
+   0
+  ],
+  "_twin": [],
+  "s1": [
+   0
+  ],
+  "s2": [
+   0
+  ]
+ },
+ "witness_reads": "at s1=[0], s2=[0] the program answers [0] and the twin answers []",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}

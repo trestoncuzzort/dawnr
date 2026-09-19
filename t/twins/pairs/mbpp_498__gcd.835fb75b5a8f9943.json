@@ -1,0 +1,36 @@
+{
+ "id": "835fb75b5a8f9943",
+ "operator": "collapse-if",
+ "problem": 498,
+ "program": "t 1\ngate recursion\ntask mbpp_498__gcd(a: int, b: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  ensures r == gcds(a, b)\n  decreases a + b\nspec fun gcds(a: int, b: int): int\n  decreases a + b\n= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a\n{\n  if a == 0 {\n    r := b;\n  } else {\n    if b == 0 {\n      r := a;\n    } else {\n      if a > b {\n        r := mbpp_498__gcd(a - b, b);\n      } else {\n        if b > a {\n          r := mbpp_498__gcd(a, b - a);\n        } else {\n          r := a;\n        }\n      }\n    }\n  }\n}",
+ "task": "mbpp_498__gcd",
+ "twin": "t 1\ngate recursion\ntask mbpp_498__gcd(a: int, b: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  ensures r == gcds(a, b)\n  decreases a + b\nspec fun gcds(a: int, b: int): int\n  decreases a + b\n= if a <= 0 then b else if b <= 0 then a else if a > b then gcds(a - b, b) else if b > a then gcds(a, b - a) else a\n{\n  r := b;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 2,
+  "a": 1,
+  "b": 2
+ },
+ "witness_reads": "at a=1, b=2 the program answers 1 and the twin answers 2",
+ "written_by": "qwen3.8-27b-fp8"
+}

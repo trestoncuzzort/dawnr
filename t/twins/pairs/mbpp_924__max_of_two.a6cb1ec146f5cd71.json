@@ -1,0 +1,36 @@
+{
+ "id": "a6cb1ec146f5cd71",
+ "operator": "collapse-if",
+ "problem": 924,
+ "program": "t 0\ntask mbpp_924__max_of_two(x: int, y: int) returns (r: int)\n  ensures r >= x\n  ensures r >= y\n  ensures r == x or r == y\n{\n  if x >= y {\n    r := x;\n  } else {\n    r := y;\n  }\n}",
+ "task": "mbpp_924__max_of_two",
+ "twin": "t 0\ntask mbpp_924__max_of_two(x: int, y: int) returns (r: int)\n  ensures r >= x\n  ensures r >= y\n  ensures r == x or r == y\n{\n  r := x;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 0,
+  "x": 0,
+  "y": 1
+ },
+ "witness_reads": "at x=0, y=1 the program answers 1 and the twin answers 0",
+ "written_by": "qwen3.8-27b-fp8"
+}

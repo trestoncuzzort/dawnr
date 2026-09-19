@@ -1,0 +1,36 @@
+{
+ "id": "3f76c9171dab7c29",
+ "operator": "off-by-one#1",
+ "problem": 112,
+ "program": "t 0\ntask mbpp_112__perimeter(r: int, h: int) returns (res: int)\n  ensures res == 2 * r + 2 * h\n{\n  res := 2 * r + 2 * h;\n}",
+ "task": "mbpp_112__perimeter",
+ "twin": "t 0\ntask mbpp_112__perimeter(r: int, h: int) returns (res: int)\n  ensures res == 2 * r + 2 * h\n{\n  res := 1 * r + 2 * h;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 1,
+  "h": 0,
+  "r": 1
+ },
+ "witness_reads": "at h=0, r=1 the program answers 2 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

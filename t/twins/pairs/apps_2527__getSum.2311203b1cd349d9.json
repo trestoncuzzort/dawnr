@@ -1,0 +1,36 @@
+{
+ "id": "2311203b1cd349d9",
+ "operator": "wrong-var",
+ "problem": 202527,
+ "program": "t 0\ntask apps_2527__getSum(a: int, b: int) returns (r: int)\n  ensures r == a + b\n{\n  r := a + b;\n}",
+ "task": "apps_2527__getSum",
+ "twin": "t 0\ntask apps_2527__getSum(a: int, b: int) returns (r: int)\n  ensures r == a + b\n{\n  r := b + b;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 2,
+  "a": 0,
+  "b": 1
+ },
+ "witness_reads": "at a=0, b=1 the program answers 1 and the twin answers 2",
+ "written_by": "qwen2.5-coder-14b-apps-s1"
+}

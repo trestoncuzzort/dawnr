@@ -1,0 +1,36 @@
+{
+ "id": "0c89a091e78cbccf",
+ "operator": "compare-flip",
+ "problem": 282,
+ "program": "t 1\ngate loops\ntask mbpp_282__sub_list(l1: seq, l2: seq) returns (r: seq)\n  requires len(l1) == len(l2)\n  ensures len(r) == len(l1)\n  ensures forall i in [0, len(r)) . r[i] == l1[i] - l2[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(l1)\n    invariant 0 <= i\n    invariant i <= len(l1)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == l1[j] - l2[j]\n    decreases len(l1) - i\n  {\n    r := r + [l1[i] - l2[i]];\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_282__sub_list",
+ "twin": "t 1\ngate loops\ntask mbpp_282__sub_list(l1: seq, l2: seq) returns (r: seq)\n  requires len(l1) == len(l2)\n  ensures len(r) == len(l1)\n  ensures forall i in [0, len(r)) . r[i] == l1[i] - l2[i]\n{\n  r := [];\n  var i: int := 0;\n  while i <= len(l1)\n    invariant 0 <= i\n    invariant i <= len(l1)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == l1[j] - l2[j]\n    decreases len(l1) - i\n  {\n    r := r + [l1[i] - l2[i]];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [],
+  "_twin": "at index 0 outside [0,0)",
+  "l1": [],
+  "l2": []
+ },
+ "witness_reads": "at l1=[], l2=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen2.5-coder-14b-v3-s8"
+}

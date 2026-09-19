@@ -1,0 +1,37 @@
+{
+ "id": "3cdf6d900d349149",
+ "operator": "collapse-if",
+ "problem": 210,
+ "program": "t 1\ngate quantifiers\ntask mbpp_210__is_allowed_specific_char(s: seq) returns (r: bool)\n  ensures r == (forall i in [0, len(s)) . s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 or s[i] >= 48 and s[i] <= 57)\n{\n  r := true;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant r == (forall j in [0, i) . s[j] >= 97 and s[j] <= 122 or s[j] >= 65 and s[j] <= 90 or s[j] >= 48 and s[j] <= 57)\n    decreases len(s) - i\n  {\n    if not (s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 or s[i] >= 48 and s[i] <= 57) {\n      r := false;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_210__is_allowed_specific_char",
+ "twin": "t 1\ngate quantifiers\ntask mbpp_210__is_allowed_specific_char(s: seq) returns (r: bool)\n  ensures r == (forall i in [0, len(s)) . s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 or s[i] >= 48 and s[i] <= 57)\n{\n  r := true;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant r == (forall j in [0, i) . s[j] >= 97 and s[j] <= 122 or s[j] >= 65 and s[j] <= 90 or s[j] >= 48 and s[j] <= 57)\n    decreases len(s) - i\n  {\n    r := false;\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": true,
+  "_twin": false,
+  "s": [
+   97
+  ]
+ },
+ "witness_reads": "at s=[97] the program answers true and the twin answers false",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}

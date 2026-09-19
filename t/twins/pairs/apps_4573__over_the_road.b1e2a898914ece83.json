@@ -1,0 +1,36 @@
+{
+ "id": "b1e2a898914ece83",
+ "operator": "off-by-one",
+ "problem": 204573,
+ "program": "t 0\ntask apps_4573__over_the_road(address: int, n: int) returns (r: int)\n  requires address >= 1\n  requires address <= 2 * n\n  requires n >= 1\n  ensures r >= 1\n  ensures r <= 2 * n\n  ensures r == 2 * n + 1 - address\n{\n  r := 2 * n + 1 - address;\n}",
+ "task": "apps_4573__over_the_road",
+ "twin": "t 0\ntask apps_4573__over_the_road(address: int, n: int) returns (r: int)\n  requires address >= 1\n  requires address <= 2 * n\n  requires n >= 1\n  ensures r >= 1\n  ensures r <= 2 * n\n  ensures r == 2 * n + 1 - address\n{\n  r := 3 * n + 1 - address;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 3,
+  "address": 1,
+  "n": 1
+ },
+ "witness_reads": "at address=1, n=1 the program answers 2 and the twin answers 3",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

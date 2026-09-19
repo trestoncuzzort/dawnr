@@ -1,0 +1,35 @@
+{
+ "id": "14984d52572448fc",
+ "operator": "off-by-one",
+ "problem": 202510,
+ "program": "t 1\ngate quantifiers\ntask apps_2510__canWinNim(n: int) returns (r: bool)\n  ensures r == (n % 4 != 0)\n{\n  r := n % 4 != 0;\n}",
+ "task": "apps_2510__canWinNim",
+ "twin": "t 1\ngate quantifiers\ntask apps_2510__canWinNim(n: int) returns (r: bool)\n  ensures r == (n % 4 != 0)\n{\n  r := n % 5 != 0;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": false,
+  "_twin": true,
+  "n": 4
+ },
+ "witness_reads": "at n=4 the program answers false and the twin answers true",
+ "written_by": "qwen3-coder-30b-apps-s2"
+}

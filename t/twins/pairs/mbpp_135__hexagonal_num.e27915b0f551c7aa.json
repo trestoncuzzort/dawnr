@@ -1,0 +1,35 @@
+{
+ "id": "e27915b0f551c7aa",
+ "operator": "off-by-one",
+ "problem": 135,
+ "program": "t 0\ntask mbpp_135__hexagonal_num(n: int) returns (r: int)\n  requires n > 0\n  ensures r == n * (2 * n - 1)\n{\n  r := n * (2 * n - 1);\n}",
+ "task": "mbpp_135__hexagonal_num",
+ "twin": "t 0\ntask mbpp_135__hexagonal_num(n: int) returns (r: int)\n  requires n > 0\n  ensures r == n * (2 * n - 1)\n{\n  r := n * (3 * n - 1);\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 2,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 1 and the twin answers 2",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}

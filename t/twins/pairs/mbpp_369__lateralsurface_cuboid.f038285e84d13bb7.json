@@ -1,0 +1,37 @@
+{
+ "id": "f038285e84d13bb7",
+ "operator": "off-by-one#1",
+ "problem": 369,
+ "program": "t 0\ntask mbpp_369__lateralsurface_cuboid(l: int, w: int, h: int) returns (r: int)\n  requires l > 0\n  requires w > 0\n  requires h > 0\n  ensures r == 2 * h * (l + w)\n{\n  r := 2 * h * (l + w);\n}",
+ "task": "mbpp_369__lateralsurface_cuboid",
+ "twin": "t 0\ntask mbpp_369__lateralsurface_cuboid(l: int, w: int, h: int) returns (r: int)\n  requires l > 0\n  requires w > 0\n  requires h > 0\n  ensures r == 2 * h * (l + w)\n{\n  r := 1 * h * (l + w);\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 4,
+  "_twin": 2,
+  "h": 1,
+  "l": 1,
+  "w": 1
+ },
+ "witness_reads": "at h=1, l=1, w=1 the program answers 4 and the twin answers 2",
+ "written_by": "qwen2.5-coder-14b-v3-s7"
+}

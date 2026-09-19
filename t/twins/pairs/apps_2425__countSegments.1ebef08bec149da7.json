@@ -1,0 +1,35 @@
+{
+ "id": "1ebef08bec149da7",
+ "operator": "wrong-constant",
+ "problem": 202425,
+ "program": "t 1\ntask apps_2425__countSegments(s: seq) returns (r: int)\n  ensures r == len(s.split())\n{\n  r := len(s.split());\n}",
+ "task": "apps_2425__countSegments",
+ "twin": "t 1\ntask apps_2425__countSegments(s: seq) returns (r: int)\n  ensures r == len(s.split())\n{\n  r := len(s.split()) + 1;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "s": []
+ },
+ "witness_reads": "at s=[] the program answers 0 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-apps-s1"
+}

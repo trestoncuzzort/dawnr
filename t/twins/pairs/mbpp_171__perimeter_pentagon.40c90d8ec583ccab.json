@@ -1,0 +1,35 @@
+{
+ "id": "40c90d8ec583ccab",
+ "operator": "off-by-one",
+ "problem": 171,
+ "program": "t 0\ntask mbpp_171__perimeter_pentagon(side_length: int) returns (r: int)\n  requires side_length > 0\n  ensures r == 5 * side_length\n{\n  r := 5 * side_length;\n}",
+ "task": "mbpp_171__perimeter_pentagon",
+ "twin": "t 0\ntask mbpp_171__perimeter_pentagon(side_length: int) returns (r: int)\n  requires side_length > 0\n  ensures r == 5 * side_length\n{\n  r := 6 * side_length;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 5,
+  "_twin": 6,
+  "side_length": 1
+ },
+ "witness_reads": "at side_length=1 the program answers 5 and the twin answers 6",
+ "written_by": "qwen2.5-coder-14b-v3-s2"
+}

@@ -1,0 +1,37 @@
+{
+ "id": "f47940116ec8a1e5",
+ "operator": "collapse-if#1",
+ "problem": 227,
+ "program": "t 0\ntask mbpp_227__min_of_three(a: int, b: int, c: int) returns (r: int)\n  ensures r == a or r == b or r == c\n  ensures r <= a and r <= b and r <= c\n{\n  if a <= b and a <= c {\n    r := a;\n  } else {\n    if b <= a and b <= c {\n      r := b;\n    } else {\n      r := c;\n    }\n  }\n}",
+ "task": "mbpp_227__min_of_three",
+ "twin": "t 0\ntask mbpp_227__min_of_three(a: int, b: int, c: int) returns (r: int)\n  ensures r == a or r == b or r == c\n  ensures r <= a and r <= b and r <= c\n{\n  if a <= b and a <= c {\n    r := a;\n  } else {\n    r := b;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "a": 1,
+  "b": 1,
+  "c": 0
+ },
+ "witness_reads": "at a=1, b=1, c=0 the program answers 0 and the twin answers 1",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

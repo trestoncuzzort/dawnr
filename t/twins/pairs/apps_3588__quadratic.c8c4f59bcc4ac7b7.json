@@ -1,0 +1,44 @@
+{
+ "id": "c8c4f59bcc4ac7b7",
+ "operator": "off-by-one",
+ "problem": 203588,
+ "program": "t 1\ntask apps_3588__quadratic(x1: int, x2: int) returns (r: seq)\n  ensures len(r) == 3\n  ensures r[0] == 1\n  ensures r[1] == -(x1 + x2)\n  ensures r[2] == x1 * x2\n{\n  r := [1, -(x1 + x2), x1 * x2];\n}",
+ "task": "apps_3588__quadratic",
+ "twin": "t 1\ntask apps_3588__quadratic(x1: int, x2: int) returns (r: seq)\n  ensures len(r) == 3\n  ensures r[0] == 1\n  ensures r[1] == -(x1 + x2)\n  ensures r[2] == x1 * x2\n{\n  r := [2, -(x1 + x2), x1 * x2];\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [
+   1,
+   0,
+   0
+  ],
+  "_twin": [
+   2,
+   0,
+   0
+  ],
+  "x1": 0,
+  "x2": 0
+ },
+ "witness_reads": "at x1=0, x2=0 the program answers [1, 0, 0] and the twin answers [2, 0, 0]",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

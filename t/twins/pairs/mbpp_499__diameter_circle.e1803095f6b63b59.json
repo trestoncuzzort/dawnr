@@ -1,0 +1,35 @@
+{
+ "id": "e1803095f6b63b59",
+ "operator": "off-by-one",
+ "problem": 499,
+ "program": "t 0\ntask mbpp_499__diameter_circle(radius: int) returns (r: int)\n  ensures r == 2 * radius\n{\n  r := 2 * radius;\n}",
+ "task": "mbpp_499__diameter_circle",
+ "twin": "t 0\ntask mbpp_499__diameter_circle(radius: int) returns (r: int)\n  ensures r == 2 * radius\n{\n  r := 3 * radius;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 3,
+  "radius": 1
+ },
+ "witness_reads": "at radius=1 the program answers 2 and the twin answers 3",
+ "written_by": "qwen3.8-27b-fp8"
+}

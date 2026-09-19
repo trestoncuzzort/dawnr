@@ -1,0 +1,35 @@
+{
+ "id": "b3931a3c9ba5ba2e",
+ "operator": "off-by-one#1",
+ "problem": 204360,
+ "program": "t 1\ngate quantifiers\ntask apps_4360__get_score(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 50 * n * (n + 1) / 2\n{\n  r := 50 * n * (n + 1) / 2;\n}",
+ "task": "apps_4360__get_score",
+ "twin": "t 1\ngate quantifiers\ntask apps_4360__get_score(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == 50 * n * (n + 1) / 2\n{\n  r := 49 * n * (n + 1) / 2;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 50,
+  "_twin": 49,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 50 and the twin answers 49",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

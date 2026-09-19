@@ -1,0 +1,38 @@
+{
+ "id": "0e032f3720db6ea4",
+ "operator": "negate-cond",
+ "problem": 190,
+ "program": "t 0\ntask mbpp_190__count_Intgral_Points(x1: int, y1: int, x2: int, y2: int) returns (r: int)\n  requires x1 <= x2\n  requires y1 <= y2\n  ensures r == (x2 - x1 - 1) * (y2 - y1 - 1) or x1 == x2 and y1 == y2 and r == 1\n{\n  if x1 == x2 and y1 == y2 {\n    r := 1;\n  } else {\n    r := (x2 - x1 - 1) * (y2 - y1 - 1);\n  }\n}",
+ "task": "mbpp_190__count_Intgral_Points",
+ "twin": "t 0\ntask mbpp_190__count_Intgral_Points(x1: int, y1: int, x2: int, y2: int) returns (r: int)\n  requires x1 <= x2\n  requires y1 <= y2\n  ensures r == (x2 - x1 - 1) * (y2 - y1 - 1) or x1 == x2 and y1 == y2 and r == 1\n{\n  if x1 == x2 and y1 == y2 {\n    r := (x2 - x1 - 1) * (y2 - y1 - 1);\n  } else {\n    r := 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "x1": 0,
+  "x2": 0,
+  "y1": 0,
+  "y2": 1
+ },
+ "witness_reads": "at x1=0, x2=0, y1=0, y2=1 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

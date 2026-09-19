@@ -1,0 +1,35 @@
+{
+ "id": "01b8159f9f66ed5b",
+ "operator": "negate-cond",
+ "problem": 204481,
+ "program": "t 1\ngate loops\ntask apps_4481__not_visible_cubes(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == (if n <= 2 then 0 else (n - 2) * (n - 2) * (n - 2))\n{\n  if n <= 2 {\n    r := 0;\n  } else {\n    var inner_size: int := n - 2;\n    r := inner_size * inner_size * inner_size;\n  }\n}",
+ "task": "apps_4481__not_visible_cubes",
+ "twin": "t 1\ngate loops\ntask apps_4481__not_visible_cubes(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == (if n <= 2 then 0 else (n - 2) * (n - 2) * (n - 2))\n{\n  if n <= 2 {\n    var inner_size: int := n - 2;\n    r := inner_size * inner_size * inner_size;\n  } else {\n    r := 0;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": -8,
+  "n": 0
+ },
+ "witness_reads": "at n=0 the program answers 0 and the twin answers -8",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

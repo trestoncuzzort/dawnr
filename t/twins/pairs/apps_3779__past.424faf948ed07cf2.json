@@ -1,0 +1,37 @@
+{
+ "id": "424faf948ed07cf2",
+ "operator": "off-by-one#1",
+ "problem": 203779,
+ "program": "t 0\ntask apps_3779__past(h: int, m: int, s: int) returns (r: int)\n  requires 0 <= h and h <= 23\n  requires 0 <= m and m <= 59\n  requires 0 <= s and s <= 59\n  ensures r == h * 3600000 + m * 60000 + s * 1000\n{\n  r := h * 3600000 + m * 60000 + s * 1000;\n}",
+ "task": "apps_3779__past",
+ "twin": "t 0\ntask apps_3779__past(h: int, m: int, s: int) returns (r: int)\n  requires 0 <= h and h <= 23\n  requires 0 <= m and m <= 59\n  requires 0 <= s and s <= 59\n  ensures r == h * 3600000 + m * 60000 + s * 1000\n{\n  r := h * 3599999 + m * 60000 + s * 1000;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 3600000,
+  "_twin": 3599999,
+  "h": 1,
+  "m": 0,
+  "s": 0
+ },
+ "witness_reads": "at h=1, m=0, s=0 the program answers 3600000 and the twin answers 3599999",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

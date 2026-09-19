@@ -1,0 +1,35 @@
+{
+ "id": "1412696ec767bbcb",
+ "operator": "wrong-constant",
+ "problem": 100041,
+ "program": "t 0\ntask he_41__car_race_collision(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * n\n{\n  r := n * n;\n}",
+ "task": "he_41__car_race_collision",
+ "twin": "t 0\ntask he_41__car_race_collision(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * n\n{\n  r := n * n + 1;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "n": 0
+ },
+ "witness_reads": "at n=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-he-s1"
+}

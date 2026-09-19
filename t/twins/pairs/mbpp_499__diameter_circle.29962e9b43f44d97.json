@@ -1,0 +1,35 @@
+{
+ "id": "29962e9b43f44d97",
+ "operator": "off-by-one#1",
+ "problem": 499,
+ "program": "t 0\ntask mbpp_499__diameter_circle(r: int) returns (d: int)\n  requires r >= 0\n  ensures d == 2 * r\n{\n  d := 2 * r;\n}",
+ "task": "mbpp_499__diameter_circle",
+ "twin": "t 0\ntask mbpp_499__diameter_circle(r: int) returns (d: int)\n  requires r >= 0\n  ensures d == 2 * r\n{\n  d := 1 * r;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 1,
+  "r": 1
+ },
+ "witness_reads": "at r=1 the program answers 2 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-v3-s2"
+}

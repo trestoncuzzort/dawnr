@@ -1,0 +1,42 @@
+{
+ "id": "40dd24df8944e6a8",
+ "operator": "collapse-if",
+ "problem": 230,
+ "program": "t 1\ngate loops\ntask mbpp_230__replace_blank(s: seq, c: int) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . if s[i] == 32 then r[i] == c else r[i] == s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . if s[k] == 32 then r[k] == c else r[k] == s[k]\n    decreases len(s) - i\n  {\n    if s[i] == 32 {\n      r := r + [c];\n    } else {\n      r := r + [s[i]];\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_230__replace_blank",
+ "twin": "t 1\ngate loops\ntask mbpp_230__replace_blank(s: seq, c: int) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . if s[i] == 32 then r[i] == c else r[i] == s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . if s[k] == 32 then r[k] == c else r[k] == s[k]\n    decreases len(s) - i\n  {\n    r := r + [c];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [
+   0
+  ],
+  "_twin": [
+   1
+  ],
+  "c": 1,
+  "s": [
+   0
+  ]
+ },
+ "witness_reads": "at c=1, s=[0] the program answers [0] and the twin answers [1]",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

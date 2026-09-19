@@ -1,0 +1,39 @@
+{
+ "id": "698faa388cfb4c40",
+ "operator": "collapse-if",
+ "problem": 451,
+ "program": "t 1\ngate loops\ntask mbpp_451__remove_whitespaces(s: seq) returns (r: seq)\n  ensures len(r) <= len(s)\n  ensures forall i in [0, len(r)) . not (r[i] == 9 or r[i] == 10 or r[i] == 13 or r[i] == 32)\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall k in [0, len(r)) . not (r[k] == 9 or r[k] == 10 or r[k] == 13 or r[k] == 32)\n    decreases len(s) - i\n  {\n    if not (s[i] == 9 or s[i] == 10 or s[i] == 13 or s[i] == 32) {\n      r := r + [s[i]];\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_451__remove_whitespaces",
+ "twin": "t 1\ngate loops\ntask mbpp_451__remove_whitespaces(s: seq) returns (r: seq)\n  ensures len(r) <= len(s)\n  ensures forall i in [0, len(r)) . not (r[i] == 9 or r[i] == 10 or r[i] == 13 or r[i] == 32)\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall k in [0, len(r)) . not (r[k] == 9 or r[k] == 10 or r[k] == 13 or r[k] == 32)\n    decreases len(s) - i\n  {\n    r := r + [s[i]];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [],
+  "_twin": [
+   9
+  ],
+  "s": [
+   9
+  ]
+ },
+ "witness_reads": "at s=[9] the program answers [] and the twin answers [9]",
+ "written_by": "qwen3.8-27b-fp8-v3-s2"
+}

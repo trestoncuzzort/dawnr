@@ -1,0 +1,36 @@
+{
+ "id": "c999cdab5ea053eb",
+ "operator": "off-by-one",
+ "problem": 646,
+ "program": "t 0\ntask mbpp_646__No_of_cubes(n: int, k: int) returns (r: int)\n  requires n >= k\n  ensures r == (n - k + 1) * (n - k + 1) * (n - k + 1)\n{\n  r := (n - k + 1) * (n - k + 1) * (n - k + 1);\n}",
+ "task": "mbpp_646__No_of_cubes",
+ "twin": "t 0\ntask mbpp_646__No_of_cubes(n: int, k: int) returns (r: int)\n  requires n >= k\n  ensures r == (n - k + 1) * (n - k + 1) * (n - k + 1)\n{\n  r := (n - k + 2) * (n - k + 1) * (n - k + 1);\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 2,
+  "k": 0,
+  "n": 0
+ },
+ "witness_reads": "at k=0, n=0 the program answers 1 and the twin answers 2",
+ "written_by": "qwen2.5-coder-14b-v3-s2"
+}

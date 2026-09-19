@@ -1,0 +1,35 @@
+{
+ "id": "96d69d26cc760da0",
+ "operator": "off-by-one#2",
+ "problem": 509,
+ "program": "t 1\ngate loops\ntask mbpp_509__average_Odd(n: int) returns (r: int)\n  requires n >= 1\n  requires n % 2 == 1\n  ensures 2 * r == n + 1\n{\n  r := (n + 1) / 2;\n}",
+ "task": "mbpp_509__average_Odd",
+ "twin": "t 1\ngate loops\ntask mbpp_509__average_Odd(n: int) returns (r: int)\n  requires n >= 1\n  requires n % 2 == 1\n  ensures 2 * r == n + 1\n{\n  r := (n + 1) / 3;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 0,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 1 and the twin answers 0",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

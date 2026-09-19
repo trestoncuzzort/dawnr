@@ -1,0 +1,36 @@
+{
+ "id": "114b320fc15217c2",
+ "operator": "off-by-one",
+ "problem": 203369,
+ "program": "t 0\ntask apps_3369__move(position: int, roll: int) returns (r: int)\n  ensures r == position + 2 * roll\n{\n  r := position + 2 * roll;\n}",
+ "task": "apps_3369__move",
+ "twin": "t 0\ntask apps_3369__move(position: int, roll: int) returns (r: int)\n  ensures r == position + 2 * roll\n{\n  r := position + 3 * roll;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 3,
+  "position": 0,
+  "roll": 1
+ },
+ "witness_reads": "at position=0, roll=1 the program answers 2 and the twin answers 3",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

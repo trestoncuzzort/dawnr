@@ -1,0 +1,37 @@
+{
+ "id": "906a3d306dffa497",
+ "operator": "collapse-if#1",
+ "problem": 227,
+ "program": "t 0\ntask mbpp_227__min_of_three(x: int, y: int, z: int) returns (r: int)\n  ensures r <= x\n  ensures r <= y\n  ensures r <= z\n  ensures r == x or r == y or r == z\n{\n  if x <= y and x <= z {\n    r := x;\n  } else {\n    if y <= z {\n      r := y;\n    } else {\n      r := z;\n    }\n  }\n}",
+ "task": "mbpp_227__min_of_three",
+ "twin": "t 0\ntask mbpp_227__min_of_three(x: int, y: int, z: int) returns (r: int)\n  ensures r <= x\n  ensures r <= y\n  ensures r <= z\n  ensures r == x or r == y or r == z\n{\n  if x <= y and x <= z {\n    r := x;\n  } else {\n    r := y;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "x": 1,
+  "y": 1,
+  "z": 0
+ },
+ "witness_reads": "at x=1, y=1, z=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}

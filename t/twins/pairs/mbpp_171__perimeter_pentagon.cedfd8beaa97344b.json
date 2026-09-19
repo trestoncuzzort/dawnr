@@ -1,0 +1,35 @@
+{
+ "id": "cedfd8beaa97344b",
+ "operator": "off-by-one#1",
+ "problem": 171,
+ "program": "t 0\ntask mbpp_171__perimeter_pentagon(x: int) returns (r: int)\n  ensures r == 5 * x\n{\n  r := 5 * x;\n}",
+ "task": "mbpp_171__perimeter_pentagon",
+ "twin": "t 0\ntask mbpp_171__perimeter_pentagon(x: int) returns (r: int)\n  ensures r == 5 * x\n{\n  r := 4 * x;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 5,
+  "_twin": 4,
+  "x": 1
+ },
+ "witness_reads": "at x=1 the program answers 5 and the twin answers 4",
+ "written_by": "qwen3.8-27b-fp8-v3-s2"
+}

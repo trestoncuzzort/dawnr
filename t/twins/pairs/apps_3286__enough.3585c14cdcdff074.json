@@ -1,0 +1,37 @@
+{
+ "id": "3585c14cdcdff074",
+ "operator": "off-by-one#1",
+ "problem": 203286,
+ "program": "t 0\ntask apps_3286__enough(cap: int, on: int, wait: int) returns (r: int)\n  requires cap >= 0\n  requires on >= 0\n  requires wait >= 0\n  ensures r == 0 or r == wait - (cap - on)\n  ensures r >= 0\n{\n  if on + wait <= cap {\n    r := 0;\n  } else {\n    r := wait - (cap - on);\n  }\n}",
+ "task": "apps_3286__enough",
+ "twin": "t 0\ntask apps_3286__enough(cap: int, on: int, wait: int) returns (r: int)\n  requires cap >= 0\n  requires on >= 0\n  requires wait >= 0\n  ensures r == 0 or r == wait - (cap - on)\n  ensures r >= 0\n{\n  if on + wait <= cap {\n    r := -1;\n  } else {\n    r := wait - (cap - on);\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": -1,
+  "cap": 0,
+  "on": 0,
+  "wait": 0
+ },
+ "witness_reads": "at cap=0, on=0, wait=0 the program answers 0 and the twin answers -1",
+ "written_by": "qwen2.5-coder-14b-apps-s1"
+}

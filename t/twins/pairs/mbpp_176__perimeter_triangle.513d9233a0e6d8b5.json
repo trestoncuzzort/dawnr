@@ -1,0 +1,37 @@
+{
+ "id": "513d9233a0e6d8b5",
+ "operator": "wrong-var#1",
+ "problem": 176,
+ "program": "t 0\ntask mbpp_176__perimeter_triangle(a: int, b: int, c: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  requires c > 0\n  ensures r == a + b + c\n{\n  r := a + b + c;\n}",
+ "task": "mbpp_176__perimeter_triangle",
+ "twin": "t 0\ntask mbpp_176__perimeter_triangle(a: int, b: int, c: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  requires c > 0\n  ensures r == a + b + c\n{\n  r := c + b + c;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 4,
+  "_twin": 5,
+  "a": 1,
+  "b": 1,
+  "c": 2
+ },
+ "witness_reads": "at a=1, b=1, c=2 the program answers 4 and the twin answers 5",
+ "written_by": "qwen2.5-coder-14b-v3-s4"
+}

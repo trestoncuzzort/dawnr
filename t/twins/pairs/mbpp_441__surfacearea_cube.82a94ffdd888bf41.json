@@ -1,0 +1,35 @@
+{
+ "id": "82a94ffdd888bf41",
+ "operator": "off-by-one#1",
+ "problem": 441,
+ "program": "t 0\ntask mbpp_441__surfacearea_cube(side: int) returns (area: int)\n  ensures area == 6 * side * side\n{\n  area := 6 * side * side;\n}",
+ "task": "mbpp_441__surfacearea_cube",
+ "twin": "t 0\ntask mbpp_441__surfacearea_cube(side: int) returns (area: int)\n  ensures area == 6 * side * side\n{\n  area := 5 * side * side;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 6,
+  "_twin": 5,
+  "side": 1
+ },
+ "witness_reads": "at side=1 the program answers 6 and the twin answers 5",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

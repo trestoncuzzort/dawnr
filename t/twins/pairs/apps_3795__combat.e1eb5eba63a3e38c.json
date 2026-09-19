@@ -1,0 +1,36 @@
+{
+ "id": "e1eb5eba63a3e38c",
+ "operator": "negate-cond",
+ "problem": 203795,
+ "program": "t 0\ntask apps_3795__combat(health: int, damage: int) returns (r: int)\n  ensures r >= 0\n  ensures r == health - damage or r == 0\n{\n  if health - damage >= 0 {\n    r := health - damage;\n  } else {\n    r := 0;\n  }\n}",
+ "task": "apps_3795__combat",
+ "twin": "t 0\ntask apps_3795__combat(health: int, damage: int) returns (r: int)\n  ensures r >= 0\n  ensures r == health - damage or r == 0\n{\n  if health - damage >= 0 {\n    r := 0;\n  } else {\n    r := health - damage;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": -1,
+  "damage": 1,
+  "health": 0
+ },
+ "witness_reads": "at damage=1, health=0 the program answers 0 and the twin answers -1",
+ "written_by": "qwen3-coder-30b-apps-s1"
+}

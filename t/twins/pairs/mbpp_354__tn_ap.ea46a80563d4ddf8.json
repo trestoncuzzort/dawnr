@@ -1,0 +1,37 @@
+{
+ "id": "ea46a80563d4ddf8",
+ "operator": "off-by-one#1",
+ "problem": 354,
+ "program": "t 0\ntask mbpp_354__tn_ap(a: int, n: int, d: int) returns (r: int)\n  requires n >= 1\n  ensures r == a + (n - 1) * d\n{\n  r := a + (n - 1) * d;\n}",
+ "task": "mbpp_354__tn_ap",
+ "twin": "t 0\ntask mbpp_354__tn_ap(a: int, n: int, d: int) returns (r: int)\n  requires n >= 1\n  ensures r == a + (n - 1) * d\n{\n  r := a + (n - 0) * d;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "a": 0,
+  "d": 1,
+  "n": 1
+ },
+ "witness_reads": "at a=0, d=1, n=1 the program answers 0 and the twin answers 1",
+ "written_by": "qwen3.8-27b-fp8"
+}

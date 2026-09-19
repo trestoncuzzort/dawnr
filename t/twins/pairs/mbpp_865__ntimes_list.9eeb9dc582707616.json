@@ -1,0 +1,36 @@
+{
+ "id": "9eeb9dc582707616",
+ "operator": "compare-flip",
+ "problem": 865,
+ "program": "t 1\ngate quantifiers\ntask mbpp_865__ntimes_list(s: seq, n: int) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * n\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * n\n    decreases len(s) - i\n  {\n    r := r + [s[i] * n];\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_865__ntimes_list",
+ "twin": "t 1\ngate quantifiers\ntask mbpp_865__ntimes_list(s: seq, n: int) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * n\n{\n  r := [];\n  var i: int := 0;\n  while i <= len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * n\n    decreases len(s) - i\n  {\n    r := r + [s[i] * n];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [],
+  "_twin": "at index 0 outside [0,0)",
+  "n": 0,
+  "s": []
+ },
+ "witness_reads": "at n=0, s=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen3.8-27b-fp8-v3-s2"
+}

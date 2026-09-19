@@ -1,0 +1,35 @@
+{
+ "id": "56b9f09b6f961003",
+ "operator": "off-by-one#1",
+ "problem": 266,
+ "program": "t 0\ntask mbpp_266__lateralsurface_cube(s: int) returns (r: int)\n  requires s >= 0\n  ensures r == 4 * s * s\n{\n  r := 4 * s * s;\n}",
+ "task": "mbpp_266__lateralsurface_cube",
+ "twin": "t 0\ntask mbpp_266__lateralsurface_cube(s: int) returns (r: int)\n  requires s >= 0\n  ensures r == 4 * s * s\n{\n  r := 3 * s * s;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 4,
+  "_twin": 3,
+  "s": 1
+ },
+ "witness_reads": "at s=1 the program answers 4 and the twin answers 3",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

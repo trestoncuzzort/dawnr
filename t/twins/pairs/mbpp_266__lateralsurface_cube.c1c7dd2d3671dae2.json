@@ -1,0 +1,35 @@
+{
+ "id": "c1c7dd2d3671dae2",
+ "operator": "off-by-one",
+ "problem": 266,
+ "program": "t 0\ntask mbpp_266__lateralsurface_cube(side: int) returns (r: int)\n  ensures r == 4 * side * side\n{\n  r := 4 * side * side;\n}",
+ "task": "mbpp_266__lateralsurface_cube",
+ "twin": "t 0\ntask mbpp_266__lateralsurface_cube(side: int) returns (r: int)\n  ensures r == 4 * side * side\n{\n  r := 5 * side * side;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 4,
+  "_twin": 5,
+  "side": 1
+ },
+ "witness_reads": "at side=1 the program answers 4 and the twin answers 5",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

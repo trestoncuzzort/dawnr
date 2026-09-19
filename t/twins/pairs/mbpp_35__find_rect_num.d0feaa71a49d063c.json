@@ -1,0 +1,35 @@
+{
+ "id": "d0feaa71a49d063c",
+ "operator": "off-by-one",
+ "problem": 35,
+ "program": "t 0\ntask mbpp_35__find_rect_num(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+ "task": "mbpp_35__find_rect_num",
+ "twin": "t 0\ntask mbpp_35__find_rect_num(n: int) returns (r: int)\n  requires n >= 1\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 2);\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 3,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 2 and the twin answers 3",
+ "written_by": "qwen3.8-27b-fp8-v3"
+}

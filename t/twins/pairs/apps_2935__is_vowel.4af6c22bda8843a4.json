@@ -1,0 +1,37 @@
+{
+ "id": "4af6c22bda8843a4",
+ "operator": "collapse-if#1",
+ "problem": 202935,
+ "program": "t 1\ntask apps_2935__is_vowel(s: seq) returns (r: bool)\n  ensures r == (len(s) == 1 and (s[0] == 97 or s[0] == 101 or s[0] == 105 or s[0] == 111 or s[0] == 117 or s[0] == 65 or s[0] == 69 or s[0] == 73 or s[0] == 79 or s[0] == 85))\n{\n  if len(s) != 1 {\n    r := false;\n  } else {\n    if s[0] == 97 or s[0] == 101 or s[0] == 105 or s[0] == 111 or s[0] == 117 or s[0] == 65 or s[0] == 69 or s[0] == 73 or s[0] == 79 or s[0] == 85 {\n      r := true;\n    } else {\n      r := false;\n    }\n  }\n}",
+ "task": "apps_2935__is_vowel",
+ "twin": "t 1\ntask apps_2935__is_vowel(s: seq) returns (r: bool)\n  ensures r == (len(s) == 1 and (s[0] == 97 or s[0] == 101 or s[0] == 105 or s[0] == 111 or s[0] == 117 or s[0] == 65 or s[0] == 69 or s[0] == 73 or s[0] == 79 or s[0] == 85))\n{\n  if len(s) != 1 {\n    r := false;\n  } else {\n    r := true;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": false,
+  "_twin": true,
+  "s": [
+   0
+  ]
+ },
+ "witness_reads": "at s=[0] the program answers false and the twin answers true",
+ "written_by": "qwen3-coder-30b-apps-s2"
+}

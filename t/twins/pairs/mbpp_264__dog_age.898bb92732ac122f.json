@@ -1,0 +1,35 @@
+{
+ "id": "898bb92732ac122f",
+ "operator": "off-by-one",
+ "problem": 264,
+ "program": "t 0\ntask mbpp_264__dog_age(n: int) returns (r: int)\n  ensures r == 4 * n + 13\n{\n  r := 4 * n + 13;\n}",
+ "task": "mbpp_264__dog_age",
+ "twin": "t 0\ntask mbpp_264__dog_age(n: int) returns (r: int)\n  ensures r == 4 * n + 13\n{\n  r := 5 * n + 13;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 17,
+  "_twin": 18,
+  "n": 1
+ },
+ "witness_reads": "at n=1 the program answers 17 and the twin answers 18",
+ "written_by": "qwen3.8-27b-fp8"
+}

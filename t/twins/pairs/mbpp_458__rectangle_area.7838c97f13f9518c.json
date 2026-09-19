@@ -1,0 +1,36 @@
+{
+ "id": "7838c97f13f9518c",
+ "operator": "wrong-var",
+ "problem": 458,
+ "program": "t 0\ntask mbpp_458__rectangle_area(length: int, width: int) returns (area: int)\n  requires length >= 0\n  requires width >= 0\n  ensures area == length * width\n{\n  area := length * width;\n}",
+ "task": "mbpp_458__rectangle_area",
+ "twin": "t 0\ntask mbpp_458__rectangle_area(length: int, width: int) returns (area: int)\n  requires length >= 0\n  requires width >= 0\n  ensures area == length * width\n{\n  area := width * width;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "length": 0,
+  "width": 1
+ },
+ "witness_reads": "at length=0, width=1 the program answers 0 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}

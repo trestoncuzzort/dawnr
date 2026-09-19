@@ -1,0 +1,36 @@
+{
+ "id": "c89b9306e32c998f",
+ "operator": "off-by-one#1",
+ "problem": 654,
+ "program": "t 0\ntask mbpp_654__rectangle_perimeter(width: int, height: int) returns (perimeter: int)\n  ensures perimeter == 2 * (width + height)\n{\n  perimeter := 2 * (width + height);\n}",
+ "task": "mbpp_654__rectangle_perimeter",
+ "twin": "t 0\ntask mbpp_654__rectangle_perimeter(width: int, height: int) returns (perimeter: int)\n  ensures perimeter == 2 * (width + height)\n{\n  perimeter := 1 * (width + height);\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 1,
+  "height": 1,
+  "width": 0
+ },
+ "witness_reads": "at height=1, width=0 the program answers 2 and the twin answers 1",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

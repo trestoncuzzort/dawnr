@@ -1,0 +1,35 @@
+{
+ "id": "5606e26a3f22d36c",
+ "operator": "compare-flip",
+ "problem": 495,
+ "program": "t 1\ngate loops\ntask mbpp_495__remove_lowercase(s: seq) returns (r: seq)\n  ensures len(r) <= len(s)\n  ensures forall k in [0, len(r)) . r[k] < 97 or r[k] > 122\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall k in [0, len(r)) . r[k] < 97 or r[k] > 122\n    decreases len(s) - i\n  {\n    if s[i] < 97 or s[i] > 122 {\n      r := r + [s[i]];\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_495__remove_lowercase",
+ "twin": "t 1\ngate loops\ntask mbpp_495__remove_lowercase(s: seq) returns (r: seq)\n  ensures len(r) <= len(s)\n  ensures forall k in [0, len(r)) . r[k] < 97 or r[k] > 122\n{\n  r := [];\n  var i: int := 0;\n  while i <= len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall k in [0, len(r)) . r[k] < 97 or r[k] > 122\n    decreases len(s) - i\n  {\n    if s[i] < 97 or s[i] > 122 {\n      r := r + [s[i]];\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "undefined",
+  "_real": [],
+  "_twin": "at index 0 outside [0,0)",
+  "s": []
+ },
+ "witness_reads": "at s=[] the twin breaks the specification the program keeps",
+ "written_by": "qwen3.8-27b-fp8-v3-s2"
+}

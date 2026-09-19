@@ -1,0 +1,35 @@
+{
+ "id": "cb2bfe48d1753440",
+ "operator": "negate-cond",
+ "problem": 873,
+ "program": "t 1\ngate recursion\ntask mbpp_873__fibonacci(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == fibs(n)\n  decreases n\nspec fun fibs(n: int): int\n  decreases n\n= if n <= 1 then n else fibs(n - 1) + fibs(n - 2)\n{\n  if n <= 1 {\n    r := n;\n  } else {\n    r := mbpp_873__fibonacci(n - 1) + mbpp_873__fibonacci(n - 2);\n  }\n}",
+ "task": "mbpp_873__fibonacci",
+ "twin": "t 1\ngate recursion\ntask mbpp_873__fibonacci(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == fibs(n)\n  decreases n\nspec fun fibs(n: int): int\n  decreases n\n= if n <= 1 then n else fibs(n - 1) + fibs(n - 2)\n{\n  if n <= 1 {\n    r := mbpp_873__fibonacci(n - 1) + mbpp_873__fibonacci(n - 2);\n  } else {\n    r := n;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 1,
+  "_twin": 2,
+  "n": 2
+ },
+ "witness_reads": "at n=2 the program answers 1 and the twin answers 2",
+ "written_by": "qwen2.5-coder-14b-v3-s2"
+}

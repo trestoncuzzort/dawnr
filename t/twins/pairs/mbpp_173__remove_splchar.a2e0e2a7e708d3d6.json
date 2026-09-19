@@ -1,0 +1,39 @@
+{
+ "id": "a2e0e2a7e708d3d6",
+ "operator": "collapse-if",
+ "problem": 173,
+ "program": "t 1\ntask mbpp_173__remove_splchar(s: seq) returns (r: seq)\n  ensures forall i in [0, len(r)) . r[i] >= 48 and r[i] <= 57 or r[i] >= 65 and r[i] <= 90 or r[i] >= 97 and r[i] <= 122\n  ensures len(r) <= len(s)\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall j in [0, len(r)) . r[j] >= 48 and r[j] <= 57 or r[j] >= 65 and r[j] <= 90 or r[j] >= 97 and r[j] <= 122\n    decreases len(s) - i\n  {\n    if s[i] >= 48 and s[i] <= 57 or s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122 {\n      r := r + [s[i]];\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_173__remove_splchar",
+ "twin": "t 1\ntask mbpp_173__remove_splchar(s: seq) returns (r: seq)\n  ensures forall i in [0, len(r)) . r[i] >= 48 and r[i] <= 57 or r[i] >= 65 and r[i] <= 90 or r[i] >= 97 and r[i] <= 122\n  ensures len(r) <= len(s)\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) <= i\n    invariant forall j in [0, len(r)) . r[j] >= 48 and r[j] <= 57 or r[j] >= 65 and r[j] <= 90 or r[j] >= 97 and r[j] <= 122\n    decreases len(s) - i\n  {\n    r := r + [s[i]];\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": [],
+  "_twin": [
+   0
+  ],
+  "s": [
+   0
+  ]
+ },
+ "witness_reads": "at s=[0] the program answers [] and the twin answers [0]",
+ "written_by": "qwen2.5-coder-14b-v3-s5"
+}

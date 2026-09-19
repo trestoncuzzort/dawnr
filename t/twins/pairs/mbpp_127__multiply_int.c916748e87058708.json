@@ -1,0 +1,36 @@
+{
+ "id": "c916748e87058708",
+ "operator": "compare-flip",
+ "problem": 127,
+ "program": "t 1\ngate loops\ntask mbpp_127__multiply_int(a: int, b: int) returns (r: int)\n  requires b >= 0\n  ensures r == a * b\n{\n  r := 0;\n  var i: int := 0;\n  while i < b\n    invariant r == a * i\n    invariant i >= 0 and i <= b\n    decreases b - i\n  {\n    r := r + a;\n    i := i + 1;\n  }\n}",
+ "task": "mbpp_127__multiply_int",
+ "twin": "t 1\ngate loops\ntask mbpp_127__multiply_int(a: int, b: int) returns (r: int)\n  requires b >= 0\n  ensures r == a * b\n{\n  r := 0;\n  var i: int := 0;\n  while i <= b\n    invariant r == a * i\n    invariant i >= 0 and i <= b\n    decreases b - i\n  {\n    r := r + a;\n    i := i + 1;\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "a": 1,
+  "b": 0
+ },
+ "witness_reads": "at a=1, b=0 the program answers 0 and the twin answers 1",
+ "written_by": "qwen2.5-coder-14b-v3-s5"
+}

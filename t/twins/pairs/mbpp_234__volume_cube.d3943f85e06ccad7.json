@@ -1,0 +1,35 @@
+{
+ "id": "d3943f85e06ccad7",
+ "operator": "wrong-constant",
+ "problem": 234,
+ "program": "t 0\ntask mbpp_234__volume_cube(side: int) returns (volume: int)\n  ensures volume == side * side * side\n{\n  volume := side * side * side;\n}",
+ "task": "mbpp_234__volume_cube",
+ "twin": "t 0\ntask mbpp_234__volume_cube(side: int) returns (volume: int)\n  ensures volume == side * side * side\n{\n  volume := side * side * side + 1;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 0,
+  "_twin": 1,
+  "side": 0
+ },
+ "witness_reads": "at side=0 the program answers 0 and the twin answers 1",
+ "written_by": "deepseek-coder-v2-16b-v4-s1"
+}

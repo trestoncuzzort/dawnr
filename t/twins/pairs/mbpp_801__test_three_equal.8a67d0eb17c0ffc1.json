@@ -1,0 +1,37 @@
+{
+ "id": "8a67d0eb17c0ffc1",
+ "operator": "collapse-if#1",
+ "problem": 801,
+ "program": "t 0\ntask mbpp_801__test_three_equal(a: int, b: int, c: int) returns (r: int)\n  ensures r == 3 ==> a == b and b == c\n  ensures r == 2 ==> a == b and b != c or a == c and c != b or b == c and c != a\n  ensures r == 0 ==> a != b and b != c and a != c\n{\n  if a == b {\n    if b == c {\n      r := 3;\n    } else {\n      r := 2;\n    }\n  } else {\n    if a == c {\n      r := 2;\n    } else {\n      if b == c {\n        r := 2;\n      } else {\n        r := 0;\n      }\n    }\n  }\n}",
+ "task": "mbpp_801__test_three_equal",
+ "twin": "t 0\ntask mbpp_801__test_three_equal(a: int, b: int, c: int) returns (r: int)\n  ensures r == 3 ==> a == b and b == c\n  ensures r == 2 ==> a == b and b != c or a == c and c != b or b == c and c != a\n  ensures r == 0 ==> a != b and b != c and a != c\n{\n  if a == b {\n    r := 3;\n  } else {\n    if a == c {\n      r := 2;\n    } else {\n      if b == c {\n        r := 2;\n      } else {\n        r := 0;\n      }\n    }\n  }\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 2,
+  "_twin": 3,
+  "a": 0,
+  "b": 0,
+  "c": 1
+ },
+ "witness_reads": "at a=0, b=0, c=1 the program answers 2 and the twin answers 3",
+ "written_by": "qwen2.5-coder-14b-v3-s4"
+}

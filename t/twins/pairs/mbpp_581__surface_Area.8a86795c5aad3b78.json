@@ -1,0 +1,36 @@
+{
+ "id": "8a86795c5aad3b78",
+ "operator": "off-by-one#1",
+ "problem": 581,
+ "program": "t 0\ntask mbpp_581__surface_Area(base: int, slant: int) returns (r: int)\n  requires base >= 0\n  requires slant >= 0\n  ensures r == 2 * base * slant + base * base\n{\n  r := 2 * base * slant + base * base;\n}",
+ "task": "mbpp_581__surface_Area",
+ "twin": "t 0\ntask mbpp_581__surface_Area(base: int, slant: int) returns (r: int)\n  requires base >= 0\n  requires slant >= 0\n  ensures r == 2 * base * slant + base * base\n{\n  r := 1 * base * slant + base * base;\n}",
+ "twin_refuted_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "verified_by": [
+  "dafny",
+  "framac",
+  "fstar",
+  "lean",
+  "rocq",
+  "spark",
+  "verus"
+ ],
+ "witness": {
+  "_ens": true,
+  "_kind": "value",
+  "_real": 3,
+  "_twin": 2,
+  "base": 1,
+  "slant": 1
+ },
+ "witness_reads": "at base=1, slant=1 the program answers 3 and the twin answers 2",
+ "written_by": "qwen2.5-coder-14b-v3-s1"
+}
