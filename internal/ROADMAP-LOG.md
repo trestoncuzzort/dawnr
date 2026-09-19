@@ -1930,6 +1930,35 @@ DONE WHEN: both arms are generated and graded at the same 32 cells, and
 the preregistration's rule is applied to their clean counts in public,
 whichever way it falls.
 
+## Lab monitor recovery, 2026-09-19
+
+The monitor still read desktop files after the pipeline moved to the workstation,
+so the current jobs were invisible. `t/lab_status.py` now supplies a read-only
+snapshot over SSH: owned processes, per-set answer counts, logs, live checks,
+results, GPU use and the follow-up worker's heartbeat. The desktop displays the
+snapshot and marks a lost connection explicitly while retaining the last data.
+No completion-test shell commands run on the desktop in this mode. Flaky or
+partial proofs cannot count clean, and an unresolved twin is no longer described
+as a broken copy that passed. The monitor has no launch controls when connected
+to the workstation. `lab_gpu.sh stop` includes current generators and training,
+scopes signals to the remote user, and no longer modifies a checkout on start.
+
+Measured: all 18 monitor and GPU-control tests passed on the workstation; a live
+snapshot took 0.501 seconds, identified the three surviving generators and four
+GPUs, and matched independent counts for all 67 answer sets. Predictions and
+commands are in `t/PREDICT-lab-gui-2026-09-19.md`.
+
+The vanished follow-up script has a detached singleton replacement, reading the
+three existing generation sets and running extraction, tests, seven-kernel grading
+at eight cells and specification checks when each is complete. It starts
+no generation or training. Its private status is linked under the day's run logs.
+The historical diameter-circle SPARK flake was rechecked without cache: three
+real proofs and three twin refutations, stable. One provenance record was added
+to each existing recheck file; no original table or earlier record was replaced.
+The current expanded preflight passes with two warnings: historical v3 prompt
+wording and four existing untracked data files. The grammar also loads under the
+workstation's full Python stack. The inherited lowering changes remain unverified.
+
 ## The road to 1.0 (opened 2026-09-05)
 
 WS-12 is the next six sessions. This is everything after them, to the two

@@ -1,0 +1,400 @@
+{
+  "capacity": {
+    "common": {
+      "bf16": true,
+      "context": 2048,
+      "data": "private deterministic synthetic text fixture; not the study corpus",
+      "deterministic": true,
+      "dropout": 0.0,
+      "heads": 12,
+      "layers": 12,
+      "optimizer_steps": 4,
+      "preset": "core-medium",
+      "vocabulary": 8192,
+      "width": 768
+    },
+    "four_gpu": {
+      "comparison": {
+        "final": {
+          "identity": true,
+          "initial_losses": true,
+          "losses": true,
+          "max_weight_difference": 0.0,
+          "model": true,
+          "optimizer": true,
+          "rank_rng": true
+        },
+        "step2": {
+          "identity": true,
+          "initial_losses": true,
+          "losses": true,
+          "max_weight_difference": 0.0,
+          "model": true,
+          "optimizer": true,
+          "rank_rng": true
+        }
+      },
+      "runs": [
+        {
+          "accum": 2,
+          "batch": 4,
+          "case": "four-b4",
+          "checkpoint": false,
+          "initial_losses": {
+            "train_nats_per_token": 9.151013374328613,
+            "val_nats_per_token": 9.150713920593262
+          },
+          "losses": {
+            "last_step_nats_per_token": 8.760691523551941,
+            "train_nats_per_token": 8.336294174194336,
+            "val_nats_per_token": 8.30842113494873
+          },
+          "parameters": 91245312,
+          "peak_allocated_GiB": [
+            6.673,
+            6.673,
+            6.673,
+            6.673
+          ],
+          "peak_reserved_GiB": [
+            7.041,
+            7.041,
+            7.041,
+            7.041
+          ],
+          "steady_tokens_per_second": 272425.95364277833,
+          "step": 4,
+          "tokens_per_step": 65536
+        },
+        {
+          "accum": 1,
+          "batch": 8,
+          "case": "four-b8",
+          "checkpoint": false,
+          "initial_losses": {
+            "train_nats_per_token": 9.151591777801514,
+            "val_nats_per_token": 9.153854846954346
+          },
+          "losses": {
+            "last_step_nats_per_token": 8.758518934249878,
+            "train_nats_per_token": 8.337292194366455,
+            "val_nats_per_token": 8.318457841873169
+          },
+          "parameters": 91245312,
+          "peak_allocated_GiB": [
+            11.023,
+            11.023,
+            11.023,
+            11.023
+          ],
+          "peak_reserved_GiB": [
+            11.896,
+            11.896,
+            11.896,
+            11.896
+          ],
+          "steady_tokens_per_second": 271193.9244557671,
+          "step": 4,
+          "tokens_per_step": 65536
+        },
+        {
+          "accum": 1,
+          "batch": 16,
+          "case": "four-b16",
+          "checkpoint": true,
+          "initial_losses": {
+            "train_nats_per_token": 9.15356159210205,
+            "val_nats_per_token": 9.154494285583496
+          },
+          "losses": {
+            "last_step_nats_per_token": 8.66988468170166,
+            "train_nats_per_token": 8.31178903579712,
+            "val_nats_per_token": 8.281805276870728
+          },
+          "parameters": 91245312,
+          "peak_allocated_GiB": [
+            5.968,
+            5.968,
+            5.968,
+            5.968
+          ],
+          "peak_reserved_GiB": [
+            7.477,
+            7.477,
+            7.477,
+            7.477
+          ],
+          "steady_tokens_per_second": 209937.01037087536,
+          "step": 4,
+          "tokens_per_step": 131072
+        },
+        {
+          "accum": 1,
+          "batch": 8,
+          "case": "four-b8-resume",
+          "checkpoint": false,
+          "initial_losses": {
+            "train_nats_per_token": 9.151591777801514,
+            "val_nats_per_token": 9.153854846954346
+          },
+          "losses": {
+            "last_step_nats_per_token": 8.770982265472412,
+            "train_nats_per_token": 8.552764177322388,
+            "val_nats_per_token": 8.535808563232422
+          },
+          "parameters": 91245312,
+          "peak_allocated_GiB": [
+            11.023,
+            11.023,
+            11.023,
+            11.023
+          ],
+          "peak_reserved_GiB": [
+            11.896,
+            11.896,
+            11.896,
+            11.896
+          ],
+          "steady_tokens_per_second": 267184.37335615663,
+          "step": 2,
+          "tokens_per_step": 65536
+        },
+        {
+          "accum": 1,
+          "batch": 8,
+          "case": "four-b8-resume-continue",
+          "checkpoint": false,
+          "initial_losses": {
+            "train_nats_per_token": 9.151591777801514,
+            "val_nats_per_token": 9.153854846954346
+          },
+          "losses": {
+            "last_step_nats_per_token": 8.758518934249878,
+            "train_nats_per_token": 8.337292194366455,
+            "val_nats_per_token": 8.318457841873169
+          },
+          "parameters": 91245312,
+          "peak_allocated_GiB": [
+            11.021,
+            11.021,
+            11.021,
+            11.021
+          ],
+          "peak_reserved_GiB": [
+            11.889,
+            11.889,
+            11.889,
+            11.889
+          ],
+          "steady_tokens_per_second": 200910.7016315946,
+          "step": 4,
+          "tokens_per_step": 65536
+        }
+      ]
+    },
+    "gpt_control": {
+      "architecture": "gpt",
+      "free_bytes_before": [
+        15084814336,
+        17844666368,
+        17927503872,
+        17710448640
+      ],
+      "initial_losses": {
+        "train_nats_per_token": 9.166025638580322,
+        "val_nats_per_token": 9.163402080535889
+      },
+      "losses": {
+        "last_step_nats_per_token": 9.032004356384277,
+        "train_nats_per_token": 8.885818004608154,
+        "val_nats_per_token": 8.869041919708252
+      },
+      "parameters": 92920320,
+      "peak_allocated_GiB": [
+        8.274,
+        8.274,
+        8.274,
+        8.274
+      ],
+      "peak_reserved_GiB": [
+        9.137,
+        9.137,
+        9.137,
+        9.137
+      ],
+      "steady_tokens_per_second": 324832.33590860915,
+      "tokens_per_step": 65536
+    },
+    "single_gpu": [
+      {
+        "batch": 2,
+        "checkpointing": false,
+        "free_bytes_before": 15084814336,
+        "losses": {
+          "last_step_nats_per_token": 8.533287048339844,
+          "train_nats_per_token": 8.506988525390625,
+          "val_nats_per_token": 8.634695053100586
+        },
+        "ok": true,
+        "optimizer_tokens_per_second": 43353.26724308944,
+        "peak_allocated_bytes": 4275545088,
+        "peak_reserved_bytes": 4716494848,
+        "steady_tokens_per_second": 67253.22996035026
+      },
+      {
+        "batch": 4,
+        "checkpointing": false,
+        "free_bytes_before": 15084814336,
+        "losses": {
+          "last_step_nats_per_token": 8.439117431640625,
+          "train_nats_per_token": 8.669140815734863,
+          "val_nats_per_token": 8.376482009887695
+        },
+        "ok": true,
+        "optimizer_tokens_per_second": 54055.63408099339,
+        "peak_allocated_bytes": 6797452288,
+        "peak_reserved_bytes": 7463763968,
+        "steady_tokens_per_second": 66699.03693465417
+      },
+      {
+        "batch": 8,
+        "checkpointing": false,
+        "free_bytes_before": 15084814336,
+        "losses": {
+          "last_step_nats_per_token": 8.45359992980957,
+          "train_nats_per_token": 8.377392768859863,
+          "val_nats_per_token": 8.36284351348877
+        },
+        "ok": true,
+        "optimizer_tokens_per_second": 58289.41737351819,
+        "peak_allocated_bytes": 11835685888,
+        "peak_reserved_bytes": 12773752832,
+        "steady_tokens_per_second": 64089.577499660925
+      },
+      {
+        "batch": 16,
+        "checkpointing": false,
+        "free_bytes": 15084814336,
+        "projected_bytes": 23393730560.0,
+        "reason": "projected reserved memory plus 1 GiB exceeds current free memory",
+        "skipped": true
+      },
+      {
+        "batch": 8,
+        "checkpointing": true,
+        "free_bytes_before": 15084814336,
+        "losses": {
+          "last_step_nats_per_token": 8.45359992980957,
+          "train_nats_per_token": 8.377392768859863,
+          "val_nats_per_token": 8.36284351348877
+        },
+        "ok": true,
+        "optimizer_tokens_per_second": 48897.689061036595,
+        "peak_allocated_bytes": 4070126080,
+        "peak_reserved_bytes": 4429185024,
+        "steady_tokens_per_second": 52900.46990601051
+      },
+      {
+        "batch": 16,
+        "checkpointing": true,
+        "free_bytes_before": 15084814336,
+        "losses": {
+          "last_step_nats_per_token": 8.383127212524414,
+          "train_nats_per_token": 8.295648574829102,
+          "val_nats_per_token": 8.424115180969238
+        },
+        "ok": true,
+        "optimizer_tokens_per_second": 46088.09784532718,
+        "peak_allocated_bytes": 6407991808,
+        "peak_reserved_bytes": 8027897856,
+        "steady_tokens_per_second": 47840.983903379834
+      }
+    ]
+  },
+  "date": "2026-09-19",
+  "final_tested_source_sha256": {
+    "data.py": "98d9ea5aa890e084399b9dbbf149bb883d09c89118bd66c9f84689c43f1579e0",
+    "model.py": "d8073d77b19ce2e5bdaedc73d9e8fc1e3c2def70209c9fc7d570976a8d7285f0",
+    "test_train_distributed.py": "8bb84f4f2c8fe4a469c439f54b592c6a1c375c90fdf6ce0f1b75f96349e2107d",
+    "train.py": "40c196685bd2007ca035b372b51ec7e000f5505a45370619a90896d7a9d4eaa4",
+    "train_distributed.py": "8062a754f6f94c0b03a9ce1257de910a6dccc38f547758521cf89066faa66ff7"
+  },
+  "hardware": {
+    "gpu_count": 4,
+    "gpu_model": "NVIDIA RTX 6000 Ada Generation",
+    "torch": "2.13.0+cu130"
+  },
+  "limitations": [
+    "Short shared-machine timing probes are not a controlled architecture speed comparison.",
+    "CUDA allocator measurements exclude driver and other process allocations.",
+    "Bit-exact continuation was demonstrated on this fixed software/hardware stack with unchanged schedule, data, tokenizer and rank order.",
+    "No task-quality or Phi comparison follows from these checks."
+  ],
+  "producer": "train_distributed.py",
+  "purpose": "bounded capacity and resume diagnostics; no learned-quality claim",
+  "regression_test": "test_train_distributed.py",
+  "resume_diagnosis": {
+    "deterministic_kernels_adaptive_ddp_buckets": {
+      "final": {
+        "loss_max_abs": 5.340576171875e-05,
+        "max_abs": 0.00028285756707191467,
+        "nonzero_median": 4.842877388000488e-08,
+        "nonzero_parameters": 31043534,
+        "optimizer_exact": false,
+        "rng_exact": true
+      },
+      "step2": {
+        "loss_max_abs": 0.0,
+        "max_abs": 0.0,
+        "nonzero_median": 0,
+        "nonzero_parameters": 0,
+        "optimizer_exact": true,
+        "rng_exact": true
+      }
+    },
+    "deterministic_kernels_fixed_ddp_buckets": {
+      "final": {
+        "loss_max_abs": 0.0,
+        "max_abs": 0.0,
+        "nonzero_median": 0,
+        "nonzero_state_elements": 0,
+        "optimizer_exact": true,
+        "rng_exact": true
+      },
+      "step2": {
+        "loss_max_abs": 0.0,
+        "max_abs": 0.0,
+        "nonzero_median": 0,
+        "nonzero_state_elements": 0,
+        "optimizer_exact": true,
+        "rng_exact": true
+      }
+    },
+    "uncontrolled_cuda": {
+      "identity_matches": true,
+      "loss_max_abs_diff": 0.0019664764404296875,
+      "model_exact": false,
+      "model_max_abs_diff": 0.007553338073194027
+    }
+  },
+  "selected_study_configuration": {
+    "activation_checkpointing": false,
+    "gradient_accumulation": 1,
+    "microbatch_per_rank": 8,
+    "minimum_free_mib_per_gpu": 13312,
+    "tokens_per_step": 65536,
+    "world_size": 4
+  },
+  "tests": {
+    "final_snapshot": {
+      "includes_four_rank_cuda_bf16_dropout": true,
+      "includes_two_rank_cpu": true,
+      "passed": 5
+    },
+    "main_checkout": {
+      "optional_gpu_test_skipped": 1,
+      "passed": 4,
+      "same_source_as_final_snapshot": true
+    }
+  }
+}
