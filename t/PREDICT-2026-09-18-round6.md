@@ -50,3 +50,19 @@ are also generated with t's grammar on the decoder -- for the student and for Ph
   that reads a verifier's error rather than more preference pairs.
 - Phi gains as much from the constraint as the student does: the honest claim stays the system's 12 clean
   against Phi's 3, not the student's.
+
+## Prompt v4 against v3, predicted before the run (2026-09-19)
+
+Same model (the untrained Qwen2.5-Coder-1.5B), same 232 held-out problems, same decoding; the only difference
+is that v4 tells the truth about division and modulo and names the three commonest refusals. The v3 row exists
+already: 39 well formed, 13 test-passing, 3 clean, 3 of 13 converting.
+
+1. **Well formed rises, 45 to 65** (was 39). The spec-function rule alone touches 18.5 percent of refused
+   replies and the comment rule another 10, and neither costs the model anything.
+2. **Test-passing rises more than well formed does, 18 to 30** (was 13). Division and modulo are not style:
+   a corpus where 163 of 785 programs need them has been answered by models told the operators do not exist,
+   so the ones that need them have been failing their tests rather than their parse.
+3. **Clean rises to 4 to 8** (was 3). If it does not move at all while test-passing does, the proof gate is
+   eating the gain, which is the same wall every other change has hit.
+4. **If nothing moves**, the prompt was not the constraint and eleven days of a wrong sentence cost nothing,
+   which would itself be worth knowing.
