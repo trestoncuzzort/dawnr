@@ -23,10 +23,49 @@ is therefore cells in flight, and kernel-call concurrency is six times it:
 on the Dell's 120 threads, --jobs 16 is the 96-prover regime that flaked 9
 spark and framac cells on their wall backstops, --jobs 5 is the 30-prover
 regime that ran clean. T_CELL_SERIAL=1 restores the sequential cell.
+
+THE VERDICT CACHE (2026-09-19, ROADMAP 15.1 extended from the library to
+this driver). t/cache.py and t/tlib.py already spent no kernel run on an
+unchanged task in an editor; this driver spent a full run on every cell of
+every re-grade. It now reads the same cache, one entry per SIDE (the real
+source and the twin source are separate keys, exactly as tlib.py keys
+them), with the same discipline, unrelaxed:
+
+  * a side is written only after a COMPLETED n-of-3 flake agreement, so
+    nothing provisional is ever cached and a cache hit is never
+    provisional. A cell with one flaked side still caches the side that
+    agreed, and caches nothing for the side that did not;
+  * the key is the lowered source's bytes, the kernel, the kernel's own
+    version string, and the budget -- and, because this driver runs while
+    t/verifiers/* is being edited, an ADAPTER FINGERPRINT as well: the
+    sha256 of verifiers/<kernel>.py, verifiers/__init__.py and
+    verifiers/discover.py, plus the flake n. The adapter decides VERIFIED
+    against VACUOUS from the same kernel output and holds the default
+    budget constant the driver never passes, so an edited adapter must
+    mean a fresh key, not a stale hit (t/cache.py's `extra`);
+  * TIMEOUT and TOOL_ERROR are never written. A timeout is a statement
+    about this machine under this load at this moment (the wall backstops
+    fire under --jobs pressure: the 96-prover regime above flaked nine
+    cells on them), and TOOL_ERROR is "never evidence of anything" by the
+    Outcome vocabulary's own words. Neither is a property of the source
+    the key can stand for, so both are re-run every time.
+
+--no-cache turns it off, and IS the default for a run that writes the
+committed t/AGREEMENT.md: that matrix is always produced by real kernel
+runs. Asking for --cache on the committed table is refused, not warned
+about, so the rule holds without anyone remembering it. Everywhere else
+(a sweep with its own --table, a re-grade into /tmp) the cache is on by
+default; --no-cache is how you ask for the second opinion.
+
+A cached table and a fresh one are the same bytes: nothing about the cache
+reaches AGREEMENT.md. The run's SUMMARY LINE is where the cache shows, and
+it always names the hits and the kernel runs, so a reader can tell a
+cached table from a fresh one without reading this file.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import os
 import sys
@@ -38,9 +77,11 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
+import cache                        # noqa: E402  (the verdict cache, ROADMAP 15.1)
 import harness                      # noqa: E402
 import tasks_io                     # noqa: E402
-from verifiers import Outcome, cell_pair, sha256_file, mp_context   # noqa: E402
+import verifiers                    # noqa: E402  (verifiers.LAUNCHES, the launch counter)
+from verifiers import Outcome, cell_pair, flake_check, sha256_file, mp_context   # noqa: E402
 import blockers                     # noqa: E402  (the sole-blocker section, ROADMAP WS-19 move 4)
 
 BACKENDS = [
@@ -52,6 +93,112 @@ BACKENDS = [
     ("rocq", "lower_rocq", "v"),
     ("fstar", "lower_fstar", "fst"),
 ]
+
+# ----------------------------------------------------------- verdict cache --
+# The committed matrix. A run writing THIS file never reads the cache; see
+# the module docstring, and the refusal in main().
+COMMITTED_TABLE = HERE / "AGREEMENT.md"
+
+# What a cache entry is allowed to stand for. VERIFIED, REFUTED, VACUOUS,
+# MALFORMED and UNPROVED are functions of the source, the kernel, the
+# budget and the adapter -- all four in the key. TIMEOUT and TOOL_ERROR are
+# not: a timeout says this machine, under this load, ran out of wall or
+# steps (the wall backstops fire under --jobs pressure), and TOOL_ERROR is
+# never evidence of anything. Remembering either would be remembering the
+# machine, not the program, so neither is ever written and both are re-run
+# on every pass.
+CACHEABLE = frozenset({Outcome.VERIFIED, Outcome.REFUTED, Outcome.VACUOUS,
+                       Outcome.MALFORMED, Outcome.UNPROVED})
+
+_ADAPTER_FP: dict[str, str] = {}
+
+
+def adapter_fingerprint(bname: str) -> str:
+    """sha256 of the code that turns this kernel's output into an Outcome:
+    verifiers/<bname>.py, plus verifiers/__init__.py (the Outcome
+    vocabulary, flake_check, run_tree and the wall-backstop machinery) and
+    verifiers/discover.py (which binary gets run at all). Read once per
+    process, from disk, in the parent.
+
+    Why it is in the key and the kernel's --version string is not enough:
+    the adapter holds each backend's DEFAULT_RLIMIT/DEFAULT_STEPS -- the
+    budget this driver never passes and therefore never varies -- and it
+    holds the ban regexes and certificate checks that separate VERIFIED
+    from VACUOUS. Edit t/verifiers/dafny.py and the same dafny, on the same
+    bytes, can honestly return a different Outcome. An unfingerprinted key
+    would hand back the old one."""
+    if bname not in _ADAPTER_FP:
+        h = hashlib.sha256()
+        for name in (f"{bname}.py", "__init__.py", "discover.py"):
+            p = HERE / "verifiers" / name
+            try:
+                h.update(p.read_bytes())
+            except OSError as e:                    # noqa: BLE001
+                # Unreadable adapter: fold the reason in, so the key is
+                # distinct from any key built from a file that was read.
+                h.update(f"UNREADABLE {name} {e}".encode("utf-8"))
+            h.update(b"\0")
+        _ADAPTER_FP[bname] = h.hexdigest()
+    return _ADAPTER_FP[bname]
+
+
+def _cached_outcome(bname: str, key: str, cache_dir) -> str | None:
+    """The cached outcome for one side, or None for a miss. An entry whose
+    outcome is not in CACHEABLE is read as a MISS, not as a verdict: this
+    driver never writes one, so such a file came from somewhere else, and
+    "somewhere else" is not evidence."""
+    hit = cache.read(bname, key, cache_dir)
+    if not isinstance(hit, dict):
+        return None
+    outcome = hit.get("outcome")
+    return outcome if outcome in CACHEABLE else None
+
+
+def _record_sides(bname: str, task_name: str, sides: dict, keys, versions: dict,
+                  cache_dir, flake_n: int, counts: dict) -> int:
+    """Count what this cell ran, write back the sides that may be written,
+    and return how many of its two sides came from the cache.
+
+    The write rule, in one place: a side is written only if it RAN (a cache
+    hit is not re-written), only if its n-of-3 flake_check AGREED, and only
+    if its outcome is one the key can stand for. A flaked side leaves no
+    entry, so the next run asks the kernel again instead of trusting a
+    verdict the kernel itself did not repeat."""
+    n_hit = 0
+    for i, side in enumerate(("real", "twin")):
+        outcome, agreed, was_cached = sides[side]
+        if was_cached:
+            n_hit += 1
+            counts["cached_sides"] += 1
+            continue
+        counts["ran_sides"] += 1
+        counts["runs"] += flake_n
+        if cache_dir is None or keys is None or not agreed:
+            continue
+        if outcome not in CACHEABLE:
+            counts["unwritable"] += 1
+            continue
+        try:
+            cache.write(bname, keys[i],
+                        {"outcome": outcome, "backend_version": versions[bname]},
+                        cache_dir)
+        except OSError as e:                        # noqa: BLE001
+            # A cache that cannot be written is a slower next run, never a
+            # failed this one: the verdict in hand is unaffected.
+            print(f"  (cache write failed for {task_name} x {bname} {side}: {e})",
+                  flush=True)
+            continue
+        counts["written"] += 1
+    return n_hit
+
+
+def cache_key(source: str, bname: str, version: str, flake_n: int) -> str:
+    """This driver's key for one lowered source. The budget component is
+    None, which is what run_par passes every backend's verify() -- i.e.
+    each adapter's own default, whose value is inside the fingerprint."""
+    return cache.key_for(source, bname, version, None,
+                         extra=f"adapter={adapter_fingerprint(bname)};"
+                               f"flake={flake_n}")
 
 
 def _watch_event(**ev) -> None:
@@ -72,25 +219,53 @@ def _watch_event(**ev) -> None:
         pass
 
 
-def _run_cell(bname: str, task_name: str, suffix: str, op: str, flake_n: int = 3):
+def _run_cell(bname: str, task_name: str, suffix: str, op: str, flake_n: int = 3,
+              cached: tuple | None = None):
     # Re-imported per call: correct under spawn (fresh interpreter, no
     # inherited module object); a sys.modules hit under fork, used below.
     # flake_n defaults to cell_pair's own default (3, everyone); grade.py's
     # --flake is the only caller that ever passes another value, so a bare
     # `python3 run_par.py` dispatch is unchanged.
+    #
+    # `cached` is (real_outcome_or_None, twin_outcome_or_None), the sides
+    # the PARENT already found in the verdict cache -- a pair of strings or
+    # Nones, so it pickles under spawn like every other argument here. None
+    # (the default, and what every caller outside this file passes) is the
+    # uncached cell, byte-identical to what this function has always done:
+    # one cell_pair, 2n kernel calls. A cell whose BOTH sides are cached is
+    # never submitted at all, so it costs no worker and no dispatch.
     backend = importlib.import_module(f"verifiers.{bname}")
     real = harness.OUT / f"{task_name}.{suffix}"
     twin = harness.OUT / f"{task_name}_twin.{suffix}"
-    _watch_event(ev="start", task=task_name, kernel=bname, op=op)
+    c_real, c_twin = cached if cached is not None else (None, None)
+    _watch_event(ev="start", task=task_name, kernel=bname, op=op,
+                 cached=[c_real is not None, c_twin is not None])
+    launches0 = verifiers.LAUNCHES
     try:
-        (r_real, a1), (r_twin, a2) = cell_pair(backend.verify, real, twin, flake_n)
+        if c_real is None and c_twin is None:
+            (r_real, a1), (r_twin, a2) = cell_pair(backend.verify, real, twin, flake_n)
+            o_real, o_twin = r_real.outcome, r_twin.outcome
+        elif c_real is None:
+            # Only the real side is unknown; a cached twin is a completed
+            # agreement by construction, so its agreed flag is True.
+            r_real, a1 = flake_check(backend.verify, real, flake_n)
+            o_real, o_twin, a2 = r_real.outcome, c_twin, True
+        else:
+            r_twin, a2 = flake_check(backend.verify, twin, flake_n)
+            o_real, a1, o_twin = c_real, True, r_twin.outcome
     except BaseException as e:
         _watch_event(ev="end", task=task_name, kernel=bname, real="error",
                      twin=type(e).__name__, agree=False)
         raise
-    _watch_event(ev="end", task=task_name, kernel=bname, real=str(r_real.outcome),
-                 twin=str(r_twin.outcome), agree=bool(a1 and a2))
-    return task_name, bname, op, (r_real.outcome, r_twin.outcome, a1 and a2)
+    _watch_event(ev="end", task=task_name, kernel=bname, real=str(o_real),
+                 twin=str(o_twin), agree=bool(a1 and a2))
+    # The two per-side agreement flags travel separately from the cell's
+    # own (a1 and a2): the caller caches a side that agreed even when its
+    # sibling flaked, and caches neither of a cell it cannot write.
+    return (task_name, bname, op, (o_real, o_twin, a1 and a2),
+            {"real": (o_real, bool(a1), c_real is not None),
+             "twin": (o_twin, bool(a2), c_twin is not None)},
+            verifiers.LAUNCHES - launches0)
 
 
 def probe_backends():
@@ -118,7 +293,9 @@ def probe_backends():
     return cols, present
 
 
-def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
+def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3,
+                       versions: dict | None = None, cache_dir=None,
+                       stats: dict | None = None):
     """Sequential lowering (real + twin, every (backend, task) pair from
     `present`) followed by the parallel cell dispatch: the pipeline main()
     has always run inline, between the backend probe and the table write.
@@ -135,9 +312,28 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
     replies. `flake_n` defaults to 3 (cell_pair's own default, SPEC.md's
     "The twins" and verifiers/__init__.py's flake_check), so a bare
     `python3 run_par.py` invocation, which never passes it, is byte-
-    identical to before; grade.py's --flake is the only caller that does."""
+    identical to before; grade.py's --flake is the only caller that does.
+
+    THE CACHE (2026-09-19) is off unless `cache_dir` is given, so every
+    caller that does not ask for it -- grade.py, cli.py, test_twin_rule.py,
+    and this file's own --no-cache path -- runs exactly the kernels it ran
+    before. With a cache_dir, a side (real source, or twin source) whose
+    key is present costs no kernel run, a cell whose BOTH sides are present
+    is never even submitted to the pool, and a side that runs is written
+    back only on a completed n-of-3 agreement with a cacheable outcome
+    (module docstring: never TIMEOUT, never TOOL_ERROR). `versions` maps
+    kernel -> the version string probe_backends() already read in this
+    process; a kernel missing from it is never cached, because a key
+    without the kernel's own version is a key that cannot be invalidated
+    by a toolchain upgrade. `stats`, when a dict is passed, is filled with
+    the counts main() prints in its summary line -- an out-parameter rather
+    than a fourth return value, so every existing three-tuple call site is
+    untouched."""
     rows = {harness.load(t)["name"]: {} for t in tasks}
     all_ok = True
+    versions = versions or {}
+    counts = {"cells": 0, "cached_cells": 0, "cached_sides": 0, "ran_sides": 0,
+              "runs": 0, "measured_runs": 0, "written": 0, "unwritable": 0}
     # Lowering + writes: sequential, entirely before any dispatch below, so
     # out/*.{suffix} has a single writer for the whole time it is produced.
     pending, wits = [], {}
@@ -197,8 +393,35 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
                 continue
             (harness.OUT / f"{name}.{suffix}").write_text(real_src, encoding="utf-8", newline="\n")
             (harness.OUT / f"{name}_twin.{suffix}").write_text(twin_src, encoding="utf-8", newline="\n")
-            pending.append((bname, name, suffix, op))
             wits[name] = w
+            # The cache lookup sits HERE, after the lowering and before the
+            # dispatch, because the lowered bytes just written are the key:
+            # the cache answers for a source, never for a task name. The
+            # lowering itself still runs on every pass -- it is Python over
+            # an interpreted witness search, not a kernel -- so a fully
+            # cached run still writes out/*.dfy and the table's verdict-basis
+            # hashes still name files this run produced.
+            keys = hit_real = hit_twin = None
+            if cache_dir is not None and bname in versions:
+                keys = (cache_key(real_src, bname, versions[bname], flake_n),
+                        cache_key(twin_src, bname, versions[bname], flake_n))
+                hit_real, hit_twin = (_cached_outcome(bname, k, cache_dir)
+                                      for k in keys)
+            if hit_real is not None and hit_twin is not None:
+                # No kernel, no worker, no dispatch: both sides of this cell
+                # were agreed by a previous run on these exact bytes.
+                cell = (hit_real, hit_twin, True)
+                rows[name][bname] = cell
+                good = cell == (Outcome.VERIFIED, Outcome.REFUTED, True)
+                all_ok &= good
+                counts["cells"] += 1
+                counts["cached_cells"] += 1
+                counts["cached_sides"] += 2
+                print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}"
+                      + ("" if good else "  <-- FINDING")
+                      + f"   (cached; twin witness: {harness.witness(w)})", flush=True)
+                continue
+            pending.append((bname, name, suffix, op, (hit_real, hit_twin), keys))
     n_cells = len(tasks) * len(BACKENDS)          # matrix size, independent of what lowered
     jobs = jobs_arg or max(1, min(n_cells, os.cpu_count() or 1))
     # Platform-selected: fork where it exists, spawn on Windows. The spawn
@@ -206,16 +429,25 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3):
     # in verifiers.mp_context's docstring; the spawn branch is exercised on
     # Linux via T_MP_START=spawn against the full matrix.
     ctx = mp_context()
+    keymap = {(b, n): k for b, n, _s, _o, _c, k in pending}
     with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx) as ex:
-        futs = {ex.submit(_run_cell, b, n, s, o, flake_n): (b, n, o) for b, n, s, o in pending}
+        futs = {ex.submit(_run_cell, b, n, s, o, flake_n, c): (b, n, o)
+                for b, n, s, o, c, _k in pending}
         for fut in as_completed(futs):
-            name, bname, op, cell = fut.result()
+            name, bname, op, cell, sides, launched = fut.result()
             rows[name][bname] = cell
             good = cell == (Outcome.VERIFIED, Outcome.REFUTED, True)
             all_ok &= good
+            counts["cells"] += 1
+            counts["measured_runs"] += launched
+            n_hit = _record_sides(bname, name, sides, keymap.get((bname, name)),
+                                  versions, cache_dir, flake_n, counts)
             print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}"
                   + ("" if good else "  <-- FINDING")
+                  + ("" if not n_hit else f"   ({n_hit} side cached)")
                   + f"   (twin witness: {harness.witness(wits.get(name))})", flush=True)
+    if stats is not None:
+        stats.update(counts)
     return rows, wits, all_ok
 
 
@@ -286,6 +518,63 @@ def format_table(cols, rows, tasks, out_dir: Path, wits: dict | None = None) -> 
     return "\n".join(lines) + "\n"
 
 
+def cache_decision(table: Path, flag, cache_dir: Path):
+    """(cache_dir_or_None, refusal_or_None) for one run's --cache/--no-cache
+    and --table. One function so the rule is stated once and can be tested
+    without running a kernel (t/test_run_par_cache.py):
+
+      * --cache on the committed t/AGREEMENT.md is REFUSED. That table is
+        the claim the project makes about seven kernels; it is produced by
+        running them.
+      * no flag, committed table -> off. The default IS --no-cache there.
+      * no flag, any other table -> on. A sweep, a re-grade into /tmp, a
+        recheck after a lowering fix: these re-run constantly and are
+        exactly what the cache exists for.
+      * --no-cache -> off, anywhere.
+
+    The comparison is on resolved paths, so `AGREEMENT.md`, `./AGREEMENT.md`,
+    `t/AGREEMENT.md` and a symlink to it are one answer."""
+    try:
+        committed = table.resolve() == COMMITTED_TABLE.resolve()
+    except OSError:
+        committed = table == COMMITTED_TABLE
+    if committed and flag is True:
+        return None, ("REFUSED: --cache writes the committed t/AGREEMENT.md "
+                      "from remembered verdicts. That table is the claim, and "
+                      "the claim is produced by real kernel runs. Drop "
+                      "--cache, or write somewhere else with --table.")
+    use = (not committed) if flag is None else bool(flag)
+    return (cache_dir if use else None), None
+
+
+def cache_summary(stats: dict, cache_dir) -> str:
+    """The cache clause of the run's summary line. Printed on EVERY run,
+    including a --no-cache one, which says so in those words: a reader who
+    sees a table and a summary must be able to tell whether kernels
+    produced it without reading this file or the cache directory. Nothing
+    here reaches AGREEMENT.md -- a cached table and a fresh one are the
+    same bytes, which is the property the run must not hide."""
+    cells = stats.get("cells", 0)
+    runs = stats.get("runs", 0)
+    if cache_dir is None:
+        return (f"no cache (--no-cache): {cells} cells, {runs} kernel runs, "
+                f"every verdict measured here")
+    parts = [f"cache on ({cache_dir})",
+             f"{stats.get('cached_cells', 0)} of {cells} cells whole from cache",
+             f"{stats.get('cached_sides', 0)} of {2 * cells} sides",
+             f"{runs} kernel runs",
+             f"{stats.get('written', 0)} entries written"]
+    if stats.get("unwritable"):
+        parts.append(f"{stats['unwritable']} side(s) too noisy to cache "
+                     f"(timeout or tool error)")
+    measured = stats.get("measured_runs", 0)
+    if measured != runs:
+        # The workers' own flake_check counter disagreeing with the count
+        # derived here is a finding about this file, not a rounding note.
+        parts.append(f"WORKERS COUNTED {measured} <-- does not match, a finding")
+    return "; ".join(parts)
+
+
 def main() -> int:
     # Mutual exclusion is the lock file taken in __main__ (verifiers.
     # acquire_run_lock), on every platform. A /proc scan used to sit here
@@ -312,8 +601,25 @@ def main() -> int:
     ap.add_argument("--kernels", default="",
                     help="comma-separated subset of the seven kernels to grade "
                          "(default all); the table shows only these columns")
+    # The verdict cache (module docstring). Default: ON for any other table,
+    # OFF for the committed t/AGREEMENT.md, and asking for it there is
+    # refused below rather than quietly honoured.
+    ap.add_argument("--cache", dest="cache", action="store_true", default=None,
+                    help="reuse cached verdicts for unchanged lowered sources "
+                         "(default on, except when writing t/AGREEMENT.md)")
+    ap.add_argument("--no-cache", dest="cache", action="store_false",
+                    help="run every kernel on every cell; the default for a "
+                         "run that writes the committed t/AGREEMENT.md")
+    ap.add_argument("--cache-dir", type=Path, default=cache.DEFAULT_CACHE_DIR,
+                    help="where cached verdicts live (default t/out/cache, "
+                         "shared with t/tlib.py's editor cache; content-keyed, "
+                         "so it is correct across --out directories)")
     args = ap.parse_args()
     jobs_arg = args.jobs
+    cache_dir, refusal = cache_decision(args.table, args.cache, args.cache_dir)
+    if refusal:
+        print(refusal)
+        return 2
     harness.OUT = args.out
     harness.OUT.mkdir(parents=True, exist_ok=True)
     tasks = tasks_io.load_dir(args.tasks)
@@ -327,7 +633,11 @@ def main() -> int:
         keep = {k.strip() for k in args.kernels.split(",") if k.strip()}
         cols = [(b, v) for b, v in cols if b in keep]
         present = [p for p in present if p[0] in keep]
-    rows, wits, all_ok = lower_and_dispatch(tasks, present, jobs_arg)
+    stats: dict = {}
+    rows, wits, all_ok = lower_and_dispatch(
+        tasks, present, jobs_arg,
+        versions={b: v for b, v in cols if not v.startswith("ABSENT")},
+        cache_dir=cache_dir, stats=stats)
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
     MIN_KERNELS = int(os.environ.get("T_MIN_KERNELS", "2"))
     # Refuse BEFORE writing; see run_all.py for the measurement behind it.
@@ -348,7 +658,8 @@ def main() -> int:
     text = format_table(cols, rows, tasks, harness.OUT, wits)
     args.table.write_text(text, encoding="utf-8", newline="\n")
     print(f"\n{len(present_names)} kernels, {len(tasks)} tasks: "
-          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, a finding, see ' + str(args.table)}")
+          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, a finding, see ' + str(args.table)}"
+          f"; {cache_summary(stats, cache_dir)}")
     return 0 if all_ok else 1
 
 

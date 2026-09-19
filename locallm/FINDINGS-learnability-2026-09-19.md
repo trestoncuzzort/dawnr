@@ -1,4 +1,4 @@
-# The curriculum is not learnable by this core, and that closes the line
+# The floor did not move, so a factorial has nothing left to measure
 
 Registered in [PREREG-learnability-2026-09-19.md](PREREG-learnability-2026-09-19.md)
 before the run: one treatment, three seeds, run to find out whether the
@@ -40,12 +40,18 @@ Quadrupling the training tasks and widening the parameter grid moved the score
 from 2 of 102 to 0 of 323. The floor did not rise; removing the tasks that a
 memorized single stage could pass took the score to zero and left it there.
 
-So the blocker is upstream of any auxiliary objective. Running four cells of
-latent and execution supervision against a floor of zero would measure nothing,
-and the factorial's null result is now explained rather than merely reported:
-there was no signal available for a treatment to improve. **This line is closed
-until something changes the floor** -- a curriculum the core can actually learn,
-a response finer than one greedy program per task, or a larger core.
+So the blocker is upstream of any auxiliary objective **in this setup**, and
+the setup is the whole of the claim: this initialization (the 91M modern
+4000-step checkpoints), this curriculum, this budget, this one-greedy-candidate
+decoding. Running four cells against a floor of zero would measure nothing, and
+the factorial's null result is explained rather than merely reported: there was
+no signal for a treatment to improve.
+
+What follows is that **another factorial should be deferred**, not that the
+curriculum is unlearnable or the direction is dead. Neither of those was
+tested. A different initialization, a larger core, more candidates per task, or
+a curriculum with a gentler gradient between its trained and held-out patterns
+could each move the floor, and none of them has been tried.
 
 What the run cost: 21 minutes of training for three arms. The pilot was worth
 four minutes an arm precisely because the answer was this decisive.
@@ -54,4 +60,6 @@ four minutes an arm precisely because the answer was this decisive.
 
 It says nothing about execution supervision in general, nothing about the
 project's own pipeline data, and nothing about the seven-verifier gates. It is
-one 91M core, one generated curriculum, one greedy candidate per task.
+one 91M core, one generated curriculum, one greedy candidate per task, one
+budget. "Not learnable here, this way" is the whole finding; "not learnable" is
+a different sentence that this run does not support.

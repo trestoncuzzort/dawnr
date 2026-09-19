@@ -856,20 +856,32 @@ def _task_loop_scopes(body: list) -> list:
 
 
 def _walk_source_loops(source: MethodDecl) -> list:
-    """Pre-order `(loop, scope)` pairs from the source method's body: every
-    `WhileStmt`/`ForStmt`, and the `Param` list in scope there (the
-    method's own params plus every local declared before that point on
-    the path reaching it -- section 9 item 6's "every local in scope at
-    the loop")."""
+    """Pre-order `(loop, scope, ancestors)` triples from the source
+    method's body: every `WhileStmt`/`ForStmt`, the `Param` list in scope
+    there (the method's own params plus every local declared before that
+    point on the path reaching it -- section 9 item 6's "every local in
+    scope at the loop"), and the enclosing loops on the path to it,
+    outermost first (empty for a top-level loop).
+
+    `ancestors` is carried by the SAME walk rather than reconstructed by
+    a second one on purpose (2026-09-19): `_build_checker_parts` indexes
+    `src_loops`, `task_loops` and `task_loop_scopes` strictly
+    index-for-index, and a parallel walk that ever drifted from this
+    one's `BlockStmt`/`LabelStmt`/`IfStmt` handling would misattribute a
+    nested loop's own enclosing chain silently, which is exactly the
+    class of positional guess the 2026-09-14 alignment row removed. One
+    walk cannot drift from itself. The triple is a signature change with
+    a single caller in this file (`_build_checker_parts`), noted here
+    rather than left for a reader to discover from the unpack."""
     out = []
 
-    def walk(stmts, sc):
+    def walk(stmts, sc, anc):
         for s in stmts:
             if isinstance(s, VarDeclStmt):
                 sc = sc + list(s.names)
             elif isinstance(s, WhileStmt):
-                out.append((s, list(sc)))
-                walk(s.body, sc)
+                out.append((s, list(sc), list(anc)))
+                walk(s.body, sc, anc + [s])
             elif isinstance(s, ForStmt):
                 # The for-loop's OWN iteration variable is in scope for
                 # ITS OWN invariants (Dafny allows `for i := lo to hi
@@ -885,23 +897,106 @@ def _walk_source_loops(source: MethodDecl) -> list:
                 # signature).
                 vt = s.var_type or Type(line=s.line, kind="id", name="int")
                 sc_here = sc + [Param(line=s.line, name=s.var, type=vt)]
-                out.append((s, list(sc_here)))
-                walk(s.body, sc_here)
+                out.append((s, list(sc_here), list(anc)))
+                walk(s.body, sc_here, anc + [s])
             elif isinstance(s, IfStmt):
-                walk(s.then, sc)
+                walk(s.then, sc, anc)
                 if isinstance(s.else_, tuple):
-                    walk(s.else_, sc)
+                    walk(s.else_, sc, anc)
                 elif isinstance(s.else_, IfStmt):
-                    walk((s.else_,), sc)
+                    walk((s.else_,), sc, anc)
             elif isinstance(s, BlockStmt):
-                walk(s.body, sc)
+                walk(s.body, sc, anc)
             elif isinstance(s, LabelStmt):
-                walk((s.stmt,), sc)
+                walk((s.stmt,), sc, anc)
             # AssertByStmt.proof, ForallStmt.body: ghost-only, hints
             # (section 9's "what the checker does NOT see"), never walked
             # for loops that would need a real-body lemma.
-    walk(source.body or (), list(source.params))
+    walk(source.body or (), list(source.params), [])
     return out
+
+
+def _for_index_range_facts(ancestors: list, record: LiftRecord,
+                           crename: dict, declared: set) -> list:
+    """The enclosing `for`-loop index-range facts in scope at a NESTED
+    loop's own head, as printed lemma text: one `(<lo> <= <i>)` and one
+    `(<i> < <h>)` per enclosing source `for i := <lo> to <hi>`.
+
+    Why this is needed (measured 2026-09-19, dafny 4.11.0, on
+    `dafny-synthesis_task_id_401` IndexWiseAddition and `_431`
+    HasCommonElement, the two nested-loop rows LIFTER-785-RESIDUALS.md's
+    2026-09-14 section leaves open by name): an INNER loop's invariant
+    routinely indexes with the OUTER loop's own variable
+    (`subResult[k] == a[i][k] + b[i][k]`, `a[i] != b[k]`), and so does
+    the `h_v == |a[i_v3]|` extra-fact the 2026-09-12 row threads for the
+    inner loop's own desugared bound. `L_inv_1`'s parameter for that
+    outer index is a free `int`, so `a[i_v3]` is not well-formed and
+    dafny reads `index out of range` on the lemma's own `requires`/
+    `ensures` -- ill-formed, before the `<==>` is ever weighed. It is not
+    a hard proof; the lemma as stated does not type-check.
+
+    Why the fact is sound to state, and exactly how far it goes. This is
+    NOT "the enclosing loop's invariants hold here". They need not: an
+    enclosing body may break its own invariant at any point before the
+    inner loop, and assuming a premise that does not hold would make the
+    lemma vacuous -- the one move section 9's checker may never make.
+    What holds is narrower and structural, read off decision 15's own
+    `to`-direction desugaring in `lift_rewrite.py` and nothing else:
+
+      * `h` (the cached bound) is a `renamer.fresh` lift-only local
+        assigned once, at its own `var`, and never again -- so it is
+        constant through the whole loop;
+      * `i` is assigned at the `var` (to `lo`) and then ONLY by the
+        increment the desugaring appends as the LAST statement of the
+        body. Dafny forbids assigning a `for`-loop index in the source,
+        so no lifted statement from the body can touch it;
+      * the while guard is `i < h`, and `i` is unchanged from the top of
+        the body until that trailing increment. Every statement of the
+        body -- a nested loop among them -- therefore runs with
+        `i < h`;
+      * `lo <= i` likewise holds from the `var` onwards, `i` only ever
+        increasing -- but only as WRITTEN when `lo`'s own text cannot
+        change under it, so this half is emitted only for an integer
+        LITERAL `lo` (`for i := 0 to n`, the shape both measured rows
+        and every other nested `for` in the MBPP-DFY 164 use). A `lo`
+        that reads a variable is skipped, named here rather than
+        guessed at.
+
+    An enclosing plain `while` gets nothing at all, for the reason
+    above: its guard and its invariants are both breakable inside its
+    own body, so neither is a fact the construction establishes at an
+    inner loop's head. A `downto` `for` gets nothing either -- it caches
+    no bound local (`lift_rewrite` prints `hi` inline there), so there
+    is no constant to state `i < h` against, and the decrement sits
+    FIRST in its body rather than last. Both are refusals to extend, not
+    gaps left unnamed.
+
+    `record.for_bound_locals` (the same positional record the 2026-09-14
+    alignment fix reads) is what identifies an enclosing `to`-desugared
+    `for` and names its cached bound: its presence for that source line
+    IS the evidence that this loop was lowered by the shape argued
+    above, not a re-derivation from the task's text. `crename` maps the
+    enclosing index's source name to the task's own name for it
+    (`locals_in_scope` carries it, since `_walk_source_loops` puts a
+    `for`'s variable in its own body's scope); `declared` is this
+    lemma's parameter-name set, so a fact is only ever stated over names
+    the signature actually declares."""
+    bounds_by_line = getattr(record, "for_bound_locals", {})
+    facts = []
+    for anc in ancestors:
+        if not isinstance(anc, ForStmt) or anc.direction != "to":
+            continue
+        bounds = bounds_by_line.get(anc.line) or []
+        if not bounds:
+            continue
+        h_name = bounds[0]
+        i_name = crename.get(anc.var, anc.var)
+        if h_name not in declared or i_name not in declared:
+            continue
+        if isinstance(anc.lo, IntLit):
+            facts.append(f"({anc.lo.value} <= {i_name})")
+        facts.append(f"({i_name} < {h_name})")
+    return facts
 
 
 def _clause_rename(source: MethodDecl, task: dict, rename: dict) -> dict:
@@ -1337,8 +1432,21 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # premise, weakening neither side of any `<==>`) and gives Dafny
     # the same trigger the isolated single-guard case already finds on
     # its own.
-    array_view_fact = _and([f"forall k: int :: 0 <= k < {name}.Length ==> "
-                            f"{name}[k] == {name}[..][k]"
+    # Each conjunct is parenthesised by hand (2026-09-19): `_and` wraps
+    # only the WHOLE conjunction, and a bare `forall x :: ...` body runs
+    # as far right as dafny can take it, so with TWO array-typed names
+    # `forall k :: A ==> a-fact && forall k :: B ==> b-fact` parses as
+    # `forall k :: A ==> (a-fact && forall k :: B ==> b-fact)` -- the
+    # second array's fact silently becomes conditional on the FIRST
+    # array being non-empty, and its `k` shadows the outer one (measured
+    # on `dafny-synthesis_task_id_431` HasCommonElement, whose `L_ens`
+    # and `L_inv_k` both carried the swallowed form). A fact this
+    # module means to state and does not is worse than one it never
+    # stated, since nothing in the verdict says it went missing; with a
+    # single array (every previously-measured row) the text is
+    # unchanged but for the parens.
+    array_view_fact = _and([f"(forall k: int :: 0 <= k < {name}.Length ==> "
+                            f"{name}[k] == {name}[..][k])"
                             for name, kind in views.items() if kind == "array"])
 
     # (3) L_fun_F per spec_fun whose closure function is found. `args`
@@ -1525,7 +1633,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # positional walk already guarantees that).
     all_bound_locals = {n for names in getattr(record, "for_bound_locals", {}).values()
                         for n in names}
-    for k, (loop, scope) in enumerate(src_loops):
+    for k, (loop, scope, ancestors) in enumerate(src_loops):
         lemma_names.append(f"L_inv_{k}")
         # `scope` (from `_walk_source_loops`) is seeded with `source.params`
         # and only ever appended to, so its first len(source.params) entries
@@ -1655,6 +1763,16 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
                            for n, t in zip(full_names, full_types))
         nat_clause = _and([f"{n} >= 0" for n, t in zip(full_names, full_types)
                           if _is_nat_type(t)])
+        # Row (2026-09-19): an enclosing `for`'s index is a free `int`
+        # lemma parameter here, so every `a[<outer index>]` this loop's
+        # own invariant (or its own `extra_fact`) indexes with is
+        # ill-formed. `_for_index_range_facts` states the range decision
+        # 15's `to` desugaring gives that index throughout the enclosing
+        # body, and states nothing else; see its docstring for why an
+        # enclosing invariant or an enclosing `while`'s guard is NOT
+        # available and is deliberately not taken.
+        encl_fact = _and(_for_index_range_facts(ancestors, record, loop_crename,
+                                                set(full_names)))
         # decision 22: only usable when THIS loop's own lemma parameters
         # actually declare the mutated array's name (a loop textually
         # before its allocation would not, though none of the shapes
@@ -1809,7 +1927,19 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # left-to-right `&&` short-circuit (the same discipline L_req
         # already relies on) establishes them before `src_inv`'s embedded
         # calls are evaluated.
-        lines.append(f"  requires {_and([lifted_req, nat_clause, call_guards, this_length_fact, extra_fact, array_view_fact])}")
+        # `encl_fact` sits AHEAD of `call_guards`/`this_length_fact`/
+        # `extra_fact` and not merely somewhere in this conjunction:
+        # `extra_fact` for a nested loop is itself an indexed term
+        # (`h_v == |a[i_v3]|` on 401), so the enclosing index's range has
+        # to be established by dafny's own left-to-right `&&`
+        # short-circuit BEFORE that conjunct is weighed -- measured, same
+        # file, appending it at the END instead left 401 reading `index
+        # out of range` on the `requires` line itself. It is threaded
+        # into `requires` ONLY: being assumed there makes the `ensures`
+        # well-formed too (10 verified, 0 errors on 401 either way), and
+        # leaving the `<==>` text alone keeps this row from perturbing a
+        # single already-measured program that has no nested `for`.
+        lines.append(f"  requires {_and([lifted_req, nat_clause, encl_fact, call_guards, this_length_fact, extra_fact, array_view_fact])}")
         lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, extra_fact, src_inv])}) <==> ({lifted_inv})")
         if inv_hints:
             lines.append("{")
@@ -1830,7 +1960,10 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             src_dec = _print_expr(dec_specs[0].exprs[0], loop_crename)
             lifted_dec = _t_expr(task_loops[k]["decreases"], views)
             lines.append(f"lemma {name}({ps_inv})")
-            dec_req = _and([this_length_fact, extra_fact])
+            # Same ordering, same reason as `L_inv_k`'s own `requires`
+            # above: `extra_fact` can index with the enclosing `for`'s
+            # index, so `encl_fact` has to precede it.
+            dec_req = _and([encl_fact, this_length_fact, extra_fact])
             if dec_req != "true":
                 lines.append(f"  requires {dec_req}")
             lines.append(f"  ensures ({src_dec}) == ({lifted_dec})")

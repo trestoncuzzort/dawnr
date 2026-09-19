@@ -184,6 +184,17 @@ result cannot be refused as inconclusive: demanding "gave_up" would turn 8
 of the 11 honest cells into TIMEOUT. Both are recorded in extras["f_post"].
 Prover pinned to the bundled Z3 with --prover=z3.
 
+COST (2026-09-19): gnatprove is run with -j, because the profile at
+JOBS_CAP below found that what this kernel spends is not proof search --
+a median task's 93 obligations cost 164 steps of a 20000-step budget and
+"max 0.0 seconds" -- but ~110 serially-launched processes, 34 of which
+--proof-warnings=on adds on top. -j is a scheduling knob and NOT a budget:
+it is absent from Result.budget by design, it leaves the audit, the exit
+code, the stdout and the verdict byte-identical (MEASURED), and
+T_SPARK_JOBS=1 restores the old serial behaviour exactly. Nothing about
+--steps, the wall backstop, the counterexample channel or the
+proof-warnings pass was touched to buy the speed.
+
 `pragma Assume`, SPARK_Mode Off, Import, and GNATprove justification
 annotations prove or excuse anything: t never emits them; the adapter rules
 VACUOUS on sight (BANNED below). That ban is the
@@ -322,6 +333,123 @@ _GNATPROVE_WHY = missing("spark", "T_GNATPROVE", ['gnatprove'], [".local/gnatpro
 # only load-induced misreads on quiet re-check.
 DEFAULT_STEPS = 20_000
 WALL_S = 180
+
+# ---------------------------------------------------------------------------
+# WHERE THE TIME ACTUALLY GOES, and the one knob that moves it (2026-09-19,
+# ROADMAP 15.1, t/BUDGETS-2026-09-19.md). That table made this kernel the
+# most expensive of the seven by 18x -- median 21.88 s against the
+# next-slowest kernel's 1.23 s, and ZERO of 35 committed tasks inside ten
+# seconds -- and t/COVERAGE-apps-2026-09-19.md made `spark`/`timeout` the
+# commonest kernel/outcome pair in the whole corpus (196 answers). So the
+# cost was PROFILED rather than guessed, on this box (24 cores, idle, FSF
+# 16.1.0 / Why3 1.8.2), against t/tasks/is_prime.t, a median lowering:
+#
+#   gnatprove flags                        wall     what is added
+#   --mode=check  /  --mode=check_all     0.31 s    frontend + project + SPARK
+#   --mode=flow                           0.32 s    flow analysis
+#   prove, --steps 20000 --prover=z3      2.98 s    gnat2why, 7 gnatwhy3, 35 z3
+#     + --counterexamples=on ... =on      3.03 s    the CE channel: ~0.05 s
+#     + --proof-warnings=on              13.93 s    34 EXTRA cvc5 launches
+#
+# Neither of the two things that look expensive is: SPARKlib re-elaboration
+# is not the cost (a bare-project task, is_prime, is just as slow as a
+# library one once the flags match), and the PROVER is not the cost either.
+# `--report=statistics` accounts for every one of is_prime's 93 obligations
+# at "max 0.0 seconds", 164 steps in TOTAL against a 20000-step budget.
+# What costs is per-obligation PROCESS overhead, run strictly serially:
+# MEASURED by `strace -f -e trace=execve`, one shipped run of is_prime is
+# 111 execve's -- 35 z3, 34 cvc5, 7 gnatwhy3, 7 semaphore wrappers, 11 gcc,
+# 2 gnat2why -- and the 34 cvc5 launches that --proof-warnings=on adds (the
+# VACUOUS instrument, docstring (1) above; it ignores --prover=z3 and has
+# its own wall-clock bound) are 11 of those 13.9 seconds, at ~0.32 s each.
+# All of it on a box whose other 23 cores were idle, because gnatprove's own
+# default is -j1.
+#
+# So the fix is gnatprove's own -j, and it changes not one question asked:
+# every obligation is still generated, still handed to the same prover,
+# still bounded by the same machine-independent --steps, and the
+# proof-warnings pass still runs in full. -j says only how many of THIS
+# run's prover processes may be in flight at once; gnatprove enforces it
+# with a per-run named POSIX semaphore (GNATPROVE_SEMAPHORE over a
+# mkstemp'd /tmp/gnat-XXXXXX name, so two gnatprove trees never share one).
+# Total CPU work is unchanged, which is why a saturated machine is no worse
+# off than before and an idle one simply stops waiting.
+#
+# VERDICT-NEUTRAL, MEASURED and not assumed (2026-09-19): for abs, gcd,
+# is_prime and reverse, two -j1 runs and two -j8 runs each produce a
+# byte-identical _read_audit() summary, the same return code, the same
+# _classify_audit() verdict and byte-identical stdout. The raw .spark JSON
+# does differ between any two runs, at any fixed -j, in the
+# check_tree/proof_attempts wall-clock "time" fields -- which _read_audit
+# never reads.
+#
+# MEASURED wall for ONE gnatprove run at the shipped flags:
+#   task          -j1      -j4     -j8   -j0 (24)
+#   abs          1.00 s       -       -    0.76 s
+#   gcd          1.22 s       -  0.74 s         -
+#   reverse     10.51 s       -  2.45 s         -
+#   is_prime    12.26 s  4.09 s  3.84 s    3.86 s
+#   seq_max     17.38 s  5.74 s  4.60 s    4.46 s
+#   count_vowels 17.95 s 6.66 s  5.23 s    5.01 s
+#   word_count  25.38 s  9.05 s  7.40 s    6.37 s
+#   split_join  29.41 s 10.73 s  7.46 s    7.82 s
+#
+# JOBS_CAP is 8 because 8 takes ~90% of what all 24 cores take while
+# bounding ONE verify at 8 prover processes: a sweep at N harness jobs then
+# costs N x 8 provers, the same units t/run_par.py's own note already
+# reasons in ("--jobs 16 is the 96-prover regime"). T_SPARK_JOBS overrides
+# it (T_SPARK_JOBS=0 is gnatprove's own "all cores"); T_SPARK_JOBS=1
+# restores the pre-2026-09-19 serial behaviour exactly, and is what the
+# 32-job lab sweep this file's note above calls provisional should set.
+#
+# NOT in Result.budget: that field is documented (verifiers/__init__.py) as
+# "the deterministic bound used", and -j bounds nothing the verdict depends
+# on -- putting a machine-dependent job count there would make two honest
+# witnesses of the same file disagree about the question they answered. It
+# is recorded in extras["gnatprove_jobs"] instead, beside wall_ms, because
+# it is the thing that explains the wall.
+#
+# WHAT WAS REJECTED, and why, so it is not re-tried:
+#   * --proof-warnings-timeout (a smaller bound on the 34 cvc5 calls): it is
+#     a WALL CLOCK, which ROADMAP 7.3 forbids as a budget, and lowering it
+#     would buy speed by giving the VACUOUS instrument less room to find a
+#     contradictory hypothesis. That is weakening the check, not making it
+#     cheaper.
+#   * dropping --proof-warnings=on on the main run: same, and worse -- the
+#     contradictory-Pre rules outrank every other verdict here, so a file
+#     could mint VERIFIED that today reads VACUOUS.
+#   * -A=VC_UNREACHABLE_BRANCH / -A=VC_DEAD_CODE (suppress the two warning
+#     families this adapter records but never rules on): MEASURED rejected
+#     by gnatprove FSF 16.1.0 with exit 1, and it would have deleted
+#     recorded evidence (extras["proof_warnings"]) to buy wall clock.
+#   * --no-subprojects on a SPARKlib task: MEASURED 17.88 s against 17.38 s,
+#     i.e. nothing; Externally_Built already keeps the library out.
+#   * --memcached-server=file:<dir> (gnatprove's content-addressed prover
+#     cache): it is correctly keyed -- a changed VC is a changed key -- but
+#     it would silently defeat the two measurements that exist precisely to
+#     re-run a kernel: the flake rule runs the same cell three times to see
+#     whether it answers the same way, and t/budgets.py bypasses the verdict
+#     cache "so every call launches its kernel". A cache under those is a
+#     cache that makes them measure nothing.
+JOBS_CAP = 8
+
+
+def _jobs() -> int:
+    """gnatprove's -j for one run: how many of ITS OWN prover processes may
+    be in flight at once. A scheduling knob, never a budget -- see the block
+    comment above for the profile that motivates it and for the proof that
+    it leaves every verdict, return code and stdout byte-identical."""
+    raw = os.environ.get("T_SPARK_JOBS", "").strip()
+    if raw:
+        try:
+            n = int(raw)
+        except ValueError:
+            n = -1
+        if n >= 0:
+            return n                  # 0 is gnatprove's own "all cores"
+    return max(1, min(JOBS_CAP, os.cpu_count() or 1))
+
+
 # CE_STEPS (2026-09-11, ROADMAP 13.4, fz_p_badrec2): --ce-steps was pinned to
 # the run's own --steps (20000) until this constant, "judged at exactly the
 # standard the real run was judged at" (the paragraph above's original
@@ -792,7 +920,7 @@ def _run(src_text: str, unit: str, budget: int, warnings: bool,
         # here keeps harness filenames free (twins live in *.twin.ads outside).
         (work / unit).write_text(src_text, encoding="utf-8")
         cmd = [str(GNATPROVE), "-P", "t_work.gpr", "--steps", str(budget),
-               "--prover=z3", "--quiet"]
+               "--prover=z3", "--quiet", f"-j{_jobs()}"]
         if warnings:
             cmd.append("--proof-warnings=on")
         if cntexmp:
@@ -981,7 +1109,10 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
         havoc_outcome, havoc_why = _havoc_verdict(src_text, unit, budget)
         havoc_wall = int((time.monotonic() - h0) * 1000)
     wall = int((time.monotonic() - t0) * 1000)
-    extras = {"banned_tokens": banned[:5], "havoc_ms": havoc_wall}
+    extras = {"banned_tokens": banned[:5], "havoc_ms": havoc_wall,
+              # The scheduling knob that explains wall_ms, kept out of
+              # `budget` on purpose: see JOBS_CAP's comment above.
+              "gnatprove_jobs": _jobs()}
     if havoc_outcome:
         extras["havoc"] = {"outcome": havoc_outcome, "why": havoc_why}
     if audit is not None:

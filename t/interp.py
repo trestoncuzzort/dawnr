@@ -81,6 +81,7 @@ SPEC.md's three predicted twins to what the ladder actually finds.
 from __future__ import annotations
 
 import itertools
+from copy import deepcopy
 from dataclasses import dataclass
 
 # Per-input caps. An input that exceeds one is DISCARDED (no verdict), never
@@ -646,37 +647,55 @@ def ev(e: dict, env: dict, funs: dict, st: St):
     raise ValueError(f"t has no operator {op!r}")
 
 
-def exec_body(body: list, env: dict, funs: dict, st: St, hook=None) -> bool:
+def exec_body(body: list, env: dict, funs: dict, st: St, hook=None,
+              *, trace=None, path=()) -> bool:
     """Run statements for their VALUE only. Invariants and `decreases` are not
     checked here: this interpreter answers "what does the twin compute", and a
     twin whose annotations are broken is exactly what the kernel is asked to
     detect.
 
-    `hook(stmt, env)` fires once per ARRIVAL at a `while` header, before the
-    guard. invariant_witness needs it to learn what an actual execution puts
+    `hook(stmt, env)` fires once on entering a `while` statement, before the
+    first guard. invariant_witness needs it to learn what an actual execution puts
     in the variables the loop does not assign; default None leaves behaviour
     unchanged for every other caller.
+
+    Optional `trace(event)` receives copied statement-entry/exit and guard
+    states with AST paths. A failed statement has no exit event. Function
+    bodies evaluated inside expressions are opaque to this callback; events
+    describe this body's statements, not a complete interprocedural trace.
+    The callback must not modify interpreter globals or raise exceptions.
 
     Returns True when a `return` statement (SPEC.md "Early exit",
     2026-09-08) ended the run: the value is in env under the return name,
     and every enclosing block stops. Callers that run a whole body may
     ignore the flag; the nested calls below propagate it."""
-    for s in body:
+    def emit(kind, location, **details):
+        if trace is not None:
+            trace(dict(kind=kind, path=list(location), state=deepcopy(env),
+                       **details))
+
+    for index, s in enumerate(body):
+        location = (*path, index)
         st.tick()
+        emit("enter", location)
         if "assign" in s:
             name, e = s["assign"]
             env[name] = ev(e, env, funs, st)
         elif "return" in s:
             name, e = s["return"]
             env[name] = ev(e, env, funs, st)
+            emit("exit", location, returned=True)
             return True
         elif "var" in s:
             d = s["var"]
             env[d["name"]] = ev(d["init"], env, funs, st)
         elif "if" in s:
             c = s["if"]
-            if exec_body(c["then"] if ev(c["cond"], env, funs, st) else c["else"],
-                         env, funs, st, hook):
+            branch = "then" if ev(c["cond"], env, funs, st) else "else"
+            emit("guard", location, taken=branch)
+            if exec_body(c[branch], env, funs, st, hook,
+                         trace=trace, path=(*location, branch)):
+                emit("exit", location, returned=True)
                 return True
         elif "while" in s:
             w = s["while"]
@@ -695,7 +714,11 @@ def exec_body(body: list, env: dict, funs: dict, st: St, hook=None) -> bool:
             # strictly below the PREVIOUS arrival's variant -- the same
             # rule ev()'s spec_fun case checks for a recursive call,
             # restated for a loop's iterations instead of a call chain.
-            while ev(w["cond"], env, funs, st):
+            while True:
+                guard = ev(w["cond"], env, funs, st)
+                emit("guard", location, taken=bool(guard), iteration=it)
+                if not guard:
+                    break
                 if st.check_measures and dec is not None:
                     m = ev(dec, env, funs, st)
                     if m < 0 or (prev_m is not None and not (m < prev_m)):
@@ -703,13 +726,16 @@ def exec_body(body: list, env: dict, funs: dict, st: St, hook=None) -> bool:
                                                prev_m if prev_m is not None
                                                else m, m)
                     prev_m = m
-                if exec_body(w["body"], env, funs, st, hook):
+                if exec_body(w["body"], env, funs, st, hook,
+                             trace=trace, path=(*location, "body")):
+                    emit("exit", location, returned=True)
                     return True
                 it += 1
                 if it > MAX_LOOP:
                     raise Budget("loop cap")
         else:
             raise ValueError(f"t has no statement {s!r}")
+        emit("exit", location, returned=False)
     return False
 
 

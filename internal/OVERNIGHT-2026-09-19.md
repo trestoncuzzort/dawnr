@@ -8,9 +8,9 @@ for waiting, and keep reports concise. The broader Phi goal is not achieved.
 
 Latest operator instruction: update GitHub only after a run is done. Batch
 results and tested changes at a terminal event, then start the next round and
-go quiet. Pause the active goal while waiting to prevent automatic model turns;
-the event watcher supplies the next authorized wake. Never mark the Phi goal
-complete merely to suppress polling.
+go quiet. The event watcher supplies completion/failure wakes independently of
+the research goal. Pause a goal only at the operator's explicit request; never
+mark it complete merely to suppress polling.
 
 The initial six-arm study is complete; its result is in
 `locallm/FINDINGS-source-pretraining-2026-09-19.md`. The next registered study is
@@ -18,21 +18,28 @@ The initial six-arm study is complete; its result is in
 and reporter and 200 warmup updates. See `locallm/PREREG-source-longer-2026-09-19.md`.
 Do not accidentally resume it with the default 1000-step schedule.
 
+Before selecting the intervention after that study, read
+`internal/RESEARCH-ANGLES-2026-09-19.md`. The report archive has been recovered
+and indexed; the initial review points toward dense semantic supervision and
+structured search, with explicit controls against already-failed whole-answer
+self-repair. Do not replace the active matched run halfway through.
+
 Wake transport correction: an idle UI still owns its thread's writer lock.
 Never invoke a second `codex exec resume` for this open conversation. The
 watcher must deliver using native `codex queue`, preserve the returned queue ID,
 and distinguish enqueue acceptance from actual turn delivery. The old failed
 wake remains in private state; do not erase it to imply successful operation.
 
-The active study is `t/out/source-pretraining-2026-09-19` on the lab. Its source
+The active study is `t/out/source-pretraining-longer-2026-09-19` on the lab. Its source
 corpus and tokenizer are the corresponding `source-corpus-2026-09-19-v2` and
 `source-tokenizer-2026-09-19-v2` directories. Use the lab's `.venv-vllm` Python
 for the entire study. Run configuration and six-arm order are fixed in
 `locallm/run_pretraining_study.py`; predictions and partition/tokenizer hashes
-are in `locallm/PREREG-source-pretrain-2026-09-19.md`. Current core and runner
+are in `locallm/PREREG-source-pretrain-2026-09-19.md`, with the longer schedule
+and acceptance criteria in `locallm/PREREG-source-longer-2026-09-19.md`. Current core and runner
 hashes must remain unchanged while that study is active.
 
-On completion, run `locallm/summarize_pretraining.py` with all six `--run`
+On completion, run `locallm/summarize_pretraining.py` with `--steps 4000` and all six `--run`
 assignments (`modern:1337`, `gpt:1337`, `modern:7`, `gpt:7`, `modern:42`,
 `gpt:42`). Read every paired result, runtime and failed-attempt record. Report
 held-out loss separately from executable correctness. Inspect fixed source-code

@@ -24,13 +24,26 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_CACHE_DIR = HERE / "out" / "cache"
 
 
-def key_for(source: str, kernel: str, kernel_version: str, budget) -> str:
+def key_for(source: str, kernel: str, kernel_version: str, budget,
+            extra: str = "") -> str:
     """sha256 over the lowered source, the kernel, its version, and the
     budget -- exactly the four things ROADMAP 15.1 names as what an
-    unchanged verdict depends on."""
+    unchanged verdict depends on.
+
+    `extra` is anything ELSE a caller knows the verdict depends on, folded
+    into the same key: t/run_par.py passes the sha256 of the adapter
+    modules that turn a kernel's output into an Outcome, plus the flake n,
+    because that driver runs while t/verifiers/* is edited and an edited
+    adapter can read the same kernel output as a different Outcome. Empty
+    by default, and the empty string is hashed exactly as it always was
+    (one trailing separator), so every key t/tlib.py has ever written or
+    read is unchanged by this parameter's existence."""
     h = hashlib.sha256()
     for part in (source, kernel, kernel_version, str(budget)):
         h.update(part.encode("utf-8"))
+        h.update(b"\0")
+    if extra:
+        h.update(extra.encode("utf-8"))
         h.update(b"\0")
     return h.hexdigest()
 

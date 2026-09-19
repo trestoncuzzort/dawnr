@@ -1942,7 +1942,7 @@ lowering handed a witness shape it does not know still lowers the real
 plainly, as it always has.
 
 THE WITHHELD-DEFINITION CERTIFICATE, 2026-09-11 (ROADMAP 13.4,
-framac-axiom, worktree /home/tmcuzzort/tup/.claude/worktrees/
+framac-axiom, worktree $HOME/tup/.claude/worktrees/
 wf_127b4bf3-1c9-1). The note directly above ("THE MEASURE WITNESS
 CERTIFICATE") ends honestly unfinished for two of its own three probes:
 `_measure_certificate` reads REFUTED on `fz_p_badvariant` (a loop's own
@@ -2020,13 +2020,12 @@ re-measured for that reason, not by assumption -- reading the diff is
 the check.
 
 FRAMAC-SEQ2, ROADMAP 13.4, 2026-09-11 (worktree
-/home/tmcuzzort/tup/.claude/worktrees/wf_09045dfc-4fd-2). The ten seq
+$HOME/tup/.claude/worktrees/wf_09045dfc-4fd-2). The ten seq
 cells above, taken in the stated order, land the FIRST item only and
 stop there, each remaining cell named by the kernel's own exact
 message, unchanged from before this pass (measured both sides,
 `python3 <scratchpad>/framac-seq2/measure.py before` then `after2`,
-`<scratchpad>` = /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-
-804f-aa0d13f350ee/scratchpad):
+`<scratchpad>` is this session's own scratch directory):
 
   LANDED: `count`/`find` (SPEC.md "The string library (v1)"), general
   recursive ACSL definitions in EXECUTABLE position (T_STRFIND_ACSL,
@@ -2068,7 +2067,7 @@ message, unchanged from before this pass (measured both sides,
   an empty range is vacuously true there), which Alt-Ergo already
   discharges directly from `t_find_c`'s own contract. Standalone
   verification, before wiring into the dispatch (frama-c 33.0 /
-  alt-ergo 2.4.3-free, /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-
+  alt-ergo 2.4.3-free, <scratch>
   441b-804f-aa0d13f350ee/scratchpad/framac-seq2/t_strfind.c):
   `t_find_c`, `t_count_c`, `t_countempty_rec` and both empty-pattern
   harness functions, 103/103 goals, Qed and Alt-Ergo only, smoke
@@ -2103,7 +2102,7 @@ message, unchanged from before this pass (measured both sides,
   refuted twin. The framac column of the ROADMAP 13.4 conformance
   suite (66 probes, `probe_manifest()`/`run_items()` restricted to
   framac via `run_par.probe_backends()`'s own `present` filter, the
-  script is /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-
+  script is <scratch>
   aa0d13f350ee/scratchpad/framac-seq2/conf_framac.py): 51/66 PASS
   before this pass's edit (git show HEAD:t/lower_framac.py restored
   for that one run), 53/66 PASS after, the two new PASSes being
@@ -2116,7 +2115,7 @@ message, unchanged from before this pass (measured both sides,
   2026-09-10, RE-MEASURED 2026-09-11 rather than trusted: `python3
   grade.py --tasks <task-set> --kernels framac,dafny --flake 3 --jobs
   8`, twelve named tasks copied from the 59-lifted set into
-  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee
+  <scratch>
   /scratchpad/framac-seq2/roadmap162-tasks, byte-identical result
   before and after this pass's edit, `r162-before/table.md` vs
   `r162-after/table.md` under that scratchpad differing only in their
@@ -2147,7 +2146,7 @@ message, unchanged from before this pass (measured both sides,
   result: byte-identical before/after, none call `count`/`find`.
 
 FRAMAC-SEQ3, ROADMAP 13.4, 2026-09-11 (worktree
-/home/tmcuzzort/tup/.claude/worktrees/wf_127b4bf3-1c9-2). The eight
+$HOME/tup/.claude/worktrees/wf_127b4bf3-1c9-2). The eight
 abstaining seq cells named for this round, taken in the stated order
 (fz_p_nest_cell, fz_p_nest_lit; fz_p_nest_eq; fz_p_nest_empty,
 fz_p_str_splitempty; fz_p_str_tab; fz_p_str_lowernonletter;
@@ -2159,7 +2158,7 @@ already drew for them, each remeasured (unchanged) rather than trusted.
   has the design). `fz_p_nest_cell`'s and `fz_p_nest_lit`'s own measured
   message before this pass, byte-identical both, `python3
   <scratchpad>/framac-seq3/measure.py` (`<scratchpad>` =
-  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee
+  <scratch>
   /scratchpad): "conditionally evaluated `at` in executable position:
   definedness not dischargeable by a plain assert" -- both bodies put
   `at(m, i)`'s own row read inside a LATER conjunct of an `and` guard
@@ -2233,13 +2232,13 @@ already drew for them, each remeasured (unchanged) rather than trusted.
   literal).
 
 FRAMAC-SEQ4, ROADMAP 13.4, 2026-09-12 (worktree
-/home/tmcuzzort/tup/.claude/worktrees/wf_092dca46-e41-1). The six seq
+$HOME/tup/.claude/worktrees/wf_092dca46-e41-1). The six seq
 cells FRAMAC-SEQ3's own note above left STOPPED (fz_p_nest_eq;
 fz_p_nest_empty, fz_p_str_splitempty; fz_p_str_tab;
 fz_p_str_lowernonletter; fz_p_pair_seq), taken in the stated order:
 none of the six moves cell-to-verified this pass, each remeasured
 (`python3 <scratchpad>/framac-seq4/measure.py`, `<scratchpad>` =
-/tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+<scratch>/
 scratchpad) rather than trusted, and one genuine rendering-site bug
 `pred()` had on the FIRST of the six is fixed along the way, named
 below rather than claimed as a landed cell since it does not move
@@ -2456,7 +2455,7 @@ length bound derived differently), not a scoped extension of the
 frame-fact/capacity fixes landed here. Named, not attempted.
 
 FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12 (worktree
-/home/tmcuzzort/tup/.claude/worktrees/wf_2056d1d0-df2-2). Item (a) of
+$HOME/tup/.claude/worktrees/wf_2056d1d0-df2-2). Item (a) of
 the design order this pass's own task named ("the extensional seq
 equality loop in executable position ... a statement-shaped rendering
 path stmts() emits before the assignment, a C loop with its own
@@ -2480,7 +2479,7 @@ turn into a pointer/length pair.
 MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-12, `python3
 grade.py --tasks <dir> --kernels framac,dafny --flake 3 --jobs 4/8`,
 task JSON copied from `t/out/lifted-tasks/` into
-/tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+<scratch>/
 scratchpad/framac-nested/roadmap-tasks, and `fuzz_lower.py --n 0 --only
 framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
 
@@ -2611,7 +2610,7 @@ framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
 
   REGRESSION, measured both sides (before = `git show HEAD:t/
   lower_framac.py` at this pass's own start commit, copied to
-  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+  <scratch>/
   scratchpad/framac-nested/before-t/lower_framac.py, run inside a full
   copy of `t/` so every import resolves identically): the 34 committed
   tasks under t/tasks, framac column, `python3 grade.py --tasks tasks
@@ -2625,7 +2624,7 @@ framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
   the RETURN-name-first-assignment or reassigned-"var"-across-
   iterations shapes the certificate bug needed). The 66-item framac
   conformance manifest (own scratchpad script,
-  /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-aa0d13f350ee/
+  <scratch>/
   scratchpad/framac-nested/conf_framac.py, `run_par.BACKENDS` restricted
   to framac, `conformance.build_manifest()`/`run_items()`/`grade()`
   called directly): 58/66 PASS both before and after, PASS/FAIL split
@@ -2634,7 +2633,7 @@ framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
   scored FAIL, matching `_expect` neither before nor after). The 66
   `dafny_synthesis_*` rows of t/COVERAGE-lifted-785.md that read
   `verified / refuted` in the framac column TODAY (grepped from the
-  live file, copied into /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-
+  live file, copied into <scratch>
   441b-804f-aa0d13f350ee/scratchpad/framac-nested/ds-verified-refuted-
   tasks, `python3 grade.py --tasks <dir> --kernels framac --min-kernels
   1 --flake 3 --jobs 8`): table.md BYTE-IDENTICAL before/after (none of
@@ -2675,7 +2674,7 @@ framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
   open for task 460 above.
 
 FRAMAC-NESTED, DESIGN-framac-nested-seq.md, 2026-09-14 (worktree
-/home/tmcuzzort/tup/.claude/worktrees/wf_9a0a9ebc-9de-6). Takes up items
+$HOME/tup/.claude/worktrees/wf_9a0a9ebc-9de-6). Takes up items
 (b)/(c)/(d) named OPEN just above: a second capacity dimension for a
 seq<seq> RETURN/LOCAL (sections 1-3), an executable `lower`/`upper`
 (section 4), and re-checks the two cells wave K's item (a) moved from
@@ -2824,7 +2823,7 @@ FAIL to PASS; the five still-FAIL cells -- biglen, seqlen (open by
 design), pair_seq, nest_eq, str_tab -- read the identical (real, twin)
 pair before and after, confirmed by rerunning the SAME script against a
 copy of the pre-pass file). The 302-task lifted corpus
-(`/home/tmcuzzort/tup/t/out/lifted-tasks/`, read-only): `lower()` called
+(`$HOME/tup/t/out/lifted-tasks/`, read-only): `lower()` called
 directly on all 302 (same before/after-module technique as the 34
 committed tasks) -- 301 of 302 BYTE-IDENTICAL; the one exception,
 `dafny-language-server_tmp_tmpkir0kenl_Test_tutorial_maximum.Maximum`
@@ -3032,7 +3031,117 @@ unchanged. None of the thirteen tasks named above (240, 262, 307, 412,
 refuted` in the framac column of t/COVERAGE-lifted-785.md before this
 pass (every one was `abstain / abstain` or `timeout / timeout`), so the
 "no real may move" regression bar on that document's own verified/
-refuted cells is vacuously satisfied, not merely unmeasured."""
+refuted cells is vacuously satisfied, not merely unmeasured.
+
+FRAMAC-SEQ5, 2026-09-19 (ROADMAP 13.4, the three ADDRESSABLE framac
+conformance cells still FAILing after wave Q). Measured first, before
+anything was written, because the brief this pass was handed named six
+cells from a stale reading of internal/ROADMAP-LOG.md's 13.4 section
+(which stops at pass 8) and three of those six had already been closed
+by wave O: `python3 t/conformance.py`'s own committed table
+(t/CONFORMANCE.md, 2026-09-15 20:23Z) and a direct re-measurement of
+each cell through `tlib.verify(probe, ['framac'])` agree, and both
+agree with wave O's, P's and Q's gate lines (457 of 462, five framac
+FAIL cells). `fz_p_nest_empty`, `fz_p_str_splitempty` and
+`fz_p_str_lowernonletter` read VERIFIED before this pass and are
+untouched by it. The five that FAILed: `fz_p_biglen` and `fz_p_seqlen`,
+open by design (a false bound on an unbounded length no prover here
+names, see the pass-5 note), left alone; `fz_p_nest_eq`,
+`fz_p_str_tab`, `fz_p_pair_seq`, taken here.
+
+1. `fz_p_nest_eq`: THE INVARIANTS, NOT THE INSTANTIATION SHAPE. Wave K
+   built the seq-equality loops (`_seq_eq_top`/`_seq_eq_operand_c`/
+   `_seq_eq_loop`/`_seq_eq_value`) and wave K's own note read the
+   remaining TIMEOUT as an alt-ergo instantiation-shape gap. Re-measured
+   here by running `frama-c -wp` on the emitted file directly rather
+   than through the harness: the two goals left were the `ensures` and
+   the OUTER loop's own invariant-preserved, and both were unprovable,
+   not merely slow. Every invariant wave K wrote is one-directional
+   (`{eq} == 1 ==> elements agree so far`), which never lets WP conclude
+   the flag is STILL 1, and the flag is exactly what `ensures r == (...)`
+   is about; and the inner loop republished nothing about the rows the
+   outer loop had already finished, so the outer invariant could not be
+   re-established after it. `_seq_eq_loop`'s own docstring ("BOTH
+   DIRECTIONS") carries the three changes and why each is needed.
+   Measured after: 40 / 40 goals, Qed 18, alt-ergo 20 (6ms-60ms-731ms),
+   Smoke Tests 10 / 10; the cell reads verified.
+
+2. `fz_p_str_tab`: A COMPARISON ONE LEVEL DOWN. Its body is `r :=
+   (len(rows) == 2) and (rows[0] == [65]) and (rows[1] == [66])`, so the
+   seq `==` is a CONJUNCT, never the root, and `stmts()`'s three
+   `_seq_eq_top` branches never saw it -- `cexpr` reached the bare-`==`
+   refusal one level down and the cell abstained. `_seq_eq_hoist` (new)
+   rewrites such an expression, replacing every maximal seq comparison
+   with a fresh bool temp its own `_seq_eq_loop` computes ahead of the
+   statement; `_seq_eq_operand_c` gained the fourth operand shape the
+   cell needs, a seq LITERAL, declared as an initialized local array
+   rather than a C99 compound literal (which inside a loop body is a
+   fresh object per iteration). `_seq_eq_hoist`'s docstring states why
+   lifting a SHORT-CIRCUITED conjunct is honest: the hoisted operand's
+   domain obligations are emitted unguarded, so a guard that is
+   load-bearing makes the file unproved rather than making it lie.
+
+   WHAT THIS CELL DOES AND DOES NOT PROVE, stated plainly because the
+   answer is weaker than the goal count suggests. `rows` is a
+   seq<seq>-typed LOCAL whose initializer is `split([65, 9, 66])`, and
+   wave O's `_fold_nested_rows` constant-folds that at LOWERING time
+   through `interp._str_split_ws`, the reference evaluator's own
+   function. WP then proves, over the C arrays that fold declares, that
+   the row count is 2 and each row equals its literal -- a real proof of
+   the extraction and the two comparisons. It does NOT prove that
+   `split([65, 9, 66])` IS those rows: that step is the lowering's own
+   fold, i.e. the same reference semantics the probe's expectation is
+   written against. This is exactly the claim `fz_p_nest_empty` and
+   `fz_p_str_splitempty` already make since wave O, extended one cell,
+   not a new liberty; an ACSL `split` general over a parameter is
+   DESIGN-framac-nested-seq.md section 3's own "riskiest step" and is
+   not attempted here. A reader who wants the stronger claim should read
+   this cell as "framac agrees once split is given", and the item is
+   named, not hidden.
+
+   Five doomed `wp_smoke_dead_code` goals are reported on the emitted
+   file (109 / 114, i.e. 74 / 74 real obligations once the smoke tallies
+   are subtracted). They are the branches of two comparisons whose data
+   is provably equal and of the `&&` chain over a provably true first
+   conjunct -- correctly dead, the class `verifiers/framac.py`'s own
+   `_UNREACHABLE_SMOKE`/`_all_obligations_proved` doctrine has exempted
+   since 2026-09-04, checked here in the kernel's own JSON report rather
+   than assumed (all five carry `property` `..._wp_smoke_dead_code_s*`).
+   Nothing in that doctrine was touched.
+
+3. `fz_p_pair_seq`: FLATTEN, DO NOT WIDEN THE STRUCT. The refusal this
+   cell reached (`_pair_field_c`) is about a struct FIELD holding a seq,
+   and it is still right: a buffer pointer plus a length is not a field.
+   The answer, DESIGN-framac-nested-seq.md section 5's, is that a
+   pair-typed PARAMETER with a seq component needs no struct at all --
+   `int *p_fst, int p_fst_n, int p_snd`, each component declared exactly
+   as a parameter of that t-type already is. `_pair_flat` (new) is the
+   whole encoding, and `seq_var` returning `p_fst` for `fst(p)` is what
+   makes `len`/`at`/definedness/`\\separated`/the `requires` block read
+   the seq half with no per-site rendering added anywhere. The three
+   shapes with no encoding -- a pair-with-a-seq RETURN, the same as a
+   LOCAL (both a CAPACITY sizing question `Ctx.seq_len` has no name to
+   key on), and a pair of two seqs -- are refused BY NAME in `lower()`
+   and pinned by `test_framac_seq4.py`. The twin's COLLAPSE-IF witness
+   (`p = ([], 0)`, an unguarded `at` outside `[0,0)`) now certifies:
+   `_undef_certificate` declares a flattened pair witness component by
+   component, and its `env_py` builds an `interp.Pair` instead of a
+   Python tuple for a pair-typed parameter (the old line turned any list
+   into a tuple, which is `interp.py`'s SEQ representation, so
+   `interp.ev` raised `AttributeError` on `.b` and the certificate was
+   silently declined). The cell reads verified / refuted.
+
+STILL OPEN, named with what each would need. `fz_p_nest_eq`'s and
+`fz_p_str_tab`'s TWINS read timeout, not refuted: `_cert_stmts`'s ground
+replay reaches `cexpr`, which has no C VALUE for a seq `==` (the same
+refusal `_seq_eq_hoist` answers at STATEMENT level, which a certificate
+function's expression-position replay cannot use) and none for `split`
+in executable position. Both cells grade on the real and PASS, and the
+honest route for the twins is a statement-shaped certificate replay, a
+different mechanism from the one `_cert_cexpr` is. `fz_p_biglen` and
+`fz_p_seqlen` are unchanged and stay open by design. A pair with a seq
+component as a RETURN or LOCAL, and a general (non-folded) `split`, are
+the two named residuals of this pass."""
 from __future__ import annotations
 
 import sys
@@ -3331,7 +3440,7 @@ def _wordcount(s: list) -> int:
 # `wc == t_wc(s, i)` shape one level up).
 #
 # MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-11, standalone
-# file, /tmp/claude-1004/-home-tmcuzzort/b04a1fce-9e33-441b-804f-
+# file, <scratch>
 # aa0d13f350ee/scratchpad/framac-seq2/t_strfind.c): `t_find_c`,
 # `t_count_c` and two harness functions instantiating each at the
 # EMPTY-pattern case (`fz_p_str_findempty`'s and `fz_p_str_countempty`'s
@@ -3600,6 +3709,15 @@ def seq_var(e: dict, env: dict) -> str:
         t = env.get(e["var"])
         if t == "seq" or is_nested_seq_type(t):
             return e["var"]
+    flat = _pair_flat(e, env)
+    if flat is not None and (flat[1] == "seq" or is_nested_seq_type(flat[1])):
+        # A PAIR WITH A SEQ COMPONENT, 2026-09-19: `fst(p)` IS a bare
+        # seq name in the emitted C, `p_fst`, because `lower()` passes
+        # the components as separate parameters rather than as a struct
+        # (see `_pair_flat`). One line here is what makes every `len`/
+        # `at`/definedness site read the projection without a case of
+        # its own.
+        return flat[0]
     raise NotImplementedError(f"seq position holds non-variable {e!r}")
 
 
@@ -3618,7 +3736,11 @@ def _seq_val_len_c(e: dict, env: dict, funs: dict, task_name: str,
     reached for `update`/`fill` (SPEC.md's own grammar restricts those to
     the whole right-hand side of a seq-typed assignment, `seq_assign_lines`
     above, never nested inside a `len(...)`)."""
-    if "var" in e:
+    if "var" in e or _pair_flat(e, env) is not None:
+        # The flattened seq component of a pair PARAMETER (2026-09-19,
+        # `_pair_flat`) IS a bare seq name in the emitted C, so its
+        # length is the same `{v}_n` a bare seq variable's is; `seq_var`
+        # is what knows the name.
         v = seq_var(e, env)
         return f"{v}_n"
     op = e.get("op")
@@ -3893,6 +4015,21 @@ def term(e: dict, ctx: Ctx) -> str:
         # the `var` case above) in both committed tasks, but the
         # rendering is generic over any pair-typed term this backend can
         # otherwise express (never `pair(...)` itself, see below).
+        #
+        # A PAIR WITH A SEQ COMPONENT, 2026-09-19: there is no struct at
+        # all for that shape (see `_pair_flat`), so the SCALAR sibling
+        # is a plain C name and the seq half never reaches here (it
+        # arrives at `_seq_len_render`/`_seq_at_render` through
+        # `seq_var` instead).
+        flat = _pair_flat(e, ctx.env)
+        if flat is not None:
+            if flat[1] == "seq" or is_nested_seq_type(flat[1]):
+                raise NotImplementedError(
+                    "a seq-typed pair component in ACSL TERM position "
+                    "(not under `len`/`at`): a seq has no ACSL term of "
+                    "its own in this lowering, the same gap a bare "
+                    "seq-typed variable already has there")
+            return flat[0]
         field = "a" if op == "fst" else "b"
         return f"({term(args[0], ctx)}).{field}"
     if op == "pair":
@@ -4231,6 +4368,13 @@ def pred(e: dict, ctx: Ctx) -> str:
         # `term()`, never here), so this applies the SAME `!= 0` bool
         # convention the `var` case above already applies to a bare
         # bool-typed C name, to the field read instead of the name.
+        #
+        # A PAIR WITH A SEQ COMPONENT, 2026-09-19: the bool sibling of a
+        # seq component is a plain C name, not a field (see
+        # `_pair_flat`); the same `!= 0` convention applies to it.
+        flat = _pair_flat(e, ctx.env)
+        if flat is not None:
+            return f"({flat[0]} != 0)"
         field = "a" if op == "fst" else "b"
         return f"(({term(args[0], ctx)}).{field} != 0)"
     raise ValueError(f"no predicate form for operator {op!r}")
@@ -4326,6 +4470,63 @@ def pred(e: dict, ctx: Ctx) -> str:
 # pair one too. Nothing to fix, and nothing left silently unclaimed.
 
 
+def _pair_seq_type(t) -> bool:
+    """True iff `t` is a pair t-type with at least one "seq" component --
+    the shape `_pair_field_c` refuses a struct field for and
+    `_pair_flat` below encodes by FLATTENING instead."""
+    return isinstance(t, dict) and "pair" in t and "seq" in t["pair"]
+
+
+def _pair_flat(e: dict, env: dict):
+    """`(flattened C name, that component's t-type)` when `e` is
+    `fst(p)`/`snd(p)` for a bare pair-typed name `p` whose pair has a seq
+    component; None otherwise, which is every pair shape this file
+    already encoded as a struct.
+
+    A PAIR WITH A SEQ COMPONENT, 2026-09-19 (ROADMAP 13.4,
+    `fz_p_pair_seq`; DESIGN-framac-nested-seq.md section 5). The PAIRS
+    section above explains why a struct field cannot hold one: a seq in
+    this backend is a caller-provided buffer PLUS a length, and a C
+    struct field can hold neither the storage nor the second
+    `\\valid`/`\\separated` obligation the caller owes for it. That
+    argument is about the STRUCT, and the design's answer is to not
+    build one: a pair-typed PARAMETER whose components are `(seq, int)`
+    is passed as the components themselves, `int *p_fst, int p_fst_n,
+    int p_snd`, exactly the C parameters `p_fst: seq, p_snd: int` would
+    have got as two ordinary parameters. There is no struct type, no
+    struct field and no by-value pair anywhere in the emitted file, so
+    `_pair_field_c`'s refusal is not weakened; it is simply never
+    reached for this shape.
+
+    Why this is the whole change, and not a new encoding to get right:
+    every reader of a seq in this file goes through `seq_var` for the
+    NAME and renders `{v}`, `{v}_n` off it (`_seq_len_render`,
+    `_seq_at_render`, `defs`, `at_asserts`, `code_ats`, `cexpr`'s `at`
+    case, `_seq_eq_operand_c`). `seq_var` returning `p_fst` for
+    `fst(p)` therefore gives `len(fst(p))` -> `p_fst_n` and
+    `at(fst(p), i)` -> `p_fst[i]` in ACSL and in C at once, with no
+    per-site rendering added anywhere. The scalar sibling is the one
+    remaining site, and it is three one-line branches (`term`, `pred`,
+    `cexpr`) choosing `p_snd` over `(p).b`.
+
+    SCOPE, stated rather than stretched: a PARAMETER only, and exactly
+    one seq component. A pair-with-a-seq RETURN or LOCAL would have to
+    SIZE the seq half the way CAPACITY mode sizes a plain seq return,
+    which is a second question this does not answer, and a pair of two
+    seqs is two buffers where no measured task has even one; `lower()`
+    refuses all three BY NAME rather than guessing."""
+    if e.get("op") not in ("fst", "snd"):
+        return None
+    base = e["args"][0]
+    if "var" not in base:
+        return None
+    t = env.get(base["var"])
+    if not _pair_seq_type(t):
+        return None
+    k = 0 if e["op"] == "fst" else 1
+    return f"{base['var']}_{e['op']}", t["pair"][k]
+
+
 def _pair_field_c(t) -> str:
     """The C field type a pair component of t-type `t` gets: `int` for
     both "int" and "bool" (this backend's existing bool-as-int-0/1
@@ -4396,14 +4597,26 @@ def _pair_types_needed(task: dict, body: list, env: dict, funs: dict
     full_env = dict(env)
     full_env.update(_pair_local_types(body))
     seen: dict = {}
+    # A PAIR WITH A SEQ COMPONENT, 2026-09-19: a FLATTENED parameter
+    # (`_pair_flat`) has no struct type at all -- its components are
+    # separate C parameters -- so it must not put one in this list, or
+    # `lower()`'s header would declare a struct whose field type
+    # `_pair_field_c` correctly refuses to name. Every OTHER source of a
+    # seq-bearing pair type (a RETURN, a LOCAL, a `pair(...)`
+    # construction) still lands here and still reaches that refusal,
+    # which is the point: only the one shape that has a real encoding is
+    # exempted from needing a struct.
     for p in task["params"]:
         if isinstance(p["type"], dict) and "pair" in p["type"]:
-            seen[tuple(p["type"]["pair"])] = True
+            if not _pair_seq_type(p["type"]):
+                seen[tuple(p["type"]["pair"])] = True
     rett = task["returns"][0]["type"]
     if isinstance(rett, dict) and "pair" in rett:
         seen[tuple(rett["pair"])] = True
-    for t in full_env.values():
-        if isinstance(t, dict) and "pair" in t:
+    flat_params = {p["name"] for p in task["params"]
+                   if _pair_seq_type(p["type"])}
+    for n, t in full_env.items():
+        if isinstance(t, dict) and "pair" in t and n not in flat_params:
             seen[tuple(t["pair"])] = True
 
     def scan(x):
@@ -4660,6 +4873,22 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
     if op in ("fst", "snd"):
         # p.0 / p.1: a plain field read on whatever `cexpr` already
         # renders for the pair-typed operand.
+        #
+        # A PAIR WITH A SEQ COMPONENT, 2026-09-19: no struct exists for
+        # that shape (see `_pair_flat`), so the scalar sibling is its
+        # own C parameter; a seq-typed projection has no C VALUE, the
+        # same named refusal a bare seq-typed variable already has in
+        # value position, and `at`/`len` reach it through `seq_var`
+        # without ever coming here.
+        flat = _pair_flat(e, env)
+        if flat is not None:
+            if flat[1] == "seq" or is_nested_seq_type(flat[1]):
+                raise NotImplementedError(
+                    "a seq-typed pair component in C VALUE position "
+                    "(not under `len`/`at`): a seq has no single C "
+                    "value in this lowering, only a pointer and a "
+                    "length")
+            return flat[0]
         field = "a" if op == "fst" else "b"
         return f"({cexpr(args[0], env, funs, task_name, _div_style)}).{field}"
     if op == "neg":
@@ -5853,25 +6082,36 @@ def _assigns_target(n: str, ctx: Ctx) -> str:
 _SEQ_EQ_CTR = [0]
 
 
-def _seq_eq_operand_c(e: dict, ctx: Ctx, funs: dict, task_name: str):
+def _seq_eq_operand_c(e: dict, ctx: Ctx, funs: dict, task_name: str,
+                      pre: list | None = None, indent: str = "",
+                      tmp_prefix: str = "__seq_eq"):
     """(pointer-expr, length-expr, domain-assert-list) for a flat
     ("seq"-typed) EXECUTABLE-position read operand of the equality loop
-    below. Three shapes, the ones this pass's own three named cells
-    actually need, each MEASURED against the real lifted task JSON before
-    being written (isSublist's `main_v[i_v .. i_v+len(sub)]`,
-    containsSequence's `at(list, i_v)` where `list` is a seq<seq>
-    parameter): a bare seq variable (`{v}_n` elements at `{v}` itself,
-    already `\\valid_read` by that parameter's own `requires`); a slice of
-    one (`{base} + lo` .. `hi - lo` elements, its own domain obligation
-    `0 <= lo <= hi <= len(base)` returned as asserts since no `at`
-    wraps it here for `code_ats`/`at_asserts` to pick up); or a ROW of a
-    nested seq<seq> PARAMETER (`at(m, i)`, THE ENCODING's own
-    `{m}_data + {m}_off[i]` .. `{m}_off[i+1] - {m}_off[i]` elements, its
-    own domain obligation `0 <= i < len(m)`). Anything else (a seq
-    literal or a `+` concatenation operand) is a named NotImplementedError,
-    not guessed at: none of this pass's own three cells needs one, and
+    below. Four shapes, the ones this pass's own named cells actually
+    need, each MEASURED against the real task JSON before being written
+    (isSublist's `main_v[i_v .. i_v+len(sub)]`, containsSequence's
+    `at(list, i_v)` where `list` is a seq<seq> parameter, and
+    `fz_p_str_tab`'s `at(rows, 0) == [65]`): a bare seq variable (`{v}_n`
+    elements at `{v}` itself, already `\\valid_read` by that parameter's
+    own `requires`); a slice of one (`{base} + lo` .. `hi - lo` elements,
+    its own domain obligation `0 <= lo <= hi <= len(base)` returned as
+    asserts since no `at` wraps it here for `code_ats`/`at_asserts` to
+    pick up); a ROW of a nested seq<seq> variable (`at(m, i)`, THE
+    ENCODING's own `{m}_data + {m}_off[i]` .. `{m}_off[i+1] - {m}_off[i]`
+    elements, its own domain obligation `0 <= i < len(m)`) -- a PARAMETER
+    or, since 2026-09-14, the compile-time-constant seq<seq> LOCAL
+    `stmts()`'s own `var` case declares, which carries the identical
+    `_data`/`_off`/`_n` triple; or a seq LITERAL, declared as a local
+    array into `pre` (see that case for why not a compound literal).
+    Anything else (a `+` concatenation operand) is a named
+    NotImplementedError, not guessed at: no measured cell needs one, and
     guessing a rendering un-measured against a real task is exactly what
-    RULES forbids."""
+    RULES forbids.
+
+    `pre` is the caller's own line list for declarations this operand
+    needs emitted BEFORE the loop; only the literal case appends to it,
+    and a caller that passes none is declaring it has no such position,
+    so a literal operand raises the same named refusal as before."""
     if "var" in e:
         v = seq_var(e, ctx.env)
         return v, f"{v}_n", []
@@ -5898,11 +6138,34 @@ def _seq_eq_operand_c(e: dict, ctx: Ctx, funs: dict, task_name: str):
             dom = [f"0 <= ({idx_c})", f"({idx_c}) < {nv}_n"]
             return (f"({nv}_data + {nv}_off[{idx_c}])",
                     f"({nv}_off[({idx_c}) + 1] - {nv}_off[{idx_c}])", dom)
+    if op == "seq" and pre is not None:
+        # A SEQ LITERAL operand, added 2026-09-19 (ROADMAP 13.4,
+        # `fz_p_str_tab`'s own `at(rows, 0) == [65]`). `cexpr`'s own
+        # "item 1 (literal)" case already renders `at([e0, ...], k)` as a
+        # C99 compound literal `((int[]){e0, ...})[k]`; the same array is
+        # what this operand needs, except that here it is read inside a
+        # LOOP, once per iteration, and a compound literal in a loop body
+        # is a FRESH object each time round. So this declares it once, as
+        # an ordinary initialized local array before the loop, and hands
+        # back that array's name: one object with one definite initial
+        # value for WP to read, no per-iteration allocation for it to
+        # reason about. The length is the literal's own element count, a
+        # C integer constant, so there is no domain obligation at all --
+        # the array cannot be indexed out of its own capacity by a loop
+        # whose bound IS that capacity. An EMPTY literal (`[]`) still
+        # gets a one-element array, since C has no zero-length array
+        # type, and a length of 0, so the loop never reads it.
+        elems = ", ".join(
+            cexpr(a, ctx.env, funs, task_name) for a in e.get("args", ()))
+        nm = f"{tmp_prefix}_lit{len(pre)}"
+        pre.append(f"{indent}int {nm}[{max(1, len(e.get('args', ())))}] = "
+                   f"{{{elems if elems else '0'}}};")
+        return nm, str(len(e.get("args", ()))), []
     raise NotImplementedError(
         "seq extensional equality loop: only a bare seq variable, a "
-        "slice of one, or a row of a nested seq<seq> PARAMETER has an "
-        "executable-position pointer/length by this pass; a seq literal "
-        "or `+` concatenation operand is a named remaining gap")
+        "slice of one, a row of a nested seq<seq> PARAMETER or a seq "
+        "LITERAL has an executable-position pointer/length by this pass; "
+        "a `+` concatenation operand is a named remaining gap")
 
 
 def _seq_eq_top(e: dict, ctx: Ctx) -> bool:
@@ -5949,7 +6212,50 @@ def _seq_eq_loop(e: dict, ctx: Ctx, indent: str, funs: dict, task_name: str):
     helper-free block below rather than factored through the nested case's
     inner-loop code, since the two need different index/name plumbing --
     the nested case's inner loop is generated per outer iteration, this
-    one only once)."""
+    one only once).
+
+    BOTH DIRECTIONS, 2026-09-19 (ROADMAP 13.4, `fz_p_nest_eq` and
+    `fz_p_str_tab`). Wave K wrote every invariant here one-directional,
+    `{eq} == 1 ==> (elements agree so far)`, which is the half a CALLER
+    that only ever reads the temp as "if this is 1 the seqs matched"
+    needs. It is NOT the half either named cell needs: both spell the
+    comparison into an `ensures` (`r == (len(m) == len(n) && \\forall k
+    ...)`, `r == true`), so WP has to prove `\\result != 0` as well as
+    what follows from it, and NOTHING in a one-directional invariant
+    ever lets it conclude the flag is still 1. Measured before the
+    change, `frama-c -wp` on the emitted `fz_p_nest_eq.c`: the goals
+    left unproved were the `ensures` and the outer loop's own
+    invariant-preserved, the second because the inner loop republished
+    nothing about the rows the outer loop had already finished, so the
+    outer invariant could not be re-established after it -- alt-ergo
+    spun on both and the cell read TIMEOUT rather than UNPROVED, which
+    is why wave K's note read it as an instantiation-shape gap.
+
+    Three changes, each carrying its own reason:
+
+      * `0 <= {eq} <= 1`, on every loop. The flag is assigned only `0`
+        or a C comparison, so it IS a 0/1 value, but a loop invariant is
+        all WP has at the loop head: without this it must admit `{eq}
+        == 2`, where the C guard `while ({eq} && ...)` is TRUE and the
+        biconditional below says the elements do NOT all agree, and the
+        `ensures`'s own `\\result != 0` side is then unprovable for a
+        reason that has nothing to do with the comparison.
+      * `<==>` in place of `==>`, on every loop. The reverse direction
+        is just as true (the body sets the flag to 0 exactly at the
+        first mismatch and never back) and it is the one that concludes
+        "still 1, so they matched all the way".
+      * the outer loop's own facts restated as invariants OF THE INNER
+        loop (`{av}_n == {bv}_n` and the finished-rows `\\forall`).
+        Both are established at inner entry from the outer invariant
+        read forward under the outer guard (`{eq}` nonzero, hence 1),
+        and both are preserved because the inner loop `assigns` only
+        its own index and the flag. This is what lets WP re-establish
+        the outer invariant on the row after the inner loop, the goal
+        that was spinning.
+
+    Measured on the emitted file after the change (same pins as
+    `verifiers/framac.py`): `fz_p_nest_eq` 40 / 40 goals, Qed 18,
+    alt-ergo 20 (6ms-60ms-731ms), Smoke Tests 10 / 10."""
     n = _SEQ_EQ_CTR[0]
     _SEQ_EQ_CTR[0] += 1
     eq, i = f"__seq_eq{n}", f"__seq_eq{n}_i"
@@ -5972,14 +6278,15 @@ def _seq_eq_loop(e: dict, ctx: Ctx, indent: str, funs: dict, task_name: str):
                  f"({av}_off[__k + 1] - {av}_off[__k]) ==> "
                  f"{av}_data[{av}_off[__k] + __j] == "
                  f"{bv}_data[{bv}_off[__k] + __j])")
+        rows_done = (f"\\forall integer __k; 0 <= __k < {i} ==> ({row_eq})")
         out.append(f"{indent}int {i} = 0;")
         out.append(f"{indent}int {eq} = ({av}_n == {bv}_n);")
         out.append(f"{indent}/*@")
         out.append(f"{indent}  loop invariant 0 <= {i} <= {av}_n;")
         out.append(f"{indent}  loop invariant {i} <= {bv}_n;")
-        out.append(f"{indent}  loop invariant {eq} == 1 ==> "
-                  f"(\\forall integer __k; 0 <= __k < {i} ==> "
-                  f"({row_eq}));")
+        out.append(f"{indent}  loop invariant 0 <= {eq} <= 1;")
+        out.append(f"{indent}  loop invariant {eq} == 1 <==> "
+                  f"(({av}_n == {bv}_n) && ({rows_done}));")
         out.append(f"{indent}  loop assigns {i}, {eq};")
         out.append(f"{indent}  loop variant {av}_n - {i};")
         out.append(f"{indent}*/")
@@ -5992,7 +6299,10 @@ def _seq_eq_loop(e: dict, ctx: Ctx, indent: str, funs: dict, task_name: str):
         out.append(f"{indent}    int {i2} = 0;")
         out.append(f"{indent}    /*@")
         out.append(f"{indent}      loop invariant 0 <= {i2} <= {rl};")
-        out.append(f"{indent}      loop invariant {eq} == 1 ==> "
+        out.append(f"{indent}      loop invariant 0 <= {eq} <= 1;")
+        out.append(f"{indent}      loop invariant {av}_n == {bv}_n;")
+        out.append(f"{indent}      loop invariant {rows_done};")
+        out.append(f"{indent}      loop invariant {eq} == 1 <==> "
                   f"(\\forall integer __j; 0 <= __j < {i2} ==> "
                   f"{av}_data[{av}_off[{i}] + __j] == "
                   f"{bv}_data[{bv}_off[{i}] + __j]);")
@@ -6010,8 +6320,10 @@ def _seq_eq_loop(e: dict, ctx: Ctx, indent: str, funs: dict, task_name: str):
         out.append(f"{indent}  {i} = {i} + 1;")
         out.append(f"{indent}}}")
         return out, eq
-    ap, alen, adom = _seq_eq_operand_c(a_e, ctx, funs, task_name)
-    bp, blen, bdom = _seq_eq_operand_c(b_e, ctx, funs, task_name)
+    ap, alen, adom = _seq_eq_operand_c(a_e, ctx, funs, task_name,
+                                       out, indent, eq)
+    bp, blen, bdom = _seq_eq_operand_c(b_e, ctx, funs, task_name,
+                                       out, indent, eq)
     for d in adom + bdom:
         out.append(f"{indent}/*@ assert {d}; */")
     out.append(f"{indent}int {i} = 0;")
@@ -6019,9 +6331,10 @@ def _seq_eq_loop(e: dict, ctx: Ctx, indent: str, funs: dict, task_name: str):
     out.append(f"{indent}/*@")
     out.append(f"{indent}  loop invariant 0 <= {i} <= ({alen});")
     out.append(f"{indent}  loop invariant {i} <= ({blen});")
-    out.append(f"{indent}  loop invariant {eq} == 1 ==> "
-              f"(\\forall integer __j; 0 <= __j < {i} ==> "
-              f"({ap})[__j] == ({bp})[__j]);")
+    out.append(f"{indent}  loop invariant 0 <= {eq} <= 1;")
+    out.append(f"{indent}  loop invariant {eq} == 1 <==> "
+              f"((({alen}) == ({blen})) && (\\forall integer __j; "
+              f"0 <= __j < {i} ==> ({ap})[__j] == ({bp})[__j]));")
     out.append(f"{indent}  loop assigns {i}, {eq};")
     out.append(f"{indent}  loop variant ({alen}) - {i};")
     out.append(f"{indent}*/")
@@ -6042,6 +6355,130 @@ def _seq_eq_value(e: dict, ctx: Ctx, indent: str, funs: dict,
     otherwise go."""
     lines, tmp = _seq_eq_loop(e, ctx, indent, funs, task_name)
     return lines, (f"(!{tmp})" if e["op"] == "!=" else tmp)
+
+
+def _seq_eq_top_safe(e, ctx: Ctx) -> bool:
+    """`_seq_eq_top` guarded against a TYPING failure, for the two walks
+    below that ask the question at EVERY node of an expression rather
+    than only at its root (2026-09-19). `_seq_eq_top` types its left
+    operand, and a subterm this file cannot type is a subterm it cannot
+    hoist either -- answering False leaves the ordinary rendering path to
+    reach its OWN named message, which is a better report than whatever
+    typing failure happened to surface first from inside a question
+    about hoisting."""
+    if not isinstance(e, dict):
+        return False
+    try:
+        return _seq_eq_top(e, ctx)
+    except (KeyError, ValueError, TypeError, NotImplementedError):
+        return False
+
+
+def _contains_seq_eq(e, ctx: Ctx) -> bool:
+    """True iff a seq extensional `==`/`!=` sits ANYWHERE inside `e`
+    (`_seq_eq_top` is the same question asked only at the root). Used by
+    `stmts()` to tell the one shape `_seq_eq_hoist` below handles from
+    every other expression, so that nothing `cexpr` renders today takes
+    a different path tomorrow."""
+    if not isinstance(e, dict):
+        return False
+    if "forall" in e or "exists" in e:
+        # NOT descended into, deliberately: a quantifier has no
+        # executable rendering at all (`cexpr`'s own named refusal), and
+        # its BINDER is not in `ctx.env`, so `_seq_eq_top`'s `typ()` call
+        # on a subterm mentioning it would raise KeyError -- turning a
+        # named abstain into a lower-error crash, for a node nothing
+        # here could hoist anyway.
+        return False
+    if _seq_eq_top_safe(e, ctx):
+        return True
+    if "ite" in e:
+        return any(_contains_seq_eq(e["ite"][k], ctx)
+                   for k in ("cond", "then", "else"))
+    if "call" in e:
+        return any(_contains_seq_eq(a, ctx) for a in e["call"]["args"])
+    if "op" in e:
+        return any(_contains_seq_eq(a, ctx) for a in e.get("args", ()))
+    return False
+
+
+def _seq_eq_hoist(e, ctx: Ctx, indent: str, funs: dict, task_name: str):
+    """Returns `(lines, e')`, where `e'` is `e` with every MAXIMAL seq
+    extensional `==`/`!=` subterm replaced by a reference to a fresh
+    bool-valued C local that `lines` declares, each from its own
+    `_seq_eq_loop`. `cexpr` then renders `e'` with no seq comparison left
+    in it at all.
+
+    Added 2026-09-19 (ROADMAP 13.4, `fz_p_str_tab`), whose body is
+    `r := (len(rows) == 2) and (rows[0] == [65]) and (rows[1] == [66])`:
+    a seq `==` that is NOT the root of the assigned expression, so wave
+    K's own `_seq_eq_top` branch in `stmts()` never saw it and `cexpr`
+    reached the bare-`==` refusal one level down. The rewrite is the
+    smallest thing that fixes that: the loops that wave K already builds,
+    lifted to statement position where a loop can go, and the holes they
+    leave filled with plain C names.
+
+    WHY LIFTING IS HONEST HERE, and what it costs. t's `and`/`or`/
+    `implies` SHORT-CIRCUIT for definedness (SPEC.md; `code_ats` threads
+    the path condition through exactly those nodes), so a comparison in
+    the second conjunct may be evaluated in C where t would not have
+    evaluated it. That can only ever LOSE a cell, never mint a wrong
+    verdict, and the reason is worth stating precisely:
+
+      * every domain obligation an operand owes is emitted as a real
+        `/*@ assert ... */` in front of its loop, UNGUARDED (the
+        implication `at_asserts` emits for the same node from the
+        short-circuited position is emitted too, and separately). If the
+        guard is what makes the operand defined, the unguarded assert is
+        not provable, the file reads unproved, and no verdict is minted
+        off it. `fz_p_str_tab`'s own guard, `len(rows) == 2`, is
+        redundant with the C array length its constant-folded local
+        declares, so both forms hold there;
+      * the comparison itself is total and terminating on whatever it
+        reads (a bounded loop with a `loop variant`), has no side effect
+        and writes nothing the rest of the expression can see, so the
+        value of `e'` equals the value of `e` at every input where `e` is
+        defined;
+      * it is never the other way round: a seq comparison that C
+        evaluates and t does not cannot make an expression DEFINED that
+        t leaves undefined, because the temp it feeds is a plain 0/1 int
+        either way.
+
+    Left-to-right, and maximal: a seq `==` nested inside another one is
+    impossible (an operand of a seq comparison is a seq, not a bool), so
+    `_seq_eq_top` at a node means stop descending there."""
+    lines: list = []
+
+    def walk(x):
+        if not isinstance(x, dict):
+            return x
+        if "forall" in x or "exists" in x:
+            return x            # see `_contains_seq_eq`'s own note
+        if _seq_eq_top_safe(x, ctx):
+            sub, val = _seq_eq_value(x, ctx, indent, funs, task_name)
+            lines.extend(sub)
+            # Named for the loop that just produced it (`_seq_eq_loop`
+            # took `_SEQ_EQ_CTR[0]` and advanced it), so the temp in the
+            # rewritten expression reads back to its own loop in the
+            # emitted C rather than to a second, unrelated counter.
+            nm = f"__seq_eq{_SEQ_EQ_CTR[0] - 1}_v"
+            lines.append(f"{indent}int {nm} = {val};")
+            return {"var": nm}
+        if "ite" in x:
+            i = x["ite"]
+            return {"ite": {"cond": walk(i["cond"]), "then": walk(i["then"]),
+                            "else": walk(i["else"])}}
+        if "call" in x:
+            c = dict(x["call"])
+            c["args"] = [walk(a) for a in c["args"]]
+            return {"call": c}
+        if "op" in x:
+            y = dict(x)
+            y["args"] = [walk(a) for a in x.get("args", ())]
+            return y
+        return x
+
+    return lines, walk(e)
 
 
 def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
@@ -6127,6 +6564,20 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                                           task_name)
                 out += lines
                 out.append(f"{indent}{name} = {val};")
+            elif _contains_seq_eq(e, ctx):
+                # 2026-09-19 (ROADMAP 13.4, `fz_p_str_tab`): the same
+                # comparison one level DOWN -- a conjunct of an `and`,
+                # not the root -- where the branch above never looked and
+                # `cexpr` reached its own bare-`==` refusal. See
+                # `_seq_eq_hoist` for the rewrite and for why lifting a
+                # short-circuited conjunct out of the expression can cost
+                # a cell but cannot mint a verdict.
+                out += at_asserts(e, ctx, indent, ctx.funs, task_name)
+                lines, e2 = _seq_eq_hoist(e, ctx, indent, ctx.funs,
+                                          task_name)
+                out += lines
+                out.append(f"{indent}{name} = "
+                           f"{cexpr(e2, ctx.env, ctx.funs, task_name)};")
             else:
                 out += at_asserts(e, ctx, indent, ctx.funs, task_name)
                 out.append(f"{indent}{name} = "
@@ -6181,6 +6632,18 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                                           task_name)
                 out += lines
                 out.append(f"{indent}{name} = {val};")
+                out.append(f"{indent}return {name};")
+            elif _contains_seq_eq(e, ctx):
+                # 2026-09-19: the "assign" branch's own hoisting case,
+                # for an early-exit `return`. Not exercised by any
+                # measured cell either, kept whole for the same reason
+                # the branch above it is.
+                out += at_asserts(e, ctx, indent, ctx.funs, task_name)
+                lines, e2 = _seq_eq_hoist(e, ctx, indent, ctx.funs,
+                                          task_name)
+                out += lines
+                out.append(f"{indent}{name} = "
+                           f"{cexpr(e2, ctx.env, ctx.funs, task_name)};")
                 out.append(f"{indent}return {name};")
             else:
                 out += at_asserts(e, ctx, indent, ctx.funs, task_name)
@@ -6318,6 +6781,14 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                 lines, cond_c = _seq_eq_value(c["cond"], ctx, indent,
                                              ctx.funs, task_name)
                 out += lines
+            elif _contains_seq_eq(c["cond"], ctx):
+                # 2026-09-19: the branch above's hoisting case, for a
+                # condition that only CONTAINS a seq comparison. No
+                # measured cell reaches it; whole for the same reason.
+                lines, cond_e = _seq_eq_hoist(c["cond"], ctx, indent,
+                                              ctx.funs, task_name)
+                out += lines
+                cond_c = cexpr(cond_e, ctx.env, ctx.funs, task_name)
             else:
                 cond_c = cexpr(c["cond"], ctx.env, ctx.funs, task_name)
             out.append(f"{indent}if ({cond_c}) {{")
@@ -7214,6 +7685,21 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
         b_c = _cert_cexpr(args[1], ctx, st, funs, name, asserts, ind)
         return f"(struct {sname}){{{a_c}, {b_c}}}"
     if op in ("fst", "snd"):
+        # A PAIR WITH A SEQ COMPONENT, 2026-09-19: a FLATTENED pair
+        # parameter (`_pair_flat`) has no struct to read a field off, in
+        # the certificate function exactly as in the twin itself -- the
+        # witness declarations below hand it the same
+        # `{p}_fst`/`{p}_fst_n`/`{p}_snd` names the twin's own signature
+        # has, so the projection is that name. A seq-typed projection
+        # reaching here (not under `len`/`at`) is a skip, not a guess,
+        # the same way a bare seq in value position already is.
+        flat = _pair_flat(e, ctx.env)
+        if flat is not None:
+            if flat[1] == "seq" or is_nested_seq_type(flat[1]):
+                raise _CertSkip(
+                    "seq-typed pair component in certificate replay "
+                    "value position")
+            return flat[0]
         field = "a" if op == "fst" else "b"
         return f"({_cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)}).{field}"
     if op == "neg":
@@ -7493,6 +7979,47 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                 # fix closes rather than a regression it introduces.
                 if not (isinstance(v, list) and len(v) == 2):
                     return None            # not a ground pair witness
+                if _pair_seq_type(p["type"]):
+                    # A PAIR WITH A SEQ COMPONENT, 2026-09-19
+                    # (`fz_p_pair_seq`): FLATTENED in the twin's own
+                    # signature (`_pair_flat`), so the witness is
+                    # declared component by component, each exactly as a
+                    # parameter of that t-type already is a few branches
+                    # above -- the seq half as array + pointer + length
+                    # (ACSL has no implicit array-to-pointer conversion,
+                    # the seq branch's own measured reason), the scalar
+                    # half as a plain `int`. `st` keeps the RAW 2-element
+                    # witness, which is what `_cev`'s own "fst"/"snd"
+                    # case indexes; only the C DECLARATIONS differ.
+                    ok = True
+                    comp_decls = []
+                    for j, ct in enumerate(p["type"]["pair"]):
+                        nm = f"{p['name']}_{'fst' if j == 0 else 'snd'}"
+                        cv = v[j]
+                        if ct == "seq":
+                            arr = f"t_cert_{nm}"
+                            if arr in used or nm in used:
+                                ok = False
+                                break
+                            vals = [int(x) for x in cv]
+                            init = ", ".join(_int_lit(x) for x in vals) or "0"
+                            comp_decls.append(
+                                f"  int {arr}[{max(len(vals), 1)}] = "
+                                f"{{{init}}};")
+                            comp_decls.append(f"  int *{nm} = {arr};")
+                            comp_decls.append(f"  int {nm}_n = {len(vals)};")
+                        else:
+                            if nm in used:
+                                ok = False
+                                break
+                            comp_decls.append(
+                                f"  int {nm} = "
+                                f"{_int_lit(int(cv))};")
+                    if not ok:
+                        return None
+                    decls += comp_decls
+                    st[p["name"]] = v
+                    continue
                 try:
                     psname = _pair_struct_name(*p["type"]["pair"])
                 except NotImplementedError:
@@ -7662,8 +8189,27 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
     # interp.py's own seq representation is a tuple; the witness's JSON
     # gives seqs as lists, so this is the one conversion point, mirrored
     # by `lower_verus.py`'s `_undef_obligation`.
-    env_py = {n: (tuple(v) if isinstance(v, list) else v)
-              for n, v in names.items()}
+    # A PAIR-TYPED PARAM'S WITNESS, 2026-09-19 (`fz_p_pair_seq`): the
+    # JSON witness gives a pair as a 2-element LIST, and the line below
+    # turned any list into a tuple, which is `interp.py`'s own
+    # representation for a SEQ, not for a pair -- `interp.Pair` is a
+    # frozen dataclass kept deliberately out of Python's tuple (its own
+    # docstring says why: a bare 2-tuple would collide with a length-2
+    # seq under the value-witness type tag). So `interp.ev` reached
+    # `a[0].b` on a tuple and raised AttributeError, which this
+    # function's own `except` clause read as "no certificate". Every
+    # NON-pair parameter converts exactly as before, byte for byte.
+    ptypes = {p["name"]: p["type"] for p in task["params"]}
+
+    def _py_val(n, v):
+        t = ptypes.get(n)
+        if (isinstance(t, dict) and "pair" in t
+                and isinstance(v, list) and len(v) == 2):
+            return interp.Pair(*(tuple(x) if isinstance(x, list) else x
+                                 for x in v))
+        return tuple(v) if isinstance(v, list) else v
+
+    env_py = {n: _py_val(n, v) for n, v in names.items()}
     ctx = Ctx(dict(env), funs, ret=None, label="Here")
     code = []
     seq_decls: set = set()   # local (non-param) seq names already given a
@@ -7868,6 +8414,38 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                             f"{{{init}}};")
                 code.append(f"  int *{p['name']} = {arr};")
                 code.append(f"  int {p['name']}_n = {len(vals)};")
+            elif _pair_seq_type(p["type"]):
+                # A PAIR WITH A SEQ COMPONENT, 2026-09-19
+                # (`fz_p_pair_seq`, whose twin witness IS this kind:
+                # COLLAPSE-IF drops the guard, so `at(fst(p), snd(p))`
+                # is read at `p = ([], 0)`, undefined there). FLATTENED
+                # in the twin's own signature (`_pair_flat`), so the
+                # witness is declared component by component, each
+                # exactly as a parameter of that t-type is declared
+                # above. The STRUCT-shaped pair (no seq component) still
+                # has no branch in THIS function and still falls to the
+                # `int(v)` below, where a 2-element list raises and the
+                # caller reads None -- unchanged, and not widened here,
+                # because no measured witness needs it and
+                # `_value_certificate` is where that shape was measured.
+                if not (isinstance(v, list) and len(v) == 2):
+                    return None
+                for j, ct in enumerate(p["type"]["pair"]):
+                    nm = f"{p['name']}_{'fst' if j == 0 else 'snd'}"
+                    if ct == "seq":
+                        arr = f"t_cert_{nm}"
+                        if arr in used or nm in used:
+                            return None
+                        vals = [int(x) for x in v[j]]
+                        init = ", ".join(_int_lit(x) for x in vals) or "0"
+                        code.append(f"  int {arr}[{max(len(vals), 1)}] = "
+                                    f"{{{init}}};")
+                        code.append(f"  int *{nm} = {arr};")
+                        code.append(f"  int {nm}_n = {len(vals)};")
+                    else:
+                        if nm in used:
+                            return None
+                        code.append(f"  int {nm} = {_int_lit(int(v[j]))};")
             else:
                 code.append(f"  int {p['name']} = {_int_lit(int(v))};")
         ifuns = interp.funs_of(task, twin_body)
@@ -8420,6 +8998,50 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     seqs = [p["name"] for p in task["params"] if p["type"] == "seq"]
     nested_seqs = [p["name"] for p in task["params"]
                   if is_nested_seq_type(p["type"])]
+
+    # A PAIR WITH A SEQ COMPONENT, 2026-09-19 (ROADMAP 13.4,
+    # `fz_p_pair_seq`; DESIGN-framac-nested-seq.md section 5). See
+    # `_pair_flat` for the encoding and why it needs no struct. What is
+    # decided HERE is the scope, and each refusal below is a question
+    # this pass did not answer rather than a shape it thinks impossible:
+    #
+    #   * a RETURN: the seq half would need a caller-provided buffer
+    #     sized from a `requires`-time bound, i.e. CAPACITY mode reaching
+    #     inside a pair. CAPACITY threads ONE length through `Ctx.seq_len`
+    #     keyed by the return's own name; a component of a pair has no
+    #     such name and no `\result`-shaped length to be pinned to.
+    #   * a LOCAL: the same sizing question, plus the storage one.
+    #   * two seq components: two buffers, needing their own
+    #     `\separated` pair and a second flattened length; no measured
+    #     task has even one, so the second is unwritten, not assumed.
+    #
+    # A PARAMETER with exactly one seq component is what `fz_p_pair_seq`
+    # is and what is built. Each refusal raises the SAME
+    # NotImplementedError class every other named scope limit in this
+    # file raises, so the harness reads abstain, never a verdict.
+    pair_seq_params = [p for p in task["params"]
+                       if _pair_seq_type(p["type"])]
+    for p in pair_seq_params:
+        if p["type"]["pair"].count("seq") != 1:
+            raise NotImplementedError(
+                f"pair parameter {p['name']} has two seq components: "
+                f"this lowering flattens exactly one seq component of a "
+                f"pair into a (pointer, length) parameter pair (see "
+                f"`_pair_flat`); two would need a second flattened "
+                f"buffer and its own `\\separated` clause, unmeasured")
+    if _pair_seq_type(rett):
+        raise NotImplementedError(
+            "a pair RETURN with a seq component is refused by this "
+            "lowering: the seq half would need a caller-provided output "
+            "buffer sized from a requires-time bound, and CAPACITY mode "
+            "sizes one buffer against the RETURN's own name, which a "
+            "pair component does not have (see `_pair_flat`)")
+    for _ln, _lt in _pair_local_types(body).items():
+        if _pair_seq_type(_lt):
+            raise NotImplementedError(
+                f"a pair LOCAL with a seq component ({_ln}) is refused "
+                f"by this lowering, the same sizing question the pair "
+                f"RETURN refusal above states (see `_pair_flat`)")
     used = set()
 
     def names_in(x):
@@ -8444,6 +9066,27 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                 raise NotImplementedError(
                     f"name {m}{suffix} collides with a fresh parameter "
                     f"this lowering synthesizes for nested seq {m}")
+    # A PAIR WITH A SEQ COMPONENT, 2026-09-19: `_pair_flat` synthesizes
+    # `{p}_fst`/`{p}_snd` (and `{p}_fst_n`/`{p}_snd_n` for the seq half),
+    # so the same collision refusal the two blocks above make for the
+    # `_n` and `_data`/`_off` namespaces is owed for this one. A task
+    # that already has a name of that spelling is refused BY NAME rather
+    # than silently given two C objects with one identifier.
+    for p in pair_seq_params:
+        for suffix in ("_fst", "_snd", "_fst_n", "_snd_n"):
+            if f"{p['name']}{suffix}" in used:
+                raise NotImplementedError(
+                    f"name {p['name']}{suffix} collides with a fresh "
+                    f"parameter this lowering synthesizes for the "
+                    f"flattened pair {p['name']}")
+        # The seq component joins `seqs` under its FLATTENED name, which
+        # is what gives it, with no further code, the `{v}_n >= 0` and
+        # `\valid_read` requires every seq parameter already gets and a
+        # place in the `\separated` cross-product below -- exactly the
+        # clauses it would have got as a bare seq parameter, because in
+        # the emitted C that is precisely what it now is.
+        k = p["type"]["pair"].index("seq")
+        seqs.append(f"{p['name']}_{'fst' if k == 0 else 'snd'}")
 
     # PAIRS (SPEC.md "Pairs", 2026-09-10): a pair-typed RETURN's struct
     # type must be declared before anything in the file uses it (the
@@ -8855,6 +9498,22 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             # Typed model treating a value parameter and a value return
             # alike is not something this file assumes without running
             # it).
+            if _pair_seq_type(p["type"]):
+                # A PAIR WITH A SEQ COMPONENT, 2026-09-19: FLATTENED,
+                # never a struct (see `_pair_flat`). Component order is
+                # the pair's own, so `(seq, int)` gives `int *p_fst,
+                # int p_fst_n, int p_snd` and `(int, seq)` gives `int
+                # p_fst, int *p_snd, int p_snd_n` -- each component
+                # declared exactly as a parameter of that t-type would
+                # be on its own, which is what makes every reader of
+                # either half need no case of its own.
+                for j, ct in enumerate(p["type"]["pair"]):
+                    nm = f"{p['name']}_{'fst' if j == 0 else 'snd'}"
+                    if ct == "seq":
+                        cparams += [f"int *{nm}", f"int {nm}_n"]
+                    else:
+                        cparams.append(f"int {nm}")
+                continue
             sname = _pair_struct_name(*p["type"]["pair"])
             cparams.append(f"struct {sname} {p['name']}")
         else:

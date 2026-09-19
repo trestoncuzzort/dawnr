@@ -25,8 +25,11 @@ gradient checkpointing on, block 512, vocabulary 8,192, bf16.
 | 500M | 483,402,240 | 8 | trains | 8,548 MiB | 4,809 |
 | 312M | 311,224,320 | 8 | trains | 5,706 MiB | 7,396 |
 
-**875M parameters train on one shared card**: 270 times the 3.2M model on the
-scoreboard, and nine times the 91M cores the pretraining studies used. The
+**Optimizer steps at 875M parameters fit on one shared card**, at 2,693 tokens
+a second: 270 times the parameter count of the 3.2M model on the scoreboard and
+nine times the 91M cores the pretraining studies used. What this establishes is
+that such a model steps, and how fast. It does not establish that size is why
+earlier work stalled; nothing here has trained a large model to a score. The
 1.63B configuration fails for an arithmetic reason, not a mysterious one: AdamW
 in fp32 holds parameters, gradients and two moments, sixteen bytes per
 parameter, so 1.63B needs about 26 GiB of state before a single activation.
@@ -44,9 +47,12 @@ The frozen source corpus is 153 MB of training text, about **46M BPE tokens**.
 The 4000-step studies consumed 262M tokens per arm, so they made roughly six
 passes over it. A 91M model at 46M tokens is already far below the usual
 compute-optimal ratio; a 312M or 875M model on the same corpus would be further
-below it still. The measured headroom is in parameters. The missing resource is
-data, and the roadmap's own order -- core, then t capability, then data beyond
-`nl/` -- says so.
+below it still. The measured headroom is in parameters. That data is *the* binding constraint
+is an **inference** from 46M tokens against the usual compute-optimal ratios,
+not a measurement made here: no run in this repository has varied corpus size
+with everything else held still. It is the inference the roadmap's own order --
+core, then t capability, then data beyond `nl/` -- already encodes, and it
+remains to be tested.
 
 So "scale the model" and "scale the data" are not the same lever, and only one
 of them has been measured to have room. Both numbers belong next to each other
@@ -64,3 +70,8 @@ The 92M GPT core from the 4000-step study, specialized on 39,191 tokens of
 filtered t data in 30 seconds, moved held-out corpus loss from 3.104 to 0.574.
 Whether that turns into clean answers on the 232 held-out problems is being
 graded now, and loss has already failed to predict behaviour twice this week.
+That comparison moves size, tokenizer, pretraining corpus and training recipe
+at the same time, so it can show whether the pipeline's number moves and never
+which of the four moved it. Isolating controls -- the same 92M from random
+weights on the same corpus, and the 3.2M recipe with the byte-BPE -- are not
+run yet.

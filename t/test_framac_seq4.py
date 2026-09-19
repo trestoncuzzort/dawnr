@@ -92,42 +92,116 @@ def nest_eq_now_lowers_to_a_loop_not_an_abstain():
 
 @test
 def the_other_five_seq_cells_are_unmoved():
-    """UPDATED 2026-09-14 (FRAMAC-NESTED, DESIGN-framac-nested-seq.md):
-    three of the five cells this docstring originally named as untouched
-    by FRAMAC-SEQ4 are CLOSED by this later pass, each its own fresh
-    mechanism (`lower_framac.py`'s own dated 2026-09-14 note has the
-    full account): `fz_p_nest_empty`/`fz_p_str_splitempty` (a
-    compile-time-constant nested seq<seq> RETURN, `_ret_nested_fold`/
+    """UPDATED TWICE. 2026-09-14 (FRAMAC-NESTED, DESIGN-framac-nested-
+    seq.md) closed three of the five cells this docstring originally
+    named as untouched by FRAMAC-SEQ4, each its own fresh mechanism
+    (`lower_framac.py`'s own dated 2026-09-14 note has the full
+    account): `fz_p_nest_empty`/`fz_p_str_splitempty` (a compile-time-
+    constant nested seq<seq> RETURN, `_ret_nested_fold`/
     `_fold_nested_rows`) and `fz_p_str_lowernonletter` (an executable
-    `lower`, `_expr_seq_len`'s new case plus `seq_assign_lines`'s new
-    `lower`/`upper` branch). `fz_p_str_tab`'s own LOCAL-declaration gap
-    is ALSO closed the same way (`stmts()`'s `var` case, the same
-    `_fold_nested_rows`), so it now declares its two rows cleanly --
-    but the cell as a whole still abstains, because its body then reads
-    those rows back through `==` NESTED INSIDE `and` (`len(rows)==2 and
-    at(rows,0)==[65] and at(rows,1)==[66]`), never a bare top-level
-    comparison `_seq_eq_top` recognizes (item (a)'s own scope, wave K,
-    2026-09-12), a genuinely different, deeper gap than "local variables
-    are not supported" and not attempted by this pass either. Only
-    `fz_p_pair_seq` (a pair with a seq component, still its own separate
-    encoding problem, see `_pair_field_c`) is truly untouched."""
-    expected_substrings = {
-        "fz_p_str_tab": "seq extensional equality (==/!=) reaching "
-                        "executable position directly",
-        "fz_p_pair_seq": "a pair with a seq component is refused",
-    }
-    for name, needle in expected_substrings.items():
-        try:
-            _lower(name)()
-        except NotImplementedError as ex:
-            assert needle in str(ex), (name, str(ex))
-        else:
-            raise AssertionError(f"{name}: lowered with no exception; "
-                                  f"expected it to still abstain")
-    # The three CLOSED cells now lower with no exception at all.
+    `lower`).
+
+    2026-09-19 (ROADMAP 13.4) closes the last two, so this test now pins
+    the opposite fact for every one of the five: all five LOWER, none
+    abstains. `fz_p_str_tab` reads its constant-folded rows back through
+    a seq `==` NESTED INSIDE an `and`, which `_seq_eq_hoist` now lifts
+    into the loops `_seq_eq_loop` already builds, with the literal
+    operand declared as a local array; `fz_p_pair_seq` is a pair with a
+    seq component, which `_pair_flat` now FLATTENS into separate C
+    parameters rather than asking `_pair_field_c` for a struct field it
+    still, correctly, refuses to name. The named refusals both of them
+    used to reach are still live for the shapes that have no encoding --
+    a pair with a seq component as a RETURN or a LOCAL, and a pair of
+    two seqs -- and those are checked in `pair_seq_refusals_are_still_
+    named` below, so nothing here is traded for a silent guess."""
     for name in ("fz_p_nest_empty", "fz_p_str_splitempty",
-                 "fz_p_str_lowernonletter"):
+                 "fz_p_str_lowernonletter", "fz_p_str_tab",
+                 "fz_p_pair_seq"):
         _lower(name)()
+
+
+@test
+def str_tab_hoists_its_two_row_comparisons_into_loops():
+    """`fz_p_str_tab`'s emitted C, checked directly rather than through
+    the kernel: the constant-folded seq<seq> local's own three
+    declarations, one declared local array per seq LITERAL operand, one
+    `while` per comparison, and the two temps the rewritten `and` reads
+    instead of the comparisons it replaced."""
+    c = _lower("fz_p_str_tab")()
+    assert "int rows_data[2] = {65, 66};" in c, c
+    assert "int rows_off[3] = {0, 1, 2};" in c, c
+    assert "int rows_n = 2;" in c, c
+    assert "int __seq_eq0_lit0[1] = {65};" in c, c
+    assert "int __seq_eq1_lit0[1] = {66};" in c, c
+    # Two comparison loops, counted by their own flag rather than by the
+    # bare keyword: the emitted header carries a `while` of its own (the
+    # string library's ACSL block, pulled in by `split`).
+    assert c.count("while (__seq_eq") == 2, c
+    assert "int __seq_eq0_v = __seq_eq0;" in c, c
+    assert "int __seq_eq1_v = __seq_eq1;" in c, c
+    assert "r = ((rows_n == 2) && __seq_eq0_v && __seq_eq1_v);" in c, c
+
+
+@test
+def pair_seq_flattens_the_parameter_and_keeps_its_obligations():
+    """`fz_p_pair_seq`'s emitted C: the pair PARAMETER is three C
+    parameters, not a struct, and the seq half carries exactly the
+    `requires` a bare seq parameter would. No `struct t_pair_` is
+    declared anywhere, which is the point -- `_pair_field_c`'s refusal
+    of a seq struct FIELD is not weakened, it is never reached."""
+    c = _lower("fz_p_pair_seq")()
+    assert "int fz_p_pair_seq_t(int *p_fst, int p_fst_n, int p_snd)" in c, c
+    assert "struct t_pair_" not in c, c
+    assert "requires p_fst_n >= 0;" in c, c
+    assert "requires \\valid_read(p_fst + (0 .. p_fst_n - 1));" in c, c
+    assert "r = p_fst[p_snd];" in c, c
+
+
+@test
+def pair_seq_refusals_are_still_named():
+    """The three shapes `lower()` refuses BY NAME around the flattened
+    parameter, each built here rather than taken from a probe because no
+    probe has one: a pair-with-a-seq RETURN, a pair-with-a-seq LOCAL,
+    and a pair of two seqs. Each must raise NotImplementedError (the
+    harness's abstain), never lower."""
+    seq_int = {"pair": ["seq", "int"]}
+    cases = [
+        ("return", {
+            "t": 1, "name": "t_pair_seq_ret",
+            "params": [{"name": "s", "type": "seq"}],
+            "returns": [{"name": "r", "type": seq_int}],
+            "requires": [], "ensures": [],
+            "body": [{"assign": ["r", {"op": "pair", "args": [
+                {"var": "s"}, {"int": 0}]}]}]},
+         "pair RETURN with a seq component"),
+        ("local", {
+            "t": 1, "name": "t_pair_seq_local",
+            "params": [{"name": "s", "type": "seq"}],
+            "returns": [{"name": "r", "type": "int"}],
+            "requires": [], "ensures": [],
+            "body": [{"var": {"name": "q", "type": seq_int,
+                              "init": {"op": "pair", "args": [
+                                  {"var": "s"}, {"int": 0}]}}},
+                     {"assign": ["r", {"int": 0}]}]},
+         "pair LOCAL with a seq component"),
+        ("two-seqs", {
+            "t": 1, "name": "t_pair_two_seqs",
+            "params": [{"name": "p", "type": {"pair": ["seq", "seq"]}}],
+            "returns": [{"name": "r", "type": "int"}],
+            "requires": [], "ensures": [],
+            "body": [{"assign": ["r", {"op": "len",
+                                       "args": [{"op": "fst", "args": [
+                                           {"var": "p"}]}]}]}]},
+         "two seq components"),
+    ]
+    for label, task, needle in cases:
+        try:
+            lower_framac.lower(task, task["body"])
+        except NotImplementedError as ex:
+            assert needle in str(ex), (label, str(ex))
+        else:
+            raise AssertionError(f"{label}: lowered with no exception; "
+                                 f"expected a named refusal")
 
 
 @test

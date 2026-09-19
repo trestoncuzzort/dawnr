@@ -125,12 +125,20 @@ def seq_eq_counter_resets_per_lower_call():
 
 
 @test
-def flat_seq_literal_operand_still_named_refusal():
-    """A shape genuinely out of this pass's own scope (a seq LITERAL or
-    concatenation operand, not a bare variable/slice/nested-seq row)
-    still raises `_seq_eq_operand_c`'s own named NotImplementedError, not
-    a guess: built directly from fuzz_lower's own AST helpers rather than
-    reusing a probe, since no committed/fuzzed task needs this shape."""
+def flat_seq_literal_operand_is_a_declared_local_array():
+    """UPDATED 2026-09-19 (ROADMAP 13.4, `fz_p_str_tab`). This test used
+    to pin `_seq_eq_operand_c`'s refusal of a seq LITERAL operand, which
+    was honest while nothing needed one; `fz_p_str_tab` needs one
+    (`at(rows, 0) == [65]`), so the literal is now declared as an
+    ordinary initialized local array ahead of the loop -- NOT a C99
+    compound literal, which inside a loop body is a fresh object each
+    iteration. What the test pins is that shape: one declaration, with
+    the literal's own elements, and a loop bound that is the literal's
+    own element count, not a `_n` read off anything.
+
+    A `+` CONCATENATION operand is still refused by name, and that half
+    is checked below, so this file still holds a live named-refusal
+    case."""
     task = {
         "t": 1, "name": "test_seq_eq_literal_operand",
         "params": [{"name": "s", "type": "seq"}],
@@ -138,6 +146,28 @@ def flat_seq_literal_operand_still_named_refusal():
         "requires": [], "ensures": [],
         "body": [{"assign": ["r", {"op": "==", "args": [
             {"var": "s"}, {"op": "seq", "args": [{"int": 1}, {"int": 2}]}]}]}],
+    }
+    src = lower_framac.lower(task, task["body"])
+    assert "int __seq_eq0_lit0[2] = {1, 2};" in src, src
+    assert "(__seq_eq0_lit0)[" in src, src
+    # The comparison is `s` against a two-element literal, so the flag's
+    # initial value is the length test against the literal's own count.
+    assert "= ((s_n) == (2));" in src, src
+
+
+@test
+def flat_seq_concat_operand_still_named_refusal():
+    """The half of `_seq_eq_operand_c`'s scope that is still a refusal: a
+    `+` concatenation operand has no pointer this pass renders, and says
+    so by name rather than guessing one."""
+    task = {
+        "t": 1, "name": "test_seq_eq_concat_operand",
+        "params": [{"name": "s", "type": "seq"}, {"name": "u", "type": "seq"}],
+        "returns": [{"name": "r", "type": "bool"}],
+        "requires": [], "ensures": [],
+        "body": [{"assign": ["r", {"op": "==", "args": [
+            {"var": "s"},
+            {"op": "+", "args": [{"var": "s"}, {"var": "u"}]}]}]}],
     }
     try:
         lower_framac.lower(task, task["body"])
