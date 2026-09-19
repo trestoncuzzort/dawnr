@@ -6,6 +6,8 @@ The industry bet is scale: more parameters, more tokens, more scraped code. loca
 
 Every number below was measured by a script in this repository and links to the file that records it. Where a number of this project's own turned out wrong, the correction is on this page rather than in its history.
 
+**Status, 2026-09-19.** Two negative results landed the same day, both measured against predictions written before the runs. The modern core's architecture advantage **reversed** at four times the training budget, and a preregistered four-cell experiment in execution and latent supervision produced **no synthesis gain at any seed**, while revealing that its own held-out tasks were passable without composing anything. Both are below, under [the owned core](#the-owned-core-trained-here-from-random-weights).
+
 **What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **No model trained here has beaten Phi-4-mini**: three rounds of the loop have produced 3 clean answers out of 232 each time, which is exactly Phi's score. Two models *run through* this pipeline do beat it, and neither was trained by us. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
 
 ## Start here
@@ -55,6 +57,62 @@ our student writes three times Phi's well-formed answers and converts a third of
 Three rounds, three different data recipes — more problems, more answers, then preference pairs aimed at the exact gate the student loses at — and the clean count did not move. Round 6's predictions were written before it ran ([`t/PREDICT-2026-09-18-round6.md`](t/PREDICT-2026-09-18-round6.md)) and the one that mattered was wrong.
 
 **The gate we lose at is the proof, not the notation.** Round 6's student wrote three times as many well-formed answers as Phi and one and a half times as many test-passing ones, then converted 3 of 9 into clean answers where Phi converted 3 of 6. A model pretrained to write proofs converts better than either: DeepSeek-Prover-V2-7B, prompted and never fine-tuned by us, converted 6 of 10 and none of its six specifications disagreed with its problem. That result is three answers wide and needs seeds before it is a claim, but it is the first thing measured here that points at a fix rather than closing a door.
+
+## The owned core, trained here from random weights
+
+`locallm/` trains a transformer from random weights on this machine's own
+corpus. Two studies on 2026-09-19 measured it, both against predictions
+registered first, and both came back negative.
+
+**The architecture advantage did not survive a longer run.** Six arms, three
+seeds, 4000 updates each on a frozen corpus and tokenizer
+([PREREG](locallm/PREREG-source-longer-2026-09-19.md),
+[FINDINGS](locallm/FINDINGS-source-longer-2026-09-19.md)).
+
+| seed | modern val loss | GPT val loss | modern |
+|---|---:|---:|---|
+| 1337 | 1.3611 | 1.2676 | 7.4% worse |
+| 7 | 1.3388 | 1.2641 | 5.9% worse |
+| 42 | 1.3691 | 1.2824 | 6.8% worse |
+
+At 1000 updates the modern core led by about a quarter; at 4000 it loses at
+every seed, and it is also 18.8% slower and reserves 33% more memory. Two
+registered predictions held (finite training, and each modern seed improving on
+its own 1000-step endpoint by 44-46%) and the third was falsified in the
+opposite direction. Completions from all six arms are still repetitive: a 45%
+cut in token loss bought no usable completion, which is why the next experiment
+was scored by executing programs instead of by nats per token.
+
+**Execution and latent supervision: no synthesis gain, and a broken ruler.**
+Four treatments -- neither, latent only, execution only, both -- from each
+4000-step modern checkpoint, on a generated compositional curriculum whose
+held-out patterns appear in training under no parameter assignment
+([PREREG](locallm/PREREG-factorial-2026-09-19.md),
+[FINDINGS](locallm/FINDINGS-factorial-2026-09-19.md)).
+
+| seed | baseline | latent | execution | combined |
+|---|---:|---:|---:|---:|
+| 1337 | 2 | 1 | 3 | 4 |
+| 7 | 2 | 3 | 7 | 1 |
+| 42 | 2 | 9 | 2 | 2 |
+
+All three registered predictions are falsified: combined never reaches the
+5-point threshold, its paired difference is negative at one seed and zero at
+another, and the interaction is negative at two of three. The seed moves the
+score more than the treatment does.
+
+Then the ruler itself failed a check. `t/audit_collapsible.py` asks whether a
+proper sub-sequence of a task's own stages already passes all of its tests --
+`cap 12` twice behaves like `cap 12` once. **Of the 38 correct answers produced
+by all twelve arms together, 38 are on such tasks. No arm ever solved a task
+that required composing its stages.** The generator now refuses those tasks and
+the rebuilt dataset has none.
+
+What did work is the part that says the intervention was real: on held-out
+execution examples, the arms supervised on intermediate states predict about
+half the trace correctly before derailing (line-prefix accuracy 0.48-0.63) and
+the arms without that supervision score exactly zero. The supervision taught
+what it was asked to teach, and that skill did not reach unaided synthesis.
 
 ## What has been ruled out, and what it cost to find out
 
@@ -115,6 +173,9 @@ Three rounds, three different data recipes — more problems, more answers, then
 ## Limits, stated plainly
 
 - No model trained here has beaten Phi-4-mini. Three rounds have tied it at 3 of 232.
+- The owned core's architecture choice is not settled in its favour: at 4000 updates the older GPT core beats the modern one at every seed, on loss, time and memory.
+- No auxiliary training objective tried here has improved program synthesis. Execution-state supervision improves execution-state prediction and does not transfer; latent prediction does neither at three seeds.
+- Token loss on a validation window predicts nothing about behaviour at this scale. The 45% loss cut that bought no usable completion is the second time in two days that a loss result and a behaviour result disagreed here.
 - The clean pool is small (87 examples) and the corpus that feeds it is exhausted, so the next move is a better generator or a better base model, not more rounds of the same shape.
 - A proof covers the specification, not the intent. Hence the tests, the proven-but-wrong column and the specification check.
 - t covers integers, booleans, sequences, pairs, strings as character sequences, loops with invariants and recursive specification functions. No heap, no floats, no concurrency.

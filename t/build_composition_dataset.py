@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 import random
 
+from audit_collapsible import collapsible
 import check_wf
 import composition_reference as ref
 from execution_trace import collect, digest
@@ -225,6 +226,10 @@ def main():
                         help="scored inputs per held-out task, per stratum")
     parser.add_argument("--max-events", type=int, default=240,
                         help="length cap applied identically to every arm")
+    parser.add_argument("--keep-collapsible", action="store_true",
+                        help="keep held-out tasks a proper sub-sequence of their own "
+                             "stages already passes; the default drops them, because "
+                             "such a task is passed without composing anything")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=False)
     rng = random.Random(args.seed)
@@ -276,8 +281,22 @@ def main():
                               "extrapolation": sorted(rng.sample(EXTRAPOLATION_INPUTS,
                                                                  min(args.eval_inputs,
                                                                      len(EXTRAPOLATION_INPUTS))))}
+                    shorter = collapsible(list(stages),
+                                          [x for values in strata.values() for x in values])
+                    if shorter is not None and not args.keep_collapsible:
+                        # Nothing is learned from a held-out task one of its own
+                        # stages already passes: drop the task and its traces.
+                        counts["dropped_collapsible_tasks"] = counts.get(
+                            "dropped_collapsible_tasks", 0) + 1
+                        counts["tasks"][split] = counts["tasks"].get(split, 0)
+                        del traces[len(traces) - len(rows):]
+                        for row in serialized:
+                            eval_execution.remove(row)
+                        continue
                     eval_synthesis.append({
                         "task_name": name, "split": split, "pattern": list(pattern),
+                        "stages": [list(stage) for stage in stages],
+                        "collapsible_subsequence": shorter,
                         "prompt": example["prompt"], "contract": contract,
                         "contract_sha256": digest(contract), "task_sha256": digest(task),
                         # The body is withheld on purpose: scoring runs the candidate
@@ -291,6 +310,15 @@ def main():
 
     covered = {tuple(row["pattern"]) for row in train + eval_execution
                if row["kind"] == "execution"}
+    surviving = {tuple(row["pattern"]) for row in eval_synthesis}
+    for split in ("eval_pattern", "eval_depth"):
+        kept = [pattern for pattern in splits[split] if pattern in surviving]
+        dropped = [list(pattern) for pattern in splits[split] if pattern not in surviving]
+        if dropped:
+            counts.setdefault("patterns_dropped_as_collapsible", {})[split] = dropped
+        splits[split] = kept
+        if not kept:
+            raise AssertionError(f"{split}: every pattern collapses to a sub-sequence")
     uncovered = {}
     for split, patterns in splits.items():
         missing = sorted(set(patterns) - covered)
