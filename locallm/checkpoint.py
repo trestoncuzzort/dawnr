@@ -24,7 +24,7 @@ from pathlib import Path
 
 import torch
 
-from data import CharTokenizer
+from data import load_tokenizer, tokenizer_fingerprint
 from model import GPT, GPTConfig
 from train import pick_device
 
@@ -54,26 +54,35 @@ def load_checkpoint(out_dir: str | Path, device: str | None = None):
         device = pick_device()
     # weights_only=True: forward-compatible with torch>=2.6 where it becomes the
     # default. The checkpoint is a plain dict of tensors + config primitives.
-    ck = torch.load(ckpt, map_location=device, weights_only=True)
+    # Distributed training checkpoints also contain optimizer and rank RNG state.
+    # Inference needs only model weights on the GPU; loading the entire training
+    # state there can exhaust memory before the model is even constructed.
+    ck = torch.load(ckpt, map_location="cpu", weights_only=True)
+    ck.pop("optimizer", None)
     cfg = GPTConfig(**ck["config"])
-    model = GPT(cfg).to(device)
-    model.load_state_dict(ck["model"])
-    model.eval()
-    tok = CharTokenizer.load(tokf)
+    tok = load_tokenizer(tokf)
 
     # A checkpoint whose tokenizer disagrees with its embedding table will
     # generate index errors or silent garbage. Cheap to check, miserable to
     # debug: caught here, at load, naming both numbers.
-    if len(tok.chars) != cfg.vocab_size:
+    if tok.vocab_size != cfg.vocab_size:
         raise ValueError(
-            f"{out}/ is inconsistent: tokenizer has {len(tok.chars)} characters "
+            f"{out}/ is inconsistent: tokenizer has {tok.vocab_size} tokens "
             f"but the model's vocab_size is {cfg.vocab_size}. The tokenizer and "
             f"the weights came from different training runs.")
+    if "tokenizer_fingerprint" in ck and ck["tokenizer_fingerprint"] != tokenizer_fingerprint(tok):
+        raise ValueError(
+            f"{out}/ is inconsistent: tokenizer fingerprint does not match the weights. "
+            "Token IDs or encoding rules changed; restore this checkpoint's tokenizer.json.")
+    model = GPT(cfg).to(device)
+    model.load_state_dict(ck["model"])
+    model.eval()
     return model, tok, cfg
 
 
 def sample(model, tok, prompt: str, tokens: int = 400,
-           temperature: float = 0.8, top_k: int = 40, device: str | None = None) -> str:
+           temperature: float = 0.8, top_k: int = 40, device: str | None = None,
+           use_cache: bool = False) -> str:
     """Prompt in, text out. Shared so the GUI and the CLI cannot drift apart.
 
     An empty prompt, or one made entirely of characters absent from this model's
@@ -86,5 +95,5 @@ def sample(model, tok, prompt: str, tokens: int = 400,
     ids = tok.encode(prompt) or [0]
     idx = torch.tensor([ids], dtype=torch.long, device=device)
     model.eval()
-    out = model.generate(idx, tokens, temperature=temperature, top_k=top_k)
+    out = model.generate(idx, tokens, temperature=temperature, top_k=top_k, use_cache=use_cache)
     return tok.decode(out[0].tolist())

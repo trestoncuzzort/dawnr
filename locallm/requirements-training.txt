@@ -1,0 +1,2 @@
+-r requirements.txt
+tokenizers>=0.20,<1

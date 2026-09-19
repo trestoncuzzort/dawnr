@@ -8,7 +8,7 @@ No pretrained weights. No API. No account. Nothing leaves your computer.
 The name is not short for "local language model." It is a **local learning model**:
 point it at the text-shaped data your life actually produces — notes, code, machine
 logs, query dumps, sensor exports — and it learns the structure of *that*, where the
-data lives. It is built like a language model because a character-level transformer is
+data lives. It is built like a language model because a transformer is
 the simplest honest machine for the job, but conversation is not the product. Learning
 your data, measurably and verifiably, is.
 
@@ -16,12 +16,33 @@ You can optionally **download plain text to train on** (`get_corpus.py`), never 
 The model is always built from random numbers on your machine; what you download is
 something to read, not something that already knows how to write.
 
-The model starts as random numbers. The vocabulary is built from exactly the characters
-in the data you give it. You watch it learn.
+The model starts as random numbers. By default, the vocabulary contains the characters
+in the data you give it. The core training presets can instead learn a byte-level BPE
+tokenizer from the training text. You watch it learn.
 
 ```
 python studio.py
 ```
+
+## Core training presets
+
+The CLI now supports rotary positions, RMSNorm, SwiGLU, activation checkpointing, and
+approximately 30M, 91M, and 312M parameter presets at an 8192-token vocabulary. Each size
+completed real optimizer steps on the lab GPUs at context 2048. This establishes that
+the larger owned models run; better learned answers remain to be measured.
+
+```sh
+python train.py --data corpus.txt --out out/core-medium \
+  --preset core-medium --tokenizer bpe --vocab-size 8192 \
+  --batch-size 1 --steps 2000 --lr 0.0003
+```
+
+Install `requirements-training.txt` for BPE. Existing character checkpoints and commands
+remain supported. In the matched probe, the modern core was slower (11.16 versus
+5.87 ms/step); checkpointing reduced its peak allocated memory about 51% while costing
+more computation. Read [the measured core report](CORE-2026-09-19.md) for exact shapes,
+raw observations, reproducible checks, and the limits of those numbers. The GUI keeps
+its existing simple presets; these new scale presets are exposed through the CLI.
 
 > ## 🚧 Work in progress
 >

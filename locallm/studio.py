@@ -53,7 +53,7 @@ import runlog  # noqa: E402
 
 from model import GPT, GPTConfig  # noqa: E402
 from data import (CharTokenizer, Corpus, documents, group_split,  # noqa: E402
-                  split_health, split_verdict)
+                  split_health, split_verdict, tokenizer_fingerprint)
 from leakage import scan as leakage_scan  # noqa: E402
 from train import (auto_lr, cosine_lr, enable_fast_math,  # noqa: E402
                    estimate_loss, make_optimizer, pick_device, wants_bf16)
@@ -477,7 +477,8 @@ class TrainWorker(threading.Thread):
 
         out = Path(c["out"])
         out.mkdir(parents=True, exist_ok=True)
-        torch.save({"model": model.state_dict(), "config": cfg.__dict__}, out / "ckpt.pt")
+        torch.save({"model": model.state_dict(), "config": cfg.__dict__,
+                    "tokenizer_fingerprint": tokenizer_fingerprint(tok)}, out / "ckpt.pt")
         tok.save(out / "tokenizer.json")
         self.log(f"Saved your model to the '{out.name}' folder. It will still be "
                  f"there next time you open this.")
@@ -1173,10 +1174,10 @@ class Studio(ttk.Frame):
                     f"No trained model found in '{out}/' or any other folder here.")
             return False
         self.model, self.tok = model, tok
-        self.vocab = len(tok.chars)
+        self.vocab = tok.vocab_size
         self.b_gen.config(state="normal")
         self._write(f"Found a model you trained earlier in '{out}/' "
-                    f"({model.num_params():,} numbers, {self.vocab} characters). "
+                    f"({model.num_params():,} numbers, {self.vocab} vocabulary entries). "
                     f"You can press “Write something” straight away.")
         self._set_status("Earlier model loaded — ready to write.")
         return True

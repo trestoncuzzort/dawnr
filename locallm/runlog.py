@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import sys
 from collections import Counter
@@ -36,7 +37,7 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-LOG = HERE / "runs.jsonl"
+LOG = Path(os.environ.get("LOCALLM_RUN_LOG", HERE / "runs.jsonl"))
 
 
 def corpus_fingerprint(text: str) -> dict:

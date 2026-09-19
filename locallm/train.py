@@ -18,7 +18,15 @@ import torch
 import baselines
 import runlog
 from model import GPT, GPTConfig
-from data import CharTokenizer, Corpus
+from data import Corpus, build_tokenizer, tokenizer_fingerprint
+
+
+# Explicit scaling recipes; old commands keep the original small GPT defaults.
+MODEL_PRESETS = {
+    "core-small": dict(n_layer=8, n_head=8, n_embd=512, block_size=2048),
+    "core-medium": dict(n_layer=12, n_head=12, n_embd=768, block_size=2048),
+    "core-large": dict(n_layer=24, n_head=16, n_embd=1024, block_size=2048),
+}
 
 
 def enable_fast_math() -> None:
@@ -180,22 +188,43 @@ def estimate_loss(model, corpus, batch_size, block_size, iters=20):
     return out
 
 
-def main():
+def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True, help="path to a .txt corpus (yours)")
     ap.add_argument("--out", default="out")
     ap.add_argument("--steps", type=int, default=2000)
     ap.add_argument("--batch-size", type=int, default=32)
-    ap.add_argument("--block-size", type=int, default=128)
-    ap.add_argument("--n-layer", type=int, default=4)
-    ap.add_argument("--n-head", type=int, default=4)
-    ap.add_argument("--n-embd", type=int, default=256)
+    ap.add_argument("--preset", choices=MODEL_PRESETS,
+                    help="modern core size; explicit dimension flags override the preset")
+    ap.add_argument("--architecture", choices=("gpt", "modern"), default=None)
+    ap.add_argument("--gradient-checkpointing", action=argparse.BooleanOptionalAction,
+                    default=None, help="recompute blocks during backward to reduce activation memory")
+    ap.add_argument("--tokenizer", choices=("char", "bpe"), default="char")
+    ap.add_argument("--vocab-size", type=int, default=8192,
+                    help="target BPE vocabulary size; ignored by the character tokenizer")
+    ap.add_argument("--block-size", type=int, default=None)
+    ap.add_argument("--n-layer", type=int, default=None)
+    ap.add_argument("--n-head", type=int, default=None)
+    ap.add_argument("--n-embd", type=int, default=None)
     ap.add_argument("--dropout", type=float, default=0.1)
     ap.add_argument("--lr", type=float, default=None,
                     help="learning rate; default = auto_lr(n_embd), width-scaled")
     ap.add_argument("--eval-interval", type=int, default=250)
     ap.add_argument("--seed", type=int, default=1337)
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
+    defaults = MODEL_PRESETS.get(args.preset, dict(n_layer=4, n_head=4, n_embd=256, block_size=128))
+    for key, value in defaults.items():
+        if getattr(args, key) is None:
+            setattr(args, key, value)
+    if args.architecture is None:
+        args.architecture = "modern" if args.preset else "gpt"
+    if args.gradient_checkpointing is None:
+        args.gradient_checkpointing = args.preset in ("core-medium", "core-large")
+    return args
+
+
+def main():
+    args = parse_args()
 
     device = pick_device()
     torch.manual_seed(args.seed)
@@ -206,15 +235,17 @@ def main():
               f"pass --lr to override)")
 
     text = Path(args.data).read_text(encoding="utf-8", errors="ignore")
-    tok = CharTokenizer.from_text(text)
+    tok = build_tokenizer(text, kind=args.tokenizer, vocab_size=args.vocab_size)
     corpus = Corpus(text, tok, device)
     print(f"corpus: {len(text):,} chars | vocab {tok.vocab_size} | device {device}")
 
     cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=args.block_size,
                     n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd,
-                    dropout=args.dropout)
+                    dropout=args.dropout, bias=args.architecture == "gpt",
+                    architecture=args.architecture,
+                    gradient_checkpointing=args.gradient_checkpointing)
     model = GPT(cfg).to(device)
-    print(f"model: {model.num_params() / 1e6:.2f}M params | "
+    print(f"model: {model.total_params() / 1e6:.2f}M total params | {args.architecture} | "
           f"{args.n_layer}L {args.n_head}H {args.n_embd}D")
 
     enable_fast_math()
@@ -242,7 +273,8 @@ def main():
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step()
 
-    torch.save({"model": model.state_dict(), "config": cfg.__dict__}, Path(args.out) / "ckpt.pt")
+    torch.save({"model": model.state_dict(), "config": cfg.__dict__,
+                "tokenizer_fingerprint": tokenizer_fingerprint(tok)}, Path(args.out) / "ckpt.pt")
     tok.save(Path(args.out) / "tokenizer.json")
     print(f"\nsaved model + tokenizer to {args.out}/")
 
@@ -255,14 +287,16 @@ def main():
     # can only be compared to uniform guessing, which anything beats — see
     # baselines.py. Scored on corpus.train/corpus.val rather than a fresh split,
     # so the baseline cannot describe a different holdout than the model was
-    # scored on. ~2.4s on a 20MB corpus, so it runs unconditionally.
+    # scored on. This comparison is only meaningful for character-token loss.
     base = None
-    if corpus.train_text is not None and corpus.val_text:
+    if args.tokenizer == "char" and corpus.train_text is not None and corpus.val_text:
         base = baselines.compare(corpus.train_text, corpus.val_text,
                                  tok.vocab_size, model_val_nats=final["val"])
         print("\n--- how does that compare to a model that cannot learn? ---")
         for line in baselines.summary_lines(base):
             print(line)
+    elif args.tokenizer != "char":
+        print("Character n-gram comparisons omitted: BPE loss is measured per BPE token.")
 
     # corpus AND split. The corpus fingerprint says which text; the split
     # fingerprint says which tenth of it was held back, which is the part every
@@ -281,11 +315,14 @@ def main():
                           "n_embd": args.n_embd, "block_size": args.block_size,
                           "batch_size": args.batch_size, "steps": args.steps,
                           "lr": args.lr, "dropout": args.dropout,
-                          "seed": args.seed},
+                          "seed": args.seed, "architecture": args.architecture,
+                          "preset": args.preset, "tokenizer": args.tokenizer,
+                          "vocab_size": tok.vocab_size,
+                          "gradient_checkpointing": args.gradient_checkpointing},
                   metrics={"train_loss": final["train"], "val_loss": final["val"],
                            "wall_s": wall,
                            "ms_per_step": wall / max(args.steps, 1) * 1000,
-                           "params": model.num_params()},
+                           "params": model.num_params(), "total_params": model.total_params()},
                   baselines=base,
                   leakage=_leak_of(text))
     print(f"recorded to {runlog.LOG.name}  (python runlog.py to review)")

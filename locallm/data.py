@@ -1,7 +1,7 @@
-"""data.py — a dependency-free tokenizer built from YOUR corpus, plus batching.
+"""Corpus-built character or byte-BPE tokenizers, document splits and batching.
 
-Char-level: the vocabulary is exactly the set of characters in your text, so there
-is no external tokenizer, no downloads, nothing proprietary. You own the whole stack.
+Neither tokenizer downloads pretrained vocabulary or weights. Character mode
+needs only the standard library; optional byte-BPE uses the tokenizers package.
 """
 from __future__ import annotations
 
@@ -267,16 +267,121 @@ class CharTokenizer:
         return cls(json.loads(Path(path).read_text(encoding="utf-8")))
 
 
+class BPETokenizer:
+    """Byte-level BPE learned from local text, with a complete 256-byte alphabet.
+
+    No pretrained vocabulary or normalization: code whitespace and previously
+    unseen Unicode survive encoding. The optional tokenizers library only learns
+    merges from the supplied training text.
+    """
+    def __init__(self, backend, training: dict | None = None):
+        self.backend = backend
+        self.training = training or {}
+
+    @property
+    def vocab_size(self) -> int:
+        return self.backend.get_vocab_size()
+
+    @classmethod
+    def from_text(cls, text: str, vocab_size: int = 8192, min_frequency: int = 2):
+        if not text:
+            raise ValueError("BPE needs nonempty training text")
+        if vocab_size < 256:
+            raise ValueError("byte-level BPE needs at least 256 vocabulary entries")
+        if min_frequency < 1:
+            raise ValueError("min_frequency must be positive")
+        try:
+            from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
+        except ImportError as exc:
+            raise RuntimeError("BPE needs the optional tokenizers package: pip install tokenizers") from exc
+        backend = Tokenizer(models.BPE())
+        backend.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+        backend.decoder = decoders.ByteLevel()
+        trainer = trainers.BpeTrainer(vocab_size=vocab_size, min_frequency=min_frequency,
+            initial_alphabet=pre_tokenizers.ByteLevel.alphabet(), show_progress=False)
+        # Whole documents preserve whitespace and prevent merges spanning documents.
+        backend.train_from_iterator(documents(text), trainer=trainer)
+        result = cls(backend, {"text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                               "requested_vocab_size": vocab_size, "min_frequency": min_frequency})
+        if result.decode(result.encode(text)) != text:
+            raise ValueError("trained tokenizer did not preserve its input text")
+        return result
+
+    def encode(self, text: str) -> list[int]:
+        return self.backend.encode(text, add_special_tokens=False).ids
+
+    def decode(self, ids) -> str:
+        return self.backend.decode([int(i) for i in ids], skip_special_tokens=False)
+
+    def save(self, path):
+        payload = {"format": "locallm-tokenizer", "version": 1, "kind": "byte-bpe",
+                   "backend": json.loads(self.backend.to_str()), "training": self.training}
+        Path(path).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    @classmethod
+    def load(cls, path):
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or payload.get("format") != "locallm-tokenizer" or \
+                payload.get("version") != 1 or payload.get("kind") != "byte-bpe":
+            raise ValueError("unsupported locallm BPE tokenizer format")
+        try:
+            from tokenizers import Tokenizer
+        except ImportError as exc:
+            raise RuntimeError("this checkpoint needs tokenizers: pip install tokenizers") from exc
+        return cls(Tokenizer.from_str(json.dumps(payload["backend"])), payload.get("training", {}))
+
+
+def load_tokenizer(path):
+    """Read both historical character vocabularies and versioned BPE vocabularies."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(payload, list) and all(isinstance(c, str) for c in payload):
+        return CharTokenizer(payload)
+    return BPETokenizer.load(path)
+
+
+def tokenizer_fingerprint(tokenizer) -> str:
+    """Identify token IDs and encoding rules, independent of training metadata."""
+    if isinstance(tokenizer, CharTokenizer):
+        payload = {"kind": "char", "chars": tokenizer.chars}
+    elif isinstance(tokenizer, BPETokenizer):
+        payload = {"kind": "byte-bpe", "backend": json.loads(tokenizer.backend.to_str())}
+    else:
+        raise TypeError(f"unsupported tokenizer type: {type(tokenizer).__name__}")
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def build_tokenizer(text: str, kind: str = "char", vocab_size: int = 8192,
+                    val_frac: float = 0.1, seed: int = 1337,
+                    training_text: str | None = None):
+    """Fit on an explicit training partition, or use the historical split rules."""
+    if kind == "char":
+        return CharTokenizer.from_text(text if training_text is None else training_text)
+    if kind == "bpe":
+        if training_text is None:
+            training_text, _ = group_split(text, val_frac=val_frac, seed=seed)
+        return BPETokenizer.from_text(training_text, vocab_size=vocab_size)
+    raise ValueError(f"unknown tokenizer kind: {kind}")
+
+
 class Corpus:
     """Holds train/val splits as token tensors and serves random batches."""
 
-    def __init__(self, text: str, tokenizer: CharTokenizer, device: str,
-                 val_frac: float = 0.1, grouped: bool = True, seed: int = 1337):
+    def __init__(self, text: str, tokenizer: CharTokenizer | BPETokenizer, device: str,
+                 val_frac: float = 0.1, grouped: bool = True, seed: int = 1337,
+                 validation_text: str | None = None):
         """grouped=True splits by whole document and de-duplicates first, so
         validation text cannot also be training text. grouped=False reproduces
         the naive positional cut; it is kept only so leakage.py can show what
         that costs, and it should not be used for real comparisons."""
-        if grouped:
+        # Explicit partitions have already been grouped by their source builder.
+        # Their exact bytes and order are part of the experiment identity.
+        self.split_mode = "explicit" if validation_text is not None else ("grouped" if grouped else "positional")
+        if validation_text is not None:
+            train_text, val_text = text, validation_text
+            train_ids = torch.tensor(tokenizer.encode(train_text), dtype=torch.int32)
+            val_ids = torch.tensor(tokenizer.encode(val_text), dtype=torch.int32)
+        elif grouped:
             train_text, val_text = group_split(text, val_frac, seed)
             train_ids = torch.tensor(tokenizer.encode(train_text), dtype=torch.int32)
             val_ids = torch.tensor(tokenizer.encode(val_text), dtype=torch.int32)

@@ -1,0 +1,190 @@
+{
+  "arguments": {
+    "device": "cuda",
+    "architecture": "both",
+    "layers": 8,
+    "width": 512,
+    "heads": 8,
+    "vocab": 8192,
+    "context": 2048,
+    "prefix": 1536,
+    "tokens": 128,
+    "batch": 1,
+    "warmup": 1,
+    "repeats": 3,
+    "out": "../t/out/core/kv-cache-long-2026-09-19.json"
+  },
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "model_sha256": "f30e9d98760c2fe286114b6c050e194c8f6bc8fee4fb664d97cceb6dc8e580f0",
+  "device": "NVIDIA RTX 6000 Ada Generation",
+  "dtype": "bfloat16 autocast",
+  "work_checks": [
+    {
+      "architecture": "gpt",
+      "cached": false,
+      "decode_steps": 128,
+      "first_layer_tokens": 204736,
+      "output_length": 1664,
+      "largest_chunk": 1663
+    },
+    {
+      "architecture": "gpt",
+      "cached": true,
+      "decode_steps": 128,
+      "first_layer_tokens": 1663,
+      "output_length": 1664,
+      "largest_chunk": 1536
+    },
+    {
+      "architecture": "modern",
+      "cached": false,
+      "decode_steps": 128,
+      "first_layer_tokens": 204736,
+      "output_length": 1664,
+      "largest_chunk": 1663
+    },
+    {
+      "architecture": "modern",
+      "cached": true,
+      "decode_steps": 128,
+      "first_layer_tokens": 1663,
+      "output_length": 1664,
+      "largest_chunk": 1536
+    }
+  ],
+  "runs": [
+    {
+      "architecture": "gpt",
+      "cached": false,
+      "repeat": 0,
+      "seconds": 0.23161588003858924,
+      "tokens_per_second": 552.6391367408577,
+      "peak_allocated_bytes": 224602624,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": true,
+      "repeat": 0,
+      "seconds": 0.19347885996103287,
+      "tokens_per_second": 661.5709852010681,
+      "peak_allocated_bytes": 256762368,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": false,
+      "repeat": 1,
+      "seconds": 0.23271822812967002,
+      "tokens_per_second": 550.0213757586652,
+      "peak_allocated_bytes": 224615936,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": true,
+      "repeat": 1,
+      "seconds": 0.18908539111725986,
+      "tokens_per_second": 676.9428311921876,
+      "peak_allocated_bytes": 256762368,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": false,
+      "repeat": 2,
+      "seconds": 0.23206426203250885,
+      "tokens_per_second": 551.5713573426875,
+      "peak_allocated_bytes": 224615936,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": true,
+      "repeat": 2,
+      "seconds": 0.19114227104000747,
+      "tokens_per_second": 669.6582566668817,
+      "peak_allocated_bytes": 256762368,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "modern",
+      "cached": true,
+      "repeat": 0,
+      "seconds": 0.4294790020212531,
+      "tokens_per_second": 298.0355253635097,
+      "peak_allocated_bytes": 273523712,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": false,
+      "repeat": 0,
+      "seconds": 0.43450196110643446,
+      "tokens_per_second": 294.5901548385542,
+      "peak_allocated_bytes": 228929024,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": false,
+      "repeat": 1,
+      "seconds": 0.38403059099800885,
+      "tokens_per_second": 333.30678076284727,
+      "peak_allocated_bytes": 228929024,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": true,
+      "repeat": 1,
+      "seconds": 0.43592239590361714,
+      "tokens_per_second": 293.63024520607775,
+      "peak_allocated_bytes": 273537024,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": true,
+      "repeat": 2,
+      "seconds": 0.4438246109057218,
+      "tokens_per_second": 288.40221306968044,
+      "peak_allocated_bytes": 273537024,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": false,
+      "repeat": 2,
+      "seconds": 0.4323121558409184,
+      "tokens_per_second": 296.08235223230974,
+      "peak_allocated_bytes": 228929024,
+      "greedy_equal": true,
+      "params": 29936128
+    }
+  ],
+  "summary": {
+    "gpt": {
+      "uncached_seconds": 0.23206426203250885,
+      "cached_seconds": 0.19114227104000747,
+      "speedup": 1.2140917902138775
+    },
+    "modern": {
+      "uncached_seconds": 0.4323121558409184,
+      "cached_seconds": 0.43592239590361714,
+      "speedup": 0.9917181587901326
+    }
+  }
+}

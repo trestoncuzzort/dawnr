@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -114,10 +115,12 @@ def cmd_train(a) -> int:
                          f"pass --heads {max(ok) if ok else 1} or another divisor of {a.width}")
     cmd = [sys.executable, "train.py", "--data", str(Path(a.corpus).resolve()), "--out", str(Path(a.model).resolve()),
            "--steps", str(a.steps), "--block-size", str(a.block), "--n-layer", str(a.layers),
-           "--n-head", str(a.heads), "--n-embd", str(a.width), "--batch-size", str(a.batch), "--seed", str(a.seed)]
-    r = subprocess.run(cmd, cwd=LOCALLM)
-    # train.py appends a row to locallm/runs.jsonl, a tracked file
-    subprocess.run(["git", "checkout", "--", "locallm/runs.jsonl"], cwd=HERE.parent)
+           "--n-head", str(a.heads), "--n-embd", str(a.width), "--batch-size", str(a.batch), "--seed", str(a.seed),
+           "--architecture", a.architecture, "--tokenizer", a.tokenizer, "--vocab-size", str(a.vocab_size)]
+    if a.gradient_checkpointing:
+        cmd.append("--gradient-checkpointing")
+    env = dict(os.environ, LOCALLM_RUN_LOG=str(Path(a.model).resolve() / "runs.jsonl"))
+    r = subprocess.run(cmd, cwd=LOCALLM, env=env)
     return r.returncode
 
 
@@ -143,12 +146,13 @@ def cmd_generate(a) -> int:
         if entry is None or path.exists():
             continue
         head = problem_head(entry)
-        text = checkpoint.sample(model, tok, head, a.chars, temperature=a.temperature, top_k=a.top_k)
+        text = checkpoint.sample(model, tok, head, a.tokens, temperature=a.temperature, top_k=a.top_k)
         body = text[len(head):] if text.startswith(head) else text
         body = re.split(r"\n\s*\n(?=Problem: |t \d)", body, maxsplit=1)[0]
         record = {"task_id": tid, "fn": entry["fn"], "model": f"locallm:{a.model}", "digest": f"{params} params",
                   "pool_version": split.get("pool", "v1"), "prompt_version": "locallm-head",
-                  "options": {"temperature": a.temperature, "top_k": a.top_k, "chars": a.chars, "seed": a.seed},
+                  "options": {"temperature": a.temperature, "top_k": a.top_k, "max_new_tokens": a.tokens,
+                              "tokenizer": type(tok).__name__, "seed": a.seed},
                   "messages": [{"role": "user", "content": head}],
                   "reply": "```t\n" + body.strip() + "\n```", "done_reason": "length"}
         path.write_text(json.dumps(record, indent=1), encoding="utf-8")
@@ -177,13 +181,18 @@ def main() -> int:
     p.add_argument("--width", type=int, default=384)
     p.add_argument("--batch", type=int, default=32)
     p.add_argument("--seed", type=int, default=1337)
+    p.add_argument("--architecture", choices=("gpt", "modern"), default="gpt")
+    p.add_argument("--tokenizer", choices=("char", "bpe"), default="char")
+    p.add_argument("--vocab-size", type=int, default=8192)
+    p.add_argument("--gradient-checkpointing", action="store_true")
     p = sub.add_parser("generate")
     p.add_argument("--model", default=str(OUT / "model"))
     p.add_argument("--tag", required=True)
     p.add_argument("--ids-file", default="", help="answer only these task ids, one per line")
     p.add_argument("--train", action="store_true", help="answer the split's training problems, not its held-out ones")
     p.add_argument("--split", default=str(HERE / "out" / "loop" / "split-v3.json"))
-    p.add_argument("--chars", type=int, default=1200)
+    p.add_argument("--tokens", "--chars", dest="tokens", type=int, default=1200,
+                   help="maximum new tokens; --chars is the historical character-tokenizer alias")
     p.add_argument("--temperature", type=float, default=0.5)
     p.add_argument("--top-k", type=int, default=20)
     p.add_argument("--seed", type=int, default=1)

@@ -1,0 +1,156 @@
+{
+  "arguments": {
+    "device": "cuda",
+    "architecture": "both",
+    "layers": 8,
+    "width": 512,
+    "heads": 8,
+    "vocab": 8192,
+    "context": 2048,
+    "prefix": 512,
+    "tokens": 128,
+    "batch": 1,
+    "warmup": 1,
+    "repeats": 3,
+    "out": "../t/out/core/kv-cache-2026-09-19.json"
+  },
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "model_sha256": "f30e9d98760c2fe286114b6c050e194c8f6bc8fee4fb664d97cceb6dc8e580f0",
+  "device": "NVIDIA RTX 6000 Ada Generation",
+  "dtype": "bfloat16 autocast",
+  "runs": [
+    {
+      "architecture": "gpt",
+      "cached": false,
+      "repeat": 0,
+      "seconds": 0.1812605478335172,
+      "tokens_per_second": 706.165801272787,
+      "peak_allocated_bytes": 203343360,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": true,
+      "repeat": 0,
+      "seconds": 0.19731844495981932,
+      "tokens_per_second": 648.6975914799303,
+      "peak_allocated_bytes": 214922752,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": false,
+      "repeat": 1,
+      "seconds": 0.1816731400322169,
+      "tokens_per_second": 704.5620501594302,
+      "peak_allocated_bytes": 203348480,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": true,
+      "repeat": 1,
+      "seconds": 0.20211877417750657,
+      "tokens_per_second": 633.2909969441369,
+      "peak_allocated_bytes": 214922752,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": false,
+      "repeat": 2,
+      "seconds": 0.17871787096373737,
+      "tokens_per_second": 716.2126501941809,
+      "peak_allocated_bytes": 203348480,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "gpt",
+      "cached": true,
+      "repeat": 2,
+      "seconds": 0.19706939300522208,
+      "tokens_per_second": 649.517401195873,
+      "peak_allocated_bytes": 214922752,
+      "greedy_equal": true,
+      "params": 30462976
+    },
+    {
+      "architecture": "modern",
+      "cached": true,
+      "repeat": 0,
+      "seconds": 0.4447426241822541,
+      "tokens_per_second": 287.8069090754522,
+      "peak_allocated_bytes": 220555264,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": false,
+      "repeat": 0,
+      "seconds": 0.43765475298278034,
+      "tokens_per_second": 292.46797647605166,
+      "peak_allocated_bytes": 207406080,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": false,
+      "repeat": 1,
+      "seconds": 0.43873622291721404,
+      "tokens_per_second": 291.74705281663637,
+      "peak_allocated_bytes": 207406080,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": true,
+      "repeat": 1,
+      "seconds": 0.44386628014035523,
+      "tokens_per_second": 288.3751384753197,
+      "peak_allocated_bytes": 220560384,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": true,
+      "repeat": 2,
+      "seconds": 0.44717109203338623,
+      "tokens_per_second": 286.24390592414096,
+      "peak_allocated_bytes": 220560384,
+      "greedy_equal": true,
+      "params": 29936128
+    },
+    {
+      "architecture": "modern",
+      "cached": false,
+      "repeat": 2,
+      "seconds": 0.4495628059376031,
+      "tokens_per_second": 284.72106301820196,
+      "peak_allocated_bytes": 207406080,
+      "greedy_equal": true,
+      "params": 29936128
+    }
+  ],
+  "summary": {
+    "gpt": {
+      "uncached_seconds": 0.1812605478335172,
+      "cached_seconds": 0.19731844495981932,
+      "speedup": 0.9186193813276197
+    },
+    "modern": {
+      "uncached_seconds": 0.43873622291721404,
+      "cached_seconds": 0.4447426241822541,
+      "speedup": 0.9864946579472027
+    }
+  }
+}

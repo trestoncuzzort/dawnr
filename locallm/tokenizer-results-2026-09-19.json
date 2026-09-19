@@ -1,0 +1,28 @@
+{
+  "corpus_sha256": "1535159520892f2a053bf8608e0cd3a0e01a774241ec0e56af7d6a827f47b86b",
+  "tokenizer_fingerprint": "91c75a1774f974f498b43f397cefa687367a11d65becb561ece673f21cdf873d",
+  "vocab_size": 1382,
+  "splits": {
+    "train": {
+      "chars": 85593,
+      "bytes": 85593,
+      "tokens": 33654,
+      "roundtrip": true,
+      "tokens_per_char": 0.393186358697557
+    },
+    "val": {
+      "chars": 9441,
+      "bytes": 9441,
+      "tokens": 3775,
+      "roundtrip": true,
+      "tokens_per_char": 0.3998517106238746
+    },
+    "unseen": {
+      "chars": 16,
+      "bytes": 24,
+      "tokens": 20,
+      "roundtrip": true,
+      "tokens_per_char": 1.25
+    }
+  }
+}

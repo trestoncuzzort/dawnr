@@ -1,0 +1,245 @@
+{
+  "date": "2026-09-19",
+  "scope": "Architecture and scaling probe, before KV cache work",
+  "source_sha256": {
+    "model.py": "0d5a6904541672853c49573f8cc5552301f730b0f20f6e2999bf02054cb331cf",
+    "bench_core.py": "61242cd19d0d75661de292e270eaaa9ebcfe9046359876cfb3899b07076ffbb2",
+    "legacy_model.py": "06839c0e52a92e142a73f1e001f8b07fe34e70298589fcae1d35a5d02e22b8ea",
+    "test_model_core.py": "b30fd23e59b65fa7897246b97db9bef37723c9b5d4373630db6921a649e7d442"
+  },
+  "matched": {
+    "torch_version": "2.13.0+cu130",
+    "device": "NVIDIA RTX 6000 Ada Generation",
+    "settings": {
+      "device": "cuda",
+      "dtype": "bfloat16",
+      "vocab_size": 8192,
+      "layers": 6,
+      "heads": 8,
+      "width": 512,
+      "context": 512,
+      "batch": 4,
+      "warmup": 3,
+      "steps": 10,
+      "repeats": 3,
+      "seed": 91,
+      "variant": "all",
+      "optimizer_step": false,
+      "out": "matched-core.json"
+    },
+    "rows": [
+      {
+        "repeat": 0,
+        "architecture": "modern",
+        "gradient_checkpointing": false,
+        "total_params": 23468544,
+        "ms_per_step": 11.39585729688406,
+        "tokens_per_second": 179714.43013418387,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 731408384
+      },
+      {
+        "repeat": 0,
+        "architecture": "modern",
+        "gradient_checkpointing": true,
+        "total_params": 23468544,
+        "ms_per_step": 24.33349317871034,
+        "tokens_per_second": 84163.8306904419,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 357879808
+      },
+      {
+        "repeat": 0,
+        "architecture": "gpt",
+        "gradient_checkpointing": false,
+        "total_params": 23371776,
+        "ms_per_step": 5.871812300756574,
+        "tokens_per_second": 348784.9909194336,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 598487040
+      },
+      {
+        "repeat": 1,
+        "architecture": "modern",
+        "gradient_checkpointing": false,
+        "total_params": 23468544,
+        "ms_per_step": 10.990873794071376,
+        "tokens_per_second": 186336.41313438778,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 729835520
+      },
+      {
+        "repeat": 1,
+        "architecture": "gpt",
+        "gradient_checkpointing": false,
+        "total_params": 23371776,
+        "ms_per_step": 6.1238398076966405,
+        "tokens_per_second": 334430.6945171896,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 598487040
+      },
+      {
+        "repeat": 1,
+        "architecture": "modern",
+        "gradient_checkpointing": true,
+        "total_params": 23468544,
+        "ms_per_step": 24.60479261353612,
+        "tokens_per_second": 83235.81637803807,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 357879808
+      },
+      {
+        "repeat": 2,
+        "architecture": "gpt",
+        "gradient_checkpointing": false,
+        "total_params": 23371776,
+        "ms_per_step": 5.61731040943414,
+        "tokens_per_second": 364587.2936913781,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 598487040
+      },
+      {
+        "repeat": 2,
+        "architecture": "modern",
+        "gradient_checkpointing": true,
+        "total_params": 23468544,
+        "ms_per_step": 25.784313306212425,
+        "tokens_per_second": 79428.1381737073,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 357879808
+      },
+      {
+        "repeat": 2,
+        "architecture": "modern",
+        "gradient_checkpointing": false,
+        "total_params": 23468544,
+        "ms_per_step": 11.155297583900392,
+        "tokens_per_second": 183589.90287768975,
+        "finite_loss_and_gradients": true,
+        "peak_allocated_bytes": 729835520
+      }
+    ],
+    "limitation": "Random inputs; throughput and memory only. No semantic quality measured."
+  },
+  "scale": {
+    "small": {
+      "torch_version": "2.13.0+cu130",
+      "device": "NVIDIA RTX 6000 Ada Generation",
+      "settings": {
+        "device": "cuda",
+        "dtype": "bfloat16",
+        "vocab_size": 8192,
+        "layers": 8,
+        "heads": 8,
+        "width": 512,
+        "context": 2048,
+        "batch": 1,
+        "warmup": 1,
+        "steps": 3,
+        "repeats": 1,
+        "seed": 91,
+        "variant": "modern-checkpoint",
+        "optimizer_step": true,
+        "out": "scale-small.json"
+      },
+      "rows": [
+        {
+          "repeat": 0,
+          "architecture": "modern",
+          "gradient_checkpointing": true,
+          "total_params": 29893120,
+          "ms_per_step": 33.183926328395806,
+          "tokens_per_second": 61716.62689136055,
+          "finite_loss_and_gradients": true,
+          "peak_allocated_bytes": 640050176
+        }
+      ],
+      "limitation": "Random inputs; throughput and memory only. No semantic quality measured."
+    },
+    "medium": {
+      "torch_version": "2.13.0+cu130",
+      "device": "NVIDIA RTX 6000 Ada Generation",
+      "settings": {
+        "device": "cuda",
+        "dtype": "bfloat16",
+        "vocab_size": 8192,
+        "layers": 12,
+        "heads": 12,
+        "width": 768,
+        "context": 2048,
+        "batch": 1,
+        "warmup": 1,
+        "steps": 3,
+        "repeats": 1,
+        "seed": 91,
+        "variant": "modern-checkpoint",
+        "optimizer_step": true,
+        "out": "scale-medium.json"
+      },
+      "rows": [
+        {
+          "repeat": 0,
+          "architecture": "modern",
+          "gradient_checkpointing": true,
+          "total_params": 91245312,
+          "ms_per_step": 47.83679738951226,
+          "tokens_per_second": 42812.230578985276,
+          "finite_loss_and_gradients": true,
+          "peak_allocated_bytes": 1634153984
+        }
+      ],
+      "limitation": "Random inputs; throughput and memory only. No semantic quality measured."
+    },
+    "large": {
+      "torch_version": "2.13.0+cu130",
+      "device": "NVIDIA RTX 6000 Ada Generation",
+      "settings": {
+        "device": "cuda",
+        "dtype": "bfloat16",
+        "vocab_size": 8192,
+        "layers": 24,
+        "heads": 16,
+        "width": 1024,
+        "context": 2048,
+        "batch": 1,
+        "warmup": 1,
+        "steps": 3,
+        "repeats": 1,
+        "seed": 91,
+        "variant": "modern-checkpoint",
+        "optimizer_step": true,
+        "out": "scale-large.json"
+      },
+      "rows": [
+        {
+          "repeat": 0,
+          "architecture": "modern",
+          "gradient_checkpointing": true,
+          "total_params": 312001536,
+          "ms_per_step": 117.62961465865374,
+          "tokens_per_second": 17410.581560970313,
+          "finite_loss_and_gradients": true,
+          "peak_allocated_bytes": 5234216448
+        }
+      ],
+      "limitation": "Random inputs; throughput and memory only. No semantic quality measured."
+    }
+  },
+  "validation": {
+    "core_tests": 8,
+    "existing_checkpoint_tests": 9,
+    "legacy_source_weights_and_full_forward": "bit-identical",
+    "learning_quality": "not measured"
+  },
+  "rejected_native_rmsnorm": {
+    "float32_output_and_gradient_parity": "passed",
+    "bfloat16_weight_gradient_parity": "failed",
+    "absolute_tolerance": 0.02,
+    "relative_tolerance": 0.02,
+    "max_absolute_weight_gradient_difference": 0.0380859375,
+    "mismatched_weights": 3,
+    "total_weights": 512,
+    "production_changed": false,
+    "benchmark_run": false
+  }
+}
