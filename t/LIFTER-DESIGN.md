@@ -36,12 +36,12 @@ on Windows per RUN-ON-WINDOWS.md):
 
 Strategy: verified-lift. Design wave for ROADMAP.md 12.4; a later wave
 implements. Every number below is a measurement made on this box on
-2026-09-05 with Dafny 4.11.0 at /home/tmcuzzort/.local/dafny, and every
+2026-09-05 with Dafny 4.11.0 at $HOME/.local/dafny, and every
 command is listed in section 16. Where a rule rests on a reading of a
 program, the file and line are quoted. No schedule anywhere in this
 document, only per-step costs that were timed.
 
-Experiment files: /tmp/claude-1004/-home-tmcuzzort/a9f0da81-d405-444a-825e-ea9c0f2cb89e/scratchpad/lifter/design/vl/
+Experiment files: <scratch>/lifter/design/vl/
 (hand-lifted tasks fatorial.json and cube.json, the lemma files eq_*.dfy,
 the negative controls neg*.dfy, the probes, and rp/ holding the resolver's
 print of all 785 corpus files).
@@ -974,7 +974,7 @@ list.
 
 ## 16. Experiments run (commands and results)
 
-All in /tmp/claude-1004/-home-tmcuzzort/a9f0da81-d405-444a-825e-ea9c0f2cb89e/scratchpad/lifter/design/vl/, with `export PATH=/home/tmcuzzort/.local/dafny:$PATH`, every dafny call under `timeout 120`.
+All in <scratch>/lifter/design/vl/, with `export PATH=$HOME/.local/dafny:$PATH`, every dafny call under `timeout 120`.
 
 1. `dafny resolve X.dfy --rprint:X.rp.dfy` on cube, sqrt, maximum, mult,
    potencia, iseven, fat: 0.48 to 0.53 s each; iseven exits 2

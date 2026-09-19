@@ -84,7 +84,7 @@ and re-measure any `spark` or `framac` timeout alone. `internal/MACHINES.md`'s
 - `reproduce.sh` no longer hardcodes the lab workstation's home: it `cd`s to
   its own directory and resolves the corpora through `$T_CORPORA`, defaulting
   to `<repo>/t-corpora`, the same rule `corpora.py` applies. The two tests
-  that named `/home/tmcuzzort/tup/t/out/lifted-tasks` (`test_lower_dafny_closure.py`,
+  that named `$HOME/tup/t/out/lifted-tasks` (`test_lower_dafny_closure.py`,
   `test_lower_rocq_loop_cert.py`) now look beside themselves; they skip here
   as before because the lifted corpus is not committed.
 - `t/lab.py` opened on this machine (Homebrew python@3.12 with python-tk@3.12,

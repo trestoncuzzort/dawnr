@@ -2,7 +2,7 @@
 
 Design only (ROADMAP.md 12.4). Nothing below is implemented. Every statement
 about what Dafny 4.11.0 does was measured with the installed binary
-(`/home/tmcuzzort/.local/dafny/dafny`), and the command and result are in
+(`$HOME/.local/dafny/dafny`), and the command and result are in
 section 15. Every statement about a corpus program quotes the line it rests
 on (section 14). Where a rule rests on a semantic choice that is Treston's
 to make, the rule names its default and section 16 lists the reversal.
@@ -933,7 +933,7 @@ The number is a reading, not a measurement; T9 measures it.
 
 ## 15. Experiments run
 
-All with `PATH=/home/tmcuzzort/.local/dafny:$PATH`, every dafny call under
+All with `PATH=$HOME/.local/dafny:$PATH`, every dafny call under
 `timeout 120`, probe files under the scratchpad `lifter/exp/`.
 
 - E1 `dafny resolve sqrt.dfy --print:sqrt.print.dfy` (Clover_integer_square_root): exit 0; the print keeps `nat`, the chain `r * r <= N < (r + 1) * (r + 1)`, and has NO decreases. `dafny resolve sqrt.dfy --rprint:sqrt.rprint.dfy`: exit 0; the method gets `decreases N` and the loop `decreases N - (r + 1) * (r + 1)`.

@@ -352,7 +352,7 @@ def export(args, adapter_dir: Path) -> None:
     if convert_script is None:
         print("[export] MISSING: no llama.cpp convert_hf_to_gguf.py (or "
               "convert-hf-to-gguf.py) found on this box (checked $SRLM_LLAMA_CPP, "
-              "~/llama.cpp, /home/tmcuzzort/llama.cpp, and PATH). GGUF conversion "
+              "~/llama.cpp, $HOME/llama.cpp, and PATH). GGUF conversion "
               "was NOT run and no GGUF file was written. To convert: "
               "git clone --depth 1 https://github.com/ggml-org/llama.cpp somewhere, "
               "then rerun with SRLM_LLAMA_CPP=<that path> loop_train.py --export "

@@ -186,9 +186,9 @@ table it writes is byte-identical to `run_par.py`'s own, modulo the
 timestamp line. This is the one full-matrix run this item is allowed:
 
 ```
-$ python3 cli.py verify tasks --jobs 12 --table /tmp/claude-1004/.../scratchpad/command-agreement.md
+$ python3 cli.py verify tasks --jobs 12 --table <scratch>/.../scratchpad/command-agreement.md
 ...
-7 kernels, 34 tasks: DISAGREEMENT, see /tmp/claude-1004/.../scratchpad/command-agreement.md
+7 kernels, 34 tasks: DISAGREEMENT, see <scratch>/.../scratchpad/command-agreement.md
 EXIT=1
 ```
 
@@ -203,7 +203,7 @@ Then, diffed against the committed `t/AGREEMENT.md` with the timestamp
 line stripped from both sides (2026-09-11, this run):
 
 ```
-$ diff <(tail -n +2 AGREEMENT.md) <(tail -n +2 /tmp/claude-1004/.../scratchpad/command-agreement.md)
+$ diff <(tail -n +2 AGREEMENT.md) <(tail -n +2 <scratch>/.../scratchpad/command-agreement.md)
 $ echo "diff rc=$?"
 diff rc=0
 ```

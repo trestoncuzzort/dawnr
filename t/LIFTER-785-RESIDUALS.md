@@ -180,7 +180,7 @@ the bar.
 
 ## 2026-09-14: the loop-scope alignment fixed, 6 of the 16 close
 
-Confirmed first, `/home/tmcuzzort/tup/t/out/lift`, this box: all 14
+Confirmed first, `$HOME/tup/t/out/lift`, this box: all 14
 `for`-shaped rows (113, 267, 284, 307, 401, 555, 565, 623, 743, 759,
 770, 775, 790, 804) and both `while`-shaped rows (433, 807) still read
 `lift-check-failed`, matching the section above exactly.
@@ -308,7 +308,7 @@ row's own instruction); no real moved from its prior column, matching
 the honesty rule.
 
 **Lifter regression bar: the full 164 MBPP-DFY re-lift, diffed against
-`/home/tmcuzzort/tup/t/out/lift`** (`t/lifter.py --list <the 164>
+`$HOME/tup/t/out/lift`** (`t/lifter.py --list <the 164>
 --corpus-dir <DafnyBench ground_truth> --jobs 4 --timeout 200`, this box,
 under heavy shared-box load throughout -- 60-90 concurrent dafny/lifter
 /grade processes from other builders' own waves the whole run): 12 rows
@@ -359,7 +359,7 @@ length or contents), seq-return capacity bounds, and char-membership
 quantifiers (a quantifier over the characters of a string).
 
 Measured here (this box, dafny 4.11.0, against
-`/home/tmcuzzort/tup/t/out/lift`'s own outcome files, the 164 MBPP-DFY
+`$HOME/tup/t/out/lift`'s own outcome files, the 164 MBPP-DFY
 programs): 35 read `refused:lift-check-failed`. 14 of the 35 (113, 267,
 284, 307, 401, 555, 565, 623, 743, 759, 770, 775, 790, 804 -- wait, 804
 is this row's own, see below) are the `_task_loop_scopes` end-alignment
@@ -465,7 +465,7 @@ this row's scope.)
 (`t/lifter.py --list <164> --corpus-dir <DafnyBench ground_truth> --jobs 4
 --timeout 200`, then the 3 the parallel run's own background job cut off
 re-run singly) and diffed every file's own lift-or-refuse verdict against
-`/home/tmcuzzort/tup/t/out/lift`: no previously-`lifted` task changed or
+`$HOME/tup/t/out/lift`: no previously-`lifted` task changed or
 stopped lifting. Four tasks (728, 578, 106, 809) read a DIFFERENT
 refusal in the first, loaded pass (`lift-diff-failed`, the differential
 harness -- section 10, untouched by this fix); re-measured each alone on
@@ -481,7 +481,7 @@ file to raise the budget on. Five tasks besides
 436/804 read a NEW `unbounded-quantifier -> lifted` or `-> lift-check-failed`
 flip (472, 567, 622 to `lifted`; 751 to `lift-check-failed`) -- these are
 `lift_classify.py` reclassifications already committed before this wave
-that the baseline `/home/tmcuzzort/tup/t/out/lift` directory (a snapshot,
+that the baseline `$HOME/tup/t/out/lift` directory (a snapshot,
 not regenerated for every file since) had not yet picked up; confirmed by
 inspecting `git log` on `lift_classify.py`, no line this diff touches.
 
@@ -511,7 +511,7 @@ itself needs the sweep's own re-run, not attempted here.
 
 Wave O's lifter-contracts item (LIFTER-DECISIONS.md rows 34 and 35) named
 four programs refused at the checker in its own report and in
-`/home/tmcuzzort/tup/t/out/lift`'s own outcome files: `dafny-synthesis_task_id_2`
+`$HOME/tup/t/out/lift`'s own outcome files: `dafny-synthesis_task_id_2`
 SharedElements, `dafny-synthesis_task_id_161` RemoveElements, and
 `dafny-synthesis_task_id_249` Intersection all refuse `token:
 L_fun_inArray`; `dafny-synthesis_task_id_447` CubeElements refuses with no
@@ -600,7 +600,7 @@ accepts the lift, section 9's own scope; the twin's own provability is
 **Regression, the 164.** Re-lifted all 164 MBPP-DFY programs
 (`t/lifter.py --list <164> --corpus-dir <DafnyBench ground_truth> --jobs 4
 --timeout 200 --force`) and diffed every file's own lift-or-refuse
-verdict against `/home/tmcuzzort/tup/t/out/lift`: see the diff reported
+verdict against `$HOME/tup/t/out/lift`: see the diff reported
 alongside this patch; no previously-`lifted` task changed or stopped
 lifting, and the four rows above flip `refused:lift-check-failed ->
 lifted`.

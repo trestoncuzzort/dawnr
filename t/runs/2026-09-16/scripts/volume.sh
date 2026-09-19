@@ -2,8 +2,8 @@
 # several sampled 27B answer sets on pool v3; grade only test-passing, new tasks
 export PATH=$HOME/.cargo/bin:$HOME/.opam/default/bin:$HOME/.elan/bin:$HOME/.local/fstar/fstar/bin:$HOME/.local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin:$HOME/.local/verus/verus-x86-linux:$PATH
 export T_WATCH=$HOME/.cache/t-watch/events.jsonl
-cd /home/tmcuzzort/tup/t || exit 1
-S=/tmp/claude-1004/-home-tmcuzzort/2118453c-5ae7-47ef-9be5-9ab0b2538b3d/scratchpad/volume
+cd $HOME/tup/t || exit 1
+S=<scratch>/volume
 stamp() { echo "$(date -u +%FT%TZ) $*"; }
 python3 $S/pick.py out/spec-experiment/qwen3.8-27b-fp8 > /dev/null
 python3 $S/pick.py out/spec-experiment/qwen3.8-27b-fp8-v3

@@ -863,7 +863,7 @@ unproved; regenerating that table is a coverage-script action, not a
 lowering one, so left for the sweep that next regenerates it.
 
 THE v1def FAMILY, THE UNDEF-WALK GAP, AND A TRIGGER GAP (2026-09-10,
-reading /home/tmcuzzort/tup/t/out/reproduce-families/, the morning's
+reading $HOME/tup/t/out/reproduce-families/, the morning's
 full-family fuzz reproduction). THE TARGET was v1def, 8 tasks (033, 049,
 070, 103, 143, 209, 268, 295); 070 and 103 already counted. The prior
 diagnosis for 033/049/143 (verified/unproved) named a single suspect,

@@ -52,7 +52,7 @@ recursive-descent parser over a small Dafny subset, and lift that AST.
 
 ## 1. What the Dafny binary does, measured
 
-Binary: `/home/tmcuzzort/.local/dafny/dafny`, `dafny --version` prints
+Binary: `$HOME/.local/dafny/dafny`, `dafny --version` prints
 `4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2`. Scratch directory for
 every file below: `scratchpad/lifter/design/dpn-exp/` (paths abbreviated).
 
@@ -1241,7 +1241,7 @@ Instruments, in the order they run:
 
 ## 16. Experiments run (commands and results)
 
-All under `PATH=/home/tmcuzzort/.local/dafny:$PATH`, cwd
+All under `PATH=$HOME/.local/dafny:$PATH`, cwd
 `scratchpad/lifter/design/dpn-exp/`, each dafny call under `timeout 120`.
 
 1. `dafny --version` -> `4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2`.

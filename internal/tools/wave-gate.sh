@@ -2,7 +2,7 @@
 # usage: wave-gate.sh <name>   (conformance full run, matrix diff vs the banked AGREEMENT.md, reproduce.sh --tests)
 N=${1:?name}
 export PATH=$HOME/.cargo/bin:$HOME/.opam/default/bin:$HOME/.elan/bin:$HOME/.local/fstar/fstar/bin:$PATH
-cd /home/tmcuzzort/tup/t || exit 1
+cd $HOME/tup/t || exit 1
 S=${T_SCRATCH:-$HOME/.cache/t-gate}; mkdir -p "$S"
 bash -n reproduce.sh || { echo "reproduce.sh SYNTAX ERROR"; exit 2; }
 cp AGREEMENT.md $S/AGREEMENT.pre-$N.md

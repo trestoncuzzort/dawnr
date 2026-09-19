@@ -1,7 +1,7 @@
 #!/bin/bash
 export PATH=$HOME/.cargo/bin:$HOME/.opam/default/bin:$HOME/.elan/bin:$HOME/.local/fstar/fstar/bin:$HOME/.local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin:$HOME/.local/verus/verus-x86-linux:$PATH
 L=$HOME/.local/share/tjob/vllm-27b-3072.log; G=$HOME/.local/share/tjob/spec-gen-27b-3072.log
-cd /home/tmcuzzort/tup/t || exit 1
+cd $HOME/tup/t || exit 1
 stamp() { echo "$(date -u +%FT%TZ) $*" | tee -a $G; }
 stamp "waiting for the 27B server"
 for i in $(seq 1 180); do grep -q "Application startup complete" $L 2>/dev/null && break; grep -q "SERVE_EXIT" $L 2>/dev/null && { stamp "server exited before startup; GEN_DONE"; exit 1; }; sleep 10; done

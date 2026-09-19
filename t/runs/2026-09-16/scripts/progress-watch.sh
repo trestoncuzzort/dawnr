@@ -1,6 +1,6 @@
 #!/bin/bash
 # emit one line per milestone across the running experiments (new lines only)
-S=/tmp/claude-1004/-home-tmcuzzort/2118453c-5ae7-47ef-9be5-9ab0b2538b3d/scratchpad
+S=<scratch>
 LOGS="$S/locallm-t/loop.log $S/locallm-t/loop-rawmatched.log $S/volume/locallm-r0.log $S/volume/volume.log"
 PAT='round [0-9]+:|LOOP_DONE|stopping|LOCALLM_R0_DONE|kernels, [0-9]+ tasks|set [0-9]+ (generate|kernels)|pass their tests|VOLUME_DONE|Traceback|Error|Killed|REFUSED|No such file'
 declare -A seen

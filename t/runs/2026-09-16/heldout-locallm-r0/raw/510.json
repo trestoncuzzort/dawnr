@@ -1,7 +1,7 @@
 {
  "task_id": 510,
  "fn": "no_of_subsequences",
- "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "model": "locallm:$HOME/tup/t/out/loop-locallm/model",
  "digest": "4891136 params",
  "pool_version": "v3",
  "prompt_version": "locallm-head",

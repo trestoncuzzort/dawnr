@@ -7,7 +7,7 @@ entry stays as it was rather than being replaced by a timeout."""
 import json, shutil, subprocess, sys
 from pathlib import Path
 
-S = Path("/tmp/claude-1004/-home-tmcuzzort/2118453c-5ae7-47ef-9be5-9ab0b2538b3d/scratchpad")
+S = Path("<scratch>")
 bulk, alone, dest = S / "relift26", S / "relift26b", S / "relift26-install"
 seven = {l.strip()[:-len(".dfy")] for l in open(S / "wave-p-merge/relift7.txt") if l.strip()}
 

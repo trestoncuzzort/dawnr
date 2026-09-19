@@ -1,7 +1,7 @@
 {
  "task_id": 626,
  "fn": "triangle_area",
- "model": "locallm:/home/tmcuzzort/tup/t/out/loop-locallm/model",
+ "model": "locallm:$HOME/tup/t/out/loop-locallm/model",
  "digest": "4891136 params",
  "pool_version": "v3",
  "prompt_version": "locallm-head",

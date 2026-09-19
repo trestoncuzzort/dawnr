@@ -1,5 +1,5 @@
 {
- "checked": 650,
+ "checked": 655,
  "tags": [
   "deepseek-coder-v2-16b-v4-s1",
   "deepseek-coder-v2-16b-v4-s2",
@@ -8,6 +8,7 @@
   "phi4-mini-v3",
   "prover-v2-7b",
   "qwen15b-base-v3",
+  "qwen15b-base-v4",
   "qwen2.5-coder-1.5b",
   "qwen2.5-coder-1.5b-r0hf",
   "qwen2.5-coder-1.5b-r0hf-v3",
@@ -41,6 +42,7 @@
  "disagree": [
   "deepseek-coder-v2-16b-v4-s2/mbpp_908__find_fixed_point",
   "qwen15b-base-v3/mbpp_768__check_Odd_Parity",
+  "qwen15b-base-v4/mbpp_768__check_Odd_Parity",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_58__opposite_Signs",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_768__check_Odd_Parity",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_855__check_Even_Parity",
@@ -66,6 +68,7 @@
   "student-r4-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
   "student-r5-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
   "student-r6-g/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
-  "student-r6-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}"
+  "student-r6-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
+  "qwen15b-base-v4/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}"
  }
 }

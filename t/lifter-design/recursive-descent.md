@@ -14,9 +14,9 @@ untyped locals, and `dafny resolve --print` supplies a second rendering of
 the same program that the same parser must read to the same tree.
 
 Everything below that says "measured" was run on this box on 2026-09-05
-with dafny 4.11.0 (`/home/tmcuzzort/.local/dafny/dafny`) and the checked-in
+with dafny 4.11.0 (`$HOME/.local/dafny/dafny`) and the checked-in
 `t/` modules; the commands are listed in section 17 and the files are under
-`/tmp/claude-1004/-home-tmcuzzort/a9f0da81-d405-444a-825e-ea9c0f2cb89e/scratchpad/lifter/design/rd/`.
+`<scratch>/lifter/design/rd/`.
 Meaning preservation is the design's only priority: a refusal costs one
 row, a wrong lift corrupts every number downstream, so every rule below
 comes with the argument for why the kernels grade the same theorem, and
@@ -741,7 +741,7 @@ what the implementation wave measures.
 
 ## 17. Experiments run
 
-All with `PATH=/home/tmcuzzort/.local/dafny:$PATH`, dafny 4.11.0, under
+All with `PATH=$HOME/.local/dafny:$PATH`, dafny 4.11.0, under
 `timeout 120` per dafny invocation. Files under `design/rd/`.
 
 - E1 `dafny resolve X.dfy --print:X.print.dfy` on cube, stairs, s801,
@@ -915,7 +915,7 @@ All with `PATH=/home/tmcuzzort/.local/dafny:$PATH`, dafny 4.11.0, under
 ## 20. Corpus evidence
 
 Quoted from the ground_truth files (paths relative to
-`/home/tmcuzzort/tup/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth/`):
+`$HOME/tup/t-corpora/DafnyBench/DafnyBench/dataset/ground_truth/`):
 
 - `Clover_abs.dfy`: `if x < 0 {\n    return -x;\n  } else {\n    return x;\n  }` : tail returns in both branches of a tail if (7.1).
 - `Dafny_Verify_tmp_tmphq7j0row_AI_agent_verify_examples_Cube.dfy`: `while i != n` with no decreases, `c, k, m := c + k, k + m, m + 6;` : `!=` guard (L2 ite) and an order-safe parallel assignment.

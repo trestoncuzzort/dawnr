@@ -3,7 +3,7 @@
 no kernel. One line: name, twin op, per-kernel seconds for real/twin, peak RSS.
 Crashes and refusals are named inline. Run under a memory cap and a clock."""
 import sys, time, resource, os
-sys.path.insert(0, "/home/tmcuzzort/tup/t")
+sys.path.insert(0, "$HOME/tup/t")
 import tasks_io, harness
 task = tasks_io.load_task(sys.argv[1])
 name = task.get("name")
