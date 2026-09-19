@@ -75,6 +75,16 @@ Three rounds, three different data recipes — more problems, more answers, then
 - **Seven systems, one matrix.** 35 committed tasks, 31 of them verified with the twin refuted in all seven ([`t/AGREEMENT.md`](t/AGREEMENT.md)), regenerated on a second machine from a clean clone with no cell moved.
 - **Nested loops, closed 2026-09-18.** A `while` inside a `while` was an abstain in Lean, Rocq and F\* and a timeout in Frama-C; all seven now verify it with its twin refuted. Two of those fixes were honesty defects rather than gaps: Lean could leave a goal unsolved that `sorryAx` then discharged, so a lowering that proved nothing could read as verified, and Frama-C was not slow at all — the lowering was emitting an invariant of its own that is false.
 - **A grammar that is the notation.** [`t/t.gbnf`](t/t.gbnf) is t's syntax as a grammar a generator can decode against, with its identifier rules generated from the lexer's keyword set; [`t/grammar_check.py`](t/grammar_check.py) proves it accepts all 4,208 programs the parser accepts and refuses 590 of 590 replies the parser refuses.
+- **The twins ship as an artifact.** [`t/twins/`](t/twins/) is 426 pairs over 90 programs: each one a verified
+  program, a near-miss one deliberate edit away, the concrete input at which the near-miss breaks the
+  specification the program keeps, and seven independent refutations of it at that input. A pair is written
+  only when both halves are on the record. Verified programs are abundant; this pairing is the part with no
+  substitute, and it is what lets a model be trained or graded on the difference between a proof that holds
+  and one that does not.
+- **The specifications are checked against the problems.** All 36 graded answer sets, 650 clean answers, 200
+  random draws each against the problem's own solution: 13 disagree -- answers whose tests passed, whose seven
+  proofs held and whose twin was refuted, and whose specification still does not say what the problem asked.
+  None is in the training pool ([`t/SPEC-CHECK-2026-09-18.md`](t/SPEC-CHECK-2026-09-18.md)).
 - **Preflight.** [`t/preflight.py`](t/preflight.py) refuses to let a round start on a checker whose version cannot be read, a held-out problem in a training set, a clean answer resting on a flake or a timeout, or a specification that disagrees with its problem.
 
 ## Corrections this project made against itself
@@ -96,6 +106,7 @@ Three rounds, three different data recipes — more problems, more answers, then
 |---|---|
 | [`locallm/`](locallm/) | the model builder: a transformer trained from random weights on your own hardware |
 | [`t/`](t/) | the filter: a small specification language translated into seven proof systems, and every pipeline script above |
+| [`t/twins/`](t/twins/) | 426 verified programs each paired with a near-miss and the input that separates them |
 | [`nl/`](nl/) | natural-language programming problems with tests, from four public sources |
 | [`forge/`](forge/) | the earlier training pipeline that grades a model by the twins it refutes |
 | [`tup/`](tup/) | a Linux distribution built from source with a receipt per step |
