@@ -2153,6 +2153,28 @@ UNBLOCKS: 15.2, 15.5.
 
 **15.1 DONE 2026-09-11 (4bb1066).** `t/tlib.py`: verify(task, kernels, flake, budget) in-process, one dict per kernel (real, twin, operator, witness, provisional, source sha, kernel version, cached), plus twin, lower and explain; `t/cache.py` keys a verdict by the lowered source's sha256, the kernel's version (read once per process through each verifier's own version command) and the budget, under out/cache, written only by a completed n-of-3 run and read before any kernel runs; a flaked result stays provisional and is never cached (test_tlib's stub backend alternates verdicts). Measured: verify(abs) across all seven, first call 42 kernel launches in 15.9 s, second call 0 launches in 0.00 s in-process and 0.39 s from a second process, every entry cached and not provisional; an editor call ran while run_par produced a four-task table and the table matched AGREEMENT.md with out/ untouched (the library writes under out/lib, the table under its own out directory, so there is no shared lock to relax). The independent check exercised the absent-kernel path (a refusal, not a crash). Open: interactive budgets per kernel are still unmeasured; `budget` is passed through, not characterised.
 
+**Closed 2026-09-19 by `t/budgets.py`** (`t/BUDGETS-2026-09-19.md`): one
+verification of the real program per task per kernel over the 35 committed
+tasks, the verdict cache bypassed so every call launches its kernel, on the lab
+workstation with 14 of its 120 cores busy. Median, slowest, and how many tasks
+finish inside a second:
+
+    lean    0.50 s   3.7 s    30 of 35 under a second
+    fstar   0.92 s  14.4 s    19 of 35
+    verus   1.12 s   1.6 s    11 of 35
+    dafny   1.23 s   1.8 s     0 of 35, all 35 under three
+    framac  3.73 s  24.2 s
+    rocq    4.23 s 180.1 s
+    spark  21.88 s  63.4 s     0 of 35 under ten
+
+So an editor can have Lean and F* while someone types; Dafny, Verus, Frama-C
+and Rocq belong on a pause or a save; SPARK belongs on a keystroke the person
+chooses, and nothing else. Dafny's spread is the narrowest of the seven (1.2 to
+1.8 s across every task) and Rocq's is the widest (4 s to 180), which matters
+more than the median for an editor deciding whether to show a spinner. The
+flake rule is unchanged and costs three runs, so a verdict fit to write into a
+table costs three times these numbers.
+
 #### 15.2 The language server
 
 One server, spoken to over stdio in the Language Server Protocol (JSON-RPC
