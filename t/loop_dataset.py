@@ -87,6 +87,16 @@ LIFTED_NAME_RE = re.compile(r"^dafny-synthesis_task_id_(\d+)\.")
 SAMPLES_MAX_TWINS = 2
 SAMPLES_MAX_FAIL = 2
 SAMPLES_MAX_MALFORMED = 1
+# 2026-09-18, from the round 5 score: the student writes 42 well-formed answers to Phi-4-mini's 12 and turns
+# 11 of them into test-passing answers against Phi's 6 -- and then converts only 3 of those 11 into clean ones
+# where Phi converts 3 of 6. The gate it loses at is the proof, not the notation, and until now no pair ever
+# showed it that gate: every rejected side was a program that was WRONG (a twin, a test-failing answer, a
+# malformed reply). A program that is right and cannot be proved was never in the training signal at all.
+ALL_KERNELS = 7                      # a clean answer is verified with its twin refuted in every one of them
+SAMPLES_MAX_UNPROVED = 2
+# and the round 5 student's 12 answers that all seven proved while disagreeing with the problem, up from 8:
+# a specification the provers like and the problem does not is its own failure mode and its own negative
+SAMPLES_MAX_DISAGREE = 1
 
 
 def fence(text: str) -> str:
@@ -511,6 +521,26 @@ def negatives_for_positive(pos: dict, samples: list[dict]) -> list[dict]:
                       "rejected": twin_task_text(pos["task"], body), "witness": w,
                       "neg_tag": None, "neg_sample_index": None})
 
+    # (a2) the answer that is RIGHT and cannot be proved: same problem, well formed, its own tests pass, and
+    # the seven do not all verify it with the twin refuted. Against a clean chosen side this is the only pair
+    # in the set whose difference is the specification rather than the program, which is the difference the
+    # round 5 student could not make (2026-09-18).
+    unproved = [s for s in samples
+                if s["wellformed"] and s["text"] != pos["text"] and s["tests_pass"]
+                and s["kernel_count"] < ALL_KERNELS]
+    unproved.sort(key=lambda s: (-s["kernel_count"], s["k"]))    # the near misses first: they differ by least
+    for s in unproved[:SAMPLES_MAX_UNPROVED]:
+        negs.append({"kind": f"unproved:{s['kernel_count']}of7", "operator": None, "rejected": s["text"],
+                     "witness": None, "neg_tag": s["tag"], "neg_sample_index": s["k"]})
+
+    # (a3) the answer all seven proved whose specification disagrees with the problem's own solution
+    for s in samples:
+        if (s["wellformed"] and s["text"] != pos["text"]
+                and f"{s['tag']}/{s.get('name')}" in SPEC_DISAGREE):
+            negs.append({"kind": "spec-disagrees", "operator": None, "rejected": s["text"],
+                         "witness": None, "neg_tag": s["tag"], "neg_sample_index": s["k"]})
+            break
+
     others = [s for s in samples
               if s["wellformed"] and s["text"] != pos["text"] and not s["tests_pass"]]
     others.sort(key=lambda s: (0 if s["kernel_count"] > 0 else 1, s["k"]))
@@ -528,7 +558,7 @@ def negatives_for_positive(pos: dict, samples: list[dict]) -> list[dict]:
             negs.append({"kind": "malformed", "operator": None, "rejected": s["malformed_text"],
                          "witness": None, "neg_tag": s["tag"], "neg_sample_index": s["k"]})
 
-    return negs[:SAMPLES_MAX_TWINS + SAMPLES_MAX_FAIL]
+    return negs[:SAMPLES_MAX_TWINS + SAMPLES_MAX_UNPROVED + SAMPLES_MAX_DISAGREE + SAMPLES_MAX_FAIL]
 
 
 def load_pairs_jsonl(path: Path) -> list[dict]:

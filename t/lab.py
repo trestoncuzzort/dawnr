@@ -235,6 +235,52 @@ STEPS = [
     ("r5-score", "Round 5: score", "The round 5 row next to round 4 and Phi.",
      "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4 "
      "student-r5-v3 locallm-r5 | tee t/out/score-r5.md", "test -s t/out/score-r5.md", ""),
+    # Round 6 answers the round 5 score with the two things it measured: the student loses at the proof gate,
+    # not the notation (it wrote 42 well-formed answers to Phi's 12 and converted 3 of 11 test-passing where
+    # Phi converted 3 of 6), and its parse rate never moved off the untrained model's. So the pairs gained a
+    # rejected side that is RIGHT and unprovable, and the answers are decoded against t's grammar -- both
+    # arms, Phi included, because a constraint on one side only is not a comparison.
+    ("r6-pool", "Round 6: pool with the proof gate in it",
+     "Rebuilds the pairs with two negatives nothing in the pool had: an answer to the same problem that "
+     "passes its own tests and does not verify, and one the seven proved whose specification disagrees with "
+     "the problem. Those are the two ways round 5's student lost.",
+     f"python3 t/loop_dataset.py --from-samples {SAMPLE_TAGS} student-r4-train locallm-r4-train "
+     "--split t/out/loop/split-v5.json --min-kernels 7 --out-suffix r6 && "
+     "wc -l t/out/loop/sft-r6.jsonl t/out/loop/pairs-r6.jsonl",
+     "test -s t/out/loop/pairs-r6.jsonl", ""),
+    ("r6-train", "Round 6: train the student", "The same 1.5B on the round 6 pairs.",
+     f"PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True {PY} t/loop_train.py --sft t/out/loop/sft-r6.jsonl "
+     "--pairs t/out/loop/pairs-r6.jsonl --sft-first --max-len 3072 --out t/out/loop/adapter-r6",
+     "test -s t/out/loop/adapter-r6/adapter_model.safetensors", "gpu"),
+    ("r6-student", "Round 6: student answers", "Held-out answers, unconstrained, so the round 4 and 5 rows "
+     "stay comparable.",
+     f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r6 --tag student-r6-v3 --pool v3 --prompt v3 "
+     "--ids-file t/out/loop/eval-ids.txt",
+     f"test $(ls {SE}/student-r6-v3/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("r6-student-g", "Round 6: student answers, under the grammar",
+     "The same held-out problems with t's grammar on the decoder, so the model cannot write what the parser "
+     "would refuse.",
+     f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r6 --tag student-r6-g --pool v3 --prompt v3 "
+     "--ids-file t/out/loop/eval-ids.txt --grammar t/t.gbnf",
+     f"test $(ls {SE}/student-r6-g/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("phi-g", "Phi-4-mini, under the same grammar",
+     "Phi answering the same problems with the same constraint. Without this row a constrained student "
+     "against an unconstrained Phi would be a comparison of two different experiments.",
+     f"{PY} t/loop_generate.py --adapter none --base microsoft/Phi-4-mini-instruct --tag phi4-mini-g "
+     "--pool v3 --prompt v3 --ids-file t/out/loop/eval-ids.txt --max-new 3072 --grammar t/t.gbnf",
+     f"test $(ls {SE}/phi4-mini-g/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
+    ("r6-grade-heldout", "Round 6: grade held-out",
+     "All four new sets through the seven checkers on the lab workstation.",
+     "for T in student-r6-v3 student-r6-g phi4-mini-g; do [ -d t/out/spec-experiment/$T/raw ] || continue; "
+     "python3 t/spec_experiment.py extract --model $T --pool v3 && "
+     "python3 t/spec_experiment.py tests --model $T --pool v3; done && "
+     "bash t/grade_lab.sh heldout student-r6-v3 student-r6-g phi4-mini-g",
+     f"test -s {SE}/student-r6-v3/kernels.md", "lab"),
+    ("r6-score", "Round 6: score", "Every row: the two Phis, the untrained base, rounds 4, 5 and 6, and both "
+     "locallms.",
+     "python3 t/score_heldout.py qwen3.8-27b-fp8-v3 phi4-mini-v3 phi4-mini-g qwen15b-base-v3 student-r4-v3 "
+     "student-r5-v3 student-r6-v3 student-r6-g locallm-r4 locallm-r5 | tee t/out/score-r6.md",
+     "test -s t/out/score-r6.md", ""),
     # WS-21, the parse wall. The funnel measured that 62 percent of a stock model's replies never reach a
     # prover because they are not t; these three are the answer to that, in the order the preregistration
     # fixes (t/PREREG-2026-09-18-constrained.md).
@@ -256,6 +302,21 @@ STEPS = [
      "Needs the lab workstation's cards, which are the operator's to lend.",
      "bash t/lab_gpu.sh constrained",
      "test -d t/out/spec-experiment/qwen3-coder-30b-apps-g1/raw", "gen"),
+    ("constrained-grade", "Grade the constrained arm",
+     "Extract, test and filter the constrained answers the same way as every other set -- same gates, same "
+     "control sample of failing answers -- then the seven checkers on the lab workstation at the same 32 "
+     "cells the control arm was graded at, because a timeout is not a verdict.",
+     "python3 t/spec_experiment.py extract --model qwen3-coder-30b-apps-g1 --pool v5 && "
+     "python3 t/spec_experiment.py tests --model qwen3-coder-30b-apps-g1 --pool v5 && "
+     "python3 t/pool_pick.py t/out/spec-experiment/qwen3-coder-30b-apps-g1 --control 40 && "
+     "bash t/grade_lab.sh tags qwen3-coder-30b-apps-g1",
+     "test -s t/out/spec-experiment/qwen3-coder-30b-apps-g1/kernels.md", "lab"),
+    ("constrained-score", "What the constraint bought",
+     "The preregistered comparison: clean answers in each arm, the test-pass rate among answers that parse, "
+     "problems covered, and generation seconds per clean answer. The decision rule was fixed before either "
+     "arm existed, in t/PREREG-2026-09-18-constrained.md.",
+     "python3 t/constrained_compare.py | tee t/out/CONSTRAINED-2026-09-18.md",
+     "test -s t/out/CONSTRAINED-2026-09-18.md", ""),
     ("score", "Score against Phi", "The result. Saved to t/out/score-r4.md.",
      f"python3 t/score_heldout.py qwen3.8-27b-fp8-v3 {HELDOUT} locallm-r0 | tee t/out/score-r4.md",
      "test -s t/out/score-r4.md", ""),
@@ -274,7 +335,10 @@ NEEDS = {
     "student": ["train"], "locallm": ["pool"], "grade-heldout": ["phi"], "score": ["grade-heldout"],
     "r5-pool": ["grade"], "r5-locallm": ["r5-pool"], "r5-train": ["r5-pool"],
     "r5-student": ["r5-train"], "r5-grade-heldout": ["r5-student"], "r5-score": ["r5-grade-heldout"],
-    "constrained": ["grammar"],
+    "r6-train": ["r6-pool"], "r6-student": ["r6-train"], "r6-student-g": ["r6-train"],
+    "r6-grade-heldout": ["r6-student"], "r6-score": ["r6-grade-heldout"],
+    "constrained": ["grammar"], "constrained-grade": ["constrained"],
+    "constrained-score": ["constrained-grade"],
 }
 RUNS = HERE / "runs" / time.strftime("%Y-%m-%d")
 STEPS_FILE = HERE / "steps.json"

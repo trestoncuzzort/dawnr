@@ -211,7 +211,7 @@ def derive_seed(seed: int, task_id: int, chunk: int | None = None) -> int:
 
 
 def generate_samples(torch_mod, model, tokenizer, input_ids, attention_mask, eos_id,
-                     args, tid: int, K: int):
+                     args, tid: int, K: int, make_procs=None):
     """K sampled replies for one problem, as ONE num_return_sequences=K
     model.generate call whenever it fits. Returns (new_token_slices, elapsed_s,
     oom_hit) where new_token_slices is a list of K 1-D tensors (prompt
@@ -236,7 +236,8 @@ def generate_samples(torch_mod, model, tokenizer, input_ids, attention_mask, eos
                 input_ids, attention_mask=attention_mask, max_new_tokens=args.max_new,
                 do_sample=True, temperature=args.temperature, top_p=args.top_p,
                 num_return_sequences=K, pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=eos_id)
+                eos_token_id=eos_id,
+                **({"logits_processor": make_procs()} if make_procs else {}))
         return [out[i][prompt_len:] for i in range(K)], time.monotonic() - t0, False
     except torch_mod.cuda.OutOfMemoryError:
         print(f"loop_generate: task {tid}: CUDA OOM generating all {K} samples in one "
@@ -257,7 +258,8 @@ def generate_samples(torch_mod, model, tokenizer, input_ids, attention_mask, eos
                         input_ids, attention_mask=attention_mask, max_new_tokens=args.max_new,
                         do_sample=True, temperature=args.temperature, top_p=args.top_p,
                         num_return_sequences=this, pad_token_id=tokenizer.pad_token_id,
-                        eos_token_id=eos_id)
+                        eos_token_id=eos_id,
+                        **({"logits_processor": make_procs()} if make_procs else {}))
                 break
             except torch_mod.cuda.OutOfMemoryError:
                 torch_mod.cuda.empty_cache()
@@ -376,6 +378,35 @@ def check_reply(reply: str, entry: dict) -> tuple[bool, str, str]:
 
 # ------------------------------------------------------------------ main --
 
+def grammar_processors(tokenizer, grammar_path: str, torch_mod):
+    """A logits processor that lets only tokens t's grammar can still accept (WS-21, 2026-09-18).
+
+    The measurement that asks for this: the round 5 student parsed 32 percent of the time, exactly where the
+    untrained 1.5B already sat, and training moved it not at all; the constrained arm on the lab workstation
+    took a 30B from 32 percent parsing to 63. Constraining the student at inference is the same move for the
+    model this project is actually trying to make good.
+
+    xgrammar compiles the grammar once against this tokenizer's vocabulary, then masks per step. Returns None
+    if anything about that fails, so a run without xgrammar is a run without the constraint rather than no run
+    at all -- and says so, because a silent fallback here would be a measurement quietly changed."""
+    try:
+        import xgrammar as xgr
+        from xgrammar.contrib.hf import LogitsProcessor
+    except ImportError as e:
+        print(f"loop_generate: no xgrammar ({e}); generating unconstrained", flush=True)
+        return None
+    try:
+        text = "\n".join(line for line in Path(grammar_path).read_text(encoding="utf-8").splitlines()
+                         if not line.lstrip().startswith("#"))
+        info = xgr.TokenizerInfo.from_huggingface(tokenizer, vocab_size=len(tokenizer))
+        compiled = xgr.GrammarCompiler(info).compile_grammar(xgr.Grammar.from_ebnf(text))
+        print(f"loop_generate: decoding against {grammar_path}", flush=True)
+        return lambda: [LogitsProcessor(compiled)]
+    except Exception as e:                                      # noqa: BLE001
+        print(f"loop_generate: could not compile {grammar_path}: {e}; generating unconstrained", flush=True)
+        return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -395,6 +426,9 @@ def main() -> int:
                          "unions with --ids if both are given")
     ap.add_argument("--gpu", type=int, default=None, help="pin a GPU index; default: most free VRAM")
     ap.add_argument("--max-new", type=int, default=1024)
+    ap.add_argument("--grammar", default="",
+                    help="decode against this grammar (t/t.gbnf), so the reply cannot be something the parser "
+                         "would refuse; needs xgrammar (WS-21)")
     ap.add_argument("--only-heldout", default="", help="path to a heldout.json; restricts to its held-out ids")
     ap.add_argument("--samples", type=int, default=1,
                     help="K replies per problem (default 1: today's single greedy reply). "
@@ -517,6 +551,7 @@ def main() -> int:
         adapter_hash = adapter_digest(adapter_dir)
     model.eval()
     model.config.use_cache = True
+    make_procs = grammar_processors(tokenizer, args.grammar, torch) if args.grammar else None
 
     digest = (f"base={args.base} adapter={adapter_note} "
               f"adapter_digest={adapter_hash} torch={torch.__version__} "
@@ -645,7 +680,7 @@ def main() -> int:
                 json.dumps(record, indent=1), encoding="utf-8")
         else:
             new_slices, elapsed, oom_hit = generate_samples(
-                torch, model, tokenizer, input_ids, attention_mask, eos_id, args, tid, K)
+                torch, model, tokenizer, input_ids, attention_mask, eos_id, args, tid, K, make_procs)
             oom_hit_any = oom_hit_any or oom_hit
             per_sample_t = elapsed / K
             note = ("sampled transformers generate (do_sample=True); eval_s and wall_s "
