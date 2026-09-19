@@ -8,39 +8,6 @@ that writes verified programs out, on hardware you can buy.
 
 ---
 
-## Why this project is unusual
-
-Most of what is below is normal engineering. A few things are not, and they are
-the reason this repository is worth your time:
-
-- **Seven proof systems, not one.** Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq
-  and F\* each get their own translation of every program, and a training
-  example survives only if **all seven** verify it. Projects that verify their
-  training data usually use one prover. Writing seven translations of one
-  language, and keeping them honest against each other, is the part nobody
-  does.
-- **Every program ships with a sabotaged twin.** For each verified program
-  there is a near-identical broken one, plus the exact input where they
-  disagree, and all seven provers must *catch* it. That is what stops a proof
-  system from waving through something it never really checked.
-  [`t/twins/`](t/twins/) is 426 such pairs over 90 programs, each with its
-  separating input and seven independent refutations. We have not found another
-  published set of that shape, though we have not searched exhaustively.
-- **Predictions are written down before runs, including the wrong ones.** Every
-  experiment here registers what would prove it wrong, then reports what
-  happened. Several of this project's own beliefs died that way and the files
-  that killed them are in the repo.
-- **It corrects itself in public.** A scoring bug once credited answers as
-  "specification checked" when nothing had checked them, which made one of our
-  own published claims wrong. That is written up on this page, not quietly
-  fixed. See [corrections](#corrections-this-project-made-against-itself).
-- **Every number links to the script that produced it.** If a number here has
-  no file behind it, it is a bug.
-
-The industry bet is scale: more parameters, more tokens, more scraped code.
-This one bets the other way -- keep only what can be proved, then see how far a
-small model gets on it.
-
 ## What locallm has done
 
 locallm is the thing this project builds. Everything else on this page is a
@@ -101,6 +68,38 @@ it, and it did.
 
 
 **What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **locallm has not beaten Phi-4-mini yet**: its best round scored 2 clean answers of 232 against Phi's 3, and this page leads with that rather than with the one column locallm wins by a distance. Two models *run through* this pipeline beat Phi, and neither was built here, so neither is a result of this project's method. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
+
+## Why this project is unusual
+
+Those came out of a setup that almost nobody runs:
+
+- **Seven proof systems, not one.** Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq
+  and F\* each get their own translation of every program, and a training
+  example survives only if **all seven** verify it. Projects that verify their
+  training data usually use one prover. Writing seven translations of one
+  language, and keeping them honest against each other, is the part nobody
+  does.
+- **Every program ships with a sabotaged twin.** For each verified program
+  there is a near-identical broken one, plus the exact input where they
+  disagree, and all seven provers must *catch* it. That is what stops a proof
+  system from waving through something it never really checked.
+  [`t/twins/`](t/twins/) is 426 such pairs over 90 programs, each with its
+  separating input and seven independent refutations. We have not found another
+  published set of that shape, though we have not searched exhaustively.
+- **Predictions are written down before runs, including the wrong ones.** Every
+  experiment here registers what would prove it wrong, then reports what
+  happened. Several of this project's own beliefs died that way and the files
+  that killed them are in the repo.
+- **It corrects itself in public.** A scoring bug once credited answers as
+  "specification checked" when nothing had checked them, which made one of our
+  own published claims wrong. That is written up on this page, not quietly
+  fixed. See [corrections](#corrections-this-project-made-against-itself).
+- **Every number links to the script that produced it.** If a number here has
+  no file behind it, it is a bug.
+
+The industry bet is scale: more parameters, more tokens, more scraped code.
+This one bets the other way -- keep only what can be proved, then see how far a
+small model gets on it.
 
 ## Start here
 
