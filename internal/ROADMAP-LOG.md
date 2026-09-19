@@ -2226,7 +2226,25 @@ HumanEval and MBPP bodies from the nl-problems corpus named in 12.6, run
 through the same pipeline, so the coverage claim is not a claim about one
 benchmark.
 
-DONE WHEN: a second coverage table, same format, over a second corpus.
+2026-09-19: the second table exists, and it asks the question this pipeline can
+answer rather than the one `coverage_census.py` asks. That script reads Dafny
+source and reports which constructs a program needs that t lacks; APPS is
+Python, so it cannot be the instrument. `t/coverage_corpus.py` reports instead
+how far a whole corpus got: of APPS's 2,266 problems in pool v5, a model
+answered 2,263, 422 answers were well-formed t (18.6 percent), 257 passed the
+problems' own tests (11.3), and 29 were verified by all seven with the twin
+refuted (1.3). `t/COVERAGE-apps-2026-09-19.md` carries it with what stopped the
+351 answers the checkers saw, one row per kernel and outcome.
+
+Two things in that table are worth acting on. SPARK's commonest outcome on this
+corpus is `timeout`, 196 of the graded answers, which is a budget question and
+not a capability one. And the sole-blocker count -- answers six kernels
+verified and one did not -- is SPARK 6, Frama-C 3, Lean 2: eleven answers whose
+every other column is already on the record, the cheapest gains available.
+
+DONE WHEN: a second coverage table, same format, over a second corpus (DONE in
+the pipeline's terms; a Dafny-source census over a second proof corpus remains
+open and is a different claim).
 UNBLOCKS: nothing on the 1.0 path; it is what 1.0 is measured against next.
 
 ### WS-17: the release
