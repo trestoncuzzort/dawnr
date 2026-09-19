@@ -413,7 +413,7 @@ ints and a yes/no answer as bool.
 Reply with exactly one t task inside a ```t fenced block and nothing else.
 """
 
-PROMPT_VERSIONS = ("v1", "v2", "v3")
+PROMPT_VERSIONS = ("v1", "v2", "v3", "v4")
 
 # GRAMMAR_V2 is GRAMMAR plus the sequence trio (literal, concatenation,
 # slice) and the string sugar (SPEC.md "Sequences: literals, concatenation,
@@ -677,17 +677,52 @@ Reply with exactly one t task inside a ```t fenced block and nothing else.
 FEWSHOT_V3_EXTRA = ["word_count", "split_join"]
 
 
+# ---------------------------------------------------------------- prompt v4 --
+# v4 is v3 with four corrections, applied to v3's own text so the two cannot drift apart. Three of them come
+# from t/FUNNEL-2026-09-18.md, which counted what models reach for and the parser refuses; the first is a
+# plain error that every answer set in this repository was generated under.
+#
+# 1. DIVISION AND MODULO. v1, v2 and v3 all say "no division, no modulo" and list `/` and `%` among the
+#    operators that "DO NOT EXIST in t". They have existed since 2026-09-08 (SPEC.md "Division and modulo",
+#    surface.py's _MUL_OPS, Euclidean, undefined at a zero divisor). So every model this project has ever run
+#    was told to avoid two operators the language has, on a corpus where 163 of 785 census programs need them
+#    (t/LIFTER-DECISIONS.md, decision 20). Nothing measured before 2026-09-19 saw a model that knew.
+# 2. SPEC FUNCTIONS COME BEFORE THE BODY. 18.5 percent of refused replies write them after the closing brace.
+# 3. COMPARISONS DO NOT CHAIN. `0 <= i < n` is refused; the conjunction is not.
+# 4. NO COMMENTS, of any kind. 10 percent of refused replies carry one.
+_V4_FIXES = (
+    ("+ - * (no division,\nno modulo, no shifts)",
+     "+ - * / % (/ and % are Euclidean division and\nmodulo, undefined only when the divisor is 0; no shifts)"),
+    ("make the task unparseable: / % ** ^ & | << >> bin abs min max pow sum",
+     "make the task unparseable: ** ^ & | << >> bin abs min max pow sum"),
+)
+GRAMMAR_V4 = GRAMMAR_V3
+for _a, _b in _V4_FIXES:
+    assert _a in GRAMMAR_V4, f"prompt v4 expected to find {_a[:40]!r} in v3"
+    GRAMMAR_V4 = GRAMMAR_V4.replace(_a, _b)
+GRAMMAR_V4 += """
+WHERE THINGS GO, AND WHAT IS REFUSED (the four most common ways a reply is
+thrown away, measured over 14,130 replies):
+  * A `spec fun` goes BEFORE the `{` of the body, after the ensures lines,
+    never after the closing `}`.
+  * Comparisons do not chain: write `0 <= i and i < n`, not `0 <= i < n`.
+  * There are no comments of any kind. Not `//`, not `#`.
+  * Write the task and nothing else: no prose before it, no explanation
+    after it.
+"""
+
+
 def fewshot_text(version: str = "v1") -> str:
     if version not in PROMPT_VERSIONS:
-        raise ValueError("prompt version must be v1, v2 or v3, got %r" % version)
+        raise ValueError("prompt version must be one of %s, got %r" % (", ".join(PROMPT_VERSIONS), version))
     parts = []
     for name in FEWSHOT:
         task = harness.load(tasks_io.find(HERE / "tasks", name))
         parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
-    if version in ("v2", "v3"):
+    if version in ("v2", "v3", "v4"):
         for _, text in FEWSHOT_V2_EXTRA:
             parts.append("```t\n" + text.rstrip() + "\n```")
-    if version == "v3":
+    if version in ("v3", "v4"):
         for name in FEWSHOT_V3_EXTRA:
             task = harness.load(tasks_io.find(HERE / "tasks", name))
             parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
@@ -696,7 +731,7 @@ def fewshot_text(version: str = "v1") -> str:
 
 def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
     if version not in PROMPT_VERSIONS:
-        raise ValueError("prompt version must be v1, v2 or v3, got %r" % version)
+        raise ValueError("prompt version must be one of %s, got %r" % (", ".join(PROMPT_VERSIONS), version))
     r = entry["rec"]
     tests = "\n".join(r["test_list"])
     arity = len(entry["points"][0]["args"])
@@ -707,7 +742,8 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
             f"of type(s) {kinds}, in the order the tests pass them, returning "
             f"{ret}. The tests must pass and the ensures must specify the "
             f"result.")
-    grammar = GRAMMAR_V3 if version == "v3" else (GRAMMAR_V2 if version == "v2" else GRAMMAR)
+    grammar = (GRAMMAR_V4 if version == "v4" else GRAMMAR_V3 if version == "v3"
+               else GRAMMAR_V2 if version == "v2" else GRAMMAR)
     return [{"role": "system", "content": grammar + "\nExamples of complete t tasks:\n\n" + fewshot_text(version)},
             {"role": "user", "content": user}]
 
