@@ -62,7 +62,7 @@ the seed worth +-7 cannot detect a 5-point effect.
 registered in
 [PREREG-factorial-2026-09-19.md](../locallm/PREREG-factorial-2026-09-19.md)
 before any arm produced a scored output. The design's batch 32 was amended to
-batch 8 over 4000 updates -- the same examples per arm -- after a batch-32 arm
+batch 8 over 4000 updates, the same examples per arm, after a batch-32 arm
 was killed by the other user's growing allocation on a card that had measured
 17 GiB free seconds earlier; the amendment and its measurements are in the
 preregistration, and every arm uses it.

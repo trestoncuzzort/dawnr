@@ -115,8 +115,8 @@ seed. Registered in
 
 At 1000 updates the modern core led by 24.6%, 26.6% and 28.7%. Two registered
 predictions held (all updates finite; each modern seed improved on its own
-1000-step endpoint by 43.7-45.8%) and the third -- that modern would keep a 3%
-advantage -- was falsified at every seed, in the opposite direction. Modern
+1000-step endpoint by 43.7-45.8%) and the third, that modern would keep a 3%
+advantage, was falsified at every seed, in the opposite direction. Modern
 also took 1,141 s against 961 s per arm and reserved 11.02 GiB against 8.27.
 
 **Caveats.** One corpus, one tokenizer, one optimizer setting, one budget. A

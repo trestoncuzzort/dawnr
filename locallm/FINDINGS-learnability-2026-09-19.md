@@ -9,7 +9,7 @@ removed. Output `t/out/learnability-2026-09-19`.
 
 `t/out/composition-2026-09-19-v5`, built with a wider parameter grid: 309
 training tasks against 81, 4,139 training execution examples against 1,094, and
-323 held-out tasks of which **0 are collapsible** -- every one requires
+323 held-out tasks of which **0 are collapsible**: every one requires
 composing all of its stages. Baseline arm only, from the same frozen modern
 4000-step checkpoints, 4000 updates at batch 8, same greedy single-candidate
 response, same independent scorer.

@@ -3,9 +3,8 @@
 A candidate is only ever the body of a task whose contract is supplied from
 the frozen manifest, so nothing a model writes can change the contract, the
 tests or the expected values. Expected values come from the closed-form
-oracle, never from running the reference body. Every non-answer -- malformed,
-contract-altering, undefined, over budget, over time, too long -- is a
-failure, and all of them are counted and reported separately.
+oracle, never from running the reference body. Every non-answer is a failure, whether
+malformed, contract-altering, undefined, over budget, over time or too long,, and all of them are counted and reported separately.
 """
 import argparse
 from hashlib import sha256

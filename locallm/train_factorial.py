@@ -1,9 +1,8 @@
 """One arm of the latent/execution factorial: frozen identities, resumable state.
 
-The four arms differ in exactly two flags. Everything else -- backbone
-initialization, dataset, example order, batch composition, optimizer settings,
-learning-rate schedule and the synthesis/final-answer loss -- is identical by
-construction, and the identities that make that checkable are written into
+The four arms differ in exactly two flags. Everything else is identical by construction:
+backbone initialization, dataset, example order, batch composition, optimizer
+settings, learning-rate schedule and the synthesis/final-answer loss, and the identities that make that checkable are written into
 `run.json` before the first update. Intermediate execution tokens are present
 in every arm's input; only their loss mask changes.
 

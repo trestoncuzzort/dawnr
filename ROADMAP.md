@@ -100,7 +100,7 @@ that, in the order the measurements say to try it.
 **What the measurements already rule in and out.** locallm writes well-formed t
 at 209 of 232, seventeen times Phi's 12, and converts every answer it gets
 right: 2 of 2 and 1 of 1 verified by all seven with the twin refuted. Its
-bottleneck is one number -- **test-passing answers, 2 against Phi's 6**. At
+bottleneck is one number, **test-passing answers, 2 against Phi's 6**. At
 locallm's conversion rate, roughly 8 test-passing answers is 4 clean, which
 beats Phi; 12 is 6 clean, which doubles it. Nothing about the proof side needs
 to change.
@@ -143,7 +143,7 @@ that, in this order.
    problems to thousands. The gate is a test reader per source, not new language features, and the held-out
    split must stay exactly split-v3's 232 MBPP problems so every earlier number keeps its meaning.
 3. **Test quality. Measured 2026-09-19:** the differential check has now been run over all 36 graded answer
-   sets -- 650 clean answers, 200 draws each against the problem's own solution. **13 disagree**, about 2
+   sets: 650 clean answers, 200 draws each against the problem's own solution. **13 disagree**, about 2
    percent: answers whose tests passed, whose seven proofs held and whose twin was refuted, and whose
    specification still does not say what the problem asked. None is in the training pool; every one is a
    held-out answer, where the model writes its own specification.
@@ -190,8 +190,8 @@ plainly: `spec` (a spec function written after the task it serves, rather than b
 for `and` and `or`, `^` for powers, and `//` comments, which t has never had because a comment carries no AST
 node and could not survive `print(parse(text))`.
 
-The cheap fix was tested first and does not work. A tolerant reader -- comments dropped, `&&` and `||` read as
-`and` and `or` -- rescues 119 of the 6,603 refused replies on this machine, 2 percent, and the second layer
+The cheap fix was tested first and does not work. A tolerant reader, one that drops comments and reads `&&` and `||` as
+`and` and `or`, rescues 119 of the 6,603 refused replies on this machine, 2 percent, and the second layer
 adds 3. The refusals are structural, not orthographic, so no preprocessor over answers already generated will
 open this. That leaves the generator.
 
@@ -208,7 +208,7 @@ Three moves follow, in this order.
    parser would refuse. The work is a GBNF for t's surface syntax, and the test that it is the *same* language
    is mechanical: every committed task and every answer that parses today must be accepted by the grammar, and
    nothing the parser refuses may be. The prize is the 62 percent, but only if constraining a model does not
-   simply turn it into locallm -- syntactically perfect and semantically empty -- which is exactly what the
+   simply turn it into locallm, syntactically perfect and semantically empty, which is exactly what the
    measurement below is for, and why the number that decides this is the clean count and not the parse rate.
    Preregistered in [`t/PREREG-2026-09-18-constrained.md`](t/PREREG-2026-09-18-constrained.md).
 
@@ -227,7 +227,7 @@ Three moves follow, in this order.
    whether or not move 1 lands. Measured the same way, against the same sample.
 3. **Whether anything can hold both ends.** The gap between locallm's row and the stock row is the whole
    distance to a higher clean count: one model has the notation, the others have the problem, and no model here
-   has both. Once move 1 removes the syntax gate, the question is answered directly -- a constrained stock model
+   has both. Once move 1 removes the syntax gate, the question is answered directly: a constrained stock model
    has locallm's notation by construction, so its test-pass rate is the first honest measurement of whether the
    semantics were ever the limit. If it is, the pool's job changes from teaching syntax to teaching proof, and
    [`t/loop_train.py`](t/loop_train.py)'s objective changes with it.

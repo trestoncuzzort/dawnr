@@ -51,7 +51,7 @@ below it still. The measured headroom is in parameters. That data is *the* bindi
 is an **inference** from 46M tokens against the usual compute-optimal ratios,
 not a measurement made here: no run in this repository has varied corpus size
 with everything else held still. It is the inference the roadmap's own order --
-core, then t capability, then data beyond `nl/` -- already encodes, and it
+core, then t capability, then data beyond `nl/`, already encodes, and it
 remains to be tested.
 
 So "scale the model" and "scale the data" are not the same lever, and only one
@@ -72,6 +72,6 @@ Whether that turns into clean answers on the 232 held-out problems is being
 graded now, and loss has already failed to predict behaviour twice this week.
 That comparison moves size, tokenizer, pretraining corpus and training recipe
 at the same time, so it can show whether the pipeline's number moves and never
-which of the four moved it. Isolating controls -- the same 92M from random
-weights on the same corpus, and the 3.2M recipe with the byte-BPE -- are not
+which of the four moved it. Isolating controls, the same 92M from random
+weights on the same corpus and the 3.2M recipe with the byte-BPE, are not
 run yet.

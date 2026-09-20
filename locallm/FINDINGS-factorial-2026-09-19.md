@@ -50,8 +50,8 @@ happened to be enough.
 Reading the candidates says the same thing. For `affine ∘ affine`, whose
 contract reads `r == 3 * (3 * x + 4) + 1`, the seed-42 baseline writes the first
 stage and stops; the latent arm writes a `shift` stage that belongs to a
-different family. The bodies are syntactically valid t -- 102 of 102 closed
-their braces in the first arm scored -- and semantically the wrong program.
+different family. The bodies are syntactically valid t, with 102 of 102 closing
+their braces in the first arm scored, and semantically the wrong program.
 
 The generator now refuses these tasks: `t/build_composition_dataset.py` drops
 any held-out task a proper sub-sequence passes, and drops a pattern that loses

@@ -29,7 +29,7 @@ wrote *fewer* well-formed answers than they did, 136 against 209 and 198.
    real-source pretraining buy nothing at all here, tests passing lands at 1 or
    2 and prediction 1 fails low."
 2. **Clean fewer than 3, i.e. it does not beat Phi: held**, at 1.
-3. **Conversion below 50%: unscoreable**, exactly as registered -- the
+3. **Conversion below 50%: unscoreable**, exactly as registered: the
    denominator is 1, below the 5 the prediction required. It reads 100% and
    that number means nothing.
 4. **The fresh Phi baseline reproduces the historical row within one answer per
@@ -45,7 +45,7 @@ Two held, two falsified, one unscoreable.
 ## The instrument held, which is why the rest can be read
 
 `t/out/evaluator-state-2026-09-19.json`: `evaluator_stable: true`. No hash moved
-across the whole evaluation -- not on the desktop, where extraction, tests and
+across the whole evaluation, not on the desktop, where extraction, tests and
 the specification check ran with inherited modifications to `interp.py`,
 `cache.py` and `run_par.py`, and not on the lab, where the seven kernels ran at
 `17d7aaf` with 109 dirty entries. The lab HEAD did not move either.
@@ -69,8 +69,7 @@ comparison. Without it, a 1 against a 3 could have been lowering drift.
   wrong function.
 - **1 passes**, `mbpp_682__mul_list`, and it is clean and spec-checked.
 
-That is the same disease the 3.2M models had -- notation without the problem --
-and pretraining on 46M tokens of real source did not cure it. If anything the
+That is the same disease the 3.2M models had, notation without the problem, and pretraining on 46M tokens of real source did not cure it. If anything the
 larger model is better at producing confident, self-consistent, wrong
 specifications: 91 proven-but-wrong out of 136 well formed is a higher rate
 than the 3.2M rows' 204 of 209 only because their denominator is bigger.

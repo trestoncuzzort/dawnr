@@ -38,7 +38,7 @@ Not a verdict on head conditioning. An interface bug, and the raw replies name
 it exactly: the model writes one program, then a blank line, then
 `Signature: dafny_synthesis_task_id_441__medianOfThree(int, int) -> int`, then
 a second program. Training documents began with a head, so the model learned
-that a head is how a document *starts* -- and emits one when it thinks the
+that a head is how a document *starts*, and emits one when it thinks the
 previous document ended.
 
 `t/loop_locallm.py` cuts an answer at the next document with

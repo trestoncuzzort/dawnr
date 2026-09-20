@@ -18,7 +18,7 @@ one links to the script that produced it; the version with the exact settings,
 hashes and caveats is [`locallm/ACHIEVEMENTS.md`](locallm/ACHIEVEMENTS.md).
 
 **1. It learned to write a formal language almost perfectly, from nothing.**
-Starting from random numbers -- no downloaded model, no pretrained weights --
+Starting from random numbers, with no downloaded model and no pretrained weights,
 it produced a syntactically valid program in t for **209 of 232** problems it
 had never seen. Microsoft's Phi-4-mini, a model roughly a thousand times larger
 trained on a large part of the public internet, managed **12**. Everyone assumes the hard part for a tiny model is
@@ -32,7 +32,7 @@ the latest round. It has never written something correct that it couldn't
 prove.
 
 **3. You can stop it and start it again and get the identical model.**
-Training can be interrupted -- a crash, a shared machine, a power cut -- and
+Training can be interrupted by a crash, a shared machine or a power cut, then
 resumed, and the result is the same weights bit for bit as if it had never
 stopped. There's a test that fails the moment that stops being
 true. It's the difference between a result you can reproduce and a result you
@@ -48,12 +48,12 @@ was an argument for months; it's arithmetic now.
 **5. It builds its own vocabulary instead of borrowing one.** Models read text
 in chunks, and most projects download someone else's chunking rules. locallm
 learns them from its own corpus, which cuts the same text into about **60%
-as many chunks** -- so more real content fits in the same amount of the model's
+as many chunks**, so more real content fits in the same amount of the model's
 limited attention.
 
 **6. It generates faster, and only because that was checked first.** Reusing
 work between output tokens is a standard speed trick. We predicted how much it
-would help, measured it, and the prediction failed -- so the feature ships
+would help, measured it, and the prediction failed, so the feature ships
 turned **off by default**, with the evidence that it produces identical output
 either way. Nothing here gets adopted just because everyone else does it.
 
@@ -98,7 +98,7 @@ Those came out of a setup that almost nobody runs:
   no file behind it, it is a bug.
 
 The industry bet is scale: more parameters, more tokens, more scraped code.
-This one bets the other way -- keep only what can be proved, then see how far a
+This one bets the other way: keep only what can be proved, then see how far a
 small model gets on it.
 
 ## Start here
@@ -145,8 +145,8 @@ The target is Phi-4-mini, and the target is not a tie.
 the strongest of them: it is the only locallm result whose every clean answer
 was also checked against the problem's own solution and agreed with it, which
 the 3.2M rows never were. It wins the
-notation by a distance no baseline approaches -- 209 well-formed answers to
-Phi's 12, from a model a thousand times smaller -- and loses the gate that
+notation by a distance no baseline approaches, 209 well-formed answers to
+Phi's 12 from a model a thousand times smaller, and loses the gate that
 decides the score, which is passing the problem's own tests. Of 209 well-formed
 answers, 2 computed the right values and 204 were proven correct against a
 specification the model wrote for a function nobody asked for.
@@ -170,7 +170,7 @@ rest were prompted.
 
 Two facts from those rows that shaped the plan for locallm: the gate a borrowed
 base loses at is the **proof**, not the notation, and a model pretrained to
-write proofs converts better than anything else measured here -- the prover
+write proofs converts better than anything else measured here: the prover
 converted 6 of 10 where Phi converted 3 of 6. locallm has the opposite profile,
 and that is why its work is on problem-solving rather than on formality.
 
@@ -200,7 +200,7 @@ cut in token loss bought no usable completion, which is why the next experiment
 was scored by executing programs instead of by nats per token.
 
 **Execution and latent supervision: no synthesis gain, and a broken ruler.**
-Four treatments -- neither, latent only, execution only, both -- from each
+Four treatments (neither, latent only, execution only, both) from each
 4000-step modern checkpoint, on a generated compositional curriculum whose
 held-out patterns appear in training under no parameter assignment
 ([PREREG](locallm/PREREG-factorial-2026-09-19.md),
@@ -256,7 +256,7 @@ what it was asked to teach, and that skill did not reach unaided synthesis.
   substitute, and it is what lets a model be trained or graded on the difference between a proof that holds
   and one that does not.
 - **The specifications are checked against the problems.** All 36 graded answer sets, 650 clean answers, 200
-  random draws each against the problem's own solution: 13 disagree -- answers whose tests passed, whose seven
+  random draws each against the problem's own solution: 13 disagree: answers whose tests passed, whose seven
   proofs held and whose twin was refuted, and whose specification still does not say what the problem asked.
   None is in the training pool ([`t/SPEC-CHECK-2026-09-18.md`](t/SPEC-CHECK-2026-09-18.md)).
 - **Preflight.** [`t/preflight.py`](t/preflight.py) refuses to let a round start on a checker whose version cannot be read, a held-out problem in a training set, a clean answer resting on a flake or a timeout, or a specification that disagrees with its problem.

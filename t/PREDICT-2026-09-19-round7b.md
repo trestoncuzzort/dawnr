@@ -41,6 +41,6 @@ the same fresh Phi baseline already graded today beside round 7.
 Prediction 1 to hold and prediction 2 to hold with it: the signature failures
 are a conditioning defect with an obvious cause, and fixing them should convert
 some of those 55 answers into *graded* answers without making them *right*.
-The interesting number is not clean at all -- it is how many of the rescued
+The interesting number is not clean at all. It is how many of the rescued
 answers land in "proven but wrong", because that is the count that says the
 model writes confident specifications of the wrong function.
