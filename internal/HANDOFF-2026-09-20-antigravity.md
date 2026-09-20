@@ -458,6 +458,26 @@ on the lab. `python3 -m unittest discover` additionally picks up
 `test_lab_gui.py`, whose tkinter teardown crashes the *whole run* and hides the
 tally, so exclude it when you want a number.
 
+## One more, found while checking the above
+
+`t/preflight.py`'s evaluator check counted `git status --porcelain | wc -l`,
+which includes **untracked** files. Three stray files on the grading machine
+made it print *"the grading machine is not this tree: it grades at 07ab406 with
+3 dirty entries; this tree is at 07ab406"*, a line that names the same commit
+twice and calls them different trees. Tracked modifications and untracked files
+are now counted apart, and untracked ones are reported on the ok line instead.
+
+Worth stating why this was worth fixing rather than tolerating: this is the
+check that catches a genuinely stale evaluator, and on 2026-09-19 the grading
+machine was 19 commits behind while every log line looked normal. A check that
+warns every round is one the reader stops reading, which would have cost exactly
+the thing it exists to protect. Verified in both directions against the real
+machine: untracked-only reports ok, a tracked modification still warns.
+
+**Both trees are now at the same commit**, the first time today, so the
+"regrade a baseline beside any new answer set" caveat does not apply to anything
+you grade from here.
+
 ## Traps that cost time today
 
 1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless
