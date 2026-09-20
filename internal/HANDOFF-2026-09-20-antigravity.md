@@ -361,6 +361,14 @@ opened with `Example: ...` before `t 1`, and all 24 failed to extract:
 `extract: 24 replies; parse 24`, every answer lost. The answer splitter cuts at
 the *next* document and so never looked at a head in front of *this* one.
 
+**Verified on the lab after the fix, not just by unit test:** the same 24
+problems regenerated and re-extracted at `e8bd14a` give **0 of 24 replies
+opening with a head**, against 24 of 24 before, and extraction goes from 0
+usable answers to **9** (`extract: 24 replies; parse 10, task 9, wf 5`, where
+`task` is the stage that means a task file was written). The 15 that still fail
+are a 150-step smoke model writing bad programs, which is expected and is a
+different problem.
+
 This is the **third** time the same family has bitten, and it is worth naming
 because a fourth is likely. *A corpus format grew and one reader did not know.*
 First the answer splitter (216 of 232 unparseable), then the copy check's
@@ -391,12 +399,16 @@ those, which is where the 75 / 31 above come from.
 1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless
    you pass `-f`. Three findings documents cited tables that were not in the
    repository until this was caught.
-2. **`grade_lab.sh` runs `git pull --ff-only || true` on the lab and it is
-   failing.** The lab tree is 19 commits behind origin with 109 dirty entries
-   and untracked files that would be overwritten. Grading therefore runs on an
-   **older evaluator than this desktop's tree**, which is why every comparison
-   regrades a baseline beside the new model. Do not force-reset it; the dirty
-   files are other agents' unverified work.
+2. **RESOLVED 2026-09-20, but read this before you trust the lab tree again.**
+   The lab was 19 commits behind origin and would not fast-forward: 104
+   untracked files stood in the way, so grading ran on an **older evaluator
+   than the desktop's tree**. It is now at `e8bd14a`, the same commit as the
+   desktop. Nothing was force-reset. All 104 files were copied to
+   `~/tup-lab-untracked-2026-09-20` on the lab first; 94 were byte-identical to
+   origin and the other 10 were superseded by later desktop edits (the ` -- `
+   scrub, and the new test). That backup is still there and can be deleted once
+   you are satisfied. If the pull starts failing again, preserve before you
+   remove: the dirty files may be another agent's unverified work.
 3. **The grading machine has no verdict cache.** Its `run_par.py` is at
    `17d7aaf` and does not import `t/cache.py`; the cache is uncommitted desktop
    work. `--no-cache` is not a flag it accepts.
