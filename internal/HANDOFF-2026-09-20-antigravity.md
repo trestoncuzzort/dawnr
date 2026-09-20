@@ -8,7 +8,7 @@ otherwise, and where a number was wrong it says that too.
 whole lab runs end to end: corpus, head alignment, training from the pretrained
 core, sharded generation on four cards, extract, tests, all seven kernels,
 `spec_check`, `spec_scorecard`, `preflight`. Verified 2026-09-20 on 24 problems.
-Suite is 418 tests with four known failures listed under "Known-failing".
+Suite is 428 tests with four known failures listed under "Known-failing".
 
 ---
 
@@ -113,24 +113,42 @@ Each one cost real time or silently corrupted a result.
 |---|---|---|
 | **`phi4-mini-g`** | 56 of 232 generated, never graded | `/tmp/gen_phig.sh` on the lab (skips answered problems), then grade. Retires attack 2 |
 | **`prover-train2`** | **450 of 2,354** answered, ungraded | `bash t/grow_pool.sh prover-train2`; resume generation with `/tmp/gen_prover2.sh` |
-| **three seed arms** | 232/232 generated, cells computed, `kernels.md` never assembled | `bash t/finish_seeds.sh`. If `/dev/shm` was cleared by a reboot, the answers survive and `bash t/grade_lab.sh heldout <tag>` regrades |
+| **three seed arms** | **graded with Verus never running; tables quarantined** | see the box below. Regrade with `bash t/grade_lab.sh heldout <tag>` from the DESKTOP |
 | **the examples arm** | implemented, corpus built, never trained | `t/out/loop/corpus-ex-headed.txt` exists; commands at the end of `internal/RESEARCH-NEXT-2026-09-20.md`. Run the holdout split first |
 
-The seed arms' cells are cached, so re-running the driver over the same
-directory assembles the table without redoing the proofs:
+### The seed arms are UNGRADED, not scored zero. Read this before regrading
+
+Their tables were assembled on 2026-09-19 and both scored **0 clean**. That is
+not what happened. Every row read `verus | malformed / malformed` (114 of 114
+for `locallm-r9`, 87 of 88 for `seed7`) and each table's own footer said *"Of the
+68 tasks in six, 68 are verus alone"*. **Verus never started** — trap 2. Both
+tables are quarantined as `kernels.md.INVALID-verus-never-ran` with a
+`WHY-NO-TABLE.md` beside them, so nothing scores them by accident.
+
+`preflight.py` check 11b now catches this class: a kernel malformed on 90% or
+more of a set's rows means the toolchain never ran, and no verdict in that
+column means anything. Check 11 had passed these tables because all seven
+columns were *present*; they just all said malformed.
+
+The headline arm and the baselines are unaffected: `locallm-r7b-headed2` has 0
+of 91 malformed, `locallm-r8` 0 of 142, `phi4-mini` 2 of 12 which is ordinary.
+
+**Predictions are registered in `t/PREDICT-2026-09-20-seeds.md`, written before
+any table was read, and remain unmeasured.** Prediction 3 is the one to watch: a
+spread of 3 or more clean across seeds means the seed dominates the recipe, and
+that file says in advance that I would rewrite `README.md` into a mean and a
+range if so.
+
+To regrade, from the **desktop** (not on the lab), once the machine is quiet:
 
 ```bash
-cd ~/tup && bash -lc 'python3 t/run_par.py --jobs 24 \
-  --tasks /dev/shm/tup-grade/locallm-r9/tasks \
-  --out   /dev/shm/tup-grade/locallm-r9/kernels \
-  --table /dev/shm/tup-grade/locallm-r9/kernels.md'
+bash t/grade_lab.sh heldout locallm-r9 locallm-r9-seed7 locallm-r9-seed42
 ```
 
-Then copy each `kernels.md` to `t/out/spec-experiment/<tag>/kernels.md` on the
-desktop, run `python3 t/spec_check.py <tags> --pool v5 --n 100 --only clean`,
-then `t/score_heldout.py`. Predictions for round 8 are in
-`t/PREDICT-2026-09-19-round8.md`; **the seed arms have no registration, and
-someone should write one before reading their numbers.**
+`grade_lab.sh` invokes the driver as `bash -lc`, which is the whole reason it
+exists. The lab was at load **178 on 120 cores** when this was found and Lean
+flakes under contention, so check `/proc/loadavg` first. `seed42` was never
+graded at all and has no cells.
 
 Scripts in `/tmp` do not survive a reboot. The two that matter are committed:
 `t/finish_seeds.sh` and `t/grow_pool.sh`.
@@ -201,7 +219,7 @@ is. Everything is CPU-only unless noted.
 | **bidirectional equivalence against the reference** | CLEVER [arXiv:2505.13938](https://arxiv.org/abs/2505.13938), VeriEquivBench [arXiv:2510.06296](https://arxiv.org/abs/2510.06296) | **not built.** Prove both `spec(x, ref(x))` and `∀y. spec(x,y) → y = ref(x)` with each of the seven. The second half is the tightness check we lack |
 | **verifier feedback into a knowledge base, not weights** | KBSpec, [arXiv:2606.21339](https://arxiv.org/abs/2606.21339) | **not built, and the right shape for us**: t is out-of-distribution for every model, and this reports **14–32%** better verification pass rates with no fine-tuning |
 | **mutate the candidate spec, keep variants that still verify** | SpecGen, [arXiv:2401.08807](https://arxiv.org/abs/2401.08807) | **not built.** A repair loop rather than a gate: when a spec fails `check_points`, mutate and retry instead of discarding. 279/385 verifiable vs 247 for the best prior method |
-| **provers as each other's reference** | verifier fuzzing, [arXiv:2606.01066](https://arxiv.org/abs/2606.01066) | **not built**, and we are unusually well placed: seven independent provers, so any disagreement is a spec defect or a prover defect. The disagreement rate is a free integrity metric |
+| **provers as each other's reference** | verifier fuzzing, [arXiv:2606.01066](https://arxiv.org/abs/2606.01066) | **built 2026-09-20** as `t/kernel_disagreement.py`. Over 3,321 graded programs: **0 contradictions**, 0 twin-side unsound cells. The zero is tested, because an untested detector's zero is indistinguishable from a broken parser. Gap ranking (undecided while another decided): dafny 222, verus 262, spark 346, fstar 366, framac 384, rocq 410, **lean 491** |
 | **checkpoint specs at internal program points** | SpecCoder, [arXiv:2607.04232](https://arxiv.org/abs/2607.04232) | **not built.** Our interpreter already emits per-statement states, so intermediate assertions cost nothing. Reported +55.8% spec correctness, +358.1% completeness |
 | **isomorphic perturbation** | [arXiv:2604.15149](https://arxiv.org/abs/2604.15149) | **not built.** Rename every identifier and regenerate: a spec that only works under the original naming was keyed to surface cues. Needs generation, so GPU |
 | **spectests: implementation-impossible negatives** | SpecRL, [arXiv:2604.05820](https://arxiv.org/abs/2604.05820) | primitive built as `spec_check.mutations`. Their +26.46% came from **rewarding rejection rate during training**, the step not taken |
