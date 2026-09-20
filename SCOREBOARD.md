@@ -23,9 +23,29 @@ every number here is comparable to every earlier one.
 | Qwen2.5-Coder-1.5B, untrained | baseline | 39 | 13 | **3** | 23% | 2 |
 | Qwen3.8-27B-FP8, prompted | reference, far larger | 116 | 81 | **12** | 15% | 11 |
 | DeepSeek-Prover-V2-7B, prompted | reference | 39 | 10 | **6** | 60% | 6 |
+| Qwen3-235B-A22B-Instruct-2507 (4-bit AWQ), prompted | reference, far larger | 67 | 53 | **11** | 21% | 8 |
 
 Phi's row was regraded on 2026-09-19 beside round 7 and reproduced exactly,
 cell for cell, so the comparison is one evaluator and not two.
+
+**The 235B row, added 2026-09-20, and what it does not say.** Qwen3-235B-A22B
+is about 2,550 times locallm's parameter count and 22B of it is active per
+token. It answered the same 232 problems, prompt v3, temperature 0, seed 1, on
+four cards at 4-bit. Nothing was truncated: all 232 replies stopped on their
+own, median 265 tokens of an 8192 budget, which is worth saying because the
+Phi rows in this table were all cut off at their cap.
+
+It solves far more of the problems: 53 of its answers compute the right values
+against locallm's 3. It converts far fewer of them: 21 percent reach all seven
+kernels with the twin refuted, against locallm's 100 percent, and 8 of its 11
+clean answers survive the specification check against 3 of 3. And it does not
+beat the 27B already in this table, which scored 12 on 81 test-passing answers.
+Between 27B and 235B the clean count did not move, so on this benchmark the
+limit is not parameters.
+
+That is the whole claim this project makes, measured from the other direction:
+training on data that seven provers agreed about buys the CONVERSION from a
+right answer to a proved one, and buys very little of the answering itself.
 
 **What moved the score.** Giving every training document the signature its own
 program declares cut the model's signature failures from 40.8% to 12.1%, and
