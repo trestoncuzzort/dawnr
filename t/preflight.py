@@ -163,6 +163,22 @@ def check_split(split_path: Path) -> bool:
                     leaked.add(int(tid))
         ok = say(not leaked, f"{name} holds no held-out problem",
                  "" if not leaked else f"{len(leaked)} leaked: {sorted(leaked)[:5]}") and ok
+
+    # The pool files are not the only thing that reaches a model. A locallm
+    # corpus is the pool's answers PLUS the lifted and committed tasks, and
+    # those never pass through the pool gate at all: they come from DafnyBench,
+    # whose MBPP-DFY subset is derived from the same MBPP the held-out split is
+    # drawn from. Measured clean on 2026-09-20 (0 of 232 in four corpora) and
+    # unenforced until now, which is the same shape as the round-6 gap above.
+    corpora = sorted((OUT / "loop").glob("corpus-*.txt")) + \
+        sorted((OUT / "loop-locallm").glob("corpus*.txt"))
+    for p in corpora:
+        leaked = {int(tid) for tid in re.findall(r"mbpp_(\d+)", p.read_text(errors="replace"))
+                  if int(tid) in ev}
+        ok = say(not leaked, f"{p.name} trains on no held-out problem",
+                 "" if not leaked else f"{len(leaked)} leaked: {sorted(leaked)[:5]}") and ok
+    if not corpora:
+        note("no locallm corpus to leak-check yet")
     return ok
 
 
@@ -273,21 +289,38 @@ def check_evaluator(lab: str | None) -> bool:
     if not lab:
         return True
     try:
+        # Tracked modifications and untracked files are counted apart on purpose.
+        # A modified tracked file IS a different evaluator. An untracked file is
+        # not: nothing imports it. Counting them together made this warn "the
+        # grading machine is not this tree: it grades at 07ab406 ... this tree is
+        # at 07ab406" over three stray files on 2026-09-20, which reads as a
+        # contradiction and trains the reader to skip the line. A check that
+        # cries wolf every round is worse than no check, because this is the one
+        # that catches a genuinely stale evaluator.
         out = subprocess.run(
             ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
-             "cd ~/tup && git rev-parse --short HEAD && git status --porcelain | wc -l"],
+             "cd ~/tup && git rev-parse --short HEAD"
+             " && git status --porcelain --untracked-files=no | wc -l"
+             " && git ls-files --others --exclude-standard | wc -l"],
             capture_output=True, text=True, timeout=45)
         lines = [line.strip() for line in out.stdout.splitlines() if line.strip()]
-        if len(lines) < 2:
+        if len(lines) < 3:
             return warn("grading machine state unreadable", out.stderr.strip()[:60])
-        head, dirty = lines[0], int(lines[1])
+        head, modified, untracked = lines[0], int(lines[1]), int(lines[2])
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         return warn("grading machine state unreadable", str(error)[:60])
     mine = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
                           text=True, cwd=HERE.parent).stdout.strip()
-    if head == mine and dirty == 0:
+    if head == mine and modified == 0:
+        if untracked:
+            return say(True, f"the grading machine matches this tree at {head} "
+                             f"({untracked} untracked file(s), which change no evaluator)")
         return say(True, f"the grading machine matches this tree at {head}")
-    detail = f"it grades at {head} with {dirty} dirty entries; this tree is at {mine}"
+    if head == mine:
+        detail = f"same commit {head}, but {modified} tracked file(s) modified there"
+    else:
+        detail = (f"it grades at {head}, this tree is at {mine}"
+                  + (f", and {modified} tracked file(s) are modified there" if modified else ""))
     warn("the grading machine is not this tree", detail)
     print("         regrade a baseline beside any new answer set, or the comparison "
           "spans two evaluators")
