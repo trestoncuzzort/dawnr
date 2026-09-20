@@ -1,10 +1,39 @@
 # locallm
 
-**A language model trained from scratch on one desk, on code that seven
-independent proof systems all agreed was correct.**
+## A 92M model trained on one desk just drew level with a 3.8B Microsoft model
 
-Not fine-tuned. Not distilled from a bigger model. Random numbers in, a model
-that writes verified programs out, on hardware you can buy.
+**locallm has 92 million parameters. Phi-4-mini has 3.8 billion, 41 times
+more. On 232 held-out programming problems, both produced exactly 3 answers
+that were correct and formally proved.**
+
+An answer only counts when it passes the problem's own tests, is verified
+against its specification by **seven independent proof systems** (Dafny, Verus,
+SPARK, Frama-C, Lean 4, Rocq, F\*), and all seven catch a deliberately
+sabotaged copy of it at a concrete input. That is a far harder bar than passing
+unit tests.
+
+| | locallm | Phi-4-mini |
+|---|---:|---:|
+| parameters | **92M** | 3.8B |
+| trained | from random numbers, on one shared GPU | by Microsoft, on a cluster |
+| **clean answers of 232** | **3** | **3** |
+| of those, confirmed to specify the right problem | **3** | 2 |
+
+Phi was regraded the same day, by the same evaluator, beside locallm, so the
+two numbers are comparable rather than quoted from different weeks.
+
+**The honest asterisks, because they belong next to the number.** 3 of 232 is
+1.3%: both models fail the overwhelming majority of the time, and tying at a
+low number is easier than tying at a high one. Phi has never seen t, the
+specification language this project invented, so 220 of its 232 answers do not
+parse at all; a Phi trained on t the way locallm is would likely look very
+different. And three answers is thin, with no seeds behind it yet.
+
+What is not asterisked: locallm was trained from random weights, on one
+machine, on 46M tokens of source plus 50,142 tokens of specialization, in
+minutes of GPU time, on a language that did not exist a month ago. The target
+was never a tie, and [`ROADMAP.md`](ROADMAP.md) WS-22 is the plan to beat it
+outright.
 
 ---
 
