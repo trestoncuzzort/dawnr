@@ -76,3 +76,24 @@ Phi's 3 is also a single run. Nothing here reruns Phi across seeds, and Phi's
 decoding was already greedy, so its number has no seed variance to measure in
 the same sense. The comparison remains one arm of ours against one arm of
 theirs; the seeds tell us about *our* stability, not about the gap.
+
+---
+
+## Note added 2026-09-20, after registration and before any table was read
+
+The premise in "What is being measured" is wrong in one word. It says the three
+arms share one recipe with the headline, "greedy decoding". The three r9 arms
+do decode greedily: every one of their 232 records reads `temperature 0.0`.
+`locallm-r7b-headed2` does not: all 232 of its records read `temperature 0.5,
+top_k 20`, because `t/gen_fleet.sh` dropped the `--temperature 0` it was given
+(see `CORRECTIONS.md`).
+
+So these arms measure the seed variance of a greedy recipe, and the headline is
+a sample from a 0.5 one. That makes prediction 3 harder to interpret, not
+easier: a spread across greedy seeds says nothing directly about how much of
+the headline's 3 was the draw. The honest reading, if the arms come back tight,
+is that the RECIPE is stable under seed at temperature 0, and the headline's own
+variance is still unmeasured.
+
+The five predictions are left exactly as registered. Nothing here is changed to
+fit what the numbers turn out to be.

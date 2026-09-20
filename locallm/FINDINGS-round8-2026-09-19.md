@@ -15,7 +15,7 @@ corpus was built. `t/out/score-r8.md` is the table, graded with
 | locallm r7 (92M, temperature 0.5) | 136 | 40.4% | 1 | **1** | 1 | 0 |
 | locallm r7b greedy | 149 | 32.2% | 2 | **2** | 2 | 0 |
 | locallm r8 (checked pool, no heads) | 142 | 40.8% | 2 | **2** | 2 | 0 |
-| **locallm r7b headed2 (heads, greedy)** | 91 | **12.1%** | **3** | **3** | **3** | **0** |
+| **locallm r7b headed2 (heads, sampled at 0.5)** | 91 | **12.1%** | **3** | **3** | **3** | **0** |
 
 **locallm now ties Phi-4-mini at 3 clean answers of 232, and all three of
 locallm's agree with the problem's own solution while one of Phi's three cannot

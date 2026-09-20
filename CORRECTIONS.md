@@ -73,3 +73,34 @@ sentence now cites the source-corpus figure to the file that measures it and
 gives the specialization corpus as the byte size of the file itself, which is
 checkable with `ls`. The token count returns when something measures it.
 
+## The headline arm was sampled, not greedy, found 2026-09-20
+
+Every one of the 232 answers in `locallm-r7b-headed2`, the arm behind the
+README's tie with Phi-4-mini, records `temperature 0.5, top_k 20, seed 1`.
+`locallm/FINDINGS-round8-2026-09-19.md:18` names that row
+"locallm r7b headed2 (heads, **greedy**)". It was not greedy. The same is true
+of `locallm-r7-92m`. Every other recent arm really is greedy at 0.0:
+`locallm-r7b-greedy`, `locallm-r8`, and all three r9 seed arms.
+
+Where it came from: `t/loop_locallm.py:338` defaults `--temperature` to 0.5, so
+an arm generated without that flag is sampled. `t/gen_fleet.sh` was supposed to
+forward the caller's flags and did not, because commit `75a43fa` changed the
+call site to read `"${EXTRA[@]}"` and never added the assignment that fills
+`EXTRA`. On bash 4.4 and later an unassigned array expands to zero words
+instead of failing, so the script dropped `--temperature 0`, printed its answer
+count, exited 0 and wrote its sentinel. Fixed 2026-09-20; the diagnosis and the
+citation are in that commit.
+
+**What this does and does not change.** The three clean answers are still three
+clean answers: they passed the problem's own tests, verified in all seven
+kernels with the twin refuted, and survived `spec_check.py`. Nothing about the
+grading is affected. What changes is the provenance. The headline is one sample
+from a temperature-0.5 distribution rather than the deterministic output of a
+fixed recipe, reproducible only at seed 1, and "greedy decoding" is listed in
+`SCOREBOARD.md` among the things that worked.
+
+It also breaks a premise in `t/PREDICT-2026-09-20-seeds.md`, which registers the
+three r9 arms as "one recipe" with the headline, "greedy decoding". They are
+greedy and the headline is not, so those arms measure seed variance of a
+DIFFERENT recipe than the one in the README. A note saying so is appended to
+that file; the predictions themselves are left exactly as registered.
