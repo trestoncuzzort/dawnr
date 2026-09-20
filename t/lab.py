@@ -410,6 +410,14 @@ TEXT, MUTED, FAINT = "#e7eaf0", "#98a2b3", "#5d6678"
 GREEN, RED, BLUE = "#22c55e", "#ef4444", "#3b82f6"
 BLUE_DIM, GREEN_DIM, RED_DIM = "#1d3a6b", "#123d25", "#4a1a1d"
 YES, NO, DASH = "✔", "✘", "–"
+# SLOW was ⏱ U+23F1 until fc-match showed DejaVu Sans carries no glyph for it, so
+# it fell through to FreeSerif and drew serif beside seven sans marks. ◷ U+25F7 is
+# in DejaVu Sans and in Geometric Shapes, the block ● ▾ ▶ ■ already come from. The
+# obvious hourglass ⌛ U+231B is wrong twice over: also absent from DejaVu Sans, and
+# Emoji_Presentation=Yes, so it is the one candidate that really would come out as a
+# colour emoji (unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt v18.0.0,
+# read 2026-09-20; the ⏱️ shown there with U+FE0F means its own default is text).
+SLOW = "◷"
 LOOP_RE = re.compile(r"round (\d+): corpus (\d+) docs; samples (\d+), parsed (\d+), "
                      r"well-formed (\d+), novel (\d+)")
 CLEAN_RE = re.compile(r"round (\d+): clean in all seven (\d+)")
@@ -435,7 +443,7 @@ def verdict(real: str, twin: str, agree: bool = True) -> tuple[str, str, str, st
     if real == "unproved":
         return (NO, "Not proven", "The checker could not prove it, and found no bug either.", RED)
     if real == "timeout":
-        return ("⏱", "Too slow", "The checker ran out of time. That does not mean the program is wrong.", MUTED)
+        return (SLOW, "Too slow", "The checker ran out of time. That does not mean the program is wrong.", MUTED)
     if real == "malformed":
         return ("?", "Unreadable", "The checker could not read the program.", RED)
     if real == "abstain":
@@ -659,7 +667,7 @@ class Lab:
 
         head = tk.Frame(root, bg=BG)
         head.pack(fill="x", padx=22, pady=(18, 6))
-        tk.Label(head, text="t lab", bg=BG, fg=TEXT, font=self.f_title).pack(side="left")
+        tk.Label(head, text="locallm", bg=BG, fg=TEXT, font=self.f_title).pack(side="left")
         self.pulse = tk.Label(head, text="●  waiting for checks", bg=BG, fg=FAINT, font=self.f_small)
         self.pulse.pack(side="right")
         self.follow_btn_parent = head
@@ -673,14 +681,26 @@ class Lab:
         self.pages, self.tab_buttons = {}, {}
         body = tk.Frame(root, bg=BG)
         body.pack(fill="both", expand=True, padx=22, pady=(0, 18))
-        names = ("Live checks", "Collect data", "Results", "AI") if self.remote else (
-            "Live checks", "Test a model", "Collect data", "Results", "AI")
+        # Train leads because it is the first thing a person does: build a model,
+        # watch it be checked, read the result.
+        #
+        # It is present in remote mode too, and that is a correction. The first
+        # version dropped it there, reasoning that training needs torch on THIS
+        # machine exactly as "Test a model" does. Running it showed what that costs:
+        # this desktop has a lab-workstation.conf, so remote is true, so the tab
+        # simply was not there and nothing said why. A window whose own docstring
+        # promises "every word explained" should not answer a missing capability by
+        # hiding the word. So the tab always exists and build_train says what is
+        # missing -- torch, or the fact that the work is happening elsewhere.
+        names = ("Train", "Live checks", "Collect data", "Results", "AI") if self.remote else (
+            "Train", "Live checks", "Test a model", "Collect data", "Results", "AI")
         for name in names:
             b = tk.Label(tabs, text=name, cursor="hand2", padx=18, pady=7, font=self.f_bold)
             b.pack(side="left", padx=(0, 8))
             b.bind("<Button-1>", lambda _e, n=name: self.show_page(n))
             self.tab_buttons[name] = b
             self.pages[name] = tk.Frame(body, bg=BG)
+        self.build_train(self.pages["Train"])
         self.build_live(self.pages["Live checks"])
         if not self.remote:
             Button(self.follow_btn_parent, "Follow a loop run", self.follow_loop, BLUE, self,
@@ -758,6 +778,69 @@ class Lab:
         self.pages[name].pack(fill="both", expand=True)
 
     # -- Live checks -------------------------------------------------------------
+    # The colours the training surface borrows from this shell. Every key the
+    # shell has an opinion about is named here; the ones it does not (the plot
+    # series, the log surface, the amber warning) stay as locallm/studio.py set
+    # them, because this file has no equivalent and those carry meaning.
+    TRAIN_PALETTE = {
+        "bg": BG, "panel": CARD, "field": SURFACE,
+        "fg": TEXT, "muted": MUTED, "faint": FAINT,
+        "ok": GREEN, "bad": RED,
+        "plot_bg": SURFACE, "plot_grid": LINE, "plot_axis": FAINT,
+        "learn": BLUE,
+    }
+
+    def build_train(self, page):
+        """Host locallm/studio.py's training surface as a page of this window.
+
+        Imported HERE rather than at the top of the file, on purpose: studio.py
+        imports torch at module scope, and this shell runs perfectly well without
+        torch for everything except training and testing a model. A top-level
+        import would make the whole window refuse to open on a machine that only
+        wants to watch the checkers. t/lab.py already does exactly this for torch
+        itself (see run_model), so the pattern is the file's own.
+
+        There is ONE Tk root in this process and this shell owns it. Studio is a
+        ttk.Frame and takes a parent, so it embeds without a second root, which
+        matters because two tk.Tk() roots is undefined behaviour rather than
+        untidy: the first mainloop() opens both windows and blocks until both
+        close (stackoverflow.com/q/39417091).
+        """
+        if self.remote:
+            tk.Label(page, bg=BG, fg=MUTED, font=self.f_body, justify="left", anchor="w",
+                     wraplength=760, padx=4, pady=10,
+                     text=("This window is pointed at the lab workstation, so the steps "
+                           "run there and this machine only reads what they produce.\n\n"
+                           "Training builds a model from text on the machine you are "
+                           "sitting at. To do that here, unset the lab target "
+                           "(t/lab-workstation.conf) and install torch for this python; "
+                           "to train on the workstation, run locallm there.")
+                     ).pack(anchor="w", padx=6, pady=6)
+            return
+        try:
+            import studio                                       # noqa: PLC0415
+        except Exception as e:                                   # noqa: BLE001
+            missing = "torch" in str(e)
+            tk.Label(page, bg=BG, fg=MUTED, font=self.f_body, justify="left",
+                     anchor="w", wraplength=760, padx=4, pady=10,
+                     text=("Training needs torch, the one locallm trains with, and it is "
+                           "not installed for this python.\n\n"
+                           "Everything else in this window works without it: the live "
+                           "checks, the results and the collected data are all read from "
+                           "files.\n\n"
+                           f"What python said: {e}"
+                           if missing else
+                           f"The training surface could not be loaded.\n\n{type(e).__name__}: {e}")
+                     ).pack(anchor="w", padx=6, pady=6)
+            return
+        try:
+            self.studio = studio.Studio(page, embedded=True, palette=self.TRAIN_PALETTE)
+        except Exception as e:                                   # noqa: BLE001
+            tk.Label(page, bg=BG, fg=RED, font=self.f_body, justify="left", anchor="w",
+                     wraplength=760, text=f"The training surface failed to start.\n\n"
+                                          f"{type(e).__name__}: {e}"
+                     ).pack(anchor="w", padx=6, pady=6)
+
     def build_live(self, page):
         tiles = tk.Frame(page, bg=BG)
         tiles.pack(fill="x", pady=(0, 12))
@@ -1462,7 +1545,7 @@ class Lab:
         Button(head, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
                filled=False).pack(side="right")
         Button(head, "Reload steps", self.reload_steps, BLUE, self, filled=False).pack(side="right", padx=8)
-        Button(head, "Refresh t lab", self.restart_app, BLUE, self, filled=False).pack(side="right", padx=8)
+        Button(head, "Refresh locallm", self.restart_app, BLUE, self, filled=False).pack(side="right", padx=8)
         self.show_done = tk.BooleanVar(value=False)
         Chip(head, "Show finished", self.show_done, self, command=lambda: self.refresh_steps(once=True)).pack(
             side="right", padx=8)
@@ -2072,7 +2155,7 @@ def main() -> int:
     if "--page" in sys.argv[1:]:
         page = sys.argv[sys.argv.index("--page") + 1]
     root = tk.Tk()
-    root.title("t lab")
+    root.title("locallm")
     w, h = min(1400, root.winfo_screenwidth() - 20), min(900, root.winfo_screenheight() - 60)
     try:                                  # where it was left, so Refresh t lab does not move the window
         root.geometry(GEOMETRY.read_text().strip())

@@ -237,6 +237,43 @@ def human_time(seconds: float) -> str:
     return f"{seconds / 3600:.1f} hours"
 
 
+# Fonts are RESOLVED, not asserted. This file named a Windows-only sans in ten
+# places (four of them bold) and a Windows-only mono in one. Measured on this
+# Linux box 2026-09-20: neither family is installed, and Tk resolves them
+# silently to Adwaita Sans and DejaVu Sans Mono without warning. A family name
+# that becomes a different family on every platform is not a design decision, it
+# is an unspecified default wearing one, so
+# the SIZES and WEIGHTS here (which are decisions) are kept and the family is
+# looked up. The two preference lists are t/lab.py's, verbatim, so the merged
+# window uses one typeface rather than two arbitrary ones.
+_SANS = ["Inter", "SF Pro Text", "Helvetica Neue", "Segoe UI", "Cantarell",
+         "Ubuntu", "Noto Sans", "DejaVu Sans"]
+_MONO = ["JetBrains Mono", "SF Mono", "Menlo", "Consolas", "DejaVu Sans Mono"]
+_resolved: dict[str, str] = {}
+
+
+def _family(kind: str) -> str:
+    """The first installed family from the list, memoised. Needs a live root, so
+    it is called from widget construction and never at import time."""
+    if kind not in _resolved:
+        from tkinter import font as tkfont
+        try:
+            have = set(tkfont.families())
+        except Exception:                                       # noqa: BLE001
+            have = set()
+        names, fb = (_SANS, "TkDefaultFont") if kind == "sans" else (_MONO, "TkFixedFont")
+        _resolved[kind] = next((n for n in names if n in have), fb)
+    return _resolved[kind]
+
+
+def SANS(size: int, *style) -> tuple:
+    return (_family("sans"), size, *style)
+
+
+def MONO(size: int, *style) -> tuple:
+    return (_family("mono"), size, *style)
+
+
 class LearningPlot(tk.Canvas):
     """The learning curve, in units a person can read.
 
@@ -304,14 +341,14 @@ class LearningPlot(tk.Canvas):
             y = y0 + (y1 - y0) * i / 4
             self.create_line(x0, y, x1, y, fill=self.GRID)
             self.create_text(x0 - 8, y, anchor="e", fill=self.AXIS,
-                             font=("Segoe UI", 8),
+                             font=SANS(8),
                              text=f"{hi - (hi - lo) * i / 4:.0f}")
 
         self.create_text(14, (y0 + y1) / 2, anchor="center", angle=90,
-                         fill=self.AXIS, font=("Segoe UI", 8),
+                         fill=self.AXIS, font=SANS(8),
                          text="characters it's choosing between  (lower = smarter)")
         self.create_text((x0 + x1) / 2, h - 9, fill=self.AXIS,
-                         font=("Segoe UI", 8), text="training progress →")
+                         font=SANS(8), text="training progress →")
 
         def to_xy(step, val):
             fx = x0 + (x1 - x0) * (step / self.total_steps)
@@ -322,7 +359,7 @@ class LearningPlot(tk.Canvas):
             _, gy = to_xy(0, self.vocab)
             self.create_line(x0, gy, x1, gy, fill=self.GUESS, dash=(4, 3))
             self.create_text(x0 + 6, gy - 9, anchor="w", fill=self.GUESS,
-                             font=("Segoe UI", 8),
+                             font=SANS(8),
                              text=f"pure guessing — {self.vocab} characters")
 
         series = [(self.learn_pts, self.LEARN, "your text")]
@@ -340,10 +377,10 @@ class LearningPlot(tk.Canvas):
                                  outline=colour)
         for i, (_, colour, label) in enumerate(series):
             self.create_text(x1 - 6, y0 + 4 + i * 15, anchor="ne", fill=colour,
-                             font=("Segoe UI", 9), text=label)
+                             font=SANS(9), text=label)
         if not self.unseen_ok and self.learn_pts:
             self.create_text(x1 - 6, y0 + 4 + 15, anchor="ne", fill=self.GUESS,
-                             font=("Segoe UI", 8),
+                             font=SANS(8),
                              text="(can't score unseen text with this file)")
 
 
@@ -532,8 +569,27 @@ class TrainWorker(threading.Thread):
 
 
 class Studio(ttk.Frame):
-    def __init__(self, root):
+    """The training surface. Usable standalone (main() below) or embedded.
+
+    EMBEDDED MODE exists because t/lab.py hosts this as its Train tab, and two
+    tk.Tk() roots in one process is undefined behaviour rather than merely untidy:
+    the first mainloop() opens BOTH windows and blocks until both close
+    (stackoverflow.com/q/39417091, read 2026-09-20 via the StackExchange API). So
+    the merged app has exactly ONE root, owned by the lab shell, and this class
+    takes a parent widget either way -- which it already did, being a ttk.Frame.
+
+    What embedding must NOT do is repaint the host. `_apply_theme` calls
+    ttk.Style() and winfo_toplevel().configure(), both of which are process-wide:
+    left alone it would switch the shell's ttk theme to 'clam', restyle its
+    Treeviews, and repaint the root from the lab's #0b0e14 to this file's #1b1d21.
+    So `embedded=True` skips both, forces dark (the shell is dark-only, and a
+    light Train tab inside a dark window is the incoherence a single palette
+    exists to prevent), and takes the host's colours through `palette`.
+    """
+
+    def __init__(self, root, embedded: bool = False, palette: dict | None = None):
         super().__init__(root, padding=10)
+        self.embedded = embedded
         self.grid(sticky="nsew")
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
@@ -547,8 +603,13 @@ class Studio(ttk.Frame):
         self.tok = None
         self.device = pick_device()
         self.vocab = 0
-        self.dark = system_wants_dark()
-        self.C = THEMES["dark" if self.dark else "light"]
+        self.dark = True if embedded else system_wants_dark()
+        self.C = dict(THEMES["dark" if self.dark else "light"])
+        if palette:
+            # The host's colours win for every key it names; this file keeps the
+            # ones it alone has (the plot series, the log surface), because the
+            # lab palette has no equivalent and those carry meaning.
+            self.C.update(palette)
         self._apply_theme()
         self.speeds = load_speeds()
         self.advanced_open = False
@@ -580,10 +641,11 @@ class Studio(ttk.Frame):
         """
         C = self.C
         style = ttk.Style()
-        try:
-            style.theme_use("clam" if self.dark else "vista")
-        except tk.TclError:
-            pass
+        if not self.embedded:
+            try:
+                style.theme_use("clam" if self.dark else "vista")
+            except tk.TclError:
+                pass
         if not self.dark:
             return
         style.configure(".", background=C["bg"], foreground=C["fg"],
@@ -606,7 +668,8 @@ class Studio(ttk.Frame):
         style.configure("TScale", background=C["bg"], troughcolor=C["field"])
         style.configure("TScrollbar", background=C["panel"],
                         troughcolor=C["bg"], arrowcolor=C["fg"])
-        self.winfo_toplevel().configure(bg=C["bg"])
+        if not self.embedded:
+            self.winfo_toplevel().configure(bg=C["bg"])
 
     # ---------------------------------------------------------------- left
     def _build_left(self):
@@ -649,7 +712,7 @@ class Studio(ttk.Frame):
         box.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         box.columnconfigure(0, weight=1)
         self.v_data = tk.StringVar(value=str(HERE / "corpus.txt"))
-        self.l_file = ttk.Label(box, text="—", font=("Segoe UI", 9, "bold"))
+        self.l_file = ttk.Label(box, text="—", font=SANS(9, "bold"))
         self.l_file.grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
         self.l_corpus = ttk.Label(box, text="—", foreground=self.C["muted"],
                                   wraplength=300, justify="left")
@@ -676,7 +739,7 @@ class Studio(ttk.Frame):
             ttk.Label(arch, text=SIZES[name]["blurb"], foreground=self.C["faint"],
                       wraplength=280, justify="left").grid(
                 row=2 * i + 1, column=0, sticky="w", padx=(30, 10), pady=(0, 2))
-        self.l_params = ttk.Label(arch, text="", font=("Segoe UI", 9, "bold"),
+        self.l_params = ttk.Label(arch, text="", font=SANS(9, "bold"),
                                   foreground=self.C["ok"], wraplength=300,
                                   justify="left")
         self.l_params.grid(row=2 * len(SIZES), column=0, sticky="w",
@@ -773,7 +836,7 @@ class Studio(ttk.Frame):
         # chart is the evidence and this is the finding.
         self.l_headline = ttk.Label(
             right, text="Press “Start training” and this will fill in.",
-            font=("Segoe UI", 12, "bold"), wraplength=640, justify="left")
+            font=SANS(12, "bold"), wraplength=640, justify="left")
         self.l_headline.grid(row=0, column=0, sticky="w", pady=(0, 6))
 
         self.plot = LearningPlot(right, self.C, height=190)
@@ -802,7 +865,7 @@ class Studio(ttk.Frame):
         logbox.columnconfigure(0, weight=1)
         logbox.rowconfigure(0, weight=1)
         self.log = tk.Text(logbox, height=5, bg=self.C["log_bg"], fg=self.C["log_fg"],
-                           insertbackground=self.C["log_fg"], font=("Consolas", 9),
+                           insertbackground=self.C["log_fg"], font=MONO(9),
                            wrap="word", relief="flat")
         self.log.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
         sb = ttk.Scrollbar(logbox, command=self.log.yview)
@@ -961,7 +1024,7 @@ class Studio(ttk.Frame):
         mb = tk.IntVar(value=200)
 
         ttk.Label(win, text="What should your AI read?",
-                  font=("Segoe UI", 11, "bold")).grid(
+                  font=SANS(11, "bold")).grid(
             row=0, column=0, sticky="w", padx=14, pady=(12, 8))
         for i, name in enumerate(sorted(get_corpus.SOURCES)):
             s = get_corpus.SOURCES[name]
