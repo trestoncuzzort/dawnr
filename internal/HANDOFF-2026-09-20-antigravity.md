@@ -120,6 +120,23 @@ before reading their numbers.
   already passed. `t/audit_collapsible.py` is the check;
   `locallm/FINDINGS-factorial-2026-09-19.md` is the write-up.
 
+## Engine fixes made after the runs stopped, 2026-09-19 late
+
+Five silent failures, each of which had already cost a round. All committed,
+all verifiable without a GPU.
+
+| file | what was silently wrong |
+|---|---|
+| `t/spec_check.py` | crashed on its last line when `--out` was relative, **after** writing the report: work done, exit code nonzero |
+| `t/loop_locallm.py` | the corpus splitter knew `Problem:` heads and bare programs, not `Signature:` heads, so a headed corpus passed as `--base` merges documents |
+| `t/loop_filter.py` | same splitter gap, plus a head stripper that removed only `Problem:`/`Signature:` lines, so an `Example:` line made `surface.parse` fail and the document vanish from the copy check inside `except Exception: pass` |
+| `.gitignore` | `t/out/` hid the scoreboard tables, so `git add t/out/score-r8.md` failed silently and three findings cited files the repo did not contain. Negations added for `score-*.md`, `evaluator-state-*.json`, `capacity-*.json` |
+| `t/grade_lab.sh` | `git pull --ff-only \|\| true` is how the grading machine ran 19 commits behind with 109 dirty entries while every log line looked normal. It now prints the HEAD and dirty count it is actually grading with |
+
+`t/test_head_handling.py` fails if a new head line is added without teaching
+the stripper, both splitters and the aligner. That mistake has been made three
+times; the test is there so it is made zero more.
+
 ## Traps that cost time today
 
 1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless
