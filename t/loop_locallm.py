@@ -175,7 +175,8 @@ def cmd_generate(a) -> int:
         if entry is None or path.exists():
             continue
         head = problem_head(entry, a.examples)
-        text = checkpoint.sample(model, tok, head, a.tokens, temperature=a.temperature, top_k=a.top_k)
+        text = checkpoint.sample(model, tok, head, a.tokens, temperature=a.temperature,
+                                 top_k=a.top_k, use_cache=a.use_cache)
         body = text[len(head):] if text.startswith(head) else text
         # A corpus whose documents begin with a head teaches the model to emit that
         # head between documents, so the boundary the answer ends at must know
@@ -234,6 +235,11 @@ def main() -> int:
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--examples", action="store_true",
                    help="ask with the problem's own assertions in the prompt")
+    p.add_argument("--use-cache", action="store_true",
+                   help="cached decoding, off by default. locallm/FINDINGS-kv-cache-2026-09-19.md "
+                        "verified it produces identical output and its registered speed prediction "
+                        "failed on a different benchmark; it has never been measured on this path, "
+                        "so register a prediction before quoting a speedup")
     a = ap.parse_args()
     return {"corpus": cmd_corpus, "train": cmd_train, "generate": cmd_generate}[a.cmd](a)
 

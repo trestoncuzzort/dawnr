@@ -366,5 +366,37 @@
   ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && ~/.venv-vllm/bin/python locallm/summarize_factorial.py --study t/out/factorial-2026-09-19 --markdown t/out/factorial-2026-09-19/summary.md' && rsync -a \"$T_LAB:~/tup/t/out/factorial-2026-09-19/summary.md\" t/out/factorial-summary.md",
   "test -s t/out/factorial-summary.md",
   "lab"
+ ],
+ [
+  "fleet-generate",
+  "Generate an answer set on every card at once",
+  "One problem at a time on one card uses 1.5 GB of a 48 GB card. This shards the held-out list and runs a worker per shard: measured 2026-09-19, three arms of 232 answers in about ten minutes against roughly forty-five minutes per arm. Edit the model and tag in the command. Do not run it while Grade is running: ten workers plus a 7B model plus 32 grading cells put the load average at 80 and killed the connection carrying the grade.",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && bash t/gen_fleet.sh t/out/locallm-r9 locallm-r9 4 \"0 1 2 3\" --temperature 0'",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'test -f ~/tup/t/out/gen-locallm-r9.done'",
+  "lab"
+ ],
+ [
+  "finish-seeds",
+  "Finish the three seed arms left mid-grade",
+  "The three seed arms of the recipe that tied Phi are generated, 232 answers each, and their kernel cells are computed. This copies their tables back, regrades only what has none, runs the specification check and prints them beside Phi. It is the run that says whether 3 clean was luck.",
+  "bash t/finish_seeds.sh",
+  "test -s t/out/score-seeds.md",
+  "lab"
+ ],
+ [
+  "grow-pool",
+  "Grade the prover's answers and rebuild the pool",
+  "prover-train2 has 450 of 2,354 training problems answered and never graded; its predecessor converted 31 of 88 graded cells into clean answers. This grades them, runs the specification check the gate refuses answers without, and rebuilds the pool as r10.",
+  "bash t/grow_pool.sh prover-train2",
+  "test -s t/out/loop/sft-r10.jsonl",
+  "lab"
+ ],
+ [
+  "examples-arm",
+  "Train with the problem's examples in the prompt",
+  "The signature line took signature failures from 40.8% to 12.1% and turned 2 clean answers into 3 by pinning the types. The problem's own assertions pin the semantics, which is where 59 to 204 proven-but-wrong answers a round come from. Register the prediction first, and regrade Phi with --examples before quoting any comparison: internal/RESEARCH-NEXT-2026-09-20.md has both.",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup/t && python3 loop_locallm.py corpus --pool v5 --lifted --examples --sft out/loop/sft-r8.jsonl --out ~/tup/t/out/loop/corpus-ex.txt && python3 head_align_corpus.py --corpus ~/tup/t/out/loop/corpus-ex.txt --out ~/tup/t/out/loop/corpus-ex-headed.txt'",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'test -s ~/tup/t/out/loop/corpus-ex-headed.txt'",
+  "lab"
  ]
 ]
