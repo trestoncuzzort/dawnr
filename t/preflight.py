@@ -259,6 +259,41 @@ def check_space(lab: str | None) -> bool:
     return ok
 
 
+def check_evaluator(lab: str | None) -> bool:
+    """The machine that runs the kernels runs its own tree, and that tree drifts.
+
+    On 2026-09-19 it was 19 commits behind origin with 109 dirty entries while
+    every log line looked normal, because grade_lab.sh ran `git pull --ff-only
+    || true`. Two answer sets graded by different evaluators cannot be compared,
+    and nothing anywhere said so. This warns rather than fails: those dirty
+    files are other agents' unverified work and must be preserved, and a round
+    graded by a known-stale evaluator is fine as long as its baseline is
+    regraded beside it.
+    """
+    if not lab:
+        return True
+    try:
+        out = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
+             "cd ~/tup && git rev-parse --short HEAD && git status --porcelain | wc -l"],
+            capture_output=True, text=True, timeout=45)
+        lines = [line.strip() for line in out.stdout.splitlines() if line.strip()]
+        if len(lines) < 2:
+            return warn("grading machine state unreadable", out.stderr.strip()[:60])
+        head, dirty = lines[0], int(lines[1])
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        return warn("grading machine state unreadable", str(error)[:60])
+    mine = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
+                          text=True, cwd=HERE.parent).stdout.strip()
+    if head == mine and dirty == 0:
+        return say(True, f"the grading machine matches this tree at {head}")
+    detail = f"it grades at {head} with {dirty} dirty entries; this tree is at {mine}"
+    warn("the grading machine is not this tree", detail)
+    print("         regrade a baseline beside any new answer set, or the comparison "
+          "spans two evaluators")
+    return True
+
+
 def check_prompt() -> bool:
     """Check 7. Every prompt version builds, the ones the run names exist, and no prompt in use tells the
     model something about the notation that this repository's own parser contradicts."""
@@ -592,6 +627,7 @@ def main() -> int:
     print("housekeeping")
     ok = check_keys() and ok
     ok = check_space(lab) and ok
+    ok = check_evaluator(lab) and ok
     if WARNED and ok:
         print("\n" + (f"not ready: {len(WARNED)} warning(s) above, and --strict was asked for" if a.strict else
                       f"ready, with {len(WARNED)} warning(s) above: nothing here makes this round's numbers "
