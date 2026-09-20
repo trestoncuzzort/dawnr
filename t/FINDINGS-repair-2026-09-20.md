@@ -131,9 +131,30 @@ the seven provers we already run.
 
 ## What not to claim
 
-No published system attempts a conjunctive seven-prover gate with a mutation
-kill, so there is no basis for expecting a repair loop to produce a high clean
-count under ours. The nearest precedent reaches 14 of 18 dual-prover and 3 of 18
+**Corrected 2026-09-20, after checking:** this paragraph opened "No published
+system attempts a conjunctive seven-prover gate with a mutation kill." Both
+halves of that are occupied. SpecSyn ([arXiv:2604.21570](https://arxiv.org/abs/2604.21570))
+writes our acceptance rule as an optimization objective, Definition 2:
+`S = argmin_S |M|(1 - r_v(S,p,M)) s.t. V(p,S) = 0` -- maximize the
+semantically-non-equivalent mutants the specification refutes, subject to the
+specification still verifying against the true program -- with its variant
+discriminative rate in Definition 1, 188 mutation operators, equivalent mutants
+filtered by Trivial Compiler Equivalence, and **Frama-C/WP 25.0**, one of our own
+seven. Falda (arXiv:2606.02019) builds the conjunctive multi-prover gate, and
+MutDafny (arXiv:2511.15403) the mutant-still-verifies test for weak
+specifications. What is not occupied is narrower and worth stating exactly: the
+width, seven kernels spanning auto-active verifiers *and* interactive theorem
+provers, and the refutation signal, one **concrete witness input** all seven
+agree separates the program from its twin. SpecSyn is single-prover and its
+refutation is the verifier's verdict on the mutant, never a witness.
+
+Two consequences for this run, read off the same papers. SpecSyn's own ablation
+prices the twin loop: removing the refinement mechanism costs "approximately 2%
+in precision and about 5% in recall", where removing its program decomposition
+costs 11.41% and 12.66%. So the sabotage half of our gate is the cheaper
+mechanism, not the load-bearing one. And there is still no precedent for a high
+clean count under a seven-way conjunction, which is the original point of this
+paragraph and survives intact. The nearest precedent reaches 14 of 18 dual-prover and 3 of 18
 triple-prover agreement with sixteen backends and human orchestration. If the
 headline is a clean count, the gate is the binding constraint, not the loop. If
 the headline is the criterion itself, then a low clean count is the finding, and

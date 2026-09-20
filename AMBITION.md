@@ -43,7 +43,7 @@ tests: seven independent proof systems verifying the program against the
 specification, and all seven catching a deliberately sabotaged twin.
 
 **The ambition is not a smaller model that keeps up. It is proof that verified
-data buys parameter efficiency**, stated as a curve rather than a point: 3.2M,
+data buys parameter efficiency**, stated as a curve rather than a point: 10.9M,
 92M, 312M on one recipe and one evaluator, with Phi's fixed point beside it.
 Capacity is already measured to 875M on a single shared card
 (`locallm/FINDINGS-capacity-2026-09-19.md`); the data to justify it is the

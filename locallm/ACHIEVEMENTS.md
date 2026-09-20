@@ -11,7 +11,7 @@ behind the newer numbers carry their own tests and nothing more.
 
 ## 1. Well-formedness from random initialization
 
-**209 of 232** held-out answers parse and pass `check_wf` (`locallm-r4`, 3.2M
+**209 of 232** held-out answers parse and pass `check_wf` (`locallm-r4`, 10.9M
 parameters, character tokenizer, trained from random weights on a 77 KB
 corpus); 198 of 232 for `locallm-r5`. The matched Phi-4-mini row is 12 of 232
 and the prompted Qwen3.8-27B-FP8 row is 116.

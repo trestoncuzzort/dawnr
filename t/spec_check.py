@@ -570,6 +570,20 @@ def main() -> int:
                       f"the problem's solution answers {r['reference_said']!r}")
     print(f"\n{sum(tally.values())} tasks checked against their problem's own solution, {a.n} draws each: "
           f"{tally['agrees']} agree, {tally['disagrees']} disagree, {tally['other']} could not be checked")
+    # A tag that produced no rows was NOT checked, whatever the command asked for,
+    # and it must not enter the cumulative "tags" list below. This is the same
+    # failure CORRECTIONS.md records for score_heldout.py, in a second place: on
+    # 2026-09-20 two runs named 42 tags, five of them arms graded on the v3
+    # held-out split, and asked for --pool v5. Every answer in those five was
+    # skipped for being outside the pool, both runs reported the same counts as
+    # the 37-tag run before them, and all five were still recorded as checked --
+    # so the README's "3 against 2 after the specification check" had no evidence
+    # in the tree for a day. Silence about a tag now says nothing about it.
+    empty = [t for t in tags if t not in {tag for tag, _n, _r in rows}]
+    if empty:
+        print(f"\nNOT CHECKED, no answer of theirs was in pool {a.pool}: {', '.join(empty)}")
+        print("  These tags are left out of the checked list. Re-run them against the pool "
+              "they were graded on.")
     lines = ["# Specifications against the problems' own solutions, 2026-09-18", "",
              f"`python3 t/spec_check.py --pool {a.pool} --n {a.n} --only {a.only}`, seed {a.seed}. Each task's",
              "`ensures` is evaluated with the problem's reference solution supplying the result, on random",
@@ -604,7 +618,7 @@ def main() -> int:
         prev = json.loads(out_path.read_text())
     except (OSError, ValueError):
         prev = {}
-    checked_tags = sorted(set(prev.get("tags", [])) | set(tags))
+    checked_tags = sorted(set(prev.get("tags", [])) | ({tag for tag, _n, _r in rows} & set(tags)))
     results = {f"{tag}/{name}": result for tag, name, result in rows}
     keep = [x for x in prev.get("disagree", []) if x not in results]
     keep_texts = {k: v for k, v in (prev.get("programs") or {}).items()
@@ -615,7 +629,7 @@ def main() -> int:
                "results": {**prev.get("results", {}), **results},
                "runs": [*prev.get("runs", []),
                         {"tags": tags, "pool": a.pool, "seed": a.seed, "attempts": a.n,
-                         "only": a.only, "counts": tally,
+                         "only": a.only, "counts": tally, "checked_nothing": empty,
                          "when": datetime.datetime.now(datetime.timezone.utc).isoformat()}]}
     temp = out_path.with_suffix(".tmp")
     temp.write_text(json.dumps(updated, indent=1) + "\n", encoding="utf-8")

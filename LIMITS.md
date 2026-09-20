@@ -78,7 +78,7 @@ a reader reaching a particular paragraph. The headline is in
 
 - Pretraining the core did not help this pipeline. A 92M core pretrained on 46M
   tokens of real source and specialized on the filtered t data scored 1 clean
-  of 232, wrote fewer well-formed answers than the 3.2M models, and produced 91
+  of 232, wrote fewer well-formed answers than the 10.9M and 25.5M models, and produced 91
   proven-but-wrong answers out of 136 well formed. The comparison moves size,
   tokenizer, corpus and recipe together, so it says the number did not improve
   and not which change is responsible.
@@ -95,5 +95,11 @@ a reader reaching a particular paragraph. The headline is in
   exhausted here until 2026-09-20, when 1,032 stdin-shaped problems that
   `t/nl_stdin.py` had already measured and nothing had ever imported were wired
   in as pool v6 (4,035 problems, +34.4%). That is more problems, not more clean
-  examples: none of them has been answered by any model yet, so the 87 stands
-  until they are.
+  examples. As of 2026-09-20 the 235B has answered **1,030 of the 1,032**, and
+  none of those answers has been graded: the arm `qwen235-v6new` holds `raw` and
+  `tasks` and no kernel table. So the 87 stands, and what it now waits on is the
+  seven-prover gate rather than a generator.
+  One thing has to happen before any of them can enter a training set:
+  `t/loop_dataset.py` reads its pool from the split file and skips any id in
+  neither half, and there is no `split-v6.json`, so all 1,030 are invisible to
+  the dataset builder no matter how they grade.

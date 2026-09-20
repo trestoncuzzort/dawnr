@@ -7,7 +7,7 @@ Written 2026-09-19, from the day's numbers, for whoever runs the next round.
 locallm's failure is not proof and it is not notation. Both of those are solved
 to a first approximation:
 
-- **Notation:** 209 of 232 well formed at 3.2M parameters, 149 at 92M, against
+- **Notation:** 209 of 232 well formed at 10.9M parameters, 149 at 92M, against
   Phi's 12. Writing t is nearly free.
 - **Proof:** conversion is 2 of 2, 1 of 1, 3 of 3. Every locallm answer that
   computed the right values was verified by all seven with its twin refuted.
@@ -17,7 +17,7 @@ The gate is a single population, and it is enormous:
 
 | arm | well formed | **proven but wrong** | tests pass |
 |---|---:|---:|---:|
-| locallm r4 (3.2M) | 209 | **204** | 2 |
+| locallm r4 (10.9M) | 209 | **204** | 2 |
 | locallm r7 (92M) | 136 | **91** | 1 |
 | locallm r7b greedy | 149 | **117** | 2 |
 | locallm r8 headed | 91 | **59** | 3 |
@@ -91,12 +91,20 @@ none of them moved this number.
 
 ## What not to spend time on, with the evidence
 
-- **More proof-side work.** Conversion is already 100% for this model.
-- **More notation work.** 90% well formed at 3.2M parameters.
+- **More proof-side work.** Conversion is 3 of 3 at best, and 3 events is not a
+  rate. Corrected 2026-09-20: this line read "already 100%", which treated a
+  denominator of 3 as a settled property and put the strongest claim the project
+  has on the do-not-work-on list. PostcondBench (`arXiv:2605.03356`, Table 2)
+  measures the same quantity as 0.33-0.53 over 120-2,389 tasks, and the two rows
+  here with a two-digit denominator are the 235B's 12 of 81 and 11 of 53, which
+  sit *below* that band. One proven-but-wrong answer takes locallm to 3 of 4. The
+  work to avoid is a new conversion *technique*; the work to do is raising the
+  denominator so the column carries information.
+- **More notation work.** 90% well formed at 10.9M parameters.
 - **The synthetic composition curriculum.** Three seeds, 0, 2 and 0 of 323.
 - **A cleaner pool alone.** Round 8 replaced 28 disagreeing answers with checked
   ones and scored exactly what the previous recipe scored.
-- **A bigger model alone.** 92M wrote *fewer* well-formed answers than 3.2M. The
+- **A bigger model alone.** 92M wrote *fewer* well-formed answers than 10.9M. The
   capacity is there, measured to 875M; the data to justify it is not.
 
 ## Implemented 2026-09-19, ready to run

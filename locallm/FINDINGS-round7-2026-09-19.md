@@ -14,11 +14,11 @@ kernels were still running and before either `kernels.md` existed.
 | phi4-mini-v3 (historical) | 12 | 6 | **3** | 3/6 (50%) | 0, 3 unchecked | 1 |
 | phi4-mini-eval2 (regraded today) | 12 | 6 | **3** | 3/6 (50%) | 2, 1 unchecked | 1 |
 | qwen15b-base-v3 | 39 | 13 | **3** | 3/13 (23%) | 0, 3 unchecked | 8 |
-| locallm-r4 (3.2M) | 209 | 2 | **2** | 2/2 | 0, 2 unchecked | 204 |
-| locallm-r5 (3.2M) | 198 | 2 | **2** | 2/2 | 0, 2 unchecked | 196 |
+| locallm-r4 (10.9M) | 209 | 2 | **2** | 2/2 | 0, 2 unchecked | 204 |
+| locallm-r5 (25.5M) | 198 | 2 | **2** | 2/2 | 0, 2 unchecked | 196 |
 | **locallm-r7-92m** | **136** | **1** | **1** | 1/1 | **1, 0 unchecked** | 91 |
 
-**The pretrained 92M core scored 1 clean of 232.** That is below the 3.2M
+**The pretrained 92M core scored 1 clean of 232.** That is below the 10.9M and 25.5M
 character models it was meant to improve on, and below Phi-4-mini. It also
 wrote *fewer* well-formed answers than they did, 136 against 209 and 198.
 
@@ -69,15 +69,15 @@ comparison. Without it, a 1 against a 3 could have been lowering drift.
   wrong function.
 - **1 passes**, `mbpp_682__mul_list`, and it is clean and spec-checked.
 
-That is the same disease the 3.2M models had, notation without the problem, and pretraining on 46M tokens of real source did not cure it. If anything the
+That is the same disease the 10.9M and 25.5M models had, notation without the problem, and pretraining on 46M tokens of real source did not cure it. If anything the
 larger model is better at producing confident, self-consistent, wrong
 specifications: 91 proven-but-wrong out of 136 well formed is a higher rate
-than the 3.2M rows' 204 of 209 only because their denominator is bigger.
+than the 10.9M row's 204 of 209 only because their denominator is bigger.
 
 ## What this does not establish, stated before anyone asks
 
 - The comparison moves **size, tokenizer, pretraining corpus and training
-  recipe at once** against the 3.2M rows. It shows the pipeline's number did
+  recipe at once** against the 10.9M and 25.5M rows. It shows the pipeline's number did
   not improve; it cannot say which of the four is responsible.
 - **The exported checkpoint is the end of the schedule, step 300**, whose
   validation loss on the specialization corpus (0.5927) is worse than step

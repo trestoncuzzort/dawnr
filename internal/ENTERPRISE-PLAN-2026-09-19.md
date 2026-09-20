@@ -11,7 +11,7 @@ possible data teacher. It does not complete the owned-model, efficiency, or ente
 ## Starting evidence
 
 [The recorded results](../t/out/score-r6.md) put the 1.5B students at 3 clean of 232, tied with Phi,
-and 2 after specification checking. The 3.2M locallm reaches 2 clean, with 196–204 wrong-but-proven
+and 2 after specification checking. The 10.9M locallm reaches 2 clean, with 196–204 wrong-but-proven
 answers. The prompted 7B prover reaches 6 clean; none of those models is a demonstrated enterprise winner.
 The 232 problems are repeatedly inspected MBPP, with possible upstream pretraining contamination.
 They remain a regression set, not the final generalization claim.

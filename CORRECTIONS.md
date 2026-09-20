@@ -104,3 +104,72 @@ three r9 arms as "one recipe" with the headline, "greedy decoding". They are
 greedy and the headline is not, so those arms measure seed variance of a
 DIFFERENT recipe than the one in the README. A note saying so is appended to
 that file; the predictions themselves are left exactly as registered.
+
+- **Two scoreboard rows understated their own parameter count by 3.4x and 8x.**
+  `SCOREBOARD.md` called locallm round 4 and round 5 "3.2M". Every one of the 232
+  answer records each arm wrote carries the true figure in its `digest` field:
+  **10,875,648** for `locallm-r4` and **25,524,224** for `locallm-r5`, unanimous
+  across all 232 in both arms. The same field reads `4,891,136` for `locallm-r0`,
+  also published as "about 3.2M", and `92,920,320` for every 92M arm, which was
+  labelled correctly.
+
+  Where it came from: 3,213,312 is what `locallm/train.py`'s own defaults build
+  (4 layers, 4 heads, width 256, block 128), and `cmd_train` never uses them.
+  `t/loop_locallm.py` defaults to 6 layers, 6 heads, width 384, block 512, which
+  is r4's 10.9M; r5 then ran `--layers 8 --width 512`, which is r5's 25.5M. The
+  label was read off the wrong end of the code and never checked against a run.
+
+  Three independent confirmations, because the arithmetic had a trap in it. The
+  checkpoints are 43,502,592 and 102,121,472 bytes in 76 and 100 tensors; 76 and
+  100 are exactly `12n+4` for 6 and 8 transformer blocks, which rules out
+  optimizer state, since an Adam save carries roughly three times the tensors. So
+  these are weights only and bytes over four gives the same 10.88M and 25.53M.
+  Had they instead held optimizer state, 3.2M would have been consistent with
+  r4's 43.5 MB and this correction would have been the error.
+
+  **What it changes.** The README's "Phi-4-mini, about 1,200 times larger" and
+  the scoreboard's "about 1,200 times smaller" are **about 350 times**, against
+  r4's 10.9M. The claim they support does not move: 209 well-formed answers of
+  232 against Phi's 12 is the measured number either way, and the 3-clean tie is
+  a 92.9M arm, which was never mislabelled. What does move is the size curve the
+  project reasons with. `LIMITS.md` and `internal/RESEARCH-NEXT-2026-09-20.md`
+  argued that "a bigger model alone" failed because 92M wrote fewer well-formed
+  answers than 3.2M, a 29x span. The real span is 10.9M to 92.9M, **8.5x**, and
+  the same comparison moves seven things at once: parameters, tokenizer,
+  pretraining, epochs over t, learning rate, dropout, and what `block_size 512`
+  means in characters. Corrected in place in `SCOREBOARD.md`, `README.md`,
+  `LIMITS.md`, `AMBITION.md`, `locallm/ACHIEVEMENTS.md`, five `locallm/FINDINGS-*`
+  files and three `internal/` documents.
+
+  **Left as written, deliberately.** The `t/PREDICT-*` files reason against "the
+  3.2M rows"; registered predictions are never edited after the fact, and the
+  note above is the record instead. `internal/ROADMAP-LOG.md`'s 2026-09-16 entry
+  and `t/runs/2026-09-17/README.md` describe an earlier filter-loop model as
+  3.2M; no `digest` was recorded for that run, so the figure is unverified rather
+  than known-wrong and is left alone rather than replaced with a guess.
+
+- **Two scoreboard cells counted an answer nobody could check as an answer that
+  passed.** `SCOREBOARD.md` gave locallm rounds 4 and 5 a 2 in "after the
+  specification check". Each arm has two clean answers and in each only one is
+  checkable; both arms' other one is `mbpp_800__remove_all_spaces`, which returns
+  `no valid draws` because it is a string problem, `t` has no string type, and no
+  drawn argument shape fits the reference solution. The scoreboard's own sentence
+  says how to count that case — "one of Phi's three cannot be checked at all, so
+  on that column it reads 3 against 2" — so the cells are **1 and 1**. This is
+  the first entry in this file recurring: the tool was fixed to print
+  `not checked`, and the published table was never regenerated from it.
+
+  Found while fixing a worse version of the same thing. `t/out/spec-disagree.json`
+  held 496 result rows and none at all for `locallm-r7b-headed2`, `locallm-r8` or
+  `phi4-mini-eval2-2026-09-19`, the three arms behind "3 against 2", because two
+  runs had asked for `--pool v5` on arms graded against the v3 held-out split and
+  every answer was skipped as out-of-pool while the tags were still recorded as
+  checked. Re-run against the right pool, **the headline holds exactly**: 3 of 3
+  agreeing for `locallm-r7b-headed2`, 2 for Phi's regrade with
+  `mbpp_269__ascii_value` uncheckable. The measurement, the per-tag table and the
+  code fix are in `t/FINDINGS-spec-evidence-2026-09-20.md`; `spec_check.py` now
+  refuses to add a tag it checked nothing for, and says so on the way out.
+
+  Phi's historical `phi4-mini-v3` arm, measured for the first time in the same
+  run, has a real disagreement: `mbpp_20__is_woodall` is false at `n = 63` where
+  the problem's solution answers `True`.

@@ -2,8 +2,10 @@
 
 The core report checked that an optimizer step runs at 312M parameters. That is
 not the same question as **how large a locallm trains here**, and until today
-nobody had asked it. Every locallm row on the project scoreboard is a
-**3.2M-parameter** model with a character tokenizer trained on a 77 KB corpus.
+nobody had asked it. The locallm rows trained from random weights on the project
+scoreboard are **10.9M** and **25.5M** parameters with a character tokenizer on a
+77 KB corpus; the pretrained-core rows are **92.9M** with a byte-BPE tokenizer.
+Each figure is the `digest` its own 232 answer records carry.
 
 `locallm/measure_capacity.py` runs real optimizer steps at each size on real
 data shapes and reports what fits and how fast, or that it did not fit.
@@ -26,7 +28,7 @@ gradient checkpointing on, block 512, vocabulary 8,192, bf16.
 | 312M | 311,224,320 | 8 | trains | 5,706 MiB | 7,396 |
 
 **Optimizer steps at 875M parameters fit on one shared card**, at 2,693 tokens
-a second: 270 times the parameter count of the 3.2M model on the scoreboard and
+a second: 80 times the parameter count of the 10.9M model on the scoreboard and
 nine times the 91M cores the pretraining studies used. What this establishes is
 that such a model steps, and how fast. It does not establish that size is why
 earlier work stalled; nothing here has trained a large model to a score. The
@@ -73,5 +75,5 @@ graded now, and loss has already failed to predict behaviour twice this week.
 That comparison moves size, tokenizer, pretraining corpus and training recipe
 at the same time, so it can show whether the pipeline's number moves and never
 which of the four moved it. Isolating controls, the same 92M from random
-weights on the same corpus and the 3.2M recipe with the byte-BPE, are not
+weights on the same corpus and the 10.9M recipe with the byte-BPE, are not
 run yet.

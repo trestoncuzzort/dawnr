@@ -13,8 +13,8 @@ every number here is comparable to every earlier one.
 
 | model | whose | well formed | tests pass | **clean** | converts | after the spec check |
 |---|---|---:|---:|---:|---|---:|
-| **locallm, round 4 (3.2M, from scratch)** | **ours** | **209** | 2 | **2** | 100% | 2 |
-| **locallm, round 5 (3.2M)** | **ours** | 198 | 2 | **2** | 100% | 2 |
+| **locallm, round 4 (10.9M, from scratch)** | **ours** | **209** | 2 | **2** | 2/2 | 1 |
+| **locallm, round 5 (25.5M)** | **ours** | 198 | 2 | **2** | 2/2 | 1 |
 | **locallm, round 7 (92M, pretrained then specialized)** | **ours** | 136 | 1 | **1** | 1/1 | 1 |
 | **locallm, round 7b (the same model, decoded greedily)** | **ours** | 149 | 2 | **2** | 2/2 | **2** |
 | **locallm, round 8 (specification-checked pool)** | **ours** | 142 | 2 | **2** | 2/2 | **2** |
@@ -74,7 +74,7 @@ checked against the problem's own solution and agree with it; one of Phi's
 three cannot be checked at all, so on that column it reads 3 against 2.
 
 **Where the gap is.** locallm wins the notation by a distance no baseline
-approaches, 209 well-formed answers to Phi's 12 from a model about 1,200 times
+approaches, 209 well-formed answers to Phi's 12 from a model about 350 times
 smaller, and loses the gate that decides the score, which is passing the
 problem's own tests. Of 209 well-formed answers, 2 computed the right values
 and 204 were proven correct against a specification the model wrote for a

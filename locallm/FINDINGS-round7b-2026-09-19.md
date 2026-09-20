@@ -61,7 +61,7 @@ signature failures 40.4% to 32.2%, clean 1 to **2**, and both of those clean
 answers survived the specification check against the problem's own solution --
 `clean, spec checked: 2, spec unchecked: 0`.
 
-That matters beyond the count. The 3.2M rows also score 2 clean, but neither
+That matters beyond the count. The 10.9M and 25.5M rows also score 2 clean, but neither
 had ever been specification-checked. **This is the first locallm result whose
 every clean answer is verified by all seven, with its twin refuted, and checked
 to be a specification of the problem that was actually asked.**

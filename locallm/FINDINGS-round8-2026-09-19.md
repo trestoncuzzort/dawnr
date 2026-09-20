@@ -10,8 +10,8 @@ corpus was built. `t/out/score-r8.md` is the table, graded with
 | model | well formed | signature failures | tests pass | **clean** | clean, spec checked | spec unchecked |
 |---|---:|---:|---:|---:|---:|---:|
 | Phi-4-mini, regraded today | 12 | — | 6 | **3** | 2 | 1 |
-| locallm r4 (3.2M) | 209 | — | 2 | **2** | 0 | 2 |
-| locallm r5 (3.2M) | 198 | — | 2 | **2** | 0 | 2 |
+| locallm r4 (10.9M) | 209 | — | 2 | **2** | 0 | 2 |
+| locallm r5 (25.5M) | 198 | — | 2 | **2** | 0 | 2 |
 | locallm r7 (92M, temperature 0.5) | 136 | 40.4% | 1 | **1** | 1 | 0 |
 | locallm r7b greedy | 149 | 32.2% | 2 | **2** | 2 | 0 |
 | locallm r8 (checked pool, no heads) | 142 | 40.8% | 2 | **2** | 2 | 0 |

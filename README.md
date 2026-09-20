@@ -51,9 +51,9 @@ outright.
 Eight results, in plain terms, each linked to the script that produced it:
 [`locallm/ACHIEVEMENTS.md`](locallm/ACHIEVEMENTS.md). The short version:
 
-1. **It learned a formal language almost perfectly, from nothing.** The 3.2M
+1. **It learned a formal language almost perfectly, from nothing.** The 10.9M
    model wrote a syntactically valid program for **209 of 232** unseen
-   problems. Phi-4-mini, about 1,200 times larger, managed **12**. Everyone
+   problems. Phi-4-mini, about 350 times larger, managed **12**. Everyone
    assumes notation is the hard part for a tiny model. It isn't. It's nearly
    free.
 2. **It matches a model 41 times its size**, at 3 clean answers each. All three

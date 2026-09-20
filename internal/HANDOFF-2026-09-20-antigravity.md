@@ -27,7 +27,7 @@ Suite is 428 tests with four known failures listed under "Known-failing".
    attack 3 (no seeds) and costs minutes, not GPU time.
 4. **Train the examples arm** — but run `t/example_holdout.py` first or the
    result does not count. See "The examples arm" below.
-5. **A size curve.** 3.2M and 92M exist; 312M trains at 7,396 tokens a second on
+5. **A size curve.** 10.9M, 25.5M and 92M exist; 312M trains at 7,396 tokens a second on
    one shared card. Three points on one recipe and one evaluator turn a tie into
    a trend, which is the strongest available version of this project's claim.
 
@@ -266,7 +266,7 @@ a file is.**
   while also being 18.8% slower and reserving 33% more memory, after leading by
   about a quarter at 1000.
 - **Pretraining the core did not help this pipeline.** 1 clean of 232, fewer
-  well-formed answers than the 3.2M models.
+  well-formed answers than the 10.9M and 25.5M models.
 
 What worked, in order: the signature header (40.8% → 12.1% signature failures,
 2 clean → 3), greedy decoding (well formed 136 → 149, clean 1 → 2, free), the

@@ -58,8 +58,8 @@ Machine notes for anyone repeating this: the lab workstation grades at 64 cells 
 | Phi-4-mini, bf16 | 3.8B | 12 | 6 | 3 | 1 |
 | Qwen2.5-Coder 1.5B, untrained | 1.5B | 39 | 13 | 3 | 8 |
 | The student: the same 1.5B trained on this pool | 1.5B | 37 | 12 | 3 | 8 |
-| locallm r4, built from scratch on this pool | about 3.2M | 209 | 2 | 2 | 204 |
-| locallm r0, the previous pool | about 3.2M | 199 | 0 | 0 | 188 |
+| locallm r4, built from scratch on this pool | 10.9M | 209 | 2 | 2 | 204 |
+| locallm r0, the previous pool | 4.9M | 199 | 0 | 0 | 188 |
 
 Over the 232 held-out problems of `split-v3.json`, which never enter any training set. Clean means the tests
 pass and all seven proof systems verify the program with its deliberately broken copy refuted.

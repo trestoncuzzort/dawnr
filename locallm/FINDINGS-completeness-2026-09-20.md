@@ -21,8 +21,8 @@ solution (soundness), and does it reject a mutated output (completeness)?
 |---|---|---:|---:|---:|---:|---:|
 | r7b greedy | clean | 2 | 2 | 0 | 2 | **0** |
 | r7b greedy | proven but wrong | 117 | 3 | **52** | 3 | **0** |
-| r4 (3.2M) | clean | 2 | 1 | 0 | 1 | **0** |
-| r4 (3.2M) | proven but wrong | 205 | 2 | **43** | 2 | **0** |
+| r4 (10.9M) | clean | 2 | 1 | 0 | 1 | **0** |
+| r4 (10.9M) | proven but wrong | 205 | 2 | **43** | 2 | **0** |
 | r8 headed2 | clean | 3 | 3 | 0 | 3 | **0** |
 | r8 headed2 | proven but wrong | 59 | 3 | **44** | 3 | **0** |
 
@@ -142,8 +142,8 @@ call.
 |---|---|---:|---:|---:|
 | r7b greedy | proven but wrong | 117 | **72 (62%)** | 45 |
 | r7b greedy | clean | 2 | **0** | 0 |
-| r4 (3.2M) | proven but wrong | 205 | **56 (27%)** | 148 |
-| r4 (3.2M) | clean | 2 | **0** | 0 |
+| r4 (10.9M) | proven but wrong | 205 | **56 (27%)** | 148 |
+| r4 (10.9M) | clean | 2 | **0** | 0 |
 | r8 headed2 | proven but wrong | 59 | **52 (88%)** | 5 |
 | r8 headed2 | clean | 3 | **0** | 0 |
 | Phi-4-mini | proven but wrong | 1 | **1 (100%)** | 0 |
@@ -193,7 +193,7 @@ about 300**:
 | arm | specifications scored | weak | wrong answers tested |
 |---|---:|---:|---:|
 | r7b greedy | 5 | 0 | 333 |
-| r4 (3.2M) | 3 | 0 | 249 |
+| r4 (10.9M) | 3 | 0 | 249 |
 | r8 headed2 | 6 | **1** | 713 |
 
 **One weak specification exists**, and it is the textbook case:
