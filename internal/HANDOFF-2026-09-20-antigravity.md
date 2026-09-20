@@ -143,6 +143,15 @@ before reading their numbers.
    exited", not "the work finished".** Killing a generator let its wrapper
    touch the sentinel and two chains scored partial answer sets.
 
+## Two commands that do the first two steps for you
+
+    bash t/finish_seeds.sh        # the three seed arms, mid-grade, to a scoreboard
+    bash t/grow_pool.sh prover-train2   # grade 450 prover answers, rebuild the pool
+
+Both are committed, both are safe to re-run, and `grow_pool.sh` prints the four
+commands that turn the new pool into a scored model with the recipe that tied
+Phi. Read them before running them; they are short.
+
 ## What to do next, in the order I would do it
 
 1. **Assemble the three seed tables** as above and score them. This answers
