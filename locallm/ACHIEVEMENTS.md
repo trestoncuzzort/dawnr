@@ -30,9 +30,11 @@ failed.
 ## 2. Conversion from correct to proved
 
 Every locallm answer that passed its problem's tests also verified in all seven
-systems with its twin refuted: **2 of 2** (r4, r5) and **1 of 1** (r7). The
+systems with its twin refuted: **2 of 2** (r4, r5), **1 of 1** (r7), **2 of 2**
+(r7b greedy, r8) and **3 of 3** (r7b headed2, the arm that ties Phi). The
 comparable rates are Phi 3 of 6, the untrained 1.5B 3 of 13, the prompted 27B
-12 of 81, DeepSeek-Prover-V2-7B 6 of 10.
+12 of 81, DeepSeek-Prover-V2-7B 6 of 10. Every rate here is a column of
+[`../t/out/score-r8.md`](../t/out/score-r8.md).
 
 **Caveats.** The denominators are 1 and 2. This is not evidence of a high
 conversion rate; it is the absence of any observed failure to convert, on a
@@ -153,6 +155,8 @@ No second party has reviewed them.
 
 ## What is not on this page
 
-No locallm model has beaten Phi-4-mini. The best is 2 clean answers of 232
-against Phi's 3, and the plan to change that is WS-22 in
-[`ROADMAP.md`](../ROADMAP.md).
+No locallm model has beaten Phi-4-mini. The best is **3** clean answers of 232
+against Phi's 3 ([`../t/out/score-r8.md`](../t/out/score-r8.md)), which is a tie
+and not a win, and the plan to change that is WS-22 in
+[`ROADMAP.md`](../ROADMAP.md). This page said "the best is 2" until 2026-09-20,
+two rounds after it stopped being true.

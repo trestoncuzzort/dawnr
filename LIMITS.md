@@ -83,6 +83,9 @@ a reader reaching a particular paragraph. The headline is in
 - Token loss on a validation window predicts nothing about behaviour at this
   scale. The 45% loss cut that bought no usable completion is the second time
   in two days that a loss result and a behaviour result disagreed here.
-- The clean pool is small (87 examples) and the corpus that feeds it is
-  exhausted, so the next move is a better generator or a better base model, not
-  more rounds of the same shape.
+- The clean pool is small (87 examples). The corpus that feeds it was called
+  exhausted here until 2026-09-20, when 1,032 stdin-shaped problems that
+  `t/nl_stdin.py` had already measured and nothing had ever imported were wired
+  in as pool v6 (4,035 problems, +34.4%). That is more problems, not more clean
+  examples: none of them has been answered by any model yet, so the 87 stands
+  until they are.

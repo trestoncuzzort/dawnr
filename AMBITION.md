@@ -82,9 +82,10 @@ is to retire all three with measurements rather than argument**, and to keep
 publishing the failures beside the wins, because a repository that corrects its
 own published claims is worth more than one that never had to.
 
-The twins are the artifact most likely to outlive the score: 426 verified
-programs, each paired with a near-miss, the input that separates them, and
-seven independent refutations. Nothing comparable has been found published.
+The twins are the artifact most likely to outlive the score: 426 pairs over
+**213** verified programs answering 90 problems, each paired with a near-miss,
+the input that separates them, and seven independent refutations
+(`t/twins/README.md`). Nothing comparable has been found published.
 
 ---
 

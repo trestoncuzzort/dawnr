@@ -29,15 +29,23 @@ set -u
 cd "$(dirname "$0")/.."
 CARDS=${*:-0 1 2 3}
 BASE=microsoft/Phi-4-mini-instruct
-TAG=phi4-mini-g
-SENTINEL=t/out/gen-phig.done
+# Budget, grammar and tag are parameters because the 3072 default was found on
+# 2026-09-20 to truncate 205 of 232 constrained answers and 232 of 232
+# unconstrained ones -- every reply in the baseline the README compares against
+# stopped at the cap, `done_reason: length`, median reply_tokens exactly 3072.
+# A model that was cut off mid-program did not answer badly; it did not answer.
+#   T_MAX_NEW=8192 T_TAG=phi4-mini-8k T_GRAMMAR= bash t/gen_phig.sh
+TAG=${T_TAG:-phi4-mini-g}
+MAX_NEW=${T_MAX_NEW:-3072}
+GRAMMAR=${T_GRAMMAR-t/t.gbnf}          # set empty for unconstrained decoding
+SENTINEL=t/out/gen-$TAG.done
 
 command -v nvidia-smi >/dev/null || { echo "no nvidia-smi: this runs on the lab, not the desktop"; exit 1; }
 [ -x ~/.venv-vllm/bin/python ] || { echo "no ~/.venv-vllm: this runs on the lab, not the desktop"; exit 1; }
 
 rm -f "$SENTINEL"
 before=$(ls "t/out/spec-experiment/$TAG/raw" 2>/dev/null | wc -l)
-echo "== $TAG: $before of 232 answered, cards: $CARDS =="
+echo "== $TAG: $before of 232 answered, cards: $CARDS, max_new=$MAX_NEW, grammar=${GRAMMAR:-none} =="
 
 chunk=0
 pids=""
@@ -45,8 +53,8 @@ for card in $CARDS; do
   ids="t/out/loop/eval-chunk$chunk.txt"
   [ -s "$ids" ] || { echo "missing $ids"; exit 1; }
   ~/.venv-vllm/bin/python t/loop_generate.py --adapter none --base "$BASE" \
-    --tag "$TAG" --pool v3 --prompt v3 --ids-file "$ids" --max-new 3072 \
-    --grammar t/t.gbnf --gpu "$card" >> "t/out/gen-phig-$chunk.log" 2>&1 &
+    --tag "$TAG" --pool v3 --prompt v3 --ids-file "$ids" --max-new "$MAX_NEW" \
+    ${GRAMMAR:+--grammar "$GRAMMAR"} --gpu "$card" >> "t/out/gen-$TAG-$chunk.log" 2>&1 &
   pids="$pids $!:$chunk:$card"
   echo "chunk$chunk -> GPU $card (pid $!)"
   chunk=$((chunk + 1))
@@ -61,7 +69,7 @@ for entry in $pids; do
   if wait "$pid"; then
     echo "chunk$c (GPU $card): ok"
   else
-    echo "chunk$c (GPU $card): EXIT $? -- see t/out/gen-phig-$c.log"
+    echo "chunk$c (GPU $card): EXIT $? -- see t/out/gen-$TAG-$c.log"
     bad=$((bad + 1))
   fi
 done

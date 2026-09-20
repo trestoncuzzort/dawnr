@@ -58,7 +58,9 @@ Eight results, in plain terms, each linked to the script that produced it:
    actually asked; one of Phi's three could not be checked.
 3. **When it is right, it is provably right.** Every locallm answer that
    computed the right values cleared all seven provers with the sabotaged copy
-   caught: **2 of 2**, and **1 of 1** in the latest round.
+   caught: **2 of 2** in rounds 4 and 5, **1 of 1** in round 7, and **3 of 3**
+   in the round that ties Phi ([`t/out/score-r8.md`](t/out/score-r8.md)). Phi's
+   comparable rate is 3 of 6.
 4. **Stop it and restart it and you get the identical model**, bit for bit,
    with a test that fails the moment that stops being true.
 5. **It is nowhere near the size this hardware can train.** Measured by
@@ -111,7 +113,7 @@ Eight results, in plain terms, each linked to the script that produced it:
 ## The pipeline
 
 ```
-problems in English, with tests (nl/; pool v5 is 3,003, 232 held out and never trained on)
+problems in English, with tests (nl/; pool v6 is 4,035, 232 held out and never trained on)
   -> a generator model writes a specified program for each          spec_experiment.py generate
   -> keep only programs that pass their tests and copy nothing seen  spec_experiment.py tests, pool_pick.py
   -> prove each in Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq, F*    run_par.py

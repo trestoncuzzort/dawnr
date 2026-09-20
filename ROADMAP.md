@@ -109,7 +109,7 @@ Open. A 1.0 tag must contain the frozen specification, conformance suite, matrix
 
 ### 17.3 Going public
 
-The repository is private while claims are in motion; it is published again once the 1.0 gate is met.
+The repository is public. It was private while claims were in motion, and this line said so until 2026-09-20; `AGENTS.md` has said "this repository is public" for longer, and the two disagreed in public.
 
 ## WS-18: the training loop
 

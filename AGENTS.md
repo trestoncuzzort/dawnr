@@ -42,7 +42,7 @@ exists to answer is whether a model built from that data does more per parameter
 | `ROADMAP.md` | the public face of the same, updated as things finish |
 | `t/RUN-NEXT.md` | the recipe for the next pipeline run, with the number behind each choice |
 | `t/` | the language, the seven lowerings, and every pipeline script |
-| `t/twins/` | 426 verified programs each paired with a near-miss and the input that separates them |
+| `t/twins/` | 426 pairs over 213 verified programs, each paired with a near-miss and the input that separates them |
 | `locallm/` | a transformer trained from random weights on the filtered data |
 | `internal/CODEX-SKILLS.md` | index of the skill library pulled from the lab workstation |
 

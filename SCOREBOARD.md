@@ -38,7 +38,8 @@ approaches, 209 well-formed answers to Phi's 12 from a model about 1,200 times
 smaller, and loses the gate that decides the score, which is passing the
 problem's own tests. Of 209 well-formed answers, 2 computed the right values
 and 204 were proven correct against a specification the model wrote for a
-function nobody asked for. The gap is problem-solving, not formality.
+function nobody asked for. The remaining 3 were neither: well formed, but not
+proven and not passing. The gap is problem-solving, not formality.
 
 ## Other models run through the pipeline, which are not the product
 
@@ -120,7 +121,7 @@ what it was asked to teach, and that skill did not reach unaided synthesis.
 
 | Idea | Measured | Record |
 |---|---|---|
-| More problems | the corpus is exhausted at about 3,000: APPS's test split yields 37 more, widening t's value kinds at most 353 | [`t/funnel.py`](t/funnel.py) |
+| More problems | **superseded 2026-09-20.** Read as "exhausted at about 3,000" until the stdin-shaped problems `t/nl_stdin.py` had already measured were wired in: pool v6 is 4,035, **+1,032 (+34.4%)**, APPS 474 and CodeContests 558. APPS's test split still yields 37 more on top | [`t/nl_stdin_pool.py`](t/nl_stdin_pool.py), [`t/funnel.py`](t/funnel.py) |
 | More answers per problem | rounds 4 and 5 grew the pool 60 to 87 rows and moved the clean count by 0 | [`t/out/score-r6.md`](t/out/score-r6.md) |
 | Let the model repair its own unproven answers | 110 repaired answers, 2 clean (1.8 percent against 21 percent for fresh samples) | [`t/runs/2026-09-17/NOTES-home.md`](t/runs/2026-09-17/NOTES-home.md) |
 | A more tolerant reader (comments, `&&`, `\|\|`) | rescues 119 of 6,603 refused replies, 2 percent | [`t/FUNNEL-2026-09-18.md`](t/FUNNEL-2026-09-18.md) |
