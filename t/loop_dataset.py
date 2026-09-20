@@ -511,6 +511,32 @@ def load_spec_results() -> dict:
 # Statuses that mean check_task produced NO verdict because the problem's
 # reference solution could not be exercised, as opposed to a verdict against the
 # specification. Only these may fall back to the problem's own stated examples.
+#
+# PRIOR ART, and it splits. "Correct Tests Are Not Enough: Measuring and Training
+# Oracle Conversion in Specification-Based Test Generation"
+# (arXiv:2609.05879) builds the same distinction and states it directly:
+# "Reference timeouts or disagreements invalidate that input's oracle, not treated
+# as negative evidence." That is exactly the half of this rule that says a
+# reference which cannot run is a missing verdict, not a failing one.
+#
+# It takes the OPPOSITE choice on the other half. Where the oracle is invalid it
+# sets the detection set to the empty set -- it drops the case -- and it removes
+# stated examples and sample I/O from its prompts on purpose rather than falling
+# back to them. Under that design the 14 string answers stay out.
+#
+# Admitting them on a weaker, labelled tier is a deliberate divergence, and the
+# reason is the objective. That paper is measuring how well a model generates
+# tests, where dropping an uncheckable case costs only sample size. Here the
+# supervised pool is 75 examples and is the binding constraint on every locallm
+# round, so 14 answers that passed their tests and read verified / refuted in all
+# seven kernels are worth admitting with their provenance recorded. The tier is
+# visible in the evidence, not hidden: a reader can separate the two populations
+# by asking which rows have status "agrees".
+#
+# That paper also names this project's own scoreboard column. Its
+# Oracle-Conversion Efficiency, OCE = sum|E_q| / sum|P_q| over potential and
+# effective detection sets, is the published form of "converts", and it measures a
+# conversion gap of 11.83 points, 24.06% input kill against 12.23% full kill.
 # "arity differs from the problem" and "interpreter refused" are deliberately NOT
 # here: the first means the answer is shaped for a different problem and the
 # second that the specification could not be evaluated, and neither is a missing

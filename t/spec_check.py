@@ -581,6 +581,18 @@ def main() -> int:
     # in the tree for a day. Silence about a tag now says nothing about it.
     empty = [t for t in tags if t not in {tag for tag, _n, _r in rows}]
     if empty:
+        # INVENTED, and the search that says so is recorded rather than implied.
+        # No paper was found covering this case in program verification. The
+        # nearest prior art is in supply-chain provenance, where SLSA draws the
+        # same line between a manifest, which lists what claims to be present, and
+        # a signed attestation, which asserts what a pipeline actually consumed --
+        # and notes that confirming each input met its requirements "is the piece
+        # that doesn't exist yet, and this is the step most pipelines skip"
+        # (slsa.dev/spec/v1.0/verifying-artifacts). The cumulative "tags" list here
+        # is the manifest and the "results" rows are the attestation, and they had
+        # drifted apart by 30 tags. The in-repo precedent is CORRECTIONS.md's first
+        # entry, the same mistake in score_heldout.py.
+        #
         # Say only what is established. Reaching the checker needs a kernels.md,
         # a tasks/<name>.json, and -- under --only clean -- a row whose tests pass
         # AND whose seven kernels all read verified / refuted. A task id outside

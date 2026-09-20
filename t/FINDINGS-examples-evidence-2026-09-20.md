@@ -111,3 +111,51 @@ is now a WS-13.1 construct item with a measured 14-example price rather than a
 guess. And the honest next measurement is whether a round trained on the 90 beats
 one trained on the 75 — the 15 are all one shape, string problems, so they may
 teach a narrow thing well and nothing else.
+
+## Prior art, checked after the fact, and it splits
+
+This section exists because the search should have come first and did not. Two of
+the changes above were written from an in-repo precedent and a measurement, and
+the rule is that every implementation checks for a repository or a paper before it
+is written. Searching afterwards found something that matters.
+
+**"Correct Tests Are Not Enough: Measuring and Training Oracle Conversion in
+Specification-Based Test Generation"** ([arXiv:2609.05879](https://arxiv.org/abs/2609.05879))
+builds the same distinction this change rests on, and states it outright:
+*"Reference timeouts or disagreements invalidate that input's oracle, not treated
+as negative evidence."* That is the half of the rule saying a reference which
+cannot run is a missing verdict rather than a failing one, independently arrived at
+and now independently supported.
+
+**It takes the opposite choice on the other half.** Where the oracle is invalid it
+sets the detection set to empty — it drops the case — and it removes stated
+examples and sample I/O from its prompts deliberately rather than falling back to
+them. Under that design all 14 string answers stay out.
+
+Admitting them on a weaker, labelled tier is therefore a divergence from the
+nearest published design, not an implementation of it, and the reason is the
+objective. That paper measures how well a model generates tests, where dropping an
+uncheckable case costs only sample size. Here the supervised pool is 75 examples
+and is the binding constraint on every locallm round. The divergence is recorded
+so a later reader can reverse it in one line: delete `NO_REFERENCE_VERDICT` from
+the gate and the pool returns to 75.
+
+**The same paper names this project's own column.** Its Oracle-Conversion
+Efficiency, `OCE = Σ|E_q| / Σ|P_q|` over potential and effective detection sets, is
+the published form of what `SCOREBOARD.md` calls "converts", and it measures a
+conversion gap of **11.83 points** — 24.06% input kill against 12.23% full kill on
+a Qwen3.5-9B, closing only to 11.12 points after training. That is a third
+independent measurement of the shape this project reports, with a real denominator,
+and "oracle conversion" is the term to use rather than coining another.
+
+**The `NOT CHECKED` guard in `spec_check.py` was invented.** No paper was found
+covering it in program verification. The nearest prior art is in supply-chain
+provenance: SLSA separates a *manifest*, which lists what claims to be present,
+from a *signed attestation*, which asserts what a pipeline actually consumed, and
+observes that confirming each input met its requirements "is the piece that doesn't
+exist yet, and this is the step most pipelines skip"
+([slsa.dev](https://slsa.dev/spec/v1.0/verifying-artifacts)). The cumulative `tags`
+list is the manifest here and the `results` rows are the attestation; they had
+drifted apart by 30 tags. That is an analogue from another domain, not a
+specification to implement, so the code is this project's own and is labelled as
+such in the file.
