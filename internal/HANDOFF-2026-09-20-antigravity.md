@@ -6,8 +6,9 @@ otherwise. Read `AGENTS.md` first, then this.
 
 Since the first version, the whole lab was run end to end on 24 problems to find
 what a day of changes had broken. It found two real bugs, both now fixed; the
-section "The regression run, 2026-09-20" has the results and the one rule worth
-carrying forward.
+section "The regression run, 2026-09-20" has the results and the rules worth
+carrying forward. It found three bugs, not two; the third made every
+`grade_lab.sh <mode>` call since a6acacb exit 0 without grading anything.
 
 ## The headline, and exactly how far it is supported
 
@@ -330,12 +331,13 @@ lesson is that a zero found by a search is a property of the search.
 `locallm/FINDINGS-completeness-2026-09-20.md` carries the correction at its
 head and the case at its end.
 
-## The regression run, 2026-09-20: what it proved and the two bugs it found
+## The regression run, 2026-09-20: what it proved and the three bugs it found
 
 Everything above was written and changed in one day, so before handing it over I
 ran the whole lab end to end on 24 problems, GPU generation and CPU grading, to
 find what the day had broken. **Run this again after any change to the
-readers.** It is cheap and it has now caught two real bugs.
+readers.** It is cheap and it caught three real bugs, all three of which
+reported success while doing nothing.
 
 What passed, and these are the claims you may rely on:
 
@@ -382,6 +384,32 @@ cannot be written without one.
 `loop_filter.HEAD_LINE` and nowhere else, and make every reader call
 `strip_head`. The test file exists to enforce exactly that.
 
+**Bug 3, fixed (`042e35c`), and the worst of the three.** With bugs 1 and 2
+fixed the run reached grading, and `bash t/grade_lab.sh heldout locallm-smoke`
+printed its load line, exited **0**, and produced no table. `bash -x` found it:
+the load guard added in `a6acacb` does `set -- $BUSY` to split the machine
+reading, `set --` replaces the **positional parameters**, and this script's mode
+is `$1`. So `heldout` became `8.69`, the `case` matched no branch, and the
+script fell off the end reporting success.
+
+Every `grade_lab.sh <mode>` call between `a6acacb` and today did nothing and
+said it worked. Check any table you believe was written in that window; if a
+`kernels.md` is missing or stale and the log looked clean, this is why. `read -r`
+replaces `set --` and does not touch `$@`.
+
+That is **twice in one day from one root cause** (`gen_fleet.sh` was the other).
+If you write shell here, `set --` is a loaded gun; use `read -r`, and prefer
+running the thing over reading it, because reading it is exactly what missed
+this for a day.
+
+**After all three fixes the whole chain runs**, verified 2026-09-20: corpus,
+head alignment, training from the pretrained core, sharded generation on four
+cards, extract, tests, **all seven kernels** (9 tasks, 7 of 7 columns present,
+6 `verified / refuted`), `spec_check` (0 agree / 6 disagree / 3 uncheckable),
+`spec_scorecard` (6 proven-but-wrong at post-correctness 0.000) and
+`preflight` (ready, 3 known warnings). The 150-step smoke model is bad, which is
+expected and is not what this run was measuring.
+
 **Not a repo bug, but it will catch you too:** `t/grade_lab.sh` is written to run
 **from the desktop and ssh into the lab**. Running it *on* the lab gives
 `T_LAB: set T_LAB=user@host` and looks like a missing config. It is not; you are
@@ -425,9 +453,12 @@ those, which is where the 75 / 31 above come from.
    number, then 24 answers. Put the head in `loop_filter.HEAD_LINE` and nowhere
    else, and make every reader call `loop_filter.strip_head`.
    `t/test_head_handling.py` enforces it.
-8. **`t/gen_fleet.sh` took the caller's extra flags and threw them away** until
-   `75a43fa` on 2026-09-20. Any fleet-generated set older than that commit was
-   decoded with defaults, whatever its log line says.
+8. **`set --` in a shell script replaces the positional parameters**, and it
+   bit twice on 2026-09-20. `t/gen_fleet.sh` threw away the caller's extra
+   flags until `75a43fa`, so any fleet set older than that was decoded with
+   defaults whatever its log says. `t/grade_lab.sh` overwrote its own mode
+   argument until `042e35c`, so every `grade_lab.sh <mode>` call after
+   `a6acacb` exited 0 without grading. Use `read -r`.
 
 ## Two commands that do the first two steps for you
 
