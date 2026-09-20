@@ -1142,3 +1142,82 @@ That is our `verified / decorative` cell and our 12.6 finding about specificatio
 that restate the body, arrived at independently and measured on the same programs. It
 is the closest external comparison this project has on its own coverage corpus, and
 nothing in `t/COVERAGE-mbpp-dfy-lifter.md` cites it yet.
+
+## PoPilot: this project's thesis, published and measured, 2026-09-20
+
+[arXiv:2502.11901](https://arxiv.org/abs/2502.11901), "Building A Proof-Oriented
+Programmer That Is 64% Better Than GPT-4o Under Data Scarcity", is the closest
+published match to what this repository is for, and it was not on any reading list
+here until tonight. F\*, explicit data scarcity, verifier-filtered
+model-generated training data.
+
+Its Table 2, on 1,000 held-out repository-level problems, evaluates the
+data-generating teachers on the same set as the student. Teachers at Generate@5:
+Qwen2.5-Coder-32B-Instruct **24.2**, Qwen2.5-Coder-14B-Instruct **24.0**,
+DeepSeek-Coder-V2-Lite **24.4**, GPT-4o **22.2**. The student, a
+Qwen2.5-Coder-14B fine-tuned on those teachers' verifier-filtered outputs:
+**33.0 to 34.0** Generate@5, **38.5** Generate@10, **39.4** with repair.
+
+**The student beat every one of its teachers by nine to ten points absolute, about
+40% relative, at the same parameter count as one of them.** The mechanism is this
+project's own argument: the teachers' outputs passed the F\* type-checker before
+training, so the student learned only from the teacher's *successful conversions*
+and inherited the filtered distribution rather than the teacher's raw ability.
+
+Two of its findings cut against what is being done here, and both are worth more
+than the corroboration.
+
+**Diversity beat volume, and non-domain data beat more domain data.** 54K F\*
+examples give 0.42 pass@1. Nearly doubling the domain data to 93K gives 0.48, +6.
+Adding 80K of *general* code (Magicoder-Evol-Instruct) to the original 54K gives
+**0.52, +10**. The full mixture, 93K F\* plus 20K Lean plus 50K Evol plus 15K
+CodeAlpaca plus 15K RunBugRun, reaches 0.58. locallm trains on a corpus that is
+100% `t` and, at the supervised pool's current size, about 90 examples; this says
+the next lever is a mixture, not more `t`.
+
+**Rule-based synthetic negatives actively hurt them.** AST-mutation repair data
+*dropped* performance. Our preference pairs are exactly that shape: a twin produced
+by a mutation operator, with a witness. The twin's role as a *gate* is unaffected,
+because there the seven provers judge it and a witness makes it a real refutation.
+Its role as a *training negative* is what this result questions, and the reward
+ablation (WS-19 move 7) is where that should be measured rather than assumed.
+
+## Why the literature mostly cannot see the gap this project reports
+
+Baldur ([arXiv:2303.04910](https://arxiv.org/abs/2303.04910)) states the reason
+plainly:
+
+> "in Baldur's domain of theorem proving, it is impossible to produce a proof that
+> appears to prove the theorems, but actually fails to do so, because the theorem
+> prover acts as an absolute oracle for the correctness of the proof."
+
+Where the statement is given, solve-rate and conversion-rate collapse into one
+number by construction, and there is nothing to separate. The gap only opens when
+the *specification* may be weaker than the intent, which is the case this project
+works in and the reason `spec_check.py` and the twin exist. So the scarcity of
+external comparisons is structural, not an oversight.
+
+Two same-system separations do exist. **AlphaVerus**
+([arXiv:2412.06176](https://arxiv.org/abs/2412.06176)) measures verified code
+generation from a specification at **65.7%** on MBPP and proof annotation given
+already-correct code at **75.7%** on the same set. And **VERINA**
+([arXiv:2505.23135](https://arxiv.org/abs/2505.23135)) reports the sharpest number
+of all, inside its specification task: o4-mini's specifications are sound and
+complete **51.0% by testing and 3.7% when formally proved**, a fourteenfold gap
+between the two oracles. That is precisely the distance between our
+`spec_check.py`, which tests against the problem's own solution on random draws,
+and a formal check, and it is the strongest external argument that the
+specification-check column is a weaker instrument than the seven provers rather
+than an equal one.
+
+### Corrections to priors this sweep found
+
+The F\* dataset paper ([arXiv:2405.01787](https://arxiv.org/abs/2405.01787)) is
+**32,054 top-level definitions**, of which 22,779 are in the train split, not the
+600K figure that had been repeated here; 600K is its line count. Its models are
+Phi-2 2.7B, Orca-2 7B and StarCoder 15.5B, not a 1.5B-class set. And **none of this
+family is distillation**: "distill" appears zero times in that paper, zero in
+Baldur, zero in AutoVerus, and once in AlphaVerus as part of a model name. The F\*
+paper's target response "is set to be the definition from the dataset itself",
+human-written ground truth; AlphaVerus fine-tunes nothing at all and is in-context
+few-shot over a self-built exemplar pool.
