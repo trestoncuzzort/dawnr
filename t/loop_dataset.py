@@ -508,6 +508,17 @@ def load_spec_results() -> dict:
     return results
 
 
+# Statuses that mean check_task produced NO verdict because the problem's
+# reference solution could not be exercised, as opposed to a verdict against the
+# specification. Only these may fall back to the problem's own stated examples.
+# "arity differs from the problem" and "interpreter refused" are deliberately NOT
+# here: the first means the answer is shaped for a different problem and the
+# second that the specification could not be evaluated, and neither is a missing
+# verdict. Measured 2026-09-20: 0 rows in either status hold at their examples
+# anyway, so nothing is lost by excluding them and a real signal is kept.
+NO_REFERENCE_VERDICT = frozenset({"no valid draws", "reference result has no t value"})
+
+
 def positive_rejection(sample: dict, results: dict, pool_name: str | None = None) -> str | None:
     """First failed gate, or None for a current, explicitly checked positive."""
     if not sample["wellformed"]:
@@ -523,10 +534,37 @@ def positive_rejection(sample: dict, results: dict, pool_name: str | None = None
     result = results.get(f"{sample['tag']}/{sample['name']}")
     if not isinstance(result, dict):
         return "spec-unchecked"
-    if result.get("status") != "agrees":
+    status = result.get("status")
+    # Two evidence paths, and the order here is the whole design.
+    #
+    # The strong one is check_task: the problem's reference solution supplying the
+    # result on up to --n random arguments. The weak one is check_points: the
+    # specification evaluated at the input/output pairs the problem itself states.
+    # The weak path exists because the strong one cannot run at all for a whole
+    # class of problems -- every string problem, since t has no string type, so no
+    # drawn argument shape fits the reference and the status reads
+    # "no valid draws". 14 answers that pass their tests and read
+    # verified / refuted in all seven kernels were being dropped for want of
+    # evidence rather than for being wrong (t/FINDINGS-examples-evidence-2026-09-20.md).
+    #
+    # The weak path may only supply a MISSING verdict. It may never overturn a
+    # negative one, and the measurement is unambiguous about why: of the 12
+    # specifications known to disagree with their reference solution that carry
+    # these columns, 6 hold at every example their problem states. Three stated
+    # examples do not catch what 100 draws catch. phi4-mini-v3/mbpp_20__is_woodall
+    # is false at n=63 and holds at all three; locallm-r9-seed42/mbpp_541__check_abundant
+    # is false at n=2 and holds at all three. A rule that let the examples answer
+    # for the draws would have readmitted every one of them.
+    examples_hold = (type(result.get("points_held")) is int and result["points_held"] > 0
+                     and result.get("points_failed") == 0
+                     and result.get("over_constrained") is not True)
+    if status == "agrees":
+        if type(result.get("draws")) is not int or result["draws"] <= 0:
+            return "spec-no-valid-draws"
+    elif status in NO_REFERENCE_VERDICT and examples_hold:
+        pass                               # admitted on the problem's own examples
+    else:
         return "spec-not-agrees"
-    if type(result.get("draws")) is not int or result["draws"] <= 0:
-        return "spec-no-valid-draws"
     if type(result.get("task_id")) is not int or result["task_id"] != sample["task_id"]:
         return "spec-problem-mismatch"
     if pool_name is not None and result.get("pool") != pool_name:

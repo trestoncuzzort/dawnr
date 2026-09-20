@@ -581,9 +581,18 @@ def main() -> int:
     # in the tree for a day. Silence about a tag now says nothing about it.
     empty = [t for t in tags if t not in {tag for tag, _n, _r in rows}]
     if empty:
-        print(f"\nNOT CHECKED, no answer of theirs was in pool {a.pool}: {', '.join(empty)}")
-        print("  These tags are left out of the checked list. Re-run them against the pool "
-              "they were graded on.")
+        # Say only what is established. Reaching the checker needs a kernels.md,
+        # a tasks/<name>.json, and -- under --only clean -- a row whose tests pass
+        # AND whose seven kernels all read verified / refuted. A task id outside
+        # the pool is NOT one of the reasons: that case still writes a row, with
+        # status "problem not in pool". Naming a cause this loop cannot tell apart
+        # would be a false verdict, which is the one thing this file must not emit.
+        print(f"\nNOT CHECKED, no answer of theirs reached the checker under --only {a.only}: "
+              f"{', '.join(empty)}")
+        print("  Left out of the checked list, because a tag nothing was checked for must not "
+              "read as a tag that passed. Look for a missing kernels.md or tasks/ directory, "
+              "no row that is both test-passing and clean in all seven, or a pool the arm was "
+              "not graded against.")
     lines = ["# Specifications against the problems' own solutions, 2026-09-18", "",
              f"`python3 t/spec_check.py --pool {a.pool} --n {a.n} --only {a.only}`, seed {a.seed}. Each task's",
              "`ensures` is evaluated with the problem's reference solution supplying the result, on random",

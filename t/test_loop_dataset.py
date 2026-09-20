@@ -111,6 +111,64 @@ class SampleGateTests(unittest.TestCase):
                 modified[key]["points_failed"] = value
                 self.assertIsNone(dataset.positive_rejection(modified and s, modified, "v5"))
 
+    def test_examples_supply_a_missing_verdict_but_never_overturn_a_negative_one(self):
+        """t has no string type, so check_task cannot draw an argument the reference
+        solution of a string problem will accept and the status reads "no valid
+        draws" -- no verdict, not a bad one. check_points answers such a problem
+        from the input/output pairs it states. But the examples are WEAKER than the
+        draws, measured: of 12 specifications known to disagree with their
+        reference, 6 hold at every stated example. So a disagreement is absolute.
+        """
+        s = sample()
+        key = f"{s['tag']}/{s['name']}"
+
+        def ev_with(**kw):
+            e = evidence(s)
+            e[key].update(**kw)
+            return e
+
+        # No verdict + holds at every stated example -> admitted.
+        for status in ("no valid draws", "reference result has no t value"):
+            with self.subTest(status=status):
+                e = ev_with(status=status, draws=0, points_held=3, points_failed=0)
+                self.assertIsNone(dataset.positive_rejection(s, e, "v5"))
+                self.assertEqual(dataset.positives_of([s], results=e, pool_name="v5"), [s])
+
+        # A disagreement stays a rejection however well the examples hold. This is
+        # the case that would have readmitted six known-wrong specifications.
+        e = ev_with(status="disagrees", draws=0, points_held=3, points_failed=0)
+        self.assertEqual(dataset.positive_rejection(s, e, "v5"), "spec-not-agrees")
+
+        # Statuses that are not a missing verdict get no fallback.
+        for status in ("arity differs from the problem", "interpreter refused"):
+            with self.subTest(status=status):
+                e = ev_with(status=status, draws=0, points_held=3, points_failed=0)
+                self.assertEqual(dataset.positive_rejection(s, e, "v5"), "spec-not-agrees")
+
+        # No verdict and no examples either is still no evidence.
+        for held, failed in ((0, 0), (0, 3), (3, 1)):
+            with self.subTest(held=held, failed=failed):
+                e = ev_with(status="no valid draws", draws=0,
+                            points_held=held, points_failed=failed)
+                self.assertEqual(dataset.positive_rejection(s, e, "v5"), "spec-not-agrees")
+
+        # Over-constrained: it refused every example it was given.
+        e = ev_with(status="no valid draws", draws=0, points_held=0,
+                    points_failed=0, points_excluded=3, over_constrained=True)
+        self.assertEqual(dataset.positive_rejection(s, e, "v5"), "spec-not-agrees")
+
+        # The examples path does not excuse the other gates.
+        e = ev_with(status="no valid draws", draws=0, points_held=3,
+                    points_failed=0, pool="v1")
+        self.assertEqual(dataset.positive_rejection(s, e, "v5"), "spec-pool-mismatch")
+        e = ev_with(status="no valid draws", draws=0, points_held=3,
+                    points_failed=0, task_sha256="old")
+        self.assertEqual(dataset.positive_rejection(s, e, "v5"), "spec-hash-missing-or-stale")
+
+        # An agreeing result still needs a real draw; the examples do not stand in.
+        e = ev_with(draws=0, points_held=3, points_failed=0)
+        self.assertEqual(dataset.positive_rejection(s, e, "v5"), "spec-no-valid-draws")
+
     def test_seven_means_exact_named_clean_kernels(self):
         s = sample()
         for columns in (["dafny"] * 7, list(spec_check.KERNELS[:-1]) + ["fake"],
