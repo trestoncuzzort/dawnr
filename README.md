@@ -48,12 +48,13 @@ hashes and caveats is [`locallm/ACHIEVEMENTS.md`](locallm/ACHIEVEMENTS.md).
 
 **1. It learned to write a formal language almost perfectly, from nothing.**
 Starting from random numbers, with no downloaded model and no pretrained weights,
-it produced a syntactically valid program in t for **209 of 232** problems it
-had never seen. Microsoft's Phi-4-mini, a model roughly a thousand times larger
-trained on a large part of the public internet, managed **12**. Everyone assumes the hard part for a tiny model is
+the 3.2M-parameter version produced a syntactically valid program in t for
+**209 of 232** problems it had never seen. Microsoft's Phi-4-mini, which at
+3.8B parameters is about 1,200 times larger and trained on a large part of the
+public internet, managed **12**. Everyone assumes the hard part for a tiny model is
 learning the notation. It isn't. It's nearly free.
 
-**2. It now matches a Microsoft model a thousand times its size.** On 232
+**2. It now matches a Microsoft model 41 times its size.** On 232
 problems it had never seen, locallm and Phi-4-mini each produced **3** answers
 that passed the problem's tests, were proved correct by all seven systems, and
 had their sabotaged twins caught. All three of locallm's also survived a check
@@ -190,7 +191,7 @@ that column it reads 3 against 2.
 It is a tie, not a win, and it is three answers wide. The target is still to
 beat Phi outright. It wins the
 notation by a distance no baseline approaches, 209 well-formed answers to
-Phi's 12 from a model a thousand times smaller, and loses the gate that
+Phi's 12 from the 3.2M model, about 1,200 times smaller, and loses the gate that
 decides the score, which is passing the problem's own tests. Of 209 well-formed
 answers, 2 computed the right values and 204 were proven correct against a
 specification the model wrote for a function nobody asked for.
