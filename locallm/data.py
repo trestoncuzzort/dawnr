@@ -5,8 +5,10 @@ needs only the standard library; optional byte-BPE uses the tokenizers package.
 """
 from __future__ import annotations
 
+import array
 import hashlib
 import json
+import os
 import random
 from pathlib import Path
 
@@ -364,6 +366,52 @@ def build_tokenizer(text: str, kind: str = "char", vocab_size: int = 8192,
     raise ValueError(f"unknown tokenizer kind: {kind}")
 
 
+TOKEN_CACHE_ENV = "LOCALLM_TOKEN_CACHE"
+
+
+def cached_encode(tokenizer, text: str, what: str = "corpus"):
+    """Encode once and reuse, because the ids are a pure function of the inputs.
+
+    Measured 2026-09-20 on the lab: the frozen source corpus costs about 77
+    seconds to byte-BPE at every training start, plus 15 for its validation
+    half, and a six-arm study pays it twelve times for text that never changes.
+    That is roughly 8% of each arm's wall clock spent re-deriving a constant,
+    and a resumed run pays it again.
+
+    Pre-tokenizing into a binary beside the corpus is what every large training
+    pipeline does (Megatron's .bin/.idx pair, memory-mapped). Ours is 46M tokens,
+    184 MB as int32, so it fits in memory and needs no index.
+
+    Off unless LOCALLM_TOKEN_CACHE names a directory, so no existing command
+    changes behaviour by upgrading. The key is the sha256 of the text AND the
+    tokenizer's fingerprint, so a cache hit is only possible for the exact pair
+    that produced it: a changed corpus or a retrained tokenizer cannot collide
+    with a stale entry.
+    """
+    directory = os.environ.get(TOKEN_CACHE_ENV, "").strip()
+    if not directory:
+        return tokenizer.encode(text)
+    key = hashlib.sha256(
+        hashlib.sha256(text.encode("utf-8")).hexdigest().encode()
+        + tokenizer_fingerprint(tokenizer).encode()).hexdigest()[:32]
+    cache = Path(directory)
+    path = cache / f"{key}.int32"
+    try:
+        if path.exists():
+            return array.array("i", path.read_bytes()).tolist()
+    except (OSError, ValueError):
+        pass                      # an unreadable cache is a miss, never an error
+    ids = tokenizer.encode(text)
+    try:
+        cache.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_bytes(array.array("i", ids).tobytes())
+        temporary.replace(path)   # atomic: a reader never sees half a corpus
+    except (OSError, ValueError, OverflowError):
+        pass                      # caching is an optimization, never a failure
+    return ids
+
+
 class Corpus:
     """Holds train/val splits as token tensors and serves random batches."""
 
@@ -379,8 +427,8 @@ class Corpus:
         self.split_mode = "explicit" if validation_text is not None else ("grouped" if grouped else "positional")
         if validation_text is not None:
             train_text, val_text = text, validation_text
-            train_ids = torch.tensor(tokenizer.encode(train_text), dtype=torch.int32)
-            val_ids = torch.tensor(tokenizer.encode(val_text), dtype=torch.int32)
+            train_ids = torch.tensor(cached_encode(tokenizer, train_text, "train"), dtype=torch.int32)
+            val_ids = torch.tensor(cached_encode(tokenizer, val_text, "validation"), dtype=torch.int32)
         elif grouped:
             train_text, val_text = group_split(text, val_frac, seed)
             train_ids = torch.tensor(tokenizer.encode(train_text), dtype=torch.int32)
