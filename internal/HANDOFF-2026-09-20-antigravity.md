@@ -137,6 +137,25 @@ all verifiable without a GPU.
 the stripper, both splitters and the aligner. That mistake has been made three
 times; the test is there so it is made zero more.
 
+## Optimizations made after the runs stopped
+
+| change | what it buys |
+|---|---|
+| `t/gen_fleet.sh` | the measured **12x** on generation, permanently: shards the held-out list stride-wise, a worker per shard per card, no coordination because answers already on disk are skipped, sentinel written **only on success** |
+| `t/loop_locallm.py --use-cache` | the KV cache this project built and verified correct was unreachable from the pipeline; every generation has been decoding 1200 tokens an answer without it. Off by default, **unmeasured on this path**, prediction to register in the help text |
+| `t/preflight.py` | reads the grading machine's HEAD and dirty count and says when it is not this tree. It found the drift on its first run |
+| `t/grade_lab.sh` | reads load, cores and our own running workers before choosing cell count, instead of always taking 32. A SPARK cell averages 3.4 cores, so cells are the budget |
+| four `t/steps.json` entries | the fleet, both recovery scripts and the examples corpus, drivable from t Lab |
+
+**`t/spec_check.py` was considered for parallelism and deliberately left
+serial.** One `random.Random(seed)` is threaded through every task in order, so
+task N's arguments depend on tasks 1..N-1. That is what makes a seed reproduce a
+report, and it means any concurrency changes the verdicts. Its output is cited
+evidence, including the figure in the README and the file the training gate
+reads. The safe route is per-task seeding from the task's own hash, which is a
+change to the instrument and needs every report regenerated and the change
+registered. The reasoning is written at the line someone would edit.
+
 ## Traps that cost time today
 
 1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless

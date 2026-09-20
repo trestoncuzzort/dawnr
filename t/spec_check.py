@@ -197,6 +197,19 @@ def main() -> int:
     if a.n < 1:
         ap.error("--n must be positive")
     pool = se.pool(a.pool)
+    # ONE generator, threaded through every task in order, so task N's arguments
+    # depend on tasks 1..N-1. That is what makes `--seed 1` reproduce a report
+    # exactly, and it is also why this loop cannot be parallelized for speed:
+    # any concurrency changes the draw order and therefore the verdicts, and
+    # this file's output is cited evidence (t/SPEC-CHECK-*.md, the README's
+    # 650-answer figure, and t/out/spec-disagree.json, which the training gate
+    # reads). Considered and rejected on 2026-09-20.
+    #
+    # The safe route, if the runtime ever matters: seed per task from the task's
+    # own sha256 instead of sharing this generator, which makes tasks
+    # independent and parallelizable. That is a change to the instrument, not an
+    # optimization of it -- every existing report would have to be regenerated
+    # and the change registered before anyone compares old numbers with new.
     rnd = random.Random(a.seed)
     root = HERE / "out" / "spec-experiment"
     tags = a.tags or sorted(p.name for p in root.glob("*") if (p / "kernels.md").exists())

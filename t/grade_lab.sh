@@ -43,6 +43,28 @@ if ! $SSH "$LAB" true 2>/dev/null; then
   echo "connected"
 fi
 $SSH "$LAB" "mkdir -p ~/.cache/t-watch $WORK && touch ~/$REMOTE_EV"
+
+# JOBS used to be 32 whatever else was on the machine. On 2026-09-19 ten
+# generation workers, a 7B model and 32 grading cells put the load average at 80
+# on a 120-core box shared with another user, and the ssh carrying this script
+# timed out mid-grade: the kernels survived as orphans and the table was never
+# written. Read the machine first and take what is actually free.
+BUSY=$($SSH "$LAB" "cut -d' ' -f1 /proc/loadavg; nproc; ps -eo cmd | grep -cE '[l]oop_locallm.py generate|[l]oop_generate.py'" 2>/dev/null | tr '\n' ' ')
+set -- $BUSY
+LOAD=${1:-0}; CORES=${2:-120}; OURS=${3:-0}
+HEADROOM=$(awk -v c="$CORES" -v l="$LOAD" 'BEGIN{h=int(c-l); print (h>0)?h:0}')
+if [ "${OURS:-0}" -gt 0 ]; then
+  echo "NOTE: $OURS of our generation workers are still running on the grading machine."
+  echo "      Generation is GPU work and grading is CPU work, but they share the box and"
+  echo "      the connection. Consider waiting; continuing with fewer cells."
+fi
+# A SPARK cell averages 3.4 cores, so cells, not threads, are the budget.
+FIT=$(( HEADROOM / 4 ))
+[ "$FIT" -lt 4 ] && FIT=4
+if [ "$FIT" -lt "$JOBS" ]; then
+  echo "load $LOAD on $CORES cores: taking $FIT cells instead of $JOBS"
+  JOBS=$FIT
+fi
 # The pull used to be `|| true`, which is how the grading machine ran 19 commits
 # behind origin with 109 dirty entries for an unknown number of rounds while
 # every log line said the round had started normally (2026-09-19). A grader that
