@@ -137,7 +137,13 @@ case "${1:-seeds}" in
            # a held-out set has no grade-in/: nothing is pre-filtered, every answer is graded, which is what
            # makes it a measurement of the model rather than of the filter. Named tags may follow, so a later
            # round grades its own two sets without this list being edited (2026-09-18).
-           for T in "${@:-phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4}"; do
+           # "${@:-a b c d}" expands to ONE word holding all four names, so with
+           # no tags the loop ran once against a tag that cannot exist and printed
+           # "no answers yet, skipped" (issue #24). The tagged form always worked,
+           # which is why every run in this session succeeded and nobody noticed.
+           heldout=("$@")
+           [ ${#heldout[@]} -eq 0 ] && heldout=(phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4)
+           for T in "${heldout[@]}"; do
              [ -d "$SE/$T/raw" ] || { echo "== $T: no answers yet, skipped"; continue; }
              [ -n "$(ls "$SE/$T/tasks"/*.json 2>/dev/null)" ] || { python3 t/spec_experiment.py extract --model $T --pool v3 &&
                                         python3 t/spec_experiment.py tests --model $T --pool v3; } || exit 1

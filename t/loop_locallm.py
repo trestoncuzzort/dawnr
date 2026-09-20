@@ -118,6 +118,35 @@ def problem_head(entry: dict, with_examples: bool = False) -> str:
     return head + examples(entry) if with_examples else head
 
 
+def held_out(split_path: str) -> set[int]:
+    """The ids no corpus may contain, read from the split that defines them.
+
+    Issue #30: the builder applied no split filter at all. `--sft` trusted its
+    input file and `--lifted` added MBPP-DFY-derived tasks with no check, and
+    MBPP-DFY is derived from the same MBPP the held-out split is drawn from, so
+    nothing but luck kept an evaluation problem out of training. Measured
+    2026-09-20, luck held: four current corpora and both historical ones contain
+    0 of 232 held-out ids. `t/preflight.py` checks this after the fact; this
+    stops it at the point the corpus is built, which is the only place it can be
+    stopped before a model has already seen the problem.
+
+    An empty set (no split given) means no filtering, which is the old
+    behaviour, so a caller that does not pass one is not silently changed.
+    """
+    if not split_path:
+        return set()
+    try:
+        return {int(i) for i in json.loads(Path(split_path).read_text(encoding="utf-8"))["eval_ids"]}
+    except (OSError, KeyError, ValueError) as e:
+        raise SystemExit(f"cannot read held-out ids from {split_path}: {e}")
+
+
+def mbpp_id(name: str) -> int | None:
+    """The MBPP number inside a lifted or committed task name, e.g. mbpp_269__f -> 269."""
+    m = re.match(r"mbpp_(\d+)__", name or "")
+    return int(m.group(1)) if m else None
+
+
 def clean_rows(table: Path) -> set[str]:
     rows = set()
     for line in table.read_text(encoding="utf-8").splitlines():
@@ -130,6 +159,8 @@ def clean_rows(table: Path) -> set[str]:
 def cmd_corpus(a) -> int:
     pool = se.pool(a.pool)
     docs, n_sft, n_lift, n_committed = [], 0, 0, 0
+    evil = held_out(getattr(a, "split", ""))      # ids that must not appear anywhere below
+    dropped = 0
     if a.base:
         # an existing corpus (e.g. t/runs/2026-09-16/loop-data/corpus.txt, which
         # already holds the lifted and committed tasks) under the new answers
@@ -137,13 +168,26 @@ def cmd_corpus(a) -> int:
         # Signature: belongs here for the same reason it belongs in the answer
         # splitter below: a corpus whose documents start with a head must be
         # split at every head this project writes, or two documents become one.
-        docs += [d.strip() + "\n"
-                 for d in re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", text) if d.strip()]
+        for d in re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", text):
+            if not d.strip():
+                continue
+            # the base corpus was built by an older run that may not have filtered
+            found = {i for i in (mbpp_id(n) for n in re.findall(r"task (mbpp_\d+__\w+)", d)) if i is not None}
+            if evil & found:
+                dropped += 1
+                continue
+            docs.append(d.strip() + "\n")
     for sft in a.sft:
         for line in Path(sft).read_text(encoding="utf-8").splitlines():
             r = json.loads(line)
             m = re.search(r"```t\n(.*?)```", r["chosen"], re.S)
             entry = pool.get(r["task_id"]) or pool.get(int(r["task_id"]))
+            try:
+                if int(r["task_id"]) in evil:
+                    dropped += 1
+                    continue
+            except (TypeError, ValueError):
+                pass
             if m and entry:
                 docs.append(problem_head(entry, a.examples) + m.group(1).strip() + "\n")
                 n_sft += 1
@@ -151,12 +195,18 @@ def cmd_corpus(a) -> int:
         keep = clean_rows(HERE / "COVERAGE-lifted-785.md")
         for f in sorted((HERE / "out" / "lifted-tasks").glob("*.json")):
             task = json.loads(f.read_text(encoding="utf-8"))
+            if mbpp_id(task.get("name")) in evil:
+                dropped += 1
+                continue
             if task.get("name") in keep:
                 docs.append(surface.print_task(task).strip() + "\n")
                 n_lift += 1
         keep = clean_rows(HERE / "AGREEMENT.md")
         for f in sorted((HERE / "tasks").glob("*.t")):
             task = surface.parse_file(str(f))
+            if mbpp_id(task.get("name")) in evil:
+                dropped += 1
+                continue
             if task.get("name") in keep:
                 docs.append(surface.print_task(task).strip() + "\n")
                 n_committed += 1
@@ -171,6 +221,10 @@ def cmd_corpus(a) -> int:
     out.write_text("\n\n".join(docs) + "\n", encoding="utf-8")
     print(f"corpus {out}: {len(docs)} documents (base {a.base or 'none'}, {n_sft} problem answers, {n_lift} lifted, "
           f"{n_committed} committed), {out.stat().st_size} bytes")
+    if evil:
+        print(f"held-out filter: {len(evil)} ids from {a.split}, {dropped} document(s) excluded")
+    else:
+        print("held-out filter: NOT APPLIED (no --split given); t/preflight.py will catch a leak after the fact")
     return 0
 
 
@@ -255,6 +309,10 @@ def main() -> int:
     p.add_argument("--examples", action="store_true",
                    help="put the problem's own assertions in the head; every model "
                         "compared against a model trained this way must get them too")
+    p.add_argument("--split", default="",
+                   help="exclude this split's eval_ids from every source (issue #30). "
+                        "Pass the split the model will be evaluated on; without it "
+                        "nothing is filtered and only preflight catches a leak.")
     p = sub.add_parser("train")
     p.add_argument("--corpus", default=str(OUT / "corpus.txt"))
     p.add_argument("--model", default=str(OUT / "model"))

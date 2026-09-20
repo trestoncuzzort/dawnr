@@ -114,7 +114,11 @@ def _install_group_reaper() -> None:
     import atexit
     import signal
     atexit.register(_kill_live_groups)
-    for sig in (signal.SIGTERM, signal.SIGHUP):
+    # SIGHUP does not exist on Windows, and this runs at import: without the
+    # guard the whole module raises AttributeError there and every test that
+    # touches the harness fails at collection rather than at use (issue #44).
+    for sig in (s for s in (getattr(signal, "SIGTERM", None),
+                            getattr(signal, "SIGHUP", None)) if s is not None):
         try:
             if signal.getsignal(sig) is signal.SIG_DFL:
                 signal.signal(sig, _kill_live_groups_and_die)
