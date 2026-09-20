@@ -148,7 +148,11 @@ def cmd_generate(a) -> int:
         head = problem_head(entry)
         text = checkpoint.sample(model, tok, head, a.tokens, temperature=a.temperature, top_k=a.top_k)
         body = text[len(head):] if text.startswith(head) else text
-        body = re.split(r"\n\s*\n(?=Problem: |t \d)", body, maxsplit=1)[0]
+        # A corpus whose documents begin with a head teaches the model to emit that
+        # head between documents, so the boundary the answer ends at must know
+        # about every head this project writes -- 2026-09-19, when a Signature:
+        # corpus left two programs in one reply and 216 of 232 answers unparseable.
+        body = re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", body, maxsplit=1)[0]
         record = {"task_id": tid, "fn": entry["fn"], "model": f"locallm:{a.model}", "digest": f"{params} params",
                   "pool_version": split.get("pool", "v1"), "prompt_version": "locallm-head",
                   "options": {"temperature": a.temperature, "top_k": a.top_k, "max_new_tokens": a.tokens,

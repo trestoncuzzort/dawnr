@@ -134,13 +134,17 @@ The target is Phi-4-mini, and the target is not a tie.
 | **locallm, round 4 (3.2M, from scratch)** | **ours** | **209** | 2 | **2** | 100% | 2 |
 | **locallm, round 5 (3.2M)** | **ours** | 198 | 2 | **2** | 100% | 2 |
 | **locallm, round 7 (92M, pretrained then specialized)** | **ours** | 136 | 1 | **1** | 1/1 | 1 |
+| **locallm, round 7b (the same model, decoded greedily)** | **ours** | 149 | 2 | **2** | 2/2 | **2** |
 | Phi-4-mini, 3.8B | baseline | 12 | 6 | **3** | 50% | 2 |
 | Phi-4-mini, regraded 2026-09-19 beside round 7 | baseline | 12 | 6 | **3** | 50% | 2 |
 | Qwen2.5-Coder-1.5B, untrained | baseline | 39 | 13 | **3** | 23% | 2 |
 | Qwen3.8-27B-FP8, prompted | reference, far larger | 116 | 81 | **12** | 15% | 11 |
 | DeepSeek-Prover-V2-7B, prompted | reference | 39 | 10 | **6** | 60% | 6 |
 
-**Where locallm stands, plainly: 2 clean against Phi's 3.** It wins the
+**Where locallm stands, plainly: 2 clean against Phi's 3.** The round 7b row is
+the strongest of them: it is the only locallm result whose every clean answer
+was also checked against the problem's own solution and agreed with it, which
+the 3.2M rows never were. It wins the
 notation by a distance no baseline approaches -- 209 well-formed answers to
 Phi's 12, from a model a thousand times smaller -- and loses the gate that
 decides the score, which is passing the problem's own tests. Of 209 well-formed
