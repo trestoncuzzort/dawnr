@@ -122,3 +122,46 @@ class ExampleConsistencyTests(unittest.TestCase):
         out = spec_check.check_points(task, entry([["int", 4]], ["int", 8]))
         self.assertEqual(out["points_failed"], 0)
         self.assertEqual(out["points_held"], 0)
+
+
+class ExploitTests(unittest.TestCase):
+    """AlphaVerus's exploit model: the laziest program that satisfies the spec."""
+
+    def build(self, ensures, params="s: seq", ret="r: seq", points=None):
+        task = task_of(ensures, params=params, ret=ret)
+        return task, {"fn": "f", "rec": {"code": "", "text": "t"}, "points": points}
+
+    def test_a_weak_sequence_spec_is_exploited_by_the_empty_sequence(self):
+        # The real one, from locallm-r4 on 2026-09-20: "remove all whitespaces"
+        # specified only that every character is alphanumeric and the result is
+        # no longer than the input. Returning nothing satisfies both.
+        task, entry = self.build(
+            "len(r) <= len(s)",
+            points=[{"args": [["seq", [97, 32, 98]]], "expected": ["seq", [97, 98]]}])
+        self.assertEqual(spec_check.exploit(task, entry)["exploited_by"], "empty sequence")
+
+    def test_a_spec_that_pins_the_answer_is_not_exploitable(self):
+        task, entry = self.build(
+            "r == s", params="s: seq", ret="r: seq",
+            points=[{"args": [["seq", [97, 98]]], "expected": ["seq", [97, 98]]}])
+        self.assertIsNone(spec_check.exploit(task, entry)["exploited_by"])
+
+    def test_pinning_only_the_length_is_still_exploitable(self):
+        # Written expecting a pass and corrected by the instrument: a spec that
+        # fixes only the length is satisfied by the reversed input, which is the
+        # wrong answer for anything order-sensitive.
+        task, entry = self.build(
+            "len(r) == len(s)", params="s: seq", ret="r: seq",
+            points=[{"args": [["seq", [97, 98]]], "expected": ["seq", [97, 98]]}])
+        self.assertEqual(spec_check.exploit(task, entry)["exploited_by"],
+                         "the first argument, reversed")
+
+    def test_a_lazy_program_that_is_also_correct_is_not_an_exploit(self):
+        task, entry = self.build(
+            "r == x", params="x: int", ret="r: int",
+            points=[{"args": [["int", 5]], "expected": ["int", 5]}])
+        self.assertIsNone(spec_check.exploit(task, entry)["exploited_by"])
+
+    def test_no_usable_points_means_no_verdict(self):
+        task, entry = self.build("r == x", params="x: int", ret="r: int", points=[])
+        self.assertIsNone(spec_check.exploit(task, entry)["exploited_by"])

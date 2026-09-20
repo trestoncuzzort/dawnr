@@ -191,6 +191,97 @@ def reference(rec: dict, fn: str):
     return f if callable(f) else None
 
 
+def lazy_functions():
+    """The laziest programs anyone could write, as callables over the arguments.
+
+    AlphaVerus (arXiv:2412.06176, github.com/cmu-l3/alphaverus) calls this the
+    **exploit model**: write the laziest program that satisfies the
+    specification, and if it verifies, the specification is broken. They report
+    that without this filter `assume(false)` snowballed across every program and
+    progress plateaued.
+
+    Enumerating the lazy programs is stronger than perturbing one output,
+    because it asks whether an entire wrong *function* satisfies the spec rather
+    than whether one wrong *answer* does. It needs no model and no prover: the
+    interpreter evaluates the ensures with the lazy program's result in place of
+    the real one.
+    """
+    def first(args):
+        return args[0] if args else None
+
+    return [
+        ("constant zero", lambda args: 0),
+        ("constant one", lambda args: 1),
+        ("constant false", lambda args: False),
+        ("constant true", lambda args: True),
+        ("empty sequence", lambda args: ()),
+        ("returns its first argument", first),
+        ("first argument plus one",
+         lambda args: first(args) + 1 if isinstance(first(args), int)
+         and not isinstance(first(args), bool) else None),
+        ("length of the first argument",
+         lambda args: len(first(args)) if isinstance(first(args), tuple) else None),
+        ("the larger of the first two",
+         lambda args: max(args[0], args[1]) if len(args) > 1
+         and all(isinstance(a, int) and not isinstance(a, bool) for a in args[:2]) else None),
+        ("the first argument, reversed",
+         lambda args: tuple(reversed(first(args))) if isinstance(first(args), tuple) else None),
+    ]
+
+
+def exploit(task: dict, entry: dict) -> dict:
+    """Does a lazy program satisfy this specification and still fail the problem?
+
+    A specification that a constant or an identity function satisfies has not
+    described the problem, however many provers discharge it. Returns the first
+    lazy program that gets away with it, or nothing.
+    """
+    funs = interp.funs_of(task, task["body"])
+    name = task["returns"][0]["name"]
+    points = [p for p in entry.get("points", [])
+              if len(p.get("args", [])) == len(task["params"])]
+    if not points:
+        return {"exploited_by": None, "lazy_programs_tried": 0}
+    tried = 0
+    for label, lazy in lazy_functions():
+        tried += 1
+        satisfied = disagreed = 0
+        for point in points:
+            try:
+                args = [to_t(v) for _k, v in point["args"]]
+                guess = lazy(args)
+                if guess is None:
+                    satisfied = -1
+                    break                      # this lazy program does not type here
+                env = {p["name"]: a for p, a in zip(task["params"], args)}
+                env[name] = to_t(guess) if not isinstance(guess, tuple) else guess
+                expected = to_t(point["expected"][1])
+            except (TypeError, KeyError, IndexError, ValueError):
+                satisfied = -1
+                break
+            st = interp.St()
+            try:
+                if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
+                    continue
+                if not all(interp.ev(e, env, funs, st) is True for e in task.get("ensures", [])):
+                    satisfied = -1
+                    break                      # the spec catches it, which is the point
+            except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
+                satisfied = -1
+                break
+            except Exception:                  # noqa: BLE001
+                satisfied = -1
+                break
+            satisfied += 1
+            disagreed += int(env[name] != expected)
+        if satisfied > 0 and disagreed > 0:
+            # It satisfied the specification everywhere the precondition allowed
+            # and still answered the problem wrongly at least once.
+            return {"exploited_by": label, "lazy_programs_tried": tried,
+                    "wrong_at_points": disagreed}
+    return {"exploited_by": None, "lazy_programs_tried": tried}
+
+
 def check_points(task: dict, entry: dict) -> dict:
     """Does the specification hold at the problem's OWN examples?
 
@@ -213,7 +304,7 @@ def check_points(task: dict, entry: dict) -> dict:
     """
     funs = interp.funs_of(task, task["body"])
     name = task["returns"][0]["name"]
-    held = failed = 0
+    held = failed = excluded = 0
     first = None
     for point in entry.get("points", []):
         if len(point.get("args", [])) != len(task["params"]):
@@ -230,7 +321,15 @@ def check_points(task: dict, entry: dict) -> dict:
         st = interp.St()
         try:
             if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
-                continue                   # outside its own precondition, says nothing
+                # NOT nothing: the problem supplied this input, and the
+                # specification's own precondition refuses it. That is the
+                # over-constrained failure mode, which vACT/Spec-Harness
+                # (github.com/Mondego/vACT) is the one published artifact to
+                # score, and which is invisible to every check that only asks
+                # whether a spec is too weak. A spec that narrows the problem
+                # makes correct programs unprovable rather than wrong.
+                excluded += 1
+                continue
             ok = all(interp.ev(e, env, funs, st) is True for e in task.get("ensures", []))
         except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
             continue
@@ -242,7 +341,9 @@ def check_points(task: dict, entry: dict) -> dict:
             failed += 1
             if first is None:
                 first = {"args": [v for _k, v in point["args"]], "expected": point["expected"][1]}
-    out = {"points_held": held, "points_failed": failed}
+    out = {"points_held": held, "points_failed": failed, "points_excluded": excluded}
+    if excluded and not held and not failed:
+        out["over_constrained"] = True     # it refused every example it was given
     if first is not None:
         out["contradicts_example"] = first
     return out
