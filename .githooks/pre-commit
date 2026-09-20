@@ -1,0 +1,56 @@
+#!/bin/sh
+# Every implementation cites a repository, a paper or an online source, or says
+# plainly that it was invented. The rule was set by the operator on 2026-09-20
+# after it was skipped twice in one session, and a skill and a memory both failed
+# to prevent that, because both depend on being remembered. This does not.
+#
+# A commit that adds or changes Python must carry, in its message, either:
+#   * a source -- an http(s) URL, or an arXiv id such as arXiv:2604.21570, or
+#     a github.com/owner/repo reference; or
+#   * the literal token INVENTED: followed by what was searched for and why
+#     nothing was usable.
+#
+# To bypass for a genuine non-implementation commit (a rename, a typo, a revert):
+#   git commit --no-verify
+set -eu
+
+changed=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
+[ -n "$changed" ] || exit 0
+
+msg=$(cat "${1:-.git/COMMIT_EDITMSG}" 2>/dev/null || true)
+# A merge or a revert is not an implementation.
+case "$msg" in
+  Merge*|Revert*) exit 0 ;;
+esac
+
+if printf '%s' "$msg" | grep -Eqi 'https?://|arxiv[:. ]?[0-9]{4}\.[0-9]{4,5}|github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+'; then
+  exit 0
+fi
+if printf '%s' "$msg" | grep -q 'INVENTED:'; then
+  exit 0
+fi
+
+cat >&2 <<'MSG'
+
+  pre-commit: this commit changes Python and cites nothing.
+
+  Python touched:
+MSG
+printf '    %s\n' $changed >&2
+cat >&2 <<'MSG'
+
+  Before writing code, look for a repository, a paper or an online source that
+  already solves it. Then put the source in the commit message:
+
+      Fix the loop-invariant alignment (arXiv:2604.21570, github.com/owner/repo)
+
+  If you searched and nothing exists, say so and say what you searched for:
+
+      INVENTED: searched for prior art on tiered oracle evidence in program
+      verification; the nearest analogue is SLSA's manifest-vs-attestation
+      distinction, from a different domain, so this code is ours.
+
+  A rename, a typo fix or a revert is not an implementation: git commit --no-verify
+
+MSG
+exit 1

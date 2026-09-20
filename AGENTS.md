@@ -27,9 +27,18 @@ exists to answer is whether a model built from that data does more per parameter
    the first file were wrong; the file says so.
 4. **Report the failure plainly, then what it bought.** Failures are the instrument here, not something to
    soften. A report that stops at the bad number throws away the useful half.
-5. **No assistant attribution anywhere** — not in commits, docs or comments. Commit messages explain what was
+5. **Look for it before you write it.** Every implementation checks for a repository, a paper or an online
+   source that already solves the problem, *before* any code is written — not after, and not only when the
+   problem looks hard. If nothing usable exists, say so in the commit message with the word `INVENTED:` and what
+   was searched for. This is enforced rather than remembered: `.git/hooks/pre-commit` refuses a commit that
+   changes Python and cites neither a source nor `INVENTED:`. It is enforced because it was skipped twice in one
+   session on 2026-09-20 while both a skill and a memory told the author to follow it, and searching afterwards
+   found a paper that had already made one of the same design decisions and taken the opposite choice on
+   another (`t/FINDINGS-examples-evidence-2026-09-20.md`). A citation is not decoration: it is how a reader
+   learns whether a decision was reasoned or guessed.
+6. **No assistant attribution anywhere** — not in commits, docs or comments. Commit messages explain what was
    measured and why, in plain prose.
-6. **This repository is public.** No personal or institutional identifiers: no home directories naming an
+7. **This repository is public.** No personal or institutional identifiers: no home directories naming an
    account, no hostnames, no credentials. `t/lab-workstation.conf` holds the only machine address and is
    gitignored.
 
