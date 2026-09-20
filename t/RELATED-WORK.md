@@ -1104,3 +1104,41 @@ This does not retire the twin, which is the only one of the five that yields a
 concrete separating input, and that witness is what the seven provers certify. It does
 say the twin should not be the *first* thing tried on a row that a core would have
 explained for free.
+
+### The conjunction and the disjunction, and why they point opposite ways
+
+Frama-C's WP manual (§2.4.5, fetched 2026-09-20) states its smoke-test rule in one
+sentence, and it is the mirror image of this project's gate:
+
+> "This is best-effort verification: **if at least one prover succeed in proving
+> `\false`, an inconsistency is detected.** Otherwise, the test is not conclusive,
+> and you can never be sure that the ACSL annotations are free of inconsistencies."
+
+So WP detects vacuity **disjunctively** over its provers, where t verifies
+**conjunctively** over its seven. Both are right, and the asymmetry is the reason:
+finding a defect needs one witness, so any prover suffices and more provers can only
+help; claiming correctness needs every reading to agree, so one abstention costs the
+row. t already lives on both sides of that line without having said so, since a
+REFUTED twin needs one certificate a kernel accepts while a clean answer needs all
+seven. Worth stating in `GRADER.md` in those terms, because a reader who sees only
+the conjunction will think the seven-way AND is the whole design.
+
+### ProofPulse: the same failure, measured on our own corpus
+
+[arXiv:2608.30818](https://arxiv.org/html/2608.30818v1) is three-valued proof
+coverage for Dafny by unsat-core minimization, and it is evaluated against **252
+programs of the dafny-synthesis benchmark** -- the corpus family WS-16.2's 164
+MBPP-DFY programs come from. It reports "perfect precision for precondition
+classification" with core minimization, and names the failure this project built
+fstar's zero-obligation rule for:
+
+> "In the extreme case, the Dafny verifier may report a 'correct' status for a
+> program that lacks verification conditions. In such instances, the IDE provides a
+> passing 'tick' despite the absence of meaningful relationship between the
+> specification and the code, creating confidence in an implementation that remains
+> effectively unverified."
+
+That is our `verified / decorative` cell and our 12.6 finding about specifications
+that restate the body, arrived at independently and measured on the same programs. It
+is the closest external comparison this project has on its own coverage corpus, and
+nothing in `t/COVERAGE-mbpp-dfy-lifter.md` cites it yet.
