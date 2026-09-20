@@ -38,6 +38,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import harness                                                  # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 
 KERNEL_NAMES = {"dafny": "Dafny", "verus": "Verus", "spark": "SPARK (GNATprove)", "framac": "Frama-C (WP)",
@@ -80,6 +81,66 @@ def feedback(row: dict, cols: list[str]) -> str:
     return "\n".join(lines)
 
 
+def counterexample(task: dict, row: dict, cols: list[str]) -> str:
+    """The concrete input the verdicts are ABOUT, put in the prompt.
+
+    Two independent lines of work put the counterexample in the message rather
+    than describing the failure, and both iterate. VeriMed measures the rungs
+    (below). LLM-CEGIS-Repair, AAAI 2025
+    (https://github.com/pmorvalho/LLM-CEGIS-Repair) runs a CEGIS loop: localize
+    the faulty statements, hand the model a sketch with them removed, then "a
+    counterexample chosen from the test suite is sent to the prompt generator,
+    which then feeds this counterexample to the LLM to prompt a revised
+    synthesis", repairing up to 59.1 percent. Its prompts also say "Modify the
+    code as little as possible", which costs nothing and is now in the ask.
+
+    Two differences from both, stated rather than hidden. We do no fault
+    localization: the closest thing here is `kind_of`, which decides whether the
+    specification or the proof may move and freezes the other half. And this
+    file is SINGLE SHOT, while neither reported result is; iterating means
+    re-running it on the previous `-fixN` directory, which the `--suffix` flag
+    already allows and nobody has done.
+
+    Checker feedback in prose is the MIDDLE rung of a ladder measured in
+    VeriMed (https://arxiv.org/abs/2605.13817): no feedback 55.4 percent, the
+    model told only that it was rejected 58.5, the violated requirements in
+    prose 80.0, and those requirements together with a concrete counterexample
+    98.5, over at most five repair rounds. Their reading of the gap is that a
+    concrete witness state lets the model localize the fault in its previous
+    answer in a way that the violated requirements alone do not.
+
+    Everything above this function builds the 80.0 rung and stops there. The
+    witness is not missing from this project: it is computed on every grading
+    run and printed beside the verdict (t/run_par.py:448, "twin witness:
+    n=1 -> real 1, twin 0") and then dropped. So this adds no machinery. It is
+    harness's own bounded search, formatted by harness.witness, moved into the
+    message.
+
+    A refuted real is asked for its own witness, the input where the program
+    breaks its own ensures. A real that verified beside a twin that also
+    verified is asked for the twin's witness, the input where the two compute
+    different values while the ensures is satisfied by both, which is what a
+    decorative specification is. A task with neither gets nothing rather than a
+    guess."""
+    verdicts = [cell_words(row.get(k, "")) for k in cols]
+    try:
+        if any(real == "refuted" for real, _t in verdicts):
+            w = harness.real_witness(task)
+            if w:
+                return ("\nThe program breaks its own `ensures` at this input, found by running it:\n"
+                        f"    {harness.witness(w)}\n")
+        if any(real == "verified" and twin in ("verified", "decorative", "unsound")
+               for real, twin in verdicts):
+            _body, _op, w = harness.twin_for(task)
+            if w:
+                return ("\nA deliberately broken copy of this program computes a different value here, and your\n"
+                        "`ensures` is satisfied by BOTH, which is why the checkers could not separate them:\n"
+                        f"    {harness.witness(w)}\n")
+    except Exception:                                           # noqa: BLE001
+        return ""        # a witness is evidence, never a precondition
+    return ""
+
+
 def spec_of(task: dict) -> dict:
     return {"params": task["params"], "returns": task["returns"], "requires": task.get("requires", [])}
 
@@ -102,6 +163,11 @@ def main() -> int:
     ap.add_argument("src", type=Path, help="a graded tag directory (grade-in/ and kernels.md present)")
     ap.add_argument("--model", default="qwen2.5-coder:14b")
     ap.add_argument("--host", default="127.0.0.1:11434")
+    ap.add_argument("--api", choices=("ollama", "openai"), default="ollama",
+                    help="openai: an OpenAI-shaped server such as vLLM. Until 2026-09-20 se.chat was called "
+                         "with five positional arguments here, so `api` took its default and every request "
+                         "went to /api/chat, which vLLM does not serve: the run then reported `no answer` "
+                         "for every task and looked like a model that would not cooperate.")
     ap.add_argument("--suffix", default="-fix1")
     ap.add_argument("--pool", default="v3")
     ap.add_argument("--jobs", type=int, default=4)
@@ -152,13 +218,16 @@ def main() -> int:
                     "state exactly what the tests show the result must be, strong enough that a wrong result breaks "
                     "them. Keep the task name, the parameters, the return type and every `requires` exactly as they "
                     "are; fix the loop invariants to match.")
-        ask = (f"Your t task passes every test. The seven proof checkers said:\n\n{feedback(row, cols)}\n\n"
-               f"Rewrite the task so every checker proves it and catches a broken copy. {keep} Reply with the "
-               "complete task in one ```t block.")
+        task_path = src / "tasks" / f"{name}.json"
+        task = json.loads(task_path.read_text(encoding="utf-8")) if task_path.exists() else {}
+        cex = counterexample(task, row, cols) if task else ""
+        ask = (f"Your t task passes every test. The seven proof checkers said:\n\n{feedback(row, cols)}\n{cex}\n"
+               f"Rewrite the task so every checker proves it and catches a broken copy. {keep} Change as "
+               "little as possible. Reply with the complete task in one ```t block.")
         messages = raw["messages"] + [{"role": "assistant", "content": f"```t\n{block}\n```"},
                                       {"role": "user", "content": ask}]
         try:
-            resp = se.chat(a.host, a.model, messages, options, a.timeout)
+            resp = se.chat(a.host, a.model, messages, options, a.timeout, a.api)
         except OSError as e:
             print(f"repair: {tid}: no answer: {e}", file=sys.stderr)
             with lock:
