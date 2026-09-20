@@ -61,3 +61,34 @@ The next measurement that matters is the size-matched comparison on held-out pro
 3. From the repository root: `~/.venv-t/bin/python t/lab.py`.
 
 The models locallm built on 2026-09-16 are in `t/runs/2026-09-16/` (Git LFS; run `git lfs pull` after cloning) and show up in the model list. The readable, rules and new checks work with Python alone. A "Proven by" check needs that checker installed; Dafny is the one to install first. The Live checks tab fills in whenever `t/run_par.py` runs with `T_WATCH` set, which the Test tab does by itself.
+
+## Git identity, set 2026-09-20
+
+Every machine that commits here uses one identity, so the work lands on one
+GitHub account:
+
+    git config user.name  "trestoncuzzort"
+    git config user.email "235123374+trestoncuzzort@users.noreply.github.com"
+
+**Why the noreply address and not a real one.** GitHub maps a commit to an
+account by the author email alone, and this repository is public, so a real
+address in the history is both a personal identifier and a thing that breaks
+the moment it moves between accounts. The `<id>+<login>@users.noreply.github.com`
+form maps to the account permanently and exposes nothing.
+
+**What it was before, and why it mattered.** Four identities were in the history
+and each landed somewhere different in the contributors graph:
+
+| author email | commits | credited to |
+|---|---:|---|
+| `jonhhjackson@gmail.com` | 159 | `trestoncuzzort` |
+| `tmcuzzort@gmail.com` | 195 | `tmcuzzort-ship-it` |
+| `team@hotspotbars.com` | 2 | `HotSpot-Technologies` |
+| `t@example.com` | 229 | **no account at all** |
+
+The desktop was committing as `t@example.com`, so a day's work appeared in the
+graph as nobody, and the lab was committing as `tmcuzzort@gmail.com`, so its
+work was credited to a second account. Same person throughout; four buckets.
+Setting the identity fixes it going forward. Re-attributing the existing
+commits is done by moving the verified emails onto one account in GitHub's
+settings, which changes no commit and no SHA.
