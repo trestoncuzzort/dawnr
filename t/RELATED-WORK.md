@@ -1047,3 +1047,60 @@ evidence.
 ### proof development (1)
 
 - [3] Nuprl (Proof Development System) (software) https://en.wikipedia.org/wiki/Nuprl : Proof development system based on Martin-Löf intuitionistic type theory, with distributed architecture for computer-mediated formal analysis.
+
+## Two additions, 2026-09-20, both fetched and read
+
+### VERINA: the solve/prove gap, measured on one task set
+
+[arXiv:2505.23135](https://arxiv.org/abs/2505.23135), 189 Lean tasks with ground-truth
+specifications and, for 46, ground-truth proofs. On the same tasks o3 writes
+functionally correct code **72.6%** of the time and proves it **4.9%** of the time,
+and its best model, o4-mini, reads 61.4% correct code, 51.0% sound-and-complete
+specifications and **3.6%** proofs.
+
+This is the third independent measurement of the shape `SCOREBOARD.md` reports as
+"converts", after PostcondBench's ρ band of 0.33 to 0.53 and the Oracle-Conversion
+Efficiency gap of 11.83 points in [arXiv:2609.05879](https://arxiv.org/abs/2609.05879).
+The reading that matters for this project: collapsing correctness and provability
+into one number is about a fifteenfold error on that benchmark, which is the same
+distinction the twin discipline and `spec_check.py` exist to keep apart. It also
+prices our own numbers honestly, since VERINA measured our exact model arm,
+**Qwen3-235B-A22B-fp8 at 80.0% cannot-compile on Lean code generation**.
+
+### Vacuity without mutants: the unsat core of a proof that succeeded
+
+The twin is one of five mechanisms for deciding a specification is too weak, and it
+is not the cheapest. The five, by what they perturb: **nothing** (inspect the unsat
+core of a successful proof and report any element absent from it), **an added goal**
+(`assert false`, which is Boogie's `/smoke` and Frama-C WP's smoke tests), **the
+specification** (IronSpec), **the program** (our twin, MutDafny, SpecSyn's variant
+discriminative rate), and **the implementation under a havoc** (VeriEquivBench's
+uniqueness check).
+
+The first is the one t does not have. Tomb and Joshi, *Static Coverage in Deductive
+Software Verification*, FMCAD 2025 (DOI `10.34727/2025/isbn.978-3-85448-084-6_32`,
+free at [repositum.tuwien.at](https://repositum.tuwien.at/handle/20.500.12708/219562),
+not on arXiv) state the duality and then replace mutation with core inspection: "By
+changing a program element and attempting to re-prove the program, it's possible to
+determine whether that element is necessary for the proof. **As a more efficient
+alternative**, one can do a proof ... and identify the facts used to complete the
+proof." Measured on the same codebase: **78 coverage warnings against 2,897 smoke
+warnings**, at a median overhead of −4% to 6%.
+
+Dafny already exposes this and this project already relies on it, from the other end:
+`--warn-contradictory-assumptions` is why `verifiers/dafny.py` is sound where the
+regex adapters were not (WS-7). What is missing is using it as a *specification
+strength* signal rather than an honesty gate. Two of our seven have no vacuity
+tooling at all: `vacuous`, `vacuity` and `smoke` appear nowhere in the Verus guide or
+CLI, nor in F\*'s `FStarC.Options.fst`, whose `quake` is proof-stability retrying and
+not a vacuity check.
+
+**The cost comparison is the point.** Our gate pays N mutants times seven provers for
+a sample of the program space; an unsat core is one proof's worth of overhead for a
+statement about every element the proof needed. SpecSyn's own ablation prices the
+mutation half of its pipeline at about 2% precision and 5% recall, against 11.41% and
+12.66% for its program decomposition, so the twin is the cheaper mechanism there too.
+This does not retire the twin, which is the only one of the five that yields a
+concrete separating input, and that witness is what the seven provers certify. It does
+say the twin should not be the *first* thing tried on a row that a core would have
+explained for free.
