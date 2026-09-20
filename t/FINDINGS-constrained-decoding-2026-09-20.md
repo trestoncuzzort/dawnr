@@ -113,3 +113,44 @@ grammar in isolation could be dismissed as microbenchmarking. Four cards at 0%
 while a 235B model waits on a CPU mask is the same number as a system property,
 and it says the choice of mask engine is not an optimisation detail but the
 difference between an arm that runs and one that does not.
+
+## The backends take different grammars, and that is what actually blocked WS-21
+
+The server was restarted with `--structured-outputs-config '{"backend":"guidance"}'`
+and the engine confirms it (`StructuredOutputsConfig(backend='guidance', ...)` in
+both the non-default args and the engine config). The constrained arm still produced
+nothing, and the reason is not speed:
+
+    t/t.gbnf       -> HTTP 400 Bad Request, in 0.0 s
+    t/t.lark.gbnf  -> a well-formed t task, in 4.8 s
+
+**llguidance does not accept the GBNF file.** It takes the Lark form, which is what
+`t/t.lark.gbnf` is and why it was written this morning; `t/make_grammar.py` emits
+GBNF for xgrammar and the Lark file is derived from it. Nothing in the server log
+says so: there is no error, no warning, and 524 requests served without complaint,
+because a 400 is returned to the client and the client, `spec_experiment.generate`,
+logged nothing a reader would notice. The arm sat at 3 answers for ten minutes
+looking exactly like a slow job.
+
+So the sequence that had WS-21 move 1 "blocked on a card" was three separate things
+wearing one face:
+
+1. the cards were never the blocker, the mask engine was;
+2. the default backend is `auto`, which picks xgrammar, at 373.8 s a reply with all
+   four cards at 0% utilisation;
+3. and the engine that is 168x cheaper refuses the grammar file the other one needs.
+
+Measured on the same model, same prompt, same grammar, same server:
+
+| backend | grammar | per reply |
+|---|---|---:|
+| xgrammar (`auto`) | `t/t.gbnf` | **373.8 s** |
+| guidance | `t/t.gbnf` | HTTP 400 |
+| guidance | `t/t.lark.gbnf` | **4.8 s** |
+
+78x on wall clock, end to end, against the 168x the mask microbenchmark predicted;
+the rest is the model's own decode, which no mask engine removes.
+
+The three answers generated under xgrammar are moved to `t/out/xgrammar-aside/`
+rather than kept, so the arm has one provenance. The preregistration's rule is
+unchanged and its decision is still clean answers, not parse rate.
