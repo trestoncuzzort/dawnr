@@ -24,40 +24,48 @@ had never seen. Microsoft's Phi-4-mini, a model roughly a thousand times larger
 trained on a large part of the public internet, managed **12**. Everyone assumes the hard part for a tiny model is
 learning the notation. It isn't. It's nearly free.
 
-**2. When it is right, it is provably right.** Software is normally tested;
+**2. It now matches a Microsoft model a thousand times its size.** On 232
+problems it had never seen, locallm and Phi-4-mini each produced **3** answers
+that passed the problem's tests, were proved correct by all seven systems, and
+had their sabotaged twins caught. All three of locallm's also survived a check
+that the specification it wrote describes the problem that was actually asked;
+one of Phi's three could not be checked. It is a tie on three answers, which is
+thin, and it is the first time anything trained here has drawn level.
+
+**3. When it is right, it is provably right.** Software is normally tested;
 here every answer is also *proved*, by seven independent proof systems, and
 each one must also catch a deliberately broken copy of the same program. Every locallm answer that computed the right values
 cleared all seven with the broken copy caught: **2 of 2**, and **1 of 1** in
 the latest round. It has never written something correct that it couldn't
 prove.
 
-**3. You can stop it and start it again and get the identical model.**
+**4. You can stop it and start it again and get the identical model.**
 Training can be interrupted by a crash, a shared machine or a power cut, then
 resumed, and the result is the same weights bit for bit as if it had never
 stopped. There's a test that fails the moment that stops being
 true. It's the difference between a result you can reproduce and a result you
 can only repeat.
 
-**4. It is nowhere near the size this hardware can train.** The models on the
+**5. It is nowhere near the size this hardware can train.** The models on the
 scoreboard have 3.2 million and 92 million parameters. We measured what the
 machine actually supports by training at each size until it ran out of memory:
 **875 million parameters trains**, on a single graphics card that another user
 was sharing at the time. Nobody had ever checked. "Should we go bigger?"
 was an argument for months; it's arithmetic now.
 
-**5. It builds its own vocabulary instead of borrowing one.** Models read text
+**6. It builds its own vocabulary instead of borrowing one.** Models read text
 in chunks, and most projects download someone else's chunking rules. locallm
 learns them from its own corpus, which cuts the same text into about **60%
 as many chunks**, so more real content fits in the same amount of the model's
 limited attention.
 
-**6. It generates faster, and only because that was checked first.** Reusing
+**7. It generates faster, and only because that was checked first.** Reusing
 work between output tokens is a standard speed trick. We predicted how much it
 would help, measured it, and the prediction failed, so the feature ships
 turned **off by default**, with the evidence that it produces identical output
 either way. Nothing here gets adopted just because everyone else does it.
 
-**7. We tested our own architectural belief and it was wrong.** A "modern"
+**8. We tested our own architectural belief and it was wrong.** A "modern"
 design looked about **25% better** than the older one after a short training
 run, which is the point at which most projects would commit. Run four times
 longer, the older design won at **every one of three random seeds**, while also
@@ -67,7 +75,7 @@ it, and it did.
 **And none of it is a win yet.** The gap, and what we're doing about it, is below.
 
 
-**What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **locallm has not beaten Phi-4-mini yet**: its best round scored 2 clean answers of 232 against Phi's 3, and this page leads with that rather than with the one column locallm wins by a distance. Two models *run through* this pipeline beat Phi, and neither was built here, so neither is a result of this project's method. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
+**What this does not claim.** Nothing here is hallucination-free or 100 percent correct. A proof shows a program meets its specification, not that the specification says what the problem asked, which is why every table carries a **proven but wrong** column, why the tests are a separate gate, and why an accepted answer's specification is checked against the problem's own solution ([`t/spec_check.py`](t/spec_check.py)). **locallm has drawn level with Phi-4-mini, not beaten it**: its best round scores 3 clean answers of 232 and so does Phi, on a baseline regraded the same day by the same evaluator. Three answers is a thin result and this page says so next to it. Two models *run through* this pipeline beat Phi, and neither was built here, so neither is a result of this project's method. And the seven checkers do less of the work than the name suggests: a preregistered ablation ([`t/ABLATION-2026-09-17.md`](t/ABLATION-2026-09-17.md)) measured one prover admitting wrong answers 17.4 percent of the time against 12.9 percent for all seven with the twin refuted, at half the problem coverage; on held-out answers, where the model writes its own specification, every proof gate admits about 97 percent wrong and the tests catch what the proofs cannot. The honest claim is tests **and** proofs together, not seven provers rather than one.
 
 ## Why this project is unusual
 
@@ -135,16 +143,23 @@ The target is Phi-4-mini, and the target is not a tie.
 | **locallm, round 5 (3.2M)** | **ours** | 198 | 2 | **2** | 100% | 2 |
 | **locallm, round 7 (92M, pretrained then specialized)** | **ours** | 136 | 1 | **1** | 1/1 | 1 |
 | **locallm, round 7b (the same model, decoded greedily)** | **ours** | 149 | 2 | **2** | 2/2 | **2** |
+| **locallm, round 8 (specification-checked pool)** | **ours** | 142 | 2 | **2** | 2/2 | **2** |
+| **locallm, round 8 with signature-headed training (best)** | **ours** | 91 | 3 | **3** | 3/3 | **3** |
 | Phi-4-mini, 3.8B | baseline | 12 | 6 | **3** | 50% | 2 |
 | Phi-4-mini, regraded 2026-09-19 beside round 7 | baseline | 12 | 6 | **3** | 50% | 2 |
 | Qwen2.5-Coder-1.5B, untrained | baseline | 39 | 13 | **3** | 23% | 2 |
 | Qwen3.8-27B-FP8, prompted | reference, far larger | 116 | 81 | **12** | 15% | 11 |
 | DeepSeek-Prover-V2-7B, prompted | reference | 39 | 10 | **6** | 60% | 6 |
 
-**Where locallm stands, plainly: 2 clean against Phi's 3.** The round 7b row is
-the strongest of them: it is the only locallm result whose every clean answer
-was also checked against the problem's own solution and agreed with it, which
-the 3.2M rows never were. It wins the
+**Where locallm stands: level with Phi at 3 clean of 232.** Giving every
+training document the signature its own program declares cut the model's
+signature failures from 40.8% to 12.1%, and that converted into the score. All
+three of locallm's clean answers were checked against the problem's own
+solution and agree with it; one of Phi's three cannot be checked at all, so on
+that column it reads 3 against 2.
+
+It is a tie, not a win, and it is three answers wide. The target is still to
+beat Phi outright. It wins the
 notation by a distance no baseline approaches, 209 well-formed answers to
 Phi's 12 from a model a thousand times smaller, and loses the gate that
 decides the score, which is passing the problem's own tests. Of 209 well-formed
