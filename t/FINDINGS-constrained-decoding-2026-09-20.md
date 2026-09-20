@@ -74,3 +74,42 @@ Not yet measured end to end: the throughput on a real serving run. The 168x is
 mask cost on one program on CPU, which is the term that was dominating, not a
 promise about tokens a second. `t/t.simpleid.gbnf` stays as the control that
 isolates the trie from everything else.
+
+## The 168x, confirmed end to end on the 235B, 2026-09-20 evening
+
+The mask cost above was measured on `t/t.gbnf` alone, without a model. It was then
+paid for real. `qwen235-heldout-g1`, the constrained arm registered in
+`t/PREDICT-2026-09-20-constrained-235b.md`, was launched against the loaded
+Qwen3-235B server with `--grammar t/t.gbnf` and nothing else changed from the
+control:
+
+    generate: 1/232 (1 asked this run, 374 s, 373.8 s each)
+
+**374 seconds per reply**, against a control arm that answered the same 232
+problems in minutes. The prediction is arithmetic, not hindsight: 101.3 ms per
+token times a reply of about 3,700 tokens is 375 s. And the tell is where the time
+went. All four RTX 6000 Ada sat at **0% utilisation** for the duration, because
+xgrammar computes its mask on the CPU and the GPU waits; the same four cards read
+100% within seconds of the arm being stopped.
+
+Three things follow.
+
+**The arm was stopped after 3 answers, and that is the right call rather than a
+failure.** At 374 s per reply with 16 in flight it would have taken about 1.5
+hours of a server two other jobs were waiting on, to measure a quantity the
+preregistration explicitly excluded: "This arm runs on whichever backend the
+loaded server has and its wall-clock is therefore not a measurement of what
+constrained decoding must cost." The 3 answers are kept; they are not a column.
+
+**WS-21 move 1 is blocked on a server flag, not on code.** Every other piece
+exists: the grammar, its two-directional check (2,121 accepted, 590 refused),
+`spec_experiment.py generate --grammar`, the preregistration and its decision
+rule. What it needs is a server started with
+`--structured-outputs-config.backend guidance`, and the arm then costs 0.602 ms
+per token of mask instead of 101.3.
+
+**The GPU-idle reading is the part worth keeping.** A 168x number measured on a
+grammar in isolation could be dismissed as microbenchmarking. Four cards at 0%
+while a 235B model waits on a CPU mask is the same number as a system property,
+and it says the choice of mask engine is not an optimisation detail but the
+difference between an arm that runs and one that does not.
