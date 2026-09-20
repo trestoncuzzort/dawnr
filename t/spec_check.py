@@ -179,6 +179,63 @@ def reference(rec: dict, fn: str):
     return f if callable(f) else None
 
 
+def check_points(task: dict, entry: dict) -> dict:
+    """Does the specification hold at the problem's OWN examples?
+
+    Clover (arXiv 2310.17807, https://github.com/ChuyueSun/Clover) reduces
+    correctness to consistency between three artifacts: the code, the docstring
+    and the formal annotation, checking every pair. It reports 87% acceptance on
+    correct instances with no false positives.
+
+    This project already has two of those edges. The seven verifiers check code
+    against annotation, and `check_task` above checks annotation against the
+    problem by running its reference solution. The edge measured here is the one
+    nobody was checking: the annotation against the problem's own assertions,
+    which are ground-truth input/output pairs shipped with every problem.
+
+    It needs no reference solution, no random draws and no language model, so it
+    reaches the answers `check_task` must give up on: on 2026-09-20 that was 78
+    of 149 in one arm, where the reference would not run or the drawn shapes did
+    not fit. A specification false at an example the problem itself states is
+    wrong, and no amount of proving can fix it.
+    """
+    funs = interp.funs_of(task, task["body"])
+    name = task["returns"][0]["name"]
+    held = failed = 0
+    first = None
+    for point in entry.get("points", []):
+        if len(point.get("args", [])) != len(task["params"]):
+            # zip() would silently truncate here and check a task against a
+            # point it does not fit, which is a verdict about nothing.
+            continue                       # arity differs; check_task reports that separately
+        try:
+            env = {p["name"]: to_t(v) for p, (_k, v) in zip(task["params"], point["args"])}
+            env[name] = to_t(point["expected"][1])
+        except (TypeError, KeyError, IndexError, ValueError):
+            continue                       # a point this task cannot even be asked about
+        if len(env) != len(task["params"]) + 1:
+            continue                       # duplicate parameter names collapsed the env
+        st = interp.St()
+        try:
+            if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
+                continue                   # outside its own precondition, says nothing
+            ok = all(interp.ev(e, env, funs, st) is True for e in task.get("ensures", []))
+        except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
+            continue
+        except Exception:                  # noqa: BLE001
+            continue
+        if ok:
+            held += 1
+        else:
+            failed += 1
+            if first is None:
+                first = {"args": [v for _k, v in point["args"]], "expected": point["expected"][1]}
+    out = {"points_held": held, "points_failed": failed}
+    if first is not None:
+        out["contradicts_example"] = first
+    return out
+
+
 def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     """One task against its problem's solution: how many draws agreed, and the first that did not."""
     fn = reference(entry["rec"], entry["fn"])
@@ -312,6 +369,13 @@ def main() -> int:
                 entry = pool.get(tid)
                 r = (check_task(task, entry, a.n, rnd) if entry is not None
                      else {"status": "problem not in pool"})
+                if entry is not None:
+                    # Clover's third consistency edge (arXiv 2310.17807): the
+                    # annotation against the problem's own assertions. Needs no
+                    # reference solution, so it reaches the tasks check_task
+                    # gives up on, and it never flagged a clean answer in the
+                    # three arms measured on 2026-09-20.
+                    r.update(check_points(task, entry))
             except ValueError as e:
                 tid = None
                 r = {"status": "problem mapping refused", "reason": str(e)}

@@ -92,3 +92,70 @@ shipped report threads one generator through every task in order, which is why
 it is reproducible but not parallelizable. The two agree on every verdict
 reported here, and the per-task seeding is the honest choice for a comparison
 between populations.
+
+---
+
+# The fix already existed: Clover's third consistency edge
+
+Under the operator's rule — search for an existing fix before writing one — the
+failure above has prior art with a repository.
+**[Clover: Closed-Loop Verifiable Code Generation](https://arxiv.org/abs/2310.17807)**
+([POPL/Dafny 2024](https://popl24.sigplan.org/details/dafny-2024-papers/1/CLOVER-Closed-Loop-Verifiable-Code-Generation),
+code at [ChuyueSun/Clover](https://github.com/ChuyueSun/Clover)) reduces
+correctness to **consistency between three artifacts** — code, docstring and
+formal annotation — by checking every pair. It reports up to **87% acceptance on
+correct instances with no false positives** on CloverBench.
+
+This project had two of those three edges and never noticed the third was
+missing:
+
+| edge | how this repo checks it |
+|---|---|
+| code ↔ annotation | the seven verifiers, plus the twin refutation |
+| code ↔ problem | the problem's own unit tests |
+| **annotation ↔ problem** | **only via a reference solution, when one runs** |
+
+`spec_check.check_task` runs the problem's reference solution and draws random
+arguments. When the reference will not run, the drawn shapes do not fit, or the
+arity differs, it gives up: **78 of 149 answers in one arm**.
+
+## The edge, added
+
+`t/spec_check.check_points` evaluates the model's `ensures` at the problem's
+**own assertions** — the ground-truth input/output pairs shipped with every
+problem. No reference solution, no random draws, no language model, no verifier
+call.
+
+| arm | population | n | caught | no opinion |
+|---|---|---:|---:|---:|
+| r7b greedy | proven but wrong | 117 | **72 (62%)** | 45 |
+| r7b greedy | clean | 2 | **0** | 0 |
+| r4 (3.2M) | proven but wrong | 205 | **56 (27%)** | 148 |
+| r4 (3.2M) | clean | 2 | **0** | 0 |
+| r8 headed2 | proven but wrong | 59 | **52 (88%)** | 5 |
+| r8 headed2 | clean | 3 | **0** | 0 |
+| Phi-4-mini | proven but wrong | 1 | **1 (100%)** | 0 |
+| Phi-4-mini | clean | 3 | **0** | 0 |
+
+**Zero false positives across every clean answer in four answer sets**, which is
+the property Clover reports and the only property that makes a gate safe to
+build on. On the best arm it explains 88% of the proven-but-wrong population by
+itself.
+
+A test caught a real defect while this was being written: `zip()` silently
+truncates, so a point carrying more arguments than the task has parameters was
+being checked against a truncated environment instead of skipped — a verdict
+about nothing. The guard now compares lengths before zipping.
+
+## What it is worth
+
+It is cheap, it never fires on a right answer, and it reaches exactly the
+population the reference-based check cannot. That makes it the first candidate
+for a training-data gate that would actually remove something: the
+completeness gate was refused above because it would have rejected nothing,
+and this one would reject between a quarter and seven-eighths of the
+proven-but-wrong answers, depending on the arm.
+
+It stays a measurement until someone runs a round with it as a gate and reports
+what the pool lost, because adding a gate changes what the pool contains and the
+pool's contents are cited evidence.

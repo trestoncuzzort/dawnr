@@ -86,3 +86,39 @@ class CompletenessTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExampleConsistencyTests(unittest.TestCase):
+    """Clover's third edge: the specification against the problem's own examples."""
+
+    def points(self, ensures, args, expected, params="x: int", ret="r: int"):
+        return spec_check.check_points(task_of(ensures, params=params, ret=ret),
+                                       entry([list(a) for a in args], list(expected)))
+
+    def test_a_specification_that_matches_the_example_holds(self):
+        out = self.points("r == x * 2", [("int", 4)], ("int", 8))
+        self.assertEqual(out["points_failed"], 0)
+        self.assertGreater(out["points_held"], 0)
+
+    def test_a_specification_of_another_function_contradicts_the_example(self):
+        out = self.points("r == x + 1", [("int", 4)], ("int", 8))
+        self.assertGreater(out["points_failed"], 0)
+        self.assertEqual(out["contradicts_example"]["expected"], 8)
+
+    def test_a_predicate_problem_answered_with_arithmetic_is_caught(self):
+        # The real shape of the failure, from locallm-r7b-greedy on 2026-09-20:
+        # the problem asks a yes/no question and the model specified r == x + 1.
+        out = self.points("r == x + 1", [("int", 4)], ("bool", True), ret="r: bool")
+        self.assertGreater(out["points_failed"], 0)
+
+    def test_a_point_the_task_cannot_be_asked_about_is_skipped_not_failed(self):
+        out = self.points("r == x * 2", [("int", 1), ("int", 2)], ("int", 2))
+        self.assertEqual(out["points_failed"], 0)
+        self.assertEqual(out["points_held"], 0)
+
+    def test_it_says_nothing_outside_the_specification_s_own_precondition(self):
+        task = surface.parse("t 1\ntask probe(x: int) returns (r: int)\n"
+                             "  requires x > 100\n  ensures r == x * 2\n{\n  r := x;\n}\n")
+        out = spec_check.check_points(task, entry([["int", 4]], ["int", 8]))
+        self.assertEqual(out["points_failed"], 0)
+        self.assertEqual(out["points_held"], 0)
