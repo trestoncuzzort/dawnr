@@ -194,8 +194,20 @@ def main() -> int:
           f"{len(rows) * a.samples} replies to ask for", flush=True)
 
     banked = skipped = 0
+    # The blocker table prints a sweep row key, which is lowercased with its
+    # hyphens folded to underscores; the lifted task file keeps the corpus's own
+    # spelling ("Formal-methods-of-software-development_tmp_..._Lab3.ComputeFact2").
+    # A literal lookup found 9 of 30 and skipped 21 as missing, so match on the
+    # normalized form, which resolves all 18 that exist.
+    def norm(x: str) -> str:
+        return "".join(c for c in x.lower() if c.isalnum())
+
+    by_norm = {norm(f.stem): f for f in tasks_dir.glob("*.json")}
+
     for kernel, name in rows:
         path = tasks_dir / f"{name}.json"
+        if not path.exists():
+            path = by_norm.get(norm(name)) or path
         if not path.exists():
             print(f"SKIP {kernel:7s} {name}: no lifted task at {path.name}", flush=True)
             skipped += 1
