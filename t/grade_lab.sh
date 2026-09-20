@@ -42,7 +42,20 @@ if ! $SSH "$LAB" true 2>/dev/null; then
   $SSH "$LAB" true || { echo "still cannot reach $LAB after 10 minutes"; exit 1; }
   echo "connected"
 fi
-$SSH "$LAB" "mkdir -p ~/.cache/t-watch $WORK && touch ~/$REMOTE_EV && cd ~/tup && git pull -q --ff-only || true"
+$SSH "$LAB" "mkdir -p ~/.cache/t-watch $WORK && touch ~/$REMOTE_EV"
+# The pull used to be `|| true`, which is how the grading machine ran 19 commits
+# behind origin with 109 dirty entries for an unknown number of rounds while
+# every log line said the round had started normally (2026-09-19). A grader that
+# is not the tree you think it is invalidates the comparison, not the run, so
+# this reports loudly and continues: the answers are still graded, and the state
+# that graded them is printed where the operator sees it.
+if ! $SSH "$LAB" "cd ~/tup && git pull -q --ff-only" 2>/tmp/t-grade-pull.$$; then
+  echo "WARNING: the grading machine did not update. It is grading with:"
+  $SSH "$LAB" "cd ~/tup && echo '  HEAD '\$(git rev-parse --short HEAD) && echo '  dirty entries '\$(git status --porcelain | wc -l)"
+  echo "  reason: $(head -2 /tmp/t-grade-pull.$$ | tr '\n' ' ')"
+  echo "  a comparison across evaluators is not a comparison: regrade a baseline beside the new set."
+fi
+rm -f /tmp/t-grade-pull.$$
 if [ -n "${T_WATCH:-}" ]; then
   mkdir -p "$(dirname "$T_WATCH")"
   # remote pids mean nothing here, so drop them before t lab reads the line

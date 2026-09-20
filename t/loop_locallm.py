@@ -95,7 +95,11 @@ def cmd_corpus(a) -> int:
         # an existing corpus (e.g. t/runs/2026-09-16/loop-data/corpus.txt, which
         # already holds the lifted and committed tasks) under the new answers
         text = Path(a.base).read_text(encoding="utf-8")
-        docs += [d.strip() + "\n" for d in re.split(r"\n\s*\n(?=Problem: |t \d)", text) if d.strip()]
+        # Signature: belongs here for the same reason it belongs in the answer
+        # splitter below: a corpus whose documents start with a head must be
+        # split at every head this project writes, or two documents become one.
+        docs += [d.strip() + "\n"
+                 for d in re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", text) if d.strip()]
     for sft in a.sft:
         for line in Path(sft).read_text(encoding="utf-8").splitlines():
             r = json.loads(line)

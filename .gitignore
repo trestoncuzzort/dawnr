@@ -71,6 +71,14 @@ locallm/training_data_dafny/
 locallm/out/
 locallm/out-dafny-mps/
 t/out/
+# ...but not the evidence. A findings document that cites a table the
+# repository does not contain is a claim without a file behind it, and
+# `git add t/out/score-r8.md` failed silently for three rounds on 2026-09-19
+# because this rule matched before anyone noticed. Negations, not -f.
+!t/out/score-*.md
+!t/out/evaluator-state-*.json
+!t/out/capacity-*.json
+!t/out/CONSTRAINED-*.md
 # tup/book/ stays TRACKED: it is generated, but it is the exact bytes that
 # executed, which is evidence a receipt can point at.
 

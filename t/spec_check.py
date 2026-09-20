@@ -289,7 +289,15 @@ def main() -> int:
     temp = out_path.with_suffix(".tmp")
     temp.write_text(json.dumps(updated, indent=1) + "\n", encoding="utf-8")
     temp.replace(out_path)
-    print(f"written to {a.out.relative_to(HERE.parent)}")
+    # relative_to raises when --out is outside the repository or given as a
+    # relative path from elsewhere, which failed a run on 2026-09-19 AFTER the
+    # report had been written: the work was done and the command still exited
+    # nonzero. Report the path we can, never crash on the way out.
+    try:
+        shown = a.out.resolve().relative_to(HERE.parent)
+    except ValueError:
+        shown = a.out.resolve()
+    print(f"written to {shown}")
     return 0
 
 
