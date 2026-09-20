@@ -156,6 +156,32 @@ reads. The safe route is per-task seeding from the task's own hash, which is a
 change to the instrument and needs every report regenerated and the change
 registered. The reasoning is written at the line someone would edit.
 
+## The CPU-side optimization scan
+
+`internal/OPTIMIZATION-SCAN-2026-09-20.md` has the full version with a paper
+cited for every issue. The short form:
+
+- **Fixed.** The corpus was re-tokenized at every training start: 104.6 s for
+  48.8M tokens of frozen text, about 9% of each arm's wall clock, paid again on
+  every resume. `locallm/data.py:cached_encode` makes it **1.6 s** with
+  identical ids, keyed on the text hash and the tokenizer fingerprint together.
+  Set `LOCALLM_TOKEN_CACHE=~/.cache/locallm-tokens` to turn it on; it is off by
+  default so no existing command changes by upgrading.
+- **Do not bother with a SPARK prover portfolio.** `spark.py:350-365` already
+  proved with `strace` that the prover is not the cost: 93 obligations at "max
+  0.0 seconds" against 111 serially-launched processes. The `-j` fix landed
+  2026-09-19 and is the right one.
+- **Do not bother parallelizing extract and tests.** Measured at 1.2 s and
+  1.06 s for a 232-answer set.
+- **Worth doing, with CPU hours:** deploy the verdict cache to the grading
+  machine, which has never had it (`grep -c "import cache"` returns 0 there),
+  after its three-table bar passes. And replace wall-clock backstops with
+  CPU-time limits, after re-measuring the affected column cell for cell.
+
+**Standing rule from the operator, 2026-09-20:** search for a paper before
+fixing anything, cite it in the code and the commit, and say so plainly when no
+paper exists rather than implying one does.
+
 ## Traps that cost time today
 
 1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless
