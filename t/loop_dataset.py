@@ -533,6 +533,35 @@ def positive_rejection(sample: dict, results: dict, pool_name: str | None = None
         return "spec-pool-mismatch"
     if result.get("task_sha256") != spec_check.task_sha256(sample["task"]):
         return "spec-hash-missing-or-stale"
+    # The specification must also hold at the problem's OWN stated examples, not
+    # only at the random arguments check_task draws. spec_check.check_points
+    # computes this and, until now, nothing gated on it: the column existed only
+    # in the scorecard. A specification false at an input the problem itself
+    # supplies is wrong however many random draws agreed, and the stated examples
+    # are the cases a problem author chose as discriminating, so the draws are the
+    # weaker instrument on exactly the inputs that matter most.
+    #
+    # Measured before it was added (2026-09-20): of the 42 result rows carrying
+    # these columns, 7 contradict a stated example and all 7 are already rejected
+    # for disagreeing or for a reference that would not run, and 0 agree on random
+    # draws while contradicting an example. So this rejects nothing today. It is a
+    # guard that removes the dependence on a draw happening to land in the wrong
+    # region, and it is the mechanism VeriAct's PostCorr and Coins' Pass_all both
+    # gate on. It cannot silently shrink the pool without saying so, because a
+    # rejection here is counted and named like every other.
+    #
+    # NOTE, and it is the reason this is worded as it is: a MISSING points_failed
+    # is not a pass. check_points landed on 2026-09-20, so 470 of 512 existing
+    # rows predate it and carry no such column. Those rows are unchecked on this
+    # dimension, not clean on it, and re-running spec_check is what supplies the
+    # evidence. Treating absence as a pass is the exact mistake this file's own
+    # history records twice (see CORRECTIONS.md); it is tolerated here only
+    # because every other gate above still applies, and a positive_rejection of
+    # None has never meant "every check that exists was run".
+    if type(result.get("points_failed")) is int and result["points_failed"] > 0:
+        return "spec-contradicts-example"
+    if result.get("over_constrained") is True:
+        return "spec-refuses-every-example"
     return None
 
 

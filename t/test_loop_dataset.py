@@ -56,7 +56,10 @@ class SampleGateTests(unittest.TestCase):
                  ("task_id", 2, "spec-problem-mismatch"),
                  ("task_id", True, "spec-problem-mismatch"),
                  ("pool", "v1", "spec-pool-mismatch"),
-                 ("task_sha256", "old", "spec-hash-missing-or-stale")]
+                 ("task_sha256", "old", "spec-hash-missing-or-stale"),
+                 ("points_failed", 1, "spec-contradicts-example"),
+                 ("points_failed", 3, "spec-contradicts-example"),
+                 ("over_constrained", True, "spec-refuses-every-example")]
         for field, value, expected in cases:
             with self.subTest(field=field, value=value):
                 modified = copy.deepcopy(good)
@@ -67,6 +70,46 @@ class SampleGateTests(unittest.TestCase):
         changed = copy.deepcopy(s)
         changed["task"] = surface.parse(surface.print_task(s["task"]).replace("a + 1", "a + 2"))
         self.assertEqual(dataset.positive_rejection(changed, evidence(s)), "spec-hash-missing-or-stale")
+
+    def test_agreeing_on_draws_does_not_excuse_contradicting_a_stated_example(self):
+        """A specification can agree on every random draw and still be false at an
+        input the problem itself supplies. The draws are sampled; the examples are
+        the ones a problem author chose. Before 2026-09-20 spec_check computed this
+        and only the scorecard read it, so such an answer entered the training set.
+        """
+        s = sample()
+        key = f"{s['tag']}/{s['name']}"
+        ev = evidence(s)
+        ev[key].update(points_held=2, points_failed=1,
+                       contradicts_example={"args": [7], "expected": 8})
+        self.assertEqual(dataset.positive_rejection(s, ev, "v5"), "spec-contradicts-example")
+        self.assertEqual(dataset.positives_of([s], results=ev, pool_name="v5"), [])
+        # Held at every example and failing none is the passing shape.
+        ev[key].update(points_held=3, points_failed=0)
+        ev[key].pop("contradicts_example")
+        self.assertIsNone(dataset.positive_rejection(s, ev, "v5"))
+        # A specification whose precondition refuses every example the problem
+        # gave it narrows the problem instead of describing it.
+        ev[key].update(points_held=0, points_failed=0, points_excluded=3,
+                       over_constrained=True)
+        self.assertEqual(dataset.positive_rejection(s, ev, "v5"), "spec-refuses-every-example")
+
+    def test_missing_points_columns_are_not_treated_as_a_failure(self):
+        """470 of 512 existing rows predate check_points. They must still pass the
+        gates that do apply rather than being rejected for a column that did not
+        exist when they were written -- and, equally, absence is not evidence they
+        hold at their examples. Only a present, positive count rejects.
+        """
+        s = sample()
+        key = f"{s['tag']}/{s['name']}"
+        ev = evidence(s)
+        self.assertNotIn("points_failed", ev[key])
+        self.assertIsNone(dataset.positive_rejection(s, ev, "v5"))
+        for value in (None, "1", True, 0):
+            with self.subTest(points_failed=value):
+                modified = copy.deepcopy(ev)
+                modified[key]["points_failed"] = value
+                self.assertIsNone(dataset.positive_rejection(modified and s, modified, "v5"))
 
     def test_seven_means_exact_named_clean_kernels(self):
         s = sample()
