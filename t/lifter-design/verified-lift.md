@@ -891,7 +891,7 @@ list.
   risk), and the refusal-on-unknown-token rule means the parser fails
   closed.
 
-## 15. Open decisions (Treston's, not the lifter's)
+## 15. Open decisions (the operator's, not the lifter's)
 
 1. Read-only `array<int>` params -> `seq`? Default: NO (refuse `array`),
    because `a.Length`/`a[i]` reads are meaning-equivalent to `len`/`at`

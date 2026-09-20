@@ -1,6 +1,6 @@
 # Why no number about this corpus counts yet
 
-The standing rule, in Treston's words on 2026-09-06:
+The standing rule, in the operator's words on 2026-09-06:
 
 > If the t lifter isn't flawlessly preserving meaning on the simplest functional tasks,
 > any success metric on the larger 24,000-problem corpus is mathematically meaningless.

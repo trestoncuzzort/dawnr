@@ -612,5 +612,5 @@ plus the `problem6` row above. Those 25 are not a defect. They are the
 standing consequence of LIFTER-DECISIONS row 1, which lifts a read-only
 `array<int>` to a `seq` under stated conditions and refuses otherwise. A row
 that fails those conditions is decided, not undecided; what is undecided is
-whether to widen the rule, and that is Treston's call rather than the
+whether to widen the rule, and that is the operator's call rather than the
 lifter's.

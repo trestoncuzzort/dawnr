@@ -287,7 +287,7 @@ Ranked by how much each changes what the paper has to say.
 ### Corrections from the citation audit of 2026-09-09
 
 Thirteen entries of this list were audited against their sources by
-Treston's literature workflow (the records are the appendix of
+the operator's literature workflow (the records are the appendix of
 LITERATURE-2026-09.md). The corrections are folded into the entries
 above; the ones that change a claim rather than a spelling are these.
 "Who Watches the Provers?" is an essay on de Moura's blog, not a paper,

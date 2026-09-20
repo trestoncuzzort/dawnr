@@ -242,7 +242,7 @@ history rewrite on request that stripped every AI co-authorship trailer
 still point at pre-rewrite commits and GitHub refuses pushes to them, so
 the old history stays fetchable by SHA until GitHub Support collects them;
 a rewrite is not an unpublish. The repository is private again while its
-claims move (17.3); going public a second time is Treston's call at the
+claims move (17.3); going public a second time is the operator's call at the
 1.0 tag.
 
 ---
@@ -533,7 +533,7 @@ and reproduced from clean scratch by an adversarial reader per 10.4.
 Deliberately the measured coverage, not the lexical one, which is why 12.1
 came before everything else; the lexical count for that subset today is 131
 of 164 (COVERAGE-mbpp-dfy.md, family table). USABILITY, added 2026-09-05
-when Treston set the bar at "fully usable in an IDE", with people coding in
+when the operator set the bar at "fully usable in an IDE", with people coding in
 Visual Studio and in VS Code: a person with a fresh checkout opens a `.t`
 file in VS Code on Linux and on Windows, and in Visual Studio on Windows,
 and gets highlighting, parse and well-formedness errors at the offending
@@ -808,11 +808,11 @@ loop invariant: the same table with a larger model and several samples per
 problem, and div-mod (12.7) before any of it, since it alone bars 102 of
 368 problems. HumanEval is 16.3.
 
-2026-09-15 19:00Z, the spec experiment at 27B (12.6 and WS-18, the commit after 05c5b8d): Qwen3.8-27B-FP8 served by vLLM across the four RTX 6000 Ada beside another user's job (about 12 GB per card, tensor parallel 4, CUDA graphs), through t/spec_experiment.py generate --jobs 8 with the model's thinking mode off. With thinking on, the chat template's default, 340 of 368 replies hit a 1,024-token cap and 15 of the first 17 a 3,072 cap, the visible reply being the reasoning; that capped run is kept as t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8-np1024.md (32 well-formed tasks, 30 in all seven and passing tests). With thinking off and 3,072 tokens: 368 replies in 35 minutes at about 200 tokens per second aggregate, 332 stopping on their own; 315 with a closed t block, 143 well-formed (the 7B: 64), 116 passing the problem's tests (the 7B: 33). The seven kernels, at 16 jobs while wave Q and the design workflow shared the machine (load average above 100 throughout), read 47 tasks in all seven columns: 44 of 368 problems have a task that verifies with a refuted twin in all seven and passes its tests (the 7B: 4), 57 in at least one column, and 2 verify in all seven while failing their tests, the class 12.6 warns about. Of the 67 pool problems that are MBPP-DFY, 18 verify in all seven and pass. Blocking cells under that load: spark 50 timeouts and framac 36, lean 26 abstains, rocq 29 and fstar 23 on shapes their lowerings refuse, dafny 59 unproved reals; the spark and framac timeouts are re-graded alone before the count is called final. Table t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md; the server stays resident on this machine by Treston's request; the loop's named hurdle, positives in the hundreds, is now a matter of rounds.
+2026-09-15 19:00Z, the spec experiment at 27B (12.6 and WS-18, the commit after 05c5b8d): Qwen3.8-27B-FP8 served by vLLM across the four RTX 6000 Ada beside another user's job (about 12 GB per card, tensor parallel 4, CUDA graphs), through t/spec_experiment.py generate --jobs 8 with the model's thinking mode off. With thinking on, the chat template's default, 340 of 368 replies hit a 1,024-token cap and 15 of the first 17 a 3,072 cap, the visible reply being the reasoning; that capped run is kept as t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8-np1024.md (32 well-formed tasks, 30 in all seven and passing tests). With thinking off and 3,072 tokens: 368 replies in 35 minutes at about 200 tokens per second aggregate, 332 stopping on their own; 315 with a closed t block, 143 well-formed (the 7B: 64), 116 passing the problem's tests (the 7B: 33). The seven kernels, at 16 jobs while wave Q and the design workflow shared the machine (load average above 100 throughout), read 47 tasks in all seven columns: 44 of 368 problems have a task that verifies with a refuted twin in all seven and passes its tests (the 7B: 4), 57 in at least one column, and 2 verify in all seven while failing their tests, the class 12.6 warns about. Of the 67 pool problems that are MBPP-DFY, 18 verify in all seven and pass. Blocking cells under that load: spark 50 timeouts and framac 36, lean 26 abstains, rocq 29 and fstar 23 on shapes their lowerings refuse, dafny 59 unproved reals; the spark and framac timeouts are re-graded alone before the count is called final. Table t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8.md; the server stays resident on this machine by the operator's request; the loop's named hurdle, positives in the hundreds, is now a matter of rounds.
 
 2026-09-16 21:31Z, the 27B on pool v3 and prompt v3 (strings, sequences of strings; t/spec_experiment.py generate --tag, 215f0a2): 649 problems, 323 well-formed tasks, 237 passing the problem's tests; 57 of 649 verify with a refuted twin in all seven and pass their tests, 117 in at least one column; 11 verify in all seven while failing their tests. Of the 117 MBPP-DFY pool problems, 27 verify in all seven and pass. Graded at 8 jobs beside other work. Table t/SPEC-EXPERIMENT-mbpp-qwen3.8-27b-fp8-v3.md.
 
-2026-09-16 23:05Z, locallm builds models and t filters what they learn from (the project's purpose, stated by Treston: locallm is the water source, t the filter, the product a model clean of wrong output). t/loop_filter.py: locallm builds a model from random numbers (3.2M parameters, 1,500 steps), the model writes 500 programs, and a program counts as clean only when it parses, passes check_wf, is not a copy of the training corpus (canonical AST, name erased) and reads verified / refuted in all seven kernels. Size-matched comparison: a model built from 94.5 KB of clean tasks (t/loop_locallm.py corpus: 47 27B answers that pass their tests and read all seven on the train split of out/loop/split-v3.json, 192 lifted and 30 committed tasks reading all seven) wrote 375 parsing, 180 well-formed, 146 novel, 46 clean programs (1 of the 46 an exact copy the first copy check missed, since fixed); a model built from 95.7 KB of raw 27B output wrote 97 parsing, 7 well-formed, 7 novel, 3 clean. Rounds on the clean side, each model built from the clean corpus plus every clean program so far: round 1, 415 parsing, 249 well-formed, 144 novel, 57 clean (pool 103); round 2, 422 parsing, 300 well-formed, 164 novel, grading stopped unfinished at Ahmed's request. All grading ran beside other load (load average near 110 on 120 cores), which can only lower clean counts. Held out: t/loop_locallm.py's model built from the same clean corpus answered 232 held-out problems with 199 well-formed tasks, 188 reading all seven, 0 passing their tests, and 151 exact copies of corpus tasks: at 47 problem examples the model recites verified tasks and ignores the problem, so kernels without tests and a copy check reward recitation. The 27B's sampled answer set 2 (temperature 0.7) gave 197 test-passing tasks, 165 new; its grading and sets 3 to 9 were stopped with the rest. The 27B server was shut down the same night.
+2026-09-16 23:05Z, locallm builds models and t filters what they learn from (the project's purpose, stated by the operator: locallm is the water source, t the filter, the product a model clean of wrong output). t/loop_filter.py: locallm builds a model from random numbers (3.2M parameters, 1,500 steps), the model writes 500 programs, and a program counts as clean only when it parses, passes check_wf, is not a copy of the training corpus (canonical AST, name erased) and reads verified / refuted in all seven kernels. Size-matched comparison: a model built from 94.5 KB of clean tasks (t/loop_locallm.py corpus: 47 27B answers that pass their tests and read all seven on the train split of out/loop/split-v3.json, 192 lifted and 30 committed tasks reading all seven) wrote 375 parsing, 180 well-formed, 146 novel, 46 clean programs (1 of the 46 an exact copy the first copy check missed, since fixed); a model built from 95.7 KB of raw 27B output wrote 97 parsing, 7 well-formed, 7 novel, 3 clean. Rounds on the clean side, each model built from the clean corpus plus every clean program so far: round 1, 415 parsing, 249 well-formed, 144 novel, 57 clean (pool 103); round 2, 422 parsing, 300 well-formed, 164 novel, grading stopped unfinished at another user's request. All grading ran beside other load (load average near 110 on 120 cores), which can only lower clean counts. Held out: t/loop_locallm.py's model built from the same clean corpus answered 232 held-out problems with 199 well-formed tasks, 188 reading all seven, 0 passing their tests, and 151 exact copies of corpus tasks: at 47 problem examples the model recites verified tasks and ignores the problem, so kernels without tests and a copy check reward recitation. The 27B's sampled answer set 2 (temperature 0.7) gave 197 test-passing tasks, 165 new; its grading and sets 3 to 9 were stopped with the rest. The 27B server was shut down the same night.
 
 2026-09-17 01:45Z, the filter loop on the M3 Max MacBook, and the copy check corrected (t/runs/2026-09-17/README.md): t/loop_filter.py with the 2026-09-16 clean corpus and settings, locallm training on MPS (42 s for 1,500 steps), sampling 500 programs in 11 minutes, the seven kernels grading at 2 jobs in 18 minutes. Round 0: 341 parse, 125 well-formed, 112 novel, 35 clean in all seven as the loop counted (the lab workstation's same round: 375, 180, 146, 46). Round 1 (390 parse, 227 well-formed, 166 novel) was stopped by hand with 698 of 1,162 cells graded, 52 verified / refuted in each of dafny, verus, spark and framac, no row complete. Checking the 35 against the corpus found the copy check's hole: loop_filter.key and lab.task_key kept the format version, the 27B answers are `t 0` and locallm writes `t 1`, so an exact copy of a 27B answer counted as novel and graded clean. Both keys now erase version and gate. Recounted: this Mac's r0 35 is 25 new; the committed clean r0 46 is 29, clean r1 57 is 31, raw-matched r0 3 is 1, so the size-matched headline reads 29 against 1, the direction kept and the effect about a third smaller. Of this Mac's 35, 33 are at 0.85 or more similarity to their nearest corpus task and 3 have a loop: the loop's clean output is mostly short loop-free near-copies, the same recitation the held-out run showed.
 
@@ -972,7 +972,7 @@ waits on the next model run.
 
 **sequences as values LANDED 2026-09-09 (arrays with mutation); the
 adversarial reproduction is the open clause, and the design is one for
-Treston to ratify, since it was taken overnight.** Measured first on the
+the operator to ratify, since it was taken overnight.** Measured first on the
 785: 315 programs use an array, 157 assign an element, 130 only read one
 (the lifter already carried those as `seq`), 72 mutate a parameter in
 place under `modifies`, 85 allocate and fill (unwitnessed, no committed
@@ -1324,7 +1324,7 @@ regenerates them. What is open, by name: the EMPTY-CELL and TITLE bytes
 already committed inside generated `.md` tables, the seven heredoc lines
 writing image files, and where the earlier unwitnessed 3 belong.
 
-`forge/` and `locallm/` were out of scope from 2026-09-02 to 2026-09-09; Treston
+`forge/` and `locallm/` were out of scope from 2026-09-02 to 2026-09-09; the operator
 brought them back on 2026-09-09 as parts of one project ("they just got left
 behind while we were focusing on t and tup"), forge as the training end of
 the t loop (WS-18 below), locallm as the tinkering lab; section 0's own plan
@@ -1362,7 +1362,7 @@ tier over ints, bools, sequences and strings, grown by this census's order.
 
 ## WS-18: the training loop, forge's track (opened 2026-09-09)
 
-Treston's direction of 2026-09-09: t must take in almost all of the nl/
+the operator's direction of 2026-09-09: t must take in almost all of the nl/
 corpus so models can be trained on the bugs the kernels find, the errors
 flattening round over round with every failure naming its cause. forge is
 the training end of that loop and locallm the lab beside it, both back in
@@ -1376,7 +1376,7 @@ of the spec experiment, over the pool and over a held-out set, with a
 same-path control column because the inference path moved the numbers
 more than the first training round did.
 
-**The training loop's first curve, at 1.5B (2026-09-09).** Treston set the
+**The training loop's first curve, at 1.5B (2026-09-09).** the operator set the
 direction the same day: t must take in almost all of the nl/ corpus so
 models can be trained on the bugs the kernels find, the errors flattening
 round over round with every failure naming its cause; forge and locallm
@@ -1490,7 +1490,7 @@ take that model's columns first.
 
 ## WS-19: the frontier moves (opened 2026-09-10)
 
-Treston, 2026-09-09: "the front tier survey is gonna be groundbreaking for
+the operator, 2026-09-09: "the front tier survey is gonna be groundbreaking for
 what we are doing so take it as extremely important." The survey is
 `t/FRONTIER-2026.md` (2026-09-09: seven axes of what front tier means in
 2026, t's position on each, fourteen ranked moves, three things t can
@@ -1511,7 +1511,7 @@ measures (seven-kernel joint agreement with a certified refutation, 42 of
 no repair loop, which the field's 2026 numbers name as the lever that
 moves results most for the least engineering.
 
-The moves, in the order t takes them, REORDERED 2026-09-10 on Treston's
+The moves, in the order t takes them, REORDERED 2026-09-10 on the operator's
 call ("reorder WS-19 with the grader first and get us out of the
 tunnel"). The first order put the repair loop first and the grader last;
 the first measurement (below) and a plain reading of the survey's own
@@ -2163,7 +2163,7 @@ UNBLOCKS: 12.4, 15.1.
 
 #### 13.3 What a verified twin means
 
-12.3's open decision, Treston's to make: SPEC.md says a task whose twin
+12.3's open decision, the operator's to make: SPEC.md says a task whose twin
 verifies has a decorative spec and is REFUSED, and the harness does not yet
 refuse it, so `no_flip` measures the fuzzer's spec strength rather than the
 kernels' twin discipline.
@@ -2172,7 +2172,7 @@ DONE WHEN: SPEC.md states the rule taken, the harness enforces it, and the
 fuzz_lower statistic means only what it says.
 UNBLOCKS: 13.4, 16.1.
 
-**13.3 DONE 2026-09-11 (6e87c3d).** The rule taken (the assumed answer in "Decisions for Treston"): a column whose twin VERIFIES reads `decorative` beside the real outcome, never agreement, and never a bare surviving twin; when the interpreter's witness for that twin entailed a refutation (the `_ens` witness kind), the cell reads `unsound` instead, the kernel-bug signal, counted apart. SPEC.md "The twins" states it; harness.decorative_kind decides it; run_par, grade and fuzz_lower render and count it (fuzz_lower's no_flip now counts only unproved, timeout and malformed twins, with `decorative` and `unsound` lines of their own). Measured: the committed matrix is unchanged cell for cell (no committed task has a verifying twin); the six twins that survived the full family run the same morning (two probes built to, four v0loose specs) now read decorative, unsound 0; test_twin_rule.py 3 of 3 (an `ensures true` task reads verified / decorative through the real pipeline). Open by name: no live `unsound` cell has been observed, the path is covered by a pure-function test only; grade.py's summary prose does not yet count decorative cells.
+**13.3 DONE 2026-09-11 (6e87c3d).** The rule taken (the assumed answer in "Decisions for the operator"): a column whose twin VERIFIES reads `decorative` beside the real outcome, never agreement, and never a bare surviving twin; when the interpreter's witness for that twin entailed a refutation (the `_ens` witness kind), the cell reads `unsound` instead, the kernel-bug signal, counted apart. SPEC.md "The twins" states it; harness.decorative_kind decides it; run_par, grade and fuzz_lower render and count it (fuzz_lower's no_flip now counts only unproved, timeout and malformed twins, with `decorative` and `unsound` lines of their own). Measured: the committed matrix is unchanged cell for cell (no committed task has a verifying twin); the six twins that survived the full family run the same morning (two probes built to, four v0loose specs) now read decorative, unsound 0; test_twin_rule.py 3 of 3 (an `ensures true` task reads verified / decorative through the real pipeline). Open by name: no live `unsound` cell has been observed, the path is covered by a pure-function test only; grade.py's summary prose does not yet count decorative cells.
 
 #### 13.4 The spec freeze and the conformance probes
 
@@ -2373,7 +2373,7 @@ Visual Studio 2022 hosts language servers through its own client
 extensibility, so 15.2's server is reused; the extension is a VSIX carrying
 the grammar and a language client, and it can only be built and tested on
 Windows with the Visual Studio SDK. This box is Linux; the build runs on
-Treston's Windows machine or a Windows CI runner. Five kernels run natively
+the operator's Windows machine or a Windows CI runner. Five kernels run natively
 there and WSL2 gives all seven (RUN-ON-WINDOWS.md).
 
 DONE WHEN: the same walk-through, in Visual Studio 2022 on Windows, with the
@@ -2522,11 +2522,11 @@ The repository is private today (verified 2026-09-04) and its claims move
 while it is. The em-dash debt in 12.8 is paid before the tag, sentence by
 sentence, not by deleting the character.
 
-DONE WHEN: Treston's call; the roadmap assumes the 1.0 tag is the moment.
+DONE WHEN: the operator's call; the roadmap assumes the 1.0 tag is the moment.
 
 **The em-dash debt paid in prose, 2026-09-11 (6e87c3d).** Every em-dash in prose in ROADMAP.md (54), README.md, t/GRADER.md, run_par.py, run_all.py, test_lift_report.py and boundary_probe.py was rewritten sentence by sentence (a comma, a colon, parentheses, or two sentences); the two table generators print a comma in their title from the next run; the committed generated tables keep their old title until regenerated (AGREEMENT.md was, the same day). The independent check found one rewrite that unbalanced a parenthesis in the WS-7 table; fixed before the commit. Out of scope by name: forge/, locallm/, tup/ scripts and receipts (bytes handed back as committed).
 
-### Decisions for Treston
+### Decisions for the operator
 
 Each is assumed as stated until answered; answering otherwise changes what
 is written above.

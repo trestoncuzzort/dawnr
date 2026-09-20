@@ -1186,7 +1186,7 @@ Instruments, in the order they run:
   line 4: `forall a: int :: 0 < a*a < n ==> a*a != n`: the bound is on
   `a*a`, not `a`: unbounded-quantifier, matching the census.
 
-## 15. Open decisions (Treston's, not the lifter's)
+## 15. Open decisions (the operator's, not the lifter's)
 
 1. Read-only `array<int>` parameter -> `seq`. Default: refuse `array`. If
    reversed (an array parameter never assigned, never in a `modifies`, read

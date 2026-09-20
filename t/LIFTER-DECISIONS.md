@@ -4,7 +4,7 @@ The four designs in `t/lifter-design/` (DPN: dafny-print-normalised, RD:
 recursive-descent, TSG: two-stage-generic, VL: verified-lift) each end with an
 "open decisions" section. Read together they name the same questions, and
 each states what reversing its default costs. This file settles them so the
-implementers have one answer per question. Row 1 was decided by Treston on
+implementers have one answer per question. Row 1 was decided by the operator on
 2026-09-05; the rest are the majority default across the four designs, with
 the ROADMAP.md "assumed" list (WS-16 notes) breaking ties, approved with the
 implementation plan on 2026-09-05. A row is reversed by editing this file and
@@ -17,7 +17,7 @@ on.
 
 | # | Decision | DPN | RD | TSG | VL | Chosen default | Cost of reversing |
 |---|---|---|---|---|---|---|---|
-| 1 | Read-only `array<int>` parameter | refuse `array` | refuse `array` | lift to seq | refuse `array` | Lift to `seq`, `a.Length` as `len`, `a[i]` as `at`; condition: no `modifies`, no element assignment, no `new`, no call passing the array, anywhere in the method's closure; recorded `array-readonly-as-seq`. Treston, 2026-09-05; ROADMAP assumed the same. | Refuse `array`: the 36 sole-gap programs stay refused and the table loses its largest class of rows. |
+| 1 | Read-only `array<int>` parameter | refuse `array` | refuse `array` | lift to seq | refuse `array` | Lift to `seq`, `a.Length` as `len`, `a[i]` as `at`; condition: no `modifies`, no element assignment, no `new`, no call passing the array, anywhere in the method's closure; recorded `array-readonly-as-seq`. the operator, 2026-09-05; ROADMAP assumed the same. | Refuse `array`: the 36 sole-gap programs stay refused and the table loses its largest class of rows. |
 | 2 | `x in s`, `x !in s` on a `seq<int>` | desugar | desugar | desugar | desugar | Bounded `exists` over `[0, len(s))` with a fresh binder, `not` of it for `!in`; recorded `in-desugared`. The contract lemma verifies it per program. | Refuse `seq-membership`: 0 of the 77, 6 of the 49 samples; a lifter-introduced quantifier never reaches a kernel. |
 | 3 | `s != []`, `s == []` | refuse `seq-literal` | not raised | not raised | not raised | Refuse `seq-literal` in v1 (a display is a display). | Exact emptiness desugaring to `len(s) != 0`; maximum.dfy lifts. Revisit from the 785 table. |
 | 4 | nat return | add | add | add, first | add | Add `ensures r >= 0` as the first ensures clause; recorded `nat-return-ensures`. The source's typing is part of its theorem. | The kernels prove a weaker theorem than the source's on the 25 nat-returning methods of the 77, and a twin returning a negative can pass. |

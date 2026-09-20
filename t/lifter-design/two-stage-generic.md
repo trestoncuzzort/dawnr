@@ -4,7 +4,7 @@ Design only (ROADMAP.md 12.4). Nothing below is implemented. Every statement
 about what Dafny 4.11.0 does was measured with the installed binary
 (`$HOME/.local/dafny/dafny`), and the command and result are in
 section 15. Every statement about a corpus program quotes the line it rests
-on (section 14). Where a rule rests on a semantic choice that is Treston's
+on (section 14). Where a rule rests on a semantic choice that is the operator's
 to make, the rule names its default and section 16 lists the reversal.
 
 ## 0. Summary
@@ -588,7 +588,7 @@ kernel's failure on the lift is a kernel finding and a twin's verification
 on the lift says the same thing it says on any t task. The alternative of
 dropping `ensures r >= 0` (16.3) makes the lifted spec weaker than the
 source's contract and is therefore excluded by the section 0 rule unless
-Treston decides the return type is not part of the contract t grades. The
+the operator decides the return type is not part of the contract t grades. The
 alternative of not adding the type invariants (16.4) keeps the author's
 invariant list pristine for the twin ladder at the price of making
 provable programs unprovable, which is visible under-counting and
@@ -956,7 +956,7 @@ All with `PATH=$HOME/.local/dafny:$PATH`, every dafny call under
 - E18 `python3` over census.json: 643 gradable; sole-gap counts array 36, div-mod 25, multi-return 14, multi-method 5, real 5, early-exit 4, string-char 3, set 2, nested-seq 2, generics/nondet/seq-literal/bitvector/unbounded-quantifier/module 1 each; 0 of the 77 carry a quantifier; the 36 sole-gap `array` files all lack `array-mutation`.
 - E19 background sweep started (`sweep.sh`): `dafny verify --allow-warnings` over the 77 sources into `verify77.tsv`, then `dafny resolve --allow-warnings --rprint` over all 785 into `resolve785.tsv` and `rprint/`. Results are appended to this section when it finishes (see the addendum at the end of this file if present).
 
-## 16. Open decisions (Treston's, not the lifter's)
+## 16. Open decisions (the operator's, not the lifter's)
 
 1. Read-only `array<int>` parameters as `seq`. Default: lift, recorded
    `array-readonly-as-seq`. Reversed: refuse `array`; 36 gradable programs

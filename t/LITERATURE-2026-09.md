@@ -1,4 +1,4 @@
-# Literature review for t, 2026-09-09 (Treston's workflow template, filled for t)
+# Literature review for t, 2026-09-09 (the operator's workflow template, filled for t)
 
 Produced by the literature-review workflow (run wf_6768cc54-c5a): eight open problems swept in parallel, the actionable papers deep-read, the thirteen citations of RELATED-WORK.md's reading list audited against their sources, one synthesis. Sources read are saved under ~/tup-reports/papers/literature-2026-09-09/. Search and reads on Sonnet, audit and synthesis on Opus, per the template. The session's WebSearch budget ran out during the audit, so the audits were done by direct fetch of the sources, the stronger evidence.
 

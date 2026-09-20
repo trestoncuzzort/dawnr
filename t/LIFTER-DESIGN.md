@@ -3,7 +3,7 @@
 Provenance. The text below the rule is `t/lifter-design/verified-lift.md`,
 one of four independent designs written by the design workflow
 `wf_75f9712b-7db` on 2026-09-05, unchanged. The workflow's judge, synthesis
-and critique phases never ran (five-hour rate cap, overage disabled); Treston
+and critique phases never ran (five-hour rate cap, overage disabled); the operator
 chose this design as the base on 2026-09-05 after a two-section comparison,
 and the reconciliation the panel would have done is `t/LIFTER-DECISIONS.md`,
 one row per open question with each design's default and the chosen one.
@@ -925,7 +925,7 @@ list.
   risk), and the refusal-on-unknown-token rule means the parser fails
   closed.
 
-## 15. Open decisions (Treston's, not the lifter's)
+## 15. Open decisions (the operator's, not the lifter's)
 
 1. Read-only `array<int>` params -> `seq`? Default: NO (refuse `array`),
    because `a.Length`/`a[i]` reads are meaning-equivalent to `len`/`at`

@@ -728,7 +728,7 @@ Legend: `[H]` high / `[M]` medium / `[L]` low implementable-here.
 ### [M] SpecPylot: Python Specification Generation using Large Language Models
 - 2026 · arXiv:2604.16560 (21 Apr 2026) · **FSE Companion '26** (tool demo), Montreal ·
   https://arxiv.org/pdf/2604.16560 · artifact DOI 10.5281/zenodo.19491112
-- Ayon, Ahmed (Texas State)
+- Ayon, another user (Texas State)
 - **Technique.** Generates **`icontract` decorators** — Python pre/postconditions embedded in the
   function signature, checked at runtime. Validates by executing the contracts against test cases.
   Evaluated against FormalBench and SpecGen datasets.
@@ -738,7 +738,7 @@ Legend: `[H]` high / `[M]` medium / `[L]` low implementable-here.
 
 ### [M] AutoReSpec: A Framework for Generating Specification using Large Language Models
 - 2026 · arXiv:2604.03758 (4 Apr 2026) · https://arxiv.org/abs/2604.03758
-- Ayon, Ahmed
+- Ayon, another user
 - **Technique.** JML for Java. **Collaborative open + closed-source LLM pairing**, with the model
   pair and the prompt **selected dynamically from program structure** (loops/branches get the
   robust pair). When the primary model fails, a second model is invoked with **validator feedback**
