@@ -125,6 +125,18 @@ The whole experiment, once the pool is rebuilt:
     python3 t/spec_check.py locallm-ex --pool v5 --n 100 --only clean --out t/SPEC-CHECK-ex.md
     python3 t/score_heldout.py phi4-mini-eval2-2026-09-19 locallm-r7b-headed2 locallm-ex
 
+**Run the gaming check with it, not after it.** `t/example_holdout.py`
+implements SpecBench's measurement ([arXiv:2605.21384](https://arxiv.org/abs/2605.21384)):
+the gap between the assertions the prompt showed and the ones it held back.
+SpecBench reports that every frontier model saturates visible tests while
+hacking held-out ones, that the gap grows 28 points per tenfold increase in code
+size, and that **smaller models show larger gaps** — ours is 92M.
+
+The null distribution is already measured on five arms that never saw an
+example: gaps of **-0.67, -1.41, -1.65, -1.44 and +0.00 points**. So the
+threshold is not arbitrary. **A gap above +5 points means the arm solved the two
+examples it was shown rather than the problem**, and the result does not count.
+
 **Register the prediction before running it.** Mine, on the evidence above:
 proven-but-wrong falls below 40 of its well-formed answers, from 59; clean
 reaches 3 or more; and well-formedness does not collapse the way the first
