@@ -70,15 +70,42 @@ locallm/corpus.previous.txt
 locallm/training_data_dafny/
 locallm/out/
 locallm/out-dafny-mps/
-t/out/
 # ...but not the evidence. A findings document that cites a table the
 # repository does not contain is a claim without a file behind it, and
 # `git add t/out/score-r8.md` failed silently for three rounds on 2026-09-19
-# because this rule matched before anyone noticed. Negations, not -f.
+# because this rule matched before anyone noticed.
+#
+# The fix written then did not work, and was found on 2026-09-20 still not
+# working. `t/out/` excludes the DIRECTORY, and git cannot re-include a file
+# whose parent directory is excluded, so every `!t/out/...` line below it was
+# inert -- the 25 evidence files in the repository are there because someone
+# reached for `-f` anyway. `t/.gitignore` held a second copy of the same
+# mistake, one line reading `out/`, which is why `git check-ignore` blamed that
+# file rather than this one.
+#
+# So: exclude the CONTENTS, re-include the directories so git still descends
+# into them, and only then name the evidence. Verify with
+# `git check-ignore -v t/out/score-r9.md` printing nothing at all.
+t/out/**
+!t/out/**/
 !t/out/score-*.md
 !t/out/evaluator-state-*.json
 !t/out/capacity-*.json
 !t/out/CONSTRAINED-*.md
+!t/out/KERNEL-DISAGREEMENT-*.md
+!t/out/scorecard-*.json
+!t/out/recheck.json
+!t/out/spec-disagree.json
+# the split IS the held-out set: score_heldout.py defaults to it and
+# locallm/ACHIEVEMENTS.md cites it, so a clone without it cannot reproduce
+# the headline at all.
+!t/out/loop/split-*.json
+!t/out/loop/eval-ids.txt
+!t/out/loop/train-ids.txt
+!t/out/loop/apps-upper.txt
+!t/out/loop/sft-r*.jsonl
+!t/out/loop/pairs-r*.jsonl
+!t/out/spec-experiment/**/WHY-NO-TABLE.md
 # tup/book/ stays TRACKED: it is generated, but it is the exact bytes that
 # executed, which is evidence a receipt can point at.
 
