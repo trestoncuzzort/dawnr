@@ -30,6 +30,13 @@ than passing unit tests. Phi was regraded the same day, by the same evaluator,
 beside locallm, so the two numbers are comparable rather than quoted from
 different weeks.
 
+**"locallm" is several models, not one**, and this page quotes two of them. The
+92M above is the specialized core that draws level with Phi, round 8 with
+signature-headed training. The smaller rounds trained from random weights are
+separate checkpoints and are quoted separately below, so a size ratio here and a
+size ratio there will not agree. Every round is listed with its own parameter
+count, decoding and score in [`SCOREBOARD.md`](SCOREBOARD.md).
+
 **It is a tie, not a win, and it is three answers wide.** 3 of 232 is 1.3%:
 both models fail the overwhelming majority of the time. Phi has never seen t,
 so most of its answers do not parse, which makes this a weaker claim than
@@ -51,11 +58,11 @@ outright.
 Eight results, in plain terms, each linked to the script that produced it:
 [`locallm/ACHIEVEMENTS.md`](locallm/ACHIEVEMENTS.md). The short version:
 
-1. **It learned a formal language almost perfectly, from nothing.** The 10.9M
-   model wrote a syntactically valid program for **209 of 232** unseen
-   problems. Phi-4-mini, about 350 times larger, managed **12**. Everyone
-   assumes notation is the hard part for a tiny model. It isn't. It's nearly
-   free.
+1. **It learned a formal language almost perfectly, from nothing.** Round 4,
+   10.9M parameters trained from random weights, wrote a syntactically valid
+   program for **209 of 232** unseen problems. Phi-4-mini, about 350 times
+   larger, managed **12**. Everyone assumes notation is the hard part for a tiny
+   model. It isn't. It's nearly free.
 2. **It matches a model 41 times its size**, at 3 clean answers each. All three
    of locallm's survived a check that the specification describes the problem
    actually asked; one of Phi's three could not be checked.
