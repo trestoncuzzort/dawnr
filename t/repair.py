@@ -168,6 +168,11 @@ def main() -> int:
                          "with five positional arguments here, so `api` took its default and every request "
                          "went to /api/chat, which vLLM does not serve: the run then reported `no answer` "
                          "for every task and looked like a model that would not cooperate.")
+    ap.add_argument("--require-candidates", action="store_true",
+                    help="exit 3 when no answer qualifies for repair, instead of "
+                         "reporting success over an empty work set. Opt-in, not the "
+                         "default, because a smoke run legitimately has no work "
+                         "(github.com/UCSC-Transients/dark-hunter_pop/issues/135).")
     ap.add_argument("--suffix", default="-fix1")
     ap.add_argument("--pool", default="v3")
     ap.add_argument("--jobs", type=int, default=4)
@@ -189,8 +194,29 @@ def main() -> int:
         return 2
     ext = json.loads((src / "extract.json").read_text(encoding="utf-8"))
     by_name = {e["name"]: tid for tid, e in ext.items() if e.get("stage") == "task"}
+    # grade-in/ is where a graded arm stages the answers that pass their tests, and
+    # it is what this loop was written against. Arms graded by another path have
+    # tasks/ and no grade-in/, and on 2026-09-20 that silently cost six of ten arms
+    # their whole repair run: each printed "0 answers pass their tests but are not
+    # clean in all seven" while holding about forty answers one kernel short.
+    # Fall back to tasks/, filtered by the same condition grade-in/ encodes, so the
+    # candidate set means the same thing either way -- the prompt below tells the
+    # model "your t task passes every test", and that has to be true.
+    pool_dir = src / "grade-in"
+    passing: set[str] | None = None
+    if not pool_dir.is_dir() or not any(pool_dir.glob("*.json")):
+        pool_dir = src / "tasks"
+        try:
+            tests = json.loads((src / "tests.json").read_text(encoding="utf-8"))
+            passing = {v.get("name") for v in tests.values() if v.get("overall") == "pass"}
+        except (OSError, ValueError):
+            passing = set()
+        print(f"repair: {src.name}: no grade-in/, reading tasks/ "
+              f"({len(passing)} pass their tests)", flush=True)
     todo = []
-    for f in sorted((src / "grade-in").glob("*.json")):
+    for f in sorted(pool_dir.glob("*.json")):
+        if passing is not None and f.stem not in passing:
+            continue
         name = f.stem
         row = cells.get(name)
         if row is None or all(cell_words(row.get(k, ""))[0:2] == ("verified", "refuted") for k in cols):
@@ -202,6 +228,30 @@ def main() -> int:
     options = {"temperature": a.temperature, "seed": a.seed, "num_ctx": a.num_ctx, "num_predict": a.num_predict}
     digest = se.model_digest(a.host, a.model)
     print(f"repair: {src.name}: {len(todo)} answers pass their tests but are not clean in all seven", flush=True)
+    if not todo:
+        # PRIOR ART, fetched 2026-09-20:
+        # github.com/UCSC-Transients/dark-hunter_pop/issues/135 names this exact
+        # class -- "stages complete successfully while science counters stay zero
+        # ... easy to miss in a long run-plan" -- and prescribes two things
+        # together, a loud warning when the input root is empty AND an OPTIONAL
+        # fail-closed flag "so CI or production dry-runs cannot green-pass empty
+        # science". It also says what not to do: "Do not treat empty attach as an
+        # automatic hard failure with no opt-in (local fixture-less smoke may need
+        # skip)", which is why --require-candidates exists and is off by default.
+        #
+        # Measured here first: on 2026-09-20 six of ten arms in one queue printed
+        # this line with 0 and exited 0, while holding about forty answers one
+        # kernel short of clean. The cause was a layout difference, tasks/ and no
+        # grade-in/, and nothing in the queue's log distinguished "nothing to
+        # repair" from "could not see the work".
+        print(f"repair: WARNING {src.name} has NO candidates. This is not the same "
+              f"as nothing needing repair. Checked {pool_dir.relative_to(src)}/ "
+              f"({len(list(pool_dir.glob('*.json')))} files)"
+              + (f", {len(passing)} passing their tests" if passing is not None else "")
+              + f", against {len(cells)} rows of kernels.md.", flush=True)
+        if a.require_candidates:
+            print("repair: --require-candidates given, so this is a failure", flush=True)
+            return 3
     lock, state, t0 = threading.Lock(), {"n": 0, "failed": 0}, time.monotonic()
 
     def one(item):
