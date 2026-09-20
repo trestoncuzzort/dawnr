@@ -185,7 +185,15 @@ symlinks into a sibling `nl-problems` checkout, so this tree only worked while t
 directory happened to exist beside it. They remain gitignored; nothing about what may be
 published changed. All ten now verify against `manifest.json` here: 50 checks, 0 failed.
 Since APPS has no rebuild script, these bytes are the working copy of record, and a machine
-that loses them has to re-normalise from `codeparrot/apps` by hand to match the manifest. Check the terms before
+that loses them has to re-normalise from `codeparrot/apps` by hand to match the manifest.
+
+**Where the copies are**, checked 2026-09-20, each passing all 50 manifest checks on its
+own machine: `nl/data/` in this tree on the desktop, and `~/tup/nl/data/` on the grading
+workstation. Two machines, not one. The standalone `nl-problems` repository these were
+imported from was deleted after this check; it held nothing this tree does not, its
+`manifest.json` was byte-identical, and its copy of `rebuild_codecontests_full.py`
+differed only in punctuation. Its data lived in GitHub LFS, which is why the check above
+was run before it went. Check the terms before
 republishing, redistributing outside the lab, or shipping any of it in a public model
 release.
 
