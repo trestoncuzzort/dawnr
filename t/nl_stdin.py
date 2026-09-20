@@ -435,6 +435,11 @@ def process_apps(limit: int | None = None):
                         "grammar_rule": result["grammar_rule"],
                         "signature": result["signature"],
                         "points": result["points"],
+                        # carried for t/nl_stdin_pool.py: attach_solution keeps only the
+                        # verdict, and a pool entry needs the solution text itself to
+                        # build a callable reference out of a stdin script.
+                        "solution": apps_first_solution(rec),
+                        "text": rec.get("question", ""),
                     })
             out.append(make_record("APPS", pid, stub, result))
     return out, pool_examples
@@ -469,6 +474,8 @@ def process_codecontests(limit: int | None = None):
                         "grammar_rule": result["grammar_rule"],
                         "signature": result["signature"],
                         "points": result["points"],
+                        "solution": cc_first_solution(rec),
+                        "text": rec.get("description", ""),
                     })
             out.append(make_record("CodeContests", pid, stub, result))
     return out, pool_examples

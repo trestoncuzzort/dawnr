@@ -115,7 +115,7 @@ def outdir(model: str) -> Path:
 
 # ------------------------------------------------------------------ pool --
 
-POOL_VERSIONS = ("v1", "v2", "v3", "v4", "v5")
+POOL_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "v6")
 APPS_BASE = 200000      # pool v5: an APPS record is task id 200000 + its own id, clear of MBPP and HumanEval
 HUMANEVAL_BASE = 100000     # pool v4: HumanEval/<n> is task id 100000 + n, clear of every MBPP id
 
@@ -142,7 +142,7 @@ def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
     solution, which this tuple alone cannot express, so `pool()`/
     `pool_report()` read `version == "v3"` directly for that half rather
     than folding it in here."""
-    if version in ("v3", "v4", "v5"):
+    if version in ("v3", "v4", "v5", "v6"):
         return True, ("int", "bool", "seq", "seq-of-seq")
     if version == "v2":
         return True, ("int", "bool", "seq")
@@ -168,6 +168,15 @@ def pool(version: str = "v1") -> dict[int, dict]:
     refused assertion is out, and the refusal reasons are counted in
     `pool_report`."""
     strings, allowed = _pool_settings(version)
+    if version == "v6":
+        # Pool v6 (2026-09-20): v5 plus the stdin-shaped problems t/nl_stdin.py
+        # admitted and nothing ever asked for. v5's entries are unchanged and
+        # keep their ids, so a result measured under v5 is still a result about
+        # the same problem -- but it is still a DIFFERENT POOL, and
+        # loop_dataset.positive_rejection is right to refuse a v5 result offered
+        # as a v6 one. Regrade instead of widening that gate.
+        import nl_stdin_pool
+        return {**pool("v5"), **nl_stdin_pool.stdin_pool()}
     if version == "v5":
         return {**pool("v4"), **apps_pool()}
     if version == "v4":
