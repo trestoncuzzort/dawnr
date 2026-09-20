@@ -2017,6 +2017,84 @@ is the measurement. An agent reporting that it unlocked the data by widening one
 has reported nothing that can be checked, and the shape to look for in a diff is
 a comparison loosened with a citation next to it.
 
+## Tier 0a: the pool that was measured and never asked for, 2026-09-20
+
+`t/nl_stdin.py` accepted 3,058 of 20,509 stdin-shaped problems and put 1,038 of
+them in the pool (`t/COVERAGE-nl-stdin.md:19-21`). Nothing imported it.
+`spec_experiment.pool()` never called it, so those problems were a measurement
+and nothing else while `LIMITS.md` said the corpus was exhausted. They are wired
+in now as pool v6.
+
+**Wiring alone would not have worked, and that is the whole content of this
+item.** `in_pool` means "the first Python solution's constructs are inside t's
+fragment". It does not mean there is a callable reference, and a stdin solution
+is a script: it reads `input()` and prints. `spec_check.reference()` execs the
+record's code and looks a function up by name, `check_task` returns
+`no reference` without one, and `positive_rejection` then returns
+`spec-not-agrees`. Those 1,038 problems could never have become training
+positives however well a model answered them, and nothing would have said so:
+the pool would simply have looked 35% larger.
+
+`t/nl_stdin_pool.py` renders a t-typed argument list back into the exact stdin
+text the problem's own grammar rule describes, runs the solution against it with
+stdin and stdout redirected, and reads the single integer back. It is the
+inverse of `classify_lines` + `build_args`, and `t/test_nl_stdin_pool.py` tests
+it as one: every rule is rendered and read back through `nl_stdin`'s own reader
+rather than a copy of it. `b` and `c` produce identical arguments from different
+layouts, so the rule label is carried through the entry rather than recomputed
+from the arguments, which cannot tell them apart.
+
+**Measured.** Pool v5 is 3,003 entries and builds in 0.9 s. Pool v6 is **4,035**
+entries, **1,032 added (+34.4%)**, APPS 474 and CodeContests 558, no id
+collisions. The v5 half is untouched: 0 ids overlap, `v6` keys are exactly
+`v5` keys plus the new ones, and all 3,003 v5 entries compare equal inside v6.
+Id ranges are disjoint by construction and stay that way: v5's largest id is
+204,998, the stdin APPS ids run 300,002 to 304,721 and the CodeContests ids
+1,001,913 to 10,980,869.
+
+**An id is a function of the problem and of nothing else.** APPS carries its own
+integer id, added to the base the way pool v5 already does. CodeContests names
+its problems -- "1575_A. Another Sorting Problem" -- so the id is a sha256 of
+that name over a 10 million span, and a collision refuses BOTH sides rather than
+moving one, because two problems sharing an id makes a stored verdict ambiguous
+rather than merely misfiled. The prior art is Hugging Face `datasets`, which
+fingerprints a derived dataset by hashing its sources and each transform
+(https://huggingface.co/docs/datasets/en/about_cache) and warns in its own
+documentation that an input whose order is not deterministic across sessions
+yields a fingerprint that is not either. An incrementing counter is precisely
+that input. This matters beyond tidiness: `positive_rejection` compares a
+recorded `task_id` against the pool's, so an id that moves between runs
+invalidates every result measured under an earlier one, silently, and the gate
+that catches it then looks like the obstacle rather than the instrument. The
+gate is unchanged by this work.
+
+**Points are capped at 8 per problem**, the cap `apps_pool` already applies for
+the same reason. CodeContests ships `generated_tests` in the hundreds: measured
+median 87 per problem, maximum 339, 76,177 across the pool. The eighth draw has
+already said what the first seven did, and the acceptance decision still reads
+every sample a problem carries, in `nl_stdin`, so this narrows what is stored
+and not what was checked.
+
+**There is no disk cache, deliberately.** The walk costs 2.5 minutes against
+0.9 s for all of v5, because acceptance classifies every sample of every one of
+the 20,509 candidates. `nl/data` is rsynced between the desktop and the lab, so
+mtimes move while content does not, and the usual mtime-keyed cache would
+either thrash or, far worse, be trusted while stale -- and a stale pool still
+prints every number downstream, just about a different pool. Memoised per
+process instead, where it cannot outlive the thing that built it. The cost is in
+the docstring so the next person chooses knowingly.
+
+**Not delivered: 1,032 of the 1,038 the coverage document claims.** Six APPS
+problems are admitted by `nl_stdin` and refused here; the report prints the
+reason per problem and the count, rather than rounding to the headline.
+
+Still open from the same plan, in its order: 0b CodeContests is read for the
+stdin pool but `pool()` still has no CodeContests branch of its own, 0c the APPS
+test split is never opened (37 more), 0d lifted tasks are gated against pool v1
+when they should be v3 (30 of 57 pass, 66 would), Tier 1 the
+`_build_checker_parts` bound-local bug (27 of 29 lift-check failures, MBPP-DFY
+57 to 76), Tier 2 Vericoding.
+
 ## The road to 1.0 (opened 2026-09-05)
 
 WS-12 is the next six sessions. This is everything after them, to the two

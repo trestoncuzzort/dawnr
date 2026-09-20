@@ -191,6 +191,16 @@ class TestIdsAreDerivedFromTheProblem(unittest.TestCase):
     def test_the_two_sources_cannot_collide(self):
         self.assertGreaterEqual(abs(pool.STDIN_CC_BASE - pool.STDIN_APPS_BASE), 100000)
 
+    def test_the_stdin_bases_are_clear_of_every_pool_v5_id_space(self):
+        """v6 is v5 plus these, so a stdin id landing on an MBPP, HumanEval or
+        APPS id would silently REPLACE that problem in the merged pool, and the
+        replacement would be invisible: same id, different problem, every stored
+        verdict about it now a verdict about something else."""
+        import spec_experiment as se
+        # MBPP < 100000; HumanEval = 100000 + n; APPS = 200000 + its own id.
+        self.assertGreaterEqual(pool.STDIN_APPS_BASE, se.APPS_BASE + 100000)
+        self.assertGreaterEqual(pool.STDIN_CC_BASE, pool.STDIN_APPS_BASE + 100000)
+
 
 if __name__ == "__main__":
     unittest.main()
