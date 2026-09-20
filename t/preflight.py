@@ -555,6 +555,44 @@ def check_columns() -> bool:
                                       f"seven columns is not this project's clean")
 
 
+def check_kernel_ran() -> bool:
+    """Check 11b. A column of seven is not seven columns that ran.
+
+    A kernel that cannot START is recorded as `malformed`, which is the same
+    word used for a lowering that really is malformed. Measured 2026-09-20: two
+    seed arms were graded with Verus reading `malformed / malformed` on 114 of
+    114 and 87 of 88 rows, because the driver ran in a non-login shell and Verus
+    needs rustup on PATH. Check 11 passed them, since all seven columns were
+    present. Scored as they stood, both read **0 clean**, which would have been
+    reported as the recipe failing to reproduce its headline across seeds.
+
+    A single malformed cell is ordinary and says something about one lowering. A
+    column that is malformed on nearly every row of a set says the toolchain
+    never started, and no verdict in that column means anything.
+    """
+    import spec_experiment as se
+    dead = []
+    for d in tables():
+        cols, rows = se.parse_kernel_table(d / "kernels.md")
+        if not rows:
+            continue
+        # parse_kernel_table returns {task: {kernel: "real / twin"}}
+        for name in cols:
+            if name not in KERNELS:
+                continue
+            bad = sum(1 for cells in rows.values()
+                      if str(cells.get(name, "")).strip().startswith("malformed"))
+            if len(rows) >= 10 and bad >= 0.9 * len(rows):
+                dead.append(f"{d.name}/{name} ({bad} of {len(rows)})")
+    return say(not dead,
+               f"no kernel is malformed on nearly every row of a set ({len(tables())} sets)",
+               "" if not dead else
+               f"{len(dead)}: {dead[:3]} -- that kernel did not RUN, it did not disagree. "
+               f"Verus needs rustup on PATH and a non-login shell does not provide it; "
+               f"t/grade_lab.sh uses bash -lc for exactly this. Regrade or move the table "
+               f"aside, because every clean count over it is wrong")
+
+
 def hf_cached(model: str) -> Path | None:
     """The local Hugging Face snapshot for `model`, or None. Nothing here downloads anything."""
     import os
@@ -657,6 +695,7 @@ def main() -> int:
     ok = check_spec_agreement() and ok
     ok = check_sets_complete() and ok
     ok = check_columns() and ok
+    ok = check_kernel_ran() and ok
     print("housekeeping")
     ok = check_keys() and ok
     ok = check_space(lab) and ok
