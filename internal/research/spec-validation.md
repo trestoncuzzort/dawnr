@@ -7,8 +7,16 @@ Local context assumed for the "implementable-here" rating: a small language with
 interpreter, seven independent proof systems, per-problem unit tests, a reference solution per
 problem, and an existing mutation engine that produces deliberately broken twins of a program.
 
-Status: **in progress** — appended as each paper is confirmed. Entries marked `[unverified]`
-could not be fully confirmed from a primary source; the gap is stated explicitly.
+Status: **sweep complete** (search budget exhausted at 200 queries; fetches continued after).
+**44 distinct works** across 8 angles, 15 repositories located. Entries marked `[unverified]`
+could not be fully confirmed from a primary source; the gap is stated explicitly, and there is a
+"What could not be confirmed" section before the reading list.
+
+Headline for the impatient: the single most transferable idea in this literature is that
+**a specification's quality is the fraction of deliberately-broken programs it rejects** — and we
+already own the machine that produces those broken programs. Papers A1, A2, A3, A4, B1, E1 and
+F1 are seven independent arrivals at that same measurement, and E1 is the one that turns it into
+a training reward.
 
 ---
 
@@ -148,14 +156,23 @@ could not be fully confirmed from a primary source; the gap is stated explicitly
 - **URL**: https://arxiv.org/abs/2510.23350
 - **Technique**: LLM generates **positive and negative** test cases directly from the natural
   language requirement, then those tests are run against a human-written Alloy specification of
-  a domain model. Positive tests that the spec rejects mean over-constraint; negative tests the
-  spec accepts mean under-constraint.
-- **Numbers**: GPT-5 generates syntactically correct positive and negative cases effectively and
-  identifies incorrect human-written specs. Per-model detection percentages were not confirmed
-  from the abstract page.
+  a domain model. Positive tests that the spec rejects mean **over-constraint** (valid instances
+  eliminated); negative tests the spec accepts mean **under-constraint** (invalid instances
+  permitted). Encoding is beautifully simple: both test kinds use the same `some disj ...` pattern
+  with equality constraints pinning the instance; a positive test asserts `expect 1`
+  (satisfiable), a negative test asserts `expect 0` (unsatisfiable).
+- **Numbers**: 4 domain models / **43 requirements** total (social network 8, production line 10,
+  train station 10, courses 15). Asking for N positive and N negative per requirement gives 258
+  cases at N=3. **GPT-5 with a few-shot prompt: 96% validity (247/258)** — syntactically correct,
+  executable and matching the oracle; one-shot 79%, zero-shot 46%. Gemini 2.5 Pro 81%,
+  Claude Opus 4.1 76%, GPT-5 Mini 67%. Wrong-specification detection improves with suite size:
+  at **N=1 only 38.10% of wrong specs are caught**; at **N=3, 9.90% of errors are missed**; at
+  **N=5, 6.43% missed**. "A diverse test suite is essential to help the specifier quickly rule
+  out many wrong specifications."
 - **Implementable here**: **HIGH**.
 - **What to implement**: require a negative test suite per problem (inputs with *wrong* outputs);
-  a spec that accepts any of them is under-constrained.
+  a spec that accepts any of them is under-constrained. Note the N-sensitivity: **one negative
+  test per requirement catches only ~38% of bad specs, three catches ~90%** — budget accordingly.
 - **Repo**: not confirmed.
 
 ### A8. Verus-SpecGym: An Agentic Environment for Evaluating Specification Autoformalization
@@ -251,6 +268,23 @@ could not be fully confirmed from a primary source; the gap is stated explicitly
 - **Implementable here**: **LOW** (framing, not technique).
 - **What to implement**: nothing directly; useful as the citation for why spec-quality metrics
   are the bottleneck.
+
+### A16. An Empirical Study of LLM-Generated Specifications for VeriFast
+- **Year / venue**: 2026 — arXiv:2606.26490 (25 Jun 2026). Authors: Wen Fan, Minh Tran,
+  Sanya Dod, Xin Hu, Marilyn Rego, Danning Xie, Jenna DiVincenzo, Lin Tan (Purdue).
+- **URL**: https://arxiv.org/abs/2606.26490
+- **Technique**: Large-scale empirical study of separation-logic specification generation:
+  **303 C functions × 8 prompting approaches × 10 LLMs × 3 input types**.
+- **Numbers**: functional behaviour preserved in **>91%** of both source and specifications, but
+  **verification success only 31.4%**; **94% of errors trace to the LLM's lack of
+  domain-specific knowledge of the SL verifier** rather than to misunderstanding the program.
+  Best: Gemini 2.5 Pro given formal contracts.
+- **Caveat**: does **not** break out weak-but-verifying specs, so it measures the soundness half
+  only.
+- **Implementable here**: **MEDIUM**.
+- **What to implement**: the 94% figure argues for giving the generator verifier-specific
+  scaffolding (syntax, idioms, prior error patterns) rather than more reasoning — cheap to do
+  across our seven proof systems, and it separates "cannot express" from "does not understand".
 
 ### A15. Automatic Generation of Formal Specification and Verification Annotations Using LLMs and Test Oracles
 - **Year / venue**: 2026 — arXiv:2601.12845 (19 Jan 2026). Authors: João Pascoal Faria,
@@ -601,11 +635,20 @@ could not be fully confirmed from a primary source; the gap is stated explicitly
   then use the hidden reference solution purely as the soundness oracle.
 
 ### D7. ExVerus: Verus Proof Repair via Counterexample Reasoning
-- **Year / venue**: 2026 — arXiv:2603.25810
+- **Year / venue**: 2026 — arXiv:2603.25810 (26 Mar 2026, rev. 30 Mar). Authors: Jun Yang,
+  Yuechun Sun, Yi Wu, Rodrigo Caridad, Yongwei Yuan, Jianan Yao, Shan Lu, Kexin Pei.
 - **URL**: https://arxiv.org/abs/2603.25810
-- **Technique**: Proof repair driven by reasoning over the verifier's counterexample rather than
-  its error string. **[unverified]** — identified via search; abstract not yet fetched.
-- **Implementable here**: **MEDIUM** (pending confirmation).
+- **Technique**: Argues that existing work "treat[s] proof generation as a static, end-to-end
+  prediction over source code, relying on limited verifier feedback and lacking access to
+  concrete program behaviors". When a proof fails, ExVerus **automatically generates and
+  validates a counterexample**, then guides the LLM to **generalise that counterexample into an
+  inductive invariant** that blocks the failure — behavioural feedback rather than error strings.
+- **Numbers**: 31 pages, 8 figures; **no empirical results were visible on the abstract page**
+  and no repo URL is given there.
+- **Implementable here**: **MEDIUM-HIGH**.
+- **What to implement**: the generalisation step — when one of our broken twins survives a spec,
+  do not just report it; ask the generator to turn that concrete twin into the *general* clause
+  that would have excluded it. That is the bridge from "mutation score" to "spec repair".
 
 ---
 
@@ -997,6 +1040,12 @@ could not be fully confirmed from a primary source; the gap is stated explicitly
   the verifier. MIT means we can lift code directly. Take the six-check matrix and the
   annotation→code reconstruction+equivalence check. (The repo README does not enumerate which of
   the six checks are implemented or state CloverBench's size — confirm by reading the tree.)
+  **`/dataset` contains four corpora: `CloverBench`, `MBPP-DFY-153`, `MBPP-DFY-50-legal`,
+  `MBPP-DFY-50-original`.** Per-folder counts are not shown in the directory listing. Note the
+  cross-link: **`MBPP-DFY-153` is the same 153-problem Dafny/MBPP corpus that Lahiri's symbolic
+  testing paper (A1) evaluates on** — so A1's soundness/completeness metric and Clover's
+  consistency checks can be run head-to-head on identical data. That is the cheapest possible
+  replication for us to reproduce before building anything.
 - **Critic / successor**: **VeriEquivBench (C5)** audits CloverBench with its equivalence score and
   finds only **61.29% of CloverBench specs pass** — a direct, quantified criticism of the anchor.
   **Spec-Harness (A2)** is the strongest successor on the completeness half; **Verus-SpecGym (A8)**
@@ -1050,24 +1099,134 @@ could not be fully confirmed from a primary source; the gap is stated explicitly
 - **Implementable here**: **LOW**.
 - **Caution**: cite for framing only; it has no experiments.
 
-### G5. Limits of agreement as a correctness signal  [unverified]
-- Search surfaced two quantitative cautions that I could **not** confirm against a primary
-  source and which should not be cited until checked: (i) a July 2026 preprint auditing ~265,000
-  samples reporting agreement-vs-correctness Spearman ρ of only 0.20–0.59; (ii) an ICML 2025
-  study of 350+ LLMs reporting that when two models both err they land on the *same* wrong answer
-  ~60% of the time. Both bear directly on whether multi-version spec agreement is trustworthy.
-  **Flagged as unconfirmed — needs a primary citation before use.**
+### G5. Limits of agreement as a correctness signal  [UNVERIFIED — do not cite yet]
+- A search summary surfaced two quantitative cautions that I could **not** trace to a primary
+  source before the search budget ran out, and which should not be cited until checked:
+  (i) a July 2026 preprint auditing ~265,000 samples reporting agreement-vs-correctness
+  **Spearman ρ of only 0.20–0.59**; (ii) an **ICML 2025** study of 350+ LLMs reporting that when
+  two models both err, they land on the *same* wrong answer **~60%** of the time.
+- Why it matters: both directly attack the premise of Angle G. Correlated errors mean that
+  "several independently generated specifications agree" is much weaker evidence than it looks,
+  and would argue for **diversity of mechanism** (different proof systems, executable vs.
+  symbolic checks, mutation-based rejection) over diversity of samples from one model.
+- **Action**: re-run this one search and find the primary citations before any design decision
+  rests on multi-version agreement.
 
 ---
 
-## Cross-cutting note on repositories
+## Angle H — Datasets and benchmarks worth reusing directly
 
-Confirmed so far:
-- **Clover** — https://github.com/ChuyueSun/Clover (anchor; consistency-check harness + CloverBench)
-- **FormalBench** — https://github.com/thanhlecongg/FormalBench (mutation-based completeness harness,
-  OpenJML 21.0 + Major 3.0.1)
-- **MuAlloy** — https://github.com/kaiyuanw/MuAlloy (specification-level mutation operators, Java)
-- **Code-A1** — https://github.com/ZJU-REAL/Code-A1 (adversarial code/test co-training)
-- **DafnyComp** — https://dafnycomp.github.io/ (compositional spec benchmark, site)
+### H1. A benchmark for vericoding: formally verified program synthesis
+- **Year / venue**: 2025/2026 — arXiv:2509.22908 (26 Sep 2025); **Dafny workshop @ POPL 2026**.
+  Authors incl. Quinn Dougherty, Max Tan, Max Tegmark (Beneficial AI Foundation).
+- **URL**: https://arxiv.org/abs/2509.22908
+- **Repo**: **https://github.com/Beneficial-AI-Foundation/vericoding-benchmark**
+- **Technique**: The largest specification corpus available — **12,504 formal specifications**
+  (Dafny 3,029, Verus/Rust 2,334, Lean 7,141), of which **6,174 are new and previously unseen**.
+  Measures "vericoding": synthesising code *from* a specification. Uses iterative translation,
+  ensembles and verification feedback.
+- **Numbers**: vericoding success **82.2% Dafny, 44.2% Verus, 26.8% Lean**. Pure Dafny
+  verification improved **68% → 96% over one year**. Adding natural-language descriptions does
+  **not** significantly help.
+- **Caveat**: the abstract page does **not** describe any anti-cheating or non-vacuity screening
+  of the 12,504 specs — worth checking before trusting them, given what VeriEquivBench (C5)
+  found in CloverBench and DafnyBench.
+- **Implementable here**: **MEDIUM** — a source of specs to test our judge against, not a method.
 
-Languages and licences are **not yet confirmed** for any of the above; a verification pass follows.
+### H2. DafnyBench: A Benchmark for Formal Software Verification
+- **Year / venue**: 2024 — arXiv:2406.08467; OpenReview `yBgTVWccIx`.
+- **URL**: https://arxiv.org/abs/2406.08467 · **Repo: https://github.com/sun-wendy/DafnyBench**
+- **Technique**: **782 programs, ~53,000 lines**, shipped as two sets — `ground_truth` and
+  `hints_removed`. The task is to refill the removed hints/annotations so Dafny verifies again.
+  A clean template for building a spec-reconstruction task from a corpus we already have.
+- **Numbers**: best model Claude 3 Opus ≈ **68%** success; ~54% first-try, plateauing near 65%
+  around n≈5 attempts. **VeriEquivBench (C5) later found only 43.09% of DafnyBench passes its
+  equivalence score** — the benchmark's own specs are frequently under-constrained.
+- **Implementable here**: **MEDIUM**.
+- **What to implement**: the hints-removed construction — strip our specs and ask the model to
+  reconstruct them, scoring by mutation-kill parity with the original.
+
+### H3. Others noted but not fetched  [unverified]
+- **VeriContest: A Competitive-Programming Benchmark for Verifiable Code Generation** —
+  arXiv:2605.08553.
+- **AxDafny: Agentic Verified Code Generation in Dafny** — arXiv:2606.32007.
+- **CASP: An evaluation dataset for formal verification of C code** — arXiv:2508.18798.
+- **SpecGenBench** (used by D3, D6) and **Py2Dfy** (used by E1) — dataset provenance not confirmed.
+- Each surfaced in search but was not opened; listed so the thread is not lost.
+
+---
+
+## Cross-cutting: repositories, with what to lift from each
+
+Confirmed, with language/licence where established:
+
+| Repo | Paper | Language / licence | What to lift |
+|---|---|---|---|
+| **https://github.com/ChuyueSun/Clover** | G1 Clover | **Python, MIT** | The consistency-check matrix; the annotation→code **reconstruction + equivalence** completeness test. MIT, so code can be copied directly. |
+| **https://github.com/thanhlecongg/FormalBench** | A3 FormalBench | **Python 3.12, Apache 2.0** | The mutation-based completeness harness. Already language-parameterised (Java/Major/OpenJML, C/Mull/Frama-C) — **the intended extension point for a new language is exactly our situation**. |
+| **https://github.com/Mondego/vACT** | A2 Spec-Harness / VeriAct | tbc | Hoare-triple construction for all four correctness/completeness quadrants; type-directed output mutation; the two-channel repair loop (syntax errors from the verifier, weakness from Spec-Harness). |
+| **https://github.com/MutDafny/mutdafny** | B1 MutDafny | .NET 6 + Java ≤22; licence tbc | Operator catalogue (147 imported + Dafny-specific mined from 1,475 bugfix commits / 112 repos) and the **bugfix-commit mining method** for realistic rather than syntactic mutants. |
+| **https://github.com/kaiyuanw/MuAlloy** | B4 MuAlloy | Java (Alloy 4.2); licence tbc | Mutation operators for a *specification language* (MOR/QOR/UOR/BOR/LOR/UOI/BOE) and generation of the instance that kills each mutant. |
+| **https://github.com/cmu-l3/alphaverus** | C3 AlphaVerus | Python; licence tbc | The **critique** module: rule-based trivial-escape matching, comparison model, and the **exploit model**. Plus the Dafny2Verus-Collection (247 programs, 102 error trajectories, **579 exploit pairs**). |
+| **https://github.com/Veri-Code/ReForm** | C4 Re:Form | tbc | Subset-reward / Spec-Superiority-Rate implementation; verifier-integrated data curation. Checkpoints on HF under `Veri-Code`. |
+| **https://github.com/sunblaze-ucb/verina** | A6 VERINA | tbc (ICLR 2026) | The per-task folder layout — notably **`reject_inputs.json`, a negative input set shipped with the positive tests**. HF dataset: `sunblaze-ucb/verina`. |
+| **https://github.com/ElliotXinqiWang/PBTbench** | F1 PBT-Bench | Python/Hypothesis; licence tbc | Bug-difficulty stratification L1–L3 and the bug-recall scorer. HF: `pbtbench-team`. |
+| **https://github.com/Kwai-Klear/CodeTest** | E7 Klear-CodeTest | tbc | Generator-Validation framework, sandbox "Judge", 27,965-problem validated dataset, two-gold-solution consistency validator. |
+| **https://github.com/TIGER-AI-Lab/EvolveCoder** | E9 EvolveCoder | tbc | Solution-conditioned adversarial test evolution + redundancy reduction; EvolveCoder-22k. |
+| **https://github.com/ZJU-REAL/Code-A1** | E10 Code-A1 | tbc | Two-model adversarial RL with separated code/test policies; "Mistake Book" replay; validity-vs-difficulty composite reward. |
+| **https://github.com/sun-wendy/DafnyBench** | H2 DafnyBench | tbc | `ground_truth` / `hints_removed` split. |
+| **https://github.com/Beneficial-AI-Foundation/vericoding-benchmark** | H1 Vericoding | tbc | 12,504 specs across Dafny/Verus/Lean. |
+| https://dafnycomp.github.io/ | C4/E1 DafnyComp | site | Compositional spec benchmark; DafnyComp-Spec (232 programs) is SpecRL's OOD set. |
+
+No public code found in this sweep for: **SpecRL (E1)**, **SpecSyn (B2)**, **VeriSpecGen (D1)**,
+**KBSpec (D2)**, **KaPilot (C1)**, **VeriEquivBench (C5)**, **PostcondBench (A4)**,
+**CodeSpecBench (A5)**, **Lahiri's symbolic-testing tool (A1)**.
+
+---
+
+## What could not be confirmed (be honest about these)
+
+- **FormalBench (A3) per-model *completeness* scores.** I confirmed the metric definition, the
+  tooling (OpenJML 21.0 + Major 3.0.1 for Java, Mull + Frama-C for C) and the dataset sizes
+  (699 / 6,219), and I have consistency pass rates per model — but **the per-model completeness
+  percentages are not in any page I could render**. The ACL PDF and the arXiv PDF both came back
+  as unparseable binary, and the arXiv HTML page carries metadata only. Third-party anchors do
+  exist: AutoReSpec (D3) reports **69.2% completeness** on this metric, and Spec-Harness (A2)
+  reports FormalBench prompts at **50% PostComp** on SpecGenBench.
+- **CloverBench size and the exact six consistency checks (G1).** The repo README, the arXiv
+  abstract page, the Stanford PDF and the OpenReview PDF all failed to yield them (PDFs are
+  binary; OpenReview served a browser-verification page). The 87% accept / 100% reject headline
+  and the 6 incorrect MBPP-DFY-50 programs *are* confirmed. Resolve by reading
+  `github.com/ChuyueSun/Clover/dataset` directly — the repo is MIT and Python.
+- **AlphaVerus (C3)**: confirmed the three critique filters and the headline numbers, but the
+  *count* of exploits caught per round is not stated beyond "579 exploit pairs" in the artefact.
+- **DRIVE (E8)** dataset sizes and filtering thresholds; **UTRL (E11)** numbers; **CLEVER (A12)**
+  per-model rates; **Can Formal Specs Be Synthesized from Tests Alone (D6)** has no reported
+  numbers at all (early-results paper); **The Verification Horizon (E13)** reports none either.
+- **ExVerus (D7)** was identified by title/id only and never opened.
+- **G5** — see above; the two anti-agreement statistics are unsourced.
+- **Search budget exhausted** at 200 WebSearch calls. WebFetch still worked; the remaining items
+  above are all resolvable with targeted fetches or by reading the repos.
+
+---
+
+## What to read first, and why
+
+1. **SpecRL (E1, arXiv:2604.05820)** — the only paper that turns a completeness measurement into
+   an RL *reward*, with offline-built "spectests" that our mutation engine already produces;
+   +49.96% verification and +26.46% completeness over SFT is the strongest result in the lane.
+2. **Spec-Harness / VeriAct (A2, arXiv:2604.00280, code at github.com/Mondego/vACT)** — the full
+   four-quadrant scorecard plus working code, and the finding that optimising for verifier
+   acceptance raises pass rates without raising captured behaviour, which is the failure mode our
+   seven proof systems would otherwise walk straight into.
+3. **FormalBench (A3, arXiv:2503.04779, Apache-2.0 code)** — the mutation-based completeness
+   metric with a language-parameterised harness we can extend rather than rebuild, and the
+   concrete failure signature to watch for (`invariant true`).
+4. **AlphaVerus critique (C3, arXiv:2412.06176, code at github.com/cmu-l3/alphaverus)** — the
+   **exploit model**: write the laziest program that satisfies the spec, and if it verifies the
+   spec is broken. Their Figure 7 shows `assume(false)` snowballing across all programs when this
+   filter is removed, which is what a spec-quality gate is actually for.
+5. **Clover (G1) read together with VeriEquivBench (C5)** — the anchor's reconstruction-based
+   completeness test and its 87%/100% headline, immediately followed by the audit finding only
+   **61.29% of CloverBench** survives a bidirectional-implication check. Read as a pair, they
+   give both the method and its measured limit.

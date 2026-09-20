@@ -671,3 +671,322 @@ the semantics" rather than on raw completion. Also consider grammar-generating e
 programs with known checker verdicts to grow the corpus beyond 46M tokens cheaply.
 
 ---
+
+## 21. When the Reward Suite Is Leaky: A Preregistered Causal Contrast of Natural Verifier False Positives in RLVR
+
+- **Year / venue:** 2026, arXiv (Jul 2026)
+- **arXiv:** 2607.11022
+- **URL:** https://arxiv.org/abs/2607.11022
+- **Author:** Chuyifei Zhang
+
+**Method.** A **preregistered** two-arm causal contrast — the rare thing in this literature. Same
+MBPP tasks, same seeds, same compute; the only difference is the reward suite: **original MBPP tests
+(leaky) vs MBPP+ extra tests (hardened)**. Two further model families replicate under a
+preregistration frozen before their data existed. Emphasises that real test-suite false positives are
+**per-task, persistent and asymmetric** — the same wrong programs are accepted every time — which is
+exactly the systematic-false-positive regime item 3 warns about.
+
+**Reported numbers.**
+- The average held-out effect of hardening the suite is **bounded as non-inferior under a
+  preregistered 1.5-point margin** — i.e. in this setting, fixing the leaky tests did **not** produce
+  a meaningful downstream gain. A genuine, carefully-established **negative result**.
+- But: **rewarded false-positive mass tracks a cheap static leakiness audit run before training,
+  Spearman 0.80**, and the leaky stratum has a **false-positive share +43.8 points above clean tasks**.
+
+**Implementable here: A — this is the cheapest high-value item on the list.** The finding is
+two-sided and both sides are useful: (a) do not assume hardening the oracle automatically buys
+accuracy; (b) a **static audit predicts which tasks will be gamed, with rho = 0.80, before spending
+any training compute**.
+
+**What to implement.** Run a static leakiness audit over our per-problem unit tests before training —
+for each problem, push the mutation engine's broken twins through the suite and record the fraction
+accepted. Stratify the 79 problems by that score and hold the leaky stratum out of the reward, or
+weight it down. And when we do harden an oracle, preregister the expected effect size, because this
+paper's headline is that the intuitive gain did not materialise.
+
+---
+
+## 22. LIMR: Less is More for RL Scaling
+
+- **Year / venue:** 2025, arXiv (Feb 2025)
+- **arXiv:** 2502.11886
+- **URL:** https://arxiv.org/abs/2502.11886
+- **Model/data:** https://huggingface.co/GAIR/LIMR
+- **Authors:** Xuefeng Li, Haoyang Zou, Pengfei Liu (GAIR)
+
+**Method.** **Learning Impact Measurement (LIM)** — an automated score for how well each training
+sample's reward trajectory aligns with the *model's overall learning curve*. Samples whose difficulty
+tracks the model's improvement are kept; samples that are always-solved or never-solved are dropped.
+Purely automatic, no human labelling, no extra model.
+
+**Reported numbers.**
+- A selected subset of **1,389 samples matches or exceeds the full 8,523-sample dataset** across
+  several maths benchmarks — an **~84% data reduction at no cost**.
+- **+16.7% accuracy on AIME24** over the RL-on-everything baseline; beats LIMO and s1 by **13.0%**
+  and **22.2%** on MATH500.
+- Explicit conclusion: **precise sample selection, not data scale, determines RL effectiveness.**
+
+**Implementable here: A.** With 79 examples we cannot subsample much, but LIM inverts usefully: it
+tells us *which* of our examples are carrying the gradient, and the same statistic identifies the
+dead weight (always-pass or never-pass problems contribute nothing).
+
+**What to implement.** Log per-problem reward trajectories across training and compute the LIM
+alignment score. Expect a large fraction of the 79 to be never-solved (dead) at 92M — those should
+be routed to the *easier* end of a curriculum (item 20) or to rationalisation-style cold start
+(item 5) rather than left in the RL pool contributing zero-variance groups, which also wastes GRPO's
+advantage estimate.
+
+---
+
+## 23. Tülu 3 — RLVR as one stage of a full open post-training recipe
+
+- **Year / venue:** 2024/2025, Ai2
+- **arXiv:** 2411.15124
+- **URL:** https://arxiv.org/abs/2411.15124 · blog https://allenai.org/blog/tulu-3-technical
+- **Repo:** open-instruct / Tülu3Code, data and eval all released (permissive licences)
+
+**Method.** RLVR here is deliberately minimal: replace the learned reward model in a standard PPO
+setup with a **deterministic verification function**; reward **alpha = 10** if verifiably correct,
+**0** otherwise. Applied on top of an SFT→DPO pipeline rather than as the whole training story.
+
+**Reported numbers — the sober baseline against which the flashier results should be read.**
+- RLVR on top of the DPO checkpoint gains **+1.7 on MATH, +3.3 on GSM8K, +1.3 on IFEval**.
+- That is *low single digits* for a fully engineered RLVR stage in a frontier open recipe — versus
+  the +13 to +37 point numbers elsewhere in this file. The difference is that Tülu applies RLVR to an
+  already-strong checkpoint; the big numbers come from applying it to weak or raw base models.
+
+**Implementable here: A as a calibration point.** Also note the binary alpha=10/0 reward and PPO —
+deliberately unsophisticated, and it still worked. We should not over-engineer the reward on round one.
+
+**What to implement.** Use it as the expectation-setter in our write-ups: **a well-executed RLVR
+stage on top of a good SFT/DPO checkpoint is worth a few points, not a transformation.** Budget
+accordingly and put the effort into the data stages.
+
+---
+
+## 24. Infrastructure: GRPO/RLVR frameworks worth lifting rather than rebuilding
+
+Not papers, but the code that makes the above runnable on one shared GPU.
+
+- **verl** — https://github.com/verl-project/verl (Apache-2.0, Python). Implements PPO, **GRPO**,
+  GSPO, ReMax, REINFORCE++, RLOO, PRIME, DAPO, **Dr.GRPO**, KL_Cov/Clip_Cov. Crucially it supports
+  **function-based (verifiable) rewards** natively for math and code alongside model-based rewards —
+  i.e. you plug in a Python callable that runs your checker. This is the reference implementation for
+  the reward plumbing we need.
+- **OpenRLHF** — https://github.com/OpenRLHF/OpenRLHF (Apache-2.0, Ray + vLLM). PPO, REINFORCE++,
+  REINFORCE++-baseline, GRPO, RLOO. HKUST reproduced DeepSeek-R1-Zero-style training **on small
+  models** with it, so the small-scale path is trodden.
+- **TRL** (HuggingFace) — best fit for a single shared GPU and rapid prototyping; `GRPOTrainer` takes
+  a list of reward functions directly.
+- **awesome-RLVR** — https://github.com/opendilab/awesome-RLVR — continually updated index of the
+  whole area; worth checking before any further literature sweep.
+- **Spurious_Rewards** — https://github.com/ruixin31/Spurious_Rewards — has the random/format/wrong
+  reward harnesses already written; lift these directly for the control arm in item 13.
+- **llm-verifier-noise** — https://github.com/eth-sri/llm-verifier-noise — code for injecting
+  controlled systematic verifier error, for reproducing item 3's diagnostics on our own oracles.
+- **lintseq** — https://github.com/upiterbarg/lintseq — the linter-guided backward sampler from item 2.
+- **Absolute-Zero-Reasoner** — https://github.com/LeapLabTHU/Absolute-Zero-Reasoner — executor-as-verifier
+  self-play loop (item 15).
+- **ReForm** — https://github.com/Veri-Code/ReForm + https://huggingface.co/Veri-Code — full
+  formal-verifier RL pipeline with released models and data at 0.5B–14B (item 10).
+
+**Implementable here: A.** For a 92M model on one shared GPU, **TRL's `GRPOTrainer` with a custom
+verifier reward function** is the least-effort path; borrow verl's reward-function interface design
+and Spurious_Rewards' control harness.
+
+---
+
+## 25. Learning from Less: Measuring the Effectiveness of RLVR in Low Data and Compute Regimes
+
+- **Year / venue:** **MLSys 2026 (Oral)**; arXiv Apr 2026
+- **arXiv:** 2604.18381
+- **URL:** https://arxiv.org/abs/2604.18381 ·
+  https://snorkel.ai/research-paper/learning-from-less-rlvr-low-data-compute-effectiveness/
+- **Authors:** Justin Bauer, Thomas Walshe, Derek Pham, Harit Vishwakarma, Armin Parchami,
+  Frederic Sala, Paroma Varma (Snorkel AI / Wisconsin)
+
+**Method.** The only systematic study of RLVR *specifically* in the few-hundred-example regime.
+Three **procedurally generated** datasets (number counting, graph reasoning, spatial reasoning) so
+size, diversity and complexity can each be dialled independently — the verifier is exact by
+construction. GRPO, 8 completions per prompt (5 for spatial).
+
+**Reported numbers — the closest published match to our data scale and trainable-parameter count.**
+- Base: **Qwen3-4B with LoRA rank 64 / alpha 16 → ~100M trainable parameters.** That is within ~10%
+  of our 92M, albeit riding on a 4B frozen backbone.
+- Training sets of **100, 200 and 500 examples**, either all-easy or mixed (~33% each easy/medium/hard).
+  Test sets of 200 (500 for graph). Compute: 4x A100-80G, **5-12 hours** per run.
+- Counting: easy-trained **21.9% (100 ex) → 44.2% (500 ex)**; mixed-trained **44.2% (100 ex) →
+  35.5% (500 ex)**.
+- Graph: easy **33.3% → 36.5%**; mixed **29.1% → 34.0%**.
+- Spatial: easy **49.9% → 53.1%**; mixed **56.6% → 55.7%**.
+- **5x sample efficiency: 100 mixed-difficulty examples matched 500 easy-only examples** on counting.
+- **Models trained on low-complexity tasks generalise to higher-complexity tasks.**
+- **Negative / non-monotonic results:** mixed-difficulty training *degrades* as the set grows on
+  counting (44.2 → 35.5), and spatial easy-training peaks at 200 examples and declines at 500.
+  More data is not monotonically better in this regime.
+
+**Implementable here: A — the single most directly applicable paper in this file.** ~100M trainable
+params, 100-500 training examples, exact procedural verifier, GRPO, modest compute.
+
+**What to implement.** (1) **Mix difficulties in the RL pool rather than starting easy-only** — that
+is the 5x lever and it costs nothing. (2) Generate a *procedural* easy tier so our 79 examples are
+not the whole pool; the paper's easy→hard generalisation result says cheap synthetic easy problems
+transfer upward. (3) Do not assume adding examples helps — run 100/200/500-style sweeps and expect a
+peak, because two of their three tasks got worse past the peak.
+
+---
+
+## 26. CYCLE: Learning to Self-Refine the Code Generation
+
+- **Year / venue:** **OOPSLA 2024**; arXiv Mar 2024
+- **arXiv:** 2403.18746
+- **URL:** https://arxiv.org/abs/2403.18746
+
+**Method.** Code LMs are bad at self-refinement out of the box — shown an execution failure, they
+tend to re-emit the same program. CYCLE *trains* the refinement behaviour: the training example is
+(prompt, faulty generation, **execution feedback from the test suite**) → corrected program. Trained
+at four sizes so the scale trend is visible.
+
+**Reported numbers — one of the very few results reported across a 350M-3B sweep.**
+- Sizes: **350M, 1B, 2B, 3B**, trained (not prompted).
+- **Up to +63.5% relative improvement in self-refinement** across HumanEval, MBPP and APPS.
+- **CYCLE-trained models outperform code LMs with 3x the parameters** on self-refinement — i.e.
+  training on verifier feedback is worth roughly a 3x parameter multiplier for this capability.
+
+**Implementable here: A.** 350M is the nearest published size, the signal is exactly our oracles'
+output, and "worth 3x parameters" is the kind of claim that justifies the whole lane at 92M.
+
+**What to implement.** Add a *repair* training objective alongside generation: triples of
+(problem, broken twin from our mutation engine, checker error message) → verified program. Our
+mutation engine gives us the broken twin and the oracle gives us the message, so **all 79 verified
+programs immediately become repair training data at whatever multiplicity the mutation engine can
+produce** — this is the cheapest way we have of turning 79 examples into thousands.
+
+---
+
+## 27. ExVerus: Verus Proof Repair via Counterexample Reasoning
+
+- **Year / venue:** **ICML 2026**; arXiv Mar 2026
+- **arXiv:** 2603.25810
+- **URL:** https://arxiv.org/abs/2603.25810
+- **Authors:** Jun Yang, Yuechun Sun, Yi Wu, Rodrigo Caridad, Yongwei Yuan, Jianan Yao, Shan Lu, Kexin Pei
+
+**Method.** When a Verus proof fails, ExVerus **extracts a concrete counterexample from the SMT
+backend**, validates it, and then guides the model to generalise the counterexample into an
+**inductive invariant that blocks it**. The argument is that prior work treats proof generation as
+static end-to-end prediction over source text with only a thin pass/fail verifier signal, and never
+sees actual program behaviour. Getting semantically meaningful counterexamples out of the SMT solver
+is the hard engineering contribution.
+
+**Reported numbers.** Significant improvements in proof accuracy, robustness **and token efficiency**
+over the state-of-the-art prompting-based Verus proof generator. (Prompting-based, so no training
+cost — this is an inference-time method.)
+
+**Implementable here: B.** Whether it transfers depends entirely on whether our seven proof systems
+can be made to emit counterexamples rather than just rejections. Where they can, this is a much
+richer signal than a verdict, and it costs no training compute.
+
+**What to implement.** Audit which of the seven proof systems can produce a counterexample / failing
+model on rejection, and plumb that into both the prompt and the repair-training triples from item 26.
+A counterexample is a *typed, concrete* negative — far more informative than "rejected", and it
+composes with the dense partial-credit reward from item 17.
+
+---
+
+## 28. Scaling Flaws of Verifier-Guided Search in Mathematical Reasoning
+
+- **Year / venue:** 2025, arXiv (Feb 2025)
+- **arXiv:** 2502.00271
+- **URL:** https://arxiv.org/abs/2502.00271
+- **Authors:** Fei Yu, Yingru Li, Benyou Wang
+
+**Method.** Compares verifier-guided search (beam/tree search steered by an outcome value model or a
+process reward model) against plain **repeated sampling**, as the sample budget grows.
+
+**Reported numbers — a clean negative result about relying on an imperfect verifier at search time.**
+- Verifier-guided search wins **when samples are limited**, then shows **diminishing advantage and
+  eventually underperforms repeated sampling** as the budget grows. Replicated on **Mistral 7B and
+  DeepSeekMath 7B** across **GSM8K and MATH**, with both outcome value models and process reward
+  models as the verifier.
+- Cause: **verifier failures — an imperfect verifier misranks candidates and prunes away all valid
+  paths.** The effect **intensifies on harder and out-of-distribution problems.**
+
+**Implementable here: A as a design constraint.** The critical distinction for us: their verifier is
+a *learned* value/reward model, whereas ours is a *sound proof checker*. A sound checker cannot prune
+a valid path — it can only be incomplete. **Unit tests, though, behave exactly like their imperfect
+verifier.**
+
+**What to implement.** Never let a *learned* reranker (the item 7 head) prune candidates irrevocably —
+use it to order oracle calls, not to discard. Keep a fixed fraction of the sampling budget on
+unguided repeated sampling as a hedge, and compare the two arms; this paper says the guided arm loses
+at high budget and we should be able to see the crossover in our own numbers.
+
+---
+
+## 29. A Benchmark for Vericoding: Formally Verified Program Synthesis
+
+- **Year / venue:** **POPL 2026 (Dafny workshop)**; arXiv Sep 2025
+- **arXiv:** 2509.22908
+- **URL:** https://arxiv.org/abs/2509.22908
+- **Data:** full benchmark + all experimental results released as supplementary material
+
+**Method.** Defines *vericoding* — generating code from a **formal specification** with a proof it
+meets that spec — as opposed to "vibe coding" from natural language. Builds the largest
+multi-system benchmark of its kind.
+
+**Reported numbers.**
+- **12,504 formal specifications: 3,029 Dafny, 2,334 Verus/Rust, 7,141 Lean.** 6,174 are new/unseen.
+- **55,397 vericoding experiments** reported.
+- Off-the-shelf LLM success: **27% Lean, 44% Verus/Rust, 82% Dafny.** The spread across proof systems
+  is enormous and is mostly about how much automation the system provides, not about the problems.
+- Pure Dafny verification progressed **68% → 96% over one year**.
+- **Adding natural-language descriptions does not significantly improve performance.**
+
+**Implementable here: A as a data source, B as a result.** With seven proof systems, the per-system
+success spread (27% vs 82%) is the most actionable number here: **which proof system we target
+changes the measured result more than most method choices will.**
+
+**What to implement.** Two things. (1) Mine this benchmark for extra spec/proof pairs in whichever of
+our seven systems it overlaps — 12.5k specifications against our 79 examples is a large multiplier,
+and it is released. (2) Report our results **per proof system**, never pooled, because pooling across
+systems with a 27%-82% baseline spread will make any method effect unreadable. (3) Do not spend
+effort adding natural-language problem descriptions to the training format; the measurement says it
+does not help.
+
+---
+
+## Synthesis — what this literature says to do at 92M / 46M tokens / 79 examples
+
+**Ordering.** Re:Form (10) measured SFT-on-verified-data at ~35 points vs ~15 for the RL stage on top;
+Yue et al. (6) show RL only sharpens a distribution the base model already has, and our base model has
+almost none. **Data stages before RL stages** is the consistent reading.
+
+**The three cheapest high-value actions, all supported by more than one paper:**
+1. **Rejection-sampling fine-tuning, deduplicated by distinct proof structure, pooled across all seven
+   proof systems** (19). RFT gains *grow* as the base model gets weaker, which is the only favourable
+   scaling law in the file.
+2. **Repair training from mutation-engine twins plus checker error messages** (26, 27, 16). Turns 79
+   examples into thousands, and CYCLE measured it as worth ~3x parameters.
+3. **Dense partial-credit reward from per-obligation pass counts with the density correction** (17),
+   because at 92M the binary reward is almost always zero, and that is exactly where VeRPO's gain was
+   largest (+8.83 on the hardest benchmark vs +1.46 on the easiest).
+
+**The three things not to do:**
+1. **Do not build a self-play proposer** (15) — the measured gain shrinks monotonically with model size
+   and is already only +3.2 at Llama-8B.
+2. **Do not run a naive STaR loop from random weights** (5) — there is a documented entry requirement
+   and we are below it; cold-start by rationalising the verified programs instead.
+3. **Do not trust a style/lint/format reward term on its own** (1) — it reliably buys shorter outputs
+   rather than correct ones.
+
+**The two controls that make any result we report believable:**
+- A **random-reward arm** at identical budget (13). Random rewards captured ~74% of the true-reward
+  gain on Qwen2.5-Math-7B; without this control, "+N points from our verifier" means nothing.
+- A **metamorphic audit and a static leakiness audit of our own oracles** (18, 21), reported as
+  false-negative rate and broken-twin-acceptance rate. The leakiness audit predicts gamed tasks at
+  Spearman 0.80 *before* training compute is spent.
+
+**Scale honesty.** Only four items here are at or below ~1B parameters with small data: item 1
+(0.6B-1B, +13pp), item 2 (150M/400M from scratch, +2 to +7pp pass@1), item 20 (1M params), and item 25
+(~100M trainable, 100-500 examples). Everything else is 7B and up, and items 6, 13 and 15 each give a
+specific reason why 7B+ results should not be extrapolated downward.

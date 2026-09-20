@@ -187,11 +187,59 @@ Legend: `[H]` high / `[M]` medium / `[L]` low implementable-here.
   weak spec such as `ensures true` would still admit. Training rewards verified candidates by
   **the fraction of spectests their spec rejects**, ranking candidates by how many impossible
   behaviours they rule out.
+- **Full pipeline (confirmed from the HTML, this is the recipe to copy):**
+  1. Extract the target method.
+  2. **Build a runtime-checkable `SpecCheck` predicate** from the spec clauses, folding
+     preconditions in by implication: `predicate SpecCheck(x,y) { (R1 && R2) ==> (E1 && E2) }`
+     — so a spec is *true by default* wherever its precondition does not hold.
+  3. Drop non-compilable cases.
+  4. **Positive seeds:** LLM proposes diverse inputs targeting different paths and boundaries;
+     *execute them against the implementation* to get observed outputs; reflect-and-fix loop
+     (≤3 rounds) on execution failure. Sanity check: the **reference** `SpecCheck` must accept
+     every observed (input, output) pair.
+  5. **Negative mutation → spectests:** LLM proposes *wrong* outputs aimed at plausible spec
+     weaknesses (off-by-one, corner cases, boundary violations), each validated by a
+     reflect-and-fix loop. A spectest looks like:
+     `var a := new nat[] [3,1,4,1,5]; var m := Max(a); m := 14; expect !SpecCheck(a, m);`
+  6. **Completeness score** = spectest rejection rate =
+     `|{t ∈ T_neg : rejected}| / |T_neg|`.
+  7. **Progressive four-stage reward:** extraction 0.05, compilation 0.15, verification 0.30,
+     **spectest 0.50** — and the spectest reward is paid *only to verified candidates*.
 - **Numbers.** 7B SpecRL on out-of-distribution DafnyComp-Spec: **+49.96% relative** verification
-  success over SFT and **+26.46% relative** completeness.
-- **Implement here:** spectests. We can generate implementation-impossible (input, output) pairs
-  directly from the reference solution (perturb the reference output), and score every candidate
-  spec by rejection fraction. This is the cheapest high-value thing in this whole lane.
+  success over SFT and **+26.46% relative** completeness. Datasets built: Py2Dfy-Spec 4,663
+  programs / 54,284 spectests (11.64 per program); DafnyComp-Spec 232 / 2,913 (12.56);
+  DafnyBench-Spec 107 / 1,059 (9.90). **Ablation (Qwen2.5-1.5B):** removing the spectest reward
+  drops completeness **14.1%** pass@1 and verifiable **6.1%**; removing the *verification gate*
+  inflates completeness **+32.3%** but crashes verifiable **64.7%** — the two are complementary,
+  neither alone is a valid objective. Case study `findItem`: reference spec scores 2/8,
+  Re:Form-style baseline 5/8, SpecRL-trained 8/8 rejection.
+- **Repo.** None published as of this search.
+- **Implement here:** spectests, end to end. We can generate implementation-impossible
+  (input, output) pairs directly from the reference solution (perturb the reference output), build
+  a `SpecCheck` predicate in our interpreter, and score every candidate spec by rejection fraction.
+  **This is the cheapest high-value thing in this whole lane** — and note the ablation: gate on
+  verification *first*, then reward completeness, or the metric inflates.
+
+### [H] VeriAct / Spec-Harness: Beyond Verifiability — Agentic Synthesis of Correct and Complete Formal Specifications
+- 2026 · arXiv:2604.00280 (31 Mar 2026, rev 8 Sep 2026) · https://arxiv.org/abs/2604.00280
+  (the revised title is *"Spec-Harness: Measuring and Improving Behavioral Adequacy of
+  LLM-Synthesized Formal Specifications"*)
+- Md Rakib Hossain Misu, Iris Ma, Cristina V. Lopes (UC Irvine)
+- **Technique.** States our exact failure mode: *"passing a verifier only confirms that an
+  implementation is consistent with a specification, not that the specification is meaningful."*
+  **Spec-Harness** scores a spec on **four dimensions** using **Hoare-triple-based symbolic
+  verification plus input/output mutation**, detecting **under-constrained and over-constrained**
+  specs that a verifier cannot see. **VeriAct** is a JML agent that consumes Spec-Harness feedback
+  in a loop to push specs toward correctness *and* completeness.
+- **Numbers.** Shows many verifier-accepted specs are **behaviorally inadequate**; Spec-Harness
+  feedback improves specs from Codex CLI, Claude Code and VeriAct alike. (Exact tables not
+  confirmed from the abstract page.)
+- **Repo.** **https://github.com/Mondego/vACT** — Python 3.10+, **GPL-3.0**. Contains the agentic
+  loop (code execution + OpenJML + Spec-Harness feedback) *and* baseline implementations of
+  **Daikon, Houdini, SpecGen, AutoSpec and FormalBench** in one place.
+- **Implement here:** the **four-dimension Spec-Harness score** and, above all, the
+  **over-constrained** axis — most work only checks "too weak", but a spec that is too *strong*
+  makes correct solutions unprovable and is what silently tanks a proof-gate pass rate.
 
 ### [H] Evaluating LLM-driven User-Intent Formalization for Verification-Aware Languages
 - 2024 · arXiv:2406.09757 · FMCAD 2024 · https://arxiv.org/abs/2406.09757
@@ -310,14 +358,29 @@ Legend: `[H]` high / `[M]` medium / `[L]` low implementable-here.
   https://arxiv.org/abs/2310.01831 · project: https://nl2postcond.github.io/
 - Endres, Fakhoury, Chakraborty, Lahiri (Michigan + Microsoft Research)
 - **Technique.** Founding paper of the lane. Defines **nl2postcond**: translate an NL doc comment
-  into a programmatically checkable postcondition. Introduces and validates two metrics —
-  **correctness** (does the postcondition hold of correct behaviour) and **discriminative power**
-  (does it reject incorrect code) — designed to be computed automatically.
-- **Numbers.** LLM-generated postconditions caught **64 real-world historical bugs from Defects4J**.
-  (The metric-computation detail is in the PDF; the abstract page does not spell out the exact
-  formulas — see the FSE version for the mutant/test construction.)
-- **Implement here:** correctness + discriminative power as our two headline spec metrics, with
-  our reference solution supplying correctness and wrong solutions supplying discrimination.
+  into a programmatically checkable postcondition. Introduces two automatically-computable metrics:
+  - **Test-set correctness (soundness).** `post` is *test-set-correct* iff for every input `i` in
+    test set `T`, `post(i, r(i))` is true, where `r` is the **reference implementation**. I.e. the
+    postcondition passes all tests against the golden solution.
+  - **Bug-completeness score (discriminative power).** Over a set `CM` of semantically distinct
+    buggy implementations: `|{m ∈ CM : post evaluates false on m}| / |CM|`. A postcondition
+    scoring **1.0 is "bug-complete"**. Mutants are kept only if they differ from the reference on
+    at least one test **and** are pairwise distinct.
+  - Mutant construction: LLM generates **200 natural buggy solutions + 200 artificially seeded
+    bugs per problem**.
+- **Numbers.** **EvalPlus (Python, 164 problems)** — accept@1 / accept@10 / avg bug-completeness:
+  GPT-4 (simple, no reference) **0.77 / 0.96 / 0.52**; GPT-3.5 (base) 0.46 / 0.87 / 0.72;
+  StarChat (base) 0.21 / 0.82 / 0.24. **Defects4J (Java, 525 bugs / 840 functions)** — accept@1 /
+  accept@10 / bugs caught: GPT-4 (with buggy code) **0.39 / 0.75 / 47 of 525**; StarChat
+  0.12 / 0.56 / 24 of 525. Across all variants nl2postcond distinguished **70 buggy methods from
+  64 unique bugs — 12.2% of the bugs considered**.
+  Note the tension: GPT-4 is the most *correct* (0.77) but the *least* bug-complete (0.52) of the
+  three — stronger models write safer, weaker postconditions. That is the vacuity problem in one
+  row of a table.
+- **Repo.** https://github.com/microsoft/nl-2-postcond (MIT).
+- **Implement here:** **exactly these two metrics**, verbatim. We have the reference solution
+  (correctness) and can generate mutants (bug-completeness). Report them *as a pair* — and expect
+  the same inverse relationship, which is the number our proof-gate story needs.
 
 ### [H] Beyond Postconditions: Can LLMs infer Formal Contracts for Automatic Software Verification? (NL2Contract)
 - 2025 · arXiv:2510.12702 (14 Oct 2025) · https://arxiv.org/abs/2510.12702
@@ -713,6 +776,18 @@ Legend: `[H]` high / `[M]` medium / `[L]` low implementable-here.
 - Survey spanning theorem statements, logic programs, planning domains, knowledge graphs.
   Useful for taxonomy and related-work coverage, not for a mechanism.
 
+### [M] Grammar Prompting for Domain-Specific Language Generation with LLMs
+- 2023 · arXiv:2305.19234 · **NeurIPS 2023** · https://arxiv.org/abs/2305.19234
+- **Technique.** For highly structured, low-resource languages, augment each few-shot demo with a
+  **minimally-sufficient BNF grammar** for that particular output. At inference the LLM first
+  **predicts a BNF grammar** for the test input, then generates the output constrained by it.
+- **Implement here:** directly relevant — our spec language is small and almost certainly absent
+  from pretraining. Emit a per-problem minimal grammar first, then the spec. See also
+  **DSL-Xpert 2.0** (Inf. & Softw. Tech. 2025, doi:10.1016/j.infsof.2025.107861-ish, via
+  ScienceDirect S0950584925002939) and **From Text to DSL: Evaluating Grammar-Based Model
+  Generation Using Open LLMs** (arXiv:2605.15865) which tests 0.5B–32B open models on syntactic
+  validity, semantic completeness and inter-model reference consistency with few-shot only.
+
 ### [L] Towards a Common Framework for Autoformalization
 - 2025 · arXiv:2509.09810 · https://arxiv.org/pdf/2509.09810 — see Angle E.
 
@@ -828,4 +903,55 @@ Legend: `[H]` high / `[M]` medium / `[L]` low implementable-here.
 | nl2spec | https://github.com/realChrisHahn2/nl2spec | Python | *to confirm* | Subformula↔NL-fragment traceability and the interactive refinement loop |
 | Vericoding benchmark | Beneficial-AI-Foundation GitHub (linked from arXiv:2509.22908) | Dafny/Verus/Lean | *to confirm* | 12,504 specs across 3 languages; the spec-faithfulness validation scripts |
 | DafnyComp | https://dafnycomp.github.io/ (repo linked) | Dafny + Python | *to confirm* | 400 compositional programs + failure-mode labelling |
+| **vACT / VeriAct + Spec-Harness** | https://github.com/Mondego/vACT | **Python 3.10+**, drives OpenJML | **GPL-3.0** ⚠️ (copyleft — read, don't vendor) | **The Spec-Harness scorer** (Hoare-triple symbolic verification + I/O mutation, four dimensions, catches over- *and* under-constrained specs) plus **in-repo baselines for Daikon, Houdini, SpecGen, AutoSpec and FormalBench**. Best single code artifact in this lane for "is this spec meaningful". |
+| **FormalBench** | https://github.com/thanhlecongg/FormalBench | Python, drives **OpenJML 17 & 21** (Java/JML) and **ACSL** for C | *to confirm* | **FormalBench-Base 699 Java programs + FormalBench-Diverse 6,219 mutated programs.** The mutation-based *diverse* split is exactly the semantics-preserving-transformation robustness harness we'd otherwise have to build. |
 | Vero (repo-level VERINA follow-on) | https://github.com/sunblaze-ucb/vero · https://vero.verina.io/ | Lean 4 | *to confirm* | Repository-level verified code generation, if we ever go multi-module |
+| SpecPylot | Zenodo DOI 10.5281/zenodo.19491112 | Python (`icontract`) | *to confirm* | Runtime-checked pre/postcondition decorators — the lightest-weight spec format |
+| Improving Dynamic Spec Inference w/ LLM Counterexamples | https://zenodo.org/records/18899070 | Java (SpecFuzzer) | CC BY-NC-SA 4.0 | The counterexample-generation prompts that discard invalid assertions |
+| SpecRL | none published | — | — | Pipeline is fully described in the paper (see Angle B); reimplement from the 7 steps |
+| Coins (How Powerful Are LLMs…) | not confirmed | Rocq + Python | — | 164 hand-written Rocq specs for HumanEval + 1,640 mutation-derived negatives |
+
+---
+
+## Confidence notes — what I could and could not confirm
+
+Confirmed from primary sources (arXiv abstract/HTML, ACM/Springer, or the repo itself): all
+titles, authors, dates, venues and arXiv ids above, plus every number attributed to
+Verus-SpecGym, Coins, CodeSpecBench, VeriContest, VERINA, CLEVER, VeriEquivBench, LiveFMBench,
+SpecEval, Vericoding, DafnyComp, SpecRL, Lahiri FMCAD'24, Lahiri intent-formalization,
+SpecBench, "Do LLMs Game Formalization?", "Beyond Compilation", "LLMs Gaming Verifiers",
+nl2postcond (headline only), NL2Contract, SpecCoder, SpecGen, SpecSyn, KBSpec, Marmaragan,
+VeriMed, PSV, Re:Form, VeriScale, Monty, FormalRx, AutoReSpec, FormalBench, ClassInvGen,
+the Daikon-counterexample paper, the VeriFast study, and the vACT/FormalBench/CLEVER/VERINA/
+VeriContest/Verus-SpecGym/SpecGen/nl-2-postcond repos.
+
+**Could NOT confirm:**
+- **Self-Spec** — OpenReview PDF is behind a bot check; only the abstract framing is confirmed,
+  no numbers.
+- **SpecPylot, SpecSyn (target verifier), Enhancing…via Program Slicing, Integrating Symbolic
+  Execution** — PDFs fetched as binary; abstracts confirmed, result tables not.
+- Papers explicitly marked "*Not fetched in detail*" in the body: title/venue/topic confirmed from
+  search results only — treat their descriptions as provisional.
+- Licences marked "*to confirm*" were not read from the repo's LICENSE file.
+
+---
+
+## What to read first, and why
+
+1. **SpecRL (arXiv:2604.05820)** — it is the only paper that gives a complete, copyable recipe for
+   turning "a spec that verifies" into "a spec that means something": `SpecCheck` predicate,
+   executed positive seeds, mutated negative spectests, rejection-rate score, and the ablation
+   proving you must gate on verification *before* rewarding completeness.
+2. **Verus-SpecGym (arXiv:2605.26457)** — the closest published environment to ours, and the
+   source of the one number that should change how we evaluate: an **LLM judge misses 26% of the
+   failures** that executing the spec catches. We have an interpreter; we should never use a judge.
+3. **VeriScale (arXiv:2605.22368)** + **ClassInvGen (arXiv:2502.18917)** — together they solve
+   "our per-problem unit tests are too weak to grade a spec": VeriScale mines adversarial tests
+   from wrong implementations (83× expansion) and ClassInvGen co-generates the spec with the tests
+   that would falsify it, with a correctness-and-completeness harness built on tests and mutants.
+4. **vACT / Spec-Harness (arXiv:2604.00280, github.com/Mondego/vACT)** — the best running code for
+   "is this spec meaningful", and the only one that scores **over**-constrained as well as
+   under-constrained specs, which is what makes correct solutions unprovable across seven systems.
+5. **Lahiri's intent-formalization pair (arXiv:2603.17150 + arXiv:2406.09757)** — the framing and
+   vocabulary for the write-up, and the argument that **spec validation, not proving, is the
+   bottleneck** — which is the case for spending our budget on the spec gate rather than the provers.

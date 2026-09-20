@@ -1,5 +1,5 @@
 {
- "checked": 1649,
+ "checked": 1807,
  "tags": [
   "deepseek-coder-v2-16b-v4-s1",
   "deepseek-coder-v2-16b-v4-s2",
@@ -10,6 +10,7 @@
   "locallm-r7b-greedy",
   "locallm-r7b-headed2",
   "locallm-r8",
+  "locallm-smoke",
   "phi4-mini-eval2-2026-09-19",
   "phi4-mini-v3",
   "prover-train",
@@ -66,6 +67,78 @@
   "student-r6-v3"
  ],
  "disagree": [
+  "locallm-r7b-greedy/mbpp_122__smartNumber",
+  "locallm-r7b-greedy/mbpp_138__is_Sum_Of_Powers_Of_Two",
+  "locallm-r7b-greedy/mbpp_141__pancake_sort",
+  "locallm-r7b-greedy/mbpp_161__remove_elements",
+  "locallm-r7b-greedy/mbpp_164__areEquivalent",
+  "locallm-r7b-greedy/mbpp_167__next_Power_Of_2",
+  "locallm-r7b-greedy/mbpp_169__get_pell",
+  "locallm-r7b-greedy/mbpp_175__is_valid_parenthese",
+  "locallm-r7b-greedy/mbpp_179__is_num_keith",
+  "locallm-r7b-greedy/mbpp_194__octal_To_Decimal",
+  "locallm-r7b-greedy/mbpp_203__hamming_Distance",
+  "locallm-r7b-greedy/mbpp_20__is_woodall",
+  "locallm-r7b-greedy/mbpp_235__even_bit_set_number",
+  "locallm-r7b-greedy/mbpp_239__get_total_number_of_sequences",
+  "locallm-r7b-greedy/mbpp_267__square_Sum",
+  "locallm-r7b-greedy/mbpp_289__odd_Days",
+  "locallm-r7b-greedy/mbpp_28__binomial_Coeff",
+  "locallm-r7b-greedy/mbpp_302__set_Bit_Number",
+  "locallm-r7b-greedy/mbpp_339__find_Divisor",
+  "locallm-r7b-greedy/mbpp_355__count_Rectangles",
+  "locallm-r7b-greedy/mbpp_362__max_occurrences",
+  "locallm-r7b-greedy/mbpp_374__permute_string",
+  "locallm-r7b-greedy/mbpp_375__round_num",
+  "locallm-r7b-greedy/mbpp_383__even_bit_toggle_number",
+  "locallm-r7b-greedy/mbpp_389__find_lucas",
+  "locallm-r7b-greedy/mbpp_3__is_not_prime",
+  "locallm-r7b-greedy/mbpp_402__ncr_modp",
+  "locallm-r7b-greedy/mbpp_420__cube_Sum",
+  "locallm-r7b-greedy/mbpp_447__cube_nums",
+  "locallm-r7b-greedy/mbpp_463__max_subarray_product",
+  "locallm-r7b-greedy/mbpp_492__binary_search",
+  "locallm-r7b-greedy/mbpp_502__find",
+  "locallm-r7b-greedy/mbpp_516__radix_sort",
+  "locallm-r7b-greedy/mbpp_51__check_equilateral",
+  "locallm-r7b-greedy/mbpp_531__min_coins",
+  "locallm-r7b-greedy/mbpp_541__check_abundant",
+  "locallm-r7b-greedy/mbpp_552__Seq_Linear",
+  "locallm-r7b-greedy/mbpp_559__max_sub_array_sum",
+  "locallm-r7b-greedy/mbpp_565__split",
+  "locallm-r7b-greedy/mbpp_605__prime_num",
+  "locallm-r7b-greedy/mbpp_626__triangle_area",
+  "locallm-r7b-greedy/mbpp_638__wind_chill",
+  "locallm-r7b-greedy/mbpp_663__find_max_val",
+  "locallm-r7b-greedy/mbpp_665__move_last",
+  "locallm-r7b-greedy/mbpp_672__max_of_three",
+  "locallm-r7b-greedy/mbpp_682__mul_list",
+  "locallm-r7b-greedy/mbpp_683__sum_Square",
+  "locallm-r7b-greedy/mbpp_687__recur_gcd",
+  "locallm-r7b-greedy/mbpp_6__differ_At_One_Bit_Pos",
+  "locallm-r7b-greedy/mbpp_723__count_same_pair",
+  "locallm-r7b-greedy/mbpp_757__count_reverse_pairs",
+  "locallm-r7b-greedy/mbpp_768__check_Odd_Parity",
+  "locallm-r7b-greedy/mbpp_769__Diff",
+  "locallm-r7b-greedy/mbpp_804__is_Product_Even",
+  "locallm-r7b-greedy/mbpp_826__check_Type_Of_Triangle",
+  "locallm-r7b-greedy/mbpp_831__count_Pairs",
+  "locallm-r7b-greedy/mbpp_837__cube_Sum",
+  "locallm-r7b-greedy/mbpp_849__Sum",
+  "locallm-r7b-greedy/mbpp_853__sum_of_odd_Factors",
+  "locallm-r7b-greedy/mbpp_86__centered_hexagonal_number",
+  "locallm-r7b-greedy/mbpp_876__lcm",
+  "locallm-r7b-greedy/mbpp_887__is_odd",
+  "locallm-r7b-greedy/mbpp_891__same_Length",
+  "locallm-r7b-greedy/mbpp_908__find_fixed_point",
+  "locallm-r7b-greedy/mbpp_91__find_substring",
+  "locallm-r7b-greedy/mbpp_937__max_char",
+  "locallm-smoke/mbpp_10__small_nnum",
+  "locallm-smoke/mbpp_20__is_woodall",
+  "locallm-smoke/mbpp_28__binomial_Coeff",
+  "locallm-smoke/mbpp_32__max_Prime_Factors",
+  "locallm-smoke/mbpp_51__check_equilateral",
+  "locallm-smoke/mbpp_56__check",
   "prover-train/mbpp_509__average_Odd",
   "prover-train/mbpp_890__find_Extra",
   "qwen15b-base-v3/mbpp_768__check_Odd_Parity",
@@ -97,7 +170,79 @@
   "qwen3.8-27b-fp8-v3/mbpp_195__first": "t 1\ngate loops\ntask mbpp_195__first(s: seq, x: int, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [0, r) . i < len(s) ==> s[i] != x)\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
   "qwen3.8-27b-fp8-v3-s2/mbpp_908__find_fixed_point": "t 1\ngate loops\ntask mbpp_908__find_fixed_point(s: seq, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == r\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != i)\n  ensures r != -1 ==> (forall i in [0, r) . s[i] != i)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != j)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == r and (forall j in [0, r) . j < len(s) ==> s[j] != j)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == i {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
   "prover-train/mbpp_509__average_Odd": "t 1\ntask mbpp_509__average_Odd(n: int) returns (r: int)\n  ensures r == (n + 1) / 2\n{\n  r := (n + 1) / 2;\n}",
-  "prover-train/mbpp_890__find_Extra": "t 1\ntask mbpp_890__find_Extra(a1: seq, a2: seq, n: int) returns (r: int)\n  ensures r == n\n{\n  r := n;\n}"
+  "prover-train/mbpp_890__find_Extra": "t 1\ntask mbpp_890__find_Extra(a1: seq, a2: seq, n: int) returns (r: int)\n  ensures r == n\n{\n  r := n;\n}",
+  "locallm-r7b-greedy/mbpp_122__smartNumber": "t 0\ntask mbpp_122__smartNumber(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (3 * n - 2)\n{\n  r := n * (3 * n - 2);\n}",
+  "locallm-r7b-greedy/mbpp_138__is_Sum_Of_Powers_Of_Two": "t 1\ngate loops\ntask mbpp_138__is_Sum_Of_Powers_Of_Two(x: int) returns (r: int)\n  ensures r == x + 1\n{\n  r := x + 1;\n}",
+  "locallm-r7b-greedy/mbpp_141__pancake_sort": "t 1\ngate loops\ntask mbpp_141__pancake_sort(a: seq) returns (r: seq)\n  requires len(a) == len(a)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(a)) . r[i] == a[i] + 1\n{\n  r := [];\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == a[k] + 1\n    decreases len(a) - i\n  {\n    r := r + [a[i] + 1];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_161__remove_elements": "t 1\ngate loops\ntask mbpp_161__remove_elements(s: seq, n: int) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * n\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == s[j] * n\n    decreases len(s) - i\n  {\n    r := r + [s[i] * n];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_164__areEquivalent": "t 1\ngate loops\ntask mbpp_164__areEquivalent(x1: int, y1: int) returns (r: int)\n  ensures r == 2 * x1\n{\n  r := 2 * x1;\n}",
+  "locallm-r7b-greedy/mbpp_167__next_Power_Of_2": "t 1\ngate loops\ntask mbpp_167__next_Power_Of_2(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_169__get_pell": "t 1\ngate loops\ntask mbpp_169__get_pell(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == get_pell(n)\n  decreases n\nspec fun get_pell(n: int): int\n  decreases n\n= if n <= 0 then 0 else if n == 1 then 1 else get_pell(n - 1) + get_pell(n - 2)\n{\n  if n == 0 {\n    r := 0;\n  } else {\n    if n == 1 {\n      r := 1;\n    } else {\n      r := mbpp_169__get_pell(n - 1) + mbpp_169__get_pell(n - 2);\n    }\n  }\n}",
+  "locallm-r7b-greedy/mbpp_175__is_valid_parenthese": "t 1\ngate loops\ntask mbpp_175__is_valid_parenthese(s: seq) returns (r: bool)\n  ensures r == (forall i in [0, len(s)) . s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 or s[i] >= 48 and s[i] <= 57)\n{\n  r := true;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant r == (forall j in [0, i) . s[j] >= 97 and s[j] <= 122 or s[j] >= 65 and s[j] <= 90 or s[j] >= 48 and s[j] <= 57)\n    decreases len(s) - i\n  {\n    if not (s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 or s[i] >= 48 and s[i] <= 57) {\n      r := false;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_179__is_num_keith": "t 1\ngate loops\ntask mbpp_179__is_num_keith(n: int) returns (r: int)\n  ensures r == n * (3 * n - 3)\n{\n  r := n * (3 * n - 3);\n}",
+  "locallm-r7b-greedy/mbpp_194__octal_To_Decimal": "t 0\ntask mbpp_194__octal_To_Decimal(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (3 * n - 2)\n{\n  r := n * (3 * n - 2);\n}",
+  "locallm-r7b-greedy/mbpp_203__hamming_Distance": "t 0\ntask mbpp_203__hamming_Distance(a: int, b: int) returns (r: int)\n  ensures r == 2 * a\n{\n  r := 2 * a;\n}",
+  "locallm-r7b-greedy/mbpp_20__is_woodall": "t 1\ngate loops\ntask mbpp_20__is_woodall(s: int) returns (r: int)\n  ensures r == 2 * (s + 1)\n{\n  r := 2 * (s + 1) / 2;\n}",
+  "locallm-r7b-greedy/mbpp_235__even_bit_set_number": "t 0\ntask mbpp_235__even_bit_set_number(s: int) returns (r: int)\n  ensures r == 4 * s\n{\n  r := 4 * s;\n}",
+  "locallm-r7b-greedy/mbpp_239__get_total_number_of_sequences": "t 1\ngate loops\ntask mbpp_239__get_total_number_of_sequences(a: int, b: int) returns (r: int)\n  ensures r >= a\n  ensures r >= b\n  ensures r == a or r == b\n{\n  if a >= b {\n    r := a;\n  } else {\n    r := b;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_267__square_Sum": "t 1\ngate loops\ntask mbpp_267__square_Sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant 0 <= i and i <= n\n    invariant r == r * i\n    invariant i >= 0\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_289__odd_Days": "t 0\ntask mbpp_289__odd_Days(n: int) returns (r: int)\n  requires n > 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_28__binomial_Coeff": "t 0\ntask mbpp_28__binomial_Coeff(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  ensures r == a * b\n{\n  r := a * b;\n}",
+  "locallm-r7b-greedy/mbpp_302__set_Bit_Number": "t 0\ntask mbpp_302__set_Bit_Number(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_339__find_Divisor": "t 0\ntask mbpp_339__find_Divisor(a: int, b: int) returns (r: int)\n  ensures r == 2 * (a + b)\n{\n  r := 2 * (a + b);\n}",
+  "locallm-r7b-greedy/mbpp_355__count_Rectangles": "t 0\ntask mbpp_355__count_Rectangles(s: int) returns (r: int)\n  ensures r == 2 * s * s\n{\n  r := 2 * s * s;\n}",
+  "locallm-r7b-greedy/mbpp_362__max_occurrences": "t 1\ngate loops\ntask mbpp_362__max_occurrences(s: seq) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= len(s)\n    invariant r == i * (i + 1) / 2\n    decreases len(s) - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_374__permute_string": "t 1\ngate loops\ntask mbpp_374__permute_string(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * s[k]\n    decreases len(s) - i\n  {\n    r := r + [s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_375__round_num": "t 0\ntask mbpp_375__round_num(a: int, b: int) returns (r: int)\n  ensures r == 2 * (a + b)\n{\n  r := 2 * (a + b);\n}",
+  "locallm-r7b-greedy/mbpp_383__even_bit_toggle_number": "t 0\ntask mbpp_383__even_bit_toggle_number(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_389__find_lucas": "t 0\ntask mbpp_389__find_lucas(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_3__is_not_prime": "t 1\ngate loops\ntask mbpp_3__is_not_prime(x: int) returns (r: int)\n  ensures r == x * (x - 1)\n{\n  r := x * (x - 1);\n}",
+  "locallm-r7b-greedy/mbpp_402__ncr_modp": "t 0\ntask mbpp_402__ncr_modp(a: int, b: int, c: int) returns (r: int)\n  ensures r == 2 * (a + b)\n{\n  r := 2 * (a + b);\n}",
+  "locallm-r7b-greedy/mbpp_420__cube_Sum": "t 0\ntask mbpp_420__cube_Sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_447__cube_nums": "t 1\ngate loops\ntask mbpp_447__cube_nums(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * s[k]\n    decreases len(s) - i\n  {\n    r := r + [s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_463__max_subarray_product": "t 1\ngate loops\ntask mbpp_463__max_subarray_product(s: seq) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_492__binary_search": "t 1\ngate loops\ntask mbpp_492__binary_search(s: seq, x: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < i and s[r] == x and (forall j in [r + 1, i) . j < len(s) ==> s[j] != x)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_502__find": "t 0\ntask mbpp_502__find(a: int, b: int) returns (r: int)\n  ensures r == 2 * a\n  ensures r == 2 * b\n{\n  r := 2 * a;\n}",
+  "locallm-r7b-greedy/mbpp_516__radix_sort": "t 1\ngate loops\ntask mbpp_516__radix_sort(a: seq) returns (r: seq)\n  requires len(a) == len(a)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(a)) . r[i] == a[i] + 1\n{\n  r := [];\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == a[k] + 1\n    decreases len(a) - i\n  {\n    r := r + [a[i] + 1];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_51__check_equilateral": "t 0\ntask mbpp_51__check_equilateral(a: int, b: int, c: int) returns (r: int)\n  ensures r == 2 * (a + b)\n{\n  r := 2 * (a + b);\n}",
+  "locallm-r7b-greedy/mbpp_531__min_coins": "t 1\ngate loops\ntask mbpp_531__min_coins(s: seq, x: int, y: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < y and r < x and r < y\n{\n  if s[x] == y {\n    r := -1;\n  } else {\n    r := y;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_541__check_abundant": "t 0\ntask mbpp_541__check_abundant(l: int) returns (r: int)\n  ensures r == 2 * l\n{\n  r := 2 * l;\n}",
+  "locallm-r7b-greedy/mbpp_552__Seq_Linear": "t 1\ngate loops\ntask mbpp_552__Seq_Linear(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * s[k]\n    decreases len(s) - i\n  {\n    r := r + [s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_559__max_sub_array_sum": "t 1\ngate loops\ntask mbpp_559__max_sub_array_sum(s: seq, n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1) / 2;\n}",
+  "locallm-r7b-greedy/mbpp_565__split": "t 1\ngate loops\ntask mbpp_565__split(a: seq) returns (r: seq)\n  requires len(a) == len(a)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(a)) . r[i] == a[i] + 1\n{\n  r := [];\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == a[k] + 1\n    decreases len(a) - i\n  {\n    r := r + [a[i] + 1];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_605__prime_num": "t 1\ngate loops\ntask mbpp_605__prime_num(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1) / 2;\n}",
+  "locallm-r7b-greedy/mbpp_626__triangle_area": "t 0\ntask mbpp_626__triangle_area(x: int) returns (r: int)\n  ensures r == x + 1\n{\n  r := x + 1;\n}",
+  "locallm-r7b-greedy/mbpp_638__wind_chill": "t 0\ntask mbpp_638__wind_chill(l: int, w: int) returns (r: int)\n  ensures r == 2 * (l + w + 1)\n{\n  r := 2 * (l + w + 1);\n}",
+  "locallm-r7b-greedy/mbpp_663__find_max_val": "t 0\ntask mbpp_663__find_max_val(x: int, y: int, x: int) returns (r: int)\n  ensures r == x or r == y\n  ensures r >= x and r < y and r < x and r < y and r < y and r == x\n{\n  if x >= y {\n    r := x;\n  } else {\n    r := y;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_665__move_last": "t 1\ngate loops\ntask mbpp_665__move_last(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * s[k]\n    decreases len(s) - i\n  {\n    r := r + [s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_672__max_of_three": "t 0\ntask mbpp_672__max_of_three(a: int, b: int, c: int) returns (r: int)\n  ensures r == a or r == b or r == c\n  ensures r <= a and r <= b and r <= c\n{\n  if a <= b and a <= c {\n    r := a;\n  } else {\n    if b <= a and b <= c {\n      r := b;\n    } else {\n      r := c;\n    }\n  }\n}",
+  "locallm-r7b-greedy/mbpp_682__mul_list": "t 1\ngate loops\ntask mbpp_682__mul_list(a: seq, b: seq) returns (r: seq)\n  requires len(a) == len(b)\n  ensures len(r) == len(a)\n  ensures r[0] == r[len(a) - 1]\n  ensures forall i in [0, len(a) - 1) . r[i] == a[i] + b[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == a[k] + b[k]\n    decreases len(a) - i\n  {\n    r := r + [a[i] + b[i]];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_683__sum_Square": "t 1\ngate loops\ntask mbpp_683__sum_Square(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_687__recur_gcd": "t 0\ntask mbpp_687__recur_gcd(a: int, b: int) returns (r: int)\n  requires a > 0\n  requires b > 0\n  ensures r == a * b\n{\n  r := a * b;\n}",
+  "locallm-r7b-greedy/mbpp_6__differ_At_One_Bit_Pos": "t 1\ngate loops\ntask mbpp_6__differ_At_One_Bit_Pos(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  ensures r == a * b\n{\n  r := 0;\n  var i: int := 0;\n  while i < b\n    invariant r == a * i\n    invariant i >= 0 and i <= b\n    decreases b - i\n  {\n    r := r + a;\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_723__count_same_pair": "t 1\ngate loops\ntask mbpp_723__count_same_pair(s: seq, n: int) returns (r: int)\n  ensures r == len(s)\n  ensures r == len(s) or r == len(s)\n  ensures r == len(s) or r == len(s)\n  ensures r == len(s) or r == len(s)\n{\n  r := len(s);\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant r == len(s)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    r := r + 1;\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_757__count_reverse_pairs": "t 1\ngate loops\ntask mbpp_757__count_reverse_pairs(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * s[k]\n    decreases len(s) - i\n  {\n    r := r + [s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_768__check_Odd_Parity": "t 0\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: int)\n  ensures r == n * (3 * n - 2)\n{\n  r := n * (3 * n - 2);\n}",
+  "locallm-r7b-greedy/mbpp_769__Diff": "t 1\ngate loops\ntask mbpp_769__Diff(s: seq, x: int) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] * s[i]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i\n    invariant i <= len(s)\n    invariant len(r) == i\n    invariant forall k in [0, i) . r[k] == s[k] * s[k]\n    decreases len(s) - i\n  {\n    r := r + [s[i] * s[i]];\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_804__is_Product_Even": "t 1\ngate loops\ntask mbpp_804__is_Product_Even(s: seq, n: int) returns (r: bool)\n  ensures r == (forall i in [0, n) . s[i] == 32 or s[i] == 44 or s[i] == 46)\n{\n  r := true;\n  var i: int := 0;\n  while i < n\n    invariant i <= n\n    invariant i <= n\n    invariant r == (forall j in [0, i) . s[j] == 32 or s[j] == 44 or s[j] == 46)\n    decreases n - i\n  {\n    if s[i] == 32 or s[i] == 44 or s[i] == 46 {\n      r := true;\n    } else {\n      r := false;\n    }\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_826__check_Type_Of_Triangle": "t 0\ntask mbpp_826__check_Type_Of_Triangle(a: int, b: int, c: int) returns (r: int)\n  ensures r == 2 * (a + b)\n{\n  r := 2 * (a + b);\n}",
+  "locallm-r7b-greedy/mbpp_831__count_Pairs": "t 1\ngate loops\ntask mbpp_831__count_Pairs(s: seq, n: int) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_837__cube_Sum": "t 0\ntask mbpp_837__cube_Sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_849__Sum": "t 1\ngate loops\ntask mbpp_849__Sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == sum_v(n)\nspec fun sum_v(n_v: int): int\n  decreases n_v\n= if n_v >= 0 then if n_v == 0 then 0 else sum_v(n_v - 1) + n_v else 0\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant 0 <= i and i <= n\n    invariant r == sum_v(i)\n    invariant r >= 0\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_853__sum_of_odd_Factors": "t 0\ntask mbpp_853__sum_of_odd_Factors(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1)\n{\n  r := n * (n + 1);\n}",
+  "locallm-r7b-greedy/mbpp_86__centered_hexagonal_number": "t 0\ntask mbpp_86__centered_hexagonal_number(n: int) returns (r: int)\n  requires n > 0\n  ensures r == n * (3 * n - 2)\n{\n  r := n * (3 * n - 2);\n}",
+  "locallm-r7b-greedy/mbpp_876__lcm": "t 1\ngate loops\ntask mbpp_876__lcm(a: int, b: int) returns (r: int)\n  ensures r == 2 * a\n{\n  r := 2 * a;\n}",
+  "locallm-r7b-greedy/mbpp_887__is_odd": "t 1\ngate loops\ntask mbpp_887__is_odd(n: int) returns (r: int)\n  ensures r == n * (3 * n - 3)\n{\n  r := n * (3 * n - 3);\n}",
+  "locallm-r7b-greedy/mbpp_891__same_Length": "t 1\ngate loops\ntask mbpp_891__same_Length(a: int, b: int) returns (r: int)\n  ensures r == 2 * (a + b)\n{\n  r := 2 * (a + b);\n}",
+  "locallm-r7b-greedy/mbpp_908__find_fixed_point": "t 1\ngate loops\ntask mbpp_908__find_fixed_point(s: seq, x: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < i and s[r] == x and (forall j in [r + 1, i) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_91__find_substring": "t 1\ngate loops\ntask mbpp_91__find_substring(s: seq, x: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n  ensures r != -1 ==> (forall i in [0, r) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < i and s[r] == x and (forall j in [r + 1, i) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+  "locallm-r7b-greedy/mbpp_937__max_char": "t 1\ngate loops\ntask mbpp_937__max_char(s: seq) returns (r: int)\n  ensures r == len(s) * (len(s) + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == i * (i + 1) / 2\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+  "locallm-smoke/mbpp_10__small_nnum": "t 1\ngate loops\ntask mbpp_10__small_nnum(a: seq, n: int) returns (r: int)\n  requires n >= 0\n  requires n >= 0\n  ensures r == n * n\n{\n  r := 1;\n  var i: int := 0;\n  while i < n\n    invariant r == i * i\n    invariant r == i * i\n    invariant i >= 0 and i <= n\n    decreases n - i\n  {\n    r := r + i;\n    i := i + 1;\n  }\n}",
+  "locallm-smoke/mbpp_20__is_woodall": "t 1\ntask mbpp_20__is_woodall(n: int) returns (r: bool)\n  ensures r == (n % 2 == 0)\n{\n  if n % 2 == 0 {\n    r := true;\n  } else {\n    r := false;\n  }\n}",
+  "locallm-smoke/mbpp_28__binomial_Coeff": "t 0\ntask mbpp_28__binomial_Coeff(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  ensures r == a + b\n{\n  r := a + b;\n}",
+  "locallm-smoke/mbpp_32__max_Prime_Factors": "t 1\ngate loops\ntask mbpp_32__max_Prime_Factors(n: int) returns (r: int)\n  requires n > 0\n  ensures r == n * (n + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant r == i * (i + 1) / 2\n    invariant i <= n\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
+  "locallm-smoke/mbpp_51__check_equilateral": "t 1\ntask mbpp_51__check_equilateral(a: int, b: int, c: int) returns (r: bool)\n  ensures r == (a == b or b == c or a == c or b == c)\n{\n  r := a == b or b == c or a == c or b == c;\n}",
+  "locallm-smoke/mbpp_56__check": "t 1\ngate loops\ntask mbpp_56__check(n: int) returns (r: int)\n  ensures r == (n + 1) * (n + 2)\n{\n  r := (n + 1) * (n + 2) / 2;\n}"
  },
  "results": {
   "prover-train/mbpp_135__hexagonal_num": {
@@ -3033,6 +3178,2093 @@
    "pool": "v5",
    "seed": 1,
    "attempts": 100
+  },
+  "locallm-r7b-greedy/mbpp_108__merge_sorted_list": {
+   "status": "arity differs from the problem",
+   "task_id": 108,
+   "task_sha256": "257eda9b6a8d6fe7cdf0aeb789ccc01abb7586ed229b954e1a3e37c6eba21d1e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_122__smartNumber": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    0
+   ],
+   "reference_said": 2996,
+   "agreed_before": 0,
+   "task_id": 122,
+   "task_sha256": "316a14468eef344b153963da580c89e1d86dd2b2cff9cb84e99f5d521477e990",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_125__find_length": {
+   "status": "interpreter refused",
+   "task_id": 125,
+   "task_sha256": "7e7b967b161494ee2fb665a565c882bfe270befccd3187e2ec2d04d3838ba2d5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_138__is_Sum_Of_Powers_Of_Two": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    15
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 138,
+   "task_sha256": "73e768fb3fa784d082858223f12d05c05df26bd9fad321183bf01004d7417a80",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_141__pancake_sort": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     68,
+     13,
+     70,
+     47,
+     42,
+     26
+    ]
+   ],
+   "reference_said": [
+    13,
+    26,
+    42,
+    47,
+    68,
+    70
+   ],
+   "agreed_before": 1,
+   "task_id": 141,
+   "task_sha256": "2bf82dae2a8dd011ab3b429e9c8980f9c014e706905934baa5b9cead031fa5a0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_149__longest_subseq_with_diff_one": {
+   "status": "interpreter refused",
+   "task_id": 149,
+   "task_sha256": "79629aed5ae32149caf1699953abba45d9845943cd6a004d5960f91dd529e453",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_161__remove_elements": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     -1,
+     2,
+     2,
+     2,
+     7,
+     7,
+     11,
+     12
+    ],
+    [
+     5,
+     8,
+     9
+    ]
+   ],
+   "reference_said": [
+    -1,
+    2,
+    2,
+    2,
+    7,
+    7,
+    11,
+    12
+   ],
+   "agreed_before": 0,
+   "task_id": 161,
+   "task_sha256": "ec8bba9bc29111c98876d8961b38ebd06fdfe5083add89a8701ea1bdcbe27eec",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_164__areEquivalent": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    45,
+    58
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 164,
+   "task_sha256": "897e315b7592cff3f60fd0e7495cdaf9e9dbe0fdec2b8aa04db5592a8d6a1e6e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_167__next_Power_Of_2": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    1
+   ],
+   "reference_said": 1,
+   "agreed_before": 0,
+   "task_id": 167,
+   "task_sha256": "cd1584b06bc305f2a4f7fc9492c6275a3ad1f4ee1ef6b026a33b18e416d21547",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_169__get_pell": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    8
+   ],
+   "reference_said": 408,
+   "agreed_before": 0,
+   "task_id": 169,
+   "task_sha256": "f0ad25af7aeb89fbb0778bb3189ce175728ce5b70420aff27e906239a0c7e90d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_175__is_valid_parenthese": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     108,
+     112
+    ]
+   ],
+   "reference_said": false,
+   "agreed_before": 6,
+   "task_id": 175,
+   "task_sha256": "3036acb24b0f0e482bda7975c9bf1abfd4d2123e36804a3c8f224cf3213f1592",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_179__is_num_keith": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    5
+   ],
+   "reference_said": true,
+   "agreed_before": 0,
+   "task_id": 179,
+   "task_sha256": "56d28e1344eb471e937dbf69cc9e230a63454b8b8c4e30703c9d4773ed0fcc8b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_184__greater_specificnum": {
+   "status": "interpreter refused",
+   "task_id": 184,
+   "task_sha256": "9b145e98a8d413e5a5e2a71cf909fe5a6a2ac8621c6b9ef2664c3b76f41f59eb",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_18__remove_dirty_chars": {
+   "status": "arity differs from the problem",
+   "task_id": 18,
+   "task_sha256": "9da982a114b2454923c9d2f36f9f16d3d3511651b450497be56f4349b55bd4d9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_194__octal_To_Decimal": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    16
+   ],
+   "reference_said": 14,
+   "agreed_before": 0,
+   "task_id": 194,
+   "task_sha256": "bbe15ef300355d67e6a59ee077f59c610deacf6e4075a8a4764dfa8c8837ea9a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_201__chkList": {
+   "status": "interpreter refused",
+   "task_id": 201,
+   "task_sha256": "e32087679eeb286b85ec44f59ecf0a218bf18efc24418af0302105ab9aae1794",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_203__hamming_Distance": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    0,
+    14
+   ],
+   "reference_said": 3,
+   "agreed_before": 1,
+   "task_id": 203,
+   "task_sha256": "3f2433dd36969eac8dbace9c00101cb57e3f2e8310412b99cdf86ba58d87e8c3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_208__is_decimal": {
+   "status": "arity differs from the problem",
+   "task_id": 208,
+   "task_sha256": "fb0722a698f45cbe36bf0e6aacb07a1f6f1ec21d221e629353852562f3fb661b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_20__is_woodall": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    14
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 20,
+   "task_sha256": "26e161effec5da7be79fc4132915282c7b6db8d6e40a9842b49dbc2774d8c05f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_235__even_bit_set_number": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    8
+   ],
+   "reference_said": 10,
+   "agreed_before": 0,
+   "task_id": 235,
+   "task_sha256": "820bc76cfd9761ae28b357cb381c919a330b6fbf49880448e4a04e48cec76b05",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_239__get_total_number_of_sequences": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    7,
+    4
+   ],
+   "reference_said": 0,
+   "agreed_before": 0,
+   "task_id": 239,
+   "task_sha256": "d9b085ec584b4011f7e071c8c44672c5263d5668ccb9c6e91e1ac1f279e2283f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_245__max_sum": {
+   "status": "interpreter refused",
+   "task_id": 245,
+   "task_sha256": "855d8b6f464827c6b8512c0a56d8a546661ca8146d2e506fecd79979613f4b88",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_247__lps": {
+   "status": "interpreter refused",
+   "task_id": 247,
+   "task_sha256": "000ba3f802cea27bdb1b49d30686ff7069595cbb72d8a3eb274513a9a2919f4a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_267__square_Sum": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    3
+   ],
+   "reference_said": 35,
+   "agreed_before": 1,
+   "task_id": 267,
+   "task_sha256": "32c85fea60d83ce323155da2da38e64c7d6f5a483b2866e352d5b0225edeaf8c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_269__ascii_value": {
+   "status": "arity differs from the problem",
+   "task_id": 269,
+   "task_sha256": "b685f3501bf6276c9fb6ba60317a9f6e82d155884903d7670b0519c95eb61872",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_275__get_Position": {
+   "status": "arity differs from the problem",
+   "task_id": 275,
+   "task_sha256": "8b35d82d65533038a31cf516ca4b8de857c720ef4b5ff1cb1f5191d7f461a6ef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_289__odd_Days": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    172
+   ],
+   "reference_said": 4,
+   "agreed_before": 0,
+   "task_id": 289,
+   "task_sha256": "483c70cb38dc1bb63ab512d04f92f78393bc9c03aa57b2dbc1d6174ded14ea62",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_28__binomial_Coeff": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    9,
+    2
+   ],
+   "reference_said": 36,
+   "agreed_before": 0,
+   "task_id": 28,
+   "task_sha256": "ceb31c178cb1f9b79fb83fff765b2f7ca514a4e4f23a035225636b333be3083d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_295__sum_div": {
+   "status": "arity differs from the problem",
+   "task_id": 295,
+   "task_sha256": "a60cb8fb4acaea897c085eb8d0936b52c052fa7b7f9869c5ee11d3d5fec9b91c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_302__set_Bit_Number": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    10
+   ],
+   "reference_said": 8,
+   "agreed_before": 0,
+   "task_id": 302,
+   "task_sha256": "c645558677aa2f0febe822af239b59ab98a07e3d96536f1fdd9761bc4406da57",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_313__pos_nos": {
+   "status": "arity differs from the problem",
+   "task_id": 313,
+   "task_sha256": "3b6d47e39b33123afb80e5d3a4f5a1c9e8203fdc206f78cad2d2f207930ae3dc",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_318__max_volume": {
+   "status": "arity differs from the problem",
+   "task_id": 318,
+   "task_sha256": "c285a86a30dfdd9f800ffa7a37466a08db34cb36a1720d43e027a6a7b32bceb0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_330__find_char": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 330,
+   "task_sha256": "5bc8559f4217de4d6aec52961b70827c4005035d88a97c13ac8d71d66f55c411",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_339__find_Divisor": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    1,
+    3
+   ],
+   "reference_said": 2,
+   "agreed_before": 0,
+   "task_id": 339,
+   "task_sha256": "68c7f1ed18a3b86135d19d4117ee6ffb8828cf3ec9a4e946c36047c228442a64",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_345__diff_consecutivenums": {
+   "status": "agrees",
+   "draws": 4,
+   "mutants_rejected": 4,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "task_id": 345,
+   "task_sha256": "09e7b6fc62aceb868904c715ea8920fd49f6161cc88232e3b77d17e2be75c64d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_355__count_Rectangles": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    1
+   ],
+   "reference_said": 1,
+   "agreed_before": 0,
+   "task_id": 355,
+   "task_sha256": "82bfd92f288e74d065516e5429b66f43a9a07b6c34b58d54a79c2e46c14600b8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_358__moddiv_list": {
+   "status": "arity differs from the problem",
+   "task_id": 358,
+   "task_sha256": "b4d8a3647590d63d4aed7c7e48d62ddb797983bdf78616d00ba51799d74a2084",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_362__max_occurrences": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     14,
+     7,
+     6,
+     9,
+     10,
+     10,
+     11,
+     8
+    ]
+   ],
+   "reference_said": 10,
+   "agreed_before": 0,
+   "task_id": 362,
+   "task_sha256": "a456cc8d5706e7cbc5e063e05d121301976e47daf8cad163552c9991e07ff057",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_374__permute_string": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    []
+   ],
+   "reference_said": [
+    ""
+   ],
+   "agreed_before": 0,
+   "task_id": 374,
+   "task_sha256": "341095853e8ede6279f89f10a5dc8899193cc31a85720b401006707af88d7d30",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_375__round_num": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    9358,
+    16
+   ],
+   "reference_said": 9360,
+   "agreed_before": 0,
+   "task_id": 375,
+   "task_sha256": "b890936bf3f95785946e4ba4af18cf05b43705e025c00c3ea254866b346846b6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_383__even_bit_toggle_number": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    20
+   ],
+   "reference_said": 1,
+   "agreed_before": 0,
+   "task_id": 383,
+   "task_sha256": "8c754328852379be1a2f92836fd3586ebe1b2ee87a633c81d10496a6cfe56bc9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_387__even_or_odd": {
+   "status": "interpreter refused",
+   "task_id": 387,
+   "task_sha256": "a1d2c28a707043fe1a08676598d64b8edf9abf2aefb5997ab0aa862ff4e6f379",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_389__find_lucas": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    6
+   ],
+   "reference_said": 18,
+   "agreed_before": 0,
+   "task_id": 389,
+   "task_sha256": "c1acefd275fa4d847bfb6c039986cf7c5e1ccf7a9a88e7b5ac55de535a1b8ba1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_39__rearange_string": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 39,
+   "task_sha256": "f0cf229678044d4453a0b3745f696259f174f44bd029c99de3eb5f67e0680701",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_3__is_not_prime": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    3
+   ],
+   "reference_said": false,
+   "agreed_before": 4,
+   "task_id": 3,
+   "task_sha256": "ffe0f0b5e97b5d6c0a727142a417e344d0182e7ba08abd849bf1a4dbfe370237",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_402__ncr_modp": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    8,
+    3,
+    8
+   ],
+   "reference_said": 0,
+   "agreed_before": 0,
+   "task_id": 402,
+   "task_sha256": "96644b0cac7ca5b2331a8698f74cbb1d5f3608e0960f8be2db99b880131a7020",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_411__snake_to_camel": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 411,
+   "task_sha256": "48b01de0fd2ebbaa588861f9f94b3513289f21c79e94c1fb53f116a57b9863ec",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_414__overlapping": {
+   "status": "interpreter refused",
+   "task_id": 414,
+   "task_sha256": "9b2e8d349a1b418c09e7b4eda14677c15271e305246dea551b8c4171fd7a659c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_420__cube_Sum": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    4
+   ],
+   "reference_said": 800,
+   "agreed_before": 0,
+   "task_id": 420,
+   "task_sha256": "ea3bb02e5fd80175e222950f76cd937b00c622b8d9f866b8aeafc2b555117b6c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_447__cube_nums": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     1,
+     7,
+     9,
+     10,
+     11
+    ]
+   ],
+   "reference_said": [
+    1,
+    343,
+    729,
+    1000,
+    1331
+   ],
+   "agreed_before": 0,
+   "task_id": 447,
+   "task_sha256": "01d94787b9084f4adadc7182b1e97805ff0cae9d965a87310b2671293601b0c1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_454__text_match_wordz": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 454,
+   "task_sha256": "0deeecb5050209a03112cf6428a16f6c37759c8ce41c457e3296305e309149e4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_45__get_gcd": {
+   "status": "arity differs from the problem",
+   "task_id": 45,
+   "task_sha256": "819a6561301902efd93e9927c1fc7cd42b193d2d54376420c7f7881e81692b2a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_463__max_subarray_product": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     1,
+     7,
+     -2,
+     8,
+     1,
+     5,
+     -3,
+     9
+    ]
+   ],
+   "reference_said": 15120,
+   "agreed_before": 0,
+   "task_id": 463,
+   "task_sha256": "db57ae7b0141b40db15a040047512a597d344c590acb689f15075059a639a2fa",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_467__decimal_to_Octal": {
+   "status": "arity differs from the problem",
+   "task_id": 467,
+   "task_sha256": "b49e9c0b6f7ca8ef24c9ebe3c6d99947f609c07d8c2de22300b57196aba85bbd",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_472__check_Consecutive": {
+   "status": "interpreter refused",
+   "task_id": 472,
+   "task_sha256": "5d124448262c4805d6c8418f303b25798d3814ad89d5ae0305f4bce5ef4f4582",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_474__replace_char": {
+   "status": "arity differs from the problem",
+   "task_id": 474,
+   "task_sha256": "4a4fb4b4d5956b572c8d6df4b96f7986a26331c8e81025de2bfe3f3393f43262",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_479__first_Digit": {
+   "status": "arity differs from the problem",
+   "task_id": 479,
+   "task_sha256": "9029a498c092c68903677f183e85121fedf7d0b93a9ee270051f17dc4774c954",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_482__match": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 482,
+   "task_sha256": "49129ae4afa315e11837cbe032e7422bdfc3ce5c821930d3140b6eb3d2c4e902",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_492__binary_search": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     2
+    ],
+    6
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 492,
+   "task_sha256": "11a416dcc235b2056edb2e6722b70d5c74d94f6d7bee4aa89e72cb6f44f35bd5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_502__find": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    6,
+    3
+   ],
+   "reference_said": 0,
+   "agreed_before": 0,
+   "task_id": 502,
+   "task_sha256": "5f0b50e7405ba686e57fd9df218e95e13f66e180b73222914ae04ddf0622c04f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_503__add_consecutive_nums": {
+   "status": "agrees",
+   "draws": 5,
+   "mutants_rejected": 5,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "task_id": 503,
+   "task_sha256": "d329a27ce702ade56ad71d1f3563ba83849d1a38b00c37bed7f64b1020254633",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_515__modular_sum": {
+   "status": "arity differs from the problem",
+   "task_id": 515,
+   "task_sha256": "6935d6707ca7954bb80c32a2a63bc2921f1031f16b0ece642cb0aa144a2714e0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_516__radix_sort": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     33,
+     29,
+     26,
+     27,
+     68
+    ]
+   ],
+   "reference_said": [
+    26,
+    27,
+    29,
+    33,
+    68
+   ],
+   "agreed_before": 0,
+   "task_id": 516,
+   "task_sha256": "fd6a3ce5431a3531a640a4e005834fc9ecdd12ff9f05bf22a7297494a8b0b3f7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_518__sqrt_root": {
+   "status": "reference result has no t value",
+   "task_id": 518,
+   "task_sha256": "fe00815be5dd748b59de191c36062c800784b2403fd233ceca8dfcc751d2b645",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_51__check_equilateral": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    11,
+    6,
+    16
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 51,
+   "task_sha256": "347e2425300b782bd124812c8652a45d791e356eaa93e8254476c9471549e46a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_521__check_isosceles": {
+   "status": "arity differs from the problem",
+   "task_id": 521,
+   "task_sha256": "7552f2f951fec88b0f7e66bf08cb34bb7749ef58df974b12bd36e1a472eb3788",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_531__min_coins": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     1,
+     10,
+     8,
+     3
+    ],
+    0,
+    22
+   ],
+   "reference_said": 9223372036854775807,
+   "agreed_before": 0,
+   "task_id": 531,
+   "task_sha256": "f09cb161f5f76b72d40187376690bac3fa50ebdcfe8a214e14888292e0ecc783",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_541__check_abundant": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    3
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 541,
+   "task_sha256": "ea9ca8831facbee22cbb7086ad1467d1777b102023545eb050dbd67a04b6d6d3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_548__longest_increasing_subsequence": {
+   "status": "interpreter refused",
+   "task_id": 548,
+   "task_sha256": "b89990833b49db883a043cd69a04a931da0e6584ee4ab5e2df27b6577a2b6b9c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_552__Seq_Linear": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     -2,
+     0,
+     1,
+     2,
+     6,
+     7,
+     8
+    ]
+   ],
+   "reference_said": "Non Linear Sequence",
+   "agreed_before": 0,
+   "task_id": 552,
+   "task_sha256": "56a55f0688e162618572065aeb9cb3d9a0bf788e2636aa128a22133d03ff4414",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_559__max_sub_array_sum": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     5,
+     3,
+     3,
+     -2,
+     1,
+     -1,
+     7,
+     5,
+     1,
+     1
+    ],
+    8
+   ],
+   "reference_said": 21,
+   "agreed_before": 0,
+   "task_id": 559,
+   "task_sha256": "5497cd672536777c850bc686868dbc5e03aff32263f38c94929034d3b3a0fa3a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_565__split": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     105,
+     123,
+     106,
+     107,
+     119,
+     102,
+     116
+    ]
+   ],
+   "reference_said": [
+    105,
+    123,
+    106,
+    107,
+    119,
+    102,
+    116
+   ],
+   "agreed_before": 0,
+   "task_id": 565,
+   "task_sha256": "86a76421438d7475b15bd20b8defc438ff3afdae3e0080ce85f3888e9bb64486",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_584__find_adverbs": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 584,
+   "task_sha256": "5fb77ca27e1a04976a867d8c35fbfcce81a37ecc3c55fa8e72db556293340c1c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_593__removezero_ip": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 593,
+   "task_sha256": "ef3a6b68e0fd5ce57a2942cb2346f039d98960a6103dd21be07fa477895bd6b2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_597__find_kth": {
+   "status": "arity differs from the problem",
+   "task_id": 597,
+   "task_sha256": "f6f3270f20d395b3bb3bf394fd0785ea842662b4ac22421f4a23d42c3172baff",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_604__reverse_words": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 604,
+   "task_sha256": "d911025cab35048ac05fff064fb97c27e0ead3496a531d0c1c754be71f925499",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_605__prime_num": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    14
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 605,
+   "task_sha256": "61efbe285f1462538cbb2a2b5e3176082c1fffb5a5ab7dece1d3dd234a78a269",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_60__max_len_sub": {
+   "status": "interpreter refused",
+   "task_id": 60,
+   "task_sha256": "43a2b6028a3e1a9f70eb6db40f4bedb2a718809ee2fc3daed3fea23a6fec91a3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_626__triangle_area": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    0
+   ],
+   "reference_said": 0,
+   "agreed_before": 0,
+   "task_id": 626,
+   "task_sha256": "608b28c2a51cd975358cc73c24608df94bf0cdba37a9b109b01df124fcbc5f2c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_636__Check_Solution": {
+   "status": "arity differs from the problem",
+   "task_id": 636,
+   "task_sha256": "1d6deb825e98aeace24c62d1884cb739d046a15e1798405a13c72ccb114f7872",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_638__wind_chill": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    91,
+    22
+   ],
+   "reference_said": 21,
+   "agreed_before": 0,
+   "task_id": 638,
+   "task_sha256": "b52bd9275b249dcd7f2188056775d8a7bdb0b65c404f07156f12a1cbb745763b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_650__are_Equal": {
+   "status": "arity differs from the problem",
+   "task_id": 650,
+   "task_sha256": "27f9427c6d0e8baa6ef49d31234ce16afa74c9af139f04f3e2504df8b7901286",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_656__find_Min_Sum": {
+   "status": "arity differs from the problem",
+   "task_id": 656,
+   "task_sha256": "f607847f129416ff5ff52336acdd49e798b6ad9afe29ac908e2a99f637c2b451",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_663__find_max_val": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    7,
+    7,
+    7
+   ],
+   "reference_said": -1,
+   "agreed_before": 0,
+   "task_id": 663,
+   "task_sha256": "5be34a8421b440d28734629c5b25b82ffd820bc2deb654a3d13996a3e9ba05de",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_665__move_last": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     -1,
+     0,
+     1,
+     6
+    ]
+   ],
+   "reference_said": [
+    0,
+    1,
+    6,
+    -1
+   ],
+   "agreed_before": 0,
+   "task_id": 665,
+   "task_sha256": "87a6231d94fe0ab8a97ac9671678ed94de7bf12ffe8e52eeeec1eb912bf26aab",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_669__check_IP": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 669,
+   "task_sha256": "82b7a2aedea2cbedd4b96ce5832742b8106e22e926ec5924ad94dc894ac0343c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_66__pos_count": {
+   "status": "interpreter refused",
+   "task_id": 66,
+   "task_sha256": "e48fdd6939e5c45abfc8972664b0f2af475abac6ba65e886298b03aabe1c11c3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_670__decreasing_trend": {
+   "status": "interpreter refused",
+   "task_id": 670,
+   "task_sha256": "7048bbdc7416bcd720283b800654c98ca89014cd3baaebcd6f28b16d4bc65c37",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_672__max_of_three": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    0,
+    34,
+    12
+   ],
+   "reference_said": 34,
+   "agreed_before": 0,
+   "task_id": 672,
+   "task_sha256": "34303406b33fa1733a9477886aa1d2e8e1900c4360781c560c073690321d833a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_675__sum_nums": {
+   "status": "arity differs from the problem",
+   "task_id": 675,
+   "task_sha256": "3a0a24f8835f90c5ce22fd7507f83a74af7fa20859e62b0487db9f48890a9763",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_680__increasing_trend": {
+   "status": "interpreter refused",
+   "task_id": 680,
+   "task_sha256": "7b45aece91cfea675bba466e57e51cf656c4634c5c6338a353aa75bc8c200b9f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_682__mul_list": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     -1,
+     -1,
+     1,
+     2
+    ],
+    [
+     4,
+     5,
+     5,
+     8
+    ]
+   ],
+   "reference_said": [
+    -4,
+    -5,
+    5,
+    16
+   ],
+   "agreed_before": 0,
+   "task_id": 682,
+   "task_sha256": "a15dbc687140ab73563c0222182d581c580d9450df5664f74de09fb525546f3c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_683__sum_Square": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    27
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 683,
+   "task_sha256": "0a5c3e892ac46a103461568f3f25e883663ac3b1dea09fffc06f1204988ef3e4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_687__recur_gcd": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    2,
+    5
+   ],
+   "reference_said": 1,
+   "agreed_before": 0,
+   "task_id": 687,
+   "task_sha256": "6f44afe11a69cba3aef377dd1064f4bff60a34d3a1dc6d730927a108581ee717",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_6__differ_At_One_Bit_Pos": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    6,
+    1
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 6,
+   "task_sha256": "7835d30e25ae7ea52b9a232866e0ec1fd9e44458e7c975507b3bf7e29699c36a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_701__equilibrium_index": {
+   "status": "arity differs from the problem",
+   "task_id": 701,
+   "task_sha256": "80fb23dbbbe81d7a996bcc0f4c31a228343118bb5fe70c19418950750fb81efe",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_711__product_Equal": {
+   "status": "arity differs from the problem",
+   "task_id": 711,
+   "task_sha256": "6daa7e7a50db262d7d4c2f99d2be187c5f10c32359ec543b53513d029e4e1197",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_719__text_match": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 719,
+   "task_sha256": "af5415fb74a61189bcc6a6df45a7efadb6ccc23e3744af21963ab48b9f2b59bc",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_723__count_same_pair": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     -1,
+     1,
+     1,
+     3,
+     5,
+     5,
+     5,
+     5,
+     8,
+     9
+    ],
+    [
+     2
+    ]
+   ],
+   "reference_said": 0,
+   "agreed_before": 0,
+   "task_id": 723,
+   "task_sha256": "f8cb9b98d03e42fe9c5bb06f0f2f8b476bf4e299e45c4cb2d121ff2b9004937a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_729__add_list": {
+   "status": "agrees",
+   "draws": 3,
+   "mutants_rejected": 9,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "task_id": 729,
+   "task_sha256": "116cc61ab8637ee7964016ba55d2d30b18de4d85e589bae416e5c06ca960dda3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_72__dif_Square": {
+   "status": "arity differs from the problem",
+   "task_id": 72,
+   "task_sha256": "c3dd40809e61313a13002aa85ed71dc82ed71250e7a56225a6497f60c0579dd2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_741__all_Characters_Same": {
+   "status": "interpreter refused",
+   "task_id": 741,
+   "task_sha256": "68164890cfbe713f52c127abed592723f7153e50b9bb95cbe141f24a85a03e36",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_748__capital_words_spaces": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 748,
+   "task_sha256": "66ff6cabf029dcdd546ef6d1a4ec9733e9f919aaaecada57a9ea197bad2beae9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_74__is_samepatterns": {
+   "status": "arity differs from the problem",
+   "task_id": 74,
+   "task_sha256": "02c236f82d90d1cd1279349c5dc674e993a5f536294561f801ba9a6abac19380",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_751__check_min_heap": {
+   "status": "interpreter refused",
+   "task_id": 751,
+   "task_sha256": "e516a0cc384477c113f811551f2790d8bed160e87ea30f1c3c89ab061f87f340",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_757__count_reverse_pairs": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    []
+   ],
+   "reference_said": "0",
+   "agreed_before": 0,
+   "task_id": 757,
+   "task_sha256": "e533595ed78cd29f0eedc505a38ebdebaee36928572044b49b1686b6d93a37c1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_765__is_polite": {
+   "status": "arity differs from the problem",
+   "task_id": 765,
+   "task_sha256": "c0d49b63563960217e54ce35f9eff951c07f2aa07e159c8f7dfcaf7dc056d009",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_768__check_Odd_Parity": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    22
+   ],
+   "reference_said": true,
+   "agreed_before": 0,
+   "task_id": 768,
+   "task_sha256": "07aa4aa50702e3da847c900170982528a05c80b80209111b784a36c4554432eb",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_769__Diff": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     23,
+     24,
+     31,
+     35,
+     36,
+     38,
+     39,
+     40
+    ],
+    [
+     34,
+     35,
+     41
+    ]
+   ],
+   "reference_said": [
+    36,
+    38,
+    39,
+    40,
+    23,
+    24,
+    31,
+    41,
+    34
+   ],
+   "agreed_before": 0,
+   "task_id": 769,
+   "task_sha256": "24016951fc82d86a59c9d1528d0a047bedaa76bf5c5642e5e8a1b60f5088f602",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_775__odd_position": {
+   "status": "interpreter refused",
+   "task_id": 775,
+   "task_sha256": "8a1406061c5137cd55afa40e0a3c45e42e006498dc2e8897acc20aa94456a7c1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_776__count_vowels": {
+   "status": "interpreter refused",
+   "task_id": 776,
+   "task_sha256": "4d536f31cb99170d9e19ef0bbfa259a63e3cd72f5d08d04ff538d5c39d30d84a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_782__Odd_Length_Sum": {
+   "status": "interpreter refused",
+   "task_id": 782,
+   "task_sha256": "db04565e60ed6035792abe34d513037fe0aa6b9f3cbae897d32218b687a83638",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_78__count_With_Odd_SetBits": {
+   "status": "reference result has no t value",
+   "task_id": 78,
+   "task_sha256": "9736e471bf8b600c5fd531d76e19bef451f4ef25403a4938958fbe1615a450bd",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_793__last": {
+   "status": "arity differs from the problem",
+   "task_id": 793,
+   "task_sha256": "8f0a43947c2c7e691b0de4812fdd744b48641c4af715248420b0c597b999d82c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_798___sum": {
+   "status": "arity differs from the problem",
+   "task_id": 798,
+   "task_sha256": "8e927f921a9acdb3492b3024b2ef8df21f21cf97e72788d95696122b1702b27a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_800__remove_all_spaces": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 800,
+   "task_sha256": "052f19acc15734921badd28fca645eb9176ac358677b5a07ba35868d305a8afd",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_804__is_Product_Even": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     -1,
+     0,
+     1,
+     3,
+     4
+    ],
+    5
+   ],
+   "reference_said": true,
+   "agreed_before": 1,
+   "task_id": 804,
+   "task_sha256": "e2f21b0de9c27012b35e339b57e29bf894eaff88b3556dce06216ca88ec3c9e0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_813__string_length": {
+   "status": "interpreter refused",
+   "task_id": 813,
+   "task_sha256": "1eaf3e6a852b43381a44d6149e2bf652a2746433deb6737145e4b6b0912de901",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_814__rombus_area": {
+   "status": "reference result has no t value",
+   "task_id": 814,
+   "task_sha256": "890075804067427650e08098f9045725525b0b40501a7da08ac6808208a94a72",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_822__pass_validity": {
+   "status": "interpreter refused",
+   "task_id": 822,
+   "task_sha256": "ef7feaf82b498439adfa2af78eef4e8fa060febc33c4fe7eac1f114ee27fb881",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_826__check_Type_Of_Triangle": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    2,
+    3,
+    5
+   ],
+   "reference_said": "Obtuse-angled Triangle",
+   "agreed_before": 0,
+   "task_id": 826,
+   "task_sha256": "9738f7d985dad064d20a1b096fba786fb6896c990631b9a66e5c13be63c49344",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_831__count_Pairs": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     -1,
+     -1,
+     2,
+     2,
+     2,
+     3
+    ],
+    1
+   ],
+   "reference_said": 0,
+   "agreed_before": 0,
+   "task_id": 831,
+   "task_sha256": "8c63ff5fa8cda6b5bc60f3d1399c9b59466ff14e2ffdfa1ea3b6eefc7c25f724",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_837__cube_Sum": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    4
+   ],
+   "reference_said": 496,
+   "agreed_before": 0,
+   "task_id": 837,
+   "task_sha256": "4674dd05a448fdd4e0f6df3ff0926a337d5fb3922121a15d9f8484c4910edfec",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_840__Check_Solution": {
+   "status": "arity differs from the problem",
+   "task_id": 840,
+   "task_sha256": "9cb866280e49535ca8e1d508a6da53c1a40577cb334da38cf64d0d6c14452fa8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_842__get_odd_occurence": {
+   "status": "arity differs from the problem",
+   "task_id": 842,
+   "task_sha256": "7d8a82fedd3f08f88beea4c8a57ed8a016fb336c4dfc53a90e6d8d625c7f87f6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_846__find_platform": {
+   "status": "arity differs from the problem",
+   "task_id": 846,
+   "task_sha256": "83ed6859c46f4811fae238e86a0c393e109fe547b9732e6f3ea1cccea8327663",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_849__Sum": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    112
+   ],
+   "reference_said": 9,
+   "agreed_before": 0,
+   "task_id": 849,
+   "task_sha256": "ab4d433954ffce0ab7f63fd3154fb55e3c08a3406ce116382f8fa2d01f0a5a09",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_853__sum_of_odd_Factors": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    1
+   ],
+   "reference_said": 1,
+   "agreed_before": 0,
+   "task_id": 853,
+   "task_sha256": "362fc658f1bb1fc030c0455acafa15039d8cd3e600fe53b342fa4532ca88cde6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_860__check_alphanumeric": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 860,
+   "task_sha256": "4af1053a5914fb7910900182b2ae1abf922bdd58224f81375fa7ec74b34e504e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_86__centered_hexagonal_number": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    17
+   ],
+   "reference_said": 817,
+   "agreed_before": 0,
+   "task_id": 86,
+   "task_sha256": "89edea8ca52d19c5d925931e767d747f042bb2fee374e7af515023abdb3e932c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_876__lcm": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    5,
+    9
+   ],
+   "reference_said": 45,
+   "agreed_before": 1,
+   "task_id": 876,
+   "task_sha256": "b60eeb568dfbd929b1c3e8de56af72cc31a72681fdff832f4c06f6ab7fa7a6a5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_877__sort_String": {
+   "status": "agrees",
+   "draws": 4,
+   "mutants_rejected": 4,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "task_id": 877,
+   "task_sha256": "5b235e8edd3187d62b53b5ba860424b7234b3177f5f70c445d3868f8a376e8dd",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_882__parallelogram_perimeter": {
+   "status": "arity differs from the problem",
+   "task_id": 882,
+   "task_sha256": "1612563e9df6e0cd682c5e43b67599cadaefe098652b6db6fe800d3245e4cbc0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_887__is_odd": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    3
+   ],
+   "reference_said": true,
+   "agreed_before": 0,
+   "task_id": 887,
+   "task_sha256": "4b455edca8ea1637eb41d38a0dd5315ff757cb32f4c37a757b938aa58ee48748",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_891__same_Length": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    23,
+    0
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 891,
+   "task_sha256": "2052bbc7550a0d8db9052ded0f99bda1a4fc691ee8b2f1e4d19df50989084b4d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_899__check": {
+   "status": "interpreter refused",
+   "task_id": 899,
+   "task_sha256": "b73bcd0a8b33a015c806756ef7e5ba6f27d8784951e96c6a8456e13eaa28167e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_900__match_num": {
+   "status": "arity differs from the problem",
+   "task_id": 900,
+   "task_sha256": "d4a52f401b900b2d4a41592fcd741ea4e4fae426992e557a983c38c24e5ab2ef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_908__find_fixed_point": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     0,
+     38,
+     40,
+     51,
+     70,
+     73,
+     88
+    ],
+    5
+   ],
+   "reference_said": 0,
+   "agreed_before": 3,
+   "task_id": 908,
+   "task_sha256": "aad6e79116cc0b002cb67f5ed5eda2ee6531dd76bc28d7439728169e88e32fb2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_911__maximum_product": {
+   "status": "interpreter refused",
+   "task_id": 911,
+   "task_sha256": "83beaa785dbb32f1636b20b5c7a9270483c85fe3f96820dd378ad50ea90b388c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_919__multiply_list": {
+   "status": "interpreter refused",
+   "task_id": 919,
+   "task_sha256": "5affac11f80c4d494b1d868cfe90e70fdbd4b1ed282a22b59f3f126b70acf02b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_91__find_substring": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     [
+      -1,
+      0
+     ],
+     []
+    ],
+    [
+     103,
+     109
+    ]
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "task_id": 91,
+   "task_sha256": "b58efd1a9ba4659731eae0119f1e696bf2ab75119af50008c87df2b2e1b2e622",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_928__change_date_format": {
+   "status": "arity differs from the problem",
+   "task_id": 928,
+   "task_sha256": "4badfb70683485870c7e1a28b1b2818c6ff167f1b43e8b73524bc10d6119dad6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_931__sum_series": {
+   "status": "reference result has no t value",
+   "task_id": 931,
+   "task_sha256": "55bb5d252ef8333d8f74dd97d0b27fc984a862b9bbf6e88bb88f44df89a68781",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_935__series_sum": {
+   "status": "reference result has no t value",
+   "task_id": 935,
+   "task_sha256": "cea580b5493dcc953da0ee7852aac28f64bdef45fed6caca8579c2d5a7f0b5c3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_937__max_char": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     93,
+     68,
+     63,
+     50
+    ]
+   ],
+   "reference_said": 93,
+   "agreed_before": 0,
+   "task_id": 937,
+   "task_sha256": "29505c861f246a2b53c0666ee6185819ec22d5a30a5a9097daf0240316cbd39e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_957__get_First_Set_Bit_Pos": {
+   "status": "arity differs from the problem",
+   "task_id": 957,
+   "task_sha256": "5df552b105dd43083b37c624c13393e3c56a076b7ff6eb28d867d2f0b562a102",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_962__sum_Even": {
+   "status": "arity differs from the problem",
+   "task_id": 962,
+   "task_sha256": "f34b402b6f93e5c89cda2370b747801c28574328f6af5586c843e178c4b1fbad",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_96__divisor": {
+   "status": "arity differs from the problem",
+   "task_id": 96,
+   "task_sha256": "cd8dc57b7348c7827908d30de70d0c8f4a25d261b5043b6d4e258a3d86139445",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-r7b-greedy/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 25,
+   "mutants_rejected": 93,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "task_id": 970,
+   "task_sha256": "352eeef551532548578cf0192c1ffd6fe263b21da6240de92bad33aa2dcedbc0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_10__small_nnum": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     80,
+     16
+    ],
+    2
+   ],
+   "reference_said": [
+    16,
+    80
+   ],
+   "agreed_before": 0,
+   "points_held": 0,
+   "points_failed": 3,
+   "points_excluded": 0,
+   "contradicts_example": {
+    "args": [
+     [
+      10,
+      20,
+      50,
+      70,
+      90,
+      20,
+      50,
+      40,
+      60,
+      80,
+      100
+     ],
+     2
+    ],
+    "expected": [
+     10,
+     20
+    ]
+   },
+   "task_id": 10,
+   "task_sha256": "1c6ba938137ad4552c6b507270f92c287425ba1d5a422ec7f25bd24b2830effd",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_20__is_woodall": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    120
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "points_held": 0,
+   "points_failed": 3,
+   "points_excluded": 0,
+   "contradicts_example": {
+    "args": [
+     383
+    ],
+    "expected": true
+   },
+   "task_id": 20,
+   "task_sha256": "1fc1bd24f959b5e49e293245f1a93bd2a1904486c53b0d60d54a39a3927f6209",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_24__binary_to_decimal": {
+   "status": "arity differs from the problem",
+   "points_held": 0,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 24,
+   "task_sha256": "1ab0f22d2b6d3764d93074548a007ac787e405a8a99b4d97b9a34896dcf09aeb",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_28__binomial_Coeff": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    7,
+    3
+   ],
+   "reference_said": 35,
+   "agreed_before": 0,
+   "points_held": 0,
+   "points_failed": 3,
+   "points_excluded": 0,
+   "contradicts_example": {
+    "args": [
+     5,
+     2
+    ],
+    "expected": 10
+   },
+   "task_id": 28,
+   "task_sha256": "a0c3e13d34fff174ae5382de479e9c878ecb58a784b3c1af451161b6b655a7c3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_32__max_Prime_Factors": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    15
+   ],
+   "reference_said": 5,
+   "agreed_before": 0,
+   "points_held": 0,
+   "points_failed": 3,
+   "points_excluded": 0,
+   "contradicts_example": {
+    "args": [
+     15
+    ],
+    "expected": 5
+   },
+   "task_id": 32,
+   "task_sha256": "ab86277eaa7fbc0fdd03f504f0dbe89b10cd7ff0c48de2f16c60c62328f5f436",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_4__heap_queue_largest": {
+   "status": "interpreter refused",
+   "points_held": 0,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 4,
+   "task_sha256": "8dda1f60c398471794c92ff285ce925d5ddf0caacfe1fc4ad7401e5b1b5cb949",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_51__check_equilateral": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    0,
+    0,
+    20
+   ],
+   "reference_said": false,
+   "agreed_before": 2,
+   "points_held": 2,
+   "points_failed": 1,
+   "points_excluded": 0,
+   "contradicts_example": {
+    "args": [
+     6,
+     6,
+     12
+    ],
+    "expected": false
+   },
+   "task_id": 51,
+   "task_sha256": "8ebe8b3681feb9e4a984f4d8fb70a095327cbdc4a6ee4c604c450bf438378aa3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_56__check": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    138
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "points_held": 0,
+   "points_failed": 3,
+   "points_excluded": 0,
+   "contradicts_example": {
+    "args": [
+     70
+    ],
+    "expected": false
+   },
+   "task_id": 56,
+   "task_sha256": "713e2752a8ac35ca46d73eb4452d05f3a710f8aae2009783586276ec4a2ed349",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
+  },
+  "locallm-smoke/mbpp_78__count_With_Odd_SetBits": {
+   "status": "reference result has no t value",
+   "points_held": 0,
+   "points_failed": 3,
+   "points_excluded": 0,
+   "contradicts_example": {
+    "args": [
+     5
+    ],
+    "expected": 3
+   },
+   "task_id": 78,
+   "task_sha256": "8e7b52e896862cc059d671ab303f0951e4bc86ed414cc53b0b731a047d06cdca",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25
   }
  },
  "runs": [
@@ -3213,6 +5445,36 @@
     "other": 28
    },
    "when": "2026-09-20T03:47:14.500517+00:00"
+  },
+  {
+   "tags": [
+    "locallm-r7b-greedy"
+   ],
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25,
+   "only": "all",
+   "counts": {
+    "agrees": 5,
+    "disagrees": 66,
+    "other": 78
+   },
+   "when": "2026-09-20T06:53:07.417599+00:00"
+  },
+  {
+   "tags": [
+    "locallm-smoke"
+   ],
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 25,
+   "only": "all",
+   "counts": {
+    "agrees": 0,
+    "disagrees": 6,
+    "other": 3
+   },
+   "when": "2026-09-20T07:36:13.738439+00:00"
   }
  ]
 }

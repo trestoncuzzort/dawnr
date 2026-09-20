@@ -726,3 +726,188 @@ Lean 4 and Rocq backends, and all three ship real code:
   cheaply before spending an LLM call on it**. KVerus's "toolchain specifics in the
   knowledge base" is the pragmatic lesson — most failures are version/idiom mismatches,
   not logic.
+
+## 30. frama-c-mcp — **MCP server for Frama-C; take this wholesale**
+
+- **URL:** https://github.com/sysprog21/frama-c-mcp (original; forks exist at
+  `alanhc/frama-c-mcp` and `Suzu1Dev/frama-c-mcp` — use the sysprog21 one)
+- **Language:** **Rust**
+- **Licence:** MIT
+- **Activity:** 151 commits, 31 stars, **CI that publishes a rolling `latest` release on
+  every green push to main.** Genuinely maintained.
+- **What it does:** Exposes Frama-C to AI agents over MCP. Tools in six groups: project
+  (`reload_project`, `list`, `context`, `self_check`, `parse_surface`), verification
+  (`check`, `run_wp`, `get_wp_goals`, `proof_coverage`, `run_e_acsl`), annotation
+  (`inject_all_annotations`, `propose_annotations`), sandbox (`create_sandbox`,
+  `delete_sandbox`), orchestration (`verify_program_step`) and state
+  (`store_function_conclusion`). The **sandbox mechanism** is the clever part:
+  `create_sandbox` extracts a function *with its type, callee and global dependencies*
+  into a temporary C file and starts a **separate Frama-C process**, so an agent can
+  iterate on annotations in isolation; verified annotations are then **explicitly merged
+  back**.
+- **Lift:** (a) **The whole server** — this is our Frama-C backend, done, and it is MIT.
+  (b) More valuable still, **the sandbox-extract-iterate-merge pattern is the right
+  design for all seven backends**: slice the problem out with its dependencies, run the
+  prover in a throwaway process, merge only what verified. It bounds blast radius and
+  makes parallelism across backends safe. (c) `get_wp_goals` and `proof_coverage` show
+  how to surface *partial* proof state as structured data rather than a pass/fail bit —
+  the granularity our repair loop needs. (d) Note `run_e_acsl`: **E-ACSL compiles ACSL
+  annotations into runtime assertions**, which is the Frama-C equivalent of our executable
+  interpreter and gives us spec↔test cross-checking on the C backend for free.
+
+## 31. F* ecosystem: FStar, FStarDataSet, proof-copilot
+
+- **F\*** — https://github.com/FStarLang/FStar. The language itself; Apache-2.0, actively
+  developed by Microsoft Research, Inria and community. (Many same-named results in search
+  are personal forks; `FStarLang/FStar` is canonical.) Note **Pulse**, an F* DSL for
+  concurrent imperative programming that extracts to C or Rust via KaRaMeL, and that
+  **F\* by default only verifies — it does not compile or execute** input code, which
+  matters for how our executable interpreter lines up with this backend.
+- **FStarDataSet / FStarDataSet-V2** —
+  https://huggingface.co/datasets/microsoft/FStarDataSet and `-V2`. Built for
+  "Proof-oriented Programming with AI" (PoPAI): given a specification of a program and
+  proof in F*, synthesize the implementation. **~32K (V1) to 54K (V2) top-level F*
+  definitions across 600K–940K lines**, harvested from eight open-source F* projects
+  including code shipping in Windows, Linux, Python and Firefox. Crucially it ships a
+  **program-fragment checker that queries F\* to check candidate solutions**. Papers:
+  "Towards Neural Synthesis for SMT-Assisted Proof-Oriented Programming"
+  (arXiv:2405.01787, ICSE 2025) and "Building A Proof-Oriented Programmer That Is 64%
+  Better Than GPT-4o Under Data Scarcity" (arXiv:2502.11901).
+- **proof-copilot** — https://github.com/FStarLang/proof-copilot. Apache-2.0, Shell,
+  created 2026-03-25. **An official FStarLang agent plugin** (Copilot CLI / Claude Code)
+  carrying agents and skills with prompts for F*, Pulse, Z3 and related tooling.
+- **Lift:** the **program-fragment checker** from FStarDataSet is the F* backend's
+  verification harness, already written and already used at scale — do not re-derive it.
+  `proof-copilot` is vendor-blessed prompt material for the F* backend, and is a model
+  for how we might ship our own per-backend skills. FStarDataSet's framing
+  (spec given, synthesize implementation+proof) is one half of our task; our contribution
+  is the other half (synthesize the spec).
+- **Evaluate against directly:** FStarDataSet-V2 for the F* backend — though it is
+  production-code scale, far above textbook problems, so expect it as a stretch target.
+
+## 32. Frama-C supporting corpora
+
+- **https://github.com/Frama-C/open-source-case-studies** — real open-source C codebases
+  set up to run under Frama-C (mainly Eva). Frama-C org maintained.
+- **https://github.com/Frama-C/Frama-C-snapshot** — release snapshots of the platform.
+- **https://github.com/fraunhoferfokus/acsl-by-example** — Fraunhofer FOKUS's "ACSL by
+  Example": specified-and-proved standard algorithms with the ACSL patterns explained.
+- **Lift:** `acsl-by-example` is the **few-shot bank for the Frama-C backend** (and its
+  SPARK sibling `spark-by-example` covers the SPARK backend); the case studies are the
+  scaling sanity check once textbook problems pass.
+
+## 33. VeriBench — end-to-end Python→Lean, with paired safe/unsafe tasks
+
+- **URL:** https://github.com/brando90/veribench ·
+  blog https://cs.stanford.edu/people/brando9/veribench/blog/veribench-launch/
+- **Language:** Lean 4 + Python
+- **Licence:** not stated on the launch page — confirm on the repo.
+- **Activity:** Stanford; ICML 2025 and ICML/NeurIPS 2026 appearances plus a
+  **VeriBench-FTP** follow-on. Current and being extended.
+- **What it does:** 884 paired **Python→Lean 4 autoformalization** tasks, scored
+  end-to-end under agentic verifier feedback. Splits: a 602-task canonical core
+  (introductory programs, classical algorithms, HumanEval-style functions, Python
+  stdlib, security) and a 282-task high-assurance expansion across 14 domains
+  (cryptography, aerospace, medical devices, compilers). **The `security_6858` split is
+  227 *paired safe/unsafe* tasks.** Scoring is **SCSC**, a geometric mean over three
+  checks — IC1 does the Lean file typecheck, IC2 does it contain real tests/specs/theorems
+  rather than placeholders, TC1 do the theorems cover the gold reference (LLM-assisted
+  semantic judgment). Conjunctive by design: any weak component tanks the score.
+- **Headline finding, and it is the important one for us:** frontier agents hit **~100%
+  compilation but theorem coverage at or below ~0.156**, and Codex / Claude Code /
+  Leanstral-v2 reach SCSC of only 0.42. **The models produce specs that compile and say
+  nothing.** That is the vacuity problem, measured.
+- **Lift:** (a) **The SCSC conjunctive scoring scheme** — specifically the IC2
+  "is there actual formal content or just a placeholder?" check — is a metric we should
+  adopt verbatim, because our whole apparatus (interpreter + tests + broken twins) exists
+  to answer TC1/IC2 *without* an LLM judge, which would be a genuine improvement on their
+  method. (b) The **227 paired safe/unsafe security tasks** are an off-the-shelf external
+  validation set for our mutation engine — real paired twins we did not make ourselves.
+- **Evaluate against directly:** Yes for Lean 4, and the published SCSC ≈ 0.42 / coverage
+  ≈ 0.156 numbers are a low bar that our design specifically targets.
+
+## 34. dafny-mcp — minimal, but it exists
+
+- **URL:** https://github.com/namin/dafny-mcp
+- **Language:** Python (MCP Python SDK)
+- **Licence:** MIT
+- **Activity:** **6 commits, 3 stars — genuinely minimal.** A working sketch, not a tool.
+- **What it does:** MCP server that runs the locally installed Dafny verifier on supplied
+  code and returns the result, so an agent can verify code and check proofs in-conversation.
+- **Lift:** it is 6 commits of Python — read it in five minutes, then write our own. Its
+  value is as the **shortest possible reference for wrapping a proof backend as an MCP
+  tool**; contrast with `frama-c-mcp` (entry 30) which is what a mature version looks
+  like. Same author as `dafny-sketcher` (entry 6), which has the more serious MCP server.
+- Also from the same search: **dafny-reportgenerator**
+  (https://github.com/dafny-lang/dafny-reportgenerator), an official dafny-lang tool for
+  analysing and reporting on verification results — useful for our results pipeline.
+
+---
+
+# Summary: what to do with this
+
+## Benchmarks we can evaluate against directly, in priority order
+
+| Benchmark | Backends covered | Size | Why it matters to us |
+|---|---|---|---|
+| **AlgoVeri** | Dafny, Verus, Lean (**aligned**) | 77 algorithms | Only suite with *aligned* specs across backends — closest prior art to our thesis |
+| **Vericoding** | Dafny, Verus, Lean | 12,504 specs | Largest; preamble/spec/code record format; published per-language baselines 82/44/27 |
+| **Verina** | Lean | 189 tasks | Scores code *and spec* generation; ships `reject_inputs.json` (their broken twins) |
+| **CLEVER** | Lean | 161 tasks | Spec generation vs held-out ground-truth spec; explicit anti-vacuity curation |
+| **CloverBench** | Dafny | 60 × 5 variants | Ground truth + 4 adversarial twins per problem — direct test of our mutation engine |
+| **Verus-Bench** | Verus | 150 tasks | Standard Verus target; overlaps CloverBench + MBPP |
+| **DafnyBench** | Dafny | 782 programs | Largest Dafny corpus; hints-removed/ground-truth pairing |
+| **MBPP-DFY-153** | Dafny | 153 problems | Record shape closest to ours: description + spec + solution + tests |
+| **VeriBench** | Lean | 884 tasks | SCSC scoring; 227 paired safe/unsafe tasks; exposes the vacuity gap |
+| **FVAPPS** | Lean | 4,715 (1,083 curated) | Unit-tests-as-theorems; the QA gates matter more than the data |
+| **DafnyGym** | Dafny | real-world lemmas | Hard, production-code counterweight to textbook problems |
+| **FStarDataSet-V2** | F* | ~54K definitions | F* backend target; ships a fragment checker |
+| **CASP** | Frama-C/ACSL | 316 examples | Small Frama-C target; spec-given rather than spec-generation |
+| **FormalBench** | (JML/Java) | 699 + 6,219 mutated | Not our backend, but the methodology we'll be compared against |
+
+Note the overlap: **CloverBench problems appear inside Verus-Bench, Verina and
+DafnyBench**, and MBPP problems appear inside MBPP-DFY, Verus-Bench and Vericoding. One
+curated problem set can be scored against four or five papers. Watch for contamination in
+the other direction too — DafnyBench absorbed Clover and dafny-synthesis.
+
+## The five things most worth lifting
+
+1. **MutDafny's 55 specification mutation operators** (entry 14) — a published taxonomy
+   for our mutation engine, plus the "mutation score as spec-completeness" framing.
+2. **frama-c-mcp's sandbox-extract-iterate-merge architecture** (entry 30) — the right
+   process model for running seven slow, stateful backends safely and in parallel. MIT.
+3. **CodeSpecBench's correctness/completeness/pass-rate vocabulary** (entry 26) — accept
+   valid behaviours, reject invalid ones; maps 1:1 onto our interpreter + broken twins.
+4. **ExVerus's counterexample → inductive invariant generalisation** (entry 29) — the
+   repair loop, and backend-agnostic. Our interpreter validates counterexamples cheaply.
+5. **Vericoding's preamble/spec/code task decomposition + Verina's modular
+   code/spec/proof evaluation split** (entries 9, 16) — the data model and the eval
+   design, both already published, so we don't invent our own.
+
+## Honest assessment of gaps
+
+- **SPARK is the thin one.** No maintained LLM-assisted SPARK spec tool was found. The
+  usable material is the spark2014 user guide's **test-cases → Contract Cases**
+  transformation, `spark-by-example` as a few-shot corpus, and AdaCore's own `gnatprove`
+  agent skill. We build this backend mostly from scratch.
+- **Rocq is better served than expected** — LLM4Rocq's `pytanque` / `rocq-mcp` /
+  `rocq-ml-toolbox` cover interaction, agent exposure and worker pooling.
+- **F\*** has data and an official agent plugin but no open spec-generation tool.
+- **Several promising things are papers without confirmed public code:** ExVerus, KVerus,
+  CASP, Laurel's implementation (Zenodo only). I did not fabricate GitHub URLs for these
+  and have said so inline.
+- **Thin or dead-looking repos, flagged plainly:** CodeSpecBench (1 commit, no licence),
+  AutoSpec+ (10 commits, 6 stars), dafny-mcp (6 commits), MutDafny (2 stars, no stated
+  licence), formally-verified-code-rl ("first release"), FVAPPS (7 stars — the HF dataset
+  is the live part). LeanDojo v1 is explicitly **deprecated** in favour of LeanDojo-v2.
+- **Licence blockers to resolve before copying code:** dafny-synthesis is **GPL-3.0**;
+  MutDafny and CodeSpecBench state **no licence at all**; AlgoVeri, CLEVER,
+  Goedel-Code-Prover, Etna, FVAPPS and VeriBench were not confirmed and need checking.
+
+## Useful meta-resources
+
+- https://github.com/hohieuai/awesome-formal-verification
+- https://github.com/ElNiak/awesome-formal-verification
+- https://github.com/awesomo4000/awesome-provable
+- https://github.com/zhaoyu-li/DL4TP — "A Survey on Deep Learning for Theorem Proving" (COLM 2024)
+- https://verus-lang.github.io/verus/publications-and-projects/ — where Verus artifacts get listed
