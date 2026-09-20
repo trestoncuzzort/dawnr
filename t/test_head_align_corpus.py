@@ -35,3 +35,39 @@ class HeadTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DiscriminativeExampleTests(unittest.TestCase):
+    """TiCoder (arXiv:2208.05950): show the example that separates candidates."""
+
+    @staticmethod
+    def point(args, expected):
+        return {"args": [["int", a] for a in args], "expected": ["int", expected]}
+
+    def test_an_example_the_obvious_wrong_answers_match_is_ranked_last(self):
+        import loop_locallm
+        identity = self.point([7], 7)          # refutes almost nothing
+        informative = self.point([7], 128)     # refutes identity, +1, doubling, zero
+        chosen = loop_locallm.discriminative([identity, informative], 1)
+        self.assertIs(chosen[0], informative)
+
+    def test_the_measured_failure_is_what_it_rules_out(self):
+        # A model specified `r == x + 1` for a predicate problem on 2026-09-20.
+        import loop_locallm
+        matches_successor = self.point([4], 5)
+        breaks_successor = self.point([4], 99)
+        self.assertIs(loop_locallm.discriminative([matches_successor, breaks_successor], 1)[0],
+                      breaks_successor)
+
+    def test_ties_keep_the_problem_s_own_order(self):
+        import loop_locallm
+        a, b = self.point([3], 100), self.point([4], 200)
+        self.assertEqual(loop_locallm.discriminative([a, b], 2), [a, b])
+
+    def test_asking_for_more_than_exist_returns_what_exists(self):
+        import loop_locallm
+        self.assertEqual(len(loop_locallm.discriminative([self.point([1], 2)], 5)), 1)
+
+    def test_a_malformed_point_does_not_crash_the_ranking(self):
+        import loop_locallm
+        self.assertEqual(len(loop_locallm.discriminative([{"args": None}, self.point([1], 9)], 2)), 2)

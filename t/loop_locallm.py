@@ -49,6 +49,44 @@ def signature(entry: dict) -> str:
     return f"{entry['fn']}({kinds}) -> {entry['points'][0]['expected'][0]}"
 
 
+def discriminative(points: list, n: int) -> list:
+    """The examples that rule out the most obvious wrong functions, not the first ones.
+
+    TiCoder (arXiv:2208.05950) selects the test that best *separates* candidate
+    implementations, because an example every candidate agrees on teaches
+    nothing; it reports about 46% relative pass@1 improvement within five
+    interactions. We have the ground-truth examples already, so the interaction
+    is free: rank a problem's own assertions by how many degenerate hypotheses
+    each one refutes, and show those.
+
+    The degenerate set is drawn from the failures actually measured here on
+    2026-09-20, where a model asked whether a number is a sum of non-zero powers
+    of two specified `r == x + 1`. An example whose answer happens to equal
+    `x + 1` cannot rule that out; one whose answer does not, rules it out at a
+    glance.
+
+    Ties keep the problem's own order, so the choice is deterministic.
+    """
+    def refuted(point) -> int:
+        try:
+            args = [v for _k, v in point["args"]]
+            out = point["expected"][1]
+        except (KeyError, IndexError, TypeError):
+            return 0
+        first = args[0] if args else None
+        guesses = [first, 0, False, True, []]
+        if isinstance(first, bool):
+            guesses.append(not first)
+        elif isinstance(first, int):
+            guesses += [first + 1, first - 1, -first, first * 2]
+        elif isinstance(first, (list, tuple)):
+            guesses += [len(first), list(first), list(reversed(list(first)))]
+        return sum(1 for g in guesses if g != out)
+
+    ranked = sorted(enumerate(points), key=lambda pair: (-refuted(pair[1]), pair[0]))
+    return [point for _index, point in ranked[:n]]
+
+
 def examples(entry: dict, n: int = 2) -> str:
     """The problem's own assertions, in the head, as `fn(args) == value` lines.
 
@@ -64,7 +102,7 @@ def examples(entry: dict, n: int = 2) -> str:
     comparison run with examples has to regrade its baselines with examples.
     """
     lines = []
-    for point in entry.get("points", [])[:n]:
+    for point in discriminative(entry.get("points", []), n):
         try:
             args = ", ".join(json.dumps(value) for _kind, value in point["args"])
             lines.append(f"Example: {entry['fn']}({args}) == {json.dumps(point['expected'][1])}\n")
