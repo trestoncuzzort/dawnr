@@ -422,6 +422,42 @@ fails identically with today's changes stashed. On the desktop's `python3`,
 errors on a missing `torch`. Use `~/.venv-vllm/bin/python` on the lab for
 those, which is where the 75 / 31 above come from.
 
+## The four accepted issues, now actually applied (2026-09-20)
+
+The triage accepted four issues as real and recorded the fix in each comment,
+but the code was never changed. It has been now, in `2db2a9e`:
+
+| issue | what it did | fix |
+|---|---|---|
+| **#44** | `signal.SIGHUP` at import: on Windows the module raised `AttributeError` and every test touching the harness failed at *collection* | `getattr` guard |
+| **#24** | `for T in "${@:-a b c d}"` expands to **one word**, so `grade_lab.sh heldout` with no tags looped once against a tag that cannot exist | an array; the loop now runs four times |
+| **#30** | the corpus builder applied **no split filter**, and `--lifted` adds MBPP-DFY tasks derived from the same MBPP the held-out split comes from | a `--split` flag filtering all four entry paths |
+| **#27** | nothing: `t/lab_gpu.sh`'s `GPU_PROCESSES` is already fully bracketed | no change needed |
+
+**#30 is the one to understand.** Nothing but luck kept an evaluation problem
+out of training, and luck held: 0 of 232 held-out ids across six corpora when it
+was measured. That is precisely the situation in which a guard never gets
+written. `t/preflight.py` catches a leak after the fact; the builder now catches
+it at the only point where a model has not already read the problem.
+
+Two deliberate choices in that fix, so nobody undoes them:
+
+- **Without `--split`, nothing is filtered and the builder prints `NOT
+  APPLIED`.** Every existing caller behaves exactly as before rather than
+  changing silently. Pass the split your model will be evaluated on.
+- **An unreadable split stops the build.** Filtering nothing while reporting
+  success is how the leak would be built in the first place.
+
+`t/test_corpus_split.py` covers both directions. The suite is 413 tests with the
+same four pre-existing failures as before any of today's work: three in
+`test_loop_train.py` needing `datasets`, and
+`test_lower_spark_loop_cert.py::test_two_loops_falls_back_to_plain_f_call`,
+which fails identically with today's changes stashed. On the desktop `python3`,
+all of `locallm/` also errors on a missing `torch`; use `~/.venv-vllm/bin/python`
+on the lab. `python3 -m unittest discover` additionally picks up
+`test_lab_gui.py`, whose tkinter teardown crashes the *whole run* and hides the
+tally, so exclude it when you want a number.
+
 ## Traps that cost time today
 
 1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless
