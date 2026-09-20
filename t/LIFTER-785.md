@@ -1,5 +1,13 @@
 # The lifter over DafnyBench: the 785, measured 2026-09-06
 
+> **Stale by 19 points as of 2026-09-20.** The numbers below are what the
+> 2026-09-06 lifter did. The same corpus, same flags, run with the current
+> lifter today gives 346 of 968 rows lifted (35.74%) and 253 of 785 programs
+> fully lifted (32.23%), against the 159 (16.43%) and 99 (12.61%) recorded
+> here. Thirteen of the refusal reasons in this file no longer exist. See
+> `t/LIFTER-HINTS-2026-09-20.md`, which ran that control.
+
+
 Produced by `t/lifter.py --dir <DafnyBench ground_truth> --jobs 4 --timeout 200`
 and `t/lift_census.py` at the commit that adds this file, on the Dell with
 dafny 4.11.0. One row per gradable method (968 over 785 files); the census
