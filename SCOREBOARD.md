@@ -19,6 +19,9 @@ every number here is comparable to every earlier one.
 | **locallm, round 7b (the same model, decoded greedily)** | **ours** | 149 | 2 | **2** | 2/2 | **2** |
 | **locallm, round 8 (specification-checked pool)** | **ours** | 142 | 2 | **2** | 2/2 | **2** |
 | **locallm, round 8 with signature-headed training (best)** | **ours** | 91 | 3 | **3** | 3/3 | **3** |
+| **locallm, round 9, core seed 1337 (greedy)** | **ours** | 114 | 2 | **2** | 2/2 | 2 |
+| **locallm, round 9, core seed 7 (greedy)** | **ours** | 106 | 2 | **1** | 1/2 | 1 |
+| **locallm, round 9, core seed 42 (greedy)** | **ours** | 101 | 3 | **3** | 3/3 | **2** |
 | Phi-4-mini, 3.8B | baseline | 12 | 6 | **3** | 50% | 2 |
 | Qwen2.5-Coder-1.5B, untrained | baseline | 39 | 13 | **3** | 23% | 2 |
 | Qwen3.8-27B-FP8, prompted | reference, far larger | 116 | 81 | **12** | 15% | 11 |
@@ -27,6 +30,23 @@ every number here is comparable to every earlier one.
 
 Phi's row was regraded on 2026-09-19 beside round 7 and reproduced exactly,
 cell for cell, so the comparison is one evaluator and not two.
+
+**Three seeds of one recipe, added 2026-09-20.** The r9 rows answer the
+"one lucky draw" objection and were graded against five predictions registered
+before any table was read (`t/PREDICT-2026-09-20-seeds-OUTCOME.md`). Clean across
+the three greedy seeds is **1 to 3, mean 2.0**; after the specification check,
+**1 to 2, mean 1.67**. The spread is 2, which held the prediction that a spread
+of 3 would have forced this table's headline into a mean and a range.
+
+One prediction was falsified and it is the column this project was proudest of:
+a clean answer from `seed42` **disagrees with its own problem** under
+`spec_check.py` (`mbpp_541__check_abundant`, `ensures[0]` false at `args=[2]`).
+Until today every locallm arm was 100% on that column. It is not a property of
+the method, only of the arms that had been measured.
+
+These three decode greedily. The headline arm above them decodes at temperature
+0.5, because `t/gen_fleet.sh` dropped the flag it was given, so the headline's own
+seed variance remains unmeasured.
 
 **The 235B row, added 2026-09-20, and what it does not say.** Qwen3-235B-A22B
 is about 2,550 times locallm's parameter count and 22B of it is active per
