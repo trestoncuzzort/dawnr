@@ -228,6 +228,43 @@ From `nl-to-spec.md`, ranked for this repo:
 5. **Clover** ([arXiv:2310.17807](https://arxiv.org/abs/2310.17807),
    [repo](https://github.com/ChuyueSun/Clover)) — already applied, see below.
 
+### How to apply what was fetched
+
+Roughly 4,000 lines and 287 references across five files in
+`internal/research/`. Reading them all is not the point; this table is what to
+do with them. Everything below is CPU-only unless it says otherwise.
+
+| apply this | from | to this repo |
+|---|---|---|
+| **k-sample agreement as an ambiguity detector** | VeriMed, [arXiv:2605.13817](https://arxiv.org/html/2605.13817v1) | sample k specs for one problem, check them against each other with the seven provers, and treat disagreement as a located ambiguity with a witness input. Their repair ladder is 55.4% → 80.0% → **98.5%** as feedback goes none → textual → counterexample, which is the strongest argument in the whole corpus for feeding witnesses back rather than prose |
+| **spectests: negatives that no implementation could produce** | SpecRL, [arXiv:2604.05820](https://arxiv.org/abs/2604.05820) | already built as `spec_check.mutations`. Their +26.46% relative completeness came from *rewarding* rejection rate during training, which is the step we have not taken |
+| **visible vs held-out gap** | SpecBench, [arXiv:2605.21384](https://arxiv.org/abs/2605.21384) | built as `t/example_holdout.py`, null distribution measured at −1.65 to +0.00 points. **Run it on the examples arm or that arm's result does not count** |
+| **discriminative example choice** | TiCoder, [arXiv:2208.05950](https://arxiv.org/abs/2208.05950) | built as `loop_locallm.discriminative`. Their ~46% relative pass@1 came from *interactive* selection; ours is free because the ground truth is already on disk |
+| **third consistency edge** | Clover, [arXiv:2310.17807](https://arxiv.org/abs/2310.17807), [repo](https://github.com/ChuyueSun/Clover) | built as `spec_check.check_points`; catches 62–88% of proven-but-wrong with zero false positives |
+| **bidirectional equivalence against the reference** | CLEVER [arXiv:2505.13938](https://arxiv.org/abs/2505.13938), VeriEquivBench [arXiv:2510.06296](https://arxiv.org/abs/2510.06296) | not built. Prove both `spec(x, ref(x))` and `∀y. spec(x,y) → y = ref(x)` with each of the seven. The second half is the tightness check we lack, and it is the rigorous end of what `check_points` does cheaply |
+| **mutate the candidate spec and keep variants that still verify** | SpecGen, [arXiv:2401.08807](https://arxiv.org/abs/2401.08807) | not built. A repair loop rather than a gate: when a spec fails `check_points`, mutate it and retry instead of discarding the answer. 279/385 verifiable vs 247 for the best prior method |
+| **verifier feedback into a knowledge base, not into weights** | KBSpec, [arXiv:2606.21339](https://arxiv.org/abs/2606.21339) | not built, and the right shape for us: t is out-of-distribution for every model, and this gets **14–32%** better verification pass rates with no fine-tuning at all |
+| **isomorphic perturbation** | [arXiv:2604.15149](https://arxiv.org/abs/2604.15149) | not built. Rename every identifier in a problem and regenerate: a spec that only works under the original naming was keyed to surface cues. Needs generation, so it is a GPU item |
+| **provers as each other's reference** | verifier fuzzing, [arXiv:2606.01066](https://arxiv.org/abs/2606.01066) | not built, and we are unusually well placed: seven independent provers, so any task where they disagree is either a spec defect or a prover defect. The disagreement rate is a free integrity metric |
+| **checkpoint specs at internal program points** | SpecCoder, [arXiv:2607.04232](https://arxiv.org/abs/2607.04232) | not built. Our interpreter already emits per-statement states, so assertions at intermediate points cost nothing. Reported +55.8% spec correctness, +358.1% completeness |
+| **RLVR at small scale, and its failure modes** | `verifier-feedback-training.md` | read before any RL: it collects both the wins and the papers reporting that verifier-filtered training did **not** help, plus the systematic-verification-error work that says a noisy verifier makes RL worse than none |
+
+Repositories worth reading before writing anything new, from
+`repos-verification.md`: **Vericoding**
+([Beneficial-AI-Foundation/vericoding](https://github.com/Beneficial-AI-Foundation/vericoding),
+flagged by the fetching agent as the single most relevant repo found),
+**Clover** ([ChuyueSun/Clover](https://github.com/ChuyueSun/Clover)),
+**DafnyBench** ([sun-wendy/DafnyBench](https://github.com/sun-wendy/DafnyBench)),
+**dafny-synthesis** ([Mondego/dafny-synthesis](https://github.com/Mondego/dafny-synthesis),
+the MBPP-DFY source this project already lifts from), and
+**AutoVerus** ([microsoft/verus-proof-synthesis](https://github.com/microsoft/verus-proof-synthesis)).
+
+**The order I would take them in:** SpecBench's gap check is already a blocker
+on the next run. Then Clover's tightness half (CLEVER/VeriEquivBench), because
+it upgrades a check that already earns its keep. Then KBSpec, because it is the
+only item that addresses t being out-of-distribution without a training run.
+Everything else waits on a GPU.
+
 ### Work stopped mid-flight, and how to resume each
 
 | what | where it stopped | how to pick it up |

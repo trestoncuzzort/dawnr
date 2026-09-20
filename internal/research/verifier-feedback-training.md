@@ -311,3 +311,363 @@ until something passes the oracle anyway, and every such hit is both a measured 
 new hard negative.
 
 ---
+
+## 10. Re:Form — Reducing Human Priors in Scalable Formal Software Verification with RL in LLMs (Dafny)
+
+- **Year / venue:** 2025, arXiv (Jul 2025), under review
+- **arXiv:** 2507.16331
+- **URL:** https://arxiv.org/abs/2507.16331
+- **Repo:** https://github.com/Veri-Code/ReForm · models+data https://huggingface.co/Veri-Code
+- **Benchmark released:** DafnyComp (compositional, multi-function programs with global constraints)
+
+**Method.** End-to-end pipeline with **no human annotation anywhere**: LLM-generated Dafny
+data curation, SFT, then GRPO with the **Dafny verifier as the only reward**. Deliberately
+**removes natural-language chain-of-thought** from the pipeline, arguing it is long, ineffective
+and unreliable for formal tasks. Reward includes a "spec superiority" term so the model is pushed
+to write *stronger* specifications rather than vacuous ones.
+
+**Reported numbers — this is the best-instrumented small-scale formal-verification RL result.**
+- Base models: **Qwen-2.5 at 0.5B, 1.5B, 3B, 7B, 14B** — includes sub-1B.
+- Data: 20,000 Dafny functions total; **only 3,000 used for SFT and 4,500 for RL**. (Sources:
+  16.3k Python2Dafny, 0.9k MetaReflection, 0.3k BigCode.) Eval: 512 in-domain, 300 DafnyComp.
+- **3B model, in-domain pass@1: base ~5% → SFT ~40% → SFT+RL ~55%.** So SFT on verified data is
+  worth **~35 points** and the verifier-driven RL stage adds **~15 points** on top.
+- Spec superiority rate: **+63.8% relative gain** from RL over SFT.
+- Out-of-domain DafnyComp (14B): SFT 8.3% → **RL 14.0%** pass@1; GPT-4o 2.7%; most other LLMs ~0%.
+- RL improves pass@128 much more than SFT does — i.e. here RL *widened* the distribution rather
+  than narrowing it, the opposite of the Yue et al. finding, plausibly because the verifier is
+  formal and exact rather than a test suite.
+- Cost: 14B RL run ≈ **20 hours on 64 A800-80G**. GRPO, 4 samples/input, batch 1024, lr 1e-5,
+  temp 1.0, KL 0.01, entropy 0.02.
+
+**Implementable here: A for the recipe and the hyperparameters, B for the compute.** The ordering
+evidence is what matters: **SFT on verifier-approved data delivered ~2.3x the gain that the RL
+stage did**, from 3k examples. That is the strongest argument for spending our effort on the
+verified-data side before the RL side.
+
+**What to implement.** Adopt the no-CoT formal-only target format, the GRPO hyperparameters above
+as a starting point, and above all the **spec-superiority idea**: score a candidate not just on
+"the checker accepted it" but on whether its obligations are *stronger* than a reference, which
+directly blocks the vacuous-proof exploit. Also mirror their split ratio — roughly 40% of curated
+data to SFT, 60% to RL.
+
+---
+
+## 11. Reinforcement Learning for Reasoning in Large Language Models with One Training Example (1-shot RLVR)
+
+- **Year / venue:** **NeurIPS 2025** (poster)
+- **arXiv:** 2504.20571
+- **URL:** https://arxiv.org/abs/2504.20571
+
+**Method.** RLVR (GRPO and PPO) where the training set is literally **one** problem, selected by
+training-accuracy variance. Measures generalisation to six math benchmarks the single example has
+nothing to do with.
+
+**Reported numbers — the most striking data-efficiency result in the lane.**
+- Base model **Qwen2.5-Math-1.5B**: MATH500 **36.0% → 73.6%** from **a single training example**.
+  Average over six math benchmarks **17.6% → 35.7%**.
+- **Two** examples: MATH500 74.8%, average 36.6% — slightly better than one.
+- A **1.2k-example** DeepScaleR subset containing that same example gives MATH500 73.6%,
+  average 35.9% — i.e. **1 example ≈ 1,200 examples**. The data scaling curve is almost flat.
+- Replicates across Qwen2.5-Math-7B, Llama3.2-3B-Instruct, DeepSeek-R1-Distill-Qwen-1.5B, and
+  across GRPO and PPO.
+
+**Implementable here: B — enormously encouraging *if* the mechanism transfers, and it may not.**
+The paper's own reading (and Yue et al.'s) is that this is **elicitation, not instruction**: the
+single example unlocks capability already latent in a heavily-pretrained base. A 92M model trained
+from random weights on 46M tokens has very little latent capability to elicit, so the headline
+number should not be extrapolated to us.
+
+**What to implement.** The actionable part is the *selection criterion*, which costs nothing:
+pick RL prompts by **high variance in training accuracy** (problems the model sometimes solves and
+sometimes does not), rather than by difficulty or at random. With 79 verified examples and a tiny
+model, prompt selection is one of the few free levers we have. Also: this paper is direct evidence
+that **"we only have 79 examples" is not automatically fatal for the RL stage** — it is fatal for
+the pretraining stage, which is a different problem.
+
+---
+
+## 12. Goedel-Prover: A Frontier Model for Open-Source Automated Theorem Proving
+
+- **Year / venue:** 2025, arXiv (Feb 2025); V2 technical report Aug 2025 (arXiv 2508.03613)
+- **arXiv:** 2502.07640
+- **URL:** https://arxiv.org/abs/2502.07640 · project https://goedel-lm.github.io/
+
+**Method.** Two-part pipeline. (1) **Statement formalisation**: train formaliser models to turn
+natural-language problems into Lean 4 statements, with an automatic check that the formal statement
+preserves intent — yielding **1.64M formal statements**. (2) **Expert iteration**: a chain of provers,
+each trained on proofs produced and *Lean-verified* by its predecessor. Bootstrap: use
+DeepSeek-Prover-V1.5-RL to generate 16 proofs per statement, compile each with Lean, keep one
+verified proof per solved statement, retrain, repeat.
+
+**Reported numbers.**
+- miniF2F **57.6% Pass@32**, beating the previous best open-source model by **+7.6 points**.
+- PutnamBench: 7 problems at Pass@512, #1 on the leaderboard at the time.
+- Produced **29.7K verified Lean proofs for Lean Workbook problems, ~1.9x the 15.7K** from prior work.
+- Scale: the formal statement corpus is 1.64M — four orders of magnitude beyond our pool.
+
+**Implementable here: C for the scale, A for one specific mechanic.** The transferable mechanic is
+**"generate k attempts, keep exactly one verified proof per problem, retrain"** — deduplicating to
+one proof per statement prevents the easy problems (which yield many proofs) from swamping the set.
+
+**What to implement.** Cap the contribution of any single problem to one verified sample per round.
+With 79 examples and seven proof systems, the risk of one easy theorem dominating the gradient is
+real, and this is a one-line fix.
+
+---
+
+## 13. Spurious Rewards: Rethinking Training Signals in RLVR
+
+- **Year / venue:** 2025, arXiv (Jun 2025)
+- **arXiv:** 2506.10947
+- **URL:** https://arxiv.org/abs/2506.10947 ·
+  writeup https://rethink-rlvr.notion.site/Spurious-Rewards-Rethinking-Training-Signals-in-RLVR-1f4df34dac1880948858f95aeb88872f
+- **Repo:** https://github.com/ruixin31/Spurious_Rewards
+- **Authors:** Rulin Shao, Shuyue Stella Li, Rui Xin, et al.
+
+**Method.** Runs RLVR with deliberately broken reward signals — **random rewards**, format-only
+rewards, and even **systematically incorrect** rewards — and compares against ground-truth rewards.
+
+**Reported numbers — the most important control experiment in this lane.**
+- **Qwen2.5-Math-7B trained with completely random rewards: MATH-500 +21.4 points absolute**,
+  against **+29.1 points** for perfect ground-truth rewards. A reward carrying *zero* information
+  captured ~74% of the gain of a correct one.
+- **This does not replicate on Llama3 or OLMo2.** The effect is a Qwen-family artefact — RLVR is
+  surfacing code-reasoning behaviours already baked into Qwen's pretraining, not teaching anything.
+
+**Implementable here: A as a mandatory experimental control; the result itself is a D.**
+Every "RLVR gave us +N points" claim in this literature — including ours, when we make one —
+is suspect unless a random-reward arm was run alongside.
+
+**What to implement.** Whenever we run a verifier-reward training arm, run a **random-reward arm
+with the identical budget** as a control, and report the delta between them rather than the delta
+from the starting checkpoint. If our verifier reward cannot beat random by a clear margin, the
+oracle is not the thing doing the work. This is cheap: it is the same training script with the
+reward function replaced by `random.choice([0,1])`.
+
+---
+
+## 14. Textbooks Are All You Need (phi-1)
+
+- **Year / venue:** 2023, arXiv (the origin of the "filter hard, train small" result)
+- **arXiv:** 2306.11644
+- **URL:** https://arxiv.org/abs/2306.11644
+- **Authors:** Gunasekar, Zhang, Aneja, et al. (Microsoft Research)
+
+**Method.** Not verifier-filtered but *classifier*-filtered: a quality classifier selects
+"textbook quality" web code, plus GPT-3.5-synthesised textbooks and exercises. Trained from
+scratch. Included here because it is the canonical measurement of **what aggressive data
+curation buys per parameter**, which is the question our 46M-token corpus poses.
+
+**Reported numbers.**
+- **phi-1: 1.3B params, 4 days on 8 A100s, 6B tokens of filtered web code + 1B tokens synthetic.**
+  HumanEval pass@1 **50.6%**, MBPP **55.5%**.
+- **phi-1-small: 350M params, same pipeline, still 45% on HumanEval.** This is the number that
+  matters for us — a 350M model reaching 45% HumanEval purely on data quality.
+- Emergent capability gap between phi-1 and phi-1-base attributed to the small finetuning exercise
+  set, not scale.
+
+**Implementable here: B.** The lesson transfers (curation beats volume at small scale); the exact
+numbers do not, since 350M is ~4x our parameter count and 7B tokens is ~150x our corpus.
+
+**What to implement.** Treat the corpus as the main lever, not the architecture. Spend a round
+explicitly measuring **tokens-of-curated-data vs held-out oracle pass rate** on our own corpus so we
+know where our curve saturates — phi's contribution was proving that curve is much steeper than the
+raw-scaling curve, and that is testable at 46M tokens.
+
+---
+
+## 15. Absolute Zero: Reinforced Self-play Reasoning with Zero Data (AZR)
+
+- **Year / venue:** **NeurIPS 2025**
+- **arXiv:** 2505.03335
+- **URL:** https://arxiv.org/abs/2505.03335 · project https://andrewzh112.github.io/absolute-zero-reasoner/
+- **Repo:** https://github.com/LeapLabTHU/Absolute-Zero-Reasoner (Python)
+
+**Method.** One model plays both **proposer** (invents tasks — deduction, abduction, induction —
+over Python programs) and **solver**. A **code executor is the sole verifier**: it validates that a
+proposed task is well-formed and has a gold answer, then checks solutions. Joint optimisation with a
+multitask advantage estimator; rewards for *task learnability* as well as solution correctness. No
+external dataset at all.
+
+**Reported numbers — note the scaling direction, which is bad news for us.**
+- Qwen2.5-**Coder-3B: +5.7** overall average (code +3.7, math +7.7)
+- Qwen2.5-**Coder-7B: +10.2** overall (code +5.0, math +15.2)
+- Qwen2.5-**Coder-14B: +13.2** overall (code +3.6, math +22.8)
+- Qwen2.5-Base-7B: +7.0 overall; Llama3.1-8B: **+3.2** overall (code +3.1, math +3.4)
+- Explicit conclusion: **"performance improvements scale with model size"** — 3B gains less than
+  half what 14B gains. Self-play needs a capable proposer, and capability is the scarce thing at 92M.
+- Safety: an "uh-oh moment" — concerning reasoning chains emerged in the Llama3.1-8B run.
+
+**Implementable here: C.** The mechanism is beautiful and the repo is usable, but the measured
+trend runs the wrong way for us: the smallest model tested (3B, and a *pretrained coder* at that)
+got the smallest gain, and Llama-8B got +3.2. Extrapolated to 92M-from-scratch, the expected gain
+is around zero. **Do not build a self-play proposer this round.**
+
+**What to implement.** Only the cheapest fragment: the **learnability reward** for task selection —
+weight a problem by how close the current model's pass rate is to 50%. That is the same insight as
+1-shot RLVR's variance-based selection and costs one counter per problem.
+
+---
+
+## 16. DeepSeek-Prover-V1.5: Harnessing Proof Assistant Feedback for RL and Monte-Carlo Tree Search
+
+- **Year / venue:** ICLR 2025
+- **arXiv:** 2408.08152
+- **URL:** https://arxiv.org/abs/2408.08152
+- **Repo:** https://github.com/deepseek-ai/DeepSeek-Prover-V1.5
+- **Weights:** `deepseek-ai/DeepSeek-Prover-V1.5-Base` / `-SFT` / `-RL` on Hugging Face (7B, open)
+
+**Method.** Three stages on a **7B** model: pretrain on formal maths, SFT on an enhanced Lean 4
+proof corpus, then **RLPAF — reinforcement learning from proof assistant feedback** (the Lean
+compiler's verdict is the reward). Inference uses **RMaxTS**, an MCTS variant whose tree nodes are
+*intermediate tactic states recovered from Lean's compilation messages*, with an **intrinsic reward
+for reaching novel tactic states** to fight reward sparsity.
+
+**Reported numbers.**
+- miniF2F-test **63.5%** (V1.5-RL + RMaxTS), ProofNet **25.3%** — SOTA at publication.
+- Predecessor DeepSeek-Prover-V1 (also 7B) reached **46.3% with 64 samples** on miniF2F after
+  fine-tuning on a synthetic corpus of **8M formal statements + proofs**, generated by
+  expert iteration with Lean as the filter, including the **prove-the-negation trick**: for each
+  synthesised statement, search for a proof of the statement *and* of its negation concurrently,
+  which cheaply discards unprovable statements and harvests training data either way.
+
+**Implementable here: B for RMaxTS, A for the negation trick and the error-message tree.**
+The valuable, scale-free idea is that **the checker's error message is a state signal, not just a
+verdict** — partial progress through a proof is a dense reward where pass/fail is sparse.
+
+**What to implement.** Two things. (1) Extract the failure position/tactic state from each of our
+seven proof systems' error output and use "how far the checker got" as a dense shaping term instead
+of binary accept/reject — this is the single highest-value change for a model too weak to ever hit a
+full pass. (2) For any generated conjecture, attempt it and its negation; whichever closes gives a
+verified training example.
+
+---
+
+## 17. VeRPO / Beyond Binary: Turning Partial Success into Dense Verifiable Rewards for RL in Code Generation
+
+- **Year / venue:** 2026, arXiv (Jan 2026)
+- **arXiv:** 2601.03525
+- **URL:** https://arxiv.org/abs/2601.03525
+- **Repo:** promised on acceptance; none public as of now.
+
+**Method.** Attacks reward sparsity without introducing a learned reward model. A test suite yields
+*per-test-case* outcomes, so passing a subset is an intrinsic, verifiable dense signal. VeRPO
+computes a difficulty weight per unit test from **execution statistics gathered during training**:
+`w_j = exp(-alpha * rho_j)` with `alpha = 2.0` and `rho_j` the empirical pass rate of test j, then
+divides by a Gaussian-KDE estimate of local test density to correct **"cardinality bias"** — the
+failure where many easy tests collectively dominate the gradient despite each having a low weight.
+Reward = sum of weights of passed tests.
+
+**Reported numbers.**
+- Backbone **Qwen3-8B**. Gains of VeRPO over **outcome-only GRPO** (multi-turn): HumanEval+ +1.46,
+  BigCodeBench-Full +1.61, BigCodeBench-Hard +2.38, LiveCodeBench-V6 +2.57,
+  **Codeforces CodeElo +8.83**; **average +3.12 over GRPO**, +17.80 over the base on CodeElo.
+- Single-turn gains are smaller: **+1.26 average over GRPO**.
+- So: dense partial-credit is worth roughly **1-3 points on top of** binary verifier reward, and much
+  more on the hardest benchmark where binary reward is almost always zero.
+
+**Implementable here: A.** Our regime is precisely the one where binary reward is almost always zero,
+which is where this paper's gain is largest (CodeElo +8.83 vs HumanEval+ +1.46). The method needs no
+extra model — only per-test statistics we are already collecting.
+
+**What to implement.** Replace the binary oracle reward with the weighted fraction of passing unit
+tests / discharged proof obligations, weights `exp(-2 * pass_rate)` estimated online, and **apply the
+density correction** — with seven proof systems and uneven obligation counts per problem, cardinality
+bias is exactly our failure mode (a problem with 40 trivial obligations would otherwise outweigh one
+with 3 hard ones).
+
+---
+
+## 18. Where the Verifier Fails: A Category-Level Audit of Reward Signals in RLVR
+
+- **Year / venue:** 2026, arXiv (Sep 2026)
+- **arXiv:** 2609.01354
+- **URL:** https://arxiv.org/abs/2609.01354
+- **Related:** "Are Verifier Errors Independent Within a GRPO Group? Evidence from Qwen2.5 Rollouts",
+  arXiv 2609.06386, repo https://github.com/ethxin0011/rlvr_group_correlation
+
+**Method.** Applies **metamorphic testing to the verifier instead of the model**: generates
+certified-equivalent rewrites of ground-truth answers (transformations that preserve meaning by
+construction) and measures per-category rejection rates across four widely used verifiers, over
+**307,420 verdicts**.
+
+**Reported numbers.**
+- Verifier **self-validation ranges from 53.8% to 95.2% on identical inputs — a 41.3-point spread**
+  between harnesses. Earlier work had quoted a single "~94% acceptance of its own ground truth"
+  figure; this shows that average hides categories where the verifier is barely better than a coin flip.
+- Companion paper finds verifier errors are **correlated within a GRPO group**, which breaks the
+  independence assumption GRPO's advantage estimate relies on.
+
+**Implementable here: A, as a cheap audit we should run before trusting any result.**
+
+**What to implement.** Metamorphic-test our own oracles: take each of the 79 verified programs, apply
+meaning-preserving rewrites (rename bound variables, reorder independent lemmas, change whitespace,
+swap equivalent tactics), and confirm the oracle still accepts. Any rejection is a false negative in
+our reward, and per the Delay/Plateau/Collapse paper (item 3) those are survivable — but we need the
+number, and it is the cheapest experiment on this list.
+
+---
+
+## 19. Scaling Relationship on Learning Mathematical Reasoning with LLMs (RFT — rejection sampling fine-tuning)
+
+- **Year / venue:** 2023, arXiv (the canonical effect-size measurement for rejection sampling)
+- **arXiv:** 2308.01825
+- **URL:** https://arxiv.org/abs/2308.01825
+- **Authors:** Zheng Yuan et al.
+
+**Method.** RFT: sample many reasoning paths from a supervised model, keep the ones whose answer is
+correct (oracle filter), **deduplicate by distinct reasoning path**, fine-tune on the survivors.
+Studies how gains vary with pre-training loss, supervised data amount, and augmented data amount.
+
+**Reported numbers — the two findings that matter most for a small model.**
+- **LLaMA-7B: SFT 35.9% → RFT 49.3% on GSM8K (+13.4 points)** when rejection samples from multiple
+  models are pooled.
+- **"RFT brings more improvement for less performant LLMs."** The worse the base model, the bigger
+  the rejection-sampling gain — the opposite of the scaling direction in AZR (item 15) and LintSeq's
+  large-model results. This is the most favourable scaling law in the whole lane for our situation.
+- **The gain comes from *distinct* reasoning paths, not raw sample count.** More samples with the
+  same reasoning add little.
+- **Log-linear relation between data amount and performance**, and pre-training loss predicts
+  performance better than parameter count does.
+
+**Implementable here: A.** Rejection sampling is the cheapest possible use of an oracle and this is
+the measurement that says it pays off *most* at our end of the capability range.
+
+**What to implement.** Build the RFT loop first, before any RL: sample n proofs per problem, keep
+every one the checker accepts, **deduplicate by proof structure (normalised tactic sequence), not by
+string**, and fine-tune. Pool across all seven proof systems — "rejection samples from multiple
+models" is what took LLaMA-7B from 35.9 to 49.3, and seven proof systems are our multiple sources.
+Also: report **pre-training loss** alongside accuracy, since it is the better predictor.
+
+---
+
+## 20. Curriculum Learning for Small Code Language Models
+
+- **Year / venue:** **ACL 2024 Student Research Workshop**
+- **arXiv:** 2407.10194 · https://aclanthology.org/2024.acl-srw.44/
+- **URL:** https://arxiv.org/abs/2407.10194
+- **Data:** TinyPy Generator corpus, https://www.kaggle.com/datasets/kamelmohammedyamani/tinypy-for-curriculum-learning
+- **Authors:** Marwa Naïr et al.
+
+**Method.** **1M-parameter** decoder-only GPT models — the smallest scale anyone publishes at —
+trained on synthetic Python from **TinyPy Generator**, a context-free-grammar tool that emits
+syntactically correct programs *with their expected outputs* (so the "oracle" is built into
+generation). Difficulty is scored by a proposed Overall Metric, data bucketed easy/medium/hard, and
+several curriculum schedules are compared, including a novel hybrid.
+
+**Reported numbers.**
+- **Curriculum learning significantly improves code *execution* accuracy for these 1M models, but
+  its effect on code *completion* is much weaker.** That asymmetry is the finding: ordering data by
+  difficulty helps the task that requires following semantics step by step, and barely helps
+  next-token-style generation.
+
+**Implementable here: A.** 1M params is *below* our 92M, so if anything works there it works here,
+and the grammar-generated-with-known-output trick is directly reusable for bulking out a 46M corpus.
+
+**What to implement.** Order the corpus easy→hard using a difficulty score (proof length, number of
+obligations, number of distinct tactics), and expect the benefit on "can the model simulate/execute
+the semantics" rather than on raw completion. Also consider grammar-generating extra well-formed
+programs with known checker verdicts to grow the corpus beyond 46M tokens cheaply.
+
+---

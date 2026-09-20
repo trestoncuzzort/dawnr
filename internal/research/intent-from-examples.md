@@ -28,9 +28,11 @@ a test that splits the candidate set in half is the informative one). The user a
 pass/fail on the proposed test, and that answer prunes the candidate space and is fed
 back into the prompt as a partial formalization of intent. Iterate.
 
-**Numbers.** Reported ~45.97% relative improvement in pass@1 of generated code within 5
-user interactions, and ~38.21% improvement in the pass rate of the *generated tests*,
-over the base model, on MBPP/HumanEval-derived benchmarks.
+**Numbers.** (Verified from the abstract.) Using OpenAI Codex, with **1 to 5 simulated
+user queries**: pass@1 improvements of **22.49%–37.71% absolute on MBPP** and
+**24.79%–53.98% absolute on HumanEval**. These are *absolute* percentage-point gains and
+they are large because the feedback is an idealised oracle — which is exactly the regime
+we are in, since our ground-truth assertions *are* an idealised oracle.
 
 **Implementable here: A.** This is the closest published relative of the hypothesis,
 but note the *direction*: TiCoder uses tests to disambiguate because the prose alone
@@ -56,10 +58,12 @@ model's candidate spec as a predicate on each ground-truth example, and put the
 **TiCoder-Output** (on FAIL the user supplies the expected output — i.e. hands over a
 ground-truth I/O example). Plus a mixed-methods user study with 15 programmers.
 
-**Numbers.** Users of the workflow were significantly more likely to *correctly
-evaluate* AI-generated code and reported significantly lower task-induced cognitive
-load. The empirical arm reports pass@1 gains on HumanEval/MBPP across several models
-with a small interaction budget (single-digit number of queries).
+**Numbers.** (Verified from the abstract.) User study: **15 programmers**; participants
+using the workflow were significantly more likely to *correctly evaluate* AI-generated
+code and reported significantly lower task-induced cognitive load. At-scale arm:
+**4 state-of-the-art LLMs, 2 Python datasets**, with an idealised proxy for user
+feedback — **average absolute improvement of 45.97% in pass@1 within 5 user
+interactions**, plus the unit tests come out as a by-product.
 
 **Implementable here: A.** The `TiCoder-Output` mode is exactly our setting: the
 expected output is already known. The paper's finding that *output-valued* feedback
@@ -293,7 +297,11 @@ model revise the spec). Budget for the second arm — it is the cheaper half of 
 
 - **Year:** 2025
 - **Venue/id:** arXiv:2505.07270; IEEE (doi via IEEE Xplore 11334557). Jia, Morris, Ye, Sarro, Mechtaev — Peking University + UCL
-- **URL:** https://arxiv.org/abs/2505.07270
+- **URL:** https://arxiv.org/abs/2505.07270 · v2: https://arxiv.org/html/2505.07270v2
+- **Repo:** https://github.com/msv-lab/SpecFix — **Python**, official ASE 2025 artifact.
+  Does ambiguity detection by **clustering LLM-generated candidate programs by behaviour
+  on differential tests**, then requirement refinement, then evaluation via pass@k,
+  majority voting and behavioural metrics. **This is the single best repo to lift from.**
 
 **Technique.** Instead of asking the user, **repair the prose automatically by aligning
 it to the input/output examples.** Key insight: LLMs are bad at directly clarifying
@@ -432,3 +440,566 @@ ground-truth examples. If the LLM-with-examples arm cannot beat a template enume
 these problems, the hypothesis is about the LLM, not about the examples. Also: Daikon's
 62-invalid-candidates result is the honest warning that *"consistent with the examples"
 is not "correct"* — expect residual wrong specs even in the treatment arm.
+
+---
+
+## 16. Rethinking the Role of Demonstrations: What Makes In-Context Learning Work?  ***(the strongest evidence AGAINST our hypothesis)***
+
+- **Year:** 2022
+- **Venue/id:** EMNLP 2022 (ACL Anthology 2022.emnlp-main.759); arXiv:2202.12837. Min, Lyu, Holtzman, Artetxe, Lewis, Hajishirzi, Zettlemoyer
+- **URL:** https://aclanthology.org/2022.emnlp-main.759/ · https://arxiv.org/abs/2202.12837
+
+**Technique.** Ablates what in-context demonstrations actually contribute by **replacing
+the labels in the demonstrations with random ones** and re-measuring.
+
+**Numbers.** **Randomly replacing the labels barely hurts performance**, consistently
+across **12 models including GPT-3**, on a range of classification and multi-choice
+tasks. What the demonstrations actually supply is (1) the **label space**, (2) the
+**input distribution**, (3) the **format** of the sequence — not the input→output
+mapping.
+
+**Implementable here: A — as the control that could kill the hypothesis.** If examples
+help us only by conveying *format* and *the shape of the output*, then a fake example
+with a wrong output would help just as much as the real one, and "examples pin down
+intent" is the wrong explanation for any gain we see.
+
+**What to implement.** **A corrupted-example arm.** Three arms: no examples / real
+examples / examples with *scrambled outputs*. If the scrambled arm matches the real
+arm, the effect is formatting, not intent, and we must report that. Caveat in our
+favour: Min et al. studied classification and multi-choice, where the label space is
+tiny; on open-ended function specification the mapping carries much more information,
+which is why item 10 still found +9–13%. Say so explicitly rather than ignoring the
+paper.
+
+---
+
+## 17. Assessing the Impact of Requirement Ambiguity on LLM-based Function-Level Code Generation (Orchid)
+
+- **Year:** 2026
+- **Venue/id:** arXiv:2604.21505 (also circulated as "Clarity Is Not Assumed: Understanding LLM-Based Code Generation under Ambiguous Requirements")
+- **URL:** https://arxiv.org/abs/2604.21505
+
+**Technique.** Introduces **Orchid**: **1,304 function-level tasks** with **5,216
+ambiguous requirement variants** across four linguistic ambiguity types — **lexical,
+syntactic, semantic, vagueness**. Measures both correctness and **functional consistency
+across repeated generations** under ambiguity, and separately tests whether models can
+*detect* and *localise* the ambiguity.
+
+**Numbers.** Ambiguity consistently degrades performance; **even GPT-4 drops >30%** under
+ambiguous specifications. Models identify ambiguity with **relatively high recall but
+low precision**, and struggle to *localise* and *resolve* the source.
+
+**Implementable here: B (benchmark), A (the measurement idea).**
+
+**What to implement.** **Functional consistency as a cheap ambiguity detector, requiring
+no ground truth**: sample the spec k times at temperature; if the k specs are not
+semantically equivalent, the prose is ambiguous for this model and this problem is a
+prime candidate for the examples treatment. Use it to *stratify* our results — the
+hypothesis should show its biggest effect on the high-variance problems.
+
+---
+
+## 18. Do LLMs generate test oracles that capture the actual or the expected program behaviour?
+
+- **Year:** 2024
+- **Venue/id:** arXiv:2410.21136 (Konstantinou, Degiovanni, Papadakis — Univ. of Luxembourg)
+- **URL:** https://arxiv.org/abs/2410.21136
+
+**Technique.** Controlled experiment on **24 open-source Java repositories**, over both
+oracle *classification* and oracle *generation*, with developer-written and
+automatically generated tests, across several carefully tested prompts. The question is
+whether the oracle encodes what the code **does** or what it **should do**.
+
+**Numbers.** LLMs are **more likely to generate oracles capturing the actual (implemented)
+behaviour than the expected (intended) behaviour**. They are better at *generating*
+oracles than at *classifying* correct ones. Oracle quality improves markedly when the
+code carries **meaningful variable and test names**. LLM oracles have higher fault-
+detection potential than EvoSuite's.
+
+**Implementable here: A (as a threat to validity).** This is the *mechanism* of our
+failure, named: the model describes whatever artefact is nearest to hand rather than the
+intent. If our prompt shows the model a draft program, the spec will describe that
+program, not the problem.
+
+**What to implement.** Generate the specification **before and independently of** any
+candidate program, from prose + examples only. If the pipeline currently shows the model
+its own code while asking for a spec, that ordering is itself a cause of `r == x + 1`.
+Also: keep meaningful names in the problem statement — the paper says naming measurably
+moves oracle quality.
+
+---
+
+## 19. SpecGen: Automated Generation of Formal Program Specifications via Large Language Models
+
+- **Year:** 2024/2025
+- **Venue/id:** arXiv:2401.08807 (Nanjing University, NTU, SMU)
+- **URL:** https://arxiv.org/abs/2401.08807
+
+**Technique.** Two phases. (1) **Conversational**: few-shot examples plus **iterative
+feedback from the verifier itself** (OpenJML) steering the LLM towards a JML spec that
+verifies. (2) **Mutation-based**: when the LLM output will not verify, apply four
+mutation operator families — **predicative, logical, comparative, arithmetic** — with a
+heuristic selection strategy, and search the neighbourhood of the failed spec.
+
+**Numbers.** On a benchmark of **385 Java programs, SpecGen verifies 72.5%**,
+outperforming both LLM and non-LLM baselines.
+
+**Implementable here: A (mutation repair), B (the JML specifics).**
+
+**What to implement.** When a generated spec disagrees with the ground-truth examples,
+do not resample from scratch — **mutate** it. The four operator families are directly
+applicable to a small spec language, and arithmetic/comparative mutation is exactly the
+neighbourhood that contains the fix for an `r == x + 1`-shaped error. Cheap, and it
+reuses whatever the model got right.
+
+---
+
+## 20. AutoSpec: automated specification synthesis with an iterative verifier loop
+
+- **Year:** 2023/2024
+- **Venue/id:** ASE 2023 — "Towards Automated Verification of LLM-Synthesized C Programs" / AutoSpec line of work
+- **URL:** (discussed in the survey at https://arxiv.org/abs/2601.12845)
+
+**Technique.** Decompose the program, synthesise candidate loop invariants and
+pre/postconditions per fragment, and run an **iterative feedback loop against the
+verifier**, keeping only annotations the verifier accepts and retrying the rest.
+
+**Numbers.** **Verifies 79% of 251 C programs within five attempts.** The reported
+weakness is the one that matters to us: it **depends on users providing correct and
+complete properties and is vulnerable to under-specification** — i.e. it will cheerfully
+verify a weak spec.
+
+**Implementable here: B.**
+
+**What to implement.** Bound the retry loop at **five attempts** (their empirical knee)
+rather than an open-ended loop, and — because of the stated under-specification
+weakness — pair every accepted spec with the strength check from item 12. "It verified"
+must never be the acceptance criterion on its own.
+
+---
+
+## 21. VERINA: Benchmarking Verifiable Code Generation
+
+- **Year:** 2025
+- **Venue/id:** arXiv:2505.23135; OpenReview 0A4Uf88pog (Sunblaze lab, UC Berkeley)
+- **URL:** https://arxiv.org/abs/2505.23135
+- **Repo:** https://github.com/sunblaze-ucb/verina — Lean 4 + Python, dataset also on HuggingFace
+
+**Technique.** **189 manually curated Lean tasks**, each with problem description,
+reference implementation, formal specification **and an extensive test suite** — so code,
+spec and proof can be scored *separately and modularly*. The spec-scoring pipeline is the
+part to steal: it combines **theorem proving with comprehensive testing** to score a
+generated specification on **soundness** (does it accept the reference implementation)
+and **completeness** (does it reject wrong implementations).
+
+**Numbers.** Best model **OpenAI o3**: **72.6% code correctness**, **52.3% specification
+soundness+completeness**, and **4.9% proof success** (one trial/task). The gap between
+72.6% code and 52.3% spec is the quantified version of our problem: *models write the
+program better than they write the spec of the program.*
+
+**Implementable here: A.** Closest published architecture to ours (code + spec + proof,
+tests on the side), and it supplies the exact scoring rubric we need.
+
+**What to implement.** Adopt soundness/completeness as our spec metric and report it
+alongside conversion. Soundness = spec accepts the ground-truth behaviour on all
+examples. Completeness = spec rejects mutants. Under this rubric `r == x + 1` scores
+**unsound**, and that is a number we can move.
+
+---
+
+## 22. Verus-SpecGym / Verus-SpecBench: An Agentic Environment for Evaluating Specification Autoformalization  ***(our failure mode, named and measured)***
+
+- **Year:** 2026
+- **Venue/id:** arXiv:2605.26457
+- **URL:** https://arxiv.org/abs/2605.26457 · https://arxiv.org/html/2605.26457v1
+
+**Technique.** An agentic loop where the model develops a **specification** (not code)
+for an informal problem by interacting with **Verus** (the Rust verifier), bash and the
+filesystem, refining against verifier errors. Benchmark: **Verus-SpecBench, 581
+spec-writing tasks derived from Codeforces problems**.
+
+**Numbers.**
+- gemini-3.1pro **77.8%**; other frontier models **51.1–57.8%**; open-source **21.5–25.5%**.
+- Failure taxonomy, verbatim relevant: model-generated specs **omit important input
+  assumptions**, **accept incorrect outputs**, and **reject valid ones**.
+- **LLM-as-a-judge misses 26% of the failures** their executable evaluator catches.
+- Conclusion: spec autoformalization is **brittle even on problems where the same models
+  already generate correct code**.
+
+**Implementable here: A.** The closest thing in the literature to a direct measurement of
+the thing we are failing at, on a comparable problem source (competitive-programming
+prose + examples).
+
+**What to implement.** Two things. (1) **Do not use an LLM judge to decide whether a spec
+is right** — it misses a quarter of the failures; execute the spec against the examples
+instead. (2) Adopt their three-way failure taxonomy as our error labels (missing
+precondition / accepts wrong output / rejects right output) so round-over-round we can
+say *which* failure the examples fixed, not just that the count moved.
+
+---
+
+## 23. Testing LLMs on Code Generation with Varying Levels of Prompt Specificity
+
+- **Year:** 2023
+- **Venue/id:** arXiv:2311.07599 (Murr, Grainger, Gao)
+- **URL:** https://arxiv.org/abs/2311.07599
+
+**Technique.** **104 coding problems × four prompt types** varying degrees of *tests* and
+*specificity*, across Bard, ChatGPT-3.5, ChatGPT-4 and Claude-2, scored on accuracy plus
+time and space efficiency. The framing sentence is the one to quote: when tests are in
+the prompt they act as **"a definitive specification of what the code should accomplish"**.
+
+**Numbers.** Reports per-model accuracy across the four specificity levels; the
+consistent direction is that adding tests to the prompt raises accuracy, with the effect
+largest for the weaker models.
+
+**Implementable here: B.** Older models, but the four-level design is a good template:
+prose only / prose+signature / prose+tests / prose+tests+detail.
+
+**What to implement.** Use their four-level ladder rather than a binary on/off, so we can
+see whether the examples are substituting for prose detail or adding to it. Also predict
+in advance that the effect will be **largest on our weakest model** — a cheap,
+pre-registered directional check.
+
+---
+
+## 24. Hypothesis Search: Inductive Reasoning with Language Models
+
+- **Year:** 2023/2024
+- **Venue/id:** ICLR 2024; arXiv:2309.05660; OpenReview G7UtIGQmjm (Wang, Zelikman, Poesia, Pu, Haber, Goodman — Stanford)
+- **URL:** https://arxiv.org/abs/2309.05660 · https://openreview.net/forum?id=G7UtIGQmjm
+
+**Technique.** Pure example-driven intent inference. Given only input/output pairs:
+(1) prompt the LLM for **multiple abstract hypotheses in natural language** about the
+rule; (2) **implement each hypothesis as a Python program**; (3) **filter by executing
+against the observed examples**. The NL hypothesis is the intermediate representation —
+a spec — and the program is its realisation, which is our pipeline shape exactly.
+
+**Numbers.** On a 40-problem ARC subset: **12.5% direct prompting → 27.5%** with the
+automated hypothesis-search pipeline (**>2x**), and **37.5%** when a human picks among
+LLM-generated hypotheses.
+
+**Implementable here: A.** The single most transferable *procedure* in this file for a
+spec-generation pipeline.
+
+**What to implement.** Replace one-shot spec generation with **generate-k-then-filter**:
+sample k candidate specs, discard every one that contradicts a ground-truth example, and
+only then send survivors to the provers. Note the human-in-the-loop delta (27.5→37.5):
+if we ever want an operator-assisted arm, choosing among candidate specs is where the
+leverage is — not writing them.
+
+---
+
+## 25. When Prompt Under-Specification *Improves* Code Correctness  ***(second counter-evidence paper)***
+
+- **Year:** 2026
+- **Venue/id:** arXiv:2604.24712
+- **URL:** https://arxiv.org/abs/2604.24712 · https://arxiv.org/html/2604.24712v1
+
+**Technique.** Mutates prompts to *remove* specification detail and measures robustness
+across **10 models** on **HumanEval** and the structurally richer **LiveCodeBench**.
+
+**Numbers.** Robustness depends on prompt structure: the same under-specification
+mutations that **degrade HumanEval have near-zero net effect on LiveCodeBench** because
+of redundancy in the richer descriptions. More pointed: under-specification sometimes
+**improves** correctness, by breaking misleading lexical/structural cues that trigger
+**retrieval-based** (memorised-lookalike) solution strategies. Named mechanisms:
+disruption of over-fitted terminology, removal of misleading constraints, elimination of
+spurious identifier triggers.
+
+**Implementable here: A (as a threat), C (the finding).**
+
+**What to implement.** The uncomfortable reading for us: our `r == x + 1` may be a
+*retrieval* failure — "sum of non-zero powers of two" pattern-matched onto a memorised
+neighbour. If so, adding examples helps only if they *override retrieval*, and adding
+more prose may make it worse. Test it: record whether the wrong specs cluster on
+problems whose phrasing resembles a well-known different problem. Also note the
+redundancy finding — richer descriptions absorb damage, which argues for
+prose **plus** examples rather than examples replacing prose.
+
+---
+
+## 26. ClarifyCodeBench: Evaluating LLMs on Clarifying Ambiguous Requirements for Code Generation
+
+- **Year:** 2026
+- **Venue/id:** arXiv:2607.00711
+- **URL:** https://arxiv.org/abs/2607.00711
+
+**Technique.** An **interactive** benchmark from real-world programming tasks with manual
+annotations of ambiguity types, the clarification questions that resolve them, and
+ground-truth answers. Two novel metrics: **Turn-discounted Key Question Rate (TKQR)** —
+rewards asking the key question *early*, penalises delay and redundancy — and **Optimal
+Round Adherence (ORA)** — penalises both premature code generation *and* unnecessary
+questioning.
+
+**Numbers.** Across six SOTA LLMs: **strong code-generation performance does not translate
+into effective requirement clarification**, and **more inference-time thinking improves
+code correctness but yields only marginal gains in identifying ambiguity**.
+
+**Implementable here: B (benchmark), A (the reasoning-budget finding).**
+
+**What to implement.** Do **not** try to fix this with more reasoning tokens — the paper
+says that buys code correctness, not ambiguity detection. Spend the budget on the
+examples-in-prompt and the check-against-examples gate instead. That is a direct
+experiment-design decision and it saves money.
+
+---
+
+## 27. Can Large Language Models Write Good Property-Based Tests?
+
+- **Year:** 2023
+- **Venue/id:** arXiv:2307.04346
+- **URL:** https://arxiv.org/abs/2307.04346
+
+**Technique.** Evaluates LLMs at writing **property-based tests** (PBT) from API
+documentation — i.e. producing a *universally quantified* property rather than a finite
+set of examples. Related systems in this line: **PBT-GPT** (properties + random inputs
+from API docs), **ChekProp** (arXiv:2505.23549, CPS guardrails, iteratively repairs its
+own PBTs), and **Property-Generated Solver (PGS)** — a Generator/Tester agent pair where
+the Tester defines properties, generates inputs and feeds property-violation feedback
+back to the Generator.
+
+**Numbers.** Per-library pass rates vary widely; the durable finding is that models write
+*syntactically valid* properties far more often than *semantically meaningful* ones —
+the same correct-but-vacuous hazard as item 5.
+
+**Implementable here: B.**
+
+**What to implement.** A property is what our specification *is*. The PGS loop is the
+liftable bit: a Tester role that takes the generated spec, **generates fresh inputs
+beyond the given examples**, and reports violations to the spec-writer. That extends the
+finite example set into something closer to a real oracle — which is the only way to
+catch a spec that happens to agree with all four shipped examples by accident.
+
+---
+
+## 28. Selecting Representative Examples for Program Synthesis
+
+- **Year:** 2018
+- **Venue/id:** ICML 2018, PMLR v80 (Pu, Miranda, Solar-Lezama, Kaelbling — MIT)
+- **URL:** https://proceedings.mlr.press/v80/pu18b/pu18b.pdf
+
+**Technique.** Directly answers the "*how many* examples" angle. Given a large example
+set, pick a **small representative subset** that determines the same program, framed as a
+set-cover / maximum-coverage problem over the hypothesis space and solved with a learned
+selector. The point is that most examples are redundant and a **handful of
+well-chosen ones is equivalent to the whole set**.
+
+**Numbers.** Reports large reductions in the number of examples needed for synthesis to
+converge to the right program versus random subsets, at equal or better accuracy.
+
+**Implementable here: B.**
+
+**What to implement.** Formalises the intuition behind item 13 with a cheaper algorithm:
+greedy max-coverage over candidate specs. Sample k specs; greedily pick the example that
+eliminates the most surviving specs; repeat until one survives or examples run out. The
+number of examples that greedy needs **is** our empirical answer to "how many examples
+pin this problem down" — log it per problem; it is a publishable number in its own right
+and costs nothing extra to collect.
+
+---
+
+## 29. ClarifyGPT: Enhancing LLM-Based Code Generation via Requirements Clarification
+
+- **Year:** 2023/2024
+- **Venue/id:** PACMSE / **FSE 2024** (doi 10.1145/3660810); arXiv:2310.10996 (Mu, Shi et al.)
+- **URL:** https://arxiv.org/abs/2310.10996 · https://dl.acm.org/doi/10.1145/3660810
+
+**Technique.** Detects ambiguity **without any ground truth** via a **code consistency
+check**: generate several candidate programs from the same requirement, run them on
+generated test **inputs**, and compare *outputs*. Identical outputs ⇒ the model
+interprets the requirement one way ⇒ unambiguous. Divergent outputs ⇒ ambiguous. Then
+**cluster the solutions by their test outputs**, pick one representative per cluster, and
+synthesise a targeted clarifying question from the contrast between clusters.
+
+**Numbers.**
+- GPT-4 on MBPP-sanitized: **70.96% → 80.80% pass@1** (+9.84 pp).
+- Averaged over **five benchmarks**: GPT-4 **62.43% → 69.60%**; ChatGPT **54.32% → 62.37%**.
+
+**Implementable here: A (highest ratio of value to effort in this file).**
+
+**What to implement.** The output-divergence detector, applied to *specs* instead of
+programs: sample k specs, evaluate each on the problem's example inputs, and cluster by
+the resulting truth-vector. A problem where all k specs agree and all agree with the
+ground truth needs no intervention; a problem where they split is where the examples
+treatment should be spent. This gives us a **per-problem ambiguity score for free**, with
+which to stratify the round-7 results instead of reporting one aggregate count.
+
+---
+
+## 30. On the risk of coding before testing: error propagation in LLM test-generation workflows
+
+- **Year:** 2026
+- **Venue/id:** arXiv:2607.05139 (Konstantinou, Tambon, Papadakis — Univ. of Luxembourg)
+- **URL:** https://arxiv.org/abs/2607.05139
+- **Artifact:** https://zenodo.org/records/21089934 — benchmarks, prompts, faulty implementations, generated test suites
+
+**Technique.** Isolates **error propagation**: when an LLM generates code first and then
+tests, do faults in the code get replicated in the tests? Tested across prompting
+strategies including chain-of-thought and across multi-step workflows where intermediate
+outputs become context.
+
+**Numbers.** **Generating tests after faulty code cuts fault-detection effectiveness to
+14%, versus 25% when tests are generated independently** — roughly **half**. Chain-of-
+thought does not rescue it.
+
+**Implementable here: A (pipeline ordering).** Companion to item 18 and the same group.
+
+**What to implement.** Hard rule for the pipeline: **the specification must never see a
+candidate program.** If any stage currently generates code first and then asks for a spec
+"for this code", that ordering alone can account for a large share of wrong specs, and it
+is free to fix. Independent generation, then cross-check.
+
+---
+
+## 31. Choose, Don't Label: Multiple-Choice Query Synthesis for Program Disambiguation
+
+- **Year:** 2026
+- **Venue/id:** **OOPSLA/PACMPL** (doi 10.1145/3808279); arXiv:2604.08792. Barnaby, Ding, Bastani, Dillig (UT Austin / Penn)
+- **URL:** https://arxiv.org/abs/2604.08792 · https://doi.org/10.1145/3808279
+
+**Technique.** Argues that eliciting supervision as **labelled examples is error-prone and
+often fails to capture intent**, and replaces it with **multiple-choice queries**: the
+system synthesises a small set of **high-level behaviour descriptions** covering the
+candidate programs, and the user just picks the intended one. Active learning over the
+hypothesis space, but with the query in the *behaviour* space rather than the
+input/output space.
+
+**Numbers.** Reports fewer queries to convergence and higher user accuracy than
+example-labelling baselines (PL venue; the comparison is queries-to-disambiguate).
+
+**Implementable here: B.**
+
+**What to implement.** The prompt reformulation is free and worth an arm: instead of
+"here are the examples, write a spec", give the model **k candidate behaviour
+descriptions** (generated from k sampled specs) and ask it to *choose* which matches the
+prose+examples. Discrimination is an easier task than generation — that is the paper's
+whole thesis, and it matches the Hypothesis-Search human-selection delta in item 24.
+
+---
+
+## 32. Towards Automated Verification of LLM-Synthesized C Programs / survey of spec-generation with test oracles
+
+- **Year:** 2026
+- **Venue/id:** arXiv:2601.12845 — "Automatic Generation of Formal Specification and Verification Annotations Using LLMs and Test Oracles" (preprint, intended for Science of Computer Programming)
+- **URL:** https://arxiv.org/abs/2601.12845 · https://arxiv.org/html/2601.12845
+
+**Technique.** Survey-plus-method over the whole area we are in: LLM generation of formal
+specs and verification annotations across **Verus, Dafny, Alloy, Lean, JML**, with the
+central recommendation that **combining LLMs with verifiable test oracles is both more
+effective and closer to normal developer workflow** than either alone. Carries the
+comparative numbers for SpecGen (72.5% of 385 Java programs) and AutoSpec (79% of 251 C
+programs in ≤5 attempts).
+
+**Numbers.** Aggregates the above; useful mainly as the citation map for related work.
+
+**Implementable here: C (orientation), A (the thesis).**
+
+**What to implement.** Nothing new — but it is the sentence to put at the top of the
+round-7 write-up: *the field's current best answer to "how do you know the spec is right"
+is "check it against executable oracles", not "check it against a prover".* We have seven
+provers and were missing the oracles. That is the hypothesis, stated as the literature
+states it.
+
+---
+
+## 33. TOGA: A Neural Method for Test Oracle Generation — and TOGLL, its LLM successor
+
+- **Year:** TOGA 2022; TOGLL 2024
+- **Venue/id:** TOGA — **ICSE 2022** (doi 10.1145/3510003.3510141), arXiv:2109.09262 (Dinella, Ryan, Mytkowicz, Lahiri). TOGLL — arXiv:2405.03786 (Soneya Binta Hossain, Matthew Dwyer)
+- **URL:** https://arxiv.org/abs/2109.09262 · https://arxiv.org/abs/2405.03786
+- **Related:** "Neural-Based Test Oracle Generation: A Large-scale Evaluation and Lessons Learned", arXiv:2307.16023 — the independent re-evaluation that found TOGA's reported numbers did not hold up
+
+**Technique.** TOGA reframes oracle generation as **ranking over a small set of likely
+oracles** rather than free generation, on the empirical observation that developer-written
+assertions follow **a small number of common patterns** expressible as a compact grammar;
+CodeBERT is fine-tuned to rank candidates and to classify whether a prefix throws.
+TOGLL replaces the ranker with fine-tuned LLMs (7 models, 6 prompt variants).
+
+**Numbers.** TOGLL generates about **3.8x more correct assertion oracles** and **4.9x more
+exception oracles** than TOGA. The cautionary half: independent evaluation found TOGA
+produced **a high rate of false positives**, and that for many prefixes it emitted no
+assertion at all — its headline numbers did not survive re-evaluation.
+
+**Implementable here: B (the grammar), A (the cautionary tale).**
+
+**What to implement.** The **constrained-grammar** idea is the cheapest structural defence
+available to us: if candidate specifications must be drawn from a small grammar of
+plausible predicate shapes rather than generated free-form, `r == x + 1` can still be
+*expressed* — but generate-and-rank over the grammar (rather than one confident free-form
+emission) surfaces the alternatives and lets the examples choose between them. Also, the
+re-evaluation story is the reason to score round 7 with an executable check rather than a
+reported metric: this subfield has already been burned once by numbers that did not
+replicate.
+
+---
+
+# Synthesis: what the literature says about our bet
+
+**The bet is well supported, and the expected size splits into two regimes.**
+
+*One-shot (examples pasted into the prompt, no loop):* the direct A/B of "problem's own
+tests in the prompt" (item 10) gave **+9.15% HumanEval / +12.78% MBPP**. Prompt-technique
+factorial work (item 8) puts **few-shot + signature at +10.4 pp pass@1**. Ambiguity
+detection by output-divergence (item 29, ClarifyGPT) gave **+9.84 pp** on GPT-4/MBPP.
+Aligning prose to examples automatically (item 11, SpecFix) gave **+30.9% on the subset
+it touched** but **+4.09% overall**, with **43.58% of benchmark descriptions ambiguous
+enough to be worth repairing**. **One-shot, pre-register roughly +10 pp.**
+
+*Looped against an oracle (examples used to reject and retry):* much larger.
+TiCoder with an idealised feedback proxy (items 1–2) got **22.49–37.71 pp absolute on
+MBPP**, **24.79–53.98 pp on HumanEval**, **45.97 pp average** across four LLMs — within
+**five** interactions. Item 10's remediation loop added another **~+5%** on top of its
+one-shot gain.
+
+**This distinction is the most actionable thing in the file.** TiCoder's huge numbers
+come from having a trusted oracle in the loop, and **we already have one** — the
+problem's own assertions, free, perfect, and needing no user. Pasting the examples into
+the prompt buys the ~10 pp; *rejecting and regenerating specs that contradict the
+examples* is what buys the 20–45 pp. Round 6's conversion move of 27%→33% sits inside the
+one-shot band, which suggests the proof-gate data bought roughly what a one-shot prompt
+intervention buys — and that the loop, not more prompt content, is the unexploited half.
+
+**Three papers say be careful.**
+1. **Item 16 (Min et al.)** — randomising demonstration labels barely hurt across 12
+   models. Run the **scrambled-output arm** or the result is not interpretable.
+2. **Item 4 (many-shot)** — pass@1 *declines* past ~25 examples. Do not auto-inflate.
+3. **Item 25** — under-specification sometimes *improves* correctness by breaking
+   retrieval of a memorised lookalike. `r == x + 1` smells like exactly that failure.
+
+**The cheapest wins, in order (all rated A, none needs a prover):**
+1. **Gate on the examples before the provers** (items 5, 21). Never prove a spec that
+   already disagrees with the problem's own assertions. This kills the observed failure
+   class outright and *saves* prover time.
+2. **Reconstruct-and-compare** (item 12, Clover): regenerate a program from the spec
+   alone, run it on the examples. Catches strong-looking, wrong-function specs.
+3. **Generate-k-and-filter** (items 24, 29): sample k specs, drop those contradicting an
+   example, cluster the rest by truth-vector — a free per-problem ambiguity score.
+4. **Never show the spec-writer a candidate program** (items 18, 30): tests written after
+   faulty code detect 14% of faults versus 25% written independently.
+5. **Emit a precondition too** (item 6): postcondition-only specs make verifiers raise
+   false alarms; with seven provers we are paying that tax.
+
+**Measure the spec, not just the conversion count.** Every serious paper here scores
+specs on **two axes** — soundness (accepts the intended behaviour) and
+completeness/discriminative power (rejects the wrong behaviour). Our observed failure is
+a *soundness* failure that the provers cannot see. Report soundness and completeness per
+round (items 5, 21, 22) and the number will say *which* thing improved.
+
+**Do not buy more reasoning tokens for this.** Item 26: more thinking improves code
+correctness but gives only marginal gains in identifying ambiguity.
+
+---
+
+## Repository shortlist
+
+| Repo | Language / licence | What to lift |
+|---|---|---|
+| https://github.com/msv-lab/SpecFix | Python, ASE 2025 artifact | Behavioural clustering of candidate programs for ambiguity detection; requirement-repair prompt sequence; pass@k + majority-vote eval harness |
+| https://github.com/ChuyueSun/Clover | Dafny + Python | The anti-vacuity **reconstruction** check; CloverBench |
+| https://github.com/sunblaze-ucb/verina | Lean 4 + Python | Spec **soundness/completeness** scoring pipeline (proving + testing combined); 189 curated tasks |
+| https://github.com/codespecs/daikon | Java, **MIT** | Invariant template library — the non-LLM control arm |
+| https://github.com/icetlab/CodePromptEval | Python, 7,072 prompts | Full-factorial prompt-technique experiment design + scripts |
+| https://github.com/jie-jw-wu/human-eval-comm | Python | Damaged-prose HumanEval variants; Communication Rate / Good Question Rate metrics |
+| https://zenodo.org/records/21089934 | data artifact | Faulty implementations + generated suites for the error-propagation study |
+
