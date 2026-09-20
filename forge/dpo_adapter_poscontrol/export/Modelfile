@@ -1,2 +1,0 @@
-FROM llama3:8b-instruct-q4_K_M
-ADAPTER C:\Users\user\srlm-forge\dpo_adapter_poscontrol\export\adapter.gguf

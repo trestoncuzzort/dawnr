@@ -1,3 +1,25 @@
+# forge, retired 2026-09-20: the parked items from the line that was closed
+
+`forge/` was this repository's first training pipeline, aimed at a different
+task (DPO on an 8B base over an SQL/AceCode task bank, graded by the twins it
+refutes). Its last real commit is 2026-09-01; nothing outside it ever imported
+it, and the locallm and t lines superseded it. The directory was removed from
+the working tree on 2026-09-20 and is in git history at `a736d82` if it is ever
+needed.
+
+This file is its OPEN-ITEMS list, kept because the traps it names are
+methodology rather than forge trivia, and this project keeps hitting them:
+a saturated ruler, a noise floor assumed instead of measured, a variance term
+with nowhere to live, and acceptance evidence aimed at a path production never
+takes. The specific file paths below point into the deleted tree and are left
+as written; they resolve in git history.
+
+The one piece of forge that is still load-bearing was inlined into
+`t/loop_train.py` before deletion: why a LoRA merge must happen in bf16 against
+the full-precision base and never the 4-bit one.
+
+---
+
 # OPEN ITEMS
 
 One line per parked thing: **why** it is parked and **where** the details live.

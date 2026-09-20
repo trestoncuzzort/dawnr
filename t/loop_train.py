@@ -2,9 +2,10 @@
 """loop_train.py -- QLoRA SFT and DPO on the base named by --model, over
 the examples and bugs loop_dataset.py built (default: Qwen2.5-Coder-1.5B).
 
-House pattern is forge/train_dpo.py (this repo's earlier DPO pipeline, for a
-different task): 4-bit base + a LoRA adapter over the attention and MLP
-projections, trained with trl's DPOTrainer. Two things differ on purpose:
+House pattern is a 4-bit base + a LoRA adapter over the attention and MLP
+projections, trained with trl's DPOTrainer. It came from forge/, this
+repository's earlier DPO pipeline for a different task, which was retired on
+2026-09-20; git history has it. Two things differ from it on purpose:
 
   - no unsloth. Nothing here imports unsloth or drives Ollama; the base
     loads through plain transformers + bitsandbytes + peft, and the model
@@ -12,10 +13,21 @@ projections, trained with trl's DPOTrainer. Two things differ on purpose:
   - no merge-free adapter-at-inference path. --export here MERGES the
     trained LoRA into the base in bf16 (peft's merge_and_unload) and saves
     that model, then hands it to llama.cpp's convert script if one is on
-    this box; forge/export_adapter.py's own comment explains why a 4-bit
-    base cannot be converted directly (bitsandbytes configs are not a
-    convert_hf_to_gguf.py quant method), which is exactly why the merge
-    happens in bf16 against the full-precision base, never the 4-bit one.
+    this box.
+
+    The reason the merge happens in bf16 against the FULL-PRECISION base and
+    never the 4-bit one, learned the expensive way in forge and kept here
+    because the trap is still live: a -bnb-4bit repo's config carries a
+    quantization_config key, and the converter reads the base CONFIG, so it
+    fails with
+
+        NotImplementedError: Quant method is not yet supported: 'bitsandbytes'
+
+    The converter does not need the base WEIGHTS, only its config, so the fix
+    is to hand it the unquantized twin's config rather than download 16 GB.
+    This stayed invisible until an 8B run because the one export on record
+    used a base that was already full precision: the acceptance evidence was
+    real and aimed at a path production never takes.
 
 The prompt is the model's OWN chat template applied to the recorded
 system+user messages (out/loop/pairs.jsonl's "prompt" list), rendered once
