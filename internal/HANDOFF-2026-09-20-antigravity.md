@@ -1,14 +1,37 @@
-# Handoff, written 2026-09-19 23:50, last updated 2026-09-20
+# Handoff for whoever picks this up next
 
-Claude access ends at midnight. This is the live state, what is running, what is
-half-finished, and the traps. Everything below was measured today unless it says
-otherwise. Read `AGENTS.md` first, then this.
+Written 2026-09-19 23:50, rewritten as the final version 2026-09-20. Read
+`AGENTS.md` first, then this. Everything here was measured unless it says
+otherwise, and where a number was wrong it says that too.
 
-Since the first version, the whole lab was run end to end on 24 problems to find
-what a day of changes had broken. It found two real bugs, both now fixed; the
-section "The regression run, 2026-09-20" has the results and the rules worth
-carrying forward. It found three bugs, not two; the third made every
-`grade_lab.sh <mode>` call since a6acacb exit 0 without grading anything.
+**State of the tree:** desktop and lab are both at the same commit, and the
+whole lab runs end to end: corpus, head alignment, training from the pretrained
+core, sharded generation on four cards, extract, tests, all seven kernels,
+`spec_check`, `spec_scorecard`, `preflight`. Verified 2026-09-20 on 24 problems.
+Suite is 418 tests with four known failures listed under "Known-failing".
+
+---
+
+## START HERE: the five things worth doing, in order
+
+1. **Finish `phi4-mini-g` and grade it.** 56 of 232 generated, never graded.
+   `/tmp/gen_phig.sh` on the lab, then `bash t/grade_lab.sh heldout phi4-mini-g`.
+   This is the single highest-value experiment available because it retires the
+   strongest objection to the headline: Phi decoding against `t/t.gbnf` cannot
+   emit unparseable output, so it answers "Phi has never seen t".
+2. **Grade `prover-train2`'s 450 answers and rebuild the pool.**
+   `bash t/grow_pool.sh prover-train2`. This is the only lever measured to move
+   the absolute number: its predecessor converted 31 of 88 graded cells into
+   clean answers.
+3. **Assemble the three seed arms' tables.** `bash t/finish_seeds.sh`. Answers
+   attack 3 (no seeds) and costs minutes, not GPU time.
+4. **Train the examples arm** — but run `t/example_holdout.py` first or the
+   result does not count. See "The examples arm" below.
+5. **A size curve.** 3.2M and 92M exist; 312M trains at 7,396 tokens a second on
+   one shared card. Three points on one recipe and one evaluator turn a tie into
+   a trend, which is the strongest available version of this project's claim.
+
+---
 
 ## The headline, and exactly how far it is supported
 
@@ -23,566 +46,296 @@ well formed, 6 tests passing, 3 clean. `t/out/evaluator-state-2026-09-19.json`
 records both machines' HEAD, dirty files and per-file hashes before and after,
 with `evaluator_stable: true`.
 
-**Three attacks on that claim, all fair, none yet answered:**
+**Three fair attacks on that claim. None is answered yet.**
 
-1. **3 of 232 is 1.3%.** Both models fail ~99% of the time. A tie at the floor
-   is a tie in noise. Fixing this means raising the absolute number, which
-   means more training data.
-2. **Phi has never seen t**, so 220 of its 232 answers do not parse. The arm
-   that answers this is `phi4-mini-g`, Phi decoding against `t/t.gbnf`, which
-   cannot emit unparseable output. **It is 56 of 232 generated and was never
-   graded.** Finishing it is the single highest-value experiment available.
-3. **No seeds.** Three arms exist to fix this and are described below.
+1. **3 of 232 is 1.3%.** Both models fail about 99% of the time, and a tie at
+   the floor is a tie in noise. Fixing it means raising the absolute number,
+   which means more training data. That is item 2 above.
+2. **Phi has never seen t**, so 220 of its 232 answers do not parse. `phi4-mini-g`
+   answers this and is 56 of 232 generated, never graded. Item 1 above.
+3. **No seeds.** Three arms exist to fix this and are fully generated. Item 3.
 
-The README states all three caveats next to the number. Do not remove them
-without the measurement that retires them.
+`README.md` states all three next to the number. **Do not remove them without
+the measurement that retires them.**
 
-## What is running: one job, and it finishes on its own
+---
 
-`/tmp/finish_tables.sh` is running detached on the lab, assembling the three
-seed arms' `kernels.md` from their cached cells. It touches
-`~/tup/t/out/tables.done` when finished and logs to `t/out/finish-tables.log`.
-It is re-running the SPARK cells it has to, so expect tens of minutes. **When it
-is done, that is attack 3 answered**: copy each
-`/dev/shm/tup-grade/<tag>/kernels.md` to
-`t/out/spec-experiment/<tag>/kernels.md` on the desktop, then spec-check and
-score as described below. If `/dev/shm` was cleared by a reboot, the 232 answers
-per arm still exist and `bash t/grade_lab.sh heldout <tag>` regrades them.
+## Traps. Read this section even if you read nothing else
 
-## What else was running: nothing. The long runs were stopped deliberately
+Each one cost real time or silently corrupted a result.
 
-Killed at 23:45 at the operator's request, with their partial output kept:
+1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently without
+   `-f`. Three findings documents cited tables that were not in the repository
+   until this was caught.
+2. **`run_par.py` needs a LOGIN shell on the lab, or Verus silently reads
+   `malformed`.** `grade_lab.sh` uses `bash -lc '...'` for exactly this: Verus
+   needs rustup on `PATH` and a plain `ssh host 'python3 t/run_par.py ...'` does
+   not source the profile. The cell then reads `malformed`, indistinguishable
+   from a lowering that really is malformed. Measured both ways on `t/nested`:
+   without the login shell, `verus malformed/malformed` and DISAGREEMENT; with
+   it, all seven agree.
+3. **`set --` in a shell script replaces the positional parameters**, and it bit
+   twice in one day. `t/gen_fleet.sh` threw away the caller's decoding flags
+   until `75a43fa`, so any fleet set older than that was decoded with defaults
+   whatever its log says. `t/grade_lab.sh` overwrote its own mode argument until
+   `042e35c`, so every `grade_lab.sh <mode>` call after `a6acacb` **exited 0
+   having graded nothing**. Use `read -r`.
+4. **Adding a head to a training document breaks a reader that does not know
+   it.** Three times now, costing 216, then an unknown number, then 24 answers.
+   Put the head in `loop_filter.HEAD_LINE` and nowhere else, and make every
+   reader call `loop_filter.strip_head`. `t/test_head_handling.py` enforces it.
+5. **Do not overlap GPU generation with grading.** Ten generation workers plus a
+   7B model plus 32 grading cells put the load average at 80 on a 120-core box
+   shared with another user, and the ssh carrying the grading died.
+6. **`pkill -f <pattern>` matches your own command line.** It killed my ssh
+   sessions twice. Use a bracket: `pkill -f "name[.]sh"`.
+7. **A sentinel a wrapper touches after `wait` means "the process exited", not
+   "the work finished".** Killing a generator let its wrapper touch the
+   sentinel, and two chains scored partial answer sets.
+8. **Lean flakes under contention.** `t/RECHECK-lean-2026-09-19.md`: 26 cells
+   re-run alone, **17 changed their mind**, and every one of the 26 is Lean. It
+   reports `unproved` on answers it proves in 0.0 to 16.6 seconds by itself.
+   This is why `preflight.py` refuses a clean answer resting on a flaked cell
+   and why `grade_lab.sh` sizes its cells to the machine.
+9. **`grade_lab.sh` runs FROM the desktop and ssh's in.** Running it on the lab
+   gives `T_LAB: set T_LAB=user@host`, which looks like missing config. It is
+   not; you are on the wrong machine.
+10. **A tool that cannot run reports something that looks like a verdict.** Two
+    instances in one day: Verus above, and the pre-completeness metric below
+    scoring a confident `0.000` on answers where the reference never ran.
+    Demand a concrete witness before believing an aggregate.
 
-- `prover-train2`: **450 of 2,354** training problems answered by
-  DeepSeek-Prover-V2-7B, prompt v4, pool v5. Resumable: a problem with a record
-  on disk is never re-asked. Restart with `/tmp/gen_prover2.sh` on the lab, or
-  the command inside it. **These 450 are ungraded and are the fastest path to a
-  bigger pool**: its predecessor `prover-train` converted 31 of 88 graded cells
-  into clean answers.
-- `phi4-mini-g`: 56 of 232, same resumability, `/tmp/gen_phig.sh`.
+---
 
-## Half-finished, and the exact state
+## Work stopped mid-flight, and how to resume each
 
-**Three seed arms are fully generated and partly graded.** `locallm-r9` (heads
-on the specification-checked pool), `locallm-r9-seed7` and `locallm-r9-seed42`
-(same recipe from the other two pretrained cores) each have 232 of 232 answers
-in `t/out/spec-experiment/<tag>/raw` on the lab.
+| what | where it stopped | how to pick it up |
+|---|---|---|
+| **`phi4-mini-g`** | 56 of 232 generated, never graded | `/tmp/gen_phig.sh` on the lab (skips answered problems), then grade. Retires attack 2 |
+| **`prover-train2`** | **450 of 2,354** answered, ungraded | `bash t/grow_pool.sh prover-train2`; resume generation with `/tmp/gen_prover2.sh` |
+| **three seed arms** | 232/232 generated, cells computed, `kernels.md` never assembled | `bash t/finish_seeds.sh`. If `/dev/shm` was cleared by a reboot, the answers survive and `bash t/grade_lab.sh heldout <tag>` regrades |
+| **the examples arm** | implemented, corpus built, never trained | `t/out/loop/corpus-ex-headed.txt` exists; commands at the end of `internal/RESEARCH-NEXT-2026-09-20.md`. Run the holdout split first |
 
-Their kernel cells were computed into `/dev/shm/tup-grade/<tag>/kernels/` but
-**`kernels.md` was never assembled**, because the ssh session carrying
-`grade_lab.sh` timed out when I overloaded the box. The cells are cached, so
-re-running the driver over the same directory assembles the table without
-redoing the proofs:
+The seed arms' cells are cached, so re-running the driver over the same
+directory assembles the table without redoing the proofs:
 
 ```bash
-cd ~/tup && python3 t/run_par.py --jobs 24 \
+cd ~/tup && bash -lc 'python3 t/run_par.py --jobs 24 \
   --tasks /dev/shm/tup-grade/locallm-r9/tasks \
   --out   /dev/shm/tup-grade/locallm-r9/kernels \
-  --table /dev/shm/tup-grade/locallm-r9/kernels.md
+  --table /dev/shm/tup-grade/locallm-r9/kernels.md'
 ```
 
 Then copy each `kernels.md` to `t/out/spec-experiment/<tag>/kernels.md` on the
 desktop, run `python3 t/spec_check.py <tags> --pool v5 --n 100 --only clean`,
-and `python3 t/score_heldout.py ...`. **/dev/shm does not survive a reboot.**
-If it is gone, the answers still exist and `bash t/grade_lab.sh heldout <tag>`
-regrades from scratch.
+then `t/score_heldout.py`. Predictions for round 8 are in
+`t/PREDICT-2026-09-19-round8.md`; **the seed arms have no registration, and
+someone should write one before reading their numbers.**
 
-Predictions for these arms are registered in
-`t/PREDICT-2026-09-19-round8.md`; the seed arms themselves were launched to
-answer attack 3 and have no separate registration, which someone should write
-before reading their numbers.
+Scripts in `/tmp` do not survive a reboot. The two that matter are committed:
+`t/finish_seeds.sh` and `t/grow_pool.sh`.
 
-## What worked today, in order of how much it mattered
+### The examples arm has a blocker
 
-1. **The header.** Giving every training document the signature its own program
-   declares took signature failures from 40.8% to 12.1% and turned 2 clean into
-   3. `t/head_align_corpus.py`, `t/out/loop/corpus-r8-headed.txt`.
-2. **Greedy decoding.** Temperature 0 instead of 0.5, same checkpoint: well
-   formed 136 to 149, clean 1 to 2, free.
-3. **The specification check nobody had run.** The training gate was refusing
-   246 answers that had passed their tests and all seven verifiers because
-   `spec_check.py` had never been run on them. Running it over 34 tags took
-   minutes and took the pool from 87 preference pairs to **733**.
-   `t/SPEC-CHECK-2026-09-19.md`.
-4. **Sharded generation, roughly 12x.** One problem at a time on one card
-   leaves a 48 GB card 97% idle. Split the held-out list into four chunks
-   (`t/out/loop/eval-chunk{0..3}.txt`) and run a worker per chunk per card;
-   workers skip answers already on disk, so no coordination is needed. Three
-   arms generated in about ten minutes.
+`t/example_holdout.py` implements SpecBench's visible/held-out split
+([arXiv:2605.21384](https://arxiv.org/abs/2605.21384)) and its null distribution
+is measured at −1.65 to +0.00 points. **Run it on the examples arm or that arm's
+result cannot be distinguished from gaming**, because the gap grows 28 points
+per 10× code size. Anything a model is given, every model it is compared against
+must also be given: a held-out comparison run with examples has to regrade its
+baselines with examples.
 
-## What did not work, so nobody repeats it
+---
+
+## The specification scorecard
+
+    python3 t/spec_scorecard.py --tag <answer-set> [--tag ...]
+
+Prints Spec-Harness / vACT's four quadrants
+([arXiv:2604.00280](https://arxiv.org/abs/2604.00280)). Measured on four graded
+arms:
+
+| population | post-correctness | post-completeness | pre-correctness |
+|---|---:|---:|---:|
+| clean | **1.000** everywhere | 1.000, except r4 at **0.500** | 1.000 |
+| proven but wrong | **0.000–0.034** | **0.712–0.932** | 0.980–1.000 |
+
+Read it as: the specifications behind proven-but-wrong answers are mostly
+*complete* (they reject wrong answers) and almost never *correct* (they do not
+hold at the problem's own examples). **Wrong, not weak.** Over-constraint is
+essentially absent. The one clean answer at 0.500 post-completeness is the
+whitespace specification that returning nothing satisfies.
+
+**pre-completeness is measured as of 2026-09-20** and the reason it was not
+turned out to be wrong. It needs no shipped negatives: the problem's own
+reference solution is the oracle for the problem's DOMAIN exactly as it already
+is for its outputs, so an input the reference refuses to compute is one the
+problem does not define. The signal was being drawn in `check_task` and thrown
+away by a line reading "the reference refuses this input; not a finding".
+
+**Read `locallm/FINDINGS-pre-completeness-2026-09-20.md` before quoting that
+column.** Its first version reported Phi's clean answers at 0.000 against a
+27B's 0.455 — a differentiator, and an artifact. t represents a string as a
+sequence of ints, the corpus's Python solutions want a `str`, and 54 of 97
+measurements came from a reference that never ran. Probes now count only where
+the reference is known to run. Honest result: **nine answers of 180 have a
+measurable domain boundary**, so this corpus has almost no signal in this
+quadrant. Rates print with the count under them; `0.000/1` is one answer.
+
+**Where that quadrant would bite:** APPS and CodeContests carry explicit input
+constraints in their statements, are already on disk in `nl/data/`, and the spec
+pipeline does not use them.
+
+---
+
+## What to apply from the literature
+
+About 4,000 lines and 287 references across five files in `internal/research/`,
+plus 77 repositories catalogued. Reading them all is not the point; this table
+is. Everything is CPU-only unless noted.
+
+| apply this | from | to this repo |
+|---|---|---|
+| **k-sample agreement as an ambiguity detector** | VeriMed, [arXiv:2605.13817](https://arxiv.org/html/2605.13817v1) | sample k specs for one problem, check them against each other with the seven provers, treat disagreement as a located ambiguity with a witness. Their repair ladder is 55.4% → 80.0% → **98.5%** as feedback goes none → textual → counterexample: the strongest argument in the corpus for feeding witnesses back rather than prose |
+| **visible vs held-out gap** | SpecBench, [arXiv:2605.21384](https://arxiv.org/abs/2605.21384) | built as `t/example_holdout.py`. **Blocker on the examples arm** |
+| **bidirectional equivalence against the reference** | CLEVER [arXiv:2505.13938](https://arxiv.org/abs/2505.13938), VeriEquivBench [arXiv:2510.06296](https://arxiv.org/abs/2510.06296) | **not built.** Prove both `spec(x, ref(x))` and `∀y. spec(x,y) → y = ref(x)` with each of the seven. The second half is the tightness check we lack |
+| **verifier feedback into a knowledge base, not weights** | KBSpec, [arXiv:2606.21339](https://arxiv.org/abs/2606.21339) | **not built, and the right shape for us**: t is out-of-distribution for every model, and this reports **14–32%** better verification pass rates with no fine-tuning |
+| **mutate the candidate spec, keep variants that still verify** | SpecGen, [arXiv:2401.08807](https://arxiv.org/abs/2401.08807) | **not built.** A repair loop rather than a gate: when a spec fails `check_points`, mutate and retry instead of discarding. 279/385 verifiable vs 247 for the best prior method |
+| **provers as each other's reference** | verifier fuzzing, [arXiv:2606.01066](https://arxiv.org/abs/2606.01066) | **not built**, and we are unusually well placed: seven independent provers, so any disagreement is a spec defect or a prover defect. The disagreement rate is a free integrity metric |
+| **checkpoint specs at internal program points** | SpecCoder, [arXiv:2607.04232](https://arxiv.org/abs/2607.04232) | **not built.** Our interpreter already emits per-statement states, so intermediate assertions cost nothing. Reported +55.8% spec correctness, +358.1% completeness |
+| **isomorphic perturbation** | [arXiv:2604.15149](https://arxiv.org/abs/2604.15149) | **not built.** Rename every identifier and regenerate: a spec that only works under the original naming was keyed to surface cues. Needs generation, so GPU |
+| **spectests: implementation-impossible negatives** | SpecRL, [arXiv:2604.05820](https://arxiv.org/abs/2604.05820) | primitive built as `spec_check.mutations`. Their +26.46% came from **rewarding rejection rate during training**, the step not taken |
+| **discriminative example choice** | TiCoder, [arXiv:2208.05950](https://arxiv.org/abs/2208.05950) | built as `loop_locallm.discriminative` |
+| **third consistency edge** | Clover, [arXiv:2310.17807](https://arxiv.org/abs/2310.17807), [repo](https://github.com/ChuyueSun/Clover) | built as `spec_check.check_points` |
+| **exploit model** | AlphaVerus, [arXiv:2412.06176](https://arxiv.org/abs/2412.06176) | built as `spec_check.exploit` |
+| **admissibility leg** | VERINA [arXiv:2505.23135](https://arxiv.org/abs/2505.23135), CLEVER | built 2026-09-20 as `check_task`'s pre-completeness |
+| **RLVR at small scale and its failure modes** | `internal/research/verifier-feedback-training.md` | **read before any RL.** It collects the wins *and* the papers reporting verifier-filtered training did not help, plus the work showing a noisy verifier makes RL worse than none |
+
+**Order I would take them in:** SpecBench's gap check (already a blocker), then
+CLEVER/VeriEquivBench tightness (upgrades a check that already earns its keep),
+then KBSpec (the only item addressing out-of-distribution without a training
+run). Everything else waits on a GPU.
+
+Repositories worth reading first, from `internal/research/repos-verification.md`:
+**Vericoding** ([Beneficial-AI-Foundation/vericoding](https://github.com/Beneficial-AI-Foundation/vericoding),
+flagged as the single most relevant repo found), **Clover**, **DafnyBench**,
+**dafny-synthesis** ([Mondego/dafny-synthesis](https://github.com/Mondego/dafny-synthesis),
+the MBPP-DFY source this project lifts from), and **AutoVerus**
+([microsoft/verus-proof-synthesis](https://github.com/microsoft/verus-proof-synthesis)).
+
+**The rule about research agents:** one finished, returned a 30-paper report and
+**never wrote its file**; it was recovered by hand. Every later agent was told to
+append to disk after each item. **An agent's return value is not a deliverable;
+a file is.**
+
+---
+
+## What was measured and did not work, so nobody repeats it
 
 - **A cleaner pool did not help.** `locallm-r8` trained on 79 examples that are
-  verified, twin-refuted and confirmed to specify the right problem, replacing
-  a pool containing 28 that disagree, and scored exactly what the same recipe
+  verified, twin-refuted and confirmed to specify the right problem, replacing a
+  pool containing 28 that disagree, and scored exactly what the same recipe
   scored before.
 - **A shorter training schedule is worse.** `locallm-r7b-step150`: 92 well
   formed, 0 clean.
 - **The synthetic composition curriculum is a dead end at this scale.** Three
   seeds scored 0, 2 and 0 of 323 held-out tasks, and 0 of 203 three-stage tasks
-  at every seed. `locallm/FINDINGS-learnability-2026-09-19.md`.
+  at every seed.
 - **The latent/execution factorial produced no synthesis gain**, and its own
   instrument was wrong: 38 of 38 correct answers sat on tasks a shorter program
-  already passed. `t/audit_collapsible.py` is the check;
-  `locallm/FINDINGS-factorial-2026-09-19.md` is the write-up.
-
-## Engine fixes made after the runs stopped, 2026-09-19 late
-
-Five silent failures, each of which had already cost a round. All committed,
-all verifiable without a GPU.
-
-| file | what was silently wrong |
-|---|---|
-| `t/spec_check.py` | crashed on its last line when `--out` was relative, **after** writing the report: work done, exit code nonzero |
-| `t/loop_locallm.py` | the corpus splitter knew `Problem:` heads and bare programs, not `Signature:` heads, so a headed corpus passed as `--base` merges documents |
-| `t/loop_filter.py` | same splitter gap, plus a head stripper that removed only `Problem:`/`Signature:` lines, so an `Example:` line made `surface.parse` fail and the document vanish from the copy check inside `except Exception: pass` |
-| `.gitignore` | `t/out/` hid the scoreboard tables, so `git add t/out/score-r8.md` failed silently and three findings cited files the repo did not contain. Negations added for `score-*.md`, `evaluator-state-*.json`, `capacity-*.json` |
-| `t/grade_lab.sh` | `git pull --ff-only \|\| true` is how the grading machine ran 19 commits behind with 109 dirty entries while every log line looked normal. It now prints the HEAD and dirty count it is actually grading with |
-
-`t/test_head_handling.py` fails if a new head line is added without teaching
-the stripper, both splitters and the aligner. That mistake has been made three
-times; the test is there so it is made zero more.
-
-## Optimizations made after the runs stopped
-
-| change | what it buys |
-|---|---|
-| `t/gen_fleet.sh` | the measured **12x** on generation, permanently: shards the held-out list stride-wise, a worker per shard per card, no coordination because answers already on disk are skipped, sentinel written **only on success** |
-| `t/loop_locallm.py --use-cache` | the KV cache this project built and verified correct was unreachable from the pipeline; every generation has been decoding 1200 tokens an answer without it. Off by default, **unmeasured on this path**, prediction to register in the help text |
-| `t/preflight.py` | reads the grading machine's HEAD and dirty count and says when it is not this tree. It found the drift on its first run |
-| `t/grade_lab.sh` | reads load, cores and our own running workers before choosing cell count, instead of always taking 32. A SPARK cell averages 3.4 cores, so cells are the budget |
-| four `t/steps.json` entries | the fleet, both recovery scripts and the examples corpus, drivable from t Lab |
-
-**`t/spec_check.py` was considered for parallelism and deliberately left
-serial.** One `random.Random(seed)` is threaded through every task in order, so
-task N's arguments depend on tasks 1..N-1. That is what makes a seed reproduce a
-report, and it means any concurrency changes the verdicts. Its output is cited
-evidence, including the figure in the README and the file the training gate
-reads. The safe route is per-task seeding from the task's own hash, which is a
-change to the instrument and needs every report regenerated and the change
-registered. The reasoning is written at the line someone would edit.
-
-## The CPU-side optimization scan
-
-`internal/OPTIMIZATION-SCAN-2026-09-20.md` has the full version with a paper
-cited for every issue. The short form:
-
-- **Fixed.** The corpus was re-tokenized at every training start: 104.6 s for
-  48.8M tokens of frozen text, about 9% of each arm's wall clock, paid again on
-  every resume. `locallm/data.py:cached_encode` makes it **1.6 s** with
-  identical ids, keyed on the text hash and the tokenizer fingerprint together.
-  Set `LOCALLM_TOKEN_CACHE=~/.cache/locallm-tokens` to turn it on; it is off by
-  default so no existing command changes by upgrading.
-- **Do not bother with a SPARK prover portfolio.** `spark.py:350-365` already
-  proved with `strace` that the prover is not the cost: 93 obligations at "max
-  0.0 seconds" against 111 serially-launched processes. The `-j` fix landed
-  2026-09-19 and is the right one.
-- **Do not bother parallelizing extract and tests.** Measured at 1.2 s and
-  1.06 s for a 232-answer set.
-- **Worth doing, with CPU hours:** deploy the verdict cache to the grading
-  machine, which has never had it (`grep -c "import cache"` returns 0 there),
-  after its three-table bar passes. And replace wall-clock backstops with
-  CPU-time limits, after re-measuring the affected column cell for cell.
-
-**Standing rule from the operator, 2026-09-20:** search for a paper before
-fixing anything, cite it in the code and the commit, and say so plainly when no
-paper exists rather than implying one does.
-
-## PICK UP HERE: dead workflows, dead agents, and live files
-
-### Research agents, and the lesson from one that died badly
-
-Five literature agents were run. **One finished, returned a 30-paper report, and
-never wrote its file**, because the instruction to save incrementally reached it
-too late. Its report was recovered by hand into
-`internal/research/nl-to-spec.md`. Every later agent was told to append to disk
-after each item, which is the rule to keep: **an agent's return value is not a
-deliverable; a file is.**
-
-Files in `internal/research/`, each standing on its own:
-
-| file | lane | state |
-|---|---|---|
-| `nl-to-spec.md` | generating a spec from intent | complete, 30+ papers, recovered by hand |
-| `intent-from-examples.md` | pinning intent with examples and tests | agent was still appending when the session ended |
-| `repos-verification.md` | open-source repos and benchmarks | agent was still appending |
-| `verifier-feedback-training.md` | RL/filtering from verifier signal | agent was still appending |
-| `spec-validation.md` | validating and repairing specs | **may not exist**: that agent had not written anything yet |
-
-If a file is short or missing, that agent died before finishing. Nothing is
-lost that was written; re-run the same lane if you want more.
-
-### The five papers to act on first
-
-From `nl-to-spec.md`, ranked for this repo:
-
-1. **VeriMed** ([arXiv:2605.13817](https://arxiv.org/html/2605.13817v1)) — sample
-   k specs, check pairwise equivalence, treat disagreement as ambiguity with a
-   concrete witness. Their repair ladder is 55.4% → 80.0% → **98.5%** as feedback
-   goes from none to textual to counterexample. We have seven provers to do the
-   pairwise check with.
-2. **SpecRL** ([arXiv:2604.05820](https://arxiv.org/abs/2604.05820)) — spectests:
-   negatives built from *implementation-impossible* outputs. +26.46% relative
-   completeness. Our `spec_check.mutations` is the same primitive already built.
-3. **SpecBench** ([arXiv:2605.21384](https://arxiv.org/abs/2605.21384)) — split
-   the problem's own assertions into visible and held-out and report the gap.
-   **This must be done before the examples arm runs**, or that arm cannot be
-   distinguished from gaming: the gap grows 28 points per 10x code size.
-4. **CLEVER** ([arXiv:2505.13938](https://arxiv.org/abs/2505.13938)) — spec
-   compile 71-87% against spec prove 0.62-1.86%; the sharpest "compiles is not
-   correct" datum there is.
-5. **Clover** ([arXiv:2310.17807](https://arxiv.org/abs/2310.17807),
-   [repo](https://github.com/ChuyueSun/Clover)) — already applied, see below.
-
-### How to apply what was fetched
-
-Roughly 4,000 lines and 287 references across five files in
-`internal/research/`. Reading them all is not the point; this table is what to
-do with them. Everything below is CPU-only unless it says otherwise.
-
-| apply this | from | to this repo |
-|---|---|---|
-| **k-sample agreement as an ambiguity detector** | VeriMed, [arXiv:2605.13817](https://arxiv.org/html/2605.13817v1) | sample k specs for one problem, check them against each other with the seven provers, and treat disagreement as a located ambiguity with a witness input. Their repair ladder is 55.4% → 80.0% → **98.5%** as feedback goes none → textual → counterexample, which is the strongest argument in the whole corpus for feeding witnesses back rather than prose |
-| **spectests: negatives that no implementation could produce** | SpecRL, [arXiv:2604.05820](https://arxiv.org/abs/2604.05820) | already built as `spec_check.mutations`. Their +26.46% relative completeness came from *rewarding* rejection rate during training, which is the step we have not taken |
-| **visible vs held-out gap** | SpecBench, [arXiv:2605.21384](https://arxiv.org/abs/2605.21384) | built as `t/example_holdout.py`, null distribution measured at −1.65 to +0.00 points. **Run it on the examples arm or that arm's result does not count** |
-| **discriminative example choice** | TiCoder, [arXiv:2208.05950](https://arxiv.org/abs/2208.05950) | built as `loop_locallm.discriminative`. Their ~46% relative pass@1 came from *interactive* selection; ours is free because the ground truth is already on disk |
-| **third consistency edge** | Clover, [arXiv:2310.17807](https://arxiv.org/abs/2310.17807), [repo](https://github.com/ChuyueSun/Clover) | built as `spec_check.check_points`; catches 62–88% of proven-but-wrong with zero false positives |
-| **bidirectional equivalence against the reference** | CLEVER [arXiv:2505.13938](https://arxiv.org/abs/2505.13938), VeriEquivBench [arXiv:2510.06296](https://arxiv.org/abs/2510.06296) | not built. Prove both `spec(x, ref(x))` and `∀y. spec(x,y) → y = ref(x)` with each of the seven. The second half is the tightness check we lack, and it is the rigorous end of what `check_points` does cheaply |
-| **mutate the candidate spec and keep variants that still verify** | SpecGen, [arXiv:2401.08807](https://arxiv.org/abs/2401.08807) | not built. A repair loop rather than a gate: when a spec fails `check_points`, mutate it and retry instead of discarding the answer. 279/385 verifiable vs 247 for the best prior method |
-| **verifier feedback into a knowledge base, not into weights** | KBSpec, [arXiv:2606.21339](https://arxiv.org/abs/2606.21339) | not built, and the right shape for us: t is out-of-distribution for every model, and this gets **14–32%** better verification pass rates with no fine-tuning at all |
-| **isomorphic perturbation** | [arXiv:2604.15149](https://arxiv.org/abs/2604.15149) | not built. Rename every identifier in a problem and regenerate: a spec that only works under the original naming was keyed to surface cues. Needs generation, so it is a GPU item |
-| **provers as each other's reference** | verifier fuzzing, [arXiv:2606.01066](https://arxiv.org/abs/2606.01066) | not built, and we are unusually well placed: seven independent provers, so any task where they disagree is either a spec defect or a prover defect. The disagreement rate is a free integrity metric |
-| **checkpoint specs at internal program points** | SpecCoder, [arXiv:2607.04232](https://arxiv.org/abs/2607.04232) | not built. Our interpreter already emits per-statement states, so assertions at intermediate points cost nothing. Reported +55.8% spec correctness, +358.1% completeness |
-| **RLVR at small scale, and its failure modes** | `verifier-feedback-training.md` | read before any RL: it collects both the wins and the papers reporting that verifier-filtered training did **not** help, plus the systematic-verification-error work that says a noisy verifier makes RL worse than none |
-
-Repositories worth reading before writing anything new, from
-`repos-verification.md`: **Vericoding**
-([Beneficial-AI-Foundation/vericoding](https://github.com/Beneficial-AI-Foundation/vericoding),
-flagged by the fetching agent as the single most relevant repo found),
-**Clover** ([ChuyueSun/Clover](https://github.com/ChuyueSun/Clover)),
-**DafnyBench** ([sun-wendy/DafnyBench](https://github.com/sun-wendy/DafnyBench)),
-**dafny-synthesis** ([Mondego/dafny-synthesis](https://github.com/Mondego/dafny-synthesis),
-the MBPP-DFY source this project already lifts from), and
-**AutoVerus** ([microsoft/verus-proof-synthesis](https://github.com/microsoft/verus-proof-synthesis)).
-
-**The order I would take them in:** SpecBench's gap check is already a blocker
-on the next run. Then Clover's tightness half (CLEVER/VeriEquivBench), because
-it upgrades a check that already earns its keep. Then KBSpec, because it is the
-only item that addresses t being out-of-distribution without a training run.
-Everything else waits on a GPU.
-
-### One command that summarises specification quality
-
-    python3 t/spec_scorecard.py --tag <answer-set> [--tag ...]
-
-Prints Spec-Harness / vACT's four quadrants
-([arXiv:2604.00280](https://arxiv.org/abs/2604.00280)) from instruments built
-2026-09-20. Measured on four graded arms:
-
-| population | post-correctness | post-completeness | pre-correctness |
-|---|---:|---:|---:|
-| clean | **1.000** everywhere | 1.000, except r4 at **0.500** | 1.000 |
-| proven but wrong | **0.000-0.034** | **0.712-0.932** | 0.980-1.000 |
-
-Read it as: the specifications behind proven-but-wrong answers are mostly
-*complete* — they reject wrong answers — and almost never *correct*, because
-they do not hold at the problem's own examples. Wrong, not weak. Over-constraint
-is essentially absent. The one clean answer at 0.500 post-completeness is the
-whitespace specification that returning nothing satisfies.
-
-**pre-completeness is measured as of 2026-09-20**, and the reason it was not
-turned out to be wrong. It does not need shipped negatives: the problem's own
-reference solution is the oracle for the problem's DOMAIN exactly as it already
-is for its outputs, so an input the reference refuses to compute is one the
-problem does not define, and a `requires` that still admits it is claiming
-ground the problem never gave it. The signal was already being drawn in
-`check_task` and thrown away by a line reading "the reference refuses this
-input; not a finding".
-
-**Read the findings before quoting the column**
-(`locallm/FINDINGS-pre-completeness-2026-09-20.md`). The first version of it
-reported Phi's clean answers at 0.000 against a 27B's 0.455, which is a
-differentiator and an artifact: t represents a string as a sequence of ints, the
-corpus's Python solutions want a `str`, and 54 of 97 measurements came from a
-reference that never ran at all. Probes now count only where the reference is
-known to run.
-
-Honest result: **nine answers of 180 have a measurable domain boundary**, so
-this corpus has almost no signal in this quadrant. Every rate prints with the
-count under it (`0.000/1` is one answer). The instrument is ready and the corpus
-is the limit; APPS and CodeContests carry explicit input constraints, are
-already on disk in `nl/data/`, and the spec pipeline does not use them yet.
-That is the obvious next move if this quadrant matters.
-
-### Work stopped mid-flight, and how to resume each
-
-| what | where it stopped | how to pick it up |
-|---|---|---|
-| **three seed arms** | 232/232 generated, kernel cells computed, `kernels.md` never assembled | `bash t/finish_seeds.sh`; if `/dev/shm` was cleared, `bash t/grade_lab.sh heldout <tag>` regrades from the answers, which survive |
-| **prover-train2** | **450 of 2,354** training problems answered, ungraded | `bash t/grow_pool.sh prover-train2`; resume generation with `/tmp/gen_prover2.sh` on the lab, which skips answered problems |
-| **phi4-mini-g** | 56 of 232 generated, never graded | `/tmp/gen_phig.sh` on the lab, then grade. **This retires the strongest objection to the tie**: Phi decoding against our grammar cannot emit unparseable output |
-| **the examples arm** | implemented and corpus built, never trained | `t/out/loop/corpus-ex-headed.txt` exists; the four commands are at the end of `internal/RESEARCH-NEXT-2026-09-20.md`. Do SpecBench's visible/held-out split first |
-| **`/tmp/finish_tables.sh`** | was assembling seed tables when the session ended | check `~/tup/t/out/tables.done` on the lab; `finish_seeds.sh` waits for exactly that |
-
-Scripts in `/tmp` do not survive a reboot. The two that matter are committed:
-`t/finish_seeds.sh` and `t/grow_pool.sh`.
-
-### What was applied from the literature, and what it measured
-
-**Clover's third consistency edge** ([arXiv:2310.17807](https://arxiv.org/abs/2310.17807),
-[ChuyueSun/Clover](https://github.com/ChuyueSun/Clover)) reduces correctness to
-consistency between code, docstring and annotation. This repo had two of the
-three edges; `t/spec_check.check_points` adds the missing one by evaluating the
-model's `ensures` at the problem's own assertions. It catches **62%, 27% and 88%**
-of the proven-but-wrong population in three arms and **fired on none of the
-eleven clean answers across four sets**.
-
-And the hypothesis it replaced was falsified first. Weakness is rare and
-wrongness dominates: across 1,295 wrong answers tested against 14 scored
-specifications, **1 was weak**. The other failure mode is specs that are flatly
-false at the problem's own solution, such as a predicate problem specified as
-`r == x + 1`.
-
-Be careful with this one, because I got it wrong first. The original claim here
-was "not one weak specification", and widening the search found one: a
-maximum-of-three problem missing `r >= c`, which still rejected 345 of 350 wrong
-answers. Nearly tight, and the miss is in the one direction that matters. The
-lesson is that a zero found by a search is a property of the search.
-`locallm/FINDINGS-completeness-2026-09-20.md` carries the correction at its
-head and the case at its end.
-
-## The regression run, 2026-09-20: what it proved and the three bugs it found
-
-Everything above was written and changed in one day, so before handing it over I
-ran the whole lab end to end on 24 problems, GPU generation and CPU grading, to
-find what the day had broken. **Run this again after any change to the
-readers.** It is cheap and it caught three real bugs, all three of which
-reported success while doing nothing.
-
-What passed, and these are the claims you may rely on:
-
-| check | result |
-|---|---|
-| syntax, 17 Python files + 4 shell scripts | all parse |
-| `t/` unit tests | **75 OK** |
-| `locallm/` unit tests | **31 OK** |
-| `spec_check.py` against the previous round's verdicts | **26 agree / 2 disagree / 3 uncheckable, an exact match**, no drift |
-| token cache on / off | **bit-identical**: 50,142 tokens, losses equal to 16 digits |
-
-**Bug 1, fixed (`75a43fa`).** `t/gen_fleet.sh` did `set -- $CARDS` to iterate the
-cards, which replaces the positional parameters, so `"$@"`, holding every extra
-flag the caller passed (`--temperature 0`, `--examples`), was silently gone by the
-time the workers were launched. Every fleet generation since the script was
-written ran with **default decoding regardless of what was asked for**. Fixed by
-saving `EXTRA=("$@")` before the card loop. If you have fleet-generated answer
-sets whose flags mattered, they were not generated with those flags.
-
-**Bug 2, fixed (`f191fab`).** The examples-trained model learned what its own
-training documents look like: they *start* with `Example:` lines. All 24 replies
-opened with `Example: ...` before `t 1`, and all 24 failed to extract:
-`extract: 24 replies; parse 24`, every answer lost. The answer splitter cuts at
-the *next* document and so never looked at a head in front of *this* one.
-
-**Verified on the lab after the fix, not just by unit test:** the same 24
-problems regenerated and re-extracted at `e8bd14a` give **0 of 24 replies
-opening with a head**, against 24 of 24 before, and extraction goes from 0
-usable answers to **9** (`extract: 24 replies; parse 10, task 9, wf 5`, where
-`task` is the stage that means a task file was written). The 15 that still fail
-are a 150-step smoke model writing bad programs, which is expected and is a
-different problem.
-
-This is the **third** time the same family has bitten, and it is worth naming
-because a fourth is likely. *A corpus format grew and one reader did not know.*
-First the answer splitter (216 of 232 unparseable), then the copy check's
-stripper (documents dropped in silence), now the extractor's input. The fix was
-not a third copy of the pattern. `cmd_generate` now calls
-`loop_filter.strip_head`, the one stripper that knows every head this project
-writes. `t/test_head_handling.py` asserts that call is present, so a new reader
-cannot be written without one.
-
-**The rule this leaves you:** if you add a head to a training document, add it to
-`loop_filter.HEAD_LINE` and nowhere else, and make every reader call
-`strip_head`. The test file exists to enforce exactly that.
-
-**Bug 3, fixed (`042e35c`), and the worst of the three.** With bugs 1 and 2
-fixed the run reached grading, and `bash t/grade_lab.sh heldout locallm-smoke`
-printed its load line, exited **0**, and produced no table. `bash -x` found it:
-the load guard added in `a6acacb` does `set -- $BUSY` to split the machine
-reading, `set --` replaces the **positional parameters**, and this script's mode
-is `$1`. So `heldout` became `8.69`, the `case` matched no branch, and the
-script fell off the end reporting success.
-
-Every `grade_lab.sh <mode>` call between `a6acacb` and today did nothing and
-said it worked. Check any table you believe was written in that window; if a
-`kernels.md` is missing or stale and the log looked clean, this is why. `read -r`
-replaces `set --` and does not touch `$@`.
-
-That is **twice in one day from one root cause** (`gen_fleet.sh` was the other).
-If you write shell here, `set --` is a loaded gun; use `read -r`, and prefer
-running the thing over reading it, because reading it is exactly what missed
-this for a day.
-
-**After all three fixes the whole chain runs**, verified 2026-09-20: corpus,
-head alignment, training from the pretrained core, sharded generation on four
-cards, extract, tests, **all seven kernels** (9 tasks, 7 of 7 columns present,
-6 `verified / refuted`), `spec_check` (0 agree / 6 disagree / 3 uncheckable),
-`spec_scorecard` (6 proven-but-wrong at post-correctness 0.000) and
-`preflight` (ready, 3 known warnings). The 150-step smoke model is bad, which is
-expected and is not what this run was measuring.
-
-**Not a repo bug, but it will catch you too:** `t/grade_lab.sh` is written to run
-**from the desktop and ssh into the lab**. Running it *on* the lab gives
-`T_LAB: set T_LAB=user@host` and looks like a missing config. It is not; you are
-on the wrong machine.
-
-**Known-failing before any of today's work**, so do not go hunting for it:
-`t/test_lower_spark_loop_cert.py::test_two_loops_falls_back_to_plain_f_call`
-fails identically with today's changes stashed. On the desktop's `python3`,
-`t/test_loop_train.py` errors on a missing `datasets` and all of `locallm/`
-errors on a missing `torch`. Use `~/.venv-vllm/bin/python` on the lab for
-those, which is where the 75 / 31 above come from.
-
-## The four accepted issues, now actually applied (2026-09-20)
-
-The triage accepted four issues as real and recorded the fix in each comment,
-but the code was never changed. It has been now, in `2db2a9e`:
-
-| issue | what it did | fix |
-|---|---|---|
-| **#44** | `signal.SIGHUP` at import: on Windows the module raised `AttributeError` and every test touching the harness failed at *collection* | `getattr` guard |
-| **#24** | `for T in "${@:-a b c d}"` expands to **one word**, so `grade_lab.sh heldout` with no tags looped once against a tag that cannot exist | an array; the loop now runs four times |
-| **#30** | the corpus builder applied **no split filter**, and `--lifted` adds MBPP-DFY tasks derived from the same MBPP the held-out split comes from | a `--split` flag filtering all four entry paths |
-| **#27** | nothing: `t/lab_gpu.sh`'s `GPU_PROCESSES` is already fully bracketed | no change needed |
-
-**#30 is the one to understand.** Nothing but luck kept an evaluation problem
-out of training, and luck held: 0 of 232 held-out ids across six corpora when it
-was measured. That is precisely the situation in which a guard never gets
-written. `t/preflight.py` catches a leak after the fact; the builder now catches
-it at the only point where a model has not already read the problem.
-
-Two deliberate choices in that fix, so nobody undoes them:
-
-- **Without `--split`, nothing is filtered and the builder prints `NOT
-  APPLIED`.** Every existing caller behaves exactly as before rather than
-  changing silently. Pass the split your model will be evaluated on.
-- **An unreadable split stops the build.** Filtering nothing while reporting
-  success is how the leak would be built in the first place.
-
-`t/test_corpus_split.py` covers both directions. The suite is 413 tests with the
-same four pre-existing failures as before any of today's work: three in
-`test_loop_train.py` needing `datasets`, and
-`test_lower_spark_loop_cert.py::test_two_loops_falls_back_to_plain_f_call`,
-which fails identically with today's changes stashed. On the desktop `python3`,
-all of `locallm/` also errors on a missing `torch`; use `~/.venv-vllm/bin/python`
-on the lab. `python3 -m unittest discover` additionally picks up
-`test_lab_gui.py`, whose tkinter teardown crashes the *whole run* and hides the
-tally, so exclude it when you want a number.
-
-## One more, found while checking the above
-
-`t/preflight.py`'s evaluator check counted `git status --porcelain | wc -l`,
-which includes **untracked** files. Three stray files on the grading machine
-made it print *"the grading machine is not this tree: it grades at 07ab406 with
-3 dirty entries; this tree is at 07ab406"*, a line that names the same commit
-twice and calls them different trees. Tracked modifications and untracked files
-are now counted apart, and untracked ones are reported on the ok line instead.
-
-Worth stating why this was worth fixing rather than tolerating: this is the
-check that catches a genuinely stale evaluator, and on 2026-09-19 the grading
-machine was 19 commits behind while every log line looked normal. A check that
-warns every round is one the reader stops reading, which would have cost exactly
-the thing it exists to protect. Verified in both directions against the real
-machine: untracked-only reports ok, a tracked modification still warns.
-
-**Both trees are now at the same commit**, the first time today, so the
-"regrade a baseline beside any new answer set" caveat does not apply to anything
-you grade from here.
-
-## Traps that cost time today
-
-1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless
-   you pass `-f`. Three findings documents cited tables that were not in the
-   repository until this was caught.
-2. **RESOLVED 2026-09-20, but read this before you trust the lab tree again.**
-   The lab was 19 commits behind origin and would not fast-forward: 104
-   untracked files stood in the way, so grading ran on an **older evaluator
-   than the desktop's tree**. It is now at `e8bd14a`, the same commit as the
-   desktop. Nothing was force-reset. All 104 files were copied to
-   `~/tup-lab-untracked-2026-09-20` on the lab first; 94 were byte-identical to
-   origin and the other 10 were superseded by later desktop edits (the ` -- `
-   scrub, and the new test). That backup is still there and can be deleted once
-   you are satisfied. If the pull starts failing again, preserve before you
-   remove: the dirty files may be another agent's unverified work.
-3. **The grading machine has no verdict cache.** Its `run_par.py` is at
-   `17d7aaf` and does not import `t/cache.py`; the cache is uncommitted desktop
-   work. `--no-cache` is not a flag it accepts.
-4. **Do not overlap GPU generation with grading.** Ten generation workers plus
-   a 7B model plus 32 grading cells put the load average at 80 and killed the
-   ssh carrying the grading.
-5. **`pkill -f <pattern>` matches your own command line.** It killed my ssh
-   sessions twice. Use a bracket, `pkill -f "name[.]sh"`.
-6. **A sentinel file that a wrapper touches after `wait` means "the process
-   exited", not "the work finished".** Killing a generator let its wrapper
-   touch the sentinel and two chains scored partial answer sets.
-7. **`run_par.py` needs a LOGIN shell on the grading machine, or Verus silently
-   reads `malformed`.** `grade_lab.sh` invokes it as `bash -lc '...'` for this
-   reason: Verus needs rustup on `PATH` and a plain `ssh host 'python3
-   t/run_par.py ...'` does not source the profile that provides it. The cell
-   then reads `malformed`, which looks exactly like a lowering that really is
-   malformed. Measured both ways on 2026-09-20 against `t/nested`: without the
-   login shell, `verus malformed/malformed` and DISAGREEMENT; with it, all
-   seven agree. `t/preflight.py` catches the same condition before a round.
-8. **Adding a head to a training document breaks a reader that does not know
-   it.** This has now happened three times and cost 216, then an unknown
-   number, then 24 answers. Put the head in `loop_filter.HEAD_LINE` and nowhere
-   else, and make every reader call `loop_filter.strip_head`.
-   `t/test_head_handling.py` enforces it.
-9. **`set --` in a shell script replaces the positional parameters**, and it
-   bit twice on 2026-09-20. `t/gen_fleet.sh` threw away the caller's extra
-   flags until `75a43fa`, so any fleet set older than that was decoded with
-   defaults whatever its log says. `t/grade_lab.sh` overwrote its own mode
-   argument until `042e35c`, so every `grade_lab.sh <mode>` call after
-   `a6acacb` exited 0 without grading. Use `read -r`.
-
-## Two commands that do the first two steps for you
-
-    bash t/finish_seeds.sh        # the three seed arms, mid-grade, to a scoreboard
-    bash t/grow_pool.sh prover-train2   # grade 450 prover answers, rebuild the pool
-
-Both are committed, both are safe to re-run, and `grow_pool.sh` prints the four
-commands that turn the new pool into a scored model with the recipe that tied
-Phi. Read them before running them; they are short.
-
-## What to do next, in the order I would do it
-
-1. **Assemble the three seed tables** as above and score them. This answers
-   attack 3 and costs minutes.
-2. **Grade `prover-train2`'s 450 answers** and rebuild the pool with them:
-   `python3 t/spec_experiment.py extract/tests --model prover-train2 --pool v5`,
-   then `grade_lab.sh`, then `spec_check.py`, then `loop_dataset.py
-   --from-samples <all training tags> prover-train prover-train2 --out-suffix
-   r10`. This is the only lever measured to move the absolute number.
-3. **Finish `phi4-mini-g`** and grade it. This retires attack 2.
-4. **Train the r10 corpus headed**, greedy decode, score. `t/head_align_corpus.py`
-   then `locallm/continue_from_checkpoint.py --init
-   t/out/source-pretraining-longer-2026-09-19/gpt-seed1337`.
-5. **A size curve.** 3.2M and 92M exist; 312M trains at 7,396 tokens a second
-   on one shared card (`locallm/FINDINGS-capacity-2026-09-19.md`). Three points
-   on the same recipe and evaluator turn a tie into a trend, which is the
-   strongest available version of this project's claim.
+  already passed. `t/audit_collapsible.py` is the check.
+- **The modern architecture lost at 4000 updates** at every one of three seeds,
+  while also being 18.8% slower and reserving 33% more memory, after leading by
+  about a quarter at 1000.
+- **Pretraining the core did not help this pipeline.** 1 clean of 232, fewer
+  well-formed answers than the 3.2M models.
+
+What worked, in order: the signature header (40.8% → 12.1% signature failures,
+2 clean → 3), greedy decoding (well formed 136 → 149, clean 1 → 2, free), the
+specification check nobody had run (pool 87 → **733** preference pairs), and
+sharded generation (about 12×).
+
+---
+
+## What changed 2026-09-20
+
+**Three bugs found by running the lab end to end, all of which reported success
+while doing nothing.** `gen_fleet.sh` discarding the caller's flags (`75a43fa`);
+the generator not stripping a head off the model's own reply, losing all 24
+answers (`f191fab`); `grade_lab.sh` exiting 0 without grading (`042e35c`).
+Details in traps 3 and 4.
+
+**Four accepted issues applied** (`2db2a9e`): #44 `signal.SIGHUP` at import
+breaking Windows collection; #24 `"${@:-a b c d}"` expanding to one word so
+`grade_lab.sh heldout` with no tags looped once against a tag that cannot exist;
+#30 the corpus builder applying **no split filter**, now a `--split` flag over
+all four entry paths. #27 needed no change. Two deliberate choices in #30:
+without `--split` nothing is filtered and it says `NOT APPLIED`, so no existing
+caller changes silently; and an unreadable split stops the build, because
+filtering nothing while reporting success is how the leak gets built.
+
+**`preflight.py` stopped crying wolf** (`43ace6e`): it counted untracked files
+as evaluator drift and printed "not this tree: it grades at 07ab406 … this tree
+is at 07ab406". Tracked and untracked are now counted apart.
+
+**Nested loops confirmed closed**: `t/nested` re-run with no cache, 42 kernel
+runs, **FULL AGREEMENT**, all seven verified with the twin refuted. The table in
+`t/nested/README.md` had been stale since 2026-09-18.
+
+**forge retired** (`e0bace7`), 191 files. Last real commit 2026-09-01, nothing
+outside it imported it. What was load-bearing was kept: the bf16-merge rationale
+inlined into `t/loop_train.py`, and its OPEN-ITEMS as
+`internal/FORGE-RETIRED-2026-09-20.md`.
+
+**Documentation restructured.** `README.md` 357 → 148 lines, the result stated
+once, with `SCOREBOARD.md`, `LIMITS.md` and `CORRECTIONS.md` carrying what moved
+out. `t/README.md` had claimed only Dafny was live and described an int-only
+language with no loops. `locallm/README.md` listed BPE, resume and multi-GPU as
+missing when all three exist and are tested.
+
+**`nl/data/` is self-contained.** The five large corpora were symlinks into a
+sibling `nl-problems` checkout; they are now real files, verified 50/50 against
+`manifest.json` on **both** the desktop and the lab. APPS has no rebuild script,
+so those bytes are the working copy of record.
+
+**One git identity.** Four author emails were in the history landing in four
+different buckets, including 229 commits credited to no account at all. Both
+machines now commit as `trestoncuzzort` via the account's noreply address.
+
+---
+
+## Known-failing before any of this, so do not go hunting
+
+- `t/test_lower_spark_loop_cert.py::test_two_loops_falls_back_to_plain_f_call`
+  fails identically with the day's changes stashed.
+- On the desktop's `python3`, `t/test_loop_train.py` errors on a missing
+  `datasets`, and all of `locallm/` errors on a missing `torch`. Use
+  `~/.venv-vllm/bin/python` on the lab.
+- `python3 -m unittest discover` additionally picks up `t/test_lab_gui.py`,
+  whose tkinter teardown **crashes the whole run and hides the tally**. Exclude
+  it when you want a number:
+  `ls test_*.py | grep -v test_lab_gui | sed 's/\.py$//' | xargs python3 -m unittest`
+
+---
 
 ## Where everything is
 
 | what | where |
 |---|---|
-| the plan and its finish lines | `ROADMAP.md`, WS-22 |
-| today's findings | `locallm/FINDINGS-*-2026-09-19.md` |
-| registered predictions | `t/PREDICT-2026-09-19-round7.md`, `-round7b.md`, `-round8.md`, `locallm/PREREG-*` |
+| the plan and its finish lines | `ROADMAP.md` WS-22, `internal/ROADMAP-LOG.md` (the roadmap of record) |
+| the public claim, short | `README.md`, 148 lines |
+| every model's numbers | `SCOREBOARD.md` |
+| every caveat | `LIMITS.md` |
+| claims that turned out wrong | `CORRECTIONS.md` |
+| findings | `locallm/FINDINGS-*.md` |
+| registered predictions | `t/PREDICT-*.md`, `locallm/PREREG-*.md` |
 | scoreboard tables | `t/out/score-r7.md`, `-r7b.md`, `-r8.md` |
 | evaluator provenance | `t/out/evaluator-state-2026-09-19.json` |
-| the other agent's channel | `~/.local/state/tup-channel/`, private, `channel.py read --since 0` |
-| the overnight watcher | `~/.local/state/tup-overnight/`, `enabled: false` with its reason inside |
+| the literature | `internal/research/`, five files |
+| machine setup and git identity | `internal/MACHINES.md` |
+| the retired pipeline | `internal/FORGE-RETIRED-2026-09-20.md` |
+| the other agent's channel | `~/.local/state/tup-channel/`, private local state, never the public repo |
 
-The channel holds a review request covering commits `20d5ec6..e1ded69` that was
-never answered. Nothing in that range has been reviewed by anyone. The open
-doubts are listed in message 7 and they are still open.
+**One thing nobody has done:** the channel holds a review request covering
+commits `20d5ec6..e1ded69` that was never answered. Nothing in that range has
+been reviewed by anyone, and the open doubts are listed in its message 7.
