@@ -31,11 +31,11 @@ Two halves. Both must hold before the tag.
 | WS-13 the language | 13.2 and 13.3 done; 13.4 nearly complete; 13.1 open |
 | WS-14 the notation | done |
 | WS-15 the editors | library, cache and language server done; VS Code built; Visual Studio open |
-| WS-16 the claims | 16.1 done; 16.2 partial; 16.3 open |
+| WS-16 the claims | 16.1 done; 16.2 partial; 16.3 moving, pool v6 |
 | WS-17 the release | install pages written for three operating systems; public release path open |
 | WS-18 the training loop | measured; the student tied the baseline in some rounds, but the clean count remains below target |
-| WS-19 the frontier moves | several moves complete; a model that reads a verifier error remains a candidate |
-| WS-20 what caps the corpus | ordered by measured evidence: nested loops, more sources, stronger tests, and the twin artifact |
+| WS-19 the frontier moves | six of seven moves complete; a model reading a verifier error was measured 2026-09-20; the data multiplier is unblocked and unrun |
+| WS-20 what caps the corpus | nested loops closed 2026-09-20 and the twin artifact ships; more sources moving on pool v6; test quality open |
 | WS-21 the parse wall | syntax gate measured as the dominant bottleneck |
 | WS-22 beating the baseline | the project target remains a clean win over the fixed Phi-4-mini baseline |
 
@@ -95,7 +95,13 @@ Open, and the measured count reflects how much of the corpus is now in the fragm
 
 ### 16.3 The next corpora
 
-Open. HumanEval and MBPP bodies from other sources are routed through the same pipeline.
+Moving. HumanEval and MBPP bodies from other sources are routed through the same
+pipeline, and on 2026-09-20 the pool grew for the first time in a week: 1,032
+stdin-shaped problems that `t/nl_stdin.py` had already measured and nothing had
+ever imported became pool v6, 4,035 problems against v5's 3,003. 474 are APPS and
+558 CodeContests. What remains is grading them and re-checking the contributing
+tags under the new pool label; `t/FINDINGS-split-v6-2026-09-20.md` has the two
+remaining steps and why neither is the split file.
 
 ## WS-17: the release
 
@@ -120,8 +126,17 @@ A model writes a `t` task from a problem statement; the verifiers grade it; the 
 Seven moves were chosen from a survey of the field, in the order decided earlier.
 
 1. The grader as the artifact. Done.
-2. A model that reads an error through the grader. Blocked on access to a suitable large model.
-3. The data multiplier over the verified corpus. Waits on move 2.
+2. A model that reads an error through the grader. **Done 2026-09-20**, and the
+   result is small and negative-leaning: Qwen3-235B-A22B repaired 40 answers that
+   pass their tests but are not clean, each prompted with the violated
+   obligations and a concrete witness. 26 of 26 parsed answers still passed their
+   tests, none changed its specification illegally, and the seven-way gate moved
+   from 66 to 69 verified cells of 182 while two answers lost a kernel.
+   `t/FINDINGS-repair-2026-09-20.md`. A one-round gain this size is what the
+   literature predicts, and the missing ingredient it names is a candidate repair
+   rather than a better error message.
+3. The data multiplier over the verified corpus. **Unblocked by move 2**; not yet
+   run. 480 candidate repairs are banked across twelve draws for it.
 4. The bottleneck column on the sweep. Done.
 5. The construct line. This is the order of the language expansion.
 6. The twin ladder as a completeness measurement. Done.
@@ -131,8 +146,19 @@ Seven moves were chosen from a survey of the field, in the order decided earlier
 
 Measured on a strong recent run: a substantial fraction of answers pass their tests, but a smaller population is clean in all seven. The abstains point to specific structural limits, and the measurements say the order of the next work.
 
-1. Nested-loop lowering for Lean, Rocq, and F*. Until it exists, the corpus cannot hold a real algorithm: any program with a loop inside a loop, or two loops in a body, abstains in several proof systems and can never be clean.
-2. More problem sources. Quicker to improve the ceiling than to augment the fragment. The gate is test reading per source, not a new language feature.
+1. Nested-loop lowering for Lean, Rocq, and F*. **Done 2026-09-20.**
+   `t/nested/has_duplicate.t`, a nested-loop task with invariants on both loops,
+   reads `verified / refuted` in all seven, twin operator `collapse-if`,
+   separating witness `s=[0, 1]`. Reproduced the same day from a cold cache:
+   `python3 t/run_par.py --tasks t/nested --jobs 7`, 7 cells, 42 kernel runs,
+   `FULL AGREEMENT`. Two of the three original abstains turned out to be honesty
+   defects rather than lowering gaps, which is recorded in `t/nested/README.md`.
+2. More problem sources. **Moved 2026-09-20**: pool v6 added 474 stdin-shaped
+   APPS and 558 CodeContests problems, 4,035 in all, +34.4% over v5, and the
+   235B has answered 1,030 of the 1,032. They are not graded, and
+   `t/out/loop/split-v6.json` had to be written before the dataset builder could
+   see them at all (`t/FINDINGS-split-v6-2026-09-20.md`). The gate remains test
+   reading per source, not a new language feature.
 3. Test quality. Differential testing measured where a clean answer still does not say what the original problem asked.
 4. The twins and witnesses as a first-class artifact. The project now ships verified programs together with their near-miss twin, witness input, and the seven verdicts.
 
