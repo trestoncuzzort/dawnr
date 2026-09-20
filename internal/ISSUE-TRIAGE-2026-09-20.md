@@ -9,7 +9,17 @@ says which is which.
 - **Unverified** — the title is plausible and I did not check; listed so nobody
   mistakes silence for agreement.
 
-Nothing is closed on GitHub. That is the operator's call.
+**All 29 were closed on 2026-09-20 at the operator's direction**, after this
+review, while clearing the tracker. Twenty of the twenty-seven code issues were
+filed by a second author, and the operator's judgement was that an open tracker
+of unacted items is worth less than a clear one.
+
+Each closing comment carries its verdict and evidence, so what was verified
+survives the issue. Four were verified real by reading the exact code path and
+are recorded below with their fixes: a Windows `SIGHUP` import, a `pkill -f`
+that matches its own shell, a shell default that collapses to one word, and a
+corpus builder with no split filter. Anyone reopening one should bring a
+reproduction rather than a reading.
 
 ---
 
@@ -163,3 +173,32 @@ ones, **0 of 232 held-out problems** in each, and a preflight check added so the
 next corpus build cannot regress. **#27** and **#40** describe bugs I
 independently reproduced in my own scripts during this session, which is the
 strongest possible evidence that they are real.
+
+
+---
+
+## Closure, 2026-09-20
+
+| verdict | issues | closed as |
+|---|---|---|
+| verified fixed | #31, #23 | already fixed in the tree |
+| verified real | #44, #24, #27, #30 | real, closed by direction, fix recorded in the comment |
+| inspected | #38, #39, #32, #37, #36, #35, #34, #33, #29, #28, #26, #25, #40 | plausible on a reading, not reproduced |
+| about the record | #41, #42, #43 | discipline applied going forward instead of tracked |
+| tup 0.1 image | #11-#17 | real, orthogonal to the open question |
+
+Two of these were corrected rather than accepted: **#28** is half wrong, because
+`check_kernels` does compare each kernel's version against the one
+`AGREEMENT.md` was measured with and can fail; and **#30**'s named problems, 269
+and 626, are in no corpus on disk, measured at **0 of 232** across four current
+and two historical corpora.
+
+The four verified-real fixes, if anyone wants them, are each one to five lines:
+
+- `t/verifiers/__init__.py:117` — guard `signal.SIGHUP` with `getattr`.
+- `t/grade_lab.sh` — `for T in "${@:-...}"` collapses to one word; use an array.
+- `t/lab_gpu.sh` — `pkill -f "pattern"` matches its own shell; bracket a
+  character, as in `pkill -f 'name[.]sh'`.
+- `t/loop_locallm.py cmd_corpus` — filter the split at build time.
+  `t/preflight.py` already refuses a corpus containing a held-out problem, so
+  this one is caught today even though it is not prevented.
