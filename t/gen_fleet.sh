@@ -46,7 +46,7 @@ for k in $(seq 0 $((SHARDS - 1))); do
   eval "card=\${$(( k % ncards + 1 ))}"
   PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES="$card" \
     $PY t/loop_locallm.py generate --model "$MODEL" --tag "$TAG" --split "$SPLIT" \
-      --ids-file "t/out/loop/eval-chunk$k.txt" "$@" \
+      --ids-file "t/out/loop/eval-chunk$k.txt" "${EXTRA[@]}" \
       > "t/out/gen-$TAG-$k.log" 2>&1 &
   pids="$pids $!"
   echo "shard $k -> card $card (pid $!)"
