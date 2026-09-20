@@ -182,6 +182,80 @@ cited for every issue. The short form:
 fixing anything, cite it in the code and the commit, and say so plainly when no
 paper exists rather than implying one does.
 
+## PICK UP HERE: dead workflows, dead agents, and live files
+
+### Research agents, and the lesson from one that died badly
+
+Five literature agents were run. **One finished, returned a 30-paper report, and
+never wrote its file**, because the instruction to save incrementally reached it
+too late. Its report was recovered by hand into
+`internal/research/nl-to-spec.md`. Every later agent was told to append to disk
+after each item, which is the rule to keep: **an agent's return value is not a
+deliverable; a file is.**
+
+Files in `internal/research/`, each standing on its own:
+
+| file | lane | state |
+|---|---|---|
+| `nl-to-spec.md` | generating a spec from intent | complete, 30+ papers, recovered by hand |
+| `intent-from-examples.md` | pinning intent with examples and tests | agent was still appending when the session ended |
+| `repos-verification.md` | open-source repos and benchmarks | agent was still appending |
+| `verifier-feedback-training.md` | RL/filtering from verifier signal | agent was still appending |
+| `spec-validation.md` | validating and repairing specs | **may not exist**: that agent had not written anything yet |
+
+If a file is short or missing, that agent died before finishing. Nothing is
+lost that was written; re-run the same lane if you want more.
+
+### The five papers to act on first
+
+From `nl-to-spec.md`, ranked for this repo:
+
+1. **VeriMed** ([arXiv:2605.13817](https://arxiv.org/html/2605.13817v1)) — sample
+   k specs, check pairwise equivalence, treat disagreement as ambiguity with a
+   concrete witness. Their repair ladder is 55.4% → 80.0% → **98.5%** as feedback
+   goes from none to textual to counterexample. We have seven provers to do the
+   pairwise check with.
+2. **SpecRL** ([arXiv:2604.05820](https://arxiv.org/abs/2604.05820)) — spectests:
+   negatives built from *implementation-impossible* outputs. +26.46% relative
+   completeness. Our `spec_check.mutations` is the same primitive already built.
+3. **SpecBench** ([arXiv:2605.21384](https://arxiv.org/abs/2605.21384)) — split
+   the problem's own assertions into visible and held-out and report the gap.
+   **This must be done before the examples arm runs**, or that arm cannot be
+   distinguished from gaming: the gap grows 28 points per 10x code size.
+4. **CLEVER** ([arXiv:2505.13938](https://arxiv.org/abs/2505.13938)) — spec
+   compile 71-87% against spec prove 0.62-1.86%; the sharpest "compiles is not
+   correct" datum there is.
+5. **Clover** ([arXiv:2310.17807](https://arxiv.org/abs/2310.17807),
+   [repo](https://github.com/ChuyueSun/Clover)) — already applied, see below.
+
+### Work stopped mid-flight, and how to resume each
+
+| what | where it stopped | how to pick it up |
+|---|---|---|
+| **three seed arms** | 232/232 generated, kernel cells computed, `kernels.md` never assembled | `bash t/finish_seeds.sh`; if `/dev/shm` was cleared, `bash t/grade_lab.sh heldout <tag>` regrades from the answers, which survive |
+| **prover-train2** | **450 of 2,354** training problems answered, ungraded | `bash t/grow_pool.sh prover-train2`; resume generation with `/tmp/gen_prover2.sh` on the lab, which skips answered problems |
+| **phi4-mini-g** | 56 of 232 generated, never graded | `/tmp/gen_phig.sh` on the lab, then grade. **This retires the strongest objection to the tie**: Phi decoding against our grammar cannot emit unparseable output |
+| **the examples arm** | implemented and corpus built, never trained | `t/out/loop/corpus-ex-headed.txt` exists; the four commands are at the end of `internal/RESEARCH-NEXT-2026-09-20.md`. Do SpecBench's visible/held-out split first |
+| **`/tmp/finish_tables.sh`** | was assembling seed tables when the session ended | check `~/tup/t/out/tables.done` on the lab; `finish_seeds.sh` waits for exactly that |
+
+Scripts in `/tmp` do not survive a reboot. The two that matter are committed:
+`t/finish_seeds.sh` and `t/grow_pool.sh`.
+
+### What was applied from the literature, and what it measured
+
+**Clover's third consistency edge** ([arXiv:2310.17807](https://arxiv.org/abs/2310.17807),
+[ChuyueSun/Clover](https://github.com/ChuyueSun/Clover)) reduces correctness to
+consistency between code, docstring and annotation. This repo had two of the
+three edges; `t/spec_check.check_points` adds the missing one by evaluating the
+model's `ensures` at the problem's own assertions. It catches **62%, 27% and 88%**
+of the proven-but-wrong population in three arms and **fired on none of the
+eleven clean answers across four sets**.
+
+And the hypothesis it replaced was falsified first: across 388 proved answers
+there is **not one weak specification**. The failure is specs that are flatly
+false at the problem's own solution — a predicate problem specified as
+`r == x + 1`. `locallm/FINDINGS-completeness-2026-09-20.md` has it.
+
 ## Traps that cost time today
 
 1. **`t/out` is gitignored.** `git add t/out/score-r8.md` fails silently unless
