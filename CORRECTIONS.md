@@ -53,3 +53,23 @@ successful measurements is not measuring anything.
   matched no branch, and it exited 0 having graded nothing. Every call in that
   window believed it had a table. The same root cause had already silently
   dropped the caller's decoding flags in `t/gen_fleet.sh`.
+
+## A token count with no file behind it, removed 2026-09-20
+
+`README.md` said locallm was trained on "46M tokens of source plus **50,142
+tokens of specialization**". The string `50,142` occurs nowhere else in this
+repository. No run record holds it: the `run.json` beside the round-7b
+checkpoints stores losses and `steps_run` and no corpus statistics, and the
+tokenizer those models use is character level, so none of the candidate corpora
+(`corpus-r7.txt` 77,345 bytes, `corpus-r7-headed.txt` 118,818,
+`corpus-r8-headed.txt` 133,082) yields that number under it. The nearest figure
+on record is a different one, "39,191 tokens of specialization", in
+`t/PREDICT-2026-09-19-round7.md`, for round 7 rather than for the arm the
+headline uses.
+
+`README.md:94` states the rule this broke: *"Every number links to the script
+that produced it. If a number here has no file behind it, it is a bug."* The
+sentence now cites the source-corpus figure to the file that measures it and
+gives the specialization corpus as the byte size of the file itself, which is
+checkable with `ls`. The token count returns when something measures it.
+

@@ -20,6 +20,12 @@ MODEL=${T_LAB_MODEL:-Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8}
 TAG=${T_LAB_TAG:-qwen3-coder-30b-apps-s1}
 PORT=${T_LAB_PORT:-8077}
 FRACTION=${T_LAB_GPU_FRACTION:-0.26}
+# The context the server will hold. 8192 was fine for a 30B answering with a
+# short program; it is not a safe default to draw a conclusion from, because on
+# 2026-09-20 a 3072-token cap truncated 232 of 232 baseline answers and the
+# resulting table looked like a score rather than a cut-off run. Raise it for a
+# model whose answers you have not yet seen the length of.
+MAXLEN=${T_LAB_MAX_LEN:-8192}
 JOBS=${T_LAB_GEN_JOBS:-16}
 # Brackets keep the remote shell carrying this pattern from matching its own command line.
 GPU_PROCESSES='[s]pec_experiment[.]py generate|[l]oop_generate[.]py([[:space:]]|$)|[l]oop_train[.]py([[:space:]]|$)|[t]rain_distributed[.]py([[:space:]]|$)|[l]ocallm/train[.]py([[:space:]]|$)|[v]llm serve|[V]LLM::'
@@ -29,7 +35,7 @@ case "${1:-status}" in
 serve|start)
   WHAT=${1:-serve}
   $SSH "$LAB" "mkdir -p ~/lab-gpu && test -d ~/tup" || exit $?
-  echo "== serving $MODEL on the four cards (tensor parallel), port $PORT"
+  echo "== serving $MODEL on the four cards (tensor parallel), port $PORT, ctx $MAXLEN, fraction $FRACTION"
   # vLLM's FP8 path compiles kernels, so it needs a CUDA toolkit; this machine has none in /usr/local, but the
   # venv ships one inside the nvidia wheels (2026-09-18)
   CUDA_HOME_REMOTE='$HOME/.venv-vllm/lib/python3.12/site-packages/nvidia/cu13'
@@ -41,7 +47,7 @@ serve|start)
       LD_LIBRARY_PATH=$CUDA_HOME_REMOTE/lib:\${LD_LIBRARY_PATH:-} \
       VLLM_USE_FLASHINFER_SAMPLER=0 \
       setsid nohup ~/.venv-vllm/bin/vllm serve '$MODEL' \
-      --tensor-parallel-size 4 --gpu-memory-utilization $FRACTION --max-model-len 8192 \
+      --tensor-parallel-size 4 --gpu-memory-utilization $FRACTION --max-model-len $MAXLEN \
       --port $PORT > ~/lab-gpu/vllm.log 2>&1 < /dev/null & echo started"
   echo "== waiting for the server (a first load reads 31 GB from disk)"
   for _ in $(seq 1 120); do

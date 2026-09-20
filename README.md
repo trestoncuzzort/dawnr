@@ -38,8 +38,11 @@ beating it at Python. The full caveats are in
 the reason this section is short.
 
 What is not asterisked: locallm was trained from random weights, on one
-machine, on 46M tokens of source plus 50,142 tokens of specialization, in
-minutes of GPU time, on a language that did not exist a month ago. The target
+machine, on 46M tokens of source
+([`internal/OPTIMIZATION-SCAN-2026-09-20.md`](internal/OPTIMIZATION-SCAN-2026-09-20.md))
+plus a specialization corpus of 119 KB
+([`t/out/loop/corpus-r7-headed.txt`](t/out/loop/), 118,818 bytes), in minutes of
+GPU time, on a language that did not exist a month ago. The target
 was never a tie. [`ROADMAP.md`](ROADMAP.md) WS-22 is the plan to beat it
 outright.
 
