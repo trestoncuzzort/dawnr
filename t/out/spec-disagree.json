@@ -1,5 +1,5 @@
 {
- "checked": 1807,
+ "checked": 1824,
  "tags": [
   "deepseek-coder-v2-16b-v4-s1",
   "deepseek-coder-v2-16b-v4-s2",
@@ -10,6 +10,9 @@
   "locallm-r7b-greedy",
   "locallm-r7b-headed2",
   "locallm-r8",
+  "locallm-r9",
+  "locallm-r9-seed42",
+  "locallm-r9-seed7",
   "locallm-smoke",
   "phi4-mini-eval2-2026-09-19",
   "phi4-mini-v3",
@@ -52,6 +55,7 @@
   "qwen2.5-coder-14b-v3-s8-fix1",
   "qwen2.5-coder-7b",
   "qwen2.5-coder-7b-divmod",
+  "qwen235-heldout",
   "qwen3-coder-30b-apps-g1",
   "qwen3-coder-30b-apps-g1-probe",
   "qwen3-coder-30b-apps-s1",
@@ -133,6 +137,7 @@
   "locallm-r7b-greedy/mbpp_908__find_fixed_point",
   "locallm-r7b-greedy/mbpp_91__find_substring",
   "locallm-r7b-greedy/mbpp_937__max_char",
+  "locallm-r9-seed42/mbpp_541__check_abundant",
   "locallm-smoke/mbpp_10__small_nnum",
   "locallm-smoke/mbpp_20__is_woodall",
   "locallm-smoke/mbpp_28__binomial_Coeff",
@@ -147,6 +152,7 @@
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_768__check_Odd_Parity",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_855__check_Even_Parity",
   "qwen2.5-coder-1.5b-r0hf/mbpp_58__opposite_Signs",
+  "qwen235-heldout/mbpp_355__count_Rectangles",
   "qwen3.8-27b-fp8-v3-s2/mbpp_908__find_fixed_point",
   "qwen3.8-27b-fp8-v3/mbpp_179__is_num_keith",
   "qwen3.8-27b-fp8-v3/mbpp_195__first",
@@ -242,7 +248,9 @@
   "locallm-smoke/mbpp_28__binomial_Coeff": "t 0\ntask mbpp_28__binomial_Coeff(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  ensures r == a + b\n{\n  r := a + b;\n}",
   "locallm-smoke/mbpp_32__max_Prime_Factors": "t 1\ngate loops\ntask mbpp_32__max_Prime_Factors(n: int) returns (r: int)\n  requires n > 0\n  ensures r == n * (n + 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant r == i * (i + 1) / 2\n    invariant i <= n\n    decreases n - i\n  {\n    i := i + 1;\n    r := r + i;\n  }\n}",
   "locallm-smoke/mbpp_51__check_equilateral": "t 1\ntask mbpp_51__check_equilateral(a: int, b: int, c: int) returns (r: bool)\n  ensures r == (a == b or b == c or a == c or b == c)\n{\n  r := a == b or b == c or a == c or b == c;\n}",
-  "locallm-smoke/mbpp_56__check": "t 1\ngate loops\ntask mbpp_56__check(n: int) returns (r: int)\n  ensures r == (n + 1) * (n + 2)\n{\n  r := (n + 1) * (n + 2) / 2;\n}"
+  "locallm-smoke/mbpp_56__check": "t 1\ngate loops\ntask mbpp_56__check(n: int) returns (r: int)\n  ensures r == (n + 1) * (n + 2)\n{\n  r := (n + 1) * (n + 2) / 2;\n}",
+  "qwen235-heldout/mbpp_355__count_Rectangles": "t 1\ngate loops\ntask mbpp_355__count_Rectangles(r: int) returns (r_: int)\n  requires r >= 0\n  ensures r_ == (if r == 0 then 0 else if r == 1 then 1 else 8)\n{\n  if r == 0 {\n    r_ := 0;\n  } else {\n    if r == 1 {\n      r_ := 1;\n    } else {\n      r_ := 8;\n    }\n  }\n}",
+  "locallm-r9-seed42/mbpp_541__check_abundant": "t 1\ngate loops\ntask mbpp_541__check_abundant(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == (n % 2 == 0)\n{\n  r := n % 2 == 0;\n}"
  },
  "results": {
   "prover-train/mbpp_135__hexagonal_num": {
@@ -5265,6 +5273,287 @@
    "pool": "v5",
    "seed": 1,
    "attempts": 25
+  },
+  "qwen235-heldout/mbpp_269__ascii_value": {
+   "status": "no valid draws",
+   "draws": 0,
+   "pre_completeness_unmeasurable": "reference never ran",
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 269,
+   "task_sha256": "a2daffb8c5c73ee1e630bfceba261790bbf9d1ffc548f14404a1ec6e73b09348",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_345__diff_consecutivenums": {
+   "status": "agrees",
+   "draws": 93,
+   "mutants_rejected": 591,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 345,
+   "task_sha256": "c808f42db388c4f946de754a845ec346bec08e9fdf5eddf7f504b7be9f9e0143",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_355__count_Rectangles": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    4
+   ],
+   "reference_said": 41,
+   "agreed_before": 0,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 355,
+   "task_sha256": "44337da8aee2df1e85c05b836229266b1d36689229315e2462cf31fdf66003f8",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 1399,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 672,
+   "task_sha256": "6f041e06e8ea391ef75cd8a46fdab28d2aa4bab7552548a36748c81b5b339b41",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_72__dif_Square": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 100,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 72,
+   "task_sha256": "e525e0867e3bcfdb737989427142b15758a288e7ffd3dad0b0a49dc06c5f7ec5",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_741__all_Characters_Same": {
+   "status": "agrees",
+   "draws": 90,
+   "mutants_rejected": 90,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 741,
+   "task_sha256": "f69943b4802b8ffc24a9b71b71ad4655030330f5fabf9d3f62b2177b5fdc03b5",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_804__is_Product_Even": {
+   "status": "agrees",
+   "draws": 50,
+   "mutants_rejected": 50,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "domain_probes": 28,
+   "domain_admitted": 0,
+   "reference_ran": 72,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 804,
+   "task_sha256": "3e9d9541635566351c8fc3f36d7a364c8eadfd51f8897a0af5601eed62c3c148",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_837__cube_Sum": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 1170,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 837,
+   "task_sha256": "4a8f68f5798f8f96d45d43fe8592978dbd823aa6cdae1f51cb2e3d08df821fc6",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_86__centered_hexagonal_number": {
+   "status": "agrees",
+   "draws": 95,
+   "mutants_rejected": 1297,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 86,
+   "task_sha256": "866078c1ea56135c16773434a1debeaaa0fbac077b5456e20d74ed53f01b322c",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_900__match_num": {
+   "status": "no valid draws",
+   "draws": 0,
+   "pre_completeness_unmeasurable": "reference never ran",
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 900,
+   "task_sha256": "9c5a47b8240a3e00b51cfd6b42cca6a58c5af6d7da2e954f6b449953905a9116",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen235-heldout/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 1204,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 970,
+   "task_sha256": "1ab07334eb8c4a982726759cca1bc1ef273fd90e60dba1ff68f865a7fd27d375",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r9/mbpp_729__add_list": {
+   "status": "agrees",
+   "draws": 12,
+   "mutants_rejected": 77,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 729,
+   "task_sha256": "cf13413a7192d3bff37dce9270cabe2844a9410ea329ffb8f983db8002407832",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r9/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 1210,
+   "mutants_accepted": 18,
+   "completeness": 0.985,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     20,
+     22
+    ],
+    "reference_said": 20,
+    "also_accepts": 22
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 970,
+   "task_sha256": "ad1d2f983444a3f51d1685770c7d94dd1bfa5113bbec8c0391480f615506d536",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r9-seed7/mbpp_138__is_Sum_Of_Powers_Of_Two": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 100,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 138,
+   "task_sha256": "2a942e90432dacfe9b8161343516c98f627743d5e98c7f6eefee265516c1d8ce",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r9-seed42/mbpp_541__check_abundant": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    2
+   ],
+   "reference_said": false,
+   "agreed_before": 0,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 541,
+   "task_sha256": "d3a1714b55c0c0ae8ddd1f00ab428f3aafc0f38584eb64b2aa0405bb0da7cfc2",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r9-seed42/mbpp_729__add_list": {
+   "status": "agrees",
+   "draws": 17,
+   "mutants_rejected": 95,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 729,
+   "task_sha256": "cf13413a7192d3bff37dce9270cabe2844a9410ea329ffb8f983db8002407832",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r9-seed42/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 1225,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 970,
+   "task_sha256": "0f9b1769c099310b4fb1f0e989e0604b40ebc53c61b51c55a647debd9c2cd083",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
   }
  },
  "runs": [
@@ -5475,6 +5764,38 @@
     "other": 3
    },
    "when": "2026-09-20T07:36:13.738439+00:00"
+  },
+  {
+   "tags": [
+    "qwen235-heldout"
+   ],
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100,
+   "only": "clean",
+   "counts": {
+    "agrees": 8,
+    "disagrees": 1,
+    "other": 2
+   },
+   "when": "2026-09-20T19:03:17.386477+00:00"
+  },
+  {
+   "tags": [
+    "locallm-r9",
+    "locallm-r9-seed7",
+    "locallm-r9-seed42"
+   ],
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100,
+   "only": "clean",
+   "counts": {
+    "agrees": 5,
+    "disagrees": 1,
+    "other": 0
+   },
+   "when": "2026-09-20T19:37:52.757074+00:00"
   }
  ]
 }

@@ -229,6 +229,30 @@
    "evidence": "~/.local/state/t-lab/recovery-2026-09-19/spark-flake-result.json",
    "source_sha": "748e3e1a84b50002d6ff9736803553c818b8c5c0ffe8e0b534d12e9608baa8a5",
    "kernel_version": "gnatprove FSF 16.1.0 / Why3 for gnatprove version 1.8.2+git"
+  },
+  {
+   "tag": "qwen2.5-coder-14b-apps-s1",
+   "task": "apps_2503__findLUSlength",
+   "kernel": "framac",
+   "was": "timeout / refuted under the sweep",
+   "alone": "verified / refuted",
+   "agrees_with": "the other six kernels on the same answer",
+   "how": "python3 t/recheck_near.py --only timeout --flake 3",
+   "when": "2026-09-20",
+   "seconds": 16.5,
+   "why": "a cell graded at 32 concurrent cells competes for its wall clock; lower_spark.py's own notes call such a cell provisional until re-run alone"
+  },
+  {
+   "tag": "qwen2.5-coder-14b-he-s4",
+   "task": "he_42__incr_list",
+   "kernel": "lean",
+   "was": "verified / timeout under the sweep",
+   "alone": "verified / refuted",
+   "agrees_with": "the other six kernels on the same answer",
+   "how": "python3 t/recheck_near.py --only timeout --flake 3",
+   "when": "2026-09-20",
+   "seconds": 1.6,
+   "why": "a cell graded at 32 concurrent cells competes for its wall clock; lower_spark.py's own notes call such a cell provisional until re-run alone"
   }
  ]
 }
