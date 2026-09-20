@@ -13,9 +13,9 @@ That makes git read hooks from here instead of `.git/hooks`. Note the tradeoff:
 must be copied here too before switching, or LFS stops working. Until that is
 done, install by copy instead:
 
-    cp .githooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+    cp .githooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
 
-## pre-commit
+## commit-msg
 
 Refuses a commit that changes Python and cites neither a source nor `INVENTED:`.
 AGENTS.md rule 5 is the rule; this is the enforcement. A source is an http(s) URL,

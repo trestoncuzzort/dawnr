@@ -10,6 +10,13 @@
 #   * the literal token INVENTED: followed by what was searched for and why
 #     nothing was usable.
 #
+# This is a commit-msg hook, not pre-commit, and the distinction is the whole
+# reason it works: git runs pre-commit BEFORE the message exists and passes it no
+# arguments, so a pre-commit hook cannot read the message and every commit looks
+# uncited. The first version of this file was a pre-commit hook and blocked a
+# commit that cited three papers; it passed its own test only because the test
+# handed it a path git never supplies. commit-msg receives the message file as $1.
+#
 # To bypass for a genuine non-implementation commit (a rename, a typo, a revert):
 #   git commit --no-verify
 set -eu
@@ -17,7 +24,7 @@ set -eu
 changed=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
 [ -n "$changed" ] || exit 0
 
-msg=$(cat "${1:-.git/COMMIT_EDITMSG}" 2>/dev/null || true)
+msg=$(cat "$1" 2>/dev/null || true)
 # A merge or a revert is not an implementation.
 case "$msg" in
   Merge*|Revert*) exit 0 ;;
