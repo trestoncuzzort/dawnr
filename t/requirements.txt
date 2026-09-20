@@ -1,0 +1,9 @@
+# t/ is standard library with one exception, and the exception is a training
+# path, not the language or the seven lowerings.
+#
+# Nothing in t/ needs this to lower a program, run a kernel, grade an answer set
+# or score a table. `t/loop_train.py` imports `datasets` inside
+# build_pair_dataset and build_sft_dataset, so three tests in
+# t/test_loop_train.py error without it -- which is what they did on a clean
+# machine for as long as no file recorded the dependency.
+datasets

@@ -157,7 +157,11 @@ python3 -c "from verifiers.verus import VERUS, _VERUS_WHY; print(VERUS or _VERUS
 
 `python3 --version` on this box is `Python 3.12.3` at `/usr/bin/python3`,
 which already satisfies the drivers' 3.12 requirement with no separate
-install and no venv: everything in `t/` is standard library. (The
+install and no venv: everything in `t/` is standard library except one
+training path. `t/loop_train.py` imports `datasets`, recorded in
+`t/requirements.txt`; without it three tests in `t/test_loop_train.py` error and
+nothing else in `t/` notices. Lowering, the seven kernels, grading and scoring
+are stdlib. (The
 project's separate pinned 3.12.10 interpreter, used elsewhere on this
 machine for a dataset gate, is a stricter pin than t itself needs; t's own
 suite has never required more than 3.12.)
