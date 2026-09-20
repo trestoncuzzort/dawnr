@@ -38,6 +38,7 @@ LOCALLM = HERE.parent / "locallm"
 sys.path.insert(0, str(HERE))
 
 import spec_experiment as se                                    # noqa: E402
+import loop_filter                                               # noqa: E402
 import surface                                                  # noqa: E402
 
 OUT = HERE / "out" / "loop-locallm"
@@ -221,6 +222,14 @@ def cmd_generate(a) -> int:
         # about every head this project writes -- 2026-09-19, when a Signature:
         # corpus left two programs in one reply and 216 of 232 answers unparseable.
         body = re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", body, maxsplit=1)[0]
+        # A corpus whose documents START with a head teaches the model to start
+        # its answer with one. Measured 2026-09-20: trained on the examples
+        # corpus, every one of 24 replies opened with `Example:` lines before
+        # `t 1`, and all 24 failed to extract. The splitter above cuts at the
+        # next document; this removes a head in front of this one. Third time
+        # this family has bitten: the answer splitter, then the copy check's
+        # stripper, now the extractor's input.
+        body = loop_filter.strip_head(body)
         record = {"task_id": tid, "fn": entry["fn"], "model": f"locallm:{a.model}", "digest": f"{params} params",
                   "pool_version": split.get("pool", "v1"), "prompt_version": "locallm-head",
                   "options": {"temperature": a.temperature, "top_k": a.top_k, "max_new_tokens": a.tokens,

@@ -42,6 +42,24 @@ class HeadTests(unittest.TestCase):
         self.assertEqual(counts["heads_added"], 1)
         self.assertEqual(loop_filter.strip_head(aligned[0]), PROGRAM)
 
+    def test_a_reply_that_opens_with_a_head_still_parses(self):
+        """A corpus whose documents start with a head teaches the model to.
+
+        Measured 2026-09-20: trained on the examples corpus, all 24 replies of a
+        smoke run opened with `Example:` lines before `t 1`, and all 24 failed to
+        extract. The answer splitter cuts at the *next* document; nothing removed
+        a head in front of *this* one. Third time this family has bitten, so the
+        generator now calls the same stripper every other reader uses.
+        """
+        source = open(loop_locallm.__file__).read()
+        # assertTrue, not assertIn: assertIn prints the whole 300-line file.
+        self.assertTrue("loop_filter.strip_head(body)" in source,
+                        "loop_locallm.cmd_generate must strip a head off its own reply")
+        for head in HEADS:                      # one head, or all three, or none
+            reply = head + PROGRAM
+            self.assertTrue(surface.parse(loop_filter.strip_head(reply)), head)
+        self.assertTrue(surface.parse(loop_filter.strip_head("".join(HEADS) + PROGRAM)))
+
     def test_an_example_head_round_trips_through_generate_and_back(self):
         entry = {"fn": "f", "rec": {"text": "find squares"},
                  "points": [{"args": [["seq", [1, 2]]], "expected": ["seq", [1, 4]]}]}
