@@ -12,8 +12,16 @@ a reader reaching a particular paragraph. The headline is in
 - Phi's 3 of 232 is a low bar and it is low for a reason: Phi has never seen t,
   so most of its answers do not parse. Beating it at writing t is a weaker
   claim than beating it at Python.
-- Two models *run through* this pipeline beat Phi, and neither was built here,
-  so neither is a result of this project's method.
+- Three models *run through* this pipeline beat Phi, and none was built here,
+  so none is a result of this project's method: Qwen3.8-27B at 12 clean,
+  Qwen3-235B-A22B at 11, DeepSeek-Prover-V2-7B at 6, against our best of 3.
+  A larger model is simply better at this, and saying otherwise would be false.
+- **Scale stops paying somewhere below 235B.** The 27B scores 12 and the 235B,
+  about nine times its size, scores 11. Between them the clean count did not
+  move. What did move is the opposite of a flattering number for us: the 235B
+  gets 53 of 232 answers to compute the right values where locallm gets 3. It
+  is far better at solving the problems and no better at proving them, and that
+  gap, not the headline, is what this project is actually about.
 - The 232 held-out problems are MBPP, which every base model here was almost
   certainly pretrained on. The split protects against *this project's* training
   leaking into its own evaluation; it cannot protect against a base model
