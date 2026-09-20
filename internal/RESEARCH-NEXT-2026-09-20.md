@@ -98,3 +98,40 @@ none of them moved this number.
   ones and scored exactly what the previous recipe scored.
 - **A bigger model alone.** 92M wrote *fewer* well-formed answers than 3.2M. The
   capacity is there, measured to 875M; the data to justify it is not.
+
+## Implemented 2026-09-19, ready to run
+
+`t/loop_locallm.py` now takes `--examples` on both `corpus` and `generate`,
+putting up to two of the problem's own assertions in the head as
+`Example: fn(args) == value`. Verified on pool v5:
+
+    Problem: Write a python function to identify non-prime numbers.
+    Signature: is_not_prime(int) -> bool
+    Example: is_not_prime(2) == false
+    Example: is_not_prime(10) == true
+
+The whole experiment, once the pool is rebuilt:
+
+    python3 t/loop_locallm.py corpus --pool v5 --lifted --examples \
+        --sft t/out/loop/sft-r8.jsonl --out t/out/loop/corpus-ex.txt
+    python3 t/head_align_corpus.py --corpus t/out/loop/corpus-ex.txt \
+        --out t/out/loop/corpus-ex-headed.txt
+    ~/.venv-vllm/bin/python locallm/continue_from_checkpoint.py \
+        --init t/out/source-pretraining-longer-2026-09-19/gpt-seed1337 \
+        --data t/out/loop/corpus-ex-headed.txt --out t/out/locallm-ex --steps 300 --lr 3e-5
+    python3 t/loop_locallm.py generate --model t/out/locallm-ex --tag locallm-ex \
+        --split t/out/loop/split-v5.json --tokens 1200 --temperature 0 --examples
+    bash t/grade_lab.sh heldout locallm-ex
+    python3 t/spec_check.py locallm-ex --pool v5 --n 100 --only clean --out t/SPEC-CHECK-ex.md
+    python3 t/score_heldout.py phi4-mini-eval2-2026-09-19 locallm-r7b-headed2 locallm-ex
+
+**Register the prediction before running it.** Mine, on the evidence above:
+proven-but-wrong falls below 40 of its well-formed answers, from 59; clean
+reaches 3 or more; and well-formedness does not collapse the way the first
+headed arm's did. The number that decides it is proven-but-wrong, not clean.
+
+**And the fairness rule, which is not optional.** A model asked with examples
+is being given information every baseline must also get. Before any comparison
+is quoted, Phi has to be regenerated with `--examples` and regraded. Round 7's
+discipline applies: regrade the baseline the same day, with the same evaluator,
+and record `t/out/evaluator-state-*.json` around it.

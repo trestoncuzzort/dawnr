@@ -49,9 +49,34 @@ def signature(entry: dict) -> str:
     return f"{entry['fn']}({kinds}) -> {entry['points'][0]['expected'][0]}"
 
 
-def problem_head(entry: dict) -> str:
+def examples(entry: dict, n: int = 2) -> str:
+    """The problem's own assertions, in the head, as `fn(args) == value` lines.
+
+    The measured reason this exists: the signature line took signature failures
+    from 40.8 percent to 12.1 and turned 2 clean answers into 3 (round 8,
+    2026-09-19), because it pinned the types the model had been inventing. The
+    population that remains is proven-but-wrong: 59 to 204 answers a round where
+    all seven verifiers agree the program meets the specification the model
+    wrote and the problem's tests still fail. An example pins the semantics the
+    way the signature pinned the types.
+
+    Anything a model is given here, every model must be given: a held-out
+    comparison run with examples has to regrade its baselines with examples.
+    """
+    lines = []
+    for point in entry.get("points", [])[:n]:
+        try:
+            args = ", ".join(json.dumps(value) for _kind, value in point["args"])
+            lines.append(f"Example: {entry['fn']}({args}) == {json.dumps(point['expected'][1])}\n")
+        except (KeyError, IndexError, TypeError, ValueError):
+            continue          # a point this shape cannot be printed is simply not shown
+    return "".join(lines)
+
+
+def problem_head(entry: dict, with_examples: bool = False) -> str:
     text = " ".join(entry["rec"]["text"].split())
-    return f"Problem: {text}\nSignature: {signature(entry)}\n"
+    head = f"Problem: {text}\nSignature: {signature(entry)}\n"
+    return head + examples(entry) if with_examples else head
 
 
 def clean_rows(table: Path) -> set[str]:
@@ -77,7 +102,7 @@ def cmd_corpus(a) -> int:
             m = re.search(r"```t\n(.*?)```", r["chosen"], re.S)
             entry = pool.get(r["task_id"]) or pool.get(int(r["task_id"]))
             if m and entry:
-                docs.append(problem_head(entry) + m.group(1).strip() + "\n")
+                docs.append(problem_head(entry, a.examples) + m.group(1).strip() + "\n")
                 n_sft += 1
     if a.lifted:
         keep = clean_rows(HERE / "COVERAGE-lifted-785.md")
@@ -145,7 +170,7 @@ def cmd_generate(a) -> int:
         path = d / "raw" / f"{tid}.json"
         if entry is None or path.exists():
             continue
-        head = problem_head(entry)
+        head = problem_head(entry, a.examples)
         text = checkpoint.sample(model, tok, head, a.tokens, temperature=a.temperature, top_k=a.top_k)
         body = text[len(head):] if text.startswith(head) else text
         # A corpus whose documents begin with a head teaches the model to emit that
@@ -175,6 +200,9 @@ def main() -> int:
     p.add_argument("--lifted", action="store_true", help="add the lifted and committed tasks that read all seven")
     p.add_argument("--base", default="", help="start from this corpus file (documents split at blank lines)")
     p.add_argument("--out", default=str(OUT / "corpus.txt"))
+    p.add_argument("--examples", action="store_true",
+                   help="put the problem's own assertions in the head; every model "
+                        "compared against a model trained this way must get them too")
     p = sub.add_parser("train")
     p.add_argument("--corpus", default=str(OUT / "corpus.txt"))
     p.add_argument("--model", default=str(OUT / "model"))
@@ -200,6 +228,8 @@ def main() -> int:
     p.add_argument("--temperature", type=float, default=0.5)
     p.add_argument("--top-k", type=int, default=20)
     p.add_argument("--seed", type=int, default=1)
+    p.add_argument("--examples", action="store_true",
+                   help="ask with the problem's own assertions in the prompt")
     a = ap.parse_args()
     return {"corpus": cmd_corpus, "train": cmd_train, "generate": cmd_generate}[a.cmd](a)
 
