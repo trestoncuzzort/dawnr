@@ -4,7 +4,7 @@
 #   bash t/grade_lab.sh tags T1 T2 ...  those answer sets' grade-in/ (repairs, other generators)
 #   bash t/grade_lab.sh heldout   the held-out answer sets' tasks/ (extract and tests run here first)
 # Copies the tasks over, runs run_par.py there, copies kernels.md back. Checker events stream
-# into this machine's T_WATCH so t lab's Live checks shows them. Needs key login, and the VPN when the
+# into this machine's T_WATCH so locallm's Live checks shows them. Needs key login, and the VPN when the
 # workstation is only reachable through one (T_VPN_CMD).
 set -u
 # the whole script is one function, read in full before it runs: editing this file while a job
@@ -87,7 +87,7 @@ fi
 rm -f /tmp/t-grade-pull.$$
 if [ -n "${T_WATCH:-}" ]; then
   mkdir -p "$(dirname "$T_WATCH")"
-  # remote pids mean nothing here, so drop them before t lab reads the line
+  # remote pids mean nothing here, so drop them before locallm reads the line
   $SSH "$LAB" "tail -n0 -F ~/$REMOTE_EV" | stdbuf -oL -eL sed -u "s/\"pid\": [0-9]*, //" >> "$T_WATCH" &
   trap 'kill %1 2>/dev/null' EXIT
 fi

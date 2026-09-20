@@ -356,7 +356,7 @@ STEPS_FILE = HERE / "steps.json"
 def load_steps() -> list:
     """The Collect data steps. t/steps.json wins when it is there, so a step can be added, reordered or its
     command changed without touching this file; the list above is written out as the starting point the first
-    time t lab runs. One entry: [key, title, what it does, shell command, test that says it is done, uses]
+    time locallm runs. One entry: [key, title, what it does, shell command, test that says it is done, uses]
     where uses is "" (anything), "gpu" (the graphics card), "cpu" (this machine's cores) or "lab" (the lab
     workstation over SSH). Press Reload steps after editing. Progress counting is by key; a new key with no
     rule shows none."""
@@ -1368,7 +1368,7 @@ class Lab:
         self.refresh_steps(once=True)
 
     def watch_own_code(self):
-        """Reload when t lab's own code is fixed, so a window left open overnight is never stale.
+        """Reload when locallm's own code is fixed, so a window left open overnight is never stale.
 
         A fix lands here as a git pull or an edit to t/lab.py or t/steps.json while the window is up, and until
         2026-09-18 the window kept showing the state it was built with until someone pressed Refresh -- which
@@ -1383,7 +1383,7 @@ class Lab:
         self.root.after(2000, self.watch_own_code)
 
     def restart_app(self):
-        """Reload t lab's own code in place, keeping the window where it is: the geometry is written to
+        """Reload locallm's own code in place, keeping the window where it is: the geometry is written to
         GEOMETRY and read back on start, so a refresh after an edit costs no repositioning. It comes back on
         Collect data, which is the page the runs are driven from."""
         try:
@@ -2157,7 +2157,7 @@ def main() -> int:
     root = tk.Tk()
     root.title("locallm")
     w, h = min(1400, root.winfo_screenwidth() - 20), min(900, root.winfo_screenheight() - 60)
-    try:                                  # where it was left, so Refresh t lab does not move the window
+    try:                                  # where it was left, so Refresh locallm does not move the window
         root.geometry(GEOMETRY.read_text().strip())
     except (OSError, tk.TclError):
         root.geometry(f"{w}x{h}+10+30")
